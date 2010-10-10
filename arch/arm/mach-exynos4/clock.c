@@ -20,6 +20,7 @@
 #include <plat/pll.h>
 #include <plat/s5p-clock.h>
 #include <plat/clock-clksrc.h>
+#include <plat/devs.h>
 
 #include <mach/map.h>
 #include <mach/regs-clock.h>
@@ -532,16 +533,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 10),
 	}, {
-		.name		= "pdma",
-		.id		= 0,
-		.enable		= exynos4_clk_ip_fsys_ctrl,
-		.ctrlbit	= (1 << 0),
-	}, {
-		.name		= "pdma",
-		.id		= 1,
-		.enable		= exynos4_clk_ip_fsys_ctrl,
-		.ctrlbit	= (1 << 1),
-	}, {
 		.name		= "adc",
 		.id		= -1,
 		.enable		= exynos4_clk_ip_peril_ctrl,
@@ -903,6 +894,29 @@ static struct clksrc_clk clk_sclk_spdif = {
 	},
 	.sources = &clkset_sclk_spdif,
 	.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 8, .size = 2 },
+};
+
+static struct clk init_dmaclocks[] = {
+	{
+		.name		= "pdma",
+		.id		= 0,
+		.enable		= exynos4_clk_ip_image_ctrl,
+		.ctrlbit	= ((1 << 8) | (1 << 5) | (1 << 2)),
+		.dev		= &exynos4_device_mdma.dev,
+	}, {
+		.name		= "pdma",
+		.id		= 1,
+		.enable		= exynos4_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 0),
+		.dev		= &exynos4_device_pdma0.dev,
+	}, {
+		.name		= "pdma",
+		.id		= 2,
+		.parent		= &init_dmaclocks[1],
+		.enable		= exynos4_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 1),
+		.dev		= &exynos4_device_pdma1.dev,
+	},
 };
 
 static struct clk init_clocks[] = {
@@ -1542,6 +1556,10 @@ void __init exynos4_register_clocks(void)
 
 	s3c_register_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
 	s3c_disable_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
+
+	/* Register DMA Clock */
+	s3c_register_clocks(init_dmaclocks, ARRAY_SIZE(init_dmaclocks));
+	s3c_disable_clocks(init_dmaclocks, ARRAY_SIZE(init_dmaclocks));
 
 	s3c_pwmclk_init();
 }

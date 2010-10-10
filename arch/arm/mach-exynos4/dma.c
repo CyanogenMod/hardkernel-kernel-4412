@@ -91,7 +91,7 @@ struct s3c_pl330_platdata exynos4_mdma_pdata = {
 	},
 };
 
-static struct platform_device exynos4_device_mdma = {
+struct platform_device exynos4_device_mdma = {
 	.name		= "s3c-pl330",
 	.id		= 0,
 	.num_resources	= ARRAY_SIZE(exynos4_mdma_resource),
@@ -153,7 +153,7 @@ static struct s3c_pl330_platdata exynos4_pdma0_pdata = {
 	},
 };
 
-static struct platform_device exynos4_device_pdma0 = {
+struct platform_device exynos4_device_pdma0 = {
 	.name		= "s3c-pl330",
 	.id		= 1,
 	.num_resources	= ARRAY_SIZE(exynos4_pdma0_resource),
@@ -215,7 +215,7 @@ static struct s3c_pl330_platdata exynos4_pdma1_pdata = {
 	},
 };
 
-static struct platform_device exynos4_device_pdma1 = {
+struct platform_device exynos4_device_pdma1 = {
 	.name		= "s3c-pl330",
 	.id		= 2,
 	.num_resources	= ARRAY_SIZE(exynos4_pdma1_resource),

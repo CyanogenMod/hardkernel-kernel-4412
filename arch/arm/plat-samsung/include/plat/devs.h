@@ -106,6 +106,9 @@ extern struct platform_device s5pv210_device_iis1;
 extern struct platform_device s5pv210_device_iis2;
 extern struct platform_device s5pv210_device_spdif;
 extern struct platform_device s5pv210_device_cpufreq;
+extern struct platform_device s5pv210_device_pdma0;
+extern struct platform_device s5pv210_device_pdma1;
+extern struct platform_device s5pv210_device_mdma;
 
 extern struct platform_device exynos4_device_ac97;
 extern struct platform_device exynos4_device_pcm0;
@@ -117,6 +120,9 @@ extern struct platform_device exynos4_device_i2s2;
 extern struct platform_device exynos4_device_spdif;
 extern struct platform_device exynos4_device_pd[];
 extern struct platform_device exynos4_device_ahci;
+extern struct platform_device exynos4_device_pdma0;
+extern struct platform_device exynos4_device_pdma1;
+extern struct platform_device exynos4_device_mdma;
 
 extern struct platform_device s5p6440_device_pcm;
 extern struct platform_device s5p6440_device_iis;
