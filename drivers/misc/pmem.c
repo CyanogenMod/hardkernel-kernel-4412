@@ -27,6 +27,9 @@
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/cacheflush.h>
+#if defined(CONFIG_S5P_MEM_CMA)
+#include <linux/cma.h>
+#endif
 
 #define PMEM_MAX_DEVICES 10
 #define PMEM_MAX_ORDER 128
@@ -1233,6 +1236,10 @@ int pmem_setup(struct android_pmem_platform_data *pdata,
 	int id = id_count;
 	id_count++;
 
+#if defined(CONFIG_S5P_MEM_CMA)
+	pdata->start = cma_alloc_from(pdata->name, pdata->size, 0);
+#endif
+
 	pmem[id].no_allocator = pdata->no_allocator;
 	pmem[id].cached = pdata->cached;
 	pmem[id].buffered = pdata->buffered;
@@ -1318,6 +1325,9 @@ static int pmem_remove(struct platform_device *pdev)
 {
 	int id = pdev->id;
 	__free_page(pfn_to_page(pmem[id].garbage_pfn));
+#if defined(CONFIG_S5P_MEM_CMA)
+	cma_free(((struct android_pmem_platform_data *)(pdev->dev.platform_data))->start);
+#endif
 	misc_deregister(&pmem[id].dev);
 	return 0;
 }
