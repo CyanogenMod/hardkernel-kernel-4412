@@ -232,7 +232,6 @@
 #define S5P_FIMV_ENC_INT_MASK		0xc528 /* interrupt mask */
 
 #define S5P_FIMV_ENC_RC_CONFIG		0xc5a0 /* RC config */
-#define S5P_FIMV_ENC_RC_FRAME_RATE	0xc5a4 /* frame rate */
 #define S5P_FIMV_ENC_RC_BIT_RATE	0xc5a8 /* bit rate */
 #define S5P_FIMV_ENC_RC_QBOUND		0xc5ac /* max/min QP */
 #define S5P_FIMV_ENC_RC_RPARA		0xc5b0 /* rate control reaction coeff */
@@ -247,6 +246,9 @@
 #define S5P_FIMV_ENC_H264_MDINTRA_WGT	0xd020 /* intra weighted parameter */
 #define S5P_FIMV_ENC_H264_TRANS_FLAG	0xd034 /* 8x8 transform flag in PPS &
 								high profile */
+
+#define S5P_FIMV_ENC_RC_FRAME_RATE	0xd0d0 /* frame rate */
+
 /* Encoder for MPEG4 */
 #define S5P_FIMV_ENC_MPEG4_QUART_PXL	0xe008 /* qpel interpolation ctrl */
 
