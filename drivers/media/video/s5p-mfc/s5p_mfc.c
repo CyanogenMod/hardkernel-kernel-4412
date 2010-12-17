@@ -914,12 +914,12 @@ static int vidioc_reqbufs_enc(struct file *file, void *priv,
 
 	mfc_debug_enter();
 
-	/* FIXME: V4L2_MEMORY_USERPTR */
 	mfc_debug("type: %d\n", reqbufs->memory);
-	if (reqbufs->memory != V4L2_MEMORY_MMAP) {
-		mfc_err("Only V4L2_MEMORY_MAP is supported.\n");
+
+	/* if memory is not mmp or userptr return error */
+	if ((reqbufs->memory != V4L2_MEMORY_MMAP) &&
+		(reqbufs->memory != V4L2_MEMORY_USERPTR))
 		return -EINVAL;
-	}
 
 	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		/* RMVME: s5p_mfc_buf_negotiate() ctx state checked */
@@ -1009,14 +1009,14 @@ static int vidioc_querybuf_enc(struct file *file, void *priv,
 
 	mfc_debug_enter();
 
-	/* FIXME: V4L2_MEMORY_USERPTR */
 	mfc_debug("type: %d\n", buf->memory);
-	if (buf->memory != V4L2_MEMORY_MMAP) {
-		mfc_err("Only V4L2_MEMORY_MAP is supported.\n");
-		return -EINVAL;
-	}
 
-	mfc_debug("State: %d, buf->type: %d\n", ctx->state, buf->type);
+	/* if memory is not mmp or userptr return error */
+	if ((buf->memory != V4L2_MEMORY_MMAP) &&
+		(buf->memory != V4L2_MEMORY_USERPTR))
+		return -EINVAL;
+
+	mfc_debug("state: %d, buf->type: %d\n", ctx->state, buf->type);
 
 	if (buf->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		if (ctx->state != MFCINST_GOT_INST) {
@@ -2821,12 +2821,14 @@ static int s5p_mfc_open(struct file *file)
 	/* Init videobuf2 queue for CAPTURE */
 	q = &ctx->vq_dst;
 	q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-	q->io_modes = VB2_MMAP;
 	q->drv_priv = ctx;
-	if (s5p_mfc_get_node_type(file) == MFCNODE_DECODER)
+	if (s5p_mfc_get_node_type(file) == MFCNODE_DECODER) {
+		q->io_modes = VB2_MMAP;
 		q->ops = &s5p_mfc_qops;
-	else
+	} else {
+		q->io_modes = VB2_MMAP | VB2_USERPTR;
 		q->ops = &s5p_mfc_enc_qops;
+	}
 	q->mem_ops = &vb2_cma_memops;
 	ret = vb2_queue_init(q);
 	if (ret) {
@@ -2839,10 +2841,13 @@ static int s5p_mfc_open(struct file *file)
 	q->type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 	q->io_modes = VB2_MMAP;
 	q->drv_priv = ctx;
-	if (s5p_mfc_get_node_type(file) == MFCNODE_DECODER)
+	if (s5p_mfc_get_node_type(file) == MFCNODE_DECODER) {
+		q->io_modes = VB2_MMAP;
 		q->ops = &s5p_mfc_qops;
-	else
+	} else {
+		q->io_modes = VB2_MMAP | VB2_USERPTR;
 		q->ops = &s5p_mfc_enc_qops;
+	}
 	q->mem_ops = &vb2_cma_memops;
 	ret = vb2_queue_init(q);
 	if (ret) {
