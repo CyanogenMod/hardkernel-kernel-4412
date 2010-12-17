@@ -182,8 +182,9 @@ int s5p_mfc_ctx_ready(struct s5p_mfc_ctx *ctx)
 		if (ctx->src_queue_cnt >= 1 && ctx->state == MFCINST_GOT_INST)
 			return 1;
 		/* Context is to decode a frame */
-		if (ctx->src_queue_cnt >= 1 && ctx->state == MFCINST_RUNNING &&
-						ctx->dst_queue_cnt >= ctx->dpb_count)
+		if (ctx->src_queue_cnt >= 1 &&
+		    ctx->state == MFCINST_RUNNING &&
+		    ctx->dst_queue_cnt >= ctx->dpb_count)
 			return 1;
 		/* Context is to return last frame */
 		if (ctx->state == MFCINST_FINISHING &&
@@ -1774,7 +1775,7 @@ static int s5p_mfc_queue_setup_enc(struct vb2_queue *vq,
 		return -EINVAL;
 	}
 
-        mfc_debug_leave();
+	mfc_debug_leave();
 
 	return 0;
 }
@@ -2176,46 +2177,45 @@ static void s5p_mfc_try_run(void)
 	 * Now obtaining frames from MFC buffer */
 	if (ctx->type == MFCINST_DECODER) {
 		switch (ctx->state) {
-			case MFCINST_FINISHING:
-				s5p_mfc_run_dec_last_frames(ctx);
-				break;
-			case MFCINST_RUNNING:
-				ret = s5p_mfc_run_dec_frame(ctx);
-				break;
-			case MFCINST_INIT:
-				ret = s5p_mfc_run_get_inst_no(ctx);
-				break;
-			case MFCINST_RETURN_INST:
-				ret = s5p_mfc_run_return_inst(ctx);
-				break;
-			case MFCINST_GOT_INST:
-				s5p_mfc_run_init_dec(ctx);
-				break;
-			case MFCINST_HEAD_PARSED:
-				ret = s5p_mfc_run_init_dec_buffers(ctx);
-				break;
-			default:
-				ret = -EAGAIN;
+		case MFCINST_FINISHING:
+			s5p_mfc_run_dec_last_frames(ctx);
+			break;
+		case MFCINST_RUNNING:
+			ret = s5p_mfc_run_dec_frame(ctx);
+			break;
+		case MFCINST_INIT:
+			ret = s5p_mfc_run_get_inst_no(ctx);
+			break;
+		case MFCINST_RETURN_INST:
+			ret = s5p_mfc_run_return_inst(ctx);
+			break;
+		case MFCINST_GOT_INST:
+			s5p_mfc_run_init_dec(ctx);
+			break;
+		case MFCINST_HEAD_PARSED:
+			ret = s5p_mfc_run_init_dec_buffers(ctx);
+			break;
+		default:
+			ret = -EAGAIN;
 		}
 	} else if (ctx->type == MFCINST_ENCODER) {
 		switch (ctx->state) {
-			case MFCINST_RUNNING:
-				ret = s5p_mfc_run_enc_frame(ctx);
-				break;
-			case MFCINST_INIT:
-				ret = s5p_mfc_run_get_inst_no(ctx);
-				break;
-			case MFCINST_RETURN_INST:
-				ret = s5p_mfc_run_return_inst(ctx);
-				break;
-			case MFCINST_GOT_INST:
-				s5p_mfc_run_init_enc(ctx);
-				break;
-			default:
-				ret = -EAGAIN;
+		case MFCINST_RUNNING:
+			ret = s5p_mfc_run_enc_frame(ctx);
+			break;
+		case MFCINST_INIT:
+			ret = s5p_mfc_run_get_inst_no(ctx);
+			break;
+		case MFCINST_RETURN_INST:
+			ret = s5p_mfc_run_return_inst(ctx);
+			break;
+		case MFCINST_GOT_INST:
+			s5p_mfc_run_init_enc(ctx);
+			break;
+		default:
+			ret = -EAGAIN;
 		}
-	}
-	else {
+	} else {
 		mfc_err("invalid context type: %d\n", ctx->type);
 		ret = -EAGAIN;
 	}
