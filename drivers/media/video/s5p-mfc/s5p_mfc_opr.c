@@ -1305,61 +1305,6 @@ int s5p_mfc_init_encode(struct s5p_mfc_ctx *mfc_ctx)
 
 	mfc_debug("++\n");
 
-	mfc_ctx->enc_params.width = 176;
-	mfc_ctx->enc_params.height = 144;;
-
-	mfc_ctx->enc_params.gop_size = 3;
-	mfc_ctx->enc_params.slice_mode = V4L2_CODEC_MFC5X_ENC_SW_DISABLE;
-	mfc_ctx->enc_params.slice_mb = 0;
-	mfc_ctx->enc_params.slice_bit = 0;
-	mfc_ctx->enc_params.intra_refresh_mb = 0;
-	mfc_ctx->enc_params.pad = V4L2_CODEC_MFC5X_ENC_SW_DISABLE;
-	mfc_ctx->enc_params.pad_luma = 0;
-	mfc_ctx->enc_params.pad_cb = 0;
-	mfc_ctx->enc_params.pad_cr = 0;
-	mfc_ctx->enc_params.rc_frame = V4L2_CODEC_MFC5X_ENC_SW_DISABLE;
-	mfc_ctx->enc_params.rc_bitrate = 90000;
-	mfc_ctx->enc_params.rc_reaction_coeff = 100;
-
-	mfc_ctx->enc_params.vbv_buf_size = 0;
-
-	/*
-	mfc_ctx->enc_params.seq_hdr_mode = V4L2_CODEC_MFC5X_ENC_SEQ_HDR_MODE_SEQ;
-	*/
-	mfc_ctx->enc_params.seq_hdr_mode = V4L2_CODEC_MFC5X_ENC_SEQ_HDR_MODE_SEQ_FRAME;
-
-	mfc_ctx->enc_params.frame_skip_mode = V4L2_CODEC_MFC5X_ENC_FRAME_SKIP_MODE_DISABLE;
-	mfc_ctx->enc_params.fixed_target_bit = V4L2_CODEC_MFC5X_ENC_SW_DISABLE;
-
-	mfc_ctx->enc_params.codec.h264.num_b_frame = 0;
-	mfc_ctx->enc_params.codec.h264.profile = V4L2_CODEC_MFC5X_ENC_H264_PROFILE_MAIN;
-	mfc_ctx->enc_params.codec.h264.level = 31;
-	mfc_ctx->enc_params.codec.h264.interlace = V4L2_CODEC_MFC5X_ENC_SW_DISABLE;
-	mfc_ctx->enc_params.codec.h264.loop_filter_mode = V4L2_CODEC_MFC5X_ENC_H264_LOOP_FILTER_DISABLE;
-	mfc_ctx->enc_params.codec.h264.loop_filter_alpha = 0;
-	mfc_ctx->enc_params.codec.h264.loop_filter_beta = 0;
-	mfc_ctx->enc_params.codec.h264.entropy_mode = V4L2_CODEC_MFC5X_ENC_H264_ENTROPY_MODE_CAVLC;
-	mfc_ctx->enc_params.codec.h264.max_ref_pic = 1;
-	mfc_ctx->enc_params.codec.h264.num_ref_pic_4p = 2;
-	mfc_ctx->enc_params.codec.h264._8x8_transform = V4L2_CODEC_MFC5X_ENC_SW_DISABLE;
-	mfc_ctx->enc_params.codec.h264.rc_mb = V4L2_CODEC_MFC5X_ENC_SW_DISABLE;
-	mfc_ctx->enc_params.codec.h264.rc_framerate = 30;
-	mfc_ctx->enc_params.codec.h264.rc_frame_qp = 20;
-	mfc_ctx->enc_params.codec.h264.rc_min_qp = 1;
-	mfc_ctx->enc_params.codec.h264.rc_max_qp = 51;
-	mfc_ctx->enc_params.codec.h264.rc_mb_dark = V4L2_CODEC_MFC5X_ENC_SW_INV_DISABLE;
-	mfc_ctx->enc_params.codec.h264.rc_mb_smooth = V4L2_CODEC_MFC5X_ENC_SW_INV_DISABLE;
-	mfc_ctx->enc_params.codec.h264.rc_mb_static = V4L2_CODEC_MFC5X_ENC_SW_INV_DISABLE;
-	mfc_ctx->enc_params.codec.h264.rc_mb_activity = V4L2_CODEC_MFC5X_ENC_SW_INV_DISABLE;
-	mfc_ctx->enc_params.codec.h264.rc_p_frame_qp = 10;
-	mfc_ctx->enc_params.codec.h264.rc_b_frame_qp = 5;
-	mfc_ctx->enc_params.codec.h264.ar_vui = V4L2_CODEC_MFC5X_ENC_SW_DISABLE;
-	mfc_ctx->enc_params.codec.h264.ar_vui_idc = 0;
-	mfc_ctx->enc_params.codec.h264.ext_sar_width = 0;
-	mfc_ctx->enc_params.codec.h264.ext_sar_height = 0;
-	mfc_ctx->enc_params.codec.h264.open_gop = V4L2_CODEC_MFC5X_ENC_SW_DISABLE;
-	mfc_ctx->enc_params.codec.h264.open_gop_size = 3;
-
 	s5p_mfc_set_enc_params_h264(mfc_ctx);
 
 	s5p_mfc_set_shared_buffer(mfc_ctx);
