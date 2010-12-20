@@ -40,6 +40,9 @@
 
 #define MFC_NO_INSTANCE_SET	-1
 
+#define MFC_ENC_CAP_PLANE_COUNT	1
+#define MFC_ENC_OUT_PLANE_COUNT	2
+
 /**
  * enum s5p_mfc_inst_type - The type of an MFC device node.
  */

@@ -1672,6 +1672,32 @@ static const struct v4l2_ioctl_ops s5p_mfc_enc_ioctl_ops = {
 	.vidioc_g_crop = vidioc_g_crop,
 };
 
+static int check_vb_with_fmt(struct s5p_mfc_fmt *fmt, struct vb2_buffer *vb)
+{
+	int i;
+
+	if (!fmt)
+		return -EINVAL;
+
+	if (fmt->num_planes != vb->num_planes) {
+		mfc_err("invalid plane number for the format\n");
+		return -EINVAL;
+	}
+
+	for (i = 0; i < fmt->num_planes; i++) {
+		if (!vb2_cma_plane_paddr(vb, i)) {
+			mfc_err("failed to get plane paddr\n");
+			return -EINVAL;
+		}
+
+		mfc_debug("index: %d, plane[%d] paddr: 0x%08lx",
+				vb->v4l2_buf.index, i,
+				vb2_cma_plane_paddr(vb, i));
+	}
+
+	return 0;
+}
+
 /* Negotiate buffers */
 static int s5p_mfc_queue_setup(struct vb2_queue *vq, unsigned int *buf_count,
 			       unsigned int *plane_count, unsigned long psize[],
@@ -1734,11 +1760,12 @@ static int s5p_mfc_queue_setup(struct vb2_queue *vq, unsigned int *buf_count,
 	return 0;
 }
 
-static int s5p_mfc_queue_setup_enc(struct vb2_queue *vq,
+static int s5p_mfc_enc_queue_setup(struct vb2_queue *vq,
 		unsigned int *buf_count, unsigned int *plane_count,
 		unsigned long psize[], void *allocators[])
 {
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	int i;
 
 	mfc_debug_enter();
 
@@ -1748,32 +1775,42 @@ static int s5p_mfc_queue_setup_enc(struct vb2_queue *vq,
 	}
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		*plane_count = 1;
-		*buf_count = 1;
-	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		*plane_count = 2;
+		if (ctx->dst_fmt)
+			*plane_count = ctx->dst_fmt->num_planes;
+		else
+			*plane_count = MFC_ENC_CAP_PLANE_COUNT;
 
 		if (*buf_count < 1)
 			*buf_count = 1;
 		if (*buf_count > MFC_MAX_BUFFERS)
 			*buf_count = MFC_MAX_BUFFERS;
+
+		psize[0] = ctx->enc_dst_buf_size;
+		allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
+	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		if (ctx->src_fmt)
+			*plane_count = ctx->src_fmt->num_planes;
+		else
+			*plane_count = MFC_ENC_OUT_PLANE_COUNT;
+
+		if (*buf_count < 1)
+			*buf_count = 1;
+		if (*buf_count > MFC_MAX_BUFFERS)
+			*buf_count = MFC_MAX_BUFFERS;
+
+		psize[0] = ctx->luma_size;
+		psize[1] = ctx->chroma_size;
+		allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX];
+		allocators[1] = ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX];
+
 	} else {
 		mfc_err("inavlid queue type: %d\n", vq->type);
 		return -EINVAL;
 	}
 
-	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		psize[0] = ctx->enc_dst_buf_size;
-		allocators[0] = ctx->dev->alloc_ctx[1];
-	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		psize[0] = ctx->luma_size;
-		psize[1] = ctx->chroma_size;
-		allocators[0] = ctx->dev->alloc_ctx[0];
-		allocators[1] = ctx->dev->alloc_ctx[0];
-	} else {
-		mfc_err("inavlid queue type: %d\n", vq->type);
-		return -EINVAL;
-	}
+	mfc_debug("buf_count: %d, plane_count: %d\n", *buf_count, *plane_count);
+	for (i = 0; i < *plane_count; i++)
+		mfc_debug("plane[0] size=%lu\n", psize[i]);
 
 	mfc_debug_leave();
 
@@ -1834,78 +1871,79 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 	return 0;
 }
 
-static int s5p_mfc_buf_init_enc(struct vb2_buffer *vb)
+static int s5p_mfc_enc_buf_init(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
 	unsigned int i;
+	int ret;
 
 	mfc_debug_enter();
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		if (!ctx->dst_fmt) {
-			mfc_err("invalid format for encoding dst\n");
-			return -EINVAL;
-		}
-
-		if (ctx->dst_fmt->num_planes != vb->num_planes) {
-			mfc_err("invalid plane number for encoding dst\n");
-			return -EINVAL;
-		}
-
-		for (i = 0; i < ctx->dst_fmt->num_planes; i++) {
-			if (!vb2_cma_plane_paddr(vb, i)) {
-				mfc_err("invalid plane memory\n");
-				return -EINVAL;
-			}
-		}
-
-		mfc_debug("plane size: %ld, enc_dst_buf_size: %d\n",
-			vb2_plane_size(vb, 0), ctx->enc_dst_buf_size);
-
-		if (vb2_plane_size(vb, 0) < ctx->enc_dst_buf_size) {
-			mfc_err("plane size is too small for encoding dst\n");
-			return -EINVAL;
-		}
+		ret = check_vb_with_fmt(ctx->dst_fmt, vb);
+		if (ret < 0)
+			return ret;
 
 		i = vb->v4l2_buf.index;
 		ctx->dst_bufs[i].b = vb;
 		ctx->dst_bufs[i].paddr.stream = vb2_cma_plane_paddr(vb, 0);
 		ctx->dst_bufs_cnt++;
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		if (!ctx->src_fmt) {
-			mfc_err("invalid format for for encoding src\n");
-			return -EINVAL;
-		}
-
-		if (ctx->src_fmt->num_planes != vb->num_planes) {
-			mfc_err("invalid plane number for encoding src\n");
-			return -EINVAL;
-		}
-
-		for (i = 0; i < ctx->src_fmt->num_planes; i++) {
-			if (!vb2_cma_plane_paddr(vb, i)) {
-				mfc_err("invalid plane memory\n");
-				return -EINVAL;
-			}
-		}
-
-		mfc_debug("plane size[0]: %ld, luma_size: %d, " \
-			"plane size[1]: %ld, chroma_size: %d\n",
-			vb2_plane_size(vb, 0), ctx->luma_size,
-			vb2_plane_size(vb, 1), ctx->chroma_size);
-
-		if (vb2_plane_size(vb, 0) < ctx->luma_size ||
-		    vb2_plane_size(vb, 1) < ctx->chroma_size) {
-			mfc_err("invalid plane size for encoding src\n");
-			return -EINVAL;
-		}
+		ret = check_vb_with_fmt(ctx->src_fmt, vb);
+		if (ret < 0)
+			return ret;
 
 		i = vb->v4l2_buf.index;
 		ctx->src_bufs[i].b = vb;
 		ctx->src_bufs[i].paddr.raw.luma = vb2_cma_plane_paddr(vb, 0);
 		ctx->src_bufs[i].paddr.raw.chroma = vb2_cma_plane_paddr(vb, 1);
 		ctx->src_bufs_cnt++;
+	} else {
+		mfc_err("inavlid queue type: %d\n", vq->type);
+		return -EINVAL;
+	}
+
+	mfc_debug_leave();
+
+	return 0;
+}
+
+static int s5p_mfc_enc_buf_prepare(struct vb2_buffer *vb)
+{
+	struct vb2_queue *vq = vb->vb2_queue;
+	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	int ret;
+
+	mfc_debug_enter();
+
+	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		ret = check_vb_with_fmt(ctx->dst_fmt, vb);
+		if (ret < 0)
+			return ret;
+
+		mfc_debug("plane size: %ld, dst size: %d\n",
+			vb2_plane_size(vb, 0), ctx->enc_dst_buf_size);
+
+		if (vb2_plane_size(vb, 0) < ctx->enc_dst_buf_size) {
+			mfc_err("plane size is too small for capture\n");
+			return -EINVAL;
+		}
+	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		ret = check_vb_with_fmt(ctx->src_fmt, vb);
+		if (ret < 0)
+			return ret;
+
+		mfc_debug("plane size: %ld, luma size: %d\n",
+			vb2_plane_size(vb, 0), ctx->luma_size);
+		mfc_debug("plane size: %ld, luma size: %d\n",
+			vb2_plane_size(vb, 1), ctx->chroma_size);
+
+		if (vb2_plane_size(vb, 0) < ctx->luma_size ||
+		    vb2_plane_size(vb, 1) < ctx->chroma_size) {
+			mfc_err("plane size is too small for output\n");
+			return -EINVAL;
+		}
 	} else {
 		mfc_err("inavlid queue type: %d\n", vq->type);
 		return -EINVAL;
@@ -2273,7 +2311,7 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 	mfc_debug_leave();
 }
 
-static void s5p_mfc_buf_queue_enc(struct vb2_buffer *vb)
+static void s5p_mfc_enc_buf_queue(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
@@ -2387,10 +2425,11 @@ static struct vb2_ops s5p_mfc_qops = {
 };
 
 static struct vb2_ops s5p_mfc_enc_qops = {
-	.buf_queue = s5p_mfc_buf_queue_enc,
-	.queue_setup = s5p_mfc_queue_setup_enc,
+	.buf_queue = s5p_mfc_enc_buf_queue,
+	.queue_setup = s5p_mfc_enc_queue_setup,
 	.start_streaming = s5p_mfc_start_streaming,
-	.buf_init = s5p_mfc_buf_init_enc,
+	.buf_init = s5p_mfc_enc_buf_init,
+	.buf_prepare  = s5p_mfc_enc_buf_prepare,
 	.stop_streaming = s5p_mfc_stop_streaming,
 	.wait_prepare = s5p_mfc_unlock,
 	.wait_finish = s5p_mfc_lock,
