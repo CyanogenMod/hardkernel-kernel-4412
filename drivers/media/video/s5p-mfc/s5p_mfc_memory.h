@@ -24,6 +24,7 @@
 #define SHARED_BUF_SIZE			0x01000	/* 4KB for shared buffer */
 #define CPB_BUF_SIZE			0x400000/* 4MB fr decoder */
 
+#if 0
 /* Define names for CMA memory kinds used by MFC */
 #define MFC_CMA_ALLOC_CTX_NUM	3
 
@@ -38,6 +39,20 @@
 #define MFC_CMA_BANK1_ALIGN	0x2000	/* 8KB */
 #define MFC_CMA_BANK2_ALIGN	0x2000	/* 8KB */
 #define MFC_CMA_FW_ALIGN	0x20000	/* 128KB */
+#else
 
+#define MFC_ALLOC_CTX_NUM	2
+
+#define MFC_BANK_A_ALLOC_CTX 	0
+#define MFC_BANK_B_ALLOC_CTX 	1
+
+#define MFC_BANK_A_ALIGN_ORDER	11
+#define MFC_BANK_B_ALIGN_ORDER	11
+
+#define MFC_CMA_BANK1_ALLOC_CTX MFC_BANK_A_ALLOC_CTX
+#define MFC_CMA_BANK2_ALLOC_CTX MFC_BANK_B_ALLOC_CTX
+#define MFC_CMA_FW_ALLOC_CTX 	MFC_BANK_A_ALLOC_CTX
+
+#endif
 
 #endif /* S5P_MFC_MEMORY_H_ */

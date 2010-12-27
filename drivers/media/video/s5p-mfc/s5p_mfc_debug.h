@@ -21,13 +21,10 @@
 extern int debug;
 /* Debug macro */
 
-/*
-dev_dbg(dev->v4l2_dev.dev, "%s:%s:%d:" fmt, __FILE__, __func__, __LINE__, ##__VA_ARGS__);	\
-*/
 #define mfc_debug(fmt, ...)						\
 	do {								\
 		if (debug)						\
-			dev_dbg(dev->v4l2_dev.dev, "%s:%d:" fmt, __func__, __LINE__, ##__VA_ARGS__);	\
+			dev_dbg(dev->v4l2_dev.dev, "%s:%s:%d:" fmt, __FILE__, __func__, __LINE__, ##__VA_ARGS__);	\
 	}while (0)
 #else
 #define mfc_debug(fmt, ...)

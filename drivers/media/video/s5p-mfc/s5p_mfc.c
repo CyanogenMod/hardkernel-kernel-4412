@@ -23,6 +23,8 @@
 #include <linux/videodev2.h>
 #include <media/videobuf2-cma.h>
 #include <media/videobuf2-core.h>
+#include <media/videobuf2-dma-pool.h>
+
 #include "regs-mfc5.h"
 
 #include "s5p_mfc_opr.h"
@@ -35,19 +37,48 @@
 #define S5P_MFC_DEC_NAME	"s5p-mfc5-dec"
 #define S5P_MFC_ENC_NAME	"s5p-mfc5-enc"
 
+#if 0
+#define mfc_plane_paddr(v, n)	vb2_cma_plane_paddr(v, n)
+#else
+#define mfc_plane_paddr(v, n)	vb2_dma_pool_plane_paddr(v, n)
+#endif
+
 /* Offset base used to differentiate between CAPTURE and OUTPUT
 *  while mmaping */
 #define DST_QUEUE_OFF_BASE      (TASK_SIZE / 2)
 
-int debug = 1;
+int debug = 10;
 module_param(debug, int, S_IRUGO | S_IWUSR);
 
 struct s5p_mfc_dev *dev;
 /* Order must be as defined in s5p_mfc_memory.h */
-static const char *s5p_mem_types[] = {MFC_CMA_BANK2, MFC_CMA_BANK1, MFC_CMA_FW};
-static unsigned long s5p_mem_alignments[] = {MFC_CMA_BANK2_ALIGN,
-					MFC_CMA_BANK1_ALIGN, MFC_CMA_FW_ALIGN};
+/*
+static const char *s5p_mem_types[] = {
+	MFC_CMA_BANK2,
+	MFC_CMA_BANK1,
+	MFC_CMA_FW
+};
 
+static unsigned long s5p_mem_alignments[] = {
+	MFC_CMA_BANK2_ALIGN,
+	MFC_CMA_BANK1_ALIGN,
+	MFC_CMA_FW_ALIGN
+};
+
+static unsigned long s5p_mem_alignments[] = {
+	MFC_CMA_BANK2_ALIGN,
+	MFC_CMA_BANK1_ALIGN,
+};
+*/
+static unsigned long s5p_mem_alignments[] = {
+	MFC_BANK_A_ALIGN_ORDER,
+	MFC_BANK_B_ALIGN_ORDER,
+};
+
+static unsigned long s5p_mem_sizes[] = {
+	3 << 20,
+	3 << 20,
+};
 
 /* Function prototypes */
 static void s5p_mfc_try_run(void);
@@ -247,7 +278,7 @@ static int enc_pre_seq_start(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
-	dst_addr = vb2_cma_plane_paddr(dst_mb->b, 0);
+	dst_addr = mfc_plane_paddr(dst_mb->b, 0);
 	dst_size = dst_mb->b->v4l2_planes[0].bytesused;
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
@@ -293,8 +324,8 @@ static int enc_pre_frame_start(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	src_mb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
-	src_y_addr = vb2_cma_plane_paddr(src_mb->b, 0);
-	src_c_addr = vb2_cma_plane_paddr(src_mb->b, 1);
+	src_y_addr = mfc_plane_paddr(src_mb->b, 0);
+	src_c_addr = mfc_plane_paddr(src_mb->b, 1);
 	s5p_mfc_set_enc_frame_buffer(ctx, src_y_addr, src_c_addr);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
@@ -305,7 +336,7 @@ static int enc_pre_frame_start(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
-	dst_addr = vb2_cma_plane_paddr(dst_mb->b, 0);
+	dst_addr = mfc_plane_paddr(dst_mb->b, 0);
 	dst_size = dst_mb->b->v4l2_planes[0].bytesused;
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
@@ -335,8 +366,8 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	list_for_each_entry(src_mb, &ctx->src_queue, list) {
-		src_y_addr = vb2_cma_plane_paddr(src_mb->b, 0);
-		src_c_addr = vb2_cma_plane_paddr(src_mb->b, 1);
+		src_y_addr = mfc_plane_paddr(src_mb->b, 0);
+		src_c_addr = mfc_plane_paddr(src_mb->b, 1);
 
 		mfc_debug("enc src y addr: 0x%08lx", src_y_addr);
 		mfc_debug("enc src c addr: 0x%08lx", src_c_addr);
@@ -1685,14 +1716,14 @@ static int check_vb_with_fmt(struct s5p_mfc_fmt *fmt, struct vb2_buffer *vb)
 	}
 
 	for (i = 0; i < fmt->num_planes; i++) {
-		if (!vb2_cma_plane_paddr(vb, i)) {
+		if (!mfc_plane_paddr(vb, i)) {
 			mfc_err("failed to get plane paddr\n");
 			return -EINVAL;
 		}
 
 		mfc_debug("index: %d, plane[%d] paddr: 0x%08lx",
 				vb->v4l2_buf.index, i,
-				vb2_cma_plane_paddr(vb, i));
+				mfc_plane_paddr(vb, i));
 	}
 
 	return 0;
@@ -1743,12 +1774,12 @@ static int s5p_mfc_queue_setup(struct vb2_queue *vq, unsigned int *buf_count,
 	    vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		psize[0] = ctx->luma_size;
 		psize[1] = ctx->chroma_size;
-		allocators[0] = ctx->dev->alloc_ctx[0];
-		allocators[1] = ctx->dev->alloc_ctx[1];
+		allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX];
+		allocators[1] = ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE &&
 		   ctx->state == MFCINST_GOT_INST) {
 		psize[0] = ctx->dec_src_buf_size;
-		allocators[0] = ctx->dev->alloc_ctx[1];
+		allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 	} else {
 		mfc_err("Currently only decoding is supported. Decoding not initalised.\n");
 		return -EINVAL;
@@ -1810,7 +1841,7 @@ static int s5p_mfc_enc_queue_setup(struct vb2_queue *vq,
 
 	mfc_debug("buf_count: %d, plane_count: %d\n", *buf_count, *plane_count);
 	for (i = 0; i < *plane_count; i++)
-		mfc_debug("plane[0] size=%lu\n", psize[i]);
+		mfc_debug("plane[%d] size=%lu\n", i, psize[i]);
 
 	mfc_debug_leave();
 
@@ -1830,7 +1861,7 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 			return 0;
 		}
 		for (i = 0; i <= ctx->src_fmt->num_planes ; i++) {
-			if (vb2_cma_plane_paddr(vb, i) == 0) {
+			if (mfc_plane_paddr(vb, i) == 0) {
 				mfc_err("Plane mem not allocated.\n");
 				return -EINVAL;
 			}
@@ -1844,12 +1875,12 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 							vb2_plane_size(vb, 1));
 		i = vb->v4l2_buf.index;
 		ctx->dst_bufs[i].b = vb;
-		ctx->dst_bufs[i].paddr.raw.luma = vb2_cma_plane_paddr(vb, 0);
-		ctx->dst_bufs[i].paddr.raw.chroma = vb2_cma_plane_paddr(vb, 1);
+		ctx->dst_bufs[i].paddr.raw.luma = mfc_plane_paddr(vb, 0);
+		ctx->dst_bufs[i].paddr.raw.chroma = mfc_plane_paddr(vb, 1);
 		ctx->dst_bufs_cnt++;
 
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		if (vb2_cma_plane_paddr(vb, 0)  == 0) {
+		if (mfc_plane_paddr(vb, 0)  == 0) {
 			mfc_err("Plane memory not allocated.\n");
 			return -EINVAL;
 		}
@@ -1861,7 +1892,7 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 		}
 		i = vb->v4l2_buf.index;
 		ctx->src_bufs[i].b = vb;
-		ctx->src_bufs[i].paddr.stream = vb2_cma_plane_paddr(vb, 0);
+		ctx->src_bufs[i].paddr.stream = mfc_plane_paddr(vb, 0);
 		ctx->src_bufs_cnt++;
 	} else {
 		mfc_err("s5p_mfc_buf_init: unknown queue type.\n");
@@ -1887,7 +1918,7 @@ static int s5p_mfc_enc_buf_init(struct vb2_buffer *vb)
 
 		i = vb->v4l2_buf.index;
 		ctx->dst_bufs[i].b = vb;
-		ctx->dst_bufs[i].paddr.stream = vb2_cma_plane_paddr(vb, 0);
+		ctx->dst_bufs[i].paddr.stream = mfc_plane_paddr(vb, 0);
 		ctx->dst_bufs_cnt++;
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		ret = check_vb_with_fmt(ctx->src_fmt, vb);
@@ -1896,8 +1927,8 @@ static int s5p_mfc_enc_buf_init(struct vb2_buffer *vb)
 
 		i = vb->v4l2_buf.index;
 		ctx->src_bufs[i].b = vb;
-		ctx->src_bufs[i].paddr.raw.luma = vb2_cma_plane_paddr(vb, 0);
-		ctx->src_bufs[i].paddr.raw.chroma = vb2_cma_plane_paddr(vb, 1);
+		ctx->src_bufs[i].paddr.raw.luma = mfc_plane_paddr(vb, 0);
+		ctx->src_bufs[i].paddr.raw.chroma = mfc_plane_paddr(vb, 1);
 		ctx->src_bufs_cnt++;
 	} else {
 		mfc_err("inavlid queue type: %d\n", vq->type);
@@ -1938,6 +1969,12 @@ static int s5p_mfc_enc_buf_prepare(struct vb2_buffer *vb)
 			vb2_plane_size(vb, 0), ctx->luma_size);
 		mfc_debug("plane size: %ld, luma size: %d\n",
 			vb2_plane_size(vb, 1), ctx->chroma_size);
+
+		if (vb2_plane_size(vb, 0) < ctx->luma_size ||
+		    vb2_plane_size(vb, 1) < ctx->chroma_size) {
+			mfc_err("plane size is too small for output\n");
+			return -EINVAL;
+		}
 	} else {
 		mfc_err("inavlid queue type: %d\n", vq->type);
 		return -EINVAL;
@@ -1995,8 +2032,8 @@ static inline int s5p_mfc_run_dec_frame(struct s5p_mfc_ctx *ctx)
 	/* Get the next source buffer */
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 	mfc_debug("Temp vb: %p\n", temp_vb);
-	mfc_debug("Src Addr: %08lx\n", vb2_cma_plane_paddr(temp_vb->b, 0));
-	s5p_mfc_set_dec_stream_buffer(ctx, vb2_cma_plane_paddr(temp_vb->b, 0),
+	mfc_debug("Src Addr: %08lx\n", mfc_plane_paddr(temp_vb->b, 0));
+	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_paddr(temp_vb->b, 0),
 				0, temp_vb->b->v4l2_planes[0].bytesused);
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 	dev->curr_ctx = ctx->num;
@@ -2033,8 +2070,8 @@ static inline int s5p_mfc_run_enc_frame(struct s5p_mfc_ctx *ctx)
 	}
 
 	src_mb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
-	src_y_addr = vb2_cma_plane_paddr(src_mb->b, 0);
-	src_c_addr = vb2_cma_plane_paddr(src_mb->b, 1);
+	src_y_addr = mfc_plane_paddr(src_mb->b, 0);
+	src_c_addr = mfc_plane_paddr(src_mb->b, 1);
 
 	mfc_debug("enc src y addr: 0x%08lx", src_y_addr);
 	mfc_debug("enc src c addr: 0x%08lx", src_c_addr);
@@ -2042,7 +2079,7 @@ static inline int s5p_mfc_run_enc_frame(struct s5p_mfc_ctx *ctx)
 	s5p_mfc_set_enc_frame_buffer(ctx, src_y_addr, src_c_addr);
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
-	dst_addr = vb2_cma_plane_paddr(dst_mb->b, 0);
+	dst_addr = mfc_plane_paddr(dst_mb->b, 0);
 	dst_size = dst_mb->b->v4l2_planes[0].bytesused;
 
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
@@ -2099,12 +2136,12 @@ static inline void s5p_mfc_run_init_dec(struct s5p_mfc_ctx *ctx)
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 	s5p_mfc_set_dec_desc_buffer(ctx);
 	mfc_debug("Header size: %d\n", temp_vb->b->v4l2_planes[0].bytesused);
-	s5p_mfc_set_dec_stream_buffer(ctx, vb2_cma_plane_paddr(temp_vb->b, 0),
+	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_paddr(temp_vb->b, 0),
 				0, temp_vb->b->v4l2_planes[0].bytesused);
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 	dev->curr_ctx = ctx->num;
 	mfc_debug("paddr: %08x\n",
-			(int)phys_to_virt(vb2_cma_plane_paddr(temp_vb->b, 0)));
+			(int)phys_to_virt(mfc_plane_paddr(temp_vb->b, 0)));
 	s5p_mfc_clean_ctx_int_flags(ctx);
 	s5p_mfc_init_decode(ctx);
 }
@@ -2121,7 +2158,7 @@ static inline void s5p_mfc_run_init_enc(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
-	dst_addr = vb2_cma_plane_paddr(dst_mb->b, 0);
+	dst_addr = mfc_plane_paddr(dst_mb->b, 0);
 	dst_size = dst_mb->b->v4l2_planes[0].bytesused;
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
@@ -2129,7 +2166,7 @@ static inline void s5p_mfc_run_init_enc(struct s5p_mfc_ctx *ctx)
 
 	dev->curr_ctx = ctx->num;
 	mfc_debug("paddr: %08x\n",
-			(int)phys_to_virt(vb2_cma_plane_paddr(dst_mb->b, 0)));
+			(int)phys_to_virt(mfc_plane_paddr(dst_mb->b, 0)));
 	s5p_mfc_clean_ctx_int_flags(ctx);
 	s5p_mfc_init_encode(ctx);
 }
@@ -2161,7 +2198,7 @@ static inline int s5p_mfc_run_init_dec_buffers(struct s5p_mfc_ctx *ctx)
 
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 	mfc_debug("Header size: %d\n", temp_vb->b->v4l2_planes[0].bytesused);
-	s5p_mfc_set_dec_stream_buffer(ctx, vb2_cma_plane_paddr(temp_vb->b, 0),
+	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_paddr(temp_vb->b, 0),
 				0, temp_vb->b->v4l2_planes[0].bytesused);
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 	dev->curr_ctx = ctx->num;
@@ -2273,7 +2310,7 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 		mfc_buf = &ctx->src_bufs[vb->v4l2_buf.index];
 		mfc_debug("Src queue: %p\n", &ctx->src_queue);
 		mfc_debug("Adding to src: %p (%08lx, %08x)\n", vb,
-				vb2_cma_plane_paddr(vb, 0),
+				mfc_plane_paddr(vb, 0),
 				ctx->src_bufs[vb->v4l2_buf.index].paddr.stream);
 		spin_lock_irqsave(&dev->irqlock, flags);
 		list_add_tail(&mfc_buf->list, &ctx->src_queue);
@@ -2283,7 +2320,7 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 		mfc_buf = &ctx->dst_bufs[vb->v4l2_buf.index];
 		mfc_debug("Dst queue: %p\n", &ctx->dst_queue);
 		mfc_debug("Adding to dst: %p (%lx)\n", vb,
-						  vb2_cma_plane_paddr(vb, 0));
+						  mfc_plane_paddr(vb, 0));
 		mfc_debug("ADDING Flag before: %lx (%d)\n",
 					ctx->dec_dst_flag, vb->v4l2_buf.index);
 		/* Mark destination as available for use by MFC */
@@ -2318,7 +2355,7 @@ static void s5p_mfc_enc_buf_queue(struct vb2_buffer *vb)
 		mfc_buf = &ctx->dst_bufs[vb->v4l2_buf.index];
 		mfc_debug("dst queue: %p\n", &ctx->dst_queue);
 		mfc_debug("adding to dst: %p (%08lx, %08x)\n", vb,
-			vb2_cma_plane_paddr(vb, 0),
+			mfc_plane_paddr(vb, 0),
 			ctx->dst_bufs[vb->v4l2_buf.index].paddr.stream);
 		/* Mark destination as available for use by MFC */
 		spin_lock_irqsave(&dev->irqlock, flags);
@@ -2329,8 +2366,8 @@ static void s5p_mfc_enc_buf_queue(struct vb2_buffer *vb)
 		mfc_buf = &ctx->src_bufs[vb->v4l2_buf.index];
 		mfc_debug("src queue: %p\n", &ctx->src_queue);
 		mfc_debug("adding to src: %p (%08lx, %08lx, %08x, %08x)\n", vb,
-			vb2_cma_plane_paddr(vb, 0),
-			vb2_cma_plane_paddr(vb, 1),
+			mfc_plane_paddr(vb, 0),
+			mfc_plane_paddr(vb, 1),
 			ctx->src_bufs[vb->v4l2_buf.index].paddr.raw.luma,
 			ctx->src_bufs[vb->v4l2_buf.index].paddr.raw.chroma);
 		spin_lock_irqsave(&dev->irqlock, flags);
@@ -2474,7 +2511,9 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 	list_for_each_entry(dst_buf, &ctx->dst_queue, list) {
 		mfc_debug("Listing: %d\n", dst_buf->b->v4l2_buf.index);
 		/* Check if this is the buffer we're looking for */
-		if (vb2_cma_plane_paddr(dst_buf->b, 0) == dspl_y_addr) {
+		mfc_debug("0x%08lx, 0x%08x", mfc_plane_paddr(dst_buf->b, 0),
+			dspl_y_addr);
+		if (mfc_plane_paddr(dst_buf->b, 0) == dspl_y_addr) {
 			list_del(&dst_buf->list);
 			ctx->dst_queue_cnt--;
 			dst_buf->b->v4l2_buf.sequence = ctx->sequence;
@@ -2862,7 +2901,10 @@ static int s5p_mfc_open(struct file *file)
 		q->io_modes = VB2_MMAP | VB2_USERPTR;
 		q->ops = &s5p_mfc_enc_qops;
 	}
+	/*
 	q->mem_ops = &vb2_cma_memops;
+	*/
+	q->mem_ops = &vb2_dma_pool_memops;
 	ret = vb2_queue_init(q);
 	if (ret) {
 		mfc_err("Failed to initialize videobuf2 queue(capture)\n");
@@ -2881,7 +2923,10 @@ static int s5p_mfc_open(struct file *file)
 		q->io_modes = VB2_MMAP | VB2_USERPTR;
 		q->ops = &s5p_mfc_enc_qops;
 	}
+	/*
 	q->mem_ops = &vb2_cma_memops;
+	*/
+	q->mem_ops = &vb2_dma_pool_memops;
 	ret = vb2_queue_init(q);
 	if (ret) {
 		mfc_err("Failed to initialize videobuf2 queue(output)\n");
@@ -3154,8 +3199,15 @@ static int s5p_mfc_probe(struct platform_device *pdev)
 	dev->watchdog_timer.data = 0;
 	dev->watchdog_timer.function = s5p_mfc_watchdog;
 
+	/*
 	dev->alloc_ctx = vb2_cma_init_multi(&pdev->dev, MFC_CMA_ALLOC_CTX_NUM,
 					s5p_mem_types, s5p_mem_alignments);
+	*/
+	dev->alloc_ctx = (struct vb2_alloc_ctx **)
+			vb2_dma_pool_init_multi(&pdev->dev,
+						MFC_ALLOC_CTX_NUM,
+						s5p_mem_alignments,
+						s5p_mem_sizes);
 	if (IS_ERR(dev->alloc_ctx)) {
 		mfc_err("Couldn't prepare allocator ctx.\n");
 		ret = PTR_ERR(dev->alloc_ctx);
@@ -3213,7 +3265,10 @@ static int s5p_mfc_remove(struct platform_device *pdev)
 	video_unregister_device(dev->vfd_enc);
 	video_unregister_device(dev->vfd_dec);
 	v4l2_device_unregister(&dev->v4l2_dev);
+	/*
 	vb2_cma_cleanup_multi(dev->alloc_ctx);
+	*/
+	vb2_dma_pool_cleanup_multi((void **)dev->alloc_ctx, MFC_ALLOC_CTX_NUM);
 	if (dev->mfc_mutex) {
 		mutex_destroy(dev->mfc_mutex);
 		kfree(dev->mfc_mutex);
