@@ -5,9 +5,9 @@
  * Kamil Debski, <k.debski@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  */
 
 #define DEBUG
@@ -70,7 +70,12 @@ static unsigned long s5p_mem_alignments[] = {
 	MFC_CMA_BANK1_ALIGN,
 };
 */
-static unsigned long s5p_mem_alignments[] = {
+
+static unsigned long s5p_mem_base_align[] = {
+	MFC_BASE_ALIGN_ORDER,
+	MFC_BASE_ALIGN_ORDER,
+};
+static unsigned long s5p_mem_bank_align[] = {
 	MFC_BANK_A_ALIGN_ORDER,
 	MFC_BANK_B_ALIGN_ORDER,
 };
@@ -3206,7 +3211,8 @@ static int s5p_mfc_probe(struct platform_device *pdev)
 	dev->alloc_ctx = (struct vb2_alloc_ctx **)
 			vb2_dma_pool_init_multi(&pdev->dev,
 						MFC_ALLOC_CTX_NUM,
-						s5p_mem_alignments,
+						s5p_mem_base_align,
+						s5p_mem_bank_align,
 						s5p_mem_sizes);
 	if (IS_ERR(dev->alloc_ctx)) {
 		mfc_err("Couldn't prepare allocator ctx.\n");
