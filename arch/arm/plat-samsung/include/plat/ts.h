@@ -14,6 +14,11 @@ struct s3c2410_ts_mach_info {
        int             delay;
        int             presc;
        int             oversampling_shift;
+
+	int		cal_x_max;
+	int		cal_y_max;
+	int		cal_param[7];
+
 	void    (*cfg_gpio)(struct platform_device *dev);
 };
 
