@@ -268,12 +268,21 @@ static int enc_post_seq_start(struct s5p_mfc_ctx *ctx)
 		list_del(&dst_mb->list);
 		ctx->dst_queue_cnt--;
 
-		spin_unlock_irqrestore(&dev->irqlock, flags);
-
+		vb2_set_plane_payload(dst_mb->b, 0, s5p_mfc_get_enc_strm_size());
 		vb2_buffer_done(dst_mb->b, VB2_BUF_STATE_DONE);
+
+		spin_unlock_irqrestore(&dev->irqlock, flags);
 	}
 
 	ctx->state = MFCINST_RUNNING;
+
+	if (s5p_mfc_ctx_ready(ctx)) {
+		spin_lock_irqsave(&dev->condlock, flags);
+		set_bit(ctx->num, &dev->ctx_work_bits);
+		spin_unlock_irqrestore(&dev->condlock, flags);
+	}
+
+	s5p_mfc_try_run();
 
 	return 0;
 }
@@ -349,8 +358,12 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
 	list_del(&dst_mb->list);
 	ctx->dst_queue_cnt--;
+
 	vb2_set_plane_payload(dst_mb->b, 0, s5p_mfc_get_enc_strm_size());
 	vb2_buffer_done(dst_mb->b, VB2_BUF_STATE_DONE);
+
+	/* set encoded frame type */
+	ctx->frame_type = s5p_mfc_get_enc_slice_type();
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 
