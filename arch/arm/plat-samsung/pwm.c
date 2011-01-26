@@ -110,13 +110,19 @@ int pwm_enable(struct pwm_device *pwm)
 
 	local_irq_save(flags);
 
-	tcon = __raw_readl(S3C2410_TCON);
-	tcon |= pwm_tcon_start(pwm);
-	__raw_writel(tcon, S3C2410_TCON);
+	if (!pwm->running) {
+		clk_enable(pwm->clk);
+		clk_enable(pwm->clk_div);
+
+		tcon = __raw_readl(S3C2410_TCON);
+		tcon |= pwm_tcon_start(pwm);
+		__raw_writel(tcon, S3C2410_TCON);
+
+		pwm->running = 1;
+	}
 
 	local_irq_restore(flags);
 
-	pwm->running = 1;
 	return 0;
 }
 
@@ -129,13 +135,17 @@ void pwm_disable(struct pwm_device *pwm)
 
 	local_irq_save(flags);
 
-	tcon = __raw_readl(S3C2410_TCON);
-	tcon &= ~pwm_tcon_start(pwm);
-	__raw_writel(tcon, S3C2410_TCON);
+	if (pwm->running) {
+		tcon = __raw_readl(S3C2410_TCON);
+		tcon &= ~pwm_tcon_start(pwm);
+		__raw_writel(tcon, S3C2410_TCON);
+
+		clk_disable(pwm->clk);
+		clk_disable(pwm->clk_div);
+		pwm->running = 0;
+	}
 
 	local_irq_restore(flags);
-
-	pwm->running = 0;
 }
 
 EXPORT_SYMBOL(pwm_disable);
@@ -184,6 +194,9 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 
 	/* The TCMP and TCNT can be read without a lock, they're not
 	 * shared between the timers. */
+
+	clk_enable(pwm->clk);
+	clk_enable(pwm->clk_div);
 
 	tcmp = __raw_readl(S3C2410_TCMPB(pwm->pwm_id));
 	tcnt = __raw_readl(S3C2410_TCNTB(pwm->pwm_id));
@@ -241,6 +254,9 @@ int pwm_config(struct pwm_device *pwm, int duty_ns, int period_ns)
 	__raw_writel(tcon, S3C2410_TCON);
 
 	local_irq_restore(flags);
+
+	clk_disable(pwm->clk);
+	clk_disable(pwm->clk_div);
 
 	return 0;
 }
