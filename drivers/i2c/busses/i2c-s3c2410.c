@@ -567,8 +567,13 @@ static int s3c24xx_i2c_doxfer(struct s3c24xx_i2c *i2c,
 		iicstat = readl(i2c->regs + S3C2410_IICSTAT);
 	}
 
-	if (iicstat & S3C2410_IICSTAT_START)
-		dev_dbg(i2c->dev, "timeout waiting for bus idle\n");
+	/* if still not finished, clean it up */
+	spin_lock_irq(&i2c->lock);
+	if (iicstat & S3C2410_IICSTAT_START) {
+		dev_warn(i2c->dev, "timeout waiting for bus idle\n");
+		s3c24xx_i2c_stop(i2c, 0);
+	}
+	spin_unlock_irq(&i2c->lock);
 
  out:
 	return ret;
