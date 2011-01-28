@@ -16,13 +16,14 @@
 #ifndef S5P_MFC_COMMON_H_
 #define S5P_MFC_COMMON_H_
 
-#include "regs-mfc5.h"
 #include <linux/videodev2.h>
 
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
 
 #include <media/videobuf2-core.h>
+
+#include "regs-mfc.h"
 
 #define MFC_MAX_EXTRA_DPB       5
 #define MFC_MAX_BUFFERS		32
@@ -42,6 +43,8 @@
 
 #define MFC_ENC_CAP_PLANE_COUNT	1
 #define MFC_ENC_OUT_PLANE_COUNT	2
+
+#define MFC_NAME_LEN		16
 
 /**
  * enum s5p_mfc_inst_type - The type of an MFC device node.
@@ -103,29 +106,47 @@ struct s5p_mfc_buf {
 			size_t chroma;
 		} raw;
 		size_t stream;
-	} paddr;
+	} cookie;
+};
+
+
+struct s5p_mfc_pm {
+	struct clk	*clock;
+#ifdef CONFIG_ARCH_S5PV310
+	atomic_t	power;
+#ifdef CONFIG_PM_RUNTIME
+	struct device	*device;
+#endif
+#endif
+};
+
+struct s5p_mfc_fw {
+	const struct firmware	*info;
+	int			state;
+	int			ver;
 };
 
 /**
  * struct s5p_mfc_dev - The struct containing driver internal parameters.
  */
 struct s5p_mfc_dev {
-	struct v4l2_device v4l2_dev;
-	struct video_device *vfd_dec;
-	struct video_device *vfd_enc;
-	struct platform_device *plat_dev;
+	struct v4l2_device	v4l2_dev;
+	struct video_device	*vfd_dec;
+	struct video_device	*vfd_enc;
+	struct platform_device	*plat_dev;
+
+	void __iomem		*regs_base;
+	int			irq;
+	struct resource		*mfc_mem;
+
+	struct s5p_mfc_pm	pm;
+	struct s5p_mfc_fw	fw;
 
 	int num_inst;
 	spinlock_t irqlock;
 	spinlock_t condlock;
 
-	void __iomem *regs_base;
-	int irq;
-
-	struct resource *mfc_mem;
-	void __iomem *base_virt_addr;
-
-	struct mutex *mfc_mutex;
+	struct mutex mfc_mutex;
 
 	int int_cond;
 	int int_type;
@@ -137,8 +158,10 @@ struct s5p_mfc_dev {
 
 	unsigned long hw_lock;
 
+	/*
 	struct clk *clock1;
 	struct clk *clock2;
+	*/
 
 	struct s5p_mfc_ctx *ctx[MFC_NUM_CONTEXTS];
 	int curr_ctx;
@@ -316,7 +339,9 @@ struct s5p_mfc_ctx {
 
 	void *context_buf;
 	size_t context_phys;
+	size_t context_ofs;
 	size_t context_size;
+	//dma_addr_t context_dma;
 
 	void *desc_buf;
 	size_t desc_phys;
@@ -324,6 +349,7 @@ struct s5p_mfc_ctx {
 	void *shared_buf;
 	size_t shared_phys;
 	void *shared_virt;
+	//dma_addr_t shared_dma;
 
 	struct s5p_mfc_enc_params enc_params;
 
@@ -334,6 +360,18 @@ struct s5p_mfc_ctx {
 	enum v4l2_codec_mfc5x_enc_force_frame_type force_frame_type;
 
 	struct s5p_mfc_codec_ops *c_ops;
+};
+
+#define MFC_FMT_DEC	0
+#define MFC_FMT_ENC	1
+#define MFC_FMT_RAW	2
+
+struct s5p_mfc_fmt {
+	char *name;
+	u32 fourcc;
+	u32 codec_mode;
+	u32 type;
+	u32 num_planes;
 };
 
 #endif /* S5P_MFC_COMMON_H_ */

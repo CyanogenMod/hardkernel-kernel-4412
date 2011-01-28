@@ -20,6 +20,10 @@
 #include <media/videobuf2-dma-pool.h>
 #endif
 
+/* Offset base used to differentiate between CAPTURE and OUTPUT
+*  while mmaping */
+#define DST_QUEUE_OFF_BASE      (TASK_SIZE / 2)
+
 #define FIRMWARE_CODE_SIZE	0x60000		/* 384KB */
 #define MFC_H264_CTX_BUF_SIZE	0x96000		/* 600KB per H264 instance */
 #define MFC_CTX_BUF_SIZE	0x2800		/* 10KB per instance */
@@ -59,9 +63,9 @@
 #endif
 
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
-#define mfc_plane_paddr(v, n)	vb2_cma_plane_paddr(v, n)
+#define mfc_plane_cookie(v, n)	vb2_cma_plane_paddr(v, n)
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-#define mfc_plane_paddr(v, n)	vb2_dma_pool_plane_paddr(v, n)
+#define mfc_plane_cookie(v, n)	vb2_dma_pool_plane_paddr(v, n)
 #endif
 
 static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
@@ -73,7 +77,7 @@ static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
 #endif
 }
 
-static inline size_t s5p_mfc_mem_paddr(void *a, void *b)
+static inline size_t s5p_mfc_mem_cookie(void *a, void *b)
 {
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 	return (size_t)vb2_cma_memops.cookie(b);

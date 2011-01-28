@@ -1,5 +1,4 @@
 /*
- *
  * Register definition file for Samsung MFC V5.1 Interface (FIMV) driver
  *
  * Kamil Debski, Copyright (c) 2010 Samsung Electronics
@@ -272,6 +271,8 @@
 							chrominance picture*/
 
 /* Codec numbers  */
+#define MFC_FORMATS_NO_CODEC 			-1
+
 #define S5P_FIMV_CODEC_H264_DEC			0
 #define S5P_FIMV_CODEC_VC1_DEC			1
 #define S5P_FIMV_CODEC_MPEG4_DEC		2
@@ -303,20 +304,26 @@
 #define S5P_FIMV_H2R_CMD_OPEN_INSTANCE	1
 #define S5P_FIMV_H2R_CMD_CLOSE_INSTANCE	2
 #define S5P_FIMV_H2R_CMD_SYS_INIT	3
+#define S5P_FIMV_H2R_CMD_FLUSH		4
+#define S5P_FIMV_H2R_CMD_SLEEP		5
+#define S5P_FIMV_H2R_CMD_WAKEUP		6
 
 #define S5P_FIMV_R2H_CMD_EMPTY			0
 #define S5P_FIMV_R2H_CMD_OPEN_INSTANCE_RET	1
 #define S5P_FIMV_R2H_CMD_CLOSE_INSTANCE_RET	2
-#define S5P_FIMV_R2H_CMD_ERROR_RET		3
+#define S5P_FIMV_R2H_CMD_RSV_RET		3
 #define S5P_FIMV_R2H_CMD_SEQ_DONE_RET		4
 #define S5P_FIMV_R2H_CMD_FRAME_DONE_RET		5
 #define S5P_FIMV_R2H_CMD_SLICE_DONE_RET		6
 #define S5P_FIMV_R2H_CMD_ENC_COMPLETE_RET	7
 #define S5P_FIMV_R2H_CMD_SYS_INIT_RET		8
 #define S5P_FIMV_R2H_CMD_FW_STATUS_RET		9
+#define S5P_FIMV_R2H_CMD_SLEEP_RET		10
+#define S5P_FIMV_R2H_CMD_WAKEUP_RET		11
+#define S5P_FIMV_R2H_CMD_FLUSH_RET		12
 #define S5P_FIMV_R2H_CMD_INIT_BUFFERS_RET	15
 #define S5P_FIMV_R2H_CMD_EDFU_INIT_RET		16
-#define S5P_FIMV_R2H_CMD_DECODE_ERR_RET		32
+#define S5P_FIMV_R2H_CMD_ERR_RET		32
 
 /* Error handling defines */
 #define S5P_FIMV_ERR_WARNINGS_START		145

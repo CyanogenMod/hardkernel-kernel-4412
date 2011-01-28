@@ -18,16 +18,20 @@
 #include "s5p_mfc_common.h"
 #include "s5p_mfc_mem.h"
 
+/*
 int s5p_mfc_release_firmware(struct s5p_mfc_dev *dev);
 int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev);
 int s5p_mfc_load_firmware(struct s5p_mfc_dev *dev);
 int s5p_mfc_init_hw(struct s5p_mfc_dev *dev);
+*/
 
 int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx);
 int s5p_mfc_init_encode(struct s5p_mfc_ctx *mfc_ctx);
+/*
 void s5p_mfc_deinit_hw(struct s5p_mfc_dev *dev);
 int s5p_mfc_set_sleep(struct s5p_mfc_ctx *ctx);
 int s5p_mfc_set_wakeup(struct s5p_mfc_ctx *ctx);
+*/
 
 int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx);
 int s5p_mfc_set_dec_stream_buffer(struct s5p_mfc_ctx *ctx, int buf_addr,
@@ -46,8 +50,10 @@ int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame);
 int s5p_mfc_encode_one_frame(struct s5p_mfc_ctx *mfc_ctx);
 
 /* Instance handling */
+/*
 int s5p_mfc_open_inst(struct s5p_mfc_ctx *ctx);
 int s5p_mfc_return_inst_no(struct s5p_mfc_ctx *ctx);
+*/
 
 /* Memory allocation */
 int s5p_mfc_alloc_dec_temp_buffers(struct s5p_mfc_ctx *ctx);
@@ -114,32 +120,40 @@ static inline u32 s5p_mfc_get_pic_time_bottom(struct s5p_mfc_ctx *ctx)
 #define s5p_mfc_set_start_num(ctx, x)						\
 	do {									\
 		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_START_BYTE_NUM); \
-		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);	\
-			} while(0)
+		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);		\
+	} while(0)
 
 #define s5p_mfc_set_luma_size(ctx, x)						\
-	do { 									\
+	do {									\
 		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_LUMA_DPB_SIZE);	\
-		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);	\
-			} while(0)
+		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);		\
+	} while(0)
 
 #define s5p_mfc_set_chroma_size(ctx, x)						\
-	do { 									\
+	do {									\
 		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_CHROMA_DPB_SIZE);\
-		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);	\
-			 } while(0)
+		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);		\
+	} while(0)
 
 #define s5p_mfc_set_mv_size(ctx, x)						\
-	do { 									\
+	do {									\
 		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_MV_SIZE);	\
-		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);	\
-			} while(0)
+		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);		\
+	} while(0)
 
 /* Interrupt handling routines */
-#define s5p_mfc_clear_int_flags()				\
-do {								\
-	writel(0, dev->regs_base + S5P_FIMV_RISC_HOST_INT);	\
-	writel(0, dev->regs_base + S5P_FIMV_RISC2HOST_CMD);	\
-	writel(0xffff, dev->regs_base + S5P_FIMV_SI_RTN_CHID);	\
-} while (0)
+/*
+#define s5p_mfc_clear_int_flags()					\
+	do {								\
+		writel(0, dev->regs_base + S5P_FIMV_RISC_HOST_INT);	\
+		writel(0, dev->regs_base + S5P_FIMV_RISC2HOST_CMD);	\
+		writel(0xffff, dev->regs_base + S5P_FIMV_SI_RTN_CHID);	\
+	} while (0)
+*/
+
+
+void s5p_mfc_try_run(struct s5p_mfc_dev *dev);
+
+void s5p_mfc_cleanup_queue(struct list_head *lh, struct vb2_queue *vq);
+
 #endif /* S5P_MFC_OPR_H_ */

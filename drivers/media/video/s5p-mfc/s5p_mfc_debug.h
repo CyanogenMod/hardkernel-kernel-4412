@@ -19,29 +19,29 @@
 
 #ifdef DEBUG
 extern int debug;
-/* Debug macro */
 
-#define mfc_debug(fmt, ...)						\
-	do {								\
-		if (debug)						\
-			dev_dbg(dev->v4l2_dev.dev, "%s:%s:%d:" fmt, __FILE__, __func__, __LINE__, ##__VA_ARGS__);	\
-	}while (0)
+#define mfc_debug(fmt, args...)				\
+	do {						\
+		printk(KERN_DEBUG "%s:%d: " fmt,	\
+		       __func__, __LINE__, ##args);	\
+	} while(0)
 #else
-#define mfc_debug(fmt, ...)
+#define mfc_debug(fmt, args...)
 #endif
 
 #define mfc_debug_enter() mfc_debug("enter")
 #define mfc_debug_leave() mfc_debug("leave")
 
-#define mfc_err(fmt, ...)						\
-	do {								\
-			dev_err(dev->v4l2_dev.dev,  "%s:%s:%d:" fmt, __FILE__, __func__, __LINE__, ##__VA_ARGS__);	\
-	}while (0)
+#define mfc_err(fmt, args...)				\
+	do {						\
+		printk(KERN_ERR "%s:%d: " fmt,		\
+		       __func__, __LINE__, ##args);	\
+	} while(0)
 
-#define mfc_info(fmt, ...)						\
-	do {								\
-			dev_info(dev->v4l2_dev.dev, "%s:%s:%d:" fmt,  __FILE__, __func__, __LINE__, ##__VA_ARGS__);\
-	}while (0)
+#define mfc_info(fmt, args...)				\
+	do {						\
+		printk(KERN_INFO "%s:%d: " fmt,		\
+		       __func__, __LINE__, ##args);	\
+	} while(0)
 
 #endif /* S5P_MFC_DEBUG_H_ */
-

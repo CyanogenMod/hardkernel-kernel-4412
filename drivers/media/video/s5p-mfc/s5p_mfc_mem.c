@@ -92,3 +92,4 @@ void s5p_mfc_cache_inv(const void *start_addr, unsigned long size)
 	outer_inv_range(paddr, paddr + size);
 	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
 }
+
