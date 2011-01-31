@@ -18,6 +18,8 @@
 #include <media/videobuf2-cma.h>
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 #include <media/videobuf2-dma-pool.h>
+#elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
+#include <media/videobuf2-sdvmm.h>
 #endif
 
 /* Offset base used to differentiate between CAPTURE and OUTPUT
@@ -46,7 +48,58 @@
 #define MFC_CMA_BANK1_ALIGN	0x2000	/* 8KB */
 #define MFC_CMA_BANK2_ALIGN	0x2000	/* 8KB */
 #define MFC_CMA_FW_ALIGN	0x20000	/* 128KB */
+
+#define mfc_plane_cookie(v, n)	vb2_cma_plane_paddr(v, n)
+
+static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
+{
+	return vb2_cma_memops.alloc(a, s);
+}
+
+static inline size_t s5p_mfc_mem_cookie(void *a, void *b)
+{
+	return (size_t)vb2_cma_memops.cookie(b);
+}
+
+static inline void s5p_mfc_mem_put(void *a, void *b)
+{
+	vb2_cma_memops.put(b);
+}
+
+static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
+{
+	return vb2_cma_memops.vaddr(b);
+}
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
+#define MFC_ALLOC_CTX_NUM	2
+
+#define MFC_BANK_A_ALLOC_CTX	0
+#define MFC_BANK_B_ALLOC_CTX	1
+
+#define MFC_CMA_BANK1_ALLOC_CTX MFC_BANK_A_ALLOC_CTX
+#define MFC_CMA_BANK2_ALLOC_CTX MFC_BANK_B_ALLOC_CTX
+#define MFC_CMA_FW_ALLOC_CTX	MFC_BANK_A_ALLOC_CTX
+
+#define mfc_plane_cookie(v, n)	vb2_dma_pool_plane_paddr(v, n)
+
+static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
+{
+	return vb2_dma_pool_memops.alloc(a, s);
+}
+
+static inline size_t s5p_mfc_mem_cookie(void *a, void *b)
+{
+	return (size_t)vb2_dma_pool_memops.cookie(b);
+}
+static inline void s5p_mfc_mem_put(void *a, void *b)
+{
+	vb2_dma_pool_memops.put(b);
+}
+static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
+{
+	return vb2_dma_pool_memops.vaddr(b);
+}
+#elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
 #define MFC_ALLOC_CTX_NUM	2
 
 #define MFC_BANK_A_ALLOC_CTX	0
@@ -55,54 +108,31 @@
 #define MFC_BANK_A_ALIGN_ORDER	11
 #define MFC_BANK_B_ALIGN_ORDER	11
 
-#define MFC_BASE_ALIGN_ORDER	17
-
 #define MFC_CMA_BANK1_ALLOC_CTX MFC_BANK_A_ALLOC_CTX
 #define MFC_CMA_BANK2_ALLOC_CTX MFC_BANK_B_ALLOC_CTX
 #define MFC_CMA_FW_ALLOC_CTX	MFC_BANK_A_ALLOC_CTX
-#endif
 
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-#define mfc_plane_cookie(v, n)	vb2_cma_plane_paddr(v, n)
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-#define mfc_plane_cookie(v, n)	vb2_dma_pool_plane_paddr(v, n)
-#endif
+
+#define mfc_plane_cookie(v, n)	vb2_sdvmm_plane_paddr(v, n)
 
 static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
 {
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	return vb2_cma_memops.alloc(a, s);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	return vb2_dma_pool_memops.alloc(a, s);
-#endif
+	return vb2_sdvmm_memops.alloc(a, s);
 }
 
 static inline size_t s5p_mfc_mem_cookie(void *a, void *b)
 {
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	return (size_t)vb2_cma_memops.cookie(b);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	return (size_t)vb2_dma_pool_memops.cookie(b);
-#endif
+	return (size_t)vb2_sdvmm_memops.cookie(b);
 }
-
 static inline void s5p_mfc_mem_put(void *a, void *b)
 {
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	vb2_cma_memops.put(b);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	vb2_dma_pool_memops.put(b);
-#endif
+	vb2_sdvmm_memops.put(b);
 }
-
 static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 {
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	return vb2_cma_memops.vaddr(b);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	return vb2_dma_pool_memops.vaddr(b);
-#endif
+	return vb2_sdvmm_memops.vaddr(b);
 }
+#endif
 
 struct vb2_mem_ops *s5p_mfc_mem_ops(void);
 void **s5p_mfc_mem_init_multi(struct device *dev);
@@ -110,6 +140,5 @@ void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes);
 
 void s5p_mfc_cache_clean(const void *start_addr, unsigned long size);
 void s5p_mfc_cache_inv(const void *start_addr, unsigned long size);
-
 
 #endif /* __S5P_MFC_MEM_H_ */

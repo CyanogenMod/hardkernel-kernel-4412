@@ -11,8 +11,6 @@
  */
 
 #include <linux/delay.h>
-//#include <linux/mm.h>
-//#include <linux/io.h>
 #include <linux/jiffies.h>
 
 #include <linux/firmware.h>
@@ -169,6 +167,48 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 				b_base);
 
 	dev->port_b = b_base_phys;
+
+	mfc_debug("Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
+			dev->port_a, dev->port_b,
+			s5p_mfc_bitproc_phys,
+			FIRMWARE_CODE_SIZE);
+#elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
+	mfc_debug("Allocating memory for firmware.\n");
+	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
+		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], FIRMWARE_CODE_SIZE);
+	if (IS_ERR(s5p_mfc_bitproc_buf)) {
+		s5p_mfc_bitproc_buf = 0;
+		printk(KERN_ERR "Allocating bitprocessor buffer failed\n");
+		return -ENOMEM;
+	}
+
+	
+	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
+		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
+	if (s5p_mfc_bitproc_phys & (128 << 10)) {
+		mfc_err("The base memory is not aligned to 128KB.\n");
+		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
+							s5p_mfc_bitproc_buf);
+		s5p_mfc_bitproc_phys = 0;
+		s5p_mfc_bitproc_buf = 0;
+		return -EIO;
+	}
+
+	s5p_mfc_bitproc_virt = s5p_mfc_mem_vaddr(
+		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
+	mfc_debug("Virtual address for FW: %08lx\n",
+				(long unsigned int)s5p_mfc_bitproc_virt);
+	if (!s5p_mfc_bitproc_virt) {
+		mfc_err("Bitprocessor memory remap failed\n");
+		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
+							s5p_mfc_bitproc_buf);
+		s5p_mfc_bitproc_phys = 0;
+		s5p_mfc_bitproc_buf = 0;
+		return -EIO;
+	}
+
+	dev->port_a = s5p_mfc_bitproc_phys;
+	dev->port_b = s5p_mfc_bitproc_phys;
 
 	mfc_debug("Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
 			dev->port_a, dev->port_b,

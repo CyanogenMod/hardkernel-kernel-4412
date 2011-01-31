@@ -1,3 +1,15 @@
+/*
+ * linux/drivers/media/video/s5p-mfc/s5p_mfc_shm.c
+ *
+ * Copyright (c) 2010 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ */
+
 #include <linux/io.h>
 #ifdef CONFIG_ARCH_S5PV210
 #include <linux/dma-mapping.h>
@@ -50,8 +62,6 @@ unsigned int read_shm(struct mfc_inst_ctx *ctx, unsigned int offset)
 #endif
 	return readl(ctx->shm + offset);
 }
-
-
 
 
 void s5p_mfc_write_shm(const void *start_addr, unsigned int data,

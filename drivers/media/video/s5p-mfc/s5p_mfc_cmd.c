@@ -4,11 +4,10 @@
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/
  *
- * Command interface for Samsung MFC (Multi Function Codec - FIMV) driver
- *
  * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  */
 
 #if 0
@@ -538,23 +537,4 @@ int s5p_mfc_close_inst_cmd(struct s5p_mfc_ctx *ctx)
 
 	return ret;
 }
-
-
-
-/*
-static void s5p_mfc_cmd_sleep()
-{
-	WRITEL(-1, S5P_FIMV_CH_ID);
-	WRITEL(MFC_SLEEP, S5P_FIMV_COMMAND_TYPE);
-}
-*/
-
-/*
-static void s5p_mfc_cmd_wakeup()
-{
-	WRITEL(-1, S5P_FIMV_CH_ID);
-	WRITEL(MFC_WAKEUP, S5P_FIMV_COMMAND_TYPE);
-	mdelay(100);
-}
-*/
 

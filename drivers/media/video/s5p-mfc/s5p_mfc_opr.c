@@ -827,12 +827,10 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	WRITEL(p->intra_refresh_mb, S5P_FIMV_ENC_CIR_CTRL);
 
 	/* memory structure cur. frame */
-	/*
-	if (ctx->enc_src_fmt->fourcc == V4L2_PIX_FMT_NV12)
+	if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M)
 		WRITEL(S5P_FIMV_ENC_MAP_FOR_CUR, 0);
-	else if (ctx->enc_src_fmt->fourcc == V4L2_PIX_FMT_NV12MT)
+	else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12MT)
 		WRITEL(S5P_FIMV_ENC_MAP_FOR_CUR, 3);
-	*/
 
 	/* padding control & value */
 	reg = READL(S5P_FIMV_ENC_PADDING_CTRL);
@@ -923,7 +921,7 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	reg |= p_264->profile;
 	WRITEL(reg, S5P_FIMV_ENC_PROFILE);
 
-	/* interface  */
+	/* interlace  */
 	WRITEL(p_264->interlace, S5P_FIMV_ENC_PIC_STRUCT);
 	/** height */
 	if (p_264->interlace == V4L2_CODEC_MFC5X_ENC_SW_ENABLE)
@@ -1072,6 +1070,136 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	return 0;
 }
 
+static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
+{
+	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_mpeg4_enc_params *p_mpeg4 = &p->codec.mpeg4;
+	unsigned int reg;
+	unsigned int shm;
+
+	s5p_mfc_set_enc_params(ctx);
+
+	/* pictype : number of B */
+	reg = READL(S5P_FIMV_ENC_PIC_TYPE_CTRL);
+	/** num_b_frame - 0 ~ 2 */
+	reg &= ~(0x3 << 16);
+	reg |= (p_mpeg4->num_b_frame << 16);
+	WRITEL(reg, S5P_FIMV_ENC_PIC_TYPE_CTRL);
+
+	/* profile & level */
+	reg = READL(S5P_FIMV_ENC_PROFILE);
+	/** level */
+	reg &= ~(0xFF << 8);
+	reg |= (p_mpeg4->level << 8);
+	/** profile - 0 ~ 2 */
+	reg &= ~(0x3F);
+	reg |= p_mpeg4->profile;
+	WRITEL(reg, S5P_FIMV_ENC_PROFILE);
+
+	/* quarter_pixel */
+	WRITEL(p_mpeg4->quarter_pixel, S5P_FIMV_ENC_MPEG4_QUART_PXL);
+
+	/* qp */
+	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_DISABLE) {
+		shm = s5p_mfc_read_shm(ctx->shared_virt,
+			S5P_FIMV_SHARED_P_B_FRAME_QP);
+		shm &= ~(0xFFF);
+		shm |= ((p_mpeg4->rc_b_frame_qp & 0x3F) << 6);
+		shm |= (p_mpeg4->rc_p_frame_qp & 0x3F);
+		s5p_mfc_write_shm(ctx->shared_virt, shm,
+			S5P_FIMV_SHARED_P_B_FRAME_QP);
+	}	
+
+	/* frame rate */
+	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
+		if (p_mpeg4->vop_frm_delta > 0) {
+			p_mpeg4->rc_framerate = p_mpeg4->vop_time_res /
+						p_mpeg4->vop_frm_delta;
+			/* FIXME: user set 1000x scale value */
+			WRITEL(p_mpeg4->rc_framerate * 1000,
+				S5P_FIMV_ENC_RC_FRAME_RATE);
+			shm = s5p_mfc_read_shm(ctx->shared_virt,
+				S5P_FIMV_SHARED_RC_VOP_TIMING);
+			shm &= ~(0xFFFFFFFF);
+			shm |= (1 << 31);
+			shm |= ((p_mpeg4->vop_time_res & 0x7FFF) << 16);
+			shm |= (p_mpeg4->vop_frm_delta & 0xFFFF);
+			s5p_mfc_write_shm(ctx->shared_virt, shm,
+				S5P_FIMV_SHARED_RC_VOP_TIMING);
+		}	
+	} else {
+		WRITEL(0, S5P_FIMV_ENC_RC_FRAME_RATE);		
+	}
+
+	/* rate control config. */
+	reg = READL(S5P_FIMV_ENC_RC_CONFIG);	
+	/** frame QP */
+	reg &= ~(0x3F);
+	reg |= p_mpeg4->rc_frame_qp;
+	WRITEL(reg, S5P_FIMV_ENC_RC_CONFIG);	
+
+	/* max & min value of QP */
+	reg = READL(S5P_FIMV_ENC_RC_QBOUND);
+	/** max QP */
+	reg &= ~(0x3F << 8);
+	reg |= (p_mpeg4->rc_max_qp << 8);
+	/** min QP */
+	reg &= ~(0x3F);
+	reg |= p_mpeg4->rc_min_qp;
+	WRITEL(reg, S5P_FIMV_ENC_RC_QBOUND);
+
+	return 0;
+}
+
+static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
+{
+	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_mpeg4_enc_params *p_mpeg4 = &p->codec.mpeg4;
+	unsigned int reg;
+	unsigned int shm;
+
+	s5p_mfc_set_enc_params(ctx);	
+
+	/* qp */
+	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_DISABLE) {
+		shm = s5p_mfc_read_shm(ctx->shared_virt,
+			S5P_FIMV_SHARED_P_B_FRAME_QP);
+		shm &= ~(0xFFF);		
+		shm |= (p_mpeg4->rc_p_frame_qp & 0x3F);
+		s5p_mfc_write_shm(ctx->shared_virt, shm,
+			S5P_FIMV_SHARED_P_B_FRAME_QP);
+	}	
+
+	/* frame rate */
+	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE)
+		/* FIXME: user set 1000x scale value */
+		WRITEL(p_mpeg4->rc_framerate * 1000,
+			S5P_FIMV_ENC_RC_FRAME_RATE);
+	else
+		WRITEL(0, S5P_FIMV_ENC_RC_FRAME_RATE);	
+
+	/* rate control config. */
+	reg = READL(S5P_FIMV_ENC_RC_CONFIG);	
+	/** frame QP */
+	reg &= ~(0x3F);
+	reg |= p_mpeg4->rc_frame_qp;
+	WRITEL(reg, S5P_FIMV_ENC_RC_CONFIG);	
+
+	/* max & min value of QP */
+	reg = READL(S5P_FIMV_ENC_RC_QBOUND);
+	/** max QP */
+	reg &= ~(0x3F << 8);
+	reg |= (p_mpeg4->rc_max_qp << 8);
+	/** min QP */
+	reg &= ~(0x3F);
+	reg |= p_mpeg4->rc_min_qp;
+	WRITEL(reg, S5P_FIMV_ENC_RC_QBOUND);
+
+	return 0;
+}
+
 #if 0
 /* Open a new instance and get its number */
 int s5p_mfc_open_inst(struct s5p_mfc_ctx *ctx)
@@ -1165,17 +1293,27 @@ int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 	return 0;
 }
 
-int s5p_mfc_init_encode(struct s5p_mfc_ctx *mfc_ctx)
+int s5p_mfc_init_encode(struct s5p_mfc_ctx *ctx)
 {
-	struct s5p_mfc_dev *dev = mfc_ctx->dev;
+	struct s5p_mfc_dev *dev = ctx->dev;
 
 	mfc_debug("++\n");
 
-	s5p_mfc_set_enc_params_h264(mfc_ctx);
+	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_ENC)
+	s5p_mfc_set_enc_params_h264(ctx);
+	else if (ctx->codec_mode == S5P_FIMV_CODEC_MPEG4_ENC)
+		s5p_mfc_set_enc_params_mpeg4(ctx);
+	else if (ctx->codec_mode == S5P_FIMV_CODEC_H263_ENC)
+		s5p_mfc_set_enc_params_h263(ctx);
+	else {
+		mfc_err("Unknown codec for encoding (%x).\n",
+			ctx->codec_mode);
+		return -EINVAL;	
+	}	
 
-	s5p_mfc_set_shared_buffer(mfc_ctx);
+	s5p_mfc_set_shared_buffer(ctx);
 
-	WRITEL(((S5P_FIMV_CH_SEQ_HEADER << 16) & 0x70000) | (mfc_ctx->inst_no),
+	WRITEL(((S5P_FIMV_CH_SEQ_HEADER << 16) & 0x70000) | (ctx->inst_no),
 		S5P_FIMV_SI_CH0_INST_ID);
 
 	mfc_debug("--\n");
@@ -1184,23 +1322,21 @@ int s5p_mfc_init_encode(struct s5p_mfc_ctx *mfc_ctx)
 }
 
 /* Encode a single frame */
-int s5p_mfc_encode_one_frame(struct s5p_mfc_ctx *mfc_ctx)
+int s5p_mfc_encode_one_frame(struct s5p_mfc_ctx *ctx)
 {
-	struct s5p_mfc_dev *dev = mfc_ctx->dev;
+	struct s5p_mfc_dev *dev = ctx->dev;
 
 	mfc_debug("++\n");
 
 	/* memory structure cur. frame */
-	/*
-	if (ctx->enc_src_fmt->fourcc == V4L2_PIX_FMT_NV12)
+	if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M)
 		WRITEL(S5P_FIMV_ENC_MAP_FOR_CUR, 0);
-	else if (ctx->enc_src_fmt->fourcc == V4L2_PIX_FMT_NV12MT)
+	else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12MT)
 		WRITEL(S5P_FIMV_ENC_MAP_FOR_CUR, 3);
-	*/
 
-	s5p_mfc_set_shared_buffer(mfc_ctx);
+	s5p_mfc_set_shared_buffer(ctx);
 
-	WRITEL((S5P_FIMV_CH_FRAME_START << 16 & 0x70000) | (mfc_ctx->inst_no),
+	WRITEL((S5P_FIMV_CH_FRAME_START << 16 & 0x70000) | (ctx->inst_no),
 		S5P_FIMV_SI_CH0_INST_ID);
 
 	mfc_debug("--\n");

@@ -524,6 +524,150 @@ static struct v4l2_queryctrl controls[] = {
 		.step = 1,
 		.default_value = 0,
 	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "The number of B frames",
+		.minimum = 0,
+		.maximum = 2,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_PROFILE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "MPEG4 profile",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_LEVEL,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "MPEG4 level",
+		.minimum = 0,
+		.maximum = (1 << 16) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Frame QP value",
+		.minimum = 1,
+		.maximum = 31,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_MIN_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Minimum QP value",
+		.minimum = 1,
+		.maximum = 31,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_MAX_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Minimum QP value",
+		.minimum = 1,
+		.maximum = 31,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_QUARTER_PIXEL,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "Quarter pixel search enable",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_P_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "P frame QP value",
+		.minimum = 1,
+		.maximum = 31,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_B_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "B frame QP value",
+		.minimum = 1,
+		.maximum = 31,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_VOP_TIME_RES,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "MPEG4 vop time resolution",
+		.minimum = 0,
+		.maximum = (1 << 15) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_VOP_FRM_DELTA,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "MPEG4 frame delta",
+		.minimum = 1,
+		.maximum = (1 << 16) - 1,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H263_RC_FRAME_RATE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Frame rate",
+		.minimum = 1,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H263_RC_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Frame QP value",
+		.minimum = 1,
+		.maximum = 31,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H263_RC_MIN_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Minimum QP value",
+		.minimum = 1,
+		.maximum = 31,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H263_RC_MAX_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Minimum QP value",
+		.minimum = 1,
+		.maximum = 31,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H263_RC_P_FRAME_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "P frame QP value",
+		.minimum = 1,
+		.maximum = 31,
+		.step = 1,
+		.default_value = 1,
+	},	
 };
 
 #define NUM_CTRLS ARRAY_SIZE(controls)
@@ -970,25 +1114,24 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 			pix_fmt_mp->width, pix_fmt_mp->height,
 			ctx->img_width, ctx->img_height);
 
-		/* FIXME: if size is not valid, must be resize */
 		ctx->buf_width = pix_fmt_mp->plane_fmt[0].bytesperline;
 		ctx->luma_size = pix_fmt_mp->plane_fmt[0].sizeimage;
 		ctx->buf_width = pix_fmt_mp->plane_fmt[1].bytesperline;
 		ctx->chroma_size = pix_fmt_mp->plane_fmt[1].sizeimage;
 
-		/* FIXME: */
-		/* width: 128B align, height: 32B align, size: 2KB(NV12M) or 8KB(NV12MT) align */
-		/*
-		if (ctx->enc_src_fmt->fourcc == V4L2_PIX_FMT_NV12M)
-			WRITEL(S5P_FIMV_ENC_MAP_FOR_CUR, 0);
-		else if (ctx->enc_src_fmt->fourcc == V4L2_PIX_FMT_NV12MT)
-			WRITEL(S5P_FIMV_ENC_MAP_FOR_CUR, 3);
-
-		enc_ctx->lumasize = ALIGN(ctx->width, ALIGN_W) * ALIGN(ctx->height, ALIGN_H);
-		enc_ctx->lumasize = ALIGN(enc_ctx->lumasize, ALIGN_64KB);
-		enc_ctx->chromasize = ALIGN(ctx->width + 16, ALIGN_W) * ALIGN((ctx->height >> 1) + 4, ALIGN_H);
-		enc_ctx->chromasize = ALIGN(enc_ctx->chromasize, ALIGN_64KB);
-		*/
+		/* FIXME: W/A with SYS.MMU */
+		ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN) 
+				* ALIGN(ctx->img_height, S5P_FIMV_NV12_HALIGN);
+		ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN) 
+				* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12_HALIGN);
+		
+		if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M) {
+			ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12M_SALIGN);
+			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12M_SALIGN);
+		} else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12MT) {
+			ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12MT_SALIGN);
+			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12MT_SALIGN);
+		}
 
 		ctx->src_bufs_cnt = 0;
 		ctx->output_state = QUEUE_FREE;
@@ -1401,6 +1544,54 @@ static int set_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_H264_I_PERIOD:
 		p->codec.h264.open_gop_size = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES:
+		p->codec.mpeg4.num_b_frame = ctrl->value;
+		break;	
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_PROFILE:
+		p->codec.mpeg4.profile = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_LEVEL:
+		p->codec.mpeg4.level = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_FRAME_QP:
+		p->codec.mpeg4.rc_frame_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_MIN_QP:
+		p->codec.mpeg4.rc_min_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_MAX_QP:
+		p->codec.mpeg4.rc_max_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_QUARTER_PIXEL:
+		p->codec.mpeg4.quarter_pixel = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_P_FRAME_QP:
+		p->codec.mpeg4.rc_p_frame_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_B_FRAME_QP:
+		p->codec.mpeg4.rc_b_frame_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_VOP_TIME_RES:
+		p->codec.mpeg4.vop_time_res = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_VOP_FRM_DELTA:
+		p->codec.mpeg4.vop_frm_delta = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H263_RC_FRAME_RATE:
+		p->codec.mpeg4.rc_framerate = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H263_RC_FRAME_QP:
+		p->codec.mpeg4.rc_frame_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H263_RC_MIN_QP:
+		p->codec.mpeg4.rc_min_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H263_RC_MAX_QP:
+		p->codec.mpeg4.rc_max_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H263_RC_P_FRAME_QP:
+		p->codec.mpeg4.rc_p_frame_qp = ctrl->value;
 		break;
 	default:
 		v4l2_err(&dev->v4l2_dev, "Invalid control\n");

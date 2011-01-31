@@ -25,6 +25,10 @@
 
 #include "regs-mfc.h"
 
+#if defined(CONFIG_S5P_SYSMMU_MFC_L) && defined(CONFIG_S5P_SYSMMU_MFC_R)
+#define SYSMMU_MFC_ON
+#endif
+
 #define MFC_MAX_EXTRA_DPB       5
 #define MFC_MAX_BUFFERS		32
 #define MFC_FRAME_PLANES	2
@@ -212,6 +216,26 @@ struct s5p_mfc_h264_enc_params {
 /**
  *
  */
+struct s5p_mfc_mpeg4_enc_params {
+	/* MPEG4 Only */
+	u8 num_b_frame;
+	enum v4l2_codec_mfc5x_enc_mpeg4_profile profile;
+	u8 level;
+	enum v4l2_codec_mfc5x_enc_switch quarter_pixel;
+	u16 vop_time_res;
+	u16 vop_frm_delta;
+	u8 rc_b_frame_qp;
+	/* Common for MPEG4, H263 */
+	u32 rc_framerate;
+	u8 rc_frame_qp;
+	u8 rc_min_qp;
+	u8 rc_max_qp;
+	u8 rc_p_frame_qp;
+};
+
+/**
+ *
+ */
 struct s5p_mfc_enc_params {
 	u16 width;
 	u16 height;
@@ -236,6 +260,7 @@ struct s5p_mfc_enc_params {
 
 	union {
 		struct s5p_mfc_h264_enc_params h264;
+		struct s5p_mfc_mpeg4_enc_params mpeg4;
 	} codec;
 };
 

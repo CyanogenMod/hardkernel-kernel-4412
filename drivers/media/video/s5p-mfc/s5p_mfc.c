@@ -47,7 +47,7 @@
 #endif
 #endif
 
-int debug;
+int debug = 10;
 module_param(debug, int, S_IRUGO | S_IWUSR);
 
 //struct s5p_mfc_dev *dev;
@@ -837,8 +837,10 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 				ctx->img_width = s5p_mfc_get_img_width();
 				ctx->img_height = s5p_mfc_get_img_height();
 			}
-			ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12T_VALIGN);
-			ctx->buf_height = ALIGN(ctx->img_height, S5P_FIMV_NV12T_HALIGN);
+			
+			/* FIXME: W/A with SYS.MMU */
+			ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN);
+			ctx->buf_height = ALIGN(ctx->img_height, S5P_FIMV_NV12_HALIGN);
 			mfc_debug("SEQ Done: Movie dimensions %dx%d, "
 				"buffer dimensions: %dx%d\n", ctx->img_width,
 				ctx->img_height, ctx->buf_width, ctx->buf_height);
@@ -846,12 +848,12 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 								S5P_FIMV_DEC_BUF_ALIGN);
 			ctx->chroma_size = ALIGN(ctx->buf_width *
 						ALIGN(ctx->img_height / 2,
-						S5P_FIMV_NV12T_HALIGN),
+						S5P_FIMV_NV12_HALIGN),
 						S5P_FIMV_DEC_BUF_ALIGN);
 			if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC)
 				ctx->mv_size = ALIGN(ctx->buf_width *
 						ALIGN(ctx->buf_height / 4,
-						S5P_FIMV_NV12T_HALIGN),
+						S5P_FIMV_NV12_HALIGN),
 						S5P_FIMV_DEC_BUF_ALIGN);
 			else
 				ctx->mv_size = 0;
@@ -884,6 +886,8 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 		break;
 	case S5P_FIMV_R2H_CMD_SYS_INIT_RET:
 	case S5P_FIMV_R2H_CMD_FW_STATUS_RET:
+	case S5P_FIMV_R2H_CMD_SLEEP_RET:
+	case S5P_FIMV_R2H_CMD_WAKEUP_RET:
 		if (ctx)
 			clear_work_bit(ctx);
 		s5p_mfc_clear_int_flags();
@@ -1006,8 +1010,8 @@ static int s5p_mfc_open(struct file *file)
 		ret = s5p_mfc_load_firmware(dev);
 		if (ret != 0)
 			goto out_open_2;
+		
 		mfc_debug("Enabling clocks.\n");
-
 		s5p_mfc_clock_on();
 
 		/* Init the FW */
@@ -1440,15 +1444,53 @@ static int __devexit s5p_mfc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
 static int s5p_mfc_suspend(struct device *dev)
 {
-	return 0;
+	struct s5p_mfc_dev *m_dev = platform_get_drvdata(to_platform_device(dev));
+	int ret;
+
+	if (m_dev->num_inst == 0)
+		return 0;
+
+	/* FIXME: how about locking ? */
+	ret = s5p_mfc_sleep(m_dev);
+
+	return ret;
 }
 
 static int s5p_mfc_resume(struct device *dev)
 {
-	return 0;
+	struct s5p_mfc_dev *m_dev = platform_get_drvdata(to_platform_device(dev));
+	int ret;
+
+	if (m_dev->num_inst == 0)
+		return 0;
+
+#if 0
+#ifdef SYSMMU_MFC_ON
+	mfc_clock_on();
+
+	sysmmu_on(SYSMMU_MFC_L);
+	sysmmu_on(SYSMMU_MFC_R);
+
+#ifdef CONFIG_VIDEO_MFC_VCM_UMP
+	vcm_set_pgtable_base(VCM_DEV_MFC);
+#else /* CONFIG_S5P_VMEM or kernel virtual memory allocator */
+	sysmmu_set_tablebase_pgd(SYSMMU_MFC_L, __pa(swapper_pg_dir));
+	sysmmu_set_tablebase_pgd(SYSMMU_MFC_R, __pa(swapper_pg_dir));
+#endif
+
+	mfc_clock_off();
+#endif
+#endif
+
+	/* FIXME: how about locking ? */
+	ret = s5p_mfc_wakeup(m_dev);
+	
+	return ret;
 }
+#endif
 
 #if 0
 #ifdef CONFIG_PM
