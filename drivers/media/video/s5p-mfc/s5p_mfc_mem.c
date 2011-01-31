@@ -120,7 +120,7 @@ struct vb2_mem_ops *s5p_mfc_mem_ops(void)
 void **s5p_mfc_mem_init_multi(struct device *dev)
 {
 	struct vb2_vcm vcm;
-	
+
 	vcm.vcm_id = VCM_DEV_MFC;
 	vcm.driver = &s5p_mfc_vcm_driver;
 	/* FIXME: check port count */
@@ -128,9 +128,9 @@ void **s5p_mfc_mem_init_multi(struct device *dev)
 
 	sysmmu_on(SYSMMU_MFC_L);
 	sysmmu_on(SYSMMU_MFC_R);
-	
+
 	//vcm_set_pgtable_base(VCM_DEV_MFC);
-	
+
 	return (void **)vb2_sdvmm_init_multi(MFC_ALLOC_CTX_NUM, &vcm, NULL);
 }
 

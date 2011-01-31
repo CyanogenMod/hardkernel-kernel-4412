@@ -667,7 +667,7 @@ static struct v4l2_queryctrl controls[] = {
 		.maximum = 31,
 		.step = 1,
 		.default_value = 1,
-	},	
+	},
 };
 
 #define NUM_CTRLS ARRAY_SIZE(controls)
@@ -1120,11 +1120,11 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		ctx->chroma_size = pix_fmt_mp->plane_fmt[1].sizeimage;
 
 		/* FIXME: W/A with SYS.MMU */
-		ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN) 
+		ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN)
 				* ALIGN(ctx->img_height, S5P_FIMV_NV12_HALIGN);
-		ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN) 
+		ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN)
 				* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12_HALIGN);
-		
+
 		if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M) {
 			ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12M_SALIGN);
 			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12M_SALIGN);
@@ -1547,7 +1547,7 @@ static int set_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES:
 		p->codec.mpeg4.num_b_frame = ctrl->value;
-		break;	
+		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_PROFILE:
 		p->codec.mpeg4.profile = ctrl->value;
 		break;

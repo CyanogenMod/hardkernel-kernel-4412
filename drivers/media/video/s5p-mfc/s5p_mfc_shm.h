@@ -22,7 +22,7 @@ enum MFC_SHM_OFS
 	PIC_TIME_TOP			= 0x10, /* D */
 	PIC_TIME_BOT			= 0x14, /* D */
 	START_BYTE_NUM			= 0x18, /* D */
-	
+
 	CROP_INFO1			= 0x20, /* D */
 	CROP_INFO2			= 0x24, /* D */
 	EXT_ENC_CONTROL			= 0x28,	/* E */

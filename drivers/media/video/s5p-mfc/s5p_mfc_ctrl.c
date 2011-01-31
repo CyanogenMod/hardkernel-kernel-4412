@@ -182,7 +182,6 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 		return -ENOMEM;
 	}
 
-	
 	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
 	if (s5p_mfc_bitproc_phys & (128 << 10)) {
