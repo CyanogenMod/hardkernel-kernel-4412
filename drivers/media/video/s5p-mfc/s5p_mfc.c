@@ -47,7 +47,7 @@
 #endif
 #endif
 
-int debug = 10;
+int debug;
 module_param(debug, int, S_IRUGO | S_IWUSR);
 
 //struct s5p_mfc_dev *dev;
@@ -837,7 +837,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 				ctx->img_width = s5p_mfc_get_img_width();
 				ctx->img_height = s5p_mfc_get_img_height();
 			}
-			
+
 			/* FIXME: W/A with SYS.MMU */
 			ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN);
 			ctx->buf_height = ALIGN(ctx->img_height, S5P_FIMV_NV12_HALIGN);
@@ -1010,7 +1010,7 @@ static int s5p_mfc_open(struct file *file)
 		ret = s5p_mfc_load_firmware(dev);
 		if (ret != 0)
 			goto out_open_2;
-		
+
 		mfc_debug("Enabling clocks.\n");
 		s5p_mfc_clock_on();
 
@@ -1487,9 +1487,12 @@ static int s5p_mfc_resume(struct device *dev)
 
 	/* FIXME: how about locking ? */
 	ret = s5p_mfc_wakeup(m_dev);
-	
+
 	return ret;
 }
+#else
+#define s5p_mfc_suspend		NULL
+#define s5p_mfc_resume		NULL
 #endif
 
 #if 0
