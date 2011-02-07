@@ -106,7 +106,7 @@ int s5p_mfc_init_pm(struct s5p_mfc_dev *dev)
 #ifdef CONFIG_PM_RUNTIME
 	pm->device = &dev->plat_dev->dev;
 
-	pm_runtime_enable(dev->plat_dev->dev);
+	pm_runtime_enable(pm->device);
 #endif
 
 #ifdef CLK_DEBUG
