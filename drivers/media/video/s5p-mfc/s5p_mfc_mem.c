@@ -79,39 +79,6 @@ void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes)
 	vb2_dma_pool_cleanup_multi(alloc_ctxes, MFC_ALLOC_CTX_NUM);
 }
 #elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
-static void s5p_mfc_tlb_invalidate(enum vcm_dev_id id)
-{
-	//if (s5p_mfc_power_chk()) {
-		s5p_mfc_clock_on();
-
-		sysmmu_tlb_invalidate(SYSMMU_MFC_L);
-		sysmmu_tlb_invalidate(SYSMMU_MFC_R);
-
-		s5p_mfc_clock_off();
-	//}
-}
-
-static void s5p_mfc_set_pagetable(enum vcm_dev_id id, unsigned long base)
-{
-	mfc_debug("base: 0x%08lx\n", base);
-
-	//if (s5p_mfc_power_chk()) {
-		s5p_mfc_clock_on();
-
-		sysmmu_set_tablebase_pgd(SYSMMU_MFC_L, base);
-		sysmmu_set_tablebase_pgd(SYSMMU_MFC_R, base);
-
-		s5p_mfc_clock_off();
-	//}
-}
-
-const static struct s5p_vcm_driver s5p_mfc_vcm_driver = {
-	.tlb_invalidator = &s5p_mfc_tlb_invalidate,
-	.pgd_base_specifier = &s5p_mfc_set_pagetable,
-	.phys_alloc = NULL,
-	.phys_free = NULL,
-};
-
 struct vb2_mem_ops *s5p_mfc_mem_ops(void)
 {
 	return (struct vb2_mem_ops *)&vb2_sdvmm_memops;
@@ -120,26 +87,22 @@ struct vb2_mem_ops *s5p_mfc_mem_ops(void)
 void **s5p_mfc_mem_init_multi(struct device *dev)
 {
 	struct vb2_vcm vcm;
+	void ** alloc_ctxes;
 
 	vcm.vcm_id = VCM_DEV_MFC;
-	vcm.driver = &s5p_mfc_vcm_driver;
 	/* FIXME: check port count */
 	vcm.size = SZ_256M;
 
-	sysmmu_on(SYSMMU_MFC_L);
-	sysmmu_on(SYSMMU_MFC_R);
+	s5p_mfc_power_on();
+	alloc_ctxes = (void **)vb2_sdvmm_init_multi(MFC_ALLOC_CTX_NUM, &vcm, NULL);
+	s5p_mfc_power_off();
 
-	//vcm_set_pgtable_base(VCM_DEV_MFC);
-
-	return (void **)vb2_sdvmm_init_multi(MFC_ALLOC_CTX_NUM, &vcm, NULL);
+	return alloc_ctxes;
 }
 
 void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes)
 {
 	vb2_sdvmm_cleanup_multi(alloc_ctxes);
-
-	sysmmu_off(SYSMMU_MFC_L);
-	sysmmu_off(SYSMMU_MFC_R);
 }
 #endif
 
@@ -256,6 +219,20 @@ void s5p_mfc_cache_inv(const void *start_addr, unsigned long size)
 	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
 	*/
 }
+
+void s5p_mfc_mem_suspend(void *alloc_ctx)
+{
+	s5p_mfc_clock_on();
+	vb2_sdvmm_suspend(alloc_ctx);
+	s5p_mfc_clock_off();
+}
+
+void s5p_mfc_mem_resume(void *alloc_ctx)
+{
+	s5p_mfc_clock_on();
+	vb2_sdvmm_resume(alloc_ctx);
+	s5p_mfc_clock_off();
+}
 #else
 void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
 {
@@ -273,5 +250,15 @@ void s5p_mfc_cache_inv(const void *start_addr, unsigned long size)
 	paddr = __pa((unsigned long)start_addr);
 	outer_inv_range(paddr, paddr + size);
 	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
+}
+
+void s5p_mfc_mem_suspend(void *alloc_ctx)
+{
+	/* NOP */
+}
+
+void s5p_mfc_mem_resume(void *alloc_ctx)
+{
+	/* NOP */
 }
 #endif

@@ -136,7 +136,7 @@ int s5p_mfc_clock_on(void)
 {
 #ifdef CLK_DEBUG
 	atomic_inc(&clk_ref);
-	mfc_debug("+ %d", atomic_read(&clk_ref));
+	mfc_debug(3, "+ %d", atomic_read(&clk_ref));
 #endif
 
 #ifdef CONFIG_PM_RUNTIME
@@ -150,7 +150,7 @@ void s5p_mfc_clock_off(void)
 {
 #ifdef CLK_DEBUG
 	atomic_dec(&clk_ref);
-	mfc_debug("- %d", atomic_read(&clk_ref));
+	mfc_debug(3, "- %d", atomic_read(&clk_ref));
 #endif
 
 #ifdef CONFIG_PM_RUNTIME
@@ -184,7 +184,7 @@ int s5p_mfc_power_off(void)
 
 bool s5p_mfc_power_chk(void)
 {
-	mfc_debug("%s", atomic_read(&pm->power) ? "on" : "off");
+	mfc_debug(2, "%s", atomic_read(&pm->power) ? "on" : "off");
 
 	return atomic_read(&pm->power) ? true : false;
 }

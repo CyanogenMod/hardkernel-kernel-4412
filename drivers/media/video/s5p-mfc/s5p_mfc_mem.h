@@ -91,10 +91,12 @@ static inline size_t s5p_mfc_mem_cookie(void *a, void *b)
 {
 	return (size_t)vb2_dma_pool_memops.cookie(b);
 }
+
 static inline void s5p_mfc_mem_put(void *a, void *b)
 {
 	vb2_dma_pool_memops.put(b);
 }
+
 static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 {
 	return vb2_dma_pool_memops.vaddr(b);
@@ -113,7 +115,7 @@ static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 #define MFC_CMA_FW_ALLOC_CTX	MFC_BANK_A_ALLOC_CTX
 
 
-#define mfc_plane_cookie(v, n)	vb2_sdvmm_plane_paddr(v, n)
+#define mfc_plane_cookie(v, n)	vb2_sdvmm_plane_dvaddr(v, n)
 
 static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
 {
@@ -124,10 +126,12 @@ static inline size_t s5p_mfc_mem_cookie(void *a, void *b)
 {
 	return (size_t)vb2_sdvmm_memops.cookie(b);
 }
+
 static inline void s5p_mfc_mem_put(void *a, void *b)
 {
 	vb2_sdvmm_memops.put(b);
 }
+
 static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 {
 	return vb2_sdvmm_memops.vaddr(b);
@@ -140,5 +144,8 @@ void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes);
 
 void s5p_mfc_cache_clean(const void *start_addr, unsigned long size);
 void s5p_mfc_cache_inv(const void *start_addr, unsigned long size);
+
+void s5p_mfc_mem_suspend(void *alloc_ctx);
+void s5p_mfc_mem_resume(void *alloc_ctx);
 
 #endif /* __S5P_MFC_MEM_H_ */

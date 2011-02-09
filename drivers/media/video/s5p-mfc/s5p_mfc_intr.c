@@ -40,7 +40,7 @@ int s5p_mfc_wait_for_done_dev(struct s5p_mfc_dev *dev, int command)
 		mfc_err("Interrupted by a signal.\n");
 		return 1;
 	}
-	mfc_debug("Finished waiting (dev->int_type:%d, command: %d).\n",
+	mfc_debug(1, "Finished waiting (dev->int_type:%d, command: %d).\n",
 							dev->int_type, command);
 	/* RMVME: */
 	if (dev->int_type == S5P_FIMV_R2H_CMD_RSV_RET)
@@ -79,7 +79,7 @@ int s5p_mfc_wait_for_done_ctx(struct s5p_mfc_ctx *ctx,
 		mfc_err("Interrupted by a signal.\n");
 		return 1;
 	}
-	mfc_debug("Finished waiting (ctx->int_type:%d, command: %d).\n",
+	mfc_debug(1, "Finished waiting (ctx->int_type:%d, command: %d).\n",
 							ctx->int_type, command);
 	/* RMVME: */
 	if (ctx->int_type == S5P_FIMV_R2H_CMD_RSV_RET)

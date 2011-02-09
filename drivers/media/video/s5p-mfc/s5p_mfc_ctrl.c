@@ -26,6 +26,7 @@
 #include "s5p_mfc_debug.h"
 #include "s5p_mfc_reg.h"
 #include "s5p_mfc_cmd.h"
+#include "s5p_mfc_pm.h"
 
 static void *s5p_mfc_bitproc_buf;
 static size_t s5p_mfc_bitproc_phys;
@@ -53,7 +54,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	/* Get memory region information and check if it is correct */
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 	err = cma_info(&mem_info_f, dev->v4l2_dev.dev, MFC_CMA_FW);
-	mfc_debug("Area \"%s\" is from %08x to %08x and has size %08x", "f",
+	mfc_debug(3, "Area \"%s\" is from %08x to %08x and has size %08x", "f",
 				mem_info_f.lower_bound, mem_info_f.upper_bound,
 							mem_info_f.total_size);
 	if (err) {
@@ -61,7 +62,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 		return -EINVAL;
 	}
 	err = cma_info(&mem_info_a, dev->v4l2_dev.dev, MFC_CMA_BANK1);
-	mfc_debug("Area \"%s\" is from %08x to %08x and has size %08x", "a",
+	mfc_debug(3, "Area \"%s\" is from %08x to %08x and has size %08x", "a",
 			mem_info_a.lower_bound, mem_info_a.upper_bound,
 						mem_info_a.total_size);
 	if (err) {
@@ -69,7 +70,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 		return -EINVAL;
 	}
 	err = cma_info(&mem_info_b, dev->v4l2_dev.dev, MFC_CMA_BANK2);
-	mfc_debug("Area \"%s\" is from %08x to %08x and has size %08x", "b",
+	mfc_debug(3, "Area \"%s\" is from %08x to %08x and has size %08x", "b",
 		mem_info_b.lower_bound, mem_info_b.upper_bound,
 					mem_info_b.total_size);
 	if (err) {
@@ -81,7 +82,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 			"allocated before  memory for buffers (bank A).\n");
 		return -EINVAL;
 	}
-	mfc_debug("Allocating memory for firmware.\n");
+	mfc_debug(2, "Allocating memory for firmware.\n");
 	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], FIRMWARE_CODE_SIZE);
 	if (IS_ERR(s5p_mfc_bitproc_buf)) {
@@ -101,13 +102,13 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	}
 	dev->port_a = s5p_mfc_bitproc_phys;
 	dev->port_b = mem_info_b.lower_bound;
-	mfc_debug("Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
+	mfc_debug(2, "Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
 				dev->port_a, dev->port_b, s5p_mfc_bitproc_phys,
 							FIRMWARE_CODE_SIZE);
 
 	s5p_mfc_bitproc_virt = s5p_mfc_mem_vaddr(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	mfc_debug("Virtual address for FW: %08lx\n",
+	mfc_debug(2, "Virtual address for FW: %08lx\n",
 				(long unsigned int)s5p_mfc_bitproc_virt);
 	if (!s5p_mfc_bitproc_virt) {
 		mfc_err("Bitprocessor memory remap failed\n");
@@ -118,7 +119,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 		return -EIO;
 	}
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	mfc_debug("Allocating memory for firmware.\n");
+	mfc_debug(2, "Allocating memory for firmware.\n");
 	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], FIRMWARE_CODE_SIZE);
 	if (IS_ERR(s5p_mfc_bitproc_buf)) {
@@ -140,7 +141,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	s5p_mfc_bitproc_virt = s5p_mfc_mem_vaddr(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	mfc_debug("Virtual address for FW: %08lx\n",
+	mfc_debug(2, "Virtual address for FW: %08lx\n",
 				(long unsigned int)s5p_mfc_bitproc_virt);
 	if (!s5p_mfc_bitproc_virt) {
 		mfc_err("Bitprocessor memory remap failed\n");
@@ -168,12 +169,12 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	dev->port_b = b_base_phys;
 
-	mfc_debug("Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
+	mfc_debug(2, "Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
 			dev->port_a, dev->port_b,
 			s5p_mfc_bitproc_phys,
 			FIRMWARE_CODE_SIZE);
 #elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
-	mfc_debug("Allocating memory for firmware.\n");
+	mfc_debug(2, "Allocating memory for firmware.\n");
 	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], FIRMWARE_CODE_SIZE);
 	if (IS_ERR(s5p_mfc_bitproc_buf)) {
@@ -195,7 +196,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	s5p_mfc_bitproc_virt = s5p_mfc_mem_vaddr(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	mfc_debug("Virtual address for FW: %08lx\n",
+	mfc_debug(2, "Virtual address for FW: %08lx\n",
 				(long unsigned int)s5p_mfc_bitproc_virt);
 	if (!s5p_mfc_bitproc_virt) {
 		mfc_err("Bitprocessor memory remap failed\n");
@@ -209,7 +210,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	dev->port_a = s5p_mfc_bitproc_phys;
 	dev->port_b = s5p_mfc_bitproc_phys;
 
-	mfc_debug("Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
+	mfc_debug(2, "Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
 			dev->port_a, dev->port_b,
 			s5p_mfc_bitproc_phys,
 			FIRMWARE_CODE_SIZE);
@@ -228,7 +229,7 @@ int s5p_mfc_load_firmware(struct s5p_mfc_dev *dev)
 	/* Firmare has to be present as a separate file or compiled
 	 * into kernel. */
 	mfc_debug_enter();
-	mfc_debug("Requesting fw\n");
+	mfc_debug(2, "Requesting fw\n");
 	err = request_firmware((const struct firmware **)&fw_blob,
 				     "s5pc110-mfc.fw", dev->v4l2_dev.dev);
 
@@ -237,7 +238,7 @@ int s5p_mfc_load_firmware(struct s5p_mfc_dev *dev)
 		return -EINVAL;
 	}
 
-	mfc_debug("Ret of request_firmware: %d Size: %d\n", err, fw_blob->size);
+	mfc_debug(2, "Ret of request_firmware: %d Size: %d\n", err, fw_blob->size);
 
 	if (fw_blob->size > FIRMWARE_CODE_SIZE) {
 		mfc_err("MFC firmware is too big to be loaded.\n");
@@ -275,7 +276,8 @@ int s5p_mfc_release_firmware(struct s5p_mfc_dev *dev)
 				 FIRMWARE_CODE_SIZE, DMA_TO_DEVICE);
 	*/
 	s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
-							s5p_mfc_bitproc_buf);
+			s5p_mfc_bitproc_buf);
+
 	s5p_mfc_bitproc_virt =  0;
 	s5p_mfc_bitproc_phys = 0;
 	s5p_mfc_bitproc_buf = 0;
@@ -379,7 +381,7 @@ static inline void s5p_mfc_init_memctrl(struct s5p_mfc_dev *dev)
 	/* channelB, port1 */
 	s5p_mfc_write_reg(dev->port_b, S5P_FIMV_MC_DRAMBASE_ADR_B);
 
-	mfc_debug("Port A: %08x, Port B: %08x\n", dev->port_a, dev->port_b);
+	mfc_debug(2, "Port A: %08x, Port B: %08x\n", dev->port_a, dev->port_b);
 }
 
 static inline void s5p_mfc_clear_cmds(void)
@@ -403,13 +405,16 @@ int s5p_mfc_init_hw(struct s5p_mfc_dev *dev)
 		return -EINVAL;
 
 	/* 0. MFC reset */
-	mfc_debug("MFC reset...\n");
+	mfc_debug(2, "MFC reset...\n");
+
+	s5p_mfc_clock_on();
+
 	ret = s5p_mfc_reset();
 	if (ret) {
 		mfc_err("Failed to reset MFC - timeout.\n");
 		return ret;
 	}
-	mfc_debug("Done MFC reset...\n");
+	mfc_debug(2, "Done MFC reset...\n");
 
 	/* 1. Set DRAM base Addr */
 	s5p_mfc_init_memctrl(dev);
@@ -419,7 +424,7 @@ int s5p_mfc_init_hw(struct s5p_mfc_dev *dev)
 
 	/* 3. Release reset signal to the RISC */
 	s5p_mfc_write_reg(0x3ff, S5P_FIMV_SW_RESET);
-	mfc_debug("Will now wait for completion of firmware transfer.\n");
+	mfc_debug(2, "Will now wait for completion of firmware transfer.\n");
 	if (s5p_mfc_wait_for_done_dev(dev, S5P_FIMV_R2H_CMD_FW_STATUS_RET)) {
 		mfc_err("Failed to load firmware.\n");
 		s5p_mfc_clean_dev_int_flags(dev);
@@ -433,11 +438,12 @@ int s5p_mfc_init_hw(struct s5p_mfc_dev *dev)
 		mfc_err("Failed to send command to MFC - timeout.\n");
 		return ret;
 	}
-	mfc_debug("Ok, now will write a command to init the system\n");
+	mfc_debug(2, "Ok, now will write a command to init the system\n");
 	if (s5p_mfc_wait_for_done_dev(dev, S5P_FIMV_R2H_CMD_SYS_INIT_RET)) {
 		mfc_err("Failed to load firmware\n");
 		return -EIO;
 	}
+
 	dev->int_cond = 0;
 	if (dev->int_err != 0 || dev->int_type !=
 						S5P_FIMV_R2H_CMD_SYS_INIT_RET) {
@@ -452,6 +458,8 @@ int s5p_mfc_init_hw(struct s5p_mfc_dev *dev)
 		 MFC_GET_REG(SYS_FW_VER_MONTH),
 		 MFC_GET_REG(SYS_FW_VER_DATE));
 
+	s5p_mfc_clock_off();
+
 	mfc_debug_leave();
 
 	return 0;
@@ -461,7 +469,9 @@ int s5p_mfc_init_hw(struct s5p_mfc_dev *dev)
 /* Deinitialize hardware */
 void s5p_mfc_deinit_hw(struct s5p_mfc_dev *dev)
 {
+	s5p_mfc_clock_on();
 	s5p_mfc_reset();
+	s5p_mfc_clock_off();
 }
 
 int s5p_mfc_sleep(struct s5p_mfc_dev *dev)
@@ -469,6 +479,8 @@ int s5p_mfc_sleep(struct s5p_mfc_dev *dev)
 	int ret;
 
 	mfc_debug_enter();
+
+	s5p_mfc_clock_on();
 
 	s5p_mfc_clean_dev_int_flags(dev);
 	ret = s5p_mfc_sleep_cmd(dev);
@@ -480,6 +492,9 @@ int s5p_mfc_sleep(struct s5p_mfc_dev *dev)
 		mfc_err("Failed to sleep\n");
 		return -EIO;
 	}
+
+	s5p_mfc_clock_off();
+
 	dev->int_cond = 0;
 	if (dev->int_err != 0 || dev->int_type !=
 						S5P_FIMV_R2H_CMD_SLEEP_RET) {
@@ -501,13 +516,16 @@ int s5p_mfc_wakeup(struct s5p_mfc_dev *dev)
 	mfc_debug_enter();
 
 	/* 0. MFC reset */
-	mfc_debug("MFC reset...\n");
+	mfc_debug(2, "MFC reset...\n");
+
+	s5p_mfc_clock_on();
+
 	ret = s5p_mfc_reset();
 	if (ret) {
 		mfc_err("Failed to reset MFC - timeout.\n");
 		return ret;
 	}
-	mfc_debug("Done MFC reset...\n");
+	mfc_debug(2, "Done MFC reset...\n");
 
 	/* 1. Set DRAM base Addr */
 	s5p_mfc_init_memctrl(dev);
@@ -526,11 +544,14 @@ int s5p_mfc_wakeup(struct s5p_mfc_dev *dev)
 	/* 4. Release reset signal to the RISC */
 	s5p_mfc_write_reg(0x3ff, S5P_FIMV_SW_RESET);
 
-	mfc_debug("Ok, now will write a command to wakeup the system\n");
+	mfc_debug(2, "Ok, now will write a command to wakeup the system\n");
 	if (s5p_mfc_wait_for_done_dev(dev, S5P_FIMV_R2H_CMD_WAKEUP_RET)) {
 		mfc_err("Failed to load firmware\n");
 		return -EIO;
 	}
+
+	s5p_mfc_clock_off();
+
 	dev->int_cond = 0;
 	if (dev->int_err != 0 || dev->int_type !=
 						S5P_FIMV_R2H_CMD_WAKEUP_RET) {

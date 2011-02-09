@@ -20,17 +20,18 @@
 #ifdef DEBUG
 extern int debug;
 
-#define mfc_debug(fmt, args...)				\
-	do {						\
-		printk(KERN_DEBUG "%s:%d: " fmt,	\
-		       __func__, __LINE__, ##args);	\
+#define mfc_debug(level, fmt, args...)				\
+	do {							\
+		if (debug >= level)				\
+			printk(KERN_DEBUG "%s:%d: " fmt,	\
+				__func__, __LINE__, ##args);	\
 	} while(0)
 #else
 #define mfc_debug(fmt, args...)
 #endif
 
-#define mfc_debug_enter() mfc_debug("enter")
-#define mfc_debug_leave() mfc_debug("leave")
+#define mfc_debug_enter() mfc_debug(5, "enter")
+#define mfc_debug_leave() mfc_debug(5, "leave")
 
 #define mfc_err(fmt, args...)				\
 	do {						\

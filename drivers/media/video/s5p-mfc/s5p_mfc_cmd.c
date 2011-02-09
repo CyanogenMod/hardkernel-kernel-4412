@@ -500,7 +500,7 @@ int s5p_mfc_open_inst_cmd(struct s5p_mfc_ctx *ctx)
 
 	mfc_debug_enter();
 
-	mfc_debug("Requested codec mode: %d\n", ctx->codec_mode);
+	mfc_debug(2, "Requested codec mode: %d\n", ctx->codec_mode);
 
 	memset(&h2r_args, 0, sizeof(struct s5p_mfc_cmd_args));
 	h2r_args.arg[0] = ctx->codec_mode;
