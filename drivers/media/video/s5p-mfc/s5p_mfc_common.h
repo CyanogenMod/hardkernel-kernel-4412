@@ -50,6 +50,8 @@
 
 #define MFC_NAME_LEN		16
 
+#define STUFF_BYTE		4
+
 /**
  * enum s5p_mfc_inst_type - The type of an MFC device node.
  */
