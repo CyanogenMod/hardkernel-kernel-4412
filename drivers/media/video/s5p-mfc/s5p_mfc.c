@@ -366,19 +366,21 @@ static inline void s5p_mfc_handle_error(struct s5p_mfc_ctx *ctx,
 	unsigned int reason, unsigned int err)
 {
 	/* FIXME: */
-	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dev *dev;
 	unsigned long flags;
-
-	/* FIXME: */
-	mfc_err("Interrupt Error: %08x\n", err);
-	s5p_mfc_clear_int_flags();
-	wake_up_dev(dev, reason, err);
 
 	/* FIXME: */
 	/* If no context is available then all necessary
 	 * processing has been done. */
 	if (ctx == 0)
 		return;
+
+	dev = ctx->dev;
+	/* FIXME: */
+	mfc_err("Interrupt Error: %08x\n", err);
+	s5p_mfc_clear_int_flags();
+	wake_up_dev(dev, reason, err);
+
 	/* Error recovery is dependent on the state of context */
 	switch (ctx->state) {
 	case MFCINST_INIT:
@@ -764,6 +766,7 @@ static int s5p_mfc_release(struct file *file)
 
 	mfc_debug_enter();
 
+	s5p_mfc_clock_on();
 	vb2_queue_release(&ctx->vq_src);
 	vb2_queue_release(&ctx->vq_dst);
 
@@ -812,6 +815,7 @@ static int s5p_mfc_release(struct file *file)
 			mfc_err("power off failed\n");
 	}
 
+	s5p_mfc_clock_off();
 	dev->ctx[ctx->num] = 0;
 	kfree(ctx);
 
