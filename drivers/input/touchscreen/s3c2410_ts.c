@@ -94,6 +94,7 @@ struct s3c2410ts {
 	int count;
 	int shift;
 	int features;
+	bool request_done;
 
 	int cal_enable;
 	int cal_x_max;
@@ -240,6 +241,8 @@ static void touch_timer_fire(unsigned long data)
 		input_sync(ts.input);
 
 		writel(WAIT4INT | INT_DOWN, ts.io + S3C2410_ADCTSC);
+
+		ts.request_done = true;
 	}
 }
 
@@ -267,10 +270,12 @@ static irqreturn_t stylus_irq(int irq, void *dev_id)
 	 * the timer is running, but maybe we ought to verify that the
 	 * timer isn't running anyways. */
 
-	if (down)
+	if (down && ts.request_done) {
+		ts.request_done = false;
 		s3c_adc_start(ts.client, 0, 1 << ts.shift);
-	else
+	} else {
 		dev_dbg(ts.dev, "%s: count=%d\n", __func__, ts.count);
+	}
 
 	if (ts.features & FEAT_PEN_IRQ) {
 		/* Clear pen down/up interrupt */
@@ -441,6 +446,7 @@ static int __devinit s3c2410ts_probe(struct platform_device *pdev)
 
 	ts.shift = info->oversampling_shift;
 	ts.features = platform_get_device_id(pdev)->driver_data;
+	ts.request_done = true;
 
 	ret = request_irq(ts.irq_tc, stylus_irq, IRQF_DISABLED,
 			  "s3c2410_ts_pen", ts.input);
