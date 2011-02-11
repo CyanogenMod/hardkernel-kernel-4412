@@ -438,7 +438,7 @@ static int __devinit s3c2410ts_probe(struct platform_device *pdev)
 		input_set_abs_params(ts.input, ABS_Y, 0, info->cal_y_max, 0, 0);
 	}
 
-	ts.input->name = "S3C24XX TouchScreen";
+	ts.input->name = "S3C24XX_TouchScreen";
 	ts.input->id.bustype = BUS_HOST;
 	ts.input->id.vendor = 0xDEAD;
 	ts.input->id.product = 0xBEEF;
