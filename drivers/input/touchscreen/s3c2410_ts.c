@@ -427,15 +427,15 @@ static int __devinit s3c2410ts_probe(struct platform_device *pdev)
 
 	if (info->cal_x_max == 0 || info->cal_y_max == 0) {
 		ts.cal_enable = 0;
-		input_set_abs_params(ts.input, ABS_X, 0, 0x3FF, 0, 0);
-		input_set_abs_params(ts.input, ABS_Y, 0, 0x3FF, 0, 0);
+		input_set_abs_params(ts.input, ABS_X, 0, 0x3FF, 32, 0);
+		input_set_abs_params(ts.input, ABS_Y, 0, 0x3FF, 32, 0);
 	} else {
 		for (i = 0; i < 7; i++)
 			ts.cal_param[i] = info->cal_param[i];
 
 		ts.cal_enable = 1;
-		input_set_abs_params(ts.input, ABS_X, 0, info->cal_x_max, 0, 0);
-		input_set_abs_params(ts.input, ABS_Y, 0, info->cal_y_max, 0, 0);
+		input_set_abs_params(ts.input, ABS_X, 0, info->cal_x_max, 32, 0);
+		input_set_abs_params(ts.input, ABS_Y, 0, info->cal_y_max, 32, 0);
 	}
 
 	ts.input->name = "S3C24XX_TouchScreen";
