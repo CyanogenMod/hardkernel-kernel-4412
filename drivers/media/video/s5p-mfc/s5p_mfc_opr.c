@@ -258,15 +258,39 @@ void s5p_mfc_release_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 /* Allocate codec buffers */
 int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 {
-	unsigned int luma_size, chroma_size, mv_size;
 	struct s5p_mfc_dev *dev = ctx->dev;
+	unsigned int enc_ref_y_size = 0;
+	unsigned int enc_ref_c_size = 0;
+	unsigned int guard_width, guard_height;
 
 	mfc_debug_enter();
-	luma_size = ctx->luma_size;
-	chroma_size = ctx->chroma_size;
-	mv_size = ctx->mv_size;
-	mfc_debug(2, "Luma size:%d Chroma size:%d MV size:%d Totals bufs: %d\n",
-		  luma_size, chroma_size, mv_size, ctx->total_dpb_count);
+
+	if (ctx->type == MFCINST_DECODER) {
+		mfc_debug(2, "Luma size:%d Chroma size:%d MV size:%d\n",
+			  ctx->luma_size, ctx->chroma_size, ctx->mv_size);
+		mfc_debug(2, "Totals bufs: %d\n", ctx->total_dpb_count);
+	} else if (ctx->type == MFCINST_ENCODER) {
+		enc_ref_y_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
+			* ALIGN(ctx->img_height, S5P_FIMV_NV12MT_VALIGN);
+		enc_ref_y_size = ALIGN(enc_ref_y_size, S5P_FIMV_NV12MT_SALIGN);
+
+		if (ctx->codec_mode == S5P_FIMV_CODEC_H264_ENC) {
+			enc_ref_c_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
+				* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12MT_VALIGN);
+			enc_ref_c_size = ALIGN(enc_ref_c_size, S5P_FIMV_NV12MT_SALIGN);
+		} else {
+			guard_width = ALIGN(ctx->img_width + 16, S5P_FIMV_NV12MT_HALIGN);
+			guard_height = ALIGN((ctx->img_height >> 1) + 4, S5P_FIMV_NV12MT_VALIGN);
+			enc_ref_c_size = ALIGN(guard_width * guard_height,
+					       S5P_FIMV_NV12MT_SALIGN);
+		}
+
+		mfc_debug(2, "recon luma size: %d chroma size: %d\n",
+			  enc_ref_c_size, enc_ref_c_size);
+	} else {
+		return -EINVAL;
+	}
+
 	/* Codecs have different memory requirements */
 	switch (ctx->codec_mode) {
 	case S5P_FIMV_CODEC_H264_DEC:
@@ -276,8 +300,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 					S5P_FIMV_DEC_BUF_ALIGN);
 		/* TODO, when merged with FIMC then test will it work without
 		 * alignment to 8192. For all codecs. */
-		ctx->port_b_size =
-		    ctx->total_dpb_count * mv_size;
+		ctx->port_b_size = ctx->total_dpb_count * ctx->mv_size;
 		break;
 	case S5P_FIMV_CODEC_MPEG4_DEC:
 	case S5P_FIMV_CODEC_DIVX412_DEC:
@@ -319,36 +342,31 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 			     S5P_FIMV_DEC_BUF_ALIGN);
 		ctx->port_b_size = 0;
 		break;
+
 	case S5P_FIMV_CODEC_H264_ENC:
-		ctx->port_a_size =
-			ALIGN(luma_size, S5P_FIMV_ENC_BUF_ALIGN) * 2 +
-			S5P_FIMV_ENC_UPMV_SIZE +
-			S5P_FIMV_ENC_COLFLG_SIZE +
-			S5P_FIMV_ENC_INTRAMD_SIZE +
-			S5P_FIMV_ENC_NBORINFO_SIZE;
-		ctx->port_b_size =
-			ALIGN(luma_size, S5P_FIMV_ENC_BUF_ALIGN) * 2 +
-			ALIGN(chroma_size, S5P_FIMV_ENC_BUF_ALIGN) * 4 +
-			S5P_FIMV_ENC_INTRAPRED_SIZE;
+		ctx->port_a_size = (enc_ref_y_size * 2) +
+				   S5P_FIMV_ENC_UPMV_SIZE +
+				   S5P_FIMV_ENC_COLFLG_SIZE +
+				   S5P_FIMV_ENC_INTRAMD_SIZE +
+				   S5P_FIMV_ENC_NBORINFO_SIZE;
+		ctx->port_b_size = (enc_ref_y_size * 2) +
+				   (enc_ref_c_size * 4) +
+				   S5P_FIMV_ENC_INTRAPRED_SIZE;
 		break;
 	case S5P_FIMV_CODEC_MPEG4_ENC:
-		ctx->port_a_size =
-			ALIGN(luma_size, S5P_FIMV_ENC_BUF_ALIGN) * 2 +
-			S5P_FIMV_ENC_UPMV_SIZE +
-			S5P_FIMV_ENC_COLFLG_SIZE +
-			S5P_FIMV_ENC_ACDCCOEF_SIZE;
-		ctx->port_b_size =
-			ALIGN(luma_size, S5P_FIMV_ENC_BUF_ALIGN) * 2 +
-			ALIGN(chroma_size, S5P_FIMV_ENC_BUF_ALIGN) * 4;
+		ctx->port_a_size = (enc_ref_y_size * 2) +
+				   S5P_FIMV_ENC_UPMV_SIZE +
+				   S5P_FIMV_ENC_COLFLG_SIZE +
+				   S5P_FIMV_ENC_ACDCCOEF_SIZE;
+		ctx->port_b_size = (enc_ref_y_size * 2) +
+				   (enc_ref_c_size * 4);
 		break;
 	case S5P_FIMV_CODEC_H263_ENC:
-		ctx->port_a_size =
-			ALIGN(luma_size, S5P_FIMV_ENC_BUF_ALIGN) * 2 +
-			S5P_FIMV_ENC_UPMV_SIZE +
-			S5P_FIMV_ENC_ACDCCOEF_SIZE;
-		ctx->port_b_size =
-			ALIGN(luma_size, S5P_FIMV_ENC_BUF_ALIGN) * 2 +
-			ALIGN(chroma_size, S5P_FIMV_ENC_BUF_ALIGN) * 4;
+		ctx->port_a_size = (enc_ref_y_size * 2) +
+				   S5P_FIMV_ENC_UPMV_SIZE +
+				   S5P_FIMV_ENC_ACDCCOEF_SIZE;
+		ctx->port_b_size = (enc_ref_y_size * 2) +
+				   (enc_ref_c_size * 4);
 		break;
 	default:
 		break;
@@ -579,13 +597,18 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	buf_size1 = ctx->port_a_size;
 	buf_addr2 = ctx->port_b_phys;
 	buf_size2 = ctx->port_b_size;
-	mfc_debug(2, "Buf1: %p (%d) Buf2: %p (%d)\n", (void *)buf_addr1, buf_size1,
-						(void *)buf_addr2, buf_size2);
+
+	mfc_debug(2, "Buf1: %p (%d) Buf2: %p (%d)\n",
+		  (void *)buf_addr1, buf_size1,
+		  (void *)buf_addr2, buf_size2);
 	mfc_debug(2, "Total DPB COUNT: %d\n", ctx->total_dpb_count);
 	mfc_debug(2, "Setting display delay to %d\n", ctx->display_delay);
+
 	dpb = READL(S5P_FIMV_SI_CH0_DPB_CONF_CTRL) & ~S5P_FIMV_DPB_COUNT_MASK;
 	WRITEL(ctx->total_dpb_count | dpb, S5P_FIMV_SI_CH0_DPB_CONF_CTRL);
+
 	s5p_mfc_set_shared_buffer(ctx);
+
 	switch (ctx->codec_mode) {
 	case S5P_FIMV_CODEC_H264_DEC:
 		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VERT_NB_MV_ADR);
@@ -736,45 +759,58 @@ void s5p_mfc_get_enc_frame_buffer(struct s5p_mfc_ctx *ctx,
 }
 
 /* Set encoding ref & codec buffer */
-int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *mfc_ctx)
+int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 {
+	struct s5p_mfc_dev *dev = ctx->dev;
 	size_t buf_addr1, buf_addr2;
 	size_t buf_size1, buf_size2;
-	unsigned int luma_size, chroma_size;
+	unsigned int enc_ref_y_size, enc_ref_c_size;
+	unsigned int guard_width, guard_height;
 	int i;
-	struct s5p_mfc_dev *dev = mfc_ctx->dev;
 
-	mfc_debug(2, "++\n");
+	mfc_debug_enter();
 
-	luma_size = ALIGN(mfc_ctx->luma_size, S5P_FIMV_ENC_BUF_ALIGN);
-	chroma_size = ALIGN(mfc_ctx->chroma_size, S5P_FIMV_ENC_BUF_ALIGN);
+	buf_addr1 = ctx->port_a_phys;
+	buf_size1 = ctx->port_a_size;
+	buf_addr2 = ctx->port_b_phys;
+	buf_size2 = ctx->port_b_size;
 
-	buf_addr1 = mfc_ctx->port_a_phys;
-	buf_size1 = mfc_ctx->port_a_size;
-	buf_addr2 = mfc_ctx->port_b_phys;
-	buf_size2 = mfc_ctx->port_b_size;
+	enc_ref_y_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
+		* ALIGN(ctx->img_height, S5P_FIMV_NV12MT_VALIGN);
+	enc_ref_y_size = ALIGN(enc_ref_y_size, S5P_FIMV_NV12MT_SALIGN);
+
+	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_ENC) {
+		enc_ref_c_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
+			* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12MT_VALIGN);
+		enc_ref_c_size = ALIGN(enc_ref_c_size, S5P_FIMV_NV12MT_SALIGN);
+	} else {
+		guard_width = ALIGN(ctx->img_width + 16, S5P_FIMV_NV12MT_HALIGN);
+		guard_height = ALIGN((ctx->img_height >> 1) + 4, S5P_FIMV_NV12MT_VALIGN);
+		enc_ref_c_size = ALIGN(guard_width * guard_height,
+				       S5P_FIMV_NV12MT_SALIGN);
+	}
 
 	mfc_debug(2, "buf_size1: %d, buf_size2: %d\n", buf_size1, buf_size2);
 
-	switch (mfc_ctx->codec_mode) {
+	switch (ctx->codec_mode) {
 	case S5P_FIMV_CODEC_H264_ENC:
 		for (i = 0; i < 2; i++) {
 			WRITEL(OFFSETA(buf_addr1),
 				S5P_FIMV_ENC_REF0_LUMA_ADR + (4 * i));
-			buf_addr1 += luma_size;
-			buf_size1 -= luma_size;
+			buf_addr1 += enc_ref_y_size;
+			buf_size1 -= enc_ref_y_size;
 
 			WRITEL(OFFSETB(buf_addr2),
 				S5P_FIMV_ENC_REF2_LUMA_ADR + (4 * i));
-			buf_addr2 += luma_size;
-			buf_size2 -= luma_size;
+			buf_addr2 += enc_ref_y_size;
+			buf_size2 -= enc_ref_y_size;
 		}
 
 		for (i = 0; i < 4; i++) {
 			WRITEL(OFFSETB(buf_addr2),
 				S5P_FIMV_ENC_REF0_CHROMA_ADR + (4 * i));
-			buf_addr2 += chroma_size;
-			buf_size2 -= chroma_size;
+			buf_addr2 += enc_ref_c_size;
+			buf_size2 -= enc_ref_c_size;
 		}
 
 		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_UP_MV_ADR);
@@ -805,20 +841,20 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *mfc_ctx)
 		for (i = 0; i < 2; i++) {
 			WRITEL(OFFSETA(buf_addr1),
 				S5P_FIMV_ENC_REF0_LUMA_ADR + (4 * i));
-			buf_addr1 += luma_size;
-			buf_size1 -= luma_size;
+			buf_addr1 += enc_ref_y_size;
+			buf_size1 -= enc_ref_y_size;
 
 			WRITEL(OFFSETB(buf_addr2),
 				S5P_FIMV_ENC_REF2_LUMA_ADR + (4 * i));
-			buf_addr2 += luma_size;
-			buf_size2 -= luma_size;
+			buf_addr2 += enc_ref_y_size;
+			buf_size2 -= enc_ref_y_size;
 		}
 
 		for (i = 0; i < 4; i++) {
 			WRITEL(OFFSETB(buf_addr2),
 				S5P_FIMV_ENC_REF0_CHROMA_ADR + (4 * i));
-			buf_addr2 += chroma_size;
-			buf_size2 -= chroma_size;
+			buf_addr2 += enc_ref_c_size;
+			buf_size2 -= enc_ref_c_size;
 		}
 
 		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_UP_MV_ADR);
@@ -841,20 +877,20 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *mfc_ctx)
 		for (i = 0; i < 2; i++) {
 			WRITEL(OFFSETA(buf_addr1),
 				S5P_FIMV_ENC_REF0_LUMA_ADR + (4 * i));
-			buf_addr1 += luma_size;
-			buf_size1 -= luma_size;
+			buf_addr1 += enc_ref_y_size;
+			buf_size1 -= enc_ref_y_size;
 
 			WRITEL(OFFSETB(buf_addr2),
 				S5P_FIMV_ENC_REF2_LUMA_ADR + (4 * i));
-			buf_addr2 += luma_size;
-			buf_size2 -= luma_size;
+			buf_addr2 += enc_ref_y_size;
+			buf_size2 -= enc_ref_y_size;
 		}
 
 		for (i = 0; i < 4; i++) {
 			WRITEL(OFFSETB(buf_addr2),
 				S5P_FIMV_ENC_REF0_CHROMA_ADR + (4 * i));
-			buf_addr2 += chroma_size;
-			buf_size2 -= chroma_size;
+			buf_addr2 += enc_ref_c_size;
+			buf_size2 -= enc_ref_c_size;
 		}
 
 		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_UP_MV_ADR);
@@ -871,11 +907,11 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *mfc_ctx)
 
 	default:
 		mfc_err("Unknown codec set for encoding: %d\n",
-			mfc_ctx->codec_mode);
+			ctx->codec_mode);
 		return -EINVAL;
 	}
 
-	mfc_debug(2, "--\n");
+	mfc_debug_leave();
 
 	return 0;
 }
