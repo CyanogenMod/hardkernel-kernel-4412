@@ -16,7 +16,11 @@
 #include <plat/map-base.h>
 #include <plat/map-s5p.h>
 
+#ifdef CONFIG_CPU_S5PC110
+#define S5PV210_PA_SDRAM		0x30000000
+#else
 #define S5PV210_PA_SDRAM		0x20000000
+#endif
 
 #define S5PV210_PA_SROM_BANK5		0xA8000000
 

@@ -18,6 +18,11 @@ config CPU_S5PV210
 	help
 	  Enable S5PV210 CPU support
 
+config CPU_S5PC110
+	bool
+	help
+	  S5PC110(MCP) is one of package option of S5PV210.
+
 config S5PV210_SETUP_I2C1
 	bool
 	help
@@ -105,6 +110,7 @@ config MACH_GONI
 config MACH_SMDKC110
 	bool "SMDKC110"
 	select CPU_S5PV210
+	select CPU_S5PC110
 	select S3C_DEV_I2C1
 	select S3C_DEV_I2C2
 	select S3C_DEV_RTC
