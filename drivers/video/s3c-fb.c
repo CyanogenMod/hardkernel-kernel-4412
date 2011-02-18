@@ -66,6 +66,9 @@ struct s3c_fb;
 #define VIDOSD_C(win, variant) (OSD_BASE(win, variant) + 0x08)
 #define VIDOSD_D(win, variant) (OSD_BASE(win, variant) + 0x0C)
 
+#define FIMD_CLK_TYPE0 0
+#define FIMD_CLK_TYPE1 1
+
 /**
  * struct s3c_fb_variant - fb variant information
  * @is_2443: Set if S3C2443/S3C2416 style hardware.
@@ -98,6 +101,7 @@ struct s3c_fb_variant {
 
 	unsigned int	has_prtcon:1;
 	unsigned int	has_shadowcon:1;
+	unsigned int	clk_type:1;
 };
 
 /**
@@ -185,7 +189,8 @@ struct s3c_fb_vsync {
  * @slock: The spinlock protection for this data sturcture.
  * @dev: The device that we bound to, for printing, etc.
  * @regs_res: The resource we claimed for the IO registers.
- * @bus_clk: The clk (hclk) feeding our interface and possibly pixclk.
+ * @bus_clk: The clk (hclk) feeding FIMD IP core.
+ * @lcd_clk: The clk (sclk) feeding our interface and possibly pixclk.
  * @regs: The mapped hardware registers.
  * @variant: Variant information for this hardware.
  * @enabled: A bitmask of enabled hardware windows.
@@ -200,6 +205,7 @@ struct s3c_fb {
 	struct device		*dev;
 	struct resource		*regs_res;
 	struct clk		*bus_clk;
+	struct clk		*lcd_clk;
 	void __iomem		*regs;
 	struct s3c_fb_variant	 variant;
 
@@ -337,7 +343,7 @@ static int s3c_fb_check_var(struct fb_var_screeninfo *var,
  */
 static int s3c_fb_calc_pixclk(struct s3c_fb *sfb, unsigned int pixclk)
 {
-	unsigned long clk = clk_get_rate(sfb->bus_clk);
+	unsigned long clk = clk_get_rate(sfb->lcd_clk);
 	unsigned long long tmp;
 	unsigned int result;
 
@@ -1315,8 +1321,10 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	struct s3c_fb_platdata *pd;
 	struct s3c_fb *sfb;
 	struct resource *res;
+	struct clk *mout_mpll = NULL;
 	int win;
 	int ret = 0;
+	u32 rate = 134000000;
 
 	platid = platform_get_device_id(pdev);
 	fbdrv = (struct s3c_fb_driverdata *)platid->driver_data;
@@ -1346,14 +1354,54 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 
 	spin_lock_init(&sfb->slock);
 
-	sfb->bus_clk = clk_get(dev, "lcd");
-	if (IS_ERR(sfb->bus_clk)) {
-		dev_err(dev, "failed to get bus clock\n");
-		ret = PTR_ERR(sfb->bus_clk);
+	switch (sfb->variant.clk_type) {
+	case FIMD_CLK_TYPE0:
+		sfb->bus_clk = clk_get(dev, "lcd");
+		if (IS_ERR(sfb->bus_clk)) {
+			dev_err(dev, "failed to get bus clock\n");
+			ret = PTR_ERR(sfb->bus_clk);
+			goto err_sfb;
+		}
+
+		clk_enable(sfb->bus_clk);
+
+		sfb->lcd_clk = sfb->bus_clk;
+		break;
+
+	case FIMD_CLK_TYPE1:
+		sfb->bus_clk = clk_get(&pdev->dev, "fimd");
+		if (IS_ERR(sfb->bus_clk)) {
+			dev_err(&pdev->dev, "failed to get clock for fimd\n");
+			ret = PTR_ERR(sfb->bus_clk);
+			goto err_sfb;
+		}
+		clk_enable(sfb->bus_clk);
+
+		sfb->lcd_clk = clk_get(&pdev->dev, "sclk_fimd");
+		if (IS_ERR(sfb->lcd_clk)) {
+			dev_err(&pdev->dev, "failed to get sclk for fimd\n");
+			ret = PTR_ERR(sfb->lcd_clk);
+			goto err_bus_clk;
+		}
+
+		mout_mpll = clk_get(&pdev->dev, "mout_mpll");
+		if (IS_ERR(mout_mpll)) {
+			dev_err(&pdev->dev, "failed to get mout_mpll\n");
+			ret = PTR_ERR(mout_mpll);
+			goto err_lcd_clk;
+		}
+		clk_set_parent(sfb->lcd_clk, mout_mpll);
+		clk_put(mout_mpll);
+
+		clk_set_rate(sfb->lcd_clk, rate);
+		clk_enable(sfb->lcd_clk);
+		dev_dbg(&pdev->dev, "set fimd sclk rate to %d\n", rate);
+		break;
+
+	default:
+		dev_err(dev, "failed to enable clock for FIMD\n");
 		goto err_sfb;
 	}
-
-	clk_enable(sfb->bus_clk);
 
 	pm_runtime_enable(sfb->dev);
 
@@ -1361,7 +1409,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	if (!res) {
 		dev_err(dev, "failed to find registers\n");
 		ret = -ENOENT;
-		goto err_clk;
+		goto err_lcd_clk;
 	}
 
 	sfb->regs_res = request_mem_region(res->start, resource_size(res),
@@ -1369,7 +1417,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	if (!sfb->regs_res) {
 		dev_err(dev, "failed to claim register region\n");
 		ret = -ENOENT;
-		goto err_clk;
+		goto err_lcd_clk;
 	}
 
 	sfb->regs = ioremap(res->start, resource_size(res));
@@ -1451,9 +1499,15 @@ err_ioremap:
 err_req_region:
 	release_mem_region(sfb->regs_res->start, resource_size(sfb->regs_res));
 
-err_clk:
-	clk_disable(sfb->bus_clk);
-	clk_put(sfb->bus_clk);
+err_lcd_clk:
+	clk_disable(sfb->lcd_clk);
+	clk_put(sfb->lcd_clk);
+
+err_bus_clk:
+	if (sfb->variant.clk_type != FIMD_CLK_TYPE0) {
+		clk_disable(sfb->bus_clk);
+		clk_put(sfb->bus_clk);
+	}
 
 err_sfb:
 	kfree(sfb);
@@ -1482,8 +1536,20 @@ static int __devexit s3c_fb_remove(struct platform_device *pdev)
 
 	iounmap(sfb->regs);
 
-	clk_disable(sfb->bus_clk);
-	clk_put(sfb->bus_clk);
+	switch (sfb->variant.clk_type) {
+	case FIMD_CLK_TYPE1:
+		clk_disable(sfb->lcd_clk);
+		clk_put(sfb->lcd_clk);
+		/* fall through to default case */
+	case FIMD_CLK_TYPE0:
+		clk_disable(sfb->bus_clk);
+		clk_put(sfb->bus_clk);
+		break;
+	default:
+		dev_err(sfb->dev, "invalid clock type(%d)\n",
+				sfb->variant.clk_type);
+		break;
+	}
 
 	release_mem_region(sfb->regs_res->start, resource_size(sfb->regs_res));
 
@@ -1513,6 +1579,7 @@ static int s3c_fb_suspend(struct device *dev)
 	}
 
 	clk_disable(sfb->bus_clk);
+
 	return 0;
 }
 
@@ -1825,6 +1892,37 @@ static struct s3c_fb_driverdata s3c_fb_data_s5pv210 = {
 	.win[4]	= &s3c_fb_data_s5p_wins[4],
 };
 
+static struct s3c_fb_driverdata s3c_fb_data_exynos4 = {
+	.variant = {
+		.nr_windows     = 5,
+		.vidtcon        = VIDTCON0,
+		.wincon         = WINCON(0),
+		.winmap         = WINxMAP(0),
+		.keycon         = WKEYCON,
+		.osd            = VIDOSD_BASE,
+		.osd_stride     = 16,
+		.buf_start      = VIDW_BUF_START(0),
+		.buf_size       = VIDW_BUF_SIZE(0),
+		.buf_end        = VIDW_BUF_END(0),
+
+		.palette = {
+			[0] = 0x2400,
+			[1] = 0x2800,
+			[2] = 0x2c00,
+			[3] = 0x3000,
+			[4] = 0x3400,
+		},
+
+		.has_shadowcon  = 1,
+		.clk_type       = FIMD_CLK_TYPE1,
+	},
+	.win[0] = &s3c_fb_data_64xx_wins[0],
+	.win[1] = &s3c_fb_data_64xx_wins[1],
+	.win[2] = &s3c_fb_data_64xx_wins[2],
+	.win[3] = &s3c_fb_data_64xx_wins[3],
+	.win[4] = &s3c_fb_data_64xx_wins[4],
+};
+
 /* S3C2443/S3C2416 style hardware */
 static struct s3c_fb_driverdata s3c_fb_data_s3c2443 = {
 	.variant = {
@@ -1871,6 +1969,9 @@ static struct platform_device_id s3c_fb_driver_ids[] = {
 	}, {
 		.name		= "s5pv210-fb",
 		.driver_data	= (unsigned long)&s3c_fb_data_s5pv210,
+	}, {
+		.name           = "exynos4-fb",
+		.driver_data    = (unsigned long)&s3c_fb_data_exynos4,
 	}, {
 		.name		= "s3c2443-fb",
 		.driver_data	= (unsigned long)&s3c_fb_data_s3c2443,
