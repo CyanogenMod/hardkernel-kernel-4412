@@ -13,6 +13,8 @@
 #ifndef __S5P_MFC_DEC_H_
 #define __S5P_MFC_DEC_H_ __FILE__
 
+#define MAX_FRAME_SIZE		(2*1024*1024)
+
 struct s5p_mfc_codec_ops *get_dec_codec_ops(void);
 struct vb2_ops *get_dec_queue_ops(void);
 const struct v4l2_ioctl_ops *get_dec_v4l2_ioctl_ops(void);

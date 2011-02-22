@@ -406,17 +406,9 @@ static int vidioc_try_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		mfc_err("\n");
 		return -EINVAL;
 	}
-	pix_mp = &f->fmt.pix_mp;
-	if (pix_mp->plane_fmt[0].sizeimage == 0) {
-		mfc_err("Application is required to "
-			"specify input buffer size (via sizeimage)\n");
-		return -EINVAL;
-	}
-	/* As this buffer will contain compressed data, the size is set
-	 * to the maximum size.
-	 * Width and height are left intact as they may be relevant for
+	/* Width and height are left intact as they may be relevant for
 	 * DivX 3.11 decoding. */
-	pix_mp->plane_fmt[0].bytesperline = pix_mp->plane_fmt[0].sizeimage;
+
 	return 0;
 }
 
@@ -463,9 +455,15 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		ctx->img_height = pix_mp->height;
 		ctx->img_width = pix_mp->width;
 	}
+	/* As this buffer will contain compressed data, the size is set
+	 * to the maximum size. */
+	if (pix_mp->plane_fmt[0].sizeimage)
+		ctx->dec_src_buf_size = pix_mp->plane_fmt[0].sizeimage;
+	else
+		ctx->dec_src_buf_size = MAX_FRAME_SIZE;
 	mfc_debug(2, "s_fmt w/h: %dx%d, ctx: %dx%d\n", pix_mp->width,
 		pix_mp->height, ctx->img_width, ctx->img_height);
-	ctx->dec_src_buf_size =	pix_mp->plane_fmt[0].sizeimage;
+	mfc_debug(2, "sizeimage: %d\n", pix_mp->plane_fmt[0].sizeimage);
 	pix_mp->plane_fmt[0].bytesperline = 0;
 	ctx->state = MFCINST_INIT;
 	ctx->dst_bufs_cnt = 0;
