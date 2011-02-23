@@ -330,11 +330,6 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			return;
 		} else {
 			mfc_debug(2, "MFC needs next buffer.\n");
-			/* Advance to next buffer */
-			if (src_buf->b->v4l2_planes[0].bytesused == 0) {
-				mfc_debug(2, "Setting ctx->state to FINISHING\n");
-				ctx->state = MFCINST_FINISHING;
-			}
 			ctx->consumed_stream = 0;
 			list_del(&src_buf->list);
 			ctx->src_queue_cnt--;
