@@ -423,6 +423,7 @@ static int samsung_keypad_suspend(struct device *dev)
 	return 0;
 }
 
+#include <mach/regs-pmu.h>
 static int samsung_keypad_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -430,6 +431,17 @@ static int samsung_keypad_resume(struct device *dev)
 	struct input_dev *input_dev = keypad->input_dev;
 
 	mutex_lock(&input_dev->mutex);
+
+	/*
+	 * FIXME : system ignored interrupt in case of wakeup.
+	 *         we force report key event.
+	 */
+	if (readl(S5P_WAKEUP_STAT) & 0x5) {
+		input_report_key(input_dev, KEY_A, 0x2);
+		input_sync(keypad->input_dev);
+		input_report_key(input_dev, KEY_A, 0x0);
+		input_sync(keypad->input_dev);
+	}
 
 	samsung_keypad_toggle_wakeup(keypad, false);
 
