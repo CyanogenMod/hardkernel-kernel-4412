@@ -200,6 +200,8 @@ static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 		.xres = 480,
 		.yres = 800,
 	},
+	.virtual_x = 480,
+	.virtual_y = 1600,
 	.max_bpp = 32,
 	.default_bpp = 24,
 };
@@ -256,6 +258,8 @@ static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 		.xres   = 800,
 		.yres   = 480,
 	},
+	.virtual_x = 800,
+	.virtual_y = 960,
 	.max_bpp        = 32,
 	.default_bpp    = 24,
 };
