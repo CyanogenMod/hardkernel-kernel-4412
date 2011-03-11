@@ -110,7 +110,7 @@ static struct matrix_keymap_data smdkv210_keymap_data __initdata = {
 
 static struct samsung_keypad_platdata smdkv210_keypad_data __initdata = {
 	.keymap_data	= &smdkv210_keymap_data,
-	.rows		= 8,
+	.rows		= 2,
 	.cols		= 8,
 };
 
