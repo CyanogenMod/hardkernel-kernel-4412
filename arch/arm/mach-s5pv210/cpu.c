@@ -38,7 +38,6 @@
 #include <plat/ata-core.h>
 #include <plat/fimc-core.h>
 #include <plat/iic-core.h>
-#include <plat/keypad-core.h>
 #include <plat/sdhci.h>
 #include <plat/reset.h>
 
@@ -140,9 +139,6 @@ void __init s5pv210_map_io(void)
 	s3c_i2c2_setname("s3c2440-i2c");
 
 	s3c_fb_setname("s5pv210-fb");
-
-	/* Use s5pv210-keypad instead of samsung-keypad */
-	samsung_keypad_setname("s5pv210-keypad");
 }
 
 void __init s5pv210_init_clocks(int xtal)
