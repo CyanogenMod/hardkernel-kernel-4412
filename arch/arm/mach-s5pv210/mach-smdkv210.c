@@ -308,6 +308,11 @@ static struct s3c2410_ts_mach_info s3c_ts_platform __initdata = {
 	.delay			= 10000,
 	.presc			= 49,
 	.oversampling_shift	= 2,
+	.cal_x_max		= 800,
+	.cal_y_max		= 480,
+	.cal_param		= {
+		-13357, -85, 53858048, -95, -8493, 32809514, 65536
+	},
 };
 
 static void __init smdkv210_map_io(void)
