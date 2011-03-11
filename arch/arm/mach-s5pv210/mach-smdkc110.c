@@ -236,7 +236,7 @@ static struct platform_pwm_backlight_data smdkc110_backlight_data = {
 	.pwm_id		= 3,
 	.max_brightness	= 255,
 	.dft_brightness	= 255,
-	.pwm_period_ns	= 78770,
+	.pwm_period_ns	= 1000,
 	.init		= smdkc110_backlight_init,
 	.exit		= smdkc110_backlight_exit,
 };
