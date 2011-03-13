@@ -17,6 +17,7 @@
 #include <linux/dm9000.h>
 #include <linux/fb.h>
 #include <linux/gpio.h>
+#include <linux/gpio_event.h>
 #include <linux/delay.h>
 #include <linux/pwm_backlight.h>
 
@@ -249,6 +250,43 @@ static struct platform_device smdkc110_backlight_device = {
 	},
 };
 
+static struct gpio_event_direct_entry smdkc110_keypad_key_map[] = {
+	{
+		.gpio	= S5PV210_GPH3(7),
+		.code	= KEY_POWER,
+	}
+};
+
+static struct gpio_event_input_info smdkc110_keypad_key_info = {
+	.info.func		= gpio_event_input_func,
+	.info.no_suspend	= true,
+	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
+	.type			= EV_KEY,
+	.keymap			= smdkc110_keypad_key_map,
+	.keymap_size		= ARRAY_SIZE(smdkc110_keypad_key_map)
+};
+
+static struct gpio_event_info *smdkc110_input_info[] = {
+	&smdkc110_keypad_key_info.info,
+};
+
+static struct gpio_event_platform_data smdkc110_input_data = {
+	.names	= {
+		"smdkc110-keypad",
+		NULL,
+	},
+	.info		= smdkc110_input_info,
+	.info_count	= ARRAY_SIZE(smdkc110_input_info),
+};
+
+static struct platform_device smdkc110_input_device = {
+	.name	= GPIO_EVENT_DEV_NAME,
+	.id	= 0,
+	.dev	= {
+		.platform_data = &smdkc110_input_data,
+	},
+};
+
 static struct platform_device *smdkc110_devices[] __initdata = {
 	&s3c_device_adc,
 	&s3c_device_cfcon,
@@ -272,7 +310,17 @@ static struct platform_device *smdkc110_devices[] __initdata = {
 	&smdkc110_lcd_lte480wv,
 	&s3c_device_timer[3],
 	&smdkc110_backlight_device,
+	&smdkc110_input_device,
 };
+
+static void __init smdkc110_button_init(void)
+{
+	s3c_gpio_cfgpin(S5PV210_GPH3(7), (0xf << 28));
+	s3c_gpio_setpull(S5PV210_GPH3(7), S3C_GPIO_PULL_NONE);
+
+	s3c_gpio_cfgpin(S5PV210_GPH0(4), (0xf << 16));
+	s3c_gpio_setpull(S5PV210_GPH0(4), S3C_GPIO_PULL_NONE);
+}
 
 static void __init smdkc110_dm9000_init(void)
 {
@@ -327,6 +375,7 @@ static void __init smdkc110_machine_init(void)
 {
 	s3c_pm_init();
 
+	smdkc110_button_init();
 	smdkc110_dm9000_init();
 
 	samsung_keypad_set_platdata(&smdkc110_keypad_data);
