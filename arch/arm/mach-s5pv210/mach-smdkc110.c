@@ -320,7 +320,7 @@ static void __init smdkc110_map_io(void)
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(smdkv210_uartcfgs, ARRAY_SIZE(smdkv210_uartcfgs));
-	s5p_set_timer_source(S5P_PWM3, S5P_PWM4);
+	s5p_set_timer_source(S5P_PWM2, S5P_PWM4);
 }
 
 static void __init smdkc110_machine_init(void)
