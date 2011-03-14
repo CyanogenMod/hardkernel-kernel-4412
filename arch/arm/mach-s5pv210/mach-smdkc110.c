@@ -18,6 +18,7 @@
 #include <linux/fb.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
+#include <linux/pwm_backlight.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
@@ -207,6 +208,45 @@ static struct s3c_fb_platdata smdkc110_lcd0_pdata __initdata = {
 	.setup_gpio	= s5pv210_fb_gpio_setup_24bpp,
 };
 
+static int smdkc110_backlight_init(struct device *dev)
+{
+	int ret;
+
+	ret = gpio_request(S5PV210_GPD0(3), "Backlight");
+	if (ret) {
+		printk(KERN_ERR "failed to request GPD for PWM-OUT 3\n");
+		return ret;
+	}
+
+	/* Configure GPIO pin with S5PV210_GPD_0_3_TOUT_3 */
+	s3c_gpio_cfgpin(S5PV210_GPD0(3), S3C_GPIO_SFN(2));
+
+	return 0;
+}
+
+static void smdkc110_backlight_exit(struct device *dev)
+{
+	s3c_gpio_cfgpin(S5PV210_GPD0(3), S3C_GPIO_OUTPUT);
+	gpio_free(S5PV210_GPD0(3));
+}
+
+static struct platform_pwm_backlight_data smdkc110_backlight_data = {
+	.pwm_id		= 3,
+	.max_brightness	= 255,
+	.dft_brightness	= 255,
+	.pwm_period_ns	= 78770,
+	.init		= smdkc110_backlight_init,
+	.exit		= smdkc110_backlight_exit,
+};
+
+static struct platform_device smdkc110_backlight_device = {
+	.name		= "pwm-backlight",
+	.dev		= {
+		.parent		= &s3c_device_timer[3].dev,
+		.platform_data	= &smdkc110_backlight_data,
+	},
+};
+
 static struct platform_device *smdkc110_devices[] __initdata = {
 	&samsung_asoc_dma,
 	&s5pv210_device_iis0,
@@ -226,6 +266,8 @@ static struct platform_device *smdkc110_devices[] __initdata = {
 	&s3c_device_wdt,
 	&smdkc110_dm9000,
 	&smdkc110_lcd_lte480wv,
+	&s3c_device_timer[3],
+	&smdkc110_backlight_device,
 };
 
 static void __init smdkc110_dm9000_init(void)
