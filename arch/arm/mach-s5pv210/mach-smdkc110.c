@@ -14,6 +14,7 @@
 #include <linux/serial_core.h>
 #include <linux/i2c.h>
 #include <linux/sysdev.h>
+#include <linux/dm9000.h>
 #include <linux/fb.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
@@ -30,6 +31,8 @@
 #include <mach/regs-fb.h>
 
 #include <plat/regs-serial.h>
+#include <plat/regs-srom.h>
+#include <plat/gpio-cfg.h>
 #include <plat/s5pv210.h>
 #include <plat/devs.h>
 #include <plat/cpu.h>
@@ -106,6 +109,39 @@ static struct samsung_keypad_platdata smdkc110_keypad_data __initdata = {
 	.keymap_data	= &smdkc110_keymap_data,
 	.rows		= 8,
 	.cols		= 8,
+};
+
+static struct resource smdkc110_dm9000_resources[] = {
+	[0] = {
+		.start	= S5PV210_PA_SROM_BANK5,
+		.end	= S5PV210_PA_SROM_BANK5,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= S5PV210_PA_SROM_BANK5 + 2,
+		.end	= S5PV210_PA_SROM_BANK5 + 2,
+		.flags	= IORESOURCE_MEM,
+	},
+	[2] = {
+		.start	= IRQ_EINT(9),
+		.end	= IRQ_EINT(9),
+		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
+	},
+};
+
+static struct dm9000_plat_data smdkc110_dm9000_platdata = {
+	.flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM,
+	.dev_addr	= { 0x00, 0x09, 0xc0, 0xff, 0xec, 0x48 },
+};
+
+struct platform_device smdkc110_dm9000 = {
+	.name		= "dm9000",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(smdkc110_dm9000_resources),
+	.resource	= smdkc110_dm9000_resources,
+	.dev		= {
+		.platform_data	= &smdkc110_dm9000_platdata,
+	},
 };
 
 static void smdkc110_lte480wv_set_power(struct plat_lcd_data *pd,
@@ -188,8 +224,26 @@ static struct platform_device *smdkc110_devices[] __initdata = {
 	&samsung_device_keypad,
 	&s3c_device_rtc,
 	&s3c_device_wdt,
+	&smdkc110_dm9000,
 	&smdkc110_lcd_lte480wv,
 };
+
+static void __init smdkc110_dm9000_init(void)
+{
+	unsigned int tmp;
+
+	gpio_request(S5PV210_MP01(5), "nCS5");
+	s3c_gpio_cfgpin(S5PV210_MP01(5), S3C_GPIO_SFN(2));
+	gpio_free(S5PV210_MP01(5));
+
+	tmp = (5 << S5P_SROM_BCX__TACC__SHIFT);
+	__raw_writel(tmp, S5P_SROM_BC5);
+
+	tmp = __raw_readl(S5P_SROM_BW);
+	tmp &= (S5P_SROM_BW__CS_MASK << S5P_SROM_BW__NCS5__SHIFT);
+	tmp |= (1 << S5P_SROM_BW__NCS5__SHIFT);
+	__raw_writel(tmp, S5P_SROM_BW);
+}
 
 static struct i2c_board_info smdkc110_i2c_devs0[] __initdata = {
 	{ I2C_BOARD_INFO("24c08", 0x50), },     /* Samsung S524AD0XD1 */
@@ -215,6 +269,8 @@ static void __init smdkc110_map_io(void)
 static void __init smdkc110_machine_init(void)
 {
 	s3c_pm_init();
+
+	smdkc110_dm9000_init();
 
 	samsung_keypad_set_platdata(&smdkc110_keypad_data);
 	s3c_i2c0_set_platdata(NULL);
