@@ -37,6 +37,8 @@
 #include <plat/s5pv210.h>
 #include <plat/devs.h>
 #include <plat/cpu.h>
+#include <plat/adc.h>
+#include <plat/ts.h>
 #include <plat/ata.h>
 #include <plat/iic.h>
 #include <plat/keypad.h>
@@ -248,6 +250,8 @@ static struct platform_device smdkc110_backlight_device = {
 };
 
 static struct platform_device *smdkc110_devices[] __initdata = {
+	&s3c_device_adc,
+	&s3c_device_ts,
 	&samsung_asoc_dma,
 	&s5pv210_device_iis0,
 	&s5pv210_device_ac97,
@@ -300,6 +304,12 @@ static struct i2c_board_info smdkc110_i2c_devs2[] __initdata = {
 	/* To Be Updated */
 };
 
+static struct s3c2410_ts_mach_info s3c_ts_platform __initdata = {
+	.delay			= 10000,
+	.presc			= 49,
+	.oversampling_shift	= 2,
+};
+
 static void __init smdkc110_map_io(void)
 {
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
@@ -315,6 +325,8 @@ static void __init smdkc110_machine_init(void)
 	smdkc110_dm9000_init();
 
 	samsung_keypad_set_platdata(&smdkc110_keypad_data);
+	s3c24xx_ts_set_platdata(&s3c_ts_platform);
+
 	s3c_i2c0_set_platdata(NULL);
 	s3c_i2c1_set_platdata(NULL);
 	s3c_i2c2_set_platdata(NULL);
