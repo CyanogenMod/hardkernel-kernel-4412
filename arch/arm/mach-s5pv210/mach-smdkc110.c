@@ -29,6 +29,7 @@
 #include <plat/cpu.h>
 #include <plat/ata.h>
 #include <plat/iic.h>
+#include <plat/keypad.h>
 #include <plat/pm.h>
 #include <plat/s5p-time.h>
 
@@ -81,6 +82,25 @@ static struct s3c_ide_platdata smdkc110_ide_pdata __initdata = {
 	.setup_gpio	= s5pv210_ide_setup_gpio,
 };
 
+static uint32_t smdkc110_keymap[] __initdata = {
+	/* KEY(row, col, keycode) */
+	KEY(0, 3, KEY_1), KEY(0, 4, KEY_2), KEY(0, 5, KEY_3),
+	KEY(0, 6, KEY_4), KEY(0, 7, KEY_5),
+	KEY(1, 3, KEY_A), KEY(1, 4, KEY_B), KEY(1, 5, KEY_C),
+	KEY(1, 6, KEY_D), KEY(1, 7, KEY_E)
+};
+
+static struct matrix_keymap_data smdkc110_keymap_data __initdata = {
+	.keymap		= smdkc110_keymap,
+	.keymap_size	= ARRAY_SIZE(smdkc110_keymap),
+};
+
+static struct samsung_keypad_platdata smdkc110_keypad_data __initdata = {
+	.keymap_data	= &smdkc110_keymap_data,
+	.rows		= 8,
+	.cols		= 8,
+};
+
 static struct platform_device *smdkc110_devices[] __initdata = {
 	&samsung_asoc_dma,
 	&s5pv210_device_iis0,
@@ -90,6 +110,7 @@ static struct platform_device *smdkc110_devices[] __initdata = {
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
 	&s3c_device_i2c2,
+	&samsung_device_keypad,
 	&s3c_device_rtc,
 	&s3c_device_wdt,
 };
@@ -119,6 +140,7 @@ static void __init smdkc110_machine_init(void)
 {
 	s3c_pm_init();
 
+	samsung_keypad_set_platdata(&smdkc110_keypad_data);
 	s3c_i2c0_set_platdata(NULL);
 	s3c_i2c1_set_platdata(NULL);
 	s3c_i2c2_set_platdata(NULL);
