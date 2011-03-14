@@ -10,9 +10,9 @@
 
 #include <linux/kernel.h>
 #include <linux/types.h>
+#include <linux/i2c.h>
 #include <linux/init.h>
 #include <linux/serial_core.h>
-#include <linux/i2c.h>
 #include <linux/sysdev.h>
 #include <linux/dm9000.h>
 #include <linux/fb.h>
@@ -251,11 +251,6 @@ static struct platform_device smdkc110_backlight_device = {
 
 static struct platform_device *smdkc110_devices[] __initdata = {
 	&s3c_device_adc,
-	&s3c_device_ts,
-	&samsung_asoc_dma,
-	&s5pv210_device_iis0,
-	&s5pv210_device_ac97,
-	&s5pv210_device_spdif,
 	&s3c_device_cfcon,
 	&s3c_device_fb,
 	&s3c_device_hsmmc0,
@@ -265,9 +260,14 @@ static struct platform_device *smdkc110_devices[] __initdata = {
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
 	&s3c_device_i2c2,
-	&samsung_device_keypad,
 	&s3c_device_rtc,
+	&s3c_device_ts,
 	&s3c_device_wdt,
+	&s5pv210_device_ac97,
+	&s5pv210_device_iis0,
+	&s5pv210_device_spdif,
+	&samsung_asoc_dma,
+	&samsung_device_keypad,
 	&smdkc110_dm9000,
 	&smdkc110_lcd_lte480wv,
 	&s3c_device_timer[3],
