@@ -111,6 +111,10 @@ config MACH_SMDKC110
 	bool "SMDKC110"
 	select CPU_S5PV210
 	select CPU_S5PC110
+	select S3C_DEV_HSMMC
+	select S3C_DEV_HSMMC1
+	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3
 	select S3C_DEV_I2C1
 	select S3C_DEV_I2C2
 	select S3C_DEV_RTC
@@ -121,6 +125,7 @@ config MACH_SMDKC110
 	select S5PV210_SETUP_I2C2
 	select S5PV210_SETUP_IDE
 	select S5PV210_SETUP_KEYPAD
+	select S5PV210_SETUP_SDHCI
 	help
 	  Machine support for Samsung SMDKC110
 	  S5PC110(MCP) is one of package option of S5PV210
