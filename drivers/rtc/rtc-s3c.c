@@ -556,7 +556,7 @@ static int ticnt_save, ticnt_en_save;
 static int s3c_rtc_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	/* save TICNT for anyone using periodic interrupts */
-	ticnt_save = readb(s3c_rtc_base + S3C2410_TICNT);
+	ticnt_save = readw(s3c_rtc_base + S3C2410_TICNT);
 	if (s3c_rtc_cpu_type == TYPE_S3C64XX) {
 		ticnt_en_save = readw(s3c_rtc_base + S3C2410_RTCCON);
 		ticnt_en_save &= S3C64XX_RTCCON_TICEN;
@@ -578,7 +578,7 @@ static int s3c_rtc_resume(struct platform_device *pdev)
 	unsigned int tmp;
 
 	s3c_rtc_enable(pdev, 1);
-	writeb(ticnt_save, s3c_rtc_base + S3C2410_TICNT);
+	writew(ticnt_save, s3c_rtc_base + S3C2410_TICNT);
 	if (s3c_rtc_cpu_type == TYPE_S3C64XX && ticnt_en_save) {
 		tmp = readw(s3c_rtc_base + S3C2410_RTCCON);
 		writew(tmp | ticnt_en_save, s3c_rtc_base + S3C2410_RTCCON);
