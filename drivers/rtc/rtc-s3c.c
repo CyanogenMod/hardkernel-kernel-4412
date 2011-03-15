@@ -491,19 +491,6 @@ static int __devinit s3c_rtc_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 
-	/* register RTC and exit */
-
-	rtc = rtc_device_register("s3c", &pdev->dev, &s3c_rtcops,
-				  THIS_MODULE);
-
-	if (IS_ERR(rtc)) {
-		dev_err(&pdev->dev, "cannot attach rtc\n");
-		ret = PTR_ERR(rtc);
-		goto err_nortc;
-	}
-
-	s3c_rtc_cpu_type = platform_get_device_id(pdev)->driver_data;
-
 	/* Check RTC Time */
 
 	s3c_rtc_gettime(NULL, &rtc_tm);
@@ -520,6 +507,19 @@ static int __devinit s3c_rtc_probe(struct platform_device *pdev)
 
 		dev_warn(&pdev->dev, "warning: invalid RTC value so initializing it\n");
 	}
+
+	/* register RTC and exit */
+
+	rtc = rtc_device_register("s3c", &pdev->dev, &s3c_rtcops,
+				  THIS_MODULE);
+
+	if (IS_ERR(rtc)) {
+		dev_err(&pdev->dev, "cannot attach rtc\n");
+		ret = PTR_ERR(rtc);
+		goto err_nortc;
+	}
+
+	s3c_rtc_cpu_type = platform_get_device_id(pdev)->driver_data;
 
 	if (s3c_rtc_cpu_type == TYPE_S3C64XX)
 		rtc->max_user_freq = 32768;
