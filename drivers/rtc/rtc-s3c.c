@@ -27,8 +27,8 @@
 #include <linux/slab.h>
 
 #include <mach/hardware.h>
-#include <asm/uaccess.h>
-#include <asm/io.h>
+#include <linux/uaccess.h>
+#include <linux/io.h>
 #include <asm/irq.h>
 #include <plat/regs-rtc.h>
 
