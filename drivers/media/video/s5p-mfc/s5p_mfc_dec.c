@@ -390,7 +390,6 @@ static int vidioc_g_fmt(struct file *file, void *priv, struct v4l2_format *f)
 static int vidioc_try_fmt(struct file *file, void *priv, struct v4l2_format *f)
 {
 	struct s5p_mfc_fmt *fmt;
-	struct v4l2_pix_format_mplane *pix_mp;
 
 	mfc_debug(2, "Type is %d\n", f->type);
 	if (f->type != V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
