@@ -202,16 +202,14 @@
 #define S5P_FIMV_ENC_SI_WRITE_PTR	0x200c /* write pointer */
 #define S5P_FIMV_ENC_SI_SLICE_TYPE	0x2010 /* slice type(I/P/B/IDR) */
 
-#define S5P_FIMV_ENC_SI_CH0_SB_U_ADR	0x2044 /* addr of upper stream buf */
-#define S5P_FIMV_ENC_SI_CH0_SB_L_ADR	0x2048 /* addr of lower stream buf */
+#define S5P_FIMV_ENC_SI_CH0_SB_ADR	0x2044 /* addr of stream buf */
 #define S5P_FIMV_ENC_SI_CH0_SB_SIZE	0x204c /* size of stream buf */
 #define S5P_FIMV_ENC_SI_CH0_CUR_Y_ADR	0x2050 /* current Luma addr */
 #define S5P_FIMV_ENC_SI_CH0_CUR_C_ADR	0x2054 /* current Chroma addr */
 #define S5P_FIMV_ENC_SI_CH0_FRAME_QP	0x2058 /* frame QP */
 #define S5P_FIMV_ENC_SI_CH0_SLICE_ARG	0x205c /* slice argument */
 
-#define S5P_FIMV_ENC_SI_CH1_SB_U_ADR	0x2084 /* addr of upper stream buf */
-#define S5P_FIMV_ENC_SI_CH1_SB_L_ADR	0x2088 /* addr of lower stream buf */
+#define S5P_FIMV_ENC_SI_CH1_SB_ADR	0x2084 /* addr of stream buf */
 #define S5P_FIMV_ENC_SI_CH1_SB_SIZE	0x208c /* size of stream buf */
 #define S5P_FIMV_ENC_SI_CH1_CUR_Y_ADR	0x2090 /* current Luma addr */
 #define S5P_FIMV_ENC_SI_CH1_CUR_C_ADR	0x2094 /* current Chroma addr */

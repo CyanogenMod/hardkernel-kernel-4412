@@ -728,7 +728,7 @@ static int enc_pre_seq_start(struct s5p_mfc_ctx *ctx)
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
 	dst_addr = mfc_plane_cookie(dst_mb->b, 0);
-	dst_size = dst_mb->b->v4l2_planes[0].bytesused;
+	dst_size = vb2_plane_size(dst_mb->b, 0);
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
@@ -797,7 +797,7 @@ static int enc_pre_frame_start(struct s5p_mfc_ctx *ctx)
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
 	dst_addr = mfc_plane_cookie(dst_mb->b, 0);
-	dst_size = dst_mb->b->v4l2_planes[0].bytesused;
+	dst_size = vb2_plane_size(dst_mb->b, 0);
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);

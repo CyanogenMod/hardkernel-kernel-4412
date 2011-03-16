@@ -286,7 +286,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		}
 
 		mfc_debug(2, "recon luma size: %d chroma size: %d\n",
-			  enc_ref_c_size, enc_ref_c_size);
+			  enc_ref_y_size, enc_ref_c_size);
 	} else {
 		return -EINVAL;
 	}
@@ -734,8 +734,8 @@ int s5p_mfc_set_enc_stream_buffer(struct s5p_mfc_ctx *ctx,
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 
-	WRITEL(OFFSETA(addr), S5P_FIMV_SI_CH0_SB_ST_ADR);
-	WRITEL(size, S5P_FIMV_SI_CH0_SB_FRM_SIZE);
+	WRITEL(OFFSETA(addr), S5P_FIMV_ENC_SI_CH0_SB_ADR);
+	WRITEL(size, S5P_FIMV_ENC_SI_CH0_SB_SIZE);
 
 	return 0;
 }
@@ -1624,7 +1624,7 @@ static inline int s5p_mfc_run_enc_frame(struct s5p_mfc_ctx *ctx)
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
 	dst_addr = mfc_plane_cookie(dst_mb->b, 0);
-	dst_size = dst_mb->b->v4l2_planes[0].bytesused;
+	dst_size = vb2_plane_size(dst_mb->b, 0);
 
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
@@ -1673,7 +1673,7 @@ static inline void s5p_mfc_run_init_enc(struct s5p_mfc_ctx *ctx)
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
 	dst_addr = mfc_plane_cookie(dst_mb->b, 0);
-	dst_size = dst_mb->b->v4l2_planes[0].bytesused;
+	dst_size = vb2_plane_size(dst_mb->b, 0);
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
