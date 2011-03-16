@@ -11,6 +11,8 @@
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/i2c.h>
+#include <linux/regulator/consumer.h>
+#include <linux/mfd/max8698.h>
 #include <linux/init.h>
 #include <linux/serial_core.h>
 #include <linux/sysdev.h>
@@ -29,6 +31,7 @@
 #include <video/platform_lcd.h>
 
 #include <mach/map.h>
+#include <mach/gpio.h>
 #include <mach/regs-clock.h>
 #include <mach/regs-fb.h>
 
@@ -91,6 +94,216 @@ static struct s3c2410_uartcfg smdkv210_uartcfgs[] __initdata = {
 		.ufcon		= SMDKC110_UFCON_DEFAULT,
 	},
 };
+
+#if defined(CONFIG_REGULATOR_MAX8698)
+/* LDO */
+static struct regulator_consumer_supply smdkc110_ldo3_consumer[] = {
+	REGULATOR_SUPPLY("pd_io", "s3c-usbgadget")
+};
+
+static struct regulator_consumer_supply smdkc110_ldo8_consumer[] = {
+	REGULATOR_SUPPLY("pd_core", "s3c-usbgadget")
+};
+
+static struct regulator_init_data smdkc110_ldo2_data = {
+	.constraints	= {
+		.name		= "VALIVE_1.1V",
+		.min_uV		= 1100000,
+		.max_uV		= 1100000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled = 1,
+		},
+	},
+};
+
+static struct regulator_init_data smdkc110_ldo3_data = {
+	.constraints	= {
+		.name		= "VUOTG_D+VUHOST_D_1.1V",
+		.min_uV		= 1100000,
+		.max_uV		= 1100000,
+		.apply_uV	= 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled = 1,
+		},
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(smdkc110_ldo3_consumer),
+	.consumer_supplies	= smdkc110_ldo3_consumer,
+};
+
+static struct regulator_init_data smdkc110_ldo4_data = {
+	.constraints	= {
+		.name		= "V_MIPI_1.8V",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled = 1,
+		},
+	},
+};
+
+static struct regulator_init_data smdkc110_ldo5_data = {
+	.constraints	= {
+		.name		= "VMMC+VEXT_2.8V",
+		.min_uV		= 2800000,
+		.max_uV		= 2800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.enabled = 1,
+		},
+	},
+};
+
+static struct regulator_init_data smdkc110_ldo6_data = {
+	.constraints	= {
+		.name		= "VCC_2.6V",
+		.min_uV		= 2600000,
+		.max_uV		= 2600000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_STATUS,
+		.state_mem	 = {
+			.disabled = 1,
+		},
+	},
+};
+
+static struct regulator_init_data smdkc110_ldo7_data = {
+	.constraints	= {
+		.name		= "VDAC_2.8V",
+		.min_uV		= 2800000,
+		.max_uV		= 2800000,
+		.apply_uV	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.enabled = 1,
+		},
+	},
+};
+
+static struct regulator_init_data smdkc110_ldo8_data = {
+	.constraints	= {
+		.name		= "VUOTG_A+VUHOST_A_3.3V",
+		.min_uV		= 3300000,
+		.max_uV		= 3300000,
+		.apply_uV	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled = 1,
+		},
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(smdkc110_ldo8_consumer),
+	.consumer_supplies	= smdkc110_ldo8_consumer,
+};
+
+static struct regulator_init_data smdkc110_ldo9_data = {
+	.constraints	= {
+		.name		= "VADC+VSYS+VKEY_2.8V",
+		.min_uV		= 2800000,
+		.max_uV		= 2800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled = 1,
+		},
+	},
+};
+
+/* BUCK */
+static struct regulator_consumer_supply smdkc110_buck1_consumer =
+	REGULATOR_SUPPLY("vddarm", NULL);
+
+static struct regulator_consumer_supply smdkc110_buck2_consumer =
+	REGULATOR_SUPPLY("vddint", NULL);
+
+static struct regulator_init_data smdkc110_buck1_data = {
+	.constraints	= {
+		.name		= "VCC_ARM",
+		.min_uV		= 750000,
+		.max_uV		= 1500000,
+		.apply_uV	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				  REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.uV	= 1250000,
+			.mode	= REGULATOR_MODE_NORMAL,
+			.disabled = 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &smdkc110_buck1_consumer,
+};
+
+static struct regulator_init_data smdkc110_buck2_data = {
+	.constraints	= {
+		.name		= "VCC_INTERNAL",
+		.min_uV		= 950000,
+		.max_uV		= 1200000,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				  REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.uV	= 1100000,
+			.mode	= REGULATOR_MODE_NORMAL,
+			.disabled = 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &smdkc110_buck2_consumer,
+};
+
+static struct regulator_init_data smdkc110_buck3_data = {
+	.constraints	= {
+		.name		= "VCC_MEM",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
+		.always_on	= 1,
+		.apply_uV	= 1,
+		.state_mem	= {
+			.uV	= 1800000,
+			.mode	= REGULATOR_MODE_NORMAL,
+			.enabled = 1,
+		},
+	},
+};
+
+static struct max8698_regulator_data smdkc110_regulators[] = {
+	{ MAX8698_LDO2,  &smdkc110_ldo2_data },
+	{ MAX8698_LDO3,  &smdkc110_ldo3_data },
+	{ MAX8698_LDO4,  &smdkc110_ldo4_data },
+	{ MAX8698_LDO5,  &smdkc110_ldo5_data },
+	{ MAX8698_LDO6,  &smdkc110_ldo6_data },
+	{ MAX8698_LDO7,  &smdkc110_ldo7_data },
+	{ MAX8698_LDO8,  &smdkc110_ldo8_data },
+	{ MAX8698_LDO9,  &smdkc110_ldo9_data },
+	{ MAX8698_BUCK1, &smdkc110_buck1_data },
+	{ MAX8698_BUCK2, &smdkc110_buck2_data },
+	{ MAX8698_BUCK3, &smdkc110_buck3_data },
+};
+
+static struct max8698_platform_data smdkc110_max8698_pdata = {
+	.num_regulators = ARRAY_SIZE(smdkc110_regulators),
+	.regulators     = smdkc110_regulators,
+
+	/* 1GHz default voltage */
+	.dvsarm1        = 0xa,  /* 1.25v */
+	.dvsarm2        = 0x9,  /* 1.20V */
+	.dvsarm3        = 0x6,  /* 1.05V */
+	.dvsarm4        = 0x4,  /* 0.95V */
+	.dvsint1        = 0x7,  /* 1.10v */
+	.dvsint2        = 0x5,  /* 1.00V */
+
+	.set1       = S5PV210_GPH1(6),
+	.set2       = S5PV210_GPH1(7),
+	.set3       = S5PV210_GPH0(4),
+};
+#endif
 
 static struct s3c_ide_platdata smdkc110_ide_pdata __initdata = {
 	.setup_gpio	= s5pv210_ide_setup_gpio,
@@ -349,7 +562,12 @@ static struct i2c_board_info smdkc110_i2c_devs1[] __initdata = {
 };
 
 static struct i2c_board_info smdkc110_i2c_devs2[] __initdata = {
-	/* To Be Updated */
+#if defined(CONFIG_REGULATOR_MAX8698)
+	{
+		I2C_BOARD_INFO("max8698", 0xCC >> 1),
+		.platform_data	= &smdkc110_max8698_pdata,
+	},
+#endif
 };
 
 static struct s3c2410_ts_mach_info s3c_ts_platform __initdata = {
