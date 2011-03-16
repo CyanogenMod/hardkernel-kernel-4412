@@ -1122,9 +1122,9 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 
 		if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M) {
 			ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN)
-				* ctx->img_height;
+				* ALIGN(ctx->img_height, S5P_FIMV_NV12M_LVALIGN);
 			ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN)
-				* (ctx->img_height >> 1);
+				* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12M_CVALIGN);
 
 			ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12M_SALIGN);
 			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12M_SALIGN);
