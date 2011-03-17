@@ -1569,6 +1569,7 @@ static inline int s5p_mfc_run_dec_frame(struct s5p_mfc_ctx *ctx)
 	}
 	/* Get the next source buffer */
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
+	temp_vb->used = 1;
 	mfc_debug(2, "Temp vb: %p\n", temp_vb);
 	mfc_debug(2, "Src Addr: %08lx\n", mfc_plane_cookie(temp_vb->b, 0));
 	s5p_mfc_set_dec_desc_buffer(ctx);
@@ -1614,6 +1615,7 @@ static inline int s5p_mfc_run_enc_frame(struct s5p_mfc_ctx *ctx)
 	}
 
 	src_mb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
+	src_mb->used = 1;
 	src_y_addr = mfc_plane_cookie(src_mb->b, 0);
 	src_c_addr = mfc_plane_cookie(src_mb->b, 1);
 
@@ -1623,6 +1625,7 @@ static inline int s5p_mfc_run_enc_frame(struct s5p_mfc_ctx *ctx)
 	s5p_mfc_set_enc_frame_buffer(ctx, src_y_addr, src_c_addr);
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
+	dst_mb->used = 1;
 	dst_addr = mfc_plane_cookie(dst_mb->b, 0);
 	dst_size = vb2_plane_size(dst_mb->b, 0);
 
@@ -1806,6 +1809,7 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev)
 		}
 	} else if (ctx->type == MFCINST_ENCODER) {
 		switch (ctx->state) {
+		case MFCINST_FINISHING:
 		case MFCINST_RUNNING:
 			ret = s5p_mfc_run_enc_frame(ctx);
 			break;

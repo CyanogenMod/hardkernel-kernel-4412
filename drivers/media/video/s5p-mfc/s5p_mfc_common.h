@@ -32,6 +32,7 @@
 
 #define MFC_MAX_EXTRA_DPB       5
 #define MFC_MAX_BUFFERS		32
+#define MFC_MAX_REF_BUFS	2
 #define MFC_FRAME_PLANES	2
 
 #define MFC_NUM_CONTEXTS	4
@@ -118,6 +119,7 @@ struct s5p_mfc_buf {
 		} raw;
 		size_t stream;
 	} cookie;
+	int used;
 };
 
 
@@ -396,6 +398,9 @@ struct s5p_mfc_ctx {
 	int frame_count;
 	enum v4l2_codec_mfc5x_enc_frame_type frame_type;
 	enum v4l2_codec_mfc5x_enc_force_frame_type force_frame_type;
+
+	struct list_head ref_queue;
+	unsigned int ref_queue_cnt;
 
 	struct s5p_mfc_codec_ops *c_ops;
 };

@@ -670,6 +670,10 @@ static int s5p_mfc_open(struct file *file)
 		/* Default format */
 		ctx->src_fmt = get_enc_def_fmt(1);
 		ctx->dst_fmt = get_enc_def_fmt(0);
+
+		/* only for encoder */
+		INIT_LIST_HEAD(&ctx->ref_queue);
+		ctx->ref_queue_cnt = 0;
 	} else {
 		ret = -ENOENT;
 		goto out_open;

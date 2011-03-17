@@ -1057,6 +1057,7 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		mfc_buf = &ctx->src_bufs[vb->v4l2_buf.index];
+		mfc_buf->used = 0;
 		mfc_debug(2, "Src queue: %p\n", &ctx->src_queue);
 		mfc_debug(2, "Adding to src: %p (%08lx, %08x)\n", vb,
 				mfc_plane_cookie(vb, 0),
@@ -1067,6 +1068,7 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		mfc_buf = &ctx->dst_bufs[vb->v4l2_buf.index];
+		mfc_buf->used = 0;
 		mfc_debug(2, "Dst queue: %p\n", &ctx->dst_queue);
 		mfc_debug(2, "Adding to dst: %p (%lx)\n", vb,
 						  mfc_plane_cookie(vb, 0));
