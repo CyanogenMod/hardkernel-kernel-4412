@@ -1117,7 +1117,6 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 	struct s5p_mfc_ctx *ctx = priv;
 	struct s5p_mfc_fmt *fmt;
 	struct v4l2_pix_format_mplane *pix_fmt_mp = &f->fmt.pix_mp;
-	unsigned int user_luma_size, user_chroma_size;
 	unsigned long flags;
 	int ret = 0;
 
@@ -1145,6 +1144,7 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		ctx->codec_mode = ctx->dst_fmt->codec_mode;
 		mfc_debug(2, "codec number: %d\n", ctx->dst_fmt->codec_mode);
 
+		/* CHKME: 2KB aligned, multiple of 4KB - it may be ok with SDVMM */
 		ctx->enc_dst_buf_size =	pix_fmt_mp->plane_fmt[0].sizeimage;
 		pix_fmt_mp->plane_fmt[0].bytesperline = 0;
 
@@ -1191,12 +1191,9 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 			pix_fmt_mp->width, pix_fmt_mp->height,
 			ctx->img_width, ctx->img_height);
 
-		ctx->buf_width = pix_fmt_mp->plane_fmt[0].bytesperline;
-		user_luma_size = pix_fmt_mp->plane_fmt[0].sizeimage;
-		ctx->buf_width = pix_fmt_mp->plane_fmt[1].bytesperline;
-		user_chroma_size = pix_fmt_mp->plane_fmt[1].sizeimage;
-
 		if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M) {
+			ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN);
+
 			ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN)
 				* ALIGN(ctx->img_height, S5P_FIMV_NV12M_LVALIGN);
 			ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN)
@@ -1205,6 +1202,8 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 			ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12M_SALIGN);
 			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12M_SALIGN);
 		} else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12MT) {
+			ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN);
+
 			ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
 				* ALIGN(ctx->img_height, S5P_FIMV_NV12MT_VALIGN);
 			ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
@@ -1214,16 +1213,13 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12MT_SALIGN);
 		}
 
-		if (user_luma_size != ctx->luma_size)
-			mfc_err("source plane[0](luma) size error %d:%d",
-				user_luma_size, ctx->luma_size);
-
-		if (user_chroma_size != ctx->chroma_size)
-			mfc_err("source plane[1](chroma) size error %d:%d",
-				user_chroma_size, ctx->chroma_size);
-
 		ctx->src_bufs_cnt = 0;
 		ctx->output_state = QUEUE_FREE;
+
+		pix_fmt_mp->plane_fmt[0].bytesperline = ctx->buf_width;
+		pix_fmt_mp->plane_fmt[0].sizeimage = ctx->luma_size;
+		pix_fmt_mp->plane_fmt[1].bytesperline = ctx->buf_width;
+		pix_fmt_mp->plane_fmt[1].sizeimage = ctx->chroma_size;
 	} else {
 		mfc_err("invalid buf type\n");
 		return -EINVAL;
