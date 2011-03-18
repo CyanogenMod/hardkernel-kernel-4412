@@ -181,6 +181,15 @@ static struct v4l2_queryctrl controls[] = {
 		.step = 1,
 		.default_value = 0,
 	},
+	{
+		.id = V4L2_CID_CODEC_FRAME_TAG,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Frame Tag",
+		.minimum = 0,
+		.maximum = INT_MAX,
+		.step = 1,
+		.default_value = 0,
+	},
 };
 
 #define NUM_CTRLS ARRAY_SIZE(controls)
@@ -215,6 +224,30 @@ static int check_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 }
 
 static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
+	{
+		.type = MFC_CTRL_TYPE_SET,
+		.id = V4L2_CID_CODEC_FRAME_TAG,
+		.is_volatile = 1,
+		.mode = MFC_CTRL_MODE_SHM,
+		.addr = S5P_FIMV_SHARED_SET_FRAME_TAG,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET,
+		.id = V4L2_CID_CODEC_FRAME_TAG,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SHM,
+		.addr = S5P_FIMV_SHARED_GET_FRAME_TAG_TOP,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
 };
 
 #define NUM_CTRL_CFGS ARRAY_SIZE(mfc_ctrl_list)
