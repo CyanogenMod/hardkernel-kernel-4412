@@ -1534,6 +1534,7 @@ static inline void s5p_mfc_run_res_change(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 
+	s5p_mfc_set_dec_desc_buffer(ctx);
 	s5p_mfc_set_dec_stream_buffer(ctx, 0, 0, 0);
 	dev->curr_ctx = ctx->num;
 	s5p_mfc_clean_ctx_int_flags(ctx);
@@ -1544,6 +1545,7 @@ static inline void s5p_mfc_run_dec_last_frames(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 
+	s5p_mfc_set_dec_desc_buffer(ctx);
 	s5p_mfc_set_dec_stream_buffer(ctx, 0, 0, 0);
 	dev->curr_ctx = ctx->num;
 	s5p_mfc_clean_ctx_int_flags(ctx);
@@ -1569,6 +1571,7 @@ static inline int s5p_mfc_run_dec_frame(struct s5p_mfc_ctx *ctx)
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 	mfc_debug(2, "Temp vb: %p\n", temp_vb);
 	mfc_debug(2, "Src Addr: %08lx\n", mfc_plane_cookie(temp_vb->b, 0));
+	s5p_mfc_set_dec_desc_buffer(ctx);
 	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_cookie(temp_vb->b, 0),
 				0, temp_vb->b->v4l2_planes[0].bytesused);
 	spin_unlock_irqrestore(&dev->irqlock, flags);
@@ -1709,6 +1712,7 @@ static inline int s5p_mfc_run_init_dec_buffers(struct s5p_mfc_ctx *ctx)
 	}
 
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
+	s5p_mfc_set_dec_desc_buffer(ctx);
 	mfc_debug(2, "Header size: %d\n", temp_vb->b->v4l2_planes[0].bytesused);
 	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_cookie(temp_vb->b, 0),
 				0, temp_vb->b->v4l2_planes[0].bytesused);
