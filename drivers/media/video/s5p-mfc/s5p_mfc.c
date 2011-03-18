@@ -30,6 +30,7 @@
 #include "s5p_mfc_mem.h"
 #include "s5p_mfc_debug.h"
 #include "s5p_mfc_reg.h"
+#include "s5p_mfc_shm.h"
 #include "s5p_mfc_ctrl.h"
 #include "s5p_mfc_dec.h"
 #include "s5p_mfc_enc.h"
@@ -200,12 +201,14 @@ static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 		list_del(&dst_buf->list);
 		ctx->dst_queue_cnt--;
 		dst_buf->b->v4l2_buf.sequence = (ctx->sequence++);
-		if (s5p_mfc_get_pic_time_top(ctx) ==
-			s5p_mfc_get_pic_time_bottom(ctx))
+
+		/* FIXME: move to proper postion or REMOVE */
+		if (s5p_mfc_read_shm(ctx, PIC_TIME_TOP) ==
+			s5p_mfc_read_shm(ctx, PIC_TIME_BOT))
 			dst_buf->b->v4l2_buf.field = V4L2_FIELD_NONE;
 		else
-			dst_buf->b->v4l2_buf.field =
-				V4L2_FIELD_INTERLACED;
+			dst_buf->b->v4l2_buf.field = V4L2_FIELD_INTERLACED;
+
 		ctx->dec_dst_flag &= ~(1 << dst_buf->b->v4l2_buf.index);
 		vb2_buffer_done(dst_buf->b, VB2_BUF_STATE_DONE);
 		mfc_debug(2, "Cleaned up buffer: %d\n",
@@ -234,22 +237,17 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 			list_del(&dst_buf->list);
 			ctx->dst_queue_cnt--;
 			dst_buf->b->v4l2_buf.sequence = ctx->sequence;
-			if (s5p_mfc_get_pic_time_top(ctx) ==
-				s5p_mfc_get_pic_time_bottom(ctx))
+			if (s5p_mfc_read_shm(ctx, PIC_TIME_TOP) ==
+				s5p_mfc_read_shm(ctx, PIC_TIME_BOT))
 				dst_buf->b->v4l2_buf.field = V4L2_FIELD_NONE;
 			else
-				dst_buf->b->v4l2_buf.field =
-						V4L2_FIELD_INTERLACED;
+				dst_buf->b->v4l2_buf.field = V4L2_FIELD_INTERLACED;
 			vb2_set_plane_payload(dst_buf->b, 0, ctx->luma_size);
 			vb2_set_plane_payload(dst_buf->b, 1, ctx->chroma_size);
-			clear_bit(dst_buf->b->v4l2_buf.index,
-						&ctx->dec_dst_flag);
-			if (err) {
-				vb2_buffer_done(dst_buf->b,
-						VB2_BUF_STATE_ERROR);
-			} else {
-				vb2_buffer_done(dst_buf->b, VB2_BUF_STATE_DONE);
-			}
+			clear_bit(dst_buf->b->v4l2_buf.index, &ctx->dec_dst_flag);
+
+			vb2_buffer_done(dst_buf->b,
+				err ? VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 			break;
 		}
 	}

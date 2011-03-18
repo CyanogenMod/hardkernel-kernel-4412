@@ -29,6 +29,7 @@
 #include "s5p_mfc_mem.h"
 #include "s5p_mfc_debug.h"
 #include "s5p_mfc_reg.h"
+#include "s5p_mfc_shm.h"
 #include "s5p_mfc_dec.h"
 #include "s5p_mfc_common.h"
 
@@ -803,10 +804,10 @@ static int vidioc_g_crop(struct file *file, void *priv,
 			return -EINVAL;
 		}
 	if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_H264) {
-		left = s5p_mfc_get_h_crop(ctx);
+		left = s5p_mfc_read_shm(ctx, CROP_INFO_H);
 		right = left >> S5P_FIMV_SHARED_CROP_RIGHT_SHIFT;
 		left = left & S5P_FIMV_SHARED_CROP_LEFT_MASK;
-		top = s5p_mfc_get_v_crop(ctx);
+		top = s5p_mfc_read_shm(ctx, CROP_INFO_V);
 		bottom = top >> S5P_FIMV_SHARED_CROP_BOTTOM_SHIFT;
 		top = top & S5P_FIMV_SHARED_CROP_TOP_MASK;
 		cr->c.left = left;

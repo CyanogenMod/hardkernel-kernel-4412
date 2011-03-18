@@ -391,6 +391,10 @@ struct s5p_mfc_ctx {
 	void *shared_virt;
 	//dma_addr_t shared_dma;
 
+	void *shm_alloc;
+	void *shm;
+	size_t shm_ofs;
+
 	struct s5p_mfc_enc_params enc_params;
 
 	size_t enc_dst_buf_size;

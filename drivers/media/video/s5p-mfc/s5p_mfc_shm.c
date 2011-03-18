@@ -11,69 +11,40 @@
  */
 
 #include <linux/io.h>
-#ifdef CONFIG_ARCH_S5PV210
-#include <linux/dma-mapping.h>
-#endif
 
-#include "mfc_inst.h"
-#include "mfc_mem.h"
-#include "mfc_buf.h"
+#include "s5p_mfc_mem.h"
+#include "s5p_mfc_debug.h"
+#include "s5p_mfc_common.h"
 
-int init_shm(struct mfc_inst_ctx *ctx)
+int s5p_mfc_init_shm(struct s5p_mfc_ctx *ctx)
 {
-	struct mfc_alloc_buffer *alloc;
+	struct s5p_mfc_dev *dev = ctx->dev;
+	void *shm_alloc_ctx = dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 
-	alloc = _mfc_alloc_buf(ctx, MFC_SHM_SIZE, ALIGN_4B, MBT_SHM | PORT_A);
-
-	if (alloc != NULL) {
-		ctx->shm = alloc->addr;
-		ctx->shmofs = mfc_mem_base_ofs(alloc->real);
-
-		memset((void *)ctx->shm, 0, MFC_SHM_SIZE);
-
-		mfc_mem_cache_clean((void *)ctx->shm, MFC_SHM_SIZE);
-
-		return 0;
+	ctx->shm_alloc = s5p_mfc_mem_alloc(shm_alloc_ctx, SHARED_BUF_SIZE);
+	if (IS_ERR(ctx->shm_alloc)) {
+		mfc_err("failed to allocate shared memory\n");
+		return PTR_ERR(ctx->shm_alloc);
 	}
 
-	ctx->shm = NULL;
-	ctx->shmofs = 0;
+	/* shm_ofs only keeps the offset from base (port a) */
+	ctx->shm_ofs = s5p_mfc_mem_cookie(shm_alloc_ctx, ctx->shm_alloc) - dev->port_a;
+	ctx->shm = s5p_mfc_mem_vaddr(shm_alloc_ctx, ctx->shm_alloc);
+	if (!ctx->shm) {
+		s5p_mfc_mem_put(shm_alloc_ctx, ctx->shm_alloc);
+		ctx->shm_ofs = 0;
+		ctx->shm_alloc = NULL;
 
-	return -1;
+		mfc_err("failed to virt addr of shared memory\n");
+		return -ENOMEM;
+	}
+
+	memset((void *)ctx->shm, 0, SHARED_BUF_SIZE);
+	s5p_mfc_cache_clean(ctx->shm, SHARED_BUF_SIZE);
+
+	mfc_debug(2, "shm info addr: 0x%08x, phys: 0x%08x\n",
+		 (unsigned int)ctx->shm, ctx->shm_ofs);
+
+	return 0;
 }
 
-void write_shm(struct mfc_inst_ctx *ctx, unsigned int data, unsigned int offset)
-{
-	writel(data, (ctx->shm + offset));
-
-#if defined(CONFIG_ARCH_S5PV210)
-	dma_cache_maint((void *)(ctx->shm + offset), 4, DMA_TO_DEVICE);
-#elif defined(CONFIG_ARCH_S5PV310)
-	mfc_mem_cache_clean((void *)((unsigned int)(ctx->shm) + offset), 4);
-#endif
-}
-
-unsigned int read_shm(struct mfc_inst_ctx *ctx, unsigned int offset)
-{
-#if defined(CONFIG_ARCH_S5PV210)
-	dma_cache_maint((void *)(ctx->shm + offset), 4, DMA_FROM_DEVICE);
-#elif defined(CONFIG_ARCH_S5PV310)
-	mfc_mem_cache_inv((void *)((unsigned int)(ctx->shm) + offset), 4);
-#endif
-	return readl(ctx->shm + offset);
-}
-
-
-void s5p_mfc_write_shm(const void *start_addr, unsigned int data,
-			unsigned long offset)
-{
-	writel(data, (start_addr + offset));
-	s5p_mfc_mem_cache_clean((void *)(start_addr + offset), 4);
-}
-
-unsigned int s5p_mfc_read_shm(const void *start_addr, unsigned long offset)
-{
-	s5p_mfc_mem_cache_inv((void *)(start_addr + offset), 4);
-
-	return readl(start_addr + offset);
-}

@@ -66,19 +66,6 @@ void s5p_mfc_release_codec_buffers(struct s5p_mfc_ctx *ctx);
 int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx);
 void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx);
 
-/* Getting parameters from MFC */
-static inline u32 s5p_mfc_get_h_crop(struct s5p_mfc_ctx *ctx)
-{
-	s5p_mfc_cache_inv(ctx->shared_virt, SHARED_BUF_SIZE);
-	return readl((ctx)->shared_virt + S5P_FIMV_SHARED_CROP_INFO_H);
-}
-
-static inline u32 s5p_mfc_get_v_crop(struct s5p_mfc_ctx *ctx)
-{
-	s5p_mfc_cache_inv(ctx->shared_virt, SHARED_BUF_SIZE);
-	return readl((ctx)->shared_virt + S5P_FIMV_SHARED_CROP_INFO_V);
-}
-
 #define s5p_mfc_get_dspl_y_adr()	(readl(dev->regs_base + \
 					S5P_FIMV_SI_DISPLAY_Y_ADR) << 11)
 #define s5p_mfc_get_dspl_status()	readl(dev->regs_base + \
@@ -104,42 +91,6 @@ static inline u32 s5p_mfc_get_v_crop(struct s5p_mfc_ctx *ctx)
 						S5P_FIMV_ENC_SI_STRM_SIZE)
 #define s5p_mfc_get_enc_slice_type()	readl(dev->regs_base + \
 						S5P_FIMV_ENC_SI_SLICE_TYPE)
-
-static inline u32 s5p_mfc_get_pic_time_top(struct s5p_mfc_ctx *ctx)
-{
-	s5p_mfc_cache_inv(ctx->shared_virt, SHARED_BUF_SIZE);
-	return readl((ctx)->shared_virt + S5P_FIMV_SHARED_PIC_TIME_TOP);
-}
-
-static inline u32 s5p_mfc_get_pic_time_bottom(struct s5p_mfc_ctx *ctx)
-{
-	s5p_mfc_cache_inv(ctx->shared_virt, SHARED_BUF_SIZE);
-	return readl((ctx)->shared_virt + S5P_FIMV_SHARED_PIC_TIME_BOTTOM);
-}
-
-#define s5p_mfc_set_start_num(ctx, x)						\
-	do {									\
-		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_START_BYTE_NUM); \
-		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);		\
-	} while(0)
-
-#define s5p_mfc_set_luma_size(ctx, x)						\
-	do {									\
-		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_LUMA_DPB_SIZE);	\
-		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);		\
-	} while(0)
-
-#define s5p_mfc_set_chroma_size(ctx, x)						\
-	do {									\
-		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_CHROMA_DPB_SIZE);\
-		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);		\
-	} while(0)
-
-#define s5p_mfc_set_mv_size(ctx, x)						\
-	do {									\
-		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_MV_SIZE);	\
-		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);		\
-	} while(0)
 
 /* Interrupt handling routines */
 /*
