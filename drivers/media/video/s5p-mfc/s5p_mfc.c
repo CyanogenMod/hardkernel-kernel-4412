@@ -155,6 +155,15 @@ static void s5p_mfc_watchdog_worker(struct work_struct *work)
 		mutex_unlock(&dev->mfc_mutex);
 }
 
+void mfc_workqueue_clock_off(struct work_struct *work)
+{
+	struct s5p_mfc_dev *dev = container_of(work, struct s5p_mfc_dev,
+						work_struct);
+
+	if (test_bit(0, &dev->clk_state) == 0)
+		s5p_mfc_clock_off();
+}
+
 static inline enum s5p_mfc_node_type s5p_mfc_get_node_type(struct file *file)
 {
 	struct video_device *vdev = video_devdata(file);
@@ -274,7 +283,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 		if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 			BUG();
 
-		s5p_mfc_clock_off();
+		queue_work(dev->irq_workqueue, &dev->work_struct);
 
 		s5p_mfc_try_run(dev);
 		return;
@@ -351,7 +360,7 @@ leave_handle_frame:
 	if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 		BUG();
 
-	s5p_mfc_clock_off();
+	queue_work(dev->irq_workqueue, &dev->work_struct);
 
 	s5p_mfc_try_run(dev);
 }
@@ -391,7 +400,7 @@ static inline void s5p_mfc_handle_error(struct s5p_mfc_ctx *ctx,
 		if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 			BUG();
 
-		s5p_mfc_clock_off();
+		queue_work(dev->irq_workqueue, &dev->work_struct);
 
 		break;
 	case MFCINST_FINISHING:
@@ -410,7 +419,7 @@ static inline void s5p_mfc_handle_error(struct s5p_mfc_ctx *ctx,
 		if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 			BUG();
 
-		s5p_mfc_clock_off();
+		queue_work(dev->irq_workqueue, &dev->work_struct);
 
 		break;
 	default:
@@ -459,7 +468,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 			if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 				BUG();
 
-			s5p_mfc_clock_off();
+			queue_work(dev->irq_workqueue, &dev->work_struct);
 
 			s5p_mfc_try_run(dev);
 		} else {
@@ -519,7 +528,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 		if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 			BUG();
 
-		s5p_mfc_clock_off();
+		queue_work(dev->irq_workqueue, &dev->work_struct);
 
 		s5p_mfc_try_run(dev);
 		wake_up_ctx(ctx, reason, err);
@@ -574,7 +583,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 			if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 				BUG();
 
-			s5p_mfc_clock_off();
+			queue_work(dev->irq_workqueue, &dev->work_struct);
 
 			wake_up_interruptible(&ctx->queue);
 			s5p_mfc_try_run(dev);
@@ -582,7 +591,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 			if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 				BUG();
 
-			s5p_mfc_clock_off();
+			queue_work(dev->irq_workqueue, &dev->work_struct);
 
 			wake_up_interruptible(&ctx->queue);
 		}
@@ -601,7 +610,7 @@ irq_cleanup_hw:
 	if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 		mfc_err("Failed to unlock hw.\n");
 
-	s5p_mfc_clock_off();
+	queue_work(dev->irq_workqueue, &dev->work_struct);
 
 	s5p_mfc_try_run(dev);
 	mfc_debug(2, "%s-- (via irq_cleanup_hw)\n", __func__);
@@ -774,7 +783,9 @@ static int s5p_mfc_release(struct file *file)
 
 	mfc_debug_enter();
 
+	set_bit(0, &dev->clk_state);
 	s5p_mfc_clock_on();
+
 	vb2_queue_release(&ctx->vq_src);
 	vb2_queue_release(&ctx->vq_dst);
 
@@ -823,6 +834,7 @@ static int s5p_mfc_release(struct file *file)
 			mfc_err("power off failed\n");
 	}
 
+	clear_bit(0, &dev->clk_state);
 	s5p_mfc_clock_off();
 	dev->ctx[ctx->num] = 0;
 	kfree(ctx);
@@ -900,6 +912,7 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	struct resource *res;
 	int ret = -ENOENT;
 	size_t size;
+	char workqueue_name[MFC_WORKQUEUE_LEN];
 
 	pr_debug("%s++\n", __func__);
 	dev = kzalloc(sizeof *dev, GFP_KERNEL);
@@ -924,6 +937,15 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get mfc clock source\n");
 		goto free_clk;
 	}
+
+	sprintf(workqueue_name, "mfc_workqueue");
+	dev->irq_workqueue = create_workqueue(workqueue_name);
+	if (dev->irq_workqueue == NULL) {
+		dev_err(&pdev->dev, "failed to create workqueue for mfc\n");
+		goto probe_out1;
+	}
+	INIT_WORK(&dev->work_struct, mfc_workqueue_clock_off);
+	clear_bit(0, &dev->clk_state);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {

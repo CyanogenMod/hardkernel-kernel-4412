@@ -17,6 +17,7 @@
 #define S5P_MFC_COMMON_H_
 
 #include <linux/videodev2.h>
+#include <linux/workqueue.h>
 
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
@@ -51,6 +52,7 @@
 #define MFC_NAME_LEN		16
 
 #define STUFF_BYTE		4
+#define MFC_WORKQUEUE_LEN	32
 
 /**
  * enum s5p_mfc_inst_type - The type of an MFC device node.
@@ -182,6 +184,10 @@ struct s5p_mfc_dev {
 	struct work_struct watchdog_work;
 
 	struct vb2_alloc_ctx **alloc_ctx;
+
+	unsigned long clk_state;
+	struct work_struct work_struct;
+	struct workqueue_struct *irq_workqueue;
 };
 
 /**
