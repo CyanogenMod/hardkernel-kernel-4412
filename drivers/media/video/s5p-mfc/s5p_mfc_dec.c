@@ -204,13 +204,20 @@ static int check_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	c = get_ctrl(ctrl->id);
 	if (!c)
 		return -EINVAL;
+
 	if (ctrl->value < c->minimum || ctrl->value > c->maximum
 	    || (c->step != 0 && ctrl->value % c->step != 0)) {
-		v4l2_err(&dev->v4l2_dev, "Invalid control value\n");
+		v4l2_err(&dev->v4l2_dev, "invalid control value\n");
 		return -ERANGE;
 	}
+
 	return 0;
 }
+
+static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
+};
+
+#define NUM_CTRL_CFGS ARRAY_SIZE(mfc_ctrl_list)
 
 /* Check whether a context should be run on hardware */
 static int s5p_mfc_ctx_ready(struct s5p_mfc_ctx *ctx)
@@ -250,11 +257,312 @@ static int s5p_mfc_ctx_ready(struct s5p_mfc_ctx *ctx)
 	return 0;
 }
 
+static int dec_init_ctx_ctrls(struct s5p_mfc_ctx *ctx)
+{
+	int i;
+	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
+
+	INIT_LIST_HEAD(&ctx->ctrls);
+
+	for (i = 0; i < NUM_CTRL_CFGS; i++) {
+		ctx_ctrl = kzalloc(sizeof(struct s5p_mfc_ctx_ctrl), GFP_KERNEL);
+		if (ctx_ctrl == NULL) {
+			mfc_err("failed to allocate ctx_ctrl type: %d, id: 0x%08x\n",
+				mfc_ctrl_list[i].type, mfc_ctrl_list[i].id);
+
+			return -ENOMEM;
+		}
+
+		ctx_ctrl->type = mfc_ctrl_list[i].type;
+		ctx_ctrl->id = mfc_ctrl_list[i].id;
+		ctx_ctrl->has_new = 0;
+		ctx_ctrl->val = 0;
+
+		list_add_tail(&ctx_ctrl->list, &ctx->ctrls);
+
+		mfc_debug(5, "add ctx ctrl id: 0x%08x\n", ctx_ctrl->id);
+	}
+
+	return 0;
+}
+
+static int dec_cleanup_ctx_ctrls(struct s5p_mfc_ctx *ctx)
+{
+	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
+
+	while (!list_empty(&ctx->ctrls)) {
+		ctx_ctrl = list_entry((&ctx->ctrls)->next,
+				      struct s5p_mfc_ctx_ctrl, list);
+
+		mfc_debug(5, "del ctx ctrl id: 0x%08x\n", ctx_ctrl->id);
+
+		list_del(&ctx_ctrl->list);
+		kfree(ctx_ctrl);
+	}
+
+	INIT_LIST_HEAD(&ctx->ctrls);
+
+	return 0;
+}
+
+static int dec_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
+	enum s5p_mfc_ctrl_type type, unsigned int index)
+{
+	int i;
+	struct s5p_mfc_buf_ctrl *buf_ctrl;
+	struct list_head *head;
+
+	if (type == MFC_CTRL_TYPE_SET)
+		head = &ctx->src_ctrls[index];
+	else if (type == MFC_CTRL_TYPE_GET)
+		head = &ctx->dst_ctrls[index];
+	else
+		return -EINVAL;
+
+	INIT_LIST_HEAD(head);
+
+	for (i = 0; i < NUM_CTRL_CFGS; i++) {
+		if (type != mfc_ctrl_list[i].type)
+			continue;
+
+		buf_ctrl = kzalloc(sizeof(struct s5p_mfc_buf_ctrl), GFP_KERNEL);
+		if (buf_ctrl == NULL) {
+			mfc_err("failed to allocate buf_ctrl type: %d, id: 0x%08x\n",
+				mfc_ctrl_list[i].type, mfc_ctrl_list[i].id);
+
+			return -ENOMEM;
+		}
+
+		buf_ctrl->id = mfc_ctrl_list[i].id;
+		buf_ctrl->has_new = 0;
+		buf_ctrl->val = 0;
+		buf_ctrl->old_val = 0;
+		buf_ctrl->is_volatile = mfc_ctrl_list[i].is_volatile;
+		buf_ctrl->mode = mfc_ctrl_list[i].mode;
+		buf_ctrl->addr = mfc_ctrl_list[i].addr;
+		buf_ctrl->mask = mfc_ctrl_list[i].mask;
+		buf_ctrl->shft = mfc_ctrl_list[i].shft;
+		buf_ctrl->flag_mode = mfc_ctrl_list[i].flag_mode;
+		buf_ctrl->flag_addr = mfc_ctrl_list[i].flag_addr;
+		buf_ctrl->flag_shft = mfc_ctrl_list[i].flag_shft;
+
+		list_add_tail(&buf_ctrl->list, head);
+
+		mfc_debug(5, "add buf ctrl id: 0x%08x\n", buf_ctrl->id);
+	}
+
+	return 0;
+}
+
+static int dec_cleanup_buf_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
+{
+	struct s5p_mfc_buf_ctrl *buf_ctrl;
+
+	while (!list_empty(head)) {
+		buf_ctrl = list_entry(head->next,
+				      struct s5p_mfc_buf_ctrl, list);
+
+		mfc_debug(5, "del buf ctrl id: 0x%08x\n",  buf_ctrl->id);
+
+		list_del(&buf_ctrl->list);
+		kfree(buf_ctrl);
+	}
+
+	INIT_LIST_HEAD(head);
+
+	return 0;
+}
+
+static int dec_to_buf_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
+{
+	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
+	struct s5p_mfc_buf_ctrl *buf_ctrl;
+
+	list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
+		if ((ctx_ctrl->type != MFC_CTRL_TYPE_SET) || (!ctx_ctrl->has_new))
+			continue;
+
+		list_for_each_entry(buf_ctrl, head, list) {
+			if (buf_ctrl->id == ctx_ctrl->id) {
+				buf_ctrl->has_new = 1;
+				buf_ctrl->val = ctx_ctrl->val;
+				if (buf_ctrl->is_volatile)
+					buf_ctrl->updated = 0;
+
+				ctx_ctrl->has_new = 0;
+				break;
+			}
+		}
+	}
+
+	list_for_each_entry(buf_ctrl, head, list) {
+		if (buf_ctrl->has_new)
+			mfc_debug(5, "id: 0x%08x val: %d\n",
+				 buf_ctrl->id, buf_ctrl->val);
+	}
+
+	return 0;
+}
+
+static int dec_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
+{
+	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
+	struct s5p_mfc_buf_ctrl *buf_ctrl;
+
+	list_for_each_entry(buf_ctrl, head, list) {
+		if (!buf_ctrl->has_new)
+			continue;
+
+		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
+			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET)
+				continue;
+
+			if (ctx_ctrl->id == buf_ctrl->id) {
+				mfc_debug(!ctx_ctrl->has_new, "overwrite ctx ctrl value\n");
+
+				ctx_ctrl->has_new = 1;
+				ctx_ctrl->val = buf_ctrl->val;
+
+				buf_ctrl->has_new = 0;
+			}
+		}
+	}
+
+	list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
+		if (ctx_ctrl->has_new)
+			mfc_debug(5, "id: 0x%08x val: %d\n",
+				  ctx_ctrl->id, ctx_ctrl->val);
+	}
+
+	return 0;
+}
+
+static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
+{
+	struct s5p_mfc_buf_ctrl *buf_ctrl;
+	unsigned int value = 0;
+
+	list_for_each_entry(buf_ctrl, head, list) {
+		if (!buf_ctrl->has_new)
+			continue;
+
+		/* read old vlaue */
+		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
+			value = s5p_mfc_read_reg(buf_ctrl->addr);
+		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
+			value = s5p_mfc_read_shm(ctx, buf_ctrl->addr);
+
+		/* save old vlaue for recovery */
+		if (buf_ctrl->is_volatile)
+			buf_ctrl->old_val = (value >> buf_ctrl->shft) & buf_ctrl->mask;
+
+		/* write new value */
+		value &= ~(buf_ctrl->mask << buf_ctrl->shft);
+		value |= ((buf_ctrl->val & buf_ctrl->mask) << buf_ctrl->shft);
+
+		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
+			s5p_mfc_write_reg(value, buf_ctrl->addr);
+		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
+			s5p_mfc_write_shm(ctx, value, buf_ctrl->addr);
+
+		/* set change flag bit */
+		if (buf_ctrl->flag_mode == MFC_CTRL_MODE_SFR) {
+			value = s5p_mfc_read_reg(buf_ctrl->flag_addr);
+			value |= (1 << buf_ctrl->flag_shft);
+			s5p_mfc_write_reg(value, buf_ctrl->flag_addr);
+		} else if (buf_ctrl->flag_mode == MFC_CTRL_MODE_SHM) {
+			value = s5p_mfc_read_shm(ctx, buf_ctrl->flag_addr);
+			value |= (1 << buf_ctrl->flag_shft);
+			s5p_mfc_write_shm(ctx, value, buf_ctrl->flag_addr);
+		}
+
+		buf_ctrl->has_new = 0;
+		buf_ctrl->updated = 1;
+
+		mfc_debug(5, "id: 0x%08x val: %d\n", buf_ctrl->id,
+			  buf_ctrl->val);
+	}
+
+	return 0;
+}
+
+static int dec_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
+{
+	struct s5p_mfc_buf_ctrl *buf_ctrl;
+	unsigned int value = 0;
+
+	list_for_each_entry(buf_ctrl, head, list) {
+		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
+			value = s5p_mfc_read_reg(buf_ctrl->addr);
+		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
+			value = s5p_mfc_read_shm(ctx, buf_ctrl->addr);
+
+		value = (value >> buf_ctrl->shft) & buf_ctrl->mask;
+
+		buf_ctrl->val = value;
+		buf_ctrl->has_new = 1;
+
+		mfc_debug(5, "id: 0x%08x val: %d\n", buf_ctrl->id,
+			  buf_ctrl->val);
+	}
+
+	return 0;
+}
+
+static int dec_recover_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head)
+{
+	struct s5p_mfc_buf_ctrl *buf_ctrl;
+	unsigned int value = 0;
+
+	list_for_each_entry(buf_ctrl, head, list) {
+		if ((!buf_ctrl->is_volatile) || (!buf_ctrl->updated))
+			continue;
+
+		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
+			value = s5p_mfc_read_reg(buf_ctrl->addr);
+		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
+			value = s5p_mfc_read_shm(ctx, buf_ctrl->addr);
+
+		value &= ~(buf_ctrl->mask << buf_ctrl->shft);
+		value |= ((buf_ctrl->old_val & buf_ctrl->mask) << buf_ctrl->shft);
+
+		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
+			s5p_mfc_write_reg(value, buf_ctrl->addr);
+		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
+			s5p_mfc_write_shm(ctx, value, buf_ctrl->addr);
+
+		/* clear change flag bit */
+		if (buf_ctrl->flag_mode == MFC_CTRL_MODE_SFR) {
+			value = s5p_mfc_read_reg(buf_ctrl->flag_addr);
+			value &= ~(1 << buf_ctrl->flag_shft);
+			s5p_mfc_write_reg(value, buf_ctrl->flag_addr);
+		} else if (buf_ctrl->flag_mode == MFC_CTRL_MODE_SHM) {
+			value = s5p_mfc_read_shm(ctx, buf_ctrl->flag_addr);
+			value &= ~(1 << buf_ctrl->flag_shft);
+			s5p_mfc_write_shm(ctx, value, buf_ctrl->flag_addr);
+		}
+
+		mfc_debug(5, "id: 0x%08x old_val: %d\n", buf_ctrl->id,
+			  buf_ctrl->old_val);
+	}
+
+	return 0;
+}
+
 static struct s5p_mfc_codec_ops decoder_codec_ops = {
 	.pre_seq_start		= NULL,
 	.post_seq_start		= NULL,
 	.pre_frame_start	= NULL,
 	.post_frame_start	= NULL,
+	.init_ctx_ctrls		= dec_init_ctx_ctrls,
+	.cleanup_ctx_ctrls	= dec_cleanup_ctx_ctrls,
+	.init_buf_ctrls		= dec_init_buf_ctrls,
+	.cleanup_buf_ctrls	= dec_cleanup_buf_ctrls,
+	.to_buf_ctrls		= dec_to_buf_ctrls,
+	.to_ctx_ctrls		= dec_to_ctx_ctrls,
+	.set_buf_ctrls_val	= dec_set_buf_ctrls_val,
+	.get_buf_ctrls_val	= dec_get_buf_ctrls_val,
+	.recover_buf_ctrls_val	= dec_recover_buf_ctrls_val,
 };
 
 /* Query capabilities of the device */
@@ -708,8 +1016,11 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 {
 	struct s5p_mfc_dev *dev = video_drvdata(file);
 	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
+	int ret = 0;
 
 	mfc_debug_enter();
+
 	switch (ctrl->id) {
 	case V4L2_CID_CODEC_LOOP_FILTER_MPEG4_ENABLE:
 		ctrl->value = ctx->loop_filter_mpeg4;
@@ -744,10 +1055,30 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 		ctrl->value = ctx->slice_interface;
 		break;
 	default:
-		v4l2_err(&dev->v4l2_dev, "Invalid control\n");
-		return -EINVAL;
+		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
+			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET)
+				continue;
+
+			if (ctx_ctrl->id == ctrl->id) {
+				if (ctx_ctrl->has_new) {
+					ctx_ctrl->has_new = 0;
+					ctrl->value = ctx_ctrl->val;
+				} else {
+					ctrl->value = 0;
+				}
+
+				ret = 1;
+				break;
+			}
+		}
+		if (!ret) {
+			v4l2_err(&dev->v4l2_dev, "invalid control 0x%08x\n", ctrl->id);
+			return -EINVAL;
+		}
 	}
+
 	mfc_debug_leave();
+
 	return 0;
 }
 
@@ -757,14 +1088,18 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 {
 	struct s5p_mfc_dev *dev = video_drvdata(file);
 	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
 	int ret = 0;
 	int stream_on;
 
 	mfc_debug_enter();
+
 	stream_on = ctx->vq_src.streaming || ctx->vq_dst.streaming;
+
 	ret = check_ctrl_val(ctx, ctrl);
 	if (ret != 0)
 		return ret;
+
 	switch (ctrl->id) {
 	case V4L2_CID_CODEC_LOOP_FILTER_MPEG4_ENABLE:
 		if (stream_on)
@@ -782,10 +1117,27 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 		ctx->slice_interface = ctrl->value;
 		break;
 	default:
-		v4l2_err(&dev->v4l2_dev, "Invalid control\n");
-		return -EINVAL;
+		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
+			if (ctx_ctrl->type != MFC_CTRL_TYPE_SET)
+				continue;
+
+			if (ctx_ctrl->id == ctrl->id) {
+				ctx_ctrl->has_new = 1;
+				ctx_ctrl->val = ctrl->value;
+
+				ret = 1;
+				break;
+			}
+		}
+
+		if (!ret) {
+			v4l2_err(&dev->v4l2_dev, "invalid control 0x%08x\n", ctrl->id);
+			return -EINVAL;
+		}
 	}
+
 	mfc_debug_leave();
+
 	return 0;
 }
 
@@ -944,6 +1296,7 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 	unsigned int i;
 
 	mfc_debug_enter();
+
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		if (ctx->capture_state == QUEUE_BUFS_MMAPED) {
 			mfc_debug_leave();
@@ -968,6 +1321,9 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 		ctx->dst_bufs[i].cookie.raw.chroma = mfc_plane_cookie(vb, 1);
 		ctx->dst_bufs_cnt++;
 
+		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_GET, i) < 0)
+			mfc_err("failed in init_buf_ctrls\n");
+
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		if (mfc_plane_cookie(vb, 0)  == 0) {
 			mfc_err("Plane memory not allocated.\n");
@@ -979,16 +1335,85 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 			mfc_err("Plane buffer (OUTPUT) is too small.\n");
 			return -EINVAL;
 		}
+
 		i = vb->v4l2_buf.index;
 		ctx->src_bufs[i].b = vb;
 		ctx->src_bufs[i].cookie.stream = mfc_plane_cookie(vb, 0);
 		ctx->src_bufs_cnt++;
+
+		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SET, i) < 0)
+			mfc_err("failed in init_buf_ctrls\n");
 	} else {
 		mfc_err("s5p_mfc_buf_init: unknown queue type.\n");
 		return -EINVAL;
 	}
+
 	mfc_debug_leave();
+
 	return 0;
+}
+
+static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
+{
+	struct vb2_queue *vq = vb->vb2_queue;
+	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	unsigned int index = vb->v4l2_buf.index;
+
+	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+
+	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
+			mfc_err("failed in to_buf_ctrls\n");
+	}
+
+	return 0;
+}
+
+static int s5p_mfc_buf_finish(struct vb2_buffer *vb)
+{
+	struct vb2_queue *vq = vb->vb2_queue;
+	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	unsigned int index = vb->v4l2_buf.index;
+
+	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		if (call_cop(ctx, to_ctx_ctrls, ctx, &ctx->dst_ctrls[index]) < 0)
+			mfc_err("failed in to_buf_ctrls\n");
+	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		#if 0
+		/* if there are not-handled mfc_ctrl, remove all */
+		while (!list_empty(&ctx->src_ctrls[index])) {
+			mfc_ctrl = list_entry((&ctx->src_ctrls[index])->next,
+					      struct s5p_mfc_ctrl, list);
+			mfc_debug(2, "not handled ctrl id: 0x%08x val: %d\n",
+				  mfc_ctrl->id, mfc_ctrl->val);
+			list_del(&mfc_ctrl->list);
+			kfree(mfc_ctrl);
+		}
+		#endif
+	}
+
+	return 0;
+}
+
+static void s5p_mfc_buf_cleanup(struct vb2_buffer *vb)
+{
+	struct vb2_queue *vq = vb->vb2_queue;
+	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	unsigned int index = vb->v4l2_buf.index;
+
+	mfc_debug_enter();
+
+	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->dst_ctrls[index]) < 0)
+			mfc_err("failed in cleanup_buf_ctrls\n");
+	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
+			mfc_err("failed in cleanup_buf_ctrls\n");
+	} else {
+		mfc_err("s5p_mfc_buf_cleanup: unknown queue type.\n");
+	}
+
+	mfc_debug_leave();
 }
 
 static int s5p_mfc_start_streaming(struct vb2_queue *q)
@@ -1024,6 +1449,7 @@ static int s5p_mfc_stop_streaming(struct vb2_queue *q)
 					  0);
 		aborted = 1;
 	}
+
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	if (q->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
@@ -1033,13 +1459,16 @@ static int s5p_mfc_stop_streaming(struct vb2_queue *q)
 		ctx->dpb_flush_flag = 1;
 		ctx->dec_dst_flag = 0;
 	}
+
 	if (q->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		s5p_mfc_cleanup_queue(&ctx->src_queue, &ctx->vq_src);
 		INIT_LIST_HEAD(&ctx->src_queue);
 		ctx->src_queue_cnt = 0;
 	}
+
 	if (aborted)
 		ctx->state = MFCINST_RUNNING;
+
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 
 	return 0;
@@ -1101,6 +1530,9 @@ static struct vb2_ops s5p_mfc_dec_qops = {
 	.wait_prepare	= s5p_mfc_unlock,
 	.wait_finish	= s5p_mfc_lock,
 	.buf_init	= s5p_mfc_buf_init,
+	.buf_prepare	= s5p_mfc_buf_prepare,
+	.buf_finish	= s5p_mfc_buf_finish,
+	.buf_cleanup	= s5p_mfc_buf_cleanup,
 	.start_streaming= s5p_mfc_start_streaming,
 	.stop_streaming = s5p_mfc_stop_streaming,
 	.buf_queue	= s5p_mfc_buf_queue,

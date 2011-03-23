@@ -277,6 +277,62 @@ struct s5p_mfc_enc_params {
 	} codec;
 };
 
+enum s5p_mfc_ctrl_type {
+	MFC_CTRL_TYPE_SET	= 0x1,
+	MFC_CTRL_TYPE_GET	= 0x2,
+};
+
+enum s5p_mfc_ctrl_mode {
+	MFC_CTRL_MODE_NONE	= 0x0,
+	MFC_CTRL_MODE_SFR	= 0x1,
+	MFC_CTRL_MODE_SHM	= 0x2,
+	MFC_CTRL_MODE_CST	= 0x4,
+};
+
+struct s5p_mfc_ctrl_cfg {
+	enum s5p_mfc_ctrl_type type;
+	unsigned int id;
+	/*
+	unsigned int is_dynamic;
+	*/
+	unsigned int is_volatile;	/* only for MFC_CTRL_TYPE_SET */
+	unsigned int mode;
+	unsigned int addr;
+	unsigned int mask;
+	unsigned int shft;
+	unsigned int flag_mode;		/* only for MFC_CTRL_TYPE_SET */
+	unsigned int flag_addr;		/* only for MFC_CTRL_TYPE_SET */
+	unsigned int flag_shft;		/* only for MFC_CTRL_TYPE_SET */
+};
+
+struct s5p_mfc_ctx_ctrl {
+	struct list_head list;
+	enum s5p_mfc_ctrl_type type;
+	unsigned int id;
+	/*
+	unsigned int is_dynamic;
+	*/
+	int has_new;
+	int val;
+};
+
+struct s5p_mfc_buf_ctrl {
+	struct list_head list;
+	unsigned int id;
+	int has_new;
+	int val;
+	unsigned int old_val;		/* only for MFC_CTRL_TYPE_SET */
+	unsigned int is_volatile;	/* only for MFC_CTRL_TYPE_SET */
+	unsigned int updated;
+	unsigned int mode;
+	unsigned int addr;
+	unsigned int mask;
+	unsigned int shft;
+	unsigned int flag_mode;		/* only for MFC_CTRL_TYPE_SET */
+	unsigned int flag_addr;		/* only for MFC_CTRL_TYPE_SET */
+	unsigned int flag_shft;		/* only for MFC_CTRL_TYPE_SET */
+};
+
 struct s5p_mfc_codec_ops {
 	/* initialization routines */
 	int (*alloc_ctx_buf) (struct s5p_mfc_ctx *ctx);
@@ -296,7 +352,21 @@ struct s5p_mfc_codec_ops {
 	/* configuration routines */
 	int (*get_codec_cfg) (struct s5p_mfc_ctx *ctx, unsigned int type, int *value);
 	int (*set_codec_cfg) (struct s5p_mfc_ctx *ctx, unsigned int type, int *value);
+	/* controls per buffer */
+	int (*init_ctx_ctrls) (struct s5p_mfc_ctx *ctx);
+	int (*cleanup_ctx_ctrls) (struct s5p_mfc_ctx *ctx);
+	int (*init_buf_ctrls) (struct s5p_mfc_ctx *ctx, enum s5p_mfc_ctrl_type type, unsigned int index);
+	int (*cleanup_buf_ctrls) (struct s5p_mfc_ctx *ctx, struct list_head *head);
+	int (*to_buf_ctrls) (struct s5p_mfc_ctx *ctx, struct list_head *head);
+	int (*to_ctx_ctrls) (struct s5p_mfc_ctx *ctx, struct list_head *head);
+	int (*set_buf_ctrls_val) (struct s5p_mfc_ctx *ctx, struct list_head *head);
+	int (*get_buf_ctrls_val) (struct s5p_mfc_ctx *ctx, struct list_head *head);
+	int (*recover_buf_ctrls_val) (struct s5p_mfc_ctx *ctx, struct list_head *head);
 };
+
+#define call_cop(c, op, args...)				\
+	(((c)->c_ops->op) ?					\
+		((c)->c_ops->op(args)) : 0)
 
 /**
  * struct s5p_mfc_ctx - This struct contains the instance context
@@ -363,6 +433,11 @@ struct s5p_mfc_ctx {
 	int src_bufs_cnt;
 	struct s5p_mfc_buf dst_bufs[MFC_MAX_BUFFERS];
 	int dst_bufs_cnt;
+
+	struct list_head ctrls;
+
+	struct list_head src_ctrls[MFC_MAX_BUFFERS];
+	struct list_head dst_ctrls[MFC_MAX_BUFFERS];
 
 //	int dec_dst_buf_cnt;
 	unsigned int sequence;

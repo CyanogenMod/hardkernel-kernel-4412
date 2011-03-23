@@ -221,6 +221,7 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 {
 	struct s5p_mfc_buf  *dst_buf;
 	size_t dspl_y_addr = MFC_GET_ADR(DEC_DISPLAY_Y);
+	unsigned int index;
 
 	ctx->sequence++;
 	/* If frame is same as previous then skip and do not dequeue */
@@ -248,6 +249,11 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 
 			vb2_buffer_done(dst_buf->b,
 				err ? VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
+
+			index = dst_buf->b->v4l2_buf.index;
+			if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->dst_ctrls[index]) < 0)
+				mfc_err("failed in get_buf_ctrls_val\n");
+
 			break;
 		}
 	}
@@ -262,6 +268,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 	struct s5p_mfc_buf *src_buf;
 	unsigned long flags;
 	unsigned int res_change;
+	unsigned int index;
 
 	dst_frame_status = s5p_mfc_get_dspl_status()
 				& S5P_FIMV_DEC_STATUS_DECODING_STATUS_MASK;
@@ -336,6 +343,10 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			s5p_mfc_decode_one_frame(ctx, 0);
 			return;
 		} else {
+			index = src_buf->b->v4l2_buf.index;
+			if (call_cop(ctx, recover_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
+				mfc_err("failed in recover_buf_ctrls_val\n");
+
 			mfc_debug(2, "MFC needs next buffer.\n");
 			ctx->consumed_stream = 0;
 			list_del(&src_buf->list);
@@ -744,6 +755,10 @@ static int s5p_mfc_open(struct file *file)
 		mfc_err("Failed to initialize videobuf2 queue(output)\n");
 		goto out_open_3;
 	}
+
+	if (call_cop(ctx, init_ctx_ctrls, ctx) < 0)
+		mfc_err("failed in init_buf_ctrls\n");
+
 	init_waitqueue_head(&ctx->queue);
 	mfc_debug(2, "%s-- (via irq_cleanup_hw)\n", __func__);
 	return ret;
@@ -784,6 +799,9 @@ static int s5p_mfc_release(struct file *file)
 	unsigned long flags;
 
 	mfc_debug_enter();
+
+	if (call_cop(ctx, cleanup_ctx_ctrls, ctx) < 0)
+		mfc_err("failed in init_buf_ctrls\n");
 
 	set_bit(0, &dev->clk_state);
 	s5p_mfc_clock_on();
