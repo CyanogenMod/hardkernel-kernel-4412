@@ -265,6 +265,7 @@ struct s5p_mfc_enc_params {
 	enum v4l2_codec_mfc5x_enc_switch rc_frame;
 	u32 rc_bitrate;
 	u16 rc_reaction_coeff;
+	u8 frame_tag;
 
 	u16 vbv_buf_size;
 	enum v4l2_codec_mfc5x_enc_seq_hdr_mode seq_hdr_mode;

@@ -1535,6 +1535,7 @@ static inline int s5p_mfc_run_enc_frame(struct s5p_mfc_ctx *ctx)
 	unsigned int src_y_size, src_c_size;
 	*/
 	unsigned int dst_size;
+	unsigned int index;
 
 	spin_lock_irqsave(&dev->irqlock, flags);
 
@@ -1568,6 +1569,10 @@ static inline int s5p_mfc_run_enc_frame(struct s5p_mfc_ctx *ctx)
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
+
+	index = src_mb->b->v4l2_buf.index;
+	if (call_cop(ctx, set_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
+		mfc_err("failed in set_buf_ctrls_val\n");
 
 	dev->curr_ctx = ctx->num;
 	s5p_mfc_clean_ctx_int_flags(ctx);
