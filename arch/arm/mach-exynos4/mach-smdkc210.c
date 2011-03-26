@@ -11,6 +11,7 @@
 #include <linux/serial_core.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
+#include <linux/gpio_event.h>
 #include <linux/lcd.h>
 #include <linux/mmc/host.h>
 #include <linux/platform_device.h>
@@ -32,6 +33,7 @@
 #include <plat/cpu.h>
 #include <plat/devs.h>
 #include <plat/fb.h>
+#include <plat/gpio-cfg.h>
 #include <plat/keypad.h>
 #include <plat/sdhci.h>
 #include <plat/iic.h>
@@ -343,6 +345,43 @@ static struct platform_device smdkc210_smsc911x = {
 	},
 };
 
+static struct gpio_event_direct_entry smdkc210_keypad_key_map[] = {
+	{
+		.gpio   = EXYNOS4_GPX0(0),
+		.code   = KEY_POWER,
+	}
+};
+
+static struct gpio_event_input_info smdkc210_keypad_key_info = {
+	.info.func              = gpio_event_input_func,
+	.info.no_suspend        = true,
+	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
+	.type                   = EV_KEY,
+	.keymap                 = smdkc210_keypad_key_map,
+	.keymap_size            = ARRAY_SIZE(smdkc210_keypad_key_map)
+};
+
+static struct gpio_event_info *smdkc210_input_info[] = {
+	&smdkc210_keypad_key_info.info,
+};
+
+static struct gpio_event_platform_data smdkc210_input_data = {
+	.names  = {
+		"smdkc210-keypad",
+		NULL,
+	},
+	.info           = smdkc210_input_info,
+	.info_count     = ARRAY_SIZE(smdkc210_input_info),
+};
+
+static struct platform_device smdkc210_input_device = {
+	.name   = GPIO_EVENT_DEV_NAME,
+	.id     = 0,
+	.dev    = {
+		.platform_data = &smdkc210_input_data,
+	},
+};
+
 static uint32_t smdkc210_keymap[] __initdata = {
 	/* KEY(row, col, keycode) */
 	KEY(0, 3, KEY_1), KEY(0, 4, KEY_2), KEY(0, 5, KEY_3),
@@ -394,7 +433,17 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&smdkc210_lcd_lte480wv,
 #endif
 	&smdkc210_smsc911x,
+	&smdkc210_input_device,
 };
+
+static void __init smdkc210_button_init(void)
+{
+	s3c_gpio_cfgpin(EXYNOS4_GPX0(0), (0xf << 0));
+	s3c_gpio_setpull(EXYNOS4_GPX0(0), S3C_GPIO_PULL_NONE);
+
+	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), (0xf << 28));
+	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
+}
 
 static void __init smdkc210_smsc911x_init(void)
 {
@@ -431,6 +480,7 @@ static void __init smdkc210_machine_init(void)
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 
+	smdkc210_button_init();
 	smdkc210_smsc911x_init();
 
 	s3c_sdhci0_set_platdata(&smdkc210_hsmmc0_pdata);
