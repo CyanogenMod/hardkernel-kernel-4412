@@ -205,6 +205,23 @@ static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	.max_bpp = 32,
 	.default_bpp = 24,
 };
+
+static struct s3c_fb_pd_win smdkv310_fb_win1 = {
+	.win_mode = {
+		.left_margin  = 9,
+		.right_margin = 9,
+		.upper_margin = 5,
+		.lower_margin = 5,
+		.hsync_len = 2,
+		.vsync_len = 2,
+		.xres = 480,
+		.yres = 800,
+	},
+	.virtual_x = 480,
+	.virtual_y = 1600,
+	.max_bpp = 32,
+	.default_bpp = 24,
+};
 #else
 static void lcd_lte480wv_set_power(struct plat_lcd_data *pd,
 				   unsigned int power)
@@ -263,10 +280,28 @@ static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	.max_bpp        = 32,
 	.default_bpp    = 24,
 };
+
+static struct s3c_fb_pd_win smdkv310_fb_win1 = {
+	.win_mode = {
+		.left_margin    = 13,
+		.right_margin   = 8,
+		.upper_margin   = 7,
+		.lower_margin   = 5,
+		.hsync_len      = 3,
+		.vsync_len      = 1,
+		.xres   = 800,
+		.yres   = 480,
+	},
+	.virtual_x = 800,
+	.virtual_y = 960,
+	.max_bpp        = 32,
+	.default_bpp    = 24,
+};
 #endif
 
 static struct s3c_fb_platdata smdkv310_lcd0_pdata __initdata = {
-	.win[0]         = &smdkv310_fb_win0,
+	.win[0]		= &smdkv310_fb_win0,
+	.win[1]		= &smdkv310_fb_win1,
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
 #if defined(CONFIG_LCD_AMS369FG06)
 	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_VDEN |
