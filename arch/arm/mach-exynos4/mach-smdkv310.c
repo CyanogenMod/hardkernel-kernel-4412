@@ -18,6 +18,8 @@
 #include <linux/io.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
+#include <linux/spi/spi.h>
+#include <linux/spi/spi_gpio.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -119,6 +121,89 @@ static struct s3c_sdhci_platdata smdkv310_hsmmc3_pdata __initdata = {
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 };
 
+#if defined(CONFIG_LCD_AMS369FG06)
+static int lcd_power_on(struct lcd_device *ld, int enable)
+{
+	return 1;
+}
+
+static int reset_lcd(struct lcd_device *ld)
+{
+	int err = 0;
+
+	err = gpio_request(EXYNOS4_GPX0(6), "GPX0");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX0 for "
+				"lcd reset control\n");
+		return err;
+	}
+
+	gpio_direction_output(EXYNOS4_GPX0(6), 1);
+	mdelay(100);
+
+	gpio_set_value(EXYNOS4_GPX0(6), 1);
+	mdelay(100);
+
+	gpio_free(EXYNOS4_GPX0(6));
+
+	return 1;
+}
+
+static struct lcd_platform_data ams369fg06_platform_data = {
+	.reset			= reset_lcd,
+	.power_on		= lcd_power_on,
+	.lcd_enabled		= 0,
+	.reset_delay		= 100,	/* 100ms */
+};
+
+#define		LCD_BUS_NUM	3
+#define		DISPLAY_CS	EXYNOS4_GPB(5)
+#define		DISPLAY_CLK	EXYNOS4_GPB(4)
+#define		DISPLAY_SI	EXYNOS4_GPB(7)
+
+static struct spi_board_info spi_board_info[] __initdata = {
+	{
+		.modalias		= "ams369fg06",
+		.platform_data		= (void *)&ams369fg06_platform_data,
+		.max_speed_hz		= 1200000,
+		.bus_num		= LCD_BUS_NUM,
+		.chip_select		= 0,
+		.mode			= SPI_MODE_3,
+		.controller_data	= (void *)DISPLAY_CS,
+	}
+};
+
+static struct spi_gpio_platform_data ams369fg06_spi_gpio_data = {
+	.sck	= DISPLAY_CLK,
+	.mosi	= DISPLAY_SI,
+	.miso	= -1,
+	.num_chipselect = 1,
+};
+
+static struct platform_device s3c_device_spi_gpio = {
+	.name	= "spi_gpio",
+	.id	= LCD_BUS_NUM,
+	.dev	= {
+		.parent		= &s5p_device_fimd0.dev,
+		.platform_data	= &ams369fg06_spi_gpio_data,
+	},
+};
+
+static struct s3c_fb_pd_win smdkv310_fb_win0 = {
+	.win_mode = {
+		.left_margin  = 9,
+		.right_margin = 9,
+		.upper_margin = 5,
+		.lower_margin = 5,
+		.hsync_len = 2,
+		.vsync_len = 2,
+		.xres = 480,
+		.yres = 800,
+	},
+	.max_bpp = 32,
+	.default_bpp = 24,
+};
+#else
 static void lcd_lte480wv_set_power(struct plat_lcd_data *pd,
 				   unsigned int power)
 {
@@ -174,11 +259,18 @@ static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	.max_bpp        = 32,
 	.default_bpp    = 24,
 };
+#endif
+
 static struct s3c_fb_platdata smdkv310_lcd0_pdata __initdata = {
 	.win[0]         = &smdkv310_fb_win0,
-	.vidcon0        = VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
-	.vidcon1        = VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
-	.setup_gpio     = exynos4_fimd0_gpio_setup_24bpp,
+	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
+#if defined(CONFIG_LCD_AMS369FG06)
+	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_VDEN |
+			  VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
+#else
+	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
+#endif
+	.setup_gpio	= exynos4_fimd0_gpio_setup_24bpp,
 };
 
 static struct resource smdkv310_smsc911x_resources[] = {
@@ -237,6 +329,9 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 
 static struct platform_device *smdkv310_devices[] __initdata = {
 	&s5p_device_fimd0,
+#ifdef CONFIG_LCD_AMS369FG06
+	&s3c_device_spi_gpio,
+#endif
 	&s3c_device_hsmmc0,
 	&s3c_device_hsmmc1,
 	&s3c_device_hsmmc2,
@@ -256,7 +351,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos4_device_pd[PD_GPS],
 	&exynos4_device_sysmmu,
 	&samsung_asoc_dma,
+#ifndef CONFIG_LCD_AMS369FG06
 	&smdkv310_lcd_lte480wv,
+#endif
 	&smdkv310_smsc911x,
 };
 
@@ -301,6 +398,10 @@ static void __init smdkv310_machine_init(void)
 	s3c_sdhci1_set_platdata(&smdkv310_hsmmc1_pdata);
 	s3c_sdhci2_set_platdata(&smdkv310_hsmmc2_pdata);
 	s3c_sdhci3_set_platdata(&smdkv310_hsmmc3_pdata);
+
+#ifdef CONFIG_LCD_AMS369FG06
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+#endif
 
 	s5p_fimd0_set_platdata(&smdkv310_lcd0_pdata);
 
