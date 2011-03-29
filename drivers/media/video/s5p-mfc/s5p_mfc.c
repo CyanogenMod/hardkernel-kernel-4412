@@ -710,6 +710,7 @@ static int s5p_mfc_open(struct file *file)
 		}
 #ifndef CONFIG_PM_RUNTIME
 		s5p_mfc_mem_resume(dev->alloc_ctx[0]);
+		s5p_mfc_mem_resume(dev->alloc_ctx[1]);
 #endif
 		/* Init the FW */
 		ret = s5p_mfc_init_hw(dev);
@@ -845,6 +846,10 @@ static int s5p_mfc_release(struct file *file)
 		/* FIXME: is it need ? */
 		s5p_mfc_deinit_hw(dev);
 
+#ifndef CONFIG_PM_RUNTIME
+		s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
+		s5p_mfc_mem_suspend(dev->alloc_ctx[1]);
+#endif
 		/* reset <-> F/W release */
 		s5p_mfc_release_firmware(dev);
 		del_timer_sync(&dev->watchdog_timer);
@@ -1181,8 +1186,15 @@ static int s5p_mfc_resume(struct device *dev)
 static int s5p_mfc_runtime_suspend(struct device *dev)
 {
 	struct s5p_mfc_dev *m_dev = platform_get_drvdata(to_platform_device(dev));
+	int pre_power;
 
+	pre_power = atomic_read(&m_dev->pm.power);
 	atomic_set(&m_dev->pm.power, 0);
+
+	if (pre_power == 1) {
+		s5p_mfc_mem_suspend(m_dev->alloc_ctx[0]);
+		s5p_mfc_mem_suspend(m_dev->alloc_ctx[1]);
+	}
 
 	return 0;
 }
@@ -1204,8 +1216,10 @@ static int s5p_mfc_runtime_resume(struct device *dev)
 	pre_power = atomic_read(&m_dev->pm.power);
 	atomic_set(&m_dev->pm.power, 1);
 
-	if (pre_power == 0)
+	if (pre_power == 0) {
 		s5p_mfc_mem_resume(m_dev->alloc_ctx[0]);
+		s5p_mfc_mem_resume(m_dev->alloc_ctx[1]);
+	}
 
 	return 0;
 }
