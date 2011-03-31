@@ -271,6 +271,7 @@ static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	.default_bpp    = 24,
 };
 
+#ifndef CONFIG_LCD_WA101S /* temporarily disables window1 */
 static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 	.win_mode = {
 		.left_margin    = 80,
@@ -287,6 +288,7 @@ static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 	.max_bpp        = 32,
 	.default_bpp    = 24,
 };
+#endif
 
 #elif defined(CONFIG_LCD_LTE480WV)
 static void lcd_lte480wv_set_power(struct plat_lcd_data *pd,
@@ -367,7 +369,9 @@ static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 
 static struct s3c_fb_platdata smdkv310_lcd0_pdata __initdata = {
 	.win[0]		= &smdkv310_fb_win0,
+#ifndef CONFIG_LCD_WA101S /* temporarily disables window1 */
 	.win[1]		= &smdkv310_fb_win1,
+#endif
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
 #if defined(CONFIG_LCD_AMS369FG06)
 	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_VDEN |
