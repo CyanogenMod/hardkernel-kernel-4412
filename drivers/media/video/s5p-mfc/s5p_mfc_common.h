@@ -450,6 +450,7 @@ struct s5p_mfc_ctx {
 	__u32 pix_format;
 	int loop_filter_mpeg4;
 	int display_delay;
+	int cacheable;
 
 	/* Buffers */
 

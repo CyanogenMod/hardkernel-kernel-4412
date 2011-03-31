@@ -456,7 +456,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	/* Get the reason of interrupt and the error code */
 	reason = s5p_mfc_get_int_reason();
 	err = s5p_mfc_get_int_err();
-	mfc_debug(0, "Int reason: %d (err: %08x)\n", reason, err);
+	mfc_debug(2, "Int reason: %d (err: %08x)\n", reason, err);
 	switch (reason) {
 	case S5P_FIMV_R2H_CMD_ERR_RET:
 		/* An error has occured */

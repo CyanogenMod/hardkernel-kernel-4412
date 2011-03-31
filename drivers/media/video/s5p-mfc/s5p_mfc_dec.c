@@ -190,6 +190,15 @@ static struct v4l2_queryctrl controls[] = {
 		.step = 1,
 		.default_value = 0,
 	},
+	{
+		.id = V4L2_CID_CACHEABLE,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "Cacheable flag",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
 };
 
 #define NUM_CTRLS ARRAY_SIZE(controls)
@@ -451,7 +460,7 @@ static int dec_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 				continue;
 
 			if (ctx_ctrl->id == buf_ctrl->id) {
-				mfc_debug(!ctx_ctrl->has_new, "overwrite ctx ctrl value\n");
+				mfc_debug(2, "overwrite ctx ctrl value\n");
 
 				ctx_ctrl->has_new = 1;
 				ctx_ctrl->val = buf_ctrl->val;
@@ -849,6 +858,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		return -EINVAL;
 	}
 	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		vb2_sdvmm_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],false);
 		/* Can only request buffers after an instance has been opened.*/
 		if (ctx->state == MFCINST_GOT_INST) {
 			ctx->src_bufs_cnt = 0;
@@ -871,6 +881,9 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			ctx->output_state = QUEUE_BUFS_REQUESTED;
 		}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		/* cacheable setting */
+		vb2_sdvmm_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],ctx->cacheable);
+		vb2_sdvmm_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],ctx->cacheable);
 		ctx->dst_bufs_cnt = 0;
 		if (reqbufs->count == 0) {
 			mfc_debug(2, "Freeing buffers.\n");
@@ -1061,6 +1074,9 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 	case V4L2_CID_CODEC_DISPLAY_DELAY:
 		ctrl->value = ctx->display_delay;
 		break;
+	case V4L2_CID_CACHEABLE:
+		ctrl->value = ctx->cacheable;
+		break;
 	case V4L2_CID_CODEC_REQ_NUM_BUFS:
 		if (ctx->state >= MFCINST_HEAD_PARSED &&
 		    ctx->state < MFCINST_ABORT) {
@@ -1148,6 +1164,12 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 		if (stream_on)
 			return -EBUSY;
 		ctx->slice_interface = ctrl->value;
+		break;
+	case V4L2_CID_CACHEABLE:
+		if (stream_on)
+			return -EBUSY;
+		if(ctrl->value == 0 || ctrl->value ==1)
+			ctx->cacheable = ctrl->value;
 		break;
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
@@ -1393,7 +1415,10 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 	unsigned int index = vb->v4l2_buf.index;
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-
+		if(ctx->cacheable){
+			vb2_sdvmm_cache_flush(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX], vb, 0);
+			vb2_sdvmm_cache_flush(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], vb, 1);
+		}
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
