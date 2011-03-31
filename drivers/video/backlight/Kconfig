@@ -125,6 +125,20 @@ config LCD_AMS369FG06
 	  If you have an AMS369FG06 AMOLED Panel, say Y to enable its
 	  LCD control driver.
 
+config LCD_WA101S
+	tristate "LCD_WA101S LCD Driver"
+	default n
+	help
+	  If you have a WA101S Panel(WXGA), say Y to enable its
+	  LCD control driver.
+
+config LCD_LTE480WV
+	tristate "LCD_LTE480WV LCD Driver"
+	default n
+	help
+	  If you have an LTE480 Panel(WVGA), say Y to enable its
+	  LCD control drvier.
+
 endif # LCD_CLASS_DEVICE
 
 #

@@ -224,7 +224,71 @@ static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 	.max_bpp = 32,
 	.default_bpp = 24,
 };
-#else
+
+#elif defined(CONFIG_LCD_WA101S)
+static void lcd_wa101s_set_power(struct plat_lcd_data *pd,
+				   unsigned int power)
+{
+	if (power) {
+#if !defined(CONFIG_BACKLIGHT_PWM)
+		gpio_request(EXYNOS4_GPD0(1), "GPD0");
+		gpio_direction_output(EXYNOS4_GPD0(1), 1);
+		gpio_free(EXYNOS4_GPD0(1));
+#endif
+	} else {
+#if !defined(CONFIG_BACKLIGHT_PWM)
+		gpio_request(EXYNOS4_GPD0(1), "GPD0");
+		gpio_direction_output(EXYNOS4_GPD0(1), 0);
+		gpio_free(EXYNOS4_GPD0(1));
+#endif
+	}
+}
+
+static struct plat_lcd_data smdkv310_lcd_wa101s_data = {
+	.set_power      = lcd_wa101s_set_power,
+};
+
+static struct platform_device smdkv310_lcd_wa101s = {
+	.name                   = "platform-lcd",
+	.dev.parent             = &s5p_device_fimd0.dev,
+	.dev.platform_data      = &smdkv310_lcd_wa101s_data,
+};
+
+static struct s3c_fb_pd_win smdkv310_fb_win0 = {
+	.win_mode = {
+		.left_margin    = 80,
+		.right_margin   = 48,
+		.upper_margin   = 14,
+		.lower_margin   = 3,
+		.hsync_len      = 32,
+		.vsync_len      = 5,
+		.xres   = 1366,
+		.yres   = 768,
+	},
+	.virtual_x = 1366,
+	.virtual_y = 768 * 2,
+	.max_bpp        = 32,
+	.default_bpp    = 24,
+};
+
+static struct s3c_fb_pd_win smdkv310_fb_win1 = {
+	.win_mode = {
+		.left_margin    = 80,
+		.right_margin   = 48,
+		.upper_margin   = 14,
+		.lower_margin   = 3,
+		.hsync_len      = 32,
+		.vsync_len      = 5,
+		.xres   = 1366,
+		.yres   = 768,
+	},
+	.virtual_x = 1366,
+	.virtual_y = 768 * 2,
+	.max_bpp        = 32,
+	.default_bpp    = 24,
+};
+
+#elif defined(CONFIG_LCD_LTE480WV)
 static void lcd_lte480wv_set_power(struct plat_lcd_data *pd,
 				   unsigned int power)
 {
@@ -308,7 +372,10 @@ static struct s3c_fb_platdata smdkv310_lcd0_pdata __initdata = {
 #if defined(CONFIG_LCD_AMS369FG06)
 	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_VDEN |
 			  VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
-#else
+#elif defined(CONFIG_LCD_WA101S)
+	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_HSYNC |
+			  VIDCON1_INV_VSYNC,
+#elif defined(CONFIG_LCD_LTE480WV)
 	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
 #endif
 	.setup_gpio	= exynos4_fimd0_gpio_setup_24bpp,
@@ -429,7 +496,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos4_device_pd[PD_GPS],
 	&exynos4_device_sysmmu,
 	&samsung_asoc_dma,
-#ifndef CONFIG_LCD_AMS369FG06
+#if defined(CONFIG_LCD_WA101S)
+	&smdkv310_lcd_wa101s,
+#elif defined(CONFIG_LCD_LTE480WV)
 	&smdkv310_lcd_lte480wv,
 #endif
 	&smdkv310_smsc911x,
