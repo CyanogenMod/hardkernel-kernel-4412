@@ -235,4 +235,10 @@ config CHARGER_GPIO
 	  This driver can be build as a module. If so, the module will be
 	  called gpio-charger.
 
+config BATTERY_SAMSUNG
+	tristate "Fake battery driver for samsung smdk boards"
+	depends on PLAT_SAMSUNG
+	help
+	  Say Y to enable support for batteries with samsung chip.
+
 endif # POWER_SUPPLY
