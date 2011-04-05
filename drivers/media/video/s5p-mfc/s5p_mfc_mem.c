@@ -95,6 +95,7 @@ void **s5p_mfc_mem_init_multi(struct device *dev)
 	vcm.size = SZ_256M;
 
 	vb2_drv.remap_dva = true;
+	vb2_drv.cacheable = false;
 
 	s5p_mfc_power_on();
 	alloc_ctxes = (void **)vb2_sdvmm_init_multi(MFC_ALLOC_CTX_NUM, &vcm,
