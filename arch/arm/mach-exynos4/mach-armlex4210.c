@@ -27,6 +27,7 @@
 #include <plat/sdhci.h>
 
 #include <mach/map.h>
+#include <mach/sysmmu.h>
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define ARMLEX4210_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -155,7 +156,24 @@ static struct platform_device *armlex4210_devices[] __initdata = {
 	&s3c_device_hsmmc3,
 	&s3c_device_rtc,
 	&s3c_device_wdt,
-	&exynos4_device_sysmmu,
+#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+	&exynos4_device_sysmmu[SYSMMU_MDMA],
+	&exynos4_device_sysmmu[SYSMMU_SSS],
+	&exynos4_device_sysmmu[SYSMMU_FIMC0],
+	&exynos4_device_sysmmu[SYSMMU_FIMC1],
+	&exynos4_device_sysmmu[SYSMMU_FIMC2],
+	&exynos4_device_sysmmu[SYSMMU_FIMC3],
+	&exynos4_device_sysmmu[SYSMMU_JPEG],
+	&exynos4_device_sysmmu[SYSMMU_FIMD0],
+	&exynos4_device_sysmmu[SYSMMU_FIMD1],
+	&exynos4_device_sysmmu[SYSMMU_PCIe],
+	&exynos4_device_sysmmu[SYSMMU_G2D],
+	&exynos4_device_sysmmu[SYSMMU_ROTATOR],
+	&exynos4_device_sysmmu[SYSMMU_MDMA2],
+	&exynos4_device_sysmmu[SYSMMU_TV],
+	&exynos4_device_sysmmu[SYSMMU_MFC_L],
+	&exynos4_device_sysmmu[SYSMMU_MFC_R],
+#endif
 	&samsung_asoc_dma,
 	&armlex4210_smsc911x,
 	&exynos4_device_ahci,

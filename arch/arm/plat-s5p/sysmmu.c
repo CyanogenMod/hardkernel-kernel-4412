@@ -11,11 +11,13 @@
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
+#include <linux/slab.h>
 
 #include <asm/pgtable.h>
 
 #include <mach/map.h>
 #include <mach/regs-sysmmu.h>
+
 #include <plat/sysmmu.h>
 
 #define CTRL_ENABLE	0x5
@@ -57,19 +59,22 @@ static int (*fault_handlers[S5P_SYSMMU_TOTAL_IPNUM])(
  */
 static unsigned long sysmmu_states;
 
-static inline void set_sysmmu_active(sysmmu_ips ips)
+static inline int set_sysmmu_active(sysmmu_ips ips)
 {
-	sysmmu_states |= 3 << (ips * 2);
+	/* return true if it is not set */
+	return !test_and_set_bit(ips, &sysmmu_states);
 }
 
-static inline void set_sysmmu_inactive(sysmmu_ips ips)
+static inline int set_sysmmu_inactive(sysmmu_ips ips)
 {
-	sysmmu_states &= ~(3 << (ips * 2));
+	/* return true if it is set */
+	return test_and_clear_bit(ips, &sysmmu_states);
 }
 
 static inline int is_sysmmu_active(sysmmu_ips ips)
 {
-	return sysmmu_states & (3 << (ips * 2));
+	/* BUG_ON(ips >= S5P_SYSMMU_TOTAL_IPNUM); */
+	return sysmmu_states & (1 << ips);
 }
 
 static void __iomem *sysmmusfrs[S5P_SYSMMU_TOTAL_IPNUM];
@@ -77,19 +82,19 @@ static void __iomem *sysmmusfrs[S5P_SYSMMU_TOTAL_IPNUM];
 static inline void sysmmu_block(sysmmu_ips ips)
 {
 	__raw_writel(CTRL_BLOCK, sysmmusfrs[ips] + S5P_MMU_CTRL);
-	dev_dbg(dev, "%s is blocked.\n", sysmmu_ips_name[ips]);
+	dev_dbg(dev, "%s is blocked.\n", get_sysmmu_name(ips));
 }
 
 static inline void sysmmu_unblock(sysmmu_ips ips)
 {
 	__raw_writel(CTRL_ENABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
-	dev_dbg(dev, "%s is unblocked.\n", sysmmu_ips_name[ips]);
+	dev_dbg(dev, "%s is unblocked.\n", get_sysmmu_name(ips));
 }
 
 static inline void __sysmmu_tlb_invalidate(sysmmu_ips ips)
 {
 	__raw_writel(0x1, sysmmusfrs[ips] + S5P_MMU_FLUSH);
-	dev_dbg(dev, "TLB of %s is invalidated.\n", sysmmu_ips_name[ips]);
+	dev_dbg(dev, "TLB of %s is invalidated.\n", get_sysmmu_name(ips));
 }
 
 static inline void __sysmmu_set_ptbase(sysmmu_ips ips, unsigned long pgd)
@@ -104,7 +109,7 @@ static inline void __sysmmu_set_ptbase(sysmmu_ips ips, unsigned long pgd)
 	__raw_writel(pgd, sysmmusfrs[ips] + S5P_PT_BASE_ADDR);
 
 	dev_dbg(dev, "Page table base of %s is initialized with 0x%08lX.\n",
-						sysmmu_ips_name[ips], pgd);
+						get_sysmmu_name(ips), pgd);
 	__sysmmu_tlb_invalidate(ips);
 }
 
@@ -124,13 +129,15 @@ static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 	sysmmu_ips ips = (sysmmu_ips)dev_id;
 	enum S5P_SYSMMU_INTERRUPT_TYPE itype;
 
+	BUG_ON(!is_sysmmu_active(ips));
+
 	itype = (enum S5P_SYSMMU_INTERRUPT_TYPE)
 		__ffs(__raw_readl(sysmmusfrs[ips] + S5P_INT_STATUS));
 
 	BUG_ON(!((itype >= 0) && (itype < 8)));
 
 	dev_alert(dev, "%s occurred by %s.\n", sysmmu_fault_name[itype],
-							sysmmu_ips_name[ips]);
+							get_sysmmu_name(ips));
 
 	if (fault_handlers[ips]) {
 		unsigned long addr;
@@ -143,7 +150,7 @@ static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 					sysmmusfrs[ips] + S5P_INT_CLEAR);
 			dev_notice(dev, "%s from %s is resolved."
 					" Retrying translation.\n",
-				sysmmu_fault_name[itype], sysmmu_ips_name[ips]);
+				sysmmu_fault_name[itype], get_sysmmu_name(ips));
 		} else {
 			base = 0;
 		}
@@ -153,7 +160,7 @@ static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 
 	if (!base)
 		dev_notice(dev, "%s from %s is not handled.\n",
-			sysmmu_fault_name[itype], sysmmu_ips_name[ips]);
+			sysmmu_fault_name[itype], get_sysmmu_name(ips));
 
 	return IRQ_HANDLED;
 }
@@ -167,13 +174,13 @@ void s5p_sysmmu_set_tablebase_pgd(sysmmu_ips ips, unsigned long pgd)
 	} else {
 		dev_dbg(dev, "%s is disabled. "
 			"Skipping initializing page table base.\n",
-						sysmmu_ips_name[ips]);
+						get_sysmmu_name(ips));
 	}
 }
 
 void s5p_sysmmu_enable(sysmmu_ips ips, unsigned long pgd)
 {
-	if (!is_sysmmu_active(ips)) {
+	if (set_sysmmu_active(ips)) {
 		sysmmu_clk_enable(ips);
 
 		__sysmmu_set_ptbase(ips, pgd);
@@ -181,21 +188,20 @@ void s5p_sysmmu_enable(sysmmu_ips ips, unsigned long pgd)
 		__raw_writel(CTRL_ENABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
 
 		set_sysmmu_active(ips);
-		dev_dbg(dev, "%s is enabled.\n", sysmmu_ips_name[ips]);
+		dev_dbg(dev, "%s is enabled.\n", get_sysmmu_name(ips));
 	} else {
-		dev_dbg(dev, "%s is already enabled.\n", sysmmu_ips_name[ips]);
+		dev_dbg(dev, "%s is already enabled.\n", get_sysmmu_name(ips));
 	}
 }
 
 void s5p_sysmmu_disable(sysmmu_ips ips)
 {
-	if (is_sysmmu_active(ips)) {
+	if (set_sysmmu_inactive(ips)) {
 		__raw_writel(CTRL_DISABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
-		set_sysmmu_inactive(ips);
 		sysmmu_clk_disable(ips);
-		dev_dbg(dev, "%s is disabled.\n", sysmmu_ips_name[ips]);
+		dev_dbg(dev, "%s is disabled.\n", get_sysmmu_name(ips));
 	} else {
-		dev_dbg(dev, "%s is already disabled.\n", sysmmu_ips_name[ips]);
+		dev_dbg(dev, "%s is already disabled.\n", get_sysmmu_name(ips));
 	}
 }
 
@@ -207,72 +213,73 @@ void s5p_sysmmu_tlb_invalidate(sysmmu_ips ips)
 		sysmmu_unblock(ips);
 	} else {
 		dev_dbg(dev, "%s is disabled. "
-			"Skipping invalidating TLB.\n", sysmmu_ips_name[ips]);
+			"Skipping invalidating TLB.\n", get_sysmmu_name(ips));
 	}
 }
 
 static int s5p_sysmmu_probe(struct platform_device *pdev)
 {
-	int i, ret;
-	struct resource *res, *mem;
+	sysmmu_ips id;
+	struct resource *res, *ioarea;
+	int ret;
+	int irq;
 
 	dev = &pdev->dev;
-
-	for (i = 0; i < S5P_SYSMMU_TOTAL_IPNUM; i++) {
-		int irq;
-
-		sysmmu_clk_init(dev, i);
-		sysmmu_clk_disable(i);
-
-		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
-		if (!res) {
-			dev_err(dev, "Failed to get the resource of %s.\n",
-							sysmmu_ips_name[i]);
-			ret = -ENODEV;
-			goto err_res;
-		}
-
-		mem = request_mem_region(res->start,
-				((res->end) - (res->start)) + 1, pdev->name);
-		if (!mem) {
-			dev_err(dev, "Failed to request the memory region of %s.\n",
-							sysmmu_ips_name[i]);
-			ret = -EBUSY;
-			goto err_res;
-		}
-
-		sysmmusfrs[i] = ioremap(res->start, res->end - res->start + 1);
-		if (!sysmmusfrs[i]) {
-			dev_err(dev, "Failed to ioremap() for %s.\n",
-							sysmmu_ips_name[i]);
-			ret = -ENXIO;
-			goto err_reg;
-		}
-
-		irq = platform_get_irq(pdev, i);
-		if (irq <= 0) {
-			dev_err(dev, "Failed to get the IRQ resource of %s.\n",
-							sysmmu_ips_name[i]);
-			ret = -ENOENT;
-			goto err_map;
-		}
-
-		if (request_irq(irq, s5p_sysmmu_irq, IRQF_DISABLED,
-						pdev->name, (void *)i)) {
-			dev_err(dev, "Failed to request IRQ for %s.\n",
-							sysmmu_ips_name[i]);
-			ret = -ENOENT;
-			goto err_map;
-		}
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(dev, "Failed probing system MMU: "
+						"failed to get resource.");
+		return -ENOENT;
 	}
 
+	id = (sysmmu_ips)pdev->id;
+	if (id >= S5P_SYSMMU_TOTAL_IPNUM) {
+		dev_err(dev, "Unknown System MMU ID %d.", id);
+		return -ENOENT;
+	}
+
+	ioarea = request_mem_region(res->start, resource_size(res), pdev->name);
+	if (ioarea == NULL) {
+		dev_err(dev, "Failed probing system MMU: "
+					"failed to request memory region.");
+		return -ENOMEM;
+	}
+
+	sysmmusfrs[id] = ioremap(res->start, resource_size(res));
+	if (!sysmmusfrs[id]) {
+		dev_err(dev, "Failed probing system MMU: "
+						"failed to call ioremap().");
+		ret = -ENOENT;
+		goto err_ioremap;
+	}
+
+	irq = platform_get_irq(pdev, 0);
+	if (irq <= 0) {
+		dev_err(dev, "Failed probing system MMU: "
+						"failed to get irq resource.");
+		ret = irq;
+		goto err_irq;
+	}
+
+	if (request_irq(irq, s5p_sysmmu_irq, 0, dev_name(&pdev->dev),
+								(void *)id)) {
+		dev_err(dev, "Failed probing system MMU: "
+						"failed to request irq.");
+		ret = -ENOENT;
+		goto err_irq;
+	}
+
+	sysmmu_clk_init(id, &pdev->dev);
+
+	dev_dbg(dev, "Probing system MMU succeeded.");
 	return 0;
 
-err_map:
-	iounmap(sysmmusfrs[i]);
-err_reg:
-	release_mem_region(mem->start, resource_size(mem));
-err_res:
+err_irq:
+	iounmap(sysmmusfrs[id]);
+err_ioremap:
+	release_resource(ioarea);
+	kfree(ioarea);
+	dev_err(dev, "Probing system MMU failed.");
 	return ret;
 }
 

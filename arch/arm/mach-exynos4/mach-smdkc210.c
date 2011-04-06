@@ -46,6 +46,7 @@
 
 #include <mach/map.h>
 #include <mach/regs-fb.h>
+#include <mach/sysmmu.h>
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDKC210_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -673,7 +674,24 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&exynos4_device_pd[PD_CAM],
 	&exynos4_device_pd[PD_TV],
 	&exynos4_device_pd[PD_GPS],
-	&exynos4_device_sysmmu,
+#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+	&exynos4_device_sysmmu[SYSMMU_MDMA],
+	&exynos4_device_sysmmu[SYSMMU_SSS],
+	&exynos4_device_sysmmu[SYSMMU_FIMC0],
+	&exynos4_device_sysmmu[SYSMMU_FIMC1],
+	&exynos4_device_sysmmu[SYSMMU_FIMC2],
+	&exynos4_device_sysmmu[SYSMMU_FIMC3],
+	&exynos4_device_sysmmu[SYSMMU_JPEG],
+	&exynos4_device_sysmmu[SYSMMU_FIMD0],
+	&exynos4_device_sysmmu[SYSMMU_FIMD1],
+	&exynos4_device_sysmmu[SYSMMU_PCIe],
+	&exynos4_device_sysmmu[SYSMMU_G2D],
+	&exynos4_device_sysmmu[SYSMMU_ROTATOR],
+	&exynos4_device_sysmmu[SYSMMU_MDMA2],
+	&exynos4_device_sysmmu[SYSMMU_TV],
+	&exynos4_device_sysmmu[SYSMMU_MFC_L],
+	&exynos4_device_sysmmu[SYSMMU_MFC_R],
+#endif
 	&wm8994_fixed_voltage0,
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
