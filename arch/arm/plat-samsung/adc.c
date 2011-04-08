@@ -217,10 +217,15 @@ int s3c_adc_read(struct s3c_adc_client *client, unsigned int ch)
 {
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wake);
 	int ret;
+	unsigned long flags;
+
+	spin_lock_irqsave(&adc_dev->lock, flags);
 
 	client->convert_cb = s3c_convert_done;
 	client->wait = &wake;
 	client->result = -1;
+
+	spin_unlock_irqrestore(&adc_dev->lock, flags);
 
 	ret = s3c_adc_start(client, ch, 1);
 	if (ret < 0)
