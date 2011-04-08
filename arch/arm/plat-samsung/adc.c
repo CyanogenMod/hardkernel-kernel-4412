@@ -71,6 +71,7 @@ struct adc_device {
 	spinlock_t		 lock;
 
 	unsigned int		 prescale;
+	unsigned int 		 delay;
 
 	int			 irq;
 };
@@ -361,6 +362,7 @@ static int s3c_adc_probe(struct platform_device *pdev)
 
 	adc->pdev = pdev;
 	adc->prescale = S3C2410_ADCCON_PRSCVL(49);
+	adc->delay = S3C2410_ADCDLY_DELAY(1000);
 	adc->cputype = platform_get_device_id(adc->pdev)->driver_data;
 
 	adc->irq = platform_get_irq(pdev, 1);
@@ -406,6 +408,7 @@ static int s3c_adc_probe(struct platform_device *pdev)
 	}
 	tmp |= S3C2410_ADCCON_STDBM;
 	writel(tmp, adc->regs + S3C2410_ADCCON);
+	writel(adc->delay, adc->regs + S3C2410_ADCDLY);
 
 	dev_info(dev, "attached adc driver\n");
 
@@ -471,6 +474,7 @@ static int s3c_adc_resume(struct platform_device *pdev)
 	if ((adc->cputype == TYPE_S3C64XX) || (adc->cputype == TYPE_S5PV210))
 		tmp |= S3C64XX_ADCCON_RESSEL;
 	writel(tmp, adc->regs + S3C2410_ADCCON);
+	writel(adc->delay, adc->regs + S3C2410_ADCDLY);
 
 	return 0;
 }
