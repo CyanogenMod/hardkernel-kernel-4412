@@ -1325,11 +1325,17 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 	} else {
 		WRITEL(0, S5P_FIMV_ENC_LF_CTRL);
 	}
+	/* When user sets desplay_delay to 0,
+	 * It works as "display_delay enable" and delay set to 0.
+	 * If user wants display_delay disable, It should be
+	 * set to negative value. */
 	WRITEL(((ctx->slice_interface & S5P_FIMV_SLICE_INT_MASK) <<
-		S5P_FIMV_SLICE_INT_SHIFT) | ((ctx->display_delay > 0 ? 1 : 0) <<
-		S5P_FIMV_DDELAY_ENA_SHIFT) | ((ctx->display_delay &
-		S5P_FIMV_DDELAY_VAL_MASK) << S5P_FIMV_DDELAY_VAL_SHIFT),
-		S5P_FIMV_SI_CH0_DPB_CONF_CTRL);
+				S5P_FIMV_SLICE_INT_SHIFT) |
+			((ctx->display_delay < 0 ? 0 : 1) <<
+			S5P_FIMV_DDELAY_ENA_SHIFT) |
+			(((ctx->display_delay >= 0 ? ctx->display_delay : 0) &
+			S5P_FIMV_DDELAY_VAL_MASK) << S5P_FIMV_DDELAY_VAL_SHIFT),
+			S5P_FIMV_SI_CH0_DPB_CONF_CTRL);
 	if (ctx->codec_mode == S5P_FIMV_CODEC_DIVX311_DEC) {
 		mfc_debug(2, "Setting DivX 3.11 resolution to %dx%d\n",
 					ctx->img_width, ctx->img_height);
@@ -1342,6 +1348,8 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 
 	/* Enable CRC data */
 	WRITEL(ctx->crc_enable << 31, S5P_FIMV_HOST2RISC_ARG2);
+
+	mfc_debug("DELAY : %x\n", READL(S5P_FIMV_SI_CH0_DPB_CONF_CTRL));
 
 	mfc_debug_leave();
 	return 0;

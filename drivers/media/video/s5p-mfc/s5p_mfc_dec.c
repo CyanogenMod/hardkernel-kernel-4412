@@ -158,10 +158,10 @@ static struct v4l2_queryctrl controls[] = {
 		.id = V4L2_CID_CODEC_DISPLAY_DELAY,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "",
-		.minimum = 0,
+		.minimum = -1,
 		.maximum = 16383,
 		.step = 1,
-		.default_value = 0,
+		.default_value = -1,
 	},
 	{
 		.id = V4L2_CID_CODEC_LOOP_FILTER_MPEG4_ENABLE,
