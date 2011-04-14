@@ -12,6 +12,8 @@
 #include <linux/types.h>
 #include <linux/i2c.h>
 #include <linux/regulator/consumer.h>
+#include <linux/regulator/fixed.h>
+#include <linux/regulator/machine.h>
 #include <linux/mfd/max8698.h>
 #include <linux/init.h>
 #include <linux/serial_core.h>
@@ -101,6 +103,11 @@ static struct regulator_consumer_supply smdkc110_ldo3_consumer[] = {
 	REGULATOR_SUPPLY("pd_io", "s3c-usbgadget")
 };
 
+static struct regulator_consumer_supply smdkc110_ldo5_consumer[] = {
+	REGULATOR_SUPPLY("AVDD", "0-001b"),
+	REGULATOR_SUPPLY("DVDD", "0-001b"),
+};
+
 static struct regulator_consumer_supply smdkc110_ldo8_consumer[] = {
 	REGULATOR_SUPPLY("pd_core", "s3c-usbgadget")
 };
@@ -159,6 +166,8 @@ static struct regulator_init_data smdkc110_ldo5_data = {
 			.enabled = 1,
 		},
 	},
+	.num_consumer_supplies	= ARRAY_SIZE(smdkc110_ldo5_consumer),
+	.consumer_supplies	= smdkc110_ldo5_consumer,
 };
 
 static struct regulator_init_data smdkc110_ldo6_data = {
@@ -361,6 +370,38 @@ struct platform_device smdkc110_dm9000 = {
 	},
 };
 
+#ifdef CONFIG_REGULATOR
+static struct regulator_consumer_supply smdkc110_b_pwr_5v_consumers[] = {
+	{
+		/* WM8580 */
+		.supply		= "PVDD",
+		.dev_name	= "0-001b",
+	},
+};
+
+static struct regulator_init_data smdkc110_b_pwr_5v_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(smdkc110_b_pwr_5v_consumers),
+	.consumer_supplies	= smdkc110_b_pwr_5v_consumers,
+};
+
+static struct fixed_voltage_config smdkc110_b_pwr_5v_pdata = {
+	.supply_name	= "B_PWR_5V",
+	.microvolts	= 5000000,
+	.init_data	= &smdkc110_b_pwr_5v_data,
+};
+
+static struct platform_device smdkc110_b_pwr_5v = {
+	.name          = "reg-fixed-voltage",
+	.id            = -1,
+	.dev = {
+		.platform_data = &smdkc110_b_pwr_5v_pdata,
+	},
+};
+#endif
+
 static void smdkc110_lte480wv_set_power(struct plat_lcd_data *pd,
 					unsigned int power)
 {
@@ -524,6 +565,9 @@ static struct platform_device *smdkc110_devices[] __initdata = {
 	&s3c_device_timer[3],
 	&smdkc110_backlight_device,
 	&smdkc110_input_device,
+#ifdef CONFIG_REGULATOR
+	&smdkc110_b_pwr_5v,
+#endif
 };
 
 static void __init smdkc110_button_init(void)
