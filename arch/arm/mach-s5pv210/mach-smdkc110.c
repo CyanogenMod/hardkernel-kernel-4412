@@ -581,6 +581,23 @@ static struct s3c2410_ts_mach_info s3c_ts_platform __initdata = {
 	},
 };
 
+static void smdkc110_sound_init(void)
+{
+	u32 reg;
+
+	reg = __raw_readl(S5P_CLK_OUT);
+	reg &= ~S5P_CLKOUT_CLKSEL_MASK;
+	reg &= ~S5P_CLKOUT_DIVVAL_MASK;
+	reg |= S5P_CLKOUT_CLKSEL_XUSBXTI;
+	reg |= 0x1 << S5P_CLKOUT_DIVVAL_SHIFT;
+	__raw_writel(reg, S5P_CLK_OUT);
+
+	reg = __raw_readl(S5P_OTHERS);
+	reg &= ~S5P_OTHERS_CLKOUT_MASK;
+	reg |= S5P_OTHERS_CLKOUT_SYSCON;
+	__raw_writel(reg, S5P_OTHERS);
+}
+
 static void __init smdkc110_map_io(void)
 {
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
@@ -612,6 +629,9 @@ static void __init smdkc110_machine_init(void)
 	s3c_ide_set_platdata(&smdkc110_ide_pdata);
 
 	s3c_fb_set_platdata(&smdkc110_lcd0_pdata);
+
+	/* SOUND */
+	smdkc110_sound_init();
 
 	platform_add_devices(smdkc110_devices, ARRAY_SIZE(smdkc110_devices));
 }
