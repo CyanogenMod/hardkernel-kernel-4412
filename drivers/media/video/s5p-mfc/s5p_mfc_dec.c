@@ -341,6 +341,11 @@ static int dec_init_ctx_ctrls(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
 
 	INIT_LIST_HEAD(&ctx->ctrls);
+/* TODO: Temp */
+	for (i = 0; i < NUM_CTRLS; i++) {
+		if (controls[i].id ==  V4L2_CID_CODEC_DISPLAY_DELAY)
+			ctx->display_delay = controls[i].default_value;
+	}
 
 	for (i = 0; i < NUM_CTRL_CFGS; i++) {
 		ctx_ctrl = kzalloc(sizeof(struct s5p_mfc_ctx_ctrl), GFP_KERNEL);
@@ -1472,10 +1477,10 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 			s5p_mfc_mem_cache_flush(vb, 2);
 		}
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		s5p_mfc_mem_cache_flush(vb, 1);
 		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
 	}
-
 	return 0;
 }
 

@@ -1349,7 +1349,7 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 	/* Enable CRC data */
 	WRITEL(ctx->crc_enable << 31, S5P_FIMV_HOST2RISC_ARG2);
 
-	mfc_debug("DELAY : %x\n", READL(S5P_FIMV_SI_CH0_DPB_CONF_CTRL));
+	mfc_debug(2, "DELAY : %x\n", READL(S5P_FIMV_SI_CH0_DPB_CONF_CTRL));
 
 	mfc_debug_leave();
 	return 0;
