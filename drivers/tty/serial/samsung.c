@@ -377,12 +377,14 @@ static void s3c24xx_serial_shutdown(struct uart_port *port)
 	struct s3c24xx_uart_port *ourport = to_ourport(port);
 
 	if (ourport->tx_claimed) {
+		disable_irq(ourport->tx_irq);
 		free_irq(ourport->tx_irq, ourport);
 		tx_enabled(port) = 0;
 		ourport->tx_claimed = 0;
 	}
 
 	if (ourport->rx_claimed) {
+		disable_irq(ourport->rx_irq);
 		free_irq(ourport->rx_irq, ourport);
 		ourport->rx_claimed = 0;
 		rx_enabled(port) = 0;
