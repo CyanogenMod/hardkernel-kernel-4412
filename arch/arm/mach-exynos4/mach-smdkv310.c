@@ -472,6 +472,13 @@ static struct samsung_keypad_platdata smdkv310_keypad_data __initdata = {
 	.cols		= 8,
 };
 
+#ifdef CONFIG_BATTERY_SAMSUNG
+static struct platform_device samsung_device_battery = {
+	.name	= "samsung-fake-battery",
+	.id	= -1,
+};
+#endif
+
 static struct i2c_board_info i2c_devs1[] __initdata = {
 	{I2C_BOARD_INFO("wm8994", 0x1a),},
 };
@@ -491,6 +498,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos4_device_ac97,
 	&exynos4_device_i2s0,
 	&samsung_device_keypad,
+#ifdef CONFIG_BATTERY_SAMSUNG
+	&samsung_device_battery,
+#endif
 	&exynos4_device_pd[PD_MFC],
 	&exynos4_device_pd[PD_G3D],
 	&exynos4_device_pd[PD_LCD0],
