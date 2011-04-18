@@ -541,6 +541,13 @@ static struct platform_device smdkc110_input_device = {
 	},
 };
 
+#ifdef CONFIG_BATTERY_SAMSUNG
+static struct platform_device samsung_device_battery = {
+	.name	= "samsung-fake-battery",
+	.id	= -1,
+};
+#endif
+
 static struct platform_device *smdkc110_devices[] __initdata = {
 	&s3c_device_adc,
 	&s3c_device_cfcon,
@@ -560,6 +567,9 @@ static struct platform_device *smdkc110_devices[] __initdata = {
 	&s5pv210_device_spdif,
 	&samsung_asoc_dma,
 	&samsung_device_keypad,
+#ifdef CONFIG_BATTERY_SAMSUNG
+	&samsung_device_battery,
+#endif
 	&smdkc110_dm9000,
 	&smdkc110_lcd_lte480wv,
 	&s3c_device_timer[3],
