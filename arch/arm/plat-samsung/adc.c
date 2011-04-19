@@ -401,6 +401,13 @@ static int s3c_adc_probe(struct platform_device *pdev)
 
 	clk_enable(adc->clk);
 
+#if defined(CONFIG_S3C_DEV_ADC1)
+	tmp = readl(adc->regs + S3C2410_ADCCON);
+	tmp |= S3C64XX_ADCCON_TSSEL;
+	writel(tmp, adc->regs + S3C2410_ADCCON);
+	adc->regs += 0x1000;
+#endif
+
 	tmp = adc->prescale | S3C2410_ADCCON_PRSCEN;
 	if ((adc->cputype == TYPE_S3C64XX) || (adc->cputype == TYPE_S5PV210)){
 		/* Enable 12-bit ADC resolution */
@@ -469,6 +476,13 @@ static int s3c_adc_resume(struct platform_device *pdev)
 	clk_enable(adc->clk);
 	enable_irq(adc->irq);
 
+#if defined(CONFIG_S3C_DEV_ADC1)
+	adc->regs -= 0x1000;
+	tmp = readl(adc->regs + S3C2410_ADCCON);
+	tmp |= S3C64XX_ADCCON_TSSEL;
+	writel(tmp, adc->regs + S3C2410_ADCCON);
+	adc->regs += 0x1000;
+#endif
 	tmp = adc->prescale | S3C2410_ADCCON_PRSCEN;
 	/* Enable 12-bit ADC resolution */
 	if ((adc->cputype == TYPE_S3C64XX) || (adc->cputype == TYPE_S5PV210))
