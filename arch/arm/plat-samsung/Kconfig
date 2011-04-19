@@ -284,7 +284,12 @@ config S3C64XX_DEV_SPI
 config SAMSUNG_DEV_TS
 	bool
 	help
-	    Common in platform device definitions for touchscreen device
+	  Common in platform device definitions for touchscreen device
+
+config SAMSUNG_DEV_TS1
+	bool
+	help
+	  Common in platform device definitions for touchscreen-1 device
 
 config SAMSUNG_DEV_KEYPAD
 	bool
