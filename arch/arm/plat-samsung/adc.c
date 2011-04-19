@@ -353,7 +353,7 @@ static int s3c_adc_probe(struct platform_device *pdev)
 	unsigned tmp;
 
 	adc = kzalloc(sizeof(struct adc_device), GFP_KERNEL);
-	if (adc == NULL) {
+	if (unlikely(adc == NULL)) {
 		dev_err(dev, "failed to allocate adc_device\n");
 		return -ENOMEM;
 	}
@@ -366,34 +366,34 @@ static int s3c_adc_probe(struct platform_device *pdev)
 	adc->cputype = platform_get_device_id(adc->pdev)->driver_data;
 
 	adc->irq = platform_get_irq(pdev, 1);
-	if (adc->irq <= 0) {
+	if (unlikely(adc->irq <= 0)) {
 		dev_err(dev, "failed to get adc irq\n");
 		ret = -ENOENT;
 		goto err_alloc;
 	}
 
 	ret = request_irq(adc->irq, s3c_adc_irq, 0, dev_name(dev), adc);
-	if (ret < 0) {
+	if (unlikely(ret < 0)) {
 		dev_err(dev, "failed to attach adc irq\n");
 		goto err_alloc;
 	}
 
 	adc->clk = clk_get(dev, "adc");
-	if (IS_ERR(adc->clk)) {
+	if (unlikely(IS_ERR(adc->clk))) {
 		dev_err(dev, "failed to get adc clock\n");
 		ret = PTR_ERR(adc->clk);
 		goto err_irq;
 	}
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!regs) {
+	if (unlikely(!regs)) {
 		dev_err(dev, "failed to find registers\n");
 		ret = -ENXIO;
 		goto err_clk;
 	}
 
 	adc->regs = ioremap(regs->start, resource_size(regs));
-	if (!adc->regs) {
+	if (unlikely(!adc->regs)) {
 		dev_err(dev, "failed to map registers\n");
 		ret = -ENXIO;
 		goto err_clk;
