@@ -40,7 +40,8 @@
 
 enum s3c_cpu_type {
 	TYPE_S3C24XX,
-	TYPE_S3C64XX
+	TYPE_S3C64XX,
+	TYPE_S5PV210
 };
 
 struct s3c_adc_client {
@@ -66,6 +67,7 @@ struct adc_device {
 	struct s3c_adc_client	*cur;
 	struct s3c_adc_client	*ts_pend;
 	void __iomem		*regs;
+	enum s3c_cpu_type	 cputype;
 	spinlock_t		 lock;
 
 	unsigned int		 prescale;
@@ -99,8 +101,13 @@ static inline void s3c_adc_select(struct adc_device *adc,
 	con &= ~S3C2410_ADCCON_STARTMASK;
 	con |=  S3C2410_ADCCON_PRSCEN;
 
-	if (!client->is_ts)
-		con |= S3C2410_ADCCON_SELMUX(client->channel);
+	if (!client->is_ts) {
+		if (adc->cputype == TYPE_S5PV210)
+			writel(S5PV210_ADCCON_SELMUX(client->channel),
+				adc->regs + S5PV210_ADCMUX);
+		else
+			con |= S3C2410_ADCCON_SELMUX(client->channel);
+	}
 
 	writel(con, adc->regs + S3C2410_ADCCON);
 }
@@ -277,7 +284,6 @@ static irqreturn_t s3c_adc_irq(int irq, void *pw)
 {
 	struct adc_device *adc = pw;
 	struct s3c_adc_client *client = adc->cur;
-	enum s3c_cpu_type cpu = platform_get_device_id(adc->pdev)->driver_data;
 	unsigned data0, data1;
 
 	if (!client) {
@@ -292,7 +298,7 @@ static irqreturn_t s3c_adc_irq(int irq, void *pw)
 	if (client->nr_samples > 0)
 		client->nr_samples--;
 
-	if (cpu == TYPE_S3C64XX) {
+	if ((adc->cputype == TYPE_S3C64XX) || (adc->cputype == TYPE_S5PV210)) {
 		/* S3C64XX ADC resolution is 12-bit */
 		data0 &= 0xfff;
 		data1 &= 0xfff;
@@ -319,7 +325,7 @@ static irqreturn_t s3c_adc_irq(int irq, void *pw)
 	}
 
 exit:
-	if (cpu == TYPE_S3C64XX) {
+	if ((adc->cputype == TYPE_S3C64XX) || (adc->cputype == TYPE_S5PV210)) {
 		/* Clear ADC interrupt */
 		writel(0, adc->regs + S3C64XX_ADCCLRINT);
 	}
@@ -344,6 +350,7 @@ static int s3c_adc_probe(struct platform_device *pdev)
 
 	adc->pdev = pdev;
 	adc->prescale = S3C2410_ADCCON_PRSCVL(49);
+	adc->cputype = platform_get_device_id(adc->pdev)->driver_data;
 
 	adc->irq = platform_get_irq(pdev, 1);
 	if (adc->irq <= 0) {
@@ -382,7 +389,7 @@ static int s3c_adc_probe(struct platform_device *pdev)
 	clk_enable(adc->clk);
 
 	tmp = adc->prescale | S3C2410_ADCCON_PRSCEN;
-	if (platform_get_device_id(pdev)->driver_data == TYPE_S3C64XX) {
+	if ((adc->cputype == TYPE_S3C64XX) || (adc->cputype == TYPE_S5PV210)){
 		/* Enable 12-bit ADC resolution */
 		tmp |= S3C64XX_ADCCON_RESSEL;
 	}
@@ -443,12 +450,16 @@ static int s3c_adc_suspend(struct platform_device *pdev, pm_message_t state)
 static int s3c_adc_resume(struct platform_device *pdev)
 {
 	struct adc_device *adc = platform_get_drvdata(pdev);
+	unsigned int tmp = 0;
 
 	clk_enable(adc->clk);
 	enable_irq(adc->irq);
 
-	writel(adc->prescale | S3C2410_ADCCON_PRSCEN,
-	       adc->regs + S3C2410_ADCCON);
+	tmp = adc->prescale | S3C2410_ADCCON_PRSCEN;
+	/* Enable 12-bit ADC resolution */
+	if ((adc->cputype == TYPE_S3C64XX) || (adc->cputype == TYPE_S5PV210))
+		tmp |= S3C64XX_ADCCON_RESSEL;
+	writel(tmp, adc->regs + S3C2410_ADCCON);
 
 	return 0;
 }
@@ -460,11 +471,14 @@ static int s3c_adc_resume(struct platform_device *pdev)
 
 static struct platform_device_id s3c_adc_driver_ids[] = {
 	{
-		.name           = "s3c24xx-adc",
-		.driver_data    = TYPE_S3C24XX,
+		.name		= "s3c24xx-adc",
+		.driver_data	= TYPE_S3C24XX,
 	}, {
-		.name           = "s3c64xx-adc",
-		.driver_data    = TYPE_S3C64XX,
+		.name		= "s3c64xx-adc",
+		.driver_data	= TYPE_S3C64XX,
+	}, {
+		.name		= "s5pv210-adc",
+		.driver_data	= TYPE_S5PV210,
 	},
 	{ }
 };
