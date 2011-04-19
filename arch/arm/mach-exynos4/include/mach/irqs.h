@@ -81,6 +81,11 @@
 #define IRQ_FIMD1_VSYNC		COMBINER_IRQ(12, 1)
 #define IRQ_FIMD1_SYSTEM	COMBINER_IRQ(12, 2)
 
+#define IRQ_ADC0		COMBINER_IRQ(19, 0)
+#define IRQ_PEN0		COMBINER_IRQ(19, 1)
+#define IRQ_ADC1		COMBINER_IRQ(19, 2)
+#define IRQ_PEN1		COMBINER_IRQ(19, 3)
+
 #define IRQ_PDMA0		COMBINER_IRQ(21, 0)
 #define IRQ_PDMA1		COMBINER_IRQ(21, 1)
 
@@ -155,6 +160,14 @@
 
 #define S5P_EINT_BASE1		(S5P_IRQ_EINT_BASE + 0)
 #define S5P_EINT_BASE2		(S5P_IRQ_EINT_BASE + 16)
+
+#if defined(CONFIG_S3C_DEV_ADC)
+#define IRQ_ADC		IRQ_ADC0
+#define IRQ_TC		IRQ_PEN0
+#else
+#define IRQ_ADC		IRQ_ADC1
+#define IRQ_TC		IRQ_PEN1
+#endif
 
 /* optional GPIO interrupts */
 #define S5P_GPIOINT_BASE	(S5P_IRQ_EINT_BASE + 32)

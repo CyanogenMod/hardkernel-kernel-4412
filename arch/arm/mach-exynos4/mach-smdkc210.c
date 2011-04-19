@@ -34,6 +34,8 @@
 #include <plat/devs.h>
 #include <plat/fb.h>
 #include <plat/gpio-cfg.h>
+#include <plat/adc.h>
+#include <plat/ts.h>
 #include <plat/keypad.h>
 #include <plat/sdhci.h>
 #include <plat/iic.h>
@@ -483,6 +485,19 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 	{I2C_BOARD_INFO("wm8994", 0x1a),},
 };
 
+#ifdef CONFIG_TOUCHSCREEN_S3C2410
+static struct s3c2410_ts_mach_info s3c_ts_platform __initdata = {
+	.delay			= 10000,
+	.presc			= 49,
+	.oversampling_shift	= 2,
+	.cal_x_max		= 480,
+	.cal_y_max		= 800,
+	.cal_param		= {
+		33, -9156, 34720100, 14819, 57, -4234968, 65536
+	},
+};
+#endif
+
 static struct platform_device *smdkc210_devices[] __initdata = {
 	&s5p_device_fimd0,
 #ifdef CONFIG_LCD_AMS369FG06
@@ -493,6 +508,14 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&s3c_device_hsmmc2,
 	&s3c_device_hsmmc3,
 	&s3c_device_i2c1,
+	&s3c_device_adc,
+#ifdef CONFIG_TOUCHSCREEN_S3C2410
+#ifdef CONFIG_S3C_DEV_ADC
+	&s3c_device_ts,
+#elif CONFIG_S3C_DEV_ADC1
+	&s3c_device_ts1,
+#endif
+#endif
 	&s3c_device_rtc,
 	&s3c_device_wdt,
 	&exynos4_device_ac97,
@@ -578,6 +601,15 @@ static void __init smdkc210_machine_init(void)
 	s5p_fimd0_set_platdata(&smdkc210_lcd0_pdata);
 
 	samsung_keypad_set_platdata(&smdkc210_keypad_data);
+
+#ifdef CONFIG_TOUCHSCREEN_S3C2410
+#ifdef CONFIG_S3C_DEV_ADC
+	s3c24xx_ts_set_platdata(&s3c_ts_platform);
+#endif
+#ifdef CONFIG_S3C_DEV_ADC1
+	s3c24xx_ts1_set_platdata(&s3c_ts_platform);
+#endif
+#endif
 
 	platform_add_devices(smdkc210_devices, ARRAY_SIZE(smdkc210_devices));
 }

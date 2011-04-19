@@ -24,6 +24,7 @@
 #include <plat/exynos4.h>
 #include <plat/sdhci.h>
 #include <plat/fimc-core.h>
+#include <plat/adc-core.h>
 
 #include <mach/regs-irq.h>
 
@@ -134,6 +135,7 @@ void __init exynos4_map_io(void)
 	s3c_fimc_setname(2, "exynos4-fimc");
 	s3c_fimc_setname(3, "exynos4-fimc");
 	s5p_fb_setname(0, "exynos4-fb");	/* FIMD0 */
+	s3c_adc_setname("s5pv210-adc");
 }
 
 void __init exynos4_init_clocks(int xtal)
