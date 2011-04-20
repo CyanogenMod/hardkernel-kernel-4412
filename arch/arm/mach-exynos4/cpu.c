@@ -165,15 +165,6 @@ void __init exynos4_init_irq(void)
 	gic_init(0, IRQ_LOCALTIMER, S5P_VA_GIC_DIST, S5P_VA_GIC_CPU);
 
 	for (irq = 0; irq < MAX_COMBINER_NR; irq++) {
-
-		/*
-		 * From SPI(0) to SPI(39) and SPI(51), SPI(53) are
-		 * connected to the interrupt combiner. These irqs
-		 * should be initialized to support cascade interrupt.
-		 */
-		if ((irq >= 40) && !(irq == 51) && !(irq == 53))
-			continue;
-
 		combiner_init(irq, (void __iomem *)S5P_VA_COMBINER(irq),
 				COMBINER_IRQ(irq, 0));
 		combiner_cascade_irq(irq, IRQ_SPI(irq));
