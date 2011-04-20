@@ -161,8 +161,9 @@ void mfc_workqueue_clock_off(struct work_struct *work)
 	struct s5p_mfc_dev *dev = container_of(work, struct s5p_mfc_dev,
 						work_struct);
 
-	if (test_bit(0, &dev->clk_state) == 0)
-		s5p_mfc_clock_off();
+	if (test_bit(0, &dev->hw_lock) == 0)
+		if (test_and_clear_bit(0, &dev->clk_state))
+			s5p_mfc_clock_off();
 }
 
 static inline enum s5p_mfc_node_type s5p_mfc_get_node_type(struct file *file)
@@ -804,7 +805,6 @@ static int s5p_mfc_release(struct file *file)
 	if (call_cop(ctx, cleanup_ctx_ctrls, ctx) < 0)
 		mfc_err("failed in init_buf_ctrls\n");
 
-	set_bit(0, &dev->clk_state);
 	s5p_mfc_clock_on();
 
 	vb2_queue_release(&ctx->vq_src);
@@ -859,7 +859,6 @@ static int s5p_mfc_release(struct file *file)
 			mfc_err("power off failed\n");
 	}
 
-	clear_bit(0, &dev->clk_state);
 	s5p_mfc_clock_off();
 	dev->ctx[ctx->num] = 0;
 	kfree(ctx);
