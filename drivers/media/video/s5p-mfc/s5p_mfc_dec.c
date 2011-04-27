@@ -899,7 +899,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		return -EINVAL;
 	}
 	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],false);
+		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],true);
 		/* Can only request buffers after an instance has been opened.*/
 		if (ctx->state == MFCINST_GOT_INST) {
 			ctx->src_bufs_cnt = 0;
