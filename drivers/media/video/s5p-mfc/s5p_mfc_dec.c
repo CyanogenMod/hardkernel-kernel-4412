@@ -1569,6 +1569,9 @@ static int s5p_mfc_start_streaming(struct vb2_queue *q)
 	struct s5p_mfc_dev *dev = ctx->dev;
 	unsigned long flags;
 
+	if (ctx->state == MFCINST_FINISHING || ctx->state == MFCINST_FINISHED)
+		ctx->state = MFCINST_RUNNING;
+
 	/* If context is ready then dev = work->data;schedule it to run */
 	if (s5p_mfc_ctx_ready(ctx)) {
 		spin_lock_irqsave(&dev->condlock, flags);
