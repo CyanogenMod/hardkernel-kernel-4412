@@ -148,4 +148,7 @@ void s5p_mfc_cache_inv(const void *start_addr, unsigned long size);
 void s5p_mfc_mem_suspend(void *alloc_ctx);
 void s5p_mfc_mem_resume(void *alloc_ctx);
 
+void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable);
+void s5p_mfc_mem_get_cacheable(void *alloc_ctx);
+int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no);
 #endif /* __S5P_MFC_MEM_H_ */

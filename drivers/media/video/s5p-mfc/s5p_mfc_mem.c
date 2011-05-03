@@ -11,6 +11,7 @@
  */
 
 #include <linux/dma-mapping.h>
+#include <media/videobuf2-core.h>
 #include <asm/cacheflush.h>
 
 #include "s5p_mfc_common.h"
@@ -238,6 +239,21 @@ void s5p_mfc_mem_resume(void *alloc_ctx)
 	vb2_sdvmm_resume(alloc_ctx);
 	s5p_mfc_clock_off();
 }
+
+void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
+{
+	vb2_sdvmm_set_cacheable(alloc_ctx, cacheable);
+}
+
+void s5p_mfc_mem_get_cacheable(void *alloc_ctx)
+{
+	vb2_sdvmm_get_cacheable(alloc_ctx);
+}
+
+int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
+{
+	return vb2_sdvmm_cache_flush(vb, plane_no);
+}
 #else
 void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
 {
@@ -265,5 +281,21 @@ void s5p_mfc_mem_suspend(void *alloc_ctx)
 void s5p_mfc_mem_resume(void *alloc_ctx)
 {
 	/* NOP */
+}
+
+void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
+{
+	/* NOP */
+}
+
+void s5p_mfc_mem_get_cacheable(void *alloc_ctx)
+{
+	/* NOP */
+}
+
+int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
+{
+	/* NOP */
+	return 0;
 }
 #endif
