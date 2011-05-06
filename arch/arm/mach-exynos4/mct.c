@@ -328,7 +328,12 @@ static irqreturn_t exynos4_mct_tick_isr(int irq, void *dev_id)
 	if (evt->mode != CLOCK_EVT_MODE_PERIODIC)
 		exynos4_mct_tick_stop(mevt);
 
-	/* Clear the MCT tick interrupt */
+	/*
+	 * Clear the MCT tick interrupt.
+	 * Because of the limitation of MCT hardware,
+	 * it should be cleared twice.
+	 */
+	exynos4_mct_write(0x1, mevt->base + MCT_L_INT_CSTAT_OFFSET);
 	exynos4_mct_write(0x1, mevt->base + MCT_L_INT_CSTAT_OFFSET);
 
 	evt->event_handler(evt);
