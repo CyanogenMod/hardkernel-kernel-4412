@@ -483,15 +483,11 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 		ctx->context_phys = 0;
 		ctx->context_buf = 0;
 	}
-	if (ctx->shared_phys) {
-		/*
-		dma_unmap_single(ctx->dev->v4l2_dev.dev, ctx->shared_dma,
-				 SHARED_BUF_SIZE, DMA_BIDIRECTIONAL);
-		*/
+	if (ctx->shm_alloc) {
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->shared_buf);
-		ctx->shared_phys = 0;
-		ctx->shared_buf = 0;
+							ctx->shm_alloc);
+		ctx->shm_alloc = 0;
+		ctx->shm = 0;
 	}
 	mfc_debug_leave();
 }
