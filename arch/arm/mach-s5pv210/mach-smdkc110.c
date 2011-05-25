@@ -36,6 +36,7 @@
 #include <mach/gpio.h>
 #include <mach/regs-clock.h>
 #include <mach/regs-fb.h>
+#include <mach/cpu-freq-v210.h>
 
 #include <plat/regs-serial.h>
 #include <plat/regs-srom.h>
@@ -96,6 +97,37 @@ static struct s3c2410_uartcfg smdkv210_uartcfgs[] __initdata = {
 		.ufcon		= SMDKC110_UFCON_DEFAULT,
 	},
 };
+
+#ifdef CONFIG_CPU_FREQ
+static struct s5pv210_cpufreq_voltage smdkc110_cpufreq_volt[] = {
+	{
+		.freq   = 1000000,
+		.varm   = 1275000,
+		.vint   = 1100000,
+	}, {
+		.freq   =  800000,
+		.varm   = 1200000,
+		.vint   = 1100000,
+	}, {
+		.freq   =  400000,
+		.varm   = 1050000,
+		.vint   = 1100000,
+	}, {
+		.freq   =  200000,
+		.varm   =  950000,
+		.vint   = 1100000,
+	}, {
+		.freq   =  100000,
+		.varm   =  950000,
+		.vint   = 1000000,
+	},
+};
+
+static struct s5pv210_cpufreq_data smdkc110_cpufreq_plat = {
+	.volt   = smdkc110_cpufreq_volt,
+	.size   = ARRAY_SIZE(smdkc110_cpufreq_volt),
+};
+#endif
 
 #if defined(CONFIG_REGULATOR_MAX8698)
 /* LDO */
@@ -565,6 +597,9 @@ static struct platform_device *smdkc110_devices[] __initdata = {
 	&s5pv210_device_ac97,
 	&s5pv210_device_iis0,
 	&s5pv210_device_spdif,
+#ifdef CONFIG_CPU_FREQ
+	&s5pv210_device_cpufreq,
+#endif
 	&samsung_asoc_dma,
 	&samsung_device_keypad,
 #ifdef CONFIG_BATTERY_SAMSUNG
@@ -683,6 +718,10 @@ static void __init smdkc110_machine_init(void)
 	s3c_ide_set_platdata(&smdkc110_ide_pdata);
 
 	s3c_fb_set_platdata(&smdkc110_lcd0_pdata);
+
+#ifdef CONFIG_CPU_FREQ
+	s5pv210_cpufreq_set_platdata(&smdkc110_cpufreq_plat);
+#endif
 
 	/* SOUND */
 	smdkc110_sound_init();
