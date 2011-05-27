@@ -663,11 +663,18 @@ static int s5p_mfc_open(struct file *file)
 {
 	struct s5p_mfc_ctx *ctx = NULL;
 	struct s5p_mfc_dev *dev = video_drvdata(file);
-	struct vb2_queue *q;
 	unsigned long flags;
 	int ret = 0;
+	enum s5p_mfc_node_type node;
 
 	mfc_debug_enter();
+
+	node = s5p_mfc_get_node_type(file);
+	if (node == MFCNODE_INVALID) {
+		mfc_err("cannot specify node type\n");
+		ret = -ENOENT;
+		goto err_node_type;
+	}
 
 	dev->num_inst++;	/* It is guarded by mfc_mutex in vfd */
 
@@ -676,14 +683,12 @@ static int s5p_mfc_open(struct file *file)
 	if (!ctx) {
 		mfc_err("Not enough memory.\n");
 		ret = -ENOMEM;
-		goto out_open;
+		goto err_ctx_alloc;
 	}
+
 	file->private_data = ctx;
 	ctx->dev = dev;
-	INIT_LIST_HEAD(&ctx->src_queue);
-	INIT_LIST_HEAD(&ctx->dst_queue);
-	ctx->src_queue_cnt = 0;
-	ctx->dst_queue_cnt = 0;
+
 	/* Get context number */
 	ctx->num = 0;
 	while (dev->ctx[ctx->num]) {
@@ -691,35 +696,31 @@ static int s5p_mfc_open(struct file *file)
 		if (ctx->num >= MFC_NUM_CONTEXTS) {
 			mfc_err("Too many open contexts.\n");
 			ret = -EBUSY;
-			goto out_open;
+			goto err_ctx_num;
 		}
 	}
+
 	/* Mark context as idle */
 	spin_lock_irqsave(&dev->condlock, flags);
 	clear_bit(ctx->num, &dev->ctx_work_bits);
 	spin_unlock_irqrestore(&dev->condlock, flags);
 	dev->ctx[ctx->num] = ctx;
-	if (s5p_mfc_get_node_type(file) == MFCNODE_DECODER) {
-		ctx->type = MFCINST_DECODER;
-		ctx->c_ops = get_dec_codec_ops();
-		/* Default format */
-		ctx->src_fmt = get_dec_def_fmt(1);
-		ctx->dst_fmt = get_dec_def_fmt(0);
-	} else if (s5p_mfc_get_node_type(file) == MFCNODE_ENCODER) {
-		ctx->type = MFCINST_ENCODER;
-		ctx->c_ops = get_enc_codec_ops();
-		/* Default format */
-		ctx->src_fmt = get_enc_def_fmt(1);
-		ctx->dst_fmt = get_enc_def_fmt(0);
 
-		/* only for encoder */
-		INIT_LIST_HEAD(&ctx->ref_queue);
-		ctx->ref_queue_cnt = 0;
-	} else {
-		ret = -ENOENT;
-		goto out_open;
+	init_waitqueue_head(&ctx->queue);
+
+	if (node == MFCNODE_DECODER)
+		ret = s5p_mfc_init_dec_ctx(ctx);
+	else
+		ret = s5p_mfc_init_enc_ctx(ctx);
+	if (ret)
+		goto err_ctx_init;
+
+	ret = call_cop(ctx, init_ctx_ctrls, ctx);
+	if (ret) {
+		mfc_err("failed int init_buf_ctrls\n");
+		goto err_ctx_ctrls;
 	}
-	ctx->inst_no = -1;
+
 	/* Load firmware if this is the first instance */
 	if (dev->num_inst == 1) {
 		dev->watchdog_timer.expires = jiffies +
@@ -728,97 +729,62 @@ static int s5p_mfc_open(struct file *file)
 
 		/* Load the FW */
 		ret = s5p_mfc_alloc_firmware(dev);
-		if (ret != 0)
-			goto out_open_2a;
+		if (ret)
+			goto err_fw_alloc;
+
 		ret = s5p_mfc_load_firmware(dev);
-		if (ret != 0)
-			goto out_open_2;
+		if (ret)
+			goto err_fw_load;
 
 		mfc_debug(2, "power on\n");
 		ret = s5p_mfc_power_on();
-		if (ret < 0) {
+		if (ret) {
 			mfc_err("power on failed\n");
 			goto err_pwr_enable;
 		}
+
 #ifndef CONFIG_PM_RUNTIME
 		s5p_mfc_mem_resume(dev->alloc_ctx[0]);
 		s5p_mfc_mem_resume(dev->alloc_ctx[1]);
 #endif
+
 		/* Init the FW */
 		ret = s5p_mfc_init_hw(dev);
-		if (ret != 0)
-			goto out_open_3;
+		if (ret)
+			goto err_hw_init;
 	}
 
-	/* Init videobuf2 queue for CAPTURE */
-	q = &ctx->vq_dst;
-	q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-	q->drv_priv = ctx;
-	if (s5p_mfc_get_node_type(file) == MFCNODE_DECODER) {
-		q->io_modes = VB2_MMAP;
-		q->ops = get_dec_queue_ops();
-	} else {
-		q->io_modes = VB2_MMAP | VB2_USERPTR;
-		q->ops = get_enc_queue_ops();
-	}
-
-	q->mem_ops = s5p_mfc_mem_ops();
-	ret = vb2_queue_init(q);
-	if (ret) {
-		mfc_err("Failed to initialize videobuf2 queue(capture)\n");
-		goto out_open_3;
-	}
-
-	/* Init videobuf2 queue for OUTPUT */
-	q = &ctx->vq_src;
-	q->type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
-	q->io_modes = VB2_MMAP;
-	q->drv_priv = ctx;
-	if (s5p_mfc_get_node_type(file) == MFCNODE_DECODER) {
-		q->io_modes = VB2_MMAP;
-		q->ops = get_dec_queue_ops();
-	} else {
-		q->io_modes = VB2_MMAP | VB2_USERPTR;
-		q->ops = get_enc_queue_ops();
-	}
-
-	q->mem_ops = s5p_mfc_mem_ops();
-	ret = vb2_queue_init(q);
-	if (ret) {
-		mfc_err("Failed to initialize videobuf2 queue(output)\n");
-		goto out_open_3;
-	}
-
-	if (call_cop(ctx, init_ctx_ctrls, ctx) < 0)
-		mfc_err("failed in init_buf_ctrls\n");
-
-	init_waitqueue_head(&ctx->queue);
-	mfc_debug(2, "%s-- (via irq_cleanup_hw)\n", __func__);
 	return ret;
 
 	/* Deinit when failure occured */
-out_open_3:
+err_hw_init:
+#ifndef CONFIG_PM_RUNTIME
+	s5p_mfc_mem_suspend(dev->alloc_ctx[0]);
+	s5p_mfc_mem_suspend(dev->alloc_ctx[1]);
+#endif
+
+	if (s5p_mfc_power_off() < 0)
+		mfc_err("power off failed\n");
+
 err_pwr_enable:
-	if (dev->num_inst == 1) {
-		if (s5p_mfc_power_off() < 0)
-			mfc_err("power off failed\n");
-
-		s5p_mfc_release_firmware(dev);
-	}
-
-out_open_2:
-	/*
+err_fw_load:
 	s5p_mfc_release_firmware(dev);
-	*/
 
-out_open_2a:
-	dev->ctx[ctx->num] = 0;
-	kfree(ctx);
+err_fw_alloc:
 	del_timer_sync(&dev->watchdog_timer);
+	call_cop(ctx, cleanup_ctx_ctrls, ctx);
 
-out_open:
+err_ctx_ctrls:
+err_ctx_init:
+	dev->ctx[ctx->num] = 0;
+
+err_ctx_num:
+	kfree(ctx);
+
+err_ctx_alloc:
 	dev->num_inst--;
 
+err_node_type:
 	mfc_debug_leave();
 
 	return ret;

@@ -2694,26 +2694,53 @@ static struct vb2_ops s5p_mfc_enc_qops = {
 	.buf_queue	= s5p_mfc_buf_queue,
 };
 
-struct s5p_mfc_codec_ops *get_enc_codec_ops(void)
-{
-	return &encoder_codec_ops;
-}
-
-struct vb2_ops *get_enc_queue_ops(void)
-{
-	return &s5p_mfc_enc_qops;
-}
-
 const struct v4l2_ioctl_ops *get_enc_v4l2_ioctl_ops(void)
 {
 	return &s5p_mfc_enc_ioctl_ops;
 }
 
-struct s5p_mfc_fmt *get_enc_def_fmt(bool src)
+int s5p_mfc_init_enc_ctx(struct s5p_mfc_ctx *ctx)
 {
-	if (src)
-		return &formats[DEF_SRC_FMT];
-	else
-		return &formats[DEF_DST_FMT];
-}
+	int ret = 0;
 
+	ctx->inst_no = MFC_NO_INSTANCE_SET;
+
+	INIT_LIST_HEAD(&ctx->src_queue);
+	INIT_LIST_HEAD(&ctx->dst_queue);
+	ctx->src_queue_cnt = 0;
+	ctx->dst_queue_cnt = 0;
+
+	ctx->type = MFCINST_ENCODER;
+	ctx->c_ops = &encoder_codec_ops;
+	ctx->src_fmt = &formats[DEF_SRC_FMT];
+	ctx->dst_fmt = &formats[DEF_DST_FMT];
+
+	INIT_LIST_HEAD(&ctx->ref_queue);
+	ctx->ref_queue_cnt = 0;
+
+	/* Init videobuf2 queue for OUTPUT */
+	ctx->vq_src.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
+	ctx->vq_src.drv_priv = ctx;
+	ctx->vq_src.io_modes = VB2_MMAP | VB2_USERPTR;
+	ctx->vq_src.ops = &s5p_mfc_enc_qops;
+	ctx->vq_src.mem_ops = s5p_mfc_mem_ops();
+	ret = vb2_queue_init(&ctx->vq_src);
+	if (ret) {
+		mfc_err("Failed to initialize videobuf2 queue(output)\n");
+		return ret;
+	}
+
+	/* Init videobuf2 queue for CAPTURE */
+	ctx->vq_dst.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+	ctx->vq_dst.drv_priv = ctx;
+	ctx->vq_dst.io_modes = VB2_MMAP | VB2_USERPTR;
+	ctx->vq_dst.ops = &s5p_mfc_enc_qops;
+	ctx->vq_dst.mem_ops = s5p_mfc_mem_ops();
+	ret = vb2_queue_init(&ctx->vq_dst);
+	if (ret) {
+		mfc_err("Failed to initialize videobuf2 queue(capture)\n");
+		return ret;
+	}
+
+	return 0;
+}
