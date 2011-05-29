@@ -25,9 +25,9 @@ enum S5P_SYSMMU_INTERRUPT_TYPE {
 	SYSMMU_FAULTS_NUM
 };
 
-#ifdef CONFIG_S5P_SYSTEM_MMU
-
 #include <mach/sysmmu.h>
+
+#ifdef CONFIG_S5P_SYSTEM_MMU
 
 /**
  * s5p_sysmmu_enable() - enable system mmu of ip
