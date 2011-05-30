@@ -5,7 +5,7 @@
 #
 # Licensed under GPLv2
 
-obj-y				:=
+obj-y				:= reserve_mem-exynos4.o
 obj-m				:=
 obj-n				:=
 obj-				:=
