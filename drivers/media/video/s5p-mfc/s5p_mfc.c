@@ -1194,6 +1194,9 @@ static int s5p_mfc_suspend(struct device *dev)
 	/* FIXME: how about locking ? */
 	ret = s5p_mfc_sleep(m_dev);
 
+	s5p_mfc_mem_suspend(m_dev->alloc_ctx[0]);
+	s5p_mfc_mem_suspend(m_dev->alloc_ctx[1]);
+
 	return ret;
 }
 
@@ -1206,6 +1209,7 @@ static int s5p_mfc_resume(struct device *dev)
 		return 0;
 
 	s5p_mfc_mem_resume(m_dev->alloc_ctx[0]);
+	s5p_mfc_mem_resume(m_dev->alloc_ctx[1]);
 
 	/* FIXME: how about locking ? */
 	ret = s5p_mfc_wakeup(m_dev);
