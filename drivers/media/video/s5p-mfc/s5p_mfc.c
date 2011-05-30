@@ -690,7 +690,13 @@ static int s5p_mfc_open(struct file *file)
 		goto err_ctx_alloc;
 	}
 
-	file->private_data = ctx;
+	ret = v4l2_fh_init(&ctx->fh, (node == MFCNODE_DECODER) ?
+			   dev->vfd_dec : dev->vfd_enc);
+	if (ret)
+		goto err_v4l2_fh;
+	file->private_data = &ctx->fh;
+	v4l2_fh_add(&ctx->fh);
+
 	ctx->dev = dev;
 
 	/* Get context number */
@@ -783,6 +789,10 @@ err_ctx_init:
 	dev->ctx[ctx->num] = 0;
 
 err_ctx_num:
+	v4l2_fh_del(&ctx->fh);
+	v4l2_fh_exit(&ctx->fh);
+
+err_v4l2_fh:
 	kfree(ctx);
 
 err_ctx_alloc:
@@ -797,7 +807,7 @@ err_node_type:
 /* Release MFC context */
 static int s5p_mfc_release(struct file *file)
 {
-	struct s5p_mfc_ctx *ctx = file->private_data;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	struct s5p_mfc_dev *dev = ctx->dev;
 	unsigned long flags;
 
@@ -805,6 +815,9 @@ static int s5p_mfc_release(struct file *file)
 
 	if (call_cop(ctx, cleanup_ctx_ctrls, ctx) < 0)
 		mfc_err("failed in init_buf_ctrls\n");
+
+	v4l2_fh_del(&ctx->fh);
+	v4l2_fh_exit(&ctx->fh);
 
 	s5p_mfc_clock_on();
 
@@ -873,7 +886,7 @@ static int s5p_mfc_release(struct file *file)
 static unsigned int s5p_mfc_poll(struct file *file,
 				 struct poll_table_struct *wait)
 {
-	struct s5p_mfc_ctx *ctx = file->private_data;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 
 	return vb2_poll(&ctx->vq_src, file, wait);
 }
@@ -881,7 +894,7 @@ static unsigned int s5p_mfc_poll(struct file *file,
 /* Mmap */
 static int s5p_mfc_mmap(struct file *file, struct vm_area_struct *vma)
 {
-	struct s5p_mfc_ctx *ctx = file->private_data;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	unsigned long offset = vma->vm_pgoff << PAGE_SHIFT;
 	int ret;
 

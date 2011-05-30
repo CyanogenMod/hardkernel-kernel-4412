@@ -725,7 +725,7 @@ static int vidioc_enum_fmt_vid_out_mplane(struct file *file, void *prov,
 /* Get format */
 static int vidioc_g_fmt(struct file *file, void *priv, struct v4l2_format *f)
 {
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	struct v4l2_pix_format_mplane *pix_mp;
 
 	mfc_debug_enter();
@@ -807,7 +807,7 @@ static int vidioc_try_fmt(struct file *file, void *priv, struct v4l2_format *f)
 static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 {
 	struct s5p_mfc_dev *dev = video_drvdata(file);
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	unsigned long flags;
 	int ret = 0;
 	struct s5p_mfc_fmt *fmt;
@@ -888,7 +888,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 					  struct v4l2_requestbuffers *reqbufs)
 {
 	struct s5p_mfc_dev *dev = video_drvdata(file);
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	int ret = 0;
 	unsigned long flags;
 
@@ -981,7 +981,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 static int vidioc_querybuf(struct file *file, void *priv,
 						   struct v4l2_buffer *buf)
 {
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	int ret;
 	int i;
 
@@ -1010,7 +1010,7 @@ static int vidioc_querybuf(struct file *file, void *priv,
 /* Queue a buffer */
 static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 {
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 
 	mfc_debug_enter();
 	mfc_debug(2, "Enqueued buf: %d (type = %d)\n", buf->index, buf->type);
@@ -1029,7 +1029,7 @@ static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 /* Dequeue a buffer */
 static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 {
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	int ret;
 
 	mfc_debug_enter();
@@ -1051,7 +1051,7 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 static int vidioc_streamon(struct file *file, void *priv,
 			   enum v4l2_buf_type type)
 {
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	int ret = -EINVAL;
 
 	mfc_debug_enter();
@@ -1071,7 +1071,7 @@ static int vidioc_streamon(struct file *file, void *priv,
 static int vidioc_streamoff(struct file *file, void *priv,
 			    enum v4l2_buf_type type)
 {
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	int ret;
 
 	mfc_debug_enter();
@@ -1102,7 +1102,7 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 			 struct v4l2_control *ctrl)
 {
 	struct s5p_mfc_dev *dev = video_drvdata(file);
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
 	int ret = 0;
 
@@ -1186,7 +1186,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 			 struct v4l2_control *ctrl)
 {
 	struct s5p_mfc_dev *dev = video_drvdata(file);
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
 	int ret = 0;
 	int stream_on;
@@ -1258,7 +1258,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 static int vidioc_g_crop(struct file *file, void *priv,
 		struct v4l2_crop *cr)
 {
-	struct s5p_mfc_ctx *ctx = priv;
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	u32 left, right, top, bottom;
 
 	mfc_debug_enter();

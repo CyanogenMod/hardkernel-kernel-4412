@@ -21,6 +21,7 @@
 
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
+#include <media/v4l2-fh.h>
 
 #include <media/videobuf2-core.h>
 
@@ -374,6 +375,7 @@ struct s5p_mfc_codec_ops {
  */
 struct s5p_mfc_ctx {
 	struct s5p_mfc_dev *dev;
+	struct v4l2_fh fh;
 	int num;
 
 	int int_cond;
@@ -490,6 +492,9 @@ struct s5p_mfc_ctx {
 
 	struct s5p_mfc_codec_ops *c_ops;
 };
+
+#define fh_to_mfc_ctx(x)	\
+	container_of(x, struct s5p_mfc_ctx, fh)
 
 #define MFC_FMT_DEC	0
 #define MFC_FMT_ENC	1
