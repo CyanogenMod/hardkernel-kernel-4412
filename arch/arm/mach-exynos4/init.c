@@ -16,7 +16,11 @@
 
 static struct s3c24xx_uart_clksrc exynos4_serial_clocks[] = {
 	[0] = {
+#ifdef CONFIG_MACH_FPGA4212
+		.name		= "xtal",
+#else
 		.name		= "uclk1",
+#endif
 		.divisor	= 1,
 		.min_baud	= 0,
 		.max_baud	= 0,

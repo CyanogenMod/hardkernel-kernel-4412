@@ -140,6 +140,7 @@ void __init exynos4_map_io(void)
 {
 	iotable_init(exynos4_iodesc, ARRAY_SIZE(exynos4_iodesc));
 
+#ifndef CONFIG_MACH_FPGA4212
 	/* initialize device information early */
 	exynos4_default_sdhci0();
 	exynos4_default_sdhci1();
@@ -152,6 +153,7 @@ void __init exynos4_map_io(void)
 	s3c_fimc_setname(3, "exynos4-fimc");
 	s5p_fb_setname(0, "exynos4-fb");	/* FIMD0 */
 	s3c_adc_setname("s5pv210-adc");
+#endif
 }
 
 void __init exynos4_init_clocks(int xtal)
@@ -159,9 +161,12 @@ void __init exynos4_init_clocks(int xtal)
 	printk(KERN_DEBUG "%s: initializing clocks\n", __func__);
 
 	s3c24xx_register_baseclocks(xtal);
+
+#ifndef CONFIG_MACH_FPGA4212
 	s5p_register_clocks(xtal);
 	exynos4_register_clocks();
 	exynos4_setup_clocks();
+#endif
 }
 
 static void exynos4_gic_irq_eoi(struct irq_data *d)
@@ -210,6 +215,9 @@ core_initcall(exynos4_core_init);
 #ifdef CONFIG_CACHE_L2X0
 static int __init exynos4_l2x0_cache_init(void)
 {
+#ifdef CONFIG_MACH_FPGA4212
+	l2x0_init(S5P_VA_L2CC, 0x70000, 0xffffffff);
+#else
 	/* TAG, Data Latency Control: 2cycle */
 	__raw_writel(0x110, S5P_VA_L2CC + L2X0_TAG_LATENCY_CTRL);
 	__raw_writel(0x110, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
@@ -222,6 +230,7 @@ static int __init exynos4_l2x0_cache_init(void)
 		     S5P_VA_L2CC + L2X0_POWER_CTRL);
 
 	l2x0_init(S5P_VA_L2CC, 0x7C470001, 0xC200ffff);
+#endif
 
 	return 0;
 }

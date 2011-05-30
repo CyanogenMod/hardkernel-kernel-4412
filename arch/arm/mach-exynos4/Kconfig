@@ -209,6 +209,11 @@ config MACH_NURI
 	help
 	  Machine support for Samsung Mobile NURI Board.
 
+config MACH_FPGA4212
+	bool "FPGA4212 board"
+	select CPU_EXYNOS4212
+	help
+	  Machine support for Samsung FPGA4212
 endmenu
 
 comment "Configuration for HSMMC bus width"
