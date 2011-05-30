@@ -1916,11 +1916,11 @@ static struct s3c_fb_driverdata s3c_fb_data_exynos4 = {
 		.has_shadowcon  = 1,
 		.clk_type       = FIMD_CLK_TYPE1,
 	},
-	.win[0] = &s3c_fb_data_64xx_wins[0],
-	.win[1] = &s3c_fb_data_64xx_wins[1],
-	.win[2] = &s3c_fb_data_64xx_wins[2],
-	.win[3] = &s3c_fb_data_64xx_wins[3],
-	.win[4] = &s3c_fb_data_64xx_wins[4],
+	.win[0] = &s3c_fb_data_s5p_wins[0],
+	.win[1] = &s3c_fb_data_s5p_wins[1],
+	.win[2] = &s3c_fb_data_s5p_wins[2],
+	.win[3] = &s3c_fb_data_s5p_wins[3],
+	.win[4] = &s3c_fb_data_s5p_wins[4],
 };
 
 /* S3C2443/S3C2416 style hardware */
