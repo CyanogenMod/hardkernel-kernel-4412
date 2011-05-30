@@ -79,6 +79,10 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx);
 					S5P_FIMV_RISC2HOST_CMD) & 0x1FFFF)
 #define s5p_mfc_get_int_err()		readl(dev->regs_base + \
 						S5P_FIMV_RISC2HOST_ARG2)
+#define s5p_mfc_err_dec(x)		(((x) & S5P_FIMV_ERR_DEC_MASK) >> \
+						S5P_FIMV_ERR_DEC_SHIFT)
+#define s5p_mfc_err_dspl(x)		(((x) & S5P_FIMV_ERR_DSPL_MASK) >> \
+						S5P_FIMV_ERR_DSPL_SHIFT)
 #define s5p_mfc_get_img_width()		readl(dev->regs_base + \
 						S5P_FIMV_SI_HRESOL)
 #define s5p_mfc_get_img_height()	readl(dev->regs_base + \

@@ -280,7 +280,8 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 			ctx->crc_chroma0 = crc_chroma;
 
 			vb2_buffer_done(dst_buf->b,
-				err ? VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
+				s5p_mfc_err_dspl(err) ?
+					VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 
 			index = dst_buf->b->v4l2_buf.index;
 			if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->dst_ctrls[index]) < 0)
@@ -383,7 +384,10 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			ctx->consumed_stream = 0;
 			list_del(&src_buf->list);
 			ctx->src_queue_cnt--;
-			vb2_buffer_done(src_buf->b, VB2_BUF_STATE_DONE);
+			if (s5p_mfc_err_dec(err) > 0)
+				vb2_buffer_done(src_buf->b, VB2_BUF_STATE_ERROR);
+			else
+				vb2_buffer_done(src_buf->b, VB2_BUF_STATE_DONE);
 		}
 	}
 leave_handle_frame:
@@ -493,7 +497,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	case S5P_FIMV_R2H_CMD_ERR_RET:
 		/* An error has occured */
 		if (ctx->state == MFCINST_RUNNING &&
-					err >= S5P_FIMV_ERR_WARNINGS_START)
+			s5p_mfc_err_dec(err) >= S5P_FIMV_ERR_WARNINGS_START)
 			s5p_mfc_handle_frame(ctx, reason, err);
 		else
 			s5p_mfc_handle_error(ctx, reason, err);
