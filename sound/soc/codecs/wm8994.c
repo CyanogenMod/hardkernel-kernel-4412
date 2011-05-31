@@ -1698,11 +1698,15 @@ static int _wm8994_set_fll(struct snd_soc_codec *codec, int id, int src,
 			    WM8994_FLL1_N_MASK,
 				    fll.n << WM8994_FLL1_N_SHIFT);
 
-	snd_soc_update_bits(codec, WM8994_FLL1_CONTROL_5 + reg_offset,
+	/* prevent to set 0xFFFFFFFF for WM8994_FLL1_CONTROL_5
+	   when freq_out is 0 */
+	if (freq_out) {
+		snd_soc_update_bits(codec, WM8994_FLL1_CONTROL_5 + reg_offset,
 			    WM8994_FLL1_REFCLK_DIV_MASK |
 			    WM8994_FLL1_REFCLK_SRC_MASK,
 			    (fll.clk_ref_div << WM8994_FLL1_REFCLK_DIV_SHIFT) |
 			    (src - 1));
+	}
 
 	/* Enable (with fractional mode if required) */
 	if (freq_out) {
