@@ -68,6 +68,16 @@ static struct clk clk_audiocdclk1 = {
 	.id             = 0,
 };
 
+static struct clk clk_audiocdclk2 = {
+	.name		= "audiocdclk",
+	.id		= -1,
+};
+
+static struct clk clk_spdifcdclk = {
+	.name		= "spdifcdclk",
+	.id		= -1,
+};
+
 static int exynos4_clksrc_mask_top_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_CLKSRC_MASK_TOP, clk, enable);
@@ -603,6 +613,16 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 22),
 	}, {
+		.name		= "pcm",
+		.id		= 2,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 23),
+	}, {
+		.name		= "spdif",
+		.id		= -1,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 26),
+	}, {
 		.name		= "ac97",
 		.id		= -1,
 		.enable		= exynos4_clk_ip_peril_ctrl,
@@ -738,9 +758,11 @@ static struct clk *clkset_sclk_audio0_list[] = {
 	[1] = NULL,
 	[2] = &clk_sclk_hdmi27m,
 	[3] = &clk_sclk_usbphy0,
-	[4] = &clk_mout_mpll.clk,
-	[5] = &clk_mout_epll.clk,
-	[6] = &clk_sclk_vpll.clk,
+	[4] = &clk_sclk_xxti,
+	[5] = &clk_sclk_xusbxti,
+	[6] = &clk_mout_mpll.clk,
+	[7] = &clk_mout_epll.clk,
+	[8] = &clk_sclk_vpll.clk,
 };
 
 static struct clksrc_sources clkset_sclk_audio0 = {
@@ -829,6 +851,58 @@ static struct clksrc_clk clk_sclk_audio1 = {
 	.sources = &clkset_sclk_audio1,
 	.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 0, .size = 4 },
 	.reg_div = { .reg = S5P_CLKDIV_PERIL4, .shift = 4, .size = 8 },
+};
+
+static struct clk *clkset_sclk_audio2_list[] = {
+	[0] = &clk_audiocdclk2,
+	[1] = NULL,
+	[2] = &clk_sclk_hdmi27m,
+	[3] = &clk_sclk_usbphy0,
+	[4] = &clk_sclk_xxti,
+	[5] = &clk_sclk_xusbxti,
+	[6] = &clk_mout_mpll.clk,
+	[7] = &clk_mout_epll.clk,
+	[8] = &clk_sclk_vpll.clk,
+};
+
+static struct clksrc_sources clkset_sclk_audio2 = {
+	.sources	= clkset_sclk_audio2_list,
+	.nr_sources	= ARRAY_SIZE(clkset_sclk_audio2_list),
+};
+
+static struct clksrc_clk clk_sclk_audio2 = {
+	.clk	= {
+		.name		= "audio-bus",
+		.id		= 2,
+		.enable		= exynos4_clksrc_mask_peril1_ctrl,
+		.ctrlbit	= (1 << 4),
+	},
+	.sources = &clkset_sclk_audio2,
+	.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 4, .size = 4 },
+	.reg_div = { .reg = S5P_CLKDIV_PERIL4, .shift = 16, .size = 4 },
+};
+
+static struct clk *clkset_sclk_spdif_list[] = {
+	[0] = &clk_sclk_audio0.clk,
+	[1] = &clk_sclk_audio1.clk,
+	[2] = &clk_sclk_audio2.clk,
+	[3] = &clk_spdifcdclk,
+};
+
+static struct clksrc_sources clkset_sclk_spdif = {
+	.sources	= clkset_sclk_spdif_list,
+	.nr_sources	= ARRAY_SIZE(clkset_sclk_spdif_list),
+};
+
+static struct clksrc_clk clk_sclk_spdif = {
+	.clk	= {
+		.name		= "sclk_spdif",
+		.id		= -1,
+		.enable		= exynos4_clksrc_mask_peril1_ctrl,
+		.ctrlbit	= (1 << 8),
+	},
+	.sources = &clkset_sclk_spdif,
+	.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 8, .size = 2 },
 };
 
 static struct clk init_clocks[] = {
@@ -1224,7 +1298,42 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 16),
 		},
 		.reg_div = { .reg = S5P_CLKDIV_FSYS3, .shift = 8, .size = 8 },
-	}
+	}, {
+		.clk		= {
+			.name		= "sclk_pcm",
+			.id		= 0,
+			.parent		= &clk_sclk_audio0.clk,
+		},
+			.reg_div = { .reg = S5P_CLKDIV_MAUDIO, .shift = 4, .size = 8 },
+	}, {
+		.clk		= {
+			.name		= "sclk_pcm",
+			.id		= 1,
+			.parent		= &clk_sclk_audio1.clk,
+		},
+			.reg_div = { .reg = S5P_CLKDIV_PERIL4, .shift = 4, .size = 8 },
+	}, {
+		.clk		= {
+			.name		= "sclk_pcm",
+			.id		= 2,
+			.parent		= &clk_sclk_audio2.clk,
+		},
+			.reg_div = { .reg = S5P_CLKDIV_PERIL4, .shift = 20, .size = 8 },
+	}, {
+		.clk		= {
+			.name		= "sclk_i2s",
+			.id		= 1,
+			.parent		= &clk_sclk_audio1.clk,
+		},
+			.reg_div = { .reg = S5P_CLKDIV_PERIL5, .shift = 0, .size = 6 },
+	}, {
+		.clk		= {
+			.name		= "sclk_i2s",
+			.id		= 2,
+			.parent		= &clk_sclk_audio2.clk,
+		},
+			.reg_div = { .reg = S5P_CLKDIV_PERIL5, .shift = 8, .size = 6 },
+	},
 };
 
 /* Clock initialization code */
@@ -1259,7 +1368,10 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_dout_mmc4,
 	&clk_mout_audss,
 	&clk_sclk_audss,
+	&clk_sclk_audio0,
 	&clk_sclk_audio1,
+	&clk_sclk_audio2,
+	&clk_sclk_spdif,
 };
 
 static unsigned long exynos4_epll_get_rate(struct clk *clk)
@@ -1420,7 +1532,9 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 
 	clk_set_parent(&clk_sclk_audss.clk, &clk_mout_audss.clk);
 	clk_set_parent(&clk_mout_audss.clk, &clk_fout_epll);
+	clk_set_parent(&clk_sclk_audio0.clk, &clk_mout_epll.clk);
 	clk_set_parent(&clk_sclk_audio1.clk, &clk_mout_epll.clk);
+	clk_set_parent(&clk_sclk_audio2.clk, &clk_mout_epll.clk);
 	clk_set_parent(&clk_mout_epll.clk, &clk_fout_epll);
 }
 
