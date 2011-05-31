@@ -51,7 +51,7 @@ int exynos4_pd_enable(struct device *dev)
 	__raw_writel(S5P_INT_LOCAL_PWR_EN, pdata->base);
 
 	/* Wait max 1ms */
-	timeout = 10;
+	timeout = 1000;
 	while ((__raw_readl(pdata->base + 0x4) & S5P_INT_LOCAL_PWR_EN)
 		!= S5P_INT_LOCAL_PWR_EN) {
 		if (timeout == 0) {
@@ -60,7 +60,7 @@ int exynos4_pd_enable(struct device *dev)
 			return -ETIMEDOUT;
 		}
 		timeout--;
-		udelay(100);
+		udelay(1);
 	}
 
 	if (data->read_base) {
@@ -82,7 +82,7 @@ static int exynos4_pd_disable(struct device *dev)
 	__raw_writel(0, pdata->base);
 
 	/* Wait max 1ms */
-	timeout = 10;
+	timeout = 1000;
 	while (__raw_readl(pdata->base + 0x4) & S5P_INT_LOCAL_PWR_EN) {
 		if (timeout == 0) {
 			printk(KERN_ERR "Power domain %s disable failed.\n",
@@ -90,7 +90,7 @@ static int exynos4_pd_disable(struct device *dev)
 			return -ETIMEDOUT;
 		}
 		timeout--;
-		udelay(100);
+		udelay(1);
 	}
 
 	return 0;
