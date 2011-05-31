@@ -12,9 +12,11 @@
 #define __ASM_PLAT_SAMSUNG_PD_H __FILE__
 
 struct samsung_pd_info {
+	int (*init)(struct device *dev);
 	int (*enable)(struct device *dev);
 	int (*disable)(struct device *dev);
 	void __iomem *base;
+	void *data;
 };
 
 enum exynos4_pd_block {
@@ -27,4 +29,11 @@ enum exynos4_pd_block {
 	PD_GPS
 };
 
+struct exynos4_pd_data {
+	void __iomem *clk_base;
+	void __iomem *read_base;
+	unsigned long read_phy_addr;
+};
+
+int exynos4_pd_enable(struct device *dev);
 #endif /* __ASM_PLAT_SAMSUNG_PD_H */
