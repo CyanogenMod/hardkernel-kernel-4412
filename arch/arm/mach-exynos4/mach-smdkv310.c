@@ -43,8 +43,10 @@
 #include <plat/sdhci.h>
 #include <plat/iic.h>
 #include <plat/pd.h>
+#include <plat/media.h>
 
 #include <mach/map.h>
+#include <mach/media.h>
 #include <mach/regs-fb.h>
 #include <mach/sysmmu.h>
 
@@ -742,6 +744,8 @@ static void __init smdkv310_map_io(void)
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(smdkv310_uartcfgs, ARRAY_SIZE(smdkv310_uartcfgs));
+
+	s5p_reserve_mem(S5P_RANGE_MFC);
 }
 
 static void __init smdkv310_machine_init(void)
