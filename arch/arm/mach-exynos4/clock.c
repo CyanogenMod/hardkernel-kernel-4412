@@ -23,6 +23,7 @@
 
 #include <mach/map.h>
 #include <mach/regs-clock.h>
+#include <mach/regs-audss.h>
 #include <mach/sysmmu.h>
 
 static struct clk clk_sclk_hdmi27m = {
@@ -45,6 +46,16 @@ static struct clk clk_sclk_usbphy0 = {
 static struct clk clk_sclk_usbphy1 = {
 	.name		= "sclk_usbphy1",
 	.id		= -1,
+};
+
+static struct clk clk_audiocdclk0 = {
+	.name           = "audiocdclk",
+	.id             = 0,
+};
+
+static struct clk clk_audiocdclk1 = {
+	.name           = "audiocdclk",
+	.id             = 0,
 };
 
 static int exynos4_clksrc_mask_top_ctrl(struct clk *clk, int enable)
@@ -125,6 +136,16 @@ static int exynos4_clk_ip_peril_ctrl(struct clk *clk, int enable)
 static int exynos4_clk_ip_perir_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_CLKGATE_IP_PERIR, clk, enable);
+}
+
+static int exynos4_clksrc_mask_maudio_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_CLKSRC_MASK_MAUDIO, clk, enable);
+}
+
+static int exynos4_clk_audss_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_CLKGATE_AUDSS, clk, enable);
 }
 
 /* Core list of CMU_CPU side */
@@ -556,6 +577,11 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 21),
 	}, {
+		.name		= "iis",
+		.id		= -1,
+		.enable		= exynos4_clk_audss_ctrl,
+		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL,
+	}, {
 		.name		= "ac97",
 		.id		= -1,
 		.enable		= exynos4_clk_ip_peril_ctrl,
@@ -684,6 +710,75 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 2),
 	}
+};
+
+static struct clk *clkset_sclk_audio0_list[] = {
+	[0] = &clk_audiocdclk0,
+	[1] = NULL,
+	[2] = &clk_sclk_hdmi27m,
+	[3] = &clk_sclk_usbphy0,
+	[4] = &clk_mout_mpll.clk,
+	[5] = &clk_mout_epll.clk,
+	[6] = &clk_sclk_vpll.clk,
+};
+
+static struct clksrc_sources clkset_sclk_audio0 = {
+	.sources        = clkset_sclk_audio0_list,
+	.nr_sources     = ARRAY_SIZE(clkset_sclk_audio0_list),
+};
+
+static struct clksrc_clk clk_sclk_audio0 = {
+	.clk            = {
+		.name           = "audio-bus",
+		.id             = 0,
+		.enable         = exynos4_clksrc_mask_maudio_ctrl,
+		.ctrlbit        = (1 << 0),
+	},
+	.sources = &clkset_sclk_audio0,
+	.reg_src = { .reg = S5P_CLKSRC_MAUDIO, .shift = 0, .size = 4 },
+	.reg_div = { .reg = S5P_CLKDIV_MAUDIO, .shift = 0, .size = 4 },
+};
+
+static struct clk *clkset_mout_audss_list[] = {
+	NULL,
+	&clk_fout_epll,
+};
+
+static struct clksrc_sources clkset_mout_audss = {
+	.sources        = clkset_mout_audss_list,
+	.nr_sources     = ARRAY_SIZE(clkset_mout_audss_list),
+};
+
+static struct clksrc_clk clk_mout_audss = {
+	.clk            = {
+		.name           = "mout_audss",
+		.id             = -1,
+	},
+	.sources        = &clkset_mout_audss,
+	.reg_src        = { .reg = S5P_CLKSRC_AUDSS, .shift = 0, .size = 1 },
+};
+
+static struct clk *clkset_sclk_audss_list[] = {
+	&clk_mout_audss.clk,
+	&clk_audiocdclk0,
+	&clk_sclk_audio0.clk,
+};
+
+static struct clksrc_sources clkset_sclk_audss = {
+	.sources        = clkset_sclk_audss_list,
+	.nr_sources     = ARRAY_SIZE(clkset_sclk_audss_list),
+};
+
+static struct clksrc_clk clk_sclk_audss = {
+	.clk            = {
+		.name           = "audio-bus",
+		.id             = -1,
+		.enable         = exynos4_clk_audss_ctrl,
+		.ctrlbit        = S5P_AUDSS_CLKGATE_I2SBUS,
+	},
+	.sources        = &clkset_sclk_audss,
+	.reg_src        = { .reg = S5P_CLKSRC_AUDSS, .shift = 2, .size = 2 },
+	.reg_div        = { .reg = S5P_CLKDIV_AUDSS, .shift = 4, .size = 8 },
 };
 
 static struct clk init_clocks[] = {
@@ -1112,6 +1207,8 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_dout_mmc2,
 	&clk_dout_mmc3,
 	&clk_dout_mmc4,
+	&clk_mout_audss,
+	&clk_sclk_audss,
 };
 
 static int xtal_rate;
@@ -1191,6 +1288,9 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 
 	for (ptr = 0; ptr < ARRAY_SIZE(clksrcs); ptr++)
 		s3c_set_clksrc(&clksrcs[ptr], true);
+
+	clk_set_parent(&clk_sclk_audss.clk, &clk_mout_audss.clk);
+	clk_set_parent(&clk_mout_audss.clk, &clk_fout_epll);
 }
 
 static struct clk *clks[] __initdata = {

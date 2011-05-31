@@ -42,6 +42,8 @@
 
 #define S3C_VA_USB_HSPHY	S3C_ADDR(0x02900000)
 
+#define S5P_VA_AUDSS		S3C_ADDR(0x02910000)
+
 #define VA_VIC(x)		(S3C_VA_IRQ + ((x) * 0x10000))
 #define VA_VIC0			VA_VIC(0)
 #define VA_VIC1			VA_VIC(1)
