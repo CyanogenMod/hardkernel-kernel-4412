@@ -1536,6 +1536,8 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	clk_set_parent(&clk_sclk_audio1.clk, &clk_mout_epll.clk);
 	clk_set_parent(&clk_sclk_audio2.clk, &clk_mout_epll.clk);
 	clk_set_parent(&clk_mout_epll.clk, &clk_fout_epll);
+
+	clk_set_rate(&clk_sclk_apll.clk, 100000000);
 }
 
 static struct clk *clks[] __initdata = {
