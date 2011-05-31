@@ -1005,7 +1005,7 @@ static struct clksrc_clk clksrcs[] = {
 		},
 		.sources = &clkset_group,
 		.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 16, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL1, .shift = 0, .size = 4 },
+		.reg_div = { .reg = S5P_CLKDIV_PERIL1, .shift = 8, .size = 8 },
 	}, {
 		.clk		= {
 			.name		= "sclk_spi",
@@ -1015,7 +1015,7 @@ static struct clksrc_clk clksrcs[] = {
 		},
 		.sources = &clkset_group,
 		.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 20, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL1, .shift = 16, .size = 4 },
+		.reg_div = { .reg = S5P_CLKDIV_PERIL1, .shift = 24, .size = 8 },
 	}, {
 		.clk		= {
 			.name		= "sclk_spi",
@@ -1025,7 +1025,7 @@ static struct clksrc_clk clksrcs[] = {
 		},
 		.sources = &clkset_group,
 		.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 24, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL2, .shift = 0, .size = 4 },
+		.reg_div = { .reg = S5P_CLKDIV_PERIL2, .shift = 8, .size = 8 },
 	}, {
 		.clk		= {
 			.name		= "sclk_fimg2d",
