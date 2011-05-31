@@ -31,6 +31,9 @@ static int exynos4_pd_init(struct device *dev)
 			return -ENOMEM;
 	}
 
+	if (data->clk_base == NULL)
+		return -ENODEV;
+
 	return 0;
 }
 
@@ -41,9 +44,8 @@ int exynos4_pd_enable(struct device *dev)
 	u32 timeout;
 	u32 tmp = 0;
 
-	if (data->read_base)
-		/*  save IP clock gating register */
-		tmp = __raw_readl(data->clk_base);
+	/*  save IP clock gating register */
+	tmp = __raw_readl(data->clk_base);
 
 	/*  enable all the clocks of IPs in the power domain */
 	__raw_writel(0xffffffff, data->clk_base);
@@ -63,13 +65,12 @@ int exynos4_pd_enable(struct device *dev)
 		udelay(1);
 	}
 
-	if (data->read_base) {
+	if (data->read_base)
 		/* dummy read to check the completion of power-on sequence */
 		__raw_readl(data->read_base);
 
-		/* restore IP clock gating register */
-		__raw_writel(tmp, data->clk_base);
-	}
+	/* restore IP clock gating register */
+	__raw_writel(tmp, data->clk_base);
 
 	return 0;
 }
