@@ -1017,6 +1017,20 @@ static void __init smdkc210_map_io(void)
 
 static void __init smdkc210_machine_init(void)
 {
+#if defined(CONFIG_EXYNOS4_DEV_PD) && !defined(CONFIG_PM_RUNTIME)
+	/*
+	 * These power domains should be always on
+	 * without runtime pm support.
+	 */
+	exynos4_pd_enable(&exynos4_device_pd[PD_MFC].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_G3D].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_LCD0].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_LCD1].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_CAM].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_TV].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_GPS].dev);
+#endif
+
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 
