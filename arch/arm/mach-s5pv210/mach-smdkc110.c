@@ -37,6 +37,7 @@
 #include <mach/regs-clock.h>
 #include <mach/regs-fb.h>
 #include <mach/cpu-freq-v210.h>
+#include <mach/media.h>
 
 #include <plat/regs-serial.h>
 #include <plat/regs-srom.h>
@@ -52,6 +53,7 @@
 #include <plat/pm.h>
 #include <plat/fb.h>
 #include <plat/s5p-time.h>
+#include <plat/media.h>
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDKC110_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -693,6 +695,8 @@ static void __init smdkc110_map_io(void)
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(smdkv210_uartcfgs, ARRAY_SIZE(smdkv210_uartcfgs));
 	s5p_set_timer_source(S5P_PWM2, S5P_PWM4);
+
+	s5p_reserve_mem(S5P_RANGE_MFC);
 }
 
 static void __init smdkc110_machine_init(void)
