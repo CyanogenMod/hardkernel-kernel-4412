@@ -120,6 +120,11 @@ static struct map_desc exynos4_iodesc[] __initdata = {
 		.pfn            = __phys_to_pfn(EXYNOS4_PA_AUDSS),
 		.length         = SZ_4K,
 		.type           = MT_DEVICE,
+	}, {
+		.virtual        = (unsigned long)S5P_VA_PPMU_CPU,
+		.pfn            = __phys_to_pfn(EXYNOS4_PA_PPMU_CPU),
+		.length         = SZ_16K,
+		.type           = MT_DEVICE,
 	},
 };
 
