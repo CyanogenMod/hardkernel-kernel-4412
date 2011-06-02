@@ -17,14 +17,15 @@
 #include <linux/kernel.h>
 #include <linux/platform_device.h>
 #include <linux/types.h>
-#include <plat/clock.h>
-#include <plat/gpio-cfg.h>
+#include <linux/io.h>
+
 #include <mach/regs-clock.h>
 #include <mach/regs-gpio.h>
-#include <linux/io.h>
 #include <mach/map.h>
 #include <mach/gpio.h>
-/* #include <mach/pd.h> */
+
+#include <plat/clock.h>
+#include <plat/gpio-cfg.h>
 
 struct platform_device; /* don't need the contents */
 
@@ -143,7 +144,7 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 
 	u32 rate = 0;
 
-	lcd_clk = clk_get(&pdev->dev, "fimd"); /* CLOCK GATE IP ENABLE */
+	lcd_clk = clk_get(&pdev->dev, "fimd");
 	if (IS_ERR(lcd_clk)) {
 		dev_err(&pdev->dev, "failed to get ip clk for fimd\n");
 		goto err_clk0;
@@ -164,17 +165,7 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 	}
 
 	clk_set_parent(sclk, mout_mpll);
-#if 0
-	rate = clk_round_rate(sclk, 133400000);
-	dev_dbg(&pdev->dev, "set fimd sclk rate to %d\n", rate);
-
-	if (!rate)
-		rate = 133400000;
-
-	clk_set_rate(sclk, rate);
-#else
-	clk_set_rate(sclk,800000000);
-#endif
+	clk_set_rate(sclk, 800000000);
 	dev_dbg(&pdev->dev, "set fimd sclk rate to %d\n", rate);
 
 	clk_put(mout_mpll);
@@ -193,14 +184,13 @@ err_clk0:
 	clk_put(lcd_clk);
 
 	return -EINVAL;
-
 }
 
 int s3cfb_clk_off(struct platform_device *pdev, struct clk **clk)
 {
 	struct clk *lcd_clk = NULL;
 
-	lcd_clk = clk_get(&pdev->dev, "fimd"); /*  CLOCK GATE IP ENABLE */
+	lcd_clk = clk_get(&pdev->dev, "fimd");
 	if (IS_ERR(lcd_clk)) {
 		printk(KERN_ERR "failed to get ip clk for fimd0\n");
 		goto err_clk0;
@@ -338,13 +328,13 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 	}
 
 	gpio_direction_output(EXYNOS4_GPX0(6), 1);
-	mdelay(100);
+	msleep(100);
 
 	gpio_set_value(EXYNOS4_GPX0(6), 0);
-	mdelay(10);
+	msleep(10);
 
 	gpio_set_value(EXYNOS4_GPX0(6), 1);
-	mdelay(10);
+	msleep(10);
 
 	gpio_free(EXYNOS4_GPX0(6));
 
