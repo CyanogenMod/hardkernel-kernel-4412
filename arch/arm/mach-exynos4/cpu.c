@@ -151,7 +151,9 @@ void __init exynos4_map_io(void)
 	s3c_fimc_setname(1, "exynos4-fimc");
 	s3c_fimc_setname(2, "exynos4-fimc");
 	s3c_fimc_setname(3, "exynos4-fimc");
+#ifdef CONFIG_FB_S3C
 	s5p_fb_setname(0, "exynos4-fb");	/* FIMD0 */
+#endif
 	s3c_adc_setname("s5pv210-adc");
 #endif
 }

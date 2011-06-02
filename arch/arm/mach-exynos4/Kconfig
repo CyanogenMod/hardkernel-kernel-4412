@@ -107,6 +107,12 @@ config EXYNOS4_SETUP_USB_PHY
 	help
 	  Common setup code for USB PHY controller
 
+config EXYNOS4_SETUP_FB_S5P
+	bool
+	default y
+	help
+	  Setup code for EXYNOS4 FIMD
+
 # machine support
 
 menu "EXYNOS4 Machines"
@@ -115,6 +121,7 @@ config MACH_SMDKC210
 	bool "SMDKC210"
 	select CPU_EXYNOS4210
 	select S5P_DEV_FIMD0
+	select S5P_DEV_FIMD_S5P
 	select S3C_DEV_RTC
 	select S3C_DEV_WDT
 	select S3C_DEV_I2C1
@@ -132,6 +139,7 @@ config MACH_SMDKC210
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
 	select EXYNOS4_SETUP_SDHCI
+	select EXYNOS4_SETUP_FB_S5P
 	help
 	  Machine support for Samsung SMDKC210
 
@@ -139,6 +147,7 @@ config MACH_SMDKV310
 	bool "SMDKV310"
 	select CPU_EXYNOS4210
 	select S5P_DEV_FIMD0
+	select S5P_DEV_FIMD_S5P
 	select S3C_DEV_RTC
 	select S3C_DEV_WDT
 	select S3C_DEV_I2C1
@@ -156,6 +165,7 @@ config MACH_SMDKV310
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
 	select EXYNOS4_SETUP_SDHCI
+	select EXYNOS4_SETUP_FB_S5P
 	help
 	  Machine support for Samsung SMDKV310
 

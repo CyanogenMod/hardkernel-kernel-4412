@@ -36,6 +36,7 @@
 #include <plat/cpu.h>
 #include <plat/devs.h>
 #include <plat/fb.h>
+#include <plat/fb-s5p.h>
 #include <plat/gpio-cfg.h>
 #include <plat/adc.h>
 #include <plat/ts.h>
@@ -131,6 +132,7 @@ static struct s3c_sdhci_platdata smdkv310_hsmmc3_pdata __initdata = {
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 };
 
+#ifdef CONFIG_FB_S3C
 #if defined(CONFIG_LCD_AMS369FG06)
 static int lcd_power_on(struct lcd_device *ld, int enable)
 {
@@ -376,9 +378,12 @@ static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 #endif
 
 static struct s3c_fb_platdata smdkv310_lcd0_pdata __initdata = {
+#if defined(CONFIG_LCD_AMS369FG06) || defined(CONFIG_LCD_WA101S) || \
+	defined(CONFIG_LCD_LTE480WV)
 	.win[0]		= &smdkv310_fb_win0,
 #ifndef CONFIG_LCD_WA101S /* temporarily disables window1 */
 	.win[1]		= &smdkv310_fb_win1,
+#endif
 #endif
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
 #if defined(CONFIG_LCD_AMS369FG06)
@@ -392,6 +397,51 @@ static struct s3c_fb_platdata smdkv310_lcd0_pdata __initdata = {
 #endif
 	.setup_gpio	= exynos4_fimd0_gpio_setup_24bpp,
 };
+#endif
+
+#ifdef CONFIG_FB_S5P
+#ifdef CONFIG_FB_S5P_AMS369FG06
+static struct s3c_platform_fb ams369fg06_data __initdata = {
+	.hw_ver = 0x70,
+	.clk_name = "sclk_lcd",
+	.nr_wins = 5,
+	.default_win = CONFIG_FB_S5P_DEFAULT_WINDOW,
+	.swap = FB_SWAP_HWORD | FB_SWAP_WORD,
+};
+
+#define		LCD_BUS_NUM	3
+#define		DISPLAY_CS	EXYNOS4_GPB(5)
+#define		DISPLAY_CLK	EXYNOS4_GPB(4)
+#define		DISPLAY_SI	EXYNOS4_GPB(7)
+
+static struct spi_board_info spi_board_info[] __initdata = {
+	{
+		.modalias	= "ams369fg06",
+		.platform_data	= NULL,
+		.max_speed_hz	= 1200000,
+		.bus_num	= LCD_BUS_NUM,
+		.chip_select	= 0,
+		.mode		= SPI_MODE_3,
+		.controller_data = (void *)DISPLAY_CS,
+	}
+};
+static struct spi_gpio_platform_data ams369fg06_spi_gpio_data = {
+	.sck	= DISPLAY_CLK,
+	.mosi	= DISPLAY_SI,
+	.miso	= -1,
+	.num_chipselect = 1,
+};
+
+static struct platform_device s3c_device_spi_gpio = {
+	.name	= "spi_gpio",
+	.id	= LCD_BUS_NUM,
+	.dev	= {
+		.parent		= &s3c_device_fb.dev,
+		.platform_data	= &ams369fg06_spi_gpio_data,
+	},
+};
+#endif
+#endif
 
 static struct resource smdkv310_smsc911x_resources[] = {
 	[0] = {
@@ -644,9 +694,19 @@ static struct s3c2410_ts_mach_info s3c_ts_platform __initdata = {
 #endif
 
 static struct platform_device *smdkv310_devices[] __initdata = {
+/* mainline fimd */
+#ifdef CONFIG_FB_S3C
 	&s5p_device_fimd0,
 #ifdef CONFIG_LCD_AMS369FG06
 	&s3c_device_spi_gpio,
+#endif
+#endif
+/* legacy fimd */
+#ifdef CONFIG_FB_S5P
+	&s3c_device_fb,
+#ifdef CONFIG_FB_S5P_AMS369FG06
+	&s3c_device_spi_gpio,
+#endif
 #endif
 	&s3c_device_hsmmc0,
 	&s3c_device_hsmmc1,
@@ -698,10 +758,12 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
+#ifdef CONFIG_FB_S3C
 #if defined(CONFIG_LCD_WA101S)
 	&smdkv310_lcd_wa101s,
 #elif defined(CONFIG_LCD_LTE480WV)
 	&smdkv310_lcd_lte480wv,
+#endif
 #endif
 	&smdkv310_smsc911x,
 	&smdkv310_input_device,
@@ -761,11 +823,21 @@ static void __init smdkv310_machine_init(void)
 	s3c_sdhci2_set_platdata(&smdkv310_hsmmc2_pdata);
 	s3c_sdhci3_set_platdata(&smdkv310_hsmmc3_pdata);
 
+#ifdef CONFIG_FB_S3C
 #ifdef CONFIG_LCD_AMS369FG06
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 #endif
-
 	s5p_fimd0_set_platdata(&smdkv310_lcd0_pdata);
+#endif
+
+#ifdef CONFIG_FB_S5P
+#ifdef CONFIG_FB_S5P_AMS369FG06
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+	s3cfb_set_platdata(&ams369fg06_data);
+#else
+	s3cfb_set_platdata(NULL);
+#endif
+#endif
 
 	samsung_keypad_set_platdata(&smdkv310_keypad_data);
 
