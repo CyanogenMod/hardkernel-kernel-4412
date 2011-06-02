@@ -719,11 +719,9 @@ int s3cfb_set_par_window(struct s3cfb_global *fbdev, struct fb_info *fb)
 		s3cfb_unmap_video_memory(fbdev, fb);
 
 	/* modify the fix info */
-	if (win->id != pdata->default_win) {
-		fb->fix.line_length = fb->var.xres_virtual *
-						fb->var.bits_per_pixel / 8;
-		fb->fix.smem_len = fb->fix.line_length * fb->var.yres_virtual;
-	}
+	fb->fix.line_length = fb->var.xres_virtual *
+					fb->var.bits_per_pixel / 8;
+	fb->fix.smem_len = fb->fix.line_length * fb->var.yres_virtual;
 
 	if (win->id != pdata->default_win && fbdev->system_state != POWER_OFF)
 		s3cfb_map_video_memory(fbdev, fb);
