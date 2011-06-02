@@ -166,16 +166,17 @@ int s3cfb_unmap_video_memory(struct s3cfb_global *fbdev, struct fb_info *fb)
 {
 	struct fb_fix_screeninfo *fix = &fb->fix;
 	struct s3cfb_window *win = fb->par;
-	int err;
 
 #ifdef CONFIG_VCM
 	struct fb_var_screeninfo *var = &fb->var;
 	int frame_num = var->yres_virtual / var->yres;
 	int i;
 	struct cma_info mem_info;
+	int err;
 #else
 #ifdef CONFIG_S5P_MEM_CMA
 	struct cma_info mem_info;
+	int err;
 #endif
 #endif
 
@@ -401,11 +402,11 @@ int s3cfb_map_default_video_memory(struct s3cfb_global *fbdev,
 #ifdef MALI_USE_UNIFIED_MEMORY_PROVIDER
 #ifdef CONFIG_VCM
 	int i;
+	unsigned int arg = 0;
 #ifdef CONFIG_UMP_VCM_ALLOC
 	struct ump_vcm ump_vcm;
 #endif
 #endif
-	unsigned int arg = 0;
 #endif
 
 	if (win->owner == DMA_MEM_OTHER)
@@ -1393,7 +1394,9 @@ int s3cfb_direct_ioctl(int id, unsigned int cmd, unsigned long arg)
 	struct s3cfb_window *win = fb->par;
 	struct s3cfb_lcd *lcd = fbdev->lcd;
 	struct s3cfb_user_window user_win;
+#ifdef CONFIG_S5PV310_DEV_PD
 	struct platform_device *pdev = to_platform_device(fbdev->dev);
+#endif
 	void *argp = (void *)arg;
 	int ret = 0;
 

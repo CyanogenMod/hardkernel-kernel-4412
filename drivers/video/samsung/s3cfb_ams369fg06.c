@@ -296,7 +296,7 @@ void s3cfb_set_lcd_info(struct s3cfb_global *ctrl)
 	ctrl->lcd = &ams369fg06;
 }
 
-void ams369fg06_gpio_cfg()
+void ams369fg06_gpio_cfg(void)
 {
 	/* LCD _CS */
 	s3c_gpio_cfgpin(EXYNOS4_GPB(5), S3C_GPIO_OUTPUT);
@@ -460,7 +460,9 @@ static const struct backlight_ops s5p_bl_ops = {
 static int __init ams369fg06_probe(struct spi_device *spi)
 {
 	int ret;
+#ifdef CONFIG_BACKLIGHT_AMS369FG06_AMOLED
 	struct backlight_properties props;
+#endif
 	spi->bits_per_word = 16;
 	ret = spi_setup(spi);
 #ifdef CONFIG_BACKLIGHT_AMS369FG06_AMOLED

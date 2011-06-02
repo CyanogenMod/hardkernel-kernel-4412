@@ -363,7 +363,7 @@ static int s3cfb_remove(struct platform_device *pdev)
 extern void ams369fg06_ldi_init(void);
 extern void ams369fg06_ldi_enable(void);
 extern void ams369fg06_ldi_disable(void);
-extern void ams369fg06_gpio_cfg();
+extern void ams369fg06_gpio_cfg(void);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 void s3cfb_early_suspend(struct early_suspend *h)
