@@ -468,8 +468,21 @@ int s3cfb_map_default_video_memory(struct s3cfb_global *fbdev,
 	fix->smem_start = s5p_get_media_memory_bank(S5P_MDEV_FIMD, 1);
 	fix->smem_len = s5p_get_media_memsize_bank(S5P_MDEV_FIMD, 1);
 	fb->screen_base = ioremap_wc(fix->smem_start, fix->smem_len);
+#else
+	fb->screen_base = dma_alloc_writecombine(fbdev->dev,
+						PAGE_ALIGN(fix->smem_len),
+						(unsigned int *)
+						&fix->smem_start, GFP_KERNEL);
 #endif
 #endif
+
+	if (!fb->screen_base)
+		return -ENOMEM;
+	else
+		dev_info(fbdev->dev, "[fb%d] dma: 0x%08x, cpu: 0x%08x, "
+			"size: 0x%08x\n", win->id,
+			(unsigned int)fix->smem_start,
+			(unsigned int)fb->screen_base, fix->smem_len);
 
 	memset(fb->screen_base, 0, fix->smem_len);
 	win->owner = DMA_MEM_FIMD;
