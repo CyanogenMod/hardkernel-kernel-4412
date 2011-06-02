@@ -24,6 +24,9 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/wm8994/pdata.h>
+#if defined(CONFIG_S5P_MEM_CMA)
+#include <linux/cma.h>
+#endif
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -811,13 +814,124 @@ static void __init smdkv310_smsc911x_init(void)
 		     (0x1 << S5P_SROM_BCX__TACS__SHIFT), S5P_SROM_BC1);
 }
 
+#if defined(CONFIG_S5P_MEM_CMA)
+static void __init exynos4_reserve_mem(void)
+{
+	static struct cma_region regions[] __initdata = {
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD
+		{
+			.name = "fimd",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0
+		{
+			.name = "fimc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
+		{
+			.name = "fimc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2
+		{
+			.name = "fimc2",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
+		{
+			.name = "fimc3",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1
+		{
+			.name = "mfc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1 * SZ_1K,
+			{
+				.alignment = 1 << 17,
+			},
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
+		{
+			.name = "mfc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
+			{
+				.alignment = 1 << 17,
+			},
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC
+		{
+			.name = "mfc",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC * SZ_1K,
+			{
+				.alignment = 1 << 17,
+			},
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_JPEG
+		{
+			.name = "jpeg",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_JPEG * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP
+		{
+			.name = "srp",
+			.size = CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP * SZ_1K,
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMG2D
+		{
+			.name = "fimg2d",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMG2D * SZ_1K,
+			.start = 0
+		},
+#endif
+		{
+			.size = 0
+		},
+	};
+
+	static const char map[] __initconst =
+		"s3cfb.0=fimd;"
+		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;"
+		"s3c-fimc.3=fimc3;s3c-mfc=mfc,mfc0,mfc1;s5p-rp=srp;"
+		"s5p-jpeg=jpeg;"
+		"s5p-fimg2d=fimg2d";
+
+	cma_set_defaults(regions, map);
+	cma_early_regions_reserve(NULL);
+}
+#endif
+
 static void __init smdkv310_map_io(void)
 {
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(smdkv310_uartcfgs, ARRAY_SIZE(smdkv310_uartcfgs));
 
+#if defined(CONFIG_S5P_MEM_CMA)
+	exynos4_reserve_mem();
+#else
 	s5p_reserve_mem(S5P_RANGE_MFC);
+#endif
 }
 
 static void __init smdkv310_machine_init(void)

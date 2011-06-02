@@ -109,3 +109,9 @@ config S5P_SETUP_MIPIPHY
 	bool
 	help
 	  Compile in common setup code for MIPI-CSIS and MIPI-DSIM devices
+
+config S5P_MEM_CMA
+	bool "Fixed memory through CMA"
+	select CMA
+	help
+	  Use CMA(Contiguous memory allocator) to reserve machine specific memory.
