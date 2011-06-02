@@ -166,13 +166,17 @@ int s3cfb_unmap_video_memory(struct s3cfb_global *fbdev, struct fb_info *fb)
 {
 	struct fb_fix_screeninfo *fix = &fb->fix;
 	struct s3cfb_window *win = fb->par;
-	struct cma_info mem_info;
 	int err;
 
 #ifdef CONFIG_VCM
 	struct fb_var_screeninfo *var = &fb->var;
 	int frame_num = var->yres_virtual / var->yres;
 	int i;
+	struct cma_info mem_info;
+#else
+#ifdef CONFIG_S5P_MEM_CMA
+	struct cma_info mem_info;
+#endif
 #endif
 
 	if (fix->smem_start) {
