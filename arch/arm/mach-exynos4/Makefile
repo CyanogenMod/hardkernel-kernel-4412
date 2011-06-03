@@ -16,7 +16,7 @@ obj-$(CONFIG_CPU_EXYNOS4210)	+= cpu.o init.o clock.o irq-combiner.o
 obj-$(CONFIG_CPU_EXYNOS4210)	+= setup-i2c0.o irq-eint.o dma.o pmu.o
 obj-$(CONFIG_CPU_EXYNOS4212)	+= cpu.o init.o clock.o irq-combiner.o setup-i2c0.o
 obj-$(CONFIG_PM)		+= pm.o sleep.o
-obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o
+obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o asv.o
 obj-$(CONFIG_CPU_IDLE)		+= cpuidle.o
 
 obj-$(CONFIG_SMP)		+= platsmp.o headsmp.o

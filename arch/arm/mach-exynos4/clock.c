@@ -1068,6 +1068,26 @@ static struct clksrc_clk clk_dout_mmc4 = {
 	.reg_div = { .reg = S5P_CLKDIV_FSYS3, .shift = 0, .size = 4 },
 };
 
+static struct clk *clkset_mout_hpm_list[] = {
+	[0] = &clk_mout_apll.clk,
+	[1] = &clk_mout_mpll.clk,
+};
+
+static struct clksrc_sources clkset_sclk_hpm = {
+	.sources	= clkset_mout_hpm_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mout_hpm_list),
+};
+
+static struct clksrc_clk clk_dout_copy = {
+	.clk	= {
+		.name		= "dout_copy",
+		.id		= -1,
+	},
+	.sources	= &clkset_sclk_hpm,
+	.reg_src	= { .reg = S5P_CLKSRC_CPU, .shift = 20, .size = 1 },
+	.reg_div	= { .reg = S5P_CLKDIV_CPU1, .shift = 0, .size = 3 },
+};
+
 static struct clksrc_clk clksrcs[] = {
 	{
 		.clk	= {
@@ -1347,6 +1367,21 @@ static struct clksrc_clk clksrcs[] = {
 			.parent		= &clk_sclk_audio2.clk,
 		},
 			.reg_div = { .reg = S5P_CLKDIV_PERIL5, .shift = 8, .size = 6 },
+	}, {
+		.clk		= {
+			.name		= "sclk_hpm",
+			.id		= -1,
+			.parent		= &clk_dout_copy.clk,
+		},
+		.reg_div = { .reg = S5P_CLKDIV_CPU1, .shift = 4, .size = 3 },
+	}, {
+		.clk		= {
+			.name		= "sclk_pwi",
+			.id		= -1,
+		},
+		.sources = &clkset_group,
+		.reg_src = { .reg = S5P_CLKSRC_DMC, .shift = 16, .size = 4 },
+		.reg_div = { .reg = S5P_CLKDIV_DMC1, .shift = 8, .size = 4 },
 	},
 };
 
@@ -1386,6 +1421,7 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_sclk_audio1,
 	&clk_sclk_audio2,
 	&clk_sclk_spdif,
+	&clk_dout_copy,
 };
 
 static unsigned long exynos4_epll_get_rate(struct clk *clk)
