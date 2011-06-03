@@ -767,6 +767,16 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #endif
 	&smdkv310_smsc911x,
 	&smdkv310_input_device,
+#ifdef CONFIG_USB_GADGET
+        &s3c_device_usbgadget,
+#endif
+#ifdef CONFIG_USB_ANDROID_RNDIS
+        &s3c_device_rndis,
+#endif
+#ifdef CONFIG_USB_ANDROID
+        &s3c_device_android_usb,
+        &s3c_device_usb_mass_storage,
+#endif
 };
 
 static void __init smdkv310_button_init(void)
