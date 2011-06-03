@@ -100,6 +100,11 @@ config S5P_DEV_FIMD_S5P
 	help
 	  Compile in platform device definitions for FIMD controller
 
+config S5P_DEV_USBGADGET
+	bool
+	help
+	  compile in platform device definitions for USB-GADGET
+
 config S5P_SETUP_MIPIPHY
 	bool
 	help
