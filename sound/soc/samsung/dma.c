@@ -84,26 +84,36 @@ static void dma_enqueue(struct snd_pcm_substream *substream)
 	pr_debug("%s: loaded %d, limit %d\n",
 				__func__, prtd->dma_loaded, limit);
 
-	while (prtd->dma_loaded < limit) {
-		unsigned long len = prtd->dma_period;
-
-		pr_debug("dma_loaded: %d\n", prtd->dma_loaded);
-
-		if ((pos + len) > prtd->dma_end) {
-			len  = prtd->dma_end - pos;
-			pr_debug("%s: corrected dma len %ld\n", __func__, len);
-		}
-
-		ret = s3c2410_dma_enqueue(prtd->params->channel,
-			substream, pos, len);
-
+	if (s3c_dma_has_infiniteloop()) {
+		ret = s3c2410_dma_enqueue_ring(prtd->params->channel,
+				substream, pos, prtd->dma_period, limit);
 		if (ret == 0) {
-			prtd->dma_loaded++;
+			prtd->dma_loaded += limit;
 			pos += prtd->dma_period;
-			if (pos >= prtd->dma_end)
-				pos = prtd->dma_start;
-		} else
-			break;
+		}
+	} else {
+		while (prtd->dma_loaded < limit) {
+			unsigned long len = prtd->dma_period;
+
+			pr_debug("dma_loaded: %d\n", prtd->dma_loaded);
+
+			if ((pos + len) > prtd->dma_end) {
+				len  = prtd->dma_end - pos;
+				pr_debug("%s: corrected dma len %ld\n",
+						__func__, len);
+			}
+
+			ret = s3c2410_dma_enqueue(prtd->params->channel,
+					substream, pos, len);
+
+			if (ret == 0) {
+				prtd->dma_loaded++;
+				pos += prtd->dma_period;
+				if (pos >= prtd->dma_end)
+					pos = prtd->dma_start;
+			} else
+				break;
+		}
 	}
 
 	prtd->dma_pos = pos;
@@ -129,7 +139,8 @@ static void audio_buffdone(struct s3c2410_dma_chan *channel,
 	spin_lock(&prtd->lock);
 	if (prtd->state & ST_RUNNING && !s3c_dma_has_circular()) {
 		prtd->dma_loaded--;
-		dma_enqueue(substream);
+		if (!s3c_dma_has_infiniteloop())
+			dma_enqueue(substream);
 	}
 
 	spin_unlock(&prtd->lock);
