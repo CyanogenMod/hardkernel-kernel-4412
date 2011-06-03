@@ -373,6 +373,20 @@ config USB_S3C_HSUDC
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 
+config USB_GADGET_S3C_OTGD
+	boolean "S3C HS USB OTG Device"
+	depends on (PLAT_S5P)
+	help
+	  Samsung's S3C64XX processors include high speed USB OTG2.0
+	  controller. It has 15 configurable endpoints, as well as
+	  endpoint zero (for control transfers).
+
+	  This driver has been tested on the S3C6410, S5P6440, S5PC100, S5PV210, EXYNOS4210 processor.
+
+	  Say "y" to link the driver statically, or "m" to build a
+	  dynamically linked module called "s3c-udc-otg" and force all
+	  gadget drivers to also be dynamically linked.
+
 config USB_GADGET_PXA_U2O
 	boolean "PXA9xx Processor USB2.0 controller"
 	select USB_GADGET_DUALSPEED
@@ -633,6 +647,21 @@ config USB_DUMMY_HCD
 endchoice
 
 # Selected by UDC drivers that support high-speed operation.
+comment "NOTE: S3C OTG device role enables the controller driver below"
+	depends on USB_GADGET_S3C_OTGD
+
+config USB_S3C_OTGD
+	tristate "S3C high speed(2.0, dual-speed) USB OTG device"
+	depends on USB_GADGET && USB_GADGET_S3C_OTGD && !(USB_S3C_OTG_HOST)
+	default y
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+	select USB_GADGET_DUALSPEED
+	help
+	  Say "y" to link the driver statically, or "m" to build a
+	  dynamically linked module called "s3c-udc-otg-hs" and force all
+	  gadget drivers to also be dynamically linked.
+
 config USB_GADGET_DUALSPEED
 	bool
 	depends on USB_GADGET
