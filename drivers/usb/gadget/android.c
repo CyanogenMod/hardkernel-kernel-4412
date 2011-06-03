@@ -195,12 +195,19 @@ static int android_bind_config(struct usb_configuration *c)
 
 	return 0;
 }
+#ifdef CONFIG_USB_ANDROID_ACM
+	#define ANDROID_DEBUG_CONFIG_STRING "UMS + ACM + ADB(Debug mode)"
+	#define ANDROID_NO_DEBUG_CONFIG_STRING "UMS + ACM"
+#else
+	#define ANDROID_DEBUG_CONFIG_STRING "UMS + ADB (Debugging mode)"
+	#define ANDROID_NO_DEBUG_CONFIG_STRING "UMS Only (Not debugging mode)"
+#endif
 
 static int android_setup_config(struct usb_configuration *c,
 		const struct usb_ctrlrequest *ctrl);
 
 static struct usb_configuration android_config_driver = {
-	.label		= "android",
+	.label		= ANDROID_NO_DEBUG_CONFIG_STRING,
 	.setup		= android_setup_config,
 	.bConfigurationValue = 1,
 	.bmAttributes	= USB_CONFIG_ATT_ONE | USB_CONFIG_ATT_SELFPOWER,
@@ -415,7 +422,12 @@ void android_enable_function(struct usb_function *f, int enable)
 
 	if (!!f->disabled != disable) {
 		usb_function_set_enabled(f, !disable);
-
+		if (!strcmp(f->name, "adb")) {
+			if (enable)
+				android_config_driver.label = ANDROID_DEBUG_CONFIG_STRING;
+			else
+				android_config_driver.label = ANDROID_NO_DEBUG_CONFIG_STRING;
+		}
 #ifdef CONFIG_USB_ANDROID_RNDIS
 		if (!strcmp(f->name, "rndis")) {
 			struct usb_function		*func;
@@ -439,7 +451,15 @@ void android_enable_function(struct usb_function *f, int enable)
 			dev->cdev->desc.idVendor = device_desc.idVendor;
 			dev->cdev->desc.idProduct = device_desc.idProduct;
 		}
-		usb_composite_force_reset(dev->cdev);
+		/* usb_composite_force_reset(dev->cdev); */
+
+		/* Force reenumeration */
+		if (dev->cdev && dev->cdev->gadget &&
+		    dev->cdev->gadget->speed != USB_SPEED_UNKNOWN) {
+			usb_gadget_disconnect(dev->cdev->gadget);
+			msleep(10);
+			usb_gadget_connect(dev->cdev->gadget);
+		}
 	}
 }
 
