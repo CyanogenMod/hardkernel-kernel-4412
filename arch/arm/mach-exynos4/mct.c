@@ -24,6 +24,8 @@
 #include <mach/regs-mct.h>
 #include <asm/mach/time.h>
 
+#define TICK_BASE_CNT 1
+
 static unsigned long clk_cnt_per_tick;
 static unsigned long clk_rate;
 
@@ -379,7 +381,7 @@ static void exynos4_mct_tick_init(struct clock_event_device *evt)
 	evt->features = CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = 450;
 
-	clockevents_calc_mult_shift(evt, clk_rate / 2, 5);
+	clockevents_calc_mult_shift(evt, clk_rate / (TICK_BASE_CNT + 1), 5);
 	evt->max_delta_ns =
 		clockevent_delta2ns(0x7fffffff, evt);
 	evt->min_delta_ns =
@@ -387,7 +389,7 @@ static void exynos4_mct_tick_init(struct clock_event_device *evt)
 
 	clockevents_register_device(evt);
 
-	exynos4_mct_write(0x1, mct_tick[cpu].base + MCT_L_TCNTB_OFFSET);
+	exynos4_mct_write(TICK_BASE_CNT, mct_tick[cpu].base + MCT_L_TCNTB_OFFSET);
 
 	if (cpu == 0) {
 		mct_tick0_event_irq.dev_id = &mct_tick[cpu];
