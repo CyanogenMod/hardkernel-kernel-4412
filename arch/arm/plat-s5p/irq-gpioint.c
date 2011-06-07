@@ -46,6 +46,7 @@ static int s5p_gpioint_set_type(struct irq_data *d, unsigned int type)
 	struct irq_chip_generic *gc = irq_data_get_irq_chip_data(d);
 	struct irq_chip_type *ct = gc->chip_types;
 	unsigned int shift = (d->irq - gc->irq_base) << 2;
+	struct irq_desc *desc = irq_to_desc(d->irq);
 
 	switch (type) {
 	case IRQ_TYPE_EDGE_RISING:
@@ -72,6 +73,12 @@ static int s5p_gpioint_set_type(struct irq_data *d, unsigned int type)
 	gc->type_cache &= ~(0x7 << shift);
 	gc->type_cache |= type << shift;
 	writel(gc->type_cache, gc->reg_base + ct->regs.type);
+
+	if (type & IRQ_TYPE_EDGE_BOTH)
+		desc->handle_irq = handle_edge_irq;
+	else
+		desc->handle_irq = handle_level_irq;
+
 	return 0;
 }
 
