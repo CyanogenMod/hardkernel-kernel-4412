@@ -24,6 +24,7 @@
 #include <linux/android_pmem.h>
 #include <linux/mempolicy.h>
 #include <linux/sched.h>
+#include <linux/vmalloc.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
 #include <asm/cacheflush.h>
@@ -1253,6 +1254,9 @@ int pmem_setup(struct android_pmem_platform_data *pdata,
 	int err = 0;
 	int i, index = 0;
 	int id = id_count;
+	struct page **pages;
+	int nr_pages;
+	int prot;
 	id_count++;
 
 #if defined(CONFIG_S5P_MEM_CMA)
@@ -1296,16 +1300,24 @@ int pmem_setup(struct android_pmem_platform_data *pdata,
 		}
 	}
 
+	nr_pages = pmem[id].size >> PAGE_SHIFT;
+	pages = kmalloc(nr_pages * sizeof(*pages), GFP_KERNEL);
+	if (!pages)
+		goto err_no_mem_for_pages;
+
+	for (i = 0; i < nr_pages; i++)
+		pages[i] = phys_to_page(pmem[id].base + i * PAGE_SIZE);
+
 	if (pmem[id].cached)
-		pmem[id].vbase = ioremap_cached(pmem[id].base,
-						pmem[id].size);
-#ifdef ioremap_ext_buffered
+		prot = PAGE_KERNEL;
 	else if (pmem[id].buffered)
-		pmem[id].vbase = ioremap_ext_buffered(pmem[id].base,
-						      pmem[id].size);
-#endif
+		prot = pgprot_writecombine(PAGE_KERNEL);
 	else
-		pmem[id].vbase = ioremap(pmem[id].base, pmem[id].size);
+		prot = pgprot_noncached(PAGE_KERNEL);
+
+	pmem[id].vbase = vmap(pages, nr_pages, VM_MAP, prot);
+
+	kfree(pages);
 
 	if (pmem[id].vbase == 0)
 		goto error_cant_remap;
@@ -1320,6 +1332,7 @@ int pmem_setup(struct android_pmem_platform_data *pdata,
 #endif
 	return 0;
 error_cant_remap:
+err_no_mem_for_pages:
 	kfree(pmem[id].bitmap);
 err_no_mem_for_metadata:
 	misc_deregister(&pmem[id].dev);
