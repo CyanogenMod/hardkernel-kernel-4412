@@ -53,6 +53,9 @@
 #define IRQ_RTC_ALARM		IRQ_SPI(44)
 #define IRQ_RTC_TIC		IRQ_SPI(45)
 
+#define IRQ_GPIO_XB		IRQ_SPI(46)
+#define IRQ_GPIO_XA		IRQ_SPI(47)
+
 #define IRQ_MCT_L1		IRQ_SPI(48)
 
 #define IRQ_UART0		IRQ_SPI(52)
