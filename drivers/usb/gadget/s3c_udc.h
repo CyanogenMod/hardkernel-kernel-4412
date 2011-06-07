@@ -131,6 +131,8 @@ struct s3c_udc {
 	struct s3c_ep ep[S3C_MAX_ENDPOINTS];
 
 	unsigned char usb_address;
+	struct usb_ctrlrequest *usb_ctrl;
+	dma_addr_t usb_ctrl_dma;
 
 	unsigned req_pending:1, req_std:1, req_config:1;
 };

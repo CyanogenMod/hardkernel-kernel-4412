@@ -144,11 +144,16 @@ static struct resource s3c_usbgadget_resource[] = {
 	}
 };
 
+static u64 s5p_device_usb_gadget_dmamask = 0xffffffffUL;
 struct platform_device s3c_device_usbgadget = {
 	.name		= "s3c-usbgadget",
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(s3c_usbgadget_resource),
 	.resource	= s3c_usbgadget_resource,
+	.dev		= {
+		.dma_mask	= &s5p_device_usb_gadget_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 #endif /* CONFIG_USB_GADGET */
 

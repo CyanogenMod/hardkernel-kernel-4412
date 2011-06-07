@@ -61,11 +61,11 @@ void s3c_udc_cable_disconnect(struct s3c_udc *dev)
 }
 #endif
 
-static inline void s3c_udc_ep0_zlp(void)
+static inline void s3c_udc_ep0_zlp(struct s3c_udc *dev)
 {
 	u32 ep_ctrl;
 
-	__raw_writel(virt_to_phys(usb_ctrl), S3C_UDC_OTG_DIEPDMA(EP0_CON));
+	__raw_writel(dev->usb_ctrl_dma, S3C_UDC_OTG_DIEPDMA(EP0_CON));
 	__raw_writel((1<<19 | 0<<0), S3C_UDC_OTG_DIEPTSIZ(EP0_CON));
 
 	ep_ctrl = __raw_readl(S3C_UDC_OTG_DIEPCTL(EP0_CON));
@@ -76,7 +76,7 @@ static inline void s3c_udc_ep0_zlp(void)
 		__func__, __raw_readl(S3C_UDC_OTG_DIEPCTL(EP0_CON)));
 }
 
-static inline void s3c_udc_pre_setup(void)
+static inline void s3c_udc_pre_setup(struct s3c_udc *dev)
 {
 	u32 ep_ctrl;
 
@@ -84,7 +84,7 @@ static inline void s3c_udc_pre_setup(void)
 
 	__raw_writel((3<<29) | (1<<19) | sizeof(struct usb_ctrlrequest),
 		S3C_UDC_OTG_DOEPTSIZ(EP0_CON));
-	__raw_writel(virt_to_phys(usb_ctrl), S3C_UDC_OTG_DOEPDMA(EP0_CON));
+	__raw_writel(dev->usb_ctrl_dma, S3C_UDC_OTG_DOEPDMA(EP0_CON));
 
 	ep_ctrl = __raw_readl(S3C_UDC_OTG_DOEPCTL(EP0_CON));
 	__raw_writel(ep_ctrl|DEPCTL_EPENA|DEPCTL_CNAK, S3C_UDC_OTG_DOEPCTL(EP0_CON));
@@ -229,7 +229,7 @@ static void complete_rx(struct s3c_udc *dev, u8 ep_num)
 		if (ep_num == EP0_CON && dev->ep0state == DATA_STATE_RECV) {
 			DEBUG_OUT_EP("	=> Send ZLP\n");
 			dev->ep0state = WAIT_FOR_SETUP;
-			s3c_udc_ep0_zlp();
+			s3c_udc_ep0_zlp(dev);
 		} else {
 			done(ep, req, 0);
 
@@ -356,7 +356,7 @@ static void process_ep_in_intr(struct s3c_udc *dev)
 
 				if (ep_num == 0) {
 					if (dev->ep0state == WAIT_FOR_SETUP)
-						s3c_udc_pre_setup();
+						s3c_udc_pre_setup(dev);
 
 					/* continue transfer after
 						set_clear_halt for DMA mode */
@@ -377,7 +377,7 @@ static void process_ep_out_intr(struct s3c_udc *dev)
 {
 	u32 ep_intr, ep_intr_status;
 	u8 ep_num = 0;
-	u32 ep_ctrl=0;
+	u32 ep_ctrl = 0;
 	ep_intr = __raw_readl(S3C_UDC_OTG_DAINT);
 	DEBUG_OUT_EP("*** %s: EP OUT interrupt : DAINT = 0x%x\n",
 				__func__, ep_intr);
@@ -405,7 +405,7 @@ static void process_ep_out_intr(struct s3c_udc *dev)
 				if (ep_intr_status & TRANSFER_DONE) {
 					complete_rx(dev, ep_num);
 					writel((3<<29)|(1 << 19)|sizeof(struct usb_ctrlrequest), S3C_UDC_OTG_DOEPTSIZ(EP0_CON));
-					writel(virt_to_phys(usb_ctrl), S3C_UDC_OTG_DOEPDMA(EP0_CON));
+					writel(dev->usb_ctrl_dma, S3C_UDC_OTG_DOEPDMA(EP0_CON));
 
 					ep_ctrl = readl(S3C_UDC_OTG_DOEPCTL(EP0_CON));
 					writel(ep_ctrl|DEPCTL_EPENA|DEPCTL_SNAK, S3C_UDC_OTG_DOEPCTL(EP0_CON));
@@ -517,7 +517,7 @@ static irqreturn_t s3c_udc_irq(int irq, void *_dev)
 				reset_usbd();
 				dev->ep0state = WAIT_FOR_SETUP;
 				reset_available = 0;
-				s3c_udc_pre_setup();
+				s3c_udc_pre_setup(dev);
 			} else
 				reset_available = 1;
 		} else {
@@ -667,17 +667,6 @@ static int write_fifo_ep0(struct s3c_ep *ep, struct s3c_request *req)
 	return 0;
 }
 
-static inline int s3c_fifo_read(struct s3c_ep *ep, u32 *cp, int max)
-{
-	u32 bytes;
-
-	bytes = sizeof(struct usb_ctrlrequest);
-	__dma_single_dev_to_cpu(usb_ctrl, bytes*BACK2BACK_SIZE, DMA_FROM_DEVICE);
-	DEBUG_EP0("%s: bytes=%d, ep_index=%d\n", __func__, bytes, ep_index(ep));
-
-	return bytes;
-}
-
 /**
  * udc_set_address - set the USB address for this device
  * @address:
@@ -690,7 +679,7 @@ static void udc_set_address(struct s3c_udc *dev, unsigned char address)
 	u32 ctrl = __raw_readl(S3C_UDC_OTG_DCFG);
 	__raw_writel(address << 4 | ctrl, S3C_UDC_OTG_DCFG);
 
-	s3c_udc_ep0_zlp();
+	s3c_udc_ep0_zlp(dev);
 
 	DEBUG_EP0("%s: USB OTG 2.0 Device address=%d, DCFG=0x%x\n",
 		__func__, address, __raw_readl(S3C_UDC_OTG_DCFG));
@@ -722,7 +711,7 @@ static inline void s3c_udc_ep0_set_stall(struct s3c_ep *ep)
 	 */
 	dev->ep0state = WAIT_FOR_SETUP;
 
-	s3c_udc_pre_setup();
+	s3c_udc_pre_setup(dev);
 }
 
 static void s3c_ep0_read(struct s3c_udc *dev)
@@ -749,10 +738,10 @@ static void s3c_ep0_read(struct s3c_udc *dev)
 
 		dev->ep0state = WAIT_FOR_SETUP;
 		set_conf_done = 1;
-		s3c_udc_ep0_zlp();
+		s3c_udc_ep0_zlp(dev);
 
 		DEBUG_EP0("%s: req.length = 0, bRequest = %d\n",
-			__func__, usb_ctrl->bRequest);
+			__func__, dev->usb_ctrl->bRequest);
 		return;
 	}
 
@@ -1024,9 +1013,11 @@ static int s3c_udc_clear_feature(struct usb_ep *_ep)
 {
 	struct s3c_ep	*ep;
 	u8		ep_num;
+	struct usb_ctrlrequest *usb_ctrl;
 
 	ep = container_of(_ep, struct s3c_ep, ep);
 	ep_num = ep_index(ep);
+	usb_ctrl = ep->dev->usb_ctrl;
 
 	DEBUG_SETUP("%s: ep_num = %d, is_in = %d, clear_feature_flag = %d\n",
 		__func__, ep_num, ep_is_in(ep), clear_feature_flag);
@@ -1052,7 +1043,7 @@ static int s3c_udc_clear_feature(struct usb_ep *_ep)
 			break;
 		}
 
-		s3c_udc_ep0_zlp();
+		s3c_udc_ep0_zlp(ep->dev);
 		break;
 
 	case USB_RECIP_ENDPOINT:
@@ -1065,7 +1056,7 @@ static int s3c_udc_clear_feature(struct usb_ep *_ep)
 				return 0;
 			}
 
-			s3c_udc_ep0_zlp();
+			s3c_udc_ep0_zlp(ep->dev);
 
 			s3c_udc_ep_clear_stall(ep);
 			s3c_udc_ep_activate(ep);
@@ -1081,10 +1072,10 @@ static int s3c_udc_clear_feature(struct usb_ep *_ep)
 }
 
 /* Set into the test mode for Test Mode set_feature request */
-static inline void set_test_mode(void)
+static inline void set_test_mode(struct s3c_udc *dev)
 {
 	u32 ep_ctrl, dctl;
-	u8 test_selector = (usb_ctrl->wIndex>>8) & TEST_SELECTOR_MASK;
+	u8 test_selector = (dev->usb_ctrl->wIndex>>8) & TEST_SELECTOR_MASK;
 
 	if (test_selector > 0 && test_selector < 6) {
 		ep_ctrl = __raw_readl(S3C_UDC_OTG_DIEPCTL(EP0_CON));
@@ -1158,9 +1149,11 @@ static int s3c_udc_set_feature(struct usb_ep *_ep)
 {
 	struct s3c_ep	*ep;
 	u8		ep_num;
+	struct usb_ctrlrequest *usb_ctrl;
 
 	ep = container_of(_ep, struct s3c_ep, ep);
 	ep_num = ep_index(ep);
+	usb_ctrl = ep->dev->usb_ctrl;
 
 	DEBUG_SETUP("%s: *** USB_REQ_SET_FEATURE,"
 			"ep_num = %d\n", __func__, ep_num);
@@ -1180,7 +1173,7 @@ static int s3c_udc_set_feature(struct usb_ep *_ep)
 
 		case USB_DEVICE_TEST_MODE:
 			DEBUG_SETUP("\tSET_FEATURE: USB_DEVICE_TEST_MODE\n");
-			set_test_mode();
+			set_test_mode(ep->dev);
 			break;
 
 		case USB_DEVICE_B_HNP_ENABLE:
@@ -1200,7 +1193,7 @@ static int s3c_udc_set_feature(struct usb_ep *_ep)
 			break;
 		}
 
-		s3c_udc_ep0_zlp();
+		s3c_udc_ep0_zlp(ep->dev);
 		return 0;
 
 	case USB_RECIP_INTERFACE:
@@ -1218,7 +1211,7 @@ static int s3c_udc_set_feature(struct usb_ep *_ep)
 			s3c_udc_ep_set_stall(ep);
 		}
 
-		s3c_udc_ep0_zlp();
+		s3c_udc_ep0_zlp(ep->dev);
 		return 0;
 	}
 
@@ -1231,14 +1224,12 @@ static int s3c_udc_set_feature(struct usb_ep *_ep)
 static void s3c_ep0_setup(struct s3c_udc *dev)
 {
 	struct s3c_ep *ep = &dev->ep[0];
-	int i, bytes, is_in;
+	int i, is_in;
 	u8 ep_num;
+	struct usb_ctrlrequest *usb_ctrl = dev->usb_ctrl;
 
 	/* Nuke all previous transfers */
 	nuke(ep, -EPROTO);
-
-	/* read control req from fifo (8 bytes) */
-	bytes = s3c_fifo_read(ep, (u32 *)usb_ctrl, 8);
 
 	DEBUG_SETUP("%s: bRequestType = 0x%x(%s), bRequest = 0x%x"
 			"\twLength = 0x%x, wValue = 0x%x, wIndex= 0x%x\n",

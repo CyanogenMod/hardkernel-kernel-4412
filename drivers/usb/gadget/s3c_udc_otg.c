@@ -113,7 +113,6 @@ static unsigned int ep0_fifo_size = 64;
 static unsigned int ep_fifo_size =  512;
 static unsigned int ep_fifo_size2 = 1024;
 static int reset_available = 1;
-static struct usb_ctrlrequest *usb_ctrl;
 
 extern void otg_phy_init(void);
 extern void otg_phy_off(void);
@@ -1139,6 +1138,15 @@ static int s3c_udc_probe(struct platform_device *pdev)
 		return -EBUSY;
 	}
 
+	dev->usb_ctrl = dma_alloc_coherent(&pdev->dev,
+			sizeof(struct usb_ctrlrequest)*BACK2BACK_SIZE,
+			&dev->usb_ctrl_dma, GFP_KERNEL);
+
+	if (!dev->usb_ctrl) {
+		DEBUG(KERN_ERR "%s: can't get usb_ctrl dma memory\n", driver_name);
+		return -ENOMEM;
+	}
+
 	disable_irq(IRQ_USB_HSOTG);
 	create_proc_files();
 
@@ -1153,7 +1161,10 @@ static int s3c_udc_remove(struct platform_device *pdev)
 
 	remove_proc_files();
 	usb_gadget_unregister_driver(dev->driver);
-
+	if (dev->usb_ctrl)
+		dma_free_coherent(&pdev->dev,
+				sizeof(struct usb_ctrlrequest)*BACK2BACK_SIZE,
+				dev->usb_ctrl, dev->usb_ctrl_dma);
 	free_irq(IRQ_USB_HSOTG, dev);
 
 	platform_set_drvdata(pdev, 0);
@@ -1230,8 +1241,6 @@ static int __init udc_init(void)
 {
 	int ret;
 
-	usb_ctrl = kmalloc(sizeof(struct usb_ctrlrequest)
-			*BACK2BACK_SIZE, GFP_KERNEL);
 	ret = platform_driver_register(&s3c_udc_driver);
 	if (!ret)
 		printk(KERN_INFO "%s : %s\n"
@@ -1245,7 +1254,6 @@ static int __init udc_init(void)
 static void __exit udc_exit(void)
 {
 	platform_driver_unregister(&s3c_udc_driver);
-	kfree(usb_ctrl);
 	printk(KERN_INFO "Unloaded %s version %s\n",
 				driver_name, DRIVER_VERSION);
 }
