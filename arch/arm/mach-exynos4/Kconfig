@@ -120,6 +120,7 @@ menu "EXYNOS4 Machines"
 config MACH_SMDKC210
 	bool "SMDKC210"
 	select CPU_EXYNOS4210
+	select S5P_GPIO_INT
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
 	select S5P_DEV_USBGADGET
@@ -147,6 +148,7 @@ config MACH_SMDKC210
 config MACH_SMDKV310
 	bool "SMDKV310"
 	select CPU_EXYNOS4210
+	select S5P_GPIO_INT
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
 	select S5P_DEV_USBGADGET
