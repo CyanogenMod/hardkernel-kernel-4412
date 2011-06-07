@@ -1090,9 +1090,11 @@ __cma_alloc(const struct device *dev, const char *type,
 	if (!size || alignment & (alignment - 1))
 		return -EINVAL;
 
-	size = PAGE_ALIGN(size);
 	if (alignment < PAGE_SIZE)
 		alignment = PAGE_SIZE;
+
+	if (size & (alignment - 1))
+		size = ALIGN(size + alignment, alignment);
 
 	mutex_lock(&cma_mutex);
 
