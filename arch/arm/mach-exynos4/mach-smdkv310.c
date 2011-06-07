@@ -755,20 +755,6 @@ static void __init android_pmem_set_platdata(void)
 #endif
 
 static struct platform_device *smdkv310_devices[] __initdata = {
-/* mainline fimd */
-#ifdef CONFIG_FB_S3C
-	&s5p_device_fimd0,
-#ifdef CONFIG_LCD_AMS369FG06
-	&s3c_device_spi_gpio,
-#endif
-#endif
-/* legacy fimd */
-#ifdef CONFIG_FB_S5P
-	&s3c_device_fb,
-#ifdef CONFIG_FB_S5P_AMS369FG06
-	&s3c_device_spi_gpio,
-#endif
-#endif
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
 	&pmem_gpu1_device,
@@ -831,11 +817,22 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
+/* mainline fimd */
 #ifdef CONFIG_FB_S3C
-#if defined(CONFIG_LCD_WA101S)
+	&s5p_device_fimd0,
+#if defined(CONFIG_LCD_AMS369FG06)
+	&s3c_device_spi_gpio,
+#elif defined(CONFIG_LCD_WA101S)
 	&smdkv310_lcd_wa101s,
 #elif defined(CONFIG_LCD_LTE480WV)
 	&smdkv310_lcd_lte480wv,
+#endif
+#endif
+/* legacy fimd */
+#ifdef CONFIG_FB_S5P
+	&s3c_device_fb,
+#ifdef CONFIG_FB_S5P_AMS369FG06
+	&s3c_device_spi_gpio,
 #endif
 #endif
 	&smdkv310_smsc911x,
@@ -1044,6 +1041,9 @@ static void __init smdkv310_machine_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 #endif
 	s5p_fimd0_set_platdata(&smdkv310_lcd0_pdata);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_fimd0.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+#endif
 #endif
 
 #ifdef CONFIG_FB_S5P
@@ -1052,6 +1052,9 @@ static void __init smdkv310_machine_init(void)
 	s3cfb_set_platdata(&ams369fg06_data);
 #else
 	s3cfb_set_platdata(NULL);
+#endif
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s3c_device_fb.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
 
