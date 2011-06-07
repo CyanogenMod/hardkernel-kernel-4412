@@ -1394,13 +1394,13 @@ int s3cfb_direct_ioctl(int id, unsigned int cmd, unsigned long arg)
 	struct s3cfb_window *win = fb->par;
 	struct s3cfb_lcd *lcd = fbdev->lcd;
 	struct s3cfb_user_window user_win;
-#ifdef CONFIG_S5PV310_DEV_PD
+#ifdef CONFIG_EXYNOS4_DEV_PD
 	struct platform_device *pdev = to_platform_device(fbdev->dev);
 #endif
 	void *argp = (void *)arg;
 	int ret = 0;
 
-#ifdef CONFIG_S5PV310_DEV_PD
+#ifdef CONFIG_EXYNOS4_DEV_PD
 	/* enable the power domain */
 	if (fbdev->system_state == POWER_OFF) {
 		/* This IOCTLs are came from fimc irq.
@@ -1545,7 +1545,7 @@ int s3cfb_direct_ioctl(int id, unsigned int cmd, unsigned long arg)
 		break;
 	}
 
-#ifdef CONFIG_S5PV310_DEV_PD
+#ifdef CONFIG_EXYNOS4_DEV_PD
 	/* disable the power domain */
 	if (fbdev->system_state == POWER_OFF)
 		pm_runtime_put(&pdev->dev);
