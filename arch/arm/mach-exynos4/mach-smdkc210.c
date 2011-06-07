@@ -102,6 +102,7 @@ static struct s3c2410_uartcfg smdkc210_uartcfgs[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_S3C_DEV_HSMMC
 static struct s3c_sdhci_platdata smdkc210_hsmmc0_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_GPIO,
 	.ext_cd_gpio		= EXYNOS4_GPK0(2),
@@ -112,14 +113,18 @@ static struct s3c_sdhci_platdata smdkc210_hsmmc0_pdata __initdata = {
 	.host_caps		= MMC_CAP_8_BIT_DATA,
 #endif
 };
+#endif
 
+#ifdef CONFIG_S3C_DEV_HSMMC1
 static struct s3c_sdhci_platdata smdkc210_hsmmc1_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_GPIO,
 	.ext_cd_gpio		= EXYNOS4_GPK0(2),
 	.ext_cd_gpio_invert	= 1,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 };
+#endif
 
+#ifdef CONFIG_S3C_DEV_HSMMC2
 static struct s3c_sdhci_platdata smdkc210_hsmmc2_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_GPIO,
 	.ext_cd_gpio		= EXYNOS4_GPK2(2),
@@ -130,13 +135,16 @@ static struct s3c_sdhci_platdata smdkc210_hsmmc2_pdata __initdata = {
 	.host_caps		= MMC_CAP_8_BIT_DATA,
 #endif
 };
+#endif
 
+#ifdef CONFIG_S3C_DEV_HSMMC3
 static struct s3c_sdhci_platdata smdkc210_hsmmc3_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_GPIO,
 	.ext_cd_gpio		= EXYNOS4_GPK2(2),
 	.ext_cd_gpio_invert	= 1,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 };
+#endif
 
 #ifdef CONFIG_FB_S3C
 #if defined(CONFIG_LCD_AMS369FG06)
@@ -765,10 +773,18 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&pmem_device,
 	&pmem_gpu1_device,
 #endif
+#ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
 	&s3c_device_hsmmc1,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC2
 	&s3c_device_hsmmc2,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC3
 	&s3c_device_hsmmc3,
+#endif
 	&s3c_device_i2c1,
 	&s3c_device_adc,
 #ifdef CONFIG_TOUCHSCREEN_S3C2410
@@ -1010,10 +1026,18 @@ static void __init smdkc210_machine_init(void)
 	smdkc210_button_init();
 	smdkc210_smsc911x_init();
 
+#ifdef CONFIG_S3C_DEV_HSMMC
 	s3c_sdhci0_set_platdata(&smdkc210_hsmmc0_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
 	s3c_sdhci1_set_platdata(&smdkc210_hsmmc1_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC2
 	s3c_sdhci2_set_platdata(&smdkc210_hsmmc2_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdkc210_hsmmc3_pdata);
+#endif
 
 #ifdef CONFIG_FB_S3C
 #ifdef CONFIG_LCD_AMS369FG06
