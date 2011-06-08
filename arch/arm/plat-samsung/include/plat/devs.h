@@ -141,12 +141,17 @@ extern struct platform_device s5pc100_device_iis2;
 extern struct platform_device s5pc100_device_spdif;
 
 extern struct platform_device samsung_device_keypad;
-
+#ifndef CONFIG_VIDEO_FIMC
 extern struct platform_device s5p_device_fimc0;
 extern struct platform_device s5p_device_fimc1;
 extern struct platform_device s5p_device_fimc2;
 extern struct platform_device s5p_device_fimc3;
-
+#else
+extern struct platform_device s3c_device_fimc0;
+extern struct platform_device s3c_device_fimc1;
+extern struct platform_device s3c_device_fimc2;
+extern struct platform_device s3c_device_fimc3;
+#endif
 extern struct platform_device s5p_device_mipi_csis0;
 extern struct platform_device s5p_device_mipi_csis1;
 

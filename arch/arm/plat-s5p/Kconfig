@@ -50,23 +50,34 @@ config S5P_SYSTEM_MMU
 	help
 	  Say Y here if you want to enable System MMU
 
+config S3C_DEV_FIMC
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Compile in platform device definitions for FIMC
+
 config S5P_DEV_FIMC0
 	bool
+	default n
 	help
 	  Compile in platform device definitions for FIMC controller 0
 
 config S5P_DEV_FIMC1
 	bool
+	default n
 	help
 	  Compile in platform device definitions for FIMC controller 1
 
 config S5P_DEV_FIMC2
 	bool
+	default n
 	help
 	  Compile in platform device definitions for FIMC controller 2
 
 config S5P_DEV_FIMC3
 	bool
+	default n
 	help
 	  Compile in platform device definitions for FIMC controller 3
 
