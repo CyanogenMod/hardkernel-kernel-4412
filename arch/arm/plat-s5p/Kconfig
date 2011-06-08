@@ -101,6 +101,11 @@ config S5P_DEV_CSIS1
 	help
 	  Compile in platform device definitions for MIPI-CSIS channel 1
 
+config S5P_DEV_JPEG
+	bool
+	help
+	  Compile in platform device definitions for JPEG
+
 config S5P_DEV_USB_EHCI
 	bool
 	help

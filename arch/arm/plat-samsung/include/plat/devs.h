@@ -154,6 +154,7 @@ extern struct platform_device s3c_device_fimc3;
 #endif
 extern struct platform_device s5p_device_mipi_csis0;
 extern struct platform_device s5p_device_mipi_csis1;
+extern struct platform_device s5p_device_jpeg;
 
 extern struct platform_device s5p_device_ehci;
 
