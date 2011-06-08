@@ -152,6 +152,7 @@ config MACH_SMDKC210
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
 	select S5P_DEV_USBGADGET
+	select S5P_DEV_JPEG
 	select S3C_DEV_RTC
 	select S3C_DEV_WDT
 	select S3C_DEV_I2C1
@@ -180,6 +181,7 @@ config MACH_SMDKV310
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
 	select S5P_DEV_USBGADGET
+	select S5P_DEV_JPEG
 	select S3C_DEV_RTC
 	select S3C_DEV_WDT
 	select S3C_DEV_I2C1
