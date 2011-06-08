@@ -43,6 +43,7 @@
 #include <plat/devs.h>
 #include <plat/fb.h>
 #include <plat/fb-s5p.h>
+#include <plat/fimc.h>
 #include <plat/gpio-cfg.h>
 #include <plat/adc.h>
 #include <plat/ts.h>
@@ -837,6 +838,12 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #endif
 	&smdkv310_smsc911x,
 	&smdkv310_input_device,
+#ifdef CONFIG_VIDEO_FIMC
+	&s3c_device_fimc0,
+	&s3c_device_fimc1,
+	&s3c_device_fimc2,
+	&s3c_device_fimc3,
+#endif
 #ifdef CONFIG_USB_GADGET
         &s3c_device_usbgadget,
 #endif
@@ -1084,6 +1091,12 @@ static void __init smdkv310_machine_init(void)
 #endif
 #ifdef CONFIG_ANDROID_PMEM
 	android_pmem_set_platdata();
+#endif
+#ifdef CONFIG_VIDEO_FIMC
+	s3c_fimc0_set_platdata(NULL);
+	s3c_fimc1_set_platdata(NULL);
+	s3c_fimc2_set_platdata(NULL);
+	s3c_fimc3_set_platdata(NULL);
 #endif
 
 	platform_add_devices(smdkv310_devices, ARRAY_SIZE(smdkv310_devices));

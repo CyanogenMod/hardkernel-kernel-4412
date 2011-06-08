@@ -102,6 +102,34 @@ config EXYNOS4_SETUP_FIMC
 	help
 	  Common setup code for the camera interfaces.
 
+config EXYNOS4_SETUP_FIMC0
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Common setup code for the camera interfaces.
+
+config EXYNOS4_SETUP_FIMC1
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Common setup code for the camera interfaces.
+
+config EXYNOS4_SETUP_FIMC2
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Common setup code for the camera interfaces.
+
+config EXYNOS4_SETUP_FIMC3
+	bool
+	depends on VIDEO_FIMC
+	default y
+	help
+	  Common setup code for the camera interfaces.
+
 config EXYNOS4_SETUP_USB_PHY
 	bool
 	help
