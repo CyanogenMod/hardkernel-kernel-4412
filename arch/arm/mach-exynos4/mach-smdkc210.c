@@ -1189,6 +1189,11 @@ static void __init smdkc210_machine_init(void)
 #endif
 #endif
 
+#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_VIDEO_JPEG
+	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
+#endif
 	samsung_keypad_set_platdata(&smdkc210_keypad_data);
 
 #ifdef CONFIG_TOUCHSCREEN_S3C2410
