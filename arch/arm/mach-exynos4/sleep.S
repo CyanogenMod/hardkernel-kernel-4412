@@ -45,9 +45,9 @@ ENTRY(s3c_cpu_save)
 	ldr	r3, =resume_with_mmu
 	bl	cpu_suspend
 
-	ldr	r0, =pm_cpu_sleep
-	ldr	r0, [ r0 ]
-	mov	pc, r0
+	bl	exynos4_cpu_suspend
+
+	mov	r0, #0
 
 resume_with_mmu:
 	ldmfd	sp!, { r3 - r12, pc }

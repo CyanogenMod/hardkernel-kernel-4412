@@ -240,7 +240,6 @@ static struct sleep_save exynos4_l2cc_save[] = {
 void exynos4_cpu_suspend(void)
 {
 	unsigned long tmp;
-	unsigned long mask = 0xFFFFFFFF;
 
 	/* Setting Central Sequence Register for power down mode */
 
@@ -248,33 +247,10 @@ void exynos4_cpu_suspend(void)
 	tmp &= ~(S5P_CENTRAL_LOWPWR_CFG);
 	__raw_writel(tmp, S5P_CENTRAL_SEQ_CONFIGURATION);
 
-	/* Setting Central Sequence option Register */
-
-	tmp = __raw_readl(S5P_CENTRAL_SEQ_OPTION);
-	tmp &= ~(S5P_USE_MASK);
-	tmp |= S5P_USE_STANDBY_WFI0;
-	__raw_writel(tmp, S5P_CENTRAL_SEQ_OPTION);
-
-	/* Clear all interrupt pending to avoid early wakeup */
-
-	__raw_writel(mask, (S5P_VA_GIC_DIST + 0x280));
-	__raw_writel(mask, (S5P_VA_GIC_DIST + 0x284));
-	__raw_writel(mask, (S5P_VA_GIC_DIST + 0x288));
-
-	/* Disable all interrupt */
-
-	__raw_writel(0x0, (S5P_VA_GIC_CPU + 0x000));
-	__raw_writel(0x0, (S5P_VA_GIC_DIST + 0x000));
-	__raw_writel(mask, (S5P_VA_GIC_DIST + 0x184));
-	__raw_writel(mask, (S5P_VA_GIC_DIST + 0x188));
-
 	outer_flush_all();
 
 	/* issue the standby signal into the pm unit. */
 	cpu_do_idle();
-
-	/* we should never get past here */
-	panic("sleep resumed to originator?");
 }
 
 static void exynos4_pm_prepare(void)
@@ -352,6 +328,21 @@ arch_initcall(exynos4_pm_drvinit);
 
 static void exynos4_pm_resume(void)
 {
+	unsigned long tmp;
+
+	/* If PMU failed while entering sleep mode, WFI will be
+	 * ignored by PMU and then exiting cpu_do_idle().
+	 * S5P_CENTRAL_LOWPWR_CFG bit will not be set automatically
+	 * in this situation.
+	 */
+	tmp = __raw_readl(S5P_CENTRAL_SEQ_CONFIGURATION);
+	if (!(tmp & S5P_CENTRAL_LOWPWR_CFG)) {
+		tmp |= S5P_CENTRAL_LOWPWR_CFG;
+		__raw_writel(tmp, S5P_CENTRAL_SEQ_CONFIGURATION);
+		/* No need to perform below restore code */
+		goto early_wakeup;
+	}
+
 	/* For release retention */
 
 	__raw_writel((1 << 28), S5P_PAD_RET_MAUDIO_OPTION);
@@ -372,6 +363,10 @@ static void exynos4_pm_resume(void)
 	/* enable L2X0*/
 	writel_relaxed(1, S5P_VA_L2CC + L2X0_CTRL);
 #endif
+
+early_wakeup:
+
+	return;
 }
 
 static struct syscore_ops exynos4_pm_syscore_ops = {
