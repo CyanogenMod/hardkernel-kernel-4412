@@ -26,6 +26,9 @@
 
 #include <plat/devs.h>
 #include <plat/irqs.h>
+#ifdef CONFIG_EXYNOS4_DEV_PD
+#include <plat/pd.h>
+#endif
 
 #include <mach/map.h>
 #include <mach/irqs.h>
@@ -100,6 +103,9 @@ struct platform_device exynos4_device_mdma = {
 		.dma_mask = &dma_dmamask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 		.platform_data = &exynos4_mdma_pdata,
+#ifdef CONFIG_EXYNOS4_DEV_PD
+		.parent = &exynos4_device_pd[PD_LCD0].dev,
+#endif
 	},
 };
 
