@@ -887,6 +887,7 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&s3c_device_wdt,
 	&exynos4_device_ac97,
 	&exynos4_device_i2s0,
+	&exynos4_device_pcm0,
 	&samsung_device_keypad,
 #ifdef CONFIG_BATTERY_SAMSUNG
 	&samsung_device_battery,

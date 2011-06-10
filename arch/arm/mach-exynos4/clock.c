@@ -600,6 +600,11 @@ static struct clk init_clocks_off[] = {
 		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL,
 	}, {
 		.name		= "pcm",
+		.id		= 0,
+		.enable		= exynos4_clk_audss_ctrl,
+		.ctrlbit	= S5P_AUDSS_CLKGATE_PCMSPECIAL,
+	}, {
+		.name		= "pcm",
 		.id		= 1,
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 22),

@@ -17,6 +17,9 @@
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
 
+#include <mach/regs-audss.h>
+#include <mach/regs-clock.h>
+
 #include <plat/audio.h>
 #include <plat/dma.h>
 
@@ -289,6 +292,23 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	snd_soc_dai_set_dma_data(rtd->cpu_dai, substream, dma_data);
 
+	switch (params_channels(params)) {
+	case 1:
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			pcm->dma_playback->dma_size = 2;
+		else
+			pcm->dma_capture->dma_size = 2;
+		break;
+	case 2:
+		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+			pcm->dma_playback->dma_size = 4;
+		else
+			pcm->dma_capture->dma_size = 4;
+		break;
+	default:
+		break;
+	}
+
 	/* Strictly check for sample size */
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S16_LE:
@@ -309,6 +329,9 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 	/* Set the SCLK divider */
 	sclk_div = clk_get_rate(clk) / pcm->sclk_per_fs /
 					params_rate(params) / 2 - 1;
+
+	if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
+		clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
 
 	clkctl &= ~(S3C_PCM_CLKCTL_SCLKDIV_MASK
 			<< S3C_PCM_CLKCTL_SCLKDIV_SHIFT);
@@ -471,7 +494,7 @@ static struct snd_soc_dai_ops s3c_pcm_dai_ops = {
 		.formats	= SNDRV_PCM_FMTBIT_S16_LE,	\
 	},							\
 	.capture = {						\
-		.channels_min	= 2,				\
+		.channels_min	= 1,				\
 		.channels_max	= 2,				\
 		.rates		= S3C_PCM_RATES,		\
 		.formats	= SNDRV_PCM_FMTBIT_S16_LE,	\
@@ -624,7 +647,7 @@ static __devexit int s3c_pcm_dev_remove(struct platform_device *pdev)
 
 static struct platform_driver s3c_pcm_driver = {
 	.probe  = s3c_pcm_dev_probe,
-	.remove = s3c_pcm_dev_remove,
+	.remove = __devexit_p(s3c_pcm_dev_remove),
 	.driver = {
 		.name = "samsung-pcm",
 		.owner = THIS_MODULE,
