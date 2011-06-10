@@ -68,6 +68,14 @@ static struct cpufreq_clkdiv exynos4_clkdiv_table[] = {
 	{L4, 0},
 };
 
+#define MASK_ONLY_SET_CPUFREQ		0x40
+
+#define CPUFREQ_LIMIT_LEVEL		L0
+
+unsigned int g_cpufreq_limit_id;
+unsigned int g_cpufreq_limit_val[DVFS_LOCK_ID_END];
+unsigned int g_cpufreq_limit_level = CPUFREQ_LIMIT_LEVEL;
+
 /* This defines are for cpufreq lock */
 #define CPUFREQ_MIN_LEVEL	(CPUFREQ_LEVEL_END - 1)
 
@@ -368,7 +376,8 @@ static void exynos4_set_apll(unsigned int index)
 	} while (tmp != (0x1 << S5P_CLKSRC_CPU_MUXCORE_SHIFT));
 }
 
-static void exynos4_set_frequency(unsigned int old_index, unsigned int new_index)
+static void exynos4_set_frequency(unsigned int old_index,
+				  unsigned int new_index)
 {
 	unsigned int tmp;
 
@@ -569,6 +578,61 @@ void exynos4_cpufreq_lock_free(unsigned int nId)
 	mutex_unlock(&set_cpu_freq_lock);
 }
 EXPORT_SYMBOL_GPL(exynos4_cpufreq_lock_free);
+
+int exynos4_cpufreq_upper_limit(unsigned int nId,
+				enum cpufreq_level_request cpufreq_level)
+{
+	int ret = 0, cpu = 0;
+	unsigned int cur_freq;
+
+	if (!exynos4_cpufreq_init_done)
+		return 0;
+
+	if (g_cpufreq_limit_id & (1 << nId)) {
+		printk(KERN_ERR "[CPUFREQ]This device [%d] already limited cpufreq\n", nId);
+		return 0;
+	}
+
+	mutex_lock(&set_cpu_freq_lock);
+	g_cpufreq_limit_id |= (1 << nId);
+	g_cpufreq_limit_val[nId] = cpufreq_level;
+
+	/* If the requested limit level is lower than current value */
+	if (cpufreq_level > g_cpufreq_limit_level)
+		g_cpufreq_limit_level = cpufreq_level;
+
+	mutex_unlock(&set_cpu_freq_lock);
+
+	/* If cur frequency is higher than limit freq, it needs to update */
+	cur_freq = exynos4_getspeed(cpu);
+	if (cur_freq > exynos4_freq_table[cpufreq_level].frequency) {
+		ret = cpufreq_driver_target(cpufreq_cpu_get(cpu),
+				exynos4_freq_table[cpufreq_level].frequency,
+				MASK_ONLY_SET_CPUFREQ);
+	}
+
+	return ret;
+}
+
+void exynos4_cpufreq_upper_limit_free(unsigned int nId)
+{
+	unsigned int i;
+
+	if (!exynos4_cpufreq_init_done)
+		return;
+
+	mutex_lock(&set_cpu_freq_lock);
+	g_cpufreq_limit_id &= ~(1 << nId);
+	g_cpufreq_limit_val[nId] = CPUFREQ_LIMIT_LEVEL;
+	g_cpufreq_limit_level = CPUFREQ_LIMIT_LEVEL;
+	if (g_cpufreq_limit_id) {
+		for (i = 0; i < DVFS_LOCK_ID_END; i++) {
+			if (g_cpufreq_limit_val[i] > g_cpufreq_limit_level)
+				g_cpufreq_limit_level = g_cpufreq_limit_val[i];
+		}
+	}
+	mutex_unlock(&set_cpu_freq_lock);
+}
 
 #ifdef CONFIG_PM
 static int exynos4_cpufreq_suspend(struct cpufreq_policy *policy)
