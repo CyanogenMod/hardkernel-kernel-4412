@@ -62,6 +62,10 @@
 #include <mach/regs-fb.h>
 #include <mach/sysmmu.h>
 
+#if defined(CONFIG_EXYNOS4_SETUP_THERMAL)
+#include <plat/s5p-tmu.h>
+#endif
+
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDKV310_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -971,6 +975,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
         &s3c_device_android_usb,
         &s3c_device_usb_mass_storage,
 #endif
+#ifdef CONFIG_EXYNOS4_SETUP_THERMAL
+	&s5p_device_tmu,
+#endif
 };
 
 #if defined(CONFIG_VIDEO_TVOUT)
@@ -1239,6 +1246,9 @@ static void __init smdkv310_machine_init(void)
 	s3c_fimc1_set_platdata(NULL);
 	s3c_fimc2_set_platdata(NULL);
 	s3c_fimc3_set_platdata(NULL);
+#endif
+#ifdef CONFIG_EXYNOS4_SETUP_THERMAL
+	s5p_tmu_set_platdata(NULL);
 #endif
 
 	platform_add_devices(smdkv310_devices, ARRAY_SIZE(smdkv310_devices));
