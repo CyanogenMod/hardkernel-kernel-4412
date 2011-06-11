@@ -136,3 +136,8 @@ config S5P_MEM_CMA
 	select CMA
 	help
 	  Use CMA(Contiguous memory allocator) to reserve machine specific memory.
+
+config S5P_DEV_THERMAL
+	bool
+	help
+	  Compile in platform device definitions for THERMAL management unit.
