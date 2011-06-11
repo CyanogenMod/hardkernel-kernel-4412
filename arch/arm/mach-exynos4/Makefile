@@ -62,3 +62,4 @@ obj-$(CONFIG_EXYNOS4_SETUP_USB_PHY)	+= setup-usb-phy.o
 obj-$(CONFIG_EXYNOS4_SETUP_FB_S5P)	+= setup-fb-s5p.o
 obj-$(CONFIG_EXYNOS4_SETUP_TVOUT)	+= setup-tvout.o
 obj-$(CONFIG_EXYNOS4_SETUP_USB_PHY)	+= setup-usb.o
+obj-$(CONFIG_EXYNOS4_SETUP_THERMAL)	+= tmu.o
