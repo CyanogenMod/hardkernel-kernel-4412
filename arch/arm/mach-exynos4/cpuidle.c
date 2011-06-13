@@ -15,6 +15,7 @@
 
 #include <asm/proc-fns.h>
 
+#include <mach/regs-clock.h>
 #include <mach/regs-pmu.h>
 #include <mach/pmu.h>
 
@@ -146,16 +147,57 @@ static struct cpuidle_driver exynos4_idle_driver = {
 	.owner		= THIS_MODULE,
 };
 
+static unsigned int cpu_core;
+static unsigned int old_div;
+static DEFINE_SPINLOCK(idle_lock);
+
 static int exynos4_enter_idle(struct cpuidle_device *dev,
 			      struct cpuidle_state *state)
 {
 	struct timeval before, after;
 	int idle_time;
+	int cpu;
+	unsigned int tmp;
 
 	local_irq_disable();
 	do_gettimeofday(&before);
 
+	cpu = get_cpu();
+
+	spin_lock(&idle_lock);
+	cpu_core |= (1 << cpu);
+
+	if ((cpu_core == 0x3) || (cpu_online(1) == 0)) {
+		old_div = __raw_readl(S5P_CLKDIV_CPU);
+		tmp = old_div;
+		tmp |= ((0x7 << 28) | (0x7 << 0));
+		__raw_writel(tmp, S5P_CLKDIV_CPU);
+
+		do {
+			tmp = __raw_readl(S5P_CLKDIV_STATCPU);
+		} while (tmp & 0x10000001);
+
+	}
+
+	spin_unlock(&idle_lock);
+
 	cpu_do_idle();
+
+	spin_lock(&idle_lock);
+
+	if ((cpu_core == 0x3) || (cpu_online(1) == 0)) {
+		__raw_writel(old_div, S5P_CLKDIV_CPU);
+
+		do {
+			tmp = __raw_readl(S5P_CLKDIV_STATCPU);
+		} while (tmp & 0x10000001);
+
+	}
+
+	cpu_core &= ~(1 << cpu);
+	spin_unlock(&idle_lock);
+
+	put_cpu();
 
 	do_gettimeofday(&after);
 	local_irq_enable();
