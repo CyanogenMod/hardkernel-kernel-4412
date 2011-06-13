@@ -134,9 +134,16 @@ static cycle_t exynos4_frc_read(struct clocksource *cs)
 	return ((cycle_t)hi << 32) | lo;
 }
 
+cycle_t suspended_frc_count;
+
+static void exynos4_frc_suspend(struct clocksource *cs)
+{
+	suspended_frc_count = cs->read(cs);
+}
+
 static void exynos4_frc_resume(struct clocksource *cs)
 {
-	exynos4_mct_frc_start(0, 0);
+	exynos4_mct_frc_start(suspended_frc_count >> 32, suspended_frc_count);
 }
 
 struct clocksource mct_frc = {
@@ -144,7 +151,9 @@ struct clocksource mct_frc = {
 	.rating		= 400,
 	.read		= exynos4_frc_read,
 	.mask		= CLOCKSOURCE_MASK(64),
-	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
+	.flags		= CLOCK_SOURCE_IS_CONTINUOUS |
+			  CLOCK_SOURCE_SCHED_CLOCK,
+	.suspend	= exynos4_frc_suspend,
 	.resume		= exynos4_frc_resume,
 };
 
