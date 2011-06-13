@@ -47,9 +47,19 @@ ENTRY(s3c_cpu_save)
 
 	bl	exynos4_cpu_suspend
 
+	/* Restore original sp */
+	mov	r0, sp
+	add	r0, r0, #4
+	ldr	sp, [r0]
+
 	mov	r0, #0
+	b	early_wakeup
 
 resume_with_mmu:
+
+	mov	r0, #1
+early_wakeup:
+
 	ldmfd	sp!, { r3 - r12, pc }
 
 	.ltorg
