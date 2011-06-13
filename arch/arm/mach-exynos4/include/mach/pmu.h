@@ -21,5 +21,7 @@ enum sys_powerdown {
 };
 
 extern void exynos4_sys_powerdown_conf(enum sys_powerdown mode);
+extern int exynos4_enter_lp(unsigned long *saveblk, long);
+extern void exynos4_idle_resume(void);
 
 #endif /* __ASM_ARCH_PMU_H */
