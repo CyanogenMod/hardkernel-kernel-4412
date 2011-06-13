@@ -12,6 +12,7 @@
 #include <linux/init.h>
 #include <linux/cpuidle.h>
 #include <linux/io.h>
+#include <linux/suspend.h>
 
 #include <asm/proc-fns.h>
 
@@ -227,6 +228,28 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 	return exynos4_enter_idle(dev, new_state);
 }
 
+static int exynos4_cpuidle_notifier_event(struct notifier_block *this,
+					  unsigned long event,
+					  void *ptr)
+{
+	switch (event) {
+	case PM_SUSPEND_PREPARE:
+		disable_hlt();
+		pr_debug("PM_SUSPEND_PREPARE for CPUIDLE\n");
+		return NOTIFY_OK;
+	case PM_POST_RESTORE:
+	case PM_POST_SUSPEND:
+		enable_hlt();
+		pr_debug("PM_POST_SUSPEND for CPUIDLE\n");
+		return NOTIFY_OK;
+	}
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block exynos4_cpuidle_notifier = {
+	.notifier_call = exynos4_cpuidle_notifier_event,
+};
+
 static int __init exynos4_init_cpuidle(void)
 {
 	int i, max_cpuidle_state, cpu_id;
@@ -258,6 +281,7 @@ static int __init exynos4_init_cpuidle(void)
 			return -EIO;
 		}
 	}
+	register_pm_notifier(&exynos4_cpuidle_notifier);
 	return 0;
 }
 device_initcall(exynos4_init_cpuidle);
