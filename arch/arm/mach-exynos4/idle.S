@@ -42,6 +42,15 @@
 
 ENTRY(exynos4_enter_lp)
 	stmfd	sp!, { r3 - r12, lr }
+
+	adr	r0, sleep_save_misc
+
+	mrc	p15, 0, r2, c15, c0, 0	@ read power control register
+	str	r2, [r0], #4
+
+	mrc	p15, 0, r2, c15, c0, 1	@ read diagnostic register
+	str	r2, [r0], #4
+
 	ldr	r3, =resume_with_mmu
 	bl	cpu_suspend
 
@@ -59,6 +68,14 @@ ENTRY(exynos4_enter_lp)
 
 resume_with_mmu:
 
+	adr	r0, sleep_save_misc
+
+	ldr	r1, [r0], #4
+	mcr	p15, 0, r1, c15, c0, 0	@ write power control register
+
+	ldr	r1, [r0], #4
+	mcr	p15, 0, r1, c15, c0, 1	@ write diagnostic register
+
 	mov	r0, #1
 early_wakeup:
 
@@ -73,6 +90,10 @@ early_wakeup:
 	 */
 
 	.word	0x2bedf00d
+
+sleep_save_misc:
+	.long	0
+	.long	0
 
 	/*
 	 * exynos4_idle_resume
