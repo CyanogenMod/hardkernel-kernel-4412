@@ -96,6 +96,11 @@ config S5P_DEV_TVOUT
 	help
 	  Compile in platform device definitions for TVOUT
 
+config S5P_DEV_FIMG2D
+	bool
+	help
+	  Compile in platform device definitions for FIMG2D controller
+
 config S5P_DEV_ONENAND
 	bool
 	help
