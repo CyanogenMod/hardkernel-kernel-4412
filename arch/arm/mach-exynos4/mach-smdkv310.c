@@ -56,6 +56,7 @@
 #include <plat/clock.h>
 #include <plat/s5p-clock.h>
 #include <plat/tvout.h>
+#include <plat/fimg2d.h>
 
 #include <mach/map.h>
 #include <mach/media.h>
@@ -152,6 +153,16 @@ static struct s3c_sdhci_platdata smdkv310_hsmmc3_pdata __initdata = {
 	.ext_cd_gpio		= EXYNOS4_GPK2(2),
 	.ext_cd_gpio_invert	= 1,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+};
+#endif
+
+#ifdef CONFIG_VIDEO_FIMG2D
+static struct fimg2d_platdata fimg2d_data __initdata = {
+	.hw_ver = 30,
+	.parent_clkname = "mout_mpll",
+	.clkname = "sclk_fimg2d",
+	.gate_clkname = "fimg2d",
+	.clkrate = 267 * 1000000,	/* 266 Mhz */
 };
 #endif
 
@@ -965,6 +976,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_MFC5X
 	&s5p_device_mfc,
 #endif
+#ifdef CONFIG_VIDEO_FIMG2D
+	&s5p_device_fimg2d,
+#endif
 #ifdef CONFIG_VIDEO_JPEG
 	&s5p_device_jpeg,
 #endif
@@ -1255,6 +1269,13 @@ static void __init smdkv310_machine_init(void)
 #endif
 #ifdef CONFIG_EXYNOS4_SETUP_THERMAL
 	s5p_tmu_set_platdata(NULL);
+#endif
+
+#ifdef CONFIG_VIDEO_FIMG2D
+	s5p_fimg2d_set_platdata(&fimg2d_data);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_fimg2d.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+#endif
 #endif
 
 	platform_add_devices(smdkv310_devices, ARRAY_SIZE(smdkv310_devices));

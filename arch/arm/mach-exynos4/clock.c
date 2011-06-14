@@ -1633,6 +1633,8 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_sclk_audio1,
 	&clk_sclk_audio2,
 	&clk_sclk_spdif,
+	&clk_mout_g2d0,
+	&clk_mout_g2d1,
 	&clk_dout_copy,
 	&clk_sclk_dac,
 	&clk_sclk_pixel,
