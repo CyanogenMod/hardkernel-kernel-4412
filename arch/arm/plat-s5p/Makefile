@@ -35,6 +35,7 @@ obj-$(CONFIG_S5P_DEV_FIMC2)	+= dev-fimc2.o
 obj-$(CONFIG_S5P_DEV_FIMC3)	+= dev-fimc3.o
 obj-$(CONFIG_S5P_DEV_FIMD0)	+= dev-fimd0.o
 obj-$(CONFIG_S5P_DEV_FIMD_S5P)	+= dev-fimd-s5p.o
+obj-$(CONFIG_S5P_DEV_TVOUT)	+= dev-tvout.o
 obj-$(CONFIG_S5P_DEV_ONENAND)	+= dev-onenand.o
 obj-$(CONFIG_S5P_DEV_CSIS0)	+= dev-csis0.o
 obj-$(CONFIG_S5P_DEV_CSIS1)	+= dev-csis1.o
