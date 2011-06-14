@@ -11,69 +11,129 @@
 #include <linux/kernel.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
-
 #include <linux/usb/android_composite.h>
 
 #include <mach/map.h>
 
 #ifdef CONFIG_USB_GADGET
-#define S3C_VENDOR_ID		0x18d1
-#define S3C_PRODUCT_ID		0x0001
-#define S3C_ADB_PRODUCT_ID	0x0005
+#define S3C_VENDOR_ID			0x18d1
+
+/* single product ID*/
+#define S3C_ADB_PRODUCT_ID		0x4E11
+#define S3C_UMS_PRODUCT_ID		0x4E21
+#define S3C_RNDIS_PRODUCT_ID		0x4E23
+#define S3C_MTP_PRODUCT_ID		0x4E26
+
+/* composite product ID */
+#define S3C_UMS_ADB_PRODUCT_ID		0x4E22
+#define S3C_UMS_ADB_ACM_PRODUCT_ID	0x4E24
+
+#ifdef	CONFIG_USB_ANDROID_MTP
+#define S3C_PRODUCT_ID			S3C_MTP_PRODUCT_ID
+#else
+#define S3C_PRODUCT_ID			S3C_UMS_PRODUCT_ID
+#endif
+
 #define MAX_USB_SERIAL_NUM	17
 
+#ifdef	CONFIG_USB_ANDROID_MASS_STORAGE
 static char *usb_functions_ums[] = {
 	"usb_mass_storage",
 };
+#endif
 
-#ifdef CONFIG_USB_ANDROID_RNDIS
+#ifdef	CONFIG_USB_ANDROID_RNDIS
 static char *usb_functions_rndis[] = {
 	"rndis",
 };
+#endif
 
-static char *usb_functions_rndis_adb[] = {
-	"rndis",
+#ifdef	CONFIG_USB_ANDROID_MTP
+static char *usb_functions_mtp[] = {
+	"mtp",
+};
+#endif
+
+#ifdef	CONFIG_USB_ANDROID_ADB
+static char *usb_functions_adb[] = {
 	"adb",
 };
 #endif
 
+#if defined(CONFIG_USB_ANDROID_MASS_STORAGE) && defined(CONFIG_USB_ANDROID_ADB)
 static char *usb_functions_ums_adb[] = {
 	"usb_mass_storage",
 	"adb",
 };
-
-static char *usb_functions_all[] = {
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis",
 #endif
+
+#if	defined(CONFIG_USB_ANDROID_MASS_STORAGE) && defined(CONFIG_USB_ANDROID_ADB) && defined(CONFIG_USB_ANDROID_ACM)
+static char *usb_functions_ums_adb_acm[] = {
 	"usb_mass_storage",
 	"adb",
-#ifdef CONFIG_USB_ANDROID_ACM
 	"acm",
+};
+#endif
+
+static char *usb_functions_all[] = {
+#ifdef	CONFIG_USB_ANDROID_RNDIS
+	"rndis",
+#endif
+#ifdef	CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef	CONFIG_USB_ANDROID_ADB
+	"adb",
+#endif
+#ifdef	CONFIG_USB_ANDROID_ACM
+	"acm",
+#endif
+#ifdef	CONFIG_USB_ANDROID_MTP
+	"mtp",
 #endif
 };
 
 static struct android_usb_product usb_products[] = {
+#ifdef	CONFIG_USB_ANDROID_MASS_STORAGE
 	{
-		.product_id	= S3C_PRODUCT_ID,
+		.product_id	= S3C_UMS_PRODUCT_ID,
 		.num_functions	= ARRAY_SIZE(usb_functions_ums),
 		.functions	= usb_functions_ums,
 	},
-	{
-		.product_id	= S3C_ADB_PRODUCT_ID,
-		.num_functions	= ARRAY_SIZE(usb_functions_ums_adb),
-		.functions	= usb_functions_ums_adb,
-	},
-#ifdef CONFIG_USB_ANDROID_RNDIS
+#endif
+#ifdef	CONFIG_USB_ANDROID_RNDIS
 	{
 		.product_id	= S3C_RNDIS_PRODUCT_ID,
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
 		.functions	= usb_functions_rndis,
 	},
+#endif
+#ifdef	CONFIG_USB_ANDROID_MTP
 	{
-		.product_id	= S3C_RNDIS_ADB_PRODUCT_ID,
-		.num_functions	= ARRAY_SIZE(usb_functions_rndis_adb),
-		.functions	= usb_functions_rndis_adb,
+		.product_id	= S3C_MTP_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_mtp),
+		.functions	= usb_functions_mtp,
+	},
+#endif
+#if	defined(CONFIG_USB_ANDROID_MASS_STORAGE) && defined(CONFIG_USB_ANDROID_ADB)
+	{
+		.product_id	= S3C_UMS_ADB_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_ums_adb),
+		.functions	= usb_functions_ums_adb,
+	},
+#endif
+#ifdef	CONFIG_USB_ANDROID_ADB
+	{
+		.product_id	= S3C_ADB_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_adb),
+		.functions	= usb_functions_adb,
+	},
+#endif
+#if defined(CONFIG_USB_ANDROID_MASS_STORAGE) && defined(CONFIG_USB_ANDROID_ADB) && defined(CONFIG_USB_ANDROID_ACM)
+	{
+		.product_id	= S3C_UMS_ADB_ACM_PRODUCT_ID,
+		.num_functions	= ARRAY_SIZE(usb_functions_ums_adb_acm),
+		.functions	= usb_functions_ums_adb_acm,
 	},
 #endif
 };
@@ -151,9 +211,8 @@ struct platform_device s3c_device_usbgadget = {
 	.num_resources	= ARRAY_SIZE(s3c_usbgadget_resource),
 	.resource	= s3c_usbgadget_resource,
 	.dev		= {
-		.dma_mask	= &s5p_device_usb_gadget_dmamask,
-		.coherent_dma_mask = DMA_BIT_MASK(32),
+		.dma_mask		= &s5p_device_usb_gadget_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	},
 };
 #endif /* CONFIG_USB_GADGET */
-
