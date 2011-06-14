@@ -73,6 +73,7 @@ struct clk clk_fout_mpll = {
 struct clk clk_fout_epll = {
 	.name		= "fout_epll",
 	.id		= -1,
+	.parent		= &clk_ext_xtal_mux,
 	.ctrlbit	= (1 << 31),
 };
 

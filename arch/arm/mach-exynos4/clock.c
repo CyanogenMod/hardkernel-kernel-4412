@@ -1724,10 +1724,25 @@ static int exynos4_epll_set_rate(struct clk *clk, unsigned long rate)
 {
 	unsigned int epll_con, epll_con_k;
 	unsigned int i;
+	unsigned int tmp;
+	unsigned int epll_rate;
+	unsigned int locktime;
+	unsigned int lockcnt;
 
 	/* Return if nothing changed */
 	if (clk->rate == rate)
 		return 0;
+
+	if (clk->parent)
+		epll_rate = clk_get_rate(clk->parent);
+	else
+		epll_rate = clk_ext_xtal_mux.rate;
+
+	if (epll_rate != 24000000) {
+		pr_err("Invalid Clock : recommended clock is 24MHz.\n");
+		return -EINVAL;
+	}
+
 
 	epll_con = __raw_readl(S5P_EPLL_CON0);
 	epll_con &= ~(0x1 << 27 | \
@@ -1752,8 +1767,20 @@ static int exynos4_epll_set_rate(struct clk *clk, unsigned long rate)
 		return -EINVAL;
 	}
 
+	epll_rate /= 1000000;
+
+	/* 3000 max_cycls : specification data */
+	locktime = 3000 / epll_rate * epll_div[i][3];
+	lockcnt = locktime * 10000 / (10000 / epll_rate);
+
+	__raw_writel(lockcnt, S5P_EPLL_LOCK);
+
 	__raw_writel(epll_con, S5P_EPLL_CON0);
 	__raw_writel(epll_con_k, S5P_EPLL_CON1);
+
+	do {
+		tmp = __raw_readl(S5P_EPLL_CON0);
+	} while (!(tmp & 0x1 << S5P_EPLLCON0_LOCKED_SHIFT));
 
 	clk->rate = rate;
 
