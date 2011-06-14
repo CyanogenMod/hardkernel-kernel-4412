@@ -55,6 +55,7 @@
 #include <plat/media.h>
 #include <plat/clock.h>
 #include <plat/s5p-clock.h>
+#include <plat/tvout.h>
 
 #include <mach/map.h>
 #include <mach/media.h>
@@ -794,6 +795,11 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 		I2C_BOARD_INFO("max8649", 0x60),
 		.platform_data	= &exynos4_max8649_info,
 	},
+#ifdef CONFIG_VIDEO_TVOUT
+	{
+		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
+	},
+#endif
 };
 
 #ifdef CONFIG_TOUCHSCREEN_S3C2410
@@ -939,6 +945,11 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&s3c_device_spi_gpio,
 #endif
 #endif
+#ifdef CONFIG_VIDEO_TVOUT
+	&s5p_device_tvout,
+	&s5p_device_cec,
+	&s5p_device_hpd,
+#endif
 	&smdkc210_smsc911x,
 	&smdkc210_input_device,
 #ifdef CONFIG_VIDEO_FIMC
@@ -961,6 +972,15 @@ static struct platform_device *smdkc210_devices[] __initdata = {
         &s3c_device_usb_mass_storage,
 #endif
 };
+
+#if defined(CONFIG_VIDEO_TVOUT)
+static struct s5p_platform_hpd hdmi_hpd_data __initdata = {
+
+};
+static struct s5p_platform_cec hdmi_cec_data __initdata = {
+
+};
+#endif
 
 static void __init smdkc210_button_init(void)
 {
@@ -1192,6 +1212,13 @@ static void __init smdkc210_machine_init(void)
 #ifdef CONFIG_EXYNOS4_DEV_PD
 #ifdef CONFIG_VIDEO_JPEG
 	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
+#endif
+#if defined(CONFIG_VIDEO_TVOUT)
+	s5p_hdmi_hpd_set_platdata(&hdmi_hpd_data);
+	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_tvout.dev.parent = &exynos4_device_pd[PD_TV].dev;
 #endif
 #endif
 	samsung_keypad_set_platdata(&smdkc210_keypad_data);

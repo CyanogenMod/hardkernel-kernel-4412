@@ -143,6 +143,12 @@ config EXYNOS4_SETUP_FB_S5P
 	help
 	  Setup code for EXYNOS4 FIMD
 
+config EXYNOS4_SETUP_TVOUT
+	bool
+	default y
+	help
+	  Common setup code for TVOUT
+
 # machine support
 
 menu "EXYNOS4 Machines"
@@ -153,6 +159,7 @@ config MACH_SMDKC210
 	select S5P_GPIO_INT
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
+	select S5P_DEV_TVOUT
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_JPEG
 	select S3C_DEV_RTC
@@ -182,6 +189,7 @@ config MACH_SMDKV310
 	select S5P_GPIO_INT
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
+	select S5P_DEV_TVOUT
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_JPEG
 	select S3C_DEV_RTC

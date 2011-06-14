@@ -95,9 +95,11 @@
 #define IRQ_JPEG		IRQ_SPI(88)
 #define IRQ_2D			IRQ_SPI(89)
 #define IRQ_PCIE		IRQ_SPI(90)
-
+#define IRQ_MIXER		IRQ_SPI(91)
+#define IRQ_HDMI		IRQ_SPI(92)
+#define IRQ_HDMI_I2C		IRQ_SPI(93)
 #define IRQ_MFC			IRQ_SPI(94)
-
+#define IRQ_TVENC               IRQ_SPI(95)
 #define IRQ_AUDIO_SS		IRQ_SPI(96)
 #define IRQ_I2S0		IRQ_SPI(97)
 #define IRQ_I2S1		IRQ_SPI(98)
@@ -114,7 +116,7 @@
 #define IRQ_GPS			IRQ_SPI(111)
 #define IRQ_INTFEEDCTRL_SSS	IRQ_SPI(112)
 #define IRQ_SLIMBUS		IRQ_SPI(113)
-
+#define IRQ_CEC		IRQ_SPI(114)
 #define IRQ_TSI			IRQ_SPI(115)
 #define IRQ_SATA		IRQ_SPI(116)
 
@@ -154,6 +156,8 @@
 
 #define S5P_EINT_BASE1		(S5P_IRQ_EINT_BASE + 0)
 #define S5P_EINT_BASE2		(S5P_IRQ_EINT_BASE + 16)
+
+#define IRQ_TVOUT_HPD		(S5P_IRQ_EINT_BASE + 31)
 
 #if defined(CONFIG_S3C_DEV_ADC)
 #define IRQ_ADC		IRQ_ADC0
