@@ -18,7 +18,8 @@ if CPU_EXYNOS4210
 	source "drivers/media/video/samsung/jpeg/Kconfig"
 	source "drivers/media/video/samsung/tvout/Kconfig"
 	source "drivers/media/video/samsung/mfc5x/Kconfig"
-	endif
+	source "drivers/media/video/samsung/fimg2d3x/Kconfig"
+endif
 
 if VIDEO_SAMSUNG
 comment "Reserved memory configurations"
