@@ -242,8 +242,11 @@ rx_submit(struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 
 	if (dev->port_usb->is_fixed)
 		size = max_t(size_t, size, dev->port_usb->fixed_out_len);
-
+#if CONFIG_USB_S3C_OTGD
+	skb = alloc_skb(size + NET_IP_ALIGN + 6, gfp_flags);
+#else
 	skb = alloc_skb(size + NET_IP_ALIGN, gfp_flags);
+#endif
 	if (skb == NULL) {
 		DBG(dev, "no rx skb\n");
 		goto enomem;
@@ -253,8 +256,11 @@ rx_submit(struct eth_dev *dev, struct usb_request *req, gfp_t gfp_flags)
 	 * but on at least one, checksumming fails otherwise.  Note:
 	 * RNDIS headers involve variable numbers of LE32 values.
 	 */
+#if CONFIG_USB_S3C_OTGD
+	skb_reserve(skb, NET_IP_ALIGN + 6);
+#else
 	skb_reserve(skb, NET_IP_ALIGN);
-
+#endif
 	req->buf = skb->data;
 	req->length = size;
 	req->complete = rx_complete;
@@ -484,6 +490,10 @@ static void tx_complete(struct usb_ep *ep, struct usb_request *req)
 	spin_unlock(&dev->req_lock);
 	dev_kfree_skb_any(skb);
 
+#if CONFIG_USB_S3C_OTGD
+	if (req->buf != skb->data)
+		kfree(req->buf);
+#endif
 	atomic_dec(&dev->tx_qlen);
 	if (netif_carrier_ok(dev->net))
 		netif_wake_queue(dev->net);
@@ -577,7 +587,19 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 
 		length = skb->len;
 	}
+#if CONFIG_USB_S3C_OTGD
+	/* for double word align  */
+	req->buf = kmalloc(skb->len, GFP_ATOMIC | GFP_DMA);
+
+	if (!req->buf) {
+		req->buf = skb->data;
+		ERROR(dev, "fail to kmalloc[req->buf = skb->data]\n");
+	} else {
+		memcpy((void *)req->buf, (void *)skb->data, skb->len);
+	}
+#else
 	req->buf = skb->data;
+#endif
 	req->context = skb;
 	req->complete = tx_complete;
 
@@ -618,6 +640,11 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 		dev_kfree_skb_any(skb);
 drop:
 		dev->net->stats.tx_dropped++;
+
+#if CONFIG_USB_S3C_OTGD
+		if (req->buf != skb->data)
+			kfree(req->buf);
+#endif
 		spin_lock_irqsave(&dev->req_lock, flags);
 		if (list_empty(&dev->tx_reqs))
 			netif_start_queue(net);
