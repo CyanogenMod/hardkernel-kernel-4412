@@ -165,6 +165,7 @@ config MACH_SMDKC210
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
 	select S5P_DEV_TVOUT
+	select S5P_DEV_MFC
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_JPEG
 	select S5P_DEV_THERMAL
@@ -196,6 +197,7 @@ config MACH_SMDKV310
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
 	select S5P_DEV_TVOUT
+	select S5P_DEV_MFC
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_JPEG
 	select S5P_DEV_THERMAL

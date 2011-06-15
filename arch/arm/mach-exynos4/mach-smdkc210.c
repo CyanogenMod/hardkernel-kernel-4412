@@ -962,6 +962,9 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&s3c_device_fimc2,
 	&s3c_device_fimc3,
 #endif
+#ifdef CONFIG_VIDEO_MFC5X
+	&s5p_device_mfc,
+#endif
 #ifdef CONFIG_VIDEO_JPEG
 	&s5p_device_jpeg,
 #endif
