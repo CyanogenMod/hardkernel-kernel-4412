@@ -868,7 +868,25 @@ static struct clk init_clocks_off[] = {
 		.parent		= &clk_aclk_acp.clk,
 		.enable		= exynos4_clk_ip_dmc_ctrl,
 		.ctrlbit	= (1 << 4),
-	},
+	}, {
+		.name		= "ppmumfc",
+		.id		= -1,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_mfc_ctrl,
+		.ctrlbit	= ((0x1 << 4) | (0x1 << 3)),
+	}, {
+		.name		= "smmumfc",
+		.id		= -1,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_mfc_ctrl,
+		.ctrlbit	= ((0x1 << 2) | (0x1 << 1)),
+	}, {
+		.name		= "mfc",
+		.id		= -1,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_mfc_ctrl,
+		.ctrlbit	= (0x1 << 0),
+	}
 };
 
 static struct clk *clkset_sclk_audio0_list[] = {
@@ -1143,6 +1161,54 @@ static struct clk *clkset_mout_g2d_list[] = {
 static struct clksrc_sources clkset_mout_g2d = {
 	.sources	= clkset_mout_g2d_list,
 	.nr_sources	= ARRAY_SIZE(clkset_mout_g2d_list),
+};
+
+static struct clk *clkset_mout_mfc0_list[] = {
+	[0] = &clk_mout_mpll.clk,
+	[1] = &clk_sclk_apll.clk,
+};
+
+static struct clksrc_sources clkset_mout_mfc0 = {
+	.sources	= clkset_mout_mfc0_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mout_mfc0_list),
+};
+
+static struct clksrc_clk clk_mout_mfc0 = {
+	.clk	= {
+		.name		= "mout_mfc0",
+		.id		= -1,
+	},
+	.sources	= &clkset_mout_mfc0,
+	.reg_src	= { .reg = S5P_CLKSRC_MFC, .shift = 0, .size = 1 },
+};
+
+static struct clk *clkset_mout_mfc1_list[] = {
+	[0] = &clk_mout_epll.clk,
+	[1] = &clk_sclk_vpll.clk,
+};
+
+static struct clksrc_sources clkset_mout_mfc1 = {
+	.sources	= clkset_mout_mfc1_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mout_mfc1_list),
+};
+
+static struct clksrc_clk clk_mout_mfc1 = {
+	.clk	= {
+		.name		= "mout_mfc1",
+		.id		= -1,
+	},
+	.sources	= &clkset_mout_mfc1,
+	.reg_src	= { .reg = S5P_CLKSRC_MFC, .shift = 4, .size = 1 },
+};
+
+static struct clk *clkset_mout_mfc_list[] = {
+	[0] = &clk_mout_mfc0.clk,
+	[1] = &clk_mout_mfc1.clk,
+};
+
+static struct clksrc_sources clkset_mout_mfc = {
+	.sources	= clkset_mout_mfc_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mout_mfc_list),
 };
 
 static struct clksrc_clk clk_dout_mmc0 = {
@@ -1425,6 +1491,14 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLKDIV_IMAGE, .shift = 0, .size = 4 },
 	}, {
 		.clk		= {
+			.name		= "sclk_mfc",
+			.id		= -1,
+		},
+		.sources = &clkset_mout_mfc,
+		.reg_src = { .reg = S5P_CLKSRC_MFC, .shift = 8, .size = 1 },
+		.reg_div = { .reg = S5P_CLKDIV_MFC, .shift = 0, .size = 4 },
+	}, {
+		.clk		= {
 			.name		= "sclk_mmc",
 			.id		= 0,
 			.parent		= &clk_dout_mmc0.clk,
@@ -1546,6 +1620,8 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_aclk_100,
 	&clk_aclk_160,
 	&clk_aclk_133,
+	&clk_mout_mfc0,
+	&clk_mout_mfc1,
 	&clk_dout_mmc0,
 	&clk_dout_mmc1,
 	&clk_dout_mmc2,
