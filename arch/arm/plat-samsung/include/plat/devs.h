@@ -158,6 +158,7 @@ extern struct platform_device s5p_device_jpeg;
 extern struct platform_device s5p_device_tvout;
 extern struct platform_device s5p_device_cec;
 extern struct platform_device s5p_device_hpd;
+extern struct platform_device s5p_device_ace;
 
 extern struct platform_device s5p_device_ehci;
 

@@ -141,3 +141,9 @@ config S5P_DEV_THERMAL
 	bool
 	help
 	  Compile in platform device definitions for THERMAL management unit.
+
+config S5P_DEV_ACE
+	bool
+	help
+	  Compile in common setup code for Crypto Engine devices.
+

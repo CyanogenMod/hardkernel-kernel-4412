@@ -44,3 +44,4 @@ obj-$(CONFIG_S5P_DEV_USB_EHCI)	+= dev-ehci.o
 obj-$(CONFIG_S5P_DEV_USBGADGET)	+= dev-usbgadget.o
 obj-$(CONFIG_S5P_SETUP_MIPIPHY)	+= setup-mipiphy.o
 obj-$(CONFIG_S5P_DEV_THERMAL)	+= dev-tmu.o
+obj-$(CONFIG_S5P_DEV_ACE) 	+= dev-ace.o

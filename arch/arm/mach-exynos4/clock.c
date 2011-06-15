@@ -184,6 +184,11 @@ static int exynos4_clk_vpll_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_VPLL_CON0, clk, enable);
 }
 
+static int exynos4_clk_ip_dmc_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_CLKGATE_IP_DMC, clk, enable);
+}
+
 /* Core list of CMU_CPU side */
 
 static struct clksrc_clk clk_mout_apll = {
@@ -857,7 +862,13 @@ static struct clk init_clocks_off[] = {
 		.id		= SYSMMU_MFC_R,
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 2),
-	}
+	}, {
+		.name		= "secss",
+		.id		= -1,
+		.parent		= &clk_aclk_acp.clk,
+		.enable		= exynos4_clk_ip_dmc_ctrl,
+		.ctrlbit	= (1 << 4),
+	},
 };
 
 static struct clk *clkset_sclk_audio0_list[] = {
