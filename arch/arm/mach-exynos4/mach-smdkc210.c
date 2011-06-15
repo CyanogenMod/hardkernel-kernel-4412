@@ -41,6 +41,7 @@
 #include <plat/regs-srom.h>
 #include <plat/exynos4.h>
 #include <plat/clock.h>
+#include <plat/hwmon.h>
 #include <plat/cpu.h>
 #include <plat/devs.h>
 #include <plat/fb.h>
@@ -1203,6 +1204,17 @@ static struct s3c2410_ts_mach_info s3c_ts_platform __initdata = {
 };
 #endif
 
+#ifdef CONFIG_S3C_DEV_HWMON
+static struct s3c_hwmon_pdata smdkc210_hwmon_pdata __initdata = {
+	/* Reference voltage (1.2V) */
+	.in[0] = &(struct s3c_hwmon_chcfg) {
+		.name		= "smdk:reference-voltage",
+		.mult		= 3300,
+		.div		= 4096,
+	},
+};
+#endif
+
 #ifdef CONFIG_ANDROID_PMEM
 static struct android_pmem_platform_data pmem_pdata = {
 	.name		= "pmem",
@@ -1270,6 +1282,9 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
 	&s3c_device_adc,
+#ifdef CONFIG_S3C_DEV_HWMON
+	&s3c_device_hwmon,
+#endif
 #ifdef CONFIG_TOUCHSCREEN_S3C2410
 #ifdef CONFIG_S3C_DEV_ADC
 	&s3c_device_ts,
@@ -1589,6 +1604,9 @@ static void __init smdkc210_machine_init(void)
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdkc210_hsmmc3_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HWMON
+	s3c_hwmon_set_platdata(&smdkc210_hwmon_pdata);
 #endif
 
 #ifdef CONFIG_FB_S3C
