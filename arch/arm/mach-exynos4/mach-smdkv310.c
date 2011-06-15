@@ -1139,7 +1139,7 @@ static void __init exynos4_reserve_mem(void)
 	static const char map[] __initconst =
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;s3cfb.0=fimd;"
 		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;"
-		"s3c-fimc.3=fimc3;s3c-mfc=mfc,mfc0,mfc1;s5p-rp=srp;"
+		"s3c-fimc.3=fimc3;s5p-mfc=mfc,mfc0,mfc1;s5p-rp=srp;"
 		"s5p-jpeg=jpeg;"
 		"s5p-fimg2d=fimg2d";
 
