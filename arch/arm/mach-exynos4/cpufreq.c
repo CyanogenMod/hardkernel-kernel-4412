@@ -339,9 +339,19 @@ void exynos4_set_clkdiv(unsigned int div_index)
 	} while (tmp & 0x11);
 }
 
-static void exynos4_set_apll(unsigned int index)
+static void exynos4_set_apll(unsigned int new_index,
+			     unsigned int old_index)
 {
 	unsigned int tmp;
+	unsigned int arm_volt;
+	unsigned int old_volt;
+
+	if ((new_index == L3 && old_index == L4) ||
+			(new_index == L4 && old_index == L3)) {
+		old_volt = regulator_get_voltage(arm_regulator);
+		arm_volt = exynos4_volt_table[L2].arm_volt;
+		regulator_set_voltage(arm_regulator, arm_volt, arm_volt);
+	}
 
 	/* 1. MUX_CORE_SEL = MPLL,
 	 * ARMCLK uses MPLL for lock time */
@@ -359,7 +369,7 @@ static void exynos4_set_apll(unsigned int index)
 	/* 3. Change PLL PMS values */
 	tmp = __raw_readl(S5P_APLL_CON0);
 	tmp &= ~((0x3ff << 16) | (0x3f << 8) | (0x7 << 0));
-	tmp |= exynos4_apll_pms_table[index];
+	tmp |= exynos4_apll_pms_table[new_index];
 	__raw_writel(tmp, S5P_APLL_CON0);
 
 	/* 4. wait_lock_time */
@@ -374,6 +384,10 @@ static void exynos4_set_apll(unsigned int index)
 		tmp = __raw_readl(S5P_CLKMUX_STATCPU);
 		tmp &= S5P_CLKMUX_STATCPU_MUXCORE_MASK;
 	} while (tmp != (0x1 << S5P_CLKSRC_CPU_MUXCORE_SHIFT));
+
+	if ((new_index == L3 && old_index == L4) ||
+			(new_index == L4 && old_index == L3))
+		regulator_set_voltage(arm_regulator, old_volt, old_volt);
 }
 
 static void exynos4_set_frequency(unsigned int old_index,
@@ -401,7 +415,7 @@ static void exynos4_set_frequency(unsigned int old_index,
 			/* 1. Change the system clock divider values */
 			exynos4_set_clkdiv(new_index);
 			/* 2. Change the apll m,p,s value */
-			exynos4_set_apll(new_index);
+			exynos4_set_apll(new_index, old_index);
 		}
 	} else if (old_index < new_index) {
 		/*
@@ -420,7 +434,7 @@ static void exynos4_set_frequency(unsigned int old_index,
 		} else {
 			/* Clock Configuration Procedure */
 			/* 1. Change the apll m,p,s value */
-			exynos4_set_apll(new_index);
+			exynos4_set_apll(new_index, old_index);
 			/* 2. Change the system clock divider values */
 			exynos4_set_clkdiv(new_index);
 		}
