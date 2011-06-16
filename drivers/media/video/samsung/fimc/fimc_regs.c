@@ -315,6 +315,7 @@ int fimc_hwget_overflow_state(struct fimc_control *ctrl)
 			S3C_CIWDOFST_CLROVFICR);
 		writel(cfg, ctrl->regs + S3C_CIWDOFST);
 
+		printk(KERN_INFO "FIMC%d overflow is occured status 0x%x\n", ctrl->id, status);
 		return 1;
 	}
 
@@ -1176,14 +1177,9 @@ void fimc_wait_disable_capture(struct fimc_control *ctrl)
 	while (time_before(jiffies, timeo)) {
 		cfg = readl(ctrl->regs + S3C_CISTATUS);
 
-#if defined (CONFIG_CPU_S5PV310_EVT1)
 		if (0 == (cfg & S3C_CISTATUS_IMGCPTEN)	\
 			&& 0 == (cfg & S3C_CISTATUS_IMGCPTENSC)	\
 			&& 0 == (cfg & S3C_CISTATUS_SCALERSTART))
-#else
-		if (0 == (cfg & S3C_CISTATUS_IMGCPTEN)	\
-			&& 0 == (cfg & S3C_CISTATUS_IMGCPTENSC))
-#endif
 			break;
 		msleep(5);
 	}

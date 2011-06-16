@@ -377,6 +377,49 @@ config VIDEO_VPX3220
 	  To compile this driver as a module, choose M here: the
 	  module will be called vpx3220.
 
+config VIDEO_M5MO
+        tristate "M5MO supporting camera driver"
+	depends on I2C && VIDEO_V4L2 && VIDEO_FIMC_MIPI
+        ---help---
+          This driver supports M5MO SoC camera module
+
+config VIDEO_S5K4BA
+	tristate "S5K4BA supporting camera driver"
+	depends on I2C && VIDEO_V4L2
+	---help---
+	  This driver supports s5k4ba SoC camera module
+
+config VIDEO_S5K4EA
+	tristate "S5K4EA MIPI CSI-2 supporting camera driver"
+	depends on I2C && VIDEO_V4L2 && VIDEO_FIMC_MIPI
+	---help---
+	  This driver supports s5k4ea SoC camera module with
+	  MIPI CSI-2 as well
+
+#source "drivers/media/video/m5mols/Kconfig"
+
+choice
+depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_M5MO
+prompt "Select ITU / MIPI Camera port"
+default ITU_A
+config ITU_A
+	bool "ITU Camera A port"
+	help
+	  This enables support for ITU A port
+config ITU_B
+	bool "ITU Camera B port"
+	help
+	  This enables support for ITU B port
+config CSI_C
+	bool "CSI Camera A port"
+	help
+	  This enables support for CSI A port
+config CSI_D
+	bool "CSI Camera B port"
+	help
+	  This enables support for CSI B port
+endchoice
+
 comment "Video and audio decoders"
 
 config VIDEO_SAA717X

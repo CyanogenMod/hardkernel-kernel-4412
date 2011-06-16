@@ -29,15 +29,12 @@
 
 #include "csis.h"
 
-static struct s3c_csis_info *s3c_csis[S3C_CSIS_CH_NUM];
-#if 0
-static struct s3c_platform_csis *to_csis_plat(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-
-	return (struct s3c_platform_csis *) pdev->dev.platform_data;
-}
+#ifdef CONFIG_VIDEO_DEBUG_NO_FRAME
+static s32 err_print_cnt;
 #endif
+
+static struct s3c_csis_info *s3c_csis[S3C_CSIS_CH_NUM];
+
 static int s3c_csis_set_info(struct platform_device *pdev)
 {
 	s3c_csis[pdev->id] = (struct s3c_csis_info *) \
@@ -253,6 +250,9 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 	s3c_csis_system_on(pdev);
 	s3c_csis_phy_on(pdev);
 
+#ifdef CONFIG_VIDEO_DEBUG_NO_FRAME
+	err_print_cnt = 0;
+#endif
 	info("Samsung MIPI-CSIS%d operation started\n", pdev->id);
 }
 
@@ -285,6 +285,14 @@ static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
 	cfg = readl(s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 
+#ifdef CONFIG_VIDEO_DEBUG_NO_FRAME
+	if (unlikely(cfg & S3C_CSIS_INTSRC_ERR)) {
+		if (err_print_cnt < 30) {
+			err("csis error interrupt[%d]: %#x\n", err_print_cnt, cfg);
+			err_print_cnt++;
+		}
+	}
+#endif
 	return IRQ_HANDLED;
 }
 

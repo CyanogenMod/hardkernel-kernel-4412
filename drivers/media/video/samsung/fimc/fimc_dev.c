@@ -22,12 +22,14 @@
 #include <linux/irq.h>
 #include <linux/mm.h>
 #include <linux/interrupt.h>
-#include <media/v4l2-device.h>
 #include <linux/io.h>
 #include <linux/memory.h>
 #include <linux/ctype.h>
 #include <linux/workqueue.h>
-#include <plat/clock.h>
+#include <linux/pm_runtime.h>
+#include <media/v4l2-device.h>
+#include <linux/videodev2_samsung.h>
+#include <linux/delay.h>
 #if defined(CONFIG_CMA)
 #include <linux/cma.h>
 #elif defined(CONFIG_S5P_MEM_BOOTMEM)
@@ -35,8 +37,8 @@
 #include <mach/media.h>
 #endif
 #include <plat/fimc.h>
-#include <linux/pm_runtime.h>
-#include <linux/videodev2_samsung.h>
+#include <plat/clock.h>
+#include <mach/regs-pmu.h>
 
 #if defined(CONFIG_S5P_SYSMMU_FIMC0) || defined(CONFIG_S5P_SYSMMU_FIMC1) \
 	|| defined(CONFIG_S5P_SYSMMU_FIMC2) || defined(CONFIG_S5P_SYSMMU_FIMC3)
@@ -57,7 +59,7 @@ void s3c_fimc_irq_work(struct work_struct *work)
 
 	if (ctrl->irq_cnt.counter > 0) {
 		do {
-			ret = atomic_dec_and_test(&ctrl->irq_cnt);
+			ret = atomic_dec_and_test((atomic_t *)&ctrl->irq_cnt);
 			pm_runtime_put_sync(ctrl->dev);
 		} while (ret != 1);
 	}
@@ -349,7 +351,6 @@ static inline u32 fimc_irq_out_dma(struct fimc_control *ctrl,
 
 			ctrl->fb.is_enable = 1;
 		}
-
 	}
 
 	/* Detach buffer from incomming queue. */
@@ -466,7 +467,7 @@ static inline void fimc_irq_out(struct fimc_control *ctrl)
 	}
 
 #if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-	atomic_inc(&ctrl->irq_cnt);
+	atomic_inc((atomic_t *)&ctrl->irq_cnt);
 	queue_work(ctrl->fimc_irq_wq, &ctrl->work_struct);
 #endif
 
@@ -582,7 +583,7 @@ static irqreturn_t fimc_irq(int irq, void *dev_id)
 		fimc_irq_out(ctrl);
 	else {
 		printk(KERN_ERR "%s this message must not be shown!!!"
-				" fimc%d\n", __func__, dev_id);
+				" fimc%d\n", __func__, (int)dev_id);
 		pdata = to_fimc_plat(ctrl->dev);
 		pdata->clk_on(to_platform_device(ctrl->dev),
 					&ctrl->clk);
@@ -812,14 +813,12 @@ struct fimc_control *fimc_register_controller(struct platform_device *pdev)
 		fimc_err("%s: request_irq failed\n", __func__);
 
 	mout_mpll = clk_get(&pdev->dev, "mout_mpll");
-	if (IS_ERR(mout_mpll)) {
+	if (IS_ERR(mout_mpll))
 		dev_err(&pdev->dev, "failed to get mout_mpll\n");
-	}
 
 	sclk_fimc_lclk = clk_get(&pdev->dev, "sclk_fimc");
-	if (IS_ERR(sclk_fimc_lclk)) {
+	if (IS_ERR(sclk_fimc_lclk))
 		dev_err(&pdev->dev, "failed to get sclk_fimc_lclk\n");
-	}
 
 	clk_set_parent(sclk_fimc_lclk, mout_mpll);
 	clk_set_rate(sclk_fimc_lclk, 166750000);
@@ -1195,7 +1194,7 @@ static int fimc_open(struct file *filp)
 	struct fimc_control *ctrl;
 	struct s3c_platform_fimc *pdata;
 	struct fimc_prv_data *prv_data;
-	int in_use;
+	int in_use, max_use;
 	int ret;
 	int i;
 
@@ -1205,7 +1204,12 @@ static int fimc_open(struct file *filp)
 	mutex_lock(&ctrl->lock);
 
 	in_use = atomic_read(&ctrl->in_use);
-	if (in_use > FIMC_MAX_CTXS) {
+	if (ctrl->id == FIMC0 || ctrl->id == FIMC2)
+		max_use = 1;
+	else
+		max_use = FIMC_MAX_CTXS + 1;
+
+	if (in_use >= max_use) {
 		ret = -EBUSY;
 		goto resource_busy;
 	} else {
@@ -1272,6 +1276,7 @@ static int fimc_open(struct file *filp)
 					(unsigned long)&ctrl->fb.lcd_vres);
 		if (ret < 0)
 			fimc_err("Fail: S3CFB_GET_LCD_HEIGHT\n");
+
 		ctrl->mem.curr = ctrl->mem.base;
 		ctrl->status = FIMC_STREAMOFF;
 
@@ -1280,7 +1285,7 @@ static int fimc_open(struct file *filp)
 			qos_regs0 = ioremap(0x11600400, 0x10);
 			if (!qos_regs0) {
 				fimc_err("%s: failed to remap io region\n", __func__);
-				return NULL;
+				return -1;
 			}
 			fimc_info1("0x11600400 = 0x%x , 0x11600404 = 0x%x \n", readl(qos_regs0 + 0), readl(qos_regs0 + 4));
 			writel(0x7, qos_regs0 + 0x0);
@@ -1294,7 +1299,7 @@ static int fimc_open(struct file *filp)
 			qos_regs1 = ioremap(0x11200400, 0x10);
 			if (!qos_regs1) {
 				fimc_err("%s: failed to remap io region\n", __func__);
-				return NULL;
+				return -1;
 			}
 			fimc_info1("0x11200400 = 0x%x , 0x11200404 = 0x%x \n", readl(qos_regs1 + 0), readl(qos_regs1 + 4));
 
@@ -1302,8 +1307,8 @@ static int fimc_open(struct file *filp)
 			writel(0x3f, qos_regs1 + 0x4);
 			fimc_info1("0x11200400 = 0x%x , 0x11200404 = 0x%x \n", readl(qos_regs1 + 0), readl(qos_regs1 + 4));
 
-			iounmap(qos_regs0);
-			qos_regs0 = NULL;
+			iounmap(qos_regs1);
+			qos_regs1 = NULL;
 		}
 
 	}
@@ -1408,7 +1413,7 @@ static int fimc_release(struct file *filp)
 			qos_regs0 = ioremap(0x11600400, 0x10);
 			if (!qos_regs0) {
 				fimc_err("%s: failed to remap io region\n", __func__);
-				return NULL;
+				return -1;
 			}
 
 			writel(0, qos_regs0 + 0x0);
@@ -1420,7 +1425,7 @@ static int fimc_release(struct file *filp)
 			qos_regs1 = ioremap(0x11200400, 0x10);
 			if (!qos_regs1) {
 				fimc_err("%s: failed to remap io region\n", __func__);
-				return NULL;
+				return -1;
 			}
 
 			writel(0, qos_regs1 + 0x0);
@@ -1584,11 +1589,13 @@ struct video_device fimc_video_device[FIMC_DEVICES] = {
 		.ioctl_ops = &fimc_v4l2_ops,
 		.release = fimc_vdev_release,
 	},
+#ifdef CONFIG_CPU_EXYNOS4210
 	[3] = {
 		.fops = &fimc_fops,
 		.ioctl_ops = &fimc_v4l2_ops,
 		.release = fimc_vdev_release,
 	},
+#endif
 };
 
 static int fimc_init_global(struct platform_device *pdev)
@@ -1864,7 +1871,7 @@ static int __devinit fimc_probe(struct platform_device *pdev)
 		ctrl->sysmmu_flag = FIMC_SYSMMU_ON;
 #endif
 	pdata = to_fimc_plat(&pdev->dev);
-	if (pdata->cfg_gpio)
+	if ((ctrl->id == FIMC0) && (pdata->cfg_gpio))
 		pdata->cfg_gpio(pdev);
 
 	/* V4L2 device-subdev registration */
@@ -2207,10 +2214,38 @@ static inline int fimc_resume_out(struct fimc_control *ctrl)
 	struct fimc_ctx *ctx;
 	int i;
 	u32 state = 0;
+	u32 timeout;
+	struct s3c_platform_fimc *pdata;
+
+	pdata = to_fimc_plat(ctrl->dev);
 
 	for (i = 0; i < FIMC_MAX_CTXS; i++) {
 		ctx = &ctrl->out->ctx[i];
+		__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_CAM_CONF);
+
+		/*  Wait max 1ms */
+		timeout = 10;
+		while ((__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN)
+				!= S5P_INT_LOCAL_PWR_EN) {
+			if (timeout == 0) {
+				printk(KERN_ERR "Power domain CAM enable failed.\n");
+				break;
+			}
+			timeout--;
+			udelay(100);
+		}
+
+		if (pdata->clk_on) {
+			pdata->clk_on(to_platform_device(ctrl->dev),
+					&ctrl->clk);
+		}
+
 		fimc_resume_out_ctx(ctrl, ctx);
+
+		if (pdata->clk_off) {
+			pdata->clk_off(to_platform_device(ctrl->dev),
+					&ctrl->clk);
+		}
 
 		switch (ctx->status) {
 		case FIMC_STREAMON:
@@ -2239,8 +2274,24 @@ static inline int fimc_resume_out(struct fimc_control *ctrl)
 
 static inline int fimc_resume_cap(struct fimc_control *ctrl)
 {
+	struct fimc_global *fimc = get_fimc_dev();
 	int tmp;
+	u32 timeout;
+
 	fimc_dbg("%s\n", __func__);
+
+	__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_CAM_CONF);
+	/*  Wait max 1ms */
+	timeout = 10;
+	while ((__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN)
+			!= S5P_INT_LOCAL_PWR_EN) {
+		if (timeout == 0) {
+			printk(KERN_ERR "Power domain CAM enable failed.\n");
+			break;
+		}
+		timeout--;
+		udelay(100);
+	}
 
 	if (ctrl->cam->id == CAMERA_WB || ctrl->cam->id == CAMERA_WB_B) {
 		fimc_info1("%s : framecnt_seq : %d\n",
@@ -2253,6 +2304,7 @@ static inline int fimc_resume_cap(struct fimc_control *ctrl)
 		fimc_streamon_capture((void *)ctrl);
 	}
 	/* fimc_streamon_capture((void *)ctrl); */
+	ctrl->power_status = FIMC_POWER_ON;
 
 	return 0;
 }

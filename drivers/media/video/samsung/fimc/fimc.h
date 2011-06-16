@@ -247,6 +247,7 @@ struct fimc_capinfo {
 	struct v4l2_cropcap	cropcap;
 	struct v4l2_rect	crop;
 	struct v4l2_pix_format	fmt;
+	struct v4l2_mbus_framefmt mbus_fmt;
 	struct fimc_buf_set	bufs[FIMC_CAPBUFS];
 	/* using c110 */
 	struct list_head	inq;
