@@ -1144,8 +1144,20 @@ enum v4l2_colorfx {
 #define V4L2_CID_ILLUMINATORS_1			(V4L2_CID_BASE+37)
 #define V4L2_CID_ILLUMINATORS_2			(V4L2_CID_BASE+38)
 
+/*
+ * This is custom CID
+ */
+/* for rgb alpha function */
+#define V4L2_CID_RGB_ALPHA                      (V4L2_CID_BASE+37)
+
 /* last CID + 1 */
 #define V4L2_CID_LASTP1                         (V4L2_CID_BASE+39)
+/* cacheable configuration */
+#define V4L2_CID_CACHEABLE			(V4L2_CID_BASE+39)
+
+/* jpeg captured size */
+#define V4L2_CID_CAM_JPEG_MEMSIZE		(V4L2_CID_BASE+40)
+#define V4L2_CID_CAM_JPEG_ENCODEDSIZE		(V4L2_CID_BASE+41)
 
 /*  MPEG-class control IDs defined by V4L2 */
 #define V4L2_CID_MPEG_BASE 			(V4L2_CTRL_CLASS_MPEG | 0x900)
