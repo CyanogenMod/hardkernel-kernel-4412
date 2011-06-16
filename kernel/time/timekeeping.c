@@ -1165,7 +1165,7 @@ static struct sched_clksrc sched_clksrc;
  */
 static void notrace sched_clock_clksrc_install(struct clocksource *clock)
 {
-	u64 nsecs, cyc = clock->mask;
+	u64 nsecs, cyc = clock->mask & CLOCKSOURCE_MASK(32);
 
 	if (sched_clksrc.clock)
 		return;
