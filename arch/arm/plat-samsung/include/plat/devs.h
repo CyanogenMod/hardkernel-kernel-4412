@@ -152,8 +152,13 @@ extern struct platform_device s3c_device_fimc1;
 extern struct platform_device s3c_device_fimc2;
 extern struct platform_device s3c_device_fimc3;
 #endif
+#ifndef CONFIG_VIDEO_FIMC_MIPI
 extern struct platform_device s5p_device_mipi_csis0;
 extern struct platform_device s5p_device_mipi_csis1;
+#else
+extern struct platform_device s3c_device_csis0;
+extern struct platform_device s3c_device_csis1;
+#endif
 extern struct platform_device s5p_device_jpeg;
 extern struct platform_device s5p_device_tvout;
 extern struct platform_device s5p_device_cec;

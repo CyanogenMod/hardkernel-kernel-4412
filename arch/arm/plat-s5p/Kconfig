@@ -106,6 +106,13 @@ config S5P_DEV_ONENAND
 	help
 	  Compile in platform device definition for OneNAND controller
 
+config S5P_DEV_CSIS
+	bool
+	depends on VIDEO_FIMC_MIPI
+	default y
+	help
+	  Compile in platform device definitions for MIPI-CSIS
+
 config S5P_DEV_CSIS0
 	bool
 	help
