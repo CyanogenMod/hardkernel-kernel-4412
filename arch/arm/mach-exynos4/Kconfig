@@ -137,6 +137,13 @@ config EXYNOS4_SETUP_USB_PHY
 	help
 	  Common setup code for USB PHY controller
 
+config EXYNOS4_SETUP_CSIS
+	bool
+	depends on VIDEO_FIMC_MIPI
+	default y
+	help
+	  Common setup code for MIPI-CSIS
+
 config EXYNOS4_SETUP_FB_S5P
 	bool
 	default y

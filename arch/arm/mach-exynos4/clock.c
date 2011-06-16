@@ -1407,8 +1407,8 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 28, .size = 4 },
 	}, {
 		.clk		= {
-			.name		= "sclk_cam",
-			.id		= 0,
+			.name		= "sclk_cam0",
+			.id		= -1,
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 16),
 		},
@@ -1417,8 +1417,8 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 16, .size = 4 },
 	}, {
 		.clk		= {
-			.name		= "sclk_cam",
-			.id		= 1,
+			.name		= "sclk_cam1",
+			.id		= -1,
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 20),
 		},

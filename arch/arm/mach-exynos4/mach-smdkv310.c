@@ -40,11 +40,13 @@
 #include <plat/regs-serial.h>
 #include <plat/regs-srom.h>
 #include <plat/exynos4.h>
+#include <plat/clock.h>
 #include <plat/cpu.h>
 #include <plat/devs.h>
 #include <plat/fb.h>
 #include <plat/fb-s5p.h>
 #include <plat/fimc.h>
+#include <plat/csis.h>
 #include <plat/gpio-cfg.h>
 #include <plat/adc.h>
 #include <plat/ts.h>
@@ -53,7 +55,6 @@
 #include <plat/iic.h>
 #include <plat/pd.h>
 #include <plat/media.h>
-#include <plat/clock.h>
 #include <plat/s5p-clock.h>
 #include <plat/tvout.h>
 #include <plat/fimg2d.h>
@@ -62,6 +63,10 @@
 #include <mach/media.h>
 #include <mach/regs-fb.h>
 #include <mach/sysmmu.h>
+
+#include <media/s5k4ba_platform.h>
+#include <media/s5k4ea_platform.h>
+#include <media/m5mo_platform.h>
 
 #if defined(CONFIG_EXYNOS4_SETUP_THERMAL)
 #include <plat/s5p-tmu.h>
@@ -111,6 +116,374 @@ static struct s3c2410_uartcfg smdkv310_uartcfgs[] __initdata = {
 		.ufcon		= SMDKV310_UFCON_DEFAULT,
 	},
 };
+
+#undef WRITEBACK_ENABLED
+
+#ifdef CONFIG_VIDEO_FIMC
+/*
+ * External camera reset
+ * Because the most of cameras take i2c bus signal, so that
+ * you have to reset at the boot time for other i2c slave devices.
+ * This function also called at fimc_init_camera()
+ * Do optimization for cameras on your platform.
+*/
+#ifdef CONFIG_ITU_A
+static int smdkv310_cam0_reset(int dummy)
+{
+	int err;
+	/* Camera A */
+	err = gpio_request(EXYNOS4_GPX1(2), "GPX1");
+	if (err)
+		printk(KERN_ERR "#### failed to request GPX1_2 ####\n");
+
+	s3c_gpio_setpull(EXYNOS4_GPX1(2), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS4_GPX1(2), 0);
+	gpio_direction_output(EXYNOS4_GPX1(2), 1);
+	gpio_free(EXYNOS4_GPX1(2));
+
+	return 0;
+}
+#endif
+#ifdef CONFIG_ITU_B
+static int smdkv310_cam1_reset(int dummy)
+{
+	int err;
+
+	/* Camera B */
+	err = gpio_request(EXYNOS4_GPX1(0), "GPX1");
+	if (err)
+		printk(KERN_ERR "#### failed to request GPX1_0 ####\n");
+
+	s3c_gpio_setpull(EXYNOS4_GPX1(0), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS4_GPX1(0), 0);
+	gpio_direction_output(EXYNOS4_GPX1(0), 1);
+	gpio_free(EXYNOS4_GPX1(0));
+
+	return 0;
+}
+#endif
+/* for 12M camera */
+#ifdef CE143_MONACO
+static int smdkv310_cam0_standby(void)
+{
+	int err;
+	/* Camera A */
+	err = gpio_request(EXYNOS4_GPX3(3), "GPX3");
+	if (err)
+		printk(KERN_ERR "#### failed to request GPX3_3 ####\n");
+	s3c_gpio_setpull(EXYNOS4_GPX3(3), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS4_GPX3(3), 0);
+	gpio_direction_output(EXYNOS4_GPX3(3), 1);
+	gpio_free(EXYNOS4_GPX3(3));
+
+	return 0;
+}
+
+static int smdkv310_cam1_standby(void)
+{
+	int err;
+
+	/* Camera B */
+	err = gpio_request(EXYNOS4_GPX1(1), "GPX1");
+	if (err)
+		printk(KERN_ERR "#### failed to request GPX1_1 ####\n");
+	s3c_gpio_setpull(EXYNOS4_GPX1(1), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS4_GPX1(1), 0);
+	gpio_direction_output(EXYNOS4_GPX1(1), 1);
+	gpio_free(EXYNOS4_GPX1(1));
+
+	return 0;
+}
+#endif
+
+/* Set for MIPI-CSI Camera module Reset */
+#ifdef CONFIG_CSI_C
+static int smdkv310_mipi_cam0_reset(int dummy)
+{
+	int err;
+
+	err = gpio_request(EXYNOS4_GPX1(2), "GPX1");
+	if (err)
+		printk(KERN_ERR "#### failed to reset(GPX1_2) MIPI CAM\n");
+
+	s3c_gpio_setpull(EXYNOS4_GPX1(2), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS4_GPX1(2), 0);
+	gpio_direction_output(EXYNOS4_GPX1(2), 1);
+	gpio_free(EXYNOS4_GPX1(2));
+
+	return 0;
+}
+#endif
+#ifdef CONFIG_CSI_D
+static int smdkv310_mipi_cam1_reset(int dummy)
+{
+	int err;
+
+	err = gpio_request(EXYNOS4_GPX1(0), "GPX1");
+	if (err)
+		printk(KERN_ERR "#### failed to reset(GPX1_0) MIPI CAM\n");
+
+	s3c_gpio_setpull(EXYNOS4_GPX1(0), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS4_GPX1(0), 0);
+	gpio_direction_output(EXYNOS4_GPX1(0), 1);
+	gpio_free(EXYNOS4_GPX1(0));
+
+	return 0;
+}
+#endif
+
+#ifdef CONFIG_VIDEO_S5K4BA
+static struct s5k4ba_platform_data s5k4ba_plat = {
+	.default_width = 800,
+	.default_height = 600,
+	.pixelformat = V4L2_PIX_FMT_YUYV,
+	.freq = 24000000,
+	.is_mipi = 0,
+};
+
+static struct i2c_board_info  s5k4ba_i2c_info = {
+	I2C_BOARD_INFO("S5K4BA", 0x2d),
+	.platform_data = &s5k4ba_plat,
+};
+
+static struct s3c_platform_camera s5k4ba = {
+#ifdef CONFIG_ITU_A
+	.id		= CAMERA_PAR_A,
+	.clk_name	= "sclk_cam0",
+	.i2c_busnum	= 0,
+	.cam_power	= smdkv310_cam0_reset,
+#endif
+#ifdef CONFIG_ITU_B
+	.id		= CAMERA_PAR_B,
+	.clk_name	= "sclk_cam1",
+	.i2c_busnum	= 1,
+	.cam_power	= smdkv310_cam1_reset,
+#endif
+	.type		= CAM_TYPE_ITU,
+	.fmt		= ITU_601_YCBCR422_8BIT,
+	.order422	= CAM_ORDER422_8BIT_CBYCRY,
+	.info		= &s5k4ba_i2c_info,
+	.pixelformat	= V4L2_PIX_FMT_YUYV,
+	.srclk_name	= "xusbxti",
+	.clk_rate	= 24000000,
+	.line_length	= 1920,
+	.width		= 1600,
+	.height		= 1200,
+	.window		= {
+		.left	= 0,
+		.top	= 0,
+		.width	= 1600,
+		.height	= 1200,
+	},
+
+	/* Polarity */
+	.inv_pclk	= 0,
+	.inv_vsync	= 1,
+	.inv_href	= 0,
+	.inv_hsync	= 0,
+	.reset_camera	= 1,
+	.initialized	= 0,
+};
+#endif
+
+/* 2 MIPI Cameras */
+#ifdef CONFIG_VIDEO_S5K4EA
+static struct s5k4ea_platform_data s5k4ea_plat = {
+	.default_width = 1920,
+	.default_height = 1080,
+	.pixelformat = V4L2_PIX_FMT_UYVY,
+	.freq = 24000000,
+	.is_mipi = 1,
+};
+
+static struct i2c_board_info  s5k4ea_i2c_info = {
+	I2C_BOARD_INFO("S5K4EA", 0x2d),
+	.platform_data = &s5k4ea_plat,
+};
+
+static struct s3c_platform_camera s5k4ea = {
+#ifdef CONFIG_CSI_C
+	.id		= CAMERA_CSI_C,
+	.clk_name	= "sclk_cam0",
+	.i2c_busnum	= 0,
+	.cam_power	= smdkv310_mipi_cam0_reset,
+#endif
+#ifdef CONFIG_CSI_D
+	.id		= CAMERA_CSI_D,
+	.clk_name	= "sclk_cam1",
+	.i2c_busnum	= 1,
+	.cam_power	= smdkv310_mipi_cam1_reset,
+#endif
+	.type		= CAM_TYPE_MIPI,
+	.fmt		= MIPI_CSI_YCBCR422_8BIT,
+	.order422	= CAM_ORDER422_8BIT_CBYCRY,
+	.info		= &s5k4ea_i2c_info,
+	.pixelformat	= V4L2_PIX_FMT_UYVY,
+	.srclk_name	= "mout_mpll",
+	.clk_rate	= 48000000,
+	.line_length	= 1920,
+	.width		= 1920,
+	.height		= 1080,
+	.window		= {
+		.left	= 0,
+		.top	= 0,
+		.width	= 1920,
+		.height	= 1080,
+	},
+
+	.mipi_lanes	= 2,
+	.mipi_settle	= 12,
+	.mipi_align	= 32,
+
+	/* Polarity */
+	.inv_pclk	= 0,
+	.inv_vsync	= 1,
+	.inv_href	= 0,
+	.inv_hsync	= 0,
+
+	.initialized	= 0,
+};
+#endif
+
+#ifdef WRITEBACK_ENABLED
+static struct i2c_board_info  writeback_i2c_info = {
+	I2C_BOARD_INFO("WriteBack", 0x0),
+};
+
+static struct s3c_platform_camera writeback = {
+	.id		= CAMERA_WB,
+	.fmt		= ITU_601_YCBCR422_8BIT,
+	.order422	= CAM_ORDER422_8BIT_CBYCRY,
+	.i2c_busnum	= 0,
+	.info		= &writeback_i2c_info,
+	.pixelformat	= V4L2_PIX_FMT_YUV444,
+	.line_length	= 800,
+	.width		= 480,
+	.height		= 800,
+	.window		= {
+		.left	= 0,
+		.top	= 0,
+		.width	= 480,
+		.height	= 800,
+	},
+
+	.initialized	= 0,
+};
+#endif
+
+/* M5MOLS Camera configuration for legacy fimc driver */
+#ifdef CONFIG_VIDEO_M5MO
+#define CAM_CHECK_ERR_RET(x, msg)	\
+	if (unlikely((x) < 0)) { \
+		printk(KERN_ERR "\nfail to %s: err = %d\n", msg, x); \
+		return x; \
+	}
+#define CAM_CHECK_ERR(x, msg)	\
+		if (unlikely((x) < 0)) { \
+			printk(KERN_ERR "\nfail to %s: err = %d\n", msg, x); \
+		}
+
+static int m5mo_config_isp_irq(void)
+{
+	s3c_gpio_cfgpin(EXYNOS4_GPX0(5), S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(EXYNOS4_GPX0(5), S3C_GPIO_PULL_NONE);
+	return 0;
+}
+
+static struct m5mo_platform_data m5mo_plat = {
+	.default_width = 640, /* 1920 */
+	.default_height = 480, /* 1080 */
+	.pixelformat = V4L2_PIX_FMT_UYVY,
+	.freq = 24000000,
+	.is_mipi = 1,
+	.config_isp_irq = m5mo_config_isp_irq,
+	.irq = IRQ_EINT(5),
+};
+
+static struct i2c_board_info  m5mo_i2c_info = {
+	I2C_BOARD_INFO("M5MO", 0x1F),
+	.platform_data = &m5mo_plat,
+	.irq = IRQ_EINT(5),
+};
+
+static struct s3c_platform_camera m5mo = {
+#ifdef CONFIG_CSI_C
+	.id		= CAMERA_CSI_C,
+	.clk_name	= "sclk_cam0",
+	.i2c_busnum	= 0,
+	.cam_power	= smdkv310_mipi_cam0_reset,
+#endif
+#ifdef CONFIG_CSI_D
+	.id		= CAMERA_CSI_D,
+	.clk_name	= "sclk_cam1",
+	.i2c_busnum	= 1,
+	.cam_power	= smdkv310_mipi_cam1_reset,
+#endif
+	.type		= CAM_TYPE_MIPI,
+	.fmt		= MIPI_CSI_YCBCR422_8BIT,
+	.order422	= CAM_ORDER422_8BIT_YCBYCR,
+	.info		= &m5mo_i2c_info,
+	.pixelformat	= V4L2_PIX_FMT_UYVY,
+	.srclk_name	= "xusbxti", /* "mout_mpll" */
+	.clk_rate	= 24000000, /* 48000000 */
+	.line_length	= 1920,
+	.width		= 640,
+	.height		= 480,
+	.window		= {
+		.left	= 0,
+		.top	= 0,
+		.width	= 640,
+		.height	= 480,
+	},
+
+	.mipi_lanes	= 2,
+	.mipi_settle	= 12,
+	.mipi_align	= 32,
+
+	/* Polarity */
+	.inv_pclk	= 1,
+	.inv_vsync	= 1,
+	.inv_href	= 0,
+	.inv_hsync	= 0,
+	.reset_camera	= 0,
+	.initialized	= 0,
+};
+#endif /* #ifdef CONFIG_VIDEO_M5MO */
+
+/* Interface setting */
+static struct s3c_platform_fimc fimc_plat = {
+#ifdef CONFIG_ITU_A
+	.default_cam	= CAMERA_PAR_A,
+#endif
+#ifdef CONFIG_ITU_B
+	.default_cam	= CAMERA_PAR_B,
+#endif
+#ifdef CONFIG_CSI_C
+	.default_cam	= CAMERA_CSI_C,
+#endif
+#ifdef CONFIG_CSI_D
+	.default_cam	= CAMERA_CSI_D,
+#endif
+#ifdef WRITEBACK_ENABLED
+	.default_cam	= CAMERA_WB,
+#endif
+	.camera		= {
+#ifdef CONFIG_VIDEO_S5K4BA
+		&s5k4ba,
+#endif
+#ifdef CONFIG_VIDEO_S5K4EA
+		&s5k4ea,
+#endif
+#ifdef CONFIG_VIDEO_M5MO
+		&m5mo,
+#endif
+#ifdef WRITEBACK_ENABLED
+		&writeback,
+#endif
+	},
+	.hw_ver		= 0x51,
+};
+#endif /* CONFIG_VIDEO_FIMC */
 
 #ifdef CONFIG_S3C_DEV_HSMMC
 static struct s3c_sdhci_platdata smdkv310_hsmmc0_pdata __initdata = {
@@ -979,6 +1352,10 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_FIMG2D
 	&s5p_device_fimg2d,
 #endif
+#ifdef CONFIG_VIDEO_FIMC_MIPI
+	&s3c_device_csis0,
+	&s3c_device_csis1,
+#endif
 #ifdef CONFIG_VIDEO_JPEG
 	&s5p_device_jpeg,
 #endif
@@ -1262,10 +1639,35 @@ static void __init smdkv310_machine_init(void)
 	android_pmem_set_platdata();
 #endif
 #ifdef CONFIG_VIDEO_FIMC
-	s3c_fimc0_set_platdata(NULL);
-	s3c_fimc1_set_platdata(NULL);
-	s3c_fimc2_set_platdata(NULL);
-	s3c_fimc3_set_platdata(NULL);
+	s3c_fimc0_set_platdata(&fimc_plat);
+	s3c_fimc1_set_platdata(&fimc_plat);
+	s3c_fimc2_set_platdata(&fimc_plat);
+	s3c_fimc3_set_platdata(&fimc_plat);
+#ifdef CONFIG_ITU_A
+	smdkv310_cam0_reset(1);
+#endif
+#ifdef CONFIG_ITU_B
+	smdkv310_cam1_reset(1);
+#endif
+#ifdef CONFIG_VIDEO_FIMC_MIPI
+	s3c_csis0_set_platdata(NULL);
+	s3c_csis1_set_platdata(NULL);
+#ifdef CONFIG_CSI_C
+	smdkv310_mipi_cam0_reset(1);
+#endif
+#ifdef CONFIG_CSI_D
+	smdkv310_mipi_cam1_reset(1);
+#endif
+#endif /* CONFIG_VIDEO_FIMC_MIPI */
+#endif /* CONFIG_VIDEO_FIMC */
+
+#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_VIDEO_FIMC
+	s3c_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
 #endif
 #ifdef CONFIG_EXYNOS4_SETUP_THERMAL
 	s5p_tmu_set_platdata(NULL);
