@@ -671,12 +671,15 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	switch (ios->bus_width) {
 	case MMC_BUS_WIDTH_1:
 		slot->ctype = SDMMC_CTYPE_1BIT;
+		__raw_writel((0x00010001), slot->host->regs + 0x09c);
 		break;
 	case MMC_BUS_WIDTH_4:
 		slot->ctype = SDMMC_CTYPE_4BIT;
+		__raw_writel((0x00010001), slot->host->regs + 0x09c);
 		break;
 	case MMC_BUS_WIDTH_8:
 		slot->ctype = SDMMC_CTYPE_8BIT;
+		__raw_writel((0x00020002), slot->host->regs + 0x09c);
 		break;
 	}
 
@@ -1377,6 +1380,15 @@ static void dw_mci_tasklet_card(unsigned long data)
 	}
 }
 
+static irqreturn_t dw_mci_detect_interrupt(int irq, void *dev_id)
+{
+	struct dw_mci_slot *slot = dev_id;
+
+	tasklet_schedule(&slot->host->card_tasklet);
+
+	return IRQ_HANDLED;
+}
+
 static int __init dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 {
 	struct mmc_host *mmc;
@@ -1448,6 +1460,8 @@ static int __init dw_mci_init_slot(struct dw_mci *host, unsigned int id)
 		host->vmmc = NULL;
 	} else
 		regulator_enable(host->vmmc);
+
+	host->pdata->init(id, dw_mci_detect_interrupt, host);
 
 	if (dw_mci_get_cd(mmc))
 		set_bit(DW_MMC_CARD_PRESENT, &slot->flags);
@@ -1589,6 +1603,24 @@ static int dw_mci_probe(struct platform_device *pdev)
 		goto err_freehost;
 	}
 
+	host->hclk = clk_get(&pdev->dev, pdata->hclk_name);
+	if (IS_ERR(host->hclk)) {
+		dev_err(&pdev->dev,
+				"failed to get hclk\n");
+		ret = PTR_ERR(host->hclk);
+		goto err_freehost;
+	}
+	clk_enable(host->hclk);
+
+	host->cclk = clk_get(&pdev->dev, pdata->cclk_name);
+	if (IS_ERR(host->cclk)) {
+		dev_err(&pdev->dev,
+				"failed to get cclk\n");
+		ret = PTR_ERR(host->cclk);
+		goto err_free_hclk;
+	}
+	clk_enable(host->cclk);
+
 	host->bus_hz = pdata->bus_hz;
 	host->quirks = pdata->quirks;
 
@@ -1598,7 +1630,7 @@ static int dw_mci_probe(struct platform_device *pdev)
 	ret = -ENOMEM;
 	host->regs = ioremap(regs->start, regs->end - regs->start + 1);
 	if (!host->regs)
-		goto err_freehost;
+		goto err_free_cclk;
 
 	host->dma_ops = pdata->dma_ops;
 	dw_mci_init_dma(host);
@@ -1718,6 +1750,13 @@ err_dmaunmap:
 		regulator_put(host->vmmc);
 	}
 
+err_free_cclk:
+	clk_disable(host->cclk);
+	clk_put(host->cclk);
+
+err_free_hclk:
+	clk_disable(host->hclk);
+	clk_put(host->hclk);
 
 err_freehost:
 	kfree(host);
@@ -1754,6 +1793,11 @@ static int __exit dw_mci_remove(struct platform_device *pdev)
 		regulator_disable(host->vmmc);
 		regulator_put(host->vmmc);
 	}
+
+	clk_disable(host->cclk);
+	clk_put(host->cclk);
+	clk_disable(host->hclk);
+	clk_put(host->hclk);
 
 	iounmap(host->regs);
 
