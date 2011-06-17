@@ -48,6 +48,11 @@ config EXYNOS4_DEV_SYSMMU
 	help
 	  Common setup code for SYSTEM MMU in EXYNOS4
 
+config EXYNOS4_DEV_DWMCI
+	bool
+	help
+	  Compile in platform device definitions for DWMCI
+
 config EXYNOS4_SETUP_I2C1
 	bool
 	help
@@ -180,7 +185,6 @@ config MACH_SMDKC210
 	select S3C_DEV_RTC
 	select S3C_DEV_WDT
 	select S3C_DEV_I2C1
-	select S3C_DEV_HSMMC
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
 	select S3C_DEV_HWMON if S3C_ADC
@@ -196,6 +200,7 @@ config MACH_SMDKC210
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_USB_PHY
+	select EXYNOS4_DEV_DWMCI
 	help
 	  Machine support for Samsung SMDKC210
 
@@ -214,7 +219,6 @@ config MACH_SMDKV310
 	select S3C_DEV_RTC
 	select S3C_DEV_WDT
 	select S3C_DEV_I2C1
-	select S3C_DEV_HSMMC
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
 	select S3C_DEV_HWMON if S3C_ADC
@@ -230,6 +234,7 @@ config MACH_SMDKV310
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_USB_PHY
+	select EXYNOS4_DEV_DWMCI
 	help
 	  Machine support for Samsung SMDKV310
 

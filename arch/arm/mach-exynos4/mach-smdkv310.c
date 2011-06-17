@@ -1271,6 +1271,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	&s3c_device_hsmmc3,
 #endif
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+	&exynos4_device_dwmci,
+#endif
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
 	&s3c_device_adc,

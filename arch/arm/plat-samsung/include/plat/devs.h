@@ -123,6 +123,7 @@ extern struct platform_device exynos4_device_ahci;
 extern struct platform_device exynos4_device_pdma0;
 extern struct platform_device exynos4_device_pdma1;
 extern struct platform_device exynos4_device_mdma;
+extern struct platform_device exynos4_device_dwmci;
 
 extern struct platform_device s5p6440_device_pcm;
 extern struct platform_device s5p6440_device_iis;
