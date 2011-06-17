@@ -25,6 +25,13 @@ config HDMI_HPD
 	  This is a HDMI HPD driver for Samsung S5P platform.
 	  Check dev node (major 10, minor 243)
 
+config VPLL_USE_FOR_TVENC
+	bool "VPLL use for TVENC."
+	depends on VIDEO_TVOUT && CPU_EXYNOS4210
+	default n
+	---help---
+	  This is a VPLL use of TVENC for Samsung S5P platform.
+
 config TV_FB
 	bool "TVOUT frame buffer driver support."
 	select FB_CFB_FILLRECT

@@ -70,6 +70,7 @@ static int __devinit s5p_tvout_clk_get(struct platform_device *pdev,
 	TV_CLK_GET_WITH_ERR_CHECK(fout_vpll,		pdev, "fout_vpll");
 	TV_CLK_GET_WITH_ERR_CHECK(mout_vpll,		pdev, "sclk_vpll");
 
+#ifdef CONFIG_VPLL_USE_FOR_TVENC
 	if (clk_set_rate(fout_vpll, 54000000) < 0)
 		return -1;
 
@@ -97,6 +98,7 @@ static int __devinit s5p_tvout_clk_get(struct platform_device *pdev,
 	clk_put(mout_vpll_src);
 	clk_put(fout_vpll);
 	clk_put(mout_vpll);
+#endif
 
 	return 0;
 }

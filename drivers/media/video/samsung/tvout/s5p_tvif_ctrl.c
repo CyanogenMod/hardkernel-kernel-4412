@@ -1153,11 +1153,20 @@ static void s5p_sdo_ctrl_clock(bool on)
 	mdelay(50);
 }
 
+#ifndef CONFIG_VPLL_USE_FOR_TVENC
+static void s5p_tvenc_src_to_hdmiphy_on(void);
+static void s5p_tvenc_src_to_hdmiphy_off(void);
+#endif
+
 void s5p_sdo_ctrl_stop(void)
 {
 	if (s5p_sdo_ctrl_private.running) {
 		s5p_sdo_ctrl_internal_stop();
 		s5p_sdo_ctrl_clock(0);
+
+#ifndef CONFIG_VPLL_USE_FOR_TVENC
+		s5p_tvenc_src_to_hdmiphy_off();
+#endif
 
 		s5p_sdo_ctrl_private.running = false;
 	}
@@ -1197,6 +1206,10 @@ int s5p_sdo_ctrl_start(enum s5p_tvout_disp_mode disp_mode)
 		s5p_sdo_ctrl_internal_stop();
 	else {
 		s5p_sdo_ctrl_clock(1);
+
+#ifndef CONFIG_VPLL_USE_FOR_TVENC
+		s5p_tvenc_src_to_hdmiphy_on();
+#endif
 
 		sdo_private->running = true;
 	}
@@ -1863,13 +1876,22 @@ void s5p_hdmi_ctrl_resume(void)
 {
 }
 
+#ifndef CONFIG_VPLL_USE_FOR_TVENC
+static void s5p_tvenc_src_to_hdmiphy_on(void)
+{
+	s5p_hdmi_ctrl_clock(1);
+	s5p_hdmi_ctrl_phy_power(1);
+	if (s5p_hdmi_phy_config(ePHY_FREQ_54, HDMI_CD_24) < 0)
+		tvout_err("hdmi phy configuration failed.\n");
+	clk_set_parent(s5ptv_status.sclk_dac, s5ptv_status.sclk_hdmiphy);
+}
 
-
-
-
-
-
-
+static void s5p_tvenc_src_to_hdmiphy_off(void)
+{
+	s5p_hdmi_ctrl_phy_power(0);
+	s5p_hdmi_ctrl_clock(0);
+}
+#endif
 
 /****************************************
  * Functions for tvif ctrl class
