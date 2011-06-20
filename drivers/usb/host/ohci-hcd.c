@@ -1006,6 +1006,11 @@ MODULE_LICENSE ("GPL");
 #define PLATFORM_DRIVER		ohci_hcd_s3c2410_driver
 #endif
 
+#ifdef CONFIG_USB_OHCI_S5P
+#include "ohci-s5p.c"
+#define PLATFORM_DRIVER		ohci_hcd_s5p_driver
+#endif
+
 #ifdef CONFIG_USB_OHCI_HCD_OMAP1
 #include "ohci-omap.c"
 #define OMAP1_PLATFORM_DRIVER	ohci_hcd_omap_driver

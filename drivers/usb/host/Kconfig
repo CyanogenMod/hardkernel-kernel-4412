@@ -371,6 +371,13 @@ config USB_OHCI_SH
 	  Enables support for the on-chip OHCI controller on the SuperH.
 	  If you use the PCI OHCI controller, this option is not necessary.
 
+config USB_OHCI_S5P
+	boolean "S5P OHCI support"
+	depends on USB_OHCI_HCD && PLAT_S5P
+	default y
+	help
+	 Enable support for the S5P SOC's on-chip OHCI controller.
+
 config USB_CNS3XXX_OHCI
 	bool "Cavium CNS3XXX OHCI Module"
 	depends on USB_OHCI_HCD && ARCH_CNS3XXX
