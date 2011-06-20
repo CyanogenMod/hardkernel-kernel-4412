@@ -855,6 +855,7 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 		cap->fmt.sizeimage = (cap->fmt.bytesperline * cap->fmt.height);
 		mbus_fmt->code = V4L2_MBUS_FMT_VYUY8_2X8;
 	}
+	mbus_fmt->colorspace = cap->fmt.colorspace;
 
 	if (cap->fmt.colorspace == V4L2_COLORSPACE_JPEG) {
 		ctrl->sc.bypass = 1;
