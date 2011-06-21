@@ -21,6 +21,7 @@
 #include <plat/audio.h>
 
 #include "dma.h"
+#include "idma.h"
 #include "i2s.h"
 
 #define I2SCON		0x0
@@ -166,10 +167,19 @@ struct i2s_dai {
 	u32	suspend_i2smod;
 	u32	suspend_i2scon;
 	u32	suspend_i2spsr;
+	u32	suspend_i2sahb;
+
+	bool	use_idma;
 };
 
 /* Lock for cross i/f checks */
 static DEFINE_SPINLOCK(lock);
+
+/* If idma is used for LPA mode */
+static inline bool use_internal_dma(struct i2s_dai *i2s)
+{
+	return i2s->use_idma;
+}
 
 /* If this is the 'overlay' stereo DAI */
 static inline bool is_secondary(struct i2s_dai *i2s)
@@ -193,7 +203,7 @@ static inline bool tx_active(struct i2s_dai *i2s)
 
 	active = readl(i2s->addr + I2SCON);
 
-	if (is_secondary(i2s))
+	if (is_secondary(i2s) || use_internal_dma(i2s))
 		active &= CON_TXSDMA_ACTIVE;
 	else
 		active &= CON_TXDMA_ACTIVE;
@@ -385,7 +395,7 @@ static void i2s_txctrl(struct i2s_dai *i2s, int on)
 		con |= CON_ACTIVE;
 		con &= ~CON_TXCH_PAUSE;
 
-		if (is_secondary(i2s)) {
+		if (is_secondary(i2s) || use_internal_dma(i2s)) {
 			con |= CON_TXSDMA_ACTIVE;
 			con &= ~CON_TXSDMA_PAUSE;
 		} else {
@@ -398,7 +408,7 @@ static void i2s_txctrl(struct i2s_dai *i2s, int on)
 		else
 			mod |= MOD_TXONLY;
 	} else {
-		if (is_secondary(i2s)) {
+		if (is_secondary(i2s) || use_internal_dma(i2s)) {
 			con |=  CON_TXSDMA_PAUSE;
 			con &= ~CON_TXSDMA_ACTIVE;
 		} else {
@@ -461,7 +471,7 @@ static inline void i2s_fifo(struct i2s_dai *i2s, u32 flush)
 	if (!i2s)
 		return;
 
-	if (is_secondary(i2s))
+	if (is_secondary(i2s) || use_internal_dma(i2s))
 		fic = i2s->addr + I2SFICS;
 	else
 		fic = i2s->addr + I2SFIC;
@@ -646,8 +656,9 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 {
 	struct i2s_dai *i2s = to_info(dai);
 	u32 mod = readl(i2s->addr + I2SMOD);
+	u32 ahb = readl(i2s->addr + I2SAHB);
 
-	if (!is_secondary(i2s))
+	if (!is_secondary(i2s) || !use_internal_dma(i2s))
 		mod &= ~(MOD_DC2_EN | MOD_DC1_EN);
 
 	switch (params_channels(params)) {
@@ -675,7 +686,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	if (is_secondary(i2s))
+	if (is_secondary(i2s) || use_internal_dma(i2s))
 		mod &= ~MOD_BLCS_MASK;
 	else
 		mod &= ~MOD_BLCP_MASK;
@@ -685,7 +696,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S8:
-		if (is_secondary(i2s))
+		if (is_secondary(i2s) || use_internal_dma(i2s))
 			mod |= MOD_BLCS_8BIT;
 		else
 			mod |= MOD_BLCP_8BIT;
@@ -693,7 +704,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 			mod |= MOD_BLC_8BIT;
 		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
-		if (is_secondary(i2s))
+		if (is_secondary(i2s) || use_internal_dma(i2s))
 			mod |= MOD_BLCS_16BIT;
 		else
 			mod |= MOD_BLCP_16BIT;
@@ -701,7 +712,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 			mod |= MOD_BLC_16BIT;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
-		if (is_secondary(i2s))
+		if (is_secondary(i2s) || use_internal_dma(i2s))
 			mod |= MOD_BLCS_24BIT;
 		else
 			mod |= MOD_BLCP_24BIT;
@@ -713,6 +724,13 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 				params_format(params));
 		return -EINVAL;
 	}
+
+	if (use_internal_dma(i2s)) {
+		ahb |= (AHB_DMARLD | AHB_INTMASK);
+		mod |= MOD_TXS_IDMA;
+	}
+
+	writel(ahb, i2s->addr + I2SAHB);
 	writel(mod, i2s->addr + I2SMOD);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
@@ -921,7 +939,7 @@ i2s_delay(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		delay = FIC_RXCOUNT(reg);
-	else if (is_secondary(i2s))
+	else if (is_secondary(i2s) || use_internal_dma(i2s))
 		delay = FICS_TXCOUNT(readl(i2s->addr + I2SFICS));
 	else
 		delay = FIC_TXCOUNT(reg);
@@ -938,6 +956,7 @@ static int i2s_suspend(struct snd_soc_dai *dai)
 		i2s->suspend_i2smod = readl(i2s->addr + I2SMOD);
 		i2s->suspend_i2scon = readl(i2s->addr + I2SCON);
 		i2s->suspend_i2spsr = readl(i2s->addr + I2SPSR);
+		i2s->suspend_i2sahb = readl(i2s->addr + I2SAHB);
 	}
 
 	return 0;
@@ -950,7 +969,7 @@ static int i2s_resume(struct snd_soc_dai *dai)
 	if (dai->active) {
 		writel(i2s->suspend_i2scon, i2s->addr + I2SCON);
 		writel(i2s->suspend_i2smod, i2s->addr + I2SMOD);
-		writel(i2s->suspend_i2spsr, i2s->addr + I2SPSR);
+		writel(i2s->suspend_i2sahb, i2s->addr + I2SAHB);
 	}
 
 	return 0;
@@ -999,6 +1018,9 @@ probe_exit:
 	i2s_fifo(i2s, FIC_TXFLUSH);
 	i2s_fifo(other, FIC_TXFLUSH);
 	i2s_fifo(i2s, FIC_RXFLUSH);
+
+	if (use_internal_dma(i2s))
+		idma_init((void *)i2s->addr);
 
 	/* Gate CDCLK by default */
 	if (!is_opened(other))
@@ -1192,6 +1214,13 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 		sec_dai->quirks = quirks;
 		sec_dai->pri_dai = pri_dai;
 		pri_dai->sec_dai = sec_dai;
+	}
+
+	if (quirks & QUIRK_USE_IDMA) {
+		if (sec_dai)
+			sec_dai->use_idma = true;
+		else
+			pri_dai->use_idma = true;
 	}
 
 	if (i2s_pdata->cfg_gpio && i2s_pdata->cfg_gpio(pdev)) {
