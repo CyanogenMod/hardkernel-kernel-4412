@@ -129,21 +129,26 @@ static struct snd_soc_dai_link smdk_dai[] = {
 		.codec_name = "wm8994-codec",
 		.init = smdk_wm8994_init_paiftx,
 		.ops = &smdk_ops,
-	}, { /* Sec_Fifo Playback i/f */
+	}, { /* Sec_Fifo DAI i/f */
 		.name = "Sec_FIFO TX",
 		.stream_name = "Sec_Dai",
 		.cpu_dai_name = "samsung-i2s.4",
 		.codec_dai_name = "wm8994-aif1",
 		.platform_name = "samsung-audio",
 		.codec_name = "wm8994-codec",
+		.init = smdk_wm8994_init_paiftx,
 		.ops = &smdk_ops,
 	},
+
 };
 
 static struct snd_soc_card smdk = {
 	.name = "SMDK-I2S",
 	.dai_link = smdk_dai,
-	.num_links = ARRAY_SIZE(smdk_dai),
+
+	/* If you want to use sec_fifo device,
+	 * changes the num_link = 2 or ARRAY_SIZE(smdk_dai). */
+	.num_links = 1,
 };
 
 static struct platform_device *smdk_snd_device;
