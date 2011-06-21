@@ -69,6 +69,13 @@ config SND_SOC_SAMSUNG_SMDK_WM8994
 	help
 		Say Y if you want to add support for SoC audio on the SMDKs.
 
+config SND_SOC_SAMSUNG_I2S_IDMA
+	bool "I2S operate with Internal DMA"
+	depends on SND_SAMSUNG_I2S && (ARCH_EXYNOS4 || ARCH_S5PV210)
+	default n
+	help
+	  Say Y for I2S to operate with Internal DMA(I2S's own DMA)
+
 config SND_SOC_SMDK_WM8994_PCM
 	tristate "SoC PCM Audio support for WM8994 on SMDK"
 	depends on SND_SOC_SAMSUNG && (MACH_SMDKV310 || MACH_SMDKC210)
