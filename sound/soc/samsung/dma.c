@@ -418,8 +418,11 @@ static void dma_free_dma_buffers(struct snd_pcm *pcm)
 	int stream;
 
 	pr_debug("Entered %s\n", __func__);
-
+#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
+	for (stream = 1; stream < 2; stream++) {
+#else
 	for (stream = 0; stream < 2; stream++) {
+#endif
 		substream = pcm->streams[stream].substream;
 		if (!substream)
 			continue;
@@ -448,13 +451,14 @@ static int dma_new(struct snd_card *card,
 	if (!card->dev->coherent_dma_mask)
 		card->dev->coherent_dma_mask = 0xffffffff;
 
+#ifndef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
 	if (dai->driver->playback.channels_min) {
 		ret = preallocate_dma_buffer(pcm,
 			SNDRV_PCM_STREAM_PLAYBACK);
 		if (ret)
 			goto out;
 	}
-
+#endif
 	if (dai->driver->capture.channels_min) {
 		ret = preallocate_dma_buffer(pcm,
 			SNDRV_PCM_STREAM_CAPTURE);
@@ -465,44 +469,11 @@ out:
 	return ret;
 }
 
-static struct snd_soc_platform_driver samsung_asoc_platform = {
+struct snd_soc_platform_driver samsung_asoc_platform = {
 	.ops		= &dma_ops,
 	.pcm_new	= dma_new,
 	.pcm_free	= dma_free_dma_buffers,
 };
-
-static int __devinit samsung_asoc_platform_probe(struct platform_device *pdev)
-{
-	return snd_soc_register_platform(&pdev->dev, &samsung_asoc_platform);
-}
-
-static int __devexit samsung_asoc_platform_remove(struct platform_device *pdev)
-{
-	snd_soc_unregister_platform(&pdev->dev);
-	return 0;
-}
-
-static struct platform_driver asoc_dma_driver = {
-	.driver = {
-		.name = "samsung-audio",
-		.owner = THIS_MODULE,
-	},
-
-	.probe = samsung_asoc_platform_probe,
-	.remove = __devexit_p(samsung_asoc_platform_remove),
-};
-
-static int __init samsung_asoc_init(void)
-{
-	return platform_driver_register(&asoc_dma_driver);
-}
-module_init(samsung_asoc_init);
-
-static void __exit samsung_asoc_exit(void)
-{
-	platform_driver_unregister(&asoc_dma_driver);
-}
-module_exit(samsung_asoc_exit);
 
 MODULE_AUTHOR("Ben Dooks, <ben@simtec.co.uk>");
 MODULE_DESCRIPTION("Samsung ASoC DMA Driver");
