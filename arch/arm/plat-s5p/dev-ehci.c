@@ -16,6 +16,7 @@
 #include <plat/ehci.h>
 #include <plat/usb-phy.h>
 
+#ifdef CONFIG_USB_EHCI_S5P
 /* USB EHCI Host Controller registration */
 static struct resource s5p_ehci_resource[] = {
 	[0] = {
@@ -55,3 +56,33 @@ void __init s5p_ehci_set_platdata(struct s5p_ehci_platdata *pd)
 	if (!npd->phy_exit)
 		npd->phy_exit = s5p_usb_phy_exit;
 }
+#endif
+
+#ifdef CONFIG_USB_OHCI_S5P
+/* USB Host Controlle OHCI registrations */
+static struct resource s5p_ohci_resource[] = {
+	[0] = {
+		.start = S5P_PA_OHCI,
+		.end   = S5P_PA_OHCI  + SZ_256 - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_USB_HOST,
+		.end   = IRQ_USB_HOST,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+static u64 s5p_device_ohci_dmamask = 0xffffffffUL;
+
+struct platform_device s5p_device_ohci = {
+	.name		= "s5p-ohci",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(s5p_ohci_resource),
+	.resource	= s5p_ohci_resource,
+	.dev		= {
+		.dma_mask = &s5p_device_ohci_dmamask,
+		.coherent_dma_mask = 0xffffffffUL
+	}
+};
+#endif
