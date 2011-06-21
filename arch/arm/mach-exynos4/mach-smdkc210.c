@@ -59,6 +59,7 @@
 #include <plat/s5p-clock.h>
 #include <plat/tvout.h>
 #include <plat/fimg2d.h>
+#include <plat/ehci.h>
 
 #include <mach/map.h>
 #include <mach/media.h>
@@ -1254,6 +1255,18 @@ static void __init android_pmem_set_platdata(void)
 }
 #endif
 
+/* USB EHCI */
+#ifdef CONFIG_USB_EHCI_S5P
+static struct s5p_ehci_platdata smdkc210_ehci_pdata;
+
+static void __init smdkc210_ehci_init(void)
+{
+	struct s5p_ehci_platdata *pdata = &smdkc210_ehci_pdata;
+
+	s5p_ehci_set_platdata(pdata);
+}
+#endif
+
 static struct platform_device *smdkc210_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
@@ -1368,6 +1381,12 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 #endif
 #ifdef CONFIG_VIDEO_JPEG
 	&s5p_device_jpeg,
+#endif
+#ifdef CONFIG_USB_EHCI_S5P
+	&s5p_device_ehci,
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
+	&s5p_device_ohci,
 #endif
 #ifdef CONFIG_USB_GADGET
         &s3c_device_usbgadget,
@@ -1691,6 +1710,9 @@ static void __init smdkc210_machine_init(void)
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s5p_device_fimg2d.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
+#endif
+#ifdef CONFIG_USB_EHCI_S5P
+	smdkc210_ehci_init();
 #endif
 
 	platform_add_devices(smdkc210_devices, ARRAY_SIZE(smdkc210_devices));

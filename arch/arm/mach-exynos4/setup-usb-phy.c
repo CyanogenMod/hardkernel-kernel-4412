@@ -27,7 +27,7 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 	u32 rstcon;
 	int err;
 
-	otg_clk = clk_get(&pdev->dev, "otg");
+	otg_clk = clk_get(&pdev->dev, "usbotg");
 	if (IS_ERR(otg_clk)) {
 		dev_err(&pdev->dev, "Failed to get otg clock\n");
 		return PTR_ERR(otg_clk);
@@ -37,6 +37,13 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 	if (err) {
 		clk_put(otg_clk);
 		return err;
+	}
+
+	if (readl(S5P_USBHOST_PHY_CONTROL) & S5P_USBHOST_PHY_ENABLE) {
+		dev_err(&pdev->dev, "Already power on PHY\n");
+		clk_disable(otg_clk);
+		clk_put(otg_clk);
+		return -EINVAL;
 	}
 
 	writel(readl(S5P_USBHOST_PHY_CONTROL) | S5P_USBHOST_PHY_ENABLE,
@@ -82,7 +89,7 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 
 	rstcon &= ~(HOST_LINK_PORT_SWRST_MASK | PHY1_SWRST_MASK);
 	writel(rstcon, EXYNOS4_RSTCON);
-	udelay(50);
+	udelay(80);
 
 	clk_disable(otg_clk);
 	clk_put(otg_clk);
@@ -95,7 +102,7 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 	struct clk *otg_clk;
 	int err;
 
-	otg_clk = clk_get(&pdev->dev, "otg");
+	otg_clk = clk_get(&pdev->dev, "usbotg");
 	if (IS_ERR(otg_clk)) {
 		dev_err(&pdev->dev, "Failed to get otg clock\n");
 		return PTR_ERR(otg_clk);

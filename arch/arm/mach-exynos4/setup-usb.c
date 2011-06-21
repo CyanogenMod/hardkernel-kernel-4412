@@ -115,7 +115,7 @@ void otg_phy_off(void)
 }
 EXPORT_SYMBOL(otg_phy_off);
 
-void usb_host_phy_init(void)
+void usb_host_phy_init(void __iomem *base_address)
 {
 	/*  Must be enable usbhost & usbotg clk  */
 	usb_clk_get(USBHOST_CLK);
@@ -127,7 +127,7 @@ void usb_host_phy_init(void)
 		return;
 	}
 
-#ifdef CONFIG_CPU_S5PV310_EVT1
+#ifdef CONFIG_CPU_EXYNOS4210
 	__raw_writel((__raw_readl(ETC6PUD) & ~(0x3 << 14)) | (0x3 << 14),
 		ETC6PUD);
 #else
@@ -160,9 +160,10 @@ void usb_host_phy_init(void)
 	udelay(10);
 	__raw_writel((__raw_readl(S3C_USBOTG_RSTCON) & ~(0x1<<6) & ~(0x7<<3)),
 		S3C_USBOTG_RSTCON);
-	udelay(50);
+	udelay(80);
 
 	usb_clk_put(USBOTG_CLK);
+	__raw_writel(0x03C00000, base_address + 0x90);
 }
 EXPORT_SYMBOL(usb_host_phy_init);
 
