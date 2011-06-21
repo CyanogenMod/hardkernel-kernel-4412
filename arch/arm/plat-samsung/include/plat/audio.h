@@ -36,6 +36,8 @@ struct samsung_i2s {
  */
 #define QUIRK_NO_MUXPSR		(1 << 2)
 #define QUIRK_NEED_RSTCLR	(1 << 3)
+/* If the internal dma will be used */
+#define QUIRK_USE_IDMA		(1 << 4)
 	/* Quirks of the I2S controller */
 	u32 quirks;
 
