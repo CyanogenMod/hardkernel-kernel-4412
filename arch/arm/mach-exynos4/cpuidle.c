@@ -13,6 +13,7 @@
 #include <linux/cpuidle.h>
 #include <linux/io.h>
 #include <linux/suspend.h>
+#include <linux/platform_device.h>
 
 #include <asm/proc-fns.h>
 
@@ -21,11 +22,115 @@
 #include <mach/pmu.h>
 
 #include <plat/exynos4.h>
+#include <plat/pm.h>
+#include <plat/devs.h>
 
 #define REG_DIRECTGO_ADDR	(exynos4_subrev() == 0 ?\
 				(S5P_VA_SYSRAM + 0x24) : S5P_INFORM7)
 #define REG_DIRECTGO_FLAG	(exynos4_subrev() == 0 ?\
 				(S5P_VA_SYSRAM + 0x20) : S5P_INFORM6)
+
+struct check_device_op {
+	void __iomem	*base;
+	struct platform_device	*pdev;
+	unsigned int ch;
+};
+
+static struct check_device_op chk_dev_op[] = {
+#ifdef CONFIG_I2C_S3C2410
+	{.base = 0, .pdev = &s3c_device_i2c0, .ch = 0},
+#if defined(CONFIG_S3C_DEV_I2C1)
+	{.base = 0, .pdev = &s3c_device_i2c1, .ch = 1},
+#endif
+#if defined(CONFIG_S3C_DEV_I2C2)
+	{.base = 0, .pdev = &s3c_device_i2c2, .ch = 2},
+#endif
+#if defined(CONFIG_S3C_DEV_I2C3)
+	{.base = 0, .pdev = &s3c_device_i2c3, .ch = 3},
+#endif
+#if defined(CONFIG_S3C_DEV_I2C4)
+	{.base = 0, .pdev = &s3c_device_i2c4, .ch = 4},
+#endif
+#if defined(CONFIG_S3C_DEV_I2C5)
+	{.base = 0, .pdev = &s3c_device_i2c5, .ch = 5},
+#endif
+#if defined(CONFIG_S3C_DEV_I2C6)
+	{.base = 0, .pdev = &s3c_device_i2c6, .ch = 6},
+#endif
+#if defined(CONFIG_S3C_DEV_I2C7)
+	{.base = 0, .pdev = &s3c_device_i2c7, .ch = 7},
+#endif
+#endif
+	{.base = 0, .pdev = NULL, .ch = 0xffffffff},
+};
+
+static int check_i2c_op(void)
+{
+	unsigned int val, i, chan;
+	void __iomem *base_addr;
+
+	for (i = 0; i < ARRAY_SIZE(chk_dev_op); i++) {
+		if (chk_dev_op[i].pdev == NULL)
+			break;
+		chan = chk_dev_op[i].ch;
+
+		if (chan != 0xffffffff) {
+			base_addr = chk_dev_op[i].base;
+
+			val = __raw_readl(base_addr + 0x04);
+
+			if (val & (1<<5)) {
+				printk(KERN_INFO "I2C[%d] is working\n", chan);
+				return 1;
+			}
+		} else
+			break;
+	}
+	return 0;
+}
+
+static struct sleep_save exynos4_lpa_save[] = {
+	/* CMU side */
+	SAVE_ITEM(S5P_CLKSRC_MASK_TOP),
+	SAVE_ITEM(S5P_CLKSRC_MASK_CAM),
+	SAVE_ITEM(S5P_CLKSRC_MASK_TV),
+	SAVE_ITEM(S5P_CLKSRC_MASK_LCD0),
+	SAVE_ITEM(S5P_CLKSRC_MASK_LCD1),
+	SAVE_ITEM(S5P_CLKSRC_MASK_MAUDIO),
+	SAVE_ITEM(S5P_CLKSRC_MASK_FSYS),
+	SAVE_ITEM(S5P_CLKSRC_MASK_PERIL0),
+	SAVE_ITEM(S5P_CLKSRC_MASK_PERIL1),
+	SAVE_ITEM(S5P_CLKSRC_MASK_DMC),
+};
+
+static struct sleep_save exynos4_set_clksrc[] = {
+	{ .reg = S5P_CLKSRC_MASK_TOP			, .val = 0x00000001, },
+	{ .reg = S5P_CLKSRC_MASK_CAM			, .val = 0x11111111, },
+	{ .reg = S5P_CLKSRC_MASK_TV			, .val = 0x00000111, },
+	{ .reg = S5P_CLKSRC_MASK_LCD0			, .val = 0x00001111, },
+	{ .reg = S5P_CLKSRC_MASK_LCD1			, .val = 0x00001111, },
+	{ .reg = S5P_CLKSRC_MASK_MAUDIO			, .val = 0x00000001, },
+	{ .reg = S5P_CLKSRC_MASK_FSYS			, .val = 0x01011111, },
+	{ .reg = S5P_CLKSRC_MASK_PERIL0			, .val = 0x01111111, },
+	{ .reg = S5P_CLKSRC_MASK_PERIL1			, .val = 0x01110111, },
+	{ .reg = S5P_CLKSRC_MASK_DMC			, .val = 0x00010000, },
+};
+
+static int exynos4_check_enter(void)
+{
+	unsigned int ret;
+	unsigned int check_val;
+
+	ret = 0;
+
+	/* Check UART for console is empty */
+	check_val = __raw_readl(S5P_VA_UART(CONFIG_S3C_LOWLEVEL_UART_PORT) +
+				0x18);
+
+	ret = ((check_val >> 16) & 0xff);
+
+	return ret;
+}
 
 /*
  * This function is called by exynos_enter_lp() in idle.S.
@@ -106,6 +211,84 @@ early_wakeup:
 
 	/* Clear wakeup state register */
 	__raw_writel(0x0, S5P_WAKEUP_STAT);
+
+	do_gettimeofday(&after);
+
+	local_irq_enable();
+	idle_time = (after.tv_sec - before.tv_sec) * USEC_PER_SEC +
+		    (after.tv_usec - before.tv_usec);
+
+	return idle_time;
+}
+
+static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
+				   struct cpuidle_state *state)
+{
+	struct timeval before, after;
+	int idle_time;
+	unsigned long tmp;
+
+	s3c_pm_do_save(exynos4_lpa_save, ARRAY_SIZE(exynos4_lpa_save));
+
+	/*
+	 * Before enter central sequence mode, clock src register have to set
+	 */
+	s3c_pm_do_restore_core(exynos4_set_clksrc,
+			       ARRAY_SIZE(exynos4_set_clksrc));
+
+	local_irq_disable();
+
+	do_gettimeofday(&before);
+
+	/*
+	 * Unmasking all wakeup source.
+	 */
+	__raw_writel(0x0, S5P_WAKEUP_MASK);
+
+	/* ensure at least INFORM0 has the resume address */
+	__raw_writel(virt_to_phys(s3c_cpu_resume), S5P_INFORM0);
+
+	__raw_writel(virt_to_phys(s3c_cpu_resume), REG_DIRECTGO_ADDR);
+	__raw_writel(0xfcba0d10, REG_DIRECTGO_FLAG);
+
+	__raw_writel(S5P_CHECK_LPA, S5P_INFORM1);
+	exynos4_sys_powerdown_conf(SYS_LPA);
+
+	do {
+		/* Waiting for flushing UART fifo */
+	} while (exynos4_check_enter());
+
+	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
+
+		/*
+		 * Clear Central Sequence Register in exiting early wakeup
+		 */
+		tmp = __raw_readl(S5P_CENTRAL_SEQ_CONFIGURATION);
+		tmp |= (S5P_CENTRAL_LOWPWR_CFG);
+		__raw_writel(tmp, S5P_CENTRAL_SEQ_CONFIGURATION);
+
+		goto early_wakeup;
+	}
+
+	cpu_init();
+
+	s3c_pm_do_restore_core(exynos4_lpa_save,
+			       ARRAY_SIZE(exynos4_lpa_save));
+
+	/* For release retention */
+	__raw_writel((1 << 28), S5P_PAD_RET_GPIO_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_UART_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_MMCA_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_MMCB_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_EBIA_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
+
+early_wakeup:
+
+	/* Clear wakeup state register */
+	__raw_writel(0x0, S5P_WAKEUP_STAT);
+
+	__raw_writel(0x0, S5P_WAKEUP_MASK);
 
 	do_gettimeofday(&after);
 
@@ -208,10 +391,47 @@ static int exynos4_enter_idle(struct cpuidle_device *dev,
 	return idle_time;
 }
 
+static int exynos4_lcd_check(unsigned int lcd_number)
+{
+	unsigned int tmp;
+	unsigned int ret;
+
+	if (lcd_number == 0) {
+		tmp = __raw_readl(S5P_CLKSRC_MASK_LCD0);
+		tmp &= 0x1;
+		if (tmp)
+			ret = 1;
+		else
+			ret = 0;
+	} else {
+		tmp = __raw_readl(S5P_CLKSRC_MASK_LCD1);
+		tmp &= 0x1;
+		if (tmp)
+			ret = 1;
+		else
+			ret = 0;
+	}
+
+	return ret;
+}
+
+static int exynos4_check_entermode(void)
+{
+	unsigned int ret;
+
+	if (exynos4_lcd_check(0) || check_i2c_op())
+		ret = S5P_CHECK_DIDLE;
+	else
+		ret = S5P_CHECK_LPA;
+
+	return ret;
+}
+
 static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 				  struct cpuidle_state *state)
 {
 	struct cpuidle_state *new_state = state;
+	unsigned int enter_mode;
 
 	/* This mode only can be entered when Core1 is offline */
 	if (cpu_online(1)) {
@@ -220,11 +440,15 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 	}
 	dev->last_state = new_state;
 
-	if (new_state == &dev->states[0])
+	if (new_state == &dev->states[0]) {
 		return exynos4_enter_idle(dev, new_state);
-	else
-		return exynos4_enter_core0_aftr(dev, new_state);
-
+	} else {
+		enter_mode = exynos4_check_entermode();
+		if (enter_mode == S5P_CHECK_DIDLE)
+			return exynos4_enter_core0_aftr(dev, new_state);
+		else
+			return exynos4_enter_core0_lpa(dev, new_state);
+	}
 	return exynos4_enter_idle(dev, new_state);
 }
 
@@ -254,6 +478,8 @@ static int __init exynos4_init_cpuidle(void)
 {
 	int i, max_cpuidle_state, cpu_id;
 	struct cpuidle_device *device;
+	struct platform_device *pdev;
+	struct resource *res;
 
 	cpuidle_register_driver(&exynos4_idle_driver);
 
@@ -281,6 +507,27 @@ static int __init exynos4_init_cpuidle(void)
 			return -EIO;
 		}
 	}
+
+	for (i = 0; i < ARRAY_SIZE(chk_dev_op); i++) {
+
+		pdev = chk_dev_op[i].pdev;
+
+		if (pdev == NULL)
+			break;
+
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		if (!res) {
+			printk(KERN_ERR "failed to get iomem region\n");
+			return -EINVAL;
+		}
+		chk_dev_op[i].base = ioremap(res->start, 4096);
+
+		if (!chk_dev_op[i].base) {
+			printk(KERN_ERR "failed to map io region\n");
+			return -EINVAL;
+		}
+	}
+
 	register_pm_notifier(&exynos4_cpuidle_notifier);
 	return 0;
 }

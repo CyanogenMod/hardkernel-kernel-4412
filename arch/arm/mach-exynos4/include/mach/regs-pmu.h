@@ -169,5 +169,7 @@
 #define S5P_INT_LOCAL_PWR_EN			0x7
 
 #define S5P_CHECK_SLEEP				0x00000BAD
+#define S5P_CHECK_DIDLE				0xBAD00000
+#define S5P_CHECK_LPA				0xABAD0000
 
 #endif /* __ASM_ARCH_REGS_PMU_H */
