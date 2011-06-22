@@ -875,17 +875,14 @@ static struct platform_device smdkv310_smsc911x = {
 	},
 };
 
-static struct regulator_consumer_supply max8952_supply[] = {
-	REGULATOR_SUPPLY("vdd_arm", NULL),
-};
+static struct regulator_consumer_supply max8952_supply =
+	REGULATOR_SUPPLY("vdd_arm", NULL);
 
-static struct regulator_consumer_supply max8649_supply[] = {
-	REGULATOR_SUPPLY("vdd_int", NULL),
-};
+static struct regulator_consumer_supply max8649_supply =
+	REGULATOR_SUPPLY("vdd_int", NULL);
 
-static struct regulator_consumer_supply max8649a_supply[] = {
-	REGULATOR_SUPPLY("vdd_g3d", NULL),
-};
+static struct regulator_consumer_supply max8649a_supply =
+	REGULATOR_SUPPLY("vdd_g3d", NULL);
 
 static struct regulator_init_data max8952_init_data = {
 	.constraints	= {
@@ -901,7 +898,7 @@ static struct regulator_init_data max8952_init_data = {
 		},
 	},
 	.num_consumer_supplies	= 1,
-	.consumer_supplies	= &max8952_supply[0],
+	.consumer_supplies	= &max8952_supply,
 };
 
 static struct regulator_init_data max8649_init_data = {
@@ -918,7 +915,7 @@ static struct regulator_init_data max8649_init_data = {
 		},
 	},
 	.num_consumer_supplies	= 1,
-	.consumer_supplies	= &max8649_supply[0],
+	.consumer_supplies	= &max8649_supply,
 };
 
 static struct regulator_init_data max8649a_init_data = {
@@ -936,7 +933,7 @@ static struct regulator_init_data max8649a_init_data = {
 		},
 	},
 	.num_consumer_supplies	= 1,
-	.consumer_supplies	= &max8649a_supply[0],
+	.consumer_supplies	= &max8649a_supply,
 };
 
 static struct max8649_platform_data exynos4_max8952_info = {
@@ -998,31 +995,17 @@ static struct platform_device smdkv310_input_device = {
 };
 
 static struct regulator_consumer_supply wm8994_fixed_voltage0_supplies[] = {
-	{
-		.dev_name	= "1-001a",
-		.supply		= "AVDD2",
-	}, {
-		.dev_name	= "1-001a",
-		.supply		= "CPVDD",
-	},
+	REGULATOR_SUPPLY("AVDD2", "1-001a"),
+	REGULATOR_SUPPLY("CPVDD", "1-001a"),
 };
 
 static struct regulator_consumer_supply wm8994_fixed_voltage1_supplies[] = {
-	{
-		.dev_name	= "1-001a",
-		.supply		= "SPKVDD1",
-	}, {
-		.dev_name	= "1-001a",
-		.supply		= "SPKVDD2",
-	},
+	REGULATOR_SUPPLY("SPKVDD1", "1-001a"),
+	REGULATOR_SUPPLY("SPKVDD2", "1-001a"),
 };
 
-static struct regulator_consumer_supply wm8994_fixed_voltage2_supplies[] = {
-	{
-		.dev_name	= "1-001a",
-		.supply		= "DBVDD",
-	},
-};
+static struct regulator_consumer_supply wm8994_fixed_voltage2_supplies =
+	REGULATOR_SUPPLY("DBVDD", "1-001a");
 
 static struct regulator_init_data wm8994_fixed_voltage0_init_data = {
 	.constraints = {
@@ -1044,8 +1027,8 @@ static struct regulator_init_data wm8994_fixed_voltage2_init_data = {
 	.constraints = {
 		.always_on = 1,
 	},
-	.num_consumer_supplies	= ARRAY_SIZE(wm8994_fixed_voltage2_supplies),
-	.consumer_supplies	= wm8994_fixed_voltage2_supplies,
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &wm8994_fixed_voltage2_supplies,
 };
 
 static struct fixed_voltage_config wm8994_fixed_voltage0_config = {
@@ -1093,15 +1076,11 @@ static struct platform_device wm8994_fixed_voltage2 = {
 	},
 };
 
-static struct regulator_consumer_supply wm8994_avdd1_supply = {
-	.dev_name	= "1-001a",
-	.supply		= "AVDD1",
-};
+static struct regulator_consumer_supply wm8994_avdd1_supply =
+	REGULATOR_SUPPLY("AVDD1", "1-001a");
 
-static struct regulator_consumer_supply wm8994_dcvdd_supply = {
-	.dev_name	= "1-001a",
-	.supply		= "DCVDD",
-};
+static struct regulator_consumer_supply wm8994_dcvdd_supply =
+	REGULATOR_SUPPLY("DCVDD", "1-001a");
 
 static struct regulator_init_data wm8994_ldo1_data = {
 	.constraints	= {
