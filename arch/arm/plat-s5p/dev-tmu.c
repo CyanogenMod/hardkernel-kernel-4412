@@ -63,13 +63,14 @@ void __init s5p_tmu_set_platdata(struct tmu_data *pd)
 	struct s5p_tmu *npd;
 
 	npd = kmalloc(sizeof(struct s5p_tmu), GFP_KERNEL);
-	if (!npd)
+	if (!npd) {
 		printk(KERN_ERR "%s: no memory for platform data\n", __func__);
-
-	if (!pd)
-		memcpy(&npd->data, &default_tmu_data, sizeof(struct tmu_data));
-	else
-		memcpy(&npd->data, pd, sizeof(struct tmu_data));
+	} else {
+		if (!pd)
+			memcpy(&npd->data, &default_tmu_data, sizeof(struct tmu_data));
+		else
+			memcpy(&npd->data, pd, sizeof(struct tmu_data));
+	}
 
 	platform_set_drvdata(&s5p_device_tmu, npd);
 }
