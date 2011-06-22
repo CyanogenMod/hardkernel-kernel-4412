@@ -969,6 +969,7 @@ static int i2s_resume(struct snd_soc_dai *dai)
 	if (dai->active) {
 		writel(i2s->suspend_i2scon, i2s->addr + I2SCON);
 		writel(i2s->suspend_i2smod, i2s->addr + I2SMOD);
+		writel(i2s->suspend_i2spsr, i2s->addr + I2SPSR);
 		writel(i2s->suspend_i2sahb, i2s->addr + I2SAHB);
 	}
 
