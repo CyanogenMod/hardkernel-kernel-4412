@@ -62,7 +62,7 @@ int s3c_fimc_clk_on(struct platform_device *pdev, struct clk **clk)
 	sclk_fimc_lclk = clk_get(&pdev->dev, "sclk_fimc");
 	if (IS_ERR(sclk_fimc_lclk)) {
 		dev_err(&pdev->dev, "failed to get sclk_fimc_lclk\n");
-		goto err_clk3;
+		goto err_clk1;
 	}
 
 
@@ -70,7 +70,7 @@ int s3c_fimc_clk_on(struct platform_device *pdev, struct clk **clk)
 	*clk = clk_get(&pdev->dev, "fimc");
 	if (IS_ERR(clk)) {
 		dev_err(&pdev->dev, "failed to get interface clock\n");
-		goto err_clk3;
+		goto err_clk2;
 	}
 	mout_epll = clk_get(&pdev->dev, "mout_epll");
 
@@ -79,9 +79,8 @@ int s3c_fimc_clk_on(struct platform_device *pdev, struct clk **clk)
 
 	return 0;
 
-err_clk3:
+err_clk2:
 	clk_put(sclk_fimc_lclk);
-
 err_clk1:
 	return -EINVAL;
 }

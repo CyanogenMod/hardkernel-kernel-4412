@@ -628,14 +628,14 @@ static int m5mo_dump_fw(struct v4l2_subdev *sd)
 		cam_err("failed to open %s, err %ld\n",
 			M5MO_FW_DUMP_PATH, PTR_ERR(fp));
 		err = -ENOENT;
-		goto out;
+		goto out0;
 	}
 
 	buf = kmalloc(intram_unit, GFP_KERNEL);
 	if (!buf) {
 		cam_err("failed to allocate memory\n");
 		err = -ENOMEM;
-		goto out;
+		goto out0;
 	}
 
 	cam_dbg("start, file path %s\n", M5MO_FW_DUMP_PATH);
@@ -654,7 +654,7 @@ static int m5mo_dump_fw(struct v4l2_subdev *sd)
 				intram_unit, addr + (i * unit) + j, buf);
 			if (err < 0) {
 				cam_err("i2c falied, err %d\n", err);
-				goto out;
+				goto out1;
 			}
 			vfs_write(fp, buf, intram_unit, &fp->f_pos);
 		}
@@ -669,16 +669,16 @@ static int m5mo_dump_fw(struct v4l2_subdev *sd)
 				intram_unit, addr + (i * unit) + j, buf);
 			if (err < 0) {
 				cam_err("i2c falied, err %d\n", err);
-				goto out;
+				goto out1;
 			}
 			vfs_write(fp, buf, intram_unit, &fp->f_pos);
 		}
 	}
 
 	cam_dbg("end\n");
-
-out:
+out1:
 	kfree(buf);
+out0:
 	if (!IS_ERR(fp))
 		filp_close(fp, current->files);
 	set_fs(old_fs);

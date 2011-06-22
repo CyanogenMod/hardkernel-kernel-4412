@@ -16,6 +16,7 @@
 #define to_csis_plat(d)		(to_platform_device(d)->dev.platform_data)
 
 struct platform_device;
+struct clk;
 
 struct s3c_platform_csis {
 	const char	srclk_name[16];

@@ -194,7 +194,6 @@ static int fimc_init_camera(struct fimc_control *ctrl)
 	struct s3c_platform_fimc *pdata;
 	struct s3c_platform_camera *cam;
 	int ret = 0, retry_cnt = 0;
-	u32 pixelformat;
 
 #if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	struct platform_device *pdev = to_platform_device(ctrl->dev);

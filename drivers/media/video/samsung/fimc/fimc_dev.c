@@ -1343,9 +1343,6 @@ static int fimc_release(struct file *filp)
 				(struct fimc_prv_data *)filp->private_data;
 	struct fimc_control *ctrl = prv_data->ctrl;
 	struct fimc_capinfo *cap;
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-	struct platform_device *pdev = to_platform_device(ctrl->dev);
-#endif
 	int ctx_id = prv_data->ctx_id;
 	struct s3c_platform_fimc *pdata;
 	struct fimc_overlay_buf *buf;
@@ -2274,7 +2271,6 @@ static inline int fimc_resume_out(struct fimc_control *ctrl)
 
 static inline int fimc_resume_cap(struct fimc_control *ctrl)
 {
-	struct fimc_global *fimc = get_fimc_dev();
 	int tmp;
 	u32 timeout;
 
