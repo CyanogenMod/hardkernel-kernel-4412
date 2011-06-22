@@ -97,7 +97,6 @@ static unsigned int prev_bus_rate;
 static int mfc_cpufreq_transition(struct notifier_block *nb,
 					unsigned long val, void *data)
 {
-	struct cpufreq_freqs *freqs = data;
 	unsigned long bus_rate;
 
 	if (val == CPUFREQ_PRECHANGE)
