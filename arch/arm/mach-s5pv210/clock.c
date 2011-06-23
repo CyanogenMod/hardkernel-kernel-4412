@@ -1173,7 +1173,6 @@ void __init_or_cpufreq s5pv210_setup_clocks(void)
 	u32 clkdiv0, clkdiv1;
 
 	/* Set functions for clk_fout_epll */
-	clk_fout_epll.enable = s5p_epll_enable;
 	clk_fout_epll.ops = &s5pv210_epll_ops;
 
 	printk(KERN_DEBUG "%s: registering clocks\n", __func__);
