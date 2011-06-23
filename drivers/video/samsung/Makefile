@@ -11,6 +11,9 @@ obj-$(CONFIG_FB_S5P_LTE480WV)	+= s3cfb_lte480wv.o
 obj-$(CONFIG_FB_S5P_HT101HD1)	+= s3cfb_ht101hd1.o
 obj-$(CONFIG_FB_S5P_WA101S)	+= s3cfb_wa101s.o
 obj-$(CONFIG_FB_S5P_AMS369FG06)	+= s3cfb_ams369fg06.o
+obj-$(CONFIG_FB_S5P_DUMMY_MIPI_LCD)	+= s3cfb_dummymipilcd.o
+obj-$(CONFIG_FB_S5P_MIPI_DSIM)	+= s5p_dsim_lowlevel.o
+obj-$(CONFIG_FB_S5P_MIPI_DSIM)	+= s5p-dsim.o
 endif
 
 ifeq ($(CONFIG_FB_S5P_DEBUG),y)

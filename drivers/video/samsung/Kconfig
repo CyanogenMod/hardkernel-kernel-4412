@@ -72,6 +72,13 @@ config VIDEO_SAMSUNG_MEMSIZE_FIMD
 	depends on FB_S5P
 	default "15360"
 
+config FB_S5P_MIPI_DSIM
+	bool "Samsung MIPI DSIM"
+	depends on FB_S5P
+	default n
+	---help---
+	  This enables support for Samsung MIPI DSIM feature
+
 choice
 depends on FB_S5P
 prompt "Select LCD Type"
@@ -102,6 +109,12 @@ config FB_S5P_AMS369FG06
 	select SPI_GPIO
 	help
 	  This enables support for Samsung AMS369FG06 3.7" WVGA AMOLED panel
+
+config FB_S5P_DUMMY_MIPI_LCD
+	bool "DUMMY MIPI LCD"
+	depends on FB_S5P_MIPI_DSIM
+	---help---
+	  This enables support for Samsung DUMMY MIPI LCD
 endchoice
 
 config FB_S5P_V2

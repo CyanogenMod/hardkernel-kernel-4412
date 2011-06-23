@@ -107,6 +107,12 @@ struct s3cfb_lcd_timing {
 	int	v_bp;
 	int	v_bpe;
 	int	v_sw;
+#if defined(CONFIG_FB_S5P_MIPI_DSIM)
+	int	cmd_allow_len;
+	void	(*cfg_gpio)(struct platform_device *dev);
+	int	(*backlight_on)(struct platform_device *dev);
+	int	(*reset_lcd)(struct platform_device *dev);
+#endif
 };
 
 struct s3cfb_lcd_polarity {
