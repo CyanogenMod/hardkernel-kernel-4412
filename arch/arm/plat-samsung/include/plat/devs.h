@@ -180,7 +180,7 @@ extern struct platform_device s5p_device_ohci;
 extern struct platform_device exynos4_device_sysmmu[];
 
 extern struct platform_device s5p_device_mfc;
-
+extern struct platform_device s5p_device_dsim;
 /* s3c2440 specific devices */
 
 #ifdef CONFIG_CPU_S3C2440

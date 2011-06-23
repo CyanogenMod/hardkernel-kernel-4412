@@ -174,3 +174,9 @@ config S5P_DEV_ACE
 	help
 	  Compile in common setup code for Crypto Engine devices.
 
+config S5P_DEV_MIPI_DSI
+	bool
+	depends on FB_S5P_MIPI_DSIM
+	default y
+	help
+	  Compile in platform device definitions for MIPI_DSI
