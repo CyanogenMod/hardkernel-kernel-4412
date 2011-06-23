@@ -215,7 +215,7 @@ int h263_get_init_arg(struct mfc_inst_ctx *ctx, void *arg)
 	reg |= ((init_arg->cmn.in_rc_qbound_min & 0x3F) << 0);
 	write_reg(reg, MFC_ENC_RC_QBOUND);
 
-	if (init_arg->cmn.in_rc_fr_en > 0) {
+	if (init_arg->cmn.in_rc_fr_en == 0) {
 		shm = read_shm(ctx, P_B_FRAME_QP);
 		shm &= ~(0xFFF << 0);
 		shm |= ((init_arg->cmn.in_vop_quant_p & 0x3F) << 0);
@@ -312,7 +312,7 @@ int mpeg4_get_init_arg(struct mfc_inst_ctx *ctx, void *arg)
 
 	write_reg(init_mpeg4_arg->in_quart_pixel, MFC_ENC_MPEG4_QUART_PXL);
 
-	if (init_arg->cmn.in_rc_fr_en > 0) {
+	if (init_arg->cmn.in_rc_fr_en == 0) {
 		shm = read_shm(ctx, P_B_FRAME_QP);
 		shm &= ~(0xFFF << 0);
 		shm |= ((init_mpeg4_arg->in_vop_quant_b & 0x3F) << 6);
@@ -460,7 +460,7 @@ int h264_get_init_arg(struct mfc_inst_ctx *ctx, void *arg)
 	/* 8x8 transform enable */
 	write_reg(init_h264_arg->in_transform8x8_mode & 0x1, MFC_ENC_H264_TRANS_FLAG);
 
-	if ((init_arg->cmn.in_rc_fr_en > 0) && (init_h264_arg->in_rc_mb_en > 0)) {
+	if ((init_arg->cmn.in_rc_fr_en == 0) && (init_h264_arg->in_rc_mb_en == 0)) {
 		shm = read_shm(ctx, P_B_FRAME_QP);
 		shm &= ~(0xFFF << 0);
 		shm |= ((init_h264_arg->in_vop_quant_b & 0x3F) << 6);
