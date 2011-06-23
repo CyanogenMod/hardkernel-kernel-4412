@@ -571,6 +571,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 	}
 
 	data = WINCONx_ENWIN;
+	sfb->enabled |= (1 << win->index);
 
 	/* note, since we have to round up the bits-per-pixel, we end up
 	 * relying on the bitfield information for r/g/b/a to work out
@@ -836,14 +837,15 @@ static int s3c_fb_blank(int blank_mode, struct fb_info *info)
 	 * the distinction between just window 0 being inactive and all
 	 * the windows being down.
 	 *
-	 * s3c_fb_enable(sfb, sfb->enabled ? 1 : 0);
-	*/
+	 */
+	s3c_fb_enable(sfb, sfb->enabled ? 1 : 0);
 
 	/* we're stuck with this until we can do something about overriding
 	 * the power control using the blanking event for a single fb.
+	 *
+	 * if (index == sfb->pdata->default_win)
+	 *	s3c_fb_enable(sfb, blank_mode != FB_BLANK_POWERDOWN ? 1 : 0);
 	 */
-	if (index == sfb->pdata->default_win)
-		s3c_fb_enable(sfb, blank_mode != FB_BLANK_POWERDOWN ? 1 : 0);
 
 	return 0;
 }
