@@ -608,6 +608,16 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_lcd1_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
+		.name		= "dsim0",
+		.id		= -1,
+		.enable		= exynos4_clk_ip_lcd0_ctrl,
+		.ctrlbit	= (1 << 3),
+	}, {
+		.name		= "dsim1",
+		.id		= -1,
+		.enable		= exynos4_clk_ip_lcd1_ctrl,
+		.ctrlbit	= (1 << 3),
+	}, {
 		.name		= "sataphy",
 		.id		= -1,
 		.parent		= &clk_aclk_133.clk,
