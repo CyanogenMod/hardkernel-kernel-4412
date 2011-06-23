@@ -1756,6 +1756,11 @@ static void __init smdkv310_machine_init(void)
 #endif
 
 	platform_add_devices(smdkv310_devices, ARRAY_SIZE(smdkv310_devices));
+
+#ifdef CONFIG_FB_S3C
+	exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev, "mout_mpll",
+				134 * MHZ);
+#endif
 }
 
 MACHINE_START(SMDKV310, "SMDKV310")

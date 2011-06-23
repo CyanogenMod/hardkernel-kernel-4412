@@ -107,9 +107,19 @@ extern void s5pc100_fb_gpio_setup_24bpp(void);
 extern void s5pv210_fb_gpio_setup_24bpp(void);
 
 /**
- * exynos4_fimd0_gpio_setup_24bpp() - S5PV310/S5PC210 setup function for 24bpp LCD0
+ * exynos4_fimd0_gpio_setup_24bpp() - Exynos4 setup function for 24bpp LCD0
  *
  * Initialise the GPIO for an 24bpp LCD display on the RGB interface 0.
  */
 extern void exynos4_fimd0_gpio_setup_24bpp(void);
+
+/**
+ * exynos4_fimd0_setup_clock() = Exynos4 setup function for parent clock.
+ * @dev: device pointer
+ * @parent: parent clock used for LCD pixel clock
+ * @clk_rate: clock rate for parent clock
+ */
+int __init exynos4_fimd0_setup_clock(struct device *dev, const char *parent,
+					unsigned long clk_rate);
+
 #endif /* __PLAT_S3C_FB_H */

@@ -1,6 +1,6 @@
 /* linux/arch/arm/plat-s5p/dev-fimd0.c
  *
- * Copyright (c) 2009-2010 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2009-2011 Samsung Electronics Co., Ltd.
  *             http://www.samsung.com
  *
  * Core file for Samsung Display Controller (FIMD) driver

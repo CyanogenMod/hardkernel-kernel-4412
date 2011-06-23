@@ -33,10 +33,10 @@ config EXYNOS4_DEV_AHCI
 	help
 	  Compile in platform device definitions for AHCI
 
-config EXYNOS4_SETUP_FIMD0_24BPP
+config EXYNOS4_SETUP_FIMD0
 	bool
 	help
-	  Common setup code for FIMD0 with a 24bpp RGB display helper.
+	  Common setup code for FIMD0.
 
 config EXYNOS4_DEV_PD
 	bool
@@ -196,7 +196,7 @@ config MACH_SMDKC210
 	select SAMSUNG_DEV_PWM
 	select EXYNOS4_DEV_PD
 	select EXYNOS4_DEV_SYSMMU
-	select EXYNOS4_SETUP_FIMD0_24BPP
+	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
 	select EXYNOS4_SETUP_SDHCI
@@ -232,7 +232,7 @@ config MACH_SMDKV310
 	select SAMSUNG_DEV_PWM
 	select EXYNOS4_DEV_PD
 	select EXYNOS4_DEV_SYSMMU
-	select EXYNOS4_SETUP_FIMD0_24BPP
+	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
 	select EXYNOS4_SETUP_SDHCI

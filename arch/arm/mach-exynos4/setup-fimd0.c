@@ -1,9 +1,9 @@
-/* linux/arch/arm/mach-exynos4/setup-fimd0-24bpp.c
+/* linux/arch/arm/mach-exynos4/setup-fimd0.c
  *
- * Copyright (c) 2009-2010 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2009-2011 Samsung Electronics Co., Ltd.
  *             http://www.samsung.com
  *
- * Base s5pv210 setup information for 24bpp LCD framebuffer
+ * Base Exynos4 FIMD 0 configuration
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/fb.h>
 #include <linux/gpio.h>
+#include <linux/clk.h>
 
 #include <plat/fb.h>
 #include <plat/gpio-cfg.h>
@@ -44,4 +45,31 @@ void exynos4_fimd0_gpio_setup_24bpp(void)
 	reg = __raw_readl(S3C_VA_SYS + 0x0210);
 	reg |= (1 << 1);
 	__raw_writel(reg, S3C_VA_SYS + 0x0210);
+}
+
+int __init exynos4_fimd0_setup_clock(struct device *dev, const char *parent,
+					unsigned long clk_rate)
+{
+	struct clk *clk_parent;
+	struct clk *sclk;
+
+	sclk = clk_get(dev, "sclk_fimd");
+	if (IS_ERR(sclk))
+		return PTR_ERR(sclk);
+
+	clk_parent = clk_get(NULL, parent);
+	if (IS_ERR(clk_parent)) {
+		clk_put(sclk);
+		return PTR_ERR(clk_parent);
+	}
+
+	clk_set_parent(sclk, clk_parent);
+	if (!clk_rate)
+		clk_rate = 134000000UL;
+	clk_set_rate(sclk, clk_rate);
+
+	clk_put(sclk);
+	clk_put(clk_parent);
+
+	return 0;
 }

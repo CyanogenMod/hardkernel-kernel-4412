@@ -1757,6 +1757,11 @@ static void __init smdkc210_machine_init(void)
 #endif
 
 	platform_add_devices(smdkc210_devices, ARRAY_SIZE(smdkc210_devices));
+
+#ifdef CONFIG_FB_S3C
+	exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev, "mout_mpll",
+				134 * MHZ);
+#endif
 }
 
 MACHINE_START(SMDKC210, "SMDKC210")
