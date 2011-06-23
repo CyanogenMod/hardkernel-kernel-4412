@@ -84,6 +84,7 @@ struct s3c_fb;
  * @palette: Address of palette memory, or 0 if none.
  * @has_prtcon: Set if has PRTCON register.
  * @has_shadowcon: Set if has SHADOWCON register.
+ * @has_fixvclk: Set if VIDCON1 register has FIXVCLK bits.
  */
 struct s3c_fb_variant {
 	unsigned int	is_2443:1;
@@ -101,6 +102,7 @@ struct s3c_fb_variant {
 
 	unsigned int	has_prtcon:1;
 	unsigned int	has_shadowcon:1;
+	unsigned int	has_fixvclk:1;
 	unsigned int	clk_type:1;
 };
 
@@ -1325,6 +1327,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	struct clk *mout_mpll = NULL;
 	int win;
 	int ret = 0;
+	u32 reg;
 	u32 rate = 134000000;
 
 	platid = platform_get_device_id(pdev);
@@ -1452,6 +1455,14 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	pd->setup_gpio();
 
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
+
+	/* set video clock running at under-run */
+	if (sfb->variant.has_fixvclk) {
+		reg = readl(sfb->regs + VIDCON1);
+		reg &= ~VIDCON1_VCLK_MASK;
+		reg |= VIDCON1_VCLK_RUN;
+		writel(reg, sfb->regs + VIDCON1);
+	}
 
 	/* zero all windows before we do anything */
 
@@ -1590,12 +1601,21 @@ static int s3c_fb_resume(struct device *dev)
 	struct s3c_fb_platdata *pd = sfb->pdata;
 	struct s3c_fb_win *win;
 	int win_no;
+	u32 reg;
 
 	clk_enable(sfb->bus_clk);
 
 	/* setup gpio and output polarity controls */
 	pd->setup_gpio();
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
+
+	/* set video clock running at under-run */
+	if (sfb->variant.has_fixvclk) {
+		reg = readl(sfb->regs + VIDCON1);
+		reg &= ~VIDCON1_VCLK_MASK;
+		reg |= VIDCON1_VCLK_RUN;
+		writel(reg, sfb->regs + VIDCON1);
+	}
 
 	/* zero all windows before we do anything */
 	for (win_no = 0; win_no < sfb->variant.nr_windows; win_no++)
@@ -1649,12 +1669,21 @@ static int s3c_fb_runtime_resume(struct device *dev)
 	struct s3c_fb_platdata *pd = sfb->pdata;
 	struct s3c_fb_win *win;
 	int win_no;
+	u32 reg;
 
 	clk_enable(sfb->bus_clk);
 
 	/* setup gpio and output polarity controls */
 	pd->setup_gpio();
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
+
+	/* set video clock running at under-run */
+	if (sfb->variant.has_fixvclk) {
+		reg = readl(sfb->regs + VIDCON1);
+		reg &= ~VIDCON1_VCLK_MASK;
+		reg |= VIDCON1_VCLK_RUN;
+		writel(reg, sfb->regs + VIDCON1);
+	}
 
 	/* zero all windows before we do anything */
 	for (win_no = 0; win_no < sfb->variant.nr_windows; win_no++)
@@ -1884,6 +1913,7 @@ static struct s3c_fb_driverdata s3c_fb_data_s5pv210 = {
 		},
 
 		.has_shadowcon	= 1,
+		.has_fixvclk	= 1,
 	},
 	.win[0]	= &s3c_fb_data_s5p_wins[0],
 	.win[1]	= &s3c_fb_data_s5p_wins[1],
@@ -1914,6 +1944,7 @@ static struct s3c_fb_driverdata s3c_fb_data_exynos4 = {
 		},
 
 		.has_shadowcon  = 1,
+		.has_fixvclk	= 1,
 		.clk_type       = FIMD_CLK_TYPE1,
 	},
 	.win[0] = &s3c_fb_data_s5p_wins[0],
