@@ -85,6 +85,7 @@ struct s3c_fb;
  * @has_prtcon: Set if has PRTCON register.
  * @has_shadowcon: Set if has SHADOWCON register.
  * @has_blendcon: Set if has BLENDCON register.
+ * @has_alphacon: Set if has VIDWALPHA register.
  * @has_fixvclk: Set if VIDCON1 register has FIXVCLK bits.
  */
 struct s3c_fb_variant {
@@ -104,6 +105,7 @@ struct s3c_fb_variant {
 	unsigned int	has_prtcon:1;
 	unsigned int	has_shadowcon:1;
 	unsigned int	has_blendcon:1;
+	unsigned int	has_alphacon:1;
 	unsigned int	has_fixvclk:1;
 	unsigned int	clk_type:1;
 };
@@ -1021,6 +1023,133 @@ static int s3c_fb_wait_for_vsync(struct s3c_fb *sfb, u32 crtc)
 	return 0;
 }
 
+struct s3c_fb_user_window {
+	int x;
+	int y;
+};
+
+struct s3c_fb_user_plane_alpha {
+	int		channel;
+	unsigned char	red;
+	unsigned char	green;
+	unsigned char	blue;
+};
+
+struct s3c_fb_user_chroma {
+	int		enabled;
+	unsigned char	red;
+	unsigned char	green;
+	unsigned char	blue;
+};
+
+/* IOCTL commands */
+#define S3CFB_WIN_POSITION		_IOW('F', 203, \
+						struct s3c_fb_user_window)
+#define S3CFB_WIN_SET_PLANE_ALPHA	_IOW('F', 204, \
+						struct s3c_fb_user_plane_alpha)
+#define S3CFB_WIN_SET_CHROMA		_IOW('F', 205, \
+						struct s3c_fb_user_chroma)
+#define S3CFB_SET_VSYNC_INT		_IOW('F', 206, u32)
+
+int s3c_fb_set_window_position(struct fb_info *info,
+				struct s3c_fb_user_window user_window)
+{
+	struct s3c_fb_win *win = info->par;
+	struct s3c_fb *sfb = win->parent;
+	struct fb_var_screeninfo *var = &info->var;
+	int win_no = win->index;
+	void __iomem *regs = sfb->regs;
+	u32 data;
+
+	shadow_protect_win(win, 1);
+
+	/* write 'OSD' registers to control position of framebuffer */
+	data = VIDOSDxA_TOPLEFT_X(user_window.x) |
+		VIDOSDxA_TOPLEFT_Y(user_window.y);
+	writel(data, regs + VIDOSD_A(win_no, sfb->variant));
+
+	data = VIDOSDxB_BOTRIGHT_X(s3c_fb_align_word(var->bits_per_pixel,
+					user_window.x + var->xres - 1)) |
+	       VIDOSDxB_BOTRIGHT_Y(user_window.y + var->yres - 1);
+	writel(data, regs + VIDOSD_B(win_no, sfb->variant));
+
+	shadow_protect_win(win, 0);
+	return 0;
+}
+
+int s3c_fb_set_plane_alpha_blending(struct fb_info *info,
+				struct s3c_fb_user_plane_alpha user_alpha)
+{
+	struct s3c_fb_win *win = info->par;
+	struct s3c_fb *sfb = win->parent;
+	int win_no = win->index;
+	void __iomem *regs = sfb->regs;
+	u32 data;
+
+	u32 alpha_high = 0;
+	u32 alpha_low = 0;
+
+	alpha_high = ((((user_alpha.red & 0xf0) >> 4) << 8) |
+			(((user_alpha.green & 0xf0) >> 4) << 4) |
+			(((user_alpha.blue & 0xf0) >> 4) << 0));
+
+	alpha_low = ((((user_alpha.red & 0xf)) << 16) |
+			(((user_alpha.green & 0xf)) << 8) |
+			(((user_alpha.blue & 0xf)) << 0));
+
+	data = readl(regs + sfb->variant.wincon + (win_no * 4));
+	data &= ~(WINCON1_BLD_PIX | WINCON1_ALPHA_SEL);
+	data |= WINCON1_BLD_PLANE;
+
+	if (user_alpha.channel == 0)
+		alpha_high = alpha_high << 12;
+	else {
+		data |= WINCON1_ALPHA_SEL;
+		alpha_high = alpha_high << 0;
+	}
+
+	writel(data, regs + sfb->variant.wincon + (win_no * 4));
+	writel(alpha_high, regs + VIDOSD_C(win_no, sfb->variant));
+
+	if (sfb->variant.has_alphacon) {
+		if (user_alpha.channel == 0)
+			writel(alpha_low, regs + VIDW0ALPHA0 + (win_no * 8));
+		else
+			writel(alpha_low, regs + VIDW0ALPHA1 + (win_no * 8));
+	}
+
+	return 0;
+}
+
+int s3c_fb_set_chroma_key(struct fb_info *info,
+			struct s3c_fb_user_chroma user_chroma)
+{
+	struct s3c_fb_win *win = info->par;
+	struct s3c_fb *sfb = win->parent;
+	int win_no = win->index;
+	void __iomem *regs = sfb->regs;
+	void __iomem *keycon = regs + sfb->variant.keycon;
+
+	u32 data = 0;
+
+	u32 chroma_value;
+
+	chroma_value = (((user_chroma.red & 0xff) << 16) |
+			((user_chroma.green & 0xff) << 8) |
+			((user_chroma.blue & 0xff) << 0));
+
+	if (user_chroma.enabled)
+		data |= WxKEYCON0_KEYEN_F;
+
+	keycon += (win_no-1) * 8;
+	writel(data, keycon + WKEYCON0);
+
+	data = (chroma_value & 0xffffff);
+	writel(data, keycon + WKEYCON1);
+
+	return 0;
+}
+
 static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
 {
@@ -1028,6 +1157,12 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	struct s3c_fb *sfb = win->parent;
 	int ret;
 	u32 crtc;
+
+	union {
+		struct s3c_fb_user_window user_window;
+		struct s3c_fb_user_plane_alpha user_alpha;
+		struct s3c_fb_user_chroma user_chroma;
+	} p;
 
 	switch (cmd) {
 	case FBIO_WAITFORVSYNC:
@@ -1038,6 +1173,50 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 
 		ret = s3c_fb_wait_for_vsync(sfb, crtc);
 		break;
+
+	case S3CFB_WIN_POSITION:
+		if (copy_from_user(&p.user_window,
+				(struct s3c_fb_user_window __user *)arg,
+				sizeof(p.user_window))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (p.user_window.x < 0)
+			p.user_window.x = 0;
+		if (p.user_window.y < 0)
+			p.user_window.y = 0;
+
+		ret = s3c_fb_set_window_position(info, p.user_window);
+		break;
+
+	case S3CFB_WIN_SET_PLANE_ALPHA:
+		if (copy_from_user(&p.user_alpha,
+				(struct s3c_fb_user_plane_alpha __user *)arg,
+				sizeof(p.user_alpha))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		ret = s3c_fb_set_plane_alpha_blending(info, p.user_alpha);
+		break;
+
+	case S3CFB_WIN_SET_CHROMA:
+		if (copy_from_user(&p.user_chroma,
+				   (struct s3c_fb_user_chroma __user *)arg,
+				   sizeof(p.user_chroma))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		ret = s3c_fb_set_chroma_key(info, p.user_chroma);
+		break;
+
+	case S3CFB_SET_VSYNC_INT:
+		/* unnecessary, but for compatibility */
+		ret = 0;
+		break;
+
 	default:
 		ret = -ENOTTY;
 	}
@@ -1901,6 +2080,7 @@ static struct s3c_fb_driverdata s3c_fb_data_s5pc100 = {
 
 		.has_prtcon	= 1,
 		.has_blendcon	= 1,
+		.has_alphacon	= 1,
 	},
 	.win[0]	= &s3c_fb_data_s5p_wins[0],
 	.win[1]	= &s3c_fb_data_s5p_wins[1],
@@ -1932,6 +2112,7 @@ static struct s3c_fb_driverdata s3c_fb_data_s5pv210 = {
 
 		.has_shadowcon	= 1,
 		.has_blendcon	= 1,
+		.has_alphacon	= 1,
 		.has_fixvclk	= 1,
 	},
 	.win[0]	= &s3c_fb_data_s5p_wins[0],
@@ -1964,6 +2145,7 @@ static struct s3c_fb_driverdata s3c_fb_data_exynos4 = {
 
 		.has_shadowcon  = 1,
 		.has_blendcon	= 1,
+		.has_alphacon	= 1,
 		.has_fixvclk	= 1,
 		.clk_type       = FIMD_CLK_TYPE1,
 	},

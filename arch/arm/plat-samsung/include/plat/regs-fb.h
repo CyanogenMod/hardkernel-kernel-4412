@@ -203,6 +203,7 @@
 #define WINCON0_BPPMODE_24BPP_888		(0xb << 2)
 
 #define WINCON1_BLD_PIX				(1 << 6)
+#define WINCON1_BLD_PLANE			(0 << 6)
 
 #define WINCON1_ALPHA_SEL			(1 << 1)
 #define WINCON1_BPPMODE_MASK			(0xf << 2)
@@ -393,3 +394,6 @@
 #define BLENDCON_NEW_8BIT_ALPHA_VALUE		(1 << 0)
 #define BLENDCON_NEW_4BIT_ALPHA_VALUE		(0 << 0)
 
+/* Window alpha control */
+#define VIDW0ALPHA0				(0x200)
+#define VIDW0ALPHA1				(0x204)
