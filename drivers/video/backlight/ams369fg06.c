@@ -28,6 +28,9 @@
 #include <linux/spi/spi.h>
 #include <linux/lcd.h>
 #include <linux/backlight.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
 
 #include "ams369fg06_gamma.h"
 
@@ -50,6 +53,9 @@ struct ams369fg06 {
 	struct lcd_device		*ld;
 	struct backlight_device		*bd;
 	struct lcd_platform_data	*lcd_pd;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend		early_suspend;
+#endif
 };
 
 const unsigned short SEQ_DISPLAY_ON[] = {
@@ -424,6 +430,33 @@ static const struct backlight_ops ams369fg06_backlight_ops = {
 	.update_status = ams369fg06_set_brightness,
 };
 
+#ifdef	CONFIG_HAS_EARLYSUSPEND
+unsigned int before_power;
+
+static void ams369fg06_early_suspend(struct early_suspend *handler)
+{
+	struct ams369fg06 *lcd = NULL;
+
+	lcd = container_of(handler, struct ams369fg06, early_suspend);
+
+	before_power = lcd->power;
+
+	ams369fg06_power(lcd, FB_BLANK_POWERDOWN);
+}
+
+static void ams369fg06_late_resume(struct early_suspend *handler)
+{
+	struct ams369fg06 *lcd = NULL;
+
+	lcd = container_of(handler, struct ams369fg06, early_suspend);
+
+	if (before_power == FB_BLANK_UNBLANK)
+		lcd->power = FB_BLANK_POWERDOWN;
+
+	ams369fg06_power(lcd, before_power);
+}
+#endif
+
 static int __init ams369fg06_probe(struct spi_device *spi)
 {
 	int ret = 0;
@@ -488,6 +521,12 @@ static int __init ams369fg06_probe(struct spi_device *spi)
 
 	dev_set_drvdata(&spi->dev, lcd);
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	lcd->early_suspend.suspend = ams369fg06_early_suspend;
+	lcd->early_suspend.resume = ams369fg06_late_resume;
+	lcd->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 1;
+	register_early_suspend(&lcd->early_suspend);
+#endif
 	dev_info(&spi->dev, "ams369fg06 panel driver has been probed.\n");
 
 	return 0;
@@ -511,6 +550,7 @@ static int __devexit ams369fg06_remove(struct spi_device *spi)
 }
 
 #if defined(CONFIG_PM)
+#ifndef CONFIG_HAS_EARLYSUSPEND
 unsigned int before_power;
 
 static int ams369fg06_suspend(struct spi_device *spi, pm_message_t mesg)
@@ -550,6 +590,7 @@ static int ams369fg06_resume(struct spi_device *spi)
 
 	return ret;
 }
+#endif
 #else
 #define ams369fg06_suspend	NULL
 #define ams369fg06_resume	NULL
@@ -571,8 +612,10 @@ static struct spi_driver ams369fg06_driver = {
 	.probe		= ams369fg06_probe,
 	.remove		= __devexit_p(ams369fg06_remove),
 	.shutdown	= ams369fg06_shutdown,
+#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend	= ams369fg06_suspend,
 	.resume		= ams369fg06_resume,
+#endif
 };
 
 static int __init ams369fg06_init(void)
