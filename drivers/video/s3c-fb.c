@@ -29,6 +29,10 @@
 #include <plat/regs-fb-v4.h>
 #include <plat/fb.h>
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
+
 /* This driver will export a number of framebuffer interfaces depending
  * on the configuration passed in via the platform data. Each fb instance
  * maps to a hardware window. Currently there is no support for runtime
@@ -223,6 +227,10 @@ struct s3c_fb {
 	int			 irq_no;
 	unsigned long		 irq_flags;
 	struct s3c_fb_vsync	 vsync_info;
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend	early_suspend;
+#endif
 };
 
 /**
@@ -1512,6 +1520,82 @@ static void s3c_fb_clear_win(struct s3c_fb *sfb, int win)
 	writel(reg & ~SHADOWCON_WINx_PROTECT(win), regs + SHADOWCON);
 }
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void s3c_fb_early_suspend(struct early_suspend *handler)
+{
+	struct s3c_fb *sfb;
+	struct device *dev;
+	struct s3c_fb_win *win;
+	int win_no;
+
+	sfb = container_of(handler, struct s3c_fb, early_suspend);
+	dev = sfb->dev;
+
+	for (win_no = S3C_FB_MAX_WIN - 1; win_no >= 0; win_no--) {
+		win = sfb->windows[win_no];
+		if (!win)
+			continue;
+
+		/* use the blank function to push into power-down */
+		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
+	}
+
+	clk_disable(sfb->bus_clk);
+	return;
+}
+static void s3c_fb_late_resume(struct early_suspend *handler)
+{
+	struct s3c_fb *sfb;
+	struct device *dev;
+	struct s3c_fb_platdata *pd;
+	struct s3c_fb_win *win;
+	int win_no;
+	u32 reg;
+
+	sfb = container_of(handler, struct s3c_fb, early_suspend);
+	dev = sfb->dev;
+	pd = sfb->pdata;
+
+	clk_enable(sfb->bus_clk);
+
+	/* setup gpio and output polarity controls */
+	pd->setup_gpio();
+	writel(pd->vidcon1, sfb->regs + VIDCON1);
+
+	/* set video clock running at under-run */
+	if (sfb->variant.has_fixvclk) {
+		reg = readl(sfb->regs + VIDCON1);
+		reg &= ~VIDCON1_VCLK_MASK;
+		reg |= VIDCON1_VCLK_RUN;
+		writel(reg, sfb->regs + VIDCON1);
+	}
+
+	/* zero all windows before we do anything */
+	for (win_no = 0; win_no < sfb->variant.nr_windows; win_no++)
+		s3c_fb_clear_win(sfb, win_no);
+
+	for (win_no = 0; win_no < sfb->variant.nr_windows - 1; win_no++) {
+		void __iomem *regs = sfb->regs + sfb->variant.keycon;
+
+		regs += (win_no * 8);
+		writel(0xffffff, regs + WKEYCON0);
+		writel(0xffffff, regs + WKEYCON1);
+	}
+
+	/* restore framebuffers */
+	for (win_no = 0; win_no < S3C_FB_MAX_WIN; win_no++) {
+		win = sfb->windows[win_no];
+		if (!win)
+			continue;
+
+		dev_dbg(dev, "resuming window %d\n", win_no);
+		s3c_fb_set_par(win->fbinfo);
+	}
+
+	return;
+}
+#endif
+
 static int __devinit s3c_fb_probe(struct platform_device *pdev)
 {
 	const struct platform_device_id *platid;
@@ -1696,6 +1780,12 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, sfb);
 	pm_runtime_put_sync(sfb->dev);
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	sfb->early_suspend.suspend = s3c_fb_early_suspend;
+	sfb->early_suspend.resume = s3c_fb_late_resume;
+	sfb->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
+	register_early_suspend(&sfb->early_suspend);
+#endif
 	return 0;
 
 err_irq:
@@ -1740,6 +1830,10 @@ static int __devexit s3c_fb_remove(struct platform_device *pdev)
 		if (sfb->windows[win])
 			s3c_fb_release_win(sfb, sfb->windows[win]);
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&sfb->early_suspend);
+#endif
+
 	free_irq(sfb->irq_no, sfb);
 
 	iounmap(sfb->regs);
@@ -1769,6 +1863,7 @@ static int __devexit s3c_fb_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+#ifndef CONFIG_HAS_EARLYSUSPEND
 static int s3c_fb_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -1837,6 +1932,7 @@ static int s3c_fb_resume(struct device *dev)
 
 	return 0;
 }
+#endif
 
 static int s3c_fb_runtime_suspend(struct device *dev)
 {
@@ -2214,8 +2310,10 @@ static struct platform_device_id s3c_fb_driver_ids[] = {
 MODULE_DEVICE_TABLE(platform, s3c_fb_driver_ids);
 
 static const struct dev_pm_ops s3cfb_pm_ops = {
+#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend	= s3c_fb_suspend,
 	.resume		= s3c_fb_resume,
+#endif
 	.runtime_suspend	= s3c_fb_runtime_suspend,
 	.runtime_resume		= s3c_fb_runtime_resume,
 };
