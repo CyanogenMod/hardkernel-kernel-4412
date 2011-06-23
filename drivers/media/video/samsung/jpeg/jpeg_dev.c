@@ -118,7 +118,7 @@ static int jpeg_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int jpeg_ioctl(struct file *file,
+static long jpeg_ioctl(struct file *file,
 			unsigned int cmd, unsigned long arg)
 {
 	int ret;
@@ -445,6 +445,30 @@ static int jpeg_resume(struct platform_device *pdev)
 	return 0;
 }
 
+int jpeg_suspend_pd(struct device *dev)
+{
+	struct platform_device *pdev;
+	int ret;
+	pm_message_t state;
+
+	state.event = 0;
+	pdev = to_platform_device(dev);
+	ret = jpeg_suspend(pdev, state);
+
+	return 0;
+}
+
+int jpeg_resume_pd(struct device *dev)
+{
+	struct platform_device *pdev;
+	int ret;
+
+	pdev = to_platform_device(dev);
+	ret = jpeg_resume(pdev);
+
+	return 0;
+}
+
 #ifdef CONFIG_PM_RUNTIME
 static int jpeg_runtime_suspend(struct device *dev)
 {
@@ -458,8 +482,8 @@ static int jpeg_runtime_resume(struct device *dev)
 #endif
 
 static const struct dev_pm_ops jpeg_pm_ops = {
-	.suspend	= jpeg_suspend,
-	.resume		= jpeg_resume,
+	.suspend	= jpeg_suspend_pd,
+	.resume		= jpeg_resume_pd,
 #ifdef CONFIG_PM_RUNTIME
 	.runtime_suspend = jpeg_runtime_suspend,
 	.runtime_resume = jpeg_runtime_resume,
