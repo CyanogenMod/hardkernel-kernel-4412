@@ -26,6 +26,7 @@
 #include <plat/sdhci.h>
 #include <plat/fimc-core.h>
 #include <plat/adc-core.h>
+#include <plat/pm.h>
 
 #include <mach/regs-irq.h>
 
@@ -195,6 +196,7 @@ void __init exynos4_init_irq(void)
 
 	gic_init(0, IRQ_SPI(0), S5P_VA_GIC_DIST, S5P_VA_GIC_CPU);
 	gic_arch_extn.irq_eoi = exynos4_gic_irq_eoi;
+	gic_arch_extn.irq_set_wake = s3c_irq_wake;
 
 	for (irq = 0; irq < MAX_COMBINER_NR; irq++) {
 		combiner_init(irq, (void __iomem *)S5P_VA_COMBINER(irq),
