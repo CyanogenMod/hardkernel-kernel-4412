@@ -84,6 +84,7 @@ struct s3c_fb;
  * @palette: Address of palette memory, or 0 if none.
  * @has_prtcon: Set if has PRTCON register.
  * @has_shadowcon: Set if has SHADOWCON register.
+ * @has_blendcon: Set if has BLENDCON register.
  * @has_fixvclk: Set if VIDCON1 register has FIXVCLK bits.
  */
 struct s3c_fb_variant {
@@ -102,6 +103,7 @@ struct s3c_fb_variant {
 
 	unsigned int	has_prtcon:1;
 	unsigned int	has_shadowcon:1;
+	unsigned int	has_blendcon:1;
 	unsigned int	has_fixvclk:1;
 	unsigned int	clk_type:1;
 };
@@ -655,6 +657,17 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 	writel(data, regs + sfb->variant.wincon + (win_no * 4));
 	writel(0x0, regs + sfb->variant.winmap + (win_no * 4));
+
+	/* Set alpha value width */
+	if (sfb->variant.has_blendcon) {
+		data = readl(sfb->regs + BLENDCON);
+		data &= ~BLENDCON_NEW_MASK;
+		if (var->transp.length > 4)
+			data |= BLENDCON_NEW_8BIT_ALPHA_VALUE;
+		else
+			data |= BLENDCON_NEW_4BIT_ALPHA_VALUE;
+		writel(data, sfb->regs + BLENDCON);
+	}
 
 	shadow_protect_win(win, 0);
 
@@ -1887,6 +1900,7 @@ static struct s3c_fb_driverdata s3c_fb_data_s5pc100 = {
 		},
 
 		.has_prtcon	= 1,
+		.has_blendcon	= 1,
 	},
 	.win[0]	= &s3c_fb_data_s5p_wins[0],
 	.win[1]	= &s3c_fb_data_s5p_wins[1],
@@ -1917,6 +1931,7 @@ static struct s3c_fb_driverdata s3c_fb_data_s5pv210 = {
 		},
 
 		.has_shadowcon	= 1,
+		.has_blendcon	= 1,
 		.has_fixvclk	= 1,
 	},
 	.win[0]	= &s3c_fb_data_s5p_wins[0],
@@ -1948,6 +1963,7 @@ static struct s3c_fb_driverdata s3c_fb_data_exynos4 = {
 		},
 
 		.has_shadowcon  = 1,
+		.has_blendcon	= 1,
 		.has_fixvclk	= 1,
 		.clk_type       = FIMD_CLK_TYPE1,
 	},
