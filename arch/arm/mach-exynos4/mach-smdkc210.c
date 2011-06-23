@@ -13,6 +13,7 @@
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <linux/lcd.h>
+#include <linux/pwm_backlight.h>
 #include <linux/mmc/host.h>
 #include <linux/platform_device.h>
 #include <linux/smsc911x.h>
@@ -531,6 +532,49 @@ static struct fimg2d_platdata fimg2d_data __initdata = {
 	.gate_clkname = "fimg2d",
 	.clkrate = 267 * 1000000,	/* 266 Mhz */
 };
+#endif
+
+#ifdef CONFIG_SAMSUNG_DEV_PWM
+#if defined(CONFIG_BACKLIGHT_PWM)
+static int smdkc210_backlight_init(struct device *dev)
+{
+	int ret;
+
+	ret = gpio_request(EXYNOS4_GPD0(1), "Backlight");
+	if (ret) {
+		printk(KERN_ERR "failed to request GPD for PWM-OUT 1\n");
+		return ret;
+	}
+
+	/* Configure GPIO pin with S5PC210_GPD_0_1_TOUT_1 */
+	s3c_gpio_cfgpin(EXYNOS4_GPD0(1), S3C_GPIO_SFN(2));
+
+	return 0;
+}
+
+static void smdkc210_backlight_exit(struct device *dev)
+{
+	s3c_gpio_cfgpin(EXYNOS4_GPD0(1), S3C_GPIO_OUTPUT);
+	gpio_free(EXYNOS4_GPD0(1));
+}
+
+static struct platform_pwm_backlight_data smdkc210_backlight_data = {
+	.pwm_id		= 1,
+	.max_brightness	= 255,
+	.dft_brightness	= 255,
+	.pwm_period_ns	= 1000,
+	.init		= smdkc210_backlight_init,
+	.exit		= smdkc210_backlight_exit,
+};
+
+static struct platform_device smdkc210_backlight_device = {
+	.name		= "pwm-backlight",
+	.dev		= {
+		.parent		= &s3c_device_timer[1].dev,
+		.platform_data	= &smdkc210_backlight_data,
+	},
+};
+#endif
 #endif
 
 #ifdef CONFIG_FB_S3C
@@ -1333,6 +1377,12 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&s3c_device_fb,
 #ifdef CONFIG_FB_S5P_AMS369FG06
 	&s3c_device_spi_gpio,
+#endif
+#endif
+#ifdef CONFIG_SAMSUNG_DEV_PWM
+	&s3c_device_timer[1],
+#ifdef CONFIG_BACKLIGHT_PWM
+	&smdkc210_backlight_device,
 #endif
 #endif
 #ifdef CONFIG_VIDEO_TVOUT
