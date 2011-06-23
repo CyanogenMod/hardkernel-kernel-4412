@@ -1531,6 +1531,14 @@ static void s3c_fb_early_suspend(struct early_suspend *handler)
 	sfb = container_of(handler, struct s3c_fb, early_suspend);
 	dev = sfb->dev;
 
+	if (pm_runtime_suspended(dev))
+		return;
+
+	if (dev->bus && dev->bus->pm && dev->bus->pm->runtime_suspend) {
+		dev->bus->pm->runtime_suspend(dev);
+		return;
+	}
+
 	for (win_no = S3C_FB_MAX_WIN - 1; win_no >= 0; win_no--) {
 		win = sfb->windows[win_no];
 		if (!win)
@@ -1555,6 +1563,14 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 	sfb = container_of(handler, struct s3c_fb, early_suspend);
 	dev = sfb->dev;
 	pd = sfb->pdata;
+
+	if (pm_runtime_suspended(dev))
+		return;
+
+	if (dev->bus && dev->bus->pm && dev->bus->pm->runtime_resume) {
+		dev->bus->pm->runtime_resume(dev);
+		return;
+	}
 
 	clk_enable(sfb->bus_clk);
 
@@ -1871,6 +1887,14 @@ static int s3c_fb_suspend(struct device *dev)
 	struct s3c_fb_win *win;
 	int win_no;
 
+	if (pm_runtime_suspended(dev))
+		return 0;
+
+	if (dev->bus && dev->bus->pm && dev->bus->pm->runtime_suspend) {
+		dev->bus->pm->runtime_suspend(dev);
+		return 0;
+	}
+
 	for (win_no = S3C_FB_MAX_WIN - 1; win_no >= 0; win_no--) {
 		win = sfb->windows[win_no];
 		if (!win)
@@ -1893,6 +1917,14 @@ static int s3c_fb_resume(struct device *dev)
 	struct s3c_fb_win *win;
 	int win_no;
 	u32 reg;
+
+	if (pm_runtime_suspended(dev))
+		return 0;
+
+	if (dev->bus && dev->bus->pm && dev->bus->pm->runtime_resume) {
+		dev->bus->pm->runtime_resume(dev);
+		return 0;
+	}
 
 	clk_enable(sfb->bus_clk);
 
