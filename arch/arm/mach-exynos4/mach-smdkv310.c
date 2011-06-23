@@ -659,6 +659,8 @@ static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	},
 	.virtual_x = 480,
 	.virtual_y = 1600,
+	.width = 48,
+	.height = 80,
 	.max_bpp = 32,
 	.default_bpp = 24,
 };
@@ -676,6 +678,8 @@ static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 	},
 	.virtual_x = 480,
 	.virtual_y = 1600,
+	.width = 48,
+	.height = 80,
 	.max_bpp = 32,
 	.default_bpp = 24,
 };
@@ -722,6 +726,8 @@ static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	},
 	.virtual_x = 1366,
 	.virtual_y = 768 * 2,
+	.width = 223,
+	.height = 125,
 	.max_bpp        = 32,
 	.default_bpp    = 24,
 };
@@ -740,6 +746,8 @@ static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 	},
 	.virtual_x = 1366,
 	.virtual_y = 768 * 2,
+	.width = 223,
+	.height = 125,
 	.max_bpp        = 32,
 	.default_bpp    = 24,
 };
@@ -800,6 +808,8 @@ static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	},
 	.virtual_x = 800,
 	.virtual_y = 960,
+	.width = 104,
+	.height = 62,
 	.max_bpp        = 32,
 	.default_bpp    = 24,
 };
@@ -817,6 +827,8 @@ static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 	},
 	.virtual_x = 800,
 	.virtual_y = 960,
+	.width = 104,
+	.height = 62,
 	.max_bpp        = 32,
 	.default_bpp    = 24,
 };

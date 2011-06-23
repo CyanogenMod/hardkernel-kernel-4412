@@ -27,6 +27,8 @@
  * @win_mode: The display parameters to initialise (not for window 0)
  * @virtual_x: The virtual X size.
  * @virtual_y: The virtual Y size.
+ * @width: The width of display in mm
+ * @height: The height of display in mm
  */
 struct s3c_fb_pd_win {
 	struct fb_videomode	win_mode;
@@ -35,6 +37,8 @@ struct s3c_fb_pd_win {
 	unsigned short		max_bpp;
 	unsigned short		virtual_x;
 	unsigned short		virtual_y;
+	unsigned short		width;
+	unsigned short		height;
 };
 
 /**
