@@ -962,7 +962,7 @@ static struct clksrc_clk clk_sclk_audss = {
 	},
 	.sources        = &clkset_sclk_audss,
 	.reg_src        = { .reg = S5P_CLKSRC_AUDSS, .shift = 2, .size = 2 },
-	.reg_div        = { .reg = S5P_CLKDIV_AUDSS, .shift = 4, .size = 8 },
+	.reg_div        = { .reg = S5P_CLKDIV_AUDSS, .shift = 4, .size = 4 },
 };
 
 static struct clk *clkset_sclk_audio1_list[] = {
