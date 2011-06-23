@@ -1948,7 +1948,6 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	for (ptr = 0; ptr < ARRAY_SIZE(clksrcs); ptr++)
 		s3c_set_clksrc(&clksrcs[ptr], true);
 
-	clk_fout_epll.enable = exynos4_clk_epll_ctrl;
 	clk_fout_epll.ops = &exynos4_epll_ops;
 
 	clk_set_parent(&clk_sclk_audss.clk, &clk_mout_audss.clk);
