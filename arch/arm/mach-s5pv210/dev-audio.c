@@ -53,7 +53,7 @@ static struct s3c_audio_pdata i2sv5_pdata = {
 #ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
 				| QUIRK_USE_IDMA
 #endif
-	`			| QUIRK_NEED_RSTCLR,
+				| QUIRK_NEED_RSTCLR,
 			.src_clk = rclksrc,
 		},
 	},
