@@ -449,6 +449,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 {
 	struct fb_var_screeninfo *var = &info->var;
 	struct s3c_fb_win *win = info->par;
+	struct s3c_fb_pd_win *windata = win->windata;
 	struct s3c_fb *sfb = win->parent;
 	void __iomem *regs = sfb->regs;
 	void __iomem *buf = regs;
@@ -525,8 +526,10 @@ static int s3c_fb_set_par(struct fb_info *info)
 		/* VIDTCON1 */
 		writel(data, regs + sfb->variant.vidtcon + 4);
 
-		data = VIDTCON2_LINEVAL(var->yres - 1) |
-		       VIDTCON2_HOZVAL(var->xres - 1);
+		data = VIDTCON2_LINEVAL(windata->win_mode.yres - 1) |
+		       VIDTCON2_HOZVAL(windata->win_mode.xres - 1);
+
+		/* VIDTCON2 */
 		writel(data, regs + sfb->variant.vidtcon + 8);
 	}
 
