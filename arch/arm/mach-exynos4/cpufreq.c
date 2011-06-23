@@ -344,7 +344,7 @@ static void exynos4_set_apll(unsigned int new_index,
 {
 	unsigned int tmp;
 	unsigned int arm_volt;
-	unsigned int old_volt;
+	unsigned int old_volt = 0;
 
 	if ((new_index == L3 && old_index == L4) ||
 			(new_index == L4 && old_index == L3)) {
