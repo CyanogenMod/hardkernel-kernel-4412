@@ -94,6 +94,12 @@
 #include <plat/s5p-tmu.h>
 #endif
 
+#if defined(CONFIG_FB_S5P_MIPI_DSIM)
+#include <mach/mipi_ddi.h>
+#include <mach/dsim.h>
+#include <../../../drivers/video/samsung/s3cfb.h>
+#endif
+
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDKV310_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -1002,6 +1008,114 @@ static struct platform_device s3c_device_spi_gpio = {
 		.platform_data	= &ams369fg06_spi_gpio_data,
 	},
 };
+#elif defined(CONFIG_FB_S5P_DUMMY_MIPI_LCD)
+#define		LCD_BUS_NUM	3
+#define		DISPLAY_CS	EXYNOS4_GPB(5)
+#define		DISPLAY_CLK	EXYNOS4_GPB(4)
+#define		DISPLAY_SI	EXYNOS4_GPB(7)
+
+static struct s3cfb_lcd dummy_mipi_lcd = {
+	.width = 480,
+	.height = 800,
+	.bpp = 24,
+
+	.freq = 60,
+
+	.timing = {
+		.h_fp = 0x16,
+		.h_bp = 0x16,
+		.h_sw = 0x2,
+		.v_fp = 0x28,
+		.v_fpe = 2,
+		.v_bp = 0x1,
+		.v_bpe = 1,
+		.v_sw = 3,
+		.cmd_allow_len = 4,
+	},
+
+	.polarity = {
+		.rise_vclk = 0,
+		.inv_hsync = 0,
+		.inv_vsync = 0,
+		.inv_vden = 0,
+	},
+};
+
+static struct s3c_platform_fb fb_platform_data __initdata = {
+	.hw_ver		= 0x70,
+	.clk_name	= "fimd",
+	.nr_wins	= 5,
+#if defined(CONFIG_FB_S5P_DEFAULT_WINDOW)
+	.default_win	= CONFIG_FB_S5P_DEFAULT_WINDOW,
+#else
+	.default_win	= 0,
+#endif
+	.swap		= FB_SWAP_HWORD | FB_SWAP_WORD,
+};
+
+static void lcd_cfg_gpio(void)
+{
+	return;
+}
+
+static int reset_lcd(void)
+{
+	int err = 0;
+	/* fire nRESET on power off */
+	err = gpio_request(EXYNOS4_GPX3(1), "GPX3");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX0 for "
+				"lcd reset control\n");
+		return err;
+	}
+
+	gpio_direction_output(EXYNOS4_GPX3(1), 1);
+	mdelay(100);
+
+	gpio_set_value(EXYNOS4_GPX3(1), 0);
+	mdelay(100);
+	gpio_set_value(EXYNOS4_GPX3(1), 1);
+	mdelay(100);
+	gpio_free(EXYNOS4_GPX3(1));
+
+	return 0;
+}
+
+static int lcd_power_on(void *pdev, int enable)
+{
+	return 1;
+}
+
+static void __init mipi_fb_init(void)
+{
+	struct s5p_platform_dsim *dsim_pd = NULL;
+	struct mipi_ddi_platform_data *mipi_ddi_pd = NULL;
+	struct dsim_lcd_config *dsim_lcd_info = NULL;
+
+	/* gpio pad configuration for rgb and spi interface. */
+	lcd_cfg_gpio();
+
+	/* register lcd panel data. */
+	dsim_pd = (struct s5p_platform_dsim *)
+		s5p_device_dsim.dev.platform_data;
+
+	strcpy(dsim_pd->lcd_panel_name, "dummy_mipi_lcd");
+
+	dsim_lcd_info = dsim_pd->dsim_lcd_info;
+	dsim_lcd_info->lcd_panel_info = (void *)&dummy_mipi_lcd;
+
+	mipi_ddi_pd = (struct mipi_ddi_platform_data *)
+		dsim_lcd_info->mipi_ddi_pd;
+	mipi_ddi_pd->lcd_reset = reset_lcd;
+	mipi_ddi_pd->lcd_power_on = lcd_power_on;
+
+	platform_device_register(&s5p_device_dsim);
+
+	s3cfb_set_platdata(&fb_platform_data);
+
+	printk(KERN_INFO "platform data of %s lcd panel has been registered.\n",
+			dsim_pd->lcd_panel_name);
+}
 #endif
 #endif
 
@@ -1971,6 +2085,9 @@ static void __init smdkv310_machine_init(void)
 	struct device *spi0_dev = &exynos4_device_spi0.dev;
 	struct device *spi2_dev = &exynos4_device_spi2.dev;
 #endif
+#if defined(CONFIG_FB_S5P_MIPI_DSIM)
+	mipi_fb_init();
+#endif
 
 #if defined(CONFIG_EXYNOS4_DEV_PD) && !defined(CONFIG_PM_RUNTIME)
 	/*
@@ -2024,6 +2141,8 @@ static void __init smdkv310_machine_init(void)
 #ifdef CONFIG_FB_S5P_AMS369FG06
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 	s3cfb_set_platdata(&ams369fg06_data);
+#elif defined(CONFIG_FB_S5P_DUMMY_MIPI_LCD)
+	exynos4_fimd0_gpio_setup_24bpp();
 #else
 	s3cfb_set_platdata(NULL);
 #endif
@@ -2035,6 +2154,9 @@ static void __init smdkv310_machine_init(void)
 #ifdef CONFIG_EXYNOS4_DEV_PD
 #ifdef CONFIG_VIDEO_JPEG
 	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+	s5p_device_dsim.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
 #if defined(CONFIG_VIDEO_TVOUT)
