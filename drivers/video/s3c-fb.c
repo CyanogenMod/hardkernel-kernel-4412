@@ -24,6 +24,7 @@
 #include <linux/uaccess.h>
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
+#include <linux/delay.h>
 
 #include <mach/map.h>
 #include <plat/regs-fb-v4.h>
@@ -1573,6 +1574,9 @@ static void s3c_fb_early_suspend(struct early_suspend *handler)
 		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
 	}
 
+	/* wait for next frame */
+	mdelay(20);
+
 	clk_disable(sfb->bus_clk);
 	return;
 }
@@ -1929,6 +1933,9 @@ static int s3c_fb_suspend(struct device *dev)
 		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
 	}
 
+	/* wait for next frame */
+	mdelay(20);
+
 	clk_disable(sfb->bus_clk);
 
 	return 0;
@@ -2006,6 +2013,9 @@ static int s3c_fb_runtime_suspend(struct device *dev)
 		/* use the blank function to push into power-down */
 		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
 	}
+
+	/* wait for next frame */
+	mdelay(20);
 
 	clk_disable(sfb->bus_clk);
 	return 0;
