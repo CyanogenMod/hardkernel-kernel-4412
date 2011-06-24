@@ -61,11 +61,17 @@
 #include <plat/tvout.h>
 #include <plat/fimg2d.h>
 #include <plat/ehci.h>
+#ifdef CONFIG_S3C64XX_DEV_SPI
+#include <plat/s3c64xx-spi.h>
+#endif
 
 #include <mach/map.h>
 #include <mach/media.h>
 #include <mach/regs-fb.h>
 #include <mach/sysmmu.h>
+#ifdef CONFIG_S3C64XX_DEV_SPI
+#include <mach/spi-clocks.h>
+#endif
 
 #include <media/s5k4ba_platform.h>
 #include <media/s5k4ea_platform.h>
@@ -852,6 +858,48 @@ static struct s3c_fb_platdata smdkc210_lcd0_pdata __initdata = {
 };
 #endif
 
+#ifdef CONFIG_S3C64XX_DEV_SPI
+static struct s3c64xx_spi_csinfo spi0_csi[] = {
+	[0] = {
+		.line       = EXYNOS4_GPB(1),
+		.set_level  = gpio_set_value,
+		.fb_delay   = 0x0,
+	},
+};
+
+static struct spi_board_info spi0_board_info[] __initdata = {
+	{
+		.modalias   = "spidev",
+		.platform_data  = NULL,
+		.max_speed_hz   = 10*1000*1000,
+		.bus_num    = 0,
+		.chip_select    = 0,
+		.mode       = SPI_MODE_0,
+		.controller_data = &spi0_csi[0],
+	}
+};
+
+static struct s3c64xx_spi_csinfo spi2_csi[] = {
+	[0] = {
+		.line       = EXYNOS4_GPC1(2),
+		.set_level  = gpio_set_value,
+		.fb_delay   = 0x1,
+	},
+};
+
+static struct spi_board_info spi2_board_info[] __initdata = {
+	{
+		.modalias   = "spidev",
+		.platform_data  = NULL,
+		.max_speed_hz   = 10*1000*1000,
+		.bus_num    = 2,
+		.chip_select    = 0,
+		.mode       = SPI_MODE_0,
+		.controller_data = &spi2_csi[0],
+	}
+};
+#endif
+
 #ifdef CONFIG_FB_S5P
 #ifdef CONFIG_FB_S5P_AMS369FG06
 static struct s3c_platform_fb ams369fg06_data __initdata = {
@@ -1369,6 +1417,10 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
+#ifdef CONFIG_S3C64XX_DEV_SPI
+	&exynos4_device_spi0,
+	&exynos4_device_spi2,
+#endif
 /* mainline fimd */
 #ifdef CONFIG_FB_S3C
 	&s5p_device_fimd0,
@@ -1623,6 +1675,13 @@ static void __init smdkc210_map_io(void)
 
 static void __init smdkc210_machine_init(void)
 {
+#ifdef CONFIG_S3C64XX_DEV_SPI
+	struct clk *sclk = NULL;
+	struct clk *prnt = NULL;
+	struct device *spi0_dev = &exynos4_device_spi0.dev;
+	struct device *spi2_dev = &exynos4_device_spi2.dev;
+#endif
+
 #if defined(CONFIG_EXYNOS4_DEV_PD) && !defined(CONFIG_PM_RUNTIME)
 	/*
 	 * These power domains should be always on
@@ -1758,6 +1817,44 @@ static void __init smdkc210_machine_init(void)
 #ifdef CONFIG_FB_S3C
 	exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev, "mout_mpll",
 				134 * MHZ);
+#endif
+
+#ifdef CONFIG_S3C64XX_DEV_SPI
+	sclk = clk_get(spi0_dev, "sclk_spi");
+	if (IS_ERR(sclk))
+		dev_err(spi0_dev, "failed to get sclk for SPI-0\n");
+	prnt = clk_get(spi0_dev, "mout_mpll");
+	if (IS_ERR(prnt))
+		dev_err(spi0_dev, "failed to get prnt\n");
+	clk_set_parent(sclk, prnt);
+	clk_put(prnt);
+
+	if (!gpio_request(EXYNOS4_GPB(1), "SPI_CS0")) {
+		gpio_direction_output(EXYNOS4_GPB(1), 1);
+		s3c_gpio_cfgpin(EXYNOS4_GPB(1), S3C_GPIO_SFN(1));
+		s3c_gpio_setpull(EXYNOS4_GPB(1), S3C_GPIO_PULL_UP);
+		exynos4_spi_set_info(0, EXYNOS4_SPI_SRCCLK_SCLK,
+				ARRAY_SIZE(spi0_csi));
+	}
+	spi_register_board_info(spi0_board_info, ARRAY_SIZE(spi0_board_info));
+
+	sclk = clk_get(spi2_dev, "sclk_spi");
+	if (IS_ERR(sclk))
+		dev_err(spi2_dev, "failed to get sclk for SPI-2\n");
+	prnt = clk_get(spi2_dev, "mout_mpll");
+	if (IS_ERR(prnt))
+		dev_err(spi2_dev, "failed to get prnt\n");
+	clk_set_parent(sclk, prnt);
+	clk_put(prnt);
+
+	if (!gpio_request(EXYNOS4_GPC1(2), "SPI_CS2")) {
+		gpio_direction_output(EXYNOS4_GPC1(2), 1);
+		s3c_gpio_cfgpin(EXYNOS4_GPC1(2), S3C_GPIO_SFN(1));
+		s3c_gpio_setpull(EXYNOS4_GPC1(2), S3C_GPIO_PULL_UP);
+		exynos4_spi_set_info(2, EXYNOS4_SPI_SRCCLK_SCLK,
+				ARRAY_SIZE(spi2_csi));
+	}
+	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
 }
 
