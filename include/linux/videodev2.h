@@ -580,7 +580,8 @@ struct v4l2_plane {
 		unsigned long	userptr;
 	} m;
 	__u32			data_offset;
-	__u32			reserved[11];
+	void			*cookie;
+	__u32			reserved[10];
 };
 
 /**
@@ -1148,16 +1149,19 @@ enum v4l2_colorfx {
  * This is custom CID
  */
 /* for rgb alpha function */
-#define V4L2_CID_RGB_ALPHA                      (V4L2_CID_BASE+37)
+#define V4L2_CID_RGB_ALPHA			(V4L2_CID_BASE+39)
 
-/* last CID + 1 */
-#define V4L2_CID_LASTP1                         (V4L2_CID_BASE+39)
 /* cacheable configuration */
-#define V4L2_CID_CACHEABLE			(V4L2_CID_BASE+39)
+#define V4L2_CID_CACHEABLE			(V4L2_CID_BASE+40)
 
 /* jpeg captured size */
-#define V4L2_CID_CAM_JPEG_MEMSIZE		(V4L2_CID_BASE+40)
-#define V4L2_CID_CAM_JPEG_ENCODEDSIZE		(V4L2_CID_BASE+41)
+#define V4L2_CID_CAM_JPEG_MEMSIZE		(V4L2_CID_BASE+41)
+#define V4L2_CID_CAM_JPEG_ENCODEDSIZE		(V4L2_CID_BASE+42)
+
+#define V4L2_CID_QUERYBUF			(V4L2_CID_BASE+43)
+
+/* last CID + 1 */
+#define V4L2_CID_LASTP1				(V4L2_CID_BASE+44)
 
 /*  MPEG-class control IDs defined by V4L2 */
 #define V4L2_CID_MPEG_BASE 			(V4L2_CTRL_CLASS_MPEG | 0x900)

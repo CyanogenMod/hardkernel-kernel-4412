@@ -48,14 +48,19 @@ struct s5p_fimc_isp_info {
 	u16 flags;
 };
 
+#define FIMC_MAX_CAMIF_CLIENTS	2
+
 /**
  * struct s5p_platform_fimc - camera host interface platform data
  *
  * @isp_info: properties of camera sensor required for host interface setup
- * @num_clients: the number of attached image sensors
  */
 struct s5p_platform_fimc {
-	struct s5p_fimc_isp_info *isp_info;
-	int num_clients;
+	struct s5p_fimc_isp_info *isp_info[FIMC_MAX_CAMIF_CLIENTS];
 };
+
+extern struct s5p_platform_fimc s3c_fimc0_default_data;
+extern struct s5p_platform_fimc s3c_fimc1_default_data;
+extern struct s5p_platform_fimc s3c_fimc2_default_data;
+extern struct s5p_platform_fimc s3c_fimc3_default_data;
 #endif /* S5P_FIMC_H_ */
