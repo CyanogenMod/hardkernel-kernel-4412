@@ -1486,7 +1486,7 @@ static void __init smdkv310_smsc911x_init(void)
 #if defined(CONFIG_S5P_MEM_CMA)
 static void __init exynos4_reserve_mem(void)
 {
-	static struct cma_region regions[] __initdata = {
+	static struct cma_region regions[] = {
 #ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM
 		{
 			.name = "pmem",
