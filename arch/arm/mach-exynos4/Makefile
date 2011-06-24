@@ -25,6 +25,8 @@ obj-$(CONFIG_EXYNOS4_MCT)	+= mct.o
 
 obj-$(CONFIG_HOTPLUG_CPU)	+= hotplug.o
 
+obj-$(CONFIG_EXYNOS4_PM_HOTPLUG)       += dvfs-hotplug.o
+
 # machine support
 
 obj-$(CONFIG_MACH_SMDKC210)		+= mach-smdkc210.o

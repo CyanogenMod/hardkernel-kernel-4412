@@ -166,6 +166,15 @@ config EXYNOS4_SETUP_THERMAL
 	help
 	  Common setup code for TMU
 
+menu "Support dynamic cpu hotplug (Experimental)"
+	depends on CPU_EXYNOS4210 && HOTPLUG_CPU && SMP && CPU_FREQ
+	config EXYNOS4_PM_HOTPLUG
+	bool "Integrated DVFS CPU hotplug"
+	default n
+	help
+	  Support integrated DVFS CPU hotplug
+endmenu
+
 # machine support
 
 menu "EXYNOS4 Machines"
