@@ -685,7 +685,7 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 21),
 	}, {
-		.name		= "iis",
+		.name		= "i2s_special",
 		.id		= -1,
 		.enable		= exynos4_clk_audss_ctrl,
 		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL,
@@ -955,7 +955,7 @@ static struct clksrc_sources clkset_sclk_audss = {
 
 static struct clksrc_clk clk_sclk_audss = {
 	.clk            = {
-		.name           = "audio-bus",
+		.name           = "i2s_bus",
 		.id             = -1,
 		.enable         = exynos4_clk_audss_ctrl,
 		.ctrlbit        = S5P_AUDSS_CLKGATE_I2SBUS,
