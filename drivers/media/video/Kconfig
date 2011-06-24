@@ -66,6 +66,21 @@ config VIDEOBUF2_DMA_SG
 	select VIDEOBUF2_CORE
 	select VIDEOBUF2_MEMOPS
 	tristate
+
+config VIDEOBUF2_CMA_PHYS
+	depends on CMA
+	select VIDEOBUF2_CORE
+	select VIDEOBUF2_MEMOPS
+	tristate
+
+config S5P_FIMC_VB2_CMA_PHYS
+	bool "CMA_PHYS"
+	depends on CMA
+	select VIDEOBUF2_CMA_PHYS
+	select V4L2_MEM2MEM_DEV
+	help
+	  Use videobuf2 CMA-phys allocator for FIMC
+
 #
 # Multimedia Video device configuration
 #
@@ -391,7 +406,7 @@ config VIDEO_S5K4BA
 
 config VIDEO_S5K4EA
 	tristate "S5K4EA MIPI CSI-2 supporting camera driver"
-	depends on I2C && VIDEO_V4L2 && VIDEO_FIMC_MIPI
+	depends on I2C && VIDEO_V4L2 && (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
 	---help---
 	  This driver supports s5k4ea SoC camera module with
 	  MIPI CSI-2 as well
@@ -399,23 +414,27 @@ config VIDEO_S5K4EA
 #source "drivers/media/video/m5mols/Kconfig"
 
 choice
-depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_M5MO
+depends on VIDEO_S5K4BA || VIDEO_S5K4EA || (VIDEO_M5MO || VIDEO_M5MOLS)
 prompt "Select ITU / MIPI Camera port"
 default ITU_A
 config ITU_A
 	bool "ITU Camera A port"
+	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
 	help
 	  This enables support for ITU A port
 config ITU_B
 	bool "ITU Camera B port"
+	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
 	help
 	  This enables support for ITU B port
 config CSI_C
 	bool "CSI Camera A port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
 	help
 	  This enables support for CSI A port
 config CSI_D
 	bool "CSI Camera B port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
 	help
 	  This enables support for CSI B port
 endchoice

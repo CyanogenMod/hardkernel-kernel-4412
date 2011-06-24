@@ -67,8 +67,14 @@ obj-$(CONFIG_VIDEO_TCM825X) += tcm825x.o
 obj-$(CONFIG_VIDEO_TVEEPROM) += tveeprom.o
 obj-$(CONFIG_VIDEO_MT9V011) += mt9v011.o
 obj-$(CONFIG_VIDEO_MT9V032) += mt9v032.o
-obj-$(CONFIG_VIDEO_S5K4BA)	+= s5k4ba.o
-obj-$(CONFIG_VIDEO_S5K4EA)	+= s5k4ea.o
+ifeq ($(CONFIG_VIDEO_SAMSUNG_S5P_FIMC),y)
+obj-$(CONFIG_VIDEO_S5K4BA) += s5k4ba2.o
+obj-$(CONFIG_VIDEO_S5K4EA) += s5k4ea2.o
+endif
+ifeq ($(CONFIG_VIDEO_FIMC),y)
+obj-$(CONFIG_VIDEO_S5K4BA) += s5k4ba.o
+obj-$(CONFIG_VIDEO_S5K4EA) += s5k4ea.o
+endif
 obj-$(CONFIG_VIDEO_M5MO)	+= m5mo.o
 obj-$(CONFIG_VIDEO_SR030PC30)	+= sr030pc30.o
 obj-$(CONFIG_VIDEO_NOON010PC30)	+= noon010pc30.o
@@ -114,6 +120,7 @@ obj-$(CONFIG_VIDEO_TIMBERDALE)	+= timblogiw.o
 obj-$(CONFIG_VIDEOBUF_GEN) += videobuf-core.o
 obj-$(CONFIG_VIDEOBUF_DMA_SG) += videobuf-dma-sg.o
 obj-$(CONFIG_VIDEOBUF_DMA_CONTIG) += videobuf-dma-contig.o
+obj-$(CONFIG_VIDEOBUF2_CMA_PHYS) += videobuf2-cma-phys.o
 obj-$(CONFIG_VIDEOBUF_VMALLOC) += videobuf-vmalloc.o
 obj-$(CONFIG_VIDEOBUF_DVB) += videobuf-dvb.o
 obj-$(CONFIG_VIDEO_BTCX)  += btcx-risc.o
