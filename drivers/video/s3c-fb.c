@@ -34,6 +34,10 @@
 #include <linux/earlysuspend.h>
 #endif
 
+#ifdef CONFIG_S5P_MEM_CMA
+#include <linux/cma.h>
+#endif
+
 /* This driver will export a number of framebuffer interfaces depending
  * on the configuration passed in via the platform data. Each fb instance
  * maps to a hardware window. Currently there is no support for runtime
@@ -1330,6 +1334,10 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 	unsigned int real_size, virt_size, size;
 	struct fb_info *fbi = win->fbinfo;
 	dma_addr_t map_dma;
+#ifdef CONFIG_S5P_MEM_CMA
+	struct cma_info mem_info;
+	int err;
+#endif
 
 	dev_dbg(sfb->dev, "allocating memory for display\n");
 
@@ -1349,8 +1357,16 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 
 	dev_dbg(sfb->dev, "want %u bytes for window\n", size);
 
+#ifdef CONFIG_S5P_MEM_CMA
+	err = cma_info(&mem_info, sfb->dev, 0);
+	if (ERR_PTR(err))
+		return -ENOMEM;
+	map_dma = (dma_addr_t)cma_alloc(sfb->dev, "fimd", (size_t)size, 0);
+	fbi->screen_base = cma_get_virt(map_dma, size, 1);
+#else
 	fbi->screen_base = dma_alloc_writecombine(sfb->dev, size,
 						  &map_dma, GFP_KERNEL);
+#endif
 	if (!fbi->screen_base)
 		return -ENOMEM;
 
@@ -1375,8 +1391,13 @@ static void s3c_fb_free_memory(struct s3c_fb *sfb, struct s3c_fb_win *win)
 	struct fb_info *fbi = win->fbinfo;
 
 	if (fbi->screen_base)
+#ifdef CONFIG_S5P_MEM_CMA
+		cma_free(fbi->fix.smem_start);
+#else
 		dma_free_writecombine(sfb->dev, PAGE_ALIGN(fbi->fix.smem_len),
 			      fbi->screen_base, fbi->fix.smem_start);
+#endif
+
 }
 
 /**
