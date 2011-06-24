@@ -144,7 +144,7 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 
 	u32 rate = 0;
 
-	lcd_clk = clk_get(&pdev->dev, "fimd");
+	lcd_clk = clk_get(&pdev->dev, "lcd");
 	if (IS_ERR(lcd_clk)) {
 		dev_err(&pdev->dev, "failed to get ip clk for fimd\n");
 		goto err_clk0;
@@ -190,7 +190,7 @@ int s3cfb_clk_off(struct platform_device *pdev, struct clk **clk)
 {
 	struct clk *lcd_clk = NULL;
 
-	lcd_clk = clk_get(&pdev->dev, "fimd");
+	lcd_clk = clk_get(&pdev->dev, "lcd");
 	if (IS_ERR(lcd_clk)) {
 		printk(KERN_ERR "failed to get ip clk for fimd0\n");
 		goto err_clk0;
