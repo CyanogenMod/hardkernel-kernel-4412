@@ -47,8 +47,18 @@
 #include <plat/devs.h>
 #include <plat/fb.h>
 #include <plat/fb-s5p.h>
+#ifdef CONFIG_VIDEO_FIMC
 #include <plat/fimc.h>
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+#include <plat/fimc-core.h>
+#endif
+#ifdef CONFIG_VIDEO_FIMC_MIPI
 #include <plat/csis.h>
+#endif
+#ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
+#include <plat/mipi_csis.h>
+#endif
 #include <plat/gpio-cfg.h>
 #include <plat/adc.h>
 #include <plat/ts.h>
@@ -73,9 +83,11 @@
 #include <mach/spi-clocks.h>
 #endif
 
+#include <media/s5p_fimc.h>
 #include <media/s5k4ba_platform.h>
 #include <media/s5k4ea_platform.h>
 #include <media/m5mo_platform.h>
+#include <media/m5mols.h>
 
 #if defined(CONFIG_EXYNOS4_SETUP_THERMAL)
 #include <plat/s5p-tmu.h>
@@ -128,7 +140,7 @@ static struct s3c2410_uartcfg smdkv310_uartcfgs[] __initdata = {
 
 #undef WRITEBACK_ENABLED
 
-#ifdef CONFIG_VIDEO_FIMC
+#if defined(CONFIG_VIDEO_FIMC) || defined(CONFIG_VIDEO_SAMSUNG_S5P_FIMC)
 /*
  * External camera reset
  * Because the most of cameras take i2c bus signal, so that
@@ -136,7 +148,7 @@ static struct s3c2410_uartcfg smdkv310_uartcfgs[] __initdata = {
  * This function also called at fimc_init_camera()
  * Do optimization for cameras on your platform.
 */
-#ifdef CONFIG_ITU_A
+#if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C)
 static int smdkv310_cam0_reset(int dummy)
 {
 	int err;
@@ -153,7 +165,7 @@ static int smdkv310_cam0_reset(int dummy)
 	return 0;
 }
 #endif
-#ifdef CONFIG_ITU_B
+#if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D)
 static int smdkv310_cam1_reset(int dummy)
 {
 	int err;
@@ -204,43 +216,9 @@ static int smdkv310_cam1_standby(void)
 	return 0;
 }
 #endif
-
-/* Set for MIPI-CSI Camera module Reset */
-#ifdef CONFIG_CSI_C
-static int smdkv310_mipi_cam0_reset(int dummy)
-{
-	int err;
-
-	err = gpio_request(EXYNOS4_GPX1(2), "GPX1");
-	if (err)
-		printk(KERN_ERR "#### failed to reset(GPX1_2) MIPI CAM\n");
-
-	s3c_gpio_setpull(EXYNOS4_GPX1(2), S3C_GPIO_PULL_NONE);
-	gpio_direction_output(EXYNOS4_GPX1(2), 0);
-	gpio_direction_output(EXYNOS4_GPX1(2), 1);
-	gpio_free(EXYNOS4_GPX1(2));
-
-	return 0;
-}
-#endif
-#ifdef CONFIG_CSI_D
-static int smdkv310_mipi_cam1_reset(int dummy)
-{
-	int err;
-
-	err = gpio_request(EXYNOS4_GPX1(0), "GPX1");
-	if (err)
-		printk(KERN_ERR "#### failed to reset(GPX1_0) MIPI CAM\n");
-
-	s3c_gpio_setpull(EXYNOS4_GPX1(0), S3C_GPIO_PULL_NONE);
-	gpio_direction_output(EXYNOS4_GPX1(0), 0);
-	gpio_direction_output(EXYNOS4_GPX1(0), 1);
-	gpio_free(EXYNOS4_GPX1(0));
-
-	return 0;
-}
 #endif
 
+#ifdef CONFIG_VIDEO_FIMC
 #ifdef CONFIG_VIDEO_S5K4BA
 static struct s5k4ba_platform_data s5k4ba_plat = {
 	.default_width = 800,
@@ -315,7 +293,7 @@ static struct s3c_platform_camera s5k4ea = {
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
 	.i2c_busnum	= 0,
-	.cam_power	= smdkv310_mipi_cam0_reset,
+	.cam_power	= smdkv310_cam0_reset,
 #endif
 #ifdef CONFIG_CSI_D
 	.id		= CAMERA_CSI_D,
@@ -380,7 +358,7 @@ static struct s3c_platform_camera writeback = {
 };
 #endif
 
-/* M5MOLS Camera configuration for legacy fimc driver */
+/* legacy M5MOLS Camera driver configuration */
 #ifdef CONFIG_VIDEO_M5MO
 #define CAM_CHECK_ERR_RET(x, msg)	\
 	if (unlikely((x) < 0)) { \
@@ -420,7 +398,7 @@ static struct s3c_platform_camera m5mo = {
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
 	.i2c_busnum	= 0,
-	.cam_power	= smdkv310_mipi_cam0_reset,
+	.cam_power	= smdkv310_cam0_reset,
 #endif
 #ifdef CONFIG_CSI_D
 	.id		= CAMERA_CSI_D,
@@ -457,7 +435,7 @@ static struct s3c_platform_camera m5mo = {
 	.reset_camera	= 0,
 	.initialized	= 0,
 };
-#endif /* #ifdef CONFIG_VIDEO_M5MO */
+#endif
 
 /* Interface setting */
 static struct s3c_platform_fimc fimc_plat = {
@@ -493,6 +471,88 @@ static struct s3c_platform_fimc fimc_plat = {
 	.hw_ver		= 0x51,
 };
 #endif /* CONFIG_VIDEO_FIMC */
+
+/* for mainline fimc interface */
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+#ifdef WRITEBACK_ENABLED
+struct writeback_mbus_platform_data {
+	int id;
+	struct v4l2_mbus_framefmt fmt;
+};
+
+static struct i2c_board_info writeback_info = {
+	I2C_BOARD_INFO("writeback", 0x0),
+};
+#endif
+
+#ifdef CONFIG_VIDEO_S5K4BA
+static struct s5k4ba_mbus_platform_data s5k4ba_mbus_plat = {
+	.id		= 0,
+	.fmt = {
+		.width	= 1600,
+		.height	= 1200,
+		//.code	= V4L2_MBUS_FMT_UYVY8_2X8,
+		.code	= V4L2_MBUS_FMT_VYUY8_2X8,
+	},
+	.clk_rate	= 24000000UL,
+#ifdef CONFIG_ITU_A
+	.set_power	= smdkv310_cam0_reset,
+#endif
+#ifdef CONFIG_ITU_B
+	.set_power	= smdkv310_cam1_reset,
+#endif
+};
+
+static struct i2c_board_info s5k4ba_info = {
+	I2C_BOARD_INFO("S5K4BA", 0x2d),
+	.platform_data = &s5k4ba_mbus_plat,
+};
+#endif
+
+/* 2 MIPI Cameras */
+#ifdef CONFIG_VIDEO_S5K4EA
+static struct s5k4ea_mbus_platform_data s5k4ea_mbus_plat = {
+#ifdef CONFIG_CSI_C
+	.id		= 0,
+	.set_power = smdkv310_cam0_reset,
+#endif
+#ifdef CONFIG_CSI_D
+	.id		= 1,
+	.set_power = smdkv310_cam1_reset,
+#endif
+	.fmt = {
+		.width	= 1920,
+		.height	= 1080,
+		.code	= V4L2_MBUS_FMT_VYUY8_2X8,
+	},
+	.clk_rate	= 24000000UL,
+};
+
+static struct i2c_board_info s5k4ea_info = {
+	I2C_BOARD_INFO("S5K4EA", 0x2d),
+	.platform_data = &s5k4ea_mbus_plat,
+};
+#endif
+
+#ifdef CONFIG_VIDEO_M5MOLS
+static struct m5mols_platform_data m5mols_platdata = {
+#ifdef CONFIG_CSI_C
+	.gpio_rst = EXYNOS4_GPX1(2), /* ISP_RESET */
+#endif
+#ifdef CONFIG_CSI_D
+	.gpio_rst = EXYNOS4_GPX1(0), /* ISP_RESET */
+#endif
+	.enable_rst = true, /* positive reset */
+	.irq = IRQ_EINT(5),
+};
+
+static struct i2c_board_info m5mols_board_info = {
+	I2C_BOARD_INFO("M5MOLS", 0x1F),
+	.platform_data = &m5mols_platdata,
+};
+
+#endif
+#endif /* CONFIG_VIDEO_SAMSUNG_S5P_FIMC */
 
 #ifdef CONFIG_S3C_DEV_HSMMC
 static struct s3c_sdhci_platdata smdkv310_hsmmc0_pdata __initdata = {
@@ -1057,6 +1117,69 @@ static struct max8649_platform_data exynos4_max8649a_info = {
 	.regulator	= &max8649a_init_data,
 };
 
+#ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
+static struct regulator_consumer_supply mipi_csi_fixed_voltage_supplies[] = {
+	REGULATOR_SUPPLY("mipi_csi", "s5p-mipi-csis.0"),
+};
+
+static struct regulator_init_data mipi_csi_fixed_voltage_init_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(mipi_csi_fixed_voltage_supplies),
+	.consumer_supplies	= mipi_csi_fixed_voltage_supplies,
+};
+
+static struct fixed_voltage_config mipi_csi_fixed_voltage_config = {
+	.supply_name	= "DC_5V",
+	.microvolts	= 5000000,
+	.gpio		= -EINVAL,
+	.init_data	= &mipi_csi_fixed_voltage_init_data,
+};
+
+static struct platform_device mipi_csi_fixed_voltage = {
+	.name		= "reg-fixed-voltage",
+	.id		= 3,
+	.dev		= {
+		.platform_data	= &mipi_csi_fixed_voltage_config,
+	},
+};
+#endif
+
+#ifdef CONFIG_VIDEO_M5MOLS
+static struct regulator_consumer_supply m5mols_fixed_voltage_supplies[] = {
+	REGULATOR_SUPPLY("core", NULL),
+	REGULATOR_SUPPLY("dig_18", NULL),
+	REGULATOR_SUPPLY("d_sensor", NULL),
+	REGULATOR_SUPPLY("dig_28", NULL),
+	REGULATOR_SUPPLY("a_sensor", NULL),
+	REGULATOR_SUPPLY("dig_12", NULL),
+};
+
+static struct regulator_init_data m5mols_fixed_voltage_init_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(m5mols_fixed_voltage_supplies),
+	.consumer_supplies	= m5mols_fixed_voltage_supplies,
+};
+
+static struct fixed_voltage_config m5mols_fixed_voltage_config = {
+	.supply_name	= "CAM_SENSOR",
+	.microvolts	= 1800000,
+	.gpio		= -EINVAL,
+	.init_data	= &m5mols_fixed_voltage_init_data,
+};
+
+static struct platform_device m5mols_fixed_voltage = {
+	.name		= "reg-fixed-voltage",
+	.id		= 4,
+	.dev		= {
+		.platform_data	= &m5mols_fixed_voltage_config,
+	},
+};
+#endif
+
 static struct gpio_event_direct_entry smdkv310_keypad_key_map[] = {
 	{
 		.gpio   = EXYNOS4_GPX0(0),
@@ -1345,6 +1468,7 @@ static void __init smdkv310_ehci_init(void)
 	s5p_ehci_set_platdata(pdata);
 }
 #endif
+
 static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
@@ -1457,15 +1581,38 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&s3c_device_fimc2,
 	&s3c_device_fimc3,
 #endif
+#ifdef CONFIG_VIDEO_FIMC_MIPI
+	&s3c_device_csis0,
+	&s3c_device_csis1,
+#endif
+/* CONFIG_VIDEO_SAMSUNG_S5P_FIMC & CONFIG_VIDEO_SAMSUNG_S5P_FIMC are the
+ * feature for mainline */
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+	&s5p_device_fimc0,
+	&s5p_device_fimc1,
+	&s5p_device_fimc2,
+	&s5p_device_fimc3,
+#endif
+#ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
+	&s5p_device_mipi_csis0,
+	/* FIXME : Because v4l2 subdevice framework find only one platform
+	 * device about same device names
+	 */
+	/* &s5p_device_mipi_csis1, */
+#endif
+
+#ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
+	&mipi_csi_fixed_voltage,
+#endif
+#ifdef CONFIG_VIDEO_M5MOLS
+	&m5mols_fixed_voltage,
+#endif
+
 #ifdef CONFIG_VIDEO_MFC5X
 	&s5p_device_mfc,
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
 	&s5p_device_fimg2d,
-#endif
-#ifdef CONFIG_VIDEO_FIMC_MIPI
-	&s3c_device_csis0,
-	&s3c_device_csis1,
 #endif
 #ifdef CONFIG_VIDEO_JPEG
 	&s5p_device_jpeg,
@@ -1504,6 +1651,107 @@ static void __init smdkv310_button_init(void)
 	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), (0xf << 28));
 	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
 }
+
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+static struct s5p_fimc_isp_info isp_info[] = {
+#if defined(CONFIG_VIDEO_S5K4BA)
+	{
+		.board_info	= &s5k4ba_info,
+		.clk_frequency  = 24000000UL,
+		.bus_type	= FIMC_ITU_601,
+#ifdef CONFIG_ITU_A
+		.i2c_bus_num	= 0,
+		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
+#endif
+#ifdef CONFIG_ITU_B
+		.i2c_bus_num	= 1,
+		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
+#endif
+		.flags		= FIMC_CLK_INV_VSYNC,
+	},
+#endif
+#if defined(CONFIG_VIDEO_S5K4EA)
+	{
+		.board_info	= &s5k4ea_info,
+		.clk_frequency  = 24000000UL,
+		.bus_type	= FIMC_MIPI_CSI2,
+#ifdef CONFIG_CSI_C
+		.i2c_bus_num	= 0,
+		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
+#endif
+#ifdef CONFIG_CSI_D
+		.i2c_bus_num	= 1,
+		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
+#endif
+		.flags		= FIMC_CLK_INV_VSYNC,
+		.csi_data_align = 32,
+	},
+#endif
+#if defined(CONFIG_VIDEO_M5MOLS)
+	{
+		.board_info	= &m5mols_board_info,
+		.clk_frequency  = 24000000UL,
+		.bus_type	= FIMC_MIPI_CSI2,
+#ifdef CONFIG_CSI_C
+		.i2c_bus_num	= 0,
+		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
+#endif
+#ifdef CONFIG_CSI_D
+		.i2c_bus_num	= 1,
+		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
+#endif
+		.flags		= FIMC_CLK_INV_PCLK | FIMC_CLK_INV_VSYNC,
+		.csi_data_align = 32,
+	},
+#endif
+
+#if defined(WRITEBACK_ENABLED)
+	{
+		.board_info	= &writeback_info,
+		.bus_type	= FIMC_LCD_WB,
+		.i2c_bus_num	= 0,
+		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
+		.flags		= FIMC_CLK_INV_VSYNC,
+	},
+#endif
+};
+
+static void __init smdkv310_subdev_config(void)
+{
+	s3c_fimc0_default_data.isp_info[0] = &isp_info[0];
+}
+
+static void __init smdkv310_camera_config(void)
+{
+	int i = 0;
+
+	/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
+	for (i = 0; i < 8; i++) {
+		s3c_gpio_cfgpin(EXYNOS4_GPJ0(i), S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(EXYNOS4_GPJ0(i), S3C_GPIO_PULL_NONE);
+	}
+	/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
+	for (i = 0; i < 5; i++) {
+		s3c_gpio_cfgpin(EXYNOS4_GPJ1(i), S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(EXYNOS4_GPJ1(i), S3C_GPIO_PULL_NONE);
+	}
+	/* CAM B port(b0011) : DATA[0-7] */
+	for (i = 0; i < 8; i++) {
+		s3c_gpio_cfgpin(EXYNOS4_GPE1(i), S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(EXYNOS4_GPE1(i), S3C_GPIO_PULL_NONE);
+	}
+	/* CAM B port(b0011) : PCLK, VSYNC, HREF, FIELD, CLCKOUT */
+	for (i = 0; i < 5; i++) {
+		s3c_gpio_cfgpin(EXYNOS4_GPE0(i), S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(EXYNOS4_GPE0(i), S3C_GPIO_PULL_NONE);
+	}
+	/* note : driver strength to max is unnecessary */
+#ifdef CONFIG_VIDEO_M5MOLS
+	s3c_gpio_cfgpin(EXYNOS4_GPX0(5), S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(EXYNOS4_GPX0(5), S3C_GPIO_PULL_NONE);
+#endif
+}
+#endif
 
 static void __init smdkv310_smsc911x_init(void)
 {
@@ -1640,8 +1888,9 @@ static void __init exynos4_reserve_mem(void)
 	static const char map[] __initconst =
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0=fimd;exynos4-fb.0=fimd;"
-		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;"
-		"s3c-fimc.3=fimc3;s5p-mfc=mfc,mfc0,mfc1;s5p-rp=srp;"
+		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
+		"exynos4210-fimc.0=fimc0;exynos4210-fimc.1=fimc1;exynos4210-fimc.2=fimc2;exynos4210-fimc3=fimc3;"
+		"s5p-mfc=mfc,mfc0,mfc1;s5p-rp=srp;"
 		"s5p-jpeg=jpeg;"
 		"s5p-fimg2d=fimg2d";
 
@@ -1764,23 +2013,48 @@ static void __init smdkv310_machine_init(void)
 	s3c_fimc1_set_platdata(&fimc_plat);
 	s3c_fimc2_set_platdata(&fimc_plat);
 	s3c_fimc3_set_platdata(&fimc_plat);
-#ifdef CONFIG_ITU_A
-	smdkv310_cam0_reset(1);
-#endif
-#ifdef CONFIG_ITU_B
-	smdkv310_cam1_reset(1);
-#endif
 #ifdef CONFIG_VIDEO_FIMC_MIPI
 	s3c_csis0_set_platdata(NULL);
 	s3c_csis1_set_platdata(NULL);
-#ifdef CONFIG_CSI_C
-	smdkv310_mipi_cam0_reset(1);
 #endif
-#ifdef CONFIG_CSI_D
-	smdkv310_mipi_cam1_reset(1);
+#if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C)
+	smdkv310_cam0_reset(1);
 #endif
-#endif /* CONFIG_VIDEO_FIMC_MIPI */
+#if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D)
+	smdkv310_cam1_reset(1);
+#endif
 #endif /* CONFIG_VIDEO_FIMC */
+
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+	smdkv310_camera_config();
+	smdkv310_subdev_config();
+
+	s3c_fimc_setname(0, "exynos4210-fimc");
+	s3c_fimc_setname(1, "exynos4210-fimc");
+	s3c_fimc_setname(2, "exynos4210-fimc");
+	s3c_fimc_setname(3, "exynos4210-fimc");
+	/* FIMC */
+	s3c_set_platdata(&s3c_fimc0_default_data,
+			 sizeof(s3c_fimc0_default_data), &s5p_device_fimc0);
+	s3c_set_platdata(&s3c_fimc1_default_data,
+			 sizeof(s3c_fimc1_default_data), &s5p_device_fimc1);
+	s3c_set_platdata(&s3c_fimc2_default_data,
+			 sizeof(s3c_fimc2_default_data), &s5p_device_fimc2);
+	s3c_set_platdata(&s3c_fimc3_default_data,
+			 sizeof(s3c_fimc3_default_data), &s5p_device_fimc3);
+#ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
+	s3c_set_platdata(&s5p_mipi_csis0_default_data,
+			sizeof(s5p_mipi_csis0_default_data), &s5p_device_mipi_csis0);
+	s3c_set_platdata(&s5p_mipi_csis1_default_data,
+			sizeof(s5p_mipi_csis1_default_data), &s5p_device_mipi_csis1);
+#endif
+#if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C)
+	smdkv310_cam0_reset(1);
+#endif
+#if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D)
+	smdkv310_cam1_reset(1);
+#endif
+#endif
 
 #ifdef CONFIG_EXYNOS4_DEV_PD
 #ifdef CONFIG_VIDEO_FIMC
@@ -1789,7 +2063,18 @@ static void __init smdkv310_machine_init(void)
 	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+	s5p_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 #endif
+#ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
+	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_mipi_csis1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
+#endif
+
 #ifdef CONFIG_EXYNOS4_SETUP_THERMAL
 	s5p_tmu_set_platdata(NULL);
 #endif

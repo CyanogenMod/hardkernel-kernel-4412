@@ -106,6 +106,8 @@ config EXYNOS4_SETUP_SDHCI_GPIO
 
 config EXYNOS4_SETUP_FIMC
 	bool
+	depends on VIDEO_SAMSUNG_S5P_FIMC
+	default y
 	help
 	  Common setup code for the camera interfaces.
 
