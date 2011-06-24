@@ -179,7 +179,7 @@ static int exynos4_clk_audss_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_CLKGATE_AUDSS, clk, enable);
 }
 
-static int exynos4_clk_epll_ctrl(struct clk *clk, int enable)
+static int __maybe_unused exynos4_clk_epll_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_EPLL_CON0, clk, enable);
 }
