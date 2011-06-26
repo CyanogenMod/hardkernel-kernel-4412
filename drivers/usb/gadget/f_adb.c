@@ -319,14 +319,9 @@ requeue_req:
 	/* wait for a request to complete */
 	ret = wait_event_interruptible(dev->read_wq, dev->rx_done);
 	if (ret < 0) {
-		/* Try to dequeue request since adb daemon
-		 * will queue this request again later.
-		 * If it fails we can do nothing just report. */
-		if (usb_ep_dequeue(dev->ep_out, req))
-			printk(KERN_WARNING "adb: can not dequeue request\n");
-
 		dev->error = 1;
 		r = ret;
+		usb_ep_dequeue(dev->ep_out, req);
 		goto done;
 	}
 	if (!dev->error) {
