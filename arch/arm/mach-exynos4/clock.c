@@ -1267,8 +1267,8 @@ static struct clksrc_clk clk_mout_g3d0 = {
 };
 
 static struct clk *clkset_mout_g3d1_list[] = {
-	[0] = &clk_mout_mfc0.clk,
-	[1] = &clk_mout_mfc1.clk,
+	[0] = &clk_mout_epll.clk,
+	[1] = &clk_sclk_vpll.clk,
 };
 
 static struct clksrc_sources clkset_mout_g3d1 = {
