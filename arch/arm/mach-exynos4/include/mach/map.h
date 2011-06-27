@@ -220,6 +220,8 @@
 
 /* UART */
 
+#define S3C_VA_UARTx(x)			(S3C_VA_UART + ((x) * S3C_UART_OFFSET))
+
 #define S3C_PA_UART			EXYNOS4_PA_UART
 
 #define S5P_PA_UART(x)			(S3C_PA_UART + ((x) * S3C_UART_OFFSET))
