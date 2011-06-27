@@ -21,9 +21,12 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 #include <linux/videodev2.h>
-#include <media/videobuf2-cma.h>
 #include <media/videobuf2-core.h>
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
+#include <media/videobuf2-cma.h>
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 #include <media/videobuf2-dma-pool.h>
+#endif
 
 #include "regs-mfc5.h"
 
@@ -37,9 +40,9 @@
 #define S5P_MFC_DEC_NAME	"s5p-mfc5-dec"
 #define S5P_MFC_ENC_NAME	"s5p-mfc5-enc"
 
-#if 0
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 #define mfc_plane_paddr(v, n)	vb2_cma_plane_paddr(v, n)
-#else
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 #define mfc_plane_paddr(v, n)	vb2_dma_pool_plane_paddr(v, n)
 #endif
 
@@ -52,7 +55,7 @@ module_param(debug, int, S_IRUGO | S_IWUSR);
 
 struct s5p_mfc_dev *dev;
 /* Order must be as defined in s5p_mfc_memory.h */
-/*
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 static const char *s5p_mem_types[] = {
 	MFC_CMA_BANK2,
 	MFC_CMA_BANK1,
@@ -64,13 +67,7 @@ static unsigned long s5p_mem_alignments[] = {
 	MFC_CMA_BANK1_ALIGN,
 	MFC_CMA_FW_ALIGN
 };
-
-static unsigned long s5p_mem_alignments[] = {
-	MFC_CMA_BANK2_ALIGN,
-	MFC_CMA_BANK1_ALIGN,
-};
-*/
-
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 static unsigned long s5p_mem_base_align[] = {
 	MFC_BASE_ALIGN_ORDER,
 	MFC_BASE_ALIGN_ORDER,
@@ -84,6 +81,7 @@ static unsigned long s5p_mem_sizes[] = {
 	3 << 20,
 	3 << 20,
 };
+#endif
 
 /* Function prototypes */
 static void s5p_mfc_try_run(void);
@@ -2906,10 +2904,11 @@ static int s5p_mfc_open(struct file *file)
 		q->io_modes = VB2_MMAP | VB2_USERPTR;
 		q->ops = &s5p_mfc_enc_qops;
 	}
-	/*
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	q->mem_ops = &vb2_cma_memops;
-	*/
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	q->mem_ops = &vb2_dma_pool_memops;
+#endif
 	ret = vb2_queue_init(q);
 	if (ret) {
 		mfc_err("Failed to initialize videobuf2 queue(capture)\n");
@@ -2928,10 +2927,11 @@ static int s5p_mfc_open(struct file *file)
 		q->io_modes = VB2_MMAP | VB2_USERPTR;
 		q->ops = &s5p_mfc_enc_qops;
 	}
-	/*
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	q->mem_ops = &vb2_cma_memops;
-	*/
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	q->mem_ops = &vb2_dma_pool_memops;
+#endif
 	ret = vb2_queue_init(q);
 	if (ret) {
 		mfc_err("Failed to initialize videobuf2 queue(output)\n");
@@ -3204,16 +3204,17 @@ static int s5p_mfc_probe(struct platform_device *pdev)
 	dev->watchdog_timer.data = 0;
 	dev->watchdog_timer.function = s5p_mfc_watchdog;
 
-	/*
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	dev->alloc_ctx = vb2_cma_init_multi(&pdev->dev, MFC_CMA_ALLOC_CTX_NUM,
 					s5p_mem_types, s5p_mem_alignments);
-	*/
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	dev->alloc_ctx = (struct vb2_alloc_ctx **)
 			vb2_dma_pool_init_multi(&pdev->dev,
 						MFC_ALLOC_CTX_NUM,
 						s5p_mem_base_align,
 						s5p_mem_bank_align,
 						s5p_mem_sizes);
+#endif
 	if (IS_ERR(dev->alloc_ctx)) {
 		mfc_err("Couldn't prepare allocator ctx.\n");
 		ret = PTR_ERR(dev->alloc_ctx);
@@ -3271,10 +3272,11 @@ static int s5p_mfc_remove(struct platform_device *pdev)
 	video_unregister_device(dev->vfd_enc);
 	video_unregister_device(dev->vfd_dec);
 	v4l2_device_unregister(&dev->v4l2_dev);
-	/*
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	vb2_cma_cleanup_multi(dev->alloc_ctx);
-	*/
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	vb2_dma_pool_cleanup_multi((void **)dev->alloc_ctx, MFC_ALLOC_CTX_NUM);
+#endif
 	if (dev->mfc_mutex) {
 		mutex_destroy(dev->mfc_mutex);
 		kfree(dev->mfc_mutex);

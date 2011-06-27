@@ -34,8 +34,11 @@
 #include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
 
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 #include <media/videobuf2-cma.h>
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 #include <media/videobuf2-dma-pool.h>
+#endif
 
 static void *s5p_mfc_bitproc_buf;
 static size_t s5p_mfc_bitproc_phys;
@@ -56,34 +59,38 @@ static unsigned char *s5p_mfc_bitproc_virt;
 
 static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
 {
-	/*
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	return vb2_cma_memops.alloc(a, s);
-	*/
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	return vb2_dma_pool_memops.alloc(a, s);
+#endif
 }
 
 static inline size_t s5p_mfc_mem_paddr(void *a, void *b)
 {
-	/*
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	return (size_t)vb2_cma_memops.cookie(b);
-	*/
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	return (size_t)vb2_dma_pool_memops.cookie(b);
+#endif
 }
 
 static inline void s5p_mfc_mem_put(void *a, void *b)
 {
-	/*
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	vb2_cma_memops.put(b);
-	*/
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	vb2_dma_pool_memops.put(b);
+#endif
 }
 
 static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 {
-	/*
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	return vb2_cma_memops.vaddr(b);
-	*/
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	return vb2_dma_pool_memops.vaddr(b);
+#endif
 }
 
 static void s5p_mfc_mem_cache_clean(const void *start_addr, unsigned long size)
@@ -1027,10 +1034,10 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 /* Allocate firmware */
 int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 {
-#if 0
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	int err;
 	struct cma_info mem_info_f, mem_info_a, mem_info_b;
-#else
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	void *b_base;
 	size_t b_base_phys;
 #endif
@@ -1043,7 +1050,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	}
 
 	/* Get memory region information and check if it is correct */
-#if 0
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
 	err = cma_info(&mem_info_f, dev->v4l2_dev.dev, MFC_CMA_FW);
 	mfc_debug("Area \"%s\" is from %08x to %08x and has size %08x", "f",
 				mem_info_f.lower_bound, mem_info_f.upper_bound,
@@ -1109,7 +1116,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 		s5p_mfc_bitproc_buf = 0;
 		return -EIO;
 	}
-#else
+#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	mfc_debug("Allocating memory for firmware.\n");
 	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], FIRMWARE_CODE_SIZE);
