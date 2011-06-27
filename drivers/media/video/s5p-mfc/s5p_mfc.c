@@ -664,14 +664,42 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 	unsigned int dst_frame_status;
 	struct s5p_mfc_buf *src_buf;
 	unsigned long flags;
+	unsigned int res_change;
 
 	dst_frame_status = s5p_mfc_get_dspl_status()
 				& S5P_FIMV_DEC_STATUS_DECODING_STATUS_MASK;
+	res_change = s5p_mfc_get_dspl_status()
+				& S5P_FIMV_DEC_STATUS_RESOLUTION_MASK;
 	mfc_debug("Frame Status: %x\n", dst_frame_status);
+
+	if (ctx->state == MFCINST_RES_CHANGE_INIT)
+		ctx->state = MFCINST_RES_CHANGE_FLUSH;
+
+	if (res_change) {
+		mfc_err("Resolution change set to %d\n", res_change);
+		ctx->state = MFCINST_RES_CHANGE_INIT;
+
+		s5p_mfc_clear_int_flags();
+		wake_up_ctx(ctx, reason, err);
+		if (test_and_clear_bit(0, &dev->hw_lock) == 0)
+			BUG();
+		s5p_mfc_try_run(dev);
+		return;
+	}
+	if (ctx->dpb_flush_flag)
+		ctx->dpb_flush_flag = 0;
+
 	spin_lock_irqsave(&dev->irqlock, flags);
 	/* All frames remaining in the buffer have been extracted  */
 	if (dst_frame_status == S5P_FIMV_DEC_STATUS_DECODING_EMPTY) {
-		s5p_mfc_handle_frame_all_extracted(ctx);
+		if (ctx->state == MFCINST_RES_CHANGE_FLUSH) {
+			mfc_debug("Last frame received after resolution change.\n");
+			s5p_mfc_handle_frame_all_extracted(ctx);
+			ctx->state = MFCINST_RES_CHANGE_END;
+			goto leave_handle_frame;
+		} else {
+			s5p_mfc_handle_frame_all_extracted(ctx);
+		}
 	}
 
 	/* A frame has been decoded and is in the buffer  */
@@ -690,7 +718,8 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			" %d\n", src_buf->b->v4l2_planes[0].bytesused,
 			ctx->consumed_stream, s5p_mfc_get_consumed_stream());
 		ctx->consumed_stream += s5p_mfc_get_consumed_stream();
-		if (s5p_mfc_get_frame_type() == S5P_FIMV_DECODE_FRAME_P_FRAME
+		if (ctx->codec_mode != S5P_FIMV_CODEC_H264_DEC &&
+			s5p_mfc_get_frame_type() == S5P_FIMV_DECODE_FRAME_P_FRAME
 					&& ctx->consumed_stream <
 					src_buf->b->v4l2_planes[0].bytesused) {
 			/* Run MFC again on the same buffer */
@@ -719,8 +748,10 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			vb2_buffer_done(src_buf->b, VB2_BUF_STATE_DONE);
 		}
 	}
+leave_handle_frame:
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 	mfc_debug("Assesing whether this context should be run again.\n");
+	/* if (!s5p_mfc_ctx_ready(ctx)) { */
 	if ((ctx->src_queue_cnt == 0 && ctx->state != MFCINST_FINISHING)
 				    || ctx->dst_queue_cnt < ctx->dpb_count) {
 		mfc_debug("No need to run again.\n");
@@ -904,15 +935,20 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 		spin_unlock(&dev->condlock);
 		if (err == 0) {
 			ctx->state = MFCINST_RUNNING;
-			spin_lock_irqsave(&dev->irqlock, flags);
-			if (!list_empty(&ctx->src_queue)) {
-				src_buf = list_entry(ctx->src_queue.next,
+			if (!ctx->dpb_flush_flag) {
+				mfc_debug("INIT_BUFFERS with dpb_flush - leaving image in src queue.\n");
+				spin_lock_irqsave(&dev->irqlock, flags);
+				if (!list_empty(&ctx->src_queue)) {
+					src_buf = list_entry(ctx->src_queue.next,
 					       struct s5p_mfc_buf, list);
-				list_del(&src_buf->list);
-				ctx->src_queue_cnt--;
-				vb2_buffer_done(src_buf->b, VB2_BUF_STATE_DONE);
+					list_del(&src_buf->list);
+					ctx->src_queue_cnt--;
+					vb2_buffer_done(src_buf->b, VB2_BUF_STATE_DONE);
+				}
+				spin_unlock_irqrestore(&dev->irqlock, flags);
+			} else {
+				ctx->dpb_flush_flag = 0;
 			}
-			spin_unlock_irqrestore(&dev->irqlock, flags);
 			if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 				BUG();
 			wake_up_interruptible(&ctx->queue);

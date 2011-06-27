@@ -1118,13 +1118,11 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		ctx->luma_size = pix_fmt_mp->plane_fmt[0].sizeimage;
 		ctx->buf_width = pix_fmt_mp->plane_fmt[1].bytesperline;
 		ctx->chroma_size = pix_fmt_mp->plane_fmt[1].sizeimage;
-
 		/* FIXME: W/A with SYS.MMU */
 		ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN)
 				* ALIGN(ctx->img_height, S5P_FIMV_NV12_HALIGN);
 		ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12_VALIGN)
 				* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12_HALIGN);
-
 		if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M) {
 			ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12M_SALIGN);
 			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12M_SALIGN);
@@ -1932,14 +1930,14 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 
 		mfc_debug("plane size: %ld, luma size: %d\n",
 			vb2_plane_size(vb, 0), ctx->luma_size);
-		mfc_debug("plane size: %ld, luma size: %d\n",
+		mfc_debug("plane size: %ld, chroma size: %d\n",
 			vb2_plane_size(vb, 1), ctx->chroma_size);
-
 		if (vb2_plane_size(vb, 0) < ctx->luma_size ||
 		    vb2_plane_size(vb, 1) < ctx->chroma_size) {
 			mfc_err("plane size is too small for output\n");
 			return -EINVAL;
 		}
+
 	} else {
 		mfc_err("inavlid queue type: %d\n", vq->type);
 		return -EINVAL;

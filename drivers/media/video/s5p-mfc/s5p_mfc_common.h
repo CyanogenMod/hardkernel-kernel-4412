@@ -83,6 +83,9 @@ enum s5p_mfc_inst_state {
 	MFCINST_RETURN_INST,
 	MFCINST_ERROR,
 	MFCINST_ABORT,
+	MFCINST_RES_CHANGE_INIT,
+	MFCINST_RES_CHANGE_FLUSH,
+	MFCINST_RES_CHANGE_END,
 };
 
 /**
@@ -327,6 +330,8 @@ struct s5p_mfc_ctx {
 
 	unsigned long consumed_stream;
 	int slice_interface;
+
+	unsigned int dpb_flush_flag;
 
 	/* Buffers */
 	void *port_a_buf;

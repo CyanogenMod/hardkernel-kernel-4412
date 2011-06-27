@@ -1376,6 +1376,17 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 	return 0;
 }
 
+static inline void s5p_mfc_set_flush(struct s5p_mfc_ctx *ctx, int flush)
+{
+	struct s5p_mfc_dev *dev = ctx->dev;
+	unsigned int dpb;
+	if (flush)
+		dpb = READL(S5P_FIMV_SI_CH0_DPB_CONF_CTRL) | (1 << 14);
+	else
+		dpb = READL(S5P_FIMV_SI_CH0_DPB_CONF_CTRL) & ~(1 << 14);
+	WRITEL(dpb, S5P_FIMV_SI_CH0_DPB_CONF_CTRL);
+}
+
 /* Decode a single frame */
 int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 {
@@ -1386,14 +1397,23 @@ int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 						ctx->dst_bufs_cnt);
 	WRITEL(ctx->dec_dst_flag, S5P_FIMV_SI_CH0_RELEASE_BUF);
 	s5p_mfc_set_shared_buffer(ctx);
+	s5p_mfc_set_flush(ctx, ctx->dpb_flush_flag);
 	/* Issue different commands to instance basing on whether it
 	 * is the last frame or not. */
-	if (!last_frame)
+	switch(last_frame) {
+	case 0:
 		WRITEL(((S5P_FIMV_CH_FRAME_START & S5P_FIMV_CH_MASK) <<
 		S5P_FIMV_CH_SHIFT ) | (ctx->inst_no), S5P_FIMV_SI_CH0_INST_ID);
-	else
+		break;
+	case 1:
 		WRITEL(((S5P_FIMV_CH_LAST_FRAME & S5P_FIMV_CH_MASK) <<
 		S5P_FIMV_CH_SHIFT) | (ctx->inst_no), S5P_FIMV_SI_CH0_INST_ID);
+		break;
+	case 2:
+		WRITEL(((S5P_FIMV_CH_FRAME_START_REALLOC & S5P_FIMV_CH_MASK) <<
+		S5P_FIMV_CH_SHIFT) | (ctx->inst_no), S5P_FIMV_SI_CH0_INST_ID);
+		break;
+	}
 	mfc_debug("Decoding a usual frame.\n");
 	return 0;
 }
@@ -1473,6 +1493,16 @@ static inline int s5p_mfc_get_new_ctx(struct s5p_mfc_dev *dev)
 	return new_ctx;
 }
 
+static inline void s5p_mfc_run_res_change(struct s5p_mfc_ctx *ctx)
+{
+	struct s5p_mfc_dev *dev = ctx->dev;
+
+	s5p_mfc_set_dec_stream_buffer(ctx, 0, 0, 0);
+	dev->curr_ctx = ctx->num;
+	s5p_mfc_clean_ctx_int_flags(ctx);
+	s5p_mfc_decode_one_frame(ctx, 2);
+}
+
 static inline void s5p_mfc_run_dec_last_frames(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
@@ -1488,6 +1518,7 @@ static inline int s5p_mfc_run_dec_frame(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_buf *temp_vb;
 	unsigned long flags;
+	int last_frame = 0;
 
 	spin_lock_irqsave(&dev->irqlock, flags);
 
@@ -1506,8 +1537,10 @@ static inline int s5p_mfc_run_dec_frame(struct s5p_mfc_ctx *ctx)
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 	dev->curr_ctx = ctx->num;
 	s5p_mfc_clean_ctx_int_flags(ctx);
-	s5p_mfc_decode_one_frame(ctx,
-				temp_vb->b->v4l2_planes[0].bytesused == 0);
+	if (temp_vb->b->v4l2_planes[0].bytesused == 0)
+		last_frame = 1;
+	s5p_mfc_decode_one_frame(ctx, last_frame);
+
 
 	return 0;
 }
@@ -1704,6 +1737,18 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev)
 			break;
 		case MFCINST_HEAD_PARSED:
 			ret = s5p_mfc_run_init_dec_buffers(ctx);
+			break;
+		case MFCINST_RES_CHANGE_INIT:
+			s5p_mfc_run_res_change(ctx);
+			break;
+		case MFCINST_RES_CHANGE_FLUSH:
+			s5p_mfc_run_dec_frame(ctx);
+			break;
+		case MFCINST_RES_CHANGE_END:
+			mfc_debug("Finished remaining frames after resolution change.\n");
+			ctx->capture_state = QUEUE_FREE;
+			mfc_debug("Will re-init the codec`.\n");
+			s5p_mfc_run_init_dec(ctx);
 			break;
 		default:
 			ret = -EAGAIN;
