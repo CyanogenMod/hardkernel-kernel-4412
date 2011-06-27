@@ -178,8 +178,17 @@
 #define S5P_FIMV_DEC_STX_PARSER_SIZE		(68 * 1024)
 
 #define S5P_FIMV_DEC_BUF_ALIGN			(8 * 1024)
+#define S5P_FIMV_ENC_BUF_ALIGN			(8 * 1024)
 #define S5P_FIMV_NV12T_VALIGN			128
 #define S5P_FIMV_NV12T_HALIGN			32
+
+/* Sizes of buffers required for encoding */
+#define S5P_FIMV_ENC_UPMV_SIZE			(0x10000)
+#define S5P_FIMV_ENC_COLFLG_SIZE		(0x10000)
+#define S5P_FIMV_ENC_INTRAMD_SIZE		(0x10000)
+#define S5P_FIMV_ENC_INTRAPRED_SIZE		( 0x4000)
+#define S5P_FIMV_ENC_NBORINFO_SIZE		(0x10000)
+#define S5P_FIMV_ENC_ACDCCOEF_SIZE		(0x10000)
 
 /* Encoder */
 #define S5P_FIMV_ENC_SI_STRM_SIZE	0x2004 /* stream size */
@@ -216,7 +225,7 @@
 #define S5P_FIMV_ENC_B_RECON_WRITE_ON	0xc508 /* B frame recon write ctrl */
 #define S5P_FIMV_ENC_MSLICE_CTRL	0xc50c /* multi slice control */
 #define S5P_FIMV_ENC_MSLICE_MB		0xc510 /* MB number in the one slice */
-#define S5P_FIMV_ENC_MSLICE_BYTE	0xc514 /* byte number for one slice */
+#define S5P_FIMV_ENC_MSLICE_BIT		0xc514 /* bit count for one slice */
 #define S5P_FIMV_ENC_CIR_CTRL		0xc518 /* number of intra refresh MB */
 #define S5P_FIMV_ENC_MAP_FOR_CUR	0xc51c /* linear or 64x32 tiled mode */
 #define S5P_FIMV_ENC_PADDING_CTRL	0xc520 /* padding control */
@@ -230,7 +239,7 @@
 #define S5P_FIMV_ENC_RC_MB_CTRL		0xc5b4 /* MB adaptive scaling */
 
 /* Encoder for H264 */
-#define S5P_FIMV_ENC_ENTRP_MODE		0xd004 /* CAVLC or CABAC */
+#define S5P_FIMV_ENC_H264_ENTRP_MODE	0xd004 /* CAVLC or CABAC */
 #define S5P_FIMV_ENC_H264_ALPHA_OFF	0xd008 /* loop filter alpha offset */
 #define S5P_FIMV_ENC_H264_BETA_OFF	0xd00c /* loop filter beta offset */
 #define S5P_FIMV_ENC_H264_NUM_OF_REF	0xd010 /* number of reference for P/B */
@@ -330,5 +339,11 @@
 #define S5P_FIMV_SHARED_MV_SIZE			0x006C
 #define S5P_FIMV_SHARED_PIC_TIME_TOP		0x0010
 #define S5P_FIMV_SHARED_PIC_TIME_BOTTOM		0x0014
+#define S5P_FIMV_SHARED_EXT_ENC_CONTROL		0x0028
+#define S5P_FIMV_SHARED_P_B_FRAME_QP		0x0070
+#define S5P_FIMV_SHARED_ASPECT_RATIO_IDC	0x0074
+#define S5P_FIMV_SHARED_EXTENDED_SAR		0x0078
+#define S5P_FIMV_SHARED_H264_I_PERIOD		0x009C
+#define S5P_FIMV_SHARED_RC_CONTROL_CONFIG	0x00A0
 
 #endif /* _REGS_FIMV_H */

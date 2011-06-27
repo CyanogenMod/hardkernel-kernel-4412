@@ -24,6 +24,7 @@ int s5p_mfc_load_firmware(struct s5p_mfc_dev *dev);
 int s5p_mfc_init_hw(struct s5p_mfc_dev *dev);
 
 int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx);
+int s5p_mfc_init_encode(struct s5p_mfc_ctx *mfc_ctx);
 void s5p_mfc_deinit_hw(struct s5p_mfc_dev *dev);
 int s5p_mfc_set_sleep(struct s5p_mfc_ctx *ctx);
 int s5p_mfc_set_wakeup(struct s5p_mfc_ctx *ctx);
@@ -33,7 +34,16 @@ int s5p_mfc_set_dec_stream_buffer(struct s5p_mfc_ctx *ctx, int buf_addr,
 						  unsigned int start_num_byte,
 						  unsigned int buf_size);
 
+void s5p_mfc_set_enc_frame_buffer(struct s5p_mfc_ctx *ctx,
+		unsigned long y_addr, unsigned long c_addr);
+int s5p_mfc_set_enc_stream_buffer(struct s5p_mfc_ctx *ctx,
+		unsigned long addr, unsigned int size);
+void s5p_mfc_get_enc_frame_buffer(struct s5p_mfc_ctx *ctx,
+		unsigned long *y_addr, unsigned long *c_addr);
+int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *mfc_ctx);
+
 int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame);
+int s5p_mfc_encode_one_frame(struct s5p_mfc_ctx *mfc_ctx);
 
 /* Instance handling */
 int s5p_mfc_open_inst(struct s5p_mfc_ctx *ctx);
@@ -44,8 +54,8 @@ int s5p_mfc_alloc_dec_temp_buffers(struct s5p_mfc_ctx *ctx);
 void s5p_mfc_set_dec_desc_buffer(struct s5p_mfc_ctx *ctx);
 void s5p_mfc_release_dec_desc_buffer(struct s5p_mfc_ctx *ctx);
 
-int s5p_mfc_alloc_dec_buffers(struct s5p_mfc_ctx *ctx);
-void s5p_mfc_release_dec_buffers(struct s5p_mfc_ctx *ctx);
+int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx);
+void s5p_mfc_release_codec_buffers(struct s5p_mfc_ctx *ctx);
 
 int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx);
 void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx);
@@ -84,6 +94,10 @@ static inline u32 s5p_mfc_get_v_crop(struct s5p_mfc_ctx *ctx)
 						S5P_FIMV_SI_BUF_NUMBER)
 #define s5p_mfc_get_inst_no()		readl(dev->regs_base + \
 						S5P_FIMV_RISC2HOST_ARG1)
+#define s5p_mfc_get_enc_strm_size()	readl(dev->regs_base + \
+						S5P_FIMV_ENC_SI_STRM_SIZE)
+#define s5p_mfc_get_enc_slice_type()	readl(dev->regs_base + \
+						S5P_FIMV_ENC_SI_SLICE_TYPE)
 
 static inline u32 s5p_mfc_get_pic_time_top(struct s5p_mfc_ctx *ctx)
 {

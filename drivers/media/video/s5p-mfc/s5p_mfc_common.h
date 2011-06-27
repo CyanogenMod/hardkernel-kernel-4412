@@ -41,21 +41,38 @@
 #define MFC_NO_INSTANCE_SET	-1
 
 /**
+ * enum s5p_mfc_inst_type - The type of an MFC device node.
+ */
+enum s5p_mfc_node_type {
+	MFCNODE_INVALID = -1,
+	MFCNODE_DECODER = 0,
+	MFCNODE_ENCODER = 1,
+};
+
+/**
+ * enum s5p_mfc_inst_type - The type of an MFC instance.
+ */
+enum s5p_mfc_inst_type {
+	MFCINST_INVALID = 0,
+	MFCINST_DECODER = 1,
+	MFCINST_ENCODER = 2,
+};
+
+/**
  * enum s5p_mfc_inst_state - The state of an MFC instance.
  */
 enum s5p_mfc_inst_state {
 	MFCINST_FREE = 0,
-	MFCINST_DEC_INIT = 100,
-	MFCINST_DEC_GOT_INST,
-	MFCINST_DEC_HEAD_PARSED,
-	MFCINST_DEC_BUFS_SET,
-	MFCINST_DEC_RUNNING,
-	MFCINST_DEC_FINISHING,
-	MFCINST_DEC_FINISHED,
-	MFCINST_DEC_RETURN_INST,
-	MFCINST_DEC_ERROR,
-	MFCINST_DEC_ABORT,
-	MFCINST_ENC_INIT = 200,
+	MFCINST_INIT = 100,
+	MFCINST_GOT_INST,
+	MFCINST_HEAD_PARSED,
+	MFCINST_BUFS_SET,
+	MFCINST_RUNNING,
+	MFCINST_FINISHING,
+	MFCINST_FINISHED,
+	MFCINST_RETURN_INST,
+	MFCINST_ERROR,
+	MFCINST_ABORT,
 };
 
 /**
@@ -91,7 +108,8 @@ struct s5p_mfc_buf {
  */
 struct s5p_mfc_dev {
 	struct v4l2_device v4l2_dev;
-	struct video_device *vfd;
+	struct video_device *vfd_dec;
+	struct video_device *vfd_enc;
 	struct platform_device *plat_dev;
 
 	int num_inst;
@@ -132,6 +150,91 @@ struct s5p_mfc_dev {
 };
 
 /**
+ *
+ */
+struct s5p_mfc_h264_enc_params {
+	u8 num_b_frame;
+	enum v4l2_codec_mfc5x_enc_h264_profile profile;
+	u8 level;
+	enum v4l2_codec_mfc5x_enc_switch interlace;
+	enum v4l2_codec_mfc5x_enc_h264_loop_filter loop_filter_mode;
+	s8 loop_filter_alpha;
+	s8 loop_filter_beta;
+	enum v4l2_codec_mfc5x_enc_h264_entropy_mode entropy_mode;
+	u8 max_ref_pic;
+	u8 num_ref_pic_4p;
+	enum v4l2_codec_mfc5x_enc_switch _8x8_transform;
+	enum v4l2_codec_mfc5x_enc_switch rc_mb;
+	u32 rc_framerate;
+	u8 rc_frame_qp;
+	u8 rc_min_qp;
+	u8 rc_max_qp;
+	enum v4l2_codec_mfc5x_enc_switch_inv rc_mb_dark;
+	enum v4l2_codec_mfc5x_enc_switch_inv rc_mb_smooth;
+	enum v4l2_codec_mfc5x_enc_switch_inv rc_mb_static;
+	enum v4l2_codec_mfc5x_enc_switch_inv rc_mb_activity;
+	u8 rc_p_frame_qp;
+	u8 rc_b_frame_qp;
+	enum v4l2_codec_mfc5x_enc_switch ar_vui;
+	u8 ar_vui_idc;
+	u16 ext_sar_width;
+	u16 ext_sar_height;
+	enum v4l2_codec_mfc5x_enc_switch open_gop;
+	u16 open_gop_size;
+};
+
+/**
+ *
+ */
+struct s5p_mfc_enc_params {
+	u16 width;
+	u16 height;
+
+	u16 gop_size;
+	enum v4l2_codec_mfc5x_enc_multi_slice_mode slice_mode;
+	u16 slice_mb;
+	u32 slice_bit;
+	u16 intra_refresh_mb;
+	enum v4l2_codec_mfc5x_enc_switch pad;
+	u8 pad_luma;
+	u8 pad_cb;
+	u8 pad_cr;
+	enum v4l2_codec_mfc5x_enc_switch rc_frame;
+	u32 rc_bitrate;
+	u16 rc_reaction_coeff;
+
+	u16 vbv_buf_size;
+	enum v4l2_codec_mfc5x_enc_seq_hdr_mode seq_hdr_mode;
+	enum v4l2_codec_mfc5x_enc_frame_skip_mode frame_skip_mode;
+	enum v4l2_codec_mfc5x_enc_switch fixed_target_bit;
+
+	union {
+		struct s5p_mfc_h264_enc_params h264;
+	} codec;
+};
+
+struct s5p_mfc_codec_ops {
+	/* initialization routines */
+	int (*alloc_ctx_buf) (struct s5p_mfc_ctx *ctx);
+	int (*alloc_desc_buf) (struct s5p_mfc_ctx *ctx);
+	int (*get_init_arg) (struct s5p_mfc_ctx *ctx, void *arg);
+	int (*pre_seq_start) (struct s5p_mfc_ctx *ctx);
+	int (*post_seq_start) (struct s5p_mfc_ctx *ctx);
+	int (*set_init_arg) (struct s5p_mfc_ctx *ctx, void *arg);
+	int (*set_codec_bufs) (struct s5p_mfc_ctx *ctx);
+	int (*set_dpbs) (struct s5p_mfc_ctx *ctx);		/* decoder */
+	/* execution routines */
+	int (*get_exe_arg) (struct s5p_mfc_ctx *ctx, void *arg);
+	int (*pre_frame_start) (struct s5p_mfc_ctx *ctx);
+	int (*post_frame_start) (struct s5p_mfc_ctx *ctx);
+	int (*multi_data_frame) (struct s5p_mfc_ctx *ctx);
+	int (*set_exe_arg) (struct s5p_mfc_ctx *ctx, void *arg);
+	/* configuration routines */
+	int (*get_codec_cfg) (struct s5p_mfc_ctx *ctx, unsigned int type, int *value);
+	int (*set_codec_cfg) (struct s5p_mfc_ctx *ctx, unsigned int type, int *value);
+};
+
+/**
  * struct s5p_mfc_ctx - This struct contains the instance context
  */
 struct s5p_mfc_ctx {
@@ -143,7 +246,8 @@ struct s5p_mfc_ctx {
 	unsigned int int_err;
 	wait_queue_head_t queue;
 
-	struct s5p_mfc_fmt *fmt;
+	struct s5p_mfc_fmt *src_fmt;
+	struct s5p_mfc_fmt *dst_fmt;
 
 	struct vb2_queue vq_src;
 	struct vb2_queue vq_dst;
@@ -154,6 +258,7 @@ struct s5p_mfc_ctx {
 	unsigned int src_queue_cnt;
 	unsigned int dst_queue_cnt;
 
+	enum s5p_mfc_inst_type type;
 	enum s5p_mfc_inst_state state;
 	int inst_no;
 
@@ -217,6 +322,15 @@ struct s5p_mfc_ctx {
 	size_t shared_phys;
 	void *shared_virt;
 
+	struct s5p_mfc_enc_params enc_params;
+
+	size_t enc_dst_buf_size;
+
+	int frame_count;
+	enum v4l2_codec_mfc5x_enc_frame_type frame_type;
+	enum v4l2_codec_mfc5x_enc_force_frame_type force_frame_type;
+
+	struct s5p_mfc_codec_ops *c_ops;
 };
 
 #endif /* S5P_MFC_COMMON_H_ */
