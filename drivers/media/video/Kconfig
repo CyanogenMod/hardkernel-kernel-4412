@@ -1120,5 +1120,37 @@ config VIDEO_MEM2MEM_TESTDEV
 	  This is a virtual test device for the memory-to-memory driver
 	  framework.
 
+config VIDEO_SAMSUNG_S5P_MFC
+	tristate "Samsung S5P MFC 5.1 Video Codec"
+	depends on VIDEO_V4L2 && PLAT_S5P
+	default n
+	help
+	    MFC 5.1 driver for V4L2.
+
+choice
+	prompt "VB2 memory allocator for MFC"
+	depends on VIDEO_SAMSUNG_S5P_MFC
+	default S5P_MFC_VB2_CMA if CMA
+
+config S5P_MFC_VB2_CMA
+	bool "CMA"
+	depends on CMA
+	select VIDEOBUF2_CMA
+	help
+	  Use videobuf2 CMA allocator for MFC
+
+config S5P_MFC_VB2_DMA_POOL
+	bool "DMA Pool"
+	select VIDEOBUF2_DMA_POOL
+	help
+	  use videobuf2 DMA pool allocator for MFC
+
+config S5P_MFC_VB2_SDVMM
+	bool "SDVMM"
+	depends on VCM && VCM_MMU && VIDEO_UMP && S5P_SYSTEM_MMU
+	select VIDEOBUF2_SDVMM
+	help
+	  use videobuf2 SDVMM allocator for MFC
+endchoice
 
 endif # V4L_MEM2MEM_DRIVERS
