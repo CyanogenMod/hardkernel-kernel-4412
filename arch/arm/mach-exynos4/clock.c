@@ -423,6 +423,37 @@ static struct clksrc_clk clk_aclk_133 = {
 	.reg_div	= { .reg = S5P_CLKDIV_TOP, .shift = 12, .size = 3 },
 };
 
+/* CMU_LEFT/RIGHTBUS side */
+static struct clk *clkset_aclk_lrbus_list[] = {
+	[0] = &clk_mout_mpll.clk,
+	[1] = &clk_sclk_apll.clk,
+};
+
+static struct clksrc_sources __maybe_unused clkset_aclk_lrbus = {
+	.sources        = clkset_aclk_lrbus_list,
+	.nr_sources     = ARRAY_SIZE(clkset_aclk_lrbus_list),
+};
+
+static struct clksrc_clk clk_aclk_gdl = {
+	.clk    = {
+		.name           = "aclk_gdl",
+		.id             = -1,
+	},
+	.sources        = &clkset_aclk,
+	.reg_src        = { .reg = S5P_CLKSRC_LEFTBUS, .shift = 0, .size = 1 },
+	.reg_div        = { .reg = S5P_CLKDIV_LEFTBUS, .shift = 0, .size = 3 },
+};
+
+static struct clksrc_clk clk_aclk_gdr = {
+	.clk    = {
+		.name           = "aclk_gdr",
+		.id             = -1,
+	},
+	.sources        = &clkset_aclk,
+	.reg_src        = { .reg = S5P_CLKSRC_RIGHTBUS, .shift = 0, .size = 1 },
+	.reg_div        = { .reg = S5P_CLKDIV_RIGHTBUS, .shift = 0, .size = 3 },
+};
+
 static struct clk *clkset_vpllsrc_list[] = {
 	[0] = &clk_fin_vpll,
 	[1] = &clk_sclk_hdmi27m,
@@ -1683,6 +1714,8 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_aclk_100,
 	&clk_aclk_160,
 	&clk_aclk_133,
+	&clk_aclk_gdl,
+	&clk_aclk_gdr,
 	&clk_mout_mfc0,
 	&clk_mout_mfc1,
 	&clk_dout_mmc0,
