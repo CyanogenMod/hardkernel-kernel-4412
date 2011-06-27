@@ -26,7 +26,7 @@
 
 #include "regs-mfc.h"
 
-#if defined(CONFIG_S5P_SYSMMU_MFC_L) && defined(CONFIG_S5P_SYSMMU_MFC_R)
+#if defined(CONFIG_S5P_SYSTEM_MMU)
 #define SYSMMU_MFC_ON
 #endif
 
