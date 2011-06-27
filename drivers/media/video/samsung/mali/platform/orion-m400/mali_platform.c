@@ -285,11 +285,12 @@ void mali_clk_put(mali_bool binc_mali_clock)
 
 mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 { 
-        unsigned long rate =0;	
+	unsigned long rate = 0;
 	mali_bool bis_vpll = MALI_FALSE;
-	
-	if (clk == 333)
-		bis_vpll = MALI_TRUE;
+
+#ifndef CONFIG_VPLL_USE_FOR_TVENC
+	bis_vpll = MALI_TRUE;
+#endif
 
 	if (mali_clk_get(bis_vpll) == MALI_FALSE)
 		return MALI_FALSE;
@@ -305,6 +306,15 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 
 		clk_set_parent(mali_parent_clock, sclk_vpll_clock);
 		clk_set_parent(mali_clock, mali_parent_clock);
+
+		if (clk_enable(vpll_src_clock) < 0)
+			return MALI_FALSE;
+
+		if (clk_enable(fout_vpll_clock) < 0)
+			return MALI_FALSE;
+
+		if (clk_enable(sclk_vpll_clock) < 0)
+			return MALI_FALSE;
 	}
 	else
 	{
