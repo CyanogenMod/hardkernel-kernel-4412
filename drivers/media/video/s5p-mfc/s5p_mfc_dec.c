@@ -209,7 +209,7 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_CRC_DATA,
+		.id = V4L2_CID_CODEC_CRC_DATA_LUMA,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "CRC data",
 		.minimum = 0,
@@ -218,63 +218,9 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
-		.id = V4L2_CID_CODEC_PIXEL_CACHE,
+		.id = V4L2_CID_CODEC_CRC_DATA_CHROMA,
 		.type = V4L2_CTRL_TYPE_INTEGER,
-		.name = "Pixel cache",
-		.minimum = 0,
-		.maximum = INT_MAX,
-		.step = 1,
-		.default_value = 0,
-	},
-	{
-		.id = V4L2_CID_CODEC_IMMEDIATELY_DISPLAY,
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.name = "Immediately display",
-		.minimum = 0,
-		.maximum = 1,
-		.step = 1,
-		.default_value = 0,
-	},
-	{
-		.id = V4L2_CID_CODEC_IS_LAST_FRAME,
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.name = "Is last frame",
-		.minimum = 0,
-		.maximum = 1,
-		.step = 1,
-		.default_value = 0,
-	},
-	{
-		.id = V4L2_CID_CODEC_DPB_FLUSH,
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.name = "DPB flush",
-		.minimum = 0,
-		.maximum = 1,
-		.step = 1,
-		.default_value = 0,
-	},
-	{
-		.id = V4L2_CID_CODEC_VUI_INFO,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.name = "DPB flush",
-		.minimum = 0,
-		.maximum = INT_MAX,
-		.step = 1,
-		.default_value = 0,
-	},
-	{
-		.id = V4L2_CID_CODEC_HIER_P,
-		.type = V4L2_CTRL_TYPE_BOOLEAN,
-		.name = "Hierachical P",
-		.minimum = 0,
-		.maximum = 1,
-		.step = 1,
-		.default_value = 0,
-	},
-	{
-		.id = V4L2_CID_CODEC_HEADER_SIZE,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.name = "Header size",
+		.name = "CRC data",
 		.minimum = 0,
 		.maximum = INT_MAX,
 		.step = 1,
@@ -1193,6 +1139,15 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 	case V4L2_CID_CODEC_SLICE_INTERFACE:
 		ctrl->value = ctx->slice_interface;
 		break;
+	case V4L2_CID_CODEC_CRC_ENABLE:
+		ctrl->value = ctx->crc_enable;
+		break;
+	case V4L2_CID_CODEC_CRC_DATA_LUMA:
+		ctrl->value = ctx->crc_luma0;
+		break;
+	case V4L2_CID_CODEC_CRC_DATA_CHROMA:
+		ctrl->value = ctx->crc_chroma0;
+		break;
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET)
@@ -1255,11 +1210,19 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 			return -EBUSY;
 		ctx->slice_interface = ctrl->value;
 		break;
+	case V4L2_CID_CODEC_CRC_ENABLE:
+		if (ctrl->value == 1 || ctrl->value == 0)
+			ctx->crc_enable = ctrl->value;
+		else
+			ctx->crc_enable = 0;
+		break;
 	case V4L2_CID_CACHEABLE:
-		if (stream_on)
-			return -EBUSY;
+		/*if (stream_on)
+			return -EBUSY; */
 		if(ctrl->value == 0 || ctrl->value ==1)
 			ctx->cacheable = ctrl->value;
+		else
+			ctx->cacheable = 0;
 		break;
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {

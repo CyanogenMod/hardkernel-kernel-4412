@@ -221,12 +221,16 @@ static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 {
 	struct s5p_mfc_buf  *dst_buf;
+	struct s5p_mfc_dev *dev = ctx->dev;
 	size_t dspl_y_addr = MFC_GET_ADR(DEC_DISPLAY_Y);
 	unsigned int index;
+	unsigned int frame_type = s5p_mfc_get_frame_type();
+	unsigned int crc_luma = s5p_mfc_get_crc_luma();
+	unsigned int crc_chroma = s5p_mfc_get_crc_chroma();
 
 	ctx->sequence++;
 	/* If frame is same as previous then skip and do not dequeue */
-	if (MFC_GET_REG(DEC_DECODE_FRAME_TYPE) == S5P_FIMV_DECODE_FRAME_SKIPPED)
+	if (frame_type == S5P_FIMV_DECODE_FRAME_SKIPPED)
 		return;
 	/* The MFC returns address of the buffer, now we have to
 	 * check which videobuf does it correspond to */
@@ -247,6 +251,33 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 			vb2_set_plane_payload(dst_buf->b, 0, ctx->luma_size);
 			vb2_set_plane_payload(dst_buf->b, 1, ctx->chroma_size);
 			clear_bit(dst_buf->b->v4l2_buf.index, &ctx->dec_dst_flag);
+
+			dst_buf->b->v4l2_buf.flags &=
+					(V4L2_BUF_FLAG_KEYFRAME &
+					V4L2_BUF_FLAG_PFRAME &
+					V4L2_BUF_FLAG_BFRAME);
+
+			switch (frame_type) {
+			case S5P_FIMV_DECODE_FRAME_I_FRAME:
+				dst_buf->b->v4l2_buf.flags |=
+					V4L2_BUF_FLAG_KEYFRAME;
+				break;
+			case S5P_FIMV_DECODE_FRAME_P_FRAME:
+				dst_buf->b->v4l2_buf.flags |=
+					V4L2_BUF_FLAG_PFRAME;
+				break;
+			case S5P_FIMV_DECODE_FRAME_202_FRAME:
+				dst_buf->b->v4l2_buf.flags |=
+					V4L2_BUF_FLAG_BFRAME;
+				break;
+			default:
+				dst_buf->b->v4l2_buf.flags |=
+					V4L2_BUF_FLAG_KEYFRAME;
+				break;
+			}
+
+			ctx->crc_luma0 = crc_luma;
+			ctx->crc_chroma0 = crc_chroma;
 
 			vb2_buffer_done(dst_buf->b,
 				err ? VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
@@ -874,7 +905,7 @@ static unsigned int s5p_mfc_poll(struct file *file,
 {
 	struct s5p_mfc_ctx *ctx = file->private_data;
 
-	return vb2_poll(&ctx->vq_dst, file, wait);
+	return vb2_poll(&ctx->vq_src, file, wait);
 }
 
 /* Mmap */

@@ -1336,9 +1336,13 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 		WRITEL(ctx->img_width, S5P_FIMV_SI_DIVX311_HRESOL);
 		WRITEL(ctx->img_height, S5P_FIMV_SI_DIVX311_VRESOL);
 	}
-	WRITEL(
-	((S5P_FIMV_CH_SEQ_HEADER & S5P_FIMV_CH_MASK) << S5P_FIMV_CH_SHIFT)
-				| (ctx->inst_no), S5P_FIMV_SI_CH0_INST_ID);
+	WRITEL(((S5P_FIMV_CH_SEQ_HEADER & S5P_FIMV_CH_MASK)
+			<< S5P_FIMV_CH_SHIFT)
+			| (ctx->inst_no), S5P_FIMV_SI_CH0_INST_ID);
+
+	/* Enable CRC data */
+	WRITEL(ctx->crc_enable << 31, S5P_FIMV_HOST2RISC_ARG2);
+
 	mfc_debug_leave();
 	return 0;
 }

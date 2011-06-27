@@ -208,15 +208,13 @@
 #define S5P_FIMV_ENC_SI_CH0_SB_SIZE	0x204c /* size of stream buf */
 #define S5P_FIMV_ENC_SI_CH0_CUR_Y_ADR	0x2050 /* current Luma addr */
 #define S5P_FIMV_ENC_SI_CH0_CUR_C_ADR	0x2054 /* current Chroma addr */
-#define S5P_FIMV_ENC_SI_CH0_FRAME_QP	0x2058 /* frame QP */
-#define S5P_FIMV_ENC_SI_CH0_SLICE_ARG	0x205c /* slice argument */
+#define S5P_FIMV_ENC_SI_CH0_FRAME_INS	0x2058 /* frame insertion */
 
 #define S5P_FIMV_ENC_SI_CH1_SB_ADR	0x2084 /* addr of stream buf */
 #define S5P_FIMV_ENC_SI_CH1_SB_SIZE	0x208c /* size of stream buf */
 #define S5P_FIMV_ENC_SI_CH1_CUR_Y_ADR	0x2090 /* current Luma addr */
 #define S5P_FIMV_ENC_SI_CH1_CUR_C_ADR	0x2094 /* current Chroma addr */
-#define S5P_FIMV_ENC_SI_CH1_FRAME_QP	0x2098 /* frame QP */
-#define S5P_FIMV_ENC_SI_CH1_SLICE_ARG	0x209c /* slice argument */
+#define S5P_FIMV_ENC_SI_CH1_FRAME_INS	0x2098 /* frame insertion */
 
 #define S5P_FIMV_ENC_STR_BF_U_FULL	0xc004 /* upper stream buf full */
 #define S5P_FIMV_ENC_STR_BF_U_EMPTY	0xc008 /* upper stream buf empty */

@@ -678,7 +678,15 @@ static struct v4l2_queryctrl controls[] = {
 		.step = 1,
 		.default_value = 0,
 	},
-
+	{
+		.id = V4L2_CID_CODEC_FRAME_INSERTION,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Frame Tag",
+		.minimum = 0,
+		.maximum = INT_MAX,
+		.step = 1,
+		.default_value = 0,
+	},
 };
 
 #define NUM_CTRLS ARRAY_SIZE(controls)
@@ -728,6 +736,30 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SHM,
 		.addr = S5P_FIMV_SHARED_GET_FRAME_TAG_TOP,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_SET,
+		.id = V4L2_CID_CODEC_FRAME_INSERTION,
+		.is_volatile = 1,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_ENC_SI_CH0_FRAME_INS,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET,
+		.id = V4L2_CID_CODEC_FRAME_INSERTION,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_ENC_SI_CH0_FRAME_INS,
 		.mask = 0xFFFFFFFF,
 		.shft = 0,
 		.flag_mode = MFC_CTRL_MODE_NONE,
@@ -1219,6 +1251,32 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 	if (strm_size > 0) {
 		/* at least one more dest. buffers exist always  */
 		mb_entry = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
+
+		mb_entry->b->v4l2_buf.flags &=
+			(V4L2_BUF_FLAG_KEYFRAME &
+			 V4L2_BUF_FLAG_PFRAME &
+			 V4L2_BUF_FLAG_BFRAME);
+
+		switch (slice_type) {
+		case S5P_FIMV_DECODE_FRAME_I_FRAME:
+			mb_entry->b->v4l2_buf.flags |=
+				V4L2_BUF_FLAG_KEYFRAME;
+			break;
+		case S5P_FIMV_DECODE_FRAME_P_FRAME:
+			mb_entry->b->v4l2_buf.flags |=
+				V4L2_BUF_FLAG_PFRAME;
+			break;
+		case S5P_FIMV_DECODE_FRAME_202_FRAME:
+			mb_entry->b->v4l2_buf.flags |=
+				V4L2_BUF_FLAG_BFRAME;
+			break;
+		default:
+			mb_entry->b->v4l2_buf.flags |=
+				V4L2_BUF_FLAG_KEYFRAME;
+			break;
+		}
+		mfc_debug(2, "Slice type : %d\n", mb_entry->b->v4l2_buf.flags);
+
 		list_del(&mb_entry->list);
 		ctx->dst_queue_cnt--;
 		vb2_set_plane_payload(mb_entry->b, 0, strm_size);
@@ -1821,6 +1879,7 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		ctrl->value = ctx->frame_type;
 		break;
 	case V4L2_CID_CODEC_FRAME_TAG:
+	case V4L2_CID_CODEC_FRAME_INSERTION:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET)
 				continue;
@@ -1841,7 +1900,6 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 			return -EINVAL;
 		}
 		break;
-
 	default:
 		v4l2_err(&dev->v4l2_dev, "Invalid control\n");
 		ret = -EINVAL;
@@ -2071,6 +2129,7 @@ static int set_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_CODEC_FRAME_TAG:
+	case V4L2_CID_CODEC_FRAME_INSERTION:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			if (ctx_ctrl->type != MFC_CTRL_TYPE_SET)
 				continue;

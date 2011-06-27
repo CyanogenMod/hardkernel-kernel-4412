@@ -504,7 +504,7 @@ int s5p_mfc_open_inst_cmd(struct s5p_mfc_ctx *ctx)
 
 	memset(&h2r_args, 0, sizeof(struct s5p_mfc_cmd_args));
 	h2r_args.arg[0] = ctx->codec_mode;
-	h2r_args.arg[1] = 0; /* no crc & no pixelcache */
+	h2r_args.arg[1] = ctx->crc_enable << 31; /* no pixelcache */
 	h2r_args.arg[2] = ctx->context_ofs;
 	h2r_args.arg[3] = ctx->context_size;
 
