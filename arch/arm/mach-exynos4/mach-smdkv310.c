@@ -1608,7 +1608,7 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&m5mols_fixed_voltage,
 #endif
 
-#ifdef CONFIG_VIDEO_MFC5X
+#if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	&s5p_device_mfc,
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
@@ -1859,6 +1859,24 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
+		{
+			.name		= "fw",
+			.size		= 1 << 20,
+			{ .alignment	= 128 << 10 },
+			.start		= 0x42000000,
+		},
+		{
+			.name		= "b1",
+			.size		= 32 << 20,
+			.start		= 0x43000000,
+		},
+		{
+			.name		= "b2",
+			.size		= 32 << 20,
+			.start		= 0x51000000,
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_JPEG
 		{
 			.name = "jpeg",
@@ -1890,7 +1908,15 @@ static void __init exynos4_reserve_mem(void)
 		"s3cfb.0=fimd;exynos4-fb.0=fimd;"
 		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
 		"exynos4210-fimc.0=fimc0;exynos4210-fimc.1=fimc1;exynos4210-fimc.2=fimc2;exynos4210-fimc3=fimc3;"
-		"s5p-mfc=mfc,mfc0,mfc1;s5p-rp=srp;"
+#if !defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+		"s5p-mfc=mfc,mfc0,mfc1;"
+#else
+		"mfc=mfc,mfc0,mfc1;"
+		"s5p-mfc/f=fw;"
+		"s5p-mfc/a=b1;"
+		"s5p-mfc/b=b2;"
+#endif
+		"s5p-rp=srp;"
 		"s5p-jpeg=jpeg;"
 		"s5p-fimg2d=fimg2d";
 
