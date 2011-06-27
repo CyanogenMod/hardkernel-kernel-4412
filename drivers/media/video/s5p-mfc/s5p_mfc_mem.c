@@ -88,13 +88,17 @@ void **s5p_mfc_mem_init_multi(struct device *dev)
 {
 	struct vb2_vcm vcm;
 	void ** alloc_ctxes;
+	struct vb2_drv vb2_drv;
 
 	vcm.vcm_id = VCM_DEV_MFC;
 	/* FIXME: check port count */
 	vcm.size = SZ_256M;
 
+	vb2_drv.remap_dva = true;
+
 	s5p_mfc_power_on();
-	alloc_ctxes = (void **)vb2_sdvmm_init_multi(MFC_ALLOC_CTX_NUM, &vcm, NULL);
+	alloc_ctxes = (void **)vb2_sdvmm_init_multi(MFC_ALLOC_CTX_NUM, &vcm,
+								NULL, &vb2_drv);
 	s5p_mfc_power_off();
 
 	return alloc_ctxes;
