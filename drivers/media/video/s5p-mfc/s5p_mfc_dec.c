@@ -1506,8 +1506,7 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		if(ctx->cacheable){
-			vb2_sdvmm_cache_flush(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX], vb, 0);
-			vb2_sdvmm_cache_flush(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], vb, 1);
+			vb2_sdvmm_cache_flush(vb, 2);
 		}
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
