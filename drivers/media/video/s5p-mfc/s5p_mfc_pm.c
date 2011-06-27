@@ -47,7 +47,7 @@ int s5p_mfc_power_off(void)
 {
 	return -1;
 }
-#elif defined(CONFIG_ARCH_S5PV310)
+#elif defined(CONFIG_ARCH_EXYNOS4)
 #include <linux/platform_device.h>
 #ifdef CONFIG_PM_RUNTIME
 #include <linux/pm_runtime.h>
@@ -189,12 +189,12 @@ bool s5p_mfc_power_chk(void)
 	return atomic_read(&pm->power) ? true : false;
 }
 #else /* CONFIG_ARCH_NOT_SUPPORT */
-int s5p_mfc_init_pm(struct mfc_dev *mfcdev)
+int s5p_mfc_init_pm(struct s5p_mfc_dev *mfcdev)
 {
 	return -1;
 }
 
-void s5p_mfc_final_pm(struct mfc_dev *mfcdev)
+void s5p_mfc_final_pm(struct s5p_mfc_dev *mfcdev)
 {
 	/* NOP */
 }
