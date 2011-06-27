@@ -22,7 +22,7 @@
 
 #include "s5p_mfc_opr.h"
 #include "s5p_mfc_common.h"
-#include "s5p_mfc_memory.h"
+#include "s5p_mfc_mem.h"
 #include "s5p_mfc_intr.h"
 #include "s5p_mfc_debug.h"
 
@@ -57,75 +57,17 @@ static unsigned char *s5p_mfc_bitproc_virt;
 #define OFFSETA(x)		(((x) - dev->port_a) >> S5P_FIMV_MEM_OFFSET)
 #define OFFSETB(x)		(((x) - dev->port_b) >> S5P_FIMV_MEM_OFFSET)
 
-static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
-{
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	return vb2_cma_memops.alloc(a, s);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	return vb2_dma_pool_memops.alloc(a, s);
-#endif
-}
-
-static inline size_t s5p_mfc_mem_paddr(void *a, void *b)
-{
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	return (size_t)vb2_cma_memops.cookie(b);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	return (size_t)vb2_dma_pool_memops.cookie(b);
-#endif
-}
-
-static inline void s5p_mfc_mem_put(void *a, void *b)
-{
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	vb2_cma_memops.put(b);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	vb2_dma_pool_memops.put(b);
-#endif
-}
-
-static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
-{
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	return vb2_cma_memops.vaddr(b);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	return vb2_dma_pool_memops.vaddr(b);
-#endif
-}
-
-static void s5p_mfc_mem_cache_clean(const void *start_addr, unsigned long size)
-{
-	unsigned long paddr;
-
-	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
-	/*
-	 * virtual & phsical addrees mapped directly, so we can convert
-	 * the address just using offset
-	 */
-	paddr = __pa((unsigned long)start_addr);
-	outer_clean_range(paddr, paddr + size);
-}
-
-static void s5p_mfc_mem_cache_inv(const void *start_addr, unsigned long size)
-{
-	unsigned long paddr;
-
-	paddr = __pa((unsigned long)start_addr);
-	outer_inv_range(paddr, paddr + size);
-	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
-}
 
 void s5p_mfc_write_shm(const void *start_addr, unsigned int data,
 			unsigned long offset)
 {
 	writel(data, (start_addr + offset));
-	s5p_mfc_mem_cache_clean((void *)(start_addr + offset), 4);
+	s5p_mfc_cache_clean((void *)(start_addr + offset), 4);
 }
 
 unsigned int s5p_mfc_read_shm(const void *start_addr, unsigned long offset)
 {
-	s5p_mfc_mem_cache_inv((void *)(start_addr + offset), 4);
-
+	s5p_mfc_cache_inv((void *)(start_addr + offset), 4);
 	return readl(start_addr + offset);
 }
 
@@ -176,10 +118,10 @@ static int s5p_mfc_cmd_host2risc(struct s5p_mfc_dev *dev,
 		/* No CRC calculation (slow!) */
 		WRITEL(0, S5P_FIMV_HOST2RISC_ARG2);
 		/* Physical addr of the instance buffer */
-		WRITEL(OFFSETA(ctx->instance_phys),
+		WRITEL(OFFSETA(ctx->context_phys),
 		       S5P_FIMV_HOST2RISC_ARG3);
 		/* Size of the instance buffer */
-		WRITEL(ctx->instance_size, S5P_FIMV_HOST2RISC_ARG4);
+		WRITEL(ctx->context_size, S5P_FIMV_HOST2RISC_ARG4);
 	}
 	/* Issue the command */
 	WRITEL(cmd, S5P_FIMV_HOST2RISC_CMD);
@@ -228,9 +170,6 @@ int s5p_mfc_alloc_dec_temp_buffers(struct s5p_mfc_ctx *ctx)
 		mfc_err("Remapping DESC buffer failed.\n");
 		return -ENOMEM;
 	}
-	/* Zero content of the allocated memory */
-	memset(desc_virt, 0, DESC_BUF_SIZE);
-	flush_cache_all();
 	mfc_debug_leave();
 	return 0;
 }
@@ -379,47 +318,47 @@ void s5p_mfc_release_codec_buffers(struct s5p_mfc_ctx *ctx)
 /* Allocate memory for instance data buffer */
 int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 {
-	void *instance_virt;
+	void *context_virt;
 	struct s5p_mfc_dev *dev = ctx->dev;
 
 	mfc_debug_enter();
 	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
 		ctx->codec_mode == S5P_FIMV_CODEC_H264_ENC)
-		ctx->instance_size = MFC_H264_INSTANCE_BUF_SIZE;
+		ctx->context_size = MFC_H264_CTX_BUF_SIZE;
 	else
-		ctx->instance_size = MFC_INSTANCE_BUF_SIZE;
-	ctx->instance_buf = s5p_mfc_mem_alloc(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->instance_size);
-	if (IS_ERR(ctx->instance_buf)) {
-		mfc_err("Allocating instance buffer failed.\n");
-		ctx->instance_phys = 0;
-		ctx->instance_buf = 0;
+		ctx->context_size = MFC_CTX_BUF_SIZE;
+	ctx->context_buf = s5p_mfc_mem_alloc(
+		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->context_size);
+	if (IS_ERR(ctx->context_buf)) {
+		mfc_err("Allocating context buffer failed.\n");
+		ctx->context_phys = 0;
+		ctx->context_buf = 0;
 		return -ENOMEM;
 	}
-	ctx->instance_phys = s5p_mfc_mem_paddr(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->instance_buf);
-	instance_virt = s5p_mfc_mem_vaddr(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->instance_buf);
-	if (instance_virt == NULL) {
+	ctx->context_phys = s5p_mfc_mem_paddr(
+		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->context_buf);
+	context_virt = s5p_mfc_mem_vaddr(
+		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->context_buf);
+	if (context_virt == NULL) {
 		mfc_err("Remapping instance buffer failed.\n");
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->instance_buf);
-		ctx->instance_phys = 0;
-		ctx->instance_buf = 0;
+							ctx->context_buf);
+		ctx->context_phys = 0;
+		ctx->context_buf = 0;
 		return -ENOMEM;
 	}
 	/* Zero content of the allocated memory */
-	memset(instance_virt, 0, ctx->instance_size);
-	flush_cache_all();
+	memset(context_virt, 0, ctx->context_size);
+	s5p_mfc_cache_clean(context_virt, ctx->context_size);
 	ctx->shared_buf = s5p_mfc_mem_alloc(
 		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], SHARED_BUF_SIZE);
 	if (IS_ERR(ctx->shared_buf)) {
 		mfc_err("Allocating shared buffer failed\n");
 		ctx->shared_buf = 0;
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->instance_buf);
-		ctx->instance_phys = 0;
-		ctx->instance_buf = 0;
+							ctx->context_buf);
+		ctx->context_phys = 0;
+		ctx->context_buf = 0;
 		return -ENOMEM;
 	}
 	ctx->shared_phys = s5p_mfc_mem_paddr(
@@ -433,14 +372,14 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 		ctx->shared_phys = 0;
 		ctx->shared_buf = 0;
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->instance_buf);
-		ctx->instance_phys = 0;
-		ctx->instance_buf = 0;
+							ctx->context_buf);
+		ctx->context_phys = 0;
+		ctx->context_buf = 0;
 		return -ENOMEM;
 	}
 	/* Zero content of the allocated memory */
 	memset((void *)ctx->shared_virt, 0, SHARED_BUF_SIZE);
-	flush_cache_all();
+	s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);
 	mfc_debug_leave();
 	return 0;
 }
@@ -451,13 +390,17 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_dev *dev = ctx->dev;
 
 	mfc_debug_enter();
-	if (ctx->instance_buf) {
+	if (ctx->context_buf) {
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->instance_buf);
-		ctx->instance_phys = 0;
-		ctx->instance_buf = 0;
+							ctx->context_buf);
+		ctx->context_phys = 0;
+		ctx->context_buf = 0;
 	}
 	if (ctx->shared_phys) {
+		/*
+		dma_unmap_single(ctx->dev->v4l2_dev.dev, ctx->shared_dma,
+				 SHARED_BUF_SIZE, DMA_BIDIRECTIONAL);
+		*/
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
 							ctx->shared_buf);
 		ctx->shared_phys = 0;
@@ -1205,7 +1148,7 @@ int s5p_mfc_load_firmware(struct s5p_mfc_dev *dev)
 		return -EINVAL;
 	}
 	memcpy(s5p_mfc_bitproc_virt, fw_blob->data, fw_blob->size);
-	flush_cache_all();
+	s5p_mfc_cache_clean(s5p_mfc_bitproc_virt, FIRMWARE_CODE_SIZE);
 	release_firmware(fw_blob);
 	mfc_debug_leave();
 	return 0;

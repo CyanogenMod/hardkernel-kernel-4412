@@ -314,9 +314,9 @@ struct s5p_mfc_ctx {
 
 	/* Buffers */
 
-	void *instance_buf;
-	size_t instance_phys;
-	size_t instance_size;
+	void *context_buf;
+	size_t context_phys;
+	size_t context_size;
 
 	void *desc_buf;
 	size_t desc_phys;

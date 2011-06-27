@@ -15,8 +15,8 @@
 #ifndef S5P_MFC_OPR_H_
 #define S5P_MFC_OPR_H_
 
-#include <asm/cacheflush.h>
 #include "s5p_mfc_common.h"
+#include "s5p_mfc_mem.h"
 
 int s5p_mfc_release_firmware(struct s5p_mfc_dev *dev);
 int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev);
@@ -63,13 +63,13 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx);
 /* Getting parameters from MFC */
 static inline u32 s5p_mfc_get_h_crop(struct s5p_mfc_ctx *ctx)
 {
-	flush_cache_all();
+	s5p_mfc_cache_inv(ctx->shared_virt, SHARED_BUF_SIZE);
 	return readl((ctx)->shared_virt + S5P_FIMV_SHARED_CROP_INFO_H);
 }
 
 static inline u32 s5p_mfc_get_v_crop(struct s5p_mfc_ctx *ctx)
 {
-	flush_cache_all();
+	s5p_mfc_cache_inv(ctx->shared_virt, SHARED_BUF_SIZE);
 	return readl((ctx)->shared_virt + S5P_FIMV_SHARED_CROP_INFO_V);
 }
 
@@ -101,38 +101,38 @@ static inline u32 s5p_mfc_get_v_crop(struct s5p_mfc_ctx *ctx)
 
 static inline u32 s5p_mfc_get_pic_time_top(struct s5p_mfc_ctx *ctx)
 {
-	flush_cache_all();
+	s5p_mfc_cache_inv(ctx->shared_virt, SHARED_BUF_SIZE);
 	return readl((ctx)->shared_virt + S5P_FIMV_SHARED_PIC_TIME_TOP);
 }
 
 static inline u32 s5p_mfc_get_pic_time_bottom(struct s5p_mfc_ctx *ctx)
 {
-	flush_cache_all(); 
+	s5p_mfc_cache_inv(ctx->shared_virt, SHARED_BUF_SIZE);
 	return readl((ctx)->shared_virt + S5P_FIMV_SHARED_PIC_TIME_BOTTOM);
 }
 
-#define s5p_mfc_set_start_num(ctx, x) 	do { \
-			writel((x), \
-			ctx->shared_virt + S5P_FIMV_SHARED_START_BYTE_NUM); \
-			flush_cache_all(); \
+#define s5p_mfc_set_start_num(ctx, x)						\
+	do {									\
+		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_START_BYTE_NUM); \
+		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);	\
 			} while(0)
 
-#define s5p_mfc_set_luma_size(ctx, x) do { \
-			writel((x), \
-			ctx->shared_virt + S5P_FIMV_SHARED_LUMA_DPB_SIZE); \
-			flush_cache_all(); \
+#define s5p_mfc_set_luma_size(ctx, x)						\
+	do { 									\
+		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_LUMA_DPB_SIZE);	\
+		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);	\
 			} while(0)
 
-#define s5p_mfc_set_chroma_size(ctx, x) do { \
-			writel((x), \
-			 ctx->shared_virt + S5P_FIMV_SHARED_CHROMA_DPB_SIZE); \
-			 flush_cache_all(); \
+#define s5p_mfc_set_chroma_size(ctx, x)						\
+	do { 									\
+		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_CHROMA_DPB_SIZE);\
+		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);	\
 			 } while(0)
 
-#define s5p_mfc_set_mv_size(ctx, x) do { \
-			writel((x), \
-			ctx->shared_virt + S5P_FIMV_SHARED_MV_SIZE); \
-			flush_cache_all(); \
+#define s5p_mfc_set_mv_size(ctx, x)						\
+	do { 									\
+		writel((x), ctx->shared_virt + S5P_FIMV_SHARED_MV_SIZE);	\
+		s5p_mfc_cache_clean(ctx->shared_virt, SHARED_BUF_SIZE);	\
 			} while(0)
 
 /* Interrupt handling routines */
