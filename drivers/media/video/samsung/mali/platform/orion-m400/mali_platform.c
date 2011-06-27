@@ -306,15 +306,6 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 
 		clk_set_parent(mali_parent_clock, sclk_vpll_clock);
 		clk_set_parent(mali_clock, mali_parent_clock);
-
-		if (clk_enable(vpll_src_clock) < 0)
-			return MALI_FALSE;
-
-		if (clk_enable(fout_vpll_clock) < 0)
-			return MALI_FALSE;
-
-		if (clk_enable(sclk_vpll_clock) < 0)
-			return MALI_FALSE;
 	}
 	else
 	{
@@ -322,6 +313,8 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 		clk_set_parent(mali_clock, mali_parent_clock);
 	}
 
+	if (clk_enable(mali_clock) < 0)
+		return MALI_FALSE;
 
 	clk_set_rate(mali_clock, rate);
 	rate = clk_get_rate(mali_clock);
