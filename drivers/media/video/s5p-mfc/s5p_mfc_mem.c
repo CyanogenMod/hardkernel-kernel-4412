@@ -34,18 +34,20 @@ static unsigned long s5p_mem_alignments[] = {
 
 struct vb2_mem_ops *s5p_mfc_mem_ops(void)
 {
-	return (struct vb2_mem_ops *)&vb2_cma_memops;
+	return (struct vb2_mem_ops *)&vb2_cma_phys_memops;
 }
 
 void **s5p_mfc_mem_init_multi(struct device *dev)
 {
-	return (void **)vb2_cma_init_multi(dev, MFC_CMA_ALLOC_CTX_NUM,
-					   s5p_mem_types, s5p_mem_alignments);
+/* TODO Cachable should be set */
+	return (void **)vb2_cma_phys_init_multi(dev, MFC_CMA_ALLOC_CTX_NUM,
+					   s5p_mem_types,
+					   s5p_mem_alignments,0);
 }
 
 void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes)
 {
-	vb2_cma_cleanup_multi((struct vb2_alloc_ctx **)alloc_ctxes);
+	vb2_cma_phys_cleanup_multi(alloc_ctxes);
 }
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 static unsigned long s5p_mem_base_align[] = {

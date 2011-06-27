@@ -15,7 +15,7 @@
 
 #include <linux/platform_device.h>
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
-#include <media/videobuf2-cma.h>
+#include <media/videobuf2-cma-phys.h>
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 #include <media/videobuf2-dma-pool.h>
 #elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
@@ -49,26 +49,26 @@
 #define MFC_CMA_BANK2_ALIGN	0x2000	/* 8KB */
 #define MFC_CMA_FW_ALIGN	0x20000	/* 128KB */
 
-#define mfc_plane_cookie(v, n)	vb2_cma_plane_paddr(v, n)
+#define mfc_plane_cookie(v, n)	vb2_cma_phys_plane_paddr(v, n)
 
 static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
 {
-	return vb2_cma_memops.alloc(a, s);
+	return vb2_cma_phys_memops.alloc(a, s);
 }
 
 static inline size_t s5p_mfc_mem_cookie(void *a, void *b)
 {
-	return (size_t)vb2_cma_memops.cookie(b);
+	return (size_t)vb2_cma_phys_memops.cookie(b);
 }
 
 static inline void s5p_mfc_mem_put(void *a, void *b)
 {
-	vb2_cma_memops.put(b);
+	vb2_cma_phys_memops.put(b);
 }
 
 static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 {
-	return vb2_cma_memops.vaddr(b);
+	return vb2_cma_phys_memops.vaddr(b);
 }
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 #define MFC_ALLOC_CTX_NUM	2
