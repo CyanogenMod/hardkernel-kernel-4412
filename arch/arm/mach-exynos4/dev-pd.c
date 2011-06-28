@@ -109,6 +109,7 @@ struct platform_device exynos4_device_pd[] = {
 				.base		= S5P_PMU_MFC_CONF,
 				.data		= &(struct exynos4_pd_data) {
 					.clk_base	= S5P_CLKGATE_IP_MFC,
+					.read_phy_addr	= EXYNOS4_PA_MFC,
 				},
 			},
 		},
@@ -123,6 +124,7 @@ struct platform_device exynos4_device_pd[] = {
 				.base		= S5P_PMU_G3D_CONF,
 				.data		= &(struct exynos4_pd_data) {
 					.clk_base	= S5P_CLKGATE_IP_G3D,
+					.read_phy_addr	= EXYNOS4_PA_G3D,
 				},
 			},
 		},
@@ -197,6 +199,7 @@ struct platform_device exynos4_device_pd[] = {
 				.base		= S5P_PMU_GPS_CONF,
 				.data		= &(struct exynos4_pd_data) {
 					.clk_base	= S5P_CLKGATE_IP_GPS,
+					.read_phy_addr	= EXYNOS4_PA_GPS,
 				},
 			},
 		},
