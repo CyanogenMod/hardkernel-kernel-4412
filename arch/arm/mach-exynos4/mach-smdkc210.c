@@ -1478,14 +1478,7 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&s5p_device_ohci,
 #endif
 #ifdef CONFIG_USB_GADGET
-        &s3c_device_usbgadget,
-#endif
-#ifdef CONFIG_USB_ANDROID_RNDIS
-        &s3c_device_rndis,
-#endif
-#ifdef CONFIG_USB_ANDROID
-        &s3c_device_android_usb,
-        &s3c_device_usb_mass_storage,
+	&s3c_device_usbgadget,
 #endif
 #ifdef CONFIG_EXYNOS4_SETUP_THERMAL
 	&s5p_device_tmu,
