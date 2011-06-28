@@ -2106,6 +2106,12 @@ static void __init smdkc210_machine_init(void)
 	s5p_tmu_set_platdata(NULL);
 #endif
 
+#ifdef CONFIG_VIDEO_MFC5X
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
+#endif
+#endif
+
 #ifdef CONFIG_VIDEO_FIMG2D
 	s5p_fimg2d_set_platdata(&fimg2d_data);
 #ifdef CONFIG_EXYNOS4_DEV_PD
