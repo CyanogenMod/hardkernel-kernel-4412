@@ -374,7 +374,6 @@ config USB_OHCI_SH
 config USB_OHCI_S5P
 	boolean "S5P OHCI support"
 	depends on USB_OHCI_HCD && PLAT_S5P
-	default y
 	help
 	 Enable support for the S5P SOC's on-chip OHCI controller.
 
