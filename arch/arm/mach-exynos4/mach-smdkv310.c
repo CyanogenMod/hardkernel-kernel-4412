@@ -1400,7 +1400,7 @@ static struct s3c2410_ts_mach_info s3c_ts_platform __initdata = {
 #endif
 
 #ifdef CONFIG_S3C_DEV_HWMON
-static struct s3c_hwmon_pdata smdkc210_hwmon_pdata __initdata = {
+static struct s3c_hwmon_pdata smdkv310_hwmon_pdata __initdata = {
 	/* Reference voltage (1.2V) */
 	.in[0] = &(struct s3c_hwmon_chcfg) {
 		.name		= "smdk:reference-voltage",
@@ -1984,7 +1984,7 @@ static void __init smdkv310_machine_init(void)
 	s3c_sdhci3_set_platdata(&smdkv310_hsmmc3_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HWMON
-	s3c_hwmon_set_platdata(&smdkc210_hwmon_pdata);
+	s3c_hwmon_set_platdata(&smdkv310_hwmon_pdata);
 #endif
 
 #ifdef CONFIG_FB_S3C
