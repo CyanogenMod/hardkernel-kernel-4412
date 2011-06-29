@@ -55,6 +55,10 @@ void __init s5p_ehci_set_platdata(struct s5p_ehci_platdata *pd)
 		npd->phy_init = s5p_usb_phy_init;
 	if (!npd->phy_exit)
 		npd->phy_exit = s5p_usb_phy_exit;
+	if (!npd->phy_suspend)
+		npd->phy_suspend = s5p_usb_phy_suspend;
+	if (!npd->phy_resume)
+		npd->phy_resume = s5p_usb_phy_resume;
 }
 #endif
 
@@ -85,4 +89,21 @@ struct platform_device s5p_device_ohci = {
 		.coherent_dma_mask = 0xffffffffUL
 	}
 };
+
+void __init s5p_ohci_set_platdata(struct s5p_ohci_platdata *pd)
+{
+	struct s5p_ohci_platdata *npd;
+
+	npd = s3c_set_platdata(pd, sizeof(struct s5p_ohci_platdata),
+			&s5p_device_ohci);
+
+	if (!npd->phy_init)
+		npd->phy_init = s5p_usb_phy_init;
+	if (!npd->phy_exit)
+		npd->phy_exit = s5p_usb_phy_exit;
+	if (!npd->phy_suspend)
+		npd->phy_suspend = s5p_usb_phy_suspend;
+	if (!npd->phy_resume)
+		npd->phy_resume = s5p_usb_phy_resume;
+}
 #endif
