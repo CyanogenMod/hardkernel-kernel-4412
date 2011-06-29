@@ -71,6 +71,7 @@
 #include <plat/tvout.h>
 #include <plat/fimg2d.h>
 #include <plat/ehci.h>
+#include <plat/usbgadget.h>
 #ifdef CONFIG_S3C64XX_DEV_SPI
 #include <plat/s3c64xx-spi.h>
 #endif
@@ -1469,6 +1470,28 @@ static void __init smdkv310_ehci_init(void)
 }
 #endif
 
+#ifdef CONFIG_USB_OHCI_S5P
+static struct s5p_ohci_platdata smdkv310_ohci_pdata;
+
+static void __init smdkv310_ohci_init(void)
+{
+	struct s5p_ohci_platdata *pdata = &smdkv310_ohci_pdata;
+
+	s5p_ohci_set_platdata(pdata);
+}
+#endif
+/* USB GADGET */
+#ifdef CONFIG_USB_GADGET
+static struct s5p_usbgadget_platdata smdkv310_usbgadget_pdata;
+
+static void __init smdkv310_usbgadget_init(void)
+{
+	struct s5p_usbgadget_platdata *pdata = &smdkv310_usbgadget_pdata;
+
+	s5p_usbgadget_set_platdata(pdata);
+}
+#endif
+
 static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
@@ -2119,6 +2142,12 @@ static void __init smdkv310_machine_init(void)
 #endif
 #ifdef CONFIG_USB_EHCI_S5P
 	smdkv310_ehci_init();
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
+	smdkv310_ohci_init();
+#endif
+#ifdef CONFIG_USB_GADGET
+	smdkv310_usbgadget_init();
 #endif
 
 	platform_add_devices(smdkv310_devices, ARRAY_SIZE(smdkv310_devices));
