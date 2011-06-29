@@ -488,8 +488,7 @@ static int __init exynos4_init_cpuidle(void)
 		device->cpu = cpu_id;
 
 		if (cpu_id == 0)
-			device->state_count = (sizeof(exynos4_cpuidle_set) /
-					       sizeof(struct cpuidle_state));
+			device->state_count = ARRAY_SIZE(exynos4_cpuidle_set);
 		else
 			device->state_count = 1;	/* Support IDLE only */
 
