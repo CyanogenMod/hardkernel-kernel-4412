@@ -17,16 +17,10 @@
 #include <linux/pm_runtime.h>
 
 #include <mach/regs-pmu.h>
+#include <mach/regs-usb-host.h>
 #include <plat/cpu.h>
 #include <plat/ehci.h>
 #include <plat/usb-phy.h>
-
-extern void usb_host_phy_init(void __iomem *base_address);
-extern void usb_host_phy_off(void);
-extern void usb_host_phy_suspend(void);
-extern void usb_host_phy_resume(void);
-extern void usb_host_phy_sleep(void);
-extern void usb_host_phy_wakeup(void);
 
 struct s5p_ehci_hcd {
 	struct device *dev;
@@ -34,10 +28,19 @@ struct s5p_ehci_hcd {
 	struct clk *clk;
 };
 
+static int s5p_ehci_configurate(struct usb_hcd *hcd)
+{
+	/* DMA burst Enable */
+	writel(readl(INSNREG00(hcd->regs)) | ENA_DMA_INCR,
+			INSNREG00(hcd->regs));
+	return 0;
+}
+
 #ifdef CONFIG_PM
 static int s5p_ehci_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = s5p_ehci->hcd;
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
@@ -66,15 +69,18 @@ static int s5p_ehci_suspend(struct device *dev)
 
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 
-	usb_host_phy_off();
+	if (pdata && pdata->phy_exit)
+		pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
 fail:
 	spin_unlock_irqrestore(&ehci->lock, flags);
 
 	return rc;
 }
+
 static int s5p_ehci_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = s5p_ehci->hcd;
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
@@ -82,7 +88,10 @@ static int s5p_ehci_resume(struct device *dev)
 #ifdef CONFIG_USB_SUSPEND
 	pm_runtime_resume(&pdev->dev);
 #endif
-	usb_host_phy_init(hcd->regs);
+	if (pdata->phy_init)
+		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
+
+	s5p_ehci_configurate(hcd);
 
 	if (time_before(jiffies, ehci->next_statechange))
 		msleep(10);
@@ -132,16 +141,46 @@ static int s5p_ehci_resume(struct device *dev)
 #ifdef CONFIG_USB_SUSPEND
 static int s5p_ehci_runtime_suspend(struct device *dev)
 {
-	usb_host_phy_suspend();
+	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
+
+	if (pdata && pdata->phy_suspend)
+		pdata->phy_suspend(pdev, S5P_USB_PHY_HOST);
 
 	return 0;
 }
 
 static int s5p_ehci_runtime_resume(struct device *dev)
 {
-	/* platform device isn't DPM_RESUMING */
-	if (dev->power.status != DPM_RESUMING)
-		usb_host_phy_resume();
+	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
+	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ehci->hcd;
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+	int rc = 0;
+
+	/* platform device isn't in_suspend */
+	if (pdata && pdata->phy_resume && !dev->power.in_suspend)
+		rc = pdata->phy_resume(pdev, S5P_USB_PHY_HOST);
+
+        if (rc) {
+                /* emptying the schedule aborts any urbs */
+                spin_lock_irq(&ehci->lock);
+                if (ehci->reclaim)
+                        end_unlink_async(ehci);
+                ehci_work(ehci);
+                spin_unlock_irq(&ehci->lock);
+
+                ehci_writel(ehci, ehci->command, &ehci->regs->command);
+                ehci_writel(ehci, FLAG_CF, &ehci->regs->configured_flag);
+                ehci_readl(ehci, &ehci->regs->command); /* unblock posted writes */
+
+                /* here we "know" root ports should always stay powered */
+                ehci_port_power(ehci, 1);
+
+                hcd->state = HC_STATE_SUSPENDED;
+                usb_root_hub_lost_power(hcd->self.root_hub);
+        }
 
 	return 0;
 }
@@ -220,6 +259,10 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 		goto fail_clk;
 	}
 
+	err = clk_enable(s5p_ehci->clk);
+	if (err)
+		goto fail_clken;
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "Failed to get I/O memory\n");
@@ -243,12 +286,15 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	usb_host_phy_init(hcd->regs);
+	if (pdata->phy_init)
+		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 
 	ehci = hcd_to_ehci(hcd);
 	ehci->caps = hcd->regs;
 	ehci->regs = hcd->regs +
 		HC_LENGTH(ehci, readl(&ehci->caps->hc_capbase));
+
+	s5p_ehci_configurate(hcd);
 
 	dbg_hcs_params(ehci, "reset");
 	dbg_hcc_params(ehci, "reset");
@@ -274,6 +320,8 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 fail:
 	iounmap(hcd->regs);
 fail_io:
+	clk_disable(s5p_ehci->clk);
+fail_clken:
 	clk_put(s5p_ehci->clk);
 fail_clk:
 	usb_put_hcd(hcd);
@@ -284,6 +332,7 @@ fail_hcd:
 
 static int __devexit s5p_ehci_remove(struct platform_device *pdev)
 {
+	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = s5p_ehci->hcd;
 
@@ -292,9 +341,13 @@ static int __devexit s5p_ehci_remove(struct platform_device *pdev)
 #endif
 	usb_remove_hcd(hcd);
 
-	usb_host_phy_off();
+	if (pdata && pdata->phy_exit)
+		pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
 
 	iounmap(hcd->regs);
+
+	clk_disable(s5p_ehci->clk);
+	clk_put(s5p_ehci->clk);
 
 	usb_put_hcd(hcd);
 	kfree(s5p_ehci);

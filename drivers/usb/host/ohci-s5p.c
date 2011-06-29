@@ -17,20 +17,24 @@
 */
 
 #include <linux/platform_device.h>
+#include <linux/clk.h>
 
-extern int usb_disabled(void);
+#include <plat/ehci.h>
+#include <plat/usb-phy.h>
 
-extern void usb_host_phy_init(void __iomem *base_address);
-extern void usb_host_phy_off(void);
-
-static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev);
-static int ohci_hcd_s5p_drv_remove(struct platform_device *pdev);
+struct s5p_ohci_hcd {
+	struct device *dev;
+	struct usb_hcd *hcd;
+	struct clk *clk;
+};
 
 #ifdef CONFIG_PM
-static int ohci_hcd_s5p_drv_suspend(struct platform_device *pdev,
-		pm_message_t message)
+static int ohci_hcd_s5p_drv_suspend(struct device *dev)
 {
-	struct usb_hcd *hcd = platform_get_drvdata(pdev);
+	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ohci_platdata *pdata = pdev->dev.platform_data;
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ohci->hcd;
 	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
 	unsigned long flags;
 	int rc = 0;
@@ -44,29 +48,31 @@ static int ohci_hcd_s5p_drv_suspend(struct platform_device *pdev,
 	 * any locks =P But that will be a different fix.
 	 */
 	spin_lock_irqsave(&ohci->lock, flags);
-	if (hcd->state != HC_STATE_SUSPENDED) {
+	if (hcd->state != HC_STATE_SUSPENDED && hcd->state != HC_STATE_HALT) {
 		rc = -EINVAL;
 		goto fail;
 	}
 
-	/* make sure snapshot being resumed re-enumerates everything */
-	if (message.event == PM_EVENT_PRETHAW)
-		ohci_usb_reset(ohci);
-
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 
-	usb_host_phy_off();
+	if (pdata && pdata->phy_exit)
+		pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
 fail:
 	spin_unlock_irqrestore(&ohci->lock, flags);
 
 	return rc;
 }
-static int ohci_hcd_s5p_drv_resume(struct platform_device *pdev)
+
+static int ohci_hcd_s5p_drv_resume(struct device *dev)
 {
-	struct usb_hcd *hcd = platform_get_drvdata(pdev);
+	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ohci_platdata *pdata = pdev->dev.platform_data;
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ohci->hcd;
 	int rc = 0;
 
-	usb_host_phy_init(NULL);
+	if (pdata->phy_init)
+		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 
 	/* Mark hardware accessible again as we are out of D3 state by now */
 	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
@@ -75,12 +81,11 @@ static int ohci_hcd_s5p_drv_resume(struct platform_device *pdev)
 
 	return rc;
 }
+
 #else
-#define ohci_hcd_s5p_drv_suspend NULL
-#define ohci_hcd_s5p_drv_resume NULL
+#define s5p_ohci_suspend	NULL
+#define s5p_ohci_resume		NULL
 #endif
-
-
 
 static int __devinit ohci_s5p_start(struct usb_hcd *hcd)
 {
@@ -132,83 +137,135 @@ static const struct hc_driver ohci_s5p_hc_driver = {
 
 static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 {
+	struct s5p_ohci_platdata *pdata;
+	struct s5p_ohci_hcd *s5p_ohci;
 	struct usb_hcd  *hcd = NULL;
-	int retval = 0;
+	struct resource *res;
+	int irq;
+	int err;
 
-	if (usb_disabled())
-		return -ENODEV;
-
-	if (pdev->resource[1].flags != IORESOURCE_IRQ) {
-		dev_err(&pdev->dev, "resource[1] is not IORESOURCE_IRQ.\n");
-		return -ENODEV;
+	pdata = pdev->dev.platform_data;
+	if (!pdata) {
+		dev_err(&pdev->dev, "No platform data defined\n");
+		return -EINVAL;
 	}
 
-	hcd = usb_create_hcd(&ohci_s5p_hc_driver, &pdev->dev, "s5p");
+	s5p_ohci = kzalloc(sizeof(struct s5p_ohci_hcd), GFP_KERNEL);
+	if (!s5p_ohci)
+		return -ENOMEM;
+
+	s5p_ohci->dev = &pdev->dev;
+
+	hcd = usb_create_hcd(&ohci_s5p_hc_driver, &pdev->dev,
+					dev_name(&pdev->dev));
 	if (!hcd) {
-		dev_err(&pdev->dev, "usb_create_hcd failed!\n");
-		return -ENODEV;
+		dev_err(&pdev->dev, "Unable to create HCD\n");
+		err = -ENOMEM;
+		goto fail_hcd;
 	}
 
-	hcd->rsrc_start = pdev->resource[0].start;
-	hcd->rsrc_len = pdev->resource[0].end - pdev->resource[0].start + 1;
+	s5p_ohci->hcd = hcd;
+	s5p_ohci->clk = clk_get(&pdev->dev, "usbhost");
 
-	if (!request_mem_region(hcd->rsrc_start, hcd->rsrc_len, hcd_name)) {
-		dev_err(&pdev->dev, "request_mem_region failed!\n");
-		retval = -EBUSY;
-		goto err1;
+	if (IS_ERR(s5p_ohci->clk)) {
+		dev_err(&pdev->dev, "Failed to get usbhost clock\n");
+		err = PTR_ERR(s5p_ohci->clk);
+		goto fail_clk;
 	}
 
-	usb_host_phy_init(NULL);
+	err = clk_enable(s5p_ohci->clk);
+	if (err)
+		goto fail_clken;
 
-	hcd->regs = ioremap(hcd->rsrc_start, hcd->rsrc_len);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(&pdev->dev, "Failed to get I/O memory\n");
+		err = -ENXIO;
+		goto fail_io;
+	}
+
+	hcd->rsrc_start = res->start;
+	hcd->rsrc_len = resource_size(res);
+	hcd->regs = ioremap(res->start, resource_size(res));
 	if (!hcd->regs) {
-		dev_err(&pdev->dev, "ioremap failed!\n");
-		retval = -ENOMEM;
-		goto err2;
+		dev_err(&pdev->dev, "Failed to remap I/O memory\n");
+		err = -ENOMEM;
+		goto fail_io;
 	}
+
+	irq = platform_get_irq(pdev, 0);
+	if (!irq) {
+		dev_err(&pdev->dev, "Failed to get IRQ\n");
+		err = -ENODEV;
+		goto fail;
+	}
+
+	if (pdata->phy_init)
+		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 
 	ohci_hcd_init(hcd_to_ohci(hcd));
 
-	retval = usb_add_hcd(hcd, pdev->resource[1].start,
+	err = usb_add_hcd(hcd, pdev->resource[1].start,
 				IRQF_DISABLED | IRQF_SHARED);
 
-	if (retval == 0) {
-		platform_set_drvdata(pdev, hcd);
-		return retval;
+	if (err) {
+		dev_err(&pdev->dev, "Failed to add USB HCD\n");
+		goto fail;
 	}
 
-	usb_host_phy_off();
+	platform_set_drvdata(pdev, s5p_ohci);
+
+	return 0;
+
+fail:
 	iounmap(hcd->regs);
-err2:
-	release_mem_region(hcd->rsrc_start, hcd->rsrc_len);
-err1:
+fail_io:
+	clk_disable(s5p_ohci->clk);
+fail_clken:
+	clk_put(s5p_ohci->clk);
+fail_clk:
 	usb_put_hcd(hcd);
-	return retval;
+fail_hcd:
+	kfree(s5p_ohci);
+	return err;
 }
 
 static int ohci_hcd_s5p_drv_remove(struct platform_device *pdev)
 {
-	struct usb_hcd *hcd = platform_get_drvdata(pdev);
+	struct s5p_ohci_platdata *pdata = pdev->dev.platform_data;
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ohci->hcd;
 
 	usb_remove_hcd(hcd);
+
+	if (pdata && pdata->phy_exit)
+		pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
+
 	iounmap(hcd->regs);
-	release_mem_region(hcd->rsrc_start, hcd->rsrc_len);
+
+	clk_disable(s5p_ohci->clk);
+	clk_put(s5p_ohci->clk);
+
 	usb_put_hcd(hcd);
-	usb_host_phy_off();
+	kfree(s5p_ohci);
 	platform_set_drvdata(pdev, NULL);
 
 	return 0;
 }
 
-static struct platform_driver  ohci_hcd_s5p_driver = {
+static const struct dev_pm_ops ohci_s5p_pm_ops = {
+	.suspend		= ohci_hcd_s5p_drv_suspend,
+	.resume			= ohci_hcd_s5p_drv_resume,
+};
+
+static struct platform_driver ohci_hcd_s5p_driver = {
 	.probe		= ohci_hcd_s5p_drv_probe,
-	.remove		= ohci_hcd_s5p_drv_remove,
+	.remove		= __devexit_p(ohci_hcd_s5p_drv_remove),
 	.shutdown	= usb_hcd_platform_shutdown,
-	.suspend	= ohci_hcd_s5p_drv_suspend,
-	.resume		= ohci_hcd_s5p_drv_resume,
 	.driver = {
-		.name = "s5p-ohci",
-		.owner = THIS_MODULE,
+		.name	= "s5p-ohci",
+		.owner	= THIS_MODULE,
+		.pm	= &ohci_s5p_pm_ops,
 	}
 };
 
