@@ -44,7 +44,7 @@ static struct resource s3c_dwmci_resource[] = {
 
 static u64 s3c_device_dwmci_dmamask = 0xffffffffUL;
 
-static struct dw_mci_board exynos4_dwci_pdata __initdata = {
+static struct dw_mci_board exynos4_dwci_pdata = {
 	.num_slots = 1,
 	.quirks = DW_MCI_QUIRK_BROKEN_CARD_DETECTION,
 	.bus_hz = 80*1000*1000,
