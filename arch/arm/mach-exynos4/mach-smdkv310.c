@@ -2250,7 +2250,7 @@ static void __init smdkv310_machine_init(void)
 	s5p_tmu_set_platdata(NULL);
 #endif
 
-#ifdef CONFIG_VIDEO_MFC5X
+#if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 #endif
