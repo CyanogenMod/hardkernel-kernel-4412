@@ -228,7 +228,7 @@ static struct s5k4ba_platform_data s5k4ba_plat = {
 	.is_mipi = 0,
 };
 
-static struct i2c_board_info  s5k4ba_i2c_info = {
+static struct i2c_board_info  __initdata s5k4ba_i2c_info = {
 	I2C_BOARD_INFO("S5K4BA", 0x2d),
 	.platform_data = &s5k4ba_plat,
 };
@@ -283,7 +283,7 @@ static struct s5k4ea_platform_data s5k4ea_plat = {
 	.is_mipi = 1,
 };
 
-static struct i2c_board_info  s5k4ea_i2c_info = {
+static struct i2c_board_info  __initdata s5k4ea_i2c_info = {
 	I2C_BOARD_INFO("S5K4EA", 0x2d),
 	.platform_data = &s5k4ea_plat,
 };
@@ -333,7 +333,7 @@ static struct s3c_platform_camera s5k4ea = {
 #endif
 
 #ifdef WRITEBACK_ENABLED
-static struct i2c_board_info  writeback_i2c_info = {
+static struct i2c_board_info  __initdata writeback_i2c_info = {
 	I2C_BOARD_INFO("WriteBack", 0x0),
 };
 
@@ -387,7 +387,7 @@ static struct m5mo_platform_data m5mo_plat = {
 	.irq = IRQ_EINT(5),
 };
 
-static struct i2c_board_info  m5mo_i2c_info = {
+static struct i2c_board_info  __initdata m5mo_i2c_info = {
 	I2C_BOARD_INFO("M5MO", 0x1F),
 	.platform_data = &m5mo_plat,
 	.irq = IRQ_EINT(5),
@@ -480,7 +480,7 @@ struct writeback_mbus_platform_data {
 	struct v4l2_mbus_framefmt fmt;
 };
 
-static struct i2c_board_info writeback_info = {
+static struct i2c_board_info __initdata writeback_info = {
 	I2C_BOARD_INFO("writeback", 0x0),
 };
 #endif
@@ -503,7 +503,7 @@ static struct s5k4ba_mbus_platform_data s5k4ba_mbus_plat = {
 #endif
 };
 
-static struct i2c_board_info s5k4ba_info = {
+static struct i2c_board_info __initdata s5k4ba_info = {
 	I2C_BOARD_INFO("S5K4BA", 0x2d),
 	.platform_data = &s5k4ba_mbus_plat,
 };
@@ -528,7 +528,7 @@ static struct s5k4ea_mbus_platform_data s5k4ea_mbus_plat = {
 	.clk_rate	= 24000000UL,
 };
 
-static struct i2c_board_info s5k4ea_info = {
+static struct i2c_board_info __initdata s5k4ea_info = {
 	I2C_BOARD_INFO("S5K4EA", 0x2d),
 	.platform_data = &s5k4ea_mbus_plat,
 };
@@ -546,7 +546,7 @@ static struct m5mols_platform_data m5mols_platdata = {
 	.irq = IRQ_EINT(5),
 };
 
-static struct i2c_board_info m5mols_board_info = {
+static struct i2c_board_info __initdata m5mols_board_info = {
 	I2C_BOARD_INFO("M5MOLS", 0x1F),
 	.platform_data = &m5mols_platdata,
 };
