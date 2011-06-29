@@ -14,9 +14,11 @@
 #include <linux/platform_device.h>
 
 #include <mach/map.h>
+#include <plat/devs.h>
+#include <plat/usbgadget.h>
+#include <plat/usb-phy.h>
 
 #ifdef CONFIG_USB_GADGET
-
 /* USB Device (Gadget)*/
 static struct resource s3c_usbgadget_resource[] = {
 	[0] = {
@@ -42,4 +44,17 @@ struct platform_device s3c_device_usbgadget = {
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	},
 };
+
+void __init s5p_usbgadget_set_platdata(struct s5p_usbgadget_platdata *pd)
+{
+	struct s5p_usbgadget_platdata *npd;
+
+	npd = s3c_set_platdata(pd, sizeof(struct s5p_usbgadget_platdata),
+			&s3c_device_usbgadget);
+
+	if (!npd->phy_init)
+		npd->phy_init = s5p_usb_phy_init;
+	if (!npd->phy_exit)
+		npd->phy_exit = s5p_usb_phy_exit;
+}
 #endif /* CONFIG_USB_GADGET */

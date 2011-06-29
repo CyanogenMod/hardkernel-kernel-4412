@@ -25,6 +25,8 @@
 #include <linux/platform_device.h>
 #include <mach/map.h>
 #include <plat/regs-otg.h>
+#include <plat/usb-phy.h>
+#include <plat/usbgadget.h>
 
 #if 1
 #undef DEBUG_S3C_UDC_SETUP
@@ -113,9 +115,6 @@ static unsigned int ep0_fifo_size = 64;
 static unsigned int ep_fifo_size =  512;
 static unsigned int ep_fifo_size2 = 1024;
 static int reset_available = 1;
-
-extern void otg_phy_init(void);
-extern void otg_phy_off(void);
 
 /*
   Local declarations.
@@ -218,6 +217,8 @@ udc_proc_read(char *page, char **start, off_t off, int count,
  */
 static void udc_disable(struct s3c_udc *dev)
 {
+	struct platform_device *pdev = dev->dev;
+	struct s5p_usbgadget_platdata *pdata = pdev->dev.platform_data;
 	u32 utemp;
 	DEBUG_SETUP("%s: %p\n", __func__, dev);
 
@@ -235,8 +236,8 @@ static void udc_disable(struct s3c_udc *dev)
 	utemp |= SOFT_DISCONNECT;
 	__raw_writel(utemp, S3C_UDC_OTG_DCTL);
 	udelay(20);
-
-	otg_phy_off();
+	if (pdata && pdata->phy_exit)
+		pdata->phy_exit(pdev, S5P_USB_PHY_DEVICE);
 }
 
 /*
@@ -277,9 +278,12 @@ static void udc_reinit(struct s3c_udc *dev)
  */
 static int udc_enable(struct s3c_udc *dev)
 {
+	struct platform_device *pdev = dev->dev;
+	struct s5p_usbgadget_platdata *pdata = pdev->dev.platform_data;
 	DEBUG_SETUP("%s: %p\n", __func__, dev);
 
-	otg_phy_init();
+	if (pdata->phy_init)
+		pdata->phy_init(pdev, S5P_USB_PHY_DEVICE);
 	reconfig_usbd();
 
 	DEBUG_SETUP("S3C USB 2.0 OTG Controller Core Initialized : 0x%x\n",
@@ -1104,10 +1108,17 @@ static struct s3c_udc memory = {
  */
 static int s3c_udc_probe(struct platform_device *pdev)
 {
+	struct s5p_usbgadget_platdata *pdata;
 	struct s3c_udc *dev = &memory;
 	int retval;
 
 	DEBUG("%s: %p\n", __func__, pdev);
+
+	pdata = pdev->dev.platform_data;
+	if (!pdata) {
+		dev_err(&pdev->dev, "No platform data defined\n");
+		return -EINVAL;
+	}
 
 	spin_lock_init(&dev->lock);
 	dev->dev = pdev;
