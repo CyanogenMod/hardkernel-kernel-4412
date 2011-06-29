@@ -2289,6 +2289,7 @@ static void __init smdkc210_machine_init(void)
 	if (IS_ERR(prnt))
 		dev_err(spi0_dev, "failed to get prnt\n");
 	clk_set_parent(sclk, prnt);
+	clk_put(sclk);
 	clk_put(prnt);
 
 	if (!gpio_request(EXYNOS4_GPB(1), "SPI_CS0")) {
@@ -2307,6 +2308,7 @@ static void __init smdkc210_machine_init(void)
 	if (IS_ERR(prnt))
 		dev_err(spi2_dev, "failed to get prnt\n");
 	clk_set_parent(sclk, prnt);
+	clk_put(sclk);
 	clk_put(prnt);
 
 	if (!gpio_request(EXYNOS4_GPC1(2), "SPI_CS2")) {
