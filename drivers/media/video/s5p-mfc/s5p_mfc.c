@@ -521,7 +521,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 			if (ctx->c_ops->post_seq_start(ctx))
 				mfc_err("post_seq_start() failed\n");
 		} else {
-			if (ctx->src_fmt->fourcc != V4L2_PIX_FMT_DIVX3) {
+			if (ctx->src_fmt->fourcc != V4L2_PIX_FMT_FIMV1) {
 				ctx->img_width = s5p_mfc_get_img_width();
 				ctx->img_height = s5p_mfc_get_img_height();
 			}

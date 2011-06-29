@@ -80,37 +80,37 @@ static struct s5p_mfc_fmt formats[] = {
 		.num_planes = 1,
 	},
 	{
-		.name = "DivX Encoded Stream",
-		.fourcc = V4L2_PIX_FMT_DIVX,
+		.name = "FIMV Encoded Stream",
+		.fourcc = V4L2_PIX_FMT_FIMV,
 		.codec_mode = S5P_FIMV_CODEC_MPEG4_DEC,
 		.type = MFC_FMT_DEC,
 		.num_planes = 1,
 	},
 	{
-		.name = "DivX 3.11 Encoded Stream",
-		.fourcc = V4L2_PIX_FMT_DIVX3,
-		.codec_mode = S5P_FIMV_CODEC_DIVX311_DEC,
+		.name = "FIMV1 Encoded Stream",
+		.fourcc = V4L2_PIX_FMT_FIMV1,
+		.codec_mode = S5P_FIMV_CODEC_FIMV1_DEC,
 		.type = MFC_FMT_DEC,
 		.num_planes = 1,
 	},
 	{
-		.name = "DivX 4.12 Encoded Stream",
-		.fourcc = V4L2_PIX_FMT_DIVX4,
-		.codec_mode = S5P_FIMV_CODEC_DIVX412_DEC,
+		.name = "FIMV2 Encoded Stream",
+		.fourcc = V4L2_PIX_FMT_FIMV2,
+		.codec_mode = S5P_FIMV_CODEC_FIMV2_DEC,
 		.type = MFC_FMT_DEC,
 		.num_planes = 1,
 	},
 	{
-		.name = "DivX 5.00-5.02 Encoded Stream",
-		.fourcc = V4L2_PIX_FMT_DIVX500,
-		.codec_mode = S5P_FIMV_CODEC_DIVX502_DEC,
+		.name = "FIMV3 Encoded Stream",
+		.fourcc = V4L2_PIX_FMT_FIMV3,
+		.codec_mode = S5P_FIMV_CODEC_FIMV3_DEC,
 		.type = MFC_FMT_DEC,
 		.num_planes = 1,
 	},
 	{
-		.name = "DivX 5.03 Encoded Stream",
-		.fourcc = V4L2_PIX_FMT_DIVX503,
-		.codec_mode = S5P_FIMV_CODEC_DIVX503_DEC,
+		.name = "FIMV4 Encoded Stream",
+		.fourcc = V4L2_PIX_FMT_FIMV4,
+		.codec_mode = S5P_FIMV_CODEC_FIMV4_DEC,
 		.type = MFC_FMT_DEC,
 		.num_planes = 1,
 	},
@@ -798,7 +798,7 @@ static int vidioc_try_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		return -EINVAL;
 	}
 	/* Width and height are left intact as they may be relevant for
-	 * DivX 3.11 decoding. */
+	 * FIMV1 decoding. */
 
 	return 0;
 }
@@ -839,7 +839,7 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 	ctx->codec_mode = fmt->codec_mode;
 	mfc_debug(2, "The codec number is: %d\n", ctx->codec_mode);
 	ctx->pix_format = pix_mp->pixelformat;
-	if (pix_mp->pixelformat != V4L2_PIX_FMT_DIVX3) {
+	if (pix_mp->pixelformat != V4L2_PIX_FMT_FIMV1) {
 		pix_mp->height = 0;
 		pix_mp->width = 0;
 	} else {

@@ -291,10 +291,10 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		ctx->port_b_size = ctx->total_dpb_count * ctx->mv_size;
 		break;
 	case S5P_FIMV_CODEC_MPEG4_DEC:
-	case S5P_FIMV_CODEC_DIVX412_DEC:
-	case S5P_FIMV_CODEC_DIVX311_DEC:
-	case S5P_FIMV_CODEC_DIVX502_DEC:
-	case S5P_FIMV_CODEC_DIVX503_DEC:
+	case S5P_FIMV_CODEC_FIMV1_DEC:
+	case S5P_FIMV_CODEC_FIMV2_DEC:
+	case S5P_FIMV_CODEC_FIMV3_DEC:
+	case S5P_FIMV_CODEC_FIMV4_DEC:
 		ctx->port_a_size =
 		    ALIGN(S5P_FIMV_DEC_NB_DCAC_SIZE +
 				     S5P_FIMV_DEC_UPNB_MV_SIZE +
@@ -564,10 +564,10 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 		buf_size1 -= S5P_FIMV_DEC_NB_IP_SIZE;
 		break;
 	case S5P_FIMV_CODEC_MPEG4_DEC:
-	case S5P_FIMV_CODEC_DIVX311_DEC:
-	case S5P_FIMV_CODEC_DIVX412_DEC:
-	case S5P_FIMV_CODEC_DIVX502_DEC:
-	case S5P_FIMV_CODEC_DIVX503_DEC:
+	case S5P_FIMV_CODEC_FIMV1_DEC:
+	case S5P_FIMV_CODEC_FIMV2_DEC:
+	case S5P_FIMV_CODEC_FIMV3_DEC:
+	case S5P_FIMV_CODEC_FIMV4_DEC:
 		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_NB_DCAC_ADR);
 		buf_addr1 += S5P_FIMV_DEC_NB_DCAC_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_NB_DCAC_SIZE;
@@ -1332,11 +1332,11 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 			(((ctx->display_delay >= 0 ? ctx->display_delay : 0) &
 			S5P_FIMV_DDELAY_VAL_MASK) << S5P_FIMV_DDELAY_VAL_SHIFT),
 			S5P_FIMV_SI_CH0_DPB_CONF_CTRL);
-	if (ctx->codec_mode == S5P_FIMV_CODEC_DIVX311_DEC) {
-		mfc_debug(2, "Setting DivX 3.11 resolution to %dx%d\n",
+	if (ctx->codec_mode == S5P_FIMV_CODEC_FIMV1_DEC) {
+		mfc_debug(2, "Setting FIMV1 resolution to %dx%d\n",
 					ctx->img_width, ctx->img_height);
-		WRITEL(ctx->img_width, S5P_FIMV_SI_DIVX311_HRESOL);
-		WRITEL(ctx->img_height, S5P_FIMV_SI_DIVX311_VRESOL);
+		WRITEL(ctx->img_width, S5P_FIMV_SI_FIMV1_HRESOL);
+		WRITEL(ctx->img_height, S5P_FIMV_SI_FIMV1_VRESOL);
 	}
 	WRITEL(((S5P_FIMV_CH_SEQ_HEADER & S5P_FIMV_CH_MASK)
 			<< S5P_FIMV_CH_SHIFT)

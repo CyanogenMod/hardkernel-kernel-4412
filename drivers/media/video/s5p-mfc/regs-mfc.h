@@ -129,8 +129,8 @@
 #define S5P_FIMV_SI_CH1_CPB_SIZE	0x2098 /* max size of coded pic. buf */
 #define S5P_FIMV_SI_CH1_DESC_SIZE	0x209c /* max size of descriptor buf */
 
-#define S5P_FIMV_SI_DIVX311_HRESOL	0x2054 /* horizontal resolution */
-#define S5P_FIMV_SI_DIVX311_VRESOL	0x2050 /* vertical resolution */
+#define S5P_FIMV_SI_FIMV1_HRESOL	0x2054 /* horizontal resolution */
+#define S5P_FIMV_SI_FIMV1_VRESOL	0x2050 /* vertical resolution */
 #define S5P_FIMV_CRC_LUMA0	0x2030 /* luma crc data per frame(top field)*/
 #define S5P_FIMV_CRC_CHROMA0	0x2034 /* chroma crc data per frame(top field)*/
 #define S5P_FIMV_CRC_LUMA1	0x2038 /* luma crc data per bottom field */
@@ -284,10 +284,10 @@
 #define S5P_FIMV_CODEC_MPEG2_DEC		3
 #define S5P_FIMV_CODEC_H263_DEC			4
 #define S5P_FIMV_CODEC_VC1RCV_DEC		5
-#define S5P_FIMV_CODEC_DIVX311_DEC		6
-#define S5P_FIMV_CODEC_DIVX412_DEC		7
-#define S5P_FIMV_CODEC_DIVX502_DEC		8
-#define S5P_FIMV_CODEC_DIVX503_DEC		9
+#define S5P_FIMV_CODEC_FIMV1_DEC		6
+#define S5P_FIMV_CODEC_FIMV2_DEC		7
+#define S5P_FIMV_CODEC_FIMV3_DEC		8
+#define S5P_FIMV_CODEC_FIMV4_DEC		9
 
 #define S5P_FIMV_CODEC_H264_ENC			16
 #define S5P_FIMV_CODEC_MPEG4_ENC		17
