@@ -72,11 +72,6 @@ config VIDEO_SAMSUNG_MEMSIZE_FIMD
 	depends on FB_S5P
 	default "15360"
 
-config SUPPORT_UMP
-	bool "Support UMP (Unified Memory Provider) for FIMD "
-	depends on FB_S5P && VIDEO_UMP
-	default y
-
 choice
 depends on FB_S5P
 prompt "Select LCD Type"

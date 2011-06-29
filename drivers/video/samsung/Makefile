@@ -32,9 +32,3 @@ endif
 ifeq ($(CONFIG_FB_S5P_V2_DEBUG),y)
 EXTRA_CFLAGS += -DDEBUG
 endif
-
-ifeq ($(CONFIG_SUPPORT_UMP),y)
-EXTRA_CFLAGS += -DMALI_USE_UNIFIED_MEMORY_PROVIDER=1 -Idrivers/media/video/samsung/ump/include
-else
-EXTRA_CFLAGS += -DMALI_USE_UNIFIED_MEMORY_PROVIDER=0
-endif

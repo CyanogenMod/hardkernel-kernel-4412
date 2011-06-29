@@ -22,11 +22,6 @@
 #include <mach/media.h>
 #endif
 
-#if MALI_USE_UNIFIED_MEMORY_PROVIDER
-#include "ump_kernel_interface_ref_drv.h"
-#define UMP_HANDLE_DD_INVALID ((void *)-1)
-#endif
-
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
 #include <linux/earlysuspend.h>
@@ -223,28 +218,6 @@ static const struct s5p_vcm_driver s3cfb_vcm_driver = {
 	.phys_alloc = NULL,
 	.phys_free = NULL,
 };
-
-#if MALI_USE_UNIFIED_MEMORY_PROVIDER
-int s3cfb_ump_wrapper(struct fb_fix_screeninfo *fix, int arg, int id,
-			struct s3cfb_window *win)
-{
-	ump_dd_physical_block ump_memory_description;
-	unsigned int buffer_size;
-	buffer_size = fix->smem_len / CONFIG_FB_S5P_NR_BUFFERS;
-
-	ump_memory_description.addr = fix->smem_start + (buffer_size * id);
-	ump_memory_description.size = buffer_size;
-
-	win->ump_wrapped_buffer[id] =
-		ump_dd_handle_create_from_phys_blocks
-		(&ump_memory_description, 1);
-
-	if (ump_dd_vcm_attribute_set(win->ump_wrapped_buffer[id], arg))
-		return -ENOMEM;
-
-	return 0;
-}
-#endif
 #endif
 
 int s3cfb_map_video_memory(struct s3cfb_global *fbdev, struct fb_info *fb)
@@ -342,36 +315,6 @@ int s3cfb_map_video_memory(struct s3cfb_global *fbdev, struct fb_info *fb)
 	win->owner = DMA_MEM_FIMD;
 #endif
 
-#if MALI_USE_UNIFIED_MEMORY_PROVIDER
-#ifdef CONFIG_VCM
-#ifdef CONFIG_UMP_VCM_ALLOC
-	for (i = 0; i < frame_num; i++) {
-		ump_vcm.vcm = win->s3cfb_vcm[i].dev_vcm;
-		ump_vcm.vcm_res = win->s3cfb_vcm[i].dev_vcm_res;
-		ump_vcm.dev_id = id;
-		arg = (unsigned int)&ump_vcm;
-
-		ump_memory_description.addr = fix->smem_start + ((fix->smem_len / frame_num) * i);
-		ump_memory_description.size = fix->smem_len / frame_num;
-
-		win->ump_wrapped_buffer[i] =
-			ump_dd_handle_create_from_phys_blocks
-			(&ump_memory_description, 1);
-
-		if (ump_dd_vcm_attribute_set(win->ump_wrapped_buffer[i], arg))
-			return -ENOMEM;
-
-	}
-#else
-	if (s3cfb_ump_wrapper(fix, arg, 0, win)) {
-		dev_info(fbdev->dev, "[fb%d] : Wrapped UMP memory : %x\n"
-				, win->id, (unsigned int)ump_wrapped_buffer);
-		s3cfb_unmap_video_memory(fbdev, fb);
-		return -ENOMEM;
-	}
-#endif
-#endif
-#endif
 	return 0;
 }
 
@@ -396,16 +339,6 @@ int s3cfb_map_default_video_memory(struct s3cfb_global *fbdev,
 #ifdef CONFIG_S5P_MEM_CMA
 	struct cma_info mem_info;
 	int err;
-#endif
-#endif
-
-#ifdef MALI_USE_UNIFIED_MEMORY_PROVIDER
-#ifdef CONFIG_VCM
-	int i;
-	unsigned int arg = 0;
-#ifdef CONFIG_UMP_VCM_ALLOC
-	struct ump_vcm ump_vcm;
-#endif
 #endif
 #endif
 
@@ -487,35 +420,6 @@ int s3cfb_map_default_video_memory(struct s3cfb_global *fbdev,
 
 	memset(fb->screen_base, 0, fix->smem_len);
 	win->owner = DMA_MEM_FIMD;
-
-#if MALI_USE_UNIFIED_MEMORY_PROVIDER
-#ifdef CONFIG_VCM
-#ifdef CONFIG_UMP_VCM_ALLOC
-	for (i = 0; i < CONFIG_FB_S5P_NR_BUFFERS; i++) {
-		ump_vcm.vcm = win->s3cfb_vcm[i].dev_vcm;
-		ump_vcm.vcm_res = win->s3cfb_vcm[i].dev_vcm_res;
-		ump_vcm.dev_id = id;
-		arg = (unsigned int)&ump_vcm;
-		ump_memory_description.addr = fix->smem_start + ((fix->smem_len / CONFIG_FB_S5P_NR_BUFFERS) * i);
-		ump_memory_description.size = fix->smem_len / CONFIG_FB_S5P_NR_BUFFERS;
-
-		win->ump_wrapped_buffer[i] =
-			ump_dd_handle_create_from_phys_blocks
-			(&ump_memory_description, 1);
-
-		if (ump_dd_vcm_attribute_set(win->ump_wrapped_buffer[i], arg))
-			return -ENOMEM;
-	}
-#else
-	if (s3cfb_ump_wrapper(fix, arg, 0, win)) {
-		dev_info(fbdev->dev, "[fb%d] : Wrapped UMP memory : %x\n"
-				, win->id, (unsigned int)ump_wrapped_buffer);
-		s3cfb_unmap_video_memory(fbdev, fb);
-		return -ENOMEM;
-	}
-#endif
-#endif
-#endif
 
 	return 0;
 }
@@ -1224,60 +1128,6 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
-#if MALI_USE_UNIFIED_MEMORY_PROVIDER
-#ifdef CONFIG_VCM
-	case S3CFB_GET_FB_UMP_SECURE_ID_0:
-		{
-			u32 __user *psecureid = (u32 __user *) arg;
-			ump_secure_id secure_id;
-
-			dev_info(fbdev->dev, "ump_dd_secure_id_get\n");
-			secure_id = ump_dd_secure_id_get(win->ump_wrapped_buffer[0]);
-			dev_info(fbdev->dev,
-				"Saving secure id 0x%x in userptr %p\n"
-				, (unsigned int)secure_id, psecureid);
-			dev_dbg(fbdev->dev,
-				"Saving secure id 0x%x in userptr %p\n"
-				, (unsigned int)secure_id, psecureid);
-			return put_user((unsigned int)secure_id, psecureid);
-		}
-		break;
-
-	case S3CFB_GET_FB_UMP_SECURE_ID_1:
-		{
-			u32 __user *psecureid = (u32 __user *) arg;
-			ump_secure_id secure_id;
-
-			dev_info(fbdev->dev, "ump_dd_secure_id_get\n");
-			secure_id = ump_dd_secure_id_get(win->ump_wrapped_buffer[1]);
-			dev_info(fbdev->dev,
-					"Saving secure id 0x%x in userptr %p\n"
-					, (unsigned int)secure_id, psecureid);
-			dev_dbg(fbdev->dev,
-					"Saving secure id 0x%x in userptr %p\n"
-					, (unsigned int)secure_id, psecureid);
-			return put_user((unsigned int)secure_id, psecureid);
-		}
-		break;
-
-	case S3CFB_GET_FB_UMP_SECURE_ID_2:
-		{
-			u32 __user *psecureid = (u32 __user *) arg;
-			ump_secure_id secure_id;
-
-			dev_info(fbdev->dev, "ump_dd_secure_id_get\n");
-			secure_id = ump_dd_secure_id_get(win->ump_wrapped_buffer[2]);
-			dev_info(fbdev->dev,
-					"Saving secure id 0x%x in userptr %p\n"
-					, (unsigned int)secure_id, psecureid);
-			dev_dbg(fbdev->dev,
-					"Saving secure id 0x%x in userptr %p\n"
-					, (unsigned int)secure_id, psecureid);
-			return put_user((unsigned int)secure_id, psecureid);
-		}
-		break;
-#endif
-#endif
 	case S3CFB_GET_FB_PHY_ADDR:
 		start_addr = fix->smem_start + ((var->xres_virtual *
 				var->yoffset + var->xoffset) *

@@ -23,9 +23,6 @@
 #include <plat/fb-s5p.h>
 #ifdef CONFIG_VCM
 #include <plat/s5p-vcm.h>
-#ifdef CONFIG_SUPPORT_UMP
-#include "ump_kernel_interface_ref_drv.h"
-#endif
 #endif
 #endif
 
@@ -229,12 +226,6 @@ struct s3cfb_user_chroma {
 #define S3CFB_SET_WIN_MEM		_IOW('F', 309, \
 						enum s3cfb_mem_owner_t)
 #define S3CFB_GET_FB_PHY_ADDR           _IOR('F', 310, unsigned int)
-
-#if MALI_USE_UNIFIED_MEMORY_PROVIDER
-#define S3CFB_GET_FB_UMP_SECURE_ID_0      _IOWR('m', 310, unsigned int)
-#define S3CFB_GET_FB_UMP_SECURE_ID_1      _IOWR('m', 311, unsigned int)
-#define S3CFB_GET_FB_UMP_SECURE_ID_2      _IOWR('m', 312, unsigned int)
-#endif /* MALI_USE_UNIFIED_MEMORY_PROVIDER */
 
 extern struct fb_ops			s3cfb_ops;
 extern inline struct s3cfb_global	*get_fimd_global(int id);
