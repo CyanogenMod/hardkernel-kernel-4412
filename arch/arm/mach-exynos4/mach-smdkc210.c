@@ -2186,9 +2186,19 @@ static void __init smdkc210_machine_init(void)
 	s3c_fimc1_set_platdata(&fimc_plat);
 	s3c_fimc2_set_platdata(&fimc_plat);
 	s3c_fimc3_set_platdata(&fimc_plat);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s3c_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
 #ifdef CONFIG_VIDEO_FIMC_MIPI
 	s3c_csis0_set_platdata(NULL);
 	s3c_csis1_set_platdata(NULL);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s3c_device_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_csis1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
 #endif
 #if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C)
 	smdkc210_cam0_reset(1);
@@ -2215,11 +2225,21 @@ static void __init smdkc210_machine_init(void)
 			 sizeof(s3c_fimc2_default_data), &s5p_device_fimc2);
 	s3c_set_platdata(&s3c_fimc3_default_data,
 			 sizeof(s3c_fimc3_default_data), &s5p_device_fimc3);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 	s3c_set_platdata(&s5p_mipi_csis0_default_data,
 			sizeof(s5p_mipi_csis0_default_data), &s5p_device_mipi_csis0);
 	s3c_set_platdata(&s5p_mipi_csis1_default_data,
 			sizeof(s5p_mipi_csis1_default_data), &s5p_device_mipi_csis1);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_mipi_csis1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
 #endif
 #if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C)
 	smdkc210_cam0_reset(1);
@@ -2227,26 +2247,7 @@ static void __init smdkc210_machine_init(void)
 #if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D)
 	smdkc210_cam1_reset(1);
 #endif
-#endif
-
-#ifdef CONFIG_EXYNOS4_DEV_PD
-#ifdef CONFIG_VIDEO_FIMC
-	s3c_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-	s3c_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-#endif
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-	s5p_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-	s5p_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-	s5p_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-#endif
-#ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
-	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-	s5p_device_mipi_csis1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-#endif
-#endif
+#endif  /* CONFIG_VIDEO_SAMSUNG_S5P_FIMC */
 
 #ifdef CONFIG_EXYNOS4_SETUP_THERMAL
 	s5p_tmu_set_platdata(NULL);
