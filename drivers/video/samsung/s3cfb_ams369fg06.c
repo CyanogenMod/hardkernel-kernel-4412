@@ -462,7 +462,7 @@ static const struct backlight_ops s5p_bl_ops = {
 };
 #endif
 
-static int __init ams369fg06_probe(struct spi_device *spi)
+static int __devinit ams369fg06_probe(struct spi_device *spi)
 {
 	int ret;
 #ifdef CONFIG_BACKLIGHT_AMS369FG06_AMOLED
