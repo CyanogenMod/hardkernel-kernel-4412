@@ -61,7 +61,6 @@ static struct check_device_op chk_dev_op[] = {
 	{.base = 0, .pdev = &s3c_device_i2c7, .ch = 7},
 #endif
 #endif
-	{.base = 0, .pdev = NULL, .ch = 0xffffffff},
 };
 
 static int check_i2c_op(void)
@@ -70,8 +69,6 @@ static int check_i2c_op(void)
 	void __iomem *base_addr;
 
 	for (i = 0; i < ARRAY_SIZE(chk_dev_op); i++) {
-		if (chk_dev_op[i].pdev == NULL)
-			break;
 		chan = chk_dev_op[i].ch;
 
 		if (chan != 0xffffffff) {
@@ -483,6 +480,25 @@ static int __init exynos4_init_cpuidle(void)
 
 	cpuidle_register_driver(&exynos4_idle_driver);
 
+	for (i = 0; i < ARRAY_SIZE(chk_dev_op); i++) {
+
+		pdev = chk_dev_op[i].pdev;
+
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		if (!res) {
+			printk(KERN_ERR "failed to get iomem region\n");
+			return -EINVAL;
+		}
+		chk_dev_op[i].base = ioremap(res->start, 4096);
+
+		if (!chk_dev_op[i].base) {
+			printk(KERN_ERR "failed to map io region\n");
+			return -EINVAL;
+		}
+	}
+
+	register_pm_notifier(&exynos4_cpuidle_notifier);
+
 	for_each_cpu(cpu_id, cpu_online_mask) {
 		device = &per_cpu(exynos4_cpuidle_device, cpu_id);
 		device->cpu = cpu_id;
@@ -507,27 +523,6 @@ static int __init exynos4_init_cpuidle(void)
 		}
 	}
 
-	for (i = 0; i < ARRAY_SIZE(chk_dev_op); i++) {
-
-		pdev = chk_dev_op[i].pdev;
-
-		if (pdev == NULL)
-			break;
-
-		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-		if (!res) {
-			printk(KERN_ERR "failed to get iomem region\n");
-			return -EINVAL;
-		}
-		chk_dev_op[i].base = ioremap(res->start, 4096);
-
-		if (!chk_dev_op[i].base) {
-			printk(KERN_ERR "failed to map io region\n");
-			return -EINVAL;
-		}
-	}
-
-	register_pm_notifier(&exynos4_cpuidle_notifier);
 	return 0;
 }
 device_initcall(exynos4_init_cpuidle);
