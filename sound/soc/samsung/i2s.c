@@ -944,6 +944,33 @@ static int config_setup(struct i2s_dai *i2s)
 	return 0;
 }
 
+/*
+ * Wait for the LR signal to allow synchronisation to the L/R clock
+ * from the codec. May only be needed for slave mode.
+ */
+static int i2s_lrsync(struct i2s_dai *i2s)
+{
+	unsigned long loops = msecs_to_loops(5);
+	u32 con;
+
+	pr_debug("Entered %s\n", __func__);
+
+	while (--loops) {
+		con = readl(i2s->addr + I2SCON);
+		if (con & CON_LRINDEX)
+			break;
+
+		cpu_relax();
+	}
+
+	if (!loops) {
+		printk(KERN_ERR "%s: timeout\n", __func__);
+		return -ETIMEDOUT;
+	}
+
+	return 0;
+}
+
 static int i2s_trigger(struct snd_pcm_substream *substream,
 	int cmd, struct snd_soc_dai *dai)
 {
@@ -951,11 +978,18 @@ static int i2s_trigger(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct i2s_dai *i2s = to_info(rtd->cpu_dai);
 	unsigned long flags;
+	int ret = 0;
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		if (is_slave(i2s)) {
+			ret = i2s_lrsync(i2s);
+			if (ret)
+				goto exit_err;
+		}
+
 		local_irq_save(flags);
 
 		if (config_setup(i2s)) {
@@ -989,7 +1023,8 @@ static int i2s_trigger(struct snd_pcm_substream *substream,
 		break;
 	}
 
-	return 0;
+exit_err:
+	return ret;
 }
 
 static int i2s_set_clkdiv(struct snd_soc_dai *dai,
