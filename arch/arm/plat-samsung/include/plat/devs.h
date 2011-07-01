@@ -184,7 +184,7 @@ extern struct platform_device s5p_device_fimg2d;
 extern struct platform_device s5p_device_ehci;
 extern struct platform_device s5p_device_ohci;
 
-extern struct platform_device exynos4_device_sysmmu[];
+extern struct platform_device exynos_device_sysmmu[];
 
 extern struct platform_device s5p_device_mfc;
 extern struct platform_device s5p_device_dsim;

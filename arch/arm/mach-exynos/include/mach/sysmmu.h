@@ -13,7 +13,7 @@
 #ifndef __ASM_ARM_ARCH_SYSMMU_H
 #define __ASM_ARM_ARCH_SYSMMU_H __FILE__
 
-enum exynos4_sysmmu_ips {
+enum exynos_sysmmu_ips {
 	SYSMMU_MDMA,
 	SYSMMU_SSS,
 	SYSMMU_FIMC0,
@@ -30,17 +30,17 @@ enum exynos4_sysmmu_ips {
 	SYSMMU_TV,
 	SYSMMU_MFC_L,
 	SYSMMU_MFC_R,
-	EXYNOS4_SYSMMU_TOTAL_IPNUM,
+	EXYNOS_SYSMMU_TOTAL_IPNUM,
 };
 
-#define S5P_SYSMMU_TOTAL_IPNUM		EXYNOS4_SYSMMU_TOTAL_IPNUM
+#define S5P_SYSMMU_TOTAL_IPNUM		EXYNOS_SYSMMU_TOTAL_IPNUM
 
-typedef enum exynos4_sysmmu_ips sysmmu_ips;
+typedef enum exynos_sysmmu_ips sysmmu_ips;
 
 static inline const char *get_sysmmu_name(sysmmu_ips ips)
 {
 #ifdef CONFIG_S5P_SYSTEM_MMU
-	extern const char *sysmmu_ips_name[EXYNOS4_SYSMMU_TOTAL_IPNUM];
+	extern const char *sysmmu_ips_name[EXYNOS_SYSMMU_TOTAL_IPNUM];
 	return sysmmu_ips_name[ips];
 #else
 	return "NO_SYSMMU_LOADED";

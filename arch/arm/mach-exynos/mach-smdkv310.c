@@ -1859,22 +1859,22 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos4_device_pd[PD_TV],
 	&exynos4_device_pd[PD_GPS],
 #ifdef CONFIG_S5P_SYSTEM_MMU
-	&exynos4_device_sysmmu[SYSMMU_MDMA],
-	&exynos4_device_sysmmu[SYSMMU_SSS],
-	&exynos4_device_sysmmu[SYSMMU_FIMC0],
-	&exynos4_device_sysmmu[SYSMMU_FIMC1],
-	&exynos4_device_sysmmu[SYSMMU_FIMC2],
-	&exynos4_device_sysmmu[SYSMMU_FIMC3],
-	&exynos4_device_sysmmu[SYSMMU_JPEG],
-	&exynos4_device_sysmmu[SYSMMU_FIMD0],
-	&exynos4_device_sysmmu[SYSMMU_FIMD1],
-	&exynos4_device_sysmmu[SYSMMU_PCIe],
-	&exynos4_device_sysmmu[SYSMMU_G2D],
-	&exynos4_device_sysmmu[SYSMMU_ROTATOR],
-	&exynos4_device_sysmmu[SYSMMU_MDMA2],
-	&exynos4_device_sysmmu[SYSMMU_TV],
-	&exynos4_device_sysmmu[SYSMMU_MFC_L],
-	&exynos4_device_sysmmu[SYSMMU_MFC_R],
+	&exynos_device_sysmmu[SYSMMU_MDMA],
+	&exynos_device_sysmmu[SYSMMU_SSS],
+	&exynos_device_sysmmu[SYSMMU_FIMC0],
+	&exynos_device_sysmmu[SYSMMU_FIMC1],
+	&exynos_device_sysmmu[SYSMMU_FIMC2],
+	&exynos_device_sysmmu[SYSMMU_FIMC3],
+	&exynos_device_sysmmu[SYSMMU_JPEG],
+	&exynos_device_sysmmu[SYSMMU_FIMD0],
+	&exynos_device_sysmmu[SYSMMU_FIMD1],
+	&exynos_device_sysmmu[SYSMMU_PCIe],
+	&exynos_device_sysmmu[SYSMMU_G2D],
+	&exynos_device_sysmmu[SYSMMU_ROTATOR],
+	&exynos_device_sysmmu[SYSMMU_MDMA2],
+	&exynos_device_sysmmu[SYSMMU_TV],
+	&exynos_device_sysmmu[SYSMMU_MFC_L],
+	&exynos_device_sysmmu[SYSMMU_MFC_R],
 #endif
 	&wm8994_fixed_voltage0,
 	&wm8994_fixed_voltage1,
@@ -2546,31 +2546,31 @@ static void __init smdkv310_machine_init(void)
 #endif
 
 #if defined(CONFIG_S5P_SYSTEM_MMU) && defined(CONFIG_EXYNOS4_DEV_PD)
-	exynos4_device_sysmmu[SYSMMU_MDMA].dev.parent =
+	exynos_device_sysmmu[SYSMMU_MDMA].dev.parent =
 						&exynos4_device_pd[PD_LCD0].dev;
-	exynos4_device_sysmmu[SYSMMU_FIMC0].dev.parent =
+	exynos_device_sysmmu[SYSMMU_FIMC0].dev.parent =
 						&exynos4_device_pd[PD_CAM].dev;
-	exynos4_device_sysmmu[SYSMMU_FIMC1].dev.parent =
+	exynos_device_sysmmu[SYSMMU_FIMC1].dev.parent =
 						&exynos4_device_pd[PD_CAM].dev;
-	exynos4_device_sysmmu[SYSMMU_FIMC2].dev.parent =
+	exynos_device_sysmmu[SYSMMU_FIMC2].dev.parent =
 						&exynos4_device_pd[PD_CAM].dev;
-	exynos4_device_sysmmu[SYSMMU_FIMC3].dev.parent =
+	exynos_device_sysmmu[SYSMMU_FIMC3].dev.parent =
 						&exynos4_device_pd[PD_CAM].dev;
-	exynos4_device_sysmmu[SYSMMU_JPEG].dev.parent =
+	exynos_device_sysmmu[SYSMMU_JPEG].dev.parent =
 						&exynos4_device_pd[PD_CAM].dev;
-	exynos4_device_sysmmu[SYSMMU_FIMD0].dev.parent =
+	exynos_device_sysmmu[SYSMMU_FIMD0].dev.parent =
 						&exynos4_device_pd[PD_LCD0].dev;
-	exynos4_device_sysmmu[SYSMMU_FIMD1].dev.parent =
+	exynos_device_sysmmu[SYSMMU_FIMD1].dev.parent =
 						&exynos4_device_pd[PD_LCD1].dev;
-	exynos4_device_sysmmu[SYSMMU_G2D].dev.parent =
+	exynos_device_sysmmu[SYSMMU_G2D].dev.parent =
 						&exynos4_device_pd[PD_LCD0].dev;
-	exynos4_device_sysmmu[SYSMMU_ROTATOR].dev.parent =
+	exynos_device_sysmmu[SYSMMU_ROTATOR].dev.parent =
 						&exynos4_device_pd[PD_LCD0].dev;
-	exynos4_device_sysmmu[SYSMMU_TV].dev.parent =
+	exynos_device_sysmmu[SYSMMU_TV].dev.parent =
 						&exynos4_device_pd[PD_TV].dev;
-	exynos4_device_sysmmu[SYSMMU_MFC_L].dev.parent =
+	exynos_device_sysmmu[SYSMMU_MFC_L].dev.parent =
 						&exynos4_device_pd[PD_MFC].dev;
-	exynos4_device_sysmmu[SYSMMU_MFC_R].dev.parent =
+	exynos_device_sysmmu[SYSMMU_MFC_R].dev.parent =
 						&exynos4_device_pd[PD_MFC].dev;
 #endif
 
