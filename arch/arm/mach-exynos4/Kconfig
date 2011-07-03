@@ -165,6 +165,7 @@ config EXYNOS4_SETUP_TVOUT
 
 config EXYNOS4_SETUP_THERMAL
 	bool "Use thermal management"
+	depends on CPU_FREQ
 	help
 	  Common setup code for TMU
 
