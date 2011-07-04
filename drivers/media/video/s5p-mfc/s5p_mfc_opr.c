@@ -487,6 +487,7 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
 							ctx->shm_alloc);
 		ctx->shm_alloc = 0;
+		ctx->shm_ofs = 0;
 		ctx->shm = 0;
 	}
 	mfc_debug_leave();

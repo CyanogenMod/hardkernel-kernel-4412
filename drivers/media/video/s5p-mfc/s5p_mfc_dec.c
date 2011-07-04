@@ -856,11 +856,27 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		pix_mp->height, ctx->img_width, ctx->img_height);
 	mfc_debug(2, "sizeimage: %d\n", pix_mp->plane_fmt[0].sizeimage);
 	pix_mp->plane_fmt[0].bytesperline = 0;
-	ctx->state = MFCINST_INIT;
-	ctx->dst_bufs_cnt = 0;
-	ctx->src_bufs_cnt = 0;
-	ctx->capture_state = QUEUE_FREE;
-	ctx->output_state = QUEUE_FREE;
+
+	/* In case of calling s_fmt twice or more */
+	if (ctx->inst_no != MFC_NO_INSTANCE_SET) {
+		ctx->state = MFCINST_RETURN_INST;
+		spin_lock_irqsave(&dev->condlock, flags);
+		set_bit(ctx->num, &dev->ctx_work_bits);
+		spin_unlock_irqrestore(&dev->condlock, flags);
+		s5p_mfc_clean_ctx_int_flags(ctx);
+		s5p_mfc_try_run(dev);
+		/* Wait until instance is returned or timeout occured */
+		if (s5p_mfc_wait_for_done_ctx
+		    (ctx, S5P_FIMV_R2H_CMD_CLOSE_INSTANCE_RET, 0)) {
+			mfc_err("Err returning instance.\n");
+		}
+		/* Free resources */
+		s5p_mfc_release_instance_buffer(ctx);
+		s5p_mfc_release_dec_desc_buffer(ctx);
+
+		ctx->state = MFCINST_INIT;
+	}
+
 	s5p_mfc_alloc_instance_buffer(ctx);
 	s5p_mfc_alloc_dec_temp_buffers(ctx);
 	spin_lock_irqsave(&dev->condlock, flags);
@@ -869,7 +885,7 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 	s5p_mfc_clean_ctx_int_flags(ctx);
 	s5p_mfc_try_run(dev);
 	if (s5p_mfc_wait_for_done_ctx(ctx,
-			S5P_FIMV_R2H_CMD_OPEN_INSTANCE_RET, 1)) {
+				S5P_FIMV_R2H_CMD_OPEN_INSTANCE_RET, 1)) {
 		/* Error or timeout */
 		mfc_err("Error getting instance from hardware.\n");
 		s5p_mfc_release_instance_buffer(ctx);
@@ -1672,6 +1688,12 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 	ctx->src_queue_cnt = 0;
 	ctx->dst_queue_cnt = 0;
 
+	ctx->dst_bufs_cnt = 0;
+	ctx->src_bufs_cnt = 0;
+	ctx->capture_state = QUEUE_FREE;
+	ctx->output_state = QUEUE_FREE;
+
+	ctx->state = MFCINST_INIT;
 	ctx->type = MFCINST_DECODER;
 	ctx->c_ops = &decoder_codec_ops;
 	ctx->src_fmt = &formats[DEF_SRC_FMT];
