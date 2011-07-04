@@ -76,6 +76,10 @@ config SND_SOC_SAMSUNG_I2S_IDMA
 	help
 	  Say Y for I2S to operate with Internal DMA(I2S's own DMA)
 
+config SND_SAMSUNG_I2S_MASTER
+	bool "I2S Master Mode"
+	depends on SND_SAMSUNG_I2S
+
 config SND_SOC_SAMSUNG_SMDK_WM8994_PCM
 	tristate "SoC PCM Audio support for WM8994 on SMDK"
 	depends on SND_SOC_SAMSUNG && (MACH_SMDKV310 || MACH_SMDKC210)
