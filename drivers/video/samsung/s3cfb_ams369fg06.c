@@ -289,10 +289,15 @@ void ams369fg06_ldi_disable(void)
 	/* For fixing LCD suspend problem */
 	ams369fg06_panel_send_sequence(SEQ_STANDBY_ON);
 }
+void ams369fg06_init_ldi(void)
+{
+	ams369fg06_ldi_init();
+	ams369fg06_ldi_enable();
+}
 
 void s3cfb_set_lcd_info(struct s3cfb_global *ctrl)
 {
-	ams369fg06.init_ldi = NULL;
+	ams369fg06.init_ldi = ams369fg06_ldi_init;
 	ctrl->lcd = &ams369fg06;
 }
 
