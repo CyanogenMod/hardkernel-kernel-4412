@@ -423,7 +423,11 @@ static int samsung_keypad_suspend(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_ARCH_EXYNOS4
 #include <mach/regs-pmu.h>
+#else
+#include <mach/regs-clock.h>
+#endif
 static int samsung_keypad_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
