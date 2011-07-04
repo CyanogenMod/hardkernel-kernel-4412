@@ -30,6 +30,8 @@
 
 #include "s3cfb.h"
 
+#define NOT_DEFAULT_WINDOW 99
+
 struct s3c_platform_fb *to_fb_plat(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -619,16 +621,14 @@ int s3cfb_set_par_window(struct s3cfb_global *fbdev, struct fb_info *fb)
 
 	dev_dbg(fbdev->dev, "[fb%d] set_par\n", win->id);
 
-	if ((win->id != pdata->default_win) && fb->fix.smem_start &&
-			fbdev->system_state != POWER_OFF)
-		s3cfb_unmap_video_memory(fbdev, fb);
-
 	/* modify the fix info */
-	fb->fix.line_length = fb->var.xres_virtual *
-					fb->var.bits_per_pixel / 8;
-	fb->fix.smem_len = fb->fix.line_length * fb->var.yres_virtual;
+	if (win->id != pdata->default_win) {
+		fb->fix.line_length = fb->var.xres_virtual *
+			fb->var.bits_per_pixel / 8;
+		fb->fix.smem_len = fb->fix.line_length * fb->var.yres_virtual;
+	}
 
-	if (win->id != pdata->default_win && fbdev->system_state != POWER_OFF)
+	if (win->id != pdata->default_win && !fb->fix.smem_start)
 		s3cfb_map_video_memory(fbdev, fb);
 
 	s3cfb_set_win_params(fbdev, win->id);
@@ -1003,6 +1003,8 @@ int s3cfb_blank(int blank_mode, struct fb_info *fb)
 			s3cfb_display_off(fbdev);
 			pdata->clk_off(pdev, &fbdev->clock);
 		}
+		if (win->id != pdata->default_win)
+			return NOT_DEFAULT_WINDOW;
 
 		break;
 
