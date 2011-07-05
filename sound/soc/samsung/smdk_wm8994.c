@@ -47,7 +47,7 @@
 /* SMDK has a 16.934MHZ crystal attached to WM8994 */
 #define SMDK_WM8994_FREQ 16934000
 
-#ifndef CONFIG_SND_SAMSUNG_I2S_MASTER
+#ifdef CONFIG_SND_SAMSUNG_I2S_MASTER
 static int set_epll_rate(unsigned long rate)
 {
 	struct clk *fout_epll;
@@ -69,7 +69,7 @@ out:
 }
 #endif /* CONFIG_SND_SAMSUNG_I2S_MASTER */
 
-#ifdef CONFIG_SND_SAMSUNG_I2S_MASTER
+#ifndef CONFIG_SND_SAMSUNG_I2S_MASTER
 static int smdk_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
 {
