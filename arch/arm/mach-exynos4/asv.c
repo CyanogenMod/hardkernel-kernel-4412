@@ -106,66 +106,105 @@ void __init iem_clock_set(void)
 	__raw_writel(0x00500000, S5P_CLKDIV_IEM_L1);
 }
 
-#define IDS_OFFSET		24
-#define IDS_MASK		0xFF
+#define IDS_OFFSET			24
+#define IDS_MASK			0xFF
 
-#define IDS_LEVEL_MAX_0		4
-#define IDS_LEVEL_MAX_1		8
-#define IDS_LEVEL_MAX_2		12
-#define IDS_LEVEL_MAX_3		17
-#define IDS_LEVEL_MAX_4		27
-#define IDS_LEVEL_MAX_5		45
-#define IDS_LEVEL_MAX_6		55
+#define IDS_LEVEL_MAX_1400_0		6
+#define IDS_LEVEL_MAX_1400_1		12
+#define IDS_LEVEL_MAX_1400_2		32
+#define IDS_LEVEL_MAX_1400_3		52
 
-#define HPM_LEVEL_MAX_0		8
-#define HPM_LEVEL_MAX_1		11
-#define HPM_LEVEL_MAX_2		14
-#define HPM_LEVEL_MAX_3		18
-#define HPM_LEVEL_MAX_4		21
-#define HPM_LEVEL_MAX_5		23
-#define HPM_LEVEL_MAX_6		25
+#define HPM_LEVEL_MAX_1400_0		11
+#define HPM_LEVEL_MAX_1400_1		17
+#define HPM_LEVEL_MAX_1400_2		22
+#define HPM_LEVEL_MAX_1400_3		26
 
-#define ASV_MAX_GROUP		8
+#define IDS_LEVEL_MAX_1200_0		4
+#define IDS_LEVEL_MAX_1200_1		8
+#define IDS_LEVEL_MAX_1200_2		12
+#define IDS_LEVEL_MAX_1200_3		17
+#define IDS_LEVEL_MAX_1200_4		27
+#define IDS_LEVEL_MAX_1200_5		45
+#define IDS_LEVEL_MAX_1200_6		55
+
+#define HPM_LEVEL_MAX_1200_0		8
+#define HPM_LEVEL_MAX_1200_1		11
+#define HPM_LEVEL_MAX_1200_2		14
+#define HPM_LEVEL_MAX_1200_3		18
+#define HPM_LEVEL_MAX_1200_4		21
+#define HPM_LEVEL_MAX_1200_5		23
+#define HPM_LEVEL_MAX_1200_6		25
 
 enum find_asv {
 	HPM_GROUP,
 	IDS_GROUP,
 };
 
-static int __init exynos4_find_group(unsigned int value, enum find_asv grp)
+static int __init exynos4_find_group_1200(unsigned int value, enum find_asv grp)
 {
 	unsigned int ret;
 
 	if (grp == HPM_GROUP) {
-		if (value <= HPM_LEVEL_MAX_0)
+		if (value <= HPM_LEVEL_MAX_1200_0)
 			ret = 0;
-		else if (value <= HPM_LEVEL_MAX_1)
+		else if (value <= HPM_LEVEL_MAX_1200_1)
 			ret = 1;
-		else if (value <= HPM_LEVEL_MAX_2)
+		else if (value <= HPM_LEVEL_MAX_1200_2)
 			ret = 2;
-		else if (value <= HPM_LEVEL_MAX_3)
+		else if (value <= HPM_LEVEL_MAX_1200_3)
 			ret = 3;
-		else if (value <= HPM_LEVEL_MAX_4)
+		else if (value <= HPM_LEVEL_MAX_1200_4)
 			ret = 4;
-		else if (value <= HPM_LEVEL_MAX_5)
+		else if (value <= HPM_LEVEL_MAX_1200_5)
 			ret = 5;
 		else
 			ret = 6;
 	} else {
-		if (value <= IDS_LEVEL_MAX_0)
+		if (value <= IDS_LEVEL_MAX_1200_0)
 			ret = 0;
-		else if (value <= IDS_LEVEL_MAX_1)
+		else if (value <= IDS_LEVEL_MAX_1200_1)
 			ret = 1;
-		else if (value <= IDS_LEVEL_MAX_2)
+		else if (value <= IDS_LEVEL_MAX_1200_2)
 			ret = 2;
-		else if (value <= IDS_LEVEL_MAX_3)
+		else if (value <= IDS_LEVEL_MAX_1200_3)
 			ret = 3;
-		else if (value <= IDS_LEVEL_MAX_4)
+		else if (value <= IDS_LEVEL_MAX_1200_4)
 			ret = 4;
-		else if (value <= IDS_LEVEL_MAX_5)
+		else if (value <= IDS_LEVEL_MAX_1200_5)
 			ret = 5;
 		else
 			ret = 6;
+	}
+
+	return ret;
+}
+
+static int __init exynos4_find_group_1400(unsigned int value, enum find_asv grp)
+{
+	unsigned int ret;
+
+	if (grp == HPM_GROUP) {
+		if (value <= HPM_LEVEL_MAX_1400_0)
+			ret = 0;
+		else if (value <= HPM_LEVEL_MAX_1400_1)
+			ret = 1;
+		else if (value <= HPM_LEVEL_MAX_1400_2)
+			ret = 2;
+		else if (value <= HPM_LEVEL_MAX_1400_3)
+			ret = 3;
+		else
+			ret = 4;
+	} else {
+		if (value <= IDS_LEVEL_MAX_1400_0)
+			ret = 0;
+		else if (value <= IDS_LEVEL_MAX_1400_1)
+			ret = 1;
+		else if (value <= IDS_LEVEL_MAX_1400_2)
+			ret = 2;
+		else if (value <= IDS_LEVEL_MAX_1400_3)
+			ret = 3;
+		else
+			ret = 4;
 	}
 
 	return ret;
@@ -178,12 +217,21 @@ static int __init exynos4_asv_init(void)
 	unsigned int tmp;
 	unsigned int ids_arm;
 	unsigned int result_group = 0;
-	static void __iomem *iem_base;
+	bool for_1400 = false;
+	void __iomem *iem_base;
 
 	if (machine_is_smdkv310())
 		goto out;
 
 	tmp = __raw_readl(S5P_VA_CHIPID + 0x4);
+
+	/* If CHIPID[2:0] bit is 5, can support 1.4GHz */
+#if 0
+	if ((tmp & 0x7) == 5)
+		for_1400 = true;
+#else
+	for_1400 = false;
+#endif
 
 	ids_arm = ((tmp >> IDS_OFFSET) & IDS_MASK);
 
@@ -218,10 +266,19 @@ static int __init exynos4_asv_init(void)
 
 	hpm_delay /= LOOP_CNT;
 
-	result_group = exynos4_find_group(hpm_delay, HPM_GROUP);
+	if (for_1400) {
+		result_group = exynos4_find_group_1400(hpm_delay, HPM_GROUP);
 
-	if (result_group > exynos4_find_group(ids_arm, IDS_GROUP))
-		result_group = exynos4_find_group(ids_arm, IDS_GROUP);
+		if (result_group > exynos4_find_group_1400(ids_arm, IDS_GROUP))
+			result_group = exynos4_find_group_1400(ids_arm, IDS_GROUP);
+
+		result_group |= (1 << 31);
+	} else {
+		result_group = exynos4_find_group_1200(hpm_delay, HPM_GROUP);
+
+		if (result_group > exynos4_find_group_1200(ids_arm, IDS_GROUP))
+			result_group = exynos4_find_group_1200(ids_arm, IDS_GROUP);
+	}
 
 	__raw_writel(result_group, S5P_INFORM2);
 
