@@ -53,7 +53,9 @@ void s3c_pm_dbg(const char *fmt, ...)
 	vsprintf(buff, fmt, va);
 	va_end(va);
 
+#ifdef CONFIG_DEBUG_LL
 	printascii(buff);
+#endif
 }
 
 static inline void s3c_pm_debug_init(void)
