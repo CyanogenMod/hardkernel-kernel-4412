@@ -399,6 +399,11 @@ int exynos4_busfreq_lock(unsigned int nId,
 	int ret = 0;
 	unsigned int int_volt;
 
+	if (machine_is_smdkv310()) {
+		pr_err("Busfreq does not support smdkv310\n");
+		return -ENODEV;
+	}
+
 	mutex_lock(&set_bus_freq_lock);
 	if (g_busfreq_lock_id & (1 << nId)) {
 		pr_err("This device [%d] already locked busfreq\n", nId);
@@ -426,6 +431,11 @@ err:
 void exynos4_busfreq_lock_free(unsigned int nId)
 {
 	unsigned int i;
+
+	if (machine_is_smdkv310()) {
+		pr_err("Busfreq does not support smdkv310\n");
+		return;
+	}
 
 	mutex_lock(&set_bus_freq_lock);
 	g_busfreq_lock_id &= ~(1 << nId);
