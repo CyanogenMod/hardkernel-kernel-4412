@@ -349,7 +349,7 @@ static int __devinit max8649_regulator_probe(struct i2c_client *client,
 
 	chip_id = (chip_id << 8) | ret;
 
-	if (id->driver_data != chip_id) {
+	if ((id->driver_data & 0xFFF0) != (chip_id & 0xFFF0)) {
 		dev_err(info->dev, "Failed to detect the device\n"
 				   "requested : 0x%x, detected 0x%x\n",
 				   (u32)id->driver_data, chip_id);
