@@ -1121,8 +1121,7 @@ static unsigned char s5k4ba_init_reg[][2] = {
 	{0xFF, 0xFF}	/* REGISTER END */
 };
 
-
-
+#ifdef USE_4BA_SVGA
 /* For SVGA ( 800 x 600) on 4BA module */
 static unsigned char s5k4ba_svga_reg[][2] = {
 	{0xfc, 0x02},
@@ -1186,7 +1185,8 @@ static unsigned char s5k4ba_svga_reg[][2] = {
 
 	{0xFF, 0xFF} 	/* REGISTER END */
 };
-
+#endif
+#ifdef USE_4BA_UXGA
 /* For UXGA ( 1600 x 1200) on 4BA module */
 static unsigned char s5k4ba_uxga_reg[][2] = {
 	{0xfc, 0x02},
@@ -1247,7 +1247,7 @@ static unsigned char s5k4ba_uxga_reg[][2] = {
 
 	{0xFF, 0xFF}	/* REGISTER END */
 };
-
+#endif
 #define S5K4BA_INIT_REGS	\
 	(sizeof(s5k4ba_init_reg) / sizeof(s5k4ba_init_reg[0]))
 

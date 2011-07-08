@@ -245,7 +245,7 @@ static struct v4l2_queryctrl s5k4ba_controls[] = {
 	},
 };
 
-const char **s5k4ba_ctrl_get_menu(u32 id)
+const char * const *s5k4ba_ctrl_get_menu(u32 id)
 {
 	switch (id) {
 	case V4L2_CID_WHITE_BALANCE_PRESET:
@@ -481,7 +481,7 @@ static int s5k4ba_init(struct v4l2_subdev *sd, u32 val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int err = -EINVAL, i;
-	int i2c_data;
+
 	v4l_info(client, "%s: camera initialization start\n", __func__);
 
 	for (i = 0; i < S5K4BA_INIT_REGS; i++) {

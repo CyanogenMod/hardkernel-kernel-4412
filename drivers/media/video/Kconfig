@@ -400,7 +400,7 @@ config VIDEO_M5MO
 
 config VIDEO_S5K4BA
 	tristate "S5K4BA supporting camera driver"
-	depends on I2C && VIDEO_V4L2
+	depends on I2C && VIDEO_V4L2 && (VIDEO_FIMC || VIDEO_SAMSUNG_S5P_FIMC) && !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
 	---help---
 	  This driver supports s5k4ba SoC camera module
 
