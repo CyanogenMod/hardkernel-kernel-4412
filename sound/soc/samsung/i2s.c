@@ -973,7 +973,9 @@ i2s_delay(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 #ifdef CONFIG_PM
 static int i2s_suspend(struct snd_soc_dai *dai)
 {
-	if (dai->active)
+	struct i2s_dai *i2s = to_info(dai);
+
+	if (!i2s->reg_saved)
 		i2s_reg_save(dai);
 
 	return 0;
@@ -981,7 +983,9 @@ static int i2s_suspend(struct snd_soc_dai *dai)
 
 static int i2s_resume(struct snd_soc_dai *dai)
 {
-	if (dai->active)
+	struct i2s_dai *i2s = to_info(dai);
+
+	if (i2s->reg_saved)
 		i2s_reg_restore(dai);
 
 	return 0;

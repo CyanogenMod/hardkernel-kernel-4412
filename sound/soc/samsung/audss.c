@@ -123,10 +123,13 @@ int audss_set_clk_div(u32 mode)
 		if (srp_clk_rate != clk_get_rate(audss.srp_clk)) {
 			clk_set_rate(audss.srp_clk, srp_clk_rate);
 			pr_debug("%s: SRP_CLK[%ld]\n",
-				__func__, clk_get_rate(audss.bus_clk));
+				__func__, clk_get_rate(audss.srp_clk));
 		}
 
 	}
+
+	pr_debug("%s: AUDSS DIV REG[0x%x]\n",
+		__func__, readl(S5P_CLKDIV_AUDSS));
 
 	return 0;
 }
@@ -175,10 +178,10 @@ void audss_clk_enable(bool enable)
 		if (audss.srp_clk)
 			clk_enable(audss.srp_clk);
 
-		audss.clk_enabled = true;
-
 		audss_reg_save_restore(AUDSS_REG_RESTORE);
 		audss_set_clk_div(AUDSS_ACTIVE);
+		audss.clk_enabled = true;
+
 
 		pr_debug("%s: CLKSRC[0x%x], CLKGATE[0x%x]\n", __func__,
 				readl(S5P_CLKSRC_AUDSS),
