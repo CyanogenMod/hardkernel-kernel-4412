@@ -38,6 +38,9 @@
 #include "wm8994.h"
 #include "wm_hubs.h"
 
+#ifdef CONFIG_SND_SAMSUNG_RP
+#include "../samsung/srp/srp_reg.h"
+#endif
 #define WM8994_NUM_DRC 3
 #define WM8994_NUM_EQ  3
 
@@ -2289,9 +2292,17 @@ static int wm8994_aif_mute(struct snd_soc_dai *codec_dai, int mute)
 		return -EINVAL;
 	}
 
-	if (mute)
+	if (mute) {
+#ifdef CONFIG_SND_SAMSUNG_RP
+		if (!srp_get_status(SRP_IS_RUNNING))
+			reg = WM8994_AIF1DAC1_MUTE;
+		else
+			reg = 0;
+#else
 		reg = WM8994_AIF1DAC1_MUTE;
-	else
+
+#endif
+	} else
 		reg = 0;
 
 	snd_soc_update_bits(codec, mute_reg, WM8994_AIF1DAC1_MUTE, reg);
