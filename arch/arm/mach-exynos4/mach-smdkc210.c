@@ -1747,6 +1747,10 @@ static struct platform_device *smdkc210_devices[] __initdata = {
 	&exynos4_device_ac97,
 	&exynos4_device_i2s0,
 	&exynos4_device_pcm0,
+	&exynos4_device_audss,
+#ifdef CONFIG_SND_SAMSUNG_RP
+	&exynos4_device_srp,
+#endif
 	&samsung_device_keypad,
 #ifdef CONFIG_BATTERY_SAMSUNG
 	&samsung_device_battery,
@@ -2154,7 +2158,7 @@ static void __init exynos4_reserve_mem(void)
 		"s5p-mfc/a=b1;"
 		"s5p-mfc/b=b2;"
 #endif
-		"s5p-rp=srp;"
+		"samsung-rp=srp;"
 		"s5p-jpeg=jpeg;"
 		"s5p-fimg2d=fimg2d";
 

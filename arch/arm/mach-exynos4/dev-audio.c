@@ -56,6 +56,9 @@ static struct s3c_audio_pdata i2sv5_pdata = {
 #ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
 				| QUIRK_USE_IDMA
 #endif
+#ifdef CONFIG_SND_SAMSUNG_RP
+				| QUIRK_ENABLED_SRP
+#endif
 				| QUIRK_NEED_RSTCLR,
 			.src_clk = rclksrc,
 		},
@@ -368,3 +371,25 @@ struct platform_device exynos4_device_spdif = {
 		.coherent_dma_mask = DMA_BIT_MASK(32),
 	},
 };
+
+static struct resource exynos4_audss_resource[] = {
+};
+struct platform_device exynos4_device_audss = {
+	.name = "samsung-audss",
+	.id = -1,
+	.num_resources = ARRAY_SIZE(exynos4_audss_resource),
+	.resource = exynos4_audss_resource,
+};
+
+#ifdef CONFIG_SND_SAMSUNG_RP
+static struct resource exynos4_srp_resource[] = {
+};
+
+struct platform_device exynos4_device_srp = {
+	.name             = "samsung-rp",
+	.id               = -1,
+	.num_resources    = ARRAY_SIZE(exynos4_srp_resource),
+	.resource         = exynos4_srp_resource,
+};
+EXPORT_SYMBOL(exynos4_device_srp);
+#endif
