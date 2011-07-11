@@ -145,7 +145,7 @@ static struct s3c2410_uartcfg smdkv310_uartcfgs[] __initdata = {
 	},
 };
 
-#undef WRITEBACK_ENABLED
+#define WRITEBACK_ENABLED
 
 #if defined(CONFIG_VIDEO_FIMC) || defined(CONFIG_VIDEO_SAMSUNG_S5P_FIMC)
 /*
