@@ -683,9 +683,11 @@ extern int fimc_hwget_present_frame_count(struct fimc_control *ctrl);
 extern int fimc_hwget_output_buf_sequence(struct fimc_control *ctrl);
 extern int fimc_hwget_check_framecount_sequence(struct fimc_control *ctrl, u32 frame);
 extern int fimc_hwset_image_effect(struct fimc_control *ctrl);
-
 extern int fimc_hwset_sysreg_camblk_fimd0_wb(struct fimc_control *ctrl);
 extern int fimc_hwset_sysreg_camblk_fimd1_wb(struct fimc_control *ctrl);
+extern int fimc_hwget_last_frame_end(struct fimc_control *ctrl);
+extern void fimc_hwset_enable_frame_end_irq(struct fimc_control *ctrl);
+extern void fimc_hwset_disable_frame_end_irq(struct fimc_control *ctrl);
 /* IPC related file */
 extern void ipc_start(void);
 

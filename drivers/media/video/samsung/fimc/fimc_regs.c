@@ -1924,6 +1924,7 @@ int fimc_hwget_present_frame_count(struct fimc_control *ctrl)
 	present &= 0x0000003f; /* [5:0] FrameCnt_present */
 	return present >> 0;
 }
+
 int fimc_hwget_check_framecount_sequence(struct fimc_control *ctrl, u32 frame)
 {
 	u32 framecnt_seq = readl(ctrl->regs + S3C_CIFCNTSEQ);
@@ -1935,6 +1936,7 @@ int fimc_hwget_check_framecount_sequence(struct fimc_control *ctrl, u32 frame)
 	else
 		return FIMC_FRAMECNT_SEQ_DISABLE;
 }
+
 int fimc_hwset_sysreg_camblk_fimd0_wb(struct fimc_control *ctrl)
 {
 	u32 camblk_cfg = readl(SYSREG_CAMERA_BLK);
@@ -1954,6 +1956,7 @@ int fimc_hwset_sysreg_camblk_fimd0_wb(struct fimc_control *ctrl)
 
 	return 0;
 }
+
 int fimc_hwset_sysreg_camblk_fimd1_wb(struct fimc_control *ctrl)
 {
 	u32 camblk_cfg = readl(SYSREG_CAMERA_BLK);
@@ -1972,4 +1975,18 @@ int fimc_hwset_sysreg_camblk_fimd1_wb(struct fimc_control *ctrl)
 	writel(camblk_cfg, SYSREG_CAMERA_BLK);
 
 	return 0;
+}
+
+void fimc_hwset_enable_frame_end_irq(struct fimc_control *ctrl)
+{
+	u32 cfg = readl(ctrl->regs + S3C_CIGCTRL);
+	cfg |= S3C_CIGCTRL_IRQ_END_DISABLE;
+	writel(cfg, ctrl->regs + S3C_CIGCTRL);
+}
+
+void fimc_hwset_disable_frame_end_irq(struct fimc_control *ctrl)
+{
+	u32 cfg = readl(ctrl->regs + S3C_CIGCTRL);
+	cfg &= ~S3C_CIGCTRL_IRQ_END_DISABLE;
+	writel(cfg, ctrl->regs + S3C_CIGCTRL);
 }

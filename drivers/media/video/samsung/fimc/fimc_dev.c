@@ -515,6 +515,7 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 	int buf_index;
 	int framecnt_seq;
 	int available_bufnum;
+	static int is_frame_end_irq = 0;
 
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 #ifdef DEBUG
@@ -531,13 +532,19 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 		return;
 
 	if (pdata->hw_ver >= 0x51) {
-		pp = fimc_hwget_before_frame_count(ctrl);
+		if (is_frame_end_irq) {
+			pp = fimc_hwget_present_frame_count(ctrl);
+			is_frame_end_irq = 0;
+		} else {
+			pp = fimc_hwget_before_frame_count(ctrl);
+		}
 		fimc_info2("%s[%d]\n", __func__, pp);
 		if (pp == 0) {
-			if (ctrl->cap->nr_bufs == 1)
-				pp = fimc_hwget_present_frame_count(ctrl);
-			else
-				return;
+			if (ctrl->cap->nr_bufs == 1) {
+				fimc_stop_capture(ctrl);
+				is_frame_end_irq = 1;
+			}
+			return;
 		}
 		buf_index = pp - 1;
 		fimc_add_outgoing_queue(ctrl, buf_index);
@@ -549,7 +556,7 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 		fimc_info2("%s[%d] : framecnt_seq: %d, available_bufnum: %d\n",
 			__func__, ctrl->id, framecnt_seq, available_bufnum);
 		if (ctrl->status != FIMC_BUFFER_STOP) {
-			if (available_bufnum == 1 || ctrl->cap->nr_bufs == 1) {
+			if (available_bufnum == 1) {
 				ctrl->cap->lastirq = 0;
 				fimc_stop_capture(ctrl);
 				ctrl->status = FIMC_BUFFER_STOP;

@@ -1538,6 +1538,7 @@ int fimc_start_capture(struct fimc_control *ctrl)
 		fimc_hwset_start_scaler(ctrl);
 
 	fimc_hwset_enable_capture(ctrl, ctrl->sc.bypass);
+	fimc_hwset_disable_frame_end_irq(ctrl);
 
 	return 0;
 }
@@ -1568,6 +1569,7 @@ int fimc_stop_capture(struct fimc_control *ctrl)
 		fimc_hwset_disable_lastirq(ctrl);
 	} else {
 		fimc_hwset_disable_capture(ctrl);
+		fimc_hwset_enable_frame_end_irq(ctrl);
 	}
 
 	fimc_hwset_stop_scaler(ctrl);
