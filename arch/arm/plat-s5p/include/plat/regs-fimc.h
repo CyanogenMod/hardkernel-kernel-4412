@@ -284,6 +284,7 @@
 #define S3C_CIGCTRL_IRQ_EDGE			(0 << 20)
 #define S3C_CIGCTRL_IRQ_LEVEL			(1 << 20)
 #define S3C_CIGCTRL_IRQ_CLR			(1 << 19)
+#define S3C_CIGCTRL_IRQ_END_DISABLE		(1 << 18)
 #define S3C_CIGCTRL_IRQ_DISABLE			(0 << 16)
 #define S3C_CIGCTRL_IRQ_ENABLE			(1 << 16)
 #define S3C_CIGCTRL_SHADOW_DISABLE		(1 << 12)
