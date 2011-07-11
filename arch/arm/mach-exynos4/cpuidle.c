@@ -14,13 +14,17 @@
 #include <linux/io.h>
 #include <linux/suspend.h>
 #include <linux/platform_device.h>
+#include <linux/gpio.h>
 
 #include <asm/proc-fns.h>
+#include <asm/tlbflush.h>
 
 #include <mach/regs-clock.h>
 #include <mach/regs-pmu.h>
 #include <mach/pmu.h>
+#include <mach/gpio.h>
 
+#include <plat/regs-otg.h>
 #include <plat/exynos4.h>
 #include <plat/pm.h>
 #include <plat/devs.h>
@@ -29,60 +33,217 @@
 				(S5P_VA_SYSRAM + 0x24) : S5P_INFORM7)
 #define REG_DIRECTGO_FLAG	(exynos4_subrev() == 0 ?\
 				(S5P_VA_SYSRAM + 0x20) : S5P_INFORM6)
+enum hc_type {
+	HC_SDHC,
+	HC_MSHC,
+};
 
 struct check_device_op {
-	void __iomem	*base;
+	void __iomem		*base;
 	struct platform_device	*pdev;
-	unsigned int ch;
+	enum hc_type		type;
 };
 
-static struct check_device_op chk_dev_op[] = {
-#ifdef CONFIG_I2C_S3C2410
-	{.base = 0, .pdev = &s3c_device_i2c0, .ch = 0},
-#if defined(CONFIG_S3C_DEV_I2C1)
-	{.base = 0, .pdev = &s3c_device_i2c1, .ch = 1},
+static struct check_device_op chk_sdhc_op[] = {
+#if defined (CONFIG_S5P_DEV_MSHC)
+	{.base = 0, .pdev = &s3c_device_mshci, .type = HC_MSHC},
 #endif
-#if defined(CONFIG_S3C_DEV_I2C2)
-	{.base = 0, .pdev = &s3c_device_i2c2, .ch = 2},
+#if defined (CONFIG_S3C_DEV_HSMMC)
+	{.base = 0, .pdev = &s3c_device_hsmmc0, .type = HC_SDHC},
 #endif
-#if defined(CONFIG_S3C_DEV_I2C3)
-	{.base = 0, .pdev = &s3c_device_i2c3, .ch = 3},
+#if defined (CONFIG_S3C_DEV_HSMMC1)
+	{.base = 0, .pdev = &s3c_device_hsmmc1, .type = HC_SDHC},
 #endif
-#if defined(CONFIG_S3C_DEV_I2C4)
-	{.base = 0, .pdev = &s3c_device_i2c4, .ch = 4},
+#if defined (CONFIG_S3C_DEV_HSMMC2)
+	{.base = 0, .pdev = &s3c_device_hsmmc2, .type = HC_SDHC},
 #endif
-#if defined(CONFIG_S3C_DEV_I2C5)
-	{.base = 0, .pdev = &s3c_device_i2c5, .ch = 5},
+#if defined (CONFIG_S3C_DEV_HSMMC3)
+	{.base = 0, .pdev = &s3c_device_hsmmc3, .type = HC_SDHC},
 #endif
-#if defined(CONFIG_S3C_DEV_I2C6)
-	{.base = 0, .pdev = &s3c_device_i2c6, .ch = 6},
-#endif
-#if defined(CONFIG_S3C_DEV_I2C7)
-	{.base = 0, .pdev = &s3c_device_i2c7, .ch = 7},
-#endif
-#endif
+	{.base = 0, .pdev = NULL},
 };
 
-static int check_i2c_op(void)
+#define S3C_HSMMC_PRNSTS	(0x24)
+#define S3C_HSMMC_CLKCON	(0x2c)
+#define S3C_HSMMC_CMD_INHIBIT	0x00000001
+#define S3C_HSMMC_DATA_INHIBIT	0x00000002
+#define S3C_HSMMC_CLOCK_CARD_EN	0x0004
+
+#define MSHCI_CLKENA	(0x10)  /* Clock enable */
+#define MSHCI_STATUS	(0x48)  /* Status */
+#define MSHCI_DATA_BUSY	(0x1<<9)
+#define MSHCI_ENCLK	(0x1)
+
+#define GPIO_OFFSET		0x20
+#define GPIO_PUD_OFFSET		0x08
+#define GPIO_CON_PDN_OFFSET	0x10
+#define GPIO_PUD_PDN_OFFSET	0x14
+#define GPIO_END_OFFSET		0x200
+
+static void exynos4_gpio_conpdn_reg(void)
 {
-	unsigned int val, i, chan;
+	void __iomem *gpio_base = S5P_VA_GPIO;
+	unsigned int val;
+
+	do {
+		/* Keep the previous state in didle mode */
+		__raw_writel(0xffff, gpio_base + GPIO_CON_PDN_OFFSET);
+
+		/* Pull up-down state in didle is same as normal */
+		val = __raw_readl(gpio_base + GPIO_PUD_OFFSET);
+		__raw_writel(val, gpio_base + GPIO_PUD_PDN_OFFSET);
+
+		gpio_base += GPIO_OFFSET;
+
+		if (gpio_base == S5P_VA_GPIO + GPIO_END_OFFSET)
+			gpio_base = S5P_VA_GPIO2;
+
+	} while (gpio_base <= S5P_VA_GPIO2 + GPIO_END_OFFSET);
+
+	/* set the GPZ */
+	gpio_base = S5P_VA_GPIO3;
+	__raw_writel(0xffff, gpio_base + GPIO_CON_PDN_OFFSET);
+
+	val = __raw_readl(gpio_base + GPIO_PUD_OFFSET);
+	__raw_writel(val, gpio_base + GPIO_PUD_PDN_OFFSET);
+}
+
+static int check_power_domain(void)
+{
+	unsigned long tmp;
+
+	tmp = __raw_readl(S5P_PMU_LCD0_CONF);
+	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
+		return 1;
+
+	tmp = __raw_readl(S5P_PMU_MFC_CONF);
+	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
+		return 1;
+
+	tmp = __raw_readl(S5P_PMU_G3D_CONF);
+	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
+		return 1;
+
+	tmp = __raw_readl(S5P_PMU_CAM_CONF);
+	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
+		return 1;
+
+	tmp = __raw_readl(S5P_PMU_TV_CONF);
+	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
+		return 1;
+
+	tmp = __raw_readl(S5P_PMU_GPS_CONF);
+	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
+		return 1;
+
+	return 0;
+}
+
+static int check_clock_gating(void)
+{
+	unsigned long tmp;
+
+	tmp = __raw_readl(S5P_CLKGATE_IP_IMAGE);
+	if (tmp & (S5P_CLKGATE_IP_IMAGE_MDMA | S5P_CLKGATE_IP_IMAGE_SMMUMDMA
+		| S5P_CLKGATE_IP_IMAGE_QEMDMA))
+		return 1;
+
+	tmp = __raw_readl(S5P_CLKGATE_IP_FSYS);
+	if (tmp & (S5P_CLKGATE_IP_FSYS_PDMA0 | S5P_CLKGATE_IP_FSYS_PDMA1))
+		return 1;
+
+	tmp = __raw_readl(S5P_CLKGATE_IP_PERIL);
+	if (tmp & S5P_CLKGATE_IP_PERIL_I2C0_8)
+		return 1;
+
+	return 0;
+}
+
+static int sdmmc_dev_num;
+/* If SD/MMC interface is working: return = 1 or not 0 */
+static int check_sdmmc_op(unsigned int ch)
+{
+	unsigned int reg1, reg2;
 	void __iomem *base_addr;
 
-	for (i = 0; i < ARRAY_SIZE(chk_dev_op); i++) {
-		chan = chk_dev_op[i].ch;
-
-		if (chan != 0xffffffff) {
-			base_addr = chk_dev_op[i].base;
-
-			val = __raw_readl(base_addr + 0x04);
-
-			if (val & (1<<5)) {
-				printk(KERN_INFO "I2C[%d] is working\n", chan);
-				return 1;
-			}
-		} else
-			break;
+	if (unlikely(ch > sdmmc_dev_num)) {
+		printk(KERN_ERR "Invalid ch[%d] for SD/MMC\n", ch);
+		return 0;
 	}
+
+	if (chk_sdhc_op[ch].type == HC_SDHC) {
+		base_addr = chk_sdhc_op[ch].base;
+		/* Check CMDINHDAT[1] and CMDINHCMD [0] */
+		reg1 = readl(base_addr + S3C_HSMMC_PRNSTS);
+		/* Check CLKCON [2]: ENSDCLK */
+		reg2 = readl(base_addr + S3C_HSMMC_CLKCON);
+		return !!((reg1 & (S3C_HSMMC_CMD_INHIBIT | S3C_HSMMC_DATA_INHIBIT)) ||
+		       (reg2 & (S3C_HSMMC_CLOCK_CARD_EN)));
+	} else if (chk_sdhc_op[ch].type == HC_MSHC) {
+		base_addr = chk_sdhc_op[ch].base;
+		/* Check STATUS [9] for data busy */
+		reg1 = readl(base_addr + MSHCI_STATUS);
+		/* Check CLKENA [0] for clock on/off */
+		reg2 = readl(base_addr + MSHCI_CLKENA);
+
+		return (reg1 & (MSHCI_DATA_BUSY)) ||
+		       (reg2 & (MSHCI_ENCLK));
+
+	}
+	/* should not be here */
+	return 0;
+}
+
+/* Check all sdmmc controller */
+static int loop_sdmmc_check(void)
+{
+	unsigned int iter;
+
+	for (iter = 0; iter < sdmmc_dev_num + 1; iter++) {
+		if (check_sdmmc_op(iter)) {
+			printk("SDMMC [%d] working\n", iter);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/*
+ * Check USBOTG is working or not
+ * GOTGCTL(0xEC000000)
+ * BSesVld (Indicates the Device mode transceiver status)
+ * BSesVld =	1b : B-session is valid
+ *		0b : B-session is not valid
+ */
+static int check_usbotg_op(void)
+{
+	unsigned int val;
+
+	val = __raw_readl(S3C_UDC_OTG_GOTGCTL);
+
+	return val & (A_SESSION_VALID | B_SESSION_VALID);
+}
+
+#ifdef CONFIG_SND_SAMSUNG_RP
+extern int srp_get_op_level(void);	/* By srp driver */
+#endif
+
+static int exynos4_check_operation(void)
+{
+	if (check_power_domain())
+		return 1;
+
+	if (check_clock_gating())
+		return 1;
+
+	if (loop_sdmmc_check() || check_usbotg_op())
+		return 1;
+
+#ifdef CONFIG_SND_SAMSUNG_RP
+	if (srp_get_op_level())
+		return 1;
+#endif
+
 	return 0;
 }
 
@@ -172,6 +333,16 @@ static void exynos4_set_wakeupmask(void)
 	__raw_writel(0x0000ff3e, S5P_WAKEUP_MASK);
 }
 
+static void vfp_enable(void *unused)
+{
+	u32 access = get_copro_access();
+
+	/*
+	 * Enable full access to VFP (cp10 and cp11)
+	 */
+	set_copro_access(access | CPACC_FULL(10) | CPACC_FULL(11));
+}
+
 static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 				    struct cpuidle_state *state)
 {
@@ -201,8 +372,11 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 
 		goto early_wakeup;
 	}
+	flush_tlb_all();
 
 	cpu_init();
+
+	vfp_enable(NULL);
 
 early_wakeup:
 
@@ -242,6 +416,9 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	 */
 	__raw_writel(0x0, S5P_WAKEUP_MASK);
 
+	/* Configure GPIO Power down control register */
+	exynos4_gpio_conpdn_reg();
+
 	/* ensure at least INFORM0 has the resume address */
 	__raw_writel(virt_to_phys(s3c_cpu_resume), S5P_INFORM0);
 
@@ -266,8 +443,11 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 
 		goto early_wakeup;
 	}
+	flush_tlb_all();
 
 	cpu_init();
+
+	vfp_enable(NULL);
 
 	s3c_pm_do_restore_core(exynos4_lpa_save,
 			       ARRAY_SIZE(exynos4_lpa_save));
@@ -306,7 +486,7 @@ static struct cpuidle_state exynos4_cpuidle_set[] = {
 	[0] = {
 		.enter			= exynos4_enter_idle,
 		.exit_latency		= 1,
-		.target_residency	= 100000,
+		.target_residency	= 10000,
 		.flags			= CPUIDLE_FLAG_TIME_VALID,
 		.name			= "IDLE",
 		.desc			= "ARM clock gating(WFI)",
@@ -314,7 +494,7 @@ static struct cpuidle_state exynos4_cpuidle_set[] = {
 	[1] = {
 		.enter			= exynos4_enter_lowpower,
 		.exit_latency		= 300,
-		.target_residency	= 100000,
+		.target_residency	= 10000,
 		.flags			= CPUIDLE_FLAG_TIME_VALID,
 		.name			= "LOW_POWER",
 		.desc			= "ARM power down",
@@ -388,35 +568,11 @@ static int exynos4_enter_idle(struct cpuidle_device *dev,
 	return idle_time;
 }
 
-static int exynos4_lcd_check(unsigned int lcd_number)
-{
-	unsigned int tmp;
-	unsigned int ret;
-
-	if (lcd_number == 0) {
-		tmp = __raw_readl(S5P_CLKSRC_MASK_LCD0);
-		tmp &= 0x1;
-		if (tmp)
-			ret = 1;
-		else
-			ret = 0;
-	} else {
-		tmp = __raw_readl(S5P_CLKSRC_MASK_LCD1);
-		tmp &= 0x1;
-		if (tmp)
-			ret = 1;
-		else
-			ret = 0;
-	}
-
-	return ret;
-}
-
 static int exynos4_check_entermode(void)
 {
 	unsigned int ret;
 
-	if (exynos4_lcd_check(0) || check_i2c_op())
+	if (exynos4_check_operation())
 		ret = S5P_CHECK_DIDLE;
 	else
 		ret = S5P_CHECK_LPA;
@@ -480,25 +636,6 @@ static int __init exynos4_init_cpuidle(void)
 
 	cpuidle_register_driver(&exynos4_idle_driver);
 
-	for (i = 0; i < ARRAY_SIZE(chk_dev_op); i++) {
-
-		pdev = chk_dev_op[i].pdev;
-
-		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-		if (!res) {
-			printk(KERN_ERR "failed to get iomem region\n");
-			return -EINVAL;
-		}
-		chk_dev_op[i].base = ioremap(res->start, 4096);
-
-		if (!chk_dev_op[i].base) {
-			printk(KERN_ERR "failed to map io region\n");
-			return -EINVAL;
-		}
-	}
-
-	register_pm_notifier(&exynos4_cpuidle_notifier);
-
 	for_each_cpu(cpu_id, cpu_online_mask) {
 		device = &per_cpu(exynos4_cpuidle_device, cpu_id);
 		device->cpu = cpu_id;
@@ -523,6 +660,29 @@ static int __init exynos4_init_cpuidle(void)
 		}
 	}
 
+	for (i = 0; i < ARRAY_SIZE(chk_sdhc_op); i++) {
+
+		pdev = chk_sdhc_op[i].pdev;
+
+		if (pdev == NULL) {
+			sdmmc_dev_num = i - 1;
+			break;
+		}
+
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		if (!res) {
+			printk(KERN_ERR "failed to get iomem region\n");
+			return -EINVAL;
+		}
+		chk_sdhc_op[i].base = ioremap(res->start, 4096);
+
+		if (!chk_sdhc_op[i].base) {
+			printk(KERN_ERR "failed to map io region\n");
+			return -EINVAL;
+		}
+	}
+
+	register_pm_notifier(&exynos4_cpuidle_notifier);
 	return 0;
 }
 device_initcall(exynos4_init_cpuidle);
