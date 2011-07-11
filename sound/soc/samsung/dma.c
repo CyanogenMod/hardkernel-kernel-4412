@@ -203,7 +203,7 @@ static int dma_hw_params(struct snd_pcm_substream *substream,
 	prtd->dma_pos = prtd->dma_start;
 	prtd->dma_end = prtd->dma_start + totbytes;
 
-	pr_info("DmaAddr=@%x Total=%dbytes PrdSz=%d #Prds=%d dma_area=0x%x\n",
+	pr_debug("DmaAddr=@%x Total=%dbytes PrdSz=%d #Prds=%d dma_area=0x%x\n",
 			prtd->dma_start, runtime->dma_bytes,
 			params_periods(params),	params_period_bytes(params),
 			(unsigned int)runtime->dma_area);
