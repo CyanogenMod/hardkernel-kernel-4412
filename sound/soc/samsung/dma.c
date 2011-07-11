@@ -202,6 +202,12 @@ static int dma_hw_params(struct snd_pcm_substream *substream,
 	prtd->dma_start = runtime->dma_addr;
 	prtd->dma_pos = prtd->dma_start;
 	prtd->dma_end = prtd->dma_start + totbytes;
+
+	pr_info("DmaAddr=@%x Total=%dbytes PrdSz=%d #Prds=%d dma_area=0x%x\n",
+			prtd->dma_start, runtime->dma_bytes,
+			params_periods(params),	params_period_bytes(params),
+			(unsigned int)runtime->dma_area);
+
 	spin_unlock_irq(&prtd->lock);
 
 	return 0;
@@ -418,7 +424,7 @@ static void dma_free_dma_buffers(struct snd_pcm *pcm)
 	int stream;
 
 	pr_debug("Entered %s\n", __func__);
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
+#if defined(CONFIG_SND_SOC_SAMSUNG_I2S_IDMA) || !defined(CONFIG_SND_SAMSUNG_RP)
 	for (stream = 1; stream < 2; stream++) {
 #else
 	for (stream = 0; stream < 2; stream++) {
@@ -451,7 +457,7 @@ static int dma_new(struct snd_card *card,
 	if (!card->dev->coherent_dma_mask)
 		card->dev->coherent_dma_mask = 0xffffffff;
 
-#ifndef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
+#if !defined(CONFIG_SND_SOC_SAMSUNG_I2S_IDMA) || defined(CONFIG_SND_SAMSUNG_RP)
 	if (dai->driver->playback.channels_min) {
 		ret = preallocate_dma_buffer(pcm,
 			SNDRV_PCM_STREAM_PLAYBACK);

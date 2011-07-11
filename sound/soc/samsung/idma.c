@@ -173,7 +173,7 @@ static int idma_hw_params(struct snd_pcm_substream *substream,
 
 	idma_setcallbk(substream, idma_done);
 
-	pr_debug("DmaAddr=@%x Total=%dbytes PrdSz=%d #Prds=%d dma_area=0x%x\n",
+	pr_info("DmaAddr=@%x Total=%dbytes PrdSz=%d #Prds=%d dma_area=0x%x\n",
 			prtd->start, runtime->dma_bytes, prtd->periodsz,
 			prtd->period, (unsigned int)runtime->dma_area);
 
@@ -441,6 +441,50 @@ void idma_init(void *regs)
 	spin_lock_init(&idma.lock);
 	idma.regs = regs;
 }
+
+#ifdef CONFIG_SND_SAMSUNG_RP
+int idma_irq_callback(void)
+{
+	u32 iisahb;
+	int ret = 0;
+
+	iisahb = readl(idma.regs + I2SAHB);
+
+	if (iisahb & AHB_LVL0INT) {
+		iisahb |= AHB_CLRLVL0INT;
+		ret = 1;
+	}
+
+	if (iisahb & AHB_LVL1INT) {
+		iisahb |= AHB_CLRLVL1INT;
+		ret = 1;
+	}
+
+	if (ret)
+		writel(iisahb, idma.regs + I2SAHB);
+
+	return ret;
+}
+EXPORT_SYMBOL(idma_irq_callback);
+
+void idma_stop(void)
+{
+	u32 val;
+
+	val  = readl(idma.regs + I2SAHB);
+	val &= ~AHB_DMARLD;
+	val |= AHB_DMA_STRADDRRST;
+	val &= ~AHB_DMAEN;
+	val &= ~(AHB_LVL0INT | AHB_LVL1INT);
+	val |= AHB_CLRLVL0INT | AHB_CLRLVL1INT;
+	writel(val, idma.regs + I2SAHB);
+
+	writel(0, idma.regs + I2SAHB);
+	writel(0x00000000, idma.regs + I2SLVL0ADDR);
+	writel(0x00000000, idma.regs + I2SLVL1ADDR);
+}
+EXPORT_SYMBOL(idma_stop);
+#endif
 
 struct snd_soc_platform_driver asoc_idma_platform = {
 	.ops = &idma_ops,

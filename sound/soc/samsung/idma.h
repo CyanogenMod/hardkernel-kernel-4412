@@ -13,7 +13,7 @@
 #ifndef __S3C_IDMA_H_
 #define __S3C_IDMA_H_
 
-#define I2SAHB		        0x20
+#define I2SAHB			0x20
 #define I2SSTR0			0x24
 #define I2SSIZE			0x28
 #define I2STRNCNT		0x2c
@@ -23,12 +23,24 @@
 #define I2SLVL3ADDR		0x3c
 #define I2SSTR1			0x40
 
-#define AHB_INTENLVL0		(1 << 24)
-#define AHB_LVL0INT		(1 << 20)
-#define AHB_CLRLVL0INT		(1 << 16)
-#define AHB_DMARLD		(1 << 5)
-#define AHB_INTMASK		(1 << 3)
 #define AHB_DMAEN		(1 << 0)
+#define AHB_DMACLR		(1 << 1)
+#define AHB_INTMASK		(1 << 3)
+#define AHB_DMARLD		(1 << 5)
+#define AHB_DMA_STRADDRTOG	(1 << 6)
+#define AHB_DMA_STRADDRRST	(1 << 7)
+#define AHB_CLRLVL0INT		(1 << 16)
+#define AHB_CLRLVL1INT		(1 << 17)
+#define AHB_CLRLVL2INT		(1 << 18)
+#define AHB_CLRLVL3INT		(1 << 19)
+#define AHB_LVL0INT		(1 << 20)
+#define AHB_LVL1INT		(1 << 21)
+#define AHB_LVL2INT		(1 << 22)
+#define AHB_LVL3INT		(1 << 23)
+#define AHB_INTENLVL0		(1 << 24)
+#define AHB_INTENLVL1		(1 << 25)
+#define AHB_INTENLVL2		(1 << 26)
+#define AHB_INTENLVL3		(1 << 27)
 #define AHB_LVLINTMASK		(0xf << 20)
 
 #define I2SSIZE_TRNMSK		(0xffff)
@@ -46,4 +58,8 @@
 
 extern struct snd_soc_platform_driver asoc_idma_platform;
 extern void idma_init(void *regs);
+
+/* These functions are used for srp driver. */
+extern int idma_irq_callback(void);
+extern void idma_stop(void);
 #endif /* __S3C_IDMA_H_ */

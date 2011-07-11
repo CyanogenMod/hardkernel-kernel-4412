@@ -13,17 +13,30 @@
 #include "dma.h"
 #include "idma.h"
 
+static struct snd_soc_platform_driver
+*asoc_get_platform(struct snd_pcm_substream *substream)
+{
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+#if defined(CONFIG_SND_SAMSUNG_RP)
+		/* GDMA for Legacy Audio, IDMA for SRP Audio(dedicated codec) */
+		return &samsung_asoc_platform;
+#elif defined(CONFIG_SND_SOC_SAMSUNG_I2S_IDMA)
+		/* IDMA for Generic Audio */
+		return &asoc_idma_platform;
+#else
+		/* GDMA for Generic Audio */
+		return &samsung_asoc_platform;
+#endif
+	} else {
+		/* Capture is possible via GDMA only */
+		return &samsung_asoc_platform;
+	}
+}
+
 static int asoc_platform_hw_params(struct snd_pcm_substream *substream,
 				struct snd_pcm_hw_params *params)
 {
-	struct snd_soc_platform_driver *platform;
-
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		platform = &asoc_idma_platform;
-	else
-#endif
-		platform = &samsung_asoc_platform;
+	struct snd_soc_platform_driver *platform = asoc_get_platform(substream);
 
 	if (platform->ops->hw_params)
 		return platform->ops->hw_params(substream, params);
@@ -33,14 +46,7 @@ static int asoc_platform_hw_params(struct snd_pcm_substream *substream,
 
 static int asoc_platform_hw_free(struct snd_pcm_substream *substream)
 {
-	struct snd_soc_platform_driver *platform;
-
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		platform = &asoc_idma_platform;
-	else
-#endif
-		platform = &samsung_asoc_platform;
+	struct snd_soc_platform_driver *platform = asoc_get_platform(substream);
 
 	if (platform->ops->hw_free)
 		return platform->ops->hw_free(substream);
@@ -50,14 +56,7 @@ static int asoc_platform_hw_free(struct snd_pcm_substream *substream)
 
 static int asoc_platform_prepare(struct snd_pcm_substream *substream)
 {
-	struct snd_soc_platform_driver *platform;
-
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		platform = &asoc_idma_platform;
-	else
-#endif
-		platform = &samsung_asoc_platform;
+	struct snd_soc_platform_driver *platform = asoc_get_platform(substream);
 
 	if (platform->ops->prepare)
 		return platform->ops->prepare(substream);
@@ -67,14 +66,7 @@ static int asoc_platform_prepare(struct snd_pcm_substream *substream)
 
 static int asoc_platform_trigger(struct snd_pcm_substream *substream, int cmd)
 {
-	struct snd_soc_platform_driver *platform;
-
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		platform = &asoc_idma_platform;
-	else
-#endif
-		platform = &samsung_asoc_platform;
+	struct snd_soc_platform_driver *platform = asoc_get_platform(substream);
 
 	if (platform->ops->trigger)
 		return platform->ops->trigger(substream, cmd);
@@ -84,14 +76,7 @@ static int asoc_platform_trigger(struct snd_pcm_substream *substream, int cmd)
 
 static snd_pcm_uframes_t asoc_platform_pointer(struct snd_pcm_substream *substream)
 {
-	struct snd_soc_platform_driver *platform;
-
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		platform = &asoc_idma_platform;
-	else
-#endif
-		platform = &samsung_asoc_platform;
+	struct snd_soc_platform_driver *platform = asoc_get_platform(substream);
 
 	if (platform->ops->pointer)
 		return platform->ops->pointer(substream);
@@ -101,14 +86,7 @@ static snd_pcm_uframes_t asoc_platform_pointer(struct snd_pcm_substream *substre
 
 static int asoc_platform_open(struct snd_pcm_substream *substream)
 {
-	struct snd_soc_platform_driver *platform;
-
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		platform = &asoc_idma_platform;
-	else
-#endif
-		platform = &samsung_asoc_platform;
+	struct snd_soc_platform_driver *platform = asoc_get_platform(substream);
 
 	if (platform->ops->open)
 		return platform->ops->open(substream);
@@ -118,14 +96,7 @@ static int asoc_platform_open(struct snd_pcm_substream *substream)
 
 static int asoc_platform_close(struct snd_pcm_substream *substream)
 {
-	struct snd_soc_platform_driver *platform;
-
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		platform = &asoc_idma_platform;
-	else
-#endif
-		platform = &samsung_asoc_platform;
+	struct snd_soc_platform_driver *platform = asoc_get_platform(substream);
 
 	if (platform->ops->close)
 		return platform->ops->close(substream);
@@ -136,14 +107,7 @@ static int asoc_platform_close(struct snd_pcm_substream *substream)
 static int asoc_platform_ioctl(struct snd_pcm_substream *substream,
 				unsigned int cmd, void *arg)
 {
-	struct snd_soc_platform_driver *platform;
-
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		platform = &asoc_idma_platform;
-	else
-#endif
-		platform = &samsung_asoc_platform;
+	struct snd_soc_platform_driver *platform = asoc_get_platform(substream);
 
 	if (platform->ops->ioctl)
 		return platform->ops->ioctl(substream, cmd, arg);
@@ -154,14 +118,7 @@ static int asoc_platform_ioctl(struct snd_pcm_substream *substream,
 static int asoc_platform_mmap(struct snd_pcm_substream *substream,
 				struct vm_area_struct *vma)
 {
-	struct snd_soc_platform_driver *platform;
-
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		platform = &asoc_idma_platform;
-	else
-#endif
-		platform = &samsung_asoc_platform;
+	struct snd_soc_platform_driver *platform = asoc_get_platform(substream);
 
 	if (platform->ops->mmap)
 		return platform->ops->mmap(substream, vma);
