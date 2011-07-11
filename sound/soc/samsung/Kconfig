@@ -76,6 +76,9 @@ config SND_SOC_SAMSUNG_I2S_IDMA
 	help
 	  Say Y for I2S to operate with Internal DMA(I2S's own DMA)
 
+# For support SRP audio
+source "sound/soc/samsung/srp/Kconfig"
+
 config SND_SAMSUNG_I2S_MASTER
 	bool "I2S Master Mode"
 	depends on SND_SAMSUNG_I2S
