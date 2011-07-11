@@ -802,11 +802,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 21),
 	}, {
-		.name		= "i2s_special",
-		.id		= -1,
-		.enable		= exynos4_clk_audss_ctrl,
-		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL,
-	}, {
 		.name		= "pcm",
 		.id		= 0,
 		.enable		= exynos4_clk_audss_ctrl,
@@ -1070,9 +1065,21 @@ static struct clksrc_sources clkset_sclk_audss = {
 	.nr_sources     = ARRAY_SIZE(clkset_sclk_audss_list),
 };
 
-static struct clksrc_clk clk_sclk_audss = {
+static struct clksrc_clk clk_sclk_audss_i2s = {
+	.clk		= {
+		.name		= "i2sclk",
+		.id		= -1,
+		.enable		= exynos4_clk_audss_ctrl,
+		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL,
+	},
+	.sources        = &clkset_sclk_audss,
+	.reg_src        = { .reg = S5P_CLKSRC_AUDSS, .shift = 2, .size = 2 },
+	.reg_div        = { .reg = S5P_CLKDIV_AUDSS, .shift = 8, .size = 4 },
+};
+
+static struct clksrc_clk clk_sclk_audss_bus = {
 	.clk            = {
-		.name           = "i2s_bus",
+		.name           = "busclk",
 		.id             = -1,
 		.enable         = exynos4_clk_audss_ctrl,
 		.ctrlbit        = S5P_AUDSS_CLKGATE_I2SBUS,
@@ -1080,6 +1087,18 @@ static struct clksrc_clk clk_sclk_audss = {
 	.sources        = &clkset_sclk_audss,
 	.reg_src        = { .reg = S5P_CLKSRC_AUDSS, .shift = 2, .size = 2 },
 	.reg_div        = { .reg = S5P_CLKDIV_AUDSS, .shift = 4, .size = 4 },
+};
+
+static struct clksrc_clk clk_sclk_audss_srp = {
+	.clk            = {
+		.name           = "srp_clk",
+		.id             = -1,
+		.enable         = exynos4_clk_audss_ctrl,
+		.ctrlbit        = S5P_AUDSS_CLKGATE_RP,
+	},
+	.sources        = &clkset_sclk_audss,
+	.reg_src        = { .reg = S5P_CLKSRC_AUDSS, .shift = 2, .size = 2 },
+	.reg_div        = { .reg = S5P_CLKDIV_AUDSS, .shift = 0, .size = 4 },
 };
 
 static struct clk *clkset_sclk_audio1_list[] = {
@@ -1810,7 +1829,9 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_dout_mmc3,
 	&clk_dout_mmc4,
 	&clk_mout_audss,
-	&clk_sclk_audss,
+	&clk_sclk_audss_bus,
+	&clk_sclk_audss_i2s,
+	&clk_sclk_audss_srp,
 	&clk_sclk_audio0,
 	&clk_sclk_audio1,
 	&clk_sclk_audio2,
@@ -2070,7 +2091,7 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 
 	clk_fout_epll.ops = &exynos4_epll_ops;
 
-	clk_set_parent(&clk_sclk_audss.clk, &clk_mout_audss.clk);
+	clk_set_parent(&clk_sclk_audss_i2s.clk, &clk_mout_audss.clk);
 	clk_set_parent(&clk_mout_audss.clk, &clk_fout_epll);
 	clk_set_parent(&clk_sclk_audio0.clk, &clk_mout_epll.clk);
 	clk_set_parent(&clk_sclk_audio1.clk, &clk_mout_epll.clk);
