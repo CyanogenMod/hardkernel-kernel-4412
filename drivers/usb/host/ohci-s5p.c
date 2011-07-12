@@ -205,7 +205,7 @@ static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 
 	ohci_hcd_init(hcd_to_ohci(hcd));
 
-	err = usb_add_hcd(hcd, pdev->resource[1].start,
+	err = usb_add_hcd(hcd, irq,
 				IRQF_DISABLED | IRQF_SHARED);
 
 	if (err) {
