@@ -27,6 +27,7 @@
 #include <plat/fimc-core.h>
 #include <plat/adc-core.h>
 #include <plat/pm.h>
+#include <plat/iic-core.h>
 
 #include <mach/regs-irq.h>
 
@@ -167,6 +168,11 @@ void __init exynos4_map_io(void)
 #endif
 	s3c_adc_setname("s5pv210-adc");
 #endif
+
+	/* The I2C bus controllers are directly compatible with s3c2440 */
+	s3c_i2c0_setname("s3c2440-i2c");
+	s3c_i2c1_setname("s3c2440-i2c");
+	s3c_i2c2_setname("s3c2440-i2c");
 }
 
 void __init exynos4_init_clocks(int xtal)
