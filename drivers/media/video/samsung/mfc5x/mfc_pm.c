@@ -202,9 +202,11 @@ int mfc_init_pm(struct mfc_dev *mfcdev)
 
 	atomic_set(&pm->power, 0);
 
-#ifdef CONFIG_PM_RUNTIME
+#if defined(CONFIG_PM_RUNTIME) || defined(CONFIG_CPU_FREQ)
 	pm->device = mfcdev->device;
+#endif
 
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_enable(pm->device);
 #endif
 
