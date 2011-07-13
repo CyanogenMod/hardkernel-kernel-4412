@@ -1714,19 +1714,20 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	mfc_dbg("H: %d, W: %d, DPB_Count: %d", ctx->width, ctx->height,
 		dec_ctx->numtotaldpb);
 
-#if defined(CONFIG_CPU_FREQ) && defined(CONFIG_S5PV310_BUSFREQ)
+#ifdef CONFIG_CPU_FREQ
 	/* Fix MFC & Bus Frequency for High resolution for better performance */
 	if (ctx->width >= 1920 || ctx->height >= 1080){
 		if (atomic_read(&ctx->dev->busfreq_lock_cnt) == 0) {
 			/* For fixed MFC & Bus Freq to 160 & 266 MHz for 1080p Contents */
-            if(ctx->codecid == 0) { // H264_DEC
-			    s5pv310_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L0);
+			if(ctx->codecid == 0) {// H264_DEC
+				exynos4_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L0);
+				mfc_dbg("[%s] Bus Freq Locked L0!\n", __func__);
+			} else {
+				exynos4_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L1);
+				mfc_dbg("[%s] Bus Freq Locked L1!\n", __func__);
 			}
-			else {
-				s5pv310_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L1);
-			}
-			mfc_dbg("[%s] Bus Freq Locked L1 !!  \n",__func__);
 		}
+
 		atomic_inc(&ctx->dev->busfreq_lock_cnt);
 		ctx->busfreq_flag = true;
 	}

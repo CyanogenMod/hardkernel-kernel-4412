@@ -187,15 +187,15 @@ static int mfc_release(struct inode *inode, struct file *file)
 
 	mutex_lock(&dev->lock);
 
-#if defined(CONFIG_CPU_FREQ) && defined(CONFIG_S5PV310_BUSFREQ)
+#ifdef CONFIG_CPU_FREQ
 	/* Release MFC & Bus Frequency lock for High resolution */
 	if (mfc_ctx->busfreq_flag == true){
 		atomic_dec(&dev->busfreq_lock_cnt);
 		mfc_ctx->busfreq_flag = false;
-		if (atomic_read(&dev->busfreq_lock_cnt) == 0){
+		if (atomic_read(&dev->busfreq_lock_cnt) == 0) {
 			/* release Freq lock back to normal */
-			s5pv310_busfreq_lock_free(DVFS_LOCK_ID_MFC);
-			mfc_dbg("[%s] Bus Freq lock Released Normal !!\n",__func__);
+			exynos4_busfreq_lock_free(DVFS_LOCK_ID_MFC);
+			mfc_dbg("[%s] Bus Freq lock Released Normal!\n", __func__);
 		}
 	}
 #endif
