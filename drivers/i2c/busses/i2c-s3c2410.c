@@ -261,6 +261,10 @@ static int i2c_s3c_irq_nextbyte(struct s3c24xx_i2c *i2c, unsigned long iicstat)
 
 	switch (i2c->state) {
 
+	case STATE_IDLE:
+		dev_err(i2c->dev, "%s: called in STATE_IDLE\n", __func__);
+		goto out;
+
 	case STATE_STOP:
 		dev_err(i2c->dev, "%s: called in STATE_STOP\n", __func__);
 		s3c24xx_i2c_disable_irq(i2c);
@@ -397,13 +401,6 @@ static int i2c_s3c_irq_nextbyte(struct s3c24xx_i2c *i2c, unsigned long iicstat)
 		}
 
 		break;
-
-	case STATE_IDLE:
-		/* To remove compile warning message
-		 * Never get to here because STATE_IDLE state is already
-		 * checked by s3c24xx_i2c_irq.
-		 */
-		return 0;
 	}
 
 	/* acknowlegde the IRQ and get back on with the work */
@@ -412,7 +409,7 @@ static int i2c_s3c_irq_nextbyte(struct s3c24xx_i2c *i2c, unsigned long iicstat)
 	tmp = readl(i2c->regs + S3C2410_IICCON);
 	tmp &= ~S3C2410_IICCON_IRQPEND;
 	writel(tmp, i2c->regs + S3C2410_IICCON);
-
+ out:
 	return ret;
 }
 
