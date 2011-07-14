@@ -259,6 +259,8 @@ struct s5p_ace_aes_ctx {
 	struct scatterlist		*out_sg;
 	size_t				out_ofs;
 
+	int				directcall;
+
 	u8				*src_addr;
 	u8				*dst_addr;
 	u32				dma_size;
@@ -801,6 +803,8 @@ static int s5p_ace_aes_crypt_dma_start(struct s5p_ace_device *dev)
 	do_gettimeofday(&timestamp[1]);		/* 1: dma start */
 #endif
 
+	sctx->directcall = 0;
+
 	while (1) {
 		count = sctx->total;
 		count = min(count, sg_dma_len(sctx->in_sg) - sctx->in_ofs);
@@ -889,16 +893,30 @@ static int s5p_ace_aes_crypt_dma_start(struct s5p_ace_device *dev)
 		return ret;
 	}
 
-#if !defined(CONFIG_ACE_BC_IRQMODE)
 run:
 #if defined(CONFIG_ACE_BC_ASYNC)
+#if !defined(CONFIG_ACE_BC_IRQMODE)
 	if (!ret) {
-		if ((count <= 2048) && ((s5p_ace_dev.rc_depth_bc++) < 1))
-			/* fast path for relatively small data */
+		if ((count <= 2048) && ((s5p_ace_dev.rc_depth_bc++) < 1)) {
+			sctx->directcall = 1;
 			s5p_ace_bc_task((unsigned long)&s5p_ace_dev);
-		else
-			tasklet_schedule(&dev->task_bc);
+			return ret;
+		}
 	}
+#endif
+
+	if (sctx->dma_size) {
+		if (PageHighMem(sg_page(sctx->in_sg)))
+			crypto_kunmap(sg_page(sctx->in_sg),
+						crypto_kmap_type(0));
+		if (PageHighMem(sg_page(sctx->out_sg)))
+			crypto_kunmap(sg_page(sctx->out_sg),
+						crypto_kmap_type(1));
+	}
+
+#if !defined(CONFIG_ACE_BC_IRQMODE)
+	if (!ret)
+		tasklet_schedule(&dev->task_bc);
 #endif
 #endif
 	return ret;
@@ -918,6 +936,22 @@ static int s5p_ace_aes_crypt_dma_wait(struct s5p_ace_device *dev)
 	src += sctx->in_sg->offset + sctx->in_ofs;
 	dst = (u8 *)page_to_phys(sg_page(sctx->out_sg));
 	dst += sctx->out_sg->offset + sctx->out_ofs;
+
+#if defined(CONFIG_ACE_BC_ASYNC)
+	if (!sctx->directcall) {
+		if (PageHighMem(sg_page(sctx->in_sg))) {
+			sctx->src_addr = crypto_kmap(sg_page(sctx->in_sg),
+							crypto_kmap_type(0));
+			sctx->src_addr += sctx->in_sg->offset + sctx->in_ofs;
+		}
+
+		if (PageHighMem(sg_page(sctx->out_sg))) {
+			sctx->dst_addr = crypto_kmap(sg_page(sctx->out_sg),
+							crypto_kmap_type(1));
+			sctx->dst_addr += sctx->out_sg->offset + sctx->out_ofs;
+		}
+	}
+#endif
 
 #if !defined(CONFIG_ACE_BC_IRQMODE)
 	s5p_ace_aes_engine_wait(sctx, dst, src, sctx->dma_size);
