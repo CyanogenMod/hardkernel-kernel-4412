@@ -58,17 +58,12 @@
 #undef CONFIG_ACE_HASH_ASYNC		/* not supported */
 #undef CONFIG_ACE_HASH_IRQMODE		/* not supported */
 
-#undef CONFIG_ACE_RESCHE_THAN_WAIT
-#undef CONFIG_ACE_AES_SINGLE_BLOCK	/* inefficient at C110 */
-#undef CONFIG_ACE_DISABLE_BACKLOG	/* for debugging */
-
 #undef CONFIG_ACE_DEBUG
 #undef CONFIG_ACE_DEBUG_HEARTBEAT
 #undef CONFIG_ACE_DEBUG_WATCHDOG
 
 #if !defined(CONFIG_ACE_BC_ASYNC)
 #undef CONFIG_ACE_BC_IRQMODE
-#undef CONFIG_ACE_RESCHE_THAN_WAIT
 #endif
 
 #if !defined(CONFIG_ACE_HASH_ASYNC)
@@ -648,76 +643,6 @@ static void s5p_ace_aes_engine_wait(struct s5p_ace_aes_ctx *sctx,
 	s5p_ace_write_sfr(ACE_FC_INTPEND, ACE_FC_BTDMA | ACE_FC_BRDMA);
 }
 
-#if defined(CONFIG_ACE_AES_SINGLE_BLOCK)
-static int s5p_ace_aes_run_engine(struct s5p_ace_aes_ctx *sctx,
-				u8 *out, const u8 *in, u32 len)
-{
-	int ret;
-
-	/* Clean data cache */
-	s5p_ace_dma_map((void *)in, len, DMA_TO_DEVICE);
-	s5p_ace_dma_map((void *)out, len, DMA_FROM_DEVICE);
-
-	in = (u8 *)virt_to_phys((void *)in);
-	out = (u8 *)virt_to_phys((void *)out);
-
-	ret = s5p_ace_aes_engine_start(sctx, out, in, len, 0);
-
-	s5p_ace_aes_engine_wait(sctx, out, in, len);
-
-	s5p_ace_dma_unmap((dma_addr_t)in, len, DMA_TO_DEVICE);
-	s5p_ace_dma_unmap((dma_addr_t)out, len, DMA_FROM_DEVICE);
-
-	return ret;
-}
-
-static int ace_aes_set_key(struct crypto_tfm *tfm, const u8 *key,
-		unsigned int key_len)
-{
-	struct s5p_ace_aes_ctx *sctx = crypto_tfm_ctx(tfm);
-	s5p_ace_aes_set_cipher(sctx, MI_AES_ECB, key_len * 8);
-	memcpy(sctx->sfr_key, key, key_len);
-	return 0;
-}
-
-static void ace_aes_encrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-{
-	struct s5p_ace_aes_ctx *sctx = crypto_tfm_ctx(tfm);
-	s5p_ace_aes_set_encmode(sctx, BC_MODE_ENC);
-	s5p_ace_clock_gating(ACE_CLOCK_ON);
-	s5p_ace_aes_run_engine(sctx, out, in, AES_BLOCK_SIZE);
-	s5p_ace_clock_gating(ACE_CLOCK_OFF);
-}
-
-static void ace_aes_decrypt(struct crypto_tfm *tfm, u8 *out, const u8 *in)
-{
-	struct s5p_ace_aes_ctx *sctx = crypto_tfm_ctx(tfm);
-	s5p_ace_aes_set_encmode(sctx, BC_MODE_DEC);
-	s5p_ace_clock_gating(ACE_CLOCK_ON);
-	s5p_ace_aes_run_engine(sctx, out, in, AES_BLOCK_SIZE);
-	s5p_ace_clock_gating(ACE_CLOCK_OFF);
-}
-
-static struct crypto_alg aes_alg = {
-	.cra_name		=	"aes",
-	.cra_driver_name	=	"aes-s5p-ace",
-	.cra_priority		=	300,
-	.cra_flags		=	CRYPTO_ALG_TYPE_CIPHER,
-	.cra_blocksize		=	AES_BLOCK_SIZE,
-	.cra_ctxsize		=	sizeof(struct s5p_ace_aes_ctx),
-	.cra_alignmask		=	0,
-	.cra_module		=	THIS_MODULE,
-	.cra_list		=	LIST_HEAD_INIT(aes_alg.cra_list),
-	.cra_u.cipher = {
-		.cia_min_keysize	=	AES_MIN_KEY_SIZE,
-		.cia_max_keysize	=	AES_MAX_KEY_SIZE,
-		.cia_setkey		=	ace_aes_set_key,
-		.cia_encrypt		=	ace_aes_encrypt,
-		.cia_decrypt		=	ace_aes_decrypt
-	}
-};
-#endif
-
 void s5p_ace_sg_update(struct scatterlist **sg, size_t *offset,
 					size_t count)
 {
@@ -940,10 +865,6 @@ static int s5p_ace_aes_crypt_dma_start(struct s5p_ace_device *dev)
 		memcpy(sctx->tbuf, sctx->src_addr + count - AES_BLOCK_SIZE,
 			AES_BLOCK_SIZE);
 
-#if 0
-	s5p_ace_dma_map((void *)sctx->src_addr, count, DMA_TO_DEVICE);
-	s5p_ace_dma_map((void *)sctx->dst_addr, count, DMA_FROM_DEVICE);
-#else
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35)
 	dmac_clean_range((void *)sctx->src_addr,
 		(void *)sctx->src_addr + count);
@@ -957,11 +878,7 @@ static int s5p_ace_aes_crypt_dma_start(struct s5p_ace_device *dev)
 	outer_clean_range((unsigned long)dst, (unsigned long)dst + count);
 #endif
 #endif
-#endif
 
-#if 0
-	ret = s5p_ace_aes_engine_start(sctx, dst, src, count, 1);
-#else
 	for (i = 0; i < 100; i++) {
 		ret = s5p_ace_aes_engine_start(sctx, dst, src, count, 1);
 		if (ret != -EBUSY)
@@ -971,7 +888,6 @@ static int s5p_ace_aes_crypt_dma_start(struct s5p_ace_device *dev)
 		printk(KERN_ERR "%s : DMA Start Failed\n", __func__);
 		return ret;
 	}
-#endif
 
 #if !defined(CONFIG_ACE_BC_IRQMODE)
 run:
@@ -1004,17 +920,9 @@ static int s5p_ace_aes_crypt_dma_wait(struct s5p_ace_device *dev)
 	dst += sctx->out_sg->offset + sctx->out_ofs;
 
 #if !defined(CONFIG_ACE_BC_IRQMODE)
-#if defined(CONFIG_ACE_RESCHE_THAN_WAIT)
-	if (!(s5p_ace_read_sfr(ACE_FC_INTPEND) & ACE_FC_BTDMA))
-		return -EBUSY;
-#endif
 	s5p_ace_aes_engine_wait(sctx, dst, src, sctx->dma_size);
 #endif
 
-#if 0
-	s5p_ace_dma_unmap((dma_addr_t)src, sctx->dma_size, DMA_TO_DEVICE);
-	s5p_ace_dma_unmap((dma_addr_t)dst, sctx->dma_size, DMA_FROM_DEVICE);
-#else
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35)
 	dmac_inv_range((void *)sctx->dst_addr,
 		(void *)sctx->dst_addr + sctx->dma_size);
@@ -1024,7 +932,6 @@ static int s5p_ace_aes_crypt_dma_wait(struct s5p_ace_device *dev)
 		DMA_FROM_DEVICE);
 	outer_inv_range((unsigned long)dst,
 		(unsigned long)dst + sctx->dma_size);
-#endif
 #endif
 #endif
 
@@ -1068,9 +975,6 @@ static int s5p_ace_aes_crypt_dma_wait(struct s5p_ace_device *dev)
 static int s5p_ace_aes_handle_req(struct s5p_ace_device *dev)
 {
 	struct crypto_async_request *async_req;
-#if !defined(CONFIG_ACE_DISABLE_BACKLOG)
-	struct crypto_async_request *backlog;
-#endif
 	struct s5p_ace_aes_ctx *sctx;
 	struct s5p_ace_reqctx *rctx;
 	struct ablkcipher_request *req;
@@ -1082,20 +986,7 @@ static int s5p_ace_aes_handle_req(struct s5p_ace_device *dev)
 	S5P_ACE_DEBUG("%s\n", __func__);
 
 	spin_lock_irqsave(&s5p_ace_dev.lock, flags);
-#if defined(CONFIG_ACE_DISABLE_BACKLOG)
-	if (list_empty(&dev->queue_bc.list)) {
-		async_req = NULL;
-	} else {
-		struct list_head *request;
-		request = dev->queue_bc.list.next;
-		list_del(request);
-		async_req = (struct crypto_async_request *)list_entry(
-			request, struct crypto_async_request, list);
-	}
-#else
-	backlog = crypto_get_backlog(&dev->queue_bc);
 	async_req = crypto_dequeue_request(&dev->queue_bc);
-#endif
 	S5P_ACE_DEBUG("[[ dequeue (%u) ]]\n", dev->queue_bc.qlen);
 	spin_unlock_irqrestore(&s5p_ace_dev.lock, flags);
 
@@ -1104,13 +995,6 @@ static int s5p_ace_aes_handle_req(struct s5p_ace_device *dev)
 		s5p_ace_clock_gating(ACE_CLOCK_OFF);
 		return 0;
 	}
-
-#if !defined(CONFIG_ACE_DISABLE_BACKLOG)
-	if (backlog) {
-		S5P_ACE_DEBUG("backlog.\n");
-		backlog->complete(backlog, -EINPROGRESS);
-	}
-#endif
 
 	S5P_ACE_DEBUG("get new req\n");
 
@@ -1152,16 +1036,8 @@ static void s5p_ace_bc_task(unsigned long data)
 	S5P_ACE_DEBUG("%s (total: %d, dma_size: %d)\n", __func__,
 				sctx->total, sctx->dma_size);
 
-	if (sctx->dma_size) {
+	if (sctx->dma_size)
 		ret = s5p_ace_aes_crypt_dma_wait(dev);
-#if defined(CONFIG_ACE_RESCHE_THAN_WAIT)
-		if (ret == -EBUSY) {
-			S5P_ACE_DEBUG("reschedule\n");
-			tasklet_schedule(&dev->task_bc);
-			return;
-		}
-#endif
-	}
 
 	if (!sctx->total) {
 		if ((sctx->sfr_ctrl & ACE_AES_OPERMODE_MASK)
@@ -1207,12 +1083,7 @@ static int s5p_ace_aes_crypt(struct ablkcipher_request *req, u32 encmode)
 	}
 
 	spin_lock_irqsave(&s5p_ace_dev.lock, flags);
-#if defined(CONFIG_ACE_DISABLE_BACKLOG)
-	list_add_tail(&req->base.list, &s5p_ace_dev.queue_bc.list);
-	ret = -EINPROGRESS;
-#else
 	ret = ablkcipher_enqueue_request(&s5p_ace_dev.queue_bc, req);
-#endif
 	spin_unlock_irqrestore(&s5p_ace_dev.lock, flags);
 
 	S5P_ACE_DEBUG("[[ enqueue (%u) ]]\n", s5p_ace_dev.queue_bc.qlen);
@@ -1272,7 +1143,6 @@ static int s5p_ace_aes_crypt(struct blkcipher_desc *desc,
 
 	s5p_ace_dev.ctx_bc = NULL;
 
-	clear_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags);
 	local_bh_enable();
 	s5p_ace_clock_gating(ACE_CLOCK_OFF);
 
@@ -1670,16 +1540,12 @@ static int s5p_ace_sha1_engine(struct s5p_ace_hash_ctx *sctx,
 	s5p_ace_write_sfr(ACE_HASH_FIFO_MODE, ACE_HASH_FIFO_ON);
 
 	/* Clean data cache */
-#if 0
-	s5p_ace_dma_map((void *)in, len, DMA_TO_DEVICE);
-#else
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 35)
 	dmac_clean_range((void *)in, (void *)in + len);
 #else
 #if !defined(CONFIG_ACE_USE_ACP)
 	dmac_map_area((void *)in, len, DMA_TO_DEVICE);
 	outer_clean_range((unsigned long)in_phys, (unsigned long)in_phys + len);
-#endif
 #endif
 #endif
 
@@ -1751,10 +1617,6 @@ static int s5p_ace_sha1_engine(struct s5p_ace_hash_ctx *sctx,
 	buffer[2] = s5p_ace_read_sfr(ACE_HASH_RESULT3);
 	buffer[3] = s5p_ace_read_sfr(ACE_HASH_RESULT4);
 	buffer[4] = s5p_ace_read_sfr(ACE_HASH_RESULT5);
-
-#if 0
-	s5p_ace_dma_unmap(in_phys, len, DMA_TO_DEVICE);
-#endif
 
 	clear_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags);
 
@@ -2153,12 +2015,6 @@ static int __init s5p_ace_probe(struct platform_device *pdev)
 			(unsigned long)s5p_adt);
 #endif
 
-#if defined(CONFIG_ACE_AES_SINGLE_BLOCK)
-	ret = crypto_register_alg(&aes_alg);
-	if (ret)
-		goto err_reg_aes;
-#endif
-
 	for (i = 0; i < ARRAY_SIZE(algs_bc); i++) {
 		INIT_LIST_HEAD(&algs_bc[i].cra_list);
 #if defined(CONFIG_ACE_AES_FALLBACK)
@@ -2205,10 +2061,6 @@ err_reg_hash:
 err_reg_bc:
 	for (k = 0; k < i; k++)
 		crypto_unregister_alg(&algs_bc[k]);
-#if defined(CONFIG_ACE_AES_SINGLE_BLOCK)
-	crypto_unregister_alg(&aes_alg);
-err_reg_aes:
-#endif
 #if defined(CONFIG_ACE_BC_ASYNC)
 	tasklet_kill(&s5p_adt->task_bc);
 #endif
@@ -2278,10 +2130,6 @@ static int s5p_ace_remove(struct platform_device *dev)
 
 	for (i = 0; i < ARRAY_SIZE(algs_bc); i++)
 		crypto_unregister_alg(&algs_bc[i]);
-
-#if defined(CONFIG_ACE_AES_SINGLE_BLOCK)
-	crypto_unregister_alg(&aes_alg);
-#endif
 
 #if defined(CONFIG_ACE_BC_ASYNC)
 	tasklet_kill(&s5p_adt->task_bc);
