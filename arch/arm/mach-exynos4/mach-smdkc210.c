@@ -27,6 +27,7 @@
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/mfd/max8997.h>
+#include <linux/v4l2-mediabus.h>
 #if defined(CONFIG_S5P_MEM_CMA)
 #include <linux/cma.h>
 #endif
