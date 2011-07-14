@@ -70,7 +70,7 @@ config FB_S5P_Y_VRES
 config VIDEO_SAMSUNG_MEMSIZE_FIMD
 	int "Memory size in kbytes for FIMD"
 	depends on FB_S5P
-	default "15360"
+	default "24576"
 
 config FB_S5P_MIPI_DSIM
 	bool "Samsung MIPI DSIM"
