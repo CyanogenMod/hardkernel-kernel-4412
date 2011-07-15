@@ -355,23 +355,23 @@ static mali_bool mali_dvfs_table_update()
 		case 0:
 		case 1:
 		case 2:
-			mali_dvfs[MALI_DVFS_L2].vol = 1100000; // 260Mhz
-			mali_dvfs[MALI_DVFS_L3].vol = 1200000; // 330Mhz
+			mali_dvfs[MALI_DVFS_L3].vol = 1100000; // 260Mhz
+			mali_dvfs[MALI_DVFS_L2].vol = 1200000; // 330Mhz
 			break;
 		case 3:
 		case 4:
-			mali_dvfs[MALI_DVFS_L2].vol = 1100000; // 260Mhz
-			mali_dvfs[MALI_DVFS_L3].vol = 1200000; // 330Mhz
+			mali_dvfs[MALI_DVFS_L3].vol = 1100000; // 260Mhz
+			mali_dvfs[MALI_DVFS_L2].vol = 1200000; // 330Mhz
 			break;
 		case 5:
 		case 6:
-			mali_dvfs[MALI_DVFS_L2].vol = 1100000; // 260Mhz
-			mali_dvfs[MALI_DVFS_L3].vol = 1200000; // 330Mhz
+			mali_dvfs[MALI_DVFS_L3].vol = 1100000; // 260Mhz
+			mali_dvfs[MALI_DVFS_L2].vol = 1200000; // 330Mhz
 			break;
 		case 7:
 		case 8:
-			mali_dvfs[MALI_DVFS_L2].vol = 1100000; // 260Mhz
-			mali_dvfs[MALI_DVFS_L3].vol = 1200000; // 330Mhz
+			mali_dvfs[MALI_DVFS_L3].vol = 1100000; // 260Mhz
+			mali_dvfs[MALI_DVFS_L2].vol = 1200000; // 330Mhz
 			break;
 		default :
 			MALI_PRINT(("mali asv level is invalid %d", asv_info.asv_num));
