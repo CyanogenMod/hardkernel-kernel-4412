@@ -530,7 +530,7 @@ static int s5p_csis_probe(struct platform_device *pdev)
 		goto p_err4;
 	}
 
-	ret = request_irq(state->irq, s5p_csis_isr, 0, MODULE_NAME, state);
+	ret = request_irq(state->irq, s5p_csis_isr, 0, dev_name(&pdev->dev), state);
 	if (ret) {
 		dev_err(&pdev->dev, "request_irq failed\n");
 		goto p_err4;

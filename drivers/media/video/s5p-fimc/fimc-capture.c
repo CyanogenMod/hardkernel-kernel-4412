@@ -81,18 +81,16 @@ static void fimc_subdev_unregister(struct fimc_dev *fimc)
 
 static int mipi_csi_register_callback(struct device *dev, void *p)
 {
-	struct v4l2_subdev **sd = p;
+	struct v4l2_subdev **sd_list = p;
+	struct v4l2_subdev *sd = NULL;
 
-	/*
-	 * FIXME: detect platform device id and handle multiple
-	 * MIPI-CSI devices.
-	 */
-	*sd = dev_get_drvdata(dev);
+	sd = dev_get_drvdata(dev);
 
-	if (*sd) {
-		struct platform_device *pdev = v4l2_get_subdevdata(*sd);
+	if (sd) {
+		struct platform_device *pdev = v4l2_get_subdevdata(sd);
 		if (pdev)
 			dbg("pdev->id: %d", pdev->id);
+		*(sd_list + pdev->id) = sd;
 	}
 
 	return 0; /* non-zero value stops iteration */
@@ -102,7 +100,7 @@ static struct v4l2_subdev * s5p_mipi_get_subdev(int id)
 {
 	const char *module_name = "s5p-mipi-csis";
 	struct device_driver *drv;
-	struct v4l2_subdev *sd = NULL;
+	struct v4l2_subdev *sd[FIMC_MAX_CSIS_NUM] = {NULL,};
 	int ret;
 
 	drv = driver_find(module_name, &platform_bus_type);
@@ -113,16 +111,11 @@ static struct v4l2_subdev * s5p_mipi_get_subdev(int id)
 	if (!drv)
 		return ERR_PTR(-ENODEV);
 
-	/*
-	 * FIXME: detect platform device id and handle multiple
-	 * MIPI-CSI devices. Now always a subdev from the last
-	 * found device is returned.
-	 */
-	ret = driver_for_each_device(drv, NULL, &sd,
+	ret = driver_for_each_device(drv, NULL, &sd[0],
 				     mipi_csi_register_callback);
 	put_driver(drv);
 
-	return ret ? NULL : sd;
+	return ret ? NULL : sd[id];
 }
 
 static int s3cfb_register_callback(struct device *dev, void *p)
@@ -191,7 +184,7 @@ static int fimc_subdev_attach(struct fimc_dev *fimc, int index)
 		if (!isp_info || (index >= 0 && i != index))
 			continue;
 		if (isp_info->bus_type == FIMC_MIPI_CSI2) {
-			vid_cap->mipi_sd = s5p_mipi_get_subdev(0);
+			vid_cap->mipi_sd = s5p_mipi_get_subdev(isp_info->mux_id);
 			if (IS_ERR_OR_NULL(vid_cap->mipi_sd)) {
 				fimc->vid_cap.mipi_sd = NULL;
 				return PTR_ERR(vid_cap->mipi_sd);
