@@ -1332,6 +1332,7 @@ static struct max8997_platform_data exynos4_max8997_info = {
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 static struct regulator_consumer_supply mipi_csi_fixed_voltage_supplies[] = {
 	REGULATOR_SUPPLY("mipi_csi", "s5p-mipi-csis.0"),
+	REGULATOR_SUPPLY("mipi_csi", "s5p-mipi-csis.1"),
 };
 
 static struct regulator_init_data mipi_csi_fixed_voltage_init_data = {
@@ -1832,10 +1833,7 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #endif
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 	&s5p_device_mipi_csis0,
-	/* FIXME : Because v4l2 subdevice framework find only one platform
-	 * device about same device names
-	 */
-	/* &s5p_device_mipi_csis1, */
+	&s5p_device_mipi_csis1,
 #endif
 
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
