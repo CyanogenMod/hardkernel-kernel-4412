@@ -1009,6 +1009,7 @@ static int s5p_ace_aes_crypt_dma_wait(struct s5p_ace_device *dev)
 static int s5p_ace_aes_handle_req(struct s5p_ace_device *dev)
 {
 	struct crypto_async_request *async_req;
+	struct crypto_async_request *backlog;
 	struct s5p_ace_aes_ctx *sctx;
 	struct s5p_ace_reqctx *rctx;
 	struct ablkcipher_request *req;
@@ -1020,6 +1021,7 @@ static int s5p_ace_aes_handle_req(struct s5p_ace_device *dev)
 	S5P_ACE_DEBUG("%s\n", __func__);
 
 	spin_lock_irqsave(&s5p_ace_dev.lock, flags);
+	backlog = crypto_get_backlog(&dev->queue_bc);
 	async_req = crypto_dequeue_request(&dev->queue_bc);
 	S5P_ACE_DEBUG("[[ dequeue (%u) ]]\n", dev->queue_bc.qlen);
 	spin_unlock_irqrestore(&s5p_ace_dev.lock, flags);
@@ -1028,6 +1030,11 @@ static int s5p_ace_aes_handle_req(struct s5p_ace_device *dev)
 		clear_bit(FLAGS_BC_BUSY, &dev->flags);
 		s5p_ace_clock_gating(ACE_CLOCK_OFF);
 		return 0;
+	}
+
+	if (backlog) {
+		S5P_ACE_DEBUG("backlog.\n");
+		backlog->complete(backlog, -EINPROGRESS);
 	}
 
 	S5P_ACE_DEBUG("get new req\n");
@@ -1177,6 +1184,7 @@ static int s5p_ace_aes_crypt(struct blkcipher_desc *desc,
 
 	s5p_ace_dev.ctx_bc = NULL;
 
+	clear_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags);
 	local_bh_enable();
 	s5p_ace_clock_gating(ACE_CLOCK_OFF);
 
