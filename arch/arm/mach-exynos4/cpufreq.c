@@ -134,299 +134,6 @@ static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
 	{ 3, 0 },
 };
 
-struct cpufreq_voltage_table {
-	unsigned int	index;		/* any */
-	unsigned int	arm_volt;	/* uV */
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1200_SS[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1300000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 1200000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 1100000,
-	}, {
-		.index		= L5,
-		.arm_volt	= 1050000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1200_A1[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1250000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 1150000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 1050000,
-	}, {
-		.index		= L5,
-		.arm_volt	= 1000000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1200_A2[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1300000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1200000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 1100000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 1000000,
-	}, {
-		.index		= L5,
-		.arm_volt	= 975000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1200_B1[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1275000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1175000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 1075000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 975000,
-	}, {
-		.index		= L5,
-		.arm_volt	= 950000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1200_B2[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1250000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1150000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 1050000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 975000,
-	}, {
-		.index		= L5,
-		.arm_volt	= 950000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1200_C1[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1225000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1125000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 1025000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 950000,
-	}, {
-		.index		= L5,
-		.arm_volt	= 925000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1200_C2[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1200000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1100000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 1000000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 925000,
-	}, {
-		.index		= L5,
-		.arm_volt	= 925000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1200_D[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1175000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1075000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 975000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 925000,
-	}, {
-		.index		= L5,
-		.arm_volt	= 925000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1400_S[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1300000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1200000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 1125000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 1050000,
-	}, {
-		.index		= L5,
-		.arm_volt	= 1050000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1400_A[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1350000,
-	}, {
-		.index		= L0,
-		.arm_volt	= 1250000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1150000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1075000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 1000000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 1000000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1400_B[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1300000,
-	}, {
-		.index		= L0,
-		.arm_volt	= 1200000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1100000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 1025000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 950000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 950000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1400_C[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1250000,
-	}, {
-		.index		= L0,
-		.arm_volt	= 1150000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1050000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 975000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 950000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 950000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table_1400_D[CPUFREQ_LEVEL_END] = {
-	{
-		.index		= L0,
-		.arm_volt	= 1225000,
-	}, {
-		.index		= L0,
-		.arm_volt	= 1125000,
-	}, {
-		.index		= L1,
-		.arm_volt	= 1025000,
-	}, {
-		.index		= L2,
-		.arm_volt	= 950000,
-	}, {
-		.index		= L3,
-		.arm_volt	= 950000,
-	}, {
-		.index		= L4,
-		.arm_volt	= 950000,
-	},
-};
-
-static struct cpufreq_voltage_table exynos4_volt_table[CPUFREQ_LEVEL_END];
-
 static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
 	/* APLL FOUT L0: 1400MHz */
 	((350<<16)|(6<<8)|(0x1)),
@@ -446,6 +153,50 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
 	/* APLL FOUT L5: 200MHz */
 	((200<<16)|(6<<8)|(0x3)),
 };
+
+/*
+ * ASV group voltage table
+ */
+
+static const unsigned int asv_voltage_A[6][8] = {
+	/*
+	 *	   SS, A1, A2, B1, B2, C1, C2, D
+	 * @Dummy:
+	 * @1200 :
+	 * @1000 :
+	 * @800	 :	ASV_VOLTAGE_TABLE
+	 * @500  :
+	 * @200  :
+	 */
+	{ 1350000, 1350000, 1300000, 1275000, 1250000, 1225000, 1200000, 1175000 },
+	{ 1350000, 1350000, 1300000, 1275000, 1250000, 1225000, 1200000, 1175000 },
+	{ 1300000, 1250000, 1200000, 1175000, 1150000, 1125000, 1100000, 1075000 },
+	{ 1200000, 1150000, 1100000, 1075000, 1050000, 1025000, 1000000, 975000 },
+	{ 1100000, 1050000, 1000000, 975000, 975000, 950000, 925000, 925000 },
+	{ 1050000, 1000000, 975000, 950000, 950000, 925000, 925000, 925000 },
+
+};
+
+static const unsigned int asv_voltage_B[6][5] = {
+	/*
+	 *	   S, A, B, C, D
+	 * @1400 :
+	 * @1200 :
+	 * @1000 :
+	 * @800	 :	ASV_VOLTAGE_TABLE
+	 * @500	 :
+	 * @200	 :
+	 */
+	{ 1350000, 1350000, 1300000, 1250000, 1225000 },
+	{ 1300000, 1250000, 1200000, 1150000, 1125000 },
+	{ 1200000, 1150000, 1100000, 1050000, 1025000 },
+	{ 1125000, 1075000, 1025000, 975000, 950000 },
+	{ 1050000, 1000000, 950000, 950000, 950000 },
+	{ 1050000, 1000000, 950000, 950000, 950000 },
+
+};
+
+static unsigned int exynos4_volt_table[CPUFREQ_LEVEL_END];
 
 int exynos4_verify_speed(struct cpufreq_policy *policy)
 {
@@ -495,7 +246,7 @@ static void exynos4_set_apll(unsigned int new_index,
 	if ((new_index == L4 && old_index == L5) ||
 			(new_index == L5 && old_index == L4)) {
 		old_volt = regulator_get_voltage(arm_regulator);
-		arm_volt = exynos4_volt_table[L3].arm_volt;
+		arm_volt = exynos4_volt_table[L3];
 		regulator_set_voltage(arm_regulator, arm_volt, arm_volt);
 	}
 
@@ -634,7 +385,7 @@ static int exynos4_target(struct cpufreq_policy *policy,
 	}
 
 	/* get the voltage value */
-	arm_volt = exynos4_volt_table[index].arm_volt;
+	arm_volt = exynos4_volt_table[index];
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
@@ -715,7 +466,7 @@ int exynos4_cpufreq_lock(unsigned int nId,
 		cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 		/* get the voltage value */
-		arm_volt = exynos4_volt_table[cpufreq_level].arm_volt;
+		arm_volt = exynos4_volt_table[cpufreq_level];
 		regulator_set_voltage(arm_regulator, arm_volt,
 				arm_volt);
 
@@ -925,65 +676,13 @@ static void __init exynos4_set_voltage(void)
 
 	if (for_1400) {
 		for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++) {
-			switch (asv_group) {
-			case 0:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1400_S[i].arm_volt;
-				break;
-			case 1:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1400_A[i].arm_volt;
-				break;
-			case 2:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1400_B[i].arm_volt;
-				break;
-			case 3:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1400_C[i].arm_volt;
-				break;
-			case 4:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1400_D[i].arm_volt;
-				break;
-			}
+				exynos4_volt_table[i] =
+					asv_voltage_B[i][asv_group];
 		}
 	} else {
 		for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++) {
-			switch (asv_group) {
-			case 0:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1200_SS[i].arm_volt;
-				break;
-			case 1:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1200_A1[i].arm_volt;
-				break;
-			case 2:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1200_A2[i].arm_volt;
-				break;
-			case 3:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1200_B1[i].arm_volt;
-				break;
-			case 4:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1200_B2[i].arm_volt;
-				break;
-			case 5:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1200_C1[i].arm_volt;
-				break;
-			case 6:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1200_C2[i].arm_volt;
-				break;
-			case 7:
-				exynos4_volt_table[i].arm_volt =
-					exynos4_volt_table_1200_D[i].arm_volt;
-				break;
-			}
+				exynos4_volt_table[i] =
+					asv_voltage_A[i][asv_group];
 		}
 	}
 }
