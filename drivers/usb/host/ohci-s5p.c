@@ -253,6 +253,15 @@ static int ohci_hcd_s5p_drv_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void ohci_hcd_s5p_drv_shutdown(struct platform_device *pdev)
+{
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ohci->hcd;
+
+	if (hcd->driver->shutdown)
+		hcd->driver->shutdown(hcd);
+}
+
 static const struct dev_pm_ops ohci_s5p_pm_ops = {
 	.suspend		= ohci_hcd_s5p_drv_suspend,
 	.resume			= ohci_hcd_s5p_drv_resume,
@@ -261,7 +270,7 @@ static const struct dev_pm_ops ohci_s5p_pm_ops = {
 static struct platform_driver ohci_hcd_s5p_driver = {
 	.probe		= ohci_hcd_s5p_drv_probe,
 	.remove		= __devexit_p(ohci_hcd_s5p_drv_remove),
-	.shutdown	= usb_hcd_platform_shutdown,
+	.shutdown	= ohci_hcd_s5p_drv_shutdown,
 	.driver = {
 		.name	= "s5p-ohci",
 		.owner	= THIS_MODULE,
