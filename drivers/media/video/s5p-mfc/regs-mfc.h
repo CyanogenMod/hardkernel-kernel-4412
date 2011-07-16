@@ -17,79 +17,108 @@
 
 /* Number of bits that the buffer address should be shifted for particular
  * MFC buffers.  */
-#define S5P_FIMV_MEM_OFFSET	11
+#define S5P_FIMV_MEM_OFFSET		11
 
-#define S5P_FIMV_START_ADDR	0x0000
-#define S5P_FIMV_END_ADDR	0xe008
+#define S5P_FIMV_START_ADDR		0x0000
+#define S5P_FIMV_END_ADDR		0xe008
 
-#define S5P_FIMV_SW_RESET	0x0000
-#define S5P_FIMV_RISC_HOST_INT	0x0008
+#define S5P_FIMV_SW_RESET		0x0000
+#define S5P_FIMV_RISC_HOST_INT		0x0008
+
 /* Command from HOST to RISC */
-#define S5P_FIMV_HOST2RISC_CMD	0x0030
-#define S5P_FIMV_HOST2RISC_ARG1	0x0034
-#define S5P_FIMV_HOST2RISC_ARG2	0x0038
-#define S5P_FIMV_HOST2RISC_ARG3	0x003c
-#define S5P_FIMV_HOST2RISC_ARG4	0x0040
+#define S5P_FIMV_HOST2RISC_CMD		0x0030
+#define S5P_FIMV_HOST2RISC_ARG1		0x0034
+#define S5P_FIMV_HOST2RISC_ARG2		0x0038
+#define S5P_FIMV_HOST2RISC_ARG3		0x003c
+#define S5P_FIMV_HOST2RISC_ARG4		0x0040
+
 /* Command from RISC to HOST */
-#define S5P_FIMV_RISC2HOST_CMD	0x0044
-#define S5P_FIMV_RISC2HOST_ARG1	0x0048
-#define S5P_FIMV_RISC2HOST_ARG2	0x004c
-#define S5P_FIMV_RISC2HOST_ARG3	0x0050
-#define S5P_FIMV_RISC2HOST_ARG4	0x0054
+#define S5P_FIMV_RISC2HOST_CMD		0x0044
+#define S5P_FIMV_RISC2HOST_CMD_MASK	0x1FFFF
+#define S5P_FIMV_RISC2HOST_ARG1		0x0048
+#define S5P_FIMV_RISC2HOST_ARG2		0x004c
+#define S5P_FIMV_RISC2HOST_ARG3		0x0050
+#define S5P_FIMV_RISC2HOST_ARG4		0x0054
 
-#define S5P_FIMV_FW_VERSION	0x0058
-#define S5P_FIMV_FW_Y_SHIFT	16
-#define S5P_FIMV_FW_M_SHIFT	8
-#define S5P_FIMV_FW_D_SHIFT	0
-#define S5P_FIMV_FW_MASK	0xff
+#define S5P_FIMV_FW_VERSION		0x0058
+#define S5P_FIMV_FW_Y_SHIFT		16
+#define S5P_FIMV_FW_M_SHIFT		8
+#define S5P_FIMV_FW_D_SHIFT		0
+#define S5P_FIMV_FW_MASK		0xff
 
-#define S5P_FIMV_SYS_MEM_SZ	0x005c
-#define S5P_FIMV_FW_STATUS	0x0080
+#define S5P_FIMV_SYS_MEM_SZ		0x005c
+#define S5P_FIMV_FW_STATUS		0x0080
 /* Memory controller register */
 #define S5P_FIMV_MC_DRAMBASE_ADR_A	0x0508
 #define S5P_FIMV_MC_DRAMBASE_ADR_B	0x050c
 #define S5P_FIMV_MC_STATUS		0x0510
 
 /* Common register */
-#define S5P_FIMV_SYS_MEM_ADR	0x0600 /* firmware buffer */
-#define S5P_FIMV_CPB_BUF_ADR	0x0604 /* stream buffer */
-#define S5P_FIMV_DESC_BUF_ADR	0x0608 /* descriptor buffer */
-/* H264 decoding */
-#define S5P_FIMV_VERT_NB_MV_ADR	0x068c /* vertical neighbor motion vector */
-#define S5P_FIMV_VERT_NB_IP_ADR	0x0690 /* neighbor pixels for intra pred */
-#define S5P_FIMV_H264_LUMA_ADR	0x0700 /* Luma0 ~ Luma18 */
-#define S5P_FIMV_H264_CHROMA_ADR	0x0600 /* Chroma0 ~ Chroma18 */
-#define S5P_FIMV_MV_ADR		0x0780 /* H264 motion vector 660 780 */
-/* H263/MPEG4/MPEG2/VC-1/ decoding */
-#define S5P_FIMV_NB_DCAC_ADR	0x068c /* neighbor AC/DC coeff. buffer */
-#define S5P_FIMV_UP_NB_MV_ADR	0x0690 /* upper neighbor motion vector buffer */
-#define S5P_FIMV_SA_MV_ADR	0x0694 /* subseq. anchor motion vector buffer */
-#define S5P_FIMV_OT_LINE_ADR	0x0698 /* overlap transform line buffer */
-#define S5P_FIMV_BITPLANE3_ADR	0x069C /* bitplane3 addr */
-#define S5P_FIMV_BITPLANE2_ADR	0x06A0 /* bitplane2 addr */
-#define S5P_FIMV_BITPLANE1_ADR	0x06A4 /* bitplane1 addr */
-#define S5P_FIMV_SP_ADR		0x06A8 /* syntax parser addr */
-#define S5P_FIMV_LUMA_ADR	0x0700 /* Luma0 ~ Luma5 */
-#define S5P_FIMV_CHROMA_ADR	0x0600 /* Chroma0 ~ Chroma5 */
-/* Encoder register */
-#define S5P_FIMV_ENC_UP_MV_ADR		0x0600 /* upper motion vector addr */
-#define S5P_FIMV_ENC_COZERO_FLAG_ADR	0x0610 /* direct cozero flag addr */
-#define S5P_FIMV_ENC_UP_INTRA_MD_ADR	0x0608 /* upper intra MD addr */
-#define S5P_FIMV_ENC_UP_INTRA_PRED_ADR	0x0740 /* upper intra PRED addr */
-#define S5P_FIMV_ENC_NB_DCAC_ADR	0x0604 /* entropy engine's neighbor
-						inform and AC/DC coeff. */
+#define S5P_FIMV_COMMON_BASE_A		0x0600
+#define S5P_FIMV_COMMON_BASE_B		0x0700
+
+/* Decoder */
+#define S5P_FIMV_DEC_CHROMA_ADR		(S5P_FIMV_COMMON_BASE_A)
+#define S5P_FIMV_DEC_LUMA_ADR		(S5P_FIMV_COMMON_BASE_B)
+
+/* H.264 decoding */
+#define S5P_FIMV_H264_VERT_NB_MV_ADR	(S5P_FIMV_COMMON_BASE_A + 0x8c)	/* vertical neighbor motion vector */
+#define S5P_FIMV_H264_NB_IP_ADR		(S5P_FIMV_COMMON_BASE_A + 0x90)	/* neighbor pixels for intra pred */
+#define S5P_FIMV_H264_MV_ADR		(S5P_FIMV_COMMON_BASE_B + 0x80)	/* H264 motion vector */
+
+/* MPEG4 decoding */
+#define S5P_FIMV_MPEG4_NB_DCAC_ADR	(S5P_FIMV_COMMON_BASE_A + 0x8c)	/* neighbor AC/DC coeff. */
+#define S5P_FIMV_MPEG4_UP_NB_MV_ADR	(S5P_FIMV_COMMON_BASE_A + 0x90)	/* upper neighbor motion vector */
+#define S5P_FIMV_MPEG4_SA_MV_ADR	(S5P_FIMV_COMMON_BASE_A + 0x94)	/* subseq. anchor motion vector */
+#define S5P_FIMV_MPEG4_OT_LINE_ADR	(S5P_FIMV_COMMON_BASE_A + 0x98)	/* overlap transform line */
+#define S5P_FIMV_MPEG4_SP_ADR		(S5P_FIMV_COMMON_BASE_A + 0xa8)	/* syntax parser */
+
+/* H.263 decoding */
+#define S5P_FIMV_H263_NB_DCAC_ADR	(S5P_FIMV_COMMON_BASE_A + 0x8c)
+#define S5P_FIMV_H263_UP_NB_MV_ADR	(S5P_FIMV_COMMON_BASE_A + 0x90)
+#define S5P_FIMV_H263_SA_MV_ADR		(S5P_FIMV_COMMON_BASE_A + 0x94)
+#define S5P_FIMV_H263_OT_LINE_ADR	(S5P_FIMV_COMMON_BASE_A + 0x98)
+
+/* VC-1 decoding */
+#define S5P_FIMV_VC1_NB_DCAC_ADR	(S5P_FIMV_COMMON_BASE_A + 0x8c)
+#define S5P_FIMV_VC1_UP_NB_MV_ADR	(S5P_FIMV_COMMON_BASE_A + 0x90)
+#define S5P_FIMV_VC1_SA_MV_ADR		(S5P_FIMV_COMMON_BASE_A + 0x94)
+#define S5P_FIMV_VC1_OT_LINE_ADR	(S5P_FIMV_COMMON_BASE_A + 0x98)
+#define S5P_FIMV_VC1_BITPLANE3_ADR	(S5P_FIMV_COMMON_BASE_A + 0x9c)	/* bitplane3 */
+#define S5P_FIMV_VC1_BITPLANE2_ADR	(S5P_FIMV_COMMON_BASE_A + 0xa0)	/* bitplane2 */
+#define S5P_FIMV_VC1_BITPLANE1_ADR	(S5P_FIMV_COMMON_BASE_A + 0xa4)	/* bitplane1 */
+
+/* Encoder */
+#define S5P_FIMV_ENC_REF0_LUMA_ADR	(S5P_FIMV_COMMON_BASE_A + 0x1c)	/* reconstructed luma */
+#define S5P_FIMV_ENC_REF1_LUMA_ADR	(S5P_FIMV_COMMON_BASE_A + 0x20)
+#define S5P_FIMV_ENC_REF0_CHROMA_ADR	(S5P_FIMV_COMMON_BASE_B)	/* reconstructed chroma */
+#define S5P_FIMV_ENC_REF1_CHROMA_ADR	(S5P_FIMV_COMMON_BASE_B + 0x04)
+#define S5P_FIMV_ENC_REF2_LUMA_ADR	(S5P_FIMV_COMMON_BASE_B + 0x10)
+#define S5P_FIMV_ENC_REF2_CHROMA_ADR	(S5P_FIMV_COMMON_BASE_B + 0x08)
+#define S5P_FIMV_ENC_REF3_LUMA_ADR	(S5P_FIMV_COMMON_BASE_B + 0x14)
+#define S5P_FIMV_ENC_REF3_CHROMA_ADR	(S5P_FIMV_COMMON_BASE_B + 0x0c)
+
+/* H.264 encoding */
+#define S5P_FIMV_H264_UP_MV_ADR		(S5P_FIMV_COMMON_BASE_A)	/* upper motion vector */
+#define S5P_FIMV_H264_NBOR_INFO_ADR	(S5P_FIMV_COMMON_BASE_A + 0x04)	/* entropy engine's neighbor info. */
+#define S5P_FIMV_H264_UP_INTRA_MD_ADR	(S5P_FIMV_COMMON_BASE_A + 0x08)	/* upper intra MD */
+#define S5P_FIMV_H264_COZERO_FLAG_ADR	(S5P_FIMV_COMMON_BASE_A + 0x10)	/* direct cozero flag */
+#define S5P_FIMV_H264_UP_INTRA_PRED_ADR	(S5P_FIMV_COMMON_BASE_B + 0x40)	/* upper intra PRED */
+
+/* H.263 encoding */
+#define S5P_FIMV_H263_UP_MV_ADR		(S5P_FIMV_COMMON_BASE_A)	/* upper motion vector */
+#define S5P_FIMV_H263_ACDC_COEF_ADR	(S5P_FIMV_COMMON_BASE_A + 0x04)	/* upper Q coeff. */
+
+/* MPEG4 encoding */
+#define S5P_FIMV_MPEG4_UP_MV_ADR	(S5P_FIMV_COMMON_BASE_A)	/* upper motion vector */
+#define S5P_FIMV_MPEG4_ACDC_COEF_ADR	(S5P_FIMV_COMMON_BASE_A + 0x04)	/* upper Q coeff. */
+#define S5P_FIMV_MPEG4_COZERO_FLAG_ADR	(S5P_FIMV_COMMON_BASE_A + 0x10)	/* direct cozero flag */
+
+#define S5P_FIMV_ENC_REF_B_LUMA_ADR     0x062c /* ref B Luma addr */
+#define S5P_FIMV_ENC_REF_B_CHROMA_ADR   0x0630 /* ref B Chroma addr */
 
 #define S5P_FIMV_ENC_CUR_LUMA_ADR	0x0718 /* current Luma addr */
 #define S5P_FIMV_ENC_CUR_CHROMA_ADR	0x071C /* current Chroma addr */
-
-#define S5P_FIMV_ENC_REF0_LUMA_ADR	0x061c /* ref0 Luma addr */
-#define S5P_FIMV_ENC_REF0_CHROMA_ADR	0x0700 /* ref0 Chroma addr */
-#define S5P_FIMV_ENC_REF1_LUMA_ADR	0x0620 /* ref1 Luma addr */
-#define S5P_FIMV_ENC_REF1_CHROMA_ADR	0x0704 /* ref1 Chroma addr */
-#define S5P_FIMV_ENC_REF2_LUMA_ADR	0x0710 /* ref2 Luma addr */
-#define S5P_FIMV_ENC_REF2_CHROMA_ADR	0x0708 /* ref2 Chroma addr */
-#define S5P_FIMV_ENC_REF3_LUMA_ADR	0x0714 /* ref3 Luma addr */
-#define S5P_FIMV_ENC_REF3_CHROMA_ADR	0x070c /* ref3 Chroma addr */
 
 /* Codec common register */
 #define S5P_FIMV_ENC_HSIZE_PX		0x0818 /* frame width at encoder */
@@ -103,19 +132,19 @@
 #define S5P_FIMV_ENC_PXL_CACHE_CTRL	0x0a00 /* pixel cache control */
 
 /* Channel & stream interface register */
-#define S5P_FIMV_SI_RTN_CHID	0x2000 /* Return CH instance ID register */
-#define S5P_FIMV_SI_CH0_INST_ID	0x2040 /* codec instance ID */
-#define S5P_FIMV_SI_CH1_INST_ID	0x2080 /* codec instance ID */
+#define S5P_FIMV_SI_RTN_CHID		0x2000 /* Return CH instance ID register */
+#define S5P_FIMV_SI_CH0_INST_ID		0x2040 /* codec instance ID */
+#define S5P_FIMV_SI_CH1_INST_ID		0x2080 /* codec instance ID */
 /* Decoder */
-#define S5P_FIMV_SI_VRESOL	0x2004 /* vertical resolution of decoder */
-#define S5P_FIMV_SI_HRESOL	0x2008 /* horizontal resolution of decoder */
-#define S5P_FIMV_SI_BUF_NUMBER	0x200c /* number of frames in the decoded pic */
-#define S5P_FIMV_SI_DISPLAY_Y_ADR 0x2010 /* luma address of displayed pic */
-#define S5P_FIMV_SI_DISPLAY_C_ADR 0x2014 /* chroma address of displayed pic */
-#define S5P_FIMV_SI_CONSUMED_BYTES 0x2018 /* Consumed number of bytes to decode
+#define S5P_FIMV_SI_VRESOL		0x2004 /* vertical resolution of decoder */
+#define S5P_FIMV_SI_HRESOL		0x2008 /* horizontal resolution of decoder */
+#define S5P_FIMV_SI_BUF_NUMBER		0x200c /* number of frames in the decoded pic */
+#define S5P_FIMV_SI_DISPLAY_Y_ADR	0x2010 /* luma address of displayed pic */
+#define S5P_FIMV_SI_DISPLAY_C_ADR	0x2014 /* chroma address of displayed pic */
+#define S5P_FIMV_SI_CONSUMED_BYTES	0x2018 /* Consumed number of bytes to decode
 								a frame */
-#define S5P_FIMV_SI_DISPLAY_STATUS 0x201c /* status of decoded picture */
-#define S5P_FIMV_SI_FRAME_TYPE	0x2020 /* frame type such as skip/I/P/B */
+#define S5P_FIMV_SI_DISPLAY_STATUS	0x201c /* status of decoded picture */
+#define S5P_FIMV_SI_FRAME_TYPE		0x2020 /* frame type such as skip/I/P/B */
 
 #define S5P_FIMV_SI_CH0_SB_ST_ADR	0x2044 /* start addr of stream buf */
 #define S5P_FIMV_SI_CH0_SB_FRM_SIZE	0x2048 /* size of stream buf */
@@ -131,10 +160,10 @@
 
 #define S5P_FIMV_SI_FIMV1_HRESOL	0x2054 /* horizontal resolution */
 #define S5P_FIMV_SI_FIMV1_VRESOL	0x2050 /* vertical resolution */
-#define S5P_FIMV_CRC_LUMA0	0x2030 /* luma crc data per frame(top field)*/
-#define S5P_FIMV_CRC_CHROMA0	0x2034 /* chroma crc data per frame(top field)*/
-#define S5P_FIMV_CRC_LUMA1	0x2038 /* luma crc data per bottom field */
-#define S5P_FIMV_CRC_CHROMA1	0x203c /* chroma crc data per bottom field */
+#define S5P_FIMV_CRC_LUMA0		0x2030 /* luma crc data per frame(top field)*/
+#define S5P_FIMV_CRC_CHROMA0		0x2034 /* chroma crc data per frame(top field)*/
+#define S5P_FIMV_CRC_LUMA1		0x2038 /* luma crc data per bottom field */
+#define S5P_FIMV_CRC_CHROMA1		0x203c /* chroma crc data per bottom field */
 
 /* Display status */
 #define S5P_FIMV_DEC_STATUS_DECODING_ONLY		0
@@ -167,7 +196,7 @@
 #define S5P_FIMV_DECODE_FRAME_SKIPPED		0
 #define S5P_FIMV_DECODE_FRAME_I_FRAME		1
 #define S5P_FIMV_DECODE_FRAME_P_FRAME		2
-#define S5P_FIMV_DECODE_FRAME_202_FRAME		3
+#define S5P_FIMV_DECODE_FRAME_B_FRAME		3
 #define S5P_FIMV_DECODE_FRAME_OTHER_FRAME	4
 
 /* Sizes of buffers required for decoding */
@@ -203,6 +232,8 @@
 #define S5P_FIMV_ENC_SI_PIC_CNT		0x2008 /* picture count */
 #define S5P_FIMV_ENC_SI_WRITE_PTR	0x200c /* write pointer */
 #define S5P_FIMV_ENC_SI_SLICE_TYPE	0x2010 /* slice type(I/P/B/IDR) */
+#define S5P_FIMV_ENCODED_Y_ADDR         0x2014 /* the addr of the encoded luma pic */
+#define S5P_FIMV_ENCODED_C_ADDR         0x2018 /* the addr of the encoded chroma pic */
 
 #define S5P_FIMV_ENC_SI_CH0_SB_ADR	0x2044 /* addr of stream buf */
 #define S5P_FIMV_ENC_SI_CH0_SB_SIZE	0x204c /* size of stream buf */
@@ -216,15 +247,6 @@
 #define S5P_FIMV_ENC_SI_CH1_CUR_C_ADR	0x2094 /* current Chroma addr */
 #define S5P_FIMV_ENC_SI_CH1_FRAME_INS	0x2098 /* frame insertion */
 
-#define S5P_FIMV_ENC_STR_BF_U_FULL	0xc004 /* upper stream buf full */
-#define S5P_FIMV_ENC_STR_BF_U_EMPTY	0xc008 /* upper stream buf empty */
-#define S5P_FIMV_ENC_STR_BF_L_FULL	0xc00c /* lower stream buf full */
-#define S5P_FIMV_ENC_STR_BF_L_EMPTY	0xc010 /* lower stream buf empty */
-#define S5P_FIMV_ENC_STR_STATUS		0xc018 /* stream buf interrupt status */
-#define S5P_FIMV_ENC_SF_EPB_ON_CTRL	0xc054 /* stream control */
-#define S5P_FIMV_ENC_SF_BUF_CTRL	0xc058 /* buffer control */
-#define S5P_FIMV_ENC_BF_MODE_CTRL	0xc05c /* fifo level control */
-
 #define S5P_FIMV_ENC_PIC_TYPE_CTRL	0xc504 /* pic type level control */
 #define S5P_FIMV_ENC_B_RECON_WRITE_ON	0xc508 /* B frame recon write ctrl */
 #define S5P_FIMV_ENC_MSLICE_CTRL	0xc50c /* multi slice control */
@@ -233,7 +255,6 @@
 #define S5P_FIMV_ENC_CIR_CTRL		0xc518 /* number of intra refresh MB */
 #define S5P_FIMV_ENC_MAP_FOR_CUR	0xc51c /* linear or 64x32 tiled mode */
 #define S5P_FIMV_ENC_PADDING_CTRL	0xc520 /* padding control */
-#define S5P_FIMV_ENC_INT_MASK		0xc528 /* interrupt mask */
 
 #define S5P_FIMV_ENC_RC_CONFIG		0xc5a0 /* RC config */
 #define S5P_FIMV_ENC_RC_BIT_RATE	0xc5a8 /* bit rate */
@@ -241,19 +262,16 @@
 #define S5P_FIMV_ENC_RC_RPARA		0xc5b0 /* rate control reaction coeff */
 #define S5P_FIMV_ENC_RC_MB_CTRL		0xc5b4 /* MB adaptive scaling */
 
-/* Encoder for H264 */
+/* Encoder for H264 only */
 #define S5P_FIMV_ENC_H264_ENTRP_MODE	0xd004 /* CAVLC or CABAC */
 #define S5P_FIMV_ENC_H264_ALPHA_OFF	0xd008 /* loop filter alpha offset */
 #define S5P_FIMV_ENC_H264_BETA_OFF	0xd00c /* loop filter beta offset */
 #define S5P_FIMV_ENC_H264_NUM_OF_REF	0xd010 /* number of reference for P/B */
-#define S5P_FIMV_ENC_H264_MDINTER_WGT	0xd01c /* inter weighted parameter */
-#define S5P_FIMV_ENC_H264_MDINTRA_WGT	0xd020 /* intra weighted parameter */
-#define S5P_FIMV_ENC_H264_TRANS_FLAG	0xd034 /* 8x8 transform flag in PPS &
-								high profile */
+#define S5P_FIMV_ENC_H264_TRANS_FLAG	0xd034 /* 8x8 transform flag in PPS & high profile */
 
 #define S5P_FIMV_ENC_RC_FRAME_RATE	0xd0d0 /* frame rate */
 
-/* Encoder for MPEG4 */
+/* Encoder for MPEG4 only */
 #define S5P_FIMV_ENC_MPEG4_QUART_PXL	0xe008 /* qpel interpolation ctrl */
 
 /* Additional */
@@ -267,31 +285,24 @@
 
 #define S5P_FIMV_SI_CH0_RELEASE_BUF     0x2060 /* DPB release buffer register */
 #define S5P_FIMV_SI_CH0_HOST_WR_ADR	0x2064 /* address of shared memory */
-#define S5P_FIMV_ENC_B_RECON_WRITE_ON   0xc508 /* B frame recon write ctrl */
-#define S5P_FIMV_ENC_REF_B_LUMA_ADR     0x062c /* ref B Luma addr */
-#define S5P_FIMV_ENC_REF_B_CHROMA_ADR   0x0630 /* ref B Chroma addr */
-#define S5P_FIMV_ENCODED_Y_ADDR         0x2014 /* the address of the encoded
-							luminance picture */
-#define S5P_FIMV_ENCODED_C_ADDR         0x2018 /* the address of the encoded
-							chrominance picture*/
 
 /* Codec numbers  */
-#define MFC_FORMATS_NO_CODEC 			-1
+#define MFC_FORMATS_NO_CODEC		-1
 
-#define S5P_FIMV_CODEC_H264_DEC			0
-#define S5P_FIMV_CODEC_VC1_DEC			1
-#define S5P_FIMV_CODEC_MPEG4_DEC		2
-#define S5P_FIMV_CODEC_MPEG2_DEC		3
-#define S5P_FIMV_CODEC_H263_DEC			4
-#define S5P_FIMV_CODEC_VC1RCV_DEC		5
-#define S5P_FIMV_CODEC_FIMV1_DEC		6
-#define S5P_FIMV_CODEC_FIMV2_DEC		7
-#define S5P_FIMV_CODEC_FIMV3_DEC		8
-#define S5P_FIMV_CODEC_FIMV4_DEC		9
+#define S5P_FIMV_CODEC_H264_DEC		0
+#define S5P_FIMV_CODEC_VC1_DEC		1
+#define S5P_FIMV_CODEC_MPEG4_DEC	2
+#define S5P_FIMV_CODEC_MPEG2_DEC	3
+#define S5P_FIMV_CODEC_H263_DEC		4
+#define S5P_FIMV_CODEC_VC1RCV_DEC	5
+#define S5P_FIMV_CODEC_FIMV1_DEC	6
+#define S5P_FIMV_CODEC_FIMV2_DEC	7
+#define S5P_FIMV_CODEC_FIMV3_DEC	8
+#define S5P_FIMV_CODEC_FIMV4_DEC	9
 
-#define S5P_FIMV_CODEC_H264_ENC			16
-#define S5P_FIMV_CODEC_MPEG4_ENC		17
-#define S5P_FIMV_CODEC_H263_ENC			18
+#define S5P_FIMV_CODEC_H264_ENC		16
+#define S5P_FIMV_CODEC_MPEG4_ENC	17
+#define S5P_FIMV_CODEC_H263_ENC		18
 
 /* Channel Control Register */
 #define S5P_FIMV_CH_SEQ_HEADER		1
@@ -302,7 +313,6 @@
 
 #define S5P_FIMV_CH_MASK		7
 #define S5P_FIMV_CH_SHIFT		16
-
 
 /* Host to RISC command */
 #define S5P_FIMV_H2R_CMD_EMPTY		0

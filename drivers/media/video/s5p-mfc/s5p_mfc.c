@@ -266,7 +266,7 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 				dst_buf->b->v4l2_buf.flags |=
 					V4L2_BUF_FLAG_PFRAME;
 				break;
-			case S5P_FIMV_DECODE_FRAME_202_FRAME:
+			case S5P_FIMV_DECODE_FRAME_B_FRAME:
 				dst_buf->b->v4l2_buf.flags |=
 					V4L2_BUF_FLAG_BFRAME;
 				break;

@@ -557,10 +557,10 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 
 	switch (ctx->codec_mode) {
 	case S5P_FIMV_CODEC_H264_DEC:
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VERT_NB_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H264_VERT_NB_MV_ADR);
 		buf_addr1 += S5P_FIMV_DEC_VERT_NB_MV_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_VERT_NB_MV_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VERT_NB_IP_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H264_NB_IP_ADR);
 		buf_addr1 += S5P_FIMV_DEC_NB_IP_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_NB_IP_SIZE;
 		break;
@@ -569,57 +569,57 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	case S5P_FIMV_CODEC_FIMV2_DEC:
 	case S5P_FIMV_CODEC_FIMV3_DEC:
 	case S5P_FIMV_CODEC_FIMV4_DEC:
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_NB_DCAC_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_MPEG4_NB_DCAC_ADR);
 		buf_addr1 += S5P_FIMV_DEC_NB_DCAC_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_NB_DCAC_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_UP_NB_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_MPEG4_UP_NB_MV_ADR);
 		buf_addr1 += S5P_FIMV_DEC_UPNB_MV_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_UPNB_MV_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_SA_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_MPEG4_SA_MV_ADR);
 		buf_addr1 += S5P_FIMV_DEC_SUB_ANCHOR_MV_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_SUB_ANCHOR_MV_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_SP_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_MPEG4_SP_ADR);
 		buf_addr1 += S5P_FIMV_DEC_STX_PARSER_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_STX_PARSER_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_OT_LINE_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_MPEG4_OT_LINE_ADR);
 		buf_addr1 += S5P_FIMV_DEC_OVERLAP_TRANSFORM_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_OVERLAP_TRANSFORM_SIZE;
 		break;
 	case S5P_FIMV_CODEC_H263_DEC:
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_OT_LINE_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H263_OT_LINE_ADR);
 		buf_addr1 += S5P_FIMV_DEC_OVERLAP_TRANSFORM_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_OVERLAP_TRANSFORM_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_UP_NB_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H263_UP_NB_MV_ADR);
 		buf_addr1 += S5P_FIMV_DEC_UPNB_MV_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_UPNB_MV_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_SA_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H263_SA_MV_ADR);
 		buf_addr1 += S5P_FIMV_DEC_SUB_ANCHOR_MV_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_SUB_ANCHOR_MV_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_NB_DCAC_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H263_NB_DCAC_ADR);
 		buf_addr1 += S5P_FIMV_DEC_NB_DCAC_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_NB_DCAC_SIZE;
 		break;
 	case S5P_FIMV_CODEC_VC1_DEC:
 	case S5P_FIMV_CODEC_VC1RCV_DEC:
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_NB_DCAC_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VC1_NB_DCAC_ADR);
 		buf_addr1 += S5P_FIMV_DEC_NB_DCAC_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_NB_DCAC_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_OT_LINE_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VC1_OT_LINE_ADR);
 		buf_addr1 += S5P_FIMV_DEC_OVERLAP_TRANSFORM_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_OVERLAP_TRANSFORM_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_UP_NB_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VC1_UP_NB_MV_ADR);
 		buf_addr1 += S5P_FIMV_DEC_UPNB_MV_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_UPNB_MV_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_SA_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VC1_SA_MV_ADR);
 		buf_addr1 += S5P_FIMV_DEC_SUB_ANCHOR_MV_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_SUB_ANCHOR_MV_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_BITPLANE3_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VC1_BITPLANE3_ADR);
 		buf_addr1 += S5P_FIMV_DEC_VC1_BITPLANE_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_VC1_BITPLANE_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_BITPLANE2_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VC1_BITPLANE2_ADR);
 		buf_addr1 += S5P_FIMV_DEC_VC1_BITPLANE_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_VC1_BITPLANE_SIZE;
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_BITPLANE1_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_VC1_BITPLANE1_ADR);
 		buf_addr1 += S5P_FIMV_DEC_VC1_BITPLANE_SIZE;
 		buf_size1 -= S5P_FIMV_DEC_VC1_BITPLANE_SIZE;
 		break;
@@ -640,15 +640,15 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 		/* Port B */
 		mfc_debug(2, "Luma %d: %x\n", i, ctx->dst_bufs[i].cookie.raw.luma);
 		WRITEL(OFFSETB(ctx->dst_bufs[i].cookie.raw.luma),
-						S5P_FIMV_LUMA_ADR + i * 4);
+						S5P_FIMV_DEC_LUMA_ADR + i * 4);
 		mfc_debug(2, "\tChroma %d: %x\n", i,
 					ctx->dst_bufs[i].cookie.raw.chroma);
 		WRITEL(OFFSETA(ctx->dst_bufs[i].cookie.raw.chroma),
-					       S5P_FIMV_CHROMA_ADR + i * 4);
+					       S5P_FIMV_DEC_CHROMA_ADR + i * 4);
 		if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) {
 			mfc_debug(2, "\tBuf2: %x, size: %d\n",
 							buf_addr2, buf_size2);
-			WRITEL(OFFSETB(buf_addr2), S5P_FIMV_MV_ADR + i * 4);
+			WRITEL(OFFSETB(buf_addr2), S5P_FIMV_H264_MV_ADR + i * 4);
 			buf_addr2 += frame_size_mv;
 			buf_size2 -= frame_size_mv;
 		}
@@ -759,23 +759,23 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 			buf_size2 -= enc_ref_c_size;
 		}
 
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_UP_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H264_UP_MV_ADR);
 		buf_addr1 += S5P_FIMV_ENC_UPMV_SIZE;
 		buf_size1 -= S5P_FIMV_ENC_UPMV_SIZE;
 
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_COZERO_FLAG_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H264_COZERO_FLAG_ADR);
 		buf_addr1 += S5P_FIMV_ENC_COLFLG_SIZE;
 		buf_size1 -= S5P_FIMV_ENC_COLFLG_SIZE;
 
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_UP_INTRA_MD_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H264_UP_INTRA_MD_ADR);
 		buf_addr1 += S5P_FIMV_ENC_INTRAMD_SIZE;
 		buf_size1 -= S5P_FIMV_ENC_INTRAMD_SIZE;
 
-		WRITEL(OFFSETB(buf_addr2), S5P_FIMV_ENC_UP_INTRA_PRED_ADR);
+		WRITEL(OFFSETB(buf_addr2), S5P_FIMV_H264_UP_INTRA_PRED_ADR);
 		buf_addr2 += S5P_FIMV_ENC_INTRAPRED_SIZE;
 		buf_size2 -= S5P_FIMV_ENC_INTRAPRED_SIZE;
 
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_NB_DCAC_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H264_NBOR_INFO_ADR);
 		buf_addr1 += S5P_FIMV_ENC_NBORINFO_SIZE;
 		buf_size1 -= S5P_FIMV_ENC_NBORINFO_SIZE;
 
@@ -803,15 +803,15 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 			buf_size2 -= enc_ref_c_size;
 		}
 
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_UP_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_MPEG4_UP_MV_ADR);
 		buf_addr1 += S5P_FIMV_ENC_UPMV_SIZE;
 		buf_size1 -= S5P_FIMV_ENC_UPMV_SIZE;
 
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_COZERO_FLAG_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_MPEG4_COZERO_FLAG_ADR);
 		buf_addr1 += S5P_FIMV_ENC_COLFLG_SIZE;
 		buf_size1 -= S5P_FIMV_ENC_COLFLG_SIZE;
 
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_NB_DCAC_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_MPEG4_ACDC_COEF_ADR);
 		buf_addr1 += S5P_FIMV_ENC_ACDCCOEF_SIZE;
 		buf_size1 -= S5P_FIMV_ENC_ACDCCOEF_SIZE;
 
@@ -839,11 +839,11 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 			buf_size2 -= enc_ref_c_size;
 		}
 
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_UP_MV_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H263_UP_MV_ADR);
 		buf_addr1 += S5P_FIMV_ENC_UPMV_SIZE;
 		buf_size1 -= S5P_FIMV_ENC_UPMV_SIZE;
 
-		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_ENC_NB_DCAC_ADR);
+		WRITEL(OFFSETA(buf_addr1), S5P_FIMV_H263_ACDC_COEF_ADR);
 		buf_addr1 += S5P_FIMV_ENC_ACDCCOEF_SIZE;
 		buf_size1 -= S5P_FIMV_ENC_ACDCCOEF_SIZE;
 

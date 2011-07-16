@@ -76,7 +76,8 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx);
 #define s5p_mfc_get_consumed_stream()	readl(dev->regs_base + \
 						S5P_FIMV_SI_CONSUMED_BYTES)
 #define s5p_mfc_get_int_reason()	(readl(dev->regs_base + \
-					S5P_FIMV_RISC2HOST_CMD) & 0x1FFFF)
+					S5P_FIMV_RISC2HOST_CMD) & \
+					S5P_FIMV_RISC2HOST_CMD_MASK)
 #define s5p_mfc_get_int_err()		readl(dev->regs_base + \
 						S5P_FIMV_RISC2HOST_ARG2)
 #define s5p_mfc_err_dec(x)		(((x) & S5P_FIMV_ERR_DEC_MASK) >> \
