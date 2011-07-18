@@ -2374,8 +2374,10 @@ int fimc_resume_pd(struct device *dev)
 
 
 #else
-#define fimc_suspend	NULL
-#define fimc_resume	NULL
+#define fimc_suspend		NULL
+#define fimc_resume		NULL
+#define fimc_suspend_pd		NULL
+#define fimc_resume_pd		NULL
 #endif
 
 static int fimc_runtime_suspend_out(struct fimc_control *ctrl)
