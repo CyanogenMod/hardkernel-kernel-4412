@@ -33,13 +33,13 @@ static struct clk *cpu_clk;
 static struct clk *moutcore;
 static struct clk *mout_mpll;
 static struct clk *mout_apll;
+static unsigned long mpll_freq_khz;
 
 static struct regulator *arm_regulator;
 static struct cpufreq_freqs freqs;
 
 static int exynos4_dvs_locking;
 static bool exynos4_cpufreq_init_done;
-static bool exynos4_is_support_1400 = true;
 static DEFINE_MUTEX(set_freq_lock);
 static DEFINE_MUTEX(set_cpu_freq_lock);
 
@@ -61,6 +61,8 @@ static struct cpufreq_frequency_table exynos4_freq_table[] = {
 	{L5, 200*1000},
 	{0, CPUFREQ_TABLE_END},
 };
+
+static int pll_safe_idx = L3;
 
 static struct cpufreq_clkdiv exynos4_clkdiv_table[] = {
 	{L0, 0},
@@ -158,7 +160,7 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
  * ASV group voltage table
  */
 
-static const unsigned int asv_voltage_A[6][8] = {
+static const unsigned int asv_voltage_A[CPUFREQ_LEVEL_END][8] = {
 	/*
 	 *	   SS, A1, A2, B1, B2, C1, C2, D
 	 * @Dummy:
@@ -168,7 +170,7 @@ static const unsigned int asv_voltage_A[6][8] = {
 	 * @500  :
 	 * @200  :
 	 */
-	{ 1350000, 1350000, 1300000, 1275000, 1250000, 1225000, 1200000, 1175000 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0 },
 	{ 1350000, 1350000, 1300000, 1275000, 1250000, 1225000, 1200000, 1175000 },
 	{ 1300000, 1250000, 1200000, 1175000, 1150000, 1125000, 1100000, 1075000 },
 	{ 1200000, 1150000, 1100000, 1075000, 1050000, 1025000, 1000000, 975000 },
@@ -177,7 +179,7 @@ static const unsigned int asv_voltage_A[6][8] = {
 
 };
 
-static const unsigned int asv_voltage_B[6][5] = {
+static const unsigned int asv_voltage_B[CPUFREQ_LEVEL_END][5] = {
 	/*
 	 *	   S, A, B, C, D
 	 * @1400 :
@@ -240,15 +242,6 @@ static void exynos4_set_apll(unsigned int new_index,
 			     unsigned int old_index)
 {
 	unsigned int tmp;
-	unsigned int arm_volt;
-	unsigned int old_volt = 0;
-
-	if ((new_index == L4 && old_index == L5) ||
-			(new_index == L5 && old_index == L4)) {
-		old_volt = regulator_get_voltage(arm_regulator);
-		arm_volt = exynos4_volt_table[L3];
-		regulator_set_voltage(arm_regulator, arm_volt, arm_volt);
-	}
 
 	/* 1. MUX_CORE_SEL = MPLL,
 	 * ARMCLK uses MPLL for lock time */
@@ -282,9 +275,6 @@ static void exynos4_set_apll(unsigned int new_index,
 		tmp &= S5P_CLKMUX_STATCPU_MUXCORE_MASK;
 	} while (tmp != (0x1 << S5P_CLKSRC_CPU_MUXCORE_SHIFT));
 
-	if ((new_index == L4 && old_index == L5) ||
-			(new_index == L5 && old_index == L4))
-		regulator_set_voltage(arm_regulator, old_volt, old_volt);
 }
 
 static inline int need_pms_change(unsigned int old_index, unsigned int new_index)
@@ -301,10 +291,6 @@ static void exynos4_set_frequency(unsigned int old_index,
 	unsigned int tmp;
 
 	if (old_index > new_index) {
-		/*
-		 * L1/L3, L2/L4 Level change require
-		 * to only change s divider value
-		 */
 		if (!need_pms_change(old_index, new_index)) {
 			/* 1. Change the system clock divider values */
 			exynos4_set_clkdiv(new_index);
@@ -322,10 +308,6 @@ static void exynos4_set_frequency(unsigned int old_index,
 			exynos4_set_apll(new_index, old_index);
 		}
 	} else if (old_index < new_index) {
-		/*
-		 * L1/L3, L2/L4 Level change require
-		 * to only change s divider value
-		 */
 		if (!need_pms_change(old_index, new_index)) {
 			/* 1. Change just s value in apll m,p,s value */
 			tmp = __raw_readl(S5P_APLL_CON0);
@@ -349,7 +331,7 @@ static int exynos4_target(struct cpufreq_policy *policy,
 			  unsigned int relation)
 {
 	unsigned int index, old_index;
-	unsigned int arm_volt;
+	unsigned int arm_volt, safe_arm_volt = 0;
 	int ret = 0;
 
 	mutex_lock(&set_freq_lock);
@@ -372,7 +354,6 @@ static int exynos4_target(struct cpufreq_policy *policy,
 	if (index > g_cpufreq_lock_level)
 		index = g_cpufreq_lock_level;
 
-
 	if (index < g_cpufreq_limit_level)
 		index = g_cpufreq_limit_level;
 
@@ -384,25 +365,38 @@ static int exynos4_target(struct cpufreq_policy *policy,
 		goto out;
 	}
 
-	/* get the voltage value */
+	/*
+	 * ARM clock source will be changed APLL to MPLL temporary
+	 * To support this level, need to control regulator for
+	 * required voltage level
+	 */
+	if (need_pms_change(old_index, index) &&
+	   (exynos4_freq_table[index].frequency < mpll_freq_khz) &&
+	   (exynos4_freq_table[old_index].frequency < mpll_freq_khz))
+		safe_arm_volt = exynos4_volt_table[pll_safe_idx];
+
 	arm_volt = exynos4_volt_table[index];
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
 
 	/* When the new frequency is higher than current frequency */
-	if (freqs.new > freqs.old) {
+	if ((freqs.new > freqs.old) && !safe_arm_volt) {
 		/* Firstly, voltage up to increase frequency */
 		regulator_set_voltage(arm_regulator, arm_volt,
 				arm_volt);
 	}
 
+	if (safe_arm_volt)
+		regulator_set_voltage(arm_regulator, safe_arm_volt,
+				      safe_arm_volt);
 	if (freqs.new != freqs.old)
 		exynos4_set_frequency(old_index, index);
 
 	cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 	/* When the new frequency is lower than current frequency */
-	if (freqs.new < freqs.old) {
+	if ((freqs.new < freqs.old) ||
+	   ((freqs.new > freqs.old) && safe_arm_volt)) {
 		/* down the voltage after frequency change */
 		regulator_set_voltage(arm_regulator, arm_volt,
 				arm_volt);
@@ -545,11 +539,7 @@ void exynos4_cpufreq_upper_limit_free(unsigned int nId)
 	mutex_lock(&set_cpu_freq_lock);
 	g_cpufreq_limit_id &= ~(1 << nId);
 	g_cpufreq_limit_val[nId] = CPUFREQ_LIMIT_LEVEL;
-
-	if (exynos4_is_support_1400)
-		g_cpufreq_limit_level = CPUFREQ_LIMIT_LEVEL;
-	else
-		g_cpufreq_limit_level = L1;
+	g_cpufreq_limit_level = CPUFREQ_LIMIT_LEVEL;
 
 	if (g_cpufreq_limit_id) {
 		for (i = 0; i < DVFS_LOCK_ID_END; i++) {
@@ -666,11 +656,12 @@ static void __init exynos4_set_voltage(void)
 	if ((tmp >> 31) & 0x1)
 		for_1400 = true;
 
-	/* If ASV group is S, can not support 1.4GHz */
-	if ((asv_group == 0) || !for_1400) {
-		exynos4_is_support_1400 = false;
-		g_cpufreq_limit_level = L1;
-	}
+	/*
+	 * If ASV group is S, can not support 1.4GHz
+	 * Disabling table entry
+	 */
+	if ((asv_group == 0) || !for_1400)
+		exynos4_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
 
 	printk(KERN_INFO "DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
 
@@ -705,6 +696,8 @@ static int __init exynos4_cpufreq_init(void)
 	mout_mpll = clk_get(NULL, "mout_mpll");
 	if (IS_ERR(mout_mpll))
 		goto err_mout_mpll;
+
+	mpll_freq_khz = clk_get_rate(mout_mpll) / 1000;
 
 	mout_apll = clk_get(NULL, "mout_apll");
 	if (IS_ERR(mout_apll))
