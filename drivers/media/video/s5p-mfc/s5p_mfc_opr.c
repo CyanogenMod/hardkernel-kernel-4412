@@ -423,9 +423,7 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 
 	mfc_debug_enter();
 
-	/* FIXME: S5P_FIMV_CODEC_H264_ENC */
-	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
-		ctx->codec_mode == S5P_FIMV_CODEC_H264_ENC)
+	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC)
 		ctx->ctx_buf_size = MFC_H264_CTX_BUF_SIZE;
 	else
 		ctx->ctx_buf_size = MFC_CTX_BUF_SIZE;
