@@ -1930,6 +1930,7 @@ static int wm8994_set_bias_level(struct snd_soc_codec *codec,
 
 			pm_runtime_put(codec->dev);
 		}
+		codec->cache_sync = 1;
 		break;
 	}
 	codec->dapm.bias_level = level;
