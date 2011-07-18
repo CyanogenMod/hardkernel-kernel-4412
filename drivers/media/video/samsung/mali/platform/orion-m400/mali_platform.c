@@ -97,7 +97,7 @@ int mali_regulator_get_usecount(void)
 {
 	struct regulator_dev *rdev;
 
-	if( g3d_regulator==NULL )
+	if( IS_ERR_OR_NULL(g3d_regulator) )
 	{
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_get_usecount : g3d_regulator is null\n"));
 		return 0;
@@ -108,7 +108,7 @@ int mali_regulator_get_usecount(void)
 
 void mali_regulator_disable(void)
 {
-	if( g3d_regulator==NULL )
+	if( IS_ERR_OR_NULL(g3d_regulator) )
 	{
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_disable : g3d_regulator is null\n"));
 		return;
@@ -119,7 +119,7 @@ void mali_regulator_disable(void)
 
 void mali_regulator_enable(void)
 {
-	if( g3d_regulator==NULL )
+	if( IS_ERR_OR_NULL(g3d_regulator) )
 	{
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_enable : g3d_regulator is null\n"));
 		return;
@@ -131,7 +131,7 @@ void mali_regulator_enable(void)
 void mali_regulator_set_voltage(int min_uV, int max_uV)
 {
 	int voltage;
-	if( g3d_regulator==NULL )
+	if( IS_ERR_OR_NULL(g3d_regulator) )
 	{
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_set_voltage : g3d_regulator is null\n"));
 		return;

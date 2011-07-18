@@ -886,6 +886,5 @@ void _mali_kernel_core_dump_state(void)
     }
 #if USING_MALI_PMM
 	mali_pmm_dump_os_thread_state();	
-
-}
 #endif
+}
