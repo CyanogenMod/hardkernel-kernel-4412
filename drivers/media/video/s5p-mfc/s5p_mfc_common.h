@@ -337,6 +337,22 @@ struct s5p_mfc_buf_ctrl {
 	unsigned int flag_shft;		/* only for MFC_CTRL_TYPE_SET */
 };
 
+/**
+ * struct s5p_mfc_extra_buf - represents internal used buffer
+ * @alloc:		allocation-specific contexts for each buffer
+ *			(videobuf2 allocator)
+ * @ofs:		offset of each buffer, will be used for MFC
+ * @virt:		kernel virtual address, only valid when the
+ *			buffer accessed by driver
+ * @dma:		DMA address, only valid when kernel DMA API used
+ */
+struct s5p_mfc_extra_buf {
+	void		*alloc;
+	unsigned long	ofs;
+	void		*virt;
+	dma_addr_t	dma;
+};
+
 struct s5p_mfc_codec_ops {
 	/* initialization routines */
 	int (*alloc_ctx_buf) (struct s5p_mfc_ctx *ctx);
@@ -454,24 +470,11 @@ struct s5p_mfc_ctx {
 	int crc_luma1;
 	int crc_chroma1;
 
-	/* Buffers */
-	void *context_buf;
-	size_t context_phys;
-	size_t context_ofs;
-	size_t context_size;
-	//dma_addr_t context_dma;
-
-	void *desc_buf;
-	size_t desc_phys;
-
-	void *shared_buf;
-	size_t shared_phys;
-	void *shared_virt;
-	//dma_addr_t shared_dma;
-
-	void *shm_alloc;
-	void *shm;
-	size_t shm_ofs;
+	/* Extra Buffers */
+	unsigned int ctx_buf_size;
+	struct s5p_mfc_extra_buf ctx;
+	struct s5p_mfc_extra_buf dsc;
+	struct s5p_mfc_extra_buf shm;
 
 	struct s5p_mfc_enc_params enc_params;
 

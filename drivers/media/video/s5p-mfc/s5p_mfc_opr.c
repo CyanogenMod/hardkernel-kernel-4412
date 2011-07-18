@@ -201,45 +201,51 @@ static void s5p_mfc_cmd_wakeup()
 /* Allocate temporary buffers for decoding */
 int s5p_mfc_alloc_dec_temp_buffers(struct s5p_mfc_ctx *ctx)
 {
-	void *desc_virt;
 	struct s5p_mfc_dev *dev = ctx->dev;
+
 	mfc_debug_enter();
-	ctx->desc_buf = s5p_mfc_mem_alloc(
+
+	ctx->dsc.alloc = s5p_mfc_mem_alloc(
 			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], DESC_BUF_SIZE);
-	if (IS_ERR_VALUE((int)ctx->desc_buf)) {
-		ctx->desc_buf = 0;
+	if (IS_ERR(ctx->dsc.alloc)) {
 		mfc_err("Allocating DESC buffer failed.\n");
-		return -ENOMEM;
+		return PTR_ERR(ctx->dsc.alloc);
 	}
-	ctx->desc_phys = s5p_mfc_mem_cookie(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->desc_buf);
-	desc_virt = s5p_mfc_mem_vaddr(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->desc_buf);
-	if (desc_virt == NULL) {
+
+	ctx->dsc.ofs = OFFSETA(s5p_mfc_mem_cookie(
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->dsc.alloc));
+
+	/* FIXME: need clean to zero */
+#if 0
+	ctx->dsc.virt = s5p_mfc_mem_vaddr(
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->dsc.alloc);
+	if (!ctx->dsc.virt) {
 		s5p_mfc_mem_put(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->desc_buf);
-		ctx->desc_phys = 0;
-		ctx->desc_buf = 0;
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->dsc.alloc);
+		ctx->dsc.alloc = NULL;
+		ctx->dsc.ofs = 0;
+
 		mfc_err("Remapping DESC buffer failed.\n");
 		return -ENOMEM;
 	}
-	/* Zero content of the allocated memory */
-	/*
-	memset(desc_virt, 0, DESC_BUF_SIZE);
-	*/
-	/* FIXME: cache op? */
+
+	memset(ctx->dsc.virt, 0, DESC_BUF_SIZE);
+	s5p_mfc_cache_clean(ctx->dsc.virt, DESC_BUF_SIZE);
+#endif
 	mfc_debug_leave();
+
 	return 0;
 }
 
 /* Release temproary buffers for decoding */
 void s5p_mfc_release_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 {
-	if (ctx->desc_phys) {
+	if (ctx->dsc.alloc) {
 		s5p_mfc_mem_put(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-								ctx->desc_buf);
-		ctx->desc_phys = 0;
-		ctx->desc_buf = 0;
+								ctx->dsc.alloc);
+		ctx->dsc.alloc = NULL;
+		ctx->dsc.ofs = 0;
+		ctx->dsc.virt = NULL;
 	}
 }
 
@@ -413,52 +419,56 @@ void s5p_mfc_release_codec_buffers(struct s5p_mfc_ctx *ctx)
 /* Allocate memory for instance data buffer */
 int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 {
-	void *context_virt;
 	struct s5p_mfc_dev *dev = ctx->dev;
 
 	mfc_debug_enter();
+
 	/* FIXME: S5P_FIMV_CODEC_H264_ENC */
 	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC ||
 		ctx->codec_mode == S5P_FIMV_CODEC_H264_ENC)
-		ctx->context_size = MFC_H264_CTX_BUF_SIZE;
+		ctx->ctx_buf_size = MFC_H264_CTX_BUF_SIZE;
 	else
-		ctx->context_size = MFC_CTX_BUF_SIZE;
-	ctx->context_buf = s5p_mfc_mem_alloc(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->context_size);
-	if (IS_ERR(ctx->context_buf)) {
+		ctx->ctx_buf_size = MFC_CTX_BUF_SIZE;
+
+	ctx->ctx.alloc = s5p_mfc_mem_alloc(
+		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->ctx_buf_size);
+	if (IS_ERR(ctx->ctx.alloc)) {
 		mfc_err("Allocating context buffer failed.\n");
-		ctx->context_phys = 0;
-		ctx->context_buf = 0;
+		return PTR_ERR(ctx->ctx.alloc);
+	}
+
+	ctx->ctx.ofs = OFFSETA(s5p_mfc_mem_cookie(
+		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->ctx.alloc));
+
+	ctx->ctx.virt = s5p_mfc_mem_vaddr(
+		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->ctx.alloc);
+	if (!ctx->ctx.virt) {
+		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
+							ctx->ctx.alloc);
+		ctx->ctx.alloc = NULL;
+		ctx->ctx.ofs = 0;
+		ctx->ctx.virt = NULL;
+
+		mfc_err("Remapping context buffer failed.\n");
 		return -ENOMEM;
 	}
 
-	ctx->context_phys = s5p_mfc_mem_cookie(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->context_buf);
-	ctx->context_ofs = OFFSETA(ctx->context_phys);
-	context_virt = s5p_mfc_mem_vaddr(
-		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->context_buf);
-	if (context_virt == NULL) {
-		mfc_err("Remapping instance buffer failed.\n");
-		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->context_buf);
-		ctx->context_phys = 0;
-		ctx->context_buf = 0;
-		return -ENOMEM;
-	}
-	/* Zero content of the allocated memory */
-	memset(context_virt, 0, ctx->context_size);
-	s5p_mfc_cache_clean(context_virt, ctx->context_size);
+	memset(ctx->ctx.virt, 0, ctx->ctx_buf_size);
+	s5p_mfc_cache_clean(ctx->ctx.virt, ctx->ctx_buf_size);
 	/*
-	ctx->context_dma = dma_map_single(ctx->dev->v4l2_dev.dev,
-					  context_virt, ctx->context_size,
+	ctx->ctx.dma = dma_map_single(ctx->dev->v4l2_dev.dev,
+					  ctx->ctx.virt, ctx->ctx_buf_size,
 					  DMA_TO_DEVICE);
 	*/
 
 	if (s5p_mfc_init_shm(ctx) < 0) {
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->context_buf);
-		ctx->context_phys = 0;
-		ctx->context_buf = 0;
+							ctx->ctx.alloc);
+		ctx->ctx.alloc = NULL;
+		ctx->ctx.ofs = 0;
+		ctx->ctx.virt = NULL;
+
+		mfc_err("Remapping shared mem buffer failed.\n");
 		return -ENOMEM;
 	}
 
@@ -473,23 +483,27 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_dev *dev = ctx->dev;
 
 	mfc_debug_enter();
-	if (ctx->context_buf) {
+
+	if (ctx->ctx.alloc) {
 		/*
-		dma_unmap_single(ctx->dev->v4l2_dev.dev, ctx->context_dma,
-				ctx->context_size, DMA_TO_DEVICE);
+		dma_unmap_single(ctx->dev->v4l2_dev.dev,
+				ctx->ctx.dma, ctx->ctx_buf_size,
+				DMA_TO_DEVICE);
 		*/
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->context_buf);
-		ctx->context_phys = 0;
-		ctx->context_buf = 0;
+							ctx->ctx.alloc);
+		ctx->ctx.alloc = NULL;
+		ctx->ctx.ofs = 0;
+		ctx->ctx.virt = NULL;
 	}
-	if (ctx->shm_alloc) {
+	if (ctx->shm.alloc) {
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-							ctx->shm_alloc);
-		ctx->shm_alloc = 0;
-		ctx->shm_ofs = 0;
-		ctx->shm = 0;
+							ctx->shm.alloc);
+		ctx->shm.alloc = NULL;
+		ctx->shm.ofs = 0;
+		ctx->shm.virt = NULL;
 	}
+
 	mfc_debug_leave();
 }
 
@@ -498,7 +512,7 @@ void s5p_mfc_set_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 
-	WRITEL(OFFSETA(ctx->desc_phys), S5P_FIMV_SI_CH0_DESC_ADR);
+	WRITEL(ctx->dsc.ofs, S5P_FIMV_SI_CH0_DESC_ADR);
 	WRITEL(DESC_BUF_SIZE, S5P_FIMV_SI_CH0_DESC_SIZE);
 }
 
@@ -507,7 +521,7 @@ void s5p_mfc_set_shared_buffer(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 
-	WRITEL(ctx->shm_ofs, S5P_FIMV_SI_CH0_HOST_WR_ADR);
+	WRITEL(ctx->shm.ofs, S5P_FIMV_SI_CH0_HOST_WR_ADR);
 }
 
 /* Set registers for decoding stream buffer */
@@ -523,7 +537,7 @@ int s5p_mfc_set_dec_stream_buffer(struct s5p_mfc_ctx *ctx, int buf_addr,
 	WRITEL(CPB_BUF_SIZE, S5P_FIMV_SI_CH0_CPB_SIZE);
 	WRITEL(buf_size, S5P_FIMV_SI_CH0_SB_FRM_SIZE);
 	mfc_debug(2, "Shared_virt: %p (start offset: %d)\n",
-					ctx->shared_virt, start_num_byte);
+					ctx->shm.virt, start_num_byte);
 	s5p_mfc_write_shm(ctx, start_num_byte, START_BYTE_NUM);
 	mfc_debug_leave();
 	return 0;
