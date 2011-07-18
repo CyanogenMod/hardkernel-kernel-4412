@@ -29,6 +29,7 @@
 #include <mach/regs-audss.h>
 #include <mach/sysmmu.h>
 
+#ifdef CONFIG_PM
 static struct sleep_save exynos4_clock_save[] = {
 	/* CMU side */
 	SAVE_ITEM(S5P_CLKDIV_LEFTBUS),
@@ -81,6 +82,7 @@ static struct sleep_save exynos4_clock_save[] = {
 	SAVE_ITEM(S5P_CLKGATE_IP_CAM),
 	SAVE_ITEM(S5P_CLKGATE_IP_TV),
 };
+#endif
 
 static struct clk clk_sclk_hdmi27m = {
 	.name		= "sclk_hdmi27m",
@@ -2067,6 +2069,7 @@ static struct clk *clks[] __initdata = {
 	&clk_sclk_hdmiphy,
 };
 
+#ifdef CONFIG_PM
 static int exynos4_clock_suspend(void)
 {
 	s3c_pm_do_save(exynos4_clock_save, ARRAY_SIZE(exynos4_clock_save));
@@ -2077,6 +2080,10 @@ static void exynos4_clock_resume(void)
 {
 	s3c_pm_do_restore_core(exynos4_clock_save, ARRAY_SIZE(exynos4_clock_save));
 }
+#else
+#define exynos4_clock_suspend NULL
+#define exynos4_clock_resume NULL
+#endif
 
 struct syscore_ops exynos4_clock_syscore_ops = {
 	.suspend        = exynos4_clock_suspend,
