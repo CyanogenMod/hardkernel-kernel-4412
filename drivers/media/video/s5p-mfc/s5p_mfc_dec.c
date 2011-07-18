@@ -909,16 +909,18 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	unsigned long flags;
 
 	mfc_debug_enter();
+
 	mfc_debug(2, "Memory type: %d\n", reqbufs->memory);
+
 	if (reqbufs->memory != V4L2_MEMORY_MMAP) {
 		mfc_err("Only V4L2_MEMORY_MAP is supported.\n");
 		return -EINVAL;
+
 	}
 	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],true);
 		/* Can only request buffers after an instance has been opened.*/
 		if (ctx->state == MFCINST_GOT_INST) {
-			ctx->src_bufs_cnt = 0;
 			if (reqbufs->count == 0) {
 				mfc_debug(2, "Freeing buffers.\n");
 				ret = vb2_reqbufs(&ctx->vq_src, reqbufs);
@@ -941,29 +943,35 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		/* cacheable setting */
 		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],ctx->cacheable);
 		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],ctx->cacheable);
-		ctx->dst_bufs_cnt = 0;
+
 		if (reqbufs->count == 0) {
 			mfc_debug(2, "Freeing buffers.\n");
 			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
 			return ret;
 		}
+
 		if (ctx->capture_state != QUEUE_FREE) {
 			mfc_err("Bufs have already been requested.\n");
 			return -EINVAL;
 		}
+
 		ctx->capture_state = QUEUE_BUFS_REQUESTED;
+
 		ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
 		if (ret) {
 			mfc_err("vb2_reqbufs on capture failed.\n");
 			return ret;
 		}
+
 		if (reqbufs->count < ctx->dpb_count) {
 			mfc_err("Not enough buffers allocated.\n");
 			reqbufs->count = 0;
 			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
 			return -ENOMEM;
 		}
+
 		ctx->total_dpb_count = reqbufs->count;
+
 		ret = s5p_mfc_alloc_codec_buffers(ctx);
 		if (ret) {
 			mfc_err("Failed to allocate decoding buffers.\n");
@@ -971,7 +979,8 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
 			return -ENOMEM;
 		}
-		if (ctx->dst_bufs_cnt == ctx->total_dpb_count) {
+
+		if (ctx->dpb_queue_cnt == ctx->total_dpb_count) {
 			ctx->capture_state = QUEUE_BUFS_MMAPED;
 		} else {
 			mfc_err("Not all buffers passed to buf_init.\n");
@@ -980,16 +989,20 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			s5p_mfc_release_codec_buffers(ctx);
 			return -ENOMEM;
 		}
+
 		if (s5p_mfc_ctx_ready(ctx)) {
 			spin_lock_irqsave(&dev->condlock, flags);
 			set_bit(ctx->num, &dev->ctx_work_bits);
 			spin_unlock_irqrestore(&dev->condlock, flags);
 		}
+
 		s5p_mfc_try_run(dev);
 		s5p_mfc_wait_for_done_ctx(ctx,
 					 S5P_FIMV_R2H_CMD_INIT_BUFFERS_RET, 1);
 	}
+
 	mfc_debug_leave();
+
 	return ret;
 }
 
@@ -1422,7 +1435,8 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
-	unsigned int i;
+	struct s5p_mfc_buf *buf = vb_to_mfc_buf(vb);
+	int i;
 
 	mfc_debug_enter();
 
@@ -1444,13 +1458,14 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 		}
 		mfc_debug(2, "Size: 0=%lu 2=%lu\n", vb2_plane_size(vb, 0),
 							vb2_plane_size(vb, 1));
-		i = vb->v4l2_buf.index;
-		ctx->dst_bufs[i].b = vb;
-		ctx->dst_bufs[i].cookie.raw.luma = mfc_plane_cookie(vb, 0);
-		ctx->dst_bufs[i].cookie.raw.chroma = mfc_plane_cookie(vb, 1);
-		ctx->dst_bufs_cnt++;
 
-		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_GET, i) < 0)
+		buf->cookie.raw.luma = mfc_plane_cookie(vb, 0);
+		buf->cookie.raw.chroma = mfc_plane_cookie(vb, 1);
+
+		list_add_tail(&buf->list, &ctx->dpb_queue);
+		ctx->dpb_queue_cnt++;
+
+		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_GET, vb->v4l2_buf.index) < 0)
 			mfc_err("failed in init_buf_ctrls\n");
 
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
@@ -1465,12 +1480,9 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 			return -EINVAL;
 		}
 
-		i = vb->v4l2_buf.index;
-		ctx->src_bufs[i].b = vb;
-		ctx->src_bufs[i].cookie.stream = mfc_plane_cookie(vb, 0);
-		ctx->src_bufs_cnt++;
+		buf->cookie.stream = mfc_plane_cookie(vb, 0);
 
-		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SET, i) < 0)
+		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SET, vb->v4l2_buf.index) < 0)
 			mfc_err("failed in init_buf_ctrls\n");
 	} else {
 		mfc_err("s5p_mfc_buf_init: unknown queue type.\n");
@@ -1592,6 +1604,9 @@ static int s5p_mfc_stop_streaming(struct vb2_queue *q)
 		ctx->dst_queue_cnt = 0;
 		ctx->dpb_flush_flag = 1;
 		ctx->dec_dst_flag = 0;
+
+		INIT_LIST_HEAD(&ctx->dpb_queue);
+		ctx->dpb_queue_cnt++;
 	}
 
 	if (q->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
@@ -1615,24 +1630,22 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
 	struct s5p_mfc_dev *dev = ctx->dev;
 	unsigned long flags;
-	struct s5p_mfc_buf *mfc_buf;
+	struct s5p_mfc_buf *buf = vb_to_mfc_buf(vb);
 
 	mfc_debug_enter();
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		mfc_buf = &ctx->src_bufs[vb->v4l2_buf.index];
-		mfc_buf->used = 0;
+		buf->used = 0;
 		mfc_debug(2, "Src queue: %p\n", &ctx->src_queue);
 		mfc_debug(2, "Adding to src: %p (%08lx, %08x)\n", vb,
 				mfc_plane_cookie(vb, 0),
-				ctx->src_bufs[vb->v4l2_buf.index].cookie.stream);
+				buf->cookie.stream);
 		spin_lock_irqsave(&dev->irqlock, flags);
-		list_add_tail(&mfc_buf->list, &ctx->src_queue);
+		list_add_tail(&buf->list, &ctx->src_queue);
 		ctx->src_queue_cnt++;
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		mfc_buf = &ctx->dst_bufs[vb->v4l2_buf.index];
-		mfc_buf->used = 0;
+		buf->used = 0;
 		mfc_debug(2, "Dst queue: %p\n", &ctx->dst_queue);
 		mfc_debug(2, "Adding to dst: %p (%lx)\n", vb,
 						  mfc_plane_cookie(vb, 0));
@@ -1642,7 +1655,7 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 		spin_lock_irqsave(&dev->irqlock, flags);
 		set_bit(vb->v4l2_buf.index, &ctx->dec_dst_flag);
 		mfc_debug(2, "ADDING Flag after: %lx\n", ctx->dec_dst_flag);
-		list_add_tail(&mfc_buf->list, &ctx->dst_queue);
+		list_add_tail(&buf->list, &ctx->dst_queue);
 		ctx->dst_queue_cnt++;
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	} else {
@@ -1688,8 +1701,6 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 	ctx->src_queue_cnt = 0;
 	ctx->dst_queue_cnt = 0;
 
-	ctx->dst_bufs_cnt = 0;
-	ctx->src_bufs_cnt = 0;
 	ctx->capture_state = QUEUE_FREE;
 	ctx->output_state = QUEUE_FREE;
 
@@ -1699,9 +1710,13 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 	ctx->src_fmt = &formats[DEF_SRC_FMT];
 	ctx->dst_fmt = &formats[DEF_DST_FMT];
 
+	INIT_LIST_HEAD(&ctx->dpb_queue);
+	ctx->dpb_queue_cnt = 0;
+
 	/* Init videobuf2 queue for OUTPUT */
 	ctx->vq_src.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 	ctx->vq_src.drv_priv = ctx;
+	ctx->vq_src.buf_struct_size = sizeof(struct s5p_mfc_buf);
 	ctx->vq_src.io_modes = VB2_MMAP;
 	ctx->vq_src.ops = &s5p_mfc_dec_qops;
 	ctx->vq_src.mem_ops = s5p_mfc_mem_ops();
@@ -1714,6 +1729,7 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 	/* Init videobuf2 queue for CAPTURE */
 	ctx->vq_dst.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	ctx->vq_dst.drv_priv = ctx;
+	ctx->vq_dst.buf_struct_size = sizeof(struct s5p_mfc_buf);
 	ctx->vq_dst.io_modes = VB2_MMAP;
 	ctx->vq_dst.ops = &s5p_mfc_dec_qops;
 	ctx->vq_dst.mem_ops = s5p_mfc_mem_ops();

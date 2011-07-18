@@ -538,6 +538,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	unsigned int dpb;
 	size_t buf_addr1, buf_addr2;
 	int buf_size1, buf_size2;
+	struct s5p_mfc_buf *buf;
 
 	buf_addr1 = ctx->port_a_phys;
 	buf_size1 = ctx->port_a_size;
@@ -636,23 +637,24 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	frame_size_mv = ctx->mv_size;
 	mfc_debug(2, "Frame size: %d ch: %d mv: %d\n", frame_size, frame_size_ch,
 								frame_size_mv);
-	for (i = 0; i < ctx->total_dpb_count; i++) {
-		/* Port B */
-		mfc_debug(2, "Luma %d: %x\n", i, ctx->dst_bufs[i].cookie.raw.luma);
-		WRITEL(OFFSETB(ctx->dst_bufs[i].cookie.raw.luma),
-						S5P_FIMV_DEC_LUMA_ADR + i * 4);
-		mfc_debug(2, "\tChroma %d: %x\n", i,
-					ctx->dst_bufs[i].cookie.raw.chroma);
-		WRITEL(OFFSETA(ctx->dst_bufs[i].cookie.raw.chroma),
-					       S5P_FIMV_DEC_CHROMA_ADR + i * 4);
+
+	i = 0;
+	list_for_each_entry(buf, &ctx->dpb_queue, list) {
+		mfc_debug(2, "Luma %x\n", buf->cookie.raw.luma);
+		WRITEL(OFFSETB(buf->cookie.raw.luma), S5P_FIMV_DEC_LUMA_ADR + i * 4);
+		mfc_debug(2, "\tChroma %x\n", buf->cookie.raw.chroma);
+		WRITEL(OFFSETA(buf->cookie.raw.chroma), S5P_FIMV_DEC_CHROMA_ADR + i * 4);
+
 		if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) {
-			mfc_debug(2, "\tBuf2: %x, size: %d\n",
-							buf_addr2, buf_size2);
+			mfc_debug(2, "\tBuf2: %x, size: %d\n", buf_addr2, buf_size2);
 			WRITEL(OFFSETB(buf_addr2), S5P_FIMV_H264_MV_ADR + i * 4);
 			buf_addr2 += frame_size_mv;
 			buf_size2 -= frame_size_mv;
 		}
+
+		i++;
 	}
+
 	mfc_debug(2, "Buf1: %u, buf_size1: %d\n", buf_addr1, buf_size1);
 	mfc_debug(2, "Buf 1/2 size after: %d/%d (frames %d)\n",
 			buf_size1,  buf_size2, ctx->total_dpb_count);
@@ -1370,7 +1372,7 @@ int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 
 	mfc_debug(2, "Setting flags to %08lx (free:%d WTF:%d)\n",
 				ctx->dec_dst_flag, ctx->dst_queue_cnt,
-						ctx->dst_bufs_cnt);
+						ctx->dpb_queue_cnt);
 	WRITEL(ctx->dec_dst_flag, S5P_FIMV_SI_CH0_RELEASE_BUF);
 	s5p_mfc_set_shared_buffer(ctx);
 	s5p_mfc_set_flush(ctx, ctx->dpb_flush_flag);
@@ -1511,19 +1513,19 @@ static inline int s5p_mfc_run_dec_frame(struct s5p_mfc_ctx *ctx)
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 	temp_vb->used = 1;
 	mfc_debug(2, "Temp vb: %p\n", temp_vb);
-	mfc_debug(2, "Src Addr: %08lx\n", mfc_plane_cookie(temp_vb->b, 0));
+	mfc_debug(2, "Src Addr: %08lx\n", mfc_plane_cookie(&temp_vb->vb, 0));
 	s5p_mfc_set_dec_desc_buffer(ctx);
-	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_cookie(temp_vb->b, 0),
-				0, temp_vb->b->v4l2_planes[0].bytesused);
+	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_cookie(&temp_vb->vb, 0),
+				0, temp_vb->vb.v4l2_planes[0].bytesused);
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 
-	index = temp_vb->b->v4l2_buf.index;
+	index = temp_vb->vb.v4l2_buf.index;
 	if (call_cop(ctx, set_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
 		mfc_err("failed in set_buf_ctrls_val\n");
 
 	dev->curr_ctx = ctx->num;
 	s5p_mfc_clean_ctx_int_flags(ctx);
-	if (temp_vb->b->v4l2_planes[0].bytesused == 0) {
+	if (temp_vb->vb.v4l2_planes[0].bytesused == 0) {
 		last_frame = 1;
 		mfc_debug(2, "Setting ctx->state to FINISHING\n");
 		ctx->state = MFCINST_FINISHING;
@@ -1562,8 +1564,8 @@ static inline int s5p_mfc_run_enc_frame(struct s5p_mfc_ctx *ctx)
 
 	src_mb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 	src_mb->used = 1;
-	src_y_addr = mfc_plane_cookie(src_mb->b, 0);
-	src_c_addr = mfc_plane_cookie(src_mb->b, 1);
+	src_y_addr = mfc_plane_cookie(&src_mb->vb, 0);
+	src_c_addr = mfc_plane_cookie(&src_mb->vb, 1);
 
 	mfc_debug(2, "enc src y addr: 0x%08lx", src_y_addr);
 	mfc_debug(2, "enc src c addr: 0x%08lx", src_c_addr);
@@ -1572,14 +1574,14 @@ static inline int s5p_mfc_run_enc_frame(struct s5p_mfc_ctx *ctx)
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
 	dst_mb->used = 1;
-	dst_addr = mfc_plane_cookie(dst_mb->b, 0);
-	dst_size = vb2_plane_size(dst_mb->b, 0);
+	dst_addr = mfc_plane_cookie(&dst_mb->vb, 0);
+	dst_size = vb2_plane_size(&dst_mb->vb, 0);
 
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 
-	index = src_mb->b->v4l2_buf.index;
+	index = src_mb->vb.v4l2_buf.index;
 	if (call_cop(ctx, set_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
 		mfc_err("failed in set_buf_ctrls_val\n");
 
@@ -1601,13 +1603,13 @@ static inline void s5p_mfc_run_init_dec(struct s5p_mfc_ctx *ctx)
 	mfc_debug(2, "Preparing to init decoding.\n");
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 	s5p_mfc_set_dec_desc_buffer(ctx);
-	mfc_debug(2, "Header size: %d\n", temp_vb->b->v4l2_planes[0].bytesused);
-	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_cookie(temp_vb->b, 0),
-				0, temp_vb->b->v4l2_planes[0].bytesused);
+	mfc_debug(2, "Header size: %d\n", temp_vb->vb.v4l2_planes[0].bytesused);
+	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_cookie(&temp_vb->vb, 0),
+				0, temp_vb->vb.v4l2_planes[0].bytesused);
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 	dev->curr_ctx = ctx->num;
 	mfc_debug(2, "paddr: %08x\n",
-			(int)phys_to_virt(mfc_plane_cookie(temp_vb->b, 0)));
+			(int)phys_to_virt(mfc_plane_cookie(&temp_vb->vb, 0)));
 	s5p_mfc_clean_ctx_int_flags(ctx);
 	s5p_mfc_init_decode(ctx);
 }
@@ -1625,15 +1627,15 @@ static inline void s5p_mfc_run_init_enc(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
-	dst_addr = mfc_plane_cookie(dst_mb->b, 0);
-	dst_size = vb2_plane_size(dst_mb->b, 0);
+	dst_addr = mfc_plane_cookie(&dst_mb->vb, 0);
+	dst_size = vb2_plane_size(&dst_mb->vb, 0);
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 
 	dev->curr_ctx = ctx->num;
 	mfc_debug(2, "paddr: %08x\n",
-			(int)phys_to_virt(mfc_plane_cookie(dst_mb->b, 0)));
+			(int)phys_to_virt(mfc_plane_cookie(&dst_mb->vb, 0)));
 	s5p_mfc_clean_ctx_int_flags(ctx);
 	s5p_mfc_init_encode(ctx);
 }
@@ -1666,9 +1668,9 @@ static inline int s5p_mfc_run_init_dec_buffers(struct s5p_mfc_ctx *ctx)
 
 	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 	s5p_mfc_set_dec_desc_buffer(ctx);
-	mfc_debug(2, "Header size: %d\n", temp_vb->b->v4l2_planes[0].bytesused);
-	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_cookie(temp_vb->b, 0),
-				0, temp_vb->b->v4l2_planes[0].bytesused);
+	mfc_debug(2, "Header size: %d\n", temp_vb->vb.v4l2_planes[0].bytesused);
+	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_cookie(&temp_vb->vb, 0),
+				0, temp_vb->vb.v4l2_planes[0].bytesused);
 	spin_unlock_irqrestore(&dev->irqlock, flags);
 	dev->curr_ctx = ctx->num;
 	s5p_mfc_clean_ctx_int_flags(ctx);
@@ -1799,9 +1801,9 @@ void s5p_mfc_cleanup_queue(struct list_head *lh, struct vb2_queue *vq)
 
 	while (!list_empty(lh)) {
 		b = list_entry(lh->next, struct s5p_mfc_buf, list);
-		for (i = 0; i < b->b->num_planes; i++)
-			vb2_set_plane_payload(b->b, i, 0);
-		vb2_buffer_done(b->b, VB2_BUF_STATE_ERROR);
+		for (i = 0; i < b->vb.num_planes; i++)
+			vb2_set_plane_payload(&b->vb, i, 0);
+		vb2_buffer_done(&b->vb, VB2_BUF_STATE_ERROR);
 		list_del(&b->list);
 	}
 }

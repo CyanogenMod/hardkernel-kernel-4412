@@ -196,24 +196,24 @@ static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 		dst_buf = list_entry(ctx->dst_queue.next,
 				     struct s5p_mfc_buf, list);
 		mfc_debug(2, "Cleaning up buffer: %d\n",
-					  dst_buf->b->v4l2_buf.index);
-		vb2_set_plane_payload(dst_buf->b, 0, 0);
-		vb2_set_plane_payload(dst_buf->b, 1, 0);
+					  dst_buf->vb.v4l2_buf.index);
+		vb2_set_plane_payload(&dst_buf->vb, 0, 0);
+		vb2_set_plane_payload(&dst_buf->vb, 1, 0);
 		list_del(&dst_buf->list);
 		ctx->dst_queue_cnt--;
-		dst_buf->b->v4l2_buf.sequence = (ctx->sequence++);
+		dst_buf->vb.v4l2_buf.sequence = (ctx->sequence++);
 
 		/* FIXME: move to proper postion or REMOVE */
 		if (s5p_mfc_read_shm(ctx, PIC_TIME_TOP) ==
 			s5p_mfc_read_shm(ctx, PIC_TIME_BOT))
-			dst_buf->b->v4l2_buf.field = V4L2_FIELD_NONE;
+			dst_buf->vb.v4l2_buf.field = V4L2_FIELD_NONE;
 		else
-			dst_buf->b->v4l2_buf.field = V4L2_FIELD_INTERLACED;
+			dst_buf->vb.v4l2_buf.field = V4L2_FIELD_INTERLACED;
 
-		ctx->dec_dst_flag &= ~(1 << dst_buf->b->v4l2_buf.index);
-		vb2_buffer_done(dst_buf->b, VB2_BUF_STATE_DONE);
+		ctx->dec_dst_flag &= ~(1 << dst_buf->vb.v4l2_buf.index);
+		vb2_buffer_done(&dst_buf->vb, VB2_BUF_STATE_DONE);
 		mfc_debug(2, "Cleaned up buffer: %d\n",
-			  dst_buf->b->v4l2_buf.index);
+			  dst_buf->vb.v4l2_buf.index);
 	}
 	mfc_debug(2, "After cleanup\n");
 }
@@ -235,43 +235,43 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 	/* The MFC returns address of the buffer, now we have to
 	 * check which videobuf does it correspond to */
 	list_for_each_entry(dst_buf, &ctx->dst_queue, list) {
-		mfc_debug(2, "Listing: %d\n", dst_buf->b->v4l2_buf.index);
+		mfc_debug(2, "Listing: %d\n", dst_buf->vb.v4l2_buf.index);
 		/* Check if this is the buffer we're looking for */
-		mfc_debug(2, "0x%08lx, 0x%08x", mfc_plane_cookie(dst_buf->b, 0),
+		mfc_debug(2, "0x%08lx, 0x%08x", mfc_plane_cookie(&dst_buf->vb, 0),
 			dspl_y_addr);
-		if (mfc_plane_cookie(dst_buf->b, 0) == dspl_y_addr) {
+		if (mfc_plane_cookie(&dst_buf->vb, 0) == dspl_y_addr) {
 			list_del(&dst_buf->list);
 			ctx->dst_queue_cnt--;
-			dst_buf->b->v4l2_buf.sequence = ctx->sequence;
+			dst_buf->vb.v4l2_buf.sequence = ctx->sequence;
 			if (s5p_mfc_read_shm(ctx, PIC_TIME_TOP) ==
 				s5p_mfc_read_shm(ctx, PIC_TIME_BOT))
-				dst_buf->b->v4l2_buf.field = V4L2_FIELD_NONE;
+				dst_buf->vb.v4l2_buf.field = V4L2_FIELD_NONE;
 			else
-				dst_buf->b->v4l2_buf.field = V4L2_FIELD_INTERLACED;
-			vb2_set_plane_payload(dst_buf->b, 0, ctx->luma_size);
-			vb2_set_plane_payload(dst_buf->b, 1, ctx->chroma_size);
-			clear_bit(dst_buf->b->v4l2_buf.index, &ctx->dec_dst_flag);
+				dst_buf->vb.v4l2_buf.field = V4L2_FIELD_INTERLACED;
+			vb2_set_plane_payload(&dst_buf->vb, 0, ctx->luma_size);
+			vb2_set_plane_payload(&dst_buf->vb, 1, ctx->chroma_size);
+			clear_bit(dst_buf->vb.v4l2_buf.index, &ctx->dec_dst_flag);
 
-			dst_buf->b->v4l2_buf.flags &=
+			dst_buf->vb.v4l2_buf.flags &=
 					(V4L2_BUF_FLAG_KEYFRAME &
 					V4L2_BUF_FLAG_PFRAME &
 					V4L2_BUF_FLAG_BFRAME);
 
 			switch (frame_type) {
 			case S5P_FIMV_DECODE_FRAME_I_FRAME:
-				dst_buf->b->v4l2_buf.flags |=
+				dst_buf->vb.v4l2_buf.flags |=
 					V4L2_BUF_FLAG_KEYFRAME;
 				break;
 			case S5P_FIMV_DECODE_FRAME_P_FRAME:
-				dst_buf->b->v4l2_buf.flags |=
+				dst_buf->vb.v4l2_buf.flags |=
 					V4L2_BUF_FLAG_PFRAME;
 				break;
 			case S5P_FIMV_DECODE_FRAME_B_FRAME:
-				dst_buf->b->v4l2_buf.flags |=
+				dst_buf->vb.v4l2_buf.flags |=
 					V4L2_BUF_FLAG_BFRAME;
 				break;
 			default:
-				dst_buf->b->v4l2_buf.flags |=
+				dst_buf->vb.v4l2_buf.flags |=
 					V4L2_BUF_FLAG_KEYFRAME;
 				break;
 			}
@@ -279,11 +279,11 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 			ctx->crc_luma0 = crc_luma;
 			ctx->crc_chroma0 = crc_chroma;
 
-			vb2_buffer_done(dst_buf->b,
+			vb2_buffer_done(&dst_buf->vb,
 				s5p_mfc_err_dspl(err) ?
 					VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
 
-			index = dst_buf->b->v4l2_buf.index;
+			index = dst_buf->vb.v4l2_buf.index;
 			if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->dst_ctrls[index]) < 0)
 				mfc_err("failed in get_buf_ctrls_val\n");
 
@@ -355,18 +355,18 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 		src_buf = list_entry(ctx->src_queue.next, struct s5p_mfc_buf,
 								list);
 		mfc_debug(2, "Packed PB test. Size:%d, prev offset: %ld, this run:"
-			" %d\n", src_buf->b->v4l2_planes[0].bytesused,
+			" %d\n", src_buf->vb.v4l2_planes[0].bytesused,
 			ctx->consumed_stream, s5p_mfc_get_consumed_stream());
 		ctx->consumed_stream += s5p_mfc_get_consumed_stream();
 		if (ctx->codec_mode != S5P_FIMV_CODEC_H264_DEC &&
 			s5p_mfc_get_frame_type() == S5P_FIMV_DECODE_FRAME_P_FRAME
 					&& ctx->consumed_stream + STUFF_BYTE <
-					src_buf->b->v4l2_planes[0].bytesused) {
+					src_buf->vb.v4l2_planes[0].bytesused) {
 			/* Run MFC again on the same buffer */
 			mfc_debug(2, "Running again the same buffer.\n");
 			s5p_mfc_set_dec_stream_buffer(ctx,
 				src_buf->cookie.stream, ctx->consumed_stream,
-				src_buf->b->v4l2_planes[0].bytesused -
+				src_buf->vb.v4l2_planes[0].bytesused -
 							ctx->consumed_stream);
 			dev->curr_ctx = ctx->num;
 			s5p_mfc_clean_ctx_int_flags(ctx);
@@ -376,7 +376,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			s5p_mfc_decode_one_frame(ctx, 0);
 			return;
 		} else {
-			index = src_buf->b->v4l2_buf.index;
+			index = src_buf->vb.v4l2_buf.index;
 			if (call_cop(ctx, recover_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
 				mfc_err("failed in recover_buf_ctrls_val\n");
 
@@ -385,9 +385,9 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			list_del(&src_buf->list);
 			ctx->src_queue_cnt--;
 			if (s5p_mfc_err_dec(err) > 0)
-				vb2_buffer_done(src_buf->b, VB2_BUF_STATE_ERROR);
+				vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_ERROR);
 			else
-				vb2_buffer_done(src_buf->b, VB2_BUF_STATE_DONE);
+				vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_DONE);
 		}
 	}
 leave_handle_frame:
@@ -619,7 +619,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 							     struct s5p_mfc_buf, list);
 					list_del(&src_buf->list);
 					ctx->src_queue_cnt--;
-					vb2_buffer_done(src_buf->b, VB2_BUF_STATE_DONE);
+					vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_DONE);
 				}
 				spin_unlock_irqrestore(&dev->irqlock, flags);
 			} else {

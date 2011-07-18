@@ -1058,8 +1058,8 @@ static void cleanup_ref_queue(struct s5p_mfc_ctx *ctx)
 	while (!list_empty(&ctx->ref_queue)) {
 		mb_entry = list_entry((&ctx->ref_queue)->next, struct s5p_mfc_buf, list);
 
-		mb_y_addr = mfc_plane_cookie(mb_entry->b, 0);
-		mb_c_addr = mfc_plane_cookie(mb_entry->b, 1);
+		mb_y_addr = mfc_plane_cookie(&mb_entry->vb, 0);
+		mb_c_addr = mfc_plane_cookie(&mb_entry->vb, 1);
 
 		mfc_debug(2, "enc ref y addr: 0x%08lx", mb_y_addr);
 		mfc_debug(2, "enc ref c addr: 0x%08lx", mb_c_addr);
@@ -1089,8 +1089,8 @@ static int enc_pre_seq_start(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
-	dst_addr = mfc_plane_cookie(dst_mb->b, 0);
-	dst_size = vb2_plane_size(dst_mb->b, 0);
+	dst_addr = mfc_plane_cookie(&dst_mb->vb, 0);
+	dst_size = vb2_plane_size(&dst_mb->vb, 0);
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
@@ -1115,8 +1115,8 @@ static int enc_post_seq_start(struct s5p_mfc_ctx *ctx)
 		list_del(&dst_mb->list);
 		ctx->dst_queue_cnt--;
 
-		vb2_set_plane_payload(dst_mb->b, 0, s5p_mfc_get_enc_strm_size());
-		vb2_buffer_done(dst_mb->b, VB2_BUF_STATE_DONE);
+		vb2_set_plane_payload(&dst_mb->vb, 0, s5p_mfc_get_enc_strm_size());
+		vb2_buffer_done(&dst_mb->vb, VB2_BUF_STATE_DONE);
 
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	}
@@ -1146,8 +1146,8 @@ static int enc_pre_frame_start(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	src_mb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
-	src_y_addr = mfc_plane_cookie(src_mb->b, 0);
-	src_c_addr = mfc_plane_cookie(src_mb->b, 1);
+	src_y_addr = mfc_plane_cookie(&src_mb->vb, 0);
+	src_c_addr = mfc_plane_cookie(&src_mb->vb, 1);
 	s5p_mfc_set_enc_frame_buffer(ctx, src_y_addr, src_c_addr);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
@@ -1158,8 +1158,8 @@ static int enc_pre_frame_start(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	dst_mb = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
-	dst_addr = mfc_plane_cookie(dst_mb->b, 0);
-	dst_size = vb2_plane_size(dst_mb->b, 0);
+	dst_addr = mfc_plane_cookie(&dst_mb->vb, 0);
+	dst_size = vb2_plane_size(&dst_mb->vb, 0);
 	s5p_mfc_set_enc_stream_buffer(ctx, dst_addr, dst_size);
 
 	spin_unlock_irqrestore(&dev->irqlock, flags);
@@ -1201,8 +1201,8 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 		mfc_debug(2, "encoded c addr: 0x%08lx", enc_c_addr);
 
 		list_for_each_entry(mb_entry, &ctx->src_queue, list) {
-			mb_y_addr = mfc_plane_cookie(mb_entry->b, 0);
-			mb_c_addr = mfc_plane_cookie(mb_entry->b, 1);
+			mb_y_addr = mfc_plane_cookie(&mb_entry->vb, 0);
+			mb_c_addr = mfc_plane_cookie(&mb_entry->vb, 1);
 
 			mfc_debug(2, "enc src y addr: 0x%08lx", mb_y_addr);
 			mfc_debug(2, "enc src c addr: 0x%08lx", mb_c_addr);
@@ -1211,14 +1211,14 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 				list_del(&mb_entry->list);
 				ctx->src_queue_cnt--;
 
-				vb2_buffer_done(mb_entry->b, VB2_BUF_STATE_DONE);
+				vb2_buffer_done(&mb_entry->vb, VB2_BUF_STATE_DONE);
 				break;
 			}
 		}
 
 		list_for_each_entry(mb_entry, &ctx->ref_queue, list) {
-			mb_y_addr = mfc_plane_cookie(mb_entry->b, 0);
-			mb_c_addr = mfc_plane_cookie(mb_entry->b, 1);
+			mb_y_addr = mfc_plane_cookie(&mb_entry->vb, 0);
+			mb_c_addr = mfc_plane_cookie(&mb_entry->vb, 1);
 
 			mfc_debug(2, "enc ref y addr: 0x%08lx", mb_y_addr);
 			mfc_debug(2, "enc ref c addr: 0x%08lx", mb_c_addr);
@@ -1227,7 +1227,7 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 				list_del(&mb_entry->list);
 				ctx->ref_queue_cnt--;
 
-				vb2_buffer_done(mb_entry->b, VB2_BUF_STATE_DONE);
+				vb2_buffer_done(&mb_entry->vb, VB2_BUF_STATE_DONE);
 				break;
 			}
 		}
@@ -1252,37 +1252,37 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 		/* at least one more dest. buffers exist always  */
 		mb_entry = list_entry(ctx->dst_queue.next, struct s5p_mfc_buf, list);
 
-		mb_entry->b->v4l2_buf.flags &=
+		mb_entry->vb.v4l2_buf.flags &=
 			(V4L2_BUF_FLAG_KEYFRAME &
 			 V4L2_BUF_FLAG_PFRAME &
 			 V4L2_BUF_FLAG_BFRAME);
 
 		switch (slice_type) {
 		case S5P_FIMV_DECODE_FRAME_I_FRAME:
-			mb_entry->b->v4l2_buf.flags |=
+			mb_entry->vb.v4l2_buf.flags |=
 				V4L2_BUF_FLAG_KEYFRAME;
 			break;
 		case S5P_FIMV_DECODE_FRAME_P_FRAME:
-			mb_entry->b->v4l2_buf.flags |=
+			mb_entry->vb.v4l2_buf.flags |=
 				V4L2_BUF_FLAG_PFRAME;
 			break;
 		case S5P_FIMV_DECODE_FRAME_B_FRAME:
-			mb_entry->b->v4l2_buf.flags |=
+			mb_entry->vb.v4l2_buf.flags |=
 				V4L2_BUF_FLAG_BFRAME;
 			break;
 		default:
-			mb_entry->b->v4l2_buf.flags |=
+			mb_entry->vb.v4l2_buf.flags |=
 				V4L2_BUF_FLAG_KEYFRAME;
 			break;
 		}
-		mfc_debug(2, "Slice type : %d\n", mb_entry->b->v4l2_buf.flags);
+		mfc_debug(2, "Slice type : %d\n", mb_entry->vb.v4l2_buf.flags);
 
 		list_del(&mb_entry->list);
 		ctx->dst_queue_cnt--;
-		vb2_set_plane_payload(mb_entry->b, 0, strm_size);
-		vb2_buffer_done(mb_entry->b, VB2_BUF_STATE_DONE);
+		vb2_set_plane_payload(&mb_entry->vb, 0, strm_size);
+		vb2_buffer_done(&mb_entry->vb, VB2_BUF_STATE_DONE);
 
-		index = mb_entry->b->v4l2_buf.index;
+		index = mb_entry->vb.v4l2_buf.index;
 		if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err("failed in get_buf_ctrls_val\n");
 	}
@@ -1557,7 +1557,6 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		ctx->enc_dst_buf_size =	pix_fmt_mp->plane_fmt[0].sizeimage;
 		pix_fmt_mp->plane_fmt[0].bytesperline = 0;
 
-		ctx->dst_bufs_cnt = 0;
 		ctx->capture_state = QUEUE_FREE;
 
 		s5p_mfc_alloc_instance_buffer(ctx);
@@ -1622,7 +1621,6 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12MT_SALIGN);
 		}
 
-		ctx->src_bufs_cnt = 0;
 		ctx->output_state = QUEUE_FREE;
 
 		pix_fmt_mp->plane_fmt[0].bytesperline = ctx->buf_width;
@@ -2426,7 +2424,7 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
-	unsigned int i;
+	struct s5p_mfc_buf *buf = vb_to_mfc_buf(vb);
 	int ret;
 
 	mfc_debug_enter();
@@ -2436,12 +2434,9 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 		if (ret < 0)
 			return ret;
 
-		i = vb->v4l2_buf.index;
-		ctx->dst_bufs[i].b = vb;
-		ctx->dst_bufs[i].cookie.stream = mfc_plane_cookie(vb, 0);
-		ctx->dst_bufs_cnt++;
+		buf->cookie.stream = mfc_plane_cookie(vb, 0);
 
-		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_GET, i) < 0)
+		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_GET, vb->v4l2_buf.index) < 0)
 			mfc_err("failed in init_buf_ctrls\n");
 
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
@@ -2449,13 +2444,10 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 		if (ret < 0)
 			return ret;
 
-		i = vb->v4l2_buf.index;
-		ctx->src_bufs[i].b = vb;
-		ctx->src_bufs[i].cookie.raw.luma = mfc_plane_cookie(vb, 0);
-		ctx->src_bufs[i].cookie.raw.chroma = mfc_plane_cookie(vb, 1);
-		ctx->src_bufs_cnt++;
+		buf->cookie.raw.luma = mfc_plane_cookie(vb, 0);
+		buf->cookie.raw.chroma = mfc_plane_cookie(vb, 1);
 
-		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SET, i) < 0)
+		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SET, vb->v4l2_buf.index) < 0)
 			mfc_err("failed in init_buf_ctrls\n");
 
 	} else {
@@ -2625,32 +2617,30 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
 	struct s5p_mfc_dev *dev = ctx->dev;
 	unsigned long flags;
-	struct s5p_mfc_buf *mfc_buf;
+	struct s5p_mfc_buf *buf = vb_to_mfc_buf(vb);
 
 	mfc_debug_enter();
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		mfc_buf = &ctx->dst_bufs[vb->v4l2_buf.index];
-		mfc_buf->used = 0;
+		buf->used = 0;
 		mfc_debug(2, "dst queue: %p\n", &ctx->dst_queue);
 		mfc_debug(2, "adding to dst: %p (%08lx, %08x)\n", vb,
 			mfc_plane_cookie(vb, 0),
-			ctx->dst_bufs[vb->v4l2_buf.index].cookie.stream);
+			buf->cookie.stream);
 
 		/* Mark destination as available for use by MFC */
 		spin_lock_irqsave(&dev->irqlock, flags);
-		list_add_tail(&mfc_buf->list, &ctx->dst_queue);
+		list_add_tail(&buf->list, &ctx->dst_queue);
 		ctx->dst_queue_cnt++;
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		mfc_buf = &ctx->src_bufs[vb->v4l2_buf.index];
-		mfc_buf->used = 0;
+		buf->used = 0;
 		mfc_debug(2, "src queue: %p\n", &ctx->src_queue);
 		mfc_debug(2, "adding to src: %p (%08lx, %08lx, %08x, %08x)\n", vb,
 			mfc_plane_cookie(vb, 0),
 			mfc_plane_cookie(vb, 1),
-			ctx->src_bufs[vb->v4l2_buf.index].cookie.raw.luma,
-			ctx->src_bufs[vb->v4l2_buf.index].cookie.raw.chroma);
+			buf->cookie.raw.luma,
+			buf->cookie.raw.chroma);
 
 		spin_lock_irqsave(&dev->irqlock, flags);
 
@@ -2662,7 +2652,7 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 
 			cleanup_ref_queue(ctx);
 		} else {
-			list_add_tail(&mfc_buf->list, &ctx->src_queue);
+			list_add_tail(&buf->list, &ctx->src_queue);
 			ctx->src_queue_cnt++;
 		}
 
@@ -2721,6 +2711,7 @@ int s5p_mfc_init_enc_ctx(struct s5p_mfc_ctx *ctx)
 	/* Init videobuf2 queue for OUTPUT */
 	ctx->vq_src.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 	ctx->vq_src.drv_priv = ctx;
+	ctx->vq_src.buf_struct_size = sizeof(struct s5p_mfc_buf);
 	ctx->vq_src.io_modes = VB2_MMAP | VB2_USERPTR;
 	ctx->vq_src.ops = &s5p_mfc_enc_qops;
 	ctx->vq_src.mem_ops = s5p_mfc_mem_ops();
@@ -2733,6 +2724,7 @@ int s5p_mfc_init_enc_ctx(struct s5p_mfc_ctx *ctx)
 	/* Init videobuf2 queue for CAPTURE */
 	ctx->vq_dst.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	ctx->vq_dst.drv_priv = ctx;
+	ctx->vq_dst.buf_struct_size = sizeof(struct s5p_mfc_buf);
 	ctx->vq_dst.io_modes = VB2_MMAP | VB2_USERPTR;
 	ctx->vq_dst.ops = &s5p_mfc_enc_qops;
 	ctx->vq_dst.mem_ops = s5p_mfc_mem_ops();

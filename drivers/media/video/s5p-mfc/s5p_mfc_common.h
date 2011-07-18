@@ -111,8 +111,8 @@ struct s5p_mfc_ctx;
  *
  */
 struct s5p_mfc_buf {
+	struct vb2_buffer vb;
 	struct list_head list;
-	struct vb2_buffer *b;
 	union {
 		struct {
 			size_t luma;
@@ -123,6 +123,8 @@ struct s5p_mfc_buf {
 	int used;
 };
 
+#define vb_to_mfc_buf(x)	\
+	container_of(x, struct s5p_mfc_buf, vb)
 
 struct s5p_mfc_pm {
 	struct clk	*clock;
@@ -425,24 +427,17 @@ struct s5p_mfc_ctx {
 	size_t port_b_phys;
 	size_t port_b_size;
 
-
 	enum s5p_mfc_queue_state capture_state;
 	enum s5p_mfc_queue_state output_state;
 
-//	size_t dec_dst_buf_luma[MFC_MAX_BUFFERS];
-//	size_t dec_dst_buf_chroma[MFC_MAX_BUFFERS];
-
-	struct s5p_mfc_buf src_bufs[MFC_MAX_BUFFERS];
-	int src_bufs_cnt;
-	struct s5p_mfc_buf dst_bufs[MFC_MAX_BUFFERS];
-	int dst_bufs_cnt;
+	struct list_head dpb_queue;
+	unsigned int dpb_queue_cnt;
 
 	struct list_head ctrls;
 
 	struct list_head src_ctrls[MFC_MAX_BUFFERS];
 	struct list_head dst_ctrls[MFC_MAX_BUFFERS];
 
-//	int dec_dst_buf_cnt;
 	unsigned int sequence;
 	unsigned long dec_dst_flag;
 	size_t dec_src_buf_size;
@@ -460,7 +455,6 @@ struct s5p_mfc_ctx {
 	int crc_chroma1;
 
 	/* Buffers */
-
 	void *context_buf;
 	size_t context_phys;
 	size_t context_ofs;
