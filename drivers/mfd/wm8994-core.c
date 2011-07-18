@@ -358,6 +358,9 @@ static int wm8994_i2c_resume(struct i2c_client *i2c)
 {
     return wm8994_resume(&i2c->dev);
 }
+#else
+#define wm8994_i2c_suspend NULL
+#define wm8994_i2c_resume NULL
 #endif
 
 #ifdef CONFIG_REGULATOR
