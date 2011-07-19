@@ -83,8 +83,8 @@ static int ohci_hcd_s5p_drv_resume(struct device *dev)
 }
 
 #else
-#define s5p_ohci_suspend	NULL
-#define s5p_ohci_resume		NULL
+#define ohci_hcd_s5p_drv_suspend	NULL
+#define ohci_hcd_s5p_drv_resume		NULL
 #endif
 
 static int __devinit ohci_s5p_start(struct usb_hcd *hcd)
