@@ -43,6 +43,7 @@ static int __init iem_clock_init(void)
 
 		if (IS_ERR(clk_parent)) {
 			printk(KERN_ERR"ASV : MOUT_APLL clock get error\n");
+			clk_put(clk_copy);
 			return -EINVAL;
 		}
 		clk_set_parent(clk_copy, clk_parent);
@@ -62,6 +63,7 @@ static int __init iem_clock_init(void)
 		clk_parent = clk_get(NULL, "mout_mpll");
 		if (IS_ERR(clk_parent)) {
 			printk(KERN_ERR"ASV : MOUT_APLL clock get error\n");
+			clk_put(clk_copy);
 			return -EINVAL;
 		}
 		clk_set_parent(clk_copy, clk_parent);
