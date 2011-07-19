@@ -907,11 +907,9 @@ run:
 
 	if (sctx->dma_size) {
 		if (PageHighMem(sg_page(sctx->in_sg)))
-			crypto_kunmap(sg_page(sctx->in_sg),
-						crypto_kmap_type(0));
+			crypto_kunmap(sctx->src_addr, crypto_kmap_type(0));
 		if (PageHighMem(sg_page(sctx->out_sg)))
-			crypto_kunmap(sg_page(sctx->out_sg),
-						crypto_kmap_type(1));
+			crypto_kunmap(sctx->dst_addr, crypto_kmap_type(1));
 	}
 
 #if !defined(CONFIG_ACE_BC_IRQMODE)
@@ -980,9 +978,9 @@ static int s5p_ace_aes_crypt_dma_wait(struct s5p_ace_device *dev)
 				sctx->dma_size);
 
 	if (PageHighMem(sg_page(sctx->in_sg)))
-		crypto_kunmap(sg_page(sctx->in_sg), crypto_kmap_type(0));
+		crypto_kunmap(sctx->src_addr, crypto_kmap_type(0));
 	if (PageHighMem(sg_page(sctx->out_sg)))
-		crypto_kunmap(sg_page(sctx->out_sg), crypto_kmap_type(1));
+		crypto_kunmap(sctx->dst_addr, crypto_kmap_type(1));
 
 	sctx->total -= sctx->dma_size;
 
