@@ -14,11 +14,12 @@
  * This should be same with cpufreq_frequency_table
 */
 enum cpufreq_level_request {
-	CPU_L0,		/* 1200MHz */
-	CPU_L1,		/* 1000MHz */
-	CPU_L2,		/* 800MHz */
-	CPU_L3,		/* 500MHz */
-	CPU_L4,		/* 200MHz */
+	CPU_L0,		/* 1400MHz */
+	CPU_L1,		/* 1200MHz */
+	CPU_L2,		/* 1000MHz */
+	CPU_L3,		/* 800MHz */
+	CPU_L4,		/* 500MHz */
+	CPU_L5,		/* 200MHz */
 	CPU_LEVEL_END,
 };
 
@@ -52,3 +53,9 @@ void exynos4_busfreq_lock_free(unsigned int nId);
 int exynos4_cpufreq_upper_limit(unsigned int nId,
 			enum cpufreq_level_request cpufreq_level);
 void exynos4_cpufreq_upper_limit_free(unsigned int nId);
+
+#define SUPPORT_1400MHZ	(1<<31)
+#define SUPPORT_1200MHZ	(1<<30)
+#define SUPPORT_1000MHZ	(1<<29)
+#define SUPPORT_FREQ_SHIFT	29
+#define SUPPORT_FREQ_MASK	7

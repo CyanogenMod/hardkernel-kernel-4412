@@ -23,6 +23,7 @@
 #include <mach/regs-iem.h>
 #include <mach/regs-pmu.h>
 #include <mach/regs-clock.h>
+#include <mach/cpufreq.h>
 
 #define LOOP_CNT	10
 
@@ -217,21 +218,38 @@ static int __init exynos4_asv_init(void)
 	unsigned int tmp;
 	unsigned int ids_arm;
 	unsigned int result_group = 0;
-	bool for_1400 = false;
+	bool for_1400 = false, for_1200 = false, for_1000 = false;
 	void __iomem *iem_base;
+	char *freq;
 
 	if (machine_is_smdkv310())
 		goto out;
 
 	tmp = __raw_readl(S5P_VA_CHIPID + 0x4);
 
-	/* If CHIPID[2:0] bit is 5, can support 1.4GHz */
-#if 0
-	if ((tmp & 0x7) == 5)
+	/* Check CHIPID[2:0] bit field */
+	switch (tmp & 0x7) {
+	case 0:
+	case 3:
+		for_1000 = true;
+		freq = "1GHz";
+		break;
+	case 1:
+	case 7:
+		for_1200 = true;
+		freq = "1.2GHz";
+		break;
+	case 5:
 		for_1400 = true;
-#else
-	for_1400 = false;
-#endif
+		freq = "1.4GHz";
+		break;
+	default:
+		printk(KERN_ERR "can't find Chip type[0x%x]\n", tmp);
+		for_1000 = true;
+		freq = "1GHz";
+		break;
+	}
+	printk(KERN_INFO "Support %s\n", freq);
 
 	ids_arm = ((tmp >> IDS_OFFSET) & IDS_MASK);
 
@@ -272,17 +290,22 @@ static int __init exynos4_asv_init(void)
 		if (result_group > exynos4_find_group_1400(ids_arm, IDS_GROUP))
 			result_group = exynos4_find_group_1400(ids_arm, IDS_GROUP);
 
-		result_group |= (1 << 31);
+		result_group |= SUPPORT_1400MHZ;
 	} else {
 		result_group = exynos4_find_group_1200(hpm_delay, HPM_GROUP);
 
 		if (result_group > exynos4_find_group_1200(ids_arm, IDS_GROUP))
 			result_group = exynos4_find_group_1200(ids_arm, IDS_GROUP);
+
+		if (for_1200)
+			result_group |= SUPPORT_1200MHZ;
+		else
+			result_group |= SUPPORT_1000MHZ;
 	}
 
 	__raw_writel(result_group, S5P_INFORM2);
 
-	printk(KERN_INFO "ASV Group for This Exynos4210 is %d\n", result_group);
+	printk(KERN_INFO "ASV Group for This Exynos4210 is 0x%x\n", result_group);
 
 	return 0;
 

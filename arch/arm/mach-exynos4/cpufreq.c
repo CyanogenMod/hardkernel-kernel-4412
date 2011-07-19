@@ -62,7 +62,13 @@ static struct cpufreq_frequency_table exynos4_freq_table[] = {
 	{0, CPUFREQ_TABLE_END},
 };
 
-static int pll_safe_idx = L3;
+/*
+ * These index value should be defined by depending on
+ * supporting frequency table
+ */
+static unsigned int pll_safe_idx;
+static unsigned int pm_lock_idx;
+static unsigned int max_support_level;
 
 static struct cpufreq_clkdiv exynos4_clkdiv_table[] = {
 	{L0, 0},
@@ -75,11 +81,9 @@ static struct cpufreq_clkdiv exynos4_clkdiv_table[] = {
 
 #define MASK_ONLY_SET_CPUFREQ		0x40
 
-#define CPUFREQ_LIMIT_LEVEL		L0
-
 unsigned int g_cpufreq_limit_id;
 unsigned int g_cpufreq_limit_val[DVFS_LOCK_ID_END];
-unsigned int g_cpufreq_limit_level = CPUFREQ_LIMIT_LEVEL;
+unsigned int g_cpufreq_limit_level;
 
 /* This defines are for cpufreq lock */
 #define CPUFREQ_MIN_LEVEL	(CPUFREQ_LEVEL_END - 1)
@@ -538,8 +542,8 @@ void exynos4_cpufreq_upper_limit_free(unsigned int nId)
 
 	mutex_lock(&set_cpu_freq_lock);
 	g_cpufreq_limit_id &= ~(1 << nId);
-	g_cpufreq_limit_val[nId] = CPUFREQ_LIMIT_LEVEL;
-	g_cpufreq_limit_level = CPUFREQ_LIMIT_LEVEL;
+	g_cpufreq_limit_val[nId] = max_support_level;
+	g_cpufreq_limit_level = max_support_level;
 
 	if (g_cpufreq_limit_id) {
 		for (i = 0; i < DVFS_LOCK_ID_END; i++) {
@@ -569,7 +573,7 @@ static int exynos4_cpufreq_notifier_event(struct notifier_block *this,
 
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
-		ret = exynos4_cpufreq_lock(DVFS_LOCK_ID_PM, CPU_L0);
+		ret = exynos4_cpufreq_lock(DVFS_LOCK_ID_PM, pm_lock_idx);
 		if (ret < 0)
 			return NOTIFY_BAD;
 		pr_debug("PM_SUSPEND_PREPARE for CPUFREQ\n");
@@ -617,7 +621,7 @@ static int exynos4_cpufreq_reboot_notifier_call(struct notifier_block *this,
 {
 	int ret = 0;
 
-	ret = exynos4_cpufreq_lock(DVFS_LOCK_ID_PM, CPU_L0);
+	ret = exynos4_cpufreq_lock(DVFS_LOCK_ID_PM, pm_lock_idx);
 	if (ret < 0)
 		return NOTIFY_BAD;
 
@@ -645,7 +649,7 @@ static struct cpufreq_driver exynos4_driver = {
 static void __init exynos4_set_voltage(void)
 {
 	unsigned int asv_group = 0;
-	bool for_1400 = false;
+	bool for_1400 = false, for_1200 = false, for_1000 = false;
 	unsigned int tmp;
 	unsigned int i;
 
@@ -653,8 +657,24 @@ static void __init exynos4_set_voltage(void)
 
 	asv_group = (tmp & 0xF);
 
-	if ((tmp >> 31) & 0x1)
+	switch (tmp  & (SUPPORT_FREQ_MASK << SUPPORT_FREQ_SHIFT)) {
+	case SUPPORT_1400MHZ:
 		for_1400 = true;
+		max_support_level = L0;
+		break;
+	case SUPPORT_1200MHZ:
+		for_1200 = true;
+		max_support_level = L1;
+		break;
+	case SUPPORT_1000MHZ:
+		for_1000 = true;
+		max_support_level = L2;
+		break;
+	default:
+		for_1000 = true;
+		max_support_level = L2;
+		break;
+	}
 
 	/*
 	 * If ASV group is S, can not support 1.4GHz
@@ -662,6 +682,21 @@ static void __init exynos4_set_voltage(void)
 	 */
 	if ((asv_group == 0) || !for_1400)
 		exynos4_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
+
+	if (for_1000)
+		exynos4_freq_table[L1].frequency = CPUFREQ_ENTRY_INVALID;
+
+	/*
+	 * Set lock level for PM and reset notifier
+	 * This level should be higher than boot level
+	 */
+	pm_lock_idx = L2;
+
+	/*
+	 * APLL -> MPLL -> APLL change safe level
+	 * This level should be higher than 800MHz (MPLL freq)
+	 */
+	pll_safe_idx = L2;
 
 	printk(KERN_INFO "DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
 
