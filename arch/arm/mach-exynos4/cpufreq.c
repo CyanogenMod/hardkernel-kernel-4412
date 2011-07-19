@@ -340,7 +340,7 @@ static int exynos4_target(struct cpufreq_policy *policy,
 
 	mutex_lock(&set_freq_lock);
 
-	freqs.old = exynos4_getspeed(policy->cpu);
+	freqs.old = policy->cur;
 
 	if (cpufreq_frequency_table_target(policy, exynos4_freq_table,
 					   freqs.old, relation, &old_index)) {
@@ -419,6 +419,7 @@ int exynos4_cpufreq_lock(unsigned int nId,
 {
 	int ret = 0, i, old_idx = 0;
 	unsigned int freq_old, freq_new, arm_volt;
+	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
 
 	if (!exynos4_cpufreq_init_done)
 		return 0;
@@ -442,7 +443,7 @@ int exynos4_cpufreq_lock(unsigned int nId,
 	 * it needs to update
 	 */
 	mutex_lock(&set_freq_lock);
-	freq_old = exynos4_getspeed(0);
+	freq_old = policy->cur;
 	freq_new = exynos4_freq_table[cpufreq_level].frequency;
 	if (freq_old < freq_new) {
 		/* Find out current level index */
@@ -503,6 +504,7 @@ int exynos4_cpufreq_upper_limit(unsigned int nId,
 {
 	int ret = 0, cpu = 0;
 	unsigned int cur_freq;
+	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
 
 	if (!exynos4_cpufreq_init_done)
 		return 0;
@@ -523,7 +525,7 @@ int exynos4_cpufreq_upper_limit(unsigned int nId,
 	mutex_unlock(&set_cpu_freq_lock);
 
 	/* If cur frequency is higher than limit freq, it needs to update */
-	cur_freq = exynos4_getspeed(cpu);
+	cur_freq = policy->cur;
 	if (cur_freq > exynos4_freq_table[cpufreq_level].frequency) {
 		ret = cpufreq_driver_target(cpufreq_cpu_get(cpu),
 				exynos4_freq_table[cpufreq_level].frequency,
