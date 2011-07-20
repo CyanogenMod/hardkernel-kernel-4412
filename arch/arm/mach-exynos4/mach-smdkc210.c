@@ -18,6 +18,7 @@
 #include <linux/smsc911x.h>
 #include <linux/io.h>
 #include <linux/i2c.h>
+#include <linux/pwm_backlight.h>
 #include <linux/input.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
@@ -67,6 +68,7 @@
 #include <plat/sdhci.h>
 #include <plat/iic.h>
 #include <plat/pd.h>
+#include <plat/backlight.h>
 #include <plat/media.h>
 #include <plat/s5p-clock.h>
 #include <plat/tvout.h>
@@ -2117,6 +2119,17 @@ static void __init exynos4_reserve_mem(void)
 }
 #endif
 
+/* LCD Backlight data */
+static struct samsung_bl_gpio_info smdkc210_bl_gpio_info = {
+	.no = EXYNOS4_GPD0(1),
+	.func = S3C_GPIO_SFN(2),
+};
+
+static struct platform_pwm_backlight_data smdkc210_bl_data = {
+	.pwm_id = 1,
+	.pwm_period_ns  = 1000,
+};
+
 static void __init smdkc210_map_io(void)
 {
 	clk_xusbxti.rate = 24000000;
@@ -2221,6 +2234,8 @@ static void __init smdkc210_machine_init(void)
 	s5p_device_tvout.dev.parent = &exynos4_device_pd[PD_TV].dev;
 #endif
 #endif
+	samsung_bl_set(&smdkc210_bl_gpio_info, &smdkc210_bl_data);
+
 	samsung_keypad_set_platdata(&smdkc210_keypad_data);
 
 #ifdef CONFIG_TOUCHSCREEN_S3C2410
