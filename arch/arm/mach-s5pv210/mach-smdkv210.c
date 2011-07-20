@@ -35,7 +35,6 @@
 #include <mach/map.h>
 #include <mach/gpio.h>
 #include <mach/regs-clock.h>
-#include <mach/regs-fb.h>
 #include <mach/media.h>
 
 #include <plat/regs-serial.h>
@@ -54,6 +53,7 @@
 #include <plat/s5p-time.h>
 #include <plat/media.h>
 #include <plat/backlight.h>
+#include <plat/regs-fb-v4.h>
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDKV210_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
