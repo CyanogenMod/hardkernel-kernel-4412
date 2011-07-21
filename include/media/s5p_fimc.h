@@ -49,6 +49,7 @@ struct s5p_fimc_isp_info {
 };
 
 #define FIMC_MAX_CAMIF_CLIENTS	2
+#define FIMC_MAX_CSIS_NUM	2
 
 /**
  * struct s5p_platform_fimc - camera host interface platform data
