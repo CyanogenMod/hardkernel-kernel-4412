@@ -122,7 +122,7 @@ static struct resource exynos4_pdma0_resource[] = {
 	},
 };
 
-static struct s3c_pl330_platdata exynos4_pdma0_pdata = {
+static struct s3c_pl330_platdata exynos4210_pdma0_pdata = {
 	.peri = {
 		[0] = DMACH_PCM0_RX,
 		[1] = DMACH_PCM0_TX,
@@ -159,6 +159,43 @@ static struct s3c_pl330_platdata exynos4_pdma0_pdata = {
 	},
 };
 
+static struct s3c_pl330_platdata exynos4212_pdma0_pdata = {
+	.peri = {
+		[0] = DMACH_PCM0_RX,
+		[1] = DMACH_PCM0_TX,
+		[2] = DMACH_PCM2_RX,
+		[3] = DMACH_PCM2_TX,
+		[4] = DMACH_MIPI_HSI0,
+		[5] = DMACH_MIPI_HSI1,
+		[6] = DMACH_SPI0_RX,
+		[7] = DMACH_SPI0_TX,
+		[8] = DMACH_SPI2_RX,
+		[9] = DMACH_SPI2_TX,
+		[10] = DMACH_I2S0S_TX,
+		[11] = DMACH_I2S0_RX,
+		[12] = DMACH_I2S0_TX,
+		[13] = DMACH_I2S2_RX,
+		[14] = DMACH_I2S2_TX,
+		[15] = DMACH_UART0_RX,
+		[16] = DMACH_UART0_TX,
+		[17] = DMACH_UART2_RX,
+		[18] = DMACH_UART2_TX,
+		[19] = DMACH_UART4_RX,
+		[20] = DMACH_UART4_TX,
+		[21] = DMACH_SLIMBUS0_RX,
+		[22] = DMACH_SLIMBUS0_TX,
+		[23] = DMACH_SLIMBUS2_RX,
+		[24] = DMACH_SLIMBUS2_TX,
+		[25] = DMACH_SLIMBUS4_RX,
+		[26] = DMACH_SLIMBUS4_TX,
+		[27] = DMACH_AC97_MICIN,
+		[28] = DMACH_AC97_PCMIN,
+		[29] = DMACH_AC97_PCMOUT,
+		[30] = DMACH_MIPI_HSI4,
+		[31] = DMACH_MIPI_HSI5,
+	},
+};
+
 struct platform_device exynos4_device_pdma0 = {
 	.name		= "s3c-pl330",
 	.id		= 1,
@@ -167,7 +204,6 @@ struct platform_device exynos4_device_pdma0 = {
 	.dev		= {
 		.dma_mask = &dma_dmamask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
-		.platform_data = &exynos4_pdma0_pdata,
 	},
 };
 
@@ -184,7 +220,7 @@ static struct resource exynos4_pdma1_resource[] = {
 	},
 };
 
-static struct s3c_pl330_platdata exynos4_pdma1_pdata = {
+static struct s3c_pl330_platdata exynos4210_pdma1_pdata = {
 	.peri = {
 		[0] = DMACH_PCM0_RX,
 		[1] = DMACH_PCM0_TX,
@@ -221,6 +257,43 @@ static struct s3c_pl330_platdata exynos4_pdma1_pdata = {
 	},
 };
 
+static struct s3c_pl330_platdata exynos4212_pdma1_pdata = {
+	.peri = {
+		[0] = DMACH_PCM0_RX,
+		[1] = DMACH_PCM0_TX,
+		[2] = DMACH_PCM1_RX,
+		[3] = DMACH_PCM1_TX,
+		[4] = DMACH_MIPI_HSI2,
+		[5] = DMACH_MIPI_HSI3,
+		[6] = DMACH_SPI1_RX,
+		[7] = DMACH_SPI1_TX,
+		[8] = DMACH_I2S0S_TX,
+		[9] = DMACH_I2S0_RX,
+		[10] = DMACH_I2S0_TX,
+		[11] = DMACH_I2S1_RX,
+		[12] = DMACH_I2S1_TX,
+		[13] = DMACH_UART0_RX,
+		[14] = DMACH_UART0_TX,
+		[15] = DMACH_UART1_RX,
+		[16] = DMACH_UART1_TX,
+		[17] = DMACH_UART3_RX,
+		[18] = DMACH_UART3_TX,
+		[19] = DMACH_SLIMBUS1_RX,
+		[20] = DMACH_SLIMBUS1_TX,
+		[21] = DMACH_SLIMBUS3_RX,
+		[22] = DMACH_SLIMBUS3_TX,
+		[23] = DMACH_SLIMBUS5_RX,
+		[24] = DMACH_SLIMBUS5_TX,
+		[25] = DMACH_SLIMBUS0AUX_RX,
+		[26] = DMACH_SLIMBUS0AUX_TX,
+		[27] = DMACH_SPDIF,
+		[28] = DMACH_MIPI_HSI6,
+		[29] = DMACH_MIPI_HSI7,
+		[30] = DMACH_MAX,
+		[31] = DMACH_MAX,
+	},
+};
+
 struct platform_device exynos4_device_pdma1 = {
 	.name		= "s3c-pl330",
 	.id		= 2,
@@ -229,7 +302,6 @@ struct platform_device exynos4_device_pdma1 = {
 	.dev		= {
 		.dma_mask = &dma_dmamask,
 		.coherent_dma_mask = DMA_BIT_MASK(32),
-		.platform_data = &exynos4_pdma1_pdata,
 	},
 };
 
@@ -241,6 +313,16 @@ static struct platform_device *exynos4_dmacs[] __initdata = {
 
 static int __init exynos4_dma_init(void)
 {
+	unsigned int id = __raw_readl(S5P_VA_CHIPID) & 0xFFFFF000;
+
+	if (id == 0x43220) {
+		exynos4_device_pdma0.dev.platform_data = &exynos4212_pdma0_pdata;
+		exynos4_device_pdma1.dev.platform_data = &exynos4212_pdma1_pdata;
+	} else {
+		exynos4_device_pdma0.dev.platform_data = &exynos4210_pdma0_pdata;
+		exynos4_device_pdma1.dev.platform_data = &exynos4210_pdma1_pdata;
+	}
+
 	platform_add_devices(exynos4_dmacs, ARRAY_SIZE(exynos4_dmacs));
 
 	return 0;
