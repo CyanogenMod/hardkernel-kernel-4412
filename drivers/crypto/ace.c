@@ -1469,8 +1469,12 @@ static struct crypto_alg algs_bc[] = {
 	}
 };
 
+#define TYPE_HASH_SHA1			0
+#define TYPE_HASH_SHA256		1
+
 #if defined(CONFIG_ACE_HASH)
 struct s5p_ace_hash_ctx {
+	u32		type;
 	u32		prelen_high;
 	u32		prelen_low;
 
@@ -1486,11 +1490,12 @@ struct s5p_ace_hash_ctx {
  *	out != NULL - This is a final message block.
  *		Digest value will be stored at out.
  */
-static int s5p_ace_sha1_engine(struct s5p_ace_hash_ctx *sctx,
+static int s5p_ace_sha_engine(struct s5p_ace_hash_ctx *sctx,
 				u8 *out, const u8* in, u32 len)
 {
 	u32 reg;
 	u32 *buffer;
+	u32 block_size, digest_size;
 	u8 *in_phys;
 	int transformmode = 0;
 
@@ -1499,10 +1504,15 @@ static int s5p_ace_sha1_engine(struct s5p_ace_hash_ctx *sctx,
 	S5P_ACE_DEBUG("PreLen_Hi: %u, PreLen_Lo: %u\n",
 			sctx->prelen_high, sctx->prelen_low);
 
+	block_size = (sctx->type == TYPE_HASH_SHA1) ?
+				SHA1_BLOCK_SIZE : SHA256_BLOCK_SIZE;
+	digest_size = (sctx->type == TYPE_HASH_SHA1) ?
+				SHA1_DIGEST_SIZE : SHA256_DIGEST_SIZE;
+
 	if (out == NULL) {
 		if (len == 0) {
 			return 0;
-		} else if (len < SHA1_DIGEST_SIZE) {
+		} else if (len < digest_size) {
 			printk(KERN_ERR "%s: Invalid input\n", __func__);
 			return -EINVAL;
 		}
@@ -1512,15 +1522,15 @@ static int s5p_ace_sha1_engine(struct s5p_ace_hash_ctx *sctx,
 	if (len == 0) {
 		S5P_ACE_DEBUG("%s: Workaround for empty input\n", __func__);
 
-		memset(sctx->buffer, 0, SHA1_BLOCK_SIZE - 8);
+		memset(sctx->buffer, 0, block_size - 8);
 		sctx->buffer[0] = 0x80;
 		reg = cpu_to_be32(sctx->prelen_high);
-		memcpy(sctx->buffer + SHA1_BLOCK_SIZE - 8, &reg, 4);
+		memcpy(sctx->buffer + block_size - 8, &reg, 4);
 		reg = cpu_to_be32(sctx->prelen_low);
-		memcpy(sctx->buffer + SHA1_BLOCK_SIZE - 4, &reg, 4);
+		memcpy(sctx->buffer + block_size - 4, &reg, 4);
 
 		in = sctx->buffer;
-		len = SHA1_BLOCK_SIZE;
+		len = block_size;
 		transformmode = 1;
 	}
 
@@ -1563,8 +1573,10 @@ static int s5p_ace_sha1_engine(struct s5p_ace_hash_ctx *sctx,
 	reg = (reg & ~ACE_FC_SELHASH_MASK) | ACE_FC_SELHASH_EXOUT;
 	s5p_ace_write_sfr(ACE_FC_FIFOCTRL, reg);
 
-	/* Set Hash as SHA1 and start Hash engine */
-	reg = ACE_HASH_ENGSEL_SHA1HASH | ACE_HASH_STARTBIT_ON;
+	/* Set Hash as SHA1 or SHA256 and start Hash engine */
+	reg = (sctx->type == TYPE_HASH_SHA1) ?
+			ACE_HASH_ENGSEL_SHA1HASH : ACE_HASH_ENGSEL_SHA256HASH;
+	reg |= ACE_HASH_STARTBIT_ON;
 	if ((sctx->prelen_low | sctx->prelen_high) != 0) {
 		reg |= ACE_HASH_USERIV_EN;
 		buffer = (u32 *)sctx->state;
@@ -1573,6 +1585,12 @@ static int s5p_ace_sha1_engine(struct s5p_ace_hash_ctx *sctx,
 		s5p_ace_write_sfr(ACE_HASH_IV3, buffer[2]);
 		s5p_ace_write_sfr(ACE_HASH_IV4, buffer[3]);
 		s5p_ace_write_sfr(ACE_HASH_IV5, buffer[4]);
+
+		if (sctx->type == TYPE_HASH_SHA256) {
+			s5p_ace_write_sfr(ACE_HASH_IV6, buffer[5]);
+			s5p_ace_write_sfr(ACE_HASH_IV7, buffer[6]);
+			s5p_ace_write_sfr(ACE_HASH_IV8, buffer[7]);
+		}
 	}
 	s5p_ace_write_sfr(ACE_HASH_CONTROL, reg);
 
@@ -1658,6 +1676,11 @@ static int s5p_ace_sha1_engine(struct s5p_ace_hash_ctx *sctx,
 	buffer[3] = s5p_ace_read_sfr(ACE_HASH_RESULT4);
 	buffer[4] = s5p_ace_read_sfr(ACE_HASH_RESULT5);
 
+	if (sctx->type == TYPE_HASH_SHA256) {
+		buffer[5] = s5p_ace_read_sfr(ACE_HASH_RESULT6);
+		buffer[6] = s5p_ace_read_sfr(ACE_HASH_RESULT7);
+		buffer[7] = s5p_ace_read_sfr(ACE_HASH_RESULT8);
+	}
 	clear_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags);
 
 	return 0;
@@ -1722,17 +1745,29 @@ static int s5p_ace_sha1_init(struct shash_desc *desc)
 
 	sctx->prelen_high = sctx->prelen_low = 0;
 	sctx->buflen = 0;
+	sctx->type = TYPE_HASH_SHA1;
 
 	return 0;
 }
 
-static int s5p_ace_sha1_update(struct shash_desc *desc,
+static int s5p_ace_sha256_init(struct shash_desc *desc)
+{
+	struct s5p_ace_hash_ctx *sctx = shash_desc_ctx(desc);
+
+	sctx->prelen_high = sctx->prelen_low = 0;
+	sctx->buflen = 0;
+	sctx->type = TYPE_HASH_SHA256;
+
+	return 0;
+}
+
+static int s5p_ace_sha_update(struct shash_desc *desc,
 			      const u8 *data, unsigned int len)
 {
 	struct s5p_ace_hash_ctx *sctx = shash_desc_ctx(desc);
-	u32 partlen, tmplen;
 	const u8 *src;
 	int ret = 0;
+	u32 partlen, tmplen, block_size;
 
 	S5P_ACE_DEBUG("%s (buflen: 0x%x, len: 0x%x)\n",
 			__func__, sctx->buflen, len);
@@ -1740,19 +1775,21 @@ static int s5p_ace_sha1_update(struct shash_desc *desc,
 	partlen = sctx->buflen;
 	src = data;
 
+	block_size = (sctx->type == TYPE_HASH_SHA1) ?
+				SHA1_BLOCK_SIZE : SHA256_BLOCK_SIZE;
 	s5p_ace_clock_gating(ACE_CLOCK_ON);
 
 	if (partlen != 0) {
-		if (partlen + len <= SHA1_BLOCK_SIZE) {
+		if (partlen + len <= block_size) {
 			memcpy(sctx->buffer + partlen, src, len);
 			sctx->buflen += len;
 			goto out;
 		} else {
-			tmplen = SHA1_BLOCK_SIZE - partlen;
+			tmplen = block_size - partlen;
 			memcpy(sctx->buffer + partlen, src, tmplen);
 
-			ret = s5p_ace_sha1_engine(sctx, NULL, sctx->buffer,
-						SHA1_BLOCK_SIZE);
+			ret = s5p_ace_sha_engine(sctx, NULL, sctx->buffer,
+						block_size);
 			if (ret)
 				goto out;
 
@@ -1761,10 +1798,10 @@ static int s5p_ace_sha1_update(struct shash_desc *desc,
 		}
 	}
 
-	partlen = len & (SHA1_BLOCK_SIZE - 1);
+	partlen = len & (block_size - 1);
 	len -= partlen;
 	if (len > 0) {
-		ret = s5p_ace_sha1_engine(sctx, NULL, src, len);
+		ret = s5p_ace_sha_engine(sctx, NULL, src, len);
 		if (ret)
 			goto out;
 	}
@@ -1778,14 +1815,14 @@ out:
 	return ret;
 }
 
-static int s5p_ace_sha1_final(struct shash_desc *desc, u8 *out)
+static int s5p_ace_sha_final(struct shash_desc *desc, u8 *out)
 {
 	struct s5p_ace_hash_ctx *sctx = shash_desc_ctx(desc);
 
 	S5P_ACE_DEBUG("%s (buflen: 0x%x)\n", __func__, sctx->buflen);
 
 	s5p_ace_clock_gating(ACE_CLOCK_ON);
-	s5p_ace_sha1_engine(sctx, out, sctx->buffer, sctx->buflen);
+	s5p_ace_sha_engine(sctx, out, sctx->buffer, sctx->buflen);
 	s5p_ace_clock_gating(ACE_CLOCK_OFF);
 
 	/* Wipe context */
@@ -1794,32 +1831,35 @@ static int s5p_ace_sha1_final(struct shash_desc *desc, u8 *out)
 	return 0;
 }
 
-static int s5p_ace_sha1_finup(struct shash_desc *desc, const u8 *data,
+static int s5p_ace_sha_finup(struct shash_desc *desc, const u8 *data,
 		     unsigned int len, u8 *out)
 {
 	struct s5p_ace_hash_ctx *sctx = shash_desc_ctx(desc);
 	const u8 *src;
 	int ret = 0;
+	u32 block_size;
 
 	S5P_ACE_DEBUG("%s (buflen: 0x%x, len: 0x%x)\n",
 			__func__, sctx->buflen, len);
 
 	src = data;
+	block_size = (sctx->type == TYPE_HASH_SHA1) ?
+				SHA1_BLOCK_SIZE : SHA256_BLOCK_SIZE;
 
 	s5p_ace_clock_gating(ACE_CLOCK_ON);
 
 	if (sctx->buflen != 0) {
-		if (sctx->buflen + len <= SHA1_BLOCK_SIZE) {
+		if (sctx->buflen + len <= block_size) {
 			memcpy(sctx->buffer + sctx->buflen, src, len);
 
 			len += sctx->buflen;
 			src = sctx->buffer;
 		} else  {
-			u32 copylen = SHA1_BLOCK_SIZE - sctx->buflen;
+			u32 copylen = block_size - sctx->buflen;
 			memcpy(sctx->buffer + sctx->buflen, src, copylen);
 
-			ret = s5p_ace_sha1_engine(sctx, NULL, sctx->buffer,
-						SHA1_BLOCK_SIZE);
+			ret = s5p_ace_sha_engine(sctx, NULL, sctx->buffer,
+						block_size);
 			if (ret)
 				goto out;
 
@@ -1828,7 +1868,7 @@ static int s5p_ace_sha1_finup(struct shash_desc *desc, const u8 *data,
 		}
 	}
 
-	ret = s5p_ace_sha1_engine(sctx, out, src, len);
+	ret = s5p_ace_sha_engine(sctx, out, src, len);
 
 out:
 	s5p_ace_clock_gating(ACE_CLOCK_OFF);
@@ -1848,7 +1888,19 @@ static int s5p_ace_sha1_digest(struct shash_desc *desc, const u8 *data,
 	if (ret)
 		return ret;
 
-	return s5p_ace_sha1_finup(desc, data, len, out);
+	return s5p_ace_sha_finup(desc, data, len, out);
+}
+
+static int s5p_ace_sha256_digest(struct shash_desc *desc, const u8 *data,
+		      unsigned int len, u8 *out)
+{
+	int ret;
+
+	ret = s5p_ace_sha256_init(desc);
+	if (ret)
+		return ret;
+
+	return s5p_ace_sha_finup(desc, data, len, out);
 }
 
 static int s5p_ace_hash_export(struct shash_desc *desc, void *out)
@@ -1888,9 +1940,9 @@ static void s5p_ace_hash_cra_exit(struct crypto_tfm *tfm)
 static struct ahash_alg algs_hash[] = {
 	{
 		.init		= s5p_ace_sha1_init,
-		.update		= s5p_ace_sha1_update,
-		.final		= s5p_ace_sha1_final,
-		.finup		= s5p_ace_sha1_finup,
+		.update		= s5p_ace_sha_update,
+		.final		= s5p_ace_sha_final,
+		.finup		= s5p_ace_sha_finup,
 		.digest		= s5p_ace_sha1_digest,
 		.halg.digestsize	= SHA1_DIGEST_SIZE,
 		.halg.base	= {
@@ -1913,9 +1965,9 @@ static struct shash_alg algs_hash[] = {
 	{
 		.digestsize	= SHA1_DIGEST_SIZE,
 		.init		= s5p_ace_sha1_init,
-		.update		= s5p_ace_sha1_update,
-		.final		= s5p_ace_sha1_final,
-		.finup		= s5p_ace_sha1_finup,
+		.update		= s5p_ace_sha_update,
+		.final		= s5p_ace_sha_final,
+		.finup		= s5p_ace_sha_finup,
 		.digest		= s5p_ace_sha1_digest,
 		.export		= s5p_ace_hash_export,
 		.import		= s5p_ace_hash_import,
@@ -1927,6 +1979,28 @@ static struct shash_alg algs_hash[] = {
 			.cra_priority		= 300,
 			.cra_flags		= CRYPTO_ALG_TYPE_SHASH,
 			.cra_blocksize		= SHA1_BLOCK_SIZE,
+			.cra_module		= THIS_MODULE,
+			.cra_init		= s5p_ace_hash_cra_init,
+			.cra_exit		= s5p_ace_hash_cra_exit,
+		}
+	},
+	{
+		.digestsize	= SHA256_DIGEST_SIZE,
+		.init		= s5p_ace_sha256_init,
+		.update		= s5p_ace_sha_update,
+		.final		= s5p_ace_sha_final,
+		.finup		= s5p_ace_sha_finup,
+		.digest		= s5p_ace_sha256_digest,
+		.export		= s5p_ace_hash_export,
+		.import		= s5p_ace_hash_import,
+		.descsize	= sizeof(struct s5p_ace_hash_ctx),
+		.statesize	= sizeof(struct s5p_ace_hash_ctx),
+		.base		= {
+			.cra_name		= "sha256",
+			.cra_driver_name	= "sha256-s5p-ace",
+			.cra_priority		= 300,
+			.cra_flags		= CRYPTO_ALG_TYPE_SHASH,
+			.cra_blocksize		= SHA256_BLOCK_SIZE,
 			.cra_module		= THIS_MODULE,
 			.cra_init		= s5p_ace_hash_cra_init,
 			.cra_exit		= s5p_ace_hash_cra_exit,
