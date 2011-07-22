@@ -24,7 +24,7 @@ static unsigned int num_hotplug_in;
 static unsigned int num_hotplug_out;
 
 static unsigned int freq_max;
-static unsigned int freq_min;
+static unsigned int freq_min = -1UL;
 
 static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 					unsigned int freq_new)
@@ -76,6 +76,7 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 {
 	int i;
 	struct cpufreq_frequency_table *table;
+	unsigned int freq;
 
 	total_num_target_freq = 0;
 	consecutv_highestlevel_cnt = 0;
@@ -89,12 +90,14 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 		return PTR_ERR(table);
 	}
 
-	freq_max = table[0].frequency;
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
+		freq = table[i].frequency;
 
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
-		/* Doing nothing currently */
-
-	freq_min = table[i-1].frequency;
+		if (freq != CPUFREQ_ENTRY_INVALID && freq > freq_max)
+			freq_max = freq;
+		else if (freq != CPUFREQ_ENTRY_INVALID && freq_min > freq)
+			freq_min = freq;
+	}
 
 	printk(KERN_INFO "%s, max(%d),min(%d)\n", __func__, freq_max, freq_min);
 
