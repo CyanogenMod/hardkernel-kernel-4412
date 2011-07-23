@@ -2465,7 +2465,11 @@ int fimc_qbuf_output(void *fh, struct v4l2_buffer *b)
 		ctx = &ctrl->out->ctx[ctx_num];
 		if (ctx_num != ctrl->out->last_ctx) {
 			ctrl->out->last_ctx = ctx->ctx_num;
-			fimc_outdev_set_ctx_param(ctrl, ctx);
+			ret = fimc_outdev_set_ctx_param(ctrl, ctx);
+			if (ret < 0) {
+				fimc_err("Fail: fimc_outdev_set_ctx_param\n");
+				return -EINVAL;
+			}
 		}
 
 		switch (ctx->overlay.mode) {
