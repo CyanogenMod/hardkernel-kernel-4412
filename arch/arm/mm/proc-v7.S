@@ -333,6 +333,7 @@ __v7_setup:
 	teq	r0, r10
 	bne	3f
 	cmp	r6, #0x10			@ power ctrl reg added r1p0
+#ifndef CONFIG_ARM_TRUSTZONE
 	mrcge	p15, 0, r10, c15, c0, 0		@ read power control register
 	orrge	r10, r10, #1			@ enable dynamic clock gating
 	mcrge	p15, 0, r10, c15, c0, 0		@ write power control register
@@ -370,6 +371,7 @@ __v7_setup:
 	mrclt	p15, 0, r10, c15, c0, 1		@ read diagnostic register
 	orrlt	r10, r10, #1 << 11		@ set bit #11
 	mcrlt	p15, 0, r10, c15, c0, 1		@ write diagnostic register
+#endif
 #endif
 
 3:	mov	r10, #0
