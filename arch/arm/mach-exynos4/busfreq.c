@@ -75,7 +75,7 @@ enum busfreq_level_idx {
 
 static unsigned int p_idx;
 static unsigned int curr_idx;
-static unsigned int minFreq;
+static unsigned int minFreq = -1UL;
 
 struct busfreq_table {
 	unsigned int idx;
@@ -539,6 +539,7 @@ static int __init busfreq_mon_init(void)
 	unsigned int i;
 	unsigned int tmp;
 	struct cpufreq_frequency_table *table;
+	unsigned int freq;
 
 	if (machine_is_smdkv310())
 		return -ENODEV;
@@ -549,10 +550,12 @@ static int __init busfreq_mon_init(void)
 		return -ENODEV;
 
 	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
-		/* Donthing to do currently */
+		freq = table[i].frequency;
+
+		if (freq != CPUFREQ_ENTRY_INVALID && freq < minFreq)
+			minFreq = freq;
 	}
 
-	minFreq = table[i-1].frequency ;
 	g_busfreq_lock_level = BUS_LEVEL_END - 1;
 
 	cpu.hw_base = S5P_VA_PPMU_CPU;
