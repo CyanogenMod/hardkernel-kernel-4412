@@ -211,6 +211,18 @@
 #define S5P_CLKDIV_BUS_GPLR_SHIFT	(4)
 #define S5P_CLKDIV_BUS_GPLR_MASK	(0x7 << S5P_CLKDIV_BUS_GPLR_SHIFT)
 
+/* CLK_GATE_IP_IMAGE */
+#define S5P_CLKGATE_IP_IMAGE_MDMA	(0x1 << 2)
+#define S5P_CLKGATE_IP_IMAGE_SMMUMDMA	(0x1 << 5)
+#define S5P_CLKGATE_IP_IMAGE_QEMDMA	(0x1 << 8)
+
+/*  CLK_GATE_IP_FSYS */
+#define S5P_CLKGATE_IP_FSYS_PDMA0	(0x1 << 0)
+#define S5P_CLKGATE_IP_FSYS_PDMA1	(0x1 << 1)
+
+/*  CLK_GATE_IP_PERIL */
+#define S5P_CLKGATE_IP_PERIL_I2C0_8	(0xff << 6)
+
 /* Compatibility defines and inclusion */
 
 #include <mach/regs-pmu.h>
