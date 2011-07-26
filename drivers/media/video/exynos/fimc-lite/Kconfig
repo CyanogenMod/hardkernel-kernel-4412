@@ -1,0 +1,6 @@
+config VIDEO_EXYNOS_FIMC_LITE
+	bool "Exynos Camera Interface(FIMC-Lite) driver"
+	depends on VIDEO_EXYNOS && ARCH_EXYNOS4
+	default n
+	help
+	  This is a v4l2 driver for exynos camera interface device.
