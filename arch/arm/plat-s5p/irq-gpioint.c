@@ -23,6 +23,8 @@
 #include <plat/gpio-core.h>
 #include <plat/gpio-cfg.h>
 
+#include <asm/mach/irq.h>
+
 #define GPIO_BASE(chip)		(((unsigned long)(chip)->base) & 0xFFFFF000u)
 
 #define CON_OFFSET		0x700
@@ -88,6 +90,9 @@ static void s5p_gpioint_handler(unsigned int irq, struct irq_desc *desc)
 	int group, pend_offset, mask_offset;
 	unsigned int pend, mask;
 
+	struct irq_chip *chip = irq_get_chip(irq);
+	chained_irq_enter(chip, desc);
+
 	for (group = 0; group < bank->nr_groups; group++) {
 		struct s3c_gpio_chip *chip = bank->chips[group];
 		if (!chip)
@@ -109,6 +114,7 @@ static void s5p_gpioint_handler(unsigned int irq, struct irq_desc *desc)
 			pend &= ~BIT(offset);
 		}
 	}
+	chained_irq_exit(chip, desc);
 }
 
 static __init int s5p_gpioint_add(struct s3c_gpio_chip *chip)
