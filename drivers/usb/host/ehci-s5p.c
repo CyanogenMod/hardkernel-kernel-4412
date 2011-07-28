@@ -159,8 +159,8 @@ static int s5p_ehci_runtime_resume(struct device *dev)
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	int rc = 0;
 
-	/* platform device isn't in_suspend */
-	if (pdata && pdata->phy_resume && !dev->power.in_suspend)
+	/* platform device isn't suspended */
+	if (pdata && pdata->phy_resume && !dev->power.is_suspended)
 		rc = pdata->phy_resume(pdev, S5P_USB_PHY_HOST);
 
         if (rc) {
