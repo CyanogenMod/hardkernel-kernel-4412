@@ -65,6 +65,7 @@
 #define CMD_BTCOEXSCAN_STOP	"BTCOEXSCAN-STOP"
 #define CMD_BTCOEXMODE		"BTCOEXMODE"
 #define CMD_SETSUSPENDOPT	"SETSUSPENDOPT"
+#define CMD_P2P_DEV_ADDR	"P2P_DEV_ADDR"
 #define CMD_SETFWPATH		"SETFWPATH"
 #define CMD_SETBAND		"SETBAND"
 #define CMD_GETBAND		"GETBAND"
@@ -91,7 +92,7 @@ typedef struct cmd_tlv {
 	char subver;
 	char reserved;
 } cmd_tlv_t;
-#endif
+#endif /* PNO_SUPPORT */
 
 typedef struct android_wifi_priv_cmd {
 	char *buf;
@@ -105,6 +106,11 @@ typedef struct android_wifi_priv_cmd {
 void dhd_customer_gpio_wlan_ctrl(int onoff);
 uint dhd_dev_reset(struct net_device *dev, uint8 flag);
 void dhd_dev_init_ioctl(struct net_device *dev);
+#ifdef WL_CFG80211
+int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr);
+#else
+int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr) { return 0; }
+#endif
 
 extern bool ap_fw_loaded;
 #ifdef CUSTOMER_HW2
@@ -274,7 +280,19 @@ static int wl_android_set_pno_setup(struct net_device *dev, char *command, int t
 exit_proc:
 	return res;
 }
-#endif
+#endif /* PNO_SUPPORT */
+
+static int wl_android_get_p2p_dev_addr(struct net_device *ndev, char *command, int total_len)
+{
+	int ret;
+	int bytes_written = 0;
+
+	ret = wl_cfg80211_get_p2p_dev_addr(ndev, (struct ether_addr*)command);
+	if (ret)
+		return 0;
+	bytes_written = sizeof(struct ether_addr);
+	return bytes_written;
+}
 
 /**
  * Global function definitions (declared in wl_android.h)
@@ -383,7 +401,7 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 
 	if (!g_wifi_on) {
 		DHD_ERROR(("%s: Ignore private cmd \"%s\" - iface %s is down\n",
-				__FUNCTION__, command, ifr->ifr_name));
+			__FUNCTION__, command, ifr->ifr_name));
 		ret = 0;
 		goto exit;
 	}
@@ -439,8 +457,8 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	else if (strnicmp(command, CMD_COUNTRY, strlen(CMD_COUNTRY)) == 0) {
 		char *country_code = command + strlen(CMD_COUNTRY) + 1;
 		bytes_written = wldev_set_country(net, country_code);
-#ifdef PNO_SUPPORT
 	}
+#ifdef PNO_SUPPORT
 	else if (strnicmp(command, CMD_PNOSSIDCLR_SET, strlen(CMD_PNOSSIDCLR_SET)) == 0) {
 		bytes_written = dhd_dev_pno_reset(net);
 	}
@@ -450,7 +468,10 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	else if (strnicmp(command, CMD_PNOENABLE_SET, strlen(CMD_PNOENABLE_SET)) == 0) {
 		uint pfn_enabled = *(command + strlen(CMD_PNOENABLE_SET) + 1) - '0';
 		bytes_written = dhd_dev_pno_enable(net, pfn_enabled);
+	}
 #endif
+	else if (strnicmp(command, CMD_P2P_DEV_ADDR, strlen(CMD_P2P_DEV_ADDR)) == 0) {
+		bytes_written = wl_android_get_p2p_dev_addr(net, command, priv_cmd->total_len);
 	} else {
 		DHD_ERROR(("Unknown PRIVATE command %s - ignored\n", command));
 		snprintf(command, 3, "OK");
@@ -499,6 +520,17 @@ int wl_android_exit(void)
 	return ret;
 }
 
+int wl_android_post_init(void)
+{
+	int ret = 0;
+	if (!dhd_download_fw_on_driverload) {
+		/* Call customer gpio to turn off power with WL_REG_ON signal */
+		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
+		g_wifi_on = 0;
+
+	}
+	return ret;
+}
 
 /**
  * Functions for Android WiFi card detection
