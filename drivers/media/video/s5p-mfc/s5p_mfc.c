@@ -887,8 +887,14 @@ static unsigned int s5p_mfc_poll(struct file *file,
 				 struct poll_table_struct *wait)
 {
 	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
+	unsigned int ret = 0;
 
-	return vb2_poll(&ctx->vq_src, file, wait);
+	if (s5p_mfc_get_node_type(file) == MFCNODE_DECODER)
+		ret = vb2_poll(&ctx->vq_src, file, wait);
+	else if (s5p_mfc_get_node_type(file) == MFCNODE_ENCODER)
+		ret = vb2_poll(&ctx->vq_dst, file, wait);
+
+	return ret;
 }
 
 /* Mmap */
