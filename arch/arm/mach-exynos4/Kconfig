@@ -23,6 +23,13 @@ config CPU_EXYNOS4212
 	help
 	  Enable EXYNOS4212 CPU support
 
+config EXYNOS4_CONTENT_PATH_PROTECTION
+	bool "Exynos4 Content Path Protection"
+	depends on ARM_TRUSTZONE
+	default n
+	help
+	  Enable content path protection of EXYNOS4.
+
 config EXYNOS4_MCT
 	bool
 	default y
