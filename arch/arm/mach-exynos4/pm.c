@@ -172,8 +172,18 @@ void exynos4_cpu_suspend(void)
 {
 	outer_flush_all();
 
+#ifdef CONFIG_ARM_TRUSTZONE
+	asm(
+		"push	{r0-r3}\n\t"
+		"mov	r0, #(-3)\n\t"
+		"dsb\n\t"
+		"smc	0\n\t"
+		"pop	{r0-r3}"
+	);
+#else
 	/* issue the standby signal into the pm unit. */
 	cpu_do_idle();
+#endif
 }
 
 static void exynos4_pm_prepare(void)
@@ -294,10 +304,20 @@ static void exynos4_pm_resume(void)
 	exynos4_scu_enable(S5P_VA_SCU);
 
 #ifdef CONFIG_CACHE_L2X0
+#ifdef CONFIG_ARM_TRUSTZONE
+	asm(
+		"push	{r0-r3}\n\t"
+		"mov	r0, #(-5)\n\t"
+		"dsb\n\t"
+		"smc	0\n\t"
+		"pop	{r0-r3}"
+	);
+#else
 	s3c_pm_do_restore_core(exynos4_l2cc_save, ARRAY_SIZE(exynos4_l2cc_save));
 	outer_inv_all();
 	/* enable L2X0*/
 	writel_relaxed(1, S5P_VA_L2CC + L2X0_CTRL);
+#endif
 #endif
 
 early_wakeup:

@@ -24,6 +24,7 @@
 #include <plat/map-s5p.h>
 
 #define EXYNOS4_PA_SYSRAM		0x02020000
+#define EXYNOS4_PA_SYSRAM_NS		0x0203f000
 
 #define EXYNOS4_PA_FIMC0		0x11800000
 #define EXYNOS4_PA_FIMC1		0x11810000

@@ -306,7 +306,9 @@ struct platform_device exynos4_device_pdma1 = {
 };
 
 static struct platform_device *exynos4_dmacs[] __initdata = {
+#ifndef CONFIG_ARM_TRUSTZONE
 	&exynos4_device_mdma,
+#endif
 	&exynos4_device_pdma0,
 	&exynos4_device_pdma1,
 };

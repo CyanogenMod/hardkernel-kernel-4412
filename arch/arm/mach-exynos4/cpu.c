@@ -48,6 +48,11 @@ static struct map_desc exynos4_iodesc[] __initdata = {
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
 	}, {
+		.virtual	= (unsigned long)S5P_VA_SYSRAM_NS,
+		.pfn		= __phys_to_pfn(EXYNOS4_PA_SYSRAM_NS),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
+	}, {
 		.virtual	= (unsigned long)S5P_VA_CMU,
 		.pfn		= __phys_to_pfn(EXYNOS4_PA_CMU),
 		.length		= SZ_128K,
@@ -238,6 +243,15 @@ static int __init exynos4_l2x0_cache_init(void)
 #ifdef CONFIG_MACH_FPGA4212
 	l2x0_init(S5P_VA_L2CC, 0x70000, 0xffffffff);
 #else
+#ifdef CONFIG_ARM_TRUSTZONE
+	asm(
+		"push	{r0-r3}\n\t"
+		"mov	r0, #(-5)\n\t"
+		"dsb\n\t"
+		"smc	0\n\t"
+		"pop	{r0-r3}"
+	);
+#else
 	/* TAG, Data Latency Control: 2cycle */
 	__raw_writel(0x110, S5P_VA_L2CC + L2X0_TAG_LATENCY_CTRL);
 	__raw_writel(0x110, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
@@ -248,6 +262,7 @@ static int __init exynos4_l2x0_cache_init(void)
 	/* L2X0 Power Control */
 	__raw_writel(L2X0_DYNAMIC_CLK_GATING_EN | L2X0_STNDBY_MODE_EN,
 		     S5P_VA_L2CC + L2X0_POWER_CTRL);
+#endif
 
 	l2x0_init(S5P_VA_L2CC, 0x7C470001, 0xC200ffff);
 #endif

@@ -69,10 +69,14 @@ resume_with_mmu:
 	adr	r0, sleep_save_misc
 
 	ldr	r1, [r0], #4
+#ifndef CONFIG_ARM_TRUSTZONE
 	mcr	p15, 0, r1, c15, c0, 0	@ write power control register
+#endif
 
 	ldr	r1, [r0], #4
+#ifndef CONFIG_ARM_TRUSTZONE
 	mcr	p15, 0, r1, c15, c0, 1	@ write diagnostic register
+#endif
 
 	mov	r0, #1
 early_wakeup:

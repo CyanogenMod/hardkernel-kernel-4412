@@ -34,7 +34,11 @@
 
 extern void exynos4_secondary_startup(void);
 
+#ifdef CONFIG_ARM_TRUSTZONE
+#define CPU1_BOOT_REG (S5P_VA_SYSRAM_NS + 0x8)
+#else
 #define CPU1_BOOT_REG (exynos4_subrev() == 0 ? S5P_VA_SYSRAM : S5P_INFORM5)
+#endif
 
 /*
  * control for which core is the next to come out of the secondary
@@ -114,6 +118,10 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
 
+#ifdef CONFIG_ARM_TRUSTZONE
+	static int callcount = 0;
+#endif
+
 	/*
 	 * Set synchronisation state between this boot processor
 	 * and the secondary one
@@ -151,6 +159,22 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 			return -ETIMEDOUT;
 		}
 	}
+
+#ifdef CONFIG_ARM_TRUSTZONE
+	/* SMC Call */
+	printk(KERN_INFO "DEBUG (%s): SMC call to enable CPU1\n", __func__);
+
+	if (callcount++) {
+		asm(
+			"push	{r0-r3}\n\t"
+			"mov	r0, #(-4)\n\t"
+			"dsb\n\t"
+			"smc	0\n\t"
+			"pop	{r0-r3}"
+		);
+	}
+#endif
+
 	/*
 	 * Send the secondary CPU a soft interrupt, thereby causing
 	 * the boot monitor to read the system wide flags register,
@@ -226,5 +250,5 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	 * until it receives a soft interrupt, and then the
 	 * secondary CPU branches to this address.
 	 */
-	__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)), S5P_VA_SYSRAM);
+	__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)), CPU1_BOOT_REG);
 }
