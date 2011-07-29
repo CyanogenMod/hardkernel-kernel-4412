@@ -376,8 +376,10 @@ u32 g2d_check_pagetable(void * vaddr, unsigned int size, unsigned long pgd);
 void g2d_pagetable_clean(const void *start_addr, unsigned long size, unsigned long pgd);
 int g2d_check_need_dst_cache_clean(g2d_params * params);
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
 void g2d_early_suspend(struct early_suspend *h);
 void g2d_late_resume(struct early_suspend *h);
+#endif
 
 /* fimg2d_core */
 int g2d_clk_enable(struct g2d_global *g2d_dev);
