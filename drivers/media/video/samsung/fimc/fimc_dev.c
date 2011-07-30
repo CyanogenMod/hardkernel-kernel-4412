@@ -623,11 +623,13 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 			mem_info.total_size, mem_info.free_size);
 	if (err) {
 		fimc_err("%s: get cma info failed\n", __func__);
-		return NULL;
+		ctrl->mem.size = 0;
+		ctrl->mem.base = 0;
+	} else {
+		ctrl->mem.size = mem_info.total_size;
+		ctrl->mem.base = (dma_addr_t)cma_alloc
+			(ctrl->dev, ctrl->cma_name, (size_t)ctrl->mem.size, 0);
 	}
-	ctrl->mem.size = mem_info.total_size;
-	ctrl->mem.base = (dma_addr_t)cma_alloc
-		(ctrl->dev, ctrl->cma_name, (size_t)ctrl->mem.size, 0);
 	printk(KERN_DEBUG "ctrl->mem.size = 0x%x\n", ctrl->mem.size);
 	printk(KERN_DEBUG "ctrl->mem.base = 0x%x\n", ctrl->mem.base);
 	ctrl->mem.curr = ctrl->mem.base;
