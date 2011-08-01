@@ -448,6 +448,7 @@ int s3cfb_backlight_on(struct platform_device *pdev)
 
 int s3cfb_backlight_off(struct platform_device *pdev)
 {
+#if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
 	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
@@ -459,6 +460,7 @@ int s3cfb_backlight_off(struct platform_device *pdev)
 
 	gpio_direction_output(EXYNOS4_GPD0(1), 0);
 	gpio_free(EXYNOS4_GPD0(1));
+#endif
 	return 0;
 }
 
