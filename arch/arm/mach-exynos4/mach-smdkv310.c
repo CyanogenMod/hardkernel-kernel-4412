@@ -69,6 +69,7 @@
 #include <plat/iic.h>
 #include <plat/pd.h>
 #include <plat/backlight.h>
+#include <plat/regs-fb-v4.h>
 #include <plat/media.h>
 #include <plat/s5p-clock.h>
 #include <plat/tvout.h>
@@ -81,7 +82,6 @@
 
 #include <mach/map.h>
 #include <mach/media.h>
-#include <mach/regs-fb.h>
 #include <mach/sysmmu.h>
 #ifdef CONFIG_S3C64XX_DEV_SPI
 #include <mach/spi-clocks.h>

@@ -20,7 +20,6 @@
 #include <plat/gpio-cfg.h>
 
 #include <mach/regs-clock.h>
-#include <mach/regs-fb.h>
 #include <mach/map.h>
 
 void exynos4_fimd0_gpio_setup_24bpp(void)
