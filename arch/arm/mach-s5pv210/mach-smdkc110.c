@@ -657,6 +657,7 @@ static struct samsung_bl_gpio_info smdkc110_bl_gpio_info = {
 
 static struct platform_pwm_backlight_data smdkc110_bl_data = {
 	.pwm_id = 3,
+	.pwm_period_ns  = 1000,
 };
 
 static void __init smdkc110_map_io(void)
