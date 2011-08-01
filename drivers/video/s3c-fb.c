@@ -1680,6 +1680,8 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	struct s3c_fb *sfb;
 	struct resource *res;
 	int win;
+	int default_win;
+	int i;
 	int ret = 0;
 	u32 reg;
 
@@ -1803,8 +1805,14 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	}
 
 	/* we have the register setup, start allocating framebuffers */
+	default_win = sfb->pdata->default_win;
+	for (i = 0; i < fbdrv->variant.nr_windows; i++) {
+		win = i;
+		if (i == 0)
+			win = default_win;
+		if (i == default_win)
+			win = 0;
 
-	for (win = 0; win < fbdrv->variant.nr_windows; win++) {
 		if (!pd->win[win])
 			continue;
 
