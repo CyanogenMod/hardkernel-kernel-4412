@@ -23,6 +23,7 @@
 #include <plat/clock-clksrc.h>
 #include <plat/devs.h>
 #include <plat/pm.h>
+#include <plat/cputype.h>
 
 #include <mach/map.h>
 #include <mach/regs-clock.h>
@@ -2204,6 +2205,10 @@ struct syscore_ops exynos4_clock_syscore_ops = {
 void __init exynos4_register_clocks(void)
 {
 	int ptr;
+
+	/* usbphy1 is removed in exynos 4212 */
+	if (cpu_is_exynos4212())
+		clkset_group_list[4] = NULL;
 
 	s3c24xx_register_clocks(clks, ARRAY_SIZE(clks));
 
