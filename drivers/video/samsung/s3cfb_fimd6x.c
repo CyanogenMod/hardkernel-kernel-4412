@@ -157,7 +157,8 @@ int s3cfb_set_clock(struct s3cfb_global *ctrl)
 	struct s3c_platform_fb *pdata = to_fb_plat(ctrl->dev);
 	u32 cfg, maxclk, src_clk, vclk, div;
 
-	maxclk = 86 * 1000000;
+	/* spec is under 100MHz */
+	maxclk = 100 * 1000000;
 
 	cfg = readl(ctrl->regs + S3C_VIDCON0);
 
