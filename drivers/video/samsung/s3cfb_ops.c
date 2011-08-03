@@ -888,7 +888,11 @@ int s3cfb_blank(int blank_mode, struct fb_info *fb)
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	if (fbdev->system_state == POWER_OFF) {
 		dev_err(fbdev->dev, "system_state is POWER_OFF\n");
-		return 0;
+		win->power_state = blank_mode;
+		if (win->id != pdata->default_win)
+			return NOT_DEFAULT_WINDOW;
+		else
+			return 0;
 	}
 #endif
 
