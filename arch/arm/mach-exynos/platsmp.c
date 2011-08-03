@@ -29,13 +29,14 @@
 #include <mach/hardware.h>
 #include <mach/regs-clock.h>
 #include <mach/regs-pmu.h>
+#include <mach/smc.h>
 
 #include <plat/exynos4.h>
 
 extern void exynos4_secondary_startup(void);
 
 #ifdef CONFIG_ARM_TRUSTZONE
-#define CPU1_BOOT_REG (S5P_VA_SYSRAM_NS + 0x8)
+#define CPU1_BOOT_REG (S5P_VA_SYSRAM_NS + 0x1C)
 #else
 #define CPU1_BOOT_REG (exynos4_subrev() == 0 ? S5P_VA_SYSRAM : S5P_INFORM5)
 #endif
@@ -164,15 +165,8 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	/* SMC Call */
 	printk(KERN_INFO "DEBUG (%s): SMC call to enable CPU1\n", __func__);
 
-	if (callcount++) {
-		asm(
-			"push	{r0-r3}\n\t"
-			"mov	r0, #(-4)\n\t"
-			"dsb\n\t"
-			"smc	0\n\t"
-			"pop	{r0-r3}"
-		);
-	}
+	if (callcount++)
+		exynos_smc(SMC_CMD_CPU1BOOT, 0, 0, 0);
 #endif
 
 	/*

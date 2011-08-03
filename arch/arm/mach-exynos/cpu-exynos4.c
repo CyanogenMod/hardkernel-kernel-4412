@@ -30,6 +30,7 @@
 #include <plat/iic-core.h>
 
 #include <mach/regs-irq.h>
+#include <mach/smc.h>
 
 extern int combiner_init(unsigned int combiner_nr, void __iomem *base,
 			 unsigned int irq_start);
@@ -244,13 +245,7 @@ static int __init exynos4_l2x0_cache_init(void)
 	l2x0_init(S5P_VA_L2CC, 0x70000, 0xffffffff);
 #else
 #ifdef CONFIG_ARM_TRUSTZONE
-	asm(
-		"push	{r0-r3}\n\t"
-		"mov	r0, #(-5)\n\t"
-		"dsb\n\t"
-		"smc	0\n\t"
-		"pop	{r0-r3}"
-	);
+	exynos_smc(SMC_CMD_L2X0UP, 0, 0, 0);
 #else
 	/* TAG, Data Latency Control: 2cycle */
 	__raw_writel(0x110, S5P_VA_L2CC + L2X0_TAG_LATENCY_CTRL);

@@ -23,16 +23,22 @@
 #include <mach/regs-pmu.h>
 #include <mach/pmu.h>
 #include <mach/gpio.h>
+#include <mach/smc.h>
 
 #include <plat/regs-otg.h>
 #include <plat/exynos4.h>
 #include <plat/pm.h>
 #include <plat/devs.h>
 
+#ifdef CONFIG_ARM_TRUSTZONE
+#define REG_DIRECTGO_ADDR	(S5P_VA_SYSRAM_NS + 0x24)
+#define REG_DIRECTGO_FLAG	(S5P_VA_SYSRAM_NS + 0x20)
+#else
 #define REG_DIRECTGO_ADDR	(exynos4_subrev() == 0 ?\
 				(S5P_VA_SYSRAM + 0x24) : S5P_INFORM7)
 #define REG_DIRECTGO_FLAG	(exynos4_subrev() == 0 ?\
 				(S5P_VA_SYSRAM + 0x20) : S5P_INFORM6)
+#endif
 enum hc_type {
 	HC_SDHC,
 	HC_MSHC,
@@ -324,7 +330,11 @@ void exynos4_set_core0_pwroff(void)
 	tmp &= ~(S5P_CENTRAL_LOWPWR_CFG);
 	__raw_writel(tmp, S5P_CENTRAL_SEQ_CONFIGURATION);
 
+#ifdef CONFIG_ARM_TRUSTZONE
+	exynos_smc(SMC_CMD_CPU0AFTR, 0, 0, 0);
+#else
 	cpu_do_idle();
+#endif
 }
 
 static void exynos4_set_wakeupmask(void)

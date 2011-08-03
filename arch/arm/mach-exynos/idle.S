@@ -71,10 +71,14 @@ resume_with_mmu:
 	adr	r0, sleep_save_misc
 
 	ldr	r1, [r0], #4
+#ifndef CONFIG_ARM_TRUSTZONE
 	mcr	p15, 0, r1, c15, c0, 0	@ write power control register
+#endif
 
 	ldr	r1, [r0], #4
+#ifndef CONFIG_ARM_TRUSTZONE
 	mcr	p15, 0, r1, c15, c0, 1	@ write diagnostic register
+#endif
 
 	mov	r0, #1
 early_wakeup:
@@ -106,6 +110,7 @@ sleep_save_misc:
 	 */
 
 ENTRY(exynos4_idle_resume)
+#ifndef CONFIG_ARM_TRUSTZONE
 	/* SCU enable */
 	ldr	r1, =0x10500000
 	ldr	r0, [r1]
@@ -138,5 +143,6 @@ ENTRY(exynos4_idle_resume)
 	/* Enable L2 cache */
 	mov	r0, #1
 	str	r0, [r1, #0x100]
+#endif
 
 	b	cpu_resume
