@@ -395,7 +395,7 @@ void s3cfb_early_suspend(struct early_suspend *h)
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	/* disable the power domain */
 	printk(KERN_DEBUG "s3cfb - disable power domain\n");
-	pm_runtime_put(&pdev->dev);
+	pm_runtime_put_sync(&pdev->dev);
 #endif
 	return ;
 }
@@ -419,6 +419,8 @@ void s3cfb_late_resume(struct early_suspend *h)
 	printk(KERN_DEBUG "s3cfb - enable power domain\n");
 	pm_runtime_get_sync(&pdev->dev);
 #endif
+
+	info->system_state = POWER_ON;
 
 	for (i = 0; i < FIMD_MAX; i++) {
 		fbdev[i] = fbfimd->fbdev[i];

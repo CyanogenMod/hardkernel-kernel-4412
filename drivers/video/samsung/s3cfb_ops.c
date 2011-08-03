@@ -641,6 +641,13 @@ int s3cfb_set_par(struct fb_info *fb)
 	struct s3cfb_window *win = fb->par;
 	struct s3cfb_global *fbdev = get_fimd_global(win->id);
 
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	if (fbdev->system_state == POWER_OFF) {
+		dev_err(fbdev->dev, "system_state is POWER_OFF\n");
+		return 0;
+	}
+#endif
+
 	s3cfb_set_par_window(fbdev, fb);
 
 	return 0;
@@ -878,6 +885,13 @@ int s3cfb_blank(int blank_mode, struct fb_info *fb)
 
 	dev_dbg(fbdev->dev, "change blank mode\n");
 
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	if (fbdev->system_state == POWER_OFF) {
+		dev_err(fbdev->dev, "system_state is POWER_OFF\n");
+		return 0;
+	}
+#endif
+
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
 		if (!fb->fix.smem_start) {
@@ -1007,6 +1021,13 @@ int s3cfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *fb)
 	struct s3cfb_window *win = fb->par;
 	struct s3cfb_global *fbdev = get_fimd_global(win->id);
 
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	if (fbdev->system_state == POWER_OFF) {
+		dev_err(fbdev->dev, "system_state is POWER_OFF\n");
+		return 0;
+	}
+#endif
+
 	if (var->yoffset + var->yres > var->yres_virtual) {
 		dev_err(fbdev->dev, "invalid yoffset value\n");
 		return -EINVAL;
@@ -1056,6 +1077,14 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 		struct s3cfb_user_chroma user_chroma;
 		int vsync;
 	} p;
+
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	if (fbdev->system_state == POWER_OFF) {
+		dev_err(fbdev->dev,
+			"system_state is POWER_OFF cmd is 0x%08x\n", cmd);
+		return 0;
+	}
+#endif
 
 	switch (cmd) {
 	case FBIO_WAITFORVSYNC:
@@ -1391,7 +1420,13 @@ int s3cfb_direct_ioctl(int id, unsigned int cmd, unsigned long arg)
 		break;
 
 	default:
+#ifdef CONFIG_EXYNOS4_DEV_PD
+		fbdev->system_state = POWER_ON;
+#endif
 		ret = s3cfb_ioctl(fb, cmd, arg);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+		fbdev->system_state = POWER_OFF;
+#endif
 		break;
 	}
 
