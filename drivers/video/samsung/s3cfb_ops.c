@@ -938,6 +938,8 @@ int s3cfb_blank(int blank_mode, struct fb_info *fb)
 			if (fbdev->lcd->init_ldi)
 				fbdev->lcd->init_ldi();
 		}
+		if (win->id != pdata->default_win)
+			return NOT_DEFAULT_WINDOW;
 
 		break;
 
@@ -979,6 +981,8 @@ int s3cfb_blank(int blank_mode, struct fb_info *fb)
 			if (fbdev->lcd->init_ldi)
 				fbdev->lcd->init_ldi();
 		}
+		if (win->id != pdata->default_win)
+			return NOT_DEFAULT_WINDOW;
 
 		break;
 
