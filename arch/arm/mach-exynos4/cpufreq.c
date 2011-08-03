@@ -364,11 +364,6 @@ static int exynos4_target(struct cpufreq_policy *policy,
 	freqs.new = exynos4_freq_table[index].frequency;
 	freqs.cpu = policy->cpu;
 
-	if (freqs.new == freqs.old) {
-		ret = -EINVAL;
-		goto out;
-	}
-
 	/*
 	 * ARM clock source will be changed APLL to MPLL temporary
 	 * To support this level, need to control regulator for
