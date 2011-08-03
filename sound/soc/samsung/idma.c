@@ -138,6 +138,7 @@ static void idma_ctrl(int op)
 		val &= ~(AHB_INTENLVL0 | AHB_DMAEN);
 		break;
 	default:
+		spin_unlock(&idma.lock);
 		return;
 	}
 
