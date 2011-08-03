@@ -251,6 +251,8 @@ static int s3cfb_probe(struct platform_device *pdev)
 		/* hw setting */
 		s3cfb_init_global(fbdev[i]);
 
+		fbdev[i]->system_state = POWER_ON;
+
 		/* alloc fb_info */
 		if (s3cfb_alloc_framebuffer(fbdev[i], i)) {
 			dev_err(fbdev[i]->dev, "alloc error fimd[%d]\n", i);
@@ -271,7 +273,6 @@ static int s3cfb_probe(struct platform_device *pdev)
 					FB_BLANK_UNBLANK);
 		s3cfb_display_on(fbdev[i]);
 
-		fbdev[i]->system_state = POWER_ON;
 #ifdef CONFIG_HAS_WAKELOCK
 #ifdef CONFIG_HAS_EARLYSUSPEND
 		fbdev[i]->early_suspend.suspend = s3cfb_early_suspend;
