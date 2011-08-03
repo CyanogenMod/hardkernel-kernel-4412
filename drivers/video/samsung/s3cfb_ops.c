@@ -562,9 +562,6 @@ int s3cfb_check_var_window(struct s3cfb_global *fbdev,
 #if defined(CONFIG_FB_S5P_VIRTUAL)
 	if (var->yres_virtual < var->yres)
 		var->yres_virtual = var->yres * CONFIG_FB_S5P_NR_BUFFERS;
-#else
-	if (var->yres_virtual > var->yres * CONFIG_FB_S5P_NR_BUFFERS)
-		var->yres_virtual = var->yres * CONFIG_FB_S5P_NR_BUFFERS;
 #endif
 
 	if (var->xoffset > (var->xres_virtual - var->xres))
