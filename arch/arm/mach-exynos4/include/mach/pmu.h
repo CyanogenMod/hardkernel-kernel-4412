@@ -20,6 +20,11 @@ enum sys_powerdown {
 	NUM_SYS_POWERDOWN,
 };
 
+struct exynos4_pmu_conf {
+	void __iomem *reg;
+	unsigned long val[NUM_SYS_POWERDOWN];
+};
+
 extern void exynos4_sys_powerdown_conf(enum sys_powerdown mode);
 extern int exynos4_enter_lp(unsigned long *saveblk, long);
 extern void exynos4_idle_resume(void);
