@@ -2403,7 +2403,7 @@ static void __init smdkv310_machine_init(void)
 
 #ifdef CONFIG_FB_S3C
 	exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev, "mout_mpll",
-				134 * MHZ);
+				800 * MHZ);
 #endif
 
 #ifdef CONFIG_S3C64XX_DEV_SPI
