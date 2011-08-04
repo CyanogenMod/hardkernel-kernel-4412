@@ -60,7 +60,6 @@ static struct check_device_op chk_sdhc_op[] = {
 #if defined (CONFIG_S3C_DEV_HSMMC3)
 	{.base = 0, .pdev = &s3c_device_hsmmc3, .type = HC_SDHC},
 #endif
-	{.base = 0, .pdev = NULL},
 };
 
 #define S3C_HSMMC_PRNSTS	(0x24)
@@ -166,7 +165,7 @@ static int check_sdmmc_op(unsigned int ch)
 	unsigned int reg1, reg2;
 	void __iomem *base_addr;
 
-	if (unlikely(ch > sdmmc_dev_num)) {
+	if (unlikely(ch >= sdmmc_dev_num)) {
 		printk(KERN_ERR "Invalid ch[%d] for SD/MMC\n", ch);
 		return 0;
 	}
@@ -199,7 +198,7 @@ static int loop_sdmmc_check(void)
 {
 	unsigned int iter;
 
-	for (iter = 0; iter < sdmmc_dev_num + 1; iter++) {
+	for (iter = 0; iter < sdmmc_dev_num; iter++) {
 		if (check_sdmmc_op(iter)) {
 			printk("SDMMC [%d] working\n", iter);
 			return 1;
@@ -660,21 +659,19 @@ static int __init exynos4_init_cpuidle(void)
 		}
 	}
 
-	for (i = 0; i < ARRAY_SIZE(chk_sdhc_op); i++) {
+	sdmmc_dev_num = ARRAY_SIZE(chk_sdhc_op);
+
+	for (i = 0; i < sdmmc_dev_num; i++) {
 
 		pdev = chk_sdhc_op[i].pdev;
-
-		if (pdev == NULL) {
-			sdmmc_dev_num = i - 1;
-			break;
-		}
 
 		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 		if (!res) {
 			printk(KERN_ERR "failed to get iomem region\n");
 			return -EINVAL;
 		}
-		chk_sdhc_op[i].base = ioremap(res->start, 4096);
+
+		chk_sdhc_op[i].base = ioremap(res->start, resource_size(res));
 
 		if (!chk_sdhc_op[i].base) {
 			printk(KERN_ERR "failed to map io region\n");
