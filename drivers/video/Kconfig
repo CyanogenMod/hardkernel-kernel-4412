@@ -2056,7 +2056,7 @@ config FB_S3C_DEBUG_REGWRITE
 config VIDEO_SAMSUNG_MEMSIZE_FIMD
 	int "Memory size in kbytes for FIMD0"
 	depends on FB_S3C
-	default "24576"
+	default "25600"
 
 config FB_S3C2410
 	tristate "S3C2410 LCD framebuffer support"
