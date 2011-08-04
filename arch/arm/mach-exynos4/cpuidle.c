@@ -45,19 +45,19 @@ struct check_device_op {
 };
 
 static struct check_device_op chk_sdhc_op[] = {
-#if defined (CONFIG_S5P_DEV_MSHC)
+#if defined(CONFIG_S5P_DEV_MSHC)
 	{.base = 0, .pdev = &s3c_device_mshci, .type = HC_MSHC},
 #endif
-#if defined (CONFIG_S3C_DEV_HSMMC)
+#if defined(CONFIG_S3C_DEV_HSMMC)
 	{.base = 0, .pdev = &s3c_device_hsmmc0, .type = HC_SDHC},
 #endif
-#if defined (CONFIG_S3C_DEV_HSMMC1)
+#if defined(CONFIG_S3C_DEV_HSMMC1)
 	{.base = 0, .pdev = &s3c_device_hsmmc1, .type = HC_SDHC},
 #endif
-#if defined (CONFIG_S3C_DEV_HSMMC2)
+#if defined(CONFIG_S3C_DEV_HSMMC2)
 	{.base = 0, .pdev = &s3c_device_hsmmc2, .type = HC_SDHC},
 #endif
-#if defined (CONFIG_S3C_DEV_HSMMC3)
+#if defined(CONFIG_S3C_DEV_HSMMC3)
 	{.base = 0, .pdev = &s3c_device_hsmmc3, .type = HC_SDHC},
 #endif
 };
@@ -200,7 +200,7 @@ static int loop_sdmmc_check(void)
 
 	for (iter = 0; iter < sdmmc_dev_num; iter++) {
 		if (check_sdmmc_op(iter)) {
-			printk("SDMMC [%d] working\n", iter);
+			printk(KERN_ERR "SDMMC [%d] working\n", iter);
 			return 1;
 		}
 	}
