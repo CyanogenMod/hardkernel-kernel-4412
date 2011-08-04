@@ -717,6 +717,25 @@ static struct s3c_fb_pd_win smdkc210_fb_win1 = {
 	.default_bpp = 24,
 };
 
+static struct s3c_fb_pd_win smdkc210_fb_win2 = {
+	.win_mode = {
+		.left_margin  = 9,
+		.right_margin = 9,
+		.upper_margin = 5,
+		.lower_margin = 5,
+		.hsync_len = 2,
+		.vsync_len = 2,
+		.xres = 480,
+		.yres = 800,
+	},
+	.virtual_x = 480,
+	.virtual_y = 1600,
+	.width = 48,
+	.height = 80,
+	.max_bpp = 32,
+	.default_bpp = 24,
+};
+
 #elif defined(CONFIG_LCD_WA101S)
 static void lcd_wa101s_set_power(struct plat_lcd_data *pd,
 				   unsigned int power)
@@ -766,6 +785,25 @@ static struct s3c_fb_pd_win smdkc210_fb_win0 = {
 };
 
 static struct s3c_fb_pd_win smdkc210_fb_win1 = {
+	.win_mode = {
+		.left_margin    = 80,
+		.right_margin   = 48,
+		.upper_margin   = 14,
+		.lower_margin   = 3,
+		.hsync_len      = 32,
+		.vsync_len      = 5,
+		.xres   = 1366,
+		.yres   = 768,
+	},
+	.virtual_x = 1366,
+	.virtual_y = 768 * 2,
+	.width = 223,
+	.height = 125,
+	.max_bpp        = 32,
+	.default_bpp    = 24,
+};
+
+static struct s3c_fb_pd_win smdkc210_fb_win2 = {
 	.win_mode = {
 		.left_margin    = 80,
 		.right_margin   = 48,
@@ -863,6 +901,25 @@ static struct s3c_fb_pd_win smdkc210_fb_win1 = {
 	.max_bpp        = 32,
 	.default_bpp    = 24,
 };
+
+static struct s3c_fb_pd_win smdkc210_fb_win2 = {
+	.win_mode = {
+		.left_margin    = 13,
+		.right_margin   = 8,
+		.upper_margin   = 7,
+		.lower_margin   = 5,
+		.hsync_len      = 3,
+		.vsync_len      = 1,
+		.xres   = 800,
+		.yres   = 480,
+	},
+	.virtual_x = 800,
+	.virtual_y = 960,
+	.width = 104,
+	.height = 62,
+	.max_bpp        = 32,
+	.default_bpp    = 24,
+};
 #endif
 
 static struct s3c_fb_platdata smdkc210_lcd0_pdata __initdata = {
@@ -870,6 +927,7 @@ static struct s3c_fb_platdata smdkc210_lcd0_pdata __initdata = {
 	defined(CONFIG_LCD_LTE480WV)
 	.win[0]		= &smdkc210_fb_win0,
 	.win[1]		= &smdkc210_fb_win1,
+	.win[2]		= &smdkc210_fb_win2,
 #endif
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
 #if defined(CONFIG_LCD_AMS369FG06)
