@@ -59,7 +59,7 @@ static void samsung_bl_exit(struct device *dev)
  * for their specific boards
  */
 
-static struct platform_pwm_backlight_data samsung_dfl_bl_data __initdata = {
+static struct platform_pwm_backlight_data samsung_dfl_bl_data = {
 	.max_brightness = 255,
 	.dft_brightness = 255,
 	.pwm_period_ns  = 78770,
@@ -67,7 +67,7 @@ static struct platform_pwm_backlight_data samsung_dfl_bl_data __initdata = {
 	.exit           = samsung_bl_exit,
 };
 
-static struct platform_device samsung_dfl_bl_device __initdata = {
+static struct platform_device samsung_dfl_bl_device = {
 	.name		= "pwm-backlight",
 };
 
