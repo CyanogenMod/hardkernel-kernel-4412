@@ -18,7 +18,6 @@
 #include <linux/version.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
-#include <media/v4l2-i2c-drv.h>
 #include <media/s5k4ea_platform.h>
 
 #include <linux/videodev2_samsung.h>
@@ -231,7 +230,7 @@ static struct v4l2_queryctrl s5k4ea_controls[] = {
 	},
 };
 
-const char **s5k4ea_ctrl_get_menu(u32 id)
+const char * const *s5k4ea_ctrl_get_menu(u32 id)
 {
 	switch (id) {
 	case V4L2_CID_WHITE_BALANCE_PRESET:
@@ -335,21 +334,6 @@ static int s5k4ea_enum_framesizes(struct v4l2_subdev *sd,
 
 static int s5k4ea_enum_frameintervals(struct v4l2_subdev *sd,
 					struct v4l2_frmivalenum *fival)
-{
-	int err = 0;
-
-	return err;
-}
-
-static int s5k4ea_enum_fmt(struct v4l2_subdev *sd,
-				struct v4l2_fmtdesc *fmtdesc)
-{
-	int err = 0;
-
-	return err;
-}
-
-static int s5k4ea_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 {
 	int err = 0;
 
@@ -589,28 +573,6 @@ static int s5k4ea_init(struct v4l2_subdev *sd, u32 val)
 	return 0;
 }
 
-/*
- * s_config subdev ops
- * With camera device, we need to re-initialize every single opening time
- * therefor,it is not necessary to be initialized on probe time.
- * except for version checking
- * NOTE: version checking is optional
- */
-static int s5k4ea_s_config(struct v4l2_subdev *sd, int irq, void *platform_data)
-{
-	struct s5k4ea_state *state = to_state(sd);
-
-	if (!state->pdata) {
-		printk("%s: no platform data\n", __func__);
-		return -ENODEV;
-	}
-
-	printk("%s: fetching platform data\n", __func__);
-
-	state->pdata = platform_data;
-	return 0;
-}
-
 static int s5k4ea_s_power(struct v4l2_subdev *sd, int on)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -701,7 +663,6 @@ static int s5k4ea_s_stream(struct v4l2_subdev *sd, int enable)
 
 static const struct v4l2_subdev_core_ops s5k4ea_core_ops = {
 	.init = s5k4ea_init,	/* initializing API */
-	.s_config = s5k4ea_s_config,	/* Fetch platform data */
 	.s_power = s5k4ea_s_power,
 	.queryctrl = s5k4ea_queryctrl,
 	.querymenu = s5k4ea_querymenu,
@@ -715,8 +676,6 @@ static const struct v4l2_subdev_video_ops s5k4ea_video_ops = {
 	.s_mbus_fmt = s5k4ea_s_fmt,
 	.enum_framesizes = s5k4ea_enum_framesizes,
 	.enum_frameintervals = s5k4ea_enum_frameintervals,
-	.enum_fmt = s5k4ea_enum_fmt,
-	.try_fmt = s5k4ea_try_fmt,
 	.g_parm = s5k4ea_g_parm,
 	.s_parm = s5k4ea_s_parm,
 	.s_stream = s5k4ea_s_stream,
@@ -787,12 +746,26 @@ static const struct i2c_device_id s5k4ea_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, s5k4ea_id);
 
-static struct v4l2_i2c_driver_data v4l2_i2c_data = {
-	.name = S5K4EA_DRIVER_NAME,
-	.probe = s5k4ea_probe,
-	.remove = s5k4ea_remove,
-	.id_table = s5k4ea_id,
+static struct i2c_driver s5k4ea_i2c_driver = {
+	.driver = {
+		.name	= S5K4EA_DRIVER_NAME,
+	},
+	.probe		= s5k4ea_probe,
+	.remove		= s5k4ea_remove,
+	.id_table	= s5k4ea_id,
 };
+
+static int __init s5k4ea_mod_init(void)
+{
+	return i2c_add_driver(&s5k4ea_i2c_driver);
+}
+
+static void __exit s5k4ea_mod_exit(void)
+{
+	i2c_del_driver(&s5k4ea_i2c_driver);
+}
+module_init(s5k4ea_mod_init);
+module_exit(s5k4ea_mod_exit);
 
 MODULE_DESCRIPTION("Samsung Electronics S5K4EA SXGA camera driver");
 MODULE_AUTHOR("Dongsoo Nathaniel Kim<dongsoo45.kim@samsung.com>");
