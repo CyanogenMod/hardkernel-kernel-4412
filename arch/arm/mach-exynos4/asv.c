@@ -112,12 +112,12 @@ void __init iem_clock_set(void)
 #define IDS_OFFSET			24
 #define IDS_MASK			0xFF
 
-#define IDS_LEVEL_MAX_1400_0		6
-#define IDS_LEVEL_MAX_1400_1		12
-#define IDS_LEVEL_MAX_1400_2		32
+#define IDS_LEVEL_MAX_1400_0		8
+#define IDS_LEVEL_MAX_1400_1		15
+#define IDS_LEVEL_MAX_1400_2		37
 #define IDS_LEVEL_MAX_1400_3		52
 
-#define HPM_LEVEL_MAX_1400_0		11
+#define HPM_LEVEL_MAX_1400_0		13
 #define HPM_LEVEL_MAX_1400_1		17
 #define HPM_LEVEL_MAX_1400_2		22
 #define HPM_LEVEL_MAX_1400_3		26
