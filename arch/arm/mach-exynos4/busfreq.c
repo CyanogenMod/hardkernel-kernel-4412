@@ -231,7 +231,7 @@ static int busfreq_target(struct busfreq_table *freq_table,
 		ppc_load = 50;
 	}
 
-	if (ppc_load >= up_threshold || ppmu_load) {
+	if (ppc_load >= up_threshold) {
 		target_freq = freq_table[0].mem_clk;
 	} else {
 		target_freq = (ppc_load * freq_table[pre_idx].mem_clk) /
