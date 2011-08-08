@@ -21,6 +21,11 @@ config ARCH_EXYNOS4
 	help
 	  Samsung EXYNOS4 series based systems
 
+config ARCH_EXYNOS5
+	bool "Samsung Exynos5"
+	help
+	  Samsung EXYNOS5 series based systems
+
 endchoice
 
 config CPU_EXYNOS4210
@@ -36,6 +41,11 @@ config CPU_EXYNOS4212
 	select S3C_PL330_DMA
 	help
 	  Enable EXYNOS4212 CPU support
+
+config CPU_EXYNOS5210
+	bool
+	help
+	  Enable EXYNOS5210 CPU support
 
 config EXYNOS4_CONTENT_PATH_PROTECTION
 	bool "Exynos4 Content Path Protection"
@@ -210,6 +220,7 @@ endmenu
 # machine support
 
 menu "EXYNOS4 Machines"
+	depends on ARCH_EXYNOS4
 
 config MACH_SMDKC210
 	bool "SMDKC210"
@@ -340,6 +351,11 @@ config MACH_FPGA4212
 	select CPU_EXYNOS4212
 	help
 	  Machine support for Samsung FPGA4212
+endmenu
+
+menu "EXYNOS5 Machines"
+	depends on ARCH_EXYNOS5
+
 endmenu
 
 comment "Configuration for HSMMC bus width"

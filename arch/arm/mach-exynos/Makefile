@@ -10,10 +10,12 @@ obj-m				:=
 obj-n				:=
 obj-				:=
 
-# Core support for EXYNOS4 system
+# Core support for EXYNOS system
 
-obj-$(CONFIG_ARCH_EXYNOS4)	+= cpu-exynos4.o init.o clock.o irq-combiner.o
-obj-$(CONFIG_ARCH_EXYNOS4)	+= setup-i2c0.o dma.o
+obj-y				+= init.o clock.o irq-combiner.o
+obj-$(CONFIG_ARCH_EXYNOS4)	+= cpu-exynos4.o dma.o
+obj-$(CONFIG_ARCH_EXYNOS5)	+= cpu-exynos5.o
+
 obj-$(CONFIG_CPU_EXYNOS4210)	+= irq-eint.o pmu.o ppc.o ppmu.o
 obj-$(CONFIG_PM)		+= pm.o sleep.o
 obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o asv.o busfreq.o
@@ -38,7 +40,7 @@ obj-$(CONFIG_MACH_FPGA4212)             += mach-fpga4212.o
 
 # device support
 
-obj-y					+= dev-audio.o
+obj-$(CONFIG_ARCH_EXYNOS4)		+= dev-audio.o
 obj-$(CONFIG_EXYNOS4_DEV_AHCI)		+= dev-ahci.o
 obj-$(CONFIG_EXYNOS4_DEV_PD)		+= dev-pd.o
 obj-$(CONFIG_EXYNOS4_DEV_SYSMMU)	+= dev-sysmmu.o
@@ -51,6 +53,7 @@ obj-$(CONFIG_EXYNOS4_SETUP_FIMC2)	+= setup-fimc2.o
 obj-$(CONFIG_EXYNOS4_SETUP_FIMC3)	+= setup-fimc3.o
 obj-$(CONFIG_EXYNOS4_SETUP_CSIS)	+= setup-csis.o
 obj-$(CONFIG_EXYNOS4_SETUP_FIMD0)	+= setup-fimd0.o
+obj-y					+= setup-i2c0.o
 obj-$(CONFIG_EXYNOS4_SETUP_I2C1)	+= setup-i2c1.o
 obj-$(CONFIG_EXYNOS4_SETUP_I2C2)	+= setup-i2c2.o
 obj-$(CONFIG_EXYNOS4_SETUP_I2C3)	+= setup-i2c3.o

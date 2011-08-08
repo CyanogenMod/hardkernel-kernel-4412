@@ -7,10 +7,10 @@
 
 config PLAT_S5P
 	bool
-	depends on (ARCH_S5P64X0 || ARCH_S5PC100 || ARCH_S5PV210 || ARCH_EXYNOS4)
+	depends on (ARCH_S5P64X0 || ARCH_S5PC100 || ARCH_S5PV210 || ARCH_EXYNOS)
 	default y
-	select ARM_VIC if !ARCH_EXYNOS4
-	select ARM_GIC if ARCH_EXYNOS4
+	select ARM_VIC if !ARCH_EXYNOS
+	select ARM_GIC if ARCH_EXYNOS
 	select NO_IOPORT
 	select ARCH_REQUIRE_GPIOLIB
 	select S3C_GPIO_TRACK
