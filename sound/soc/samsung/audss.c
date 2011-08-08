@@ -235,25 +235,12 @@ static int samsung_audss_resume(struct platform_device *pdev)
 
 static __devinit int samsung_audss_probe(struct platform_device *pdev)
 {
+	struct clk *mout_audss;
 	int ret = 0;
 
 	audss.bus_clk = NULL;
 	audss.i2s_clk = NULL;
 	audss.srp_clk = NULL;
-
-	audss.bus_clk = clk_get(NULL, "busclk");
-	if (IS_ERR(audss.bus_clk)) {
-		pr_err("%s: failed to get i2s bus_clk\n", __func__);
-		ret = PTR_ERR(audss.bus_clk);
-		return ret;
-	}
-
-	audss.i2s_clk = clk_get(NULL, "i2sclk");
-	if (IS_ERR(audss.bus_clk)) {
-		pr_err("%s:failed to get i2s clk\n", __func__);
-		ret = PTR_ERR(audss.i2s_clk);
-		return ret;
-	}
 
 #ifdef CONFIG_SND_SAMSUNG_RP
 	audss.srp_clk = clk_get(NULL, "srp_clk");
@@ -263,16 +250,52 @@ static __devinit int samsung_audss_probe(struct platform_device *pdev)
 		return ret;
 	}
 #endif
+	mout_audss = clk_get(NULL, "mout_audss");
+	if (IS_ERR(mout_audss)) {
+		pr_err("%s: failed to get mout audss\n", __func__);
+		ret = PTR_ERR(mout_audss);
+		goto err1;
+	}
 
-	audss.clk_src_rate = clk_get_rate(audss.bus_clk);
+	audss.bus_clk = clk_get(NULL, "busclk");
+	if (IS_ERR(audss.bus_clk)) {
+		pr_err("%s: failed to get i2s bus_clk\n", __func__);
+		ret = PTR_ERR(audss.bus_clk);
+		goto err2;
+	}
+
+	audss.i2s_clk = clk_get(NULL, "i2sclk");
+	if (IS_ERR(audss.bus_clk)) {
+		pr_err("%s:failed to get i2s clk\n", __func__);
+		ret = PTR_ERR(audss.i2s_clk);
+		goto err3;
+	}
+
+	clk_set_parent(audss.bus_clk, mout_audss);
+	if (audss.srp_clk)
+		clk_set_parent(audss.srp_clk, mout_audss);
+
+	audss.clk_src_rate = clk_get_rate(mout_audss);
 	ret = audss_set_clk_div(AUDSS_ACTIVE);
 	if (ret < 0) {
 		pr_err("%s:failed to set clock rate\n", __func__);
-		return ret;
+		goto err4;
 	}
 
 	audss.reg_saved = false;
 	audss_clk_enable(true);
+
+	return ret;
+
+err4:
+	clk_put(audss.i2s_clk);
+err3:
+	clk_put(audss.bus_clk);
+err2:
+	clk_put(mout_audss);
+err1:
+	if (audss.srp_clk)
+		clk_put(audss.srp_clk);
 
 	return ret;
 }
