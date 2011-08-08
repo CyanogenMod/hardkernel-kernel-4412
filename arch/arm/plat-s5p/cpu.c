@@ -26,6 +26,7 @@
 #include <plat/s5pc100.h>
 #include <plat/s5pv210.h>
 #include <plat/exynos4.h>
+#include <plat/exynos5.h>
 
 /* table of supported CPUs */
 
@@ -35,6 +36,7 @@ static const char name_s5pc100[] = "S5PC100";
 static const char name_s5pv210[] = "S5PV210/S5PC110";
 static const char name_exynos4210[] = "EXYNOS4210";
 static const char name_exynos4212[] = "EXYNOS4212";
+static const char name_exynos5210[] = "EXYNOS5210";
 
 static struct cpu_table cpu_ids[] __initdata = {
 	{
@@ -89,6 +91,14 @@ static struct cpu_table cpu_ids[] __initdata = {
 		.init_uarts	= exynos4_init_uarts,
 		.init		= exynos4_init,
 		.name		= name_exynos4212,
+	}, {
+		.idcode         = EXYNOS_CPU_ID_5210,
+		.idmask         = EXYNOS_CPU_MASK,
+		.map_io         = exynos5_map_io,
+		.init_clocks    = exynos5_init_clocks,
+		.init_uarts     = exynos5_init_uarts,
+		.init           = exynos5_init,
+		.name           = name_exynos5210,
 	},
 };
 

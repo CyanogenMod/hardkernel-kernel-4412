@@ -19,10 +19,12 @@
 		.macro  get_irqnr_preamble, base, tmp
 		ldr	\base, =gic_cpu_base_addr
 		ldr	\base, [\base]
+#ifdef CONFIG_ARCH_EXYNOS4
 		mrc     p15, 0, \tmp, c0, c0, 5
 		and     \tmp, \tmp, #3
 		cmp     \tmp, #1
 		addeq   \base, \base, #EXYNOS4_GIC_BANK_OFFSET
+#endif
 		.endm
 
 		.macro  arch_ret_to_user, tmp1, tmp2

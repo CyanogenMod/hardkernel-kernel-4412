@@ -21,6 +21,7 @@ extern unsigned long cpu_idcode;
 #define	S5P_CPU_ID_V210			0x43110000
 #define	EXYNOS_CPU_ID_4210		0x43210000
 #define	EXYNOS_CPU_ID_4212		0x43220000
+#define	EXYNOS_CPU_ID_5210		0x53210000
 
 #define S5P_CPU_MASK			0xfffff000
 #define EXYNOS_CPU_MASK			0xfffe0000
