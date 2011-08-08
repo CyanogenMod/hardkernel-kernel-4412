@@ -3,7 +3,7 @@
  * Audio RP Registers for Samsung Exynos4
  *
  * Copyright (c) 2010 Samsung Electronics
- * 	http://www.samsungsemi.com/
+ * http://www.samsungsemi.com/
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -57,6 +57,27 @@
 #define SRP_GAIN_CTRL_FACTOR_L		(0x0124)
 #define SRP_UART_INFORMATION		(0x0128)
 #define SRP_GAIN_CTRL_FACTOR_R		(0x012C)
+
+/*
+ * SRP Configuration register
+ */
+#define SRP_CFGR_OUTPUT_PCM_8BIT	(0x0 << 0)
+#define SRP_CFGR_OUTPUT_PCM_16BIT	(0x1 << 0)
+#define SRP_CFGR_OUTPUT_PCM_24BIT	(0x2 << 0)
+#define SRP_CFGR_BOOT_INST_EXT_MEM	(0x0 << 2)
+#define SRP_CFGR_BOOT_INST_INT_CC	(0x1 << 2)
+#define SRP_CFGR_NOTUSE_ICACHE_MEM	(0x0 << 3)
+#define SRP_CFGR_USE_ICACHE_MEM		(0x1 << 3)
+#define SRP_CFGR_FLOW_CTRL_ON		(0x1 << 4)
+#define SRP_CFGR_FLOW_CTRL_OFF		(0x0 << 4)
+#define SRP_CFGR_USE_I2S_INTR		(0x1 << 5)
+#define SRP_CFGR_NOTUSE_I2S_INTR	(0x0 << 5)
+
+/*
+ * SRP Pending control register
+ */
+#define SRP_RUN		(0x0 << 0)
+#define SRP_STALL	(0x1 << 0)
 
 /*
  * Interrupt Code & Information

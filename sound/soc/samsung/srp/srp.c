@@ -269,27 +269,27 @@ EXPORT_SYMBOL(srp_get_op_level);
 
 static void srp_commbox_init(void)
 {
+	unsigned int reg = 0x0;
+
 	s5pdbg("Commbox initialized\n");
 
-	writel(0x00000011, srp.commbox + SRP_CFGR);
+	writel(reg, srp.commbox + SRP_INTERRUPT);
+	writel(reg, srp.commbox + SRP_ARM_INTERRUPT_CODE);
+	writel(SRP_STALL, srp.commbox + SRP_PENDING);
 
-	writel(0x00000000, srp.commbox + SRP_INTERRUPT);
-	writel(0x00000000, srp.commbox + SRP_ARM_INTERRUPT_CODE);
-	writel(0x00000001, srp.commbox + SRP_PENDING);
-
-	writel(0x00000000, srp.commbox + SRP_FRAME_INDEX);
-	writel(0x00000000, srp.commbox + SRP_EFFECT_DEF);
-	writel(0x00000000, srp.commbox + SRP_EQ_USER_DEF);
+	writel(reg, srp.commbox + SRP_FRAME_INDEX);
+	writel(reg, srp.commbox + SRP_EFFECT_DEF);
+	writel(reg, srp.commbox + SRP_EQ_USER_DEF);
 
 	writel(srp.ibuf0_pa,
 			srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR0);
 	writel(srp.ibuf1_pa,
 			srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR1);
 
-	/* TEXT in IMEM */
-	writel(0x00000001, srp.commbox + SRP_CFGR);
+	/* Output PCM control : 16bit */
+	writel(SRP_CFGR_OUTPUT_PCM_16BIT, srp.commbox + SRP_CFGR);
 	/* Clear VLIW address */
-	writel(0x00000000, srp.special + 0x007C);
+	writel(reg, srp.special + 0x007C);
 
 	writel(srp.fw_data_pa, srp.commbox + SRP_DATA_START_ADDR);
 	writel(srp.pcm_dump_pa, srp.commbox + SRP_PCM_DUMP_ADDR);
@@ -304,20 +304,23 @@ static void srp_commbox_init(void)
 
 static void srp_commbox_deinit(void)
 {
+	unsigned int reg = 0x0;
+
 	s5pdbg("Commbox deinitialized\n");
 
 	/* Reset value */
-	writel(0x00000001, srp.commbox + SRP_PENDING);
-	writel(0x00000000, srp.commbox + SRP_INTERRUPT);
+	writel(SRP_STALL, srp.commbox + SRP_PENDING);
+	writel(reg, srp.commbox + SRP_INTERRUPT);
 
 	 /* Clear VLIW address */
-	writel(0x00000000, srp.special + 0x007C);
+	writel(reg, srp.special + 0x007C);
 }
 
 static void srp_fw_download(void)
 {
 	unsigned long n;
 	unsigned long *pval;
+	unsigned int reg = 0x0;
 
 #ifdef SND_SAMSUNG_RP_DEBUG
 	struct timeval begin, end;
@@ -326,17 +329,22 @@ static void srp_fw_download(void)
 #endif
 
 	/* Fill ICACHE with first 64KB area : ARM access I$ */
-	writel(0x00000011, srp.commbox + SRP_CFGR);
-
 	pval = (unsigned long *)srp.fw_code_vliw;
 	for (n = 0; n < 0x10000; n += 4, pval++)
 		writel(ENDIAN_CHK_CONV(*pval), srp.icache + n);
 
-	/* SRP access I$ */
+	reg = readl(srp.commbox + SRP_CFGR);
+	reg |= (SRP_CFGR_BOOT_INST_INT_CC |	/* Fetchs instruction from I$ */
+		SRP_CFGR_USE_ICACHE_MEM |       /* SRP can access I$ */
+		SRP_CFGR_FLOW_CTRL_ON);		/* Flow control on */
+
+	/* SRP use i2s interrupt by wake-up source */
 	if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_BTYPE)
-		writel(0x0000005D, srp.commbox + SRP_CFGR); /* I2S wakeup */
+		reg |= SRP_CFGR_USE_I2S_INTR;
 	else
-		writel(0x0000001D, srp.commbox + SRP_CFGR);
+		reg |= SRP_CFGR_NOTUSE_I2S_INTR;
+
+	writel(reg, srp.commbox + SRP_CFGR);
 
 	/* Copy VLIW code to iRAM (Operation mode C) */
 	if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_CTYPE) {
@@ -434,7 +442,7 @@ static void srp_reset(void)
 {
 	wake_up_interruptible(&WaitQueue_Write);
 
-	writel(0x00000001, srp.commbox + SRP_PENDING);
+	writel(SRP_STALL, srp.commbox + SRP_PENDING);
 
 	/* Operation mode (A/B/C) & PCM dump */
 	writel((srp.pcm_dump_enabled ? SRP_ARM_INTR_CODE_PCM_DUMP_ON : 0) |
@@ -515,7 +523,7 @@ static void srp_continue(void)
 
 static void srp_stop(void)
 {
-	writel(0x00000001, srp.commbox + SRP_PENDING);
+	writel(SRP_STALL, srp.commbox + SRP_PENDING);
 	idma_stop();
 	srp.pause_request = 0;
 }
@@ -591,7 +599,7 @@ static irqreturn_t srp_i2s_irq(int irqno, void *dev_id)
 				srp_is_running = 0;
 			}
 
-			writel(0x00000000, srp.commbox + SRP_PENDING);
+			writel(SRP_RUN, srp.commbox + SRP_PENDING);
 		}
 	}
 	return IRQ_HANDLED;
@@ -627,19 +635,12 @@ static int srp_i2s_free_irq(void)
 static void srp_init_op_mode(int mode)
 {
 	srp.op_mode = mode;
+	srp.vliw_rp   = srp.fw_code_vliw_pa;
 
-	if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_BTYPE) {
-		srp.vliw_rp   = srp.fw_code_vliw_pa;
-		srp.obuf0_pa  = SRP_IRAM_BASE + _OBUF0_OFFSET_AB_;
-		srp.obuf1_pa  = SRP_IRAM_BASE + _OBUF1_OFFSET_AB_;
-		srp.obuf0     = srp.iram  + _OBUF0_OFFSET_AB_;
-		srp.obuf1     = srp.iram  + _OBUF1_OFFSET_AB_;
-		srp.obuf_size = _OBUF_SIZE_AB_;
+	if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_BTYPE)
 		srp_i2s_request_irq();
-	} else {
-		srp.vliw_rp   = srp.fw_code_vliw_pa;
+	else
 		srp_i2s_free_irq();
-	}
 }
 
 #ifdef _USE_EOS_TIMEOUT_
@@ -843,7 +844,7 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 #endif
 		if (!srp.decoding_started) {
 			s5pdbg("Start SRP decoding!!\n");
-			writel(0x00000000, srp.commbox + SRP_PENDING);
+			writel(SRP_RUN, srp.commbox + SRP_PENDING);
 			srp_is_running = 1;
 			srp.decoding_started = 1;
 		}
@@ -919,7 +920,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case SRP_DEINIT:
 		s5pdbg("Deinit\n");
-		writel(0x00000001, srp.commbox + SRP_PENDING);
+		writel(SRP_STALL, srp.commbox + SRP_PENDING);
 		srp_is_running = 0;
 		break;
 
@@ -962,7 +963,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				srp_write_last();	/* Fill one more IBUF */
 
 			s5pdbg("Start SRP decoding!!\n");
-			writel(0x00000000, srp.commbox + SRP_PENDING);
+			writel(SRP_RUN, srp.commbox + SRP_PENDING);
 			srp_is_running = 1;
 			srp.wait_for_eos = 1;
 		} else if (srp.ibuf_empty[srp.ibuf_next]) {
@@ -1208,7 +1209,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	writel(0x00000000, srp.commbox + SRP_INTERRUPT);
 
 	if (pendingoff_req)
-		writel(0x00000000, srp.commbox + SRP_PENDING);
+		writel(SRP_RUN, srp.commbox + SRP_PENDING);
 
 	if (wakeup_req)
 		wake_up_interruptible(&WaitQueue_Write);
@@ -1674,9 +1675,9 @@ static int __init srp_probe(struct platform_device *pdev)
 
 	/* VLIW iRAM offset */
 	srp.iram_imem = srp.iram + _IMEM_OFFSET_;
-	srp.dmem = srp.sram + 0x00000;
-	srp.icache = srp.sram + 0x20000;
-	srp.cmem = srp.sram + 0x30000;
+	srp.dmem = srp.sram + SRP_DMEM;
+	srp.icache = srp.sram + SRP_ICACHE;
+	srp.cmem = srp.sram + SRP_CMEM;
 
 	ret = request_irq(IRQ_AUDIO_SS, srp_irq, 0, "samsung-rp", pdev);
 	if (ret < 0) {
