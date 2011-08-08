@@ -1,4 +1,4 @@
-# arch/arm/mach-exynos4/Makefile
+# arch/arm/mach-exynos/Makefile
 #
 # Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
 #		http://www.samsung.com/
@@ -21,7 +21,7 @@ obj-$(CONFIG_CPU_IDLE)		+= cpuidle.o idle.o
 
 obj-$(CONFIG_SMP)		+= platsmp.o headsmp.o
 
-obj-$(CONFIG_EXYNOS4_MCT)	+= mct.o
+obj-$(CONFIG_EXYNOS_MCT)	+= mct.o
 
 obj-$(CONFIG_HOTPLUG_CPU)	+= hotplug.o
 
