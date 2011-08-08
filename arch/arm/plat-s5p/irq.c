@@ -64,7 +64,9 @@ void __init s5p_init_irq(u32 *vic, u32 num_vic)
 		vic_init(VA_VIC(irq), VIC_BASE(irq), vic[irq], 0);
 #endif
 
+#ifndef CONFIG_MACH_FPGA5210
 	s3c_init_vic_timer_irq(5, IRQ_TIMER0);
+#endif
 
 	s3c_init_uart_irqs(uart_irqs, ARRAY_SIZE(uart_irqs));
 }

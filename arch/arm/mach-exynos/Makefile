@@ -37,6 +37,7 @@ obj-$(CONFIG_MACH_ARMLEX4210)		+= mach-armlex4210.o
 obj-$(CONFIG_MACH_UNIVERSAL_C210)	+= mach-universal_c210.o
 obj-$(CONFIG_MACH_NURI)			+= mach-nuri.o
 obj-$(CONFIG_MACH_FPGA4212)             += mach-fpga4212.o
+obj-$(CONFIG_MACH_FPGA5210)		+= mach-fpga5210.o
 
 # device support
 

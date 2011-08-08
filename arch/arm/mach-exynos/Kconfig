@@ -356,6 +356,11 @@ endmenu
 menu "EXYNOS5 Machines"
 	depends on ARCH_EXYNOS5
 
+config MACH_FPGA5210
+	bool "FPGA5210 board"
+	select CPU_EXYNOS5210
+	help
+	  Machine support for Samsung FPGA5210
 endmenu
 
 comment "Configuration for HSMMC bus width"

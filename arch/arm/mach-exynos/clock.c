@@ -1189,6 +1189,7 @@ static struct clksrc_clk clk_sclk_spdif = {
 	.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 8, .size = 2 },
 };
 
+#ifndef CONFIG_MACH_FPGA5210
 static struct clk init_dmaclocks[] = {
 	{
 		.name		= "pdma",
@@ -1211,6 +1212,7 @@ static struct clk init_dmaclocks[] = {
 		.dev		= &exynos4_device_pdma1.dev,
 	},
 };
+#endif
 
 static struct clk init_clocks[] = {
 	{
@@ -2221,9 +2223,11 @@ void __init exynos4_register_clocks(void)
 	s3c_register_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
 	s3c_disable_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
 
+#ifndef CONFIG_MACH_FPGA5210
 	/* Register DMA Clock */
 	s3c_register_clocks(init_dmaclocks, ARRAY_SIZE(init_dmaclocks));
 	s3c_disable_clocks(init_dmaclocks, ARRAY_SIZE(init_dmaclocks));
+#endif
 
 	register_syscore_ops(&exynos4_clock_syscore_ops);
 	s3c_pwmclk_init();
