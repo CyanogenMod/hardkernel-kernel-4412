@@ -701,12 +701,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_lcd1_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
-		.name		= "sataphy",
-		.id		= -1,
-		.parent		= &clk_aclk_133.clk,
-		.enable		= exynos4_clk_ip_fsys_ctrl,
-		.ctrlbit	= (1 << 3),
-	}, {
 		.name		= "hsmmc",
 		.id		= 0,
 		.parent		= &clk_aclk_133.clk,
@@ -736,12 +730,6 @@ static struct clk init_clocks_off[] = {
 		.parent		= &clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 9),
-	}, {
-		.name		= "sata",
-		.id		= -1,
-		.parent		= &clk_aclk_133.clk,
-		.enable		= exynos4_clk_ip_fsys_ctrl,
-		.ctrlbit	= (1 << 10),
 	}, {
 		.name		= "adc",
 		.id		= -1,
@@ -1642,16 +1630,6 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLKDIV_LCD1, .shift = 0, .size = 4 },
 	}, {
 		.clk		= {
-			.name		= "sclk_sata",
-			.id		= -1,
-			.enable		= exynos4_clksrc_mask_fsys_ctrl,
-			.ctrlbit	= (1 << 24),
-		},
-		.sources = &clkset_mout_corebus,
-		.reg_src = { .reg = S5P_CLKSRC_FSYS, .shift = 24, .size = 1 },
-		.reg_div = { .reg = S5P_CLKDIV_FSYS0, .shift = 20, .size = 4 },
-	}, {
-		.clk		= {
 			.name		= "sclk_spi",
 			.id		= 0,
 			.enable		= exynos4_clksrc_mask_peril1_ctrl,
@@ -1803,6 +1781,9 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLKDIV_DMC1, .shift = 8, .size = 4 },
 	},
 };
+
+#include "clock-4210.c"
+#include "clock-4212.c"
 
 /* Clock initialization code */
 static struct clksrc_clk *sysclks[] = {
@@ -2218,11 +2199,16 @@ void __init exynos4_register_clocks(void)
 {
 	int ptr;
 
-	/* usbphy1 is removed in exynos 4212 */
-	if (cpu_is_exynos4212())
-		clkset_group_list[4] = NULL;
-
 	s3c24xx_register_clocks(clks, ARRAY_SIZE(clks));
+
+	/* usbphy1 is removed in exynos 4212 */
+	if (cpu_is_exynos4212()) {
+		clkset_group_list[4] = NULL;
+		clk_mout_mpll = clk_mout_mpll_4212;
+		exynos4212_clock_init();
+	} else {
+		exynos4210_clock_init();
+	}
 
 	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
 		s3c_register_clksrc(sysclks[ptr], 1);
