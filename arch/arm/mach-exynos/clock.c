@@ -2087,7 +2087,7 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	aclk_133 = clk_get_rate(&clk_aclk_133.clk);
 
 	printk(KERN_INFO "EXYNOS4: ARMCLK=%ld, DMC=%ld, ACLK200=%ld\n"
-			 "ACLK100=%ld, ACLK160=%ld, ACLK133=%ld\n",
+			"ACLK100=%ld, ACLK160=%ld, ACLK133=%ld\n",
 			armclk, sclk_dmc, aclk_200,
 			aclk_100, aclk_160, aclk_133);
 
@@ -2121,64 +2121,64 @@ static struct clk *clks[] __initdata = {
 #ifdef CONFIG_PM
 static void exynos4_restore_pll(void)
 {
-       unsigned long pll_con, locktime, lockcnt;
-       unsigned long pll_in_rate;
-       unsigned int p_div, epll_wait = 0, vpll_wait = 0;
+	unsigned long pll_con, locktime, lockcnt;
+	unsigned long pll_in_rate;
+	unsigned int p_div, epll_wait = 0, vpll_wait = 0;
 
-       pll_in_rate = xtal_rate;
+	pll_in_rate = xtal_rate;
 
-       /* EPLL */
-       pll_con = exynos4_epll_save[0].val;
+	/* EPLL */
+	pll_con = exynos4_epll_save[0].val;
 
-       if (pll_con & (1 << 31)) {
-               pll_con &= (PLL46XX_PDIV_MASK << PLL46XX_PDIV_SHIFT);
-               p_div = (pll_con >> PLL46XX_PDIV_SHIFT);
+	if (pll_con & (1 << 31)) {
+		pll_con &= (PLL46XX_PDIV_MASK << PLL46XX_PDIV_SHIFT);
+		p_div = (pll_con >> PLL46XX_PDIV_SHIFT);
 
-               pll_in_rate /= 1000000;
+		pll_in_rate /= 1000000;
 
-               locktime = (3000 / pll_in_rate) * p_div;
-               lockcnt = locktime * 10000 / (10000 / pll_in_rate);
+		locktime = (3000 / pll_in_rate) * p_div;
+		lockcnt = locktime * 10000 / (10000 / pll_in_rate);
 
-               __raw_writel(lockcnt, S5P_EPLL_LOCK);
+		__raw_writel(lockcnt, S5P_EPLL_LOCK);
 
-               s3c_pm_do_restore_core(exynos4_epll_save,
-                                       ARRAY_SIZE(exynos4_epll_save));
-               epll_wait = 1;
-       }
+		s3c_pm_do_restore_core(exynos4_epll_save,
+				ARRAY_SIZE(exynos4_epll_save));
+		epll_wait = 1;
+	}
 
-       pll_in_rate = xtal_rate;
+	pll_in_rate = xtal_rate;
 
-       /* VPLL */
-       pll_con = exynos4_vpll_save[0].val;
+	/* VPLL */
+	pll_con = exynos4_vpll_save[0].val;
 
-       if (pll_con & (1 << 31)) {
-               pll_in_rate /= 1000000;
-               /* 750us */
-               locktime = 750;
-               lockcnt = locktime * 10000 / (10000 / pll_in_rate);
+	if (pll_con & (1 << 31)) {
+		pll_in_rate /= 1000000;
+		/* 750us */
+		locktime = 750;
+		lockcnt = locktime * 10000 / (10000 / pll_in_rate);
 
-               __raw_writel(lockcnt, S5P_VPLL_LOCK);
+		__raw_writel(lockcnt, S5P_VPLL_LOCK);
 
-               s3c_pm_do_restore_core(exynos4_vpll_save,
-                                       ARRAY_SIZE(exynos4_vpll_save));
-               vpll_wait = 1;
-       }
+		s3c_pm_do_restore_core(exynos4_vpll_save,
+				ARRAY_SIZE(exynos4_vpll_save));
+		vpll_wait = 1;
+	}
 
-       /* Wait PLL locking */
+	/* Wait PLL locking */
 
-       do {
-               if (epll_wait) {
-                       pll_con = __raw_readl(S5P_EPLL_CON0);
-                       if (pll_con & (1 << S5P_EPLLCON0_LOCKED_SHIFT))
-                               epll_wait = 0;
-               }
+	do {
+		if (epll_wait) {
+			pll_con = __raw_readl(S5P_EPLL_CON0);
+			if (pll_con & (1 << S5P_EPLLCON0_LOCKED_SHIFT))
+				epll_wait = 0;
+		}
 
-               if (vpll_wait) {
-                       pll_con = __raw_readl(S5P_VPLL_CON0);
-                       if (pll_con & (1 << S5P_VPLLCON0_LOCKED_SHIFT))
-                               vpll_wait = 0;
-               }
-       } while (epll_wait || vpll_wait);
+		if (vpll_wait) {
+			pll_con = __raw_readl(S5P_VPLL_CON0);
+			if (pll_con & (1 << S5P_VPLLCON0_LOCKED_SHIFT))
+				vpll_wait = 0;
+		}
+	} while (epll_wait || vpll_wait);
 }
 
 static int exynos4_clock_suspend(void)
