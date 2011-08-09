@@ -77,11 +77,11 @@ void s3c_mshci_set_platdata(struct s3c_mshci_platdata *pd)
 		set->cfg_gpio = pd->cfg_gpio;
 	if (pd->cfg_card)
 		set->cfg_card = pd->cfg_card;
-#if defined (CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
-	defined (CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
+#if defined(CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
+	defined(CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
 	if (pd->cfg_ddr)
-		set->cfg_ddr= pd->cfg_ddr;
+		set->cfg_ddr = pd->cfg_ddr;
 #endif
 	if (pd->init_card)
-		set->init_card= pd->init_card;
+		set->init_card = pd->init_card;
 }

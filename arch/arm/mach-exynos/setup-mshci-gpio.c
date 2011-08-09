@@ -1,9 +1,9 @@
-/* linux/arch/arm/plat-s5pc1xx/setup-sdhci-gpio.c
+/* linux/arch/arm/mach-exynos/setup-mshci-gpio.c
  *
  * Copyright (c) 2009-2010 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/
  *
- * EXYNOS4 - Helper functions for setting up SDHCI device(s) GPIO (HSMMC)
+ * EXYNOS4 - Helper functions for setting up MSHCI device(s) GPIO (HSMMC)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -33,7 +33,6 @@
 	defined (CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
 #define DIV_FSYS3	(S5P_VA_CMU + 0x0C54C)
 #endif
-
 
 void exynos4_setup_mshci_cfg_gpio(struct platform_device *dev, int width)
 {
