@@ -1280,6 +1280,15 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	if (host->flags & SDHCI_DEVICE_DEAD)
 		goto out;
 
+#ifdef CONFIG_MMC_CLKGATE
+	/* gating the clock and out */
+	if(mmc->clk_gated) {
+		WARN_ON(ios->clock != 0);
+		sdhci_set_clock(host, 0);
+		goto out;
+	}
+#endif
+
 	/*
 	 * Reset the chip on each power off.
 	 * Should clear out any weird states.
