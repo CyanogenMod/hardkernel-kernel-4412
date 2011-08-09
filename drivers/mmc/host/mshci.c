@@ -897,11 +897,7 @@ static void mshci_set_clock(struct mshci_host *host,
 	if (clock == 0)
 		goto out;
 
-	if (ddr != MMC_1_2V_DDR_MODE && ddr != MMC_1_8V_DDR_MODE) {
-		div = 1;
-	} else if (clock > 2000000) {
-		div = 0;
-	} else if (clock >= host->max_clk) {
+	if (clock >= host->max_clk) {
 		div = 0;
 	} else {
 		for (div = 1;div <= 0xff;div++) {
