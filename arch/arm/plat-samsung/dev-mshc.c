@@ -25,13 +25,13 @@
 
 static struct resource s3c_mshci_resource[] = {
 	[0] = {
-		.start = S5P_PA_MSHC,
-		.end   = S5P_PA_MSHC + S5P_SZ_MSHC - 1,
+		.start = EXYNOS4_PA_DWMCI,
+		.end   = EXYNOS4_PA_DWMCI + S5P_SZ_MSHC - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = IRQ_MSHC,
-		.end   = IRQ_MSHC,
+		.start = IRQ_DWMCI,
+		.end   = IRQ_DWMCI,
 		.flags = IORESOURCE_IRQ,
 	}
 };
