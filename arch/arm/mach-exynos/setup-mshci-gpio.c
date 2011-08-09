@@ -57,7 +57,7 @@ void exynos4_setup_mshci_cfg_gpio(struct platform_device *dev, int width)
 		s3c_gpio_cfgpin(EXYNOS4_GPK0(2), S3C_GPIO_SFN(3));
 		s3c_gpio_setpull(EXYNOS4_GPK0(2), S3C_GPIO_PULL_UP);
 	}
-	
+
 	switch (width) {
 	case 8:
 		for (gpio = EXYNOS4_GPK1(3); gpio <= EXYNOS4_GPK1(6); gpio++) {

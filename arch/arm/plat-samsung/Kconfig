@@ -193,6 +193,7 @@ config S5P_DEV_MSHC
 	bool
 	help
 	  Compile in platform device definitions for MSHC
+
 config S3C_DEV_HWMON
 	bool
 	help
