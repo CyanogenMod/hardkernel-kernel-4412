@@ -57,10 +57,6 @@ struct platform_device s3c_device_mshci = {
 };
 
 
-#ifdef CONFIG_MACH_U1
-#include <plat/exynos4.h>
-#include <linux/mmc/host.h>
-#endif
 void s3c_mshci_set_platdata(struct s3c_mshci_platdata *pd)
 {
 	struct s3c_mshci_platdata *set = &s3c_mshci_def_platdata;
@@ -77,13 +73,6 @@ void s3c_mshci_set_platdata(struct s3c_mshci_platdata *pd)
 		set->max_width = pd->max_width;
 	if (pd->host_caps)
 		set->host_caps |= pd->host_caps;
-#ifdef CONFIG_MACH_U1
-	if (pd->host_caps && exynos4_subrev() == 0) {
-		printk(KERN_INFO "MSHC: This exynos4 is EVT1.0. "
-					"Disable DDR R/W for eMMC.\n");
-		set->host_caps &= ~MMC_CAP_1_8V_DDR;
-	}
-#endif
 	if (pd->cfg_gpio)
 		set->cfg_gpio = pd->cfg_gpio;
 	if (pd->cfg_card)

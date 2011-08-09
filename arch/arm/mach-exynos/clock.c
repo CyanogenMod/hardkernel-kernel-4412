@@ -731,11 +731,7 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 8),
 	}, {
-#ifdef CONFIG_MACH_U1
-		.name		= "mshc",
-#else
 		.name		= "dwmci",
-#endif
 		.id		= -1,
 		.parent		= &clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
@@ -1747,11 +1743,7 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLKDIV_FSYS2, .shift = 24, .size = 8 },
 	}, {
 		.clk		= {
-#ifdef CONFIG_MACH_U1			
-			.name		= "sclk_mshc",
-#else
 			.name		= "sclk_dwmci",
-#endif			
 			.id		= -1,
 			.parent         = &clk_dout_mmc4.clk,
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
