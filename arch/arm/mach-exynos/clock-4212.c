@@ -10,6 +10,27 @@
  * published by the Free Software Foundation.
 */
 
+#ifdef CONFIG_PM
+static struct sleep_save exynos4_clock_save_4212[] = {
+	/* CMU side */
+	SAVE_ITEM(S5P_CLKSRC_CAM1),
+	SAVE_ITEM(S5P_CLKSRC_ISP),
+	SAVE_ITEM(S5P_CLKDIV_CAM1),
+	SAVE_ITEM(S5P_CLKDIV_ISP),
+	SAVE_ITEM(S5P_CLKSRC_MASK_ISP),
+	SAVE_ITEM(S5P_CLKGATE_IP_ISP),
+	SAVE_ITEM(S5P_CLKGATE_IP_DMC1),
+};
+
+static struct sleep_save exynos4_epll_save_4212[] = {
+	SAVE_ITEM(S5P_EPLL_CON2),
+};
+
+static struct sleep_save exynos4_vpll_save_4212[] = {
+	SAVE_ITEM(S5P_VPLL_CON2),
+};
+#endif
+
 static struct clksrc_clk clk_mout_mpll_4212 = {
 	.clk = {
 		.name		= "mout_mpll",

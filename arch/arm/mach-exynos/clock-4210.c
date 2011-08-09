@@ -10,6 +10,19 @@
  * published by the Free Software Foundation.
 */
 
+#ifdef CONFIG_PM
+static struct sleep_save exynos4_clock_save_4210[] = {
+	/* CMU side */
+	SAVE_ITEM(S5P_CLKSRC_IMAGE),
+	SAVE_ITEM(S5P_CLKSRC_LCD1),
+	SAVE_ITEM(S5P_CLKDIV_IMAGE),
+	SAVE_ITEM(S5P_CLKDIV_LCD1),
+	SAVE_ITEM(S5P_CLKSRC_MASK_LCD1),
+	SAVE_ITEM(S5P_CLKGATE_IP_IMAGE),
+	SAVE_ITEM(S5P_CLKGATE_IP_LCD1),
+};
+#endif
+
 static struct clk init_clocks_off_4210[] = {
 	{
 		.name		= "sataphy",

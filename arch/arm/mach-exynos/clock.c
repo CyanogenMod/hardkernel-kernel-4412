@@ -41,9 +41,7 @@ static struct sleep_save exynos4_clock_save[] = {
 	SAVE_ITEM(S5P_CLKSRC_TOP1),
 	SAVE_ITEM(S5P_CLKSRC_CAM),
 	SAVE_ITEM(S5P_CLKSRC_MFC),
-	SAVE_ITEM(S5P_CLKSRC_IMAGE),
 	SAVE_ITEM(S5P_CLKSRC_LCD0),
-	SAVE_ITEM(S5P_CLKSRC_LCD1),
 	SAVE_ITEM(S5P_CLKSRC_MAUDIO),
 	SAVE_ITEM(S5P_CLKSRC_FSYS),
 	SAVE_ITEM(S5P_CLKSRC_PERIL0),
@@ -52,9 +50,7 @@ static struct sleep_save exynos4_clock_save[] = {
 	SAVE_ITEM(S5P_CLKDIV_TV),
 	SAVE_ITEM(S5P_CLKDIV_MFC),
 	SAVE_ITEM(S5P_CLKDIV_G3D),
-	SAVE_ITEM(S5P_CLKDIV_IMAGE),
 	SAVE_ITEM(S5P_CLKDIV_LCD0),
-	SAVE_ITEM(S5P_CLKDIV_LCD1),
 	SAVE_ITEM(S5P_CLKDIV_MAUDIO),
 	SAVE_ITEM(S5P_CLKDIV_FSYS0),
 	SAVE_ITEM(S5P_CLKDIV_FSYS1),
@@ -70,7 +66,6 @@ static struct sleep_save exynos4_clock_save[] = {
 	SAVE_ITEM(S5P_CLKSRC_MASK_CAM),
 	SAVE_ITEM(S5P_CLKSRC_MASK_TV),
 	SAVE_ITEM(S5P_CLKSRC_MASK_LCD0),
-	SAVE_ITEM(S5P_CLKSRC_MASK_LCD1),
 	SAVE_ITEM(S5P_CLKSRC_MASK_MAUDIO),
 	SAVE_ITEM(S5P_CLKSRC_MASK_FSYS),
 	SAVE_ITEM(S5P_CLKSRC_MASK_PERIL0),
@@ -80,9 +75,7 @@ static struct sleep_save exynos4_clock_save[] = {
 	SAVE_ITEM(S5P_CLKGATE_IP_TV),
 	SAVE_ITEM(S5P_CLKGATE_IP_MFC),
 	SAVE_ITEM(S5P_CLKGATE_IP_G3D),
-	SAVE_ITEM(S5P_CLKGATE_IP_IMAGE),
 	SAVE_ITEM(S5P_CLKGATE_IP_LCD0),
-	SAVE_ITEM(S5P_CLKGATE_IP_LCD1),
 	SAVE_ITEM(S5P_CLKGATE_IP_FSYS),
 	SAVE_ITEM(S5P_CLKGATE_IP_GPS),
 	SAVE_ITEM(S5P_CLKGATE_IP_PERIL),
@@ -2175,8 +2168,18 @@ static void exynos4_restore_pll(void)
 static int exynos4_clock_suspend(void)
 {
 	s3c_pm_do_save(exynos4_clock_save, ARRAY_SIZE(exynos4_clock_save));
+	if (cpu_is_exynos4212())
+		s3c_pm_do_save(exynos4_clock_save_4212, ARRAY_SIZE(exynos4_clock_save_4212));
+	else
+		s3c_pm_do_save(exynos4_clock_save_4210, ARRAY_SIZE(exynos4_clock_save_4210));
+
 	s3c_pm_do_save(exynos4_epll_save, ARRAY_SIZE(exynos4_epll_save));
+	if (cpu_is_exynos4212())
+		s3c_pm_do_save(exynos4_epll_save_4212, ARRAY_SIZE(exynos4_epll_save_4212));
+
 	s3c_pm_do_save(exynos4_vpll_save, ARRAY_SIZE(exynos4_vpll_save));
+	if (cpu_is_exynos4212())
+		s3c_pm_do_save(exynos4_vpll_save_4212, ARRAY_SIZE(exynos4_vpll_save_4212));
 	return 0;
 }
 
@@ -2184,6 +2187,10 @@ static void exynos4_clock_resume(void)
 {
 	exynos4_restore_pll();
 	s3c_pm_do_restore_core(exynos4_clock_save, ARRAY_SIZE(exynos4_clock_save));
+	if (cpu_is_exynos4212())
+		s3c_pm_do_restore_core(exynos4_clock_save_4212, ARRAY_SIZE(exynos4_clock_save_4212));
+	else
+		s3c_pm_do_restore_core(exynos4_clock_save_4210, ARRAY_SIZE(exynos4_clock_save_4210));
 }
 #else
 #define exynos4_clock_suspend NULL
