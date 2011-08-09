@@ -24,6 +24,7 @@
 #include <plat/fb-core.h>
 #include <plat/exynos4.h>
 #include <plat/sdhci.h>
+#include <plat/mshci.h>
 #include <plat/fimc-core.h>
 #include <plat/adc-core.h>
 #include <plat/pm.h>
@@ -164,6 +165,7 @@ void __init exynos4_map_io(void)
 	exynos4_default_sdhci1();
 	exynos4_default_sdhci2();
 	exynos4_default_sdhci3();
+	exynos4_default_mshci();
 
 	s3c_fimc_setname(0, "exynos4-fimc");
 	s3c_fimc_setname(1, "exynos4-fimc");

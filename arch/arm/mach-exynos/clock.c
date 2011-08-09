@@ -731,7 +731,11 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 8),
 	}, {
+#ifdef CONFIG_MACH_U1
+		.name		= "mshc",
+#else
 		.name		= "dwmci",
+#endif
 		.id		= -1,
 		.parent		= &clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
@@ -1743,7 +1747,11 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLKDIV_FSYS2, .shift = 24, .size = 8 },
 	}, {
 		.clk		= {
+#ifdef CONFIG_MACH_U1			
+			.name		= "sclk_mshc",
+#else
 			.name		= "sclk_dwmci",
+#endif			
 			.id		= -1,
 			.parent         = &clk_dout_mmc4.clk,
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
@@ -1867,6 +1875,7 @@ static u32 epll_div[][6] = {
 	{  67737600, 1, 90, 4, 3, 20762 },
 	{  49152000, 0, 49, 3, 3, 9961 },
 	{  45158400, 0, 45, 3, 3, 10381 },
+	{ 180633600, 0, 45, 3, 1, 10381 },
 };
 
 static int exynos4_epll_set_rate(struct clk *clk, unsigned long rate)
@@ -2096,6 +2105,14 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	clk_p.rate = aclk_100;
 
 	clk_fout_epll.ops = &exynos4_epll_ops;
+
+#ifdef CONFIG_EXYNOS4_MSHC_EPLL_45MHZ
+	clk_set_parent(&clk_dout_mmc4.clk, &clk_mout_epll.clk);
+#endif
+#ifdef CONFIG_EXYNOS4_MSHC_VPLL_46MHZ
+	clk_set_parent(&clk_dout_mmc4.clk, &clk_sclk_vpll.clk);
+	clk_set_parent(&clk_sclk_vpll.clk, &clk_fout_vpll);
+#endif
 
 	clk_set_parent(&clk_sclk_audss_i2s.clk, &clk_mout_audss.clk);
 	clk_set_parent(&clk_mout_audss.clk, &clk_fout_epll);

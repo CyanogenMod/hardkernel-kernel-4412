@@ -18,6 +18,8 @@
 #ifndef __PLAT_S3C_SDHCI_H
 #define __PLAT_S3C_SDHCI_H __FILE__
 
+#define MAX_VMMC_NAME 20
+
 struct platform_device;
 struct mmc_host;
 struct mmc_card;
@@ -71,6 +73,8 @@ struct s3c_sdhci_platdata {
 	enum clk_types	clk_type;
 
 	char		**clocks;	/* set of clock sources */
+
+	char vmmc_name[MAX_VMMC_NAME];	/* name for regulator */
 
 	int		ext_cd_gpio;
 	bool		ext_cd_gpio_invert;

@@ -136,6 +136,17 @@ config EXYNOS4_SETUP_SDHCI_GPIO
 	help
 	  Common setup code for SDHCI gpio.
 
+config EXYNOS4_SETUP_MSHCI
+	bool
+	select EXYNOS4_SETUP_MSHCI_GPIO
+	help
+	  Internal helper functions for EXYNOS4 based MSHCI systems.
+
+config EXYNOS4_SETUP_MSHCI_GPIO
+	bool
+	help
+	  Common setup code for MSHCI gpio.
+
 config EXYNOS4_SETUP_FIMC
 	bool
 	depends on VIDEO_SAMSUNG_S5P_FIMC
@@ -358,6 +369,66 @@ config MACH_SMDK4212
 	help
 	  Machine support for Samsung SMDK4212
 
+config MACH_U1
+	bool "U1 board"
+	select CPU_EXYNOS4210
+	select S5P_GPIO_INT
+	select S5P_DEV_FIMD0
+	select S5P_DEV_FIMD_S5P
+	select S5P_DEV_TVOUT
+	select S5P_DEV_MFC
+	select S5P_DEV_FIMG2D
+	select S5P_DEV_USBGADGET
+	select S5P_DEV_JPEG
+	select S5P_DEV_THERMAL
+	select S3C_DEV_RTC
+	select S3C_DEV_WDT
+	select S3C_DEV_I2C1
+	select S3C_DEV_I2C2
+	select S3C_DEV_I2C3
+	select S3C_DEV_I2C4
+	select S3C_DEV_I2C5
+	select S3C_DEV_I2C6
+	select S3C_DEV_I2C7
+	select S5P_DEV_MSHC
+	select S3C_DEV_I2C8_EMUL
+	select S3C_DEV_I2C9_EMUL
+	select EXYNOS4_MSHC_CH0_8BIT
+	select EXYNOS4_MSHC_CH0_DDR
+	select EXYNOS4_MSHC_EPLL_45MHZ
+	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3
+	select SAMSUNG_DEV_ADC
+	select S5P_DEV_USB_EHCI
+	select SAMSUNG_DEV_TS
+	select SAMSUNG_DEV_TS1
+	select EXYNOS4_DEV_PD
+	select EXYNOS4_DEV_SYSMMU
+	select EXYNOS4_SETUP_FIMD0_24BPP
+	select EXYNOS4_SETUP_I2C1
+	select EXYNOS4_SETUP_I2C2
+	select EXYNOS4_SETUP_I2C3
+	select EXYNOS4_SETUP_I2C4
+	select EXYNOS4_SETUP_I2C5
+	select EXYNOS4_SETUP_I2C6
+	select EXYNOS4_SETUP_I2C7
+	select EXYNOS4_SETUP_SDHCI
+	select EXYNOS4_SETUP_MSHCI
+	select EXYNOS4_SETUP_FB_S5P
+	select EXYNOS4_SETUP_USB_PHY
+	help
+	  Machine support for U1 Board 
+
+choice
+	prompt "U1 board"
+	depends on MACH_U1
+	default MACH_U1_BD
+
+config MACH_U1_BD
+	bool "U1 Board"
+
+endchoice
+
 endmenu
 
 menu "EXYNOS5 Machines"
@@ -370,12 +441,23 @@ config MACH_FPGA5210
 	  Machine support for Samsung FPGA5210
 endmenu
 
+menu "USE MSHC"
+	config S5P_DEV_MSHC
+	bool "MSHC"
+	depends on PLAT_S5P && !CPU_S5PV310_EVT1
+	default n
+	help
+	IF mshc(channel 4)  uses, channel 0 is disabled.
+endmenu
+
 comment "Configuration for HSMMC bus width"
 
 menu "Use 8-bit bus width"
 
 config EXYNOS4_SDHCI_CH0_8BIT
 	bool "Channel 0 with 8-bit bus"
+	depends on PLAT_S5P && !S5P_DEV_MSHC
+	default n
 	help
 	  Support HSMMC Channel 0 8-bit bus.
 	  If selected, Channel 1 is disabled.
@@ -386,6 +468,38 @@ config EXYNOS4_SDHCI_CH2_8BIT
 	  Support HSMMC Channel 2 8-bit bus.
 	  If selected, Channel 3 is disabled.
 
+config EXYNOS4_MSHC_CH0_8BIT
+        bool "MSHC Channel 0"
+	depends on PLAT_S5P && S5P_DEV_MSHC
+	default n
+	help
+	  IF channel 0 uses 8-bit bus, channel 1 is disabled.
 endmenu
+
+menu "Use DDR"
+        depends on PLAT_S5P && S5P_DEV_MSHC
+	config EXYNOS4_MSHC_CH0_DDR
+	bool "Channel 0"
+	default n
+	help
+	  mshc channel 0 is working with DDR(Dual Data Rate) mode.
+endmenu
+
+choice
+	prompt "Use Special PLL for MSHC"
+	depends on PLAT_S5P && S5P_DEV_MSHC
+	help
+		This feature change MMC4OUT's clock source from MPLL to EPLL or VPLL
+	default EXYNOS4_MSHC_EPLL_45MHZ
+
+config EXYNOS4_MSHC_MPLL_40MHZ
+	bool "MPLL"
+
+config EXYNOS4_MSHC_VPLL_46MHZ
+	bool "VPLL"
+
+config EXYNOS4_MSHC_EPLL_45MHZ
+	bool "EPLL"
+endchoice
 
 endif
