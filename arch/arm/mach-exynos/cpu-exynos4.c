@@ -161,11 +161,22 @@ void __init exynos4_map_io(void)
 
 #ifndef CONFIG_MACH_FPGA4212
 	/* initialize device information early */
+
+#ifdef CONFIG_S3C_DEV_HSMMC
 	exynos4_default_sdhci0();
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
 	exynos4_default_sdhci1();
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC2
 	exynos4_default_sdhci2();
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC3
 	exynos4_default_sdhci3();
+#endif
+#ifdef CONFIG_S5P_DEV_MSHC
 	exynos4_default_mshci();
+#endif
 
 	s3c_fimc_setname(0, "exynos4-fimc");
 	s3c_fimc_setname(1, "exynos4-fimc");

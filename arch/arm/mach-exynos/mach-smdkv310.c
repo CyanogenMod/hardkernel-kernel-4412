@@ -66,6 +66,7 @@
 #include <plat/ts.h>
 #include <plat/keypad.h>
 #include <plat/sdhci.h>
+#include <plat/mshci.h>
 #include <plat/iic.h>
 #include <plat/pd.h>
 #include <plat/backlight.h>
@@ -83,6 +84,7 @@
 #include <mach/map.h>
 #include <mach/media.h>
 #include <mach/sysmmu.h>
+#include <mach/regs-clock.h>
 #ifdef CONFIG_S3C64XX_DEV_SPI
 #include <mach/spi-clocks.h>
 #endif
@@ -647,6 +649,24 @@ static struct s3c_sdhci_platdata smdkv310_hsmmc2_pdata __initdata = {
 static struct s3c_sdhci_platdata smdkv310_hsmmc3_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+};
+#endif
+
+#ifdef CONFIG_S5P_DEV_MSHC
+static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
+	.cd_type		= S3C_MSHCI_CD_PERMANENT,
+	.has_wp_gpio		= true,
+	.wp_gpio		= 0xffffffff,
+#if defined(CONFIG_EXYNOS4_MSHC_8BIT) && \
+	defined(CONFIG_EXYNOS4_MSHC_DDR)
+	.max_width		= 8,
+	.host_caps		= MMC_CAP_8_BIT_DATA | MMC_CAP_1_8V_DDR,
+#elif defined(CONFIG_EXYNOS4_MSHC_8BIT)
+	.max_width		= 8,
+	.host_caps		= MMC_CAP_8_BIT_DATA,
+#elif defined(CONFIG_EXYNOS4_MSHC_DDR)
+	.host_caps		= MMC_CAP_1_8V_DDR,
+#endif
 };
 #endif
 
@@ -1791,6 +1811,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	&s3c_device_hsmmc3,
 #endif
+#ifdef CONFIG_S5P_DEV_MSHC
+	&s3c_device_mshci,
+#endif
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos4_device_dwmci,
 #endif
@@ -2304,6 +2327,9 @@ static void __init smdkv310_machine_init(void)
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdkv310_hsmmc3_pdata);
+#endif
+#ifdef CONFIG_S5P_DEV_MSHC
+	s3c_mshci_set_platdata(&exynos4_mshc_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HWMON
 	s3c_hwmon_set_platdata(&smdkv310_hwmon_pdata);

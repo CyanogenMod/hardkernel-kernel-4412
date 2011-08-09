@@ -345,7 +345,7 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, host);
 
-	sc->clk_io = clk_get(dev, "mshc");
+	sc->clk_io = clk_get(dev, "dwmci");
 	if (IS_ERR(sc->clk_io)) {
 		dev_err(dev, "failed to get io clock\n");
 		ret = PTR_ERR(sc->clk_io);
@@ -369,7 +369,7 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 
 #if defined (CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
 	defined (CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
-	if (!strcmp("sclk_mshc",name)) {
+	if (!strcmp("sclk_dwmci",name)) {
 		struct clk *parent_clk;
 
 		if (!(parent_clk = clk_get_parent(clk))) {

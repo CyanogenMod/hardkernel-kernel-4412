@@ -138,6 +138,8 @@ config EXYNOS4_SETUP_SDHCI_GPIO
 
 config EXYNOS4_SETUP_MSHCI
 	bool
+	depends on S5P_DEV_MSHC
+	default y
 	select EXYNOS4_SETUP_MSHCI_GPIO
 	help
 	  Internal helper functions for EXYNOS4 based MSHCI systems.
@@ -266,7 +268,6 @@ config MACH_SMDKC210
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_USB_PHY
-	select EXYNOS4_DEV_DWMCI
 	help
 	  Machine support for Samsung SMDKC210
 
@@ -303,7 +304,6 @@ config MACH_SMDKV310
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_USB_PHY
-	select EXYNOS4_DEV_DWMCI
 	help
 	  Machine support for Samsung SMDKV310
 
@@ -380,56 +380,30 @@ config MACH_FPGA5210
 	  Machine support for Samsung FPGA5210
 endmenu
 
-menu "USE MSHC"
-	config S5P_DEV_MSHC
-	bool "MSHC"
-	depends on PLAT_S5P && !CPU_S5PV310_EVT1
+menu "MMC/SD slot setup"
+depends on PLAT_S5P
+
+comment "SELECT SYNOPSYS CONTROLLER INTERFACE DRIVER"
+config EXYNOS4_DEV_DWMCI
+	bool "DWMCI"
+	depends on PLAT_S5P
 	default n
 	help
-	IF mshc(channel 4)  uses, channel 0 is disabled.
-endmenu
+	IF DWMCI is used, SDHC channel 0 is disabled.
 
-comment "Configuration for HSMMC bus width"
-
-menu "Use 8-bit bus width"
-
-config EXYNOS4_SDHCI_CH0_8BIT
-	bool "Channel 0 with 8-bit bus"
-	depends on PLAT_S5P && !S5P_DEV_MSHC
+config S5P_DEV_MSHC
+	bool "MSHCI"
+	depends on PLAT_S5P
 	default n
 	help
-	  Support HSMMC Channel 0 8-bit bus.
-	  If selected, Channel 1 is disabled.
-
-config EXYNOS4_SDHCI_CH2_8BIT
-	bool "Channel 2 with 8-bit bus"
-	help
-	  Support HSMMC Channel 2 8-bit bus.
-	  If selected, Channel 3 is disabled.
-
-config EXYNOS4_MSHC_CH0_8BIT
-        bool "MSHC Channel 0"
-	depends on PLAT_S5P && S5P_DEV_MSHC
-	default n
-	help
-	  IF channel 0 uses 8-bit bus, channel 1 is disabled.
-endmenu
-
-menu "Use DDR"
-        depends on PLAT_S5P && S5P_DEV_MSHC
-	config EXYNOS4_MSHC_CH0_DDR
-	bool "Channel 0"
-	default n
-	help
-	  mshc channel 0 is working with DDR(Dual Data Rate) mode.
-endmenu
+	IF MSHC is used, SDHC channel 0 is disabled.
 
 choice
 	prompt "Use Special PLL for MSHC"
 	depends on PLAT_S5P && S5P_DEV_MSHC
 	help
-		This feature change MMC4OUT's clock source from MPLL to EPLL or VPLL
-	default EXYNOS4_MSHC_EPLL_45MHZ
+		This feature change MMC4OUT's clock source between MPLL and EPLL
+	default EXYNOS4_MSHC_MPLL_40MHZ
 
 config EXYNOS4_MSHC_MPLL_40MHZ
 	bool "MPLL"
@@ -440,5 +414,39 @@ config EXYNOS4_MSHC_VPLL_46MHZ
 config EXYNOS4_MSHC_EPLL_45MHZ
 	bool "EPLL"
 endchoice
+
+comment "Use 8-bit bus width"
+
+config EXYNOS4_MSHC_8BIT
+        bool "MSHC with 8-bit bus"
+	depends on PLAT_S5P && S5P_DEV_MSHC
+	default n
+	help
+	  IF MSHC uses 8-bit bus, SDHC channel 1 is disabled.
+
+config EXYNOS4_SDHCI_CH0_8BIT
+	bool "SDHC Channel 0 with 8-bit bus"
+	depends on PLAT_S5P && !EXYNOS4_DEV_DWMCI && !S5P_DEV_MSHC
+	default n
+	help
+	  Support HSMMC Channel 0 8-bit bus.
+	  If selected, Channel 1 is disabled.
+
+config EXYNOS4_SDHCI_CH2_8BIT
+	bool "SDHC Channel 2 with 8-bit bus"
+	help
+	  Support HSMMC Channel 2 8-bit bus.
+	  If selected, Channel 3 is disabled.
+
+comment "Use DDR"
+	depends on PLAT_S5P && S5P_DEV_MSHC
+config EXYNOS4_MSHC_DDR
+        depends on PLAT_S5P && S5P_DEV_MSHC
+	bool "MSHC with DDR mode"
+	default n
+	help
+	  Enabling DDR(Dual Data Rate) mode.
+
+endmenu
 
 endif

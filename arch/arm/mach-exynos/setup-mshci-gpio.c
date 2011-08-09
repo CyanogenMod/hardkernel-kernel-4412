@@ -40,7 +40,7 @@ void exynos4_setup_mshci_cfg_gpio(struct platform_device *dev, int width)
 	unsigned int gpio;
 	struct s3c_mshci_platdata *pdata = dev->dev.platform_data;
 
-	early_printk("v310_setup_mshci_cfg_gpio\n");
+	early_printk("exynos4_setup_mshci_cfg_gpio\n");
 
 	/* Set all the necessary GPG0/GPG1 pins to special-function 2 */
 	for (gpio = EXYNOS4_GPK0(0); gpio < EXYNOS4_GPK0(2); gpio++) {

@@ -1,9 +1,9 @@
-/* linux/arch/arm/mach-s5pv210/setup-sdhci.c
+/* linux/arch/arm/mach-exynos4/setup-mshci.c
  *
- * Copyright (c) 2009-2010 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/
  *
- * S5PV210 - Helper functions for settign up SDHCI device(s) (HSMMC)
+ * EXYNOS4 - Helper functions for settign up MSHCI device(s)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -24,7 +24,7 @@
 /* clock sources for the mmc bus clock, order as for the ctrl2[5..4] */
 
 char *exynos4_mshci_clksrcs[1] = {
-	[0] = "sclk_mshc",	/* mmc_bus */
+	[0] = "sclk_dwmci",	/* sclk for mshc */
 };
 
 void exynos4_setup_mshci_cfg_card(struct platform_device *dev,
