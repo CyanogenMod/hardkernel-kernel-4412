@@ -30,12 +30,12 @@
 #define DRIVER_NAME "mshci"
 
 #define DBG(f, x...) \
-	pr_debug(DRIVER_NAME " [%s()]: " f, __func__,## x)
+	pr_debug(DRIVER_NAME " [%s()]: " f, __func__, ## x)
 
 #define SDHC_CLK_ON 1
 #define SDHC_CLK_OFF 0
 
-static unsigned int debug_quirks = 0;
+static unsigned int debug_quirks;
 
 static void mshci_prepare_data(struct mshci_host *, struct mmc_data *);
 static void mshci_finish_data(struct mshci_host *);
@@ -44,7 +44,7 @@ static void mshci_send_command(struct mshci_host *, struct mmc_command *);
 static void mshci_finish_command(struct mshci_host *);
 static void mshci_fifo_init(struct mshci_host *host);
 
-static void mshci_set_clock (struct mshci_host *host,
+static void mshci_set_clock(struct mshci_host *host,
 				unsigned int clock, u32 bus_width);
 
 #define MSHCI_MAX_DMA_SINGLE_TRANS_SIZE	(0x1000)
@@ -55,8 +55,7 @@ static void mshci_set_clock (struct mshci_host *host,
 static void mshci_dumpregs(struct mshci_host *host)
 {
 	printk(KERN_DEBUG DRIVER_NAME ": ============== REGISTER DUMP ==============\n");
-
-	printk(KERN_DEBUG DRIVER_NAME ": MSHCI_CTRL:      0x%08x \n",
+	printk(KERN_DEBUG DRIVER_NAME ": MSHCI_CTRL:      0x%08x\n",
 		mshci_readl(host, MSHCI_CTRL));
 	printk(KERN_DEBUG DRIVER_NAME ": MSHCI_PWREN:     0x%08x\n",
 		mshci_readl(host, MSHCI_PWREN));
@@ -128,8 +127,7 @@ static void mshci_dumpregs(struct mshci_host *host)
 		mshci_readl(host, MSHCI_CLOCKCON));
 	printk(KERN_DEBUG DRIVER_NAME ": MSHCI_FIFODAT:   0x%08x\n",
 		mshci_readl(host, MSHCI_FIFODAT));
-
- 	printk(KERN_DEBUG DRIVER_NAME ": ===========================================\n");
+	printk(KERN_DEBUG DRIVER_NAME ": ===========================================\n");
 }
 
 
@@ -222,7 +220,6 @@ static void mshci_reset_fifo(struct mshci_host *host)
 			mshci_dumpregs(host);
 			return;
 		}
-
 		timeout--;
 		mdelay(1);
 	}
@@ -251,7 +248,7 @@ static void mshci_reset_dma(struct mshci_host *host)
 
 static void mshci_reset_all(struct mshci_host *host)
 {
-	int count, err=0;
+	int count, err = 0;
 
 	/* Wait max 100 ms */
 	count = 10000;
@@ -263,9 +260,8 @@ static void mshci_reset_all(struct mshci_host *host)
 			udelay(100);
 			if (!(mshci_readl(host, MSHCI_STATUS) & (1<<9))) {
 				udelay(100);
-				if (!(mshci_readl(host, MSHCI_STATUS) & (1<<9))) {
+				if (!(mshci_readl(host, MSHCI_STATUS) & (1<<9)))
 					break;
-				}
 			}
 		}
 		if (count == 0) {
@@ -280,9 +276,9 @@ static void mshci_reset_all(struct mshci_host *host)
 		udelay(10);
 	} while (1);
 
-	if(err && host->ops->init_card) {
+	if (err && host->ops->init_card) {
 		printk(KERN_ERR "%s: eMMC's data lines get low.\n"
-			"Reset eMMC.\n",mmc_hostname(host->mmc));
+			"Reset eMMC.\n", mmc_hostname(host->mmc));
 		host->ops->init_card(host);
 	}
 
@@ -330,7 +326,7 @@ static void mshci_read_block_pio(struct mshci_host *host)
 
 	DBG("PIO reading\n");
 
-	fifo_cnt = (mshci_readl(host,MSHCI_STATUS)&FIFO_COUNT)>>17;
+	fifo_cnt = (mshci_readl(host, MSHCI_STATUS)&FIFO_COUNT)>>17;
 	fifo_cnt *= FIFO_WIDTH;
 	chunk = 0;
 
@@ -394,8 +390,8 @@ static void mshci_write_block_pio(struct mshci_host *host)
 			 * has not occured yet.
 			 */
 
-			if (( host->data->blocks * host->data->blksz ) ==
-					host->data_transfered )
+			if ((host->data->blocks * host->data->blksz) ==
+					host->data_transfered)
 				break; /* transfer done but DTO not yet */
 			BUG();
 		}
@@ -420,8 +416,6 @@ static void mshci_write_block_pio(struct mshci_host *host)
 				scratch = 0;
 			}
 		}
-
-
 	}
 
 	sg_miter_stop(&host->sg_miter);
@@ -473,17 +467,17 @@ static int mshci_mdma_table_pre(struct mshci_host *host,
 	else
 		direction = DMA_TO_DEVICE;
 
-	if(host->ops->dma_map_sg && data->blocks >= 2048) {
+	if (host->ops->dma_map_sg && data->blocks >= 2048) {
 		/* if transfer size is bigger than 1MiB */
 		host->sg_count = host->ops->dma_map_sg(host,
 			mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 2);
-	} else if(host->ops->dma_map_sg && data->blocks >= 128) {
+	} else if (host->ops->dma_map_sg && data->blocks >= 128) {
 		/* if transfer size is bigger than 64KiB */
 		host->sg_count = host->ops->dma_map_sg(host,
 			mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 1);
-	} else if(host->ops->dma_map_sg) {
+	} else if (host->ops->dma_map_sg) {
 		host->sg_count = host->ops->dma_map_sg(host,
 			mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 0);
@@ -514,7 +508,7 @@ static int mshci_mdma_table_pre(struct mshci_host *host,
 
 		/* tran, valid */
 		des_flag = (MSHCI_IDMAC_OWN|MSHCI_IDMAC_CH);
-		des_flag |= (i==0) ? MSHCI_IDMAC_FS:0;
+		des_flag |= (i == 0) ? MSHCI_IDMAC_FS : 0;
 
 		mshci_set_mdma_desc(desc_vir, desc_phy, des_flag, len, addr);
 		desc_vir += size_idmac;
@@ -545,15 +539,15 @@ static int mshci_mdma_table_pre(struct mshci_host *host,
 	return 0;
 
 unmap_entries:
-	if(host->ops->dma_unmap_sg && data->blocks >= 2048) {
+	if (host->ops->dma_unmap_sg && data->blocks >= 2048) {
 		/* if transfer size is bigger than 1MiB */
 		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 2);
-	} else if(host->ops->dma_unmap_sg && data->blocks >= 128) {
+	} else if (host->ops->dma_unmap_sg && data->blocks >= 128) {
 		/* if transfer size is bigger than 64KiB */
 		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 1);
-	} else if(host->ops->dma_unmap_sg) {
+	} else if (host->ops->dma_unmap_sg) {
 		/* if transfer size is lower than 64KiB */
 		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 0);
@@ -578,15 +572,15 @@ static void mshci_idma_table_post(struct mshci_host *host,
 	dma_unmap_single(mmc_dev(host->mmc), host->idma_addr,
 		MSHCI_MAX_DMA_LIST*sizeof(struct mshci_idmac), DMA_TO_DEVICE);
 
-	if(host->ops->dma_unmap_sg && data->blocks >= 2048) {
+	if (host->ops->dma_unmap_sg && data->blocks >= 2048) {
 		/* if transfer size is bigger than 1MiB */
 		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 2);
-	} else if(host->ops->dma_unmap_sg && data->blocks >= 128) {
+	} else if (host->ops->dma_unmap_sg && data->blocks >= 128) {
 		/* if transfer size is bigger than 64KiB */
 		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 1);
-	} else if(host->ops->dma_unmap_sg) {
+	} else if (host->ops->dma_unmap_sg) {
 		/* if transfer size is lower than 64KiB */
 		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 0);
@@ -606,11 +600,10 @@ static void mshci_set_transfer_irqs(struct mshci_host *host)
 	u32 dma_irqs = INTMSK_DMA;
 	u32 pio_irqs = INTMSK_TXDR | INTMSK_RXDR;
 
-	if (host->flags & MSHCI_REQ_USE_DMA) {
+	if (host->flags & MSHCI_REQ_USE_DMA)
 		mshci_clear_set_irqs(host, dma_irqs, 0);
-	} else {
+	else
 		mshci_clear_set_irqs(host, 0, pio_irqs);
-	}
 }
 
 static void mshci_prepare_data(struct mshci_host *host, struct mmc_data *data)
@@ -683,7 +676,7 @@ static void mshci_prepare_data(struct mshci_host *host, struct mmc_data *data)
 	if (host->flags & MSHCI_REQ_USE_DMA) {
 		/* enable DMA, IDMA interrupts and IDMAC */
 		mshci_writel(host, (mshci_readl(host, MSHCI_CTRL) |
-					ENABLE_IDMAC|DMA_ENABLE),MSHCI_CTRL);
+					ENABLE_IDMAC|DMA_ENABLE), MSHCI_CTRL);
 		mshci_writel(host, (mshci_readl(host, MSHCI_BMOD) |
 					(BMOD_IDMAC_ENABLE|BMOD_IDMAC_FB)),
 					MSHCI_BMOD);
@@ -715,11 +708,10 @@ static void mshci_prepare_data(struct mshci_host *host, struct mmc_data *data)
 static u32 mshci_set_transfer_mode(struct mshci_host *host,
 	struct mmc_data *data)
 {
-	u32 ret=0;
+	u32 ret = 0;
 
-	if (data == NULL) {
+	if (data == NULL)
 		return ret;
-	}
 
 	WARN_ON(!host->data);
 
@@ -760,9 +752,9 @@ static void mshci_finish_data(struct mshci_host *host)
 		/* to reset dma */
 		mshci_reset_dma(host);
 		data->bytes_xfered = 0;
-	}
-	else
+	} else
 		data->bytes_xfered = data->blksz * data->blocks;
+
 	if (data->stop)
 		mshci_send_command(host, data->stop);
 	else
@@ -771,7 +763,7 @@ static void mshci_finish_data(struct mshci_host *host)
 
 static void mshci_clock_onoff(struct mshci_host *host, bool val)
 {
-	volatile u32 loop_count = 0x100000;
+	u32 loop_count = 0x100000;
 
 	if (val) {
 		mshci_writel(host, (0x1<<0), MSHCI_CLKENA);
@@ -794,13 +786,13 @@ static void mshci_clock_onoff(struct mshci_host *host, bool val)
 	}
 	if (loop_count == 0) {
 		printk(KERN_ERR "%s: Clock %s has been failed.\n "
-				, mmc_hostname(host->mmc),val ? "ON":"OFF");
+				, mmc_hostname(host->mmc), val ? "ON" : "OFF");
 	}
 }
 
 static void mshci_send_command(struct mshci_host *host, struct mmc_command *cmd)
 {
-	int flags,ret;
+	int flags, ret;
 
 	WARN_ON(host->cmd);
 
@@ -862,11 +854,15 @@ static void mshci_finish_command(struct mshci_host *host)
 			/*
 			 * response data are overturned.
 			 */
-			for (i = 0;i < 4;i++) {
-				host->cmd->resp[0] = mshci_readl(host, MSHCI_RESP3);
-				host->cmd->resp[1] = mshci_readl(host, MSHCI_RESP2);
-				host->cmd->resp[2] = mshci_readl(host, MSHCI_RESP1);
-				host->cmd->resp[3] = mshci_readl(host, MSHCI_RESP0);
+			for (i = 0; i < 4; i++) {
+				host->cmd->resp[0] = mshci_readl(host,
+								MSHCI_RESP3);
+				host->cmd->resp[1] = mshci_readl(host,
+								MSHCI_RESP2);
+				host->cmd->resp[2] = mshci_readl(host,
+								MSHCI_RESP1);
+				host->cmd->resp[3] = mshci_readl(host,
+								MSHCI_RESP0);
 			}
 		} else {
 			host->cmd->resp[0] = mshci_readl(host, MSHCI_RESP0);
@@ -889,7 +885,7 @@ static void mshci_set_clock(struct mshci_host *host,
 				unsigned int clock, u32 ddr)
 {
 	int div;
-	volatile u32 loop_count;
+	u32 loop_count;
 
 	/* befor changing clock. clock needs to be off. */
 	mshci_clock_onoff(host, CLK_DISABLE);
@@ -900,7 +896,7 @@ static void mshci_set_clock(struct mshci_host *host,
 	if (clock >= host->max_clk) {
 		div = 0;
 	} else {
-		for (div = 1;div <= 0xff;div++) {
+		for (div = 1; div <= 0xff; div++) {
 			/* div value should not be greater than 0xff */
 			if ((host->max_clk / (div<<1)) <= clock)
 				break;
@@ -917,7 +913,7 @@ static void mshci_set_clock(struct mshci_host *host,
 		if (!(mshci_readl(host, MSHCI_CMD) & CMD_STRT_BIT))
 			break;
 		loop_count--;
-	} while(loop_count);
+	} while (loop_count);
 
 	if (loop_count == 0) {
 		printk(KERN_ERR "%s: Changing clock has been failed.\n "
@@ -944,11 +940,10 @@ static void mshci_set_power(struct mshci_host *host, unsigned short power)
 
 	host->pwr = pwr;
 
-	if (pwr == 0) {
+	if (pwr == 0)
 		mshci_writel(host, 0, MSHCI_PWREN);
-	} else {
+	else
 		mshci_writel(host, 0x1, MSHCI_PWREN);
-	}
 }
 
 /*****************************************************************************\
@@ -980,7 +975,7 @@ static void mshci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	if (mrq->cmd->opcode == 12) {
 		/* nothing to do */
 	} else {
-		for(;;) {
+		for (;;) {
 			spin_lock_irqsave(&host->lock, flags);
 			if (mshci_readl(host, MSHCI_STATUS) & (1<<9)) {
 				if (timeout == 0) {
@@ -1003,7 +998,7 @@ static void mshci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 				/* if previous command made an error,
 				* this function might be called by tasklet.
 				* So, it SHOULD NOT use schedule_hrtimeout */
-				if ( host->error_state == 1) {
+				if (host->error_state == 1) {
 					spin_unlock_irqrestore
 						(&host->lock, flags);
 					udelay(10);
@@ -1055,13 +1050,12 @@ static void mshci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	if (host->flags & MSHCI_DEVICE_DEAD)
 		goto out;
 
-	if (ios->power_mode == MMC_POWER_OFF) {
+	if (ios->power_mode == MMC_POWER_OFF)
 		mshci_reinit(host);
-	}
 
 #ifdef CONFIG_MMC_CLKGATE
 	/* gating the clock and out */
-	if(mmc->clk_gated) {
+	if (mmc->clk_gated) {
 		WARN_ON(ios->clock != 0);
 		mshci_set_clock(host, ios->clock, ios->ddr);
 		goto out;
@@ -1119,7 +1113,7 @@ static int mshci_get_ro(struct mmc_host *mmc)
 	spin_lock_irqsave(&host->lock, flags);
 
 	if (host->quirks & MSHCI_QUIRK_NO_WP_BIT)
-		wrtprt = host->ops->get_ro(mmc) ? 0:WRTPRT_ON;
+		wrtprt = host->ops->get_ro(mmc) ? 0 : WRTPRT_ON;
 	else if (host->flags & MSHCI_DEVICE_DEAD)
 		wrtprt = 0;
 	else
@@ -1127,7 +1121,7 @@ static int mshci_get_ro(struct mmc_host *mmc)
 
 	spin_unlock_irqrestore(&host->lock, flags);
 
-	return (wrtprt & WRTPRT_ON);
+	return wrtprt & WRTPRT_ON;
 }
 
 static void mshci_enable_sdio_irq(struct mmc_host *mmc, int enable)
@@ -1191,7 +1185,7 @@ static void mshci_tasklet_card(unsigned long param)
 	struct mshci_host *host;
 	unsigned long flags;
 
-	host = (struct mshci_host*)param;
+	host = (struct mshci_host *)param;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1220,9 +1214,9 @@ static void mshci_tasklet_finish(unsigned long param)
 	unsigned long flags;
 	struct mmc_request *mrq;
 
-	host = (struct mshci_host*)param;
+	host = (struct mshci_host *)param;
 
-	if(host == NULL)
+	if (host == NULL)
 		return;
 
 	spin_lock_irqsave(&host->lock, flags);
@@ -1231,7 +1225,7 @@ static void mshci_tasklet_finish(unsigned long param)
 
 	mrq = host->mrq;
 
-	if(mrq == NULL || mrq->cmd == NULL)
+	if (mrq == NULL || mrq->cmd == NULL)
 		goto out;
 
 	/*
@@ -1262,7 +1256,7 @@ static void mshci_timeout_timer(unsigned long data)
 	struct mshci_host *host;
 	unsigned long flags;
 
-	host = (struct mshci_host*)data;
+	host = (struct mshci_host *)data;
 
 	spin_lock_irqsave(&host->lock, flags);
 
@@ -1309,12 +1303,12 @@ static void mshci_cmd_irq(struct mshci_host *host, u32 intmask)
 	if (intmask & INTMSK_RTO) {
 		host->cmd->error = -ETIMEDOUT;
 		printk(KERN_ERR "%s: cmd %d response timeout error\n",
-				mmc_hostname(host->mmc),host->cmd->opcode);
+				mmc_hostname(host->mmc), host->cmd->opcode);
 	} else if (intmask & (INTMSK_RCRC | INTMSK_RE)) {
 		host->cmd->error = -EILSEQ;
 		printk(KERN_ERR "%s: cmd %d repsonse %s error\n",
-				mmc_hostname(host->mmc),host->cmd->opcode,
-				(intmask & INTMSK_RCRC) ? "crc":"RE");
+				mmc_hostname(host->mmc), host->cmd->opcode,
+				(intmask & INTMSK_RCRC) ? "crc" : "RE");
 	}
 	if (host->cmd->error) {
 		/* to notify an error happend */
@@ -1347,7 +1341,7 @@ static void mshci_data_irq(struct mshci_host *host, u32 intmask, u8 intr_src)
 		printk(KERN_ERR "%s: Got data interrupt 0x%08x from %s "
 			"even though no data operation was in progress.\n",
 			mmc_hostname(host->mmc), (unsigned)intmask,
-			intr_src ? "MINT":"IDMAC");
+			intr_src ? "MINT" : "IDMAC");
 		mshci_dumpregs(host);
 
 		return;
@@ -1355,11 +1349,11 @@ static void mshci_data_irq(struct mshci_host *host, u32 intmask, u8 intr_src)
 	if (intr_src == INT_SRC_MINT) {
 		if (intmask & INTMSK_HTO) {
 			printk(KERN_ERR "%s: Host timeout error\n",
-							mmc_hostname(host->mmc));
+						mmc_hostname(host->mmc));
 			host->data->error = -ETIMEDOUT;
 		} else if (intmask & INTMSK_DRTO) {
 			printk(KERN_ERR "%s: Data read timeout error\n",
-							mmc_hostname(host->mmc));
+						mmc_hostname(host->mmc));
 			host->data->error = -ETIMEDOUT;
 		} else if (intmask & INTMSK_SBE) {
 			printk(KERN_ERR "%s: FIFO Start bit error\n",
@@ -1367,15 +1361,15 @@ static void mshci_data_irq(struct mshci_host *host, u32 intmask, u8 intr_src)
 			host->data->error = -EIO;
 		} else if (intmask & INTMSK_EBE) {
 			printk(KERN_ERR "%s: FIFO Endbit/Write no CRC error\n",
-							mmc_hostname(host->mmc));
+						mmc_hostname(host->mmc));
 			host->data->error = -EIO;
 		} else if (intmask & INTMSK_DCRC) {
 			printk(KERN_ERR "%s: Data CRC error\n",
-							mmc_hostname(host->mmc));
+						mmc_hostname(host->mmc));
 			host->data->error = -EIO;
 		} else if (intmask & INTMSK_FRUN) {
 			printk(KERN_ERR "%s: FIFO underrun/overrun error\n",
-							mmc_hostname(host->mmc));
+						mmc_hostname(host->mmc));
 			host->data->error = -EIO;
 		}
 	} else {
@@ -1400,9 +1394,9 @@ static void mshci_data_irq(struct mshci_host *host, u32 intmask, u8 intr_src)
 		mshci_finish_data(host);
 	} else {
 		if (!(host->flags & MSHCI_REQ_USE_DMA) &&
-				(((host->data->flags & MMC_DATA_READ)&&
+				(((host->data->flags & MMC_DATA_READ) &&
 				(intmask & (INTMSK_RXDR | INTMSK_DTO))) ||
-				((host->data->flags & MMC_DATA_WRITE)&&
+				((host->data->flags & MMC_DATA_WRITE) &&
 					(intmask & (INTMSK_TXDR)))))
 			mshci_transfer_pio(host);
 
@@ -1424,7 +1418,7 @@ static void mshci_data_irq(struct mshci_host *host, u32 intmask, u8 intr_src)
 static irqreturn_t mshci_irq(int irq, void *dev_id)
 {
 	irqreturn_t result;
-	struct mshci_host* host = dev_id;
+	struct mshci_host *host = dev_id;
 	u32 intmask;
 	int cardint = 0;
 	int timeout = 0x10000;
@@ -1437,7 +1431,7 @@ static irqreturn_t mshci_irq(int irq, void *dev_id)
 		/* check if there is a interrupt for IDMAC  */
 		intmask = mshci_readl(host, MSHCI_IDSTS);
 		if (intmask) {
-			mshci_writel(host, intmask,MSHCI_IDSTS);
+			mshci_writel(host, intmask, MSHCI_IDSTS);
 			mshci_data_irq(host, intmask, INT_SRC_IDMAC);
 			result = IRQ_HANDLED;
 			goto out;
@@ -1451,25 +1445,24 @@ static irqreturn_t mshci_irq(int irq, void *dev_id)
 	mshci_writel(host, intmask, MSHCI_RINTSTS);
 
 	if (intmask & (INTMSK_CDETECT)) {
-		if(!(host->mmc->caps & MMC_CAP_NONREMOVABLE))
+		if (!(host->mmc->caps & MMC_CAP_NONREMOVABLE))
 			tasklet_schedule(&host->card_tasklet);
 	}
 	intmask &= ~INTMSK_CDETECT;
 
 	if (intmask & CMD_STATUS) {
-		if ( !(intmask & INTMSK_CDONE) && (intmask & INTMSK_RTO)) {
+		if (!(intmask & INTMSK_CDONE) && (intmask & INTMSK_RTO)) {
 			/*
 			 * when a error about command timeout occurs,
 			 * cmd done intr comes together.
 			 * cmd done intr comes later than error intr.
 			 * so, it has to wait for cmd done intr.
 			 */
-			while ( --timeout &&
-				!(mshci_readl(host, MSHCI_MINTSTS)
-				  & INTMSK_CDONE));
+			while (--timeout && !(mshci_readl(host, MSHCI_MINTSTS)
+				& INTMSK_CDONE))
+				; /* Nothing to do */
 			if (!timeout)
-				printk(KERN_ERR"*** %s time out for\
-					CDONE intr\n",
+				printk(KERN_ERR"*** %s time out for	CDONE intr\n",
 					mmc_hostname(host->mmc));
 			else
 				mshci_writel(host, INTMSK_CDONE,
@@ -1481,26 +1474,27 @@ static irqreturn_t mshci_irq(int irq, void *dev_id)
 	}
 
 	if (intmask & DATA_STATUS) {
-		if ( !(intmask & INTMSK_DTO) && (intmask & INTMSK_DRTO)) {
+		if (!(intmask & INTMSK_DTO) && (intmask & INTMSK_DRTO)) {
 			/*
 			 * when a error about data timout occurs,
 			 * DTO intr comes together.
 			 * DTO intr comes later than error intr.
 			 * so, it has to wait for DTO intr.
 			 */
-			while ( --timeout &&
-				!(mshci_readl(host, MSHCI_MINTSTS)
-				  & INTMSK_DTO));
+			while (--timeout && !(mshci_readl(host, MSHCI_MINTSTS)
+				& INTMSK_DTO))
+				; /* Nothing to do */
 			if (!timeout)
-				printk(KERN_ERR"*** %s time out for\
-					CDONE intr\n",
+				printk(KERN_ERR"*** %s time out for	CDONE intr\n",
 					mmc_hostname(host->mmc));
 			else
 				mshci_writel(host, INTMSK_DTO,
 					MSHCI_RINTSTS);
-			mshci_data_irq(host, intmask & DATA_STATUS,INT_SRC_MINT);
+			mshci_data_irq(host, intmask & DATA_STATUS,
+							INT_SRC_MINT);
 		} else {
-			mshci_data_irq(host, intmask & DATA_STATUS,INT_SRC_MINT);
+			mshci_data_irq(host, intmask & DATA_STATUS,
+							INT_SRC_MINT);
 		}
 	}
 
@@ -1554,7 +1548,6 @@ int mshci_suspend_host(struct mshci_host *host, pm_message_t state)
 
 	return 0;
 }
-
 EXPORT_SYMBOL_GPL(mshci_suspend_host);
 
 int mshci_resume_host(struct mshci_host *host)
@@ -1588,8 +1581,9 @@ int mshci_resume_host(struct mshci_host *host)
 	if (host->flags & MSHCI_USE_IDMA) {
 		mshci_writel(host, BMOD_IDMAC_RESET, MSHCI_BMOD);
 		count = 100;
-		while( (mshci_readl(host, MSHCI_BMOD) & BMOD_IDMAC_RESET )
-			&& --count ) ; /* nothing to do */
+		while ((mshci_readl(host, MSHCI_BMOD) & BMOD_IDMAC_RESET)
+				&& --count)
+			; /* nothing to do */
 
 		mshci_writel(host, (mshci_readl(host, MSHCI_BMOD) |
 				(BMOD_IDMAC_ENABLE|BMOD_IDMAC_FB)), MSHCI_BMOD);
@@ -1603,7 +1597,6 @@ int mshci_resume_host(struct mshci_host *host)
 
 	return 0;
 }
-
 EXPORT_SYMBOL_GPL(mshci_resume_host);
 
 #endif /* CONFIG_PM */
@@ -1643,7 +1636,8 @@ static void mshci_fifo_init(struct mshci_host *host)
 	host->fifo_depth = fifo_threshold*2;
 
 	printk(KERN_INFO "%s: FIFO WMARK FOR RX 0x%x WX 0x%x. ###########\n",
-		mmc_hostname(host->mmc),fifo_depth,((fifo_val & TX_WMARK)>>16)+1  );
+		mmc_hostname(host->mmc), fifo_depth,
+		    ((fifo_val & TX_WMARK)>>16)+1);
 
 	fifo_val &= ~(RX_WMARK | TX_WMARK | MSIZE_MASK);
 
@@ -1653,13 +1647,12 @@ static void mshci_fifo_init(struct mshci_host *host)
 
 	mshci_writel(host, fifo_val, MSHCI_FIFOTH);
 }
-
 EXPORT_SYMBOL_GPL(mshci_alloc_host);
 
 int mshci_add_host(struct mshci_host *host)
 {
 	struct mmc_host *mmc;
-	int ret,count;
+	int ret, count;
 
 	WARN_ON(host == NULL);
 	if (host == NULL)
@@ -1681,7 +1674,7 @@ int mshci_add_host(struct mshci_host *host)
 		/* We need to allocate descriptors for all sg entries
 		 * MSHCI_MAX_DMA_LIST transfer for each of those entries. */
 		host->idma_desc = kmalloc(MSHCI_MAX_DMA_LIST * \
-					sizeof(struct mshci_idmac),GFP_KERNEL);
+					sizeof(struct mshci_idmac), GFP_KERNEL);
 		if (!host->idma_desc) {
 			kfree(host->idma_desc);
 			printk(KERN_WARNING "%s: Unable to allocate IDMA "
@@ -1719,7 +1712,7 @@ int mshci_add_host(struct mshci_host *host)
 	/*
 	 * Set host parameters.
 	 */
-	if(host->ops->get_ro)
+	if (host->ops->get_ro)
 		mshci_ops.get_ro = host->ops->get_ro;
 
 	mmc->ops = &mshci_ops;
@@ -1816,8 +1809,9 @@ int mshci_add_host(struct mshci_host *host)
 	if (host->flags & MSHCI_USE_IDMA) {
 		mshci_writel(host, BMOD_IDMAC_RESET, MSHCI_BMOD);
 		count = 100;
-		while( (mshci_readl(host, MSHCI_BMOD) & BMOD_IDMAC_RESET )
-			&& --count ) ; /* nothing to do */
+		while ((mshci_readl(host, MSHCI_BMOD) & BMOD_IDMAC_RESET)
+			&& --count)
+			; /* nothing to do */
 
 		mshci_writel(host, (mshci_readl(host, MSHCI_BMOD) |
 				(BMOD_IDMAC_ENABLE|BMOD_IDMAC_FB)), MSHCI_BMOD);
@@ -1844,7 +1838,6 @@ untasklet:
 
 	return ret;
 }
-
 EXPORT_SYMBOL_GPL(mshci_add_host);
 
 void mshci_remove_host(struct mshci_host *host, int dead)
@@ -1886,14 +1879,12 @@ void mshci_remove_host(struct mshci_host *host, int dead)
 	host->idma_desc = NULL;
 	host->align_buffer = NULL;
 }
-
 EXPORT_SYMBOL_GPL(mshci_remove_host);
 
 void mshci_free_host(struct mshci_host *host)
 {
 	mmc_free_host(host->mmc);
 }
-
 EXPORT_SYMBOL_GPL(mshci_free_host);
 
 /*****************************************************************************\

@@ -122,7 +122,7 @@ static unsigned int mshci_s3c_consider_clock(struct mshci_s3c *ourhost,
 	dev_dbg(&ourhost->pdev->dev, "clk %d: rate %ld, want %d, got %ld\n",
 		src, rate, wanted, rate / div);
 
-	return (wanted - (rate / div));
+	return wanted - (rate / div);
 }
 
 /**
@@ -235,12 +235,12 @@ static void mshci_s3c_set_ios(struct mshci_host *host,
 		pdata->cfg_card(ourhost->pdev, host->ioaddr,
 				ios, host->mmc->card);
 
-#if defined (CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
-	defined (CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
+#if defined(CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
+	defined(CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
 	if (pdata->cfg_ddr) {
 		if (ios->ddr == MMC_1_2V_DDR_MODE ||
-			ios->ddr == MMC_1_8V_DDR_MODE )
-			pdata->cfg_ddr(ourhost->pdev, 1 );
+			ios->ddr == MMC_1_8V_DDR_MODE)
+			pdata->cfg_ddr(ourhost->pdev, 1);
 		else
 			pdata->cfg_ddr(ourhost->pdev, 0);
 	}
@@ -367,35 +367,36 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 			continue;
 		}
 
-#if defined (CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
-	defined (CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
-	if (!strcmp("sclk_dwmci",name)) {
+#if defined(CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
+	defined(CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
+	if (!strcmp("sclk_dwmci", name)) {
 		struct clk *parent_clk;
 
-		if (!(parent_clk = clk_get_parent(clk))) {
+		parent_clk = clk_get_parent(clk);
+
+		if (!parent_clk) {
 			dev_err(dev, "failed to get parent clock %s\n"
 			, (char *)(clk->name));
 		} else {
 			for ( ; ; ) {
 				parent_clk = clk_get_parent(parent_clk);
-				if ( parent_clk ) {
+				if (parent_clk) {
 #ifdef CONFIG_EXYNOS4_MSHC_EPLL_45MHZ
 					if (!strcmp("fout_epll", \
 							parent_clk->name)) {
 						clk_set_rate \
-							(parent_clk,180633600);
+							(parent_clk, 180633600);
 						pdata->cfg_ddr(pdev, 0);
-#elif defined (CONFIG_EXYNOS4_MSHC_VPLL_46MHZ)
+#elif defined(CONFIG_EXYNOS4_MSHC_VPLL_46MHZ)
 					if (!strcmp("fout_vpll", \
 							parent_clk->name)) {
 						clk_set_rate \
-							(parent_clk,370882812);
+							(parent_clk, 370882812);
 						pdata->cfg_ddr(pdev, 0);
 #endif
 						clk_enable(parent_clk);
 						break;
-					}
-					else
+					} else
 						continue;
 				} else {
 					dev_err(dev, "failed to"
@@ -408,6 +409,7 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 		}
 	}
 #endif
+
 		clks++;
 		sc->clk_bus[ptr] = clk;
 		clk_enable(clk);
@@ -438,11 +440,10 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 	}
 
 	/* Ensure we have minimal gpio selected CMD/CLK/Detect */
-	if (pdata->cfg_gpio) {
+	if (pdata->cfg_gpio)
 		pdata->cfg_gpio(pdev, pdata->max_width);
-	} else {
+	else
 		dev_err(dev, "cfg_gpio dose not exist.!\n");
-	}
 
 	host->hw_name = "samsung-mshci";
 	host->ops = &mshci_s3c_ops;
@@ -454,7 +455,7 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 	else
 		host->mmc->caps = 0;
 
-	if (pdata->cd_type == S3C_MSHCI_CD_PERMANENT){
+	if (pdata->cd_type == S3C_MSHCI_CD_PERMANENT) {
 		host->quirks |= MSHCI_QUIRK_BROKEN_PRESENT_BIT;
 		host->mmc->caps |= MMC_CAP_NONREMOVABLE;
 	}
@@ -478,7 +479,8 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 
 		sc->ext_cd_irq = gpio_to_irq(pdata->ext_cd_gpio);
 		if (sc->ext_cd_irq &&
-			request_irq(sc->ext_cd_irq, mshci_s3c_gpio_card_detect_isr,
+			request_irq(sc->ext_cd_irq,
+				mshci_s3c_gpio_card_detect_isr,
 				IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 				dev_name(&pdev->dev), sc)) {
 			dev_err(&pdev->dev, "cannot request irq for card detect\n");
