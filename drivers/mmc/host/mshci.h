@@ -73,20 +73,20 @@
  *  MSHCI_CTRL - offset 0x00
  *****************************************************/
 
-#define CTRL_RESET		(0x1<<0)	/* Reset DWC_mobile_storage controller */	
+#define CTRL_RESET		(0x1<<0)	/* Reset DWC_mobile_storage controller */
 #define FIFO_RESET		(0x1<<1)	/* Reset FIFO */
 #define DMA_RESET		(0x1<<2)	/* Reset DMA interface */
 #define INT_ENABLE		(0x1<<4)	/* Global interrupt enable/disable bit */
 #define DMA_ENABLE		(0x1<<5)	/* DMA transfer mode enable/disable bit */
 #define READ_WAIT		(0x1<<6)	/* For sending read-wait to SDIO cards */
 #define SEND_IRQ_RESP	(0x1<<7)	/* Send auto IRQ response */
-#define ABRT_READ_DATA	(0x1<<8)	
+#define ABRT_READ_DATA	(0x1<<8)
 #define SEND_CCSD		(0x1<<9)
 #define SEND_AS_CCSD	(0x1<<10)
 #define CEATA_INTSTAT	(0x1<<11)
 #define CARD_VOLA		(0xF<<16)
 #define CARD_VOLB		(0xF<<20)
-#define ENABLE_OD_PULLUP (0x1<<24)	
+#define ENABLE_OD_PULLUP (0x1<<24)
 #define ENABLE_IDMAC    (0x1<<25)
 
 #define MSHCI_RESET_ALL  (0x1)
@@ -145,7 +145,7 @@
 
 /* interrupt bits */
 #define INTMSK_ALL		0xFFFFFFFF
-#define INTMSK_CDETECT 	(0x1<<0) 
+#define INTMSK_CDETECT 	(0x1<<0)
 #define INTMSK_RE 		(0x1<<1)
 #define INTMSK_CDONE 	(0x1<<2)
 #define INTMSK_DTO 		(0x1<<3)
@@ -154,7 +154,7 @@
 #define INTMSK_RCRC     (0x1<<6)
 #define INTMSK_DCRC     (0x1<<7)
 #define INTMSK_RTO      (0x1<<8)
-#define INTMSK_DRTO    	(0x1<<9) 
+#define INTMSK_DRTO    	(0x1<<9)
 #define INTMSK_HTO      (0x1<<10)
 #define INTMSK_FRUN     (0x1<<11)
 #define INTMSK_HLE      (0x1<<12)
@@ -172,7 +172,7 @@
  *  MSHCI_CMD - offset 0x2C
  *****************************************************/
 
-#define CMD_RESP_EXP_BIT		(0x1<<6)	
+#define CMD_RESP_EXP_BIT		(0x1<<6)
 #define CMD_RESP_LENGTH_BIT		(0x1<<7)
 #define CMD_CHECK_CRC_BIT		(0x1<<8)
 #define CMD_DATA_EXP_BIT		(0x1<<9)
@@ -227,8 +227,8 @@
 #define FIFO_DEPTH      (0x20)
 
 /*Command FSM status */
-#define FSM_IDLE				(0 <<4)          		
-#define FSM_SEND_INIT_SEQ		(1 <<4)  
+#define FSM_IDLE				(0 <<4)
+#define FSM_SEND_INIT_SEQ		(1 <<4)
 #define FSM_TX_CMD_STARTBIT		(2 <<4)
 #define FSM_TX_CMD_TXBIT   		(3 <<4)
 #define	FSM_TX_CMD_INDEX_ARG	(4 <<4)
@@ -258,7 +258,7 @@
 #define MSIZE_8			(2<<28)
 #define MSIZE_16		(3<<28)
 #define MSIZE_32		(4<<28)
-#define MSIZE_64		(5<<28)		
+#define MSIZE_64		(5<<28)
 #define MSIZE_128		(6<<28)
 #define MSIZE_256		(7<<28)
 
@@ -336,7 +336,7 @@ struct mshci_idmac {
 #define MSHCI_IDMAC_LD          (1<<2)
 #define MSHCI_IDMAC_DIC         (1<<1)
 #define INTMSK_IDMAC_ALL        (0x337)
-#define INTMSK_IDMAC_ERROR      (0x214)        
+#define INTMSK_IDMAC_ERROR      (0x214)
 };
 
 struct mshci_host {
@@ -420,7 +420,7 @@ struct mshci_ops {
 	void		(*init_issue_cmd)(struct mshci_host *host);
 	void		(*init_card)(struct mshci_host *host);
 
-	int		(*dma_map_sg)(struct mshci_host *host, 
+	int		(*dma_map_sg)(struct mshci_host *host,
 				struct device *dev,
 				struct scatterlist *sg,
 				int nents, enum dma_data_direction dir,

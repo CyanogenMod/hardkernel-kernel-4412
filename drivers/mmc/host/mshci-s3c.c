@@ -31,10 +31,10 @@
 #include "mshci.h"
 
 #ifdef MSHCI_S3C_OWN_DMA_MAP
-void mshci_s3c_dma_map_sg(struct device *dev, struct scatterlist *sg, 
+void mshci_s3c_dma_map_sg(struct device *dev, struct scatterlist *sg,
 		int nents, enum dma_data_direction dir, int flush_type);
 
-void mshci_s3c_dma_unmap_sg(struct device *dev, struct scatterlist *sg, 
+void mshci_s3c_dma_unmap_sg(struct device *dev, struct scatterlist *sg,
 		int nents, enum dma_data_direction dir, int flush_type);
 #endif
 
@@ -272,7 +272,7 @@ static struct mshci_ops mshci_s3c_ops = {
 #ifdef MSHCI_S3C_OWN_DMA_MAP
 	.dma_map_sg		= mshci_s3c_dma_map_sg,
 	.dma_unmap_sg		= mshci_s3c_dma_unmap_sg,
-#endif	
+#endif
 };
 
 static void mshci_s3c_notify_change(struct platform_device *dev, int state)
@@ -320,7 +320,7 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 		dev_err(dev, "no device data specified\n");
 		return -ENOENT;
 	}
-	
+
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		dev_err(dev, "no irq specified\n");
@@ -458,9 +458,9 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 		host->quirks |= MSHCI_QUIRK_BROKEN_PRESENT_BIT;
 		host->mmc->caps |= MMC_CAP_NONREMOVABLE;
 	}
-	
+
 	/* IF SD controller's WP pin donsn't connected with SD card and there
-	 * is an allocated GPIO for getting WP data form SD card, 
+	 * is an allocated GPIO for getting WP data form SD card,
 	 * use this quirk and send the GPIO number in pdata->wp_gpio. */
 	if (pdata->has_wp_gpio && gpio_is_valid(pdata->wp_gpio)) {
 		mshci_s3c_ops.get_ro = mshci_s3c_get_ro;
