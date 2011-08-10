@@ -361,10 +361,14 @@ static int s3cfb_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+#ifdef CONFIG_FB_S5P_AMS369FG06
 extern void ams369fg06_ldi_init(void);
 extern void ams369fg06_ldi_enable(void);
 extern void ams369fg06_ldi_disable(void);
 extern void ams369fg06_gpio_cfg(void);
+#elif defined(CONFIG_FB_S5P_LMS501KF03)
+extern void lms501kf03_ldi_disable(void);
+#endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 void s3cfb_early_suspend(struct early_suspend *h)
@@ -385,8 +389,10 @@ void s3cfb_early_suspend(struct early_suspend *h)
 		if (pdata->backlight_off)
 			pdata->backlight_off(pdev);
 
-#if defined(CONFIG_FB_S5P_AMS369FG06)
+#ifdef CONFIG_FB_S5P_AMS369FG06
 		ams369fg06_ldi_disable();
+#elif defined(CONFIG_FB_S5P_LMS501KF03)
+		lms501kf03_ldi_disable();
 #endif
 
 		s3cfb_display_off(fbdev[i]);
@@ -441,7 +447,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 		if (info->lcd->init_ldi)
 			fbdev[i]->lcd->init_ldi();
 		else
-			printk("no init_ldi\n");
+			dev_dbg(info->dev, "no init_ldi\n");
 
 		if (pdata->clk_on)
 			pdata->clk_on(pdev, &fbdev[i]->clock);
@@ -460,7 +466,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 			}
 		}
 
-#if defined(CONFIG_FB_S5P_AMS369FG06)
+#ifdef CONFIG_FB_S5P_AMS369FG06
 		ams369fg06_gpio_cfg();
 		ams369fg06_ldi_init();
 		ams369fg06_ldi_enable();
@@ -474,7 +480,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 
 	return;
 }
-#else //else !CONFIG_HAS_EARLYSUSPEND
+#else /* else !CONFIG_HAS_EARLYSUSPEND */
 
 int s3cfb_suspend(struct platform_device *pdev, pm_message_t state)
 {
