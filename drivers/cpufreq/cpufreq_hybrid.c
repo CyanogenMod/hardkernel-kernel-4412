@@ -127,8 +127,6 @@ static unsigned long keep_minspeed_load;
 #define DEFAULT_STEPUP_LOAD 10
 static unsigned long step_up_load;
 
-static struct workqueue_struct	*khybrid_wq;
-
 static struct dbs_tuners {
 	unsigned int sampling_rate;
 	unsigned int up_threshold;
@@ -600,7 +598,7 @@ static void do_dbs_timer(struct work_struct *work)
 
 	if ((dbs_info->cur_policy->cur != dbs_info->cur_policy->min) &&
 		(dbs_info->cur_policy->cur != dbs_info->cur_policy->max))
-		queue_delayed_work_on(cpu, khybrid_wq, &dbs_info->work, delay);
+		schedule_delayed_work_on(cpu, &dbs_info->work, delay);
 
 	mutex_unlock(&dbs_info->timer_mutex);
 }
@@ -612,8 +610,7 @@ static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info)
 
 	dbs_info->sample_type = DBS_NORMAL_SAMPLE;
 	INIT_DELAYED_WORK_DEFERRABLE(&dbs_info->work, do_dbs_timer);
-	queue_delayed_work_on(dbs_info->cpu, khybrid_wq, &dbs_info->work,
-		delay);
+	schedule_delayed_work_on(dbs_info->cpu, &dbs_info->work, delay);
 }
 
 static inline void dbs_timer_exit(struct cpu_dbs_info_s *dbs_info)
@@ -846,8 +843,7 @@ static int cpufreq_hybrid_up_task(void *data)
 		if (policy->cur != policy->max) {
 			mutex_lock(&this_dbs_info->timer_mutex);
 
-			queue_delayed_work_on(0, khybrid_wq,
-					&this_dbs_info->work, delay);
+			schedule_delayed_work_on(0, &this_dbs_info->work, delay);
 			mutex_unlock(&this_dbs_info->timer_mutex);
 			cpufreq_hybrid_update_time();
 		}
@@ -879,8 +875,7 @@ static void cpufreq_hybrid_freq_down(struct work_struct *work)
 	if (policy->cur != policy->min) {
 		mutex_lock(&this_dbs_info->timer_mutex);
 
-		queue_delayed_work_on(0, khybrid_wq,
-				&this_dbs_info->work, delay);
+		schedule_delayed_work_on(0, &this_dbs_info->work, delay);
 		mutex_unlock(&this_dbs_info->timer_mutex);
 		cpufreq_hybrid_update_time();
 	}
@@ -891,7 +886,6 @@ static void cpufreq_hybrid_freq_down(struct work_struct *work)
 
 static int __init cpufreq_gov_dbs_init(void)
 {
-	int err;
 	cputime64_t wall;
 	u64 idle_time;
 	int cpu = get_cpu();
@@ -941,17 +935,8 @@ static int __init cpufreq_gov_dbs_init(void)
 
 	INIT_WORK(&freq_scale_down_work, cpufreq_hybrid_freq_down);
 
-	khybrid_wq = create_workqueue("khybrid");
-	if (!khybrid_wq) {
-		printk(KERN_ERR "Creation of khybrid failed\n");
-		return -EFAULT;
-	}
 
-	err = cpufreq_register_governor(&cpufreq_gov_hybrid);
-	if (err)
-		destroy_workqueue(khybrid_wq);
-
-	return err;
+	return cpufreq_register_governor(&cpufreq_gov_hybrid);
 err_freeuptask:
 	put_task_struct(up_task);
 	return -ENOMEM;
@@ -960,7 +945,6 @@ err_freeuptask:
 static void __exit cpufreq_gov_dbs_exit(void)
 {
 	cpufreq_unregister_governor(&cpufreq_gov_hybrid);
-	destroy_workqueue(khybrid_wq);
 }
 
 
