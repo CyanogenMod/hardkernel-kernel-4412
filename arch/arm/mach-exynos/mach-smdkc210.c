@@ -86,6 +86,9 @@
 #ifdef CONFIG_S3C64XX_DEV_SPI
 #include <mach/spi-clocks.h>
 #endif
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+#include <mach/dwmci.h>
+#endif
 
 #include <media/s5p_fimc.h>
 #include <media/s5k4ba_platform.h>
@@ -563,6 +566,53 @@ static struct i2c_board_info m5mols_board_info = {
 
 #endif
 #endif /* CONFIG_VIDEO_SAMSUNG_S5P_FIMC */
+
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+static void exynos4_dwmci_cfg_gpio(int width)
+{
+	unsigned int gpio;
+
+	for (gpio = EXYNOS4_GPK0(0); gpio < EXYNOS4_GPK0(2); gpio++) {
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	}
+
+	switch (width) {
+	case 8:
+		for (gpio = EXYNOS4_GPK1(3); gpio <= EXYNOS4_GPK1(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(4));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+		}
+	case 4:
+		for (gpio = EXYNOS4_GPK0(3); gpio <= EXYNOS4_GPK0(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+		}
+		break;
+	case 1:
+		gpio = EXYNOS4_GPK0(3);
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	default:
+		break;
+	}
+}
+
+static struct dw_mci_board exynos4_dwmci_pdata __initdata = {
+	.num_slots = 1,
+	.quirks = DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
+	.bus_hz = 160 * 1000 * 1000,
+	.caps = MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR | MMC_CAP_8_BIT_DATA,
+	.detect_delay_ms = 200,
+	.hclk_name = "dwmci",
+	.cclk_name = "sclk_dwmci",
+	.cfg_gpio = exynos4_dwmci_cfg_gpio,
+};
+#endif
 
 #ifdef CONFIG_S3C_DEV_HSMMC
 static struct s3c_sdhci_platdata smdkc210_hsmmc0_pdata __initdata = {
@@ -2236,6 +2286,12 @@ static void __init smdkc210_machine_init(void)
 
 	smdkc210_button_init();
 	smdkc210_smsc911x_init();
+
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+	if (exynos4_subrev() == 0)
+		exynos4_dwmci_pdata.caps &= ~(MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR);
+	exynos4_dwmci_set_platdata(&exynos4_dwmci_pdata);
+#endif
 
 #ifdef CONFIG_S3C_DEV_HSMMC
 	s3c_sdhci0_set_platdata(&smdkc210_hsmmc0_pdata);
