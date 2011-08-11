@@ -18,10 +18,23 @@ if CPU_EXYNOS4210 || CPU_EXYNOS4212
 	source "drivers/media/video/samsung/jpeg/Kconfig"
 	source "drivers/media/video/samsung/tvout/Kconfig"
 	source "drivers/media/video/samsung/mfc5x/Kconfig"
-	source "drivers/media/video/samsung/fimg2d3x/Kconfig"
 	source "drivers/media/video/samsung/ump/Kconfig"
 	source "drivers/media/video/samsung/mali/Kconfig"
 endif
+
+
+config VIDEO_FIMG2D
+	bool
+	select S5P_SYSTEM_MMU
+	depends on VIDEO_SAMSUNG
+	default n
+
+config VIDEO_FIMG2D_DEBUG
+	bool
+	depends on VIDEO_FIMG2D
+	default n
+
+source "drivers/media/video/samsung/fimg2d3x/Kconfig"
 
 if VIDEO_SAMSUNG
 comment "Reserved memory configurations"
