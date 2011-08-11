@@ -17,18 +17,22 @@
 #include <mach/map.h>
 #include <plat/fimg2d.h>
 
-#define IRQ_FIMG2D	IRQ_2D
+#ifdef CONFIG_CPU_EXYNOS4212
+#define	PA_FIMG2D	S5P_PA_FIMG2D_M
+#else
+#define	PA_FIMG2D	S5P_PA_FIMG2D
+#endif
 
 #ifdef CONFIG_VIDEO_FIMG2D
 static struct resource s5p_fimg2d_resource[] = {
 	[0] = {
-		.start	= S5P_PA_FIMG2D,
-		.end	= S5P_PA_FIMG2D + SZ_4K - 1,
+		.start	= PA_FIMG2D,
+		.end	= PA_FIMG2D + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
-		.start	= IRQ_FIMG2D,
-		.end	= IRQ_FIMG2D,
+		.start	= IRQ_2D,
+		.end	= IRQ_2D,
 		.flags	= IORESOURCE_IRQ,
 	}
 };
