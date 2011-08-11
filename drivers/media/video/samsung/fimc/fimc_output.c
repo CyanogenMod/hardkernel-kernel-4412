@@ -1761,16 +1761,16 @@ int fimc_s_ctrl_output(struct file *filp, void *fh, struct v4l2_control *c)
 		break;
 	case V4L2_CID_HFLIP:
 		if (c->value)
-			ctx->flip |= FIMC_XFLIP;
+			ctx->flip |= FIMC_YFLIP;
 		else
-			ctx->flip &= ~FIMC_XFLIP;
+			ctx->flip &= ~FIMC_YFLIP;
 
 		break;
 	case V4L2_CID_VFLIP:
 		if (c->value)
-			ctx->flip |= FIMC_YFLIP;
+			ctx->flip |= FIMC_XFLIP;
 		else
-			ctx->flip &= ~FIMC_YFLIP;
+			ctx->flip &= ~FIMC_XFLIP;
 
 		break;
 	case V4L2_CID_OVERLAY_AUTO:
