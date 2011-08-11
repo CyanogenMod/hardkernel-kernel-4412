@@ -13,6 +13,11 @@
 /* CPU frequency level index for using cpufreq lock API
  * This should be same with cpufreq_frequency_table
 */
+
+enum cpufreq_level_index {
+	L0, L1, L2, L3, L4, L5, L6
+};
+
 enum cpufreq_level_request {
 	CPU_L0,		/* 1400MHz */
 	CPU_L1,		/* 1200MHz */
@@ -54,8 +59,25 @@ int exynos4_cpufreq_upper_limit(unsigned int nId,
 			enum cpufreq_level_request cpufreq_level);
 void exynos4_cpufreq_upper_limit_free(unsigned int nId);
 
+#define MAX_INDEX	10
+
+struct exynos_dvfs_info {
+	unsigned long	mpll_freq_khz;
+	unsigned int	pll_safe_idx;
+	unsigned int	pm_lock_idx;
+	unsigned int	max_support_idx;
+	unsigned int	min_support_idx;
+	struct clk	*cpu_clk;
+	unsigned int	*volt_table;
+	struct cpufreq_frequency_table	*freq_table;
+	void (*set_freq)(unsigned int, unsigned int);
+	bool (*need_apll_change)(unsigned int, unsigned int);
+};
+
 #define SUPPORT_1400MHZ	(1<<31)
 #define SUPPORT_1200MHZ	(1<<30)
 #define SUPPORT_1000MHZ	(1<<29)
 #define SUPPORT_FREQ_SHIFT	29
 #define SUPPORT_FREQ_MASK	7
+
+extern int exynos4210_cpufreq_init(struct exynos_dvfs_info *);
