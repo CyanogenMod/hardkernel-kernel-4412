@@ -37,7 +37,7 @@ static struct s3c_csis_info *s3c_csis[S3C_CSIS_CH_NUM];
 
 static int s3c_csis_set_info(struct platform_device *pdev)
 {
-	s3c_csis[pdev->id] = (struct s3c_csis_info *) \
+	s3c_csis[pdev->id] = (struct s3c_csis_info *)
 			kzalloc(sizeof(struct s3c_csis_info), GFP_KERNEL);
 	if (!s3c_csis[pdev->id]) {
 		err("no memory for configuration\n");
@@ -127,6 +127,7 @@ static void s3c_csis_system_off(struct platform_device *pdev)
 static void s3c_csis_phy_on(struct platform_device *pdev)
 {
 	u32 cfg;
+
 	cfg = readl(s3c_csis[pdev->id]->regs + S3C_CSIS_DPHYCTRL);
 	cfg |= S3C_CSIS_DPHYCTRL_ENABLE;
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_DPHYCTRL);
@@ -225,7 +226,7 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 	pdata = to_csis_plat(&pdev->dev);
 
 	if (pdata->clk_on)
-		pdata->clk_on(to_platform_device(s3c_csis[csis_id]->dev), \
+		pdata->clk_on(to_platform_device(s3c_csis[csis_id]->dev),
 			&s3c_csis[csis_id]->clock);
 	if (pdata->cfg_phy_global)
 		pdata->cfg_phy_global(1);
@@ -274,7 +275,7 @@ void s3c_csis_stop(int csis_id)
 	if (pdata->clk_off) {
 		if (s3c_csis[csis_id]->clock != NULL)
 		pdata->clk_off(pdev, &s3c_csis[csis_id]->clock);
-}
+	}
 }
 
 static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
@@ -286,7 +287,7 @@ static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 
 #ifdef CONFIG_VIDEO_DEBUG_NO_FRAME
-	if (unlikely(cfg & S3C_CSIS_INTSRC_ERR)) {
+	if (unlikely(cfg)) {
 		if (err_print_cnt < 30) {
 			err("csis error interrupt[%d]: %#x\n", err_print_cnt, cfg);
 			err_print_cnt++;
@@ -300,8 +301,9 @@ static int s3c_csis_probe(struct platform_device *pdev)
 {
 	struct s3c_platform_csis *pdata;
 	struct resource *res;
+	int ret = 0;
 
-	s3c_csis_set_info(pdev);
+	ret = s3c_csis_set_info(pdev);
 
 	s3c_csis[pdev->id]->dev = &pdev->dev;
 
@@ -312,38 +314,59 @@ static int s3c_csis_probe(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		err("failed to get io memory region\n");
-		return -EINVAL;
+		ret = -ENOENT;
+		goto err_info;
 	}
 
-
-	res = request_mem_region(res->start,
-			res->end - res->start + 1, pdev->name);
-	if (!res) {
+	s3c_csis[pdev->id]->regs_res = request_mem_region(res->start,
+				resource_size(res), pdev->name);
+	if (!s3c_csis[pdev->id]->regs_res) {
 		err("failed to request io memory region\n");
-		return -EINVAL;
+		ret = -ENOENT;
+		goto err_info;
 	}
 
 	/* ioremap for register block */
-	s3c_csis[pdev->id]->regs = ioremap(res->start, res->end - res->start + 1);
+	s3c_csis[pdev->id]->regs = ioremap(res->start, resource_size(res));
 	if (!s3c_csis[pdev->id]->regs) {
 		err("failed to remap io region\n");
-		return -EINVAL;
+		ret = -ENXIO;
+		goto err_req_region;
 	}
 
 	/* irq */
 	s3c_csis[pdev->id]->irq = platform_get_irq(pdev, 0);
-	if (request_irq(s3c_csis[pdev->id]->irq, s3c_csis_irq, IRQF_DISABLED, \
-		s3c_csis[pdev->id]->name, pdev))
+	ret = request_irq(s3c_csis[pdev->id]->irq, s3c_csis_irq, IRQF_DISABLED,
+			s3c_csis[pdev->id]->name, pdev);
+	if (ret) {
 		err("request_irq failed\n");
+		goto err_regs_unmap;
+	}
 
 	info("Samsung MIPI-CSIS%d driver probed successfully\n", pdev->id);
 
 	return 0;
+
+err_regs_unmap:
+	iounmap(s3c_csis[pdev->id]->regs);
+err_req_region:
+	release_resource(s3c_csis[pdev->id]->regs_res);
+	kfree(s3c_csis[pdev->id]->regs_res);
+err_info:
+	kfree(s3c_csis[pdev->id]);
+
+	return ret;
 }
 
 static int s3c_csis_remove(struct platform_device *pdev)
 {
 	s3c_csis_stop(pdev->id);
+
+	free_irq(s3c_csis[pdev->id]->irq, s3c_csis[pdev->id]);
+	iounmap(s3c_csis[pdev->id]->regs);
+	release_resource(s3c_csis[pdev->id]->regs_res);
+
+	kfree(s3c_csis[pdev->id]->regs_res);
 	kfree(s3c_csis[pdev->id]);
 
 	return 0;
@@ -355,8 +378,6 @@ int s3c_csis_suspend(struct platform_device *pdev, pm_message_t state)
 	struct s3c_platform_csis *pdata = NULL;
 	pdata = to_csis_plat(&pdev->dev);
 
-/*	if (s3c_csis[pdev->id]->clock != NULL)
-	pdata->clk_off(pdev, &s3c_csis[pdev->id]->clock); */
 	return 0;
 }
 
@@ -365,8 +386,6 @@ int s3c_csis_resume(struct platform_device *pdev)
 {
 	struct s3c_platform_csis *pdata = NULL;
 	pdata = to_csis_plat(&pdev->dev);
-
-/*	pdata->clk_on(pdev, &s3c_csis[pdev->id]->clock); */
 
 	return 0;
 }

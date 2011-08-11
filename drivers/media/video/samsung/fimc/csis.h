@@ -16,7 +16,7 @@
 #define S3C_CSIS_NAME		"s3c-csis"
 #define S3C_CSIS_NR_LANES	1
 
-#ifdef CONFIG_CPU_S5PV310
+#ifdef CONFIG_ARCH_EXYNOS4
 #define S3C_CSIS_CH_NUM		2
 #else
 #define S3C_CSIS_CH_NUM		1
@@ -40,6 +40,7 @@ struct s3c_csis_info {
 	struct device	*dev;
 	struct clk	*clock;
 	void __iomem	*regs;
+	struct resource *regs_res;
 	int		irq;
 	int		nr_lanes;
 };
