@@ -18,6 +18,7 @@
 
 #include <asm/proc-fns.h>
 #include <asm/tlbflush.h>
+#include <asm/cacheflush.h>
 
 #include <mach/regs-clock.h>
 #include <mach/regs-pmu.h>
@@ -39,6 +40,9 @@
 #define REG_DIRECTGO_FLAG	(exynos4_subrev() == 0 ?\
 				(S5P_VA_SYSRAM + 0x20) : S5P_INFORM6)
 #endif
+
+extern unsigned long sys_pwr_conf_addr;
+
 enum hc_type {
 	HC_SDHC,
 	HC_MSHC,
@@ -178,12 +182,9 @@ static int check_sdmmc_op(unsigned int ch)
 
 	if (chk_sdhc_op[ch].type == HC_SDHC) {
 		base_addr = chk_sdhc_op[ch].base;
-		/* Check CMDINHDAT[1] and CMDINHCMD [0] */
-		reg1 = readl(base_addr + S3C_HSMMC_PRNSTS);
 		/* Check CLKCON [2]: ENSDCLK */
 		reg2 = readl(base_addr + S3C_HSMMC_CLKCON);
-		return !!((reg1 & (S3C_HSMMC_CMD_INHIBIT | S3C_HSMMC_DATA_INHIBIT)) ||
-		       (reg2 & (S3C_HSMMC_CLOCK_CARD_EN)));
+		return !!(reg2 & (S3C_HSMMC_CLOCK_CARD_EN));
 	} else if (chk_sdhc_op[ch].type == HC_MSHC) {
 		base_addr = chk_sdhc_op[ch].base;
 		/* Check STATUS [9] for data busy */
@@ -295,46 +296,14 @@ static int exynos4_check_enter(void)
 	return ret;
 }
 
-/*
- * This function is called by exynos_enter_lp() in idle.S.
- * The contents of the SVC mode stack area should be updated
- * to physical memory until entering AFTR mode. The memory
- * contents are used by cpu_resume().
- */
-void exynos4_lpidle_cache_clean(void *stack_addr)
+void exynos4_flush_cache(void *addr, phys_addr_t phy_ttb_base)
 {
-	void *saveblk;
-	unsigned long saveblk_size;
-
-	saveblk = stack_addr - 36;
-	/*
-	 * Refer to v7 cpu_suspend function.
-	 * From saveblk to stack_addr + (4 * 4) + (4 * 8)
-	 * 4byte * (v:p offset, virt sp, ret fn, phy resume fn)
-	 * 4byte * (Saving Coporcessor and MMU control register: 8)
-	 */
-	saveblk_size = 84;
-	outer_cache.clean_range(virt_to_phys(saveblk), saveblk_size);
-
-	/* To clean sleep_save_sp area */
-	outer_cache.clean_range(virt_to_phys(cpu_resume), 64);
-}
-
-void exynos4_set_core0_pwroff(void)
-{
-	unsigned long tmp;
-	/*
-	 * Setting Central Sequence Register for power down mode
-	 */
-	tmp = __raw_readl(S5P_CENTRAL_SEQ_CONFIGURATION);
-	tmp &= ~(S5P_CENTRAL_LOWPWR_CFG);
-	__raw_writel(tmp, S5P_CENTRAL_SEQ_CONFIGURATION);
-
-#ifdef CONFIG_ARM_TRUSTZONE
-	exynos_smc(SMC_CMD_CPU0AFTR, 0, 0, 0);
-#else
-	cpu_do_idle();
-#endif
+	outer_clean_range(virt_to_phys(addr - 0x40),
+			  virt_to_phys(addr + 0x40));
+	outer_clean_range(virt_to_phys(cpu_resume),
+			  virt_to_phys(cpu_resume + 0x40));
+	outer_clean_range(phy_ttb_base, phy_ttb_base + 0xffff);
+	flush_cache_all();
 }
 
 static void exynos4_set_wakeupmask(void)
@@ -690,6 +659,8 @@ static int __init exynos4_init_cpuidle(void)
 	}
 
 	register_pm_notifier(&exynos4_cpuidle_notifier);
+	sys_pwr_conf_addr = (unsigned long)S5P_CENTRAL_SEQ_CONFIGURATION;
+
 	return 0;
 }
 device_initcall(exynos4_init_cpuidle);

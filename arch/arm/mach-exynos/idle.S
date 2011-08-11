@@ -31,6 +31,8 @@
 #include <asm/memory.h>
 #include <plat/map-base.h>
 #include <plat/map-s5p.h>
+#include <mach/smc.h>
+
 	.text
 
 	/*
@@ -55,8 +57,28 @@ ENTRY(exynos4_enter_lp)
 	bl	cpu_suspend
 
 	mov	r0, sp
-	bl	exynos4_lpidle_cache_clean
-	bl	exynos4_set_core0_pwroff
+
+	mrc	p15, 0, r1, c2, c0, 0	@ TTB 0
+	mov	r2, r1, lsr #14		@ get TTB0 base
+	mov	r1, r2, lsl #14
+	bl	exynos4_flush_cache
+
+	adr	r0, sys_pwr_conf_addr
+	ldr	r1, [r0]
+	ldr	r2, [r1]
+	bic	r2, r2, #(1<<16)
+	str	r2, [r1]
+
+#ifdef CONFIG_ARM_TRUSTZONE
+	ldr	r0, =SMC_CMD_CPU0AFTR
+	mov	r1, #0
+	mov	r2, #0
+	mov	r3, #0
+	smc	0
+#else
+	dsb
+	wfi
+#endif
 
 	/* Restore original sp */
 	mov	r0, sp
@@ -67,6 +89,12 @@ ENTRY(exynos4_enter_lp)
 	b	early_wakeup
 
 resume_with_mmu:
+	/* Enable L2 cache */
+	mov	r0, #1
+	ldr	r1, =0xF8600000
+#ifndef CONFIG_ARM_TRUSTZONE
+	str	r0, [r1, #0x100]
+#endif
 
 	adr	r0, sleep_save_misc
 
@@ -97,6 +125,10 @@ early_wakeup:
 
 sleep_save_misc:
 	.long	0
+	.long	0
+
+	.global sys_pwr_conf_addr
+sys_pwr_conf_addr:
 	.long	0
 
 	/*
@@ -139,10 +171,6 @@ ENTRY(exynos4_idle_resume)
 	and	r0, r0, r3
 	orr	r0, r0, r2
 	str	r0, [r1, #0x104]
-
-	/* Enable L2 cache */
-	mov	r0, #1
-	str	r0, [r1, #0x100]
 #endif
 
 	b	cpu_resume
