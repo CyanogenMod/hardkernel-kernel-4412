@@ -351,6 +351,13 @@ config MACH_FPGA4212
 	select CPU_EXYNOS4212
 	help
 	  Machine support for Samsung FPGA4212
+
+config MACH_SMDK4212
+	bool "SMDK4212 board"
+	select CPU_EXYNOS4212
+	help
+	  Machine support for Samsung SMDK4212
+
 endmenu
 
 menu "EXYNOS5 Machines"
