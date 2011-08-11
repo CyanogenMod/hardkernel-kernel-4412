@@ -210,6 +210,7 @@ struct dw_mci_board {
 	int (*get_cd)(u32 slot_id);
 	int (*get_ocr)(u32 slot_id);
 	int (*get_bus_wd)(u32 slot_id);
+	void (*cfg_gpio)(int width);
 	/*
 	 * Enable power to selected slot and set voltage to desired level.
 	 * Voltage levels are specified using MMC_VDD_xxx defines defined
