@@ -1,0 +1,280 @@
+/* linux/drivers/media/video/samsung/fimg2d4x/fimg2d4x_blt.c
+ *
+ * Copyright (c) 2011 Samsung Electronics Co., Ltd.
+ *	http://www.samsung.com/
+ *
+ * Samsung Graphics 2D driver
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+#include <linux/slab.h>
+#include <linux/interrupt.h>
+#include <linux/sched.h>
+#include <linux/uaccess.h>
+#include <linux/atomic.h>
+
+#include "fimg2d.h"
+#include "fimg2d4x.h"
+
+#ifdef CONFIG_S5P_SYSTEM_MMU
+#include <asm/pgtable.h>
+#include <plat/sysmmu.h>
+#include <mach/sysmmu.h>
+#endif
+
+#ifdef CONFIG_PM_RUNTIME
+#include <plat/devs.h>
+#include <linux/pm_runtime.h>
+#endif
+
+/* bitblt time measure */
+#undef PERF
+
+static int fimg2d4x_is_valid_param(struct fimg2d_bltcmd *cmd)
+{
+	return 0;
+}
+
+/* for workaround */
+static void fimg2d4x_pre_bitblt(struct fimg2d_control *info,
+		struct fimg2d_context *ctx, struct fimg2d_bltcmd *cmd)
+{
+	return;
+}
+
+/* for workaround */
+static void fimg2d4x_post_bitblt(struct fimg2d_control *info,
+		struct fimg2d_context *ctx, struct fimg2d_bltcmd *cmd)
+{
+	return;
+}
+
+/**
+ * blitter
+ */
+void fimg2d4x_bitblt(struct fimg2d_control *info)
+{
+	struct fimg2d_context *ctx;
+	struct fimg2d_bltcmd *cmd;
+	int ret = 0;
+#ifdef PERF
+	struct timeval start, end;
+	long sec, usec, time;
+#endif
+
+	fimg2d_debug("enter blitter\n");
+
+#ifdef CONFIG_PM_RUNTIME
+	if (atomic_read(&info->pwron) == 0) {
+		fimg2d_debug("pm_runtime_get_sync\n");
+		pm_runtime_get_sync(&(s5p_device_fimg2d.dev));
+	}
+#endif
+
+	while ((cmd = fimg2d_get_first_command(info))) {
+
+		if (fimg2d4x_is_valid_param(cmd))
+			goto noblt;
+
+		ctx = cmd->ctx;
+
+		atomic_set(&info->busy, 1);
+
+		/* set SFR */
+		info->configure(info, cmd);
+
+		/* set SysMMU */
+		if (cmd->dsten && cmd->dst.addr.type == ADDR_USER) {
+#ifdef CONFIG_S5P_SYSTEM_MMU
+			s5p_sysmmu_set_tablebase_pgd(SYSMMU_MDMA, ctx->pgd);
+			fimg2d_debug("set sysmmu: context(%p) pgd(0x%lx)\n", ctx, ctx->pgd);
+#endif
+		}
+
+#ifdef PERF
+		do_gettimeofday(&start);
+#endif
+
+		/* start bitblt */
+		info->run(info);
+
+		fimg2d_debug("wait irq\n");
+		ret = wait_event_timeout(info->wait_q, !atomic_read(&info->busy), 5000);
+		if (!ret) {
+			info->err = true;
+			printk(KERN_ERR "[%s] wait timeout\n", __func__);
+		} else {
+			fimg2d_debug("blitter wake up\n");
+		}
+
+#ifdef PERF
+		do_gettimeofday(&end);
+		sec = end.tv_sec - start.tv_sec;
+		if (end.tv_usec >= start.tv_usec) {
+			usec = end.tv_usec - start.tv_usec;
+		} else {
+			usec = end.tv_usec + 1000000 - start.tv_usec;
+			sec--;
+		}
+		time = sec * 1000000 + usec;
+		printk(KERN_INFO "[%s] bitblt perf: %ld usec elapsed\n", __func__, time);
+#endif
+
+noblt:
+		spin_lock(&info->bltlock);
+		fimg2d_dequeue(info, &cmd->node);
+		kfree(cmd);
+		atomic_dec(&ctx->ncmd);
+
+		/* wake up context */
+		if (!atomic_read(&ctx->ncmd)) {
+			fimg2d_debug("no more blit jobs for context(%p)\n", ctx);
+			wake_up(&ctx->wait_q);
+		}
+		spin_unlock(&info->bltlock);
+	}
+
+	atomic_set(&info->active, 0);
+
+#ifdef CONFIG_PM_RUNTIME
+	if (atomic_read(&info->pwron) == 1) {
+		pm_runtime_put_sync(&(s5p_device_fimg2d.dev));
+		fimg2d_debug("pm_runtime_put_sync\n");
+	}
+#endif
+
+	fimg2d_debug("exit blitter\n");
+}
+
+/**
+ * configure hardware
+ */
+static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
+{
+	enum image_sel srcsel, dstsel;
+
+	fimg2d_debug("context(%p) seq_no(%u)\n", cmd->ctx, cmd->seq_no);
+
+	/* TODO: batch blit */
+	fimg2d4x_reset(info);
+
+	/* src and dst select */
+	srcsel = dstsel = IMG_MEMORY;
+
+	switch (cmd->op) {
+	case BLIT_OP_SOLID_FILL:
+		srcsel = dstsel = IMG_FGCOLOR;
+		fimg2d4x_set_color_fill(info, cmd->fillcolor);
+		break;
+	case BLIT_OP_CLR:
+		srcsel = dstsel = IMG_FGCOLOR;
+		fimg2d4x_set_color_fill(info, 0);
+		break;
+	case BLIT_OP_SRC:
+		dstsel = IMG_FGCOLOR;
+		if (!cmd->srcen)
+			srcsel = IMG_FGCOLOR;
+		break;
+	case BLIT_OP_DST:
+		srcsel = IMG_FGCOLOR;
+		if (!cmd->dsten)
+			dstsel = IMG_FGCOLOR;
+		break;
+	default:	/* alpha blending */
+		fimg2d4x_enable_alpha(info, cmd->g_alpha);
+		fimg2d4x_set_alpha_composite(info, cmd->op, cmd->g_alpha);
+		if (cmd->premult == NON_PREMULTIPLIED)
+			fimg2d4x_set_premultiplied(info);
+		break;
+	}
+
+	fimg2d4x_set_src_type(info, srcsel);
+	fimg2d4x_set_dst_type(info, dstsel);
+
+	/* src */
+	if (cmd->srcen) {
+		fimg2d4x_set_src_image(info, &cmd->src);
+		fimg2d4x_set_src_rect(info, &cmd->src_rect);
+	}
+
+	/* dst */
+	if (cmd->dsten) {
+		fimg2d4x_set_dst_image(info, &cmd->dst);
+		fimg2d4x_set_dst_rect(info, &cmd->dst_rect);
+	}
+
+	/* mask */
+	if (cmd->msken) {
+		fimg2d4x_enable_msk(info);
+		fimg2d4x_set_msk_image(info, &cmd->msk);
+		fimg2d4x_set_msk_rect(info, &cmd->msk_rect);
+	}
+
+	/* bluescreen */
+	if (cmd->bluscr.mode != OPAQUE)
+		fimg2d4x_set_bluescreen(info, &cmd->bluscr);
+
+	/* scaling */
+	if (cmd->scaling.mode != NO_SCALING) {
+		fimg2d4x_set_src_scaling(info, &cmd->scaling);
+		if (cmd->msken)
+			fimg2d4x_set_msk_scaling(info, &cmd->scaling);
+	}
+
+	/* repeat */
+	if (cmd->repeat.mode != NO_REPEAT) {
+		fimg2d4x_set_src_repeat(info, &cmd->repeat);
+		if (cmd->msken)
+			fimg2d4x_set_msk_repeat(info, &cmd->repeat);
+	}
+
+	/* rotation */
+	if (cmd->rotate != ORIGIN)
+		fimg2d4x_set_rotation(info, cmd->rotate);
+
+	/* clipping */
+	if (cmd->clipping.enable)
+		fimg2d4x_enable_clipping(info, &cmd->clipping);
+
+	/* dithering */
+	if (cmd->dither)
+		fimg2d4x_enable_dithering(info);
+}
+
+/**
+ * enable irq and start bitblt
+ */
+static inline void fimg2d4x_run(struct fimg2d_control *info)
+{
+	fimg2d_debug("start bitblt\n");
+	fimg2d4x_enable_irq(info);
+	fimg2d4x_clear_irq(info);
+	fimg2d4x_start_blit(info);
+}
+
+/**
+ * disable irq and wake up thread
+ */
+static void fimg2d4x_stop(struct fimg2d_control *info)
+{
+	if (fimg2d4x_is_blit_done(info)) {
+		fimg2d_debug("bitblt done\n");
+		fimg2d4x_disable_irq(info);
+		fimg2d4x_clear_irq(info);
+		atomic_set(&info->busy, 0);
+		wake_up(&info->wait_q);
+	}
+}
+
+int fimg2d_register_ops(struct fimg2d_control *info)
+{
+	info->blit = fimg2d4x_bitblt;
+	info->configure = fimg2d4x_configure;
+	info->run = fimg2d4x_run;
+	info->stop = fimg2d4x_stop;
+
+	return 0;
+}

@@ -35,6 +35,7 @@ config VIDEO_FIMG2D_DEBUG
 	default n
 
 source "drivers/media/video/samsung/fimg2d3x/Kconfig"
+source "drivers/media/video/samsung/fimg2d4x/Kconfig"
 
 if VIDEO_SAMSUNG
 comment "Reserved memory configurations"
