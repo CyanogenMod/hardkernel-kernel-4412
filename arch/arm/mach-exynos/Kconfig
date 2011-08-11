@@ -367,6 +367,8 @@ config MACH_NURI
 config MACH_FPGA4212
 	bool "FPGA4212 board"
 	select CPU_EXYNOS4212
+	select EXYNOS4_DEV_SYSMMU
+	select S5P_DEV_FIMG2D
 	help
 	  Machine support for Samsung FPGA4212
 

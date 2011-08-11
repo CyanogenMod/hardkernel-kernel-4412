@@ -21,6 +21,10 @@
 
 #include <mach/map.h>
 
+#include <plat/devs.h>
+#include <mach/sysmmu.h>
+#include <plat/fimg2d.h>
+
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDKV310_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -66,7 +70,38 @@ static struct s3c2410_uartcfg smdkv310_uartcfgs[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_VIDEO_FIMG2D
+static struct fimg2d_platdata fimg2d_data __initdata = {
+	.hw_ver = 41,
+	.parent_clkname = "mout_mpll",
+	.clkname = "sclk_fimg2d",
+	.gate_clkname = "fimg2d",
+	.clkrate = 267 * 1000000,	/* 266 Mhz */
+};
+#endif
+
 static struct platform_device *smdkv310_devices[] __initdata = {
+#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+	&exynos4_device_sysmmu[SYSMMU_MDMA],
+	&exynos4_device_sysmmu[SYSMMU_SSS],
+	&exynos4_device_sysmmu[SYSMMU_FIMC0],
+	&exynos4_device_sysmmu[SYSMMU_FIMC1],
+	&exynos4_device_sysmmu[SYSMMU_FIMC2],
+	&exynos4_device_sysmmu[SYSMMU_FIMC3],
+	&exynos4_device_sysmmu[SYSMMU_JPEG],
+	&exynos4_device_sysmmu[SYSMMU_FIMD0],
+	&exynos4_device_sysmmu[SYSMMU_FIMD1],
+	&exynos4_device_sysmmu[SYSMMU_PCIe],
+	&exynos4_device_sysmmu[SYSMMU_G2D],
+	&exynos4_device_sysmmu[SYSMMU_ROTATOR],
+	&exynos4_device_sysmmu[SYSMMU_MDMA2],
+	&exynos4_device_sysmmu[SYSMMU_TV],
+	&exynos4_device_sysmmu[SYSMMU_MFC_L],
+	&exynos4_device_sysmmu[SYSMMU_MFC_R],
+#endif
+#ifdef CONFIG_VIDEO_FIMG2D
+	&s5p_device_fimg2d,
+#endif
 };
 
 static void __init smdkv310_map_io(void)
@@ -79,6 +114,12 @@ static void __init smdkv310_map_io(void)
 
 static void __init smdkv310_machine_init(void)
 {
+#ifdef CONFIG_VIDEO_FIMG2D
+	s5p_fimg2d_set_platdata(&fimg2d_data);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_fimg2d.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+#endif
+#endif
 	platform_add_devices(smdkv310_devices, ARRAY_SIZE(smdkv310_devices));
 }
 
