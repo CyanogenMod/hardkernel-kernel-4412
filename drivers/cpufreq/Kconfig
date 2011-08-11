@@ -109,14 +109,14 @@ config CPU_FREQ_DEFAULT_GOV_INTERACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
 
-config CPU_FREQ_DEFAULT_GOV_HYBRID
-	bool "hybrid"
-	select CPU_FREQ_GOV_HYBRID
+config CPU_FREQ_DEFAULT_GOV_ADAPTIVE
+	bool "adaptive"
+	select CPU_FREQ_GOV_ADAPTIVE
 	help
-	  Use the CPUFreq governor 'hybrid' as default. This allows
+	  Use the CPUFreq governor 'adaptive' as default. This allows
 	  you to get a full dynamic cpu frequency capable system by simply
 	  loading your cpufreq low-level hardware driver, using the
-	  'hybrid' governor for latency-sensitive workloads and demanding
+	  'adaptive' governor for latency-sensitive workloads and demanding
 	  performance.
 endchoice
 
@@ -215,10 +215,10 @@ config CPU_FREQ_GOV_CONSERVATIVE
 
 	  If in doubt, say N.
 
-config CPU_FREQ_GOV_HYBRID
-	tristate "'hybrid' cpufreq policy governor"
+config CPU_FREQ_GOV_ADAPTIVE
+	tristate "'adaptive' cpufreq policy governor"
 	help
-	  'hybrid' - This driver adds a dynamic cpufreq policy governor
+	  'adaptive' - This driver adds a dynamic cpufreq policy governor
 	  designed for latency-sensitive workloads and also for demanding
 	  performance.
 
@@ -230,7 +230,7 @@ config CPU_FREQ_GOV_HYBRID
 	  max operation level.
 
 	  To compile this driver as a module, choose M here: the
-	  module will be called cpufreq_hybrid.
+	  module will be called cpufreq_adaptive.
 
 	  For details, take a look at linux/Documentation/cpu-freq.
 

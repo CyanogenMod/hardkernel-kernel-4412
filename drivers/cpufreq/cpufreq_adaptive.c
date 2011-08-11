@@ -1,5 +1,5 @@
 /*
- *  drivers/cpufreq/cpufreq_hybrid.c
+ *  drivers/cpufreq/cpufreq_adaptive.c
  *
  *  Copyright (C)  2001 Russell King
  *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
@@ -62,11 +62,11 @@ static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				unsigned int event);
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_HYBRID
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ADAPTIVE
 static
 #endif
-struct cpufreq_governor cpufreq_gov_hybrid = {
-	.name                   = "hybrid",
+struct cpufreq_governor cpufreq_gov_adaptive = {
+	.name                   = "adaptive",
 	.governor               = cpufreq_governor_dbs,
 	.max_transition_latency = TRANSITION_LATENCY_LIMIT,
 	.owner                  = THIS_MODULE,
@@ -182,7 +182,7 @@ static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wal
 	return iowait_time;
 }
 
-static void hybrid_init_cpu(int cpu)
+static void adaptive_init_cpu(int cpu)
 {
 	struct cpu_dbs_info_s *dbs_info = &per_cpu(od_cpu_dbs_info, cpu);
 	dbs_info->freq_table = cpufreq_frequency_get_table(cpu);
@@ -193,7 +193,7 @@ static void hybrid_init_cpu(int cpu)
 static ssize_t show_sampling_rate_max(struct kobject *kobj,
 				      struct attribute *attr, char *buf)
 {
-	printk_once(KERN_INFO "CPUFREQ: hybrid sampling_rate_max "
+	printk_once(KERN_INFO "CPUFREQ: adaptive sampling_rate_max "
 	       "sysfs file is deprecated - used by: %s\n", current->comm);
 	return sprintf(buf, "%u\n", -1U);
 }
@@ -207,7 +207,7 @@ static ssize_t show_sampling_rate_min(struct kobject *kobj,
 define_one_global_ro(sampling_rate_max);
 define_one_global_ro(sampling_rate_min);
 
-/* cpufreq_hybrid Governor Tunables */
+/* cpufreq_adaptive Governor Tunables */
 #define show_one(file_name, object)					\
 static ssize_t show_##file_name						\
 (struct kobject *kobj, struct attribute *attr, char *buf)              \
@@ -222,14 +222,14 @@ show_one(ignore_nice_load, ignore_nice);
 /*** delete after deprecation time ***/
 
 #define DEPRECATION_MSG(file_name)					\
-	printk_once(KERN_INFO "CPUFREQ: Per core hybrid sysfs "	\
+	printk_once(KERN_INFO "CPUFREQ: Per core adaptive sysfs "	\
 		    "interface is deprecated - " #file_name "\n");
 
 #define show_one_old(file_name)						\
 static ssize_t show_##file_name##_old					\
 (struct cpufreq_policy *unused, char *buf)				\
 {									\
-	printk_once(KERN_INFO "CPUFREQ: Per core hybrid sysfs "	\
+	printk_once(KERN_INFO "CPUFREQ: Per core adaptive sysfs "	\
 		    "interface is deprecated - " #file_name "\n");	\
 	return show_##file_name(NULL, NULL, buf);			\
 }
@@ -342,7 +342,7 @@ static struct attribute *dbs_attributes[] = {
 
 static struct attribute_group dbs_attr_group = {
 	.attrs = dbs_attributes,
-	.name = "hybrid",
+	.name = "adaptive",
 };
 
 /*** delete after deprecation time ***/
@@ -351,12 +351,12 @@ static struct attribute_group dbs_attr_group = {
 static ssize_t store_##file_name##_old					\
 (struct cpufreq_policy *unused, const char *buf, size_t count)		\
 {									\
-	printk_once(KERN_INFO "CPUFREQ: Per core hybrid sysfs "	\
+	printk_once(KERN_INFO "CPUFREQ: Per core adaptive sysfs "	\
 			"interface is deprecated - " #file_name "\n");	\
 	return store_##file_name(NULL, NULL, buf, count);		\
 }
 
-static void cpufreq_hybrid_timer(unsigned long data)
+static void cpufreq_adaptive_timer(unsigned long data)
 {
 	cputime64_t cur_idle;
 	cputime64_t cur_wall;
@@ -515,7 +515,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		}
 
 		/*
-		 * For the purpose of hybrid, waiting for disk IO is an
+		 * For the purpose of adaptive, waiting for disk IO is an
 		 * indication that you're performance critical, and not that
 		 * the system is actually idle. So subtract the iowait time
 		 * from the cpu idle time.
@@ -641,7 +641,7 @@ static int should_io_be_busy(void)
 	return 0;
 }
 
-static void cpufreq_hybrid_idle(void)
+static void cpufreq_adaptive_idle(void)
 {
 	int i;
 	struct cpu_dbs_info_s *dbs_info = &per_cpu(od_cpu_dbs_info, 0);
@@ -711,7 +711,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			}
 		}
 		this_dbs_info->cpu = cpu;
-		hybrid_init_cpu(cpu);
+		adaptive_init_cpu(cpu);
 
 		/*
 		 * Start the timerschedule work, when this governor
@@ -745,7 +745,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		dbs_timer_init(this_dbs_info);
 
 		pm_idle_old = pm_idle;
-		pm_idle = cpufreq_hybrid_idle;
+		pm_idle = cpufreq_adaptive_idle;
 		break;
 
 	case CPUFREQ_GOV_STOP:
@@ -777,7 +777,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	return 0;
 }
 
-static inline void cpufreq_hybrid_update_time(void)
+static inline void cpufreq_adaptive_update_time(void)
 {
 	struct cpu_dbs_info_s *this_dbs_info;
 	struct cpufreq_policy *policy;
@@ -808,7 +808,7 @@ static inline void cpufreq_hybrid_update_time(void)
 
 }
 
-static int cpufreq_hybrid_up_task(void *data)
+static int cpufreq_adaptive_up_task(void *data)
 {
 	unsigned long flags;
 	struct cpu_dbs_info_s *this_dbs_info;
@@ -845,7 +845,7 @@ static int cpufreq_hybrid_up_task(void *data)
 
 			schedule_delayed_work_on(0, &this_dbs_info->work, delay);
 			mutex_unlock(&this_dbs_info->timer_mutex);
-			cpufreq_hybrid_update_time();
+			cpufreq_adaptive_update_time();
 		}
 		if (mutex_is_locked(&short_timer_mutex))
 			mutex_unlock(&short_timer_mutex);
@@ -854,7 +854,7 @@ static int cpufreq_hybrid_up_task(void *data)
 	return 0;
 }
 
-static void cpufreq_hybrid_freq_down(struct work_struct *work)
+static void cpufreq_adaptive_freq_down(struct work_struct *work)
 {
 	unsigned long flags;
 	struct cpu_dbs_info_s *this_dbs_info;
@@ -877,7 +877,7 @@ static void cpufreq_hybrid_freq_down(struct work_struct *work)
 
 		schedule_delayed_work_on(0, &this_dbs_info->work, delay);
 		mutex_unlock(&this_dbs_info->timer_mutex);
-		cpufreq_hybrid_update_time();
+		cpufreq_adaptive_update_time();
 	}
 
 	if (mutex_is_locked(&short_timer_mutex))
@@ -915,10 +915,10 @@ static int __init cpufreq_gov_dbs_init(void)
 	}
 
 	init_timer(&cpu_timer);
-	cpu_timer.function = cpufreq_hybrid_timer;
+	cpu_timer.function = cpufreq_adaptive_timer;
 
-	up_task = kthread_create(cpufreq_hybrid_up_task, NULL,
-			"khybridup");
+	up_task = kthread_create(cpufreq_adaptive_up_task, NULL,
+			"kadaptiveup");
 
 	if (IS_ERR(up_task))
 		return PTR_ERR(up_task);
@@ -928,15 +928,15 @@ static int __init cpufreq_gov_dbs_init(void)
 
 	/* No rescuer thread, bind to CPU queuing the work for possibly
 	   warm cache (probably doesn't matter much). */
-	down_wq = alloc_workqueue("khybrid_down", 0, 1);
+	down_wq = alloc_workqueue("kadaptive_down", 0, 1);
 
 	if (!down_wq)
 		goto err_freeuptask;
 
-	INIT_WORK(&freq_scale_down_work, cpufreq_hybrid_freq_down);
+	INIT_WORK(&freq_scale_down_work, cpufreq_adaptive_freq_down);
 
 
-	return cpufreq_register_governor(&cpufreq_gov_hybrid);
+	return cpufreq_register_governor(&cpufreq_gov_adaptive);
 err_freeuptask:
 	put_task_struct(up_task);
 	return -ENOMEM;
@@ -944,17 +944,17 @@ err_freeuptask:
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
-	cpufreq_unregister_governor(&cpufreq_gov_hybrid);
+	cpufreq_unregister_governor(&cpufreq_gov_adaptive);
 }
 
 
 MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
 MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
-MODULE_DESCRIPTION("'cpufreq_hybrid' - A dynamic cpufreq governor for "
+MODULE_DESCRIPTION("'cpufreq_adaptive' - A dynamic cpufreq governor for "
 	"Low Latency Frequency Transition capable processors");
 MODULE_LICENSE("GPL");
 
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_HYBRID
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_ADAPTIVE
 fs_initcall(cpufreq_gov_dbs_init);
 #else
 module_init(cpufreq_gov_dbs_init);
