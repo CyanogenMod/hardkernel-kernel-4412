@@ -671,15 +671,12 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	switch (ios->bus_width) {
 	case MMC_BUS_WIDTH_1:
 		slot->ctype = SDMMC_CTYPE_1BIT;
-		__raw_writel((0x00010001), slot->host->regs + 0x09c);
 		break;
 	case MMC_BUS_WIDTH_4:
 		slot->ctype = SDMMC_CTYPE_4BIT;
-		__raw_writel((0x00010001), slot->host->regs + 0x09c);
 		break;
 	case MMC_BUS_WIDTH_8:
 		slot->ctype = SDMMC_CTYPE_8BIT;
-		__raw_writel((0x00020002), slot->host->regs + 0x09c);
 		break;
 	}
 
@@ -688,7 +685,13 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		regs = mci_readl(slot->host, UHS_REG);
 		regs |= (0x1 << slot->id) << 16;
 		mci_writel(slot->host, UHS_REG, regs);
-	}
+
+		if (ios->bus_width == MMC_BUS_WIDTH_4)
+			mci_writel(slot->host, CLKSEL, 0x00020001);
+		else if (ios->bus_width == MMC_BUS_WIDTH_8)
+			mci_writel(slot->host, CLKSEL, 0x00020002);
+	} else /* 1, 4, 8 Bit SDR */
+		mci_writel(slot->host, CLKSEL, 0x00010001);
 
 	if (ios->clock) {
 		/*
