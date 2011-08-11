@@ -136,6 +136,8 @@ struct srp_info {
 	unsigned long frame_count_base;
 	unsigned long channel;			/* Mono = 1, Stereo = 2 */
 
+	int is_opened;				/* Running status of SRP */
+	int is_running;				/* Open status of SRP */
 	int block_mode;				/* Block Mode */
 	int decoding_started;			/* Decoding started flag */
 	int wait_for_eos;			/* Wait for End-Of-Stream */
@@ -214,19 +216,10 @@ DECLARE_WAIT_QUEUE_HEAD(WaitQueue_EOS);
 #ifdef SND_SAMSUNG_RP_DEBUG
 struct timeval time_irq, time_write;
 static char rp_fw_name[4][16] = {
-	"VLIW  ", "CGA   ", "CGA-SA", "DATA  "
+	"VLIW", "CGA", "CGA-SA", "DATA"
 };
-#endif
 
-/* Below functions should be accessed by i2s driver only. */
-int srp_is_opened;
-int srp_is_running;
-
-static void srp_set_effect_apply(void);
-static void srp_set_gain_apply(void);
-
-#ifdef SND_SAMSUNG_RP_DEBUG
-static char rp_op_level_str[][10] = { "LPA", "AFTR" };
+static char rp_op_level_str[][10] = {"LPA", "AFTR"};
 #endif
 
 int srp_get_status(int cmd)
@@ -235,10 +228,10 @@ int srp_get_status(int cmd)
 
 	switch (cmd) {
 	case SRP_IS_RUNNING:
-		ret = srp_is_running;
+		ret = srp.is_running;
 		break;
 	case SRP_IS_OPENED:
-		ret = srp_is_opened;
+		ret = srp.is_opened;
 		break;
 	}
 
@@ -249,7 +242,7 @@ int srp_get_op_level(void)
 {
 	int op_lvl;
 
-	if (srp_is_running) {
+	if (srp.is_running) {
 #ifdef _USE_PCM_DUMP_
 		if (srp.pcm_dump_enabled)
 			op_lvl = 1;
@@ -266,6 +259,42 @@ int srp_get_op_level(void)
 	return op_lvl;
 }
 EXPORT_SYMBOL(srp_get_op_level);
+
+static void srp_set_effect_apply(void)
+{
+	unsigned long arm_intr_code = readl(srp.commbox +
+					SRP_ARM_INTERRUPT_CODE);
+
+	writel(srp.effect_def | srp.effect_speaker,
+		srp.commbox + SRP_EFFECT_DEF);
+	writel(srp.effect_eq_user, srp.commbox + SRP_EQ_USER_DEF);
+
+	arm_intr_code &= ~SRP_ARM_INTR_CODE_SA_ON;
+	arm_intr_code |= srp.effect_enabled ? SRP_ARM_INTR_CODE_SA_ON : 0;
+	writel(arm_intr_code, srp.commbox + SRP_ARM_INTERRUPT_CODE);
+}
+
+static void srp_effect_trigger(void)
+{
+	unsigned long arm_intr_code = readl(srp.commbox +
+					SRP_ARM_INTERRUPT_CODE);
+
+	writel(srp.effect_def | srp.effect_speaker,
+		srp.commbox + SRP_EFFECT_DEF);
+	writel(srp.effect_eq_user, srp.commbox + SRP_EQ_USER_DEF);
+
+	arm_intr_code &= ~SRP_ARM_INTR_CODE_SA_ON;
+	arm_intr_code |= srp.effect_enabled ? SRP_ARM_INTR_CODE_SA_ON : 0;
+	writel(arm_intr_code, srp.commbox + SRP_ARM_INTERRUPT_CODE);
+}
+
+static void srp_set_gain_apply(void)
+{
+	writel((srp.gain * srp.gain_subl) / 100,
+			srp.commbox + SRP_GAIN_CTRL_FACTOR_L);
+	writel((srp.gain * srp.gain_subr) / 100,
+			srp.commbox + SRP_GAIN_CTRL_FACTOR_R);
+}
 
 static void srp_commbox_init(void)
 {
@@ -440,6 +469,8 @@ static void srp_check_stream_info(void)
 
 static void srp_reset(void)
 {
+	unsigned int reg = 0x0;
+
 	wake_up_interruptible(&WaitQueue_Write);
 
 	writel(SRP_STALL, srp.commbox + SRP_PENDING);
@@ -448,15 +479,15 @@ static void srp_reset(void)
 	writel((srp.pcm_dump_enabled ? SRP_ARM_INTR_CODE_PCM_DUMP_ON : 0) |
 		srp.op_mode, srp.commbox + SRP_ARM_INTERRUPT_CODE);
 	writel(srp.vliw_rp, srp.commbox + SRP_CODE_START_ADDR);
-	writel(0x00000000, srp.commbox + SRP_FRAME_INDEX);
-	writel(0x00000000, srp.commbox + SRP_READ_BITSTREAM_SIZE);
+	writel(reg, srp.commbox + SRP_FRAME_INDEX);
+	writel(reg, srp.commbox + SRP_READ_BITSTREAM_SIZE);
 	writel(srp.ibuf_size, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_SIZE);
 	writel(_BITSTREAM_SIZE_MAX_, srp.commbox + SRP_BITSTREAM_SIZE);
 	srp_set_effect_apply();
 
 	/* RESET */
-	writel(0x00000000, srp.commbox + SRP_CONT);
-	writel(0x00000001, srp.commbox + SRP_INTERRUPT);
+	writel(reg, srp.commbox + SRP_CONT);
+	writel(reg, srp.commbox + SRP_INTERRUPT);
 
 	/* VLIW address should be set after rp reset */
 	writel(srp.vliw_rp, srp.special + 0x007C);
@@ -493,7 +524,7 @@ static void srp_pause_request(void)
 					SRP_ARM_INTERRUPT_CODE);
 
 	s5pdbg("Pause requsted\n");
-	if (!srp_is_running) {
+	if (!srp.is_running) {
 		s5pdbg("Pause ignored\n");
 		return;
 	}
@@ -507,7 +538,7 @@ static void srp_pause_request(void)
 			break;
 		msleep_interruptible(10);
 	}
-	srp_is_running = 0;
+	srp.is_running = 0;
 	s5pdbg("Pause done\n");
 }
 
@@ -552,51 +583,15 @@ static void srp_set_pcm_dump(int on)
 }
 #endif
 
-static void srp_set_effect_apply(void)
-{
-	unsigned long arm_intr_code = readl(srp.commbox +
-					SRP_ARM_INTERRUPT_CODE);
-
-	writel(srp.effect_def | srp.effect_speaker,
-		srp.commbox + SRP_EFFECT_DEF);
-	writel(srp.effect_eq_user, srp.commbox + SRP_EQ_USER_DEF);
-
-	arm_intr_code &= ~SRP_ARM_INTR_CODE_SA_ON;
-	arm_intr_code |= srp.effect_enabled ? SRP_ARM_INTR_CODE_SA_ON : 0;
-	writel(arm_intr_code, srp.commbox + SRP_ARM_INTERRUPT_CODE);
-}
-
-static void srp_effect_trigger(void)
-{
-	unsigned long arm_intr_code = readl(srp.commbox +
-					SRP_ARM_INTERRUPT_CODE);
-
-	writel(srp.effect_def | srp.effect_speaker,
-		srp.commbox + SRP_EFFECT_DEF);
-	writel(srp.effect_eq_user, srp.commbox + SRP_EQ_USER_DEF);
-
-	arm_intr_code &= ~SRP_ARM_INTR_CODE_SA_ON;
-	arm_intr_code |= srp.effect_enabled ? SRP_ARM_INTR_CODE_SA_ON : 0;
-	writel(arm_intr_code, srp.commbox + SRP_ARM_INTERRUPT_CODE);
-}
-
-static void srp_set_gain_apply(void)
-{
-	writel((srp.gain * srp.gain_subl) / 100,
-			srp.commbox + SRP_GAIN_CTRL_FACTOR_L);
-	writel((srp.gain * srp.gain_subr) / 100,
-			srp.commbox + SRP_GAIN_CTRL_FACTOR_R);
-}
-
 static irqreturn_t srp_i2s_irq(int irqno, void *dev_id)
 {
-	if (srp_is_running) {
+	if (srp.is_running) {
 		if (idma_irq_callback()) {
 			if (srp.pause_request) {
 				s5pdbg("Pause_req after IDMA irq...\n");
 				srp_pause();
 				srp.pause_request = 0;
-				srp_is_running = 0;
+				srp.is_running = 0;
 			}
 
 			writel(SRP_RUN, srp.commbox + SRP_PENDING);
@@ -635,7 +630,11 @@ static int srp_i2s_free_irq(void)
 static void srp_init_op_mode(int mode)
 {
 	srp.op_mode = mode;
-	srp.vliw_rp   = srp.fw_code_vliw_pa;
+
+	if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_CTYPE)
+		srp.vliw_rp = SRP_IRAM_BASE + _IMEM_OFFSET_;
+	else
+		srp.vliw_rp = srp.fw_code_vliw_pa;
 
 	if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_BTYPE)
 		srp_i2s_request_irq();
@@ -696,7 +695,7 @@ struct timeval time_open, time_release;
 static int srp_open(struct inode *inode, struct file *file)
 {
 	mutex_lock(&rp_mutex);
-	if (srp_is_opened) {
+	if (srp.is_opened) {
 		s5pdbg("srp_open() - SRP is already opened.\n");
 		mutex_unlock(&rp_mutex);
 		return -1;
@@ -704,7 +703,7 @@ static int srp_open(struct inode *inode, struct file *file)
 #ifdef _USE_POSTPROCESS_SKIP_TEST_
 	do_gettimeofday(&time_open);
 #endif
-	srp_is_opened = 1;
+	srp.is_opened = 1;
 	mutex_unlock(&rp_mutex);
 
 	srp.audss_clk_enable(true);
@@ -730,16 +729,16 @@ static int srp_release(struct inode *inode, struct file *file)
 	s5pdbg("srp_release()\n");
 
 	/* Still running? */
-	if (srp_is_running) {
+	if (srp.is_running) {
 		s5pdbg("Stop (release)\n");
 		srp_stop();
-		srp_is_running = 0;
+		srp.is_running = 0;
 		srp.decoding_started = 0;
 	}
 
 	/* Reset commbox */
 	srp_commbox_deinit();
-	srp_is_opened = 0;
+	srp.is_opened = 0;
 
 #ifdef _USE_POSTPROCESS_SKIP_TEST_
 	do_gettimeofday(&time_release);
@@ -772,10 +771,10 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 
 	mutex_lock(&rp_mutex);
 	if (srp.decoding_started &&
-		(!srp_is_running || srp.auto_paused)) {
+		(!srp.is_running || srp.auto_paused)) {
 		s5pdbg("Resume SRP\n");
 		srp_continue();
-		srp_is_running = 1;
+		srp.is_running = 1;
 		srp.auto_paused = 0;
 	}
 	mutex_unlock(&rp_mutex);
@@ -797,7 +796,7 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 	if (srp.wbuf_pos < srp.ibuf_size) {
 		frame_idx = readl(srp.commbox + SRP_FRAME_INDEX);
 		while (!srp.early_suspend_entered &&
-			srp.decoding_started && srp_is_running) {
+			srp.decoding_started && srp.is_running) {
 			if (readl(srp.commbox + SRP_READ_BITSTREAM_SIZE)
 				+ srp.ibuf_size * 2 >= srp.wbuf_fill_size)
 				break;
@@ -845,7 +844,7 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 		if (!srp.decoding_started) {
 			s5pdbg("Start SRP decoding!!\n");
 			writel(SRP_RUN, srp.commbox + SRP_PENDING);
-			srp_is_running = 1;
+			srp.is_running = 1;
 			srp.decoding_started = 1;
 		}
 #ifndef _USE_START_WITH_BUF0_
@@ -911,7 +910,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			srp.ibuf_size = val;
 			srp_flush_ibuf();
 			srp_reset();
-			srp_is_running = 0;
+			srp.is_running = 0;
 		} else {
 			s5pdbg("Init error, IBUF size [%ld]\n", val);
 			ret_val = -1;
@@ -921,7 +920,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case SRP_DEINIT:
 		s5pdbg("Deinit\n");
 		writel(SRP_STALL, srp.commbox + SRP_PENDING);
-		srp_is_running = 0;
+		srp.is_running = 0;
 		break;
 
 	case SRP_PAUSE:
@@ -935,12 +934,12 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case SRP_STOP:
 		s5pdbg("Stop\n");
 		srp_stop();
-		srp_is_running = 0;
+		srp.is_running = 0;
 		srp.decoding_started = 0;
 		break;
 
 	case SRP_FLUSH:
-		/* Do not change srp_is_running state during flush */
+		/* Do not change srp.is_running state during flush */
 		s5pdbg("Flush\n");
 		srp_stop();
 		srp_flush_ibuf();
@@ -964,7 +963,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 			s5pdbg("Start SRP decoding!!\n");
 			writel(SRP_RUN, srp.commbox + SRP_PENDING);
-			srp_is_running = 1;
+			srp.is_running = 1;
 			srp.wait_for_eos = 1;
 		} else if (srp.ibuf_empty[srp.ibuf_next]) {
 			/* Last data */
@@ -978,7 +977,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case SRP_RESUME_EOS:
 		s5pdbg("Resume after EOS pause\n");
 		srp_continue();
-		srp_is_running = 1;
+		srp.is_running = 1;
 		srp.auto_paused = 0;
 #ifdef _USE_EOS_TIMEOUT_
 		srp_setup_timeout_eos();
@@ -1129,7 +1128,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 						srp.commbox + SRP_INTERRUPT_CODE);
 						return IRQ_HANDLED;
 #ifdef _USE_AUTO_PAUSE_
-					} else if (srp_is_running) {
+					} else if (srp.is_running) {
 						s5pdbg("Auto-Pause\n");
 						srp_pause();
 						srp.auto_paused = 1;
@@ -1258,7 +1257,7 @@ static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 		srp.gain = arg;
 
 		/* Change gain immediately */
-		if (srp_is_opened)
+		if (srp.is_opened)
 			srp_set_gain_apply();
 		break;
 
@@ -1275,7 +1274,7 @@ static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 			srp.gain_subl, srp.gain_subr);
 
 		/* Change gain immediately */
-		if (srp_is_opened)
+		if (srp.is_opened)
 			srp_set_gain_apply();
 		break;
 
@@ -1306,9 +1305,9 @@ static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 		s5pdbg("CTRL: Effect switch %s\n", arg ? "ON" : "OFF");
 		if (srp.effect_enabled != arg) {
 			srp.effect_enabled = arg;
-			if (srp_is_running)
+			if (srp.is_running)
 				srp_effect_trigger();
-			else if (srp_is_opened)
+			else if (srp.is_opened)
 				srp_set_effect_apply();
 		}
 		break;
@@ -1317,14 +1316,14 @@ static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 		s5pdbg("CTRL: Effect define\n");
 		/* Mask Speaker mode */
 		srp.effect_def = arg & 0xFFFFFFFE;
-		if (srp_is_running) {
+		if (srp.is_running) {
 			writel(srp.effect_def | srp.effect_speaker,
 				srp.commbox + SRP_EFFECT_DEF);
 			s5pdbg("Effect [%s], EFFECT_DEF = 0x%08lX, EQ_USR = 0x%08lX\n",
 				srp.effect_enabled ? "ON" : "OFF",
 				srp.effect_def | srp.effect_speaker,
 				srp.effect_eq_user);
-		} else if (srp_is_opened) {
+		} else if (srp.is_opened) {
 			srp_set_effect_apply();
 		}
 		break;
@@ -1332,10 +1331,10 @@ static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 	case SRP_CTRL_EFFECT_EQ_USR:
 		s5pdbg("CTRL: Effect EQ user\n");
 		srp.effect_eq_user = arg;
-		if (srp_is_running) {
+		if (srp.is_running) {
 			writel(srp.effect_eq_user,
 				srp.commbox + SRP_EQ_USER_DEF);
-		} else if (srp_is_opened) {
+		} else if (srp.is_opened) {
 			srp_set_effect_apply();
 		}
 		break;
@@ -1345,15 +1344,15 @@ static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 		s5pdbg("CTRL: Effect Speaker mode %s\n", arg ? "ON" : "OFF");
 		if (srp.effect_speaker != arg) {
 			srp.effect_speaker = arg;
-			if (srp_is_running)
+			if (srp.is_running)
 				srp_effect_trigger();
-			else if (srp_is_opened)
+			else if (srp.is_opened)
 				srp_set_effect_apply();
 		}
 		break;
 
 	case SRP_CTRL_IS_OPENED:
-		val = (unsigned long)srp_is_opened;
+		val = (unsigned long)srp.is_opened;
 		s5pdbg("CTRL: SRP is [%s]\n",
 			val == 1 ? "Opened" : "Not Opened");
 		ret_val = copy_to_user((unsigned long *)arg,
@@ -1361,7 +1360,7 @@ static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 		break;
 
 	case SRP_CTRL_IS_RUNNING:
-		val = (unsigned long)srp_is_running;
+		val = (unsigned long)srp.is_running;
 		s5pdbg("CTRL: SRP is [%s]\n", val == 1 ? "Running" : "Pending");
 		ret_val = copy_to_user((unsigned long *)arg,
 					&val, sizeof(unsigned long));
@@ -1630,7 +1629,7 @@ void srp_early_suspend(struct early_suspend *h)
 	s5pdbg("early_suspend\n");
 
 	srp.early_suspend_entered = 1;
-	if (srp_is_running) {
+	if (srp.is_running) {
 		if (srp.pcm_dump_cnt > 0)
 			srp_set_pcm_dump(0);
 	}
@@ -1642,7 +1641,7 @@ void srp_late_resume(struct early_suspend *h)
 
 	srp.early_suspend_entered = 0;
 
-	if (srp_is_running) {
+	if (srp.is_running) {
 		if (srp.pcm_dump_cnt > 0)
 			srp_set_pcm_dump(1);
 	}
@@ -1701,8 +1700,8 @@ static int __init srp_probe(struct platform_device *pdev)
 	}
 
 	/* Information for I2S driver */
-	srp_is_opened = 0;
-	srp_is_running = 0;
+	srp.is_opened = 0;
+	srp.is_running = 0;
 
 	/* I2S irq usage */
 	srp.i2s_irq_enabled = 0;
@@ -1786,8 +1785,8 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	s5pdbg("suspend\n");
 
-	if (srp_is_opened) {
-		if (srp.wait_for_eos && !srp_is_running)
+	if (srp.is_opened) {
+		if (srp.wait_for_eos && !srp.is_running)
 			srp.suspend_during_eos = 1;
 
 		srp.audss_clk_enable(false);
@@ -1800,14 +1799,14 @@ static int srp_resume(struct platform_device *pdev)
 {
 	s5pdbg("resume\n");
 
-	if (srp_is_opened) {
+	if (srp.is_opened) {
 		srp.audss_clk_enable(true);
 		srp_set_default_fw();
 
 		srp_flush_ibuf();
 		s5pdbg("Init, IBUF size [%ld]\n", srp.ibuf_size);
 		srp_reset();
-		srp_is_running = 0;
+		srp.is_running = 0;
 
 		if (srp.suspend_during_eos) {
 			srp.stop_after_eos = 1;
