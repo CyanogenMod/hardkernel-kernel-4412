@@ -550,7 +550,7 @@ static struct platform_driver mshci_s3c_driver = {
 	.resume	        = mshci_s3c_resume,
 	.driver		= {
 		.owner	= THIS_MODULE,
-		.name	= "s3c-mshci",
+		.name	= "dw_mmc",
 	},
 };
 
@@ -570,4 +570,4 @@ module_exit(mshci_s3c_exit);
 MODULE_DESCRIPTION("Samsung MSHCI (HSMMC) glue");
 MODULE_AUTHOR("Hyunsung Jang, <hs79.jang@samsung.com>");
 MODULE_LICENSE("GPL v2");
-MODULE_ALIAS("platform:s3c-mshci");
+MODULE_ALIAS("platform:dw_mmc");

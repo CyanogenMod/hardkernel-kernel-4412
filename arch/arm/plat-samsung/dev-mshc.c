@@ -45,8 +45,8 @@ struct s3c_mshci_platdata s3c_mshci_def_platdata = {
 };
 
 struct platform_device s3c_device_mshci = {
-	.name		= "s3c-mshci",
-	.id		= 0,
+	.name		= "dw_mmc",
+	.id		= -1,
 	.num_resources	= ARRAY_SIZE(s3c_mshci_resource),
 	.resource	= s3c_mshci_resource,
 	.dev		= {
