@@ -396,14 +396,14 @@ static void cpufreq_adaptive_timer(unsigned long data)
 	if (this_dbs_info->ondemand)
 		goto do_nothing;
 
-	if ((max_load <= keep_minspeed_load) &&
-		(policy->cur == policy->min))
-		goto do_nothing;
-
 	if (max_load >= go_maxspeed_load)
 		new_freq = policy->max;
 	else
 		new_freq = policy->max * max_load / 100;
+
+	if ((max_load <= keep_minspeed_load) &&
+	    (policy->cur == policy->min))
+		new_freq = policy->cur;
 
 	if (cpufreq_frequency_table_target(policy, this_dbs_info->freq_table,
 					   new_freq, CPUFREQ_RELATION_L,
@@ -412,9 +412,6 @@ static void cpufreq_adaptive_timer(unsigned long data)
 	}
 
 	new_freq = this_dbs_info->freq_table[index].frequency;
-
-	if (target_freq == new_freq)
-		goto do_nothing;
 
 	target_freq = new_freq;
 
