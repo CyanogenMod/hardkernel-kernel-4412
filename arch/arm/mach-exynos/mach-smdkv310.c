@@ -749,59 +749,59 @@ static struct platform_device s3c_device_spi_gpio = {
 
 static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	.win_mode = {
-		.left_margin  = 9,
-		.right_margin = 9,
-		.upper_margin = 5,
-		.lower_margin = 5,
-		.hsync_len = 2,
-		.vsync_len = 2,
-		.xres = 480,
-		.yres = 800,
+		.left_margin	= 9,
+		.right_margin	= 9,
+		.upper_margin	= 5,
+		.lower_margin	= 5,
+		.hsync_len	= 2,
+		.vsync_len	= 2,
+		.xres		= 480,
+		.yres		= 800,
 	},
-	.virtual_x = 480,
-	.virtual_y = 1600,
-	.width = 48,
-	.height = 80,
-	.max_bpp = 32,
-	.default_bpp = 24,
+	.virtual_x		= 480,
+	.virtual_y		= 1600,
+	.width			= 48,
+	.height			= 80,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
 };
 
 static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 	.win_mode = {
-		.left_margin  = 9,
-		.right_margin = 9,
-		.upper_margin = 5,
-		.lower_margin = 5,
-		.hsync_len = 2,
-		.vsync_len = 2,
-		.xres = 480,
-		.yres = 800,
+		.left_margin	= 9,
+		.right_margin	= 9,
+		.upper_margin	= 5,
+		.lower_margin	= 5,
+		.hsync_len	= 2,
+		.vsync_len	= 2,
+		.xres		= 480,
+		.yres		= 800,
 	},
-	.virtual_x = 480,
-	.virtual_y = 1600,
-	.width = 48,
-	.height = 80,
-	.max_bpp = 32,
-	.default_bpp = 24,
+	.virtual_x		= 480,
+	.virtual_y		= 1600,
+	.width			= 48,
+	.height			= 80,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
 };
 
 static struct s3c_fb_pd_win smdkv310_fb_win2 = {
 	.win_mode = {
-		.left_margin  = 9,
-		.right_margin = 9,
-		.upper_margin = 5,
-		.lower_margin = 5,
-		.hsync_len = 2,
-		.vsync_len = 2,
-		.xres = 480,
-		.yres = 800,
+		.left_margin	= 9,
+		.right_margin	= 9,
+		.upper_margin	= 5,
+		.lower_margin	= 5,
+		.hsync_len	= 2,
+		.vsync_len	= 2,
+		.xres		= 480,
+		.yres		= 800,
 	},
-	.virtual_x = 480,
-	.virtual_y = 1600,
-	.width = 48,
-	.height = 80,
-	.max_bpp = 32,
-	.default_bpp = 24,
+	.virtual_x		= 480,
+	.virtual_y		= 1600,
+	.width			= 48,
+	.height			= 80,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
 };
 
 #elif defined(CONFIG_LCD_WA101S)
@@ -822,70 +822,70 @@ static void lcd_wa101s_set_power(struct plat_lcd_data *pd,
 }
 
 static struct plat_lcd_data smdkv310_lcd_wa101s_data = {
-	.set_power      = lcd_wa101s_set_power,
+	.set_power		= lcd_wa101s_set_power,
 };
 
 static struct platform_device smdkv310_lcd_wa101s = {
-	.name                   = "platform-lcd",
-	.dev.parent             = &s5p_device_fimd0.dev,
+	.name			= "platform-lcd",
+	.dev.parent		= &s5p_device_fimd0.dev,
 	.dev.platform_data      = &smdkv310_lcd_wa101s_data,
 };
 
 static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	.win_mode = {
-		.left_margin    = 80,
-		.right_margin   = 48,
-		.upper_margin   = 14,
-		.lower_margin   = 3,
-		.hsync_len      = 32,
-		.vsync_len      = 5,
-		.xres   = 1360, /* real size : 1366 */
-		.yres   = 768,
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 14,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 5,
+		.xres		= 1360, /* real size : 1366 */
+		.yres		= 768,
 	},
-	.virtual_x = 1360, /* real size : 1366 */
-	.virtual_y = 768 * 2,
-	.width = 223,
-	.height = 125,
-	.max_bpp        = 32,
-	.default_bpp    = 24,
+	.virtual_x		= 1360, /* real size : 1366 */
+	.virtual_y		= 768 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
 };
 
 static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 	.win_mode = {
-		.left_margin    = 80,
-		.right_margin   = 48,
-		.upper_margin   = 14,
-		.lower_margin   = 3,
-		.hsync_len      = 32,
-		.vsync_len      = 5,
-		.xres   = 1360, /* real size : 1366 */
-		.yres   = 768,
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 14,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 5,
+		.xres		= 1360, /* real size : 1366 */
+		.yres		= 768,
 	},
-	.virtual_x = 1360, /* real size : 1366 */
-	.virtual_y = 768 * 2,
-	.width = 223,
-	.height = 125,
-	.max_bpp        = 32,
-	.default_bpp    = 24,
+	.virtual_x		= 1360, /* real size : 1366 */
+	.virtual_y		= 768 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
 };
 
 static struct s3c_fb_pd_win smdkv310_fb_win2 = {
 	.win_mode = {
-		.left_margin    = 80,
-		.right_margin   = 48,
-		.upper_margin   = 14,
-		.lower_margin   = 3,
-		.hsync_len      = 32,
-		.vsync_len      = 5,
-		.xres   = 1360, /* real size : 1366 */
-		.yres   = 768,
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 14,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 5,
+		.xres		= 1360, /* real size : 1366 */
+		.yres		= 768,
 	},
-	.virtual_x = 1360, /* real size : 1366 */
-	.virtual_y = 768 * 2,
-	.width = 223,
-	.height = 125,
-	.max_bpp        = 32,
-	.default_bpp    = 24,
+	.virtual_x		= 1360, /* real size : 1366 */
+	.virtual_y		= 768 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
 };
 
 #elif defined(CONFIG_LCD_LTE480WV)
@@ -917,70 +917,70 @@ static void lcd_lte480wv_set_power(struct plat_lcd_data *pd,
 }
 
 static struct plat_lcd_data smdkv310_lcd_lte480wv_data = {
-	.set_power      = lcd_lte480wv_set_power,
+	.set_power		= lcd_lte480wv_set_power,
 };
 
 static struct platform_device smdkv310_lcd_lte480wv = {
-	.name                   = "platform-lcd",
-	.dev.parent             = &s5p_device_fimd0.dev,
+	.name			= "platform-lcd",
+	.dev.parent		= &s5p_device_fimd0.dev,
 	.dev.platform_data      = &smdkv310_lcd_lte480wv_data,
 };
 
 static struct s3c_fb_pd_win smdkv310_fb_win0 = {
 	.win_mode = {
-		.left_margin    = 13,
-		.right_margin   = 8,
-		.upper_margin   = 7,
-		.lower_margin   = 5,
-		.hsync_len      = 3,
-		.vsync_len      = 1,
-		.xres   = 800,
-		.yres   = 480,
+		.left_margin	= 13,
+		.right_margin	= 8,
+		.upper_margin	= 7,
+		.lower_margin	= 5,
+		.hsync_len	= 3,
+		.vsync_len	= 1,
+		.xres		= 800,
+		.yres		= 480,
 	},
-	.virtual_x = 800,
-	.virtual_y = 960,
-	.width = 104,
-	.height = 62,
-	.max_bpp        = 32,
-	.default_bpp    = 24,
+	.virtual_x		= 800,
+	.virtual_y		= 960,
+	.width			= 104,
+	.height			= 62,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
 };
 
 static struct s3c_fb_pd_win smdkv310_fb_win1 = {
 	.win_mode = {
-		.left_margin    = 13,
-		.right_margin   = 8,
-		.upper_margin   = 7,
-		.lower_margin   = 5,
-		.hsync_len      = 3,
-		.vsync_len      = 1,
-		.xres   = 800,
-		.yres   = 480,
+		.left_margin	= 13,
+		.right_margin	= 8,
+		.upper_margin	= 7,
+		.lower_margin	= 5,
+		.hsync_len	= 3,
+		.vsync_len	= 1,
+		.xres		= 800,
+		.yres		= 480,
 	},
-	.virtual_x = 800,
-	.virtual_y = 960,
-	.width = 104,
-	.height = 62,
-	.max_bpp        = 32,
-	.default_bpp    = 24,
+	.virtual_x		= 800,
+	.virtual_y		= 960,
+	.width			= 104,
+	.height			= 62,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
 };
 
 static struct s3c_fb_pd_win smdkv310_fb_win2 = {
 	.win_mode = {
-		.left_margin    = 13,
-		.right_margin   = 8,
-		.upper_margin   = 7,
-		.lower_margin   = 5,
-		.hsync_len      = 3,
-		.vsync_len      = 1,
-		.xres   = 800,
-		.yres   = 480,
+		.left_margin	= 13,
+		.right_margin	= 8,
+		.upper_margin	= 7,
+		.lower_margin	= 5,
+		.hsync_len	= 3,
+		.vsync_len	= 1,
+		.xres		= 800,
+		.yres		= 480,
 	},
-	.virtual_x = 800,
-	.virtual_y = 960,
-	.width = 104,
-	.height = 62,
-	.max_bpp        = 32,
-	.default_bpp    = 24,
+	.virtual_x		= 800,
+	.virtual_y		= 960,
+	.width			= 104,
+	.height			= 62,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
 };
 #endif
 
