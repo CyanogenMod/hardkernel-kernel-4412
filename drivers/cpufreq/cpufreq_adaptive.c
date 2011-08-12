@@ -38,7 +38,7 @@
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
-
+#define MIN_ONDEMAND_THRESHOLD			(4)
 /*
  * The polling frequency of this governor depends on the capability of
  * the processor. Default polling frequency is 1000 times the transition
@@ -86,6 +86,7 @@ struct cpu_dbs_info_s {
 	unsigned int freq_hi_jiffies;
 	int cpu;
 	unsigned int sample_type:1;
+	bool ondemand;
 	/*
 	 * percpu mutex that serializes governor limit change with
 	 * do_dbs_timer invocation. We do not want do_dbs_timer to run
@@ -392,6 +393,9 @@ static void cpufreq_adaptive_timer(unsigned long data)
 			max_load = short_load;
 	}
 
+	if (this_dbs_info->ondemand)
+		goto do_nothing;
+
 	if ((max_load <= keep_minspeed_load) &&
 		(policy->cur == policy->min))
 		goto do_nothing;
@@ -429,6 +433,9 @@ static void cpufreq_adaptive_timer(unsigned long data)
 	return;
 
 do_nothing:
+	mod_timer(&cpu_timer, jiffies + 2);
+	schedule_delayed_work_on(0, &this_dbs_info->work, 10);
+
 	if (mutex_is_locked(&short_timer_mutex))
 		mutex_unlock(&short_timer_mutex);
 	return;
@@ -455,6 +462,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	unsigned int j;
 
 	unsigned int index, new_freq;
+	unsigned int longterm_load = 0;
 
 	policy = this_dbs_info->cur_policy;
 
@@ -529,14 +537,23 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		load = 100 * (wall_time - idle_time) / wall_time;
 
+		if (load > longterm_load)
+			longterm_load = load;
+
 		freq_avg = __cpufreq_driver_getavg(policy, j);
 		if (freq_avg <= 0)
 			freq_avg = policy->cur;
 
 		load_freq = load * freq_avg;
+
 		if (load_freq > max_load_freq)
 			max_load_freq = load_freq;
 	}
+
+	if (longterm_load >= MIN_ONDEMAND_THRESHOLD)
+		this_dbs_info->ondemand = true;
+	else
+		this_dbs_info->ondemand = false;
 
 	/* Check for frequency increase */
 	if (max_load_freq > (dbs_tuners_ins.up_threshold * policy->cur)) {
@@ -596,8 +613,6 @@ static void do_dbs_timer(struct work_struct *work)
 	 */
 	delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
 
-	if ((dbs_info->cur_policy->cur != dbs_info->cur_policy->min) &&
-		(dbs_info->cur_policy->cur != dbs_info->cur_policy->max))
 		schedule_delayed_work_on(cpu, &dbs_info->work, delay);
 
 	mutex_unlock(&dbs_info->timer_mutex);
