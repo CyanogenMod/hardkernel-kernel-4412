@@ -201,7 +201,7 @@ int s3cfb_set_clock(struct s3cfb_global *ctrl)
 
 	div = src_clk / vclk;
 	if (src_clk % vclk) {
-		if ((src_clk % vclk) > (src_clk/div/2))
+		if ((src_clk % vclk) > (vclk/2))
 			div++;
 	}
 
@@ -209,6 +209,7 @@ int s3cfb_set_clock(struct s3cfb_global *ctrl)
 		dev_info(ctrl->dev, "vclk(%d) should be smaller than %d Hz\n",
 			src_clk/div, maxclk);
 
+	cfg &= ~S3C_VIDCON0_CLKVAL_F(0xff);
 	cfg |= S3C_VIDCON0_CLKVAL_F(div - 1);
 	writel(cfg, ctrl->regs + S3C_VIDCON0);
 
