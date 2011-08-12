@@ -2235,7 +2235,9 @@ static struct samsung_bl_gpio_info smdkc210_bl_gpio_info = {
 
 static struct platform_pwm_backlight_data smdkc210_bl_data = {
 	.pwm_id = 1,
+#if defined(CONFIG_LCD_LTE480WV)
 	.pwm_period_ns  = 1000,
+#endif
 };
 
 static void __init smdkc210_map_io(void)
