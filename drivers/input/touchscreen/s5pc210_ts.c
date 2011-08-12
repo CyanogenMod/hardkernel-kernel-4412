@@ -55,6 +55,9 @@ static void s5pv310_ts_config(unsigned char state);
 unsigned int irq_count;
 struct s5pv310_ts_t s5pv310_ts;
 
+#define CONFIG_DEBUG_S5PV310_TS_MSG 1
+#define CAL_DELAY 1000
+
 static int s5pv310_ts_cal(void)
 {
 	unsigned char   wdata;
@@ -62,7 +65,9 @@ static int s5pv310_ts_cal(void)
 	/*   INT_mode : disable interrupt */
 	wdata = 0x00;
 	if (s5pv310_ts_write(MODULE_INTMODE, &wdata, 1)) {
-		printk(KERN_ERR "failed to write\n");
+#ifdef CONFIG_DEBUG_S5PV310_TS_MSG
+		printk(KERN_ERR "failed to write disable.\n");
+#endif
 		return -1;
 	}
 
@@ -70,19 +75,23 @@ static int s5pv310_ts_cal(void)
 	wdata = 0x03;
 	/*   set mode */
 	if (s5pv310_ts_write(MODULE_CALIBRATION, &wdata, 1)) {
-		printk(KERN_ERR "failed to write\n");
+#ifdef CONFIG_DEBUG_S5PV310_TS_MSG
+		printk(KERN_ERR "failed to write cal.\n");
+#endif
 		return -1;
 	}
+
 #ifdef CONFIG_DEBUG_S5PV310_TS_MSG
 	printk(KERN_DEBUG "calibration!!!\n");
 #endif
-	mdelay(500);
+	mdelay(CAL_DELAY);
 
 	/*   INT_mode : enable interrupt, low-active, periodically*/
 	wdata = 0x09;
-
 	if (s5pv310_ts_write(MODULE_INTMODE, &wdata, 1)) {
-		printk(KERN_ERR "failed to write\n");
+#ifdef CONFIG_DEBUG_S5PV310_TS_MSG
+		printk(KERN_ERR "failed to write enable.\n");
+#endif
 		return -1;
 	}
 
@@ -253,7 +262,7 @@ static void s5pv310_ts_config(unsigned char state)
 	/* Touchscreen Active mode */
 	wdata = 0x00;
 	s5pv310_ts_write(MODULE_POWERMODE, &wdata, 1);
-	mdelay(10);
+	mdelay(100);
 
 	if (state == TOUCH_STATE_BOOT) {
 		/* INT_mode : disable interrupt */
@@ -288,11 +297,20 @@ static void s5pv310_ts_config(unsigned char state)
 	} else {
 		/* INT_mode : disable interrupt, low-active, finger moving */
 		wdata = 0x01;
-		s5pv310_ts_write(MODULE_INTMODE, &wdata, 1);
-		mdelay(100);
+		if (s5pv310_ts_write(MODULE_INTMODE, &wdata, 1)) {
+#ifdef CONFIG_DEBUG_S5PV310_TS_MSG
+			printk(KERN_ERR "failed to write disable.\n");
+#endif
+		}
+
+		mdelay(CAL_DELAY);
 		/* INT_mode : enable interrupt, low-active, finger moving */
 		wdata = 0x09;
-		s5pv310_ts_write(MODULE_INTMODE, &wdata, 1);
+		if (s5pv310_ts_write(MODULE_INTMODE, &wdata, 1)) {
+#ifdef CONFIG_DEBUG_S5PV310_TS_MSG
+			printk(KERN_ERR "failed to write enable.\n");
+#endif
+		}
 		mdelay(100);
 	}
 }
@@ -300,7 +318,6 @@ static void s5pv310_ts_config(unsigned char state)
 static int __devinit s5pv310_ts_probe(struct platform_device *pdev)
 {
 	int rc;
-	unsigned char wdata;
 
 	irq_count = 0;
 	/* struct init */
@@ -351,20 +368,7 @@ static int __devinit s5pv310_ts_probe(struct platform_device *pdev)
 	}
 
 	s5pv310_ts_config(TOUCH_STATE_BOOT);
-
-	/*  INT_mode : disable interrupt */
-	wdata = 0x00;
-	s5pv310_ts_write(MODULE_INTMODE, &wdata, 1);
-
-	/*  touch calibration */
-	wdata = 0x03;
-	/*  set mode */
-	s5pv310_ts_write(MODULE_CALIBRATION, &wdata, 1);
-	mdelay(500);
-
-	/*  INT_mode : enable interrupt, low-active, periodically*/
-	wdata = 0x09;
-	s5pv310_ts_write(MODULE_INTMODE, &wdata, 1);
+	s5pv310_ts_cal();
 
 	printk(KERN_DEBUG "SMDKC210(MT) Touch driver initialized.\n");
 
@@ -403,12 +407,12 @@ static int s5pv310_ts_suspend(struct platform_device *dev, pm_message_t state)
 
 	wdata = 0x00;
 	s5pv310_ts_write(MODULE_POWERMODE, &wdata, 1);
-	mdelay(100);
+	mdelay(CAL_DELAY);
 
 	/* INT_mode : disable interrupt */
 	wdata = 0x00;
 	s5pv310_ts_write(MODULE_INTMODE, &wdata, 1);
-	mdelay(100);
+	mdelay(CAL_DELAY);
 
 	/* Touchscreen enter freeze mode : */
 	wdata = 0x01;
