@@ -223,20 +223,10 @@ void s3cfb_get_clk_name(char *clk_name)
 #if defined(CONFIG_FB_S5P_WA101S)
 int s3cfb_backlight_on(struct platform_device *pdev)
 {
+#if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
-#if !defined(CONFIG_BACKLIGHT_PWM)
 	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
-	if (err) {
-		printk(KERN_ERR "failed to request GPD0 for "
-			"lcd backlight control\n");
-		return err;
-	}
-	gpio_direction_output(EXYNOS4_GPD0(1), 1);
-	gpio_free(EXYNOS4_GPD0(1));
-#else
-	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
-
 	if (err) {
 		printk(KERN_ERR "failed to request GPD0 for "
 			"lcd backlight control\n");
@@ -244,17 +234,14 @@ int s3cfb_backlight_on(struct platform_device *pdev)
 	}
 
 	gpio_direction_output(EXYNOS4_GPD0(1), 1);
-
-	s3c_gpio_cfgpin(EXYNOS4_GPD0(1), EXYNOS4_GPD_0_1_TOUT_1);
-
 	gpio_free(EXYNOS4_GPD0(1));
 #endif
-
 	return 0;
 }
 
 int s3cfb_backlight_off(struct platform_device *pdev)
 {
+#if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
 	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
@@ -266,6 +253,7 @@ int s3cfb_backlight_off(struct platform_device *pdev)
 
 	gpio_direction_output(EXYNOS4_GPD0(1), 0);
 	gpio_free(EXYNOS4_GPD0(1));
+#endif
 	return 0;
 }
 
