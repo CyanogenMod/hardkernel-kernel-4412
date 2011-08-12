@@ -697,10 +697,10 @@ static int reset_lcd(struct lcd_device *ld)
 				"lcd reset control\n");
 		return err;
 	}
-	mdelay(100);
+	gpio_set_value(EXYNOS4_GPX0(6), 0);
+	mdelay(1);
 
 	gpio_set_value(EXYNOS4_GPX0(6), 1);
-	mdelay(100);
 
 	gpio_free(EXYNOS4_GPX0(6));
 
