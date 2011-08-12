@@ -691,14 +691,12 @@ static int reset_lcd(struct lcd_device *ld)
 {
 	int err = 0;
 
-	err = gpio_request(EXYNOS4_GPX0(6), "GPX0");
+	err = gpio_request_one(EXYNOS4_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPX0 for "
 				"lcd reset control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPX0(6), 1);
 	mdelay(100);
 
 	gpio_set_value(EXYNOS4_GPX0(6), 1);
@@ -812,14 +810,12 @@ static void lcd_wa101s_set_power(struct plat_lcd_data *pd,
 {
 	if (power) {
 #if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request(EXYNOS4_GPD0(1), "GPD0");
-		gpio_direction_output(EXYNOS4_GPD0(1), 1);
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
 		gpio_free(EXYNOS4_GPD0(1));
 #endif
 	} else {
 #if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request(EXYNOS4_GPD0(1), "GPD0");
-		gpio_direction_output(EXYNOS4_GPD0(1), 0);
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
 		gpio_free(EXYNOS4_GPD0(1));
 #endif
 	}
@@ -898,14 +894,11 @@ static void lcd_lte480wv_set_power(struct plat_lcd_data *pd,
 {
 	if (power) {
 #if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request(EXYNOS4_GPD0(1), "GPD0");
-		gpio_direction_output(EXYNOS4_GPD0(1), 1);
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
 		gpio_free(EXYNOS4_GPD0(1));
 #endif
 		/* fire nRESET on power up */
-		gpio_request(EXYNOS4_GPX0(6), "GPX0");
-
-		gpio_direction_output(EXYNOS4_GPX0(6), 1);
+		gpio_request_one(EXYNOS4_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
 		mdelay(100);
 
 		gpio_set_value(EXYNOS4_GPX0(6), 0);
@@ -917,8 +910,7 @@ static void lcd_lte480wv_set_power(struct plat_lcd_data *pd,
 		gpio_free(EXYNOS4_GPX0(6));
 	} else {
 #if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request(EXYNOS4_GPD0(1), "GPD0");
-		gpio_direction_output(EXYNOS4_GPD0(1), 0);
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
 		gpio_free(EXYNOS4_GPD0(1));
 #endif
 	}
@@ -1150,14 +1142,12 @@ static int reset_lcd(void)
 {
 	int err = 0;
 	/* fire nRESET on power off */
-	err = gpio_request(EXYNOS4_GPX3(1), "GPX3");
+	err = gpio_request_one(EXYNOS4_GPX3(1), GPIOF_OUT_INIT_HIGH, "GPX3");
 	if (err) {
 		printk(KERN_ERR "failed to request GPX0 for "
 				"lcd reset control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPX3(1), 1);
 	mdelay(100);
 
 	gpio_set_value(EXYNOS4_GPX3(1), 0);

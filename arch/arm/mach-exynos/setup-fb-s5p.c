@@ -226,14 +226,12 @@ int s3cfb_backlight_on(struct platform_device *pdev)
 #if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
-	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
+	err = gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPD0 for "
 			"lcd backlight control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPD0(1), 1);
 	gpio_free(EXYNOS4_GPD0(1));
 #endif
 	return 0;
@@ -244,14 +242,12 @@ int s3cfb_backlight_off(struct platform_device *pdev)
 #if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
-	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
+	err = gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPD0 for "
 			"lcd backlight control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPD0(1), 0);
 	gpio_free(EXYNOS4_GPD0(1));
 #endif
 	return 0;
@@ -273,14 +269,12 @@ int s3cfb_backlight_on(struct platform_device *pdev)
 #if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
-	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
+	err = gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPD0 for "
 			"lcd backlight control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPD0(1), 1);
 	gpio_free(EXYNOS4_GPD0(1));
 #endif
 	return 0;
@@ -291,14 +285,12 @@ int s3cfb_backlight_off(struct platform_device *pdev)
 #if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
-	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
+	err = gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPD0 for "
 			"lcd backlight control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPD0(1), 0);
 	gpio_free(EXYNOS4_GPD0(1));
 #endif
 	return 0;
@@ -308,14 +300,12 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 {
 	int err;
 
-	err = gpio_request(EXYNOS4_GPX0(6), "GPX0");
+	err = gpio_request_one(EXYNOS4_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPX0 for "
 			"lcd reset control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPX0(6), 1);
 	msleep(100);
 
 	gpio_set_value(EXYNOS4_GPX0(6), 0);
@@ -339,24 +329,22 @@ int s3cfb_backlight_on(struct platform_device *pdev)
 #if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
-	err = gpio_request(EXYNOS4_GPD0(0), "GPD0");
+	/* Backlight High */
+	err = gpio_request_one(EXYNOS4_GPD0(0), GPIOF_OUT_INIT_HIGH, "GPD0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPD0 for "
 			"lcd backlight control\n");
 		return err;
 	}
+	gpio_free(EXYNOS4_GPD0(0));
 
-	err = gpio_request(EXYNOS4_GPB(2), "GPB");
+	/* LED_EN (SPI1_MOSI) High */
+	err = gpio_request_one(EXYNOS4_GPB(2), GPIOF_OUT_INIT_HIGH, "GPB");
 	if (err) {
 		printk(KERN_ERR "failed to request GPB for "
 			"lcd LED_EN control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPD0(0), 1); /* BL pwm High */
-	gpio_direction_output(EXYNOS4_GPB(2), 1); /* LED_EN (SPI1_MOSI) */
-
-	gpio_free(EXYNOS4_GPD0(0));
 	gpio_free(EXYNOS4_GPB(2));
 #endif
 	return 0;
@@ -367,24 +355,22 @@ int s3cfb_backlight_off(struct platform_device *pdev)
 #if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
-	err = gpio_request(EXYNOS4_GPD0(0), "GPD0");
+	/* Backlight Low */
+	err = gpio_request_one(EXYNOS4_GPD0(0), GPIOF_OUT_INIT_LOW, "GPD0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPD0 for "
 			"lcd backlight control\n");
 		return err;
 	}
+	gpio_free(EXYNOS4_GPD0(0));
 
-	err = gpio_request(EXYNOS4_GPB(2), "GPB");
+	/* LED_EN (SPI1_MOSI) Low */
+	err = gpio_request_one(EXYNOS4_GPB(2), GPIOF_OUT_INIT_LOW, "GPB");
 	if (err) {
 		printk(KERN_ERR "failed to request GPB for "
 			"lcd LED_EN control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPD0(3), 0);
-	gpio_direction_output(EXYNOS4_GPB(2), 0);
-
-	gpio_freeEXYNOS4_GPD0(0));
 	gpio_free(EXYNOS4_GPB(2));
 #endif
 	return 0;
@@ -394,14 +380,12 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 {
 	int err;
 
-	err = gpio_request(EXYNOS4_GPH0(1), "GPH0");
+	err = gpio_request_one(EXYNOS4_GPH0(1), GPIOF_OUT_INIT_HIGH, "GPH0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPH0 for "
 			"lcd reset control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPH0(1), 1);
 
 	gpio_set_value(EXYNOS4_GPH0(1), 0);
 	gpio_set_value(EXYNOS4_GPH0(1), 1);
@@ -421,14 +405,12 @@ int s3cfb_backlight_on(struct platform_device *pdev)
 #if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
-	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
+	err = gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPD0 for "
 			"lcd backlight control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPD0(1), 1);
 	gpio_free(EXYNOS4_GPD0(1));
 #endif
 	return 0;
@@ -439,14 +421,12 @@ int s3cfb_backlight_off(struct platform_device *pdev)
 #if !defined(CONFIG_BACKLIGHT_PWM)
 	int err;
 
-	err = gpio_request(EXYNOS4_GPD0(1), "GPD0");
+	err = gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPD0 for "
 			"lcd backlight control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPD0(1), 0);
 	gpio_free(EXYNOS4_GPD0(1));
 #endif
 	return 0;
@@ -456,14 +436,12 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 {
 	int err;
 
-	err = gpio_request(EXYNOS4_GPX0(6), "GPX0");
+	err = gpio_request_one(EXYNOS4_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPX0 for "
 			"lcd reset control\n");
 		return err;
 	}
-
-	gpio_direction_output(EXYNOS4_GPX0(6), 1);
 
 	gpio_set_value(EXYNOS4_GPX0(6), 0);
 	mdelay(1);
