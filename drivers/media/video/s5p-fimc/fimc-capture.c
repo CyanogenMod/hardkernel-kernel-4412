@@ -237,9 +237,15 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 	if (ret)
 		return ret;
 
-	ret = fimc_subdev_attach(fimc, index);
-	if (ret)
-		return ret;
+	if (isp_info->use_cam) {
+		dbg("FIMC%d try to attatch sensor\n", fimc->id);
+		ret = fimc_subdev_attach(fimc, index);
+		if (ret)
+			return ret;
+	} else {
+		dbg("FIMC%d didn't try to attatch sensor\n", fimc->id);
+		fimc->vid_cap.input_index = index;
+	}
 
 	ret = fimc_hw_set_camera_polarity(fimc, isp_info);
 	if (ret)
@@ -248,7 +254,7 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 	if (fimc->vid_cap.mipi_sd)
 		ret = v4l2_subdev_call(fimc->vid_cap.mipi_sd, core, s_power, 1);
 
-	if(!ret)
+	if (fimc->vid_cap.sd)
 		ret = v4l2_subdev_call(fimc->vid_cap.sd, core, s_power, 1);
 
 	if (fimc->vid_cap.fb_sd) {
@@ -292,7 +298,7 @@ static int fimc_stop_capture(struct fimc_dev *fimc)
 	if (cap->sd)
 		v4l2_subdev_call(cap->sd, video, s_stream, 0);
 
-	if (fimc->vid_cap.mipi_sd)
+	if (cap->mipi_sd)
 		v4l2_subdev_call(fimc->vid_cap.mipi_sd, video, s_stream, 0);
 
 	spin_lock_irqsave(&fimc->slock, flags);

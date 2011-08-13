@@ -37,6 +37,7 @@ struct i2c_board_info;
  * @i2c_bus_num: i2c control bus id the sensor is attached to
  * @mux_id: FIMC camera interface multiplexer index (separate for MIPI and ITU)
  * @flags: flags defining bus signals polarity inversion (High by default)
+ * @use_cam: a means of used by FIMC
  */
 struct s5p_fimc_isp_info {
 	struct i2c_board_info *board_info;
@@ -46,6 +47,7 @@ struct s5p_fimc_isp_info {
 	u16 i2c_bus_num;
 	u16 mux_id;
 	u16 flags;
+	bool use_cam;
 };
 
 #define FIMC_MAX_CAMIF_CLIENTS	2
