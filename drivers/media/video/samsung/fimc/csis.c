@@ -274,7 +274,7 @@ void s3c_csis_stop(int csis_id)
 
 	if (pdata->clk_off) {
 		if (s3c_csis[csis_id]->clock != NULL)
-		pdata->clk_off(pdev, &s3c_csis[csis_id]->clock);
+			pdata->clk_off(pdev, &s3c_csis[csis_id]->clock);
 	}
 }
 
@@ -366,7 +366,6 @@ static int s3c_csis_remove(struct platform_device *pdev)
 	iounmap(s3c_csis[pdev->id]->regs);
 	release_resource(s3c_csis[pdev->id]->regs_res);
 
-	kfree(s3c_csis[pdev->id]->regs_res);
 	kfree(s3c_csis[pdev->id]);
 
 	return 0;
