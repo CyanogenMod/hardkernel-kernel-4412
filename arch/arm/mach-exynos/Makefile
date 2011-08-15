@@ -31,7 +31,7 @@ obj-$(CONFIG_EXYNOS4_PM_HOTPLUG)       += dvfs-hotplug.o
 
 # machine support
 
-obj-$(CONFIG_MACH_SMDKC210)		+= mach-smdkc210.o
+obj-$(CONFIG_MACH_SMDKC210)		+= mach-smdkv310.o
 obj-$(CONFIG_MACH_SMDKV310)		+= mach-smdkv310.o
 obj-$(CONFIG_MACH_ARMLEX4210)		+= mach-armlex4210.o
 obj-$(CONFIG_MACH_UNIVERSAL_C210)	+= mach-universal_c210.o
