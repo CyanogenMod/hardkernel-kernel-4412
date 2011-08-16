@@ -10,6 +10,10 @@
 
 #include <linux/platform_device.h>
 #include <linux/serial_core.h>
+#include <linux/spi/spi.h>
+#include <linux/spi/spi_gpio.h>
+#include <linux/gpio.h>
+#include <linux/pwm_backlight.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -18,6 +22,10 @@
 #include <plat/exynos4.h>
 #include <plat/cpu.h>
 #include <plat/clock.h>
+#include <plat/devs.h>
+#include <plat/fb-s5p.h>
+#include <plat/backlight.h>
+#include <plat/gpio-cfg.h>
 
 #include <mach/map.h>
 
@@ -66,7 +74,71 @@ static struct s3c2410_uartcfg smdk4212_uartcfgs[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_FB_S5P
+#ifdef CONFIG_FB_S5P_LMS501KF03
+static struct s3c_platform_fb lms501kf03_data __initdata = {
+	.hw_ver = 0x70,
+	.clk_name = "sclk_lcd",
+	.nr_wins = 5,
+	.default_win = CONFIG_FB_S5P_DEFAULT_WINDOW,
+	.swap = FB_SWAP_HWORD | FB_SWAP_WORD,
+};
+
+#define		LCD_BUS_NUM	3
+#define		DISPLAY_CS	EXYNOS4_GPB(5)
+#define		DISPLAY_CLK	EXYNOS4_GPB(4)
+#define		DISPLAY_SI	EXYNOS4_GPB(7)
+
+static struct spi_board_info spi_board_info[] __initdata = {
+	{
+		.modalias	= "lms501kf03",
+		.platform_data	= NULL,
+		.max_speed_hz	= 1200000,
+		.bus_num	= LCD_BUS_NUM,
+		.chip_select	= 0,
+		.mode		= SPI_MODE_3,
+		.controller_data = (void *)DISPLAY_CS,
+	}
+};
+static struct spi_gpio_platform_data lms501kf03_spi_gpio_data = {
+	.sck	= DISPLAY_CLK,
+	.mosi	= DISPLAY_SI,
+	.miso	= -1,
+	.num_chipselect = 1,
+};
+
+static struct platform_device s3c_device_spi_gpio = {
+	.name	= "spi_gpio",
+	.id	= LCD_BUS_NUM,
+	.dev	= {
+		.parent		= &s3c_device_fb.dev,
+		.platform_data	= &lms501kf03_spi_gpio_data,
+	},
+};
+#endif
+#endif
+
 static struct platform_device *smdk4212_devices[] __initdata = {
+/* legacy fimd */
+#ifdef CONFIG_FB_S5P
+	&s3c_device_fb,
+#ifdef CONFIG_FB_S5P_LMS501KF03
+	&s3c_device_spi_gpio,
+#endif
+#endif
+};
+
+/* LCD Backlight data */
+static struct samsung_bl_gpio_info smdk4212_bl_gpio_info = {
+	.no = EXYNOS4_GPD0(1),
+	.func = S3C_GPIO_SFN(2),
+};
+
+static struct platform_pwm_backlight_data smdk4212_bl_data = {
+	.pwm_id = 1,
+#ifdef CONFIG_FB_S5P_LMS501KF03
+	.pwm_period_ns  = 1000,
+#endif
 };
 
 static void __init smdk4212_map_io(void)
@@ -79,6 +151,15 @@ static void __init smdk4212_map_io(void)
 
 static void __init smdk4212_machine_init(void)
 {
+#ifdef CONFIG_FB_S5P
+#ifdef CONFIG_FB_S5P_LMS501KF03
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+	s3cfb_set_platdata(&lms501kf03_data);
+#else
+	s3cfb_set_platdata(NULL);
+#endif
+#endif
+	samsung_bl_set(&smdk4212_bl_gpio_info, &smdk4212_bl_data);
 	platform_add_devices(smdk4212_devices, ARRAY_SIZE(smdk4212_devices));
 }
 

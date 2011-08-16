@@ -366,6 +366,10 @@ config MACH_FPGA4212
 config MACH_SMDK4212
 	bool "SMDK4212 board"
 	select CPU_EXYNOS4212
+	select S5P_DEV_FIMD_S5P
+	select EXYNOS4_SETUP_FB_S5P
+	select SAMSUNG_DEV_BACKLIGHT
+	select SAMSUNG_DEV_PWM
 	help
 	  Machine support for Samsung SMDK4212
 endmenu
