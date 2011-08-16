@@ -1825,6 +1825,7 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos4_device_ac97,
 	&exynos4_device_i2s0,
 	&exynos4_device_pcm0,
+	&exynos4_device_spdif,
 	&exynos4_device_audss,
 #ifdef CONFIG_SND_SAMSUNG_RP
 	&exynos4_device_srp,
