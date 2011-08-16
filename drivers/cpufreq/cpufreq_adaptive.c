@@ -140,39 +140,6 @@ static struct dbs_tuners {
 	.ignore_nice = 0,
 };
 
-static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
-							cputime64_t *wall)
-{
-	cputime64_t idle_time;
-	cputime64_t cur_wall_time;
-	cputime64_t busy_time;
-
-	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
-	busy_time = cputime64_add(kstat_cpu(cpu).cpustat.user,
-			kstat_cpu(cpu).cpustat.system);
-
-	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.irq);
-	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.softirq);
-	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.steal);
-	busy_time = cputime64_add(busy_time, kstat_cpu(cpu).cpustat.nice);
-
-	idle_time = cputime64_sub(cur_wall_time, busy_time);
-	if (wall)
-		*wall = (cputime64_t)jiffies_to_usecs(cur_wall_time);
-
-	return (cputime64_t)jiffies_to_usecs(idle_time);
-}
-
-static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
-{
-	u64 idle_time = get_cpu_idle_time_us(cpu, wall);
-
-	if (idle_time == -1ULL)
-		return get_cpu_idle_time_jiffy(cpu, wall);
-
-	return idle_time;
-}
-
 static inline cputime64_t get_cpu_iowait_time(unsigned int cpu, cputime64_t *wall)
 {
 	u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
@@ -315,7 +282,7 @@ static ssize_t store_ignore_nice_load(struct kobject *a, struct attribute *b,
 	for_each_online_cpu(j) {
 		struct cpu_dbs_info_s *dbs_info;
 		dbs_info = &per_cpu(od_cpu_dbs_info, j);
-		dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
+		dbs_info->prev_cpu_idle = get_cpu_idle_time_us(j,
 						&dbs_info->prev_cpu_wall);
 		if (dbs_tuners_ins.ignore_nice)
 			dbs_info->prev_cpu_nice = kstat_cpu(j).cpustat.nice;
@@ -377,12 +344,18 @@ static void cpufreq_adaptive_timer(unsigned long data)
 	policy = this_dbs_info->cur_policy;
 
 	for_each_online_cpu(j) {
-		cur_idle = get_cpu_idle_time(j, &cur_wall);
+		cur_idle = get_cpu_idle_time_us(j, &cur_wall);
 
 		delta_idle = (unsigned int) cputime64_sub(cur_idle,
 				per_cpu(idle_in_idle, j));
 		delta_time = (unsigned int) cputime64_sub(cur_wall,
 				per_cpu(idle_exit_wall, j));
+
+		/*
+		 * If timer ran less than 1ms after short-term sample started, retry.
+		 */
+		if (delta_time < 1000)
+			goto do_nothing;
 
 		if (delta_idle > delta_time)
 			short_load = 0;
@@ -430,6 +403,11 @@ static void cpufreq_adaptive_timer(unsigned long data)
 	return;
 
 do_nothing:
+	for_each_online_cpu(j) {
+		per_cpu(idle_in_idle, j) =
+			get_cpu_idle_time_us(j,
+					&per_cpu(idle_exit_wall, j));
+	}
 	mod_timer(&cpu_timer, jiffies + 2);
 	schedule_delayed_work_on(0, &this_dbs_info->work, 10);
 
@@ -487,7 +465,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 		j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 
-		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time);
+		cur_idle_time = get_cpu_idle_time_us(j, &cur_wall_time);
 		cur_iowait_time = get_cpu_iowait_time(j, &cur_wall_time);
 
 		wall_time = (unsigned int) cputime64_sub(cur_wall_time,
@@ -672,7 +650,7 @@ static void cpufreq_adaptive_idle(void)
 		if (mutex_trylock(&short_timer_mutex)) {
 			for_each_online_cpu(i) {
 				per_cpu(idle_in_idle, i) =
-						get_cpu_idle_time(i,
+						get_cpu_idle_time_us(i,
 						&per_cpu(idle_exit_wall, i));
 			}
 
@@ -715,7 +693,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 			j_dbs_info->cur_policy = policy;
 
-			j_dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
+			j_dbs_info->prev_cpu_idle = get_cpu_idle_time_us(j,
 						&j_dbs_info->prev_cpu_wall);
 			if (dbs_tuners_ins.ignore_nice) {
 				j_dbs_info->prev_cpu_nice =
@@ -804,7 +782,7 @@ static inline void cpufreq_adaptive_update_time(void)
 
 		j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 
-		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time);
+		cur_idle_time = get_cpu_idle_time_us(j, &cur_wall_time);
 		cur_iowait_time = get_cpu_iowait_time(j, &cur_wall_time);
 
 		j_dbs_info->prev_cpu_wall = cur_wall_time;
