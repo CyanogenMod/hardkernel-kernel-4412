@@ -991,6 +991,7 @@ static struct s3c_fb_platdata smdkv310_lcd0_pdata __initdata = {
 	.win[1]		= &smdkv310_fb_win1,
 	.win[2]		= &smdkv310_fb_win2,
 #endif
+	.default_win	= 2,
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
 #if defined(CONFIG_LCD_AMS369FG06)
 	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_VDEN |
