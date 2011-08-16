@@ -29,110 +29,53 @@
 
 struct platform_device; /* don't need the contents */
 
-#if defined(CONFIG_FB_S5P_WA101S) || defined(CONFIG_FB_S5P_LTE480WV)
-void s3cfb_cfg_gpio(struct platform_device *pdev)
+static void s3cfb_gpio_setup_24bpp(unsigned int start, unsigned int size,
+		unsigned int cfg, s5p_gpio_drvstr_t drvstr)
 {
-	int i;
 	u32 reg;
 
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF0(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF0(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF0(i), S5P_GPIO_DRVSTR_LV4);
-	}
+	s3c_gpio_cfgrange_nopull(start, size, cfg);
 
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF1(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF1(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF1(i), S5P_GPIO_DRVSTR_LV4);
-	}
-
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF2(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF2(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF2(i), S5P_GPIO_DRVSTR_LV4);
-	}
-
-	for (i = 0; i < 4; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF3(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF3(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF3(i), S5P_GPIO_DRVSTR_LV4);
-	}
+	for (; size > 0; size--, start++)
+		s5p_gpio_set_drvstr(start, drvstr);
 
 	/* Set FIMD0 bypass */
 	reg = __raw_readl(S3C_VA_SYS + 0x0210);
 	reg |= (1<<1);
 	__raw_writel(reg, S3C_VA_SYS + 0x0210);
+}
+
+#if defined(CONFIG_FB_S5P_WA101S) || defined(CONFIG_FB_S5P_LTE480WV)
+void s3cfb_cfg_gpio(struct platform_device *pdev)
+{
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 4, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
 }
 #elif defined(CONFIG_FB_S5P_AMS369FG06)
 void s3cfb_cfg_gpio(struct platform_device *pdev)
 {
-	int i;
-	u32 reg;
-
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF0(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF0(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF0(i), S5P_GPIO_DRVSTR_LV1);
-	}
-
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF1(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF1(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF1(i), S5P_GPIO_DRVSTR_LV1);
-	}
-
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF2(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF2(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF2(i), S5P_GPIO_DRVSTR_LV1);
-	}
-
-	for (i = 0; i < 4; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF3(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF3(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF3(i), S5P_GPIO_DRVSTR_LV1);
-	}
-
-	/* Set FIMD0 bypass */
-	reg = __raw_readl(S3C_VA_SYS + 0x0210);
-	reg |= (1<<1);
-	__raw_writel(reg, S3C_VA_SYS + 0x0210);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 4, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+}
+#elif defined(CONFIG_FB_S5P_LMS501KF03)
+void s3cfb_cfg_gpio(struct platform_device *pdev)
+{
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 4, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 }
 #elif defined(CONFIG_FB_S5P_HT101HD1)
 void s3cfb_cfg_gpio(struct platform_device *pdev)
 {
-	int i;
-	u32 reg;
-
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF0(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF0(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF0(i), S5P_GPIO_DRVSTR_LV1);
-	}
-
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF1(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF1(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF1(i), S5P_GPIO_DRVSTR_LV1);
-	}
-
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF2(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF2(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF2(i), S5P_GPIO_DRVSTR_LV1);
-	}
-
-	for (i = 0; i < 6; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPF3(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPF3(i), S3C_GPIO_PULL_NONE);
-		s5p_gpio_set_drvstr(EXYNOS4_GPF3(i), S5P_GPIO_DRVSTR_LV1);
-	}
-
-	/* Set FIMD0 bypass */
-	reg = __raw_readl(S3C_VA_SYS + 0x0210);
-	reg |= (1<<1);
-	__raw_writel(reg, S3C_VA_SYS + 0x0210);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 6, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 }
 #endif
 
@@ -399,7 +342,7 @@ int s3cfb_lcd_off(struct platform_device *pdev)
 {
 	return 0;
 }
-#elif defined(CONFIG_FB_S5P_AMS369FG06)
+#elif defined(CONFIG_FB_S5P_AMS369FG06) || defined(CONFIG_FB_S5P_LMS501KF03)
 int s3cfb_backlight_on(struct platform_device *pdev)
 {
 #if !defined(CONFIG_BACKLIGHT_PWM)
@@ -436,6 +379,7 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 {
 	int err;
 
+#ifdef CONFIG_MACH_SMDKC210
 	err = gpio_request_one(EXYNOS4_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPX0 for "
@@ -449,6 +393,21 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 	gpio_set_value(EXYNOS4_GPX0(6), 1);
 
 	gpio_free(EXYNOS4_GPX0(6));
+#elif defined (CONFIG_MACH_SMDK4212)
+	err = gpio_request_one(EXYNOS4_GPX1(5), GPIOF_OUT_INIT_HIGH, "GPX0");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX0 for "
+			"lcd reset control\n");
+		return err;
+	}
+
+	gpio_set_value(EXYNOS4_GPX1(5), 0);
+	mdelay(1);
+
+	gpio_set_value(EXYNOS4_GPX1(5), 1);
+
+	gpio_free(EXYNOS4_GPX1(5));
+#endif
 
 	return 0;
 }
