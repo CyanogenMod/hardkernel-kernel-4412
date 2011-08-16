@@ -273,6 +273,13 @@ static int g2d_probe(struct platform_device *pdev)
 		goto probe_out;
 	}
 
+#if defined(CONFIG_EXYNOS4_DEV_PD)
+	/* to use the runtime PM helper functions */
+	pm_runtime_enable(&pdev->dev);
+	/* enable the power domain */
+	pm_runtime_get_sync(&pdev->dev);
+#endif
+
 	/* get the memory region */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if(res == NULL) {
@@ -371,15 +378,6 @@ static int g2d_probe(struct platform_device *pdev)
 	mutex_init(&g2d_dev->lock);
 
 	g2d_sysmmu_on(g2d_dev);
-
-	
-
-#if defined(CONFIG_EXYNOS4_DEV_PD)
-	/* to use the runtime PM helper functions */
-	pm_runtime_enable(&pdev->dev);
-	/* enable the power domain */
-	pm_runtime_get_sync(&pdev->dev);
-#endif
 
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 	g2d_dev->early_suspend.suspend = g2d_early_suspend;
