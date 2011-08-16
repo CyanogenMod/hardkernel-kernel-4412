@@ -1184,6 +1184,7 @@ static struct clksrc_clk clk_sclk_spdif = {
 		.id		= -1,
 		.enable		= exynos4_clksrc_mask_peril1_ctrl,
 		.ctrlbit	= (1 << 8),
+		.ops		= &s5p_sclk_spdif_ops,
 	},
 	.sources = &clkset_sclk_spdif,
 	.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 8, .size = 2 },
