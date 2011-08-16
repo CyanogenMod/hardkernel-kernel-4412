@@ -2356,8 +2356,14 @@ static int s5p_mfc_queue_setup(struct vb2_queue *vq,
 
 	mfc_debug_enter();
 
-	if (ctx->state != MFCINST_GOT_INST) {
-		mfc_err("inavlid state: %d\n", ctx->state);
+	if (ctx->state != MFCINST_GOT_INST &&
+	    vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		mfc_err("invalid state: %d\n", ctx->state);
+		return -EINVAL;
+	}
+	if (ctx->state >= MFCINST_FINISHING &&
+	    vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		mfc_err("invalid state: %d\n", ctx->state);
 		return -EINVAL;
 	}
 
