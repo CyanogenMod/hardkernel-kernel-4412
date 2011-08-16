@@ -454,6 +454,9 @@ struct s5p_mfc_ctx {
 	struct list_head src_ctrls[MFC_MAX_BUFFERS];
 	struct list_head dst_ctrls[MFC_MAX_BUFFERS];
 
+	int src_ctrls_flag[MFC_MAX_BUFFERS];
+	int dst_ctrls_flag[MFC_MAX_BUFFERS];
+
 	unsigned int sequence;
 	unsigned long dec_dst_flag;
 	size_t dec_src_buf_size;

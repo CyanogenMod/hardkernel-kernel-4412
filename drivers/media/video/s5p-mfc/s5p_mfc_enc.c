@@ -848,10 +848,23 @@ static int enc_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 	struct list_head *head;
 
-	if (type == MFC_CTRL_TYPE_SET)
+	if ((type == MFC_CTRL_TYPE_SET) && (ctx->src_ctrls_flag[index])) {
+		mfc_debug(5, "ctx->src_ctrls[%d] is initialized\n", index);
+		return 0;
+	}
+	if ((type == MFC_CTRL_TYPE_GET) && (ctx->dst_ctrls_flag[index])) {
+		mfc_debug(5, "ctx->dst_ctrls[%d] is initialized\n", index);
+		return 0;
+	}
+
+	if (type == MFC_CTRL_TYPE_SET) {
 		head = &ctx->src_ctrls[index];
-	else if (type == MFC_CTRL_TYPE_GET)
+		ctx->src_ctrls_flag[index] = 1;
+	}
+	else if (type == MFC_CTRL_TYPE_GET) {
 		head = &ctx->dst_ctrls[index];
+		ctx->dst_ctrls_flag[index] = 1;
+	}
 	else
 		return -EINVAL;
 
@@ -2553,8 +2566,10 @@ static void s5p_mfc_buf_cleanup(struct vb2_buffer *vb)
 		if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err("failed in cleanup_buf_ctrls\n");
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
-			mfc_err("failed in cleanup_buf_ctrls\n");
+		if (ctx->src_ctrls_flag[index]) {
+			if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
+				mfc_err("failed in cleanup_buf_ctrls\n");
+		}
 	} else {
 		mfc_err("s5p_mfc_buf_cleanup: unknown queue type.\n");
 	}
