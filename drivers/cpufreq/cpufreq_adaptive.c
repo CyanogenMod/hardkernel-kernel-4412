@@ -376,7 +376,7 @@ static void cpufreq_adaptive_timer(unsigned long data)
 
 	policy = this_dbs_info->cur_policy;
 
-	for_each_cpu(j, policy->cpus) {
+	for_each_online_cpu(j) {
 		cur_idle = get_cpu_idle_time(j, &cur_wall);
 
 		delta_idle = (unsigned int) cputime64_sub(cur_idle,
@@ -670,7 +670,7 @@ static void cpufreq_adaptive_idle(void)
 			return;
 
 		if (mutex_trylock(&short_timer_mutex)) {
-			for_each_cpu(i, policy->cpus) {
+			for_each_online_cpu(i) {
 				per_cpu(idle_in_idle, i) =
 						get_cpu_idle_time(i,
 						&per_cpu(idle_exit_wall, i));
