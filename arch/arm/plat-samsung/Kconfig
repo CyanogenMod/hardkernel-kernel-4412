@@ -249,12 +249,6 @@ config S3C_DEV_USB_HSOTG
 	help
 	  Compile in platform device definition for USB high-speed OtG
 
-config EXYNOS_DEV_SS_UDC
-	bool
-	help
-	  Compile in platform device definition for EXYNOS SuperSpeed USB 3.0
-	  Device controller
-
 config S3C_DEV_WDT
 	bool
 	default y if ARCH_S3C2410

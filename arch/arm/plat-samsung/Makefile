@@ -51,7 +51,6 @@ obj-y				+= dev-uart.o
 obj-$(CONFIG_S3C_DEV_USB_HOST)	+= dev-usb.o
 obj-$(CONFIG_S3C_DEV_USB_HSOTG)	+= dev-usb-hsotg.o
 obj-$(CONFIG_S3C_DEV_WDT)	+= dev-wdt.o
-obj-$(CONFIG_EXYNOS_DEV_SS_UDC)	+= dev-usb3-exynos-udc.o
 obj-$(CONFIG_S3C_DEV_NAND)	+= dev-nand.o
 obj-$(CONFIG_S3C_DEV_ONENAND)	+= dev-onenand.o
 obj-$(CONFIG_S3C_DEV_RTC)	+= dev-rtc.o
