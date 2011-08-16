@@ -314,6 +314,19 @@ config USB_S3C_HSOTG
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 
+config USB_GADGET_EXYNOS_SS_UDC
+        boolean "EXYNOS SuperSpeed USB 3.0 Device controller"
+        depends on EXYNOS_DEV_SS_UDC
+        select USB_GADGET_DUALSPEED
+        help
+          DWC SuperSpeed USB 3.0 Device controller.
+
+config USB_EXYNOS_SS_UDC
+        tristate
+        depends on USB_GADGET_EXYNOS_SS_UDC
+        default USB_GADGET
+        select USB_GADGET_SELECTED
+
 config USB_GADGET_IMX
 	boolean "Freescale IMX USB Peripheral Controller"
 	depends on ARCH_MX1
