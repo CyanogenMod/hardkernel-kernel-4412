@@ -40,7 +40,7 @@ static int set_audio_clock_heirachy(struct platform_device *pdev)
 		goto out1;
 	}
 
-	sclk_audio0 = clk_get(&pdev->dev, "sclk_audio");
+	sclk_audio0 = clk_get(NULL, "audio-bus");
 	if (IS_ERR(sclk_audio0)) {
 		printk(KERN_WARNING "%s: Cannot find sclk_audio.\n",
 				__func__);
