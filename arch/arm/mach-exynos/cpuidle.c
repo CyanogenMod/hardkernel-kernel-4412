@@ -564,8 +564,8 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 	struct cpuidle_state *new_state = state;
 	unsigned int enter_mode;
 
-	/* This mode only can be entered when Core1 is offline */
-	if (cpu_online(1)) {
+	/* This mode only can be entered when only Core0 is online */
+	if (num_online_cpus() != 1) {
 		BUG_ON(!dev->safe_state);
 		new_state = dev->safe_state;
 	}
