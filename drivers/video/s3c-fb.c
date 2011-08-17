@@ -887,6 +887,9 @@ static int s3c_fb_blank(int blank_mode, struct fb_info *info)
 	 *	s3c_fb_enable(sfb, blank_mode != FB_BLANK_POWERDOWN ? 1 : 0);
 	 */
 
+	if (index != sfb->pdata->default_win)
+		return 1;
+
 	return 0;
 }
 
