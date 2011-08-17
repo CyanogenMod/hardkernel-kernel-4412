@@ -1614,6 +1614,8 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 	struct s3c_fb_platdata *pd;
 	struct s3c_fb_win *win;
 	int win_no;
+	int default_win;
+	int i;
 	u32 reg;
 
 	sfb = container_of(handler, struct s3c_fb, early_suspend);
@@ -1658,7 +1660,13 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 	}
 
 	/* restore framebuffers */
-	for (win_no = 0; win_no < S3C_FB_MAX_WIN; win_no++) {
+	default_win = sfb->pdata->default_win;
+	for (i = 0; i < S3C_FB_MAX_WIN; i++) {
+		win_no = i;
+		if (i == 0)
+			win_no = default_win;
+		if (i == default_win)
+			win_no = 0;
 		win = sfb->windows[win_no];
 		if (!win)
 			continue;
@@ -1950,6 +1958,8 @@ static int s3c_fb_resume(struct device *dev)
 	struct s3c_fb_platdata *pd = sfb->pdata;
 	struct s3c_fb_win *win;
 	int win_no;
+	int default_win;
+	int i;
 	u32 reg;
 
 	if (pm_runtime_suspended(dev))
@@ -1990,7 +2000,13 @@ static int s3c_fb_resume(struct device *dev)
 	}
 
 	/* restore framebuffers */
-	for (win_no = 0; win_no < S3C_FB_MAX_WIN; win_no++) {
+	default_win = sfb->pdata->default_win;
+	for (i = 0; i < S3C_FB_MAX_WIN; i++) {
+		win_no = i;
+		if (i == 0)
+			win_no = default_win;
+		if (i == default_win)
+			win_no = 0;
 		win = sfb->windows[win_no];
 		if (!win)
 			continue;
@@ -2036,6 +2052,8 @@ static int s3c_fb_runtime_resume(struct device *dev)
 	struct s3c_fb_platdata *pd = sfb->pdata;
 	struct s3c_fb_win *win;
 	int win_no;
+	int default_win;
+	int i;
 	u32 reg;
 
 	clk_enable(sfb->bus_clk);
@@ -2068,7 +2086,13 @@ static int s3c_fb_runtime_resume(struct device *dev)
 	}
 
 	/* restore framebuffers */
-	for (win_no = 0; win_no < S3C_FB_MAX_WIN; win_no++) {
+	default_win = sfb->pdata->default_win;
+	for (i = 0; i < S3C_FB_MAX_WIN; i++) {
+		win_no = i;
+		if (i == 0)
+			win_no = default_win;
+		if (i == default_win)
+			win_no = 0;
 		win = sfb->windows[win_no];
 		if (!win)
 			continue;
