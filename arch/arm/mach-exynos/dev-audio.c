@@ -23,7 +23,7 @@
 #include <mach/irqs.h>
 
 static const char *rclksrc[] = {
-	[0] = "i2s_bus",
+	[0] = "busclk",
 	[1] = "i2sclk",
 };
 
