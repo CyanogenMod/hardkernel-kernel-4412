@@ -20,14 +20,24 @@
 #include <linux/delay.h>
 #include <linux/percpu.h>
 
+#include <plat/cputype.h>
+
 #include <mach/map.h>
 #include <mach/regs-mct.h>
+
 #include <asm/mach/time.h>
+#include <asm/hardware/gic.h>
 
 #define TICK_BASE_CNT 1
 
+enum {
+	MCT_INT_PPI,
+	MCT_INT_SPI
+};
+
 static unsigned long clk_cnt_per_tick;
 static unsigned long clk_rate;
+static unsigned int mct_int_type;
 
 struct mct_clock_event_device {
 	struct clock_event_device *evt;
@@ -335,9 +345,8 @@ static inline void exynos4_tick_set_mode(enum clock_event_mode mode,
 	}
 }
 
-static irqreturn_t exynos4_mct_tick_isr(int irq, void *dev_id)
+static inline void exynos4_mct_tick_clear(struct mct_clock_event_device *mevt)
 {
-	struct mct_clock_event_device *mevt = dev_id;
 	struct clock_event_device *evt = mevt->evt;
 
 	/*
@@ -355,6 +364,14 @@ static irqreturn_t exynos4_mct_tick_isr(int irq, void *dev_id)
 	 */
 	exynos4_mct_write(0x1, mevt->base + MCT_L_INT_CSTAT_OFFSET);
 	exynos4_mct_write(0x1, mevt->base + MCT_L_INT_CSTAT_OFFSET);
+}
+
+static irqreturn_t exynos4_mct_tick_isr(int irq, void *dev_id)
+{
+	struct mct_clock_event_device *mevt = dev_id;
+	struct clock_event_device *evt = mevt->evt;
+
+	exynos4_mct_tick_clear(mevt);
 
 	evt->event_handler(evt);
 
@@ -403,25 +420,36 @@ static void exynos4_mct_tick_init(struct clock_event_device *evt)
 
 	exynos4_mct_write(TICK_BASE_CNT, mct_tick[cpu].base + MCT_L_TCNTB_OFFSET);
 
-	if (cpu == 0) {
-		mct_tick0_event_irq.dev_id = &mct_tick[cpu];
-		setup_irq(IRQ_MCT_L0, &mct_tick0_event_irq);
+	if (mct_int_type == MCT_INT_SPI) {
+		if (cpu == 0) {
+			mct_tick0_event_irq.dev_id = &mct_tick[cpu];
+			setup_irq(IRQ_MCT_L0, &mct_tick0_event_irq);
+		} else {
+			mct_tick1_event_irq.dev_id = &mct_tick[cpu];
+			setup_irq(IRQ_MCT_L1, &mct_tick1_event_irq);
+			irq_set_affinity(IRQ_MCT_L1, cpumask_of(1));
+		}
 	} else {
-		mct_tick1_event_irq.dev_id = &mct_tick[cpu];
-		setup_irq(IRQ_MCT_L1, &mct_tick1_event_irq);
-		irq_set_affinity(IRQ_MCT_L1, cpumask_of(1));
+		gic_enable_ppi(IRQ_PPI_MCT_L);
 	}
 }
 
 /* Setup the local clock events for a CPU */
-void __cpuinit local_timer_setup(struct clock_event_device *evt)
+int __cpuinit local_timer_setup(struct clock_event_device *evt)
 {
 	exynos4_mct_tick_init(evt);
+
+	return 0;
 }
 
 int local_timer_ack(void)
 {
-	return 0;
+	unsigned int cpu = smp_processor_id();
+	struct mct_clock_event_device *mevt = &mct_tick[cpu];
+
+	exynos4_mct_tick_clear(mevt);
+
+	return 1;
 }
 
 #endif /* CONFIG_LOCAL_TIMERS */
@@ -436,6 +464,11 @@ static void __init exynos4_timer_resources(void)
 
 static void __init exynos4_timer_init(void)
 {
+	if (cpu_is_exynos4212())
+		mct_int_type = MCT_INT_PPI;
+	else
+		mct_int_type = MCT_INT_SPI;
+
 	exynos4_timer_resources();
 	exynos4_clocksource_init();
 	exynos4_clockevent_init();

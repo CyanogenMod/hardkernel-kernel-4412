@@ -12,6 +12,7 @@
 #include <mach/hardware.h>
 #include <asm/hardware/gic.h>
 #include <mach/map.h>
+#include <mach/irqs.h>
 
 		.macro	disable_fiq
 		.endm
@@ -82,4 +83,10 @@
 		/* As above, this assumes that irqstat and base are preserved.. */
 
 		.macro test_for_ltirq, irqnr, irqstat, base, tmp
+		bic     \irqnr, \irqstat, #0x1c00
+		mov     \tmp, #0
+		cmp     \irqnr, #IRQ_PPI_MCT_L
+		moveq   \tmp, #1
+		streq   \irqstat, [\base, #GIC_CPU_EOI]
+		cmp     \tmp, #0
 		.endm
