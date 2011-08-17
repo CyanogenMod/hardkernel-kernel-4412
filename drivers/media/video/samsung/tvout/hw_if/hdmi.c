@@ -600,7 +600,7 @@ static void s5p_hdmi_print_phy_config(void)
 static inline void s5p_hdmi_print_phy_config(void) {}
 #endif
 
-#ifdef CONFIG_SND_S5P_SPDIF
+#ifdef CONFIG_SND_SAMSUNG_SPDIF
 static void s5p_hdmi_audio_set_config(
 		enum s5p_tvout_audio_codec_type audio_codec)
 {
@@ -1360,7 +1360,7 @@ int s5p_hdmi_audio_init(
 		enum s5p_tvout_audio_codec_type audio_codec,
 		u32 sample_rate, u32 bits, u32 frame_size_code)
 {
-#ifdef CONFIG_SND_S5P_SPDIF
+#ifdef CONFIG_SND_SAMSUNG_SPDIF
 	s5p_hdmi_audio_set_config(audio_codec);
 	s5p_hdmi_audio_set_repetition_time(audio_codec, bits, frame_size_code);
 	s5p_hdmi_audio_irq_enable(S5P_HDMI_SPDIFIN_IRQ_OVERFLOW_EN);
