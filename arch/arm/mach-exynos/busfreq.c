@@ -76,6 +76,7 @@ enum busfreq_level_idx {
 static unsigned int p_idx;
 static unsigned int curr_idx;
 static unsigned int minFreq = -1UL;
+static bool init_done;
 
 struct busfreq_table {
 	unsigned int idx;
@@ -399,7 +400,7 @@ int exynos4_busfreq_lock(unsigned int nId,
 	int ret = 0;
 	unsigned int int_volt;
 
-	if (machine_is_smdkv310()) {
+	if (!init_done) {
 		pr_err("Busfreq does not support smdkv310\n");
 		return -ENODEV;
 	}
@@ -432,7 +433,7 @@ void exynos4_busfreq_lock_free(unsigned int nId)
 {
 	unsigned int i;
 
-	if (machine_is_smdkv310()) {
+	if (!init_done) {
 		pr_err("Busfreq does not support smdkv310\n");
 		return;
 	}
@@ -540,9 +541,18 @@ static int __init busfreq_mon_init(void)
 	unsigned int tmp;
 	struct cpufreq_frequency_table *table;
 	unsigned int freq;
+	unsigned long val;
 
-	if (machine_is_smdkv310())
+	val = __raw_readl(S5P_VA_DMC0 + 0x4);
+	val = (val >> 8) & 0xf;
+
+	/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
+	if (val != 0x05) {
+		pr_err("Memory Type Undertermined.\n");
 		return -ENODEV;
+	}
+
+	init_done = true;
 
 	table = cpufreq_frequency_get_table(0);
 
