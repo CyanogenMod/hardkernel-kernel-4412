@@ -682,6 +682,33 @@ static int set_dpbs(struct mfc_inst_ctx *ctx)
  */
 static int pre_frame_start(struct mfc_inst_ctx *ctx)
 {
+	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
+
+	if (enc_ctx->setflag == 1) {
+		if (enc_ctx->FrameTypeCngTag == 1) {
+			mfc_dbg("Encoding Param Setting - Frame Type : %d\n", enc_ctx->forceframe);
+
+			write_reg(enc_ctx->forceframe, MFC_ENC_SI_CH1_FRAME_INS);
+		}
+
+		if (enc_ctx->FrameRateCngTag == 1) {
+			mfc_dbg("Encoding Param Setting - Frame rate : %d\n", enc_ctx->framerate);
+
+			write_shm(ctx, 1000 * enc_ctx->framerate, NEW_RC_FRAME_RATE);
+			write_shm(ctx, ((1 << 31)|(enc_ctx->framerate << 16)|(1 & 0xFFFF)), VOP_TIMING);
+			write_reg(1000 * enc_ctx->framerate, MFC_ENC_RC_FRAME_RATE);
+			write_shm(ctx, (0x1 << 1), ENC_PARAM_CHANGE);
+		}
+
+		if (enc_ctx->BitRateCngTag == 1) {
+			mfc_dbg("Encoding Param Setting - Bit rate : %d\n", enc_ctx->bitrate);
+
+			write_shm(ctx, enc_ctx->bitrate, NEW_RC_BIT_RATE);
+			write_reg(enc_ctx->bitrate, MFC_ENC_RC_BIT_RATE);
+			write_shm(ctx, (0x1 << 2), ENC_PARAM_CHANGE);
+		}
+	}
+
 	return 0;
 }
 
@@ -690,6 +717,19 @@ static int pre_frame_start(struct mfc_inst_ctx *ctx)
  */
 static int post_frame_start(struct mfc_inst_ctx *ctx)
 {
+	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
+
+	if (enc_ctx->setflag == 1) {
+		enc_ctx->setflag = 0;
+
+		enc_ctx->FrameTypeCngTag = 0;
+		enc_ctx->FrameRateCngTag = 0;
+		enc_ctx->BitRateCngTag = 0;
+
+		write_shm(ctx, 0, ENC_PARAM_CHANGE);	//RC_BIT_RATE_CHANGE = 4
+		write_reg(0, MFC_ENC_SI_CH1_FRAME_INS);
+	}
+
 	return 0;
 }
 
@@ -741,11 +781,10 @@ static int get_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
  */
 static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value)
 {
-	//struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
+	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
 	int ret = 0;
 
 	mfc_dbg("type: 0x%08x", type);
-
 	/*
 	MFC_ENC_SETCONF_FRAME_TYPE	= ENC_SET,
 	MFC_ENC_SETCONF_CHANGE_FRAME_RATE,
@@ -759,12 +798,141 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 	*/
 
 	switch (type) {
+		case MFC_ENC_SETCONF_FRAME_TYPE:
+			mfc_dbg("MFC_ENC_SETCONF_FRAME_TYPE : %d\n", ctx->state);
 
-	default:
-		mfc_dbg("invalid set cfg type: 0x%08x\n", type);
-		ret = 1;
+			if (ctx->state < INST_STATE_INIT) {
+				mfc_err("MFC_ENC_SETCONF_CHANGE_FRAME_TYPE : state is invalid\n");
+				return MFC_STATE_INVALID;
+			}
 
-		break;
+			if ((value[0] >= DONT_CARE) && (value[0] <= NOT_CODED))	{
+				mfc_dbg("Frame Type : %d\n", value[0]);
+				enc_ctx->forceframe = value[0];
+				enc_ctx->FrameTypeCngTag = 1;
+				enc_ctx->setflag = 1;
+			} else {
+				mfc_warn("FRAME_TYPE should be between 0 and 2\n");
+			}
+
+			break;
+
+		case MFC_ENC_SETCONF_CHANGE_FRAME_RATE:
+			mfc_dbg("MFC_ENC_SETCONF_CHANGE_FRAME_RATE : %d\n", ctx->state);
+
+			if (ctx->state < INST_STATE_INIT) {
+				mfc_err("MFC_ENC_SETCONF_CHANGE_FRAME_RATE : state is invalid\n");
+				return MFC_STATE_INVALID;
+			}
+
+			if (value[0] > 0) {
+				mfc_dbg("Frame rate : %d\n", value[0]);
+				enc_ctx->framerate = value[0];
+				enc_ctx->FrameRateCngTag = 1;
+				enc_ctx->setflag = 1;
+			} else {
+				mfc_warn("MFCSetConfig, FRAME_RATE should be biger than 0\n");
+			}
+
+			break;
+
+		case MFC_ENC_SETCONF_CHANGE_BIT_RATE:
+			mfc_dbg("MFC_ENC_SETCONF_CHANGE_BIT_RATE : %d\n", ctx->state);
+
+			if (ctx->state < INST_STATE_INIT) {
+				mfc_err("MFC_ENC_SETCONF_CHANGE_BIT_RATE : state is invalid\n");
+				return MFC_STATE_INVALID;
+			}
+
+			if (value[0] > 0) {
+				mfc_dbg("Bit rate : %d\n", value[0]);
+				enc_ctx->bitrate = value[0];
+				enc_ctx->BitRateCngTag = 1;
+				enc_ctx->setflag = 1;
+			} else {
+				mfc_warn("MFCSetConfig, BIT_RATE should be biger than 0\n");
+			}
+
+			break;
+
+		case MFC_ENC_SETCONF_ALLOW_FRAME_SKIP:
+			mfc_dbg("MFC_ENC_SETCONF_ALLOW_FRAME_SKIP : %d\n", ctx->state);
+
+			if ((ctx->state < INST_STATE_CREATE) || (ctx->state > INST_STATE_EXE)) {
+				mfc_err("MFC_ENC_SETCONF_ALLOW_FRAME_SKIP : state is invalid\n");
+				return MFC_STATE_INVALID;
+			}
+
+			if (value[0] > 0) {
+				mfc_dbg("Allow_frame_skip enable : %d\n", value[0]);
+				enc_ctx->frame_skip_enable = value[0];
+				if (enc_ctx->frame_skip_enable == 2)
+					enc_ctx->frameskip = value[1];
+				enc_ctx->FrameSkipCngTag = 1;
+				enc_ctx->setflag = 1;
+			}
+
+			break;
+
+		case MFC_ENC_SETCONF_VUI_INFO:
+			mfc_dbg("MFC_ENC_SETCONF_VUI_INFO : %d\n", ctx->state);
+
+			if ((ctx->state < INST_STATE_CREATE) || (ctx->state > INST_STATE_EXE)) {
+				mfc_err("MFC_ENC_SETCONF_VUI_INFO_SET : state is invalid\n");
+				return MFC_STATE_INVALID;
+			}
+
+			if (value[0] > 0) {
+				mfc_dbg("VUI_info enable : %d\n", value[1]);
+				enc_ctx->vuiinfoval = value[0];
+				if (enc_ctx->vuiinfoval == 255)
+					enc_ctx->vuiextendsar = value[1];
+				enc_ctx->vui_info_enable = 1;
+				enc_ctx->VUIInfoCngTag = 1;
+				enc_ctx->setflag = 1;
+			}
+
+			break;
+
+		case MFC_ENC_SETCONF_I_PERIOD:
+			mfc_dbg("MFC_ENC_SETCONF_I_PERIOD : %d\n", ctx->state);
+
+			if ((ctx->state < INST_STATE_CREATE) || (ctx->state > INST_STATE_EXE)) {
+				mfc_err("MFC_ENC_SETCONF_I_PERIOD_CHANGE : state is invalid\n");
+				return MFC_STATE_INVALID;
+			}
+
+			if (value[0]) {
+				mfc_dbg("I_PERIOD value : %d\n", value[0]);
+				enc_ctx->iperiodval = value[0];
+				enc_ctx->IPeriodCngTag = 1;
+				enc_ctx->setflag = 1;
+			}
+
+			break;
+
+		case MFC_ENC_SETCONF_HIER_P:
+			mfc_dbg("MFC_ENC_SETCONF_FRAME_TYPE : %d\n", ctx->state);
+
+			if ((ctx->state < INST_STATE_CREATE) || (ctx->state > INST_STATE_EXE)) {
+				mfc_err("MFC_ENC_SETCONF_HIER_P_SET : state is invalid\n");
+				return MFC_STATE_INVALID;
+			}
+
+			if (value[0]) {
+				mfc_dbg("HIER_P enable : %d\n", value[0]);
+				enc_ctx->hier_p_enable = value[0];
+				enc_ctx->HierPCngTag = 1;
+				enc_ctx->setflag = 1;
+			}
+
+			break;
+
+		default:
+			mfc_dbg("invalid set cfg type: 0x%08x\n", type);
+			ret = 1;
+
+			break;
 	}
 
 	return ret;
@@ -1097,10 +1265,48 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	 * execute pre sequence start operation
 	 */
 	if (ctx->c_ops->pre_seq_start) {
-		if (ctx->c_ops->pre_seq_start(ctx) < 0) {
-			mfc_err("Pre-Sequence Start Faild");
-			ret = MFC_ENC_INIT_FAIL;
-			goto err_handling;
+		if (ctx->c_ops->pre_seq_start) {
+			if (ctx->c_ops->pre_seq_start(ctx) < 0) {
+				mfc_err("Pre-Sequence Start Failed");
+				ret = MFC_ENC_INIT_FAIL;
+				goto err_handling;
+			}
+		}
+	}
+
+	if (enc_ctx->setflag == 1) {
+		if (enc_ctx->FrameSkipCngTag == 1) {
+			mfc_dbg("Encoding Param Setting - Allow_frame_skip enable : %d - number : %d \n",
+					enc_ctx->frame_skip_enable, enc_ctx->frameskip);
+
+			if (enc_ctx->frame_skip_enable == 2)
+				write_shm(ctx,
+					((enc_ctx->frame_skip_enable << 1)| (enc_ctx->frameskip << 16) | read_shm(ctx, EXT_ENC_CONTROL)),
+					EXT_ENC_CONTROL);
+			else
+				write_shm(ctx, ((enc_ctx->frame_skip_enable << 1)|read_shm(ctx, EXT_ENC_CONTROL)), EXT_ENC_CONTROL);
+		}
+
+		if( enc_ctx->VUIInfoCngTag == 1)	{
+			mfc_dbg("Encoding Param Setting - VUI_info enable : %d\n", enc_ctx->vui_info_enable);
+
+			write_shm(ctx, enc_ctx->vuiinfoval, ASPECT_RATIO_IDC);
+			write_shm(ctx, enc_ctx->vuiextendsar, EXTENDED_SAR);
+			write_shm(ctx, ((enc_ctx->vui_info_enable << 15)|read_shm(ctx, EXT_ENC_CONTROL)), EXT_ENC_CONTROL);	//ASPECT_RATIO_VUI_ENABLE = 1<<15
+		}
+
+		if (enc_ctx->IPeriodCngTag == 1) {
+			mfc_dbg("Encoding Param Setting - I_PERIOD : %d\n", enc_ctx->iperiodval);
+			write_shm(ctx, enc_ctx->iperiodval, NEW_I_PERIOD);
+			write_shm(ctx, ((1<<16)|enc_ctx->iperiodval), H264_I_PERIOD);
+			write_reg(enc_ctx->iperiodval, MFC_ENC_PIC_TYPE_CTRL);
+			write_shm(ctx, (0x1 << 0), ENC_PARAM_CHANGE);
+		}
+
+		if (enc_ctx->HierPCngTag == 1) {
+			mfc_dbg("Encoding Param Setting - HIER_P enable : %d\n", enc_ctx->hier_p_enable);
+
+			write_shm(ctx, ((enc_ctx->hier_p_enable << 4)|read_shm(ctx, EXT_ENC_CONTROL)), EXT_ENC_CONTROL);	//HIERARCHICAL_P_ENABLE = 1<<4
 		}
 	}
 
@@ -1162,6 +1368,18 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	*/
 
 	mfc_set_inst_state(ctx, INST_STATE_INIT);
+
+	if (enc_ctx->setflag == 1) {
+		enc_ctx->setflag = 0;
+		enc_ctx->FrameSkipCngTag = 0;
+		enc_ctx->VUIInfoCngTag = 0;
+		enc_ctx->HierPCngTag = 0;
+
+		if (enc_ctx->IPeriodCngTag == 1) {
+			write_shm(ctx, 0, ENC_PARAM_CHANGE);
+			enc_ctx->IPeriodCngTag = 0;
+		}
+	}
 
 	mfc_print_buf();
 
@@ -1333,7 +1551,17 @@ int mfc_exec_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 
 	mfc_set_inst_state(ctx, INST_STATE_EXE);
 
+	if (ctx->c_ops->pre_frame_start) {
+		if (ctx->c_ops->pre_frame_start(ctx) < 0)
+			return MFC_ENC_INIT_FAIL;
+	}
+
 	ret = mfc_encoding_frame(ctx, exe_arg);
+
+	if (ctx->c_ops->post_frame_start) {
+		if (ctx->c_ops->post_frame_start(ctx) < 0)
+			return MFC_ENC_INIT_FAIL;
+	}
 
 	mfc_set_inst_state(ctx, INST_STATE_EXE_DONE);
 

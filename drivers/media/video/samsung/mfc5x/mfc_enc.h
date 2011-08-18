@@ -47,6 +47,23 @@ struct mfc_enc_ctx {
 	unsigned int frameskip;
 	unsigned int framerate;
 	unsigned int bitrate;
+	unsigned int iperiodval;
+	unsigned int vuiinfoval;
+	unsigned int vuiextendsar;
+
+	unsigned int frame_skip_enable;
+	unsigned int vui_info_enable;
+	unsigned int hier_p_enable;
+
+	/* change flag */
+	unsigned int setflag;
+	unsigned int FrameTypeCngTag;
+	unsigned int FrameRateCngTag;
+	unsigned int BitRateCngTag;
+	unsigned int FrameSkipCngTag;
+	unsigned int VUIInfoCngTag;
+	unsigned int IPeriodCngTag;
+	unsigned int HierPCngTag;
 
 	void *e_priv;
 };
