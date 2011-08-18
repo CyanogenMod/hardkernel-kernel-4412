@@ -263,9 +263,9 @@ static struct irqaction mct_comp_event_irq = {
 
 static void exynos4_clockevent_init(void)
 {
-	clk_cnt_per_tick = clk_rate / 2	/ HZ;
+	clk_cnt_per_tick = clk_rate / HZ;
 
-	clockevents_calc_mult_shift(&mct_comp_device, clk_rate / 2, 5);
+	clockevents_calc_mult_shift(&mct_comp_device, clk_rate, 5);
 	mct_comp_device.max_delta_ns =
 		clockevent_delta2ns(0xffffffff, &mct_comp_device);
 	mct_comp_device.min_delta_ns =
@@ -331,7 +331,8 @@ static inline void exynos4_tick_set_mode(enum clock_event_mode mode,
 
 	switch (mode) {
 	case CLOCK_EVT_MODE_PERIODIC:
-		exynos4_mct_tick_start(clk_cnt_per_tick, mevt);
+		exynos4_mct_tick_start(clk_cnt_per_tick / (TICK_BASE_CNT + 1)
+					, mevt);
 		break;
 
 	case CLOCK_EVT_MODE_ONESHOT:
