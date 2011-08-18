@@ -597,6 +597,8 @@ static int set_init_arg(struct mfc_inst_ctx *ctx, void *arg)
 #else
 	init_arg->cmn.out_u_addr.strm_ref_y = mfc_mem_data_ofs(enc_ctx->streamaddr, 1);
 	init_arg->cmn.out_u_addr.mv_ref_yc = 0;
+	init_arg->cmn.out_p_addr.strm_ref_y = mfc_mem_base_ofs(enc_ctx->streamaddr);
+	init_arg->cmn.out_p_addr.mv_ref_yc = 0;
 #endif
 
 	/*
@@ -1199,8 +1201,8 @@ static int mfc_encoding_frame(struct mfc_inst_ctx *ctx, struct mfc_enc_exe_arg *
 	write_shm(ctx, exe_arg->in_frametag, SET_FRAME_TAG);
 
 	/* Set stream buffer addr */
-	write_reg(mfc_mem_base_ofs(enc_ctx->streamaddr) >> 11, MFC_ENC_SI_CH1_SB_ADR);
-	write_reg(enc_ctx->streamsize, MFC_ENC_SI_CH1_SB_SIZE);
+	write_reg(exe_arg->in_strm_st >> 11, MFC_ENC_SI_CH1_SB_ADR);
+	write_reg((exe_arg->in_strm_end - exe_arg->in_strm_st), MFC_ENC_SI_CH1_SB_SIZE);
 
 	#if 0
 	/* force I frame or Not-coded frame */
