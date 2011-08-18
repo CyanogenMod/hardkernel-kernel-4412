@@ -231,6 +231,7 @@ static unsigned int mfc_get_free_buf(int size, int align, int port)
 
 	if (match != NULL) {
 		addr = match->real;
+		align_size = ALIGN(addr, align) - addr;
 
 #if !(defined(CONFIG_VIDEO_MFC_VCM_UMP) || defined(CONFIG_S5P_VMEM))
 		if (align_size > 0) {
