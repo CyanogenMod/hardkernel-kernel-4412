@@ -372,15 +372,6 @@ struct platform_device exynos4_device_spdif = {
 	},
 };
 
-static struct resource exynos4_audss_resource[] = {
-};
-struct platform_device exynos4_device_audss = {
-	.name = "samsung-audss",
-	.id = -1,
-	.num_resources = ARRAY_SIZE(exynos4_audss_resource),
-	.resource = exynos4_audss_resource,
-};
-
 #ifdef CONFIG_SND_SAMSUNG_RP
 static struct resource exynos4_srp_resource[] = {
 };
