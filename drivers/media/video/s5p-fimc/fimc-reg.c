@@ -829,7 +829,7 @@ int fimc_hwset_enable_lastend(struct fimc_dev *fimc)
 {
 	u32 cfg = readl(fimc->regs + S5P_CIOCTRL);
 
-	cfg &= ~S5P_CIOCTRL_LASTENDEN;
+	cfg |= S5P_CIOCTRL_LASTENDEN;
 	writel(cfg, fimc->regs + S5P_CIOCTRL);
 
 	return 0;
