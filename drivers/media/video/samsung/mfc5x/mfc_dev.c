@@ -336,6 +336,8 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case IOCTL_MFC_GET_IN_BUF:
+		mutex_lock(&dev->lock);
+
 		if (in_param.args.mem_alloc.type == ENCODER) {
 			buf_arg.type = ENCODER;
 			port = 1;
@@ -365,16 +367,22 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #endif
 		ret = in_param.ret_code;
 
+		mutex_unlock(&dev->lock);
 		break;
 
 	case IOCTL_MFC_FREE_BUF:
+		mutex_lock(&dev->lock);
+
 		in_param.ret_code =
 			mfc_free_buf(mfc_ctx, in_param.args.mem_free.key);
 		ret = in_param.ret_code;
 
+		mutex_unlock(&dev->lock);
 		break;
 
 	case IOCTL_MFC_GET_REAL_ADDR:
+		mutex_lock(&dev->lock);
+
 		in_param.args.real_addr.addr =
 			mfc_get_buf_real(mfc_ctx->id, in_param.args.real_addr.key);
 
@@ -387,6 +395,7 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		ret = in_param.ret_code;
 
+		mutex_unlock(&dev->lock);
 		break;
 
 	case IOCTL_MFC_GET_MMAP_SIZE:
