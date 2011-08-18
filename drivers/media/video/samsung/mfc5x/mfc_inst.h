@@ -96,7 +96,7 @@ struct mfc_enc_cfg {
 	/* runtime ? */
 	#if 0
 	unsigned int frametype;
-	unsigned int fraemrate;
+	unsigned int framerate;
 	unsigned int bitrate;
 	unsigned int vui;		/* H.264 */
 	unsigned int hec;		/* MPEG4 */
