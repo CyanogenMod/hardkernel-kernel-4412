@@ -76,7 +76,7 @@ static void mfc_init_memctrl(void)
 {
 	/* Channel A, Port 0 */
 	write_reg(mfc_mem_base(0), MFC_MC_DRAMBASE_ADR_A);
-#if CONFIG_VIDEO_MFC_MEM_PORT_COUNT == 1
+#if MFC_MAX_MEM_PORT_NUM == 1
 	/* Channel B, Port 0 */
 	write_reg(mfc_mem_base(0), MFC_MC_DRAMBASE_ADR_B);
 #else

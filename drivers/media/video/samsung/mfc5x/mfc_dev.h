@@ -85,7 +85,11 @@ struct mfc_dev {
 	struct mfc_vcm		vcm_info;
 #endif
 	int			mem_ports;
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	struct mfc_mem		mem_infos[MFC_MAX_MEM_CHUNK_NUM];
+#else
 	struct mfc_mem		mem_infos[MFC_MAX_MEM_PORT_NUM];
+#endif
 
 	atomic_t		inst_cnt;
 	struct mfc_inst_ctx	*inst_ctx[MFC_MAX_INSTANCE_NUM];

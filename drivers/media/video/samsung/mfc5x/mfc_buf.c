@@ -262,9 +262,21 @@ static unsigned int mfc_get_free_buf(int size, int align, int port)
 
 int mfc_init_buf(void)
 {
+#ifndef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	int port;
+#endif
 	int ret = 0;
 
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	INIT_LIST_HEAD(&mfc_alloc_head[0]);
+	INIT_LIST_HEAD(&mfc_free_head[0]);
+
+	ret = mfc_put_free_buf(mfc_mem_data_base(0),
+		mfc_mem_data_size(0), 0);
+
+	ret = mfc_put_free_buf(mfc_mem_data_base(1),
+		mfc_mem_data_size(1), 0);
+#else
 	for (port = 0; port < mfc_mem_count(); port++) {
 		INIT_LIST_HEAD(&mfc_alloc_head[port]);
 		INIT_LIST_HEAD(&mfc_free_head[port]);
@@ -272,6 +284,7 @@ int mfc_init_buf(void)
 		ret = mfc_put_free_buf(mfc_mem_data_base(port),
 			mfc_mem_data_size(port), port);
 	}
+#endif
 
 	/*
 	spin_lock_init(&lock);

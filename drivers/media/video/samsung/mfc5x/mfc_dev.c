@@ -401,7 +401,11 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		in_param.ret_code = MFC_OK;
 		ret = 0;
+#ifdef	CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+		for (i = 0; i < MFC_MAX_MEM_CHUNK_NUM; i++)
+#else
 		for (i = 0; i < dev->mem_ports; i++)
+#endif
 			ret += mfc_mem_data_size(i);
 
 		break;
@@ -682,6 +686,50 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 #else	/* not SYSMMU_MFC_ON */
 	/* early allocator */
 	/* CMA or bootmem(memblock) */
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	remap_offset = 0;
+	remap_size = min((unsigned long)mfc_mem_data_size(0), user_size);
+
+	vma->vm_flags |= VM_RESERVED | VM_IO;
+
+	if (mfc_ctx->buf_cache_type == NO_CACHE) {
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		mfc_info("CONFIG_VIDEO_MFC_CACHE is not enabled\n");
+	} else {
+		mfc_info("CONFIG_VIDEO_MFC_CACHE is enabled\n");
+	}
+
+	/*
+	 * Port 0 mapping for stream buf & frame buf (chroma + MV)
+	 */
+	pfn = __phys_to_pfn(mfc_mem_data_base(0));
+	if (remap_pfn_range(vma, vma->vm_start + remap_offset, pfn,
+				remap_size, vma->vm_page_prot)) {
+
+		mfc_err("failed to remap port 0\n");
+		return -EINVAL;
+	}
+
+	remap_offset = remap_size;
+	remap_size = min((unsigned long)mfc_mem_data_size(1),
+			user_size - remap_offset);
+
+	vma->vm_flags |= VM_RESERVED | VM_IO;
+
+	if (mfc_ctx->buf_cache_type == NO_CACHE)
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
+	/*
+	 * Port 1 mapping for frame buf (luma)
+	 */
+	pfn = __phys_to_pfn(mfc_mem_data_base(1));
+	if (remap_pfn_range(vma, vma->vm_start + remap_offset, pfn,
+				remap_size, vma->vm_page_prot)) {
+
+		mfc_err("failed to remap port 1\n");
+		return -EINVAL;
+	}
+#else
 	if (dev->mem_ports == 1) {
 		remap_offset = 0;
 		remap_size = user_size;
@@ -751,6 +799,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 			return -EINVAL;
 		}
 	}
+#endif
 
 	mfc_ctx->userbase = vma->vm_start;
 
