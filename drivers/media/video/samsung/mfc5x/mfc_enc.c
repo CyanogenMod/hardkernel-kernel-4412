@@ -1408,7 +1408,6 @@ err_handling:
 
 static int mfc_encoding_frame(struct mfc_inst_ctx *ctx, struct mfc_enc_exe_arg *exe_arg)
 {
-	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
 	int ret;
 #ifdef CONFIG_VIDEO_MFC_VCM_UMP
 	void *ump_handle;
