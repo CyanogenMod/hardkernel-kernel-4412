@@ -588,8 +588,8 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 	ctrl->mem.size = mem_info.total_size;
 	ctrl->mem.base = (dma_addr_t)cma_alloc
 		(ctrl->dev, ctrl->cma_name, (size_t)ctrl->mem.size, 0);
-	printk(KERN_INFO "ctrl->mem.size = 0x%x\n", ctrl->mem.size);
-	printk(KERN_INFO "ctrl->mem.base = 0x%x\n", ctrl->mem.base);
+	printk(KERN_DEBUG "ctrl->mem.size = 0x%x\n", ctrl->mem.size);
+	printk(KERN_DEBUG "ctrl->mem.base = 0x%x\n", ctrl->mem.base);
 	ctrl->mem.curr = ctrl->mem.base;
 	ctrl->status = FIMC_STREAMOFF;
 
