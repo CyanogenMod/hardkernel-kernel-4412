@@ -109,32 +109,32 @@ static struct s3c_gpio_chip exynos4_gpio_part1_4bit[] = {
 		},
 	}, {
 		.chip	= {
-			.base	= EXYNOS4_GPE0(0),
-			.ngpio	= EXYNOS4_GPIO_E0_NR,
+			.base	= EXYNOS4210_GPE0(0),
+			.ngpio	= EXYNOS4210_GPIO_E0_NR,
 			.label	= "GPE0",
 		},
 	}, {
 		.chip	= {
-			.base	= EXYNOS4_GPE1(0),
-			.ngpio	= EXYNOS4_GPIO_E1_NR,
+			.base	= EXYNOS4210_GPE1(0),
+			.ngpio	= EXYNOS4210_GPIO_E1_NR,
 			.label	= "GPE1",
 		},
 	}, {
 		.chip	= {
-			.base	= EXYNOS4_GPE2(0),
-			.ngpio	= EXYNOS4_GPIO_E2_NR,
+			.base	= EXYNOS4210_GPE2(0),
+			.ngpio	= EXYNOS4210_GPIO_E2_NR,
 			.label	= "GPE2",
 		},
 	}, {
 		.chip	= {
-			.base	= EXYNOS4_GPE3(0),
-			.ngpio	= EXYNOS4_GPIO_E3_NR,
+			.base	= EXYNOS4210_GPE3(0),
+			.ngpio	= EXYNOS4210_GPIO_E3_NR,
 			.label	= "GPE3",
 		},
 	}, {
 		.chip	= {
-			.base	= EXYNOS4_GPE4(0),
-			.ngpio	= EXYNOS4_GPIO_E4_NR,
+			.base	= EXYNOS4210_GPE4(0),
+			.ngpio	= EXYNOS4210_GPIO_E4_NR,
 			.label	= "GPE4",
 		},
 	}, {
@@ -161,20 +161,34 @@ static struct s3c_gpio_chip exynos4_gpio_part1_4bit[] = {
 			.ngpio	= EXYNOS4_GPIO_F3_NR,
 			.label	= "GPF3",
 		},
+	}, {
+		.base   = (S5P_VA_GPIO1 + 0x240),
+		.chip	= {
+			.base	= EXYNOS4212_GPJ0(0),
+			.ngpio	= EXYNOS4212_GPIO_J0_NR,
+			.label	= "GPJ0",
+		},
+	}, {
+		.base   = (S5P_VA_GPIO1 + 0x260),
+		.chip	= {
+			.base	= EXYNOS4212_GPJ1(0),
+			.ngpio	= EXYNOS4212_GPIO_J1_NR,
+			.label	= "GPJ1",
+		},
 	},
 };
 
 static struct s3c_gpio_chip exynos4_gpio_part2_4bit[] = {
 	{
 		.chip	= {
-			.base	= EXYNOS4_GPJ0(0),
-			.ngpio	= EXYNOS4_GPIO_J0_NR,
+			.base	= EXYNOS4210_GPJ0(0),
+			.ngpio	= EXYNOS4210_GPIO_J0_NR,
 			.label	= "GPJ0",
 		},
 	}, {
 		.chip	= {
-			.base	= EXYNOS4_GPJ1(0),
-			.ngpio	= EXYNOS4_GPIO_J1_NR,
+			.base	= EXYNOS4210_GPJ1(0),
+			.ngpio	= EXYNOS4210_GPIO_J1_NR,
 			.label	= "GPJ1",
 		},
 	}, {
@@ -269,6 +283,41 @@ static struct s3c_gpio_chip exynos4_gpio_part2_4bit[] = {
 			.label	= "GPY6",
 		},
 	}, {
+		.base	= (S5P_VA_GPIO2 + 0x260),
+		.chip	= {
+			.base	= EXYNOS4212_GPM0(0),
+			.ngpio	= EXYNOS4212_GPIO_M0_NR,
+			.label	= "GPM0",
+		},
+	}, {
+		.base	= (S5P_VA_GPIO2 + 0x280),
+		.chip	= {
+			.base	= EXYNOS4212_GPM1(0),
+			.ngpio	= EXYNOS4212_GPIO_M1_NR,
+			.label	= "GPM1",
+		},
+	}, {
+		.base	= (S5P_VA_GPIO2 + 0x2A0),
+		.chip	= {
+			.base	= EXYNOS4212_GPM2(0),
+			.ngpio	= EXYNOS4212_GPIO_M2_NR,
+			.label	= "GPM2",
+		},
+	}, {
+		.base	= (S5P_VA_GPIO2 + 0x2C0),
+		.chip	= {
+			.base	= EXYNOS4212_GPM3(0),
+			.ngpio	= EXYNOS4212_GPIO_M3_NR,
+			.label	= "GPM3",
+		},
+	}, {
+		.base	= (S5P_VA_GPIO2 + 0x2E0),
+		.chip	= {
+			.base	= EXYNOS4212_GPM4(0),
+			.ngpio	= EXYNOS4212_GPIO_M4_NR,
+			.label	= "GPM4",
+		},
+	}, {
 		.base	= (S5P_VA_GPIO2 + 0xC00),
 		.config	= &gpio_cfg_noint,
 		.irq_base = IRQ_EINT(0),
@@ -317,6 +366,40 @@ static struct s3c_gpio_chip exynos4_gpio_part3_4bit[] = {
 			.base	= EXYNOS4_GPZ(0),
 			.ngpio	= EXYNOS4_GPIO_Z_NR,
 			.label	= "GPZ",
+		},
+	},
+};
+
+static struct s3c_gpio_chip exynos4_gpio_part4_4bit[] = {
+	{
+		.chip	= {
+			.base	= EXYNOS4212_GPV0(0),
+			.ngpio	= EXYNOS4212_GPIO_V0_NR,
+			.label	= "GPV0",
+		},
+	}, {
+		.chip	= {
+			.base	= EXYNOS4212_GPV1(0),
+			.ngpio	= EXYNOS4212_GPIO_V1_NR,
+			.label	= "GPV1",
+		},
+	}, {
+		.chip	= {
+			.base	= EXYNOS4212_GPV2(0),
+			.ngpio	= EXYNOS4212_GPIO_V2_NR,
+			.label	= "GPV2",
+		},
+	}, {
+		.chip	= {
+			.base	= EXYNOS4212_GPV3(0),
+			.ngpio	= EXYNOS4212_GPIO_V3_NR,
+			.label	= "GPV3",
+		},
+	}, {
+		.chip	= {
+			.base	= EXYNOS4212_GPV4(0),
+			.ngpio	= EXYNOS4212_GPIO_V4_NR,
+			.label	= "GPV4",
 		},
 	},
 };
@@ -378,6 +461,23 @@ static __init int exynos4_gpiolib_init(void)
 	}
 
 	samsung_gpiolib_add_4bit_chips(exynos4_gpio_part3_4bit, nr_chips);
+
+	/* GPIO part 4 */
+
+	chip = exynos4_gpio_part4_4bit;
+	nr_chips = ARRAY_SIZE(exynos4_gpio_part4_4bit);
+
+	for (i = 0; i < nr_chips; i++, chip++) {
+		if (chip->config == NULL) {
+			chip->config = &gpio_cfg;
+			/* Assign the GPIO interrupt group */
+			chip->group = group++;
+		}
+		if (chip->base == NULL)
+			chip->base = S5P_VA_GPIO4 + (i) * 0x20;
+	}
+
+	samsung_gpiolib_add_4bit_chips(exynos4_gpio_part4_4bit, nr_chips);
 	s5p_register_gpioint_bank(IRQ_GPIO_XA, 0, IRQ_GPIO1_NR_GROUPS);
 	s5p_register_gpioint_bank(IRQ_GPIO_XB, IRQ_GPIO1_NR_GROUPS, IRQ_GPIO2_NR_GROUPS);
 
