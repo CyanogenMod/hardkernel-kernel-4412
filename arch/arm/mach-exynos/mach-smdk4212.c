@@ -200,6 +200,18 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	&s3c_device_hsmmc3,
 #endif
+#ifdef CONFIG_SND_SAMSUNG_AC97
+	&exynos4_device_ac97,
+#endif
+#ifdef CONFIG_SND_SAMSUNG_I2S
+	&exynos4_device_i2s0,
+#endif
+#ifdef CONFIG_SND_SAMSUNG_PCM
+	&exynos4_device_pcm0,
+#endif
+#ifdef CONFIG_SND_SAMSUNG_SPDIF
+	&exynos4_device_spdif,
+#endif
 };
 
 /* LCD Backlight data */
