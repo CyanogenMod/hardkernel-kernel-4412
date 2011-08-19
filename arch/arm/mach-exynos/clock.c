@@ -2043,17 +2043,22 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	if (cpu_is_exynos4212()) {
 		apll = s5p_get_pll45xx(xtal, __raw_readl(S5P_APLL_CON0), pll_4502);
 		mpll = s5p_get_pll45xx(xtal, __raw_readl(S5P_MPLL_CON0_4212), pll_4502);
+		epll = s5p_get_pll46xx(xtal, __raw_readl(S5P_EPLL_CON0),
+				__raw_readl(S5P_EPLL_CON1), pll_4600);
+
+		vpllsrc = clk_get_rate(&clk_vpllsrc.clk);
+		vpll = s5p_get_pll46xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
+				__raw_readl(S5P_VPLL_CON1), pll_4650);
 	} else {
 		apll = s5p_get_pll45xx(xtal, __raw_readl(S5P_APLL_CON0), pll_4508);
 		mpll = s5p_get_pll45xx(xtal, __raw_readl(S5P_MPLL_CON0), pll_4508);
-	}
-
-	epll = s5p_get_pll46xx(xtal, __raw_readl(S5P_EPLL_CON0),
+		epll = s5p_get_pll46xx(xtal, __raw_readl(S5P_EPLL_CON0),
 				__raw_readl(S5P_EPLL_CON1), pll_4600);
 
-	vpllsrc = clk_get_rate(&clk_vpllsrc.clk);
-	vpll = s5p_get_pll46xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
-				__raw_readl(S5P_VPLL_CON1), pll_4650);
+		vpllsrc = clk_get_rate(&clk_vpllsrc.clk);
+		vpll = s5p_get_pll46xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
+				__raw_readl(S5P_VPLL_CON1), pll_4650c);
+	}
 
 	clk_fout_apll.ops = &exynos4_fout_apll_ops;
 	clk_fout_mpll.rate = mpll;
