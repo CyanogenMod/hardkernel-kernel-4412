@@ -81,3 +81,4 @@ struct exynos_dvfs_info {
 #define SUPPORT_FREQ_MASK	7
 
 extern int exynos4210_cpufreq_init(struct exynos_dvfs_info *);
+extern int exynos4212_cpufreq_init(struct exynos_dvfs_info *);

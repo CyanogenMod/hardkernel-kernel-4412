@@ -13,12 +13,13 @@ obj-				:=
 # Core support for EXYNOS system
 
 obj-y				+= init.o clock.o irq-combiner.o
-obj-$(CONFIG_ARCH_EXYNOS4)	+= cpu-exynos4.o dma.o pmu.o irq-eint.o
+obj-$(CONFIG_ARCH_EXYNOS4)	+= cpu-exynos4.o dma.o pmu.o irq-eint.o ppc.o ppmu.o
 obj-$(CONFIG_ARCH_EXYNOS5)	+= cpu-exynos5.o
 
-obj-$(CONFIG_CPU_EXYNOS4210)	+= ppc.o ppmu.o
+obj-$(CONFIG_CPU_EXYNOS4210)	+=
 obj-$(CONFIG_PM)		+= pm.o sleep.o
-obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o asv.o busfreq.o cpufreq-4210.o
+obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o asv.o busfreq.o
+obj-$(CONFIG_CPU_FREQ)		+= cpufreq-4210.o cpufreq-4212.o
 obj-$(CONFIG_CPU_IDLE)		+= cpuidle.o idle.o
 
 obj-$(CONFIG_SMP)		+= platsmp.o headsmp.o

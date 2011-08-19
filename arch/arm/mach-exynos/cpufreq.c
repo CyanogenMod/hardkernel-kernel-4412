@@ -383,21 +383,26 @@ static struct cpufreq_driver exynos4_driver = {
 
 static int __init exynos_cpufreq_init(void)
 {
-	int ret = 0;
+	int ret = -EINVAL;
 
 	exynos_info = kzalloc(sizeof(*exynos_info), GFP_KERNEL);
 	if (!exynos_info)
 		return -ENOMEM;
 
-	if (cpu_is_exynos4210()) {
+	if (cpu_is_exynos4210())
 		ret = exynos4210_cpufreq_init(exynos_info);
-		if (ret)
-			goto err_vdd_arm;
-		if (exynos_info->set_freq == NULL) {
-			printk(KERN_ERR "%s: No set_freq function (ERR)\n",
-					__func__);
-			goto err_vdd_arm;
-		}
+	else if (cpu_is_exynos4212())
+		ret = exynos4212_cpufreq_init(exynos_info);
+	else
+		printk(KERN_ERR "%s: no cpu type defined\n", __func__);
+
+	if (ret)
+		goto err_vdd_arm;
+
+	if (exynos_info->set_freq == NULL) {
+		printk(KERN_ERR "%s: No set_freq function (ERR)\n",
+				__func__);
+		goto err_vdd_arm;
 	}
 
 	arm_regulator = regulator_get(NULL, "vdd_arm");
