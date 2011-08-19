@@ -26,6 +26,7 @@
 #include <plat/fb-s5p.h>
 #include <plat/backlight.h>
 #include <plat/gpio-cfg.h>
+#include <plat/pd.h>
 
 #include <mach/map.h>
 
@@ -126,6 +127,12 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&s3c_device_spi_gpio,
 #endif
 #endif
+	&exynos4_device_pd[PD_MFC],
+	&exynos4_device_pd[PD_G3D],
+	&exynos4_device_pd[PD_LCD0],
+	&exynos4_device_pd[PD_CAM],
+	&exynos4_device_pd[PD_TV],
+	&exynos4_device_pd[PD_GPS],
 };
 
 /* LCD Backlight data */
@@ -151,6 +158,19 @@ static void __init smdk4212_map_io(void)
 
 static void __init smdk4212_machine_init(void)
 {
+#if defined(CONFIG_EXYNOS4_DEV_PD) && !defined(CONFIG_PM_RUNTIME)
+	/*
+	 * These power domains should be always on
+	 * without runtime pm support.
+	 */
+	exynos4_pd_enable(&exynos4_device_pd[PD_MFC].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_G3D].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_LCD0].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_CAM].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_TV].dev);
+	exynos4_pd_enable(&exynos4_device_pd[PD_GPS].dev);
+#endif
+
 #ifdef CONFIG_FB_S5P
 #ifdef CONFIG_FB_S5P_LMS501KF03
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
