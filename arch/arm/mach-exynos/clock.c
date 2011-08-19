@@ -2225,6 +2225,7 @@ void __init exynos4_register_clocks(void)
 	/* usbphy1 is removed in exynos 4212 */
 	if (cpu_is_exynos4212()) {
 		clkset_group_list[4] = NULL;
+		clkset_aclk_top_list[0] = &clk_mout_mpll_user.clk;
 		clk_mout_mpll = clk_mout_mpll_4212;
 		exynos4212_clock_init();
 	} else {
