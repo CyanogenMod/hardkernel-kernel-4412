@@ -13,11 +13,14 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
 #include <linux/gpio.h>
+#include <linux/i2c.h>
 #include <linux/pwm_backlight.h>
 #include <linux/mmc/host.h>
 #include <linux/regulator/machine.h>
+#include <linux/regulator/max8649.h>
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/wm8994/pdata.h>
+#include <linux/mfd/max8997.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -30,6 +33,7 @@
 #include <plat/fb-s5p.h>
 #include <plat/backlight.h>
 #include <plat/gpio-cfg.h>
+#include <plat/iic.h>
 #include <plat/pd.h>
 #include <plat/sdhci.h>
 #include <plat/usbgadget.h>
@@ -173,6 +177,184 @@ static void __init smdkv310_usbgadget_init(void)
 }
 #endif
 
+/* max8649 */
+static struct regulator_consumer_supply max8952_supply =
+	REGULATOR_SUPPLY("vdd_arm", NULL);
+
+static struct regulator_consumer_supply max8649_supply =
+	REGULATOR_SUPPLY("vdd_int", NULL);
+
+static struct regulator_consumer_supply max8649a_supply =
+	REGULATOR_SUPPLY("vdd_g3d", NULL);
+
+static struct regulator_init_data max8952_init_data = {
+	.constraints	= {
+		.name		= "vdd_arm range",
+		.min_uV		= 770000,
+		.max_uV		= 1400000,
+		.always_on	= 1,
+		.boot_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
+		.state_mem	= {
+			.uV		= 1200000,
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8952_supply,
+};
+
+static struct regulator_init_data max8649_init_data = {
+	.constraints	= {
+		.name		= "vdd_int range",
+		.min_uV		= 750000,
+		.max_uV		= 1380000,
+		.always_on	= 1,
+		.boot_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
+		.state_mem	= {
+			.uV		= 1100000,
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8649_supply,
+};
+
+static struct regulator_init_data max8649a_init_data = {
+	.constraints	= {
+		.name		= "vdd_g3d range",
+		.min_uV		= 750000,
+		.max_uV		= 1380000,
+		.always_on	= 0,
+		.boot_on	= 0,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				  REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.uV		= 1200000,
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8649a_supply,
+};
+
+static struct max8649_platform_data exynos4_max8952_info = {
+	.mode		= 3,	/* VID1 = 1, VID0 = 1 */
+	.extclk		= 0,
+	.ramp_timing	= MAX8649_RAMP_32MV,
+	.regulator	= &max8952_init_data,
+};
+
+static struct max8649_platform_data exynos4_max8649_info = {
+	.mode		= 2,	/* VID1 = 1, VID0 = 0 */
+	.extclk		= 0,
+	.ramp_timing	= MAX8649_RAMP_32MV,
+	.regulator	= &max8649_init_data,
+};
+
+static struct max8649_platform_data exynos4_max8649a_info = {
+	.mode		= 2,	/* VID1 = 1, VID0 = 0 */
+	.extclk		= 0,
+	.ramp_timing	= MAX8649_RAMP_32MV,
+	.regulator	= &max8649a_init_data,
+};
+
+/* max8997 */
+static struct regulator_consumer_supply max8997_buck1 =
+	REGULATOR_SUPPLY("vdd_arm", NULL);
+
+static struct regulator_consumer_supply max8997_buck2 =
+	REGULATOR_SUPPLY("vdd_int", NULL);
+
+static struct regulator_consumer_supply max8997_buck3 =
+	REGULATOR_SUPPLY("vdd_g3d", NULL);
+
+static struct regulator_init_data max8997_buck1_data = {
+	.constraints	= {
+		.name		= "vdd_arm range",
+		.min_uV		= 925000,
+		.max_uV		= 1350000,
+		.always_on	= 1,
+		.boot_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8997_buck1,
+};
+
+static struct regulator_init_data max8997_buck2_data = {
+	.constraints	= {
+		.name		= "vdd_int range",
+		.min_uV		= 950000,
+		.max_uV		= 1150000,
+		.always_on	= 1,
+		.boot_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8997_buck2,
+};
+
+static struct regulator_init_data max8997_buck3_data = {
+	.constraints	= {
+		.name		= "vdd_g3d range",
+		.min_uV		= 950000,
+		.max_uV		= 1150000,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				  REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8997_buck3,
+};
+
+static struct max8997_regulator_data max8997_regulators[] = {
+	{ MAX8997_BUCK1, &max8997_buck1_data, },
+	{ MAX8997_BUCK2, &max8997_buck2_data, },
+	{ MAX8997_BUCK3, &max8997_buck3_data, },
+};
+
+static struct max8997_platform_data exynos4_max8997_info = {
+	.num_regulators = ARRAY_SIZE(max8997_regulators),
+	.regulators     = max8997_regulators,
+
+	.buck1_voltage[0] = 1350000, /* 1.35V */
+	.buck1_voltage[1] = 1300000, /* 1.3V */
+	.buck1_voltage[2] = 1250000, /* 1.25V */
+	.buck1_voltage[3] = 1200000, /* 1.2V */
+	.buck1_voltage[4] = 1150000, /* 1.15V */
+	.buck1_voltage[5] = 1100000, /* 1.1V */
+	.buck1_voltage[6] = 1000000, /* 1.0V */
+	.buck1_voltage[7] = 950000, /* 0.95V */
+
+	.buck2_voltage[0] = 1100000, /* 1.1V */
+	.buck2_voltage[1] = 1000000, /* 1.0V */
+	.buck2_voltage[2] = 950000, /* 0.95V */
+	.buck2_voltage[3] = 900000, /* 0.9V */
+	.buck2_voltage[4] = 1100000, /* 1.1V */
+	.buck2_voltage[5] = 1000000, /* 1.0V */
+	.buck2_voltage[6] = 950000, /* 0.95V */
+	.buck2_voltage[7] = 900000, /* 0.9V */
+
+	.buck5_voltage[0] = 1100000, /* 1.1V */
+	.buck5_voltage[1] = 1100000, /* 1.1V */
+	.buck5_voltage[2] = 1100000, /* 1.1V */
+	.buck5_voltage[3] = 1100000, /* 1.1V */
+	.buck5_voltage[4] = 1100000, /* 1.1V */
+	.buck5_voltage[5] = 1100000, /* 1.1V */
+	.buck5_voltage[6] = 1100000, /* 1.1V */
+	.buck5_voltage[7] = 1100000, /* 1.1V */
+};
+
 static struct regulator_consumer_supply wm8994_fixed_voltage0_supplies[] = {
 	REGULATOR_SUPPLY("AVDD2", "1-001a"),
 	REGULATOR_SUPPLY("CPVDD", "1-001a"),
@@ -291,6 +473,41 @@ static struct wm8994_pdata wm8994_platform_data = {
 	.ldo[1] = { 0, NULL, &wm8994_ldo2_data },
 };
 
+static struct i2c_board_info i2c_devs0[] __initdata = {
+	{
+		I2C_BOARD_INFO("max8649", 0x62),
+		.platform_data	= &exynos4_max8649a_info,
+	}, {
+		I2C_BOARD_INFO("max8952", 0x60),
+		.platform_data	= &exynos4_max8952_info,
+	}, {
+		I2C_BOARD_INFO("max8997", 0x66),
+		.platform_data	= &exynos4_max8997_info,
+	}
+};
+
+static struct i2c_board_info i2c_devs1[] __initdata = {
+	{
+		I2C_BOARD_INFO("wm8994", 0x1a),
+		.platform_data	= &wm8994_platform_data,
+	}, {
+		I2C_BOARD_INFO("max8649", 0x60),
+		.platform_data	= &exynos4_max8649_info,
+	},
+#ifdef CONFIG_VIDEO_TVOUT
+	{
+		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
+	},
+#endif
+};
+
+static struct i2c_board_info i2c_devs7[] __initdata = {
+	{
+		I2C_BOARD_INFO("pixcir-ts", 0x5C),
+		.irq		= IRQ_EINT(15),
+	},
+};
+
 static struct platform_device *smdk4212_devices[] __initdata = {
 /* legacy fimd */
 #ifdef CONFIG_FB_S5P
@@ -299,6 +516,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&s3c_device_spi_gpio,
 #endif
 #endif
+	&s3c_device_i2c0,
+	&s3c_device_i2c1,
+	&s3c_device_i2c7,
 #ifdef CONFIG_USB_GADGET
 	&s3c_device_usbgadget,
 #endif
@@ -374,6 +594,14 @@ static void __init smdk4212_machine_init(void)
 	exynos4_pd_enable(&exynos4_device_pd[PD_TV].dev);
 	exynos4_pd_enable(&exynos4_device_pd[PD_GPS].dev);
 #endif
+	s3c_i2c0_set_platdata(NULL);
+	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
+
+	s3c_i2c1_set_platdata(NULL);
+	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
+
+	s3c_i2c7_set_platdata(NULL);
+	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
 #ifdef CONFIG_FB_S5P
 #ifdef CONFIG_FB_S5P_LMS501KF03
