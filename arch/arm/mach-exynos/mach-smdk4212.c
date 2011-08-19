@@ -29,6 +29,7 @@
 #include <plat/exynos4.h>
 #include <plat/cpu.h>
 #include <plat/clock.h>
+#include <plat/keypad.h>
 #include <plat/devs.h>
 #include <plat/fb-s5p.h>
 #include <plat/backlight.h>
@@ -508,6 +509,23 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 	},
 };
 
+static uint32_t smdk4212_keymap[] __initdata = {
+	/* KEY(row, col, keycode) */
+	KEY(1, 0, KEY_A), KEY(1, 1, KEY_B), KEY(1, 2, KEY_C),
+	KEY(1, 3, KEY_D), KEY(1, 4, KEY_E)
+};
+
+static struct matrix_keymap_data smdk4212_keymap_data __initdata = {
+	.keymap		= smdk4212_keymap,
+	.keymap_size	= ARRAY_SIZE(smdk4212_keymap),
+};
+
+static struct samsung_keypad_platdata smdk4212_keypad_data __initdata = {
+	.keymap_data	= &smdk4212_keymap_data,
+	.rows		= 2,
+	.cols		= 5,
+};
+
 static struct platform_device *smdk4212_devices[] __initdata = {
 /* legacy fimd */
 #ifdef CONFIG_FB_S5P
@@ -557,6 +575,7 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
+	&samsung_device_keypad,
 };
 
 /* LCD Backlight data */
@@ -628,6 +647,7 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdk4212_hsmmc3_pdata);
 #endif
+	samsung_keypad_set_platdata(&smdk4212_keypad_data);
 
 	platform_add_devices(smdk4212_devices, ARRAY_SIZE(smdk4212_devices));
 }
