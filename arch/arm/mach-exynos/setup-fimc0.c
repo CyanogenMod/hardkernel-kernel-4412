@@ -21,36 +21,36 @@
 #include <plat/gpio-cfg.h>
 #include <mach/regs-gpio.h>
 #include <plat/map-s5p.h>
+#include <plat/cputype.h>
 #include <mach/map.h>
 
 struct platform_device; /* don't need the contents */
 
 void s3c_fimc0_cfg_gpio(struct platform_device *pdev)
 {
-	int i = 0;
-
-	/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPJ0(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPJ0(i), S3C_GPIO_PULL_NONE);
-	}
-	/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
-	for (i = 0; i < 5; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPJ1(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPJ1(i), S3C_GPIO_PULL_NONE);
-	}
-#if defined(CONFIG_MACH_SMDKC210) || defined(CONFIG_MACH_SMDKV310)
-	/* CAM B port(b0011) : DATA[0-7] */
-	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPE1(i), S3C_GPIO_SFN(3));
-		s3c_gpio_setpull(EXYNOS4_GPE1(i), S3C_GPIO_PULL_NONE);
-	}
-	/* CAM B port(b0011) : PCLK, VSYNC, HREF, FIELD, CLCKOUT */
-	for (i = 0; i < 5; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPE0(i), S3C_GPIO_SFN(3));
-		s3c_gpio_setpull(EXYNOS4_GPE0(i), S3C_GPIO_PULL_NONE);
-	}
+	if (cpu_is_exynos4212()) {
+		/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ0(0), 8, S3C_GPIO_SFN(2));
+		/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ1(0), 5, S3C_GPIO_SFN(2));
+#if defined(CONFIG_MACH_SMDK4412)
+		/* CAM B port(b0011) : DATA[0-7] */
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPE1(0), 8, S3C_GPIO_SFN(3));
+		/* CAM B port(b0011) : PCLK, VSYNC, HREF, FIELD, CLCKOUT */
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPE0(0), 5, S3C_GPIO_SFN(3));
 #endif
+	} else {
+		/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
+		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPJ0(0), 8, S3C_GPIO_SFN(2));
+		/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
+		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPJ1(0), 5, S3C_GPIO_SFN(2));
+#if defined(CONFIG_MACH_SMDKC210) || defined(CONFIG_MACH_SMDKV310)
+		/* CAM B port(b0011) : DATA[0-7] */
+		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPE1(0), 8, S3C_GPIO_SFN(3));
+		/* CAM B port(b0011) : PCLK, VSYNC, HREF, FIELD, CLCKOUT */
+		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPE0(0), 5, S3C_GPIO_SFN(3));
+#endif
+	}
 	/* note : driver strength to max is unnecessary */
 }
 
