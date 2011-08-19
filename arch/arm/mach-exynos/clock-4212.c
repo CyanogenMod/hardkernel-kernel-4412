@@ -87,10 +87,32 @@ static struct clksrc_clk clk_aclk_gdr_user = {
 	.reg_src        = { .reg = S5P_CLKSRC_RIGHTBUS, .shift = 4, .size = 1 },
 };
 
+static struct clksrc_clk clk_aclk_400_isp = {
+	.clk	= {
+		.name		= "aclk_400_isp",
+		.id		= -1,
+	},
+	.sources	= &clkset_aclk,
+	.reg_src	= { .reg = S5P_CLKSRC_TOP1, .shift = 8, .size = 1 },
+	.reg_div	= { .reg = S5P_CLKDIV_TOP, .shift = 24, .size = 3 },
+};
+
+static struct clksrc_clk clk_aclk_266_gps = {
+	.clk	= {
+		.name		= "aclk_266_gps",
+		.id		= -1,
+	},
+	.sources	= &clkset_aclk,
+	.reg_src	= { .reg = S5P_CLKSRC_TOP1, .shift = 4, .size = 1 },
+	.reg_div	= { .reg = S5P_CLKDIV_TOP, .shift = 20, .size = 3 },
+};
+
 static struct clksrc_clk *sysclks_4212[] = {
 	&clk_mout_mpll_user,
 	&clk_aclk_gdl_user,
 	&clk_aclk_gdr_user,
+	&clk_aclk_400_isp,
+	&clk_aclk_266_gps,
 };
 
 static struct clk init_clocks_off_4212[] = {
