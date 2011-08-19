@@ -45,6 +45,7 @@
 #include <plat/iic.h>
 #include <plat/pd.h>
 #include <plat/sdhci.h>
+#include <plat/ehci.h>
 #include <plat/usbgadget.h>
 #include <plat/fimc.h>
 
@@ -175,7 +176,28 @@ static struct s3c_sdhci_platdata smdk4212_hsmmc3_pdata __initdata = {
 };
 #endif
 
-/* USB GADGET */
+#ifdef CONFIG_USB_EHCI_S5P
+static struct s5p_ehci_platdata smdk4212_ehci_pdata;
+
+static void __init smdk4212_ehci_init(void)
+{
+	struct s5p_ehci_platdata *pdata = &smdk4212_ehci_pdata;
+
+	s5p_ehci_set_platdata(pdata);
+}
+#endif
+
+#ifdef CONFIG_USB_OHCI_S5P
+static struct s5p_ohci_platdata smdk4212_ohci_pdata;
+
+static void __init smdk4212_ohci_init(void)
+{
+	struct s5p_ohci_platdata *pdata = &smdk4212_ohci_pdata;
+
+	s5p_ohci_set_platdata(pdata);
+}
+#endif
+
 #ifdef CONFIG_USB_GADGET
 static struct s5p_usbgadget_platdata smdk4212_usbgadget_pdata;
 
@@ -587,6 +609,12 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&s3c_device_i2c1,
 	&s3c_device_i2c3,
 	&s3c_device_i2c7,
+#ifdef CONFIG_USB_EHCI_S5P
+	&s5p_device_ehci,
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
+	&s5p_device_ohci,
+#endif
 #ifdef CONFIG_USB_GADGET
 	&s3c_device_usbgadget,
 #endif
@@ -832,6 +860,12 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s3c_device_fb.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
+#endif
+#ifdef CONFIG_USB_EHCI_S5P
+	smdk4212_ehci_init();
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
+	smdk4212_ohci_init();
 #endif
 #ifdef CONFIG_USB_GADGET
 	smdk4212_usbgadget_init();
