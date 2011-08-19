@@ -15,6 +15,9 @@
 #include <linux/gpio.h>
 #include <linux/pwm_backlight.h>
 #include <linux/mmc/host.h>
+#include <linux/regulator/machine.h>
+#include <linux/regulator/fixed.h>
+#include <linux/mfd/wm8994/pdata.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -170,6 +173,124 @@ static void __init smdkv310_usbgadget_init(void)
 }
 #endif
 
+static struct regulator_consumer_supply wm8994_fixed_voltage0_supplies[] = {
+	REGULATOR_SUPPLY("AVDD2", "1-001a"),
+	REGULATOR_SUPPLY("CPVDD", "1-001a"),
+};
+
+static struct regulator_consumer_supply wm8994_fixed_voltage1_supplies[] = {
+	REGULATOR_SUPPLY("SPKVDD1", "1-001a"),
+	REGULATOR_SUPPLY("SPKVDD2", "1-001a"),
+};
+
+static struct regulator_consumer_supply wm8994_fixed_voltage2_supplies =
+	REGULATOR_SUPPLY("DBVDD", "1-001a");
+
+static struct regulator_init_data wm8994_fixed_voltage0_init_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(wm8994_fixed_voltage0_supplies),
+	.consumer_supplies	= wm8994_fixed_voltage0_supplies,
+};
+
+static struct regulator_init_data wm8994_fixed_voltage1_init_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= ARRAY_SIZE(wm8994_fixed_voltage1_supplies),
+	.consumer_supplies	= wm8994_fixed_voltage1_supplies,
+};
+
+static struct regulator_init_data wm8994_fixed_voltage2_init_data = {
+	.constraints = {
+		.always_on = 1,
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &wm8994_fixed_voltage2_supplies,
+};
+
+static struct fixed_voltage_config wm8994_fixed_voltage0_config = {
+	.supply_name	= "VDD_1.8V",
+	.microvolts	= 1800000,
+	.gpio		= -EINVAL,
+	.init_data	= &wm8994_fixed_voltage0_init_data,
+};
+
+static struct fixed_voltage_config wm8994_fixed_voltage1_config = {
+	.supply_name	= "DC_5V",
+	.microvolts	= 5000000,
+	.gpio		= -EINVAL,
+	.init_data	= &wm8994_fixed_voltage1_init_data,
+};
+
+static struct fixed_voltage_config wm8994_fixed_voltage2_config = {
+	.supply_name	= "VDD_3.3V",
+	.microvolts	= 3300000,
+	.gpio		= -EINVAL,
+	.init_data	= &wm8994_fixed_voltage2_init_data,
+};
+
+static struct platform_device wm8994_fixed_voltage0 = {
+	.name		= "reg-fixed-voltage",
+	.id		= 0,
+	.dev		= {
+		.platform_data	= &wm8994_fixed_voltage0_config,
+	},
+};
+
+static struct platform_device wm8994_fixed_voltage1 = {
+	.name		= "reg-fixed-voltage",
+	.id		= 1,
+	.dev		= {
+		.platform_data	= &wm8994_fixed_voltage1_config,
+	},
+};
+
+static struct platform_device wm8994_fixed_voltage2 = {
+	.name		= "reg-fixed-voltage",
+	.id		= 2,
+	.dev		= {
+		.platform_data	= &wm8994_fixed_voltage2_config,
+	},
+};
+
+static struct regulator_consumer_supply wm8994_avdd1_supply =
+	REGULATOR_SUPPLY("AVDD1", "1-001a");
+
+static struct regulator_consumer_supply wm8994_dcvdd_supply =
+	REGULATOR_SUPPLY("DCVDD", "1-001a");
+
+static struct regulator_init_data wm8994_ldo1_data = {
+	.constraints	= {
+		.name		= "AVDD1",
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &wm8994_avdd1_supply,
+};
+
+static struct regulator_init_data wm8994_ldo2_data = {
+	.constraints	= {
+		.name		= "DCVDD",
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &wm8994_dcvdd_supply,
+};
+
+static struct wm8994_pdata wm8994_platform_data = {
+	/* configure gpio1 function: 0x0001(Logic level input/output) */
+	.gpio_defaults[0] = 0x0001,
+	/* configure gpio3/4/5/7 function for AIF2 voice */
+	.gpio_defaults[2] = 0x8100,/* BCLK2 in */
+	.gpio_defaults[3] = 0x8100,/* LRCLK2 in */
+	.gpio_defaults[4] = 0x8100,/* DACDAT2 in */
+	/* configure gpio6 function: 0x0001(Logic level input/output) */
+	.gpio_defaults[5] = 0x0001,
+	.gpio_defaults[6] = 0x0100,/* ADCDAT2 out */
+	.ldo[0] = { 0, NULL, &wm8994_ldo1_data },
+	.ldo[1] = { 0, NULL, &wm8994_ldo2_data },
+};
+
 static struct platform_device *smdk4212_devices[] __initdata = {
 /* legacy fimd */
 #ifdef CONFIG_FB_S5P
@@ -212,6 +333,10 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_SND_SAMSUNG_SPDIF
 	&exynos4_device_spdif,
 #endif
+	&wm8994_fixed_voltage0,
+	&wm8994_fixed_voltage1,
+	&wm8994_fixed_voltage2,
+	&samsung_asoc_dma,
 };
 
 /* LCD Backlight data */
