@@ -29,6 +29,7 @@
 #include <plat/gpio-cfg.h>
 #include <plat/pd.h>
 #include <plat/sdhci.h>
+#include <plat/usbgadget.h>
 
 #include <mach/map.h>
 
@@ -157,6 +158,18 @@ static struct s3c_sdhci_platdata smdk4212_hsmmc3_pdata __initdata = {
 };
 #endif
 
+/* USB GADGET */
+#ifdef CONFIG_USB_GADGET
+static struct s5p_usbgadget_platdata smdkv310_usbgadget_pdata;
+
+static void __init smdkv310_usbgadget_init(void)
+{
+	struct s5p_usbgadget_platdata *pdata = &smdkv310_usbgadget_pdata;
+
+	s5p_usbgadget_set_platdata(pdata);
+}
+#endif
+
 static struct platform_device *smdk4212_devices[] __initdata = {
 /* legacy fimd */
 #ifdef CONFIG_FB_S5P
@@ -164,6 +177,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_FB_S5P_LMS501KF03
 	&s3c_device_spi_gpio,
 #endif
+#endif
+#ifdef CONFIG_USB_GADGET
+	&s3c_device_usbgadget,
 #endif
 	&exynos4_device_pd[PD_MFC],
 	&exynos4_device_pd[PD_G3D],
@@ -229,6 +245,9 @@ static void __init smdk4212_machine_init(void)
 #else
 	s3cfb_set_platdata(NULL);
 #endif
+#endif
+#ifdef CONFIG_USB_GADGET
+	smdkv310_usbgadget_init();
 #endif
 	samsung_bl_set(&smdk4212_bl_gpio_info, &smdk4212_bl_data);
 

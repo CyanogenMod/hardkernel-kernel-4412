@@ -58,7 +58,7 @@
 #elif defined(CONFIG_USB_GADGET_S3C_HS) || defined(CONFIG_PLAT_S5P64XX)\
 	|| defined(CONFIG_PLAT_S5PC11X) || defined(CONFIG_CPU_S5P6442)\
 	|| defined(CONFIG_CPU_S5P6450) || defined(CONFIG_CPU_S5PV310)\
-	|| defined(CONFIG_CPU_EXYNOS4210)
+	|| defined(CONFIG_ARCH_EXYNOS)
 
 #define EP0_FIFO_SIZE		64
 #define EP_FIFO_SIZE		512
