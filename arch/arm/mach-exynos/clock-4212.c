@@ -31,6 +31,16 @@ static struct sleep_save exynos4_vpll_save_4212[] = {
 };
 #endif
 
+static int __maybe_unused exynos4_clk_bus_peril_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_CLKGATE_BUS_PERIL, clk, enable);
+}
+
+static int __maybe_unused exynos4_clk_bus_perir_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_CLKGATE_BUS_PERIR, clk, enable);
+}
+
 static struct clksrc_clk clk_mout_mpll_4212 = {
 	.clk = {
 		.name		= "mout_mpll",
