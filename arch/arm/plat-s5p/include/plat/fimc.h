@@ -102,7 +102,7 @@ struct s3c_platform_camera {
 /* For camera interface driver */
 struct s3c_platform_fimc {
 	enum fimc_cam_index		default_cam;		/* index of default cam */
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 	struct s3c_platform_camera	*camera[7];		/* FIXME */
 #else
 	struct s3c_platform_camera	*camera[5];		/* FIXME */
@@ -117,7 +117,7 @@ struct s3c_platform_fimc {
 extern void s3c_fimc0_set_platdata(struct s3c_platform_fimc *fimc);
 extern void s3c_fimc1_set_platdata(struct s3c_platform_fimc *fimc);
 extern void s3c_fimc2_set_platdata(struct s3c_platform_fimc *fimc);
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 extern void s3c_fimc3_set_platdata(struct s3c_platform_fimc *fimc);
 #endif
 
@@ -125,7 +125,7 @@ extern void s3c_fimc3_set_platdata(struct s3c_platform_fimc *fimc);
 extern void s3c_fimc0_cfg_gpio(struct platform_device *pdev);
 extern void s3c_fimc1_cfg_gpio(struct platform_device *pdev);
 extern void s3c_fimc2_cfg_gpio(struct platform_device *pdev);
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 extern void s3c_fimc3_cfg_gpio(struct platform_device *pdev);
 #endif
 /* platform specific clock functions */
