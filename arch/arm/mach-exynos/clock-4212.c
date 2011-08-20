@@ -11,7 +11,7 @@
 */
 
 #ifdef CONFIG_PM
-static struct sleep_save exynos4_clock_save_4212[] = {
+static struct sleep_save exynos4212_clock_save[] = {
 	/* CMU side */
 	SAVE_ITEM(S5P_CLKSRC_CAM1),
 	SAVE_ITEM(S5P_CLKSRC_ISP),
@@ -22,11 +22,11 @@ static struct sleep_save exynos4_clock_save_4212[] = {
 	SAVE_ITEM(S5P_CLKGATE_IP_DMC1),
 };
 
-static struct sleep_save exynos4_epll_save_4212[] = {
+static struct sleep_save exynos4212_epll_save[] = {
 	SAVE_ITEM(S5P_EPLL_CON2),
 };
 
-static struct sleep_save exynos4_vpll_save_4212[] = {
+static struct sleep_save exynos4212_vpll_save[] = {
 	SAVE_ITEM(S5P_VPLL_CON2),
 };
 #endif
@@ -149,9 +149,42 @@ static struct clksrc_clk clksrcs_4212[] = {
 	},
 };
 
+#ifdef CONFIG_PM
+static int exynos4212_clock_suspend(void)
+{
+	s3c_pm_do_save(exynos4212_clock_save, ARRAY_SIZE(exynos4212_clock_save));
+	s3c_pm_do_save(exynos4212_clock_save, ARRAY_SIZE(exynos4212_vpll_save));
+	s3c_pm_do_save(exynos4212_clock_save, ARRAY_SIZE(exynos4212_epll_save));
+
+	return 0;
+}
+
+static void exynos4212_clock_resume(void)
+{
+	s3c_pm_do_restore_core(exynos4212_clock_save, ARRAY_SIZE(exynos4212_clock_save));
+	s3c_pm_do_restore_core(exynos4212_clock_save, ARRAY_SIZE(exynos4212_vpll_save));
+	s3c_pm_do_restore_core(exynos4212_clock_save, ARRAY_SIZE(exynos4212_epll_save));
+}
+#else
+#define exynos4212_clock_suspend NULL
+#define exynos4212_clock_resume NULL
+#endif
+
+struct syscore_ops exynos4212_clock_syscore_ops = {
+	.suspend        = exynos4212_clock_suspend,
+	.resume         = exynos4212_clock_resume,
+};
 static void exynos4212_clock_init(void)
 {
 	int ptr;
+
+	/* usbphy1 is removed in exynos 4212 */
+	clkset_group_list[4] = NULL;
+
+	/* mout_mpll_user is used instead of mout_mpll in exynos 4212 */
+	clkset_aclk_top_list[0] = &clk_mout_mpll_user.clk;
+
+	clk_mout_mpll = clk_mout_mpll_4212;
 
 	for (ptr = 0; ptr < ARRAY_SIZE(sysclks_4212); ptr++)
 		s3c_register_clksrc(sysclks_4212[ptr], 1);
@@ -160,4 +193,5 @@ static void exynos4212_clock_init(void)
 
 	s3c_register_clocks(init_clocks_off_4212, ARRAY_SIZE(init_clocks_off_4212));
 	s3c_disable_clocks(init_clocks_off_4212, ARRAY_SIZE(init_clocks_off_4212));
+	register_syscore_ops(&exynos4212_clock_syscore_ops);
 }

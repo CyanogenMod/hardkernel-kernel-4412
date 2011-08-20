@@ -2182,18 +2182,9 @@ static void exynos4_restore_pll(void)
 static int exynos4_clock_suspend(void)
 {
 	s3c_pm_do_save(exynos4_clock_save, ARRAY_SIZE(exynos4_clock_save));
-	if (cpu_is_exynos4212())
-		s3c_pm_do_save(exynos4_clock_save_4212, ARRAY_SIZE(exynos4_clock_save_4212));
-	else
-		s3c_pm_do_save(exynos4_clock_save_4210, ARRAY_SIZE(exynos4_clock_save_4210));
-
 	s3c_pm_do_save(exynos4_epll_save, ARRAY_SIZE(exynos4_epll_save));
-	if (cpu_is_exynos4212())
-		s3c_pm_do_save(exynos4_epll_save_4212, ARRAY_SIZE(exynos4_epll_save_4212));
-
 	s3c_pm_do_save(exynos4_vpll_save, ARRAY_SIZE(exynos4_vpll_save));
-	if (cpu_is_exynos4212())
-		s3c_pm_do_save(exynos4_vpll_save_4212, ARRAY_SIZE(exynos4_vpll_save_4212));
+
 	return 0;
 }
 
@@ -2201,10 +2192,6 @@ static void exynos4_clock_resume(void)
 {
 	exynos4_restore_pll();
 	s3c_pm_do_restore_core(exynos4_clock_save, ARRAY_SIZE(exynos4_clock_save));
-	if (cpu_is_exynos4212())
-		s3c_pm_do_restore_core(exynos4_clock_save_4212, ARRAY_SIZE(exynos4_clock_save_4212));
-	else
-		s3c_pm_do_restore_core(exynos4_clock_save_4210, ARRAY_SIZE(exynos4_clock_save_4210));
 }
 #else
 #define exynos4_clock_suspend NULL
@@ -2222,15 +2209,10 @@ void __init exynos4_register_clocks(void)
 
 	s3c24xx_register_clocks(clks, ARRAY_SIZE(clks));
 
-	/* usbphy1 is removed in exynos 4212 */
-	if (cpu_is_exynos4212()) {
-		clkset_group_list[4] = NULL;
-		clkset_aclk_top_list[0] = &clk_mout_mpll_user.clk;
-		clk_mout_mpll = clk_mout_mpll_4212;
+	if (cpu_is_exynos4212())
 		exynos4212_clock_init();
-	} else {
+	else
 		exynos4210_clock_init();
-	}
 
 	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
 		s3c_register_clksrc(sysclks[ptr], 1);

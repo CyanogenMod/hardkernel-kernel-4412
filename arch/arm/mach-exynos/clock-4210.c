@@ -11,7 +11,7 @@
 */
 
 #ifdef CONFIG_PM
-static struct sleep_save exynos4_clock_save_4210[] = {
+static struct sleep_save exynos4210_clock_save[] = {
 	/* CMU side */
 	SAVE_ITEM(S5P_CLKSRC_IMAGE),
 	SAVE_ITEM(S5P_CLKSRC_LCD1),
@@ -53,10 +53,33 @@ static struct clksrc_clk clksrcs_4210[] = {
 	},
 };
 
+#ifdef CONFIG_PM
+static int exynos4210_clock_suspend(void)
+{
+	s3c_pm_do_save(exynos4210_clock_save, ARRAY_SIZE(exynos4210_clock_save));
+
+	return 0;
+}
+
+static void exynos4210_clock_resume(void)
+{
+	s3c_pm_do_restore_core(exynos4210_clock_save, ARRAY_SIZE(exynos4210_clock_save));
+}
+#else
+#define exynos4210_clock_suspend NULL
+#define exynos4210_clock_resume NULL
+#endif
+
+struct syscore_ops exynos4210_clock_syscore_ops = {
+	.suspend        = exynos4210_clock_suspend,
+	.resume         = exynos4210_clock_resume,
+};
+
 static void exynos4210_clock_init(void)
 {
 	s3c_register_clksrc(clksrcs_4210, ARRAY_SIZE(clksrcs_4210));
 
 	s3c_register_clocks(init_clocks_off_4210, ARRAY_SIZE(init_clocks_off_4210));
 	s3c_disable_clocks(init_clocks_off_4210, ARRAY_SIZE(init_clocks_off_4210));
+	register_syscore_ops(&exynos4210_clock_syscore_ops);
 }
