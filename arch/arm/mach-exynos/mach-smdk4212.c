@@ -518,8 +518,8 @@ static struct platform_device samsung_device_battery = {
 
 static uint32_t smdk4212_keymap[] __initdata = {
 	/* KEY(row, col, keycode) */
-	KEY(1, 0, KEY_A), KEY(1, 1, KEY_B), KEY(1, 2, KEY_C),
-	KEY(1, 3, KEY_D), KEY(1, 4, KEY_E)
+	KEY(1, 0, KEY_D), KEY(1, 1, KEY_A), KEY(1, 2, KEY_B),
+	KEY(1, 3, KEY_E), KEY(1, 4, KEY_C)
 };
 
 static struct matrix_keymap_data smdk4212_keymap_data __initdata = {
