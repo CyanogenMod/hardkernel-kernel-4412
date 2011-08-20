@@ -584,6 +584,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_SND_SAMSUNG_SPDIF
 	&exynos4_device_spdif,
 #endif
+#ifdef CONFIG_SND_SAMSUNG_RP
+	&exynos4_device_srp,
+#endif
 #ifdef CONFIG_VIDEO_FIMC
 	&s3c_device_fimc0,
 	&s3c_device_fimc1,
