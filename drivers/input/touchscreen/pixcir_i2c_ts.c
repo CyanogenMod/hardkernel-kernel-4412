@@ -66,9 +66,9 @@
 #define MAXX			32
 #define MAXY			32
 #define TOUCHSCREEN_MINX	0
-#define TOUCHSCREEN_MAXX	430
+#define TOUCHSCREEN_MAXX	480
 #define TOUCHSCREEN_MINY	0
-#define TOUCHSCREEN_MAXY	750
+#define TOUCHSCREEN_MAXY	800
 
 int global_irq;
 
@@ -263,10 +263,13 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 	i2c_master_send(tsdata->client, Wrbuf, 1);
 	i2c_master_recv(tsdata->client, Rdbuf, sizeof(Rdbuf));
 
-	posx1 = (480 - ((Rdbuf[5] << 8) | Rdbuf[4]));
+	posx1 = ((Rdbuf[5] << 8) | Rdbuf[4]);
 	posy1 = ((Rdbuf[3] << 8) | Rdbuf[2]);
 	posx2 = ((Rdbuf[9] << 8) | Rdbuf[8]);
 	posy2 = ((Rdbuf[7] << 8) | Rdbuf[6]);
+
+	posx1 = TOUCHSCREEN_MAXX - posx1;
+	posx2 = TOUCHSCREEN_MAXX - posx2;
 
 	touching = Rdbuf[0];
 	oldtouching = Rdbuf[1];
@@ -410,6 +413,17 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 		kfree(tsdata);
 	}
 
+
+	if (gpio_request(EXYNOS4_GPX1(6), "GPX1")) {
+		return error;
+	}
+	RESETPIN_CFG;
+	RESETPIN_SET0;
+	mdelay(20);
+	RESETPIN_SET1;
+
+	mdelay(30);
+
 	if (request_irq(tsdata->irq, pixcir_ts_isr, IRQF_TRIGGER_FALLING,
 				"pixcir_ts_irq", tsdata)) {
 		dev_err(&client->dev, "Unable to request touchscreen IRQ.\n");
@@ -418,14 +432,6 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 	}
 
 	s3c_gpio_setpull(EXYNOS4_GPX1(7), S3C_GPIO_PULL_NONE);
-
-	if (gpio_request(EXYNOS4_GPX1(6), "GPX1")) {
-		return error;
-	}
-
-	RESETPIN_CFG;
-	RESETPIN_SET0;
-	RESETPIN_SET1;
 
 	device_init_wakeup(&client->dev, 1);
 
