@@ -38,6 +38,7 @@
 #include <plat/pd.h>
 #include <plat/sdhci.h>
 #include <plat/usbgadget.h>
+#include <plat/fimc.h>
 
 #include <mach/map.h>
 
@@ -580,6 +581,12 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_SND_SAMSUNG_SPDIF
 	&exynos4_device_spdif,
 #endif
+#ifdef CONFIG_VIDEO_FIMC
+	&s3c_device_fimc0,
+	&s3c_device_fimc1,
+	&s3c_device_fimc2,
+	&s3c_device_fimc3,
+#endif
 	&wm8994_fixed_voltage0,
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
@@ -658,6 +665,18 @@ static void __init smdk4212_machine_init(void)
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdk4212_hsmmc3_pdata);
+#endif
+#ifdef CONFIG_VIDEO_FIMC
+	s3c_fimc0_set_platdata(NULL);
+	s3c_fimc1_set_platdata(NULL);
+	s3c_fimc2_set_platdata(NULL);
+	s3c_fimc3_set_platdata(NULL);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s3c_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s3c_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
 #endif
 	samsung_keypad_set_platdata(&smdk4212_keypad_data);
 
