@@ -689,24 +689,6 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
-		{
-			.name		= "fw",
-			.size		= 1 << 20,
-			{ .alignment	= 128 << 10 },
-			.start		= 0x42000000,
-		},
-		{
-			.name		= "b1",
-			.size		= 32 << 20,
-			.start		= 0x43000000,
-		},
-		{
-			.name		= "b2",
-			.size		= 32 << 20,
-			.start		= 0x51000000,
-		},
-#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_JPEG
 		{
 			.name = "jpeg",
