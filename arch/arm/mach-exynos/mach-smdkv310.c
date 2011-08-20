@@ -2041,23 +2041,23 @@ static void __init smdkv310_camera_config(void)
 
 	/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
 	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPJ0(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPJ0(i), S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(EXYNOS4210_GPJ0(i), S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(EXYNOS4210_GPJ0(i), S3C_GPIO_PULL_NONE);
 	}
 	/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
 	for (i = 0; i < 5; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPJ1(i), S3C_GPIO_SFN(2));
-		s3c_gpio_setpull(EXYNOS4_GPJ1(i), S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(EXYNOS4210_GPJ1(i), S3C_GPIO_SFN(2));
+		s3c_gpio_setpull(EXYNOS4210_GPJ1(i), S3C_GPIO_PULL_NONE);
 	}
 	/* CAM B port(b0011) : DATA[0-7] */
 	for (i = 0; i < 8; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPE1(i), S3C_GPIO_SFN(3));
-		s3c_gpio_setpull(EXYNOS4_GPE1(i), S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(EXYNOS4210_GPE1(i), S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(EXYNOS4210_GPE1(i), S3C_GPIO_PULL_NONE);
 	}
 	/* CAM B port(b0011) : PCLK, VSYNC, HREF, FIELD, CLCKOUT */
 	for (i = 0; i < 5; i++) {
-		s3c_gpio_cfgpin(EXYNOS4_GPE0(i), S3C_GPIO_SFN(3));
-		s3c_gpio_setpull(EXYNOS4_GPE0(i), S3C_GPIO_PULL_NONE);
+		s3c_gpio_cfgpin(EXYNOS4210_GPE0(i), S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(EXYNOS4210_GPE0(i), S3C_GPIO_PULL_NONE);
 	}
 	/* note : driver strength to max is unnecessary */
 #ifdef CONFIG_VIDEO_M5MOLS
