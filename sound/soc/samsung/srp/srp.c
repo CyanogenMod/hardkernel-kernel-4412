@@ -104,7 +104,7 @@
 #define SRP_DEV_MINOR		(250)
 #define SRP_CTRL_DEV_MINOR	(251)
 
-#ifdef SND_SAMSUNG_RP_DEBUG
+#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
 #define s5pdbg(x...) printk(KERN_INFO "SRP: " x)
 #else
 #define s5pdbg(x...)
@@ -213,7 +213,7 @@ static DEFINE_MUTEX(rp_mutex);
 DECLARE_WAIT_QUEUE_HEAD(WaitQueue_Write);
 DECLARE_WAIT_QUEUE_HEAD(WaitQueue_EOS);
 
-#ifdef SND_SAMSUNG_RP_DEBUG
+#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
 struct timeval time_irq, time_write;
 static char rp_fw_name[4][16] = {
 	"VLIW", "CGA", "CGA-SA", "DATA"
@@ -253,7 +253,7 @@ int srp_get_op_level(void)
 		op_lvl = 0;
 	}
 
-#ifdef SND_SAMSUNG_RP_DEBUG
+#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
 	s5pdbg("OP level [%s]\n", rp_op_level_str[op_lvl]);
 #endif
 	return op_lvl;
@@ -351,7 +351,7 @@ static void srp_fw_download(void)
 	unsigned long *pval;
 	unsigned int reg = 0x0;
 
-#ifdef SND_SAMSUNG_RP_DEBUG
+#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
 	struct timeval begin, end;
 
 	do_gettimeofday(&begin);
@@ -382,7 +382,7 @@ static void srp_fw_download(void)
 			writel(ENDIAN_CHK_CONV(*pval), srp.iram_imem + n);
 	}
 
-#ifdef SND_SAMSUNG_RP_DEBUG
+#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
 	do_gettimeofday(&end);
 
 	s5pdbg("Firmware Download Time : %lu.%06lu seconds.\n",
@@ -851,7 +851,7 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 	}
 #endif
 
-#ifdef SND_SAMSUNG_RP_DEBUG
+#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
 	do_gettimeofday(&time_write);
 	s5pdbg("IRQ to write-func Time : %lu.%06lu seconds.\n",
 		time_write.tv_sec - time_irq.tv_sec,
@@ -1067,7 +1067,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	return ret_val;
 }
 
-#ifdef SND_SAMSUNG_RP_DEBUG
+#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
 static unsigned long elapsed_usec_old;
 #endif
 static irqreturn_t srp_irq(int irqno, void *dev_id)
@@ -1078,7 +1078,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned long irq_code = readl(srp.commbox + SRP_INTERRUPT_CODE);
 	unsigned long irq_info = readl(srp.commbox + SRP_INFORMATION);
 	unsigned long irq_code_req;
-#ifdef SND_SAMSUNG_RP_DEBUG
+#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
 	unsigned long elapsed_usec;
 #endif
 	unsigned long read_bytes;
@@ -1140,7 +1140,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 						srp_write_last();
 				}
 			}
-#ifdef SND_SAMSUNG_RP_DEBUG
+#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
 			do_gettimeofday(&time_irq);
 			elapsed_usec = time_irq.tv_sec * 1000000 +
 					time_irq.tv_usec;
@@ -1178,11 +1178,11 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			srp.obuf0 = srp.sram + (srp.obuf0_pa & 0xffff);
 			srp.obuf1 = srp.sram + (srp.obuf1_pa & 0xffff);
 
-			s5pdbg("IRQ: OBUF0[PA:0x%x], OBUF1[PA:0x%x]\n",
+			s5pdbg("IRQ: OBUF0[PA:0x%lx], OBUF1[PA:0x%lx]\n",
 				srp.obuf0_pa, srp.obuf1_pa);
-			s5pdbg("IRQ: OBUF0[VA:0x%x], OBUF1[VA:0x%x]\n",
+			s5pdbg("IRQ: OBUF0[VA:0x%p], OBUF1[VA:0x%p]\n",
 				srp.obuf0, srp.obuf1);
-			s5pdbg("IRQ: OBUF[SIZE:%d]\n", srp.obuf_size);
+			s5pdbg("IRQ: OBUF[SIZE:%ld]\n", srp.obuf_size);
 		}
 	}
 
