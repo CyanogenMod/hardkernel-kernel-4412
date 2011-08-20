@@ -49,7 +49,7 @@ void write_shm(struct mfc_inst_ctx *ctx, unsigned int data, unsigned int offset)
 
 #if defined(CONFIG_ARCH_S5PV210)
 	dma_cache_maint((void *)(ctx->shm + offset), 4, DMA_TO_DEVICE);
-#elif defined(CONFIG_CPU_EXYNOS4210)
+#elif defined(CONFIG_ARCH_EXYNOS4)
 	mfc_mem_cache_clean((void *)((unsigned int)(ctx->shm) + offset), 4);
 #endif
 }
@@ -58,7 +58,7 @@ unsigned int read_shm(struct mfc_inst_ctx *ctx, unsigned int offset)
 {
 #if defined(CONFIG_ARCH_S5PV210)
 	dma_cache_maint((void *)(ctx->shm + offset), 4, DMA_FROM_DEVICE);
-#elif defined(CONFIG_CPU_EXYNOS4210)
+#elif defined(CONFIG_ARCH_EXYNOS4)
 	mfc_mem_cache_inv((void *)((unsigned int)(ctx->shm) + offset), 4);
 #endif
 	return readl(ctx->shm + offset);

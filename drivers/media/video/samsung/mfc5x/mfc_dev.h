@@ -32,7 +32,7 @@ struct mfc_pm {
 	char		pd_name[MFC_NAME_LEN];
 	char		clk_name[MFC_NAME_LEN];
 	struct clk	*clock;
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 	atomic_t	power;
 #if defined(CONFIG_PM_RUNTIME) || defined(CONFIG_CPU_FREQ)
 	struct device	*device;

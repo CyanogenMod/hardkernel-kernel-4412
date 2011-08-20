@@ -68,7 +68,7 @@ int mfc_power_off(void)
 	return s5pv210_pd_disable(pm->pd_name);
 }
 
-#elif defined(CONFIG_CPU_EXYNOS4210)
+#elif defined(CONFIG_ARCH_EXYNOS4)
 #ifdef CONFIG_PM_RUNTIME
 #include <linux/pm_runtime.h>
 #endif

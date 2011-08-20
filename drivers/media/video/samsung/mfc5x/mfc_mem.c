@@ -15,7 +15,7 @@
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
 
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 #include <mach/media.h>
 #endif
 #include <plat/media.h>
@@ -533,7 +533,7 @@ int mfc_init_mem_mgr(struct mfc_dev *dev)
 	}
 #elif defined(CONFIG_S5P_MEM_BOOTMEM)
 	for (i = 0; i < dev->mem_ports; i++) {
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 		base = s5p_get_media_memory_bank(S5P_MDEV_MFC, i);
 #else
 		base = s3c_get_media_memory_bank(S3C_MDEV_MFC, i);
@@ -543,7 +543,7 @@ int mfc_init_mem_mgr(struct mfc_dev *dev)
 			return -EPERM;
 		}
 
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 		size = s5p_get_media_memsize_bank(S5P_MDEV_MFC, i);
 #else
 		size = s3c_get_media_memsize_bank(S3C_MDEV_MFC, i);

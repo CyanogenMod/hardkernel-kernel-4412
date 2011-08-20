@@ -20,7 +20,7 @@
 #endif
 
 
-#if defined(CONFIG_CPU_EXYNOS4210)
+#if defined(CONFIG_ARCH_EXYNOS4)
 #include <mach/regs-mfc.h>
 #elif defined(CONFIG_ARCH_S5PV210)
 #include <plat/regs-mfc.h>

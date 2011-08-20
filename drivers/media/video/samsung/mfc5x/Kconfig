@@ -4,7 +4,7 @@
 
 config VIDEO_MFC5X
 	bool "Samsung MFC (Multi Format Codec - FIMV 5.x) Driver"
-	depends on VIDEO_SAMSUNG && CPU_EXYNOS4210
+	depends on VIDEO_SAMSUNG && ARCH_EXYNOS4
 	default n
 	---help---
 	  This is a Samsung Multi Format Codecs (MFC) FIMV V5.x - driver for Samsung S5PV310
