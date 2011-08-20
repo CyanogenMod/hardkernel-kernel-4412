@@ -509,6 +509,13 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_BATTERY_SAMSUNG
+static struct platform_device samsung_device_battery = {
+	.name	= "samsung-fake-battery",
+	.id	= -1,
+};
+#endif
+
 static uint32_t smdk4212_keymap[] __initdata = {
 	/* KEY(row, col, keycode) */
 	KEY(1, 0, KEY_A), KEY(1, 1, KEY_B), KEY(1, 2, KEY_C),
@@ -575,6 +582,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
+#ifdef CONFIG_BATTERY_SAMSUNG
+	&samsung_device_battery,
+#endif
 	&samsung_device_keypad,
 };
 
