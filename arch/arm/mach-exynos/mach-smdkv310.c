@@ -2033,6 +2033,14 @@ static struct s5p_fimc_isp_info isp_info[] = {
 static void __init smdkv310_subdev_config(void)
 {
 	s3c_fimc0_default_data.isp_info[0] = &isp_info[0];
+	s3c_fimc0_default_data.isp_info[0]->use_cam = true;
+	/* support using two fimc as one sensore */
+	{
+		static struct s5p_fimc_isp_info camcording;
+		memcpy(&camcording, &isp_info[0], sizeof(struct s5p_fimc_isp_info));
+		s3c_fimc2_default_data.isp_info[0] = &camcording;
+		s3c_fimc2_default_data.isp_info[0]->use_cam = false;
+	}
 }
 
 static void __init smdkv310_camera_config(void)
