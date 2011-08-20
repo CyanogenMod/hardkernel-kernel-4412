@@ -21,6 +21,9 @@
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/mfd/max8997.h>
+#if defined(CONFIG_S5P_MEM_CMA)
+#include <linux/cma.h>
+#endif
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -597,6 +600,148 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&samsung_device_keypad,
 };
 
+#if defined(CONFIG_S5P_MEM_CMA)
+static void __init exynos4_reserve_mem(void)
+{
+	static struct cma_region regions[] = {
+#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM
+		{
+			.name = "pmem",
+			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K,
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1
+		{
+			.name = "pmem_gpu1",
+			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K,
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD
+		{
+			.name = "fimd",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0
+		{
+			.name = "fimc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
+		{
+			.name = "fimc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2
+		{
+			.name = "fimc2",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
+		{
+			.name = "fimc3",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1
+		{
+			.name = "mfc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1 * SZ_1K,
+			{
+				.alignment = 1 << 17,
+			},
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
+		{
+			.name = "mfc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
+			{
+				.alignment = 1 << 17,
+			},
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC
+		{
+			.name = "mfc",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC * SZ_1K,
+			{
+				.alignment = 1 << 17,
+			},
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
+		{
+			.name		= "fw",
+			.size		= 1 << 20,
+			{ .alignment	= 128 << 10 },
+			.start		= 0x42000000,
+		},
+		{
+			.name		= "b1",
+			.size		= 32 << 20,
+			.start		= 0x43000000,
+		},
+		{
+			.name		= "b2",
+			.size		= 32 << 20,
+			.start		= 0x51000000,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_JPEG
+		{
+			.name = "jpeg",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_JPEG * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP
+		{
+			.name = "srp",
+			.size = CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP * SZ_1K,
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMG2D
+		{
+			.name = "fimg2d",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMG2D * SZ_1K,
+			.start = 0
+		},
+#endif
+		{
+			.size = 0
+		},
+	};
+
+	static const char map[] __initconst =
+		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
+		"s3cfb.0=fimd;exynos4-fb.0=fimd;"
+		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
+		"exynos4210-fimc.0=fimc0;exynos4210-fimc.1=fimc1;exynos4210-fimc.2=fimc2;exynos4210-fimc.3=fimc3;"
+		"s5p-mfc=mfc,mfc0,mfc1;"
+		"samsung-rp=srp;"
+		"s5p-jpeg=jpeg;"
+		"s5p-fimg2d=fimg2d";
+
+	cma_set_defaults(regions, map);
+	cma_early_regions_reserve(NULL);
+}
+#endif
+
 /* LCD Backlight data */
 static struct samsung_bl_gpio_info smdk4212_bl_gpio_info = {
 	.no = EXYNOS4_GPD0(1),
@@ -616,6 +761,10 @@ static void __init smdk4212_map_io(void)
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(smdk4212_uartcfgs, ARRAY_SIZE(smdk4212_uartcfgs));
+
+#if defined(CONFIG_S5P_MEM_CMA)
+	exynos4_reserve_mem();
+#endif
 }
 
 static void __init smdk4212_machine_init(void)
