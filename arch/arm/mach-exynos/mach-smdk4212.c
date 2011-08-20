@@ -593,6 +593,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&s3c_device_fimc2,
 	&s3c_device_fimc3,
 #endif
+#ifdef CONFIG_VIDEO_MFC5X
+	&s5p_device_mfc,
+#endif
 	&wm8994_fixed_voltage0,
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
@@ -828,6 +831,11 @@ static void __init smdk4212_machine_init(void)
 	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
+#endif
+#ifdef CONFIG_VIDEO_MFC5X
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 #endif
 #endif
 	samsung_keypad_set_platdata(&smdk4212_keypad_data);

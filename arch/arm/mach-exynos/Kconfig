@@ -371,6 +371,7 @@ config MACH_SMDK4212
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_I2C1
 	select S3C_DEV_I2C7
+	select S5P_DEV_MFC
 	select S5P_DEV_FIMD_S5P
 	select S5P_DEV_USBGADGET
 	select EXYNOS4_SETUP_SDHCI
