@@ -1593,7 +1593,7 @@ struct video_device fimc_video_device[FIMC_DEVICES] = {
 		.ioctl_ops = &fimc_v4l2_ops,
 		.release = fimc_vdev_release,
 	},
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 	[3] = {
 		.fops = &fimc_fops,
 		.ioctl_ops = &fimc_v4l2_ops,

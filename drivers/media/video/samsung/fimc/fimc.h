@@ -46,7 +46,7 @@
 #define FIMC_NAME		"s3c-fimc"
 #define FIMC_CMA_NAME		"fimc"
 
-#if defined(CONFIG_CPU_EXYNOS4210)
+#if defined(CONFIG_ARCH_EXYNOS4)
 #define FIMC_DEVICES		4
 #define FIMC_PHYBUFS		32
 #define FIMC_MAXCAMS		7
