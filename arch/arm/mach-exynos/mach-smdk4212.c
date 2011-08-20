@@ -541,6 +541,7 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&s3c_device_spi_gpio,
 #endif
 #endif
+	&s3c_device_wdt,
 	&s3c_device_rtc,
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
