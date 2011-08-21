@@ -172,11 +172,11 @@ static struct s3c_sdhci_platdata smdk4212_hsmmc3_pdata __initdata = {
 
 /* USB GADGET */
 #ifdef CONFIG_USB_GADGET
-static struct s5p_usbgadget_platdata smdkv310_usbgadget_pdata;
+static struct s5p_usbgadget_platdata smdk4212_usbgadget_pdata;
 
-static void __init smdkv310_usbgadget_init(void)
+static void __init smdk4212_usbgadget_init(void)
 {
-	struct s5p_usbgadget_platdata *pdata = &smdkv310_usbgadget_pdata;
+	struct s5p_usbgadget_platdata *pdata = &smdk4212_usbgadget_pdata;
 
 	s5p_usbgadget_set_platdata(pdata);
 }
@@ -787,7 +787,7 @@ static void __init smdk4212_machine_init(void)
 #endif
 #endif
 #ifdef CONFIG_USB_GADGET
-	smdkv310_usbgadget_init();
+	smdk4212_usbgadget_init();
 #endif
 	samsung_bl_set(&smdk4212_bl_gpio_info, &smdk4212_bl_data);
 
