@@ -494,6 +494,9 @@ struct s5p_mfc_ctx {
 	unsigned int ref_queue_cnt;
 
 	struct s5p_mfc_codec_ops *c_ops;
+
+	/* ION file descriptor */
+	int fd_ion;
 };
 
 #define fh_to_mfc_ctx(x)	\

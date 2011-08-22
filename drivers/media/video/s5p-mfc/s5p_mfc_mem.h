@@ -20,6 +20,8 @@
 #include <media/videobuf2-dma-pool.h>
 #elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
 #include <media/videobuf2-sdvmm.h>
+#elif defined(CONFIG_S5P_MFC_VB2_ION)
+#include <media/videobuf2-ion.h>
 #endif
 
 /* Offset base used to differentiate between CAPTURE and OUTPUT
@@ -114,7 +116,6 @@ static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 #define MFC_CMA_BANK2_ALLOC_CTX MFC_BANK_B_ALLOC_CTX
 #define MFC_CMA_FW_ALLOC_CTX	MFC_BANK_A_ALLOC_CTX
 
-
 #define mfc_plane_cookie(v, n)	vb2_sdvmm_plane_dvaddr(v, n)
 
 static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
@@ -135,6 +136,40 @@ static inline void s5p_mfc_mem_put(void *a, void *b)
 static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 {
 	return vb2_sdvmm_memops.vaddr(b);
+}
+#elif defined(CONFIG_S5P_MFC_VB2_ION)
+#define MFC_ALLOC_CTX_NUM	2
+
+#define MFC_BANK_A_ALLOC_CTX	0
+#define MFC_BANK_B_ALLOC_CTX	1
+
+#define MFC_BANK_A_ALIGN_ORDER	11
+#define MFC_BANK_B_ALIGN_ORDER	11
+
+#define MFC_CMA_BANK1_ALLOC_CTX MFC_BANK_A_ALLOC_CTX
+#define MFC_CMA_BANK2_ALLOC_CTX MFC_BANK_B_ALLOC_CTX
+#define MFC_CMA_FW_ALLOC_CTX	MFC_BANK_A_ALLOC_CTX
+
+#define mfc_plane_cookie(v, n)	vb2_ion_plane_dvaddr(v, n)
+
+static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
+{
+	return vb2_ion_memops.alloc(a, s);
+}
+
+static inline size_t s5p_mfc_mem_cookie(void *a, void *b)
+{
+	return (size_t)vb2_ion_memops.cookie(b);
+}
+
+static inline void s5p_mfc_mem_put(void *a, void *b)
+{
+	vb2_ion_memops.put(b);
+}
+
+static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
+{
+	return vb2_ion_memops.vaddr(b);
 }
 #endif
 

@@ -46,10 +46,15 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	mfc_debug_enter();
 
+#if !defined(CONFIG_S5P_MFC_VB2_ION)
 	if (s5p_mfc_bitproc_buf) {
 		mfc_err("Attempting to allocate firmware when it seems that it is already loaded.\n");
 		return -ENOMEM;
 	}
+#else
+	if (s5p_mfc_bitproc_buf)
+		return 0;
+#endif
 
 	/* Get memory region information and check if it is correct */
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
@@ -140,13 +145,14 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	}
 
 	s5p_mfc_bitproc_virt = s5p_mfc_mem_vaddr(
-		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
+			dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
+			s5p_mfc_bitproc_buf);
 	mfc_debug(2, "Virtual address for FW: %08lx\n",
-				(long unsigned int)s5p_mfc_bitproc_virt);
+			(long unsigned int)s5p_mfc_bitproc_virt);
 	if (!s5p_mfc_bitproc_virt) {
 		mfc_err("Bitprocessor memory remap failed\n");
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
-							s5p_mfc_bitproc_buf);
+				s5p_mfc_bitproc_buf);
 		s5p_mfc_bitproc_phys = 0;
 		s5p_mfc_bitproc_buf = 0;
 		return -EIO;
@@ -174,6 +180,48 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 			s5p_mfc_bitproc_phys,
 			FIRMWARE_CODE_SIZE);
 #elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
+	mfc_debug(2, "Allocating memory for firmware.\n");
+	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
+			dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
+			FIRMWARE_CODE_SIZE);
+	if (IS_ERR(s5p_mfc_bitproc_buf)) {
+		s5p_mfc_bitproc_buf = 0;
+		printk(KERN_ERR "Allocating bitprocessor buffer failed\n");
+		return -ENOMEM;
+	}
+
+	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
+		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
+	if (s5p_mfc_bitproc_phys & (128 << 10)) {
+		mfc_err("The base memory is not aligned to 128KB.\n");
+		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
+							s5p_mfc_bitproc_buf);
+		s5p_mfc_bitproc_phys = 0;
+		s5p_mfc_bitproc_buf = 0;
+		return -EIO;
+	}
+
+	s5p_mfc_bitproc_virt = s5p_mfc_mem_vaddr(
+		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
+	mfc_debug(2, "Virtual address for FW: %08lx\n",
+				(long unsigned int)s5p_mfc_bitproc_virt);
+	if (!s5p_mfc_bitproc_virt) {
+		mfc_err("Bitprocessor memory remap failed\n");
+		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
+							s5p_mfc_bitproc_buf);
+		s5p_mfc_bitproc_phys = 0;
+		s5p_mfc_bitproc_buf = 0;
+		return -EIO;
+	}
+
+	dev->port_a = s5p_mfc_bitproc_phys;
+	dev->port_b = s5p_mfc_bitproc_phys;
+
+	mfc_debug(2, "Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
+			dev->port_a, dev->port_b,
+			s5p_mfc_bitproc_phys,
+			FIRMWARE_CODE_SIZE);
+#elif defined(CONFIG_S5P_MFC_VB2_ION)
 	mfc_debug(2, "Allocating memory for firmware.\n");
 	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], FIRMWARE_CODE_SIZE);
@@ -214,6 +262,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 			dev->port_a, dev->port_b,
 			s5p_mfc_bitproc_phys,
 			FIRMWARE_CODE_SIZE);
+
 #endif
 	mfc_debug_leave();
 
@@ -275,12 +324,14 @@ int s5p_mfc_release_firmware(struct s5p_mfc_dev *dev)
 		dma_unmap_single(dev->v4l2_dev.dev, s5p_mfc_bitproc_dma,
 				 FIRMWARE_CODE_SIZE, DMA_TO_DEVICE);
 	*/
+#if !defined(CONFIG_S5P_MFC_VB2_ION)
 	s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
 			s5p_mfc_bitproc_buf);
 
 	s5p_mfc_bitproc_virt =  0;
 	s5p_mfc_bitproc_phys = 0;
 	s5p_mfc_bitproc_buf = 0;
+#endif
 	/*
 	s5p_mfc_bitproc_dma = 0;
 	*/

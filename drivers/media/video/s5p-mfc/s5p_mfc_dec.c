@@ -235,6 +235,16 @@ static struct v4l2_queryctrl controls[] = {
 		.step = 1,
 		.default_value = 0,
 	},
+#if defined(CONFIG_S5P_MFC_VB2_ION)
+	{
+		.id		= V4L2_CID_FD,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "File descriptor for ION",
+		.minimum	= 3,
+		.maximum	= 256,
+		.default_value	= 0,
+	},
+#endif
 };
 
 #define NUM_CTRLS ARRAY_SIZE(controls)
@@ -909,36 +919,46 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	unsigned long flags;
 
 	mfc_debug_enter();
-
 	mfc_debug(2, "Memory type: %d\n", reqbufs->memory);
 
 	if (reqbufs->memory != V4L2_MEMORY_MMAP) {
 		mfc_err("Only V4L2_MEMORY_MAP is supported.\n");
 		return -EINVAL;
-
 	}
-	if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],true);
-		/* Can only request buffers after an instance has been opened.*/
-		if (ctx->state == MFCINST_GOT_INST) {
-			if (reqbufs->count == 0) {
-				mfc_debug(2, "Freeing buffers.\n");
-				ret = vb2_reqbufs(&ctx->vq_src, reqbufs);
-				return ret;
-			}
-			/* Decoding */
-			if (ctx->output_state != QUEUE_FREE) {
-				mfc_err("Bufs have already been requested.\n");
-				return -EINVAL;
-			}
-			ret = vb2_reqbufs(&ctx->vq_src, reqbufs);
-			if (ret) {
-				mfc_err("vb2_reqbufs on output failed.\n");
-				return ret;
-			}
-			mfc_debug(2, "vb2_reqbufs: %d\n", ret);
-			ctx->output_state = QUEUE_BUFS_REQUESTED;
+		/* TODO check location !! */
+#if defined(CONFIG_S5P_MFC_VB2_ION)
+		if (ctx->fd_ion < 0) {
+			mfc_err("ION file descriptor is not set.\n");
+			return -EINVAL;
 		}
+		mfc_debug(2, "ION fd from Driver : %d\n", ctx->fd_ion);
+		vb2_ion_set_fd(ctx->dev->alloc_ctx[0], ctx->fd_ion);
+		vb2_ion_set_fd(ctx->dev->alloc_ctx[1], ctx->fd_ion);
+#endif
+		if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
+					ctx->cacheable);
+			/* Can only request buffers after
+			   an instance has been opened.*/
+			if (ctx->state == MFCINST_GOT_INST) {
+				if (reqbufs->count == 0) {
+					mfc_debug(2, "Freeing buffers.\n");
+					ret = vb2_reqbufs(&ctx->vq_src, reqbufs);
+					return ret;
+				}
+				/* Decoding */
+				if (ctx->output_state != QUEUE_FREE) {
+					mfc_err("Bufs have already been requested.\n");
+					return -EINVAL;
+				}
+				ret = vb2_reqbufs(&ctx->vq_src, reqbufs);
+				if (ret) {
+					mfc_err("vb2_reqbufs on output failed.\n");
+					return ret;
+				}
+				mfc_debug(2, "vb2_reqbufs: %d\n", ret);
+				ctx->output_state = QUEUE_BUFS_REQUESTED;
+			}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		/* cacheable setting */
 		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],ctx->cacheable);
@@ -998,7 +1018,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 
 		s5p_mfc_try_run(dev);
 		s5p_mfc_wait_for_done_ctx(ctx,
-					 S5P_FIMV_R2H_CMD_INIT_BUFFERS_RET, 1);
+				S5P_FIMV_R2H_CMD_INIT_BUFFERS_RET, 1);
 	}
 
 	mfc_debug_leave();
@@ -1015,10 +1035,12 @@ static int vidioc_querybuf(struct file *file, void *priv,
 	int i;
 
 	mfc_debug_enter();
+
 	if (buf->memory != V4L2_MEMORY_MMAP) {
 		mfc_err("Only mmaped buffers can be used.\n");
 		return -EINVAL;
 	}
+
 	mfc_debug(2, "State: %d, buf->type: %d\n", ctx->state, buf->type);
 	if (ctx->state == MFCINST_GOT_INST &&
 			buf->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
@@ -1042,15 +1064,18 @@ static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 
 	mfc_debug_enter();
-	mfc_debug(2, "Enqueued buf: %d (type = %d)\n", buf->index, buf->type);
+
+	mfc_debug(2, "Enqueued buf: %d, (type = %d)\n", buf->index, buf->type);
 	if (ctx->state == MFCINST_ERROR) {
 		mfc_err("Call on QBUF after unrecoverable error.\n");
 		return -EIO;
 	}
+
 	if (buf->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
 		return vb2_qbuf(&ctx->vq_src, buf);
 	else
 		return vb2_qbuf(&ctx->vq_dst, buf);
+
 	mfc_debug_leave();
 	return -EINVAL;
 }
@@ -1182,6 +1207,11 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 	case V4L2_CID_CODEC_CRC_DATA_CHROMA:
 		ctrl->value = ctx->crc_chroma0;
 		break;
+#if defined(CONFIG_S5P_MFC_VB2_ION)
+	case V4L2_CID_FD:
+		ctrl->value = ctx->fd_ion;
+		break;
+#endif
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET)
@@ -1258,6 +1288,12 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 		else
 			ctx->cacheable = 0;
 		break;
+#if defined(CONFIG_S5P_MFC_VB2_ION)
+	case V4L2_CID_FD:
+		ctx->fd_ion = ctrl->value;
+		mfc_debug(2, "fd_ion : %d\n", ctx->fd_ion);
+		break;
+#endif
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			if (ctx_ctrl->type != MFC_CTRL_TYPE_SET)
@@ -1479,7 +1515,6 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 			mfc_err("Plane buffer (OUTPUT) is too small.\n");
 			return -EINVAL;
 		}
-
 		buf->cookie.stream = mfc_plane_cookie(vb, 0);
 
 		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SET, vb->v4l2_buf.index) < 0)
@@ -1501,11 +1536,11 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 	unsigned int index = vb->v4l2_buf.index;
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		if(ctx->cacheable) {
+		if (ctx->cacheable)
 			s5p_mfc_mem_cache_flush(vb, 2);
-		}
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		s5p_mfc_mem_cache_flush(vb, 1);
+		if (ctx->cacheable)
+			s5p_mfc_mem_cache_flush(vb, 1);
 		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
 	}
@@ -1725,7 +1760,6 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 		mfc_err("Failed to initialize videobuf2 queue(output)\n");
 		return ret;
 	}
-
 	/* Init videobuf2 queue for CAPTURE */
 	ctx->vq_dst.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	ctx->vq_dst.drv_priv = ctx;

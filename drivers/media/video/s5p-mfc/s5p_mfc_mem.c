@@ -19,6 +19,8 @@
 #include "s5p_mfc_pm.h"
 #include "s5p_mfc_debug.h"
 
+#define	MFC_ION_NAME	"s5p-mfc"
+
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 static const char *s5p_mem_types[] = {
 	MFC_CMA_BANK2,
@@ -111,6 +113,40 @@ void **s5p_mfc_mem_init_multi(struct device *dev)
 void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes)
 {
 	vb2_sdvmm_cleanup_multi(alloc_ctxes);
+}
+#elif defined(CONFIG_S5P_MFC_VB2_ION)
+struct vb2_mem_ops *s5p_mfc_mem_ops(void)
+{
+	return (struct vb2_mem_ops *)&vb2_ion_memops;
+}
+
+void **s5p_mfc_mem_init_multi(struct device *dev)
+{
+	struct vb2_ion ion;
+	void **alloc_ctxes;
+	struct vb2_drv vb2_drv;
+
+	/* TODO */
+	ion.name = MFC_ION_NAME;
+	ion.dev = dev;
+	ion.cacheable = true;
+	ion.align = 0x1000;
+	ion.contig = true;
+
+	/* FIXME: check port count */
+	vb2_drv.dev = dev;
+
+	s5p_mfc_power_on();
+	alloc_ctxes = (void **)vb2_ion_init_multi(MFC_ALLOC_CTX_NUM, &ion,
+								&vb2_drv);
+	s5p_mfc_power_off();
+
+	return alloc_ctxes;
+}
+
+void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes)
+{
+	vb2_ion_cleanup_multi(alloc_ctxes);
 }
 #endif
 
@@ -255,6 +291,53 @@ void s5p_mfc_mem_get_cacheable(void *alloc_ctx)
 int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
 {
 	return vb2_sdvmm_cache_flush(vb, plane_no);
+}
+#elif defined(CONFIG_S5P_MFC_VB2_ION)
+void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
+{
+	unsigned long paddr;
+
+	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
+	paddr = __pa((unsigned long)start_addr);
+	outer_clean_range(paddr, paddr + size);
+}
+
+void s5p_mfc_cache_inv(const void *start_addr, unsigned long size)
+{
+	unsigned long paddr;
+
+	paddr = __pa((unsigned long)start_addr);
+	outer_inv_range(paddr, paddr + size);
+	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
+}
+
+void s5p_mfc_mem_suspend(void *alloc_ctx)
+{
+	s5p_mfc_clock_on();
+	vb2_ion_suspend(alloc_ctx);
+	s5p_mfc_clock_off();
+}
+
+void s5p_mfc_mem_resume(void *alloc_ctx)
+{
+	s5p_mfc_clock_on();
+	vb2_ion_resume(alloc_ctx);
+	s5p_mfc_clock_off();
+}
+
+void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
+{
+	vb2_ion_set_cacheable(alloc_ctx, cacheable);
+}
+
+void s5p_mfc_mem_get_cacheable(void *alloc_ctx)
+{
+	vb2_ion_get_cacheable(alloc_ctx);
+}
+
+int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
+{
+	return vb2_ion_cache_flush(vb, plane_no);
 }
 #else
 void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
