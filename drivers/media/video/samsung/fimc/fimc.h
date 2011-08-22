@@ -29,16 +29,6 @@
 #include <plat/fimc.h>
 #endif
 
-#ifdef CONFIG_VIDEO_FIMC_UMP_VCM_CMA
-#include "ump_kernel_interface.h"
-#include "ump_kernel_interface_ref_drv.h"
-#include "ump_uk_types.h"
-#include <linux/cma.h>
-#include <plat/s5p-vcm.h>
-#include <plat/sysmmu.h>
-#define UMP_HANDLE_DD_INVALID -1
-#endif
-
 #ifdef CONFIG_PM_RUNTIME
 #include <linux/pm_runtime.h>
 #endif
@@ -433,16 +423,7 @@ struct fimc_control {
 	int 				suspend_framecnt;
 	enum fimc_sysmmu_flag		sysmmu_flag;
 	enum fimc_power_status		power_status;
-#ifdef CONFIG_CMA
 	char 				cma_name[16];
-#ifdef CONFIG_VIDEO_FIMC_UMP_VCM_CMA
-	struct vcm			*dev_vcm;
-	ump_dd_handle 			ump_wrapped_buffer[FIMC_PHYBUFS];
-	ump_dd_physical_block 		ump_memory_description;
-	enum vcm_dev_id 		vcm_id;
-	struct vcm_res			*dev_vcm_res[FIMC_PHYBUFS];
-#endif
-#endif
 };
 
 /* global */

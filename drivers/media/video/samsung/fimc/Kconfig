@@ -35,11 +35,6 @@ config VIDEO_FIMC_MIPI
 	depends on VIDEO_FIMC && (ARCH_S5PV210 || ARCH_EXYNOS4)
 	default y
 
-config VIDEO_FIMC_UMP_VCM_CMA
-	bool "Support UMP over VCM with CMA for FIMC"
-	depends on VIDEO_FIMC && VCM_MMU && VIDEO_UMP && CMA && VCM
-	default y
-
 choice
 depends on VIDEO_FIMC
 prompt "Select Output Mode"

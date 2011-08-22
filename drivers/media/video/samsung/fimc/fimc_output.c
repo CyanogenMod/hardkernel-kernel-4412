@@ -28,9 +28,6 @@
 #include "fimc.h"
 #include "fimc-ipc.h"
 
-#ifdef SYSMMU_FIMC
-#include <plat/sysmmu.h>
-#endif
 static __u32 fimc_get_pixel_format_type(__u32 pixelformat)
 {
 	switch (pixelformat) {
@@ -435,100 +432,9 @@ static int fimc_outdev_set_src_buf(struct fimc_control *ctrl,
 	return 0;
 }
 
-#ifdef CONFIG_VIDEO_FIMC_UMP_VCM_CMA
-int fimc_vcm_alloc_outbuf(struct fimc_control *ctrl, int buf_num, int buf_size)
-{
-	unsigned long arg = 0;
-	struct ump_vcm ump_vcm;
-	struct vcm_phys *phys = NULL;
-	dma_addr_t phys_addr;
-
-	phys = kmalloc(sizeof(*phys) + sizeof(*phys->parts), GFP_KERNEL);
-	memset(phys, 0, sizeof(*phys) + sizeof(*phys->parts));
-
-	phys_addr = (dma_addr_t)cma_alloc(ctrl->dev, ctrl->cma_name, \
-					 (size_t)buf_size, 0);
-	fimc_info1("%s : phys_addr : 0x%x, ctrl->dev : 0x%x\n", __func__,
-			phys_addr, (unsigned int)ctrl->dev);
-	phys->count = 1;
-	phys->size = buf_size;
-	phys->free = NULL;
-	phys->parts[0].start = phys_addr;
-	phys->parts[0].size = buf_size;
-
-	ctrl->dev_vcm_res[buf_num] = vcm_map(ctrl->dev_vcm, phys, 0);
-
-	/* physical address */
-	ctrl->mem.base = ctrl->dev_vcm_res[buf_num]->phys->parts->start;
-
-	/* virtual address */
-	ctrl->mem.vaddr_base = ctrl->dev_vcm_res[buf_num]->start;
-
-	ctrl->mem.curr = ctrl->mem.base;
-	ctrl->mem.vaddr_curr = ctrl->mem.vaddr_base;
-
-	fimc_info1("%s : vaddr base : 0x%x\n", __func__, ctrl->mem.vaddr_base);
-	ctrl->mem.size = buf_size;
-
-	/* UMP */
-	ctrl->ump_memory_description.addr = ctrl->mem.base;
-	ctrl->ump_memory_description.size = ctrl->mem.size;
-
-	ump_vcm.vcm = ctrl->dev_vcm;
-	ump_vcm.vcm_res = ctrl->dev_vcm_res[buf_num];
-	ump_vcm.dev_id = ctrl->vcm_id;
-	arg = (unsigned int)&ump_vcm;
-
-	ctrl->ump_wrapped_buffer[buf_num] =
-		ump_dd_handle_create_from_phys_blocks(&ctrl->ump_memory_description, 1);
-
-	if (UMP_DD_HANDLE_INVALID == ctrl->ump_wrapped_buffer[buf_num]) {
-		fimc_err("%s : ump_wrapped_buffer is unhandled\n", __func__);
-		return -ENOMEM;
-	}
-#ifdef CONFIG_UMP_VCM_ALLOC
-	if (ump_dd_vcm_attribute_set(ctrl->ump_wrapped_buffer[buf_num], arg))
-		return -ENOMEM;
-#endif
-	return 0;
-}
-
-int fimc_vcm_free_outbuf(struct fimc_control *ctrl, int buf_num, int phy_addr)
-{
-	kfree(ctrl->dev_vcm_res[buf_num]->phys);
-	vcm_unmap(ctrl->dev_vcm_res[buf_num]);
-	cma_free(phy_addr);
-}
-#endif
-
 static int fimc_outdev_set_dst_buf(struct fimc_control *ctrl,
 				   struct fimc_ctx *ctx)
 {
-#ifdef SYSMMU_FIMC
-	struct vcm_res *vcm_res;
-
-	u32 width = ctrl->fb.lcd_hres;
-	u32 height = ctrl->fb.lcd_vres;
-	u32 i, size;
-
-	size = PAGE_ALIGN(width * height * 4);
-
-	/* Initialize destination buffer addr */
-	for (i = 0; i < FIMC_OUTBUFS; i++) {
-		fimc_vcm_alloc_outbuf(ctrl, i, size);
-		ctx->dst[i].base[FIMC_ADDR_Y] = ctrl->mem.base;
-		ctx->dst[i].vaddr_base[FIMC_ADDR_Y] = ctrl->mem.vaddr_curr;
-		ctx->dst[i].length[FIMC_ADDR_Y] = size;
-		ctx->dst[i].base[FIMC_ADDR_CB] = 0;
-		ctx->dst[i].vaddr_base[FIMC_ADDR_CB] = 0;
-		ctx->dst[i].length[FIMC_ADDR_CB] = 0;
-		ctx->dst[i].base[FIMC_ADDR_CR] = 0;
-		ctx->dst[i].vaddr_base[FIMC_ADDR_CR] = 0;
-		ctx->dst[i].length[FIMC_ADDR_CR] = 0;
-	}
-
-	return 0;
-#else
 	dma_addr_t *curr = &ctrl->mem.curr;
 	dma_addr_t end;
 	u32 width = ctrl->fb.lcd_hres;
@@ -560,7 +466,6 @@ static int fimc_outdev_set_dst_buf(struct fimc_control *ctrl,
 	}
 
 	return 0;
-#endif
 }
 
 static int fimc_set_rot_degree(struct fimc_control *ctrl,
@@ -1813,16 +1718,6 @@ int fimc_g_ctrl_output(void *fh, struct v4l2_control *c)
 			c->value = 0;
 		break;
 
-#ifdef CONFIG_VIDEO_FIMC_UMP_VCM_CMA
-	case V4L2_CID_GET_UMP_SECURE_ID:
-	{
-		ump_secure_id secure_id =
-			ump_dd_secure_id_get(ctrl->ump_wrapped_buffer);
-		c->id = secure_id;
-		fimc_info1("%s : ump_secure_id : %d\n", __func__, secure_id);
-		break;
-	}
-#endif
 	case V4L2_CID_OVERLAY_VADDR0:
 		c->value = ctx->overlay.buf.vir_addr[0];
 		break;
@@ -1864,31 +1759,9 @@ static int fimc_set_dst_info(struct fimc_control *ctrl,
 {
 	struct fimc_buf *buf;
 	int i;
-#ifdef SYSMMU_FIMC
-	struct vcm_res *vcm_res;
-#endif
 
 	for (i = 0; i < ctx->buf_num; i++) {
 		buf = &fimc_buf[i];
-#ifdef SYSMMU_FIMC
-		vcm_res = (struct vcm_res *)ump_dd_vcm_res_get(
-			(unsigned int)buf->base[FIMC_ADDR_Y], ctrl->vcm_id);
-
-		if (vcm_res)
-			buf->base[FIMC_ADDR_Y] = vcm_res->start;
-		else
-			return -EINVAL;
-		ctx->dst[i].base[FIMC_ADDR_Y] = buf->base[FIMC_ADDR_Y];
-		ctx->dst[i].length[FIMC_ADDR_Y] = buf->length[FIMC_ADDR_Y];
-
-		ctx->dst[i].base[FIMC_ADDR_CB] = \
-		ctx->dst[i].base[FIMC_ADDR_Y] + buf->base[FIMC_ADDR_CB];
-		ctx->dst[i].length[FIMC_ADDR_CB] = buf->length[FIMC_ADDR_CB];
-
-		ctx->dst[i].base[FIMC_ADDR_CR] = \
-		ctx->dst[i].base[FIMC_ADDR_CB] + buf->base[FIMC_ADDR_CR];
-		ctx->dst[i].length[FIMC_ADDR_CR] = buf->length[FIMC_ADDR_CR];
-#else
 		ctx->dst[i].base[FIMC_ADDR_Y] = buf->base[FIMC_ADDR_Y];
 		ctx->dst[i].length[FIMC_ADDR_Y] = buf->length[FIMC_ADDR_Y];
 
@@ -1897,7 +1770,6 @@ static int fimc_set_dst_info(struct fimc_control *ctrl,
 
 		ctx->dst[i].base[FIMC_ADDR_CR] = buf->base[FIMC_ADDR_CR];
 		ctx->dst[i].length[FIMC_ADDR_CR] = buf->length[FIMC_ADDR_CR];
-#endif
 	}
 
 	for (i = ctx->buf_num; i < FIMC_OUTBUFS; i++) {
@@ -2262,14 +2134,7 @@ int fimc_streamoff_output(void *fh)
 
 	if (ctx->overlay.mode == FIMC_OVLY_DMA_AUTO) {
 		ctrl->mem.curr = ctx->dst[0].base[FIMC_ADDR_Y];
-
 		for (i = 0; i < FIMC_OUTBUFS; i++) {
-#ifdef CONFIG_VIDEO_FIMC_UMP_VCM_CMA
-			fimc_vcm_free_outbuf(ctrl, i, ctx->dst[i].base[FIMC_ADDR_Y]);
-			ctx->dst[i].vaddr_base[FIMC_ADDR_Y] = 0;
-			ctx->dst[i].vaddr_base[FIMC_ADDR_CB] = 0;
-			ctx->dst[i].vaddr_base[FIMC_ADDR_CR] = 0;
-#endif
 			ctx->dst[i].base[FIMC_ADDR_Y] = 0;
 			ctx->dst[i].length[FIMC_ADDR_Y] = 0;
 
@@ -2315,35 +2180,6 @@ static int fimc_qbuf_output_single_buf(struct fimc_control *ctrl,
 
 	memset(&buf_set, 0x00, sizeof(buf_set));
 
-#ifdef SYSMMU_FIMC
-	switch (format) {
-	case V4L2_PIX_FMT_RGB32:
-	case V4L2_PIX_FMT_RGB565:	/* fall through */
-		buf_set.vaddr_base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
-		break;
-	case V4L2_PIX_FMT_YUV420:
-		buf_set.vaddr_base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
-		buf_set.vaddr_base[FIMC_ADDR_CB] = buf_set.vaddr_base[FIMC_ADDR_Y] + y_size;
-		buf_set.vaddr_base[FIMC_ADDR_CR] = buf_set.vaddr_base[FIMC_ADDR_CB] + c_size;
-		break;
-	case V4L2_PIX_FMT_NV12:
-	case V4L2_PIX_FMT_NV21:
-		buf_set.vaddr_base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
-		buf_set.vaddr_base[FIMC_ADDR_CB] = buf_set.base[FIMC_ADDR_Y] + y_size;
-		break;
-	case V4L2_PIX_FMT_NV12T:
-		if (rot == 0 || rot == 180)
-			fimc_get_nv12t_size(width, height, &y_size, &c_size);
-		else
-			fimc_get_nv12t_size(height, width, &y_size, &c_size);
-		buf_set.vaddr_base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
-		buf_set.vaddr_base[FIMC_ADDR_CB] = buf_set.base[FIMC_ADDR_Y] + y_size;
-		break;
-	default:
-		fimc_err("%s: Invalid pixelformt : %d\n", __func__, format);
-		return -EINVAL;
-	}
-#else
 	switch (format) {
 	case V4L2_PIX_FMT_RGB32:
 	case V4L2_PIX_FMT_RGB565:	/* fall through */
@@ -2371,7 +2207,6 @@ static int fimc_qbuf_output_single_buf(struct fimc_control *ctrl,
 		fimc_err("%s: Invalid pixelformt : %d\n", __func__, format);
 		return -EINVAL;
 	}
-#endif
 	cfg = fimc_hwget_output_buf_sequence(ctrl);
 
 	for (i = 0; i < FIMC_PHYBUFS; i++) {
@@ -2405,28 +2240,7 @@ static int fimc_qbuf_output_multi_buf(struct fimc_control *ctrl,
 	fimc_outdev_set_src_addr(ctrl, ctx->src[idx].base);
 
 	memset(&buf_set, 0x00, sizeof(buf_set));
-#ifdef SYSMMU_FIMC
-	switch (format) {
-	case V4L2_PIX_FMT_RGB32:
-	case V4L2_PIX_FMT_RGB565:	/* fall through */
-		buf_set.vaddr_base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
-		break;
-	case V4L2_PIX_FMT_YUV420:
-		buf_set.vaddr_base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
-		buf_set.vaddr_base[FIMC_ADDR_CB] = ctx->dst[idx].base[FIMC_ADDR_CB];
-		buf_set.vaddr_base[FIMC_ADDR_CR] = ctx->dst[idx].base[FIMC_ADDR_CR];
-		break;
-	case V4L2_PIX_FMT_NV12:		/* fall through */
-	case V4L2_PIX_FMT_NV21:		/* fall through */
-	case V4L2_PIX_FMT_NV12T:
-		buf_set.vaddr_base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
-		buf_set.vaddr_base[FIMC_ADDR_CB] = ctx->dst[idx].base[FIMC_ADDR_CB];
-		break;
-	default:
-		fimc_err("%s: Invalid pixelformt : %d\n", __func__, format);
-		return -EINVAL;
-	}
-#else
+
 	switch (format) {
 	case V4L2_PIX_FMT_RGB32:
 	case V4L2_PIX_FMT_RGB565:	/* fall through */
@@ -2447,7 +2261,7 @@ static int fimc_qbuf_output_multi_buf(struct fimc_control *ctrl,
 		fimc_err("%s: Invalid pixelformt : %d\n", __func__, format);
 		return -EINVAL;
 	}
-#endif
+
 	cfg = fimc_hwget_output_buf_sequence(ctrl);
 
 	for (i = 0; i < FIMC_PHYBUFS; i++) {
@@ -2545,14 +2359,7 @@ static int fimc_qbuf_output_dma_auto(struct fimc_control *ctrl,
 		fimc_outdev_set_src_addr(ctrl, ctx->src[idx].base);
 
 		memset(&buf_set, 0x00, sizeof(buf_set));
-#ifdef SYSMMU_FIMC
 		buf_set.base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
-		buf_set.vaddr_base[FIMC_ADDR_Y]
-			= ctx->dst[idx].vaddr_base[FIMC_ADDR_Y];
-#else
-		buf_set.base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
-#endif
-
 		cfg = fimc_hwget_output_buf_sequence(ctrl);
 
 		for (i = 0; i < FIMC_PHYBUFS; i++) {
@@ -2591,11 +2398,7 @@ static int fimc_qbuf_output_dma_manual(struct fimc_control *ctrl,
 	fimc_outdev_set_src_addr(ctrl, ctx->src[idx].base);
 
 	memset(&buf_set, 0x00, sizeof(buf_set));
-#ifdef SYSMMU_FIMC
-	buf_set.vaddr_base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
-#else
 	buf_set.base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
-#endif
 	cfg = fimc_hwget_output_buf_sequence(ctrl);
 
 	for (i = 0; i < FIMC_PHYBUFS; i++) {
@@ -2650,57 +2453,15 @@ static int fimc_update_in_queue_addr(struct fimc_control *ctrl,
 				     struct fimc_ctx *ctx,
 				     u32 idx, dma_addr_t *addr)
 {
-#ifdef SYSMMU_FIMC
-	struct vcm_res *vcm_res;
-#endif
-
 	if (idx >= FIMC_OUTBUFS) {
 		fimc_err("%s: Failed\n", __func__);
 		return -EINVAL;
 	}
 
-#ifdef SYSMMU_FIMC
-	if (ctx->pix.pixelformat == V4L2_PIX_FMT_NV12T) {
-		vcm_res = (struct vcm_res *)
-			ump_dd_vcm_res_get(addr[FIMC_ADDR_Y], ctrl->vcm_id);
-		if (vcm_res)
-			ctx->src[idx].base[FIMC_ADDR_Y] = vcm_res->start;
-		else
-			return -EINVAL;
-		vcm_res = (struct vcm_res *)
-			ump_dd_vcm_res_get(addr[FIMC_ADDR_CB], ctrl->vcm_id);
-		if (vcm_res)
-			ctx->src[idx].base[FIMC_ADDR_CB] = vcm_res->start;
-		else
-			return -EINVAL;
-		ctx->src[idx].base[FIMC_ADDR_CR] = 0;
-	} else if (ctx->pix.pixelformat == V4L2_PIX_FMT_NV21) {
-		vcm_res = (struct vcm_res *)
-			ump_dd_vcm_res_get(addr[FIMC_ADDR_Y], ctrl->vcm_id);
-		if (vcm_res)
-			ctx->src[idx].base[FIMC_ADDR_Y] = vcm_res->start;
-		else
-			return -EINVAL;
-		ctx->src[idx].base[FIMC_ADDR_CB] =
-			ctx->src[idx].base[FIMC_ADDR_Y] + addr[FIMC_ADDR_CB];
-		ctx->src[idx].base[FIMC_ADDR_CR] = 0;
-	} else {
-		vcm_res = (struct vcm_res *)
-			ump_dd_vcm_res_get(addr[FIMC_ADDR_Y], ctrl->vcm_id);
-		if (vcm_res)
-			ctx->src[idx].base[FIMC_ADDR_Y] = vcm_res->start;
-		else
-			return -EINVAL;
-		ctx->src[idx].base[FIMC_ADDR_CB] =
-			ctx->src[idx].base[FIMC_ADDR_Y] + addr[FIMC_ADDR_CB];
-		ctx->src[idx].base[FIMC_ADDR_CR] =
-			ctx->src[idx].base[FIMC_ADDR_CB] + addr[FIMC_ADDR_CR];
-	}
-#else
 	ctx->src[idx].base[FIMC_ADDR_Y] = addr[FIMC_ADDR_Y];
 	ctx->src[idx].base[FIMC_ADDR_CB] = addr[FIMC_ADDR_CB];
 	ctx->src[idx].base[FIMC_ADDR_CR] = addr[FIMC_ADDR_CR];
-#endif
+
 	return 0;
 }
 

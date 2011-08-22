@@ -315,7 +315,8 @@ int fimc_hwget_overflow_state(struct fimc_control *ctrl)
 			S3C_CIWDOFST_CLROVFICR);
 		writel(cfg, ctrl->regs + S3C_CIWDOFST);
 
-		printk(KERN_INFO "FIMC%d overflow is occured status 0x%x\n", ctrl->id, status);
+		printk(KERN_INFO "FIMC%d overflow is occured status 0x%x\n",
+				ctrl->id, status);
 		return 1;
 	}
 
@@ -447,7 +448,8 @@ int fimc43_hwset_camera_type(struct fimc_control *ctrl)
 
 		/* FIXME: Temporary MIPI CSIS Data 32 bit aligned */
 		if (ctrl->cap->fmt.pixelformat == V4L2_PIX_FMT_JPEG)
-			writel((MIPI_USER_DEF_PACKET_1 | (0x1 << 8)), ctrl->regs + S3C_CSIIMGFMT);
+			writel((MIPI_USER_DEF_PACKET_1 | (0x1 << 8)),
+					ctrl->regs + S3C_CSIIMGFMT);
 		else
 			writel(cam->fmt | (0x1 << 8), ctrl->regs + S3C_CSIIMGFMT);
 	} else if (cam->type == CAM_TYPE_ITU) {
@@ -500,7 +502,8 @@ int fimc51_hwset_camera_type(struct fimc_control *ctrl)
 
 		/* FIXME: Temporary MIPI CSIS Data 32 bit aligned */
 		if (ctrl->cap->fmt.pixelformat == V4L2_PIX_FMT_JPEG)
-			writel((MIPI_USER_DEF_PACKET_1 | (0x1 << 8)), ctrl->regs + S3C_CSIIMGFMT);
+			writel((MIPI_USER_DEF_PACKET_1 | (0x1 << 8)),
+					ctrl->regs + S3C_CSIIMGFMT);
 		else
 			writel(cam->fmt | (0x1 << 8), ctrl->regs + S3C_CSIIMGFMT);
 	} else if (cam->type == CAM_TYPE_ITU) {
@@ -731,15 +734,10 @@ int fimc_hwset_prescaler(struct fimc_control *ctrl, struct fimc_scaler *sc)
 int fimc_hwset_output_address(struct fimc_control *ctrl,
 			      struct fimc_buf_set *bs, int id)
 {
-	if (ctrl->sysmmu_flag == FIMC_SYSMMU_ON) {
-		writel(bs->vaddr_base[FIMC_ADDR_Y], ctrl->regs + S3C_CIOYSA(id));
-		writel(bs->vaddr_base[FIMC_ADDR_CB], ctrl->regs + S3C_CIOCBSA(id));
-		writel(bs->vaddr_base[FIMC_ADDR_CR], ctrl->regs + S3C_CIOCRSA(id));
-	} else {
-		writel(bs->base[FIMC_ADDR_Y], ctrl->regs + S3C_CIOYSA(id));
-		writel(bs->base[FIMC_ADDR_CB], ctrl->regs + S3C_CIOCBSA(id));
-		writel(bs->base[FIMC_ADDR_CR], ctrl->regs + S3C_CIOCRSA(id));
-	}
+	writel(bs->base[FIMC_ADDR_Y], ctrl->regs + S3C_CIOYSA(id));
+	writel(bs->base[FIMC_ADDR_CB], ctrl->regs + S3C_CIOCBSA(id));
+	writel(bs->base[FIMC_ADDR_CR], ctrl->regs + S3C_CIOCRSA(id));
+
 	return 0;
 }
 
