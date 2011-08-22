@@ -92,6 +92,9 @@
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#include <mach/secmem.h>
+#endif
 
 #include <media/s5p_fimc.h>
 #include <media/s5k4ba_platform.h>
@@ -2468,6 +2471,9 @@ static void __init smdkv310_machine_init(void)
 	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	secmem.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
 #endif
 #ifdef CONFIG_VIDEO_FIMC_MIPI
 	s3c_csis0_set_platdata(NULL);

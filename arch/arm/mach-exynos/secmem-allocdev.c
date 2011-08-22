@@ -10,26 +10,29 @@
  */
 
 #include <linux/device.h>
-#include <linux/miscdevice.h>
 #include <linux/cma.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
+#ifdef CONFIG_PM_RUNTIME
+#include <linux/pm_runtime.h>
+#else
+#define pm_runtime_enable(x)		(void)NULL
+#define pm_runtime_get_sync(x)		(void)NULL
+#define pm_runtime_put_sync(x)		(void)NULL
+#define pm_runtime_forbid(x)		(void)NULL
+#define pm_runtime_allow(x)		(void)NULL
+#define __pm_runtime_disable(x, y)	(void)NULL
+#endif
 
-struct secchunk_info {
-	int		index;
-	phys_addr_t	base;
-	size_t		size;
-};
+#include <mach/secmem.h>
 
-static struct miscdevice thisdev;
+struct miscdevice secmem;
 
 static char *secmem_info[] = {
 	"mfc",	/* 0 */
 	"fimc",	/* 1 */
 	NULL
 };
-
-#define SECMEM_IOC_CHUNKINFO	_IOWR('S', 1, struct secchunk_info)
 
 static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -57,7 +60,7 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			minfo.index = -1; /* No more memory region */
 		} else {
 
-			if (cma_info(&info, thisdev.this_device,
+			if (cma_info(&info, secmem.this_device,
 					secmem_info[minfo.index]))
 				return -EINVAL;
 
@@ -67,6 +70,19 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 		if (copy_to_user((void __user *)arg, &minfo, sizeof(minfo)))
 			return -EFAULT;
+	}
+		break;
+	case SECMEM_IOC_DRM_ONOFF:
+	{
+		int val = 0;
+		int __user *argp = (int __user *)arg;
+		if (copy_from_user(&val, argp, sizeof(int)))
+			return -EFAULT;
+
+		if(val)
+			pm_runtime_forbid(secmem.this_device);
+		else
+			pm_runtime_allow(secmem.this_device);
 	}
 		break;
 	default:
@@ -82,17 +98,24 @@ static struct file_operations secmem_fops = {
 
 static int __init secmem_init(void)
 {
-	thisdev.minor = MISC_DYNAMIC_MINOR;
-	thisdev.name = "s5p-smem";
-	thisdev.fops = &secmem_fops;
-	thisdev.parent = NULL;
+	int ret;
+	secmem.minor = MISC_DYNAMIC_MINOR;
+	secmem.name = "s5p-smem";
+	secmem.fops = &secmem_fops;
 
-	return misc_register(&thisdev);
+	ret = misc_register(&secmem);
+	if (ret)
+		return ret;
+
+	pm_runtime_enable(secmem.this_device);
+
+	return 0;
 }
 
 static void __exit secmem_exit(void)
 {
-	misc_deregister(&thisdev);
+	__pm_runtime_disable(secmem.this_device, false);
+	misc_deregister(&secmem);
 }
 
 module_init(secmem_init);
