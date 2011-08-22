@@ -19,6 +19,8 @@
 
 #include <asm/mach-types.h>
 
+#include <plat/cputype.h>
+
 #include <mach/map.h>
 #include <mach/regs-iem.h>
 #include <mach/regs-pmu.h>
@@ -111,18 +113,16 @@ void __init iem_clock_set(void)
 
 #define IDS_OFFSET			24
 #define IDS_MASK			0xFF
-
-enum find_asv {
-	HPM_GROUP,
-	IDS_GROUP,
-};
+#define PACK_ID				8
+#define PACK_MASK			0x3
 
 enum target_asv {
 	EXYNOS4210_1200,
 	EXYNOS4210_1400,
+	EXYNOS4210_SINGLE_1200,
 };
 
-static struct limit_value {
+struct limit_value {
 	unsigned int hpm_limit;
 	unsigned int ids_limit;
 };
@@ -146,11 +146,19 @@ static struct limit_value exynos4210_1400_limit[] = {
 	{26 , 52},
 };
 
+static struct limit_value exynos4210_single_1200_limit[] = {
+	/* HPM , IDS */
+	{8 , 4},
+	{14 , 12},
+	{21 , 27},
+	{25 , 55},
+};
+
 static int __init exynos4_find_group(unsigned int hpm_value,
 				     unsigned int ids_value,
 				     enum target_asv exynos4_target)
 {
-	unsigned int ret;
+	unsigned int ret = 0;
 	unsigned int i;
 
 	if (exynos4_target == EXYNOS4210_1200) {
@@ -173,6 +181,16 @@ static int __init exynos4_find_group(unsigned int hpm_value,
 				break;
 			}
 		}
+	} else if (exynos4_target == EXYNOS4210_SINGLE_1200) {
+		ret = ARRAY_SIZE(exynos4210_single_1200_limit);
+
+		for (i = 0 ; i < ARRAY_SIZE(exynos4210_single_1200_limit) ; i++) {
+			if (hpm_value <= exynos4210_single_1200_limit[i].hpm_limit ||
+			   ids_value <= exynos4210_single_1200_limit[i].ids_limit) {
+				ret = i;
+				break;
+			}
+		}
 	}
 
 	return ret;
@@ -189,33 +207,36 @@ static int __init exynos4_asv_init(void)
 	void __iomem *iem_base;
 	char *freq;
 
-	if (machine_is_smdkv310())
-		goto out;
-
 	tmp = __raw_readl(S5P_VA_CHIPID + 0x4);
 
-	/* Check CHIPID[2:0] bit field */
-	switch (tmp & 0x7) {
-	case 0:
-	case 3:
-		for_1000 = true;
-		freq = "1GHz";
-		break;
-	case 1:
-	case 7:
+	if ((cpu_idcode  >> PACK_ID) & PACK_MASK) {
+		/* Check CHIPID[2:0] bit field */
+		switch (tmp & 0x7) {
+		case 0:
+		case 3:
+			for_1000 = true;
+			freq = "1GHz";
+			break;
+		case 1:
+		case 7:
+			for_1200 = true;
+			freq = "1.2GHz";
+			break;
+		case 5:
+			for_1400 = true;
+			freq = "1.4GHz";
+			break;
+		default:
+			printk(KERN_ERR "can't find Chip type[0x%x]\n", tmp);
+			for_1000 = true;
+			freq = "1GHz";
+			break;
+		}
+	} else {
 		for_1200 = true;
 		freq = "1.2GHz";
-		break;
-	case 5:
-		for_1400 = true;
-		freq = "1.4GHz";
-		break;
-	default:
-		printk(KERN_ERR "can't find Chip type[0x%x]\n", tmp);
-		for_1000 = true;
-		freq = "1GHz";
-		break;
 	}
+
 	printk(KERN_INFO "Support %s\n", freq);
 
 	ids_arm = ((tmp >> IDS_OFFSET) & IDS_MASK);
@@ -256,7 +277,10 @@ static int __init exynos4_asv_init(void)
 
 		result_group |= SUPPORT_1400MHZ;
 	} else {
-		result_group = exynos4_find_group(hpm_delay, ids_arm, EXYNOS4210_1200);
+		if ((cpu_idcode  >> PACK_ID) & PACK_MASK)
+			result_group = exynos4_find_group(hpm_delay, ids_arm, EXYNOS4210_1200);
+		else
+			result_group = exynos4_find_group(hpm_delay, ids_arm, EXYNOS4210_SINGLE_1200);
 
 		if (for_1200)
 			result_group |= SUPPORT_1200MHZ;
