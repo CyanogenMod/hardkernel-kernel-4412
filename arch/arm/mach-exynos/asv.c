@@ -196,50 +196,69 @@ static int __init exynos4_find_group(unsigned int hpm_value,
 	return ret;
 }
 
+static void __init exynos4_set_register(unsigned int pkg_id,
+				       unsigned int hpm_val,
+				       unsigned int ids_val)
+{
+	unsigned int result_grp;
+	char *support_freq;
+
+	/* Single chip is only support 1.2GHz */
+	if (!((cpu_idcode >> PACK_ID) & PACK_MASK)) {
+		result_grp = exynos4_find_group(hpm_val, ids_val,
+						EXYNOS4210_SINGLE_1200);
+		result_grp |= SUPPORT_1200MHZ;
+		support_freq = "1.2GHz";
+
+		goto set_reg;
+	}
+
+	/* Check support freq */
+	switch (pkg_id & 0x7) {
+	/* Support 1.2GHz */
+	case 1:
+	case 7:
+		result_grp = exynos4_find_group(hpm_val, ids_val,
+						EXYNOS4210_1200);
+		result_grp |= SUPPORT_1200MHZ;
+		support_freq = "1.2GHz";
+		break;
+	/* Support 1.4GHz */
+	case 5:
+		result_grp = exynos4_find_group(hpm_val, ids_val,
+						EXYNOS4210_1400);
+		result_grp |= SUPPORT_1200MHZ;
+		support_freq = "1.4GHz";
+		break;
+	/* Defalut support 1.0GHz */
+	default:
+		result_grp = exynos4_find_group(hpm_val, ids_val,
+						EXYNOS4210_1200);
+		result_grp |= SUPPORT_1000MHZ;
+		support_freq = "1.0GHz";
+		break;
+	}
+
+set_reg:
+	__raw_writel(result_grp, S5P_INFORM2);
+
+	printk(KERN_INFO "Support %s\n", support_freq);
+	printk(KERN_INFO "ASV Group for This Exynos4210 is 0x%x\n", result_grp);
+}
+
 static int __init exynos4_asv_init(void)
 {
 	unsigned int i;
 	unsigned long hpm_delay = 0;
 	unsigned int tmp;
+	unsigned int pkg_id;
 	unsigned int ids_arm;
 	unsigned int result_group = 0;
-	bool for_1400 = false, for_1200 = false, for_1000 = false;
 	void __iomem *iem_base;
-	char *freq;
 
-	tmp = __raw_readl(S5P_VA_CHIPID + 0x4);
+	pkg_id = __raw_readl(S5P_VA_CHIPID + 0x4);
 
-	if ((cpu_idcode  >> PACK_ID) & PACK_MASK) {
-		/* Check CHIPID[2:0] bit field */
-		switch (tmp & 0x7) {
-		case 0:
-		case 3:
-			for_1000 = true;
-			freq = "1GHz";
-			break;
-		case 1:
-		case 7:
-			for_1200 = true;
-			freq = "1.2GHz";
-			break;
-		case 5:
-			for_1400 = true;
-			freq = "1.4GHz";
-			break;
-		default:
-			printk(KERN_ERR "can't find Chip type[0x%x]\n", tmp);
-			for_1000 = true;
-			freq = "1GHz";
-			break;
-		}
-	} else {
-		for_1200 = true;
-		freq = "1.2GHz";
-	}
-
-	printk(KERN_INFO "Support %s\n", freq);
-
-	ids_arm = ((tmp >> IDS_OFFSET) & IDS_MASK);
+	ids_arm = ((pkg_id >> IDS_OFFSET) & IDS_MASK);
 
 	iem_base = ioremap(EXYNOS4_PA_IEM, (128 * 1024));
 
@@ -272,33 +291,14 @@ static int __init exynos4_asv_init(void)
 
 	hpm_delay /= LOOP_CNT;
 
-	if (for_1400) {
-		result_group = exynos4_find_group(hpm_delay, ids_arm, EXYNOS4210_1400);
-
-		result_group |= SUPPORT_1400MHZ;
-	} else {
-		if ((cpu_idcode  >> PACK_ID) & PACK_MASK)
-			result_group = exynos4_find_group(hpm_delay, ids_arm, EXYNOS4210_1200);
-		else
-			result_group = exynos4_find_group(hpm_delay, ids_arm, EXYNOS4210_SINGLE_1200);
-
-		if (for_1200)
-			result_group |= SUPPORT_1200MHZ;
-		else
-			result_group |= SUPPORT_1000MHZ;
-	}
-
-	__raw_writel(result_group, S5P_INFORM2);
-
-	printk(KERN_INFO "ASV Group for This Exynos4210 is 0x%x\n", result_group);
+	exynos4_set_register(pkg_id, hpm_delay, ids_arm);
 
 	return 0;
-
 out:
 	__raw_writel(0, S5P_INFORM2);
+
 	printk(KERN_INFO "ASV Group for This Exynos4210 is %d\n", result_group);
 
 	return -EINVAL;
-
 }
 core_initcall(exynos4_asv_init);
