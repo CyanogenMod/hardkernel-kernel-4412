@@ -538,7 +538,14 @@ static struct samsung_keypad_platdata smdk4212_keypad_data __initdata = {
 };
 
 static struct platform_device *smdk4212_devices[] __initdata = {
-/* legacy fimd */
+	/* Samsung Power Domain */
+	&exynos4_device_pd[PD_MFC],
+	&exynos4_device_pd[PD_G3D],
+	&exynos4_device_pd[PD_LCD0],
+	&exynos4_device_pd[PD_CAM],
+	&exynos4_device_pd[PD_TV],
+	&exynos4_device_pd[PD_GPS],
+	/* legacy fimd */
 #ifdef CONFIG_FB_S5P
 	&s3c_device_fb,
 #ifdef CONFIG_FB_S5P_LMS501KF03
@@ -553,13 +560,6 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_USB_GADGET
 	&s3c_device_usbgadget,
 #endif
-	&exynos4_device_pd[PD_MFC],
-	&exynos4_device_pd[PD_G3D],
-	&exynos4_device_pd[PD_LCD0],
-	&exynos4_device_pd[PD_CAM],
-	&exynos4_device_pd[PD_TV],
-	&exynos4_device_pd[PD_GPS],
-
 #ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
 #endif
@@ -784,6 +784,9 @@ static void __init smdk4212_machine_init(void)
 	s3cfb_set_platdata(&lms501kf03_data);
 #else
 	s3cfb_set_platdata(NULL);
+#endif
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s3c_device_fb.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
 #ifdef CONFIG_USB_GADGET
