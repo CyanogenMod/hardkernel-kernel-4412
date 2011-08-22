@@ -189,6 +189,9 @@ static void __init smdk4212_usbgadget_init(void)
 static struct regulator_consumer_supply max8952_supply =
 	REGULATOR_SUPPLY("vdd_arm", NULL);
 
+static struct regulator_consumer_supply max8952m_supply =
+	REGULATOR_SUPPLY("vdd_mif", NULL);
+
 static struct regulator_consumer_supply max8649_supply =
 	REGULATOR_SUPPLY("vdd_int", NULL);
 
@@ -210,6 +213,23 @@ static struct regulator_init_data max8952_init_data = {
 	},
 	.num_consumer_supplies	= 1,
 	.consumer_supplies	= &max8952_supply,
+};
+
+static struct regulator_init_data max8952m_init_data = {
+	.constraints	= {
+		.name		= "vdd_mif range",
+		.min_uV		= 1100000,
+		.max_uV		= 1100000,
+		.always_on	= 1,
+		.boot_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
+		.state_mem	= {
+			.uV		= 1100000,
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8952m_supply,
 };
 
 static struct regulator_init_data max8649_init_data = {
@@ -247,11 +267,18 @@ static struct regulator_init_data max8649a_init_data = {
 	.consumer_supplies	= &max8649a_supply,
 };
 
-static struct max8649_platform_data exynos4_max8952_info = {
+static struct max8649_platform_data __maybe_unused exynos4_max8952_info = {
 	.mode		= 3,	/* VID1 = 1, VID0 = 1 */
 	.extclk		= 0,
 	.ramp_timing	= MAX8649_RAMP_32MV,
 	.regulator	= &max8952_init_data,
+};
+
+static struct max8649_platform_data exynos4_max8952m_info = {
+	.mode		= 1,	/* VID1 = 0, VID0 = 1 */
+	.extclk		= 0,
+	.ramp_timing	= MAX8649_RAMP_32MV,
+	.regulator	= &max8952m_init_data,
 };
 
 static struct max8649_platform_data exynos4_max8649_info = {
@@ -486,9 +513,6 @@ static struct i2c_board_info i2c_devs0[] __initdata = {
 		I2C_BOARD_INFO("max8649", 0x62),
 		.platform_data	= &exynos4_max8649a_info,
 	}, {
-		I2C_BOARD_INFO("max8952", 0x60),
-		.platform_data	= &exynos4_max8952_info,
-	}, {
 		I2C_BOARD_INFO("max8997", 0x66),
 		.platform_data	= &exynos4_max8997_info,
 	}
@@ -507,6 +531,13 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
 	},
 #endif
+};
+
+static struct i2c_board_info i2c_devs3[] __initdata = {
+	{
+		I2C_BOARD_INFO("max8952", 0x60),
+		.platform_data	= &exynos4_max8952m_info,
+	},
 };
 
 static struct i2c_board_info i2c_devs7[] __initdata = {
@@ -826,6 +857,7 @@ static void __init smdk4212_machine_init(void)
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 
 	s3c_i2c3_set_platdata(NULL);
+	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
