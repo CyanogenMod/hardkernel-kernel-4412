@@ -29,6 +29,7 @@
 #include <plat/adc-core.h>
 #include <plat/pm.h>
 #include <plat/iic-core.h>
+#include <plat/cputype.h>
 
 #include <mach/regs-irq.h>
 #include <mach/smc.h>
@@ -100,16 +101,6 @@ static struct map_desc exynos4_iodesc[] __initdata = {
 		.length		= SZ_256,
 		.type		= MT_DEVICE,
 	}, {
-		.virtual	= (unsigned long)S5P_VA_DMC0,
-		.pfn		= __phys_to_pfn(EXYNOS4_PA_DMC0),
-		.length		= SZ_64K,
-		.type		= MT_DEVICE,
-	}, {
-		.virtual	= (unsigned long)S5P_VA_DMC1,
-		.pfn		= __phys_to_pfn(EXYNOS4_PA_DMC1),
-		.length		= SZ_64K,
-		.type		= MT_DEVICE,
-	}, {
 		.virtual	= (unsigned long)S3C_VA_UART,
 		.pfn		= __phys_to_pfn(S3C_PA_UART),
 		.length		= SZ_512K,
@@ -147,6 +138,34 @@ static struct map_desc exynos4_iodesc[] __initdata = {
 	},
 };
 
+static struct map_desc exynos4_iodesc_4210[] __initdata = {
+	{
+		.virtual	= (unsigned long)S5P_VA_DMC0,
+		.pfn		= __phys_to_pfn(EXYNOS4_PA_DMC0),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_DMC1,
+		.pfn		= __phys_to_pfn(EXYNOS4_PA_DMC1),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE,
+	},
+};
+
+static struct map_desc exynos4_iodesc_4212[] __initdata = {
+	{
+		.virtual	= (unsigned long)S5P_VA_DMC0,
+		.pfn		= __phys_to_pfn(EXYNOS4_PA_DMC0_4212),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_DMC1,
+		.pfn		= __phys_to_pfn(EXYNOS4_PA_DMC1_4212),
+		.length		= SZ_64K,
+		.type		= MT_DEVICE,
+	},
+};
+
 static void exynos4_idle(void)
 {
 	if (!need_resched())
@@ -163,6 +182,11 @@ static void exynos4_idle(void)
 void __init exynos4_map_io(void)
 {
 	iotable_init(exynos4_iodesc, ARRAY_SIZE(exynos4_iodesc));
+
+	if (cpu_is_exynos4212())
+		iotable_init(exynos4_iodesc_4212, ARRAY_SIZE(exynos4_iodesc_4212));
+	else
+		iotable_init(exynos4_iodesc_4210, ARRAY_SIZE(exynos4_iodesc_4210));
 
 #ifndef CONFIG_MACH_FPGA4212
 	/* initialize device information early */
