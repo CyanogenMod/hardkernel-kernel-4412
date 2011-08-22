@@ -605,6 +605,7 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&s3c_device_rtc,
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
+	&s3c_device_i2c3,
 	&s3c_device_i2c7,
 #ifdef CONFIG_USB_GADGET
 	&s3c_device_usbgadget,
@@ -823,6 +824,8 @@ static void __init smdk4212_machine_init(void)
 
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
+
+	s3c_i2c3_set_platdata(NULL);
 
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
