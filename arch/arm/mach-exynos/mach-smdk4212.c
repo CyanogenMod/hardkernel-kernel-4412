@@ -24,6 +24,9 @@
 #if defined(CONFIG_S5P_MEM_CMA)
 #include <linux/cma.h>
 #endif
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
+#endif
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -513,6 +516,48 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_ANDROID_PMEM
+static struct android_pmem_platform_data pmem_pdata = {
+	.name		= "pmem",
+	.no_allocator	= 1,
+	.cached		= 0,
+	.start		= 0,
+	.size		= 0
+};
+
+static struct android_pmem_platform_data pmem_gpu1_pdata = {
+	.name		= "pmem_gpu1",
+	.no_allocator	= 1,
+	.cached		= 0,
+	.start		= 0,
+	.size		= 0,
+};
+
+static struct platform_device pmem_device = {
+	.name	= "android_pmem",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &pmem_pdata
+	},
+};
+
+static struct platform_device pmem_gpu1_device = {
+	.name	= "android_pmem",
+	.id	= 1,
+	.dev	= {
+		.platform_data = &pmem_gpu1_pdata
+	},
+};
+
+static void __init android_pmem_set_platdata(void)
+{
+#if defined(CONFIG_S5P_MEM_CMA)
+	pmem_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K;
+	pmem_gpu1_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K;
+#endif
+}
+#endif
+
 #ifdef CONFIG_BATTERY_SAMSUNG
 static struct platform_device samsung_device_battery = {
 	.name	= "samsung-fake-battery",
@@ -538,6 +583,10 @@ static struct samsung_keypad_platdata smdk4212_keypad_data __initdata = {
 };
 
 static struct platform_device *smdk4212_devices[] __initdata = {
+#ifdef CONFIG_ANDROID_PMEM
+	&pmem_device,
+	&pmem_gpu1_device,
+#endif
 	/* Samsung Power Domain */
 	&exynos4_device_pd[PD_MFC],
 	&exynos4_device_pd[PD_G3D],
@@ -778,6 +827,9 @@ static void __init smdk4212_machine_init(void)
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
+#ifdef CONFIG_ANDROID_PMEM
+	android_pmem_set_platdata();
+#endif
 #ifdef CONFIG_FB_S5P
 #ifdef CONFIG_FB_S5P_LMS501KF03
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
