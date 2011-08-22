@@ -112,102 +112,67 @@ void __init iem_clock_set(void)
 #define IDS_OFFSET			24
 #define IDS_MASK			0xFF
 
-#define IDS_LEVEL_MAX_1400_0		8
-#define IDS_LEVEL_MAX_1400_1		15
-#define IDS_LEVEL_MAX_1400_2		37
-#define IDS_LEVEL_MAX_1400_3		52
-
-#define HPM_LEVEL_MAX_1400_0		13
-#define HPM_LEVEL_MAX_1400_1		17
-#define HPM_LEVEL_MAX_1400_2		22
-#define HPM_LEVEL_MAX_1400_3		26
-
-#define IDS_LEVEL_MAX_1200_0		4
-#define IDS_LEVEL_MAX_1200_1		8
-#define IDS_LEVEL_MAX_1200_2		12
-#define IDS_LEVEL_MAX_1200_3		17
-#define IDS_LEVEL_MAX_1200_4		27
-#define IDS_LEVEL_MAX_1200_5		45
-#define IDS_LEVEL_MAX_1200_6		55
-
-#define HPM_LEVEL_MAX_1200_0		8
-#define HPM_LEVEL_MAX_1200_1		11
-#define HPM_LEVEL_MAX_1200_2		14
-#define HPM_LEVEL_MAX_1200_3		18
-#define HPM_LEVEL_MAX_1200_4		21
-#define HPM_LEVEL_MAX_1200_5		23
-#define HPM_LEVEL_MAX_1200_6		25
-
 enum find_asv {
 	HPM_GROUP,
 	IDS_GROUP,
 };
 
-static int __init exynos4_find_group_1200(unsigned int value, enum find_asv grp)
+enum target_asv {
+	EXYNOS4210_1200,
+	EXYNOS4210_1400,
+};
+
+static struct limit_value {
+	unsigned int hpm_limit;
+	unsigned int ids_limit;
+};
+
+static struct limit_value exynos4210_1200_limit[] = {
+	/* HPM , IDS */
+	{8 , 4},
+	{11 , 8},
+	{14 , 12},
+	{18 , 17},
+	{21 , 27},
+	{23 , 45},
+	{25 , 55},
+};
+
+static struct limit_value exynos4210_1400_limit[] = {
+	/* HPM , IDS */
+	{13 , 8},
+	{17 , 12},
+	{22 , 32},
+	{26 , 52},
+};
+
+static int __init exynos4_find_group(unsigned int hpm_value,
+				     unsigned int ids_value,
+				     enum target_asv exynos4_target)
 {
 	unsigned int ret;
+	unsigned int i;
 
-	if (grp == HPM_GROUP) {
-		if (value <= HPM_LEVEL_MAX_1200_0)
-			ret = 0;
-		else if (value <= HPM_LEVEL_MAX_1200_1)
-			ret = 1;
-		else if (value <= HPM_LEVEL_MAX_1200_2)
-			ret = 2;
-		else if (value <= HPM_LEVEL_MAX_1200_3)
-			ret = 3;
-		else if (value <= HPM_LEVEL_MAX_1200_4)
-			ret = 4;
-		else if (value <= HPM_LEVEL_MAX_1200_5)
-			ret = 5;
-		else
-			ret = 6;
-	} else {
-		if (value <= IDS_LEVEL_MAX_1200_0)
-			ret = 0;
-		else if (value <= IDS_LEVEL_MAX_1200_1)
-			ret = 1;
-		else if (value <= IDS_LEVEL_MAX_1200_2)
-			ret = 2;
-		else if (value <= IDS_LEVEL_MAX_1200_3)
-			ret = 3;
-		else if (value <= IDS_LEVEL_MAX_1200_4)
-			ret = 4;
-		else if (value <= IDS_LEVEL_MAX_1200_5)
-			ret = 5;
-		else
-			ret = 6;
-	}
+	if (exynos4_target == EXYNOS4210_1200) {
+		ret = ARRAY_SIZE(exynos4210_1200_limit);
 
-	return ret;
-}
+		for (i = 0 ; i < ARRAY_SIZE(exynos4210_1200_limit) ; i++) {
+			if (hpm_value <= exynos4210_1200_limit[i].hpm_limit ||
+			   ids_value <= exynos4210_1200_limit[i].ids_limit) {
+				ret = i;
+				break;
+			}
+		}
+	} else if (exynos4_target == EXYNOS4210_1400) {
+		ret = ARRAY_SIZE(exynos4210_1400_limit);
 
-static int __init exynos4_find_group_1400(unsigned int value, enum find_asv grp)
-{
-	unsigned int ret;
-
-	if (grp == HPM_GROUP) {
-		if (value <= HPM_LEVEL_MAX_1400_0)
-			ret = 0;
-		else if (value <= HPM_LEVEL_MAX_1400_1)
-			ret = 1;
-		else if (value <= HPM_LEVEL_MAX_1400_2)
-			ret = 2;
-		else if (value <= HPM_LEVEL_MAX_1400_3)
-			ret = 3;
-		else
-			ret = 4;
-	} else {
-		if (value <= IDS_LEVEL_MAX_1400_0)
-			ret = 0;
-		else if (value <= IDS_LEVEL_MAX_1400_1)
-			ret = 1;
-		else if (value <= IDS_LEVEL_MAX_1400_2)
-			ret = 2;
-		else if (value <= IDS_LEVEL_MAX_1400_3)
-			ret = 3;
-		else
-			ret = 4;
+		for (i = 0 ; i < ARRAY_SIZE(exynos4210_1400_limit) ; i++) {
+			if (hpm_value <= exynos4210_1400_limit[i].hpm_limit ||
+			   ids_value <= exynos4210_1200_limit[i].ids_limit) {
+				ret = i;
+				break;
+			}
+		}
 	}
 
 	return ret;
@@ -287,17 +252,11 @@ static int __init exynos4_asv_init(void)
 	hpm_delay /= LOOP_CNT;
 
 	if (for_1400) {
-		result_group = exynos4_find_group_1400(hpm_delay, HPM_GROUP);
-
-		if (result_group > exynos4_find_group_1400(ids_arm, IDS_GROUP))
-			result_group = exynos4_find_group_1400(ids_arm, IDS_GROUP);
+		result_group = exynos4_find_group(hpm_delay, ids_arm, EXYNOS4210_1400);
 
 		result_group |= SUPPORT_1400MHZ;
 	} else {
-		result_group = exynos4_find_group_1200(hpm_delay, HPM_GROUP);
-
-		if (result_group > exynos4_find_group_1200(ids_arm, IDS_GROUP))
-			result_group = exynos4_find_group_1200(ids_arm, IDS_GROUP);
+		result_group = exynos4_find_group(hpm_delay, ids_arm, EXYNOS4210_1200);
 
 		if (for_1200)
 			result_group |= SUPPORT_1200MHZ;
