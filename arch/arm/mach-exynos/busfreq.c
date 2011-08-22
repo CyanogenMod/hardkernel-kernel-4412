@@ -541,14 +541,14 @@ static int __init busfreq_mon_init(void)
 	unsigned int tmp;
 	struct cpufreq_frequency_table *table;
 	unsigned int freq;
-	unsigned long val;
+	unsigned int val;
 
 	val = __raw_readl(S5P_VA_DMC0 + 0x4);
 	val = (val >> 8) & 0xf;
 
 	/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
 	if (val != 0x05) {
-		pr_err("Memory Type Undertermined.\n");
+		pr_err("[ %x ] Memory Type Undertermined.\n", val);
 		return -ENODEV;
 	}
 
