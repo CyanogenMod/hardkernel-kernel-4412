@@ -416,13 +416,13 @@ static int __init exynos_cpufreq_init(void)
 
 	exynos4_cpufreq_init_done = true;
 
+	g_cpufreq_lock_level = exynos_info->min_support_idx;
+	g_cpufreq_limit_level = exynos_info->max_support_idx;
+
 	if (cpufreq_register_driver(&exynos4_driver)) {
 		pr_err("failed to register cpufreq driver\n");
 		goto err_cpufreq;
 	}
-
-	g_cpufreq_lock_level = exynos_info->min_support_idx;
-	g_cpufreq_limit_level = exynos_info->max_support_idx;
 
 	return 0;
 err_cpufreq:
