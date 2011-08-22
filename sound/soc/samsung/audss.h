@@ -22,6 +22,10 @@ enum {
 	AUDSS_REG_RESTORE,
 };
 
+enum {
+	BUSCLK,
+	I2SCLK,
+};
+
 void audss_clk_enable(bool enable);
-int audss_set_clk_div(u32 mode);
 #endif /* __SND_SOC_SAMSUNG_AUDSS_H */

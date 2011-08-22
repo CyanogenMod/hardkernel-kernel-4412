@@ -24,13 +24,12 @@
 
 #include "audss.h"
 
-#define USE_RCLKSRC_BUS
-
 static struct audss_runtime_data {
-	struct clk *i2s_rclk;
+	struct clk *mout_audss;
+	struct clk *rclk;
 	struct clk *srp_clk;
 
-	char	*i2s_rclksrc;
+	char	*rclksrc;
 	u32	clk_src_rate;
 	u32	suspend_audss_clksrc;
 	u32	suspend_audss_clkdiv;
@@ -40,25 +39,28 @@ static struct audss_runtime_data {
 	bool	reg_saved;
 } audss;
 
-static char *i2s_rclksrc =
-#ifdef USE_RCLKSRC_BUS
-	"busclk";
-#else
-	"i2sclk";
-#endif
+static char *rclksrc[] = {
+	[0] = "busclk",
+	[1] = "i2sclk",
+};
 
 /* Lock for cross i/f checks */
 static DEFINE_SPINLOCK(lock);
 
 int audss_set_clk_div(u32 mode)
 {
-	u32 i2s_rclk_rate = 0;
+	u32 rclk_rate = 0;
 	u32 srp_clk_rate = 0;
-	u32 i2s_shift = 0;
-	u32 bus_shift = 0;
+	u32 rclk_shift = 0;
 	u32 srp_shift = 0;
 	u32 ret = -1;
 
+#ifdef CONFIG_SND_SAMSUNG_I2S_MASTER
+	pr_debug("%s: Do not set div reg in i2s master mode\n", __func__);
+	return 0;
+#endif
+
+	audss.clk_src_rate = clk_get_rate(audss.mout_audss);
 	if (!audss.clk_src_rate) {
 		pr_err("%s: Can't get current clk_rate %d\n",
 			__func__, audss.clk_src_rate);
@@ -72,20 +74,21 @@ int audss_set_clk_div(u32 mode)
 		switch (audss.clk_src_rate) {
 		case 192000000:
 		case 180000000:
-			i2s_shift = 2;
-			bus_shift = 1;
+			rclk_shift = 2;
 			srp_shift = 1;
+			break;
+		case 96000000:
+			rclk_shift = 1;
+			srp_shift = 0;
 			break;
 		case 73728000:
 		case 67737600:
-			i2s_shift = 1;
-			bus_shift = 1;
+			rclk_shift = 1;
 			srp_shift = 1;
 			break;
 		case 49152000:
 		case 45158000:
-			i2s_shift = 0;
-			bus_shift = 0;
+			rclk_shift = 0;
 			srp_shift = 0;
 			break;
 		}
@@ -94,39 +97,29 @@ int audss_set_clk_div(u32 mode)
 		switch (audss.clk_src_rate) {
 		case 192000000:
 		case 180000000:
-			i2s_shift = 4;
-			bus_shift = 4;
+			rclk_shift = 4;
+			srp_shift = 4;
+			break;
+		case 96000000:
+			rclk_shift = 4;
 			srp_shift = 4;
 			break;
 		case 73728000:
 		case 67737600:
-			i2s_shift = 2;
-			bus_shift = 2;
+			rclk_shift = 2;
 			srp_shift = 2;
 			break;
 		case 49152000:
 		case 45158000:
-			i2s_shift = 1;
-			bus_shift = 1;
+			rclk_shift = 1;
 			srp_shift = 1;
 			break;
 		}
 		break;
 	}
 
-	pr_debug("%s: i2s shift [%d], bus shift[%d], srp shift[%d]\n",
-		__func__, i2s_shift, bus_shift, srp_shift);
-
-	if (!strcmp(audss.i2s_rclksrc, "busclk"))
-		i2s_rclk_rate = audss.clk_src_rate >> bus_shift;
-	else
-		i2s_rclk_rate = audss.clk_src_rate >> i2s_shift;
-
-	if (i2s_rclk_rate != clk_get_rate(audss.i2s_rclk)) {
-		clk_set_rate(audss.i2s_rclk, i2s_rclk_rate);
-		pr_debug("%s: I2S_CLK[%ld]\n",
-			__func__, clk_get_rate(audss.i2s_rclk));
-	}
+	pr_debug("%s: rclk shift [%d], srp shift[%d]\n",
+		__func__, rclk_shift, srp_shift);
 
 	if (audss.srp_clk) {
 		srp_clk_rate = audss.clk_src_rate >> srp_shift;
@@ -135,7 +128,13 @@ int audss_set_clk_div(u32 mode)
 			pr_debug("%s: SRP_CLK[%ld]\n",
 				__func__, clk_get_rate(audss.srp_clk));
 		}
+	}
 
+	rclk_rate = audss.clk_src_rate >> rclk_shift;
+	if (rclk_rate != clk_get_rate(audss.rclk)) {
+		clk_set_rate(audss.rclk, rclk_rate);
+		pr_debug("%s: I2S_CLK[%ld]\n",
+			__func__, clk_get_rate(audss.rclk));
 	}
 
 	pr_debug("%s: AUDSS DIV REG[0x%x]\n",
@@ -182,7 +181,7 @@ void audss_clk_enable(bool enable)
 			goto exit_func;
 		}
 
-		clk_enable(audss.i2s_rclk);
+		clk_enable(audss.rclk);
 		if (audss.srp_clk)
 			clk_enable(audss.srp_clk);
 
@@ -205,7 +204,7 @@ void audss_clk_enable(bool enable)
 		audss_set_clk_div(AUDSS_INACTIVE);
 		audss_reg_save_restore(AUDSS_REG_SAVE);
 
-		clk_disable(audss.i2s_rclk);
+		clk_disable(audss.rclk);
 		if (audss.srp_clk)
 			clk_disable(audss.srp_clk);
 
@@ -222,13 +221,12 @@ exit_func:
 	return;
 }
 
-int audss_init(void)
+static __devinit int audss_init(void)
 {
-	struct clk *mout_audss;
 	int ret = 0;
 
-	audss.i2s_rclksrc = i2s_rclksrc;
-	audss.i2s_rclk = NULL;
+	audss.rclksrc = rclksrc[BUSCLK];
+	audss.rclk = NULL;
 	audss.srp_clk = NULL;
 
 #ifdef CONFIG_SND_SAMSUNG_RP
@@ -239,43 +237,41 @@ int audss_init(void)
 		return ret;
 	}
 #endif
-	mout_audss = clk_get(NULL, "mout_audss");
-	if (IS_ERR(mout_audss)) {
+	audss.mout_audss = clk_get(NULL, "mout_audss");
+	if (IS_ERR(audss.mout_audss)) {
 		pr_err("%s: failed to get mout audss\n", __func__);
-		ret = PTR_ERR(mout_audss);
+		ret = PTR_ERR(audss.mout_audss);
 		goto err1;
 	}
 
-	audss.i2s_rclk = clk_get(NULL, audss.i2s_rclksrc);
-	if (IS_ERR(audss.i2s_rclk)) {
+	audss.rclk = clk_get(NULL, audss.rclksrc);
+	if (IS_ERR(audss.rclk)) {
 		pr_err("%s: failed to get i2s root clk\n", __func__);
-		ret = PTR_ERR(audss.i2s_rclk);
+		ret = PTR_ERR(audss.rclk);
 		goto err2;
 	}
-	pr_info("%s: i2s rclk source is %s\n", __func__, audss.i2s_rclksrc);
+	pr_debug("%s: i2s rclk source is %s\n", __func__, audss.rclksrc);
 
-	if (!strcmp(audss.i2s_rclksrc, "busclk"))
-		clk_set_parent(audss.i2s_rclk, mout_audss);
+	if (!strcmp(audss.rclksrc, "busclk"))
+		clk_set_parent(audss.rclk, audss.mout_audss);
 
 	if (audss.srp_clk)
-		clk_set_parent(audss.srp_clk, mout_audss);
+		clk_set_parent(audss.srp_clk, audss.mout_audss);
 
-	audss.clk_src_rate = clk_get_rate(mout_audss);
-	ret = audss_set_clk_div(AUDSS_ACTIVE);
+	ret = audss_set_clk_div(AUDSS_INACTIVE);
 	if (ret < 0) {
 		pr_err("%s:failed to set clock rate\n", __func__);
 		goto err3;
 	}
 
 	audss.reg_saved = false;
-	audss_clk_enable(true);
 
 	return ret;
 
 err3:
-	clk_put(audss.i2s_rclk);
+	clk_put(audss.rclk);
 err2:
-	clk_put(mout_audss);
+	clk_put(audss.mout_audss);
 err1:
 	if (audss.srp_clk)
 		clk_put(audss.srp_clk);
@@ -285,8 +281,8 @@ err1:
 
 static __devexit int audss_deinit(void)
 {
-	clk_put(audss.i2s_rclk);
-	audss.i2s_rclk = NULL;
+	clk_put(audss.rclk);
+	audss.rclk = NULL;
 
 	if (audss.srp_clk) {
 		clk_put(audss.srp_clk);
@@ -296,7 +292,7 @@ static __devexit int audss_deinit(void)
 	return 0;
 }
 
-static char banner[] __initdata = KERN_INFO "Samsung Audio Subsystem Driver, (c) 2011 Samsung Electronics";
+static char banner[] __initdata = "Samsung Audio Subsystem Driver, (c) 2011 Samsung Electronics";
 
 static int __init samsung_audss_init(void)
 {
