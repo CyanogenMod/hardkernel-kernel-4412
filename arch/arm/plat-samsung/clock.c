@@ -27,7 +27,6 @@
 */
 
 #include <linux/init.h>
-#include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/errno.h>
@@ -134,15 +133,12 @@ struct clk *clk_get(struct device *dev, const char *id)
 	spin_unlock(&clocks_lock);
 	return clk;
 found_it:
-	if (!try_module_get(clk->owner))
-		clk = ERR_PTR(-ENOENT);
 	spin_unlock(&clocks_lock);
 	return clk;
 }
 
 void clk_put(struct clk *clk)
 {
-	module_put(clk->owner);
 }
 
 int clk_enable(struct clk *clk)
