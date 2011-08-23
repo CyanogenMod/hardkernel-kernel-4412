@@ -15,9 +15,14 @@ struct platform_device; /* don't need the contents */
 #include <linux/gpio.h>
 #include <plat/iic.h>
 #include <plat/gpio-cfg.h>
+#include <plat/cputype.h>
 
 void s3c_i2c4_cfg_gpio(struct platform_device *dev)
 {
-	s3c_gpio_cfgall_range(EXYNOS4_GPB(2), 2,
+	if (cpu_is_exynos4212())
+		s3c_gpio_cfgall_range(EXYNOS4_GPB(0), 2,
+			      S3C_GPIO_SFN(3), S3C_GPIO_PULL_UP);
+	else
+		s3c_gpio_cfgall_range(EXYNOS4_GPB(2), 2,
 			      S3C_GPIO_SFN(3), S3C_GPIO_PULL_UP);
 }
