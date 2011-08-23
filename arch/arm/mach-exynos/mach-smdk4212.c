@@ -69,6 +69,8 @@
 #include <mach/dsim.h>
 #include <../../../drivers/video/samsung/s3cfb.h>
 #endif
+#include <plat/fimg2d.h>
+#include <mach/sysmmu.h>
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK4212_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -1336,6 +1338,16 @@ static struct samsung_keypad_platdata smdk4212_keypad_data __initdata = {
 	.cols		= 5,
 };
 
+#ifdef CONFIG_VIDEO_FIMG2D
+static struct fimg2d_platdata fimg2d_data __initdata = {
+	.hw_ver = 0x41,
+	.parent_clkname = "mout_mpll",
+	.clkname = "sclk_fimg2d",
+	.gate_clkname = "fimg2d",
+	.clkrate = 267 * 1000000,	/* 266 Mhz */
+};
+#endif
+
 static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
@@ -1424,6 +1436,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #endif
 #ifdef CONFIG_VIDEO_MFC5X
 	&s5p_device_mfc,
+#endif
+#ifdef CONFIG_VIDEO_FIMG2D
+	&s5p_device_fimg2d,
 #endif
 	&wm8994_fixed_voltage0,
 	&wm8994_fixed_voltage1,
@@ -1638,6 +1653,10 @@ static void __init smdk4212_machine_init(void)
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
+#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+	&exynos4_device_sysmmu[SYSMMU_MDMA],
+#endif
+
 #ifdef CONFIG_ANDROID_PMEM
 	android_pmem_set_platdata();
 #endif
@@ -1721,6 +1740,12 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_VIDEO_MFC5X
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
+#endif
+#endif
+#ifdef CONFIG_VIDEO_FIMG2D
+	s5p_fimg2d_set_platdata(&fimg2d_data);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_fimg2d.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
 	samsung_keypad_set_platdata(&smdk4212_keypad_data);
