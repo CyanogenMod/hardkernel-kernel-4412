@@ -102,6 +102,9 @@ int mfc_load_firmware(const unsigned char *data, size_t size)
 {
 	volatile unsigned char *fw;
 
+	if (!data || size == 0)
+		return 0;
+
 	/* MFC F/W area already 128KB aligned */
 	fw = mfc_mem_addr(0);
 

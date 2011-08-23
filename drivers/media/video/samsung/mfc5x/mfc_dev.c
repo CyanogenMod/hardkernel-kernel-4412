@@ -86,15 +86,32 @@ static int mfc_open(struct inode *inode, struct file *file)
 
 	mutex_lock(&mfcdev->lock);
 
+	if (!mfcdev->fw.state) {
+		if (mfcdev->fw.requesting) {
+			printk(KERN_INFO "MFC F/W request is on-going, try again\n");
+			ret = -ENODEV;
+			goto err_fw_state;
+		}
+
+		printk(KERN_INFO "MFC F/W is not exist, requesting...\n");
+		ret = request_firmware(&mfcdev->fw.info, MFC_FW_NAME, mfcdev->device);
+
+		if (ret < 0) {
+			printk(KERN_INFO "failed to copy MFC F/W during open\n");
+			goto err_fw_state;
+		}
+	}
+
 	if (atomic_read(&mfcdev->inst_cnt) == 0) {
 		/* reload F/W for first instance again */
 		mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data, mfcdev->fw.info->size);
 		if (!mfcdev->fw.state) {
-			mfc_err("MFC F/W not load yet\n");
+			printk(KERN_ERR "failed to load MFC F/W, MFC will not working\n");
 			ret = -ENODEV;
 			goto err_fw_state;
+		} else {
+			printk(KERN_INFO "MFC F/W reloaded successfully (size: %d)\n", mfcdev->fw.info->size);
 		}
-		printk(KERN_INFO "MFC F/W reloaded for first Instance successfully (size: %d)\n", mfcdev->fw.info->size);
 
 		ret = mfc_power_on();
 		if (ret < 0) {
@@ -147,7 +164,7 @@ static int mfc_open(struct inode *inode, struct file *file)
 		goto err_inst_ctx;
 	}
 
-	printk(KERN_INFO"[%s]Opened Instance id %d \n",__func__,mfc_ctx->id);
+	printk(KERN_INFO "MFC instance [%d] opened", mfc_ctx->id);
 	mfc_ctx->dev = mfcdev;
 
 	atomic_inc(&mfcdev->inst_cnt);
@@ -202,7 +219,7 @@ static int mfc_release(struct inode *inode, struct file *file)
 
 	file->private_data = NULL;
 
-	printk(KERN_INFO"[%s]Released Instance id %d \n",__func__,mfc_ctx->id);
+	printk(KERN_INFO "MFC instance [%d] released\n", mfc_ctx->id);
 	dev->inst_ctx[mfc_ctx->id] = NULL;
 	atomic_dec(&dev->inst_cnt);
 
@@ -211,7 +228,7 @@ static int mfc_release(struct inode *inode, struct file *file)
 	if (atomic_read(&dev->inst_cnt) == 0) {
 		ret = mfc_power_off();
 		if (ret < 0) {
-			mfc_err("power disable failed.\n");
+			mfc_err("power disable failed\n");
 			goto err_pwr_disable;
 		}
 	} else {
@@ -840,13 +857,19 @@ static void mfc_firmware_request_complete_handler(const struct firmware *fw,
 						  void *context)
 {
 	if (fw != NULL) {
-		mfcdev->fw.state = mfc_load_firmware(fw->data, fw->size);
-		printk(KERN_INFO "MFC F/W loaded successfully (size: %d)\n", fw->size);
-
 		mfcdev->fw.info = fw;
+
+		mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data,
+				mfcdev->fw.info->size);
+		if (mfcdev->fw.state)
+			printk(KERN_INFO "MFC F/W loaded successfully (size: %d)\n", fw->size);
+		else
+			printk(KERN_ERR "failed to load MFC F/W, MFC will not working\n");
 	} else {
-		printk(KERN_ERR "failed to load MFC F/W, MFC will not working\n");
+		printk(KERN_INFO "failed to copy MFC F/W during init\n");
 	}
+
+	mfcdev->fw.requesting = 0;
 }
 
 /* FIXME: check every exception case (goto) */
@@ -941,6 +964,7 @@ static int __devinit mfc_probe(struct platform_device *pdev)
 	/*
 	 * loading firmware
 	 */
+	mfcdev->fw.requesting = 1;
 	ret = request_firmware_nowait(THIS_MODULE,
 				      FW_ACTION_HOTPLUG,
 				      MFC_FW_NAME,
@@ -949,6 +973,7 @@ static int __devinit mfc_probe(struct platform_device *pdev)
 				      pdev,
 				      mfc_firmware_request_complete_handler);
 	if (ret) {
+		mfcdev->fw.requesting = 0;
 		dev_err(&pdev->dev, "could not load firmware (err=%d)\n", ret);
 		goto err_fw_req;
 	}
@@ -1221,7 +1246,7 @@ static struct platform_driver mfc_driver = {
 static int __init mfc_init(void)
 {
 	if (platform_driver_register(&mfc_driver) != 0) {
-		printk(KERN_ERR "FIMV MFC platform device registration failed.. \n");
+		printk(KERN_ERR "FIMV MFC platform device registration failed\n");
 		return -1;
 	}
 
@@ -1231,7 +1256,7 @@ static int __init mfc_init(void)
 static void __exit mfc_exit(void)
 {
 	platform_driver_unregister(&mfc_driver);
-	mfc_info("FIMV MFC(Multi Function Codec) V5.x exit.\n");
+	mfc_info("FIMV MFC(Multi Function Codec) V5.x exit\n");
 }
 
 module_init(mfc_init);
