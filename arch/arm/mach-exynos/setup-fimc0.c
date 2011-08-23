@@ -55,7 +55,6 @@ void s3c_fimc0_cfg_gpio(struct platform_device *pdev)
 int s3c_fimc_clk_on(struct platform_device *pdev, struct clk **clk)
 {
 	struct clk *sclk_fimc_lclk = NULL;
-	struct clk *mout_epll = NULL;
 
 	sclk_fimc_lclk = clk_get(&pdev->dev, "sclk_fimc");
 	if (IS_ERR(sclk_fimc_lclk)) {
@@ -63,14 +62,12 @@ int s3c_fimc_clk_on(struct platform_device *pdev, struct clk **clk)
 		goto err_clk1;
 	}
 
-
 	/* be able to handle clock on/off only with this clock */
 	*clk = clk_get(&pdev->dev, "fimc");
 	if (IS_ERR(clk)) {
 		dev_err(&pdev->dev, "failed to get interface clock\n");
 		goto err_clk2;
 	}
-	mout_epll = clk_get(&pdev->dev, "mout_epll");
 
 	clk_enable(*clk);
 	clk_enable(sclk_fimc_lclk);
