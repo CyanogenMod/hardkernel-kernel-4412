@@ -219,7 +219,7 @@
 #define S5P_CLKGATE_IP_FSYS_PDMA1	(0x1 << 1)
 
 /*  CLK_GATE_IP_PERIL */
-#define S5P_CLKGATE_IP_PERIL_I2C0_8	(0xff << 6)
+#define S5P_CLKGATE_IP_PERIL_I2C0_7	(0xff << 6)
 
 /* Compatibility defines and inclusion */
 

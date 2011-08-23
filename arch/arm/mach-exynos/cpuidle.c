@@ -162,7 +162,7 @@ static int check_clock_gating(void)
 		return 1;
 
 	tmp = __raw_readl(S5P_CLKGATE_IP_PERIL);
-	if (tmp & S5P_CLKGATE_IP_PERIL_I2C0_8)
+	if (tmp & S5P_CLKGATE_IP_PERIL_I2C0_7)
 		return 1;
 
 	return 0;
