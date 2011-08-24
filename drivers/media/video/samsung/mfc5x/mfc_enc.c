@@ -1468,11 +1468,9 @@ static int mfc_encoding_frame(struct mfc_inst_ctx *ctx, struct mfc_enc_exe_arg *
 	write_reg(0x1 << 1, MFC_ENC_SF_BUF_CTRL);
 	#endif
 
-	if(ctx->buf_cache_type == CACHE){
-		/* FIXME: U1
+	if (ctx->buf_cache_type == CACHE) {
 		flush_all_cpu_caches();
 		outer_flush_all();
-		*/
 	}
 
 	ret = mfc_cmd_frame_start(ctx);

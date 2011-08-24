@@ -1567,11 +1567,9 @@ static void mfc_set_stream_info(
 	unsigned int ofs)
 {
 
-	if(ctx->buf_cache_type == CACHE){
-		/* FIXME: U1
+	if (ctx->buf_cache_type == CACHE) {
 		flush_all_cpu_caches();
 		outer_flush_all();
-		*/
 	}
 
 	write_reg(addr, MFC_SI_CH1_ES_ADR);
