@@ -18,6 +18,7 @@
 #include <mach/regs-pmu.h>
 #include <mach/regs-clock.h>
 
+#include <plat/cputype.h>
 #include <plat/pd.h>
 
 static int exynos4_pd_init(struct device *dev)
@@ -25,14 +26,11 @@ static int exynos4_pd_init(struct device *dev)
 	struct samsung_pd_info *pdata =  dev->platform_data;
 	struct exynos4_pd_data *data = (struct exynos4_pd_data *) pdata->data;
 
-	if (data->read_phy_addr) {
+	if (cpu_is_exynos4210() && data->read_phy_addr) {
 		data->read_base = ioremap(data->read_phy_addr, SZ_4K);
 		if (!data->read_base)
 			return -ENOMEM;
 	}
-
-	if (data->clk_base == NULL)
-		return -ENODEV;
 
 	return 0;
 }
@@ -45,10 +43,12 @@ int exynos4_pd_enable(struct device *dev)
 	u32 tmp = 0;
 
 	/*  save IP clock gating register */
-	tmp = __raw_readl(data->clk_base);
+	if (data->clk_base) {
+		tmp = __raw_readl(data->clk_base);
 
-	/*  enable all the clocks of IPs in the power domain */
-	__raw_writel(0xffffffff, data->clk_base);
+		/*  enable all the clocks of IPs in the power domain */
+		__raw_writel(0xffffffff, data->clk_base);
+	}
 
 	__raw_writel(S5P_INT_LOCAL_PWR_EN, pdata->base);
 
@@ -70,7 +70,8 @@ int exynos4_pd_enable(struct device *dev)
 		__raw_readl(data->read_base);
 
 	/* restore IP clock gating register */
-	__raw_writel(tmp, data->clk_base);
+	if (data->clk_base)
+		__raw_writel(tmp, data->clk_base);
 
 	return 0;
 }
@@ -200,6 +201,20 @@ struct platform_device exynos4_device_pd[] = {
 				.data		= &(struct exynos4_pd_data) {
 					.clk_base	= S5P_CLKGATE_IP_GPS,
 					.read_phy_addr	= EXYNOS4_PA_GPS,
+				},
+			},
+		},
+	}, {
+		.name		= "samsung-pd",
+		.id		= 7,
+		.dev = {
+			.platform_data = &(struct samsung_pd_info) {
+				.init		= exynos4_pd_init,
+				.enable		= exynos4_pd_enable,
+				.disable	= exynos4_pd_disable,
+				.base		= S5P_PMU_ISP_CONF,
+				.data		= &(struct exynos4_pd_data) {
+					.clk_base	= NULL,
 				},
 			},
 		},

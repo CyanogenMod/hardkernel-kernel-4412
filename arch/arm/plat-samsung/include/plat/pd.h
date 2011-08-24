@@ -26,7 +26,8 @@ enum exynos4_pd_block {
 	PD_LCD1,
 	PD_TV,
 	PD_CAM,
-	PD_GPS
+	PD_GPS,
+	PD_ISP,
 };
 
 struct exynos4_pd_data {
