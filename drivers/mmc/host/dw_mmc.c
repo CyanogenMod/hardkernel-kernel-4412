@@ -34,6 +34,8 @@
 #include <linux/bitops.h>
 #include <linux/regulator/consumer.h>
 
+#include <plat/cputype.h>
+
 #include "dw_mmc.h"
 
 /* Common flag combinations */
@@ -273,7 +275,7 @@ static void dw_mci_start_command(struct dw_mci *host,
 	mci_writel(host, CMDARG, cmd->arg);
 	wmb();
 
-	mci_writel(host, CMD, cmd_flags | SDMMC_CMD_START);
+	mci_writel(host, CMD, cmd_flags | SDMMC_CMD_START | host->hold_bit);
 }
 
 static void send_stop_cmd(struct dw_mci *host, struct mmc_data *data)
@@ -515,7 +517,7 @@ static void mci_send_cmd(struct dw_mci_slot *slot, u32 cmd, u32 arg)
 
 	mci_writel(host, CMDARG, arg);
 	wmb();
-	mci_writel(host, CMD, SDMMC_CMD_START | cmd);
+	mci_writel(host, CMD, SDMMC_CMD_START | host->hold_bit | cmd);
 
 	while (time_before(jiffies, timeout)) {
 		cmd_status = mci_readl(host, CMD);
@@ -968,7 +970,7 @@ static void dw_mci_push_data16(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 1;
 	while (cnt > 0) {
-		mci_writew(host, DATA, *pdata++);
+		mci_writew(host, DATA + host->data_addr, *pdata++);
 		cnt--;
 	}
 }
@@ -981,7 +983,7 @@ static void dw_mci_pull_data16(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 1;
 	while (cnt > 0) {
-		*pdata++ = mci_readw(host, DATA);
+		*pdata++ = mci_readw(host, DATA + host->data_addr);
 		cnt--;
 	}
 }
@@ -995,7 +997,7 @@ static void dw_mci_push_data32(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 2;
 	while (cnt > 0) {
-		mci_writel(host, DATA, *pdata++);
+		mci_writel(host, DATA + host->data_addr, *pdata++);
 		cnt--;
 	}
 }
@@ -1009,7 +1011,7 @@ static void dw_mci_pull_data32(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 2;
 	while (cnt > 0) {
-		*pdata++ = mci_readl(host, DATA);
+		*pdata++ = mci_readl(host, DATA + host->data_addr);
 		cnt--;
 	}
 }
@@ -1022,7 +1024,7 @@ static void dw_mci_push_data64(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 3;
 	while (cnt > 0) {
-		mci_writeq(host, DATA, *pdata++);
+		mci_writeq(host, DATA + host->data_addr, *pdata++);
 		cnt--;
 	}
 }
@@ -1035,7 +1037,7 @@ static void dw_mci_pull_data64(struct dw_mci *host, void *buf, int cnt)
 
 	cnt = cnt >> 3;
 	while (cnt > 0) {
-		*pdata++ = mci_readq(host, DATA);
+		*pdata++ = mci_readq(host, DATA + host->data_addr);
 		cnt--;
 	}
 }
@@ -1597,6 +1599,15 @@ static int dw_mci_probe(struct platform_device *pdev)
 	host = kzalloc(sizeof(struct dw_mci), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
+
+	/* IP version conrtol */
+	if (cpu_is_exynos4212()) {
+		host->data_addr = 0x100;
+		host->hold_bit = SDMMC_USE_HOLD_REG;
+	} else {
+		host->data_addr = 0x0;
+		host->hold_bit = 0;
+	}
 
 	host->pdev = pdev;
 	host->pdata = pdata = pdev->dev.platform_data;

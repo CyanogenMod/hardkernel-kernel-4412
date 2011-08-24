@@ -147,6 +147,10 @@ struct dw_mci {
 	struct dw_mci_board	*pdata;
 	struct dw_mci_slot	*slot[MAX_MCI_SLOTS];
 
+	/* IP version control */
+	u32			data_addr;
+	u32			hold_bit;
+
 	/* FIFO push and pull */
 	int			data_shift;
 	void (*push_data)(struct dw_mci *host, void *buf, int cnt);
