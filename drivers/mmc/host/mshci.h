@@ -185,6 +185,7 @@
 #define CMD_SEND_CLK_ONLY	(0x1<<21)
 #define CMD_READ_CEATA		(0x1<<22)
 #define CMD_CCS_EXPECTED	(0x1<<23)
+#define CMD_USE_HOLD_REG	(0x1<<29)
 #define CMD_STRT_BIT		(0x1<<31)
 #define CMD_ONLY_CLK		(CMD_STRT_BIT | CMD_SEND_CLK_ONLY | \
 						CMD_WAIT_PRV_DAT_BIT)
@@ -397,6 +398,10 @@ struct mshci_host {
 	u32			fifo_depth;
 	u32			fifo_threshold;
 	u32			data_transfered;
+
+	/* IP version control */
+	u32			data_addr;
+	u32			hold_bit;
 
 	u32			error_state;
 

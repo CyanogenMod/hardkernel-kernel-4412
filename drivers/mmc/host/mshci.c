@@ -126,7 +126,7 @@ static void mshci_dumpregs(struct mshci_host *host)
 	printk(KERN_DEBUG DRIVER_NAME ": MSHCI_CLOCKCON:  0x%08x\n",
 		mshci_readl(host, MSHCI_CLOCKCON));
 	printk(KERN_DEBUG DRIVER_NAME ": MSHCI_FIFODAT:   0x%08x\n",
-		mshci_readl(host, MSHCI_FIFODAT));
+		mshci_readl(host, MSHCI_FIFODAT + host->data_addr));
 	printk(KERN_DEBUG DRIVER_NAME ": ===========================================\n");
 }
 
@@ -345,7 +345,8 @@ static void mshci_read_block_pio(struct mshci_host *host)
 
 		while (len) {
 			if (chunk == 0) {
-				scratch = mshci_readl(host, MSHCI_FIFODAT);
+				scratch = mshci_readl(host,
+					MSHCI_FIFODAT + host->data_addr);
 				chunk = 4;
 			}
 
@@ -411,7 +412,8 @@ static void mshci_write_block_pio(struct mshci_host *host)
 			len--;
 
 			if ((chunk == 4) || ((len == 0) && (fifo_cnt == 0))) {
-				mshci_writel(host, scratch, MSHCI_FIFODAT);
+				mshci_writel(host, scratch,
+				MSHCI_FIFODAT + host->data_addr);
 				chunk = 0;
 				scratch = 0;
 			}
@@ -829,7 +831,7 @@ static void mshci_send_command(struct mshci_host *host, struct mmc_command *cmd)
 	}
 	if (cmd->flags & MMC_RSP_CRC)
 		flags |= CMD_CHECK_CRC_BIT;
-	flags |= (cmd->opcode | CMD_STRT_BIT | CMD_WAIT_PRV_DAT_BIT);
+	flags |= (cmd->opcode | CMD_STRT_BIT | host->hold_bit | CMD_WAIT_PRV_DAT_BIT);
 
 	ret = mshci_readl(host, MSHCI_CMD);
 	if (ret & CMD_STRT_BIT)

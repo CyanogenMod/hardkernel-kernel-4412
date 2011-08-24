@@ -27,6 +27,7 @@
 #include <plat/gpio-cfg.h>
 #include <plat/mshci.h>
 #include <plat/clock.h>
+#include <plat/cputype.h>
 
 #include "mshci.h"
 
@@ -341,6 +342,14 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 		return PTR_ERR(host);
 	}
 	sc = mshci_priv(host);
+
+	if (cpu_is_exynos4212()) {
+		host->data_addr = 0x100;
+		host->hold_bit = CMD_USE_HOLD_REG;
+	} else {
+		host->data_addr = 0x0;
+		host->hold_bit = 0;
+	}
 
 	sc->host = host;
 	sc->pdev = pdev;
