@@ -13,8 +13,10 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
 #include <linux/gpio.h>
+#include <linux/gpio_event.h>
 #include <linux/i2c.h>
 #include <linux/pwm_backlight.h>
+#include <linux/input.h>
 #include <linux/mmc/host.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/max8649.h>
@@ -506,6 +508,43 @@ static struct platform_device samsung_device_battery = {
 };
 #endif
 
+static struct gpio_event_direct_entry smdk4212_keypad_key_map[] = {
+	{
+		.gpio   = EXYNOS4_GPX0(0),
+		.code   = KEY_POWER,
+	}
+};
+
+static struct gpio_event_input_info smdk4212_keypad_key_info = {
+	.info.func              = gpio_event_input_func,
+	.info.no_suspend        = true,
+	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
+	.type                   = EV_KEY,
+	.keymap                 = smdk4212_keypad_key_map,
+	.keymap_size            = ARRAY_SIZE(smdk4212_keypad_key_map)
+};
+
+static struct gpio_event_info *smdk4212_input_info[] = {
+	&smdk4212_keypad_key_info.info,
+};
+
+static struct gpio_event_platform_data smdk4212_input_data = {
+	.names  = {
+		"smdk4212-keypad",
+		NULL,
+	},
+	.info           = smdk4212_input_info,
+	.info_count     = ARRAY_SIZE(smdk4212_input_info),
+};
+
+static struct platform_device smdk4212_input_device = {
+	.name   = GPIO_EVENT_DEV_NAME,
+	.id     = 0,
+	.dev    = {
+		.platform_data = &smdk4212_input_data,
+	},
+};
+
 static uint32_t smdk4212_keymap[] __initdata = {
 	/* KEY(row, col, keycode) */
 	KEY(1, 0, KEY_D), KEY(1, 1, KEY_A), KEY(1, 2, KEY_B),
@@ -602,6 +641,7 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&samsung_device_battery,
 #endif
 	&samsung_device_keypad,
+	&smdk4212_input_device,
 };
 
 #if defined(CONFIG_S5P_MEM_CMA)
