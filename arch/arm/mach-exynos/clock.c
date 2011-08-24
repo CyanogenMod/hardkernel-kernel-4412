@@ -775,6 +775,12 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 18),
 	}, {
+		.name		= "srp",
+		.id		= 0,
+		.enable		= exynos4_clk_audss_ctrl,
+		.ctrlbit	= S5P_AUDSS_CLKGATE_RP | S5P_AUDSS_CLKGATE_UART
+				| S5P_AUDSS_CLKGATE_TIMER,
+	}, {
 		.name		= "iis",
 		.id		= 0,
 		.enable		= exynos4_clk_audss_ctrl,
