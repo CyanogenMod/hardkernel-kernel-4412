@@ -21,6 +21,7 @@
 
 #include <plat/gpio-core.h>
 #include <plat/pm.h>
+#include <plat/cputype.h>
 
 /* PM GPIO helpers */
 
@@ -328,9 +329,16 @@ void s3c_pm_save_gpios(void)
 {
 	struct s3c_gpio_chip *ourchip;
 	unsigned int gpio_nr;
+	unsigned int gpio_max_nr;
 
+#if defined(CONFIG_ARCH_EXYNOS4)
+	gpio_max_nr = (cpu_is_exynos4212()) ? EXYNOS4212_GPIO_END :
+						EXYNOS4210_GPIO_END;
+	for (gpio_nr = 0; gpio_nr < gpio_max_nr;) {
+#else
 	for (gpio_nr = 0; gpio_nr < S3C_GPIO_END;) {
-		ourchip = s3c_gpiolib_getchip(gpio_nr);
+#endif
+	ourchip = s3c_gpiolib_getchip(gpio_nr);
 		if (!ourchip) {
 			gpio_nr++;
 			continue;
@@ -369,7 +377,15 @@ void s3c_pm_restore_gpios(void)
 	struct s3c_gpio_chip *ourchip;
 	unsigned int gpio_nr;
 
-	for (gpio_nr = 0; gpio_nr < S3C_GPIO_END;) {
+	unsigned int gpio_max_nr;
+
+#if defined(CONFIG_ARCH_EXYNOS4)
+	gpio_max_nr = (cpu_is_exynos4212()) ? EXYNOS4212_GPIO_END :
+						EXYNOS4210_GPIO_END;
+	for (gpio_nr = 0; gpio_nr < gpio_max_nr;) {
+#else
+for (gpio_nr = 0; gpio_nr < S3C_GPIO_END;) {
+#endif
 		ourchip = s3c_gpiolib_getchip(gpio_nr);
 		if (!ourchip) {
 			gpio_nr++;
