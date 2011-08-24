@@ -642,11 +642,11 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&s3c_device_usbgadget,
 #endif
 #ifdef CONFIG_USB_ANDROID_RNDIS
-        &s3c_device_rndis,
+	&s3c_device_rndis,
 #endif
 #ifdef CONFIG_USB_ANDROID
-        &s3c_device_android_usb,
-        &s3c_device_usb_mass_storage,
+	&s3c_device_android_usb,
+	&s3c_device_usb_mass_storage,
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
