@@ -236,7 +236,7 @@ static bool exynos_ss_udc_poll_bit_clear(void __iomem *ptr, u32 val, int timeout
 static bool exynos_ss_udc_issue_cmd(struct exynos_ss_udc *udc,
 				 struct exynos_ss_udc_ep_command *epcmd)
 {
-	int res;
+	bool res;
 	u32 depcmd;
 
 	/* If some of parameters are not in use, we will write it anyway
@@ -393,7 +393,8 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 	int epnum = udc_ep->epnum;
 	u32 mps;
 	int dir_in;
-	int ret = 0, res;
+	int ret = 0;
+	bool res;
 
 	dev_dbg(udc->dev,
 		"%s: ep %s: a 0x%02x, attr 0x%02x, mps 0x%04x, intr %d\n",
@@ -541,7 +542,7 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 	struct exynos_ss_udc *udc = udc_ep->parent;
 	int index = get_phys_epnum(udc_ep);
 	unsigned long irqflags;
-	int res;
+	bool res;
 
 	dev_info(udc->dev, "%s(ep %p %s, %d)\n", __func__, ep, ep->name, value);
 
@@ -675,7 +676,7 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 	struct exynos_ss_udc_ep_command epcmd;
 	struct usb_request *ureq = &udc_req->req;
 	int epnum = udc_ep->epnum;
-	int res;
+	bool res;
 
 	/* TODO: below is just very minimal code to start transfer,
 	 * we need to complete it!!! */
@@ -892,7 +893,7 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 
 	if (ret < 0) {
 		struct exynos_ss_udc_ep_command epcmd;
-		int res;
+		bool res;
 
 		dev_dbg(udc->dev, "ep0 stall (dir=%d)\n", ep0->dir_in);
 
@@ -1269,7 +1270,7 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 	u32 reg;
 	int epnum;
 	int mps;
-	int res;
+	bool res;
 
 	switch (event & EXYNOS_USB3_DEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEVT_EVENT_ULStChng:
