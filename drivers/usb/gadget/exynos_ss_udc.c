@@ -167,6 +167,7 @@ struct exynos_ss_udc {
 			__attribute__ ((aligned(EXYNOS_USB3_EVENT_BUFF_BSIZE)));
 	dma_addr_t		event_buff_dma;	
 
+	int			ep0_state;
 	struct usb_request	*ep0_reply;
 	struct usb_request	*ctrl_req;
 
@@ -211,6 +212,11 @@ static inline void __bic32(void __iomem *ptr, u32 val)
 static inline int get_phys_epnum(struct exynos_ss_udc_ep *udc_ep)
 {
 	return (udc_ep->epnum * 2 + udc_ep->dir_in);
+}
+
+static inline int get_usb_epnum(int index)
+{
+	return (index >> 1);
 }
 
 static bool exynos_ss_udc_poll_bit_clear(void __iomem *ptr, u32 val, int timeout)
@@ -1089,6 +1095,122 @@ static void exynos_ss_udc_kill_all_requests(struct exynos_ss_udc *udc,
 }
 
 /**
+ * exynos_ss_udc_complete_request_lock - complete a request given to us (locked)
+ * @udc: The device state.
+ * @udc_ep: The endpoint the request was on.
+ * @udc_req: The request to complete.
+ * @result: The result code (0 => Ok, otherwise errno)
+ *
+ * See exynos_ss_udc_complete_request(), but called with the endpoint's
+ * lock held.
+*/
+static void exynos_ss_udc_complete_request_lock(struct exynos_ss_udc *udc,
+					    struct exynos_ss_udc_ep *udc_ep,
+					    struct exynos_ss_udc_req *udc_req,
+					    int result)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&udc_ep->lock, flags);
+	exynos_ss_udc_complete_request(udc, udc_ep, udc_req, result);
+	spin_unlock_irqrestore(&udc_ep->lock, flags);
+}
+
+/**
+ * exynos_ss_udc_complete_in - complete IN transfer
+ * @udc: The device state.
+ * @udc_ep: The endpoint that has just completed.
+ *
+ * An IN transfer has been completed, update the transfer's state and then
+ * call the relevant completion routines.
+ */
+static void exynos_ss_udc_complete_in(struct exynos_ss_udc *udc,
+				  struct exynos_ss_udc_ep *udc_ep)
+{
+	struct exynos_ss_udc_req *udc_req = udc_ep->req;
+
+	if (!udc_req) {
+		dev_dbg(udc->dev, "XferCompl but no req\n");
+		return;
+	}
+
+	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, 0);
+}
+
+/**
+ * exynos_ss_udc_send_zlp - send zero-length packet on control endpoint
+ * @udc: The device instance
+ * @req: The request currently on this endpoint
+ */
+static void exynos_ss_udc_send_zlp(struct exynos_ss_udc *udc,
+			       struct exynos_ss_udc_req *req)
+{
+	static struct exynos_ss_udc_trb zlp_trb;
+	struct exynos_ss_udc_ep_command epcmd;
+	bool res;
+
+	if (!req) {
+		dev_warn(udc->dev, "%s: no request?\n", __func__);
+		return;
+	}
+
+	if (req->req.length == 0) {
+		udc->eps[0].sent_zlp = 1;
+		exynos_ss_udc_enqueue_setup(udc);
+		return;
+	}
+
+	udc->eps[0].sent_zlp = 1;
+
+	dev_dbg(udc->dev, "sending zero-length packet\n");
+
+	/* issue a zero-sized packet */
+
+	/* We don't care about buff address since transfer size is 0 */
+	zlp_trb.param1 = EXYNOS_USB3_TRB_BUFSIZ(0);
+	zlp_trb.param2 = EXYNOS_USB3_TRB_IOC | EXYNOS_USB3_TRB_LST |
+					EXYNOS_USB3_TRB_HWO;
+
+	/* Start Transfer */
+	epcmd.ep = 1;
+	epcmd.param0 = (u32) virt_to_phys(&zlp_trb);
+	epcmd.param1 = 0;
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTRTXFER;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
+	if (!res)
+		dev_err(udc->dev, "Failed to start transfer\n");
+}
+
+/**
+ * exynos_ss_udc_handle_outdone - handle receiving OutDone/SetupDone from RXFIFO
+ * @udc: The device instance
+ * @epnum: The endpoint received from
+ * @was_setup: Set if processing a SetupDone event.
+*/
+static void exynos_ss_udc_handle_outdone(struct exynos_ss_udc *udc,
+				     int epnum, bool was_setup)
+{
+	struct exynos_ss_udc_ep *udc_ep = &udc->eps[epnum];
+	struct exynos_ss_udc_req *udc_req = udc_ep->req;
+	struct usb_request *req = &udc_req->req;
+	int result = 0;
+
+	if (!udc_req) {
+		dev_dbg(udc->dev, "%s: no request active\n", __func__);
+		return;
+	}
+
+	if (epnum == 0) {
+		if (!was_setup && req->complete != exynos_ss_udc_complete_setup)
+			exynos_ss_udc_send_zlp(udc, udc_req);
+	}
+
+	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, result);
+}
+
+/**
  * exynos_ss_udc_handle_depevt - handle endpoint-specific event
  * @udc: The driver state
  * @event: event to handle
@@ -1098,8 +1220,9 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 {
 	int index = (event & 0xfe) >> 1;
 	int dir_in = index & 1;
+	int epnum = get_usb_epnum(index);
 	/* We will need it in future */
-	struct exynos_ss_udc_ep *udc_ep = &udc->eps[index];
+	struct exynos_ss_udc_ep *udc_ep = &udc->eps[epnum];
 	
 	switch (event & EXYNOS_USB3_DEPEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEPEVT_EVENT_XferNotReady:
@@ -1110,9 +1233,23 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 	case EXYNOS_USB3_DEPEVT_EVENT_XferComplete:
 
 		if (dir_in) {
-			/* TODO: handle "transfer complete" for IN EPs */
+			/* Handle "transfer complete" for IN EPs */
+			exynos_ss_udc_complete_in(udc, udc_ep);
+
+			if (epnum == 0 && !udc_ep->req)
+				exynos_ss_udc_enqueue_setup(udc);
 		} else {
-			/* TODO: handle "transfer complete" for OUT EPs */
+			/* Handle "transfer complete" for OUT EPs */
+
+			/* TODO: We need to distinguish Setup packets from other
+			 * OUT packets. We will use EP0 states for it. */
+
+/* This define is temporal so the code could be compiled */
+#define EP0_IDLE 0
+			if (epnum == 0 && udc->ep0_state == EP0_IDLE)
+				exynos_ss_udc_handle_outdone(udc, epnum, true);
+			else
+				exynos_ss_udc_handle_outdone(udc, epnum, false);
 		}
 
 		break;
