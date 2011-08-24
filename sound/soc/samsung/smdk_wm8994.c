@@ -107,6 +107,11 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 	if (ret < 0)
 		return ret;
 
+	ret = snd_soc_dai_set_sysclk(cpu_dai, SAMSUNG_I2S_OPCLK,
+					0, MOD_OPCLK_PCLK);
+	if (ret < 0)
+		return ret;
+
 	return 0;
 }
 #else /* CONFIG_SND_SAMSUNG_I2S_MASTER */
