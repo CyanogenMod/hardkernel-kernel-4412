@@ -45,11 +45,15 @@
 #include <plat/iic.h>
 #include <plat/pd.h>
 #include <plat/sdhci.h>
+#include <plat/mshci.h>
 #include <plat/ehci.h>
 #include <plat/usbgadget.h>
 #include <plat/fimc.h>
 
 #include <mach/map.h>
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+#include <mach/dwmci.h>
+#endif
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK4212_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -140,6 +144,53 @@ static struct platform_device s3c_device_spi_gpio = {
 #endif
 #endif
 
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+static void exynos4_dwmci_cfg_gpio(int width)
+{
+	unsigned int gpio;
+
+	for (gpio = EXYNOS4_GPK0(0); gpio < EXYNOS4_GPK0(2); gpio++) {
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	}
+
+	switch (width) {
+	case 8:
+		for (gpio = EXYNOS4_GPK1(3); gpio <= EXYNOS4_GPK1(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(4));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+		}
+	case 4:
+		for (gpio = EXYNOS4_GPK0(3); gpio <= EXYNOS4_GPK0(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+		}
+		break;
+	case 1:
+		gpio = EXYNOS4_GPK0(3);
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	default:
+		break;
+	}
+}
+
+static struct dw_mci_board exynos4_dwmci_pdata __initdata = {
+	.num_slots = 1,
+	.quirks = DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
+	.bus_hz = 80 * 1000 * 1000,
+	.caps = MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR | MMC_CAP_8_BIT_DATA,
+	.detect_delay_ms = 200,
+	.hclk_name = "dwmci",
+	.cclk_name = "sclk_dwmci",
+	.cfg_gpio = exynos4_dwmci_cfg_gpio,
+};
+#endif
+
 #ifdef CONFIG_S3C_DEV_HSMMC
 static struct s3c_sdhci_platdata smdk4212_hsmmc0_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
@@ -176,6 +227,24 @@ static struct s3c_sdhci_platdata smdk4212_hsmmc3_pdata __initdata = {
 };
 #endif
 
+#ifdef CONFIG_S5P_DEV_MSHC
+static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
+	.cd_type		= S3C_MSHCI_CD_PERMANENT,
+	.has_wp_gpio		= true,
+	.wp_gpio		= 0xffffffff,
+#if defined(CONFIG_EXYNOS4_MSHC_8BIT) && \
+	defined(CONFIG_EXYNOS4_MSHC_DDR)
+	.max_width		= 8,
+	.host_caps		= MMC_CAP_8_BIT_DATA | MMC_CAP_1_8V_DDR,
+#elif defined(CONFIG_EXYNOS4_MSHC_8BIT)
+	.max_width		= 8,
+	.host_caps		= MMC_CAP_8_BIT_DATA,
+#elif defined(CONFIG_EXYNOS4_MSHC_DDR)
+	.host_caps		= MMC_CAP_1_8V_DDR,
+#endif
+};
+#endif
+
 #ifdef CONFIG_USB_EHCI_S5P
 static struct s5p_ehci_platdata smdk4212_ehci_pdata;
 
@@ -198,6 +267,7 @@ static void __init smdk4212_ohci_init(void)
 }
 #endif
 
+/* USB GADGET */
 #ifdef CONFIG_USB_GADGET
 static struct s5p_usbgadget_platdata smdk4212_usbgadget_pdata;
 
@@ -637,6 +707,12 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	&s3c_device_hsmmc3,
 #endif
+#ifdef CONFIG_S5P_DEV_MSHC
+	&s3c_device_mshci,
+#endif
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+	&exynos4_device_dwmci,
+#endif
 #ifdef CONFIG_SND_SAMSUNG_AC97
 	&exynos4_device_ac97,
 #endif
@@ -872,6 +948,10 @@ static void __init smdk4212_machine_init(void)
 #endif
 	samsung_bl_set(&smdk4212_bl_gpio_info, &smdk4212_bl_data);
 
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+	exynos4_dwmci_set_platdata(&exynos4_dwmci_pdata);
+#endif
+
 #ifdef CONFIG_S3C_DEV_HSMMC
 	s3c_sdhci0_set_platdata(&smdk4212_hsmmc0_pdata);
 #endif
@@ -884,6 +964,10 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdk4212_hsmmc3_pdata);
 #endif
+#ifdef CONFIG_S5P_DEV_MSHC
+	s3c_mshci_set_platdata(&exynos4_mshc_pdata);
+#endif
+
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(NULL);
 	s3c_fimc1_set_platdata(NULL);
