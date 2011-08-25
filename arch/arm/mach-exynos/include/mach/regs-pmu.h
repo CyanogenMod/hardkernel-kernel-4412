@@ -28,8 +28,10 @@
 
 #define S5P_USE_STANDBY_WFI0			(1 << 16)
 #define S5P_USE_STANDBY_WFI1			(1 << 17)
+#define S5P_USE_STANDBYWFI_ISP_ARM		(1 << 18)
 #define S5P_USE_STANDBY_WFE0			(1 << 24)
 #define S5P_USE_STANDBY_WFE1			(1 << 25)
+#define S5P_USE_STANDBYWFE_ISP_ARM		(1 << 26)
 #define S5P_USE_MASK				((0x3 << 16) | (0x3 << 24))
 
 #define S5P_WAKEUP_STAT				S5P_PMUREG(0x0600)
