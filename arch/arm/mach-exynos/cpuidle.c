@@ -30,6 +30,7 @@
 #include <plat/exynos4.h>
 #include <plat/pm.h>
 #include <plat/devs.h>
+#include <plat/cputype.h>
 
 #ifdef CONFIG_ARM_TRUSTZONE
 #define REG_DIRECTGO_ADDR	(S5P_VA_SYSRAM_NS + 0x24)
@@ -272,12 +273,15 @@ static struct sleep_save exynos4_set_clksrc[] = {
 	{ .reg = S5P_CLKSRC_MASK_CAM			, .val = 0x11111111, },
 	{ .reg = S5P_CLKSRC_MASK_TV			, .val = 0x00000111, },
 	{ .reg = S5P_CLKSRC_MASK_LCD0			, .val = 0x00001111, },
-	{ .reg = S5P_CLKSRC_MASK_LCD1			, .val = 0x00001111, },
 	{ .reg = S5P_CLKSRC_MASK_MAUDIO			, .val = 0x00000001, },
 	{ .reg = S5P_CLKSRC_MASK_FSYS			, .val = 0x01011111, },
 	{ .reg = S5P_CLKSRC_MASK_PERIL0			, .val = 0x01111111, },
 	{ .reg = S5P_CLKSRC_MASK_PERIL1			, .val = 0x01110111, },
 	{ .reg = S5P_CLKSRC_MASK_DMC			, .val = 0x00010000, },
+};
+
+static struct sleep_save exynos4210_set_clksrc[] = {
+	{ .reg = S5P_CLKSRC_MASK_LCD1			, .val = 0x00001111, },
 };
 
 static int exynos4_check_enter(void)
@@ -384,6 +388,9 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	 */
 	s3c_pm_do_restore_core(exynos4_set_clksrc,
 			       ARRAY_SIZE(exynos4_set_clksrc));
+
+	if (cpu_is_exynos4210())
+		s3c_pm_do_restore_core(exynos4210_set_clksrc, ARRAY_SIZE(exynos4210_set_clksrc));
 
 	local_irq_disable();
 
