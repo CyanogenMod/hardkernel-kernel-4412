@@ -79,7 +79,6 @@ static struct sleep_save exynos4_clock_save[] = {
 	SAVE_ITEM(S5P_CLKGATE_IP_FSYS),
 	SAVE_ITEM(S5P_CLKGATE_IP_GPS),
 	SAVE_ITEM(S5P_CLKGATE_IP_PERIL),
-	SAVE_ITEM(S5P_CLKGATE_IP_PERIR),
 	SAVE_ITEM(S5P_CLKGATE_BLOCK),
 	SAVE_ITEM(S5P_CLKSRC_MASK_DMC),
 	SAVE_ITEM(S5P_CLKSRC_DMC),
@@ -2045,7 +2044,7 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 
 	if (cpu_is_exynos4212()) {
 		apll = s5p_get_pll35xx(xtal, __raw_readl(S5P_APLL_CON0), pll_3500);
-		mpll = s5p_get_pll35xx(xtal, __raw_readl(S5P_MPLL_CON0_4212), pll_3500);
+		mpll = s5p_get_pll35xx(xtal, __raw_readl(S5P_MPLL_CON0), pll_3500);
 		epll = s5p_get_pll36xx(xtal, __raw_readl(S5P_EPLL_CON0),
 				__raw_readl(S5P_EPLL_CON1), pll_3600);
 
