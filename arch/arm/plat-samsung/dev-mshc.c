@@ -21,6 +21,11 @@
 #include <plat/mshci.h>
 #include <plat/devs.h>
 
+#ifdef CONFIG_MACH_SMDKV310
+#include <plat/exynos4.h>
+#include <linux/mmc/host.h>
+#endif
+
 #define S5P_SZ_MSHC	(0x1000)
 
 static struct resource s3c_mshci_resource[] = {
@@ -73,6 +78,13 @@ void s3c_mshci_set_platdata(struct s3c_mshci_platdata *pd)
 		set->max_width = pd->max_width;
 	if (pd->host_caps)
 		set->host_caps |= pd->host_caps;
+#ifdef CONFIG_MACH_SMDKV310
+	if (pd->host_caps && exynos4_subrev() == 0) {
+		printk(KERN_INFO "MSHC: This exynos4 is EVT1.0. "
+					"Disable DDR R/W for eMMC.\n");
+		set->host_caps &= ~MMC_CAP_1_8V_DDR;
+	}
+#endif
 	if (pd->cfg_gpio)
 		set->cfg_gpio = pd->cfg_gpio;
 	if (pd->cfg_card)
