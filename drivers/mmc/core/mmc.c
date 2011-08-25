@@ -803,6 +803,9 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		}
 
 		if (!err && ddr) {
+			/* to inform to mshci driver
+			   that it is working as DDR mode */
+			(host->ios).ddr = (unsigned char)ddr;
 			err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 					 EXT_CSD_BUS_WIDTH,
 					 ext_csd_bits[idx][1],

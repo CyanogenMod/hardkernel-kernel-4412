@@ -246,6 +246,10 @@ static void mshci_s3c_set_ios(struct mshci_host *host,
 	}
 #endif
 
+	/* after change DDR/SDR, max_clk has been changed.
+	   You should re-calc the max_clk */
+	host->max_clk = mshci_s3c_get_max_clk(host);
+
 	mdelay(1);
 }
 

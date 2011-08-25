@@ -1087,7 +1087,7 @@ static void mshci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		if (ios->ddr == MMC_1_2V_DDR_MODE ||
 			ios->ddr == MMC_1_8V_DDR_MODE) {
 			mshci_writel(host, (0x1<<16), MSHCI_UHS_REG);
-			mshci_writel(host, (0x00020002), MSHCI_CLKSEL);
+			mshci_writel(host, (0x00010001), MSHCI_CLKSEL);
 		} else {
 			mshci_writel(host, (0x0<<0), MSHCI_UHS_REG);
 			mshci_writel(host, (0x00010001), MSHCI_CLKSEL);
