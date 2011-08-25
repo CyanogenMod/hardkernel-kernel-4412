@@ -612,6 +612,46 @@ static struct notifier_block exynos4_cpuidle_notifier = {
 	.notifier_call = exynos4_cpuidle_notifier_event,
 };
 
+#ifdef CONFIG_EXYNOS4_ENBLE_CLOCK_DOWN
+static void __init exynos4_core_down_clk(void)
+{
+	unsigned int tmp;
+
+	tmp = __raw_readl(S5P_PWR_CTRL1);
+
+	/* set arm clock divider value on idle state */
+	tmp |= ((0x7 << PWR_CTRL1_CORE2_DOWN_RATIO) |
+		(0x7 << PWR_CTRL1_CORE1_DOWN_RATIO));
+
+	/* Set PWR_CTRL1 register to use clock down feature */
+	tmp |= (PWR_CTRL1_DIV2_DOWN_EN |
+		PWR_CTRL1_DIV1_DOWN_EN |
+		PWR_CTRL1_USE_CORE1_WFE |
+		PWR_CTRL1_USE_CORE0_WFE |
+		PWR_CTRL1_USE_CORE1_WFI |
+		PWR_CTRL1_USE_CORE0_WFI);
+
+	__raw_writel(tmp, S5P_PWR_CTRL1);
+
+	tmp = __raw_readl(S5P_PWR_CTRL2);
+
+	/* set duration value on middle wakeup step */
+	tmp |=  ((0x1 << PWR_CTRL2_DUR_STANDBY2) |
+		 (0x1 << PWR_CTRL2_DUR_STANDBY1));
+
+	/* set arm clock divier value on middle wakeup step */
+	tmp |= ((0x1 << PWR_CTRL2_CORE2_UP_RATIO) |
+		(0x1 << PWR_CTRL2_CORE1_UP_RATIO));
+
+	/* Set PWR_CTRL2 register to use step up for arm clock */
+	tmp |= (PWR_CTRL2_DIV2_UP_EN | PWR_CTRL2_DIV1_UP_EN);
+
+	__raw_writel(tmp, S5P_PWR_CTRL2);
+
+	printk(KERN_INFO "Exynos4 : ARM Clock down on idle mode is enabled\n");
+}
+#endif
+
 static int __init exynos4_init_cpuidle(void)
 {
 	int i, max_cpuidle_state, cpu_id;
@@ -619,6 +659,11 @@ static int __init exynos4_init_cpuidle(void)
 	struct platform_device *pdev;
 	struct resource *res;
 
+#ifdef CONFIG_EXYNOS4_ENBLE_CLOCK_DOWN
+	/* Clock down feature can use only EXYNOS4212  */
+	if (cpu_is_exynos4212())
+		exynos4_core_down_clk();
+#endif
 	cpuidle_register_driver(&exynos4_idle_driver);
 
 	for_each_cpu(cpu_id, cpu_online_mask) {

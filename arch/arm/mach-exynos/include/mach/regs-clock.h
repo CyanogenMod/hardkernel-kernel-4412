@@ -268,6 +268,25 @@
 #define S5P_CLKGATE_SCLK_DMC		S5P_CLKREG(0x10800)
 #define S5P_CLKGATE_IP_DMC1		S5P_CLKREG(0x10904)
 
+#define S5P_PWR_CTRL1			S5P_CLKREG(0x15020)
+#define S5P_PWR_CTRL2			S5P_CLKREG(0x15024)
+
+/* PWR_CTRL  */
+#define PWR_CTRL1_CORE2_DOWN_RATIO	28
+#define PWR_CTRL1_CORE1_DOWN_RATIO	16
+#define PWR_CTRL1_DIV2_DOWN_EN		(1 << 8)
+#define PWR_CTRL1_DIV1_DOWN_EN		(1 << 7)
+#define PWR_CTRL1_USE_CORE1_WFE		(1 << 5)
+#define PWR_CTRL1_USE_CORE0_WFE		(1 << 4)
+#define PWR_CTRL1_USE_CORE1_WFI		(1 << 1)
+#define PWR_CTRL1_USE_CORE0_WFI		(1 << 0)
+#define PWR_CTRL2_DIV2_UP_EN		(1 << 25)
+#define PWR_CTRL2_DIV1_UP_EN		(1 << 24)
+#define PWR_CTRL2_DUR_STANDBY2		16
+#define PWR_CTRL2_DUR_STANDBY1		8
+#define PWR_CTRL2_CORE2_UP_RATIO	4
+#define PWR_CTRL2_CORE1_UP_RATIO	0
+
 /* Compatibility defines and inclusion */
 
 #include <mach/regs-pmu.h>
