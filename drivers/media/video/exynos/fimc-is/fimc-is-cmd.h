@@ -1,0 +1,139 @@
+/*
+ * Samsung Exynos4 SoC series FIMC-IS slave interface driver
+ *
+ * Command list
+ *
+ * Copyright (c) 2011 Samsung Electronics Co., Ltd
+ * Contact: Younghwan Joo, <yhwan.joo@samsung.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#ifndef FIMC_IS_CMD_H_
+#define FIMC_IS_CMD_H_
+
+#define IS_ERROR_VER 005 /* IS ERROR VERSION 0.05 */
+
+#define IS_ERROR_SUCCESS		0
+#define IS_ERROR_INVALID_PARAMETER	(IS_ERROR_SUCCESS + 1)
+#define IS_ERROR_INVALID_COMMAND	(IS_ERROR_INVALID_PARAMETER + 1)
+#define IS_ERROR_REQUEST_FAIL		(IS_ERROR_INVALID_COMMAND + 1)
+#define IS_ERROR_INVALID_SCENARIO	(IS_ERROR_REQUEST_FAIL + 1)
+#define IS_ERROR_BUSY			(IS_ERROR_INVALID_SCENARIO + 1)
+#define IS_ERROR_SET_PARAMETER		(IS_ERROR_BUSY + 1)
+#define IS_ERROR_INVALID_PATH		(IS_ERROR_SET_PARAMETER + 1)
+#define IS_ERROR_UNKNOWN		100
+
+#define IS_COMMAND_VER 105 /* IS COMMAND VERSION 1.05 */
+
+enum is_cmd {
+	/* HOST -> IS */
+	HIC_PREVIEW_STILL = 0x1,
+	HIC_PREVIEW_VIDEO,
+	HIC_CAPTURE_STILL,
+	HIC_CAPTURE_VIDEO,
+	HIC_STREAM_ON,
+	HIC_STREAM_OFF,
+	HIC_SET_PARAMETER,
+	HIC_GET_PARAMETER,
+	HIC_SET_TUNE,
+	HIC_LOAD_SET_FILE,
+	RESERVED1,
+	HIC_GET_STATE,
+	/* SENSOR PART*/
+	HIC_OPEN_SENSOR,
+	HIC_CLOSE_SENSOR,
+	RESERVED2,
+	RESERVED3,
+	RESERVED4,
+	/* IS -> HOST */
+	IHC_GET_SENSOR_NUMBER = 0x1000,
+	IHC_SET_SHOT_MARK,
+	/* PARAM1 : a frame number */
+	/* PARAM2 : confidence level(smile 0~100) */
+	/* PARMA3 : confidence level(blink 0~100) */
+	IHC_SET_FACE_MARK,
+	/* PARAM1 : coordinate count */
+	/* PARAM2 : coordinate buffer address */
+	IHC_FRAME_DONE,
+	/* PARAM1 : frame start number */
+	/* PARAM2 : frame count */
+	IHC_AF_DONE,
+	IHC_NOT_READY
+};
+
+enum is_reply {
+	ISR_DONE	= 0x2000,
+	ISR_NDONE
+};
+
+enum is_scenario_id {
+	ISS_PREVIEW_STILL,
+	ISS_PREVIEW_VIDEO,
+	ISS_CAPTURE_STILL,
+	ISS_CAPTURE_VIDEO,
+	ISS_END
+};
+
+#define HOST_SET_INT_BIT	0x00000001
+#define HOST_CLR_INT_BIT	0x00000001
+#define IS_SET_INT_BIT		0x00000001
+#define IS_CLR_INT_BIT		0x00000001
+
+#define HOST_SET_INTERRUPT(base)	(base->uiINTGR0 |= HOST_SET_INT_BIT)
+#define HOST_CLR_INTERRUPT(base)	(base->uiINTCR0 |= HOST_CLR_INT_BIT)
+#define IS_SET_INTERRUPT(base)		(base->uiINTGR1 |= IS_SET_INT_BIT)
+#define IS_CLR_INTERRUPT(base)		(base->uiINTCR1 |= IS_CLR_INT_BIT)
+
+struct is_common_reg {
+	u32 hicmd;
+	u32 hic_sensorid;
+	u32 hic_param1;
+	u32 hic_param2;
+	u32 hic_param3;
+	u32 hic_param4;
+
+	u32 reserved1[4];
+
+	u32 ihcmd;
+	u32 ihc_sensorid;
+	u32 ihc_param1;
+	u32 ihc_param2;
+	u32 ihc_param3;
+	u32 ihc_param4;
+
+	u32 reserved2[48];
+};
+
+struct is_mcuctl_reg {
+	u32 mcuctl;
+	u32 bboar;
+
+	u32 intgr0;
+	u32 intcr0;
+	u32 intmr0;
+	u32 intsr0;
+	u32 intmsr0;
+
+	u32 intgr1;
+	u32 intcr1;
+	u32 intmr1;
+	u32 intsr1;
+	u32 intmsr1;
+
+	u32 intcr2;
+	u32 intmr2;
+	u32 intsr2;
+	u32 intmsr2;
+
+	u32 gpoctrl;
+	u32 cpoenctlr;
+	u32 gpictlr;
+
+	u32 pad[0xD];
+
+	struct is_common_reg common_reg;
+};
+#endif
