@@ -85,6 +85,13 @@ config EXYNOS4_DEV_DWMCI
 	help
 	  Compile in platform device definitions for DWMCI
 
+config EXYNOS4_DEV_FIMC_IS
+	bool
+	depends on VIDEO_EXYNOS_FIMC_IS
+	default y
+	help
+	  Compile in platform device definition for FIMC-IS
+
 config EXYNOS4_SETUP_I2C1
 	bool
 	help
