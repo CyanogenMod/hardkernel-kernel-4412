@@ -37,6 +37,15 @@
 #include <linux/usb/android_composite.h>
 #include <linux/usb/f_mtp.h>
 
+#ifdef CONFIG_USB_ANDROID
+/* Constants for MTP_SET_INTERFACE_MODE */
+#define MTP_INTERFACE_MODE_MTP  0
+#define MTP_INTERFACE_MODE_PTP  1
+
+/* Sets the driver mode to either MTP or PTP */
+#define MTP_SET_INTERFACE_MODE     _IOW('M', 2, int)
+#endif
+
 #define BULK_BUFFER_SIZE           16384
 #define INTR_BUFFER_SIZE           28
 
