@@ -8,6 +8,12 @@ config VIDEO_EXYNOS
 	help
 	  This is a representative exynos multimedia device.
 
+config VIDEO_EXYNOS_MEMSIZE_FIMC_IS
+	int "Memory size in kbytes for FIMC-IS"
+	depends on VIDEO_EXYNOS
+	default "68175"
+
 if VIDEO_EXYNOS
 	source "drivers/media/video/exynos/fimc-lite/Kconfig"
+	source "drivers/media/video/exynos/fimc-is/Kconfig"
 endif
