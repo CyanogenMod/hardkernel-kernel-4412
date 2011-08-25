@@ -1,14 +1,35 @@
-/* linux/arch/arm/mach-exynos/clock-4212.c
+/*
+ * linux/arch/arm/mach-exynos/clock-exynos4212.c
  *
- * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
+ * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * EXYNOS4 - 4212 Clock support
+ * EXYNOS4212 - Clock support
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
 */
+
+#include <linux/kernel.h>
+#include <linux/err.h>
+#include <linux/clk.h>
+#include <linux/io.h>
+#include <linux/syscore_ops.h>
+
+#include <plat/cpu-freq.h>
+#include <plat/clock.h>
+#include <plat/cpu.h>
+#include <plat/pll.h>
+#include <plat/s5p-clock.h>
+#include <plat/clock-clksrc.h>
+#include <plat/exynos4.h>
+#include <plat/pm.h>
+
+#include <mach/hardware.h>
+#include <mach/map.h>
+#include <mach/regs-clock.h>
+#include <mach/exynos-clock.h>
 
 #ifdef CONFIG_PM
 static struct sleep_save exynos4212_clock_save[] = {
@@ -40,15 +61,6 @@ static int __maybe_unused exynos4_clk_bus_perir_ctrl(struct clk *clk, int enable
 {
 	return s5p_gatectrl(S5P_CLKGATE_BUS_PERIR, clk, enable);
 }
-
-static struct clksrc_clk clk_mout_mpll_4212 = {
-	.clk = {
-		.name		= "mout_mpll",
-		.id		= -1,
-	},
-	.sources	= &clk_src_mpll,
-	.reg_src	= { .reg = S5P_CLKSRC_DMC, .shift = 12, .size = 1 },
-};
 
 static struct clk *clk_src_mpll_user_list[] = {
 	[0] = &clk_fin_mpll,
@@ -117,7 +129,7 @@ static struct clksrc_clk clk_aclk_266_gps = {
 	.reg_div	= { .reg = S5P_CLKDIV_TOP, .shift = 20, .size = 3 },
 };
 
-static struct clksrc_clk *sysclks_4212[] = {
+static struct clksrc_clk *sysclks[] = {
 	&clk_mout_mpll_user,
 	&clk_aclk_gdl_user,
 	&clk_aclk_gdr_user,
@@ -125,7 +137,7 @@ static struct clksrc_clk *sysclks_4212[] = {
 	&clk_aclk_266_gps,
 };
 
-static struct clk init_clocks_off_4212[] = {
+static struct clk init_clocks_off[] = {
 	{
 		.name		= "mipihsi",
 		.id		= -1,
@@ -135,7 +147,7 @@ static struct clk init_clocks_off_4212[] = {
 	},
 };
 
-static struct clksrc_clk clksrcs_4212[] = {
+static struct clksrc_clk clksrcs[] = {
 	{
 		.clk		= {
 			.name		= "sclk_mipihsi",
@@ -153,8 +165,8 @@ static struct clksrc_clk clksrcs_4212[] = {
 static int exynos4212_clock_suspend(void)
 {
 	s3c_pm_do_save(exynos4212_clock_save, ARRAY_SIZE(exynos4212_clock_save));
-	s3c_pm_do_save(exynos4212_clock_save, ARRAY_SIZE(exynos4212_vpll_save));
-	s3c_pm_do_save(exynos4212_clock_save, ARRAY_SIZE(exynos4212_epll_save));
+	s3c_pm_do_save(exynos4212_vpll_save, ARRAY_SIZE(exynos4212_vpll_save));
+	s3c_pm_do_save(exynos4212_epll_save, ARRAY_SIZE(exynos4212_epll_save));
 
 	return 0;
 }
@@ -162,8 +174,8 @@ static int exynos4212_clock_suspend(void)
 static void exynos4212_clock_resume(void)
 {
 	s3c_pm_do_restore_core(exynos4212_clock_save, ARRAY_SIZE(exynos4212_clock_save));
-	s3c_pm_do_restore_core(exynos4212_clock_save, ARRAY_SIZE(exynos4212_vpll_save));
-	s3c_pm_do_restore_core(exynos4212_clock_save, ARRAY_SIZE(exynos4212_epll_save));
+	s3c_pm_do_restore_core(exynos4212_vpll_save, ARRAY_SIZE(exynos4212_vpll_save));
+	s3c_pm_do_restore_core(exynos4212_epll_save, ARRAY_SIZE(exynos4212_epll_save));
 }
 #else
 #define exynos4212_clock_suspend NULL
@@ -174,7 +186,8 @@ struct syscore_ops exynos4212_clock_syscore_ops = {
 	.suspend        = exynos4212_clock_suspend,
 	.resume         = exynos4212_clock_resume,
 };
-static void exynos4212_clock_init(void)
+
+void __init exynos4212_register_clocks(void)
 {
 	int ptr;
 
@@ -185,14 +198,16 @@ static void exynos4212_clock_init(void)
 	clkset_group_list[6] = &clk_mout_mpll_user.clk;
 	clkset_aclk_top_list[0] = &clk_mout_mpll_user.clk;
 
-	clk_mout_mpll = clk_mout_mpll_4212;
+	clk_mout_mpll.reg_src.reg = S5P_CLKSRC_DMC;
+	clk_mout_mpll.reg_src.shift = 12;
+	clk_mout_mpll.reg_src.size = 1;
 
-	for (ptr = 0; ptr < ARRAY_SIZE(sysclks_4212); ptr++)
-		s3c_register_clksrc(sysclks_4212[ptr], 1);
+	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
+		s3c_register_clksrc(sysclks[ptr], 1);
 
-	s3c_register_clksrc(clksrcs_4212, ARRAY_SIZE(clksrcs_4212));
+	s3c_register_clksrc(clksrcs, ARRAY_SIZE(clksrcs));
 
-	s3c_register_clocks(init_clocks_off_4212, ARRAY_SIZE(init_clocks_off_4212));
-	s3c_disable_clocks(init_clocks_off_4212, ARRAY_SIZE(init_clocks_off_4212));
+	s3c_register_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
+	s3c_disable_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
 	register_syscore_ops(&exynos4212_clock_syscore_ops);
 }

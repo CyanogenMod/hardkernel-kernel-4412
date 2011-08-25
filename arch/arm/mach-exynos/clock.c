@@ -175,7 +175,7 @@ static int exynos4_clksrc_mask_lcd1_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_CLKSRC_MASK_LCD1, clk, enable);
 }
 
-static int exynos4_clksrc_mask_fsys_ctrl(struct clk *clk, int enable)
+int exynos4_clksrc_mask_fsys_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_CLKSRC_MASK_FSYS, clk, enable);
 }
@@ -230,7 +230,7 @@ static int exynos4_clk_ip_lcd1_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_CLKGATE_IP_LCD1, clk, enable);
 }
 
-static int exynos4_clk_ip_fsys_ctrl(struct clk *clk, int enable)
+int exynos4_clk_ip_fsys_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_CLKGATE_IP_FSYS, clk, enable);
 }
@@ -300,13 +300,13 @@ static struct clksrc_clk clk_mout_epll = {
 	.reg_src	= { .reg = S5P_CLKSRC_TOP0, .shift = 4, .size = 1 },
 };
 
-static struct clksrc_clk clk_mout_mpll = {
+struct clksrc_clk clk_mout_mpll = {
 	.clk = {
 		.name		= "mout_mpll",
 		.id		= -1,
 	},
 	.sources	= &clk_src_mpll,
-	.reg_src	= { .reg = S5P_CLKSRC_CPU, .shift = 8, .size = 1 },
+	/* reg_src will be added in SoC's clock */
 };
 
 static struct clk *clkset_moutcore_list[] = {
@@ -383,12 +383,12 @@ static struct clksrc_clk clk_periphclk = {
 
 /* Core list of CMU_CORE side */
 
-static struct clk *clkset_corebus_list[] = {
+struct clk *clkset_corebus_list[] = {
 	[0] = &clk_mout_mpll.clk,
 	[1] = &clk_sclk_apll.clk,
 };
 
-static struct clksrc_sources clkset_mout_corebus = {
+struct clksrc_sources clkset_mout_corebus = {
 	.sources	= clkset_corebus_list,
 	.nr_sources	= ARRAY_SIZE(clkset_corebus_list),
 };
@@ -449,12 +449,12 @@ static struct clksrc_clk clk_pclk_acp = {
 
 /* Core list of CMU_TOP side */
 
-static struct clk *clkset_aclk_top_list[] = {
+struct clk *clkset_aclk_top_list[] = {
 	[0] = &clk_mout_mpll.clk,
 	[1] = &clk_sclk_apll.clk,
 };
 
-static struct clksrc_sources clkset_aclk = {
+struct clksrc_sources clkset_aclk = {
 	.sources	= clkset_aclk_top_list,
 	.nr_sources	= ARRAY_SIZE(clkset_aclk_top_list),
 };
@@ -489,7 +489,7 @@ static struct clksrc_clk clk_aclk_160 = {
 	.reg_div	= { .reg = S5P_CLKDIV_TOP, .shift = 8, .size = 3 },
 };
 
-static struct clksrc_clk clk_aclk_133 = {
+struct clksrc_clk clk_aclk_133 = {
 	.clk	= {
 		.name		= "aclk_133",
 		.id		= -1,
@@ -1236,7 +1236,7 @@ static struct clk init_clocks[] = {
 	}
 };
 
-static struct clk *clkset_group_list[] = {
+struct clk *clkset_group_list[] = {
 	[0] = &clk_ext_xtal_mux,
 	[1] = &clk_xusbxti,
 	[2] = &clk_sclk_hdmi27m,
@@ -1248,7 +1248,7 @@ static struct clk *clkset_group_list[] = {
 	[8] = &clk_sclk_vpll.clk,
 };
 
-static struct clksrc_sources clkset_group = {
+struct clksrc_sources clkset_group = {
 	.sources	= clkset_group_list,
 	.nr_sources	= ARRAY_SIZE(clkset_group_list),
 };
@@ -1781,9 +1781,6 @@ static struct clksrc_clk clksrcs[] = {
 	},
 };
 
-#include "clock-4210.c"
-#include "clock-4212.c"
-
 /* Clock initialization code */
 static struct clksrc_clk *sysclks[] = {
 	&clk_mout_apll,
@@ -2053,7 +2050,7 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 				__raw_readl(S5P_EPLL_CON1), pll_3600);
 
 		vpllsrc = clk_get_rate(&clk_vpllsrc.clk);
-		vpll = s5p_get_pll46xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
+		vpll = s5p_get_pll36xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
 				__raw_readl(S5P_VPLL_CON1), pll_3600);
 	} else {
 		apll = s5p_get_pll45xx(xtal, __raw_readl(S5P_APLL_CON0), pll_4508);
@@ -2123,68 +2120,6 @@ static struct clk *clks[] __initdata = {
 };
 
 #ifdef CONFIG_PM
-static void exynos4_restore_pll(void)
-{
-	unsigned long pll_con, locktime, lockcnt;
-	unsigned long pll_in_rate;
-	unsigned int p_div, epll_wait = 0, vpll_wait = 0;
-
-	pll_in_rate = xtal_rate;
-
-	/* EPLL */
-	pll_con = exynos4_epll_save[0].val;
-
-	if (pll_con & (1 << 31)) {
-		pll_con &= (PLL46XX_PDIV_MASK << PLL46XX_PDIV_SHIFT);
-		p_div = (pll_con >> PLL46XX_PDIV_SHIFT);
-
-		pll_in_rate /= 1000000;
-
-		locktime = (3000 / pll_in_rate) * p_div;
-		lockcnt = locktime * 10000 / (10000 / pll_in_rate);
-
-		__raw_writel(lockcnt, S5P_EPLL_LOCK);
-
-		s3c_pm_do_restore_core(exynos4_epll_save,
-				ARRAY_SIZE(exynos4_epll_save));
-		epll_wait = 1;
-	}
-
-	pll_in_rate = xtal_rate;
-
-	/* VPLL */
-	pll_con = exynos4_vpll_save[0].val;
-
-	if (pll_con & (1 << 31)) {
-		pll_in_rate /= 1000000;
-		/* 750us */
-		locktime = 750;
-		lockcnt = locktime * 10000 / (10000 / pll_in_rate);
-
-		__raw_writel(lockcnt, S5P_VPLL_LOCK);
-
-		s3c_pm_do_restore_core(exynos4_vpll_save,
-				ARRAY_SIZE(exynos4_vpll_save));
-		vpll_wait = 1;
-	}
-
-	/* Wait PLL locking */
-
-	do {
-		if (epll_wait) {
-			pll_con = __raw_readl(S5P_EPLL_CON0);
-			if (pll_con & (1 << S5P_EPLLCON0_LOCKED_SHIFT))
-				epll_wait = 0;
-		}
-
-		if (vpll_wait) {
-			pll_con = __raw_readl(S5P_VPLL_CON0);
-			if (pll_con & (1 << S5P_VPLLCON0_LOCKED_SHIFT))
-				vpll_wait = 0;
-		}
-	} while (epll_wait || vpll_wait);
-}
-
 static int exynos4_clock_suspend(void)
 {
 	s3c_pm_do_save(exynos4_clock_save, ARRAY_SIZE(exynos4_clock_save));
@@ -2196,8 +2131,9 @@ static int exynos4_clock_suspend(void)
 
 static void exynos4_clock_resume(void)
 {
-	exynos4_restore_pll();
 	s3c_pm_do_restore_core(exynos4_clock_save, ARRAY_SIZE(exynos4_clock_save));
+	s3c_pm_do_restore_core(exynos4_epll_save, ARRAY_SIZE(exynos4_epll_save));
+	s3c_pm_do_restore_core(exynos4_vpll_save, ARRAY_SIZE(exynos4_vpll_save));
 }
 #else
 #define exynos4_clock_suspend NULL
@@ -2214,11 +2150,6 @@ void __init exynos4_register_clocks(void)
 	int ptr;
 
 	s3c24xx_register_clocks(clks, ARRAY_SIZE(clks));
-
-	if (cpu_is_exynos4212())
-		exynos4212_clock_init();
-	else
-		exynos4210_clock_init();
 
 	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
 		s3c_register_clksrc(sysclks[ptr], 1);

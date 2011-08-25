@@ -229,6 +229,11 @@ void __init exynos4_init_clocks(int xtal)
 
 	s3c24xx_register_baseclocks(xtal);
 
+	if (cpu_is_exynos4210())
+		exynos4210_register_clocks();
+	else if (cpu_is_exynos4212())
+		exynos4212_register_clocks();
+
 #ifndef CONFIG_MACH_FPGA4212
 	s5p_register_clocks(xtal);
 	exynos4_register_clocks();
