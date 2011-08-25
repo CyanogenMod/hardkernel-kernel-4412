@@ -40,7 +40,6 @@
 #endif
 
 #include <plat/clock.h>
-#include <plat/fb.h>
 #include <plat/regs-dsim.h>
 #include <plat/gpio-cfg.h>
 
