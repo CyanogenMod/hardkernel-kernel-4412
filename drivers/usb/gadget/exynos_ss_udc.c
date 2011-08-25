@@ -864,8 +864,14 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD) {
 		switch (ctrl->bRequest) {
 		case USB_REQ_SET_ADDRESS:
+			__bic32(udc->regs + EXYNOS_USB3_DCFG,
+				EXYNOS_USB3_DCFG_DevAddr_MASK);
+			__orr32(udc->regs + EXYNOS_USB3_DCFG,
+				EXYNOS_USB3_DCFG_DevAddr(ctrl->wValue));
 
-			/* TODO */
+			dev_info(udc->dev, "new address %d\n", ctrl->wValue);
+
+			ret = exynos_ss_udc_send_reply(udc, ep0, NULL, 0);
 			return;
 
 		case USB_REQ_GET_STATUS:
