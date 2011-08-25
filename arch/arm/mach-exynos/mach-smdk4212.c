@@ -315,6 +315,24 @@ static struct regulator_consumer_supply max8997_buck2 =
 static struct regulator_consumer_supply max8997_buck3 =
 	REGULATOR_SUPPLY("vdd_g3d", NULL);
 
+static struct regulator_consumer_supply __initdata ldo14_consumer[] = {
+	REGULATOR_SUPPLY("vdd_c2c", NULL),
+};
+
+static struct regulator_init_data max8997_ldo_data = {
+	.constraints	= {
+		.name		= "vdd_c2c range",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= ldo14_consumer,
+};
+
 static struct regulator_init_data max8997_buck1_data = {
 	.constraints	= {
 		.name		= "vdd_arm range",
@@ -363,6 +381,7 @@ static struct regulator_init_data max8997_buck3_data = {
 };
 
 static struct max8997_regulator_data max8997_regulators[] = {
+	{ MAX8997_LDO14, &max8997_ldo_data, },
 	{ MAX8997_BUCK1, &max8997_buck1_data, },
 	{ MAX8997_BUCK2, &max8997_buck2_data, },
 	{ MAX8997_BUCK3, &max8997_buck3_data, },
