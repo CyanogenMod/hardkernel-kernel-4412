@@ -16,6 +16,7 @@
 #include <plat/devs.h>
 #include <plat/cpu.h>
 #include <plat/csis.h>
+#include <plat/cputype.h>
 
 static struct resource s3c_csis0_resource[] = {
 	[0] = {
@@ -38,11 +39,7 @@ struct platform_device s3c_device_csis0 = {
 };
 
 static struct s3c_platform_csis default_csis0_data __initdata = {
-#ifdef CONFIG_CPU_EXYNOS4212
-	.srclk_name	= "mout_mpll_user",
-#else
 	.srclk_name	= "mout_mpll",
-#endif
 	.clk_name	= "sclk_csis",
 	.clk_rate	= 166000000,
 };
@@ -60,6 +57,8 @@ void __init s3c_csis0_set_platdata(struct s3c_platform_csis *pd)
 		return;
 	}
 
+	if (cpu_is_exynos4212())
+		npd->srclk_name = "mout_mpll_user";
 	npd->cfg_gpio = s3c_csis0_cfg_gpio;
 	npd->cfg_phy_global = s3c_csis0_cfg_phy_global;
 	npd->clk_on = s3c_csis_clk_on;
@@ -87,11 +86,7 @@ struct platform_device s3c_device_csis1 = {
 };
 
 static struct s3c_platform_csis default_csis1_data __initdata = {
-#ifdef CONFIG_CPU_EXYNOS4212
-	.srclk_name	= "mout_mpll_user",
-#else
 	.srclk_name	= "mout_mpll",
-#endif
 	.clk_name	= "sclk_csis",
 	.clk_rate	= 166000000,
 };
@@ -109,6 +104,8 @@ void __init s3c_csis1_set_platdata(struct s3c_platform_csis *pd)
 		return;
 	}
 
+	if (cpu_is_exynos4212())
+		npd->srclk_name = "mout_mpll_user";
 	npd->cfg_gpio = s3c_csis1_cfg_gpio;
 	npd->cfg_phy_global = s3c_csis1_cfg_phy_global;
 	npd->clk_on = s3c_csis_clk_on;
