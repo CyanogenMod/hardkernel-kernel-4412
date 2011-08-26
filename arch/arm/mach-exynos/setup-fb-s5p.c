@@ -26,6 +26,7 @@
 
 #include <plat/clock.h>
 #include <plat/gpio-cfg.h>
+#include <plat/cputype.h>
 
 struct platform_device; /* don't need the contents */
 
@@ -86,13 +87,19 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 	struct clk *lcd_clk = NULL;
 
 	u32 rate = 0;
+	int ret = 0;
 
 	lcd_clk = clk_get(&pdev->dev, "lcd");
 	if (IS_ERR(lcd_clk)) {
-		dev_err(&pdev->dev, "failed to get ip clk for fimd\n");
+		dev_err(&pdev->dev, "failed to get operation clk for fimd\n");
 		goto err_clk0;
 	}
-	clk_enable(lcd_clk);
+
+	ret = clk_enable(lcd_clk);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to clk_enable of lcd clk for fimd\n");
+		goto err_clk0;
+	}
 	clk_put(lcd_clk);
 
 	sclk = clk_get(&pdev->dev, "sclk_fimd");
@@ -101,19 +108,36 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 		goto err_clk1;
 	}
 
-	mout_mpll = clk_get(&pdev->dev, "mout_mpll");
+	if (cpu_is_exynos4212()) 
+		mout_mpll = clk_get(&pdev->dev, "mout_mpll_user");
+	else
+		mout_mpll = clk_get(&pdev->dev, "mout_mpll");
+
 	if (IS_ERR(mout_mpll)) {
-		dev_err(&pdev->dev, "failed to get mout_mpll\n");
+		dev_err(&pdev->dev, "failed to get mout_mpll for fimd\n");
 		goto err_clk2;
 	}
 
-	clk_set_parent(sclk, mout_mpll);
-	clk_set_rate(sclk, 800000000);
+	ret = clk_set_parent(sclk, mout_mpll);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to clk_set_parent for fimd\n");
+		goto err_clk2;
+	}
+
+	ret = clk_set_rate(sclk, 800000000);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to clk_set_rate of sclk for fimd\n");
+		goto err_clk2;
+	}
 	dev_dbg(&pdev->dev, "set fimd sclk rate to %d\n", rate);
 
 	clk_put(mout_mpll);
 
-	clk_enable(sclk);
+	ret = clk_enable(sclk);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed to clk_enable of sclk for fimd\n");
+		goto err_clk2;
+	}
 
 	*s3cfb_clk = sclk;
 
@@ -138,6 +162,7 @@ int s3cfb_clk_off(struct platform_device *pdev, struct clk **clk)
 		printk(KERN_ERR "failed to get ip clk for fimd0\n");
 		goto err_clk0;
 	}
+
 	clk_disable(lcd_clk);
 	clk_put(lcd_clk);
 
@@ -147,6 +172,7 @@ int s3cfb_clk_off(struct platform_device *pdev, struct clk **clk)
 	*clk = NULL;
 
 	return 0;
+
 err_clk0:
 	clk_put(lcd_clk);
 
