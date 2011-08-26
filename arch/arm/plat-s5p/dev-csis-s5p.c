@@ -38,7 +38,11 @@ struct platform_device s3c_device_csis0 = {
 };
 
 static struct s3c_platform_csis default_csis0_data __initdata = {
+#ifdef CONFIG_CPU_EXYNOS4212
+	.srclk_name	= "mout_mpll_user",
+#else
 	.srclk_name	= "mout_mpll",
+#endif
 	.clk_name	= "sclk_csis",
 	.clk_rate	= 166000000,
 };
@@ -83,7 +87,11 @@ struct platform_device s3c_device_csis1 = {
 };
 
 static struct s3c_platform_csis default_csis1_data __initdata = {
+#ifdef CONFIG_CPU_EXYNOS4212
+	.srclk_name	= "mout_mpll_user",
+#else
 	.srclk_name	= "mout_mpll",
+#endif
 	.clk_name	= "sclk_csis",
 	.clk_rate	= 166000000,
 };
