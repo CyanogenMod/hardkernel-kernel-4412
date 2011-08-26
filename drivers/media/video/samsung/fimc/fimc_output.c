@@ -85,58 +85,6 @@ static int fimc_outdev_stop_camif(void *param)
 	return 0;
 }
 
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
-static int fimc_outdev_stop_dma(struct fimc_control *ctrl, struct fimc_ctx *ctx)
-{
-	struct s3cfb_user_window window;
-	int ret = -1;
-
-	fimc_dbg("%s: called\n", __func__);
-
-	ret = wait_event_timeout(ctrl->wq, (ctx->status == FIMC_STREAMOFF),
-							FIMC_ONESHOT_TIMEOUT);
-	if (ret == 0)
-		fimc_err("Fail: %s ctx->status=%d\n", __func__, ctx->status);
-
-	fimc_outdev_stop_camif(ctrl);
-
-	if (ctx->overlay.mode == FIMC_OVLY_DMA_MANUAL)
-		return 0;
-
-	ret = s3cfb_direct_ioctl(ctrl->id, S3CFB_SET_WIN_OFF,
-							(unsigned long)NULL);
-	if (ret < 0) {
-		fimc_err("direct_ioctl(S3CFB_SET_WIN_OFF) fail\n");
-		return -EINVAL;
-	}
-
-	/* reset WIN position */
-	memset(&window, 0, sizeof(window));
-	ret = s3cfb_direct_ioctl(ctrl->id, S3CFB_WIN_POSITION,
-			(unsigned long)&window);
-	if (ret < 0) {
-		fimc_err("direct_ioctl(S3CFB_WIN_POSITION) fail\n");
-		return -EINVAL;
-	}
-
-	ret = s3cfb_direct_ioctl(ctrl->id, S3CFB_SET_WIN_ADDR, 0x00000000);
-	if (ret < 0) {
-		fimc_err("direct_ioctl(S3CFB_SET_WIN_ADDR) fail\n");
-		return -EINVAL;
-	}
-
-	ret = s3cfb_direct_ioctl(ctrl->id, S3CFB_SET_WIN_MEM, DMA_MEM_NONE);
-	if (ret < 0) {
-		fimc_err("direct_ioctl(S3CFB_SET_WIN_MEM) fail\n");
-		return -EINVAL;
-	}
-
-	ctrl->fb.is_enable = 0;
-
-	return 0;
-}
-#endif
-
 static int fimc_outdev_stop_fifo(struct fimc_control *ctrl,
 				 struct fimc_ctx *ctx)
 {
@@ -183,10 +131,6 @@ int fimc_outdev_stop_streaming(struct fimc_control *ctrl, struct fimc_ctx *ctx)
 			ctx->status = FIMC_STREAMOFF;
 		else
 			ctx->status = FIMC_READY_OFF;
-
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
-		fimc_outdev_stop_dma(ctrl, ctx);
-#endif
 		break;
 	case FIMC_OVLY_NONE_SINGLE_BUF:		/* fall through */
 	case FIMC_OVLY_NONE_MULTI_BUF:
@@ -2069,13 +2013,6 @@ int fimc_streamoff_output(void *fh)
 
 	if (ctx->overlay.mode == FIMC_OVLY_DMA_AUTO ||
 			ctx->overlay.mode == FIMC_OVLY_DMA_MANUAL) {
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
-		ret = fimc_outdev_stop_streaming(ctrl, ctx);
-		if (ret < 0) {
-			fimc_err("Fail: fimc_outdev_stop_streaming\n");
-			return -EINVAL;
-		}
-#else
 		/* Need some delay to waiting reamined operation */
 		msleep(100);
 
@@ -2108,7 +2045,6 @@ int fimc_streamoff_output(void *fh)
 		}
 
 		ctrl->fb.is_enable = 0;
-#endif
 	}
 
 	ret = fimc_init_in_queue(ctrl, ctx);
