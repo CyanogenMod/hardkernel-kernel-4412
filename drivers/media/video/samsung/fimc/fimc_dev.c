@@ -33,6 +33,7 @@
 #include <linux/cma.h>
 #include <plat/fimc.h>
 #include <plat/clock.h>
+#include <plat/cputype.h>
 #include <mach/regs-pmu.h>
 
 #include "fimc.h"
@@ -561,7 +562,7 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 	int id, err;
 	struct cma_info mem_info;
 	struct clk *sclk_fimc_lclk = NULL;
-	struct clk *mout_mpll = NULL;
+	struct clk *fimc_src_clk = NULL;
 
 	id = pdev->id;
 	pdata = to_fimc_plat(&pdev->dev);
@@ -645,18 +646,22 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 	if (request_irq(ctrl->irq, fimc_irq, IRQF_DISABLED, ctrl->name, ctrl))
 		fimc_err("%s: request_irq failed\n", __func__);
 
-	mout_mpll = clk_get(&pdev->dev, "mout_mpll");
-	if (IS_ERR(mout_mpll))
-		dev_err(&pdev->dev, "failed to get mout_mpll\n");
+	if (cpu_is_exynos4212())
+		fimc_src_clk = clk_get(&pdev->dev, "mout_mpll_user");
+	else
+		fimc_src_clk = clk_get(&pdev->dev, "mout_mpll");
 
-	sclk_fimc_lclk = clk_get(&pdev->dev, "sclk_fimc");
+	if (IS_ERR(fimc_src_clk))
+		dev_err(&pdev->dev, "failed to get parent clock\n");
+
+	sclk_fimc_lclk = clk_get(&pdev->dev, FIMC_CORE_CLK);
 	if (IS_ERR(sclk_fimc_lclk))
 		dev_err(&pdev->dev, "failed to get sclk_fimc_lclk\n");
 
-	clk_set_parent(sclk_fimc_lclk, mout_mpll);
-	clk_set_rate(sclk_fimc_lclk, 166750000);
+	clk_set_parent(sclk_fimc_lclk, fimc_src_clk);
+	clk_set_rate(sclk_fimc_lclk, FIMC_CLK_RATE);
 	clk_put(sclk_fimc_lclk);
-	clk_put(mout_mpll);
+	clk_put(fimc_src_clk);
 
 #if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
 	fimc_hwset_reset(ctrl);

@@ -243,7 +243,8 @@ retry:
 		pm_runtime_get_sync(&pdev->dev);
 	}
 #endif
-	ret = v4l2_subdev_call(cam->sd, core, init, 1);
+	/* "0" argument means preview init for s5k4ea */
+	ret = v4l2_subdev_call(cam->sd, core, init, 0);
 
 	/* Retry camera power-up if first i2c fails. */
 	if (unlikely(ret < 0)) {

@@ -36,6 +36,9 @@
 #define FIMC_NAME		"s3c-fimc"
 #define FIMC_CMA_NAME		"fimc"
 
+#define FIMC_CORE_CLK		"sclk_fimc"
+#define FIMC_CLK_RATE		166750000
+
 #if defined(CONFIG_ARCH_EXYNOS4)
 #define FIMC_DEVICES		4
 #define FIMC_PHYBUFS		32
