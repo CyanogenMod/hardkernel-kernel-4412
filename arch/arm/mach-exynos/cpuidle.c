@@ -570,6 +570,7 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 {
 	struct cpuidle_state *new_state = state;
 	unsigned int enter_mode;
+	unsigned int tmp;
 
 	/* This mode only can be entered when only Core0 is online */
 	if (num_online_cpus() != 1) {
@@ -577,6 +578,13 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 		new_state = dev->safe_state;
 	}
 	dev->last_state = new_state;
+
+	if (cpu_is_exynos4212()) {
+		tmp = __raw_readl(S5P_CENTRAL_SEQ_OPTION);
+		tmp &= ~(S5P_USE_STANDBYWFI_ISP_ARM |
+			 S5P_USE_STANDBYWFE_ISP_ARM);
+		__raw_writel(tmp, S5P_CENTRAL_SEQ_OPTION);
+	}
 
 	if (new_state == &dev->states[0]) {
 		return exynos4_enter_idle(dev, new_state);
