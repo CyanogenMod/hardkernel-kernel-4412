@@ -95,7 +95,6 @@ resume_with_mmu:
 #ifndef CONFIG_ARM_TRUSTZONE
 	str	r0, [r1, #0x100]
 #endif
-
 	adr	r0, sleep_save_misc
 
 	ldr	r1, [r0], #4
@@ -150,6 +149,16 @@ ENTRY(exynos4_idle_resume)
 	orr	r0, r0, #(1 << 5)
 	str	r0, [r1]
 
+	ldr	r1, =0x10000000
+
+	/* Read CHIP ID */
+	ldr	r0, [r1]
+	mov	r0, r0, lsr #12
+	/* Check soc id */
+	ldr	r2, =0x43220
+	cmp	r0, r2
+	beq	exynos4212_l2_cache
+
 	/* Outer cache TAG,DATA latency */
 	ldr	r1, =0x10502000
 	mov	r0, #0x110
@@ -160,6 +169,21 @@ ENTRY(exynos4_idle_resume)
 	ldr	r0, =0x30000007
 	str	r0, [r1, #0xF60]
 
+	b	pwr_ctrl_regster
+
+exynos4212_l2_cache:
+	/* Outer cache TAG,DATA latency */
+	ldr	r1, =0x10502000
+	mov	r0, #0x110
+	str	r0, [r1, #0x108]
+	mov	r0, #0x120
+	str	r0, [r1, #0x10C]
+
+	/* L2 cache prefetch control register */
+	ldr	r0, =0x30000007
+	str	r0, [r1, #0xF60]
+
+pwr_ctrl_regster:
 	/* Power control register setting*/
 	mov	r0, #0x3
 	str	r0, [r1, #0xF80]
