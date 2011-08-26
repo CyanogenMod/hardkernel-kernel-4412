@@ -1064,15 +1064,6 @@ struct s3c_fb_user_chroma {
 	unsigned char	blue;
 };
 
-/* IOCTL commands */
-#define S3CFB_WIN_POSITION		_IOW('F', 203, \
-						struct s3c_fb_user_window)
-#define S3CFB_WIN_SET_PLANE_ALPHA	_IOW('F', 204, \
-						struct s3c_fb_user_plane_alpha)
-#define S3CFB_WIN_SET_CHROMA		_IOW('F', 205, \
-						struct s3c_fb_user_chroma)
-#define S3CFB_SET_VSYNC_INT		_IOW('F', 206, u32)
-
 int s3c_fb_set_window_position(struct fb_info *info,
 				struct s3c_fb_user_window user_window)
 {
