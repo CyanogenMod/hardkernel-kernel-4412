@@ -27,6 +27,7 @@
 #include <linux/sched.h>
 #include <linux/dma-mapping.h>
 #include <linux/io.h>
+#include <linux/irq.h>
 #include <linux/uaccess.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -49,20 +50,21 @@
 #include "srp_fw.h"
 #include "srp_ioctl.h"
 
-#define _USE_START_WITH_BUF0_			/* Start SRP after IBUF0 fill */
-#define _USE_AUTO_PAUSE_			/* Pause SRP, when two IBUF are empty */
-/* #define _USE_FW_ENDIAN_CONVERT_ */		/* Endian conversion */
-#define _USE_PCM_DUMP_				/* PCM snoop for Android */
-#define _USE_EOS_TIMEOUT_			/* Timeout option for EOS */
+#define _USE_START_WITH_BUF0_		/* Start SRP after IBUF0 fill */
+#define _USE_AUTO_PAUSE_		/* Pause SRP, when two IBUF are empty */
+#define _USE_PCM_DUMP_			/* PCM snoop for Android */
+#define _USE_EOS_TIMEOUT_		/* Timeout option for EOS */
+/* #define _USE_FW_ENDIAN_CONVERT_ */	/* Endian conversion */
 /* #define _USE_IBUF_ON_IRAM_ */
 /* #define _USE_CRC_CHK_ */
-/* #define _USE_POSTPROCESS_SKIP_TEST_ */	/* Decoding only without audio output */
+/* #define _USE_POSTPROCESS_SKIP_TEST_ */	/* only without audio output */
 
 #if (defined CONFIG_ARCH_EXYNOS4)
 	#define _IMEM_MAX_		(64 * 1024)	/* 64KBytes */
 	#define _DMEM_MAX_		(128 * 1024)	/* 128KBytes */
 	#define _IBUF_SIZE_		(16 * 1024)	/* 128KBytes in DRAM */
 	#define _WBUF_SIZE_		(_IBUF_SIZE_ * 2)	/* in DRAM */
+	#define _SBUF_SIZE_		(_IBUF_SIZE_ * 2)	/* in DRAM */
 	#define _FWBUF_SIZE_		(4 * 1024)	/* 4KBytes in F/W */
 	#define _IRAM_SIZE_		(128 * 1024)	/* Total size in IRAM */
 
@@ -79,6 +81,7 @@
 	#define _CGA_SIZE_		(36 * 1024)	/* 36KBytes */
 
 	#define _PCM_DUMP_SIZE_		(4 * 1024)	/* 4KBytes */
+	#define _AM_FILTER_SIZE_	(4 * 1024)	/* 4KBytes */
 
 	/* Reserved memory on DRAM */
 	#define _BASE_MEM_SIZE_		(CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP << 10)
@@ -130,6 +133,7 @@ struct srp_info {
 #ifdef _USE_START_WITH_BUF0_
 	int ibuf_req_skip;			/* IBUF req can be skipped */
 #endif
+	unsigned long ibuf_fill_size[2];	/* Fill size */
 	unsigned long ibuf_size;		/* IBUF size byte */
 	unsigned long frame_size;		/* 1 frame size = 1152 or 576 */
 	unsigned long frame_count;		/* Decoded frame counter */
@@ -144,7 +148,7 @@ struct srp_info {
 	int stop_after_eos;			/* State for Stop-after-EOS */
 	int pause_request;			/* Pause request from ioctl */
 	int auto_paused;			/* Pause by IBUF underrun */
-	int suspend_during_eos;			/* Suspend state during EOS */
+	int restart_after_resume;		/* Restart req. after resume */
 #ifdef _USE_EOS_TIMEOUT_
 	int timeout_eos_enabled;		/* Timeout switch during EOS */
 	struct timeval timeout_eos;		/* Timeout at acctual EOS */
@@ -191,6 +195,9 @@ struct srp_info {
 	unsigned long wbuf_pa;			/* Physical address */
 	unsigned long wbuf_pos;			/* Write pointer */
 	unsigned long wbuf_fill_size;		/* Total size by user write() */
+	unsigned char *sbuf;			/* SBUF in DRAM */
+	unsigned long sbuf_pa;			/* Physical address */
+	unsigned long sbuf_fill_size;		/* Fill size */
 
 	unsigned char *pcm_dump;		/* PCM dump buffer in DRAM */
 	unsigned long pcm_dump_pa;		/* Physical address */
@@ -203,6 +210,13 @@ struct srp_info {
 	unsigned long effect_eq_user;		/* Effect EQ user */
 	unsigned long effect_speaker;		/* Effect Speaker mode */
 
+	unsigned long force_mono_enabled;	/* Force MONO enable switch */
+
+	unsigned char *am_filter;		/* AM filter setting in DRAM */
+	unsigned long am_filter_pa;		/* Physical address */
+	unsigned long am_filter_loaded;		/* AM filter switch */
+
+	unsigned long sb_tablet_mode;		/* SB 0:Handphone, 1:Tablet */
 	void	(*audss_clk_enable)(bool enable);
 };
 
@@ -296,6 +310,17 @@ static void srp_set_gain_apply(void)
 			srp.commbox + SRP_GAIN_CTRL_FACTOR_R);
 }
 
+static void srp_set_force_mono_apply(void)
+{
+	unsigned long arm_intr_code = readl(srp.commbox +
+					SRP_ARM_INTERRUPT_CODE);
+
+	arm_intr_code &= ~SRP_ARM_INTR_CODE_FORCE_MONO;
+	arm_intr_code |= srp.force_mono_enabled
+			? SRP_ARM_INTR_CODE_FORCE_MONO : 0;
+	writel(arm_intr_code, srp.commbox + SRP_ARM_INTERRUPT_CODE);
+}
+
 static void srp_commbox_init(void)
 {
 	unsigned int reg = 0x0;
@@ -329,6 +354,7 @@ static void srp_commbox_init(void)
 
 	srp_set_effect_apply();
 	srp_set_gain_apply();
+	srp_set_force_mono_apply();
 }
 
 static void srp_commbox_deinit(void)
@@ -408,6 +434,8 @@ static void srp_flush_ibuf(void)
 	srp.ibuf_next = 0;
 	srp.ibuf_empty[0] = 1;
 	srp.ibuf_empty[1] = 1;
+	srp.ibuf_fill_size[0] = 0;
+	srp.ibuf_fill_size[1] = 0;
 #ifdef _USE_START_WITH_BUF0_
 	srp.ibuf_req_skip = 1;
 #endif
@@ -484,6 +512,7 @@ static void srp_reset(void)
 	writel(srp.ibuf_size, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_SIZE);
 	writel(_BITSTREAM_SIZE_MAX_, srp.commbox + SRP_BITSTREAM_SIZE);
 	srp_set_effect_apply();
+	srp_set_force_mono_apply();
 
 	/* RESET */
 	writel(reg, srp.commbox + SRP_CONT);
@@ -689,6 +718,57 @@ static int srp_is_timeout_eos(void)
 }
 #endif
 
+static void srp_fill_ibuf(void)
+{
+	unsigned long fill_size;
+
+	if (!srp.wbuf_pos)		/* wbuf empty? */
+		return;
+
+	if (srp.wbuf_pos >= srp.ibuf_size) {
+		fill_size = srp.ibuf_size;
+		srp.wbuf_pos -= fill_size;
+	} else {
+		fill_size = srp.wbuf_pos;
+		memset(&srp.wbuf[fill_size], 0xFF, srp.ibuf_size - fill_size);
+		srp.wbuf_pos = 0;
+	}
+
+	if (srp.ibuf_next == 0) {
+		memcpy(srp.sbuf, srp.ibuf0, srp.ibuf_size);
+		memcpy(srp.ibuf0, srp.wbuf, srp.ibuf_size);
+		s5pdbg("Fill IBUF0 (%lu)\n", fill_size);
+		srp.ibuf_empty[0] = 0;
+		srp.ibuf_next = 1;
+		srp.sbuf_fill_size = srp.ibuf_fill_size[0];
+		srp.ibuf_fill_size[0] = srp.ibuf_fill_size[1] + fill_size;
+	} else {
+		memcpy(srp.sbuf, srp.ibuf1, srp.ibuf_size);
+		memcpy(srp.ibuf1, srp.wbuf, srp.ibuf_size);
+		s5pdbg("Fill IBUF1 (%lu)\n", fill_size);
+		srp.ibuf_empty[1] = 0;
+		srp.ibuf_next = 0;
+		srp.sbuf_fill_size = srp.ibuf_fill_size[1];
+		srp.ibuf_fill_size[1] = srp.ibuf_fill_size[0] + fill_size;
+	}
+
+	if (srp.wbuf_pos)
+		memcpy(srp.wbuf, &srp.wbuf[srp.ibuf_size], srp.wbuf_pos);
+}
+
+static void srp_set_stream_size(void)
+{
+	/* Leave stream size max, if data is available */
+	if (srp.wbuf_pos)
+		return;
+
+	writel(srp.wbuf_fill_size, srp.commbox + SRP_BITSTREAM_SIZE);
+
+#ifdef _USE_EOS_TIMEOUT_
+	srp_setup_timeout_eos();
+#endif
+}
+
 #ifdef _USE_POSTPROCESS_SKIP_TEST_
 struct timeval time_open, time_release;
 #endif
@@ -800,7 +880,8 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 			if (readl(srp.commbox + SRP_READ_BITSTREAM_SIZE)
 				+ srp.ibuf_size * 2 >= srp.wbuf_fill_size)
 				break;
-			if (readl(srp.commbox + SRP_FRAME_INDEX) > frame_idx + 2)
+			if (readl(srp.commbox + SRP_FRAME_INDEX)
+						> frame_idx + 2)
 				break;
 			msleep_interruptible(2);
 		}
@@ -823,20 +904,7 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 	}
 
 	mutex_lock(&rp_mutex);
-	if (srp.ibuf_next == 0) {
-		memcpy(srp.ibuf0, srp.wbuf, srp.ibuf_size);
-		s5pdbg("Fill IBUF0\n");
-		srp.ibuf_empty[0] = 0;
-		srp.ibuf_next = 1;
-	} else {
-		memcpy(srp.ibuf1, srp.wbuf, srp.ibuf_size);
-		s5pdbg("Fill IBUF1\n");
-		srp.ibuf_empty[1] = 0;
-		srp.ibuf_next = 0;
-	}
-
-	memcpy(srp.wbuf, &srp.wbuf[srp.ibuf_size], srp.ibuf_size);
-	srp.wbuf_pos -= srp.ibuf_size;
+	srp_fill_ibuf();
 
 #ifndef _USE_START_WITH_BUF0_
 	if (!srp.ibuf_empty[0] && !srp.ibuf_empty[1]) {
@@ -846,6 +914,7 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 			writel(SRP_RUN, srp.commbox + SRP_PENDING);
 			srp.is_running = 1;
 			srp.decoding_started = 1;
+			srp.restart_after_resume = 0;
 		}
 #ifndef _USE_START_WITH_BUF0_
 	}
@@ -864,32 +933,6 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 		return -1;
 
 	return size;
-}
-
-static void srp_write_last(void)
-{
-	s5pdbg("Send remained data, %lu Bytes (Total: %08lX)\n",
-		srp.wbuf_pos ? srp.wbuf_pos : srp.ibuf_size,
-		srp.wbuf_fill_size);
-	memset(&srp.wbuf[srp.wbuf_pos], 0xFF,
-		srp.ibuf_size - srp.wbuf_pos);
-	if (srp.ibuf_next == 0) {
-		memcpy(srp.ibuf0, srp.wbuf, srp.ibuf_size);
-		s5pdbg("Fill IBUF0 (final)\n");
-		srp.ibuf_empty[0] = 0;
-		srp.ibuf_next = 1;
-	} else {
-		memcpy(srp.ibuf1, srp.wbuf, srp.ibuf_size);
-		s5pdbg("Fill IBUF1 (final)\n");
-		srp.ibuf_empty[1] = 0;
-		srp.ibuf_next = 0;
-	}
-	srp.wbuf_pos = 0;
-	writel(srp.wbuf_fill_size, srp.commbox + SRP_BITSTREAM_SIZE);
-
-#ifdef _USE_EOS_TIMEOUT_
-	srp_setup_timeout_eos();
-#endif
 }
 
 static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
@@ -949,36 +992,57 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case SRP_SEND_EOS:
 		s5pdbg("Send EOS\n");
-#ifdef _USE_EOS_TIMEOUT_
-		printk(KERN_INFO "SRP: Send EOS with timeout\n");
-		srp_setup_timeout_eos();
-#endif
 		/* No data? */
 		if (srp.wbuf_fill_size == 0) {
 			srp.stop_after_eos = 1;
 		} else if (srp.wbuf_fill_size < srp.ibuf_size * 2) {
-			srp_write_last();
+			srp_fill_ibuf();		/* Fill IBUF0 */
+#ifdef _USE_START_WITH_BUF0_
+			srp.ibuf_req_skip = 0;
+#else
 			if (srp.ibuf_empty[srp.ibuf_next])
-				srp_write_last();	/* Fill one more IBUF */
-
+				srp_fill_ibuf();	/* Fill IBUF1 */
+#endif
+			srp_set_stream_size();
 			s5pdbg("Start SRP decoding!!\n");
 			writel(SRP_RUN, srp.commbox + SRP_PENDING);
 			srp.is_running = 1;
 			srp.wait_for_eos = 1;
+			srp.decoding_started = 1;
 		} else if (srp.ibuf_empty[srp.ibuf_next]) {
-			/* Last data */
-			srp_write_last();
+			srp_fill_ibuf();		/* Last data */
+			srp_set_stream_size();
 			srp.wait_for_eos = 1;
 		} else {
 			srp.wait_for_eos = 1;
 		}
+#ifdef _USE_EOS_TIMEOUT_
+		printk(KERN_INFO "S5P_RP: Send EOS with timeout\n");
+		srp_setup_timeout_eos();
+#endif
 		break;
 
 	case SRP_RESUME_EOS:
 		s5pdbg("Resume after EOS pause\n");
-		srp_continue();
-		srp.is_running = 1;
-		srp.auto_paused = 0;
+		if (srp.restart_after_resume) {
+			srp_fill_ibuf();		/* Fill IBUF0 */
+#ifdef _USE_START_WITH_BUF0_
+			srp.ibuf_req_skip = 0;
+#else
+			srp_fill_ibuf();		/* Fill IBUF1 */
+#endif
+			srp_set_stream_size();
+			s5pdbg("Restart RP decoding!!\n");
+			writel(SRP_RUN, srp.commbox + SRP_PENDING);
+			srp.is_running = 1;
+			srp.wait_for_eos = 1;
+			srp.decoding_started = 1;
+			srp.restart_after_resume = 0;
+		} else {
+			srp_continue();
+			srp.is_running = 1;
+			srp.auto_paused = 0;
+		}
 #ifdef _USE_EOS_TIMEOUT_
 		srp_setup_timeout_eos();
 #endif
@@ -993,7 +1057,8 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				val = 1;
 			} else if (readl(srp.commbox + SRP_READ_BITSTREAM_SIZE)
 				!= srp.timeout_read_size) {
-				srp_setup_timeout_eos();	/* update timeout */
+				/* update timeout */
+				srp_setup_timeout_eos();
 			}
 		}
 #endif
@@ -1136,8 +1201,10 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 					}
 				} else {
 					pendingoff_req = 1;
-					if (srp.wait_for_eos && srp.wbuf_pos)
-						srp_write_last();
+					if (srp.wait_for_eos && srp.wbuf_pos) {
+						srp_fill_ibuf();
+						srp_set_stream_size();
+					}
 				}
 			}
 #ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
@@ -1351,6 +1418,27 @@ static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 		}
 		break;
 
+	case SRP_CTRL_FORCE_MONO:
+		arg &= 0x01;
+		s5pdbg("CTRL: Force Mono mode %s\n", arg ? "ON" : "OFF");
+		if (srp.force_mono_enabled != arg) {
+			srp.force_mono_enabled = arg;
+			if (srp.is_opened)
+				srp_set_force_mono_apply();
+		}
+		break;
+
+	case SRP_CTRL_AMFILTER_LOAD:
+		srp.am_filter_loaded = 1;
+		s5pdbg("CTRL: AM Filter Loading\n");
+		ret_val = copy_from_user(srp.am_filter, (void *)arg, 60);
+		break;
+
+	case SRP_CTRL_SB_TABLET:
+		srp.sb_tablet_mode = arg;
+		s5pdbg("CTRL: SB Mode %s\n", arg ? "Tablet" : "Handphone");
+		break;
+
 	case SRP_CTRL_IS_OPENED:
 		val = (unsigned long)srp.is_opened;
 		s5pdbg("CTRL: SRP is [%s]\n",
@@ -1377,7 +1465,12 @@ static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 		val = (unsigned long)srp.pcm_dump_enabled;
 		ret_val = copy_to_user((unsigned long *)arg, &val,
 				sizeof(unsigned long));
+		break;
 
+	case SRP_CTRL_IS_FORCE_MONO:
+		val = (unsigned long)srp.force_mono_enabled;
+		ret_val = copy_to_user((unsigned long *)arg,
+					&val, sizeof(unsigned long));
 		break;
 
 	case SRP_CTRL_ALTFW_STATE:
@@ -1514,8 +1607,17 @@ static int srp_prepare_fw_buff(struct device *dev)
 #endif
 	srp.wbuf = dma_alloc_writecombine(0, _WBUF_SIZE_,
 			   (dma_addr_t *)&srp.wbuf_pa, GFP_KERNEL);
+	srp.sbuf = dma_alloc_writecombine(0, _SBUF_SIZE_,
+			   (dma_addr_t *)&srp.sbuf_pa, GFP_KERNEL);
 	srp.pcm_dump = dma_alloc_writecombine(0, _PCM_DUMP_SIZE_,
 			   (dma_addr_t *)&srp.pcm_dump_pa, GFP_KERNEL);
+	srp.am_filter = dma_alloc_writecombine(0, _AM_FILTER_SIZE_,
+			   (dma_addr_t *)&srp.am_filter_pa, GFP_KERNEL);
+
+	srp.fw_code_vliw_size = rp_fw_vliw_len;
+	srp.fw_code_cga_size = rp_fw_cga_len;
+	srp.fw_code_cga_sa_size = rp_fw_cga_sa_len;
+	srp.fw_data_size = rp_fw_data_len;
 
 	s5pdbg("VLIW,       VA = 0x%08lX, PA = 0x%08lX\n",
 		(unsigned long)srp.fw_code_vliw,
@@ -1538,6 +1640,8 @@ static int srp_prepare_fw_buff(struct device *dev)
 	s5pdbg("PCM DUMP,   VA = 0x%08lX, PA = 0x%08lX\n",
 		(unsigned long)srp.pcm_dump,
 		srp.pcm_dump_pa);
+	s5pdbg("AM FILTER,  VA = 0x%08lX, PA = 0x%08lX\n",
+		(unsigned long)srp.am_filter, srp.am_filter_pa);
 
 	/* Clear Firmware memory & IBUF */
 	memset(srp.fw_code_vliw, 0, _VLIW_SIZE_);
@@ -1556,6 +1660,9 @@ static int srp_prepare_fw_buff(struct device *dev)
 			srp.fw_code_cga_sa_size);
 	memcpy(srp.fw_data, rp_fw_data,
 			srp.fw_data_size);
+
+	/* Clear AM filter setting */
+	memset(srp.am_filter, 0, _AM_FILTER_SIZE_);
 
 	return 0;
 }
@@ -1581,6 +1688,9 @@ static int srp_remove_fw_buff(void)
 	dma_free_writecombine(0, _IBUF_SIZE_, srp.ibuf1, srp.ibuf1_pa);
 #endif
 	dma_free_writecombine(0, _WBUF_SIZE_, srp.wbuf, srp.wbuf_pa);
+	dma_free_writecombine(0, _SBUF_SIZE_, srp.sbuf, srp.sbuf_pa);
+	dma_free_writecombine(0, _AM_FILTER_SIZE_,
+			srp.am_filter, srp.am_filter_pa);
 
 	srp.fw_code_vliw_pa = 0;
 	srp.fw_code_cga_pa = 0;
@@ -1589,6 +1699,8 @@ static int srp_remove_fw_buff(void)
 	srp.ibuf0_pa = 0;
 	srp.ibuf1_pa = 0;
 	srp.wbuf_pa = 0;
+	srp.sbuf_pa = 0;
+	srp.am_filter_pa = 0;
 
 	return 0;
 }
@@ -1715,7 +1827,7 @@ static int __init srp_probe(struct platform_device *pdev)
 	/* Operation level for idle framework */
 	srp.dram_in_use = 0;
 
-	srp.suspend_during_eos = 0;
+	srp.restart_after_resume = 0;
 
 	/* PCM dump mode */
 	srp.pcm_dump_enabled = 0;
@@ -1725,6 +1837,15 @@ static int __init srp_probe(struct platform_device *pdev)
 	srp.effect_def = 0;
 	srp.effect_eq_user = 0;
 	srp.effect_speaker = 1;
+
+	/* Disable force mono */
+	srp.force_mono_enabled = 0;
+
+	/* Disable AM filter load */
+	srp.am_filter_loaded = 0;
+
+	/* Set SB Handphone mode (0:Handphone, 1:Tablet)*/
+	srp.sb_tablet_mode = 0;
 
 	/* Clear alternate Firmware */
 	srp.alt_fw_loaded = 0;
@@ -1781,14 +1902,139 @@ static int srp_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
+
+static void srp_sbuf_fill(unsigned char *buf, unsigned long buf_size)
+{
+	memcpy(&srp.sbuf[srp.sbuf_fill_size], buf, buf_size);
+	srp.sbuf_fill_size += buf_size;
+
+	s5pdbg("SBUF Fill (0x%08lX) Total = 0x%08lX\n",
+		buf_size, srp.sbuf_fill_size);
+}
+
+static void srp_sbuf_fill_ibuf_frac(int ibuf_index)
+{
+	unsigned long frac;
+
+	if (!srp.ibuf_fill_size[ibuf_index])		/* empty? */
+		return;
+
+	frac = srp.ibuf_fill_size[ibuf_index] % srp.ibuf_size;
+	if (ibuf_index) {
+		s5pdbg("Backup IBUF1\n");
+		srp_sbuf_fill(srp.ibuf1, frac ? frac : srp.ibuf_size);
+	} else {
+		s5pdbg("Backup IBUF0\n");
+		srp_sbuf_fill(srp.ibuf0, frac ? frac : srp.ibuf_size);
+	}
+}
+
+static void srp_sbuf_fill_ibuf_skip_rp(int ibuf_index,
+					unsigned long rp_frac)
+{
+	unsigned long len;
+
+	len = srp.ibuf_size - rp_frac;
+	if (ibuf_index) {
+		s5pdbg("Backup IBUF1\n");
+		srp_sbuf_fill(&srp.ibuf1[rp_frac], len);
+	} else {
+		s5pdbg("Backup IBUF0\n");
+		srp_sbuf_fill(&srp.ibuf0[rp_frac], len);
+	}
+}
+
+static void srp_sbuf_fill_ibuf_frac_skip_rp(int ibuf_index,
+					unsigned long rp_frac)
+{
+	unsigned long frac, len;
+
+	frac = srp.ibuf_fill_size[ibuf_index] % srp.ibuf_size;
+	len = frac ? frac - rp_frac : srp.ibuf_size - rp_frac;
+	if (ibuf_index) {
+		s5pdbg("Backup IBUF1\n");
+		srp_sbuf_fill(&srp.ibuf1[rp_frac], len);
+	} else {
+		s5pdbg("Backup IBUF0\n");
+		srp_sbuf_fill(&srp.ibuf0[rp_frac], len);
+	}
+}
+
+static void srp_sbuf_fill_ibuf(void)
+{
+	unsigned long rp_read, rp_frac;
+
+	rp_read = readl(srp.commbox + SRP_READ_BITSTREAM_SIZE);
+	rp_frac = rp_read % srp.ibuf_size;
+
+	if (rp_read < srp.sbuf_fill_size) {	/* SBUF */
+		s5pdbg("Backup SBUF\n");
+		srp.sbuf_fill_size -= rp_frac;
+		memcpy(srp.sbuf, &srp.sbuf[rp_frac], srp.sbuf_fill_size);
+
+		if (srp.ibuf_fill_size[0] < srp.ibuf_fill_size[1]) {
+			srp_sbuf_fill_ibuf_frac(0);
+			srp_sbuf_fill_ibuf_frac(1);
+		} else {
+			srp_sbuf_fill_ibuf_frac(1);
+			srp_sbuf_fill_ibuf_frac(0);
+		}
+	} else {
+		srp.sbuf_fill_size = 0;	/* Clear sbuf */
+		if (srp.ibuf_fill_size[0] < srp.ibuf_fill_size[1]) {
+			if (rp_read < srp.ibuf_fill_size[0]) {
+				srp_sbuf_fill_ibuf_skip_rp(0, rp_frac);
+				srp_sbuf_fill_ibuf_frac(1);
+			} else {		/* Skip IBUF0 */
+				srp_sbuf_fill_ibuf_frac_skip_rp(1, rp_frac);
+			}
+		} else {
+			if (rp_read < srp.ibuf_fill_size[1]) {
+				srp_sbuf_fill_ibuf_skip_rp(1, rp_frac);
+				srp_sbuf_fill_ibuf_frac(0);
+			} else {		/* Skip IBUF1 */
+				srp_sbuf_fill_ibuf_frac_skip_rp(0, rp_frac);
+			}
+		}
+	}
+}
+
+static void srp_backup_sbuf(void)
+{
+	if (!srp.ibuf_fill_size[0] && !srp.ibuf_fill_size[1])
+		srp.sbuf_fill_size = 0;	/* Clear sbuf */
+	else
+		srp_sbuf_fill_ibuf();
+
+	if (srp.wbuf_pos) {
+		s5pdbg("Backup WBUF\n");
+		srp_sbuf_fill(srp.wbuf, srp.wbuf_pos);
+	}
+
+	s5pdbg("WBUF fill_size   = 0x%08lX\n", srp.wbuf_fill_size);
+	s5pdbg("Backup size      = 0x%08lX\n", srp.sbuf_fill_size);
+
+	if (srp.decoding_started) {
+		s5pdbg("restart_after_resume required\n");
+		srp.restart_after_resume = 1;
+	}
+}
+
+static void srp_restore_sbuf(void)
+{
+	if (srp.sbuf_fill_size) {
+		memcpy(srp.wbuf, srp.sbuf, srp.sbuf_fill_size);
+		srp.wbuf_pos = srp.sbuf_fill_size;
+		srp.wbuf_fill_size = srp.sbuf_fill_size;
+	}
+}
+
 static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	s5pdbg("suspend\n");
 
 	if (srp.is_opened) {
-		if (srp.wait_for_eos && !srp.is_running)
-			srp.suspend_during_eos = 1;
-
+		srp_backup_sbuf();
 		srp.audss_clk_enable(false);
 	}
 
@@ -1808,10 +2054,7 @@ static int srp_resume(struct platform_device *pdev)
 		srp_reset();
 		srp.is_running = 0;
 
-		if (srp.suspend_during_eos) {
-			srp.stop_after_eos = 1;
-			srp.suspend_during_eos = 0;
-		}
+		srp_restore_sbuf();
 	}
 
 	return 0;
