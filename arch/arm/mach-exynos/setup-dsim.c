@@ -1,23 +1,15 @@
-/*
- * EXYNOS4 MIPI-DSIM driver.
+/* linux/arch/arm/mach-exynos/setup-dsim.c
  *
- * Author: InKi Dae <inki.dae@samsung.com>
+ * Copyright (c) 2010 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com/
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
+ * DSIM controller configuration
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
- */
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
 #include <linux/kernel.h>
 #include <linux/string.h>
 #include <linux/io.h>
@@ -50,11 +42,14 @@ static void s5p_dsim_enable_dsi_master(unsigned char enable)
 
 void s5p_dsim_enable_clk(void *d_clk, unsigned char enable)
 {
+	int ret = 0;
 	struct clk *dsim_clk = (struct clk *) d_clk;
 
-	if (enable)
-		clk_enable(dsim_clk);
-	else
+	if (enable) {
+		ret = clk_enable(dsim_clk);
+		if (ret < 0)
+			printk("failed to clk_enable of dsim\n");
+	} else
 		clk_disable(dsim_clk);
 }
 
