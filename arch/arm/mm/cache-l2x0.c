@@ -79,11 +79,7 @@ static inline void l2x0_inv_line(unsigned long addr)
 
 static void l2x0_set_debug(unsigned long val)
 {
-#ifdef CONFIG_ARM_TRUSTZONE
-	/* To Do: Add a SMC Call */
-#else
 	writel_relaxed(val, l2x0_base + L2X0_DEBUG_CTRL);
-#endif
 }
 #else
 /* Optimised out for non-errata case */
