@@ -21,9 +21,6 @@
 #include <linux/earlysuspend.h>
 #endif
 #include <plat/fb-s5p.h>
-#ifdef CONFIG_VCM
-#include <plat/s5p-vcm.h>
-#endif
 #endif
 
 #define S3CFB_NAME		"s3cfb"
@@ -153,23 +150,12 @@ struct s3cfb_global {
 	enum s3cfb_output_t	output;
 	enum s3cfb_rgb_mode_t	rgb_mode;
 	struct s3cfb_lcd	*lcd;
-#ifdef CONFIG_VCM
-	struct vcm		*s5p_vcm;
-#endif
-
 	int 			system_state;
 #ifdef CONFIG_HAS_WAKELOCK
 	struct early_suspend	early_suspend;
 	struct wake_lock	idle_lock;
 #endif
 };
-
-#ifdef CONFIG_VCM
-struct s3cfb_vcm {
-	struct	vcm	*dev_vcm;
-	struct	vcm_res *dev_vcm_res;
-};
-#endif
 
 struct s3cfb_window {
 	int			id;
@@ -185,12 +171,6 @@ struct s3cfb_window {
 	struct			s3cfb_alpha alpha;
 	struct			s3cfb_chroma chroma;
 	int			power_state;
-
-#ifdef CONFIG_VCM
-	struct s3cfb_vcm	s3cfb_vcm[MAX_BUFFER_NUM];
-	ump_dd_handle		ump_wrapped_buffer[MAX_BUFFER_NUM];
-	struct vcm_res		*s5p_vcm_res;
-#endif
 };
 
 struct s3cfb_user_window {
