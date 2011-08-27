@@ -109,6 +109,14 @@ void __init exynos4210_register_clocks(void)
 	clk_mout_mpll.reg_src.shift = 8;
 	clk_mout_mpll.reg_src.size = 1;
 
+	clk_aclk_200.sources = &clkset_aclk;
+	clk_aclk_200.reg_src.reg = S5P_CLKSRC_TOP0;
+	clk_aclk_200.reg_src.shift = 12;
+	clk_aclk_200.reg_src.size = 1;
+	clk_aclk_200.reg_div.reg = S5P_CLKDIV_TOP;
+	clk_aclk_200.reg_div.shift = 0;
+	clk_aclk_200.reg_div.size = 3;
+
 	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
 		s3c_register_clksrc(sysclks[ptr], 1);
 

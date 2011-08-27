@@ -24,6 +24,9 @@ extern struct clk clk_sclk_hdmiphy;
 extern struct clksrc_clk clk_sclk_apll;
 extern struct clksrc_clk clk_mout_mpll;
 extern struct clksrc_clk clk_aclk_133;
+extern struct clksrc_clk clk_aclk_200;
+extern struct clksrc_clk clk_aclk_266;
+extern struct clksrc_clk clk_aclk_400;
 extern struct clksrc_clk clk_mout_epll;
 extern struct clksrc_clk clk_sclk_vpll;
 

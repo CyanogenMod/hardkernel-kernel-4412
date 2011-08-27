@@ -112,9 +112,9 @@ static struct clksrc_clk clk_aclk_gdr_user = {
 	.reg_src        = { .reg = S5P_CLKSRC_RIGHTBUS, .shift = 4, .size = 1 },
 };
 
-static struct clksrc_clk clk_aclk_400_isp = {
+static struct clksrc_clk clk_mout_aclk_400 = {
 	.clk	= {
-		.name		= "aclk_400_isp",
+		.name		= "mout_aclk_400",
 		.id		= -1,
 	},
 	.sources	= &clkset_aclk,
@@ -122,9 +122,9 @@ static struct clksrc_clk clk_aclk_400_isp = {
 	.reg_div	= { .reg = S5P_CLKDIV_TOP, .shift = 24, .size = 3 },
 };
 
-static struct clksrc_clk clk_aclk_266_gps = {
+static struct clksrc_clk clk_mout_aclk_266 = {
 	.clk	= {
-		.name		= "aclk_266_gps",
+		.name		= "mout_aclk_266",
 		.id		= -1,
 	},
 	.sources	= &clkset_aclk,
@@ -132,12 +132,73 @@ static struct clksrc_clk clk_aclk_266_gps = {
 	.reg_div	= { .reg = S5P_CLKDIV_TOP, .shift = 20, .size = 3 },
 };
 
+static struct clksrc_clk clk_mout_aclk_200 = {
+	.clk	= {
+		.name		= "mout_aclk_200",
+		.id		= -1,
+	},
+	.sources	= &clkset_aclk,
+	.reg_src	= { .reg = S5P_CLKSRC_TOP0, .shift = 12, .size = 1 },
+	.reg_div	= { .reg = S5P_CLKDIV_TOP, .shift = 0, .size = 3 },
+};
+
+static struct clk *clk_aclk_400_list[] = {
+	[0] = &clk_fin_mpll,
+	[1] = &clk_mout_aclk_400.clk,
+};
+
+static struct clksrc_sources clkset_aclk_400 = {
+	.sources        = clk_aclk_400_list,
+	.nr_sources     = ARRAY_SIZE(clk_aclk_400_list),
+};
+
+struct clksrc_clk clk_aclk_400 = {
+	.clk    = {
+		.name           = "aclk_400",
+		.id             = -1,
+	},
+	.sources        = &clkset_aclk_400,
+	.reg_src        = { .reg = S5P_CLKSRC_TOP1, .shift = 24, .size = 1 },
+};
+
+static struct clk *clk_aclk_266_list[] = {
+	[0] = &clk_fin_mpll,
+	[1] = &clk_mout_aclk_266.clk,
+};
+
+static struct clksrc_sources clkset_aclk_266 = {
+	.sources        = clk_aclk_266_list,
+	.nr_sources     = ARRAY_SIZE(clk_aclk_266_list),
+};
+
+struct clksrc_clk clk_aclk_266 = {
+	.clk    = {
+		.name           = "aclk_266",
+		.id             = -1,
+	},
+	.sources        = &clkset_aclk_266,
+	.reg_src        = { .reg = S5P_CLKSRC_TOP1, .shift = 16, .size = 1 },
+};
+
+static struct clk *clk_aclk_200_list[] = {
+	[0] = &clk_fin_mpll,
+	[1] = &clk_mout_aclk_200.clk,
+};
+
+static struct clksrc_sources clkset_aclk_200 = {
+	.sources        = clk_aclk_200_list,
+	.nr_sources     = ARRAY_SIZE(clk_aclk_200_list),
+};
+
 static struct clksrc_clk *sysclks[] = {
 	&clk_mout_mpll_user,
 	&clk_aclk_gdl_user,
 	&clk_aclk_gdr_user,
-	&clk_aclk_400_isp,
-	&clk_aclk_266_gps,
+	&clk_mout_aclk_400,
+	&clk_mout_aclk_266,
+	&clk_mout_aclk_200,
+	&clk_aclk_400,
+	&clk_aclk_266,
 };
 
 static struct clk init_clocks_off[] = {
@@ -204,6 +265,11 @@ void __init exynos4212_register_clocks(void)
 	clk_mout_mpll.reg_src.reg = S5P_CLKSRC_DMC;
 	clk_mout_mpll.reg_src.shift = 12;
 	clk_mout_mpll.reg_src.size = 1;
+
+	clk_aclk_200.sources = &clkset_aclk_200;
+	clk_aclk_200.reg_src.reg = S5P_CLKSRC_TOP1;
+	clk_aclk_200.reg_src.shift = 20;
+	clk_aclk_200.reg_src.size = 1;
 
 	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
 		s3c_register_clksrc(sysclks[ptr], 1);

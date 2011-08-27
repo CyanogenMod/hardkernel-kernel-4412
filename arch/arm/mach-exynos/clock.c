@@ -29,6 +29,7 @@
 #include <mach/regs-clock.h>
 #include <mach/regs-audss.h>
 #include <mach/sysmmu.h>
+#include <mach/exynos-clock.h>
 
 #ifdef CONFIG_PM
 static struct sleep_save exynos4_clock_save[] = {
@@ -102,24 +103,24 @@ static struct sleep_save exynos4_vpll_save[] = {
 };
 #endif
 
-static struct clk clk_sclk_hdmi27m = {
+struct clk clk_sclk_hdmi27m = {
 	.name		= "sclk_hdmi27m",
 	.id		= -1,
 	.rate		= 27000000,
 };
 
-static struct clk clk_sclk_hdmiphy = {
+struct clk clk_sclk_hdmiphy = {
 	.name		= "sclk_hdmiphy",
 	.id		= -1,
 };
 
-static struct clk clk_sclk_usbphy0 = {
+struct clk clk_sclk_usbphy0 = {
 	.name		= "sclk_usbphy0",
 	.id		= -1,
 	.rate		= 27000000,
 };
 
-static struct clk clk_sclk_usbphy1 = {
+struct clk clk_sclk_usbphy1 = {
 	.name		= "sclk_usbphy1",
 	.id		= -1,
 };
@@ -169,7 +170,7 @@ static int exynos4_clksrc_mask_lcd0_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_CLKSRC_MASK_LCD0, clk, enable);
 }
 
-static int exynos4_clksrc_mask_lcd1_ctrl(struct clk *clk, int enable)
+int exynos4_clksrc_mask_lcd1_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_CLKSRC_MASK_LCD1, clk, enable);
 }
@@ -224,7 +225,7 @@ static int exynos4_clk_ip_lcd0_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_CLKGATE_IP_LCD0, clk, enable);
 }
 
-static int exynos4_clk_ip_lcd1_ctrl(struct clk *clk, int enable)
+int exynos4_clk_ip_lcd1_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_CLKGATE_IP_LCD1, clk, enable);
 }
@@ -280,7 +281,7 @@ static struct clksrc_clk clk_mout_apll = {
 	.reg_src	= { .reg = S5P_CLKSRC_CPU, .shift = 0, .size = 1 },
 };
 
-static struct clksrc_clk clk_sclk_apll = {
+struct clksrc_clk clk_sclk_apll = {
 	.clk	= {
 		.name		= "sclk_apll",
 		.id		= -1,
@@ -289,7 +290,7 @@ static struct clksrc_clk clk_sclk_apll = {
 	.reg_div	= { .reg = S5P_CLKDIV_CPU, .shift = 24, .size = 3 },
 };
 
-static struct clksrc_clk clk_mout_epll = {
+struct clksrc_clk clk_mout_epll = {
 	.clk	= {
 		.name		= "mout_epll",
 		.id		= -1,
@@ -458,14 +459,11 @@ struct clksrc_sources clkset_aclk = {
 	.nr_sources	= ARRAY_SIZE(clkset_aclk_top_list),
 };
 
-static struct clksrc_clk clk_aclk_200 = {
+struct clksrc_clk clk_aclk_200 = {
 	.clk	= {
 		.name		= "aclk_200",
 		.id		= -1,
 	},
-	.sources	= &clkset_aclk,
-	.reg_src	= { .reg = S5P_CLKSRC_TOP0, .shift = 12, .size = 1 },
-	.reg_div	= { .reg = S5P_CLKDIV_TOP, .shift = 0, .size = 3 },
 };
 
 static struct clksrc_clk clk_aclk_100 = {
@@ -560,7 +558,7 @@ static struct clksrc_sources clkset_sclk_vpll = {
 	.nr_sources	= ARRAY_SIZE(clkset_sclk_vpll_list),
 };
 
-static struct clksrc_clk clk_sclk_vpll = {
+struct clksrc_clk clk_sclk_vpll = {
 	.clk	= {
 		.name		= "sclk_vpll",
 		.id		= -1,
@@ -2023,10 +2021,12 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	unsigned long xtal;
 	unsigned long armclk;
 	unsigned long sclk_dmc;
+	unsigned long aclk_400;
+	unsigned long aclk_266;
 	unsigned long aclk_200;
-	unsigned long aclk_100;
 	unsigned long aclk_160;
 	unsigned long aclk_133;
+	unsigned long aclk_100;
 	unsigned int ptr;
 
 	printk(KERN_DEBUG "%s: registering clocks\n", __func__);
@@ -2078,10 +2078,22 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	aclk_160 = clk_get_rate(&clk_aclk_160.clk);
 	aclk_133 = clk_get_rate(&clk_aclk_133.clk);
 
-	printk(KERN_INFO "EXYNOS4: ARMCLK=%ld, DMC=%ld, ACLK200=%ld\n"
-			"ACLK100=%ld, ACLK160=%ld, ACLK133=%ld\n",
-			armclk, sclk_dmc, aclk_200,
-			aclk_100, aclk_160, aclk_133);
+	if (cpu_is_exynos4212()) {
+		aclk_400 = clk_get_rate(&clk_aclk_400.clk);
+		aclk_266 = clk_get_rate(&clk_aclk_266.clk);
+
+		printk(KERN_INFO "EXYNOS4: ARMCLK=%ld, DMC=%ld, ACLK400=%ld\n"
+				"ACLK266=%ld, ACLK200=%ld, ACLK160=%ld\n"
+				"ACLK133=%ld, ACLK100=%ld\n",
+				armclk, sclk_dmc, aclk_400,
+				aclk_266, aclk_200, aclk_160,
+				aclk_133, aclk_100);
+	} else {
+		printk(KERN_INFO "EXYNOS4: ARMCLK=%ld, DMC=%ld, ACLK200=%ld\n"
+				"ACLK160=%ld, ACLK133=%ld, ACLK100=%ld\n",
+				armclk, sclk_dmc, aclk_200,
+				aclk_160, aclk_133, aclk_100);
+	}
 
 	clk_f.rate = armclk;
 	clk_h.rate = sclk_dmc;
