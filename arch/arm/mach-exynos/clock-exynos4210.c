@@ -67,7 +67,7 @@ static struct clk init_clocks_off[] = {
 
 static struct clksrc_clk clksrcs[] = {
 	{
-		.clk		= {
+		.clk	= {
 			.name		= "sclk_sata",
 			.id		= -1,
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
