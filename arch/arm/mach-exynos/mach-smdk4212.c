@@ -30,6 +30,7 @@
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
+#include <linux/smsc911x.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -52,6 +53,7 @@
 #include <plat/fimc.h>
 #include <plat/csis.h>
 #include <plat/media.h>
+#include <plat/regs-srom.h>
 #include <media/s5k4ba_platform.h>
 #include <media/s5k4ea_platform.h>
 #include <media/m5mo_platform.h>
@@ -103,6 +105,37 @@ static struct s3c2410_uartcfg smdk4212_uartcfgs[] __initdata = {
 		.ucon		= SMDK4212_UCON_DEFAULT,
 		.ulcon		= SMDK4212_ULCON_DEFAULT,
 		.ufcon		= SMDK4212_UFCON_DEFAULT,
+	},
+};
+
+static struct resource smdk4212_smsc911x_resources[] = {
+	[0] = {
+		.start	= EXYNOS4_PA_SROM_BANK(1),
+		.end	= EXYNOS4_PA_SROM_BANK(1) + SZ_64K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IRQ_EINT(5),
+		.end	= IRQ_EINT(5),
+		.flags	= IORESOURCE_IRQ | IRQF_TRIGGER_LOW,
+	},
+};
+
+static struct smsc911x_platform_config smsc9215_config = {
+	.irq_polarity	= SMSC911X_IRQ_POLARITY_ACTIVE_LOW,
+	.irq_type	= SMSC911X_IRQ_TYPE_PUSH_PULL,
+	.flags		= SMSC911X_USE_16BIT | SMSC911X_FORCE_INTERNAL_PHY,
+	.phy_interface	= PHY_INTERFACE_MODE_MII,
+	.mac		= {0x00, 0x80, 0x00, 0x23, 0x45, 0x67},
+};
+
+static struct platform_device smdk4212_smsc911x = {
+	.name		= "smsc911x",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(smdk4212_smsc911x_resources),
+	.resource	= smdk4212_smsc911x_resources,
+	.dev		= {
+		.platform_data	= &smsc9215_config,
 	},
 };
 
@@ -1288,6 +1321,7 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #endif
 	&samsung_device_keypad,
 	&smdk4212_input_device,
+	&smdk4212_smsc911x,
 };
 
 #if defined(CONFIG_S5P_MEM_CMA)
@@ -1439,6 +1473,29 @@ static void __init smdk4212_map_io(void)
 #endif
 }
 
+static void __init smdk4212_smsc911x_init(void)
+{
+	u32 cs1;
+
+	/* configure nCS1 width to 16 bits */
+	cs1 = __raw_readl(S5P_SROM_BW) &
+		~(S5P_SROM_BW__CS_MASK << S5P_SROM_BW__NCS1__SHIFT);
+	cs1 |= ((1 << S5P_SROM_BW__DATAWIDTH__SHIFT) |
+		(1 << S5P_SROM_BW__WAITENABLE__SHIFT) |
+		(1 << S5P_SROM_BW__BYTEENABLE__SHIFT)) <<
+		S5P_SROM_BW__NCS1__SHIFT;
+	__raw_writel(cs1, S5P_SROM_BW);
+
+	/* set timing for nCS1 suitable for ethernet chip */
+	__raw_writel((0x1 << S5P_SROM_BCX__PMC__SHIFT) |
+		     (0x9 << S5P_SROM_BCX__TACP__SHIFT) |
+		     (0xc << S5P_SROM_BCX__TCAH__SHIFT) |
+		     (0x1 << S5P_SROM_BCX__TCOH__SHIFT) |
+		     (0x6 << S5P_SROM_BCX__TACC__SHIFT) |
+		     (0x1 << S5P_SROM_BCX__TCOS__SHIFT) |
+		     (0x1 << S5P_SROM_BCX__TACS__SHIFT), S5P_SROM_BC1);
+}
+
 static void __init smdk4212_machine_init(void)
 {
 #if defined(CONFIG_EXYNOS4_DEV_PD) && !defined(CONFIG_PM_RUNTIME)
@@ -1546,6 +1603,7 @@ static void __init smdk4212_machine_init(void)
 #endif
 #endif
 	samsung_keypad_set_platdata(&smdk4212_keypad_data);
+	smdk4212_smsc911x_init();
 
 	platform_add_devices(smdk4212_devices, ARRAY_SIZE(smdk4212_devices));
 }
