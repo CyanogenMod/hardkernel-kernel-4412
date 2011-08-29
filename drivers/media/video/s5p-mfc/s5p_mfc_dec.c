@@ -747,17 +747,17 @@ static int vidioc_g_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		   of the movie, the buffer is bigger and
 		   further processing stages should crop to this
 		   rectangle. */
-		pix_mp->width = ctx->buf_width;
-		pix_mp->height = ctx->buf_height;
+		pix_mp->width = ctx->img_width;
+		pix_mp->height = ctx->img_height;
 		pix_mp->field = V4L2_FIELD_NONE;
 		pix_mp->num_planes = 2;
 		/* Set pixelformat to the format in which MFC
 		   outputs the decoded frame */
 		pix_mp->pixelformat = V4L2_PIX_FMT_NV12MT;
 		pix_mp->plane_fmt[0].bytesperline = ctx->buf_width;
-		pix_mp->plane_fmt[0].sizeimage = ctx->luma_size;
+		pix_mp->plane_fmt[0].sizeimage = ctx->buf_width * ctx->buf_height;
 		pix_mp->plane_fmt[1].bytesperline = ctx->buf_width;
-		pix_mp->plane_fmt[1].sizeimage = ctx->chroma_size;
+		pix_mp->plane_fmt[1].sizeimage = ctx->buf_width * (ctx->buf_height >> 1);
 	} else if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		/* This is run on OUTPUT
 		   The buffer contains compressed image
