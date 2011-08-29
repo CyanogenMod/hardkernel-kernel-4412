@@ -19,7 +19,7 @@
 
 #define IRQ_PPI(x)		S5P_IRQ(x+16)
 
-#define IRQ_PPI_MCT_L		28
+#define IRQ_PPI_MCT_L		IRQ_PPI(12)
 
 /* SPI: Shared Peripheral Interrupt */
 

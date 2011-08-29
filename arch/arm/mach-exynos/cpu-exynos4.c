@@ -256,7 +256,7 @@ void __init exynos4_init_irq(void)
 {
 	int irq;
 
-	gic_init(0, IRQ_SPI(0), S5P_VA_GIC_DIST, S5P_VA_GIC_CPU);
+	gic_init(0, IRQ_PPI_MCT_L, S5P_VA_GIC_DIST, S5P_VA_GIC_CPU);
 	gic_arch_extn.irq_eoi = exynos4_gic_fix_base;
 	gic_arch_extn.irq_unmask = exynos4_gic_fix_base;
 	gic_arch_extn.irq_mask = exynos4_gic_fix_base;
