@@ -63,8 +63,8 @@
 	#define _IMEM_MAX_		(64 * 1024)	/* 64KBytes */
 	#define _DMEM_MAX_		(128 * 1024)	/* 128KBytes */
 	#define _IBUF_SIZE_		(16 * 1024)	/* 128KBytes in DRAM */
-	#define _WBUF_SIZE_		(_IBUF_SIZE_ * 2)	/* in DRAM */
-	#define _SBUF_SIZE_		(_IBUF_SIZE_ * 2)	/* in DRAM */
+	#define _WBUF_SIZE_		(_IBUF_SIZE_ * 4)	/* in DRAM */
+	#define _SBUF_SIZE_		(_IBUF_SIZE_ * 4)	/* in DRAM */
 	#define _FWBUF_SIZE_		(4 * 1024)	/* 4KBytes in F/W */
 	#define _IRAM_SIZE_		(128 * 1024)	/* Total size in IRAM */
 
