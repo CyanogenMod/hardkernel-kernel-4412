@@ -140,6 +140,7 @@ static void done(struct s3c_ep *ep,
 static void stop_activity(struct s3c_udc *dev,
 			struct usb_gadget_driver *driver);
 static int udc_enable(struct s3c_udc *dev);
+static void udc_disable(struct s3c_udc *dev);
 static void udc_set_address(struct s3c_udc *dev, unsigned char address);
 static void reset_usbd(void);
 static void reconfig_usbd(void);
@@ -222,6 +223,7 @@ static void udc_disable(struct s3c_udc *dev)
 	u32 utemp;
 	DEBUG_SETUP("%s: %p\n", __func__, dev);
 
+	disable_irq(IRQ_USB_HSOTG);
 	udc_set_address(dev, 0);
 
 	dev->ep0state = WAIT_FOR_SETUP;
@@ -282,6 +284,7 @@ static int udc_enable(struct s3c_udc *dev)
 	struct s5p_usbgadget_platdata *pdata = pdev->dev.platform_data;
 	DEBUG_SETUP("%s: %p\n", __func__, dev);
 
+	enable_irq(IRQ_USB_HSOTG);
 	if (pdata->phy_init)
 		pdata->phy_init(pdev, S5P_USB_PHY_DEVICE);
 	reconfig_usbd();
@@ -290,6 +293,24 @@ static int udc_enable(struct s3c_udc *dev)
 			readl(S3C_UDC_OTG_GINTMSK));
 
 	dev->gadget.speed = USB_SPEED_UNKNOWN;
+
+	return 0;
+}
+
+int s3c_vbus_enable(struct usb_gadget *gadget, int is_active)
+{
+	unsigned long flags;
+	struct s3c_udc *dev = container_of(gadget, struct s3c_udc, gadget);
+
+	if (!is_active) {
+		spin_lock_irqsave(&dev->lock, flags);
+		stop_activity(dev, dev->driver);
+		spin_unlock_irqrestore(&dev->lock, flags);
+		udc_disable(dev);
+	} else {
+		udc_reinit(dev);
+		udc_enable(dev);
+	}
 
 	return 0;
 }
@@ -335,13 +356,11 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		dev->gadget.dev.driver = 0;
 		return retval;
 	}
-
-	enable_irq(IRQ_USB_HSOTG);
-
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 	printk(KERN_INFO "Registered gadget driver '%s'\n",
 			driver->driver.name);
 	udc_enable(dev);
-
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(usb_gadget_probe_driver);
@@ -366,14 +385,13 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 
 	driver->unbind(&dev->gadget);
 	device_del(&dev->gadget.dev);
-
-	disable_irq(IRQ_USB_HSOTG);
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 
 	printk(KERN_INFO "Unregistered gadget driver '%s'\n",
 			driver->driver.name);
 
 	udc_disable(dev);
-
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(usb_gadget_unregister_driver);
@@ -853,6 +871,7 @@ static const struct usb_gadget_ops s3c_udc_ops = {
 	.wakeup = s3c_udc_wakeup,
 	/* current versions must always be self-powered */
 	.pullup = s3c_udc_pullup,
+	.vbus_session = s3c_vbus_enable,
 };
 
 static void nop_release(struct device *dev)
@@ -1209,8 +1228,9 @@ static int s3c_udc_suspend(struct platform_device *pdev, pm_message_t state)
 		if (dev->driver->disconnect)
 			dev->driver->disconnect(&dev->gadget);
 
-		disable_irq(IRQ_USB_HSOTG);
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 		udc_disable(dev);
+#endif
 	}
 
 	return 0;
@@ -1222,8 +1242,9 @@ static int s3c_udc_resume(struct platform_device *pdev)
 
 	if (dev->driver) {
 		udc_reinit(dev);
-		enable_irq(IRQ_USB_HSOTG);
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 		udc_enable(dev);
+#endif
 
 		if (dev->driver->resume)
 			dev->driver->resume(&dev->gadget);
