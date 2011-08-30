@@ -49,6 +49,13 @@ enum hc_type {
 	HC_MSHC,
 };
 
+enum idle_clock_down {
+	HW_CLK_DWN,
+	SW_CLK_DWN,
+};
+
+unsigned int use_clock_down;
+
 struct check_device_op {
 	void __iomem		*base;
 	struct platform_device	*pdev;
@@ -508,42 +515,46 @@ static int exynos4_enter_idle(struct cpuidle_device *dev,
 	local_irq_disable();
 	do_gettimeofday(&before);
 
-	cpu = get_cpu();
+	if (use_clock_down == SW_CLK_DWN) {
+		/* USE SW Clock Down */
+		cpu = get_cpu();
 
-	spin_lock(&idle_lock);
-	cpu_core |= (1 << cpu);
+		spin_lock(&idle_lock);
+		cpu_core |= (1 << cpu);
 
-	if ((cpu_core == 0x3) || (cpu_online(1) == 0)) {
-		old_div = __raw_readl(S5P_CLKDIV_CPU);
-		tmp = old_div;
-		tmp |= ((0x7 << 28) | (0x7 << 0));
-		__raw_writel(tmp, S5P_CLKDIV_CPU);
+		if ((cpu_core == 0x3) || (cpu_online(1) == 0)) {
+			old_div = __raw_readl(S5P_CLKDIV_CPU);
+			tmp = old_div;
+			tmp |= ((0x7 << 28) | (0x7 << 0));
+			__raw_writel(tmp, S5P_CLKDIV_CPU);
 
-		do {
-			tmp = __raw_readl(S5P_CLKDIV_STATCPU);
-		} while (tmp & 0x10000001);
+			do {
+				tmp = __raw_readl(S5P_CLKDIV_STATCPU);
+			} while (tmp & 0x10000001);
 
-	}
+		}
 
-	spin_unlock(&idle_lock);
+		spin_unlock(&idle_lock);
 
-	cpu_do_idle();
+		cpu_do_idle();
 
-	spin_lock(&idle_lock);
+		spin_lock(&idle_lock);
 
-	if ((cpu_core == 0x3) || (cpu_online(1) == 0)) {
-		__raw_writel(old_div, S5P_CLKDIV_CPU);
+		if ((cpu_core == 0x3) || (cpu_online(1) == 0)) {
+			__raw_writel(old_div, S5P_CLKDIV_CPU);
 
-		do {
-			tmp = __raw_readl(S5P_CLKDIV_STATCPU);
-		} while (tmp & 0x10000001);
+			do {
+				tmp = __raw_readl(S5P_CLKDIV_STATCPU);
+			} while (tmp & 0x10000001);
 
-	}
+		}
 
-	cpu_core &= ~(1 << cpu);
-	spin_unlock(&idle_lock);
+		cpu_core &= ~(1 << cpu);
+		spin_unlock(&idle_lock);
 
-	put_cpu();
+		put_cpu();
+	} else
+		cpu_do_idle();
 
 	do_gettimeofday(&after);
 	local_irq_enable();
@@ -658,6 +669,8 @@ static void __init exynos4_core_down_clk(void)
 
 	printk(KERN_INFO "Exynos4 : ARM Clock down on idle mode is enabled\n");
 }
+#else
+#define exynos4_core_down_clk()	do { } while (0)
 #endif
 
 static int __init exynos4_init_cpuidle(void)
@@ -667,11 +680,15 @@ static int __init exynos4_init_cpuidle(void)
 	struct platform_device *pdev;
 	struct resource *res;
 
-#ifdef CONFIG_EXYNOS4_ENBLE_CLOCK_DOWN
-	/* Clock down feature can use only EXYNOS4212  */
-	if (cpu_is_exynos4212())
+	if (cpu_is_exynos4210())
+		use_clock_down = SW_CLK_DWN;
+	else
+		use_clock_down = HW_CLK_DWN;
+
+	/* Clock down feature can use only EXYNOS4212 */
+	if (use_clock_down == HW_CLK_DWN)
 		exynos4_core_down_clk();
-#endif
+
 	cpuidle_register_driver(&exynos4_idle_driver);
 
 	for_each_cpu(cpu_id, cpu_online_mask) {
