@@ -1569,6 +1569,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #endif
 	&exynos4_device_spi2,
 #endif
+#ifdef CONFIG_S5P_DEV_ACE
+	&s5p_device_ace,
+#endif
 };
 
 #if defined(CONFIG_VIDEO_TVOUT)
