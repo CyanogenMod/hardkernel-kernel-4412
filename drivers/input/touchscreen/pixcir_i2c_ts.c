@@ -433,7 +433,7 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 
 	s3c_gpio_setpull(EXYNOS4_GPX1(7), S3C_GPIO_PULL_NONE);
 
-	device_init_wakeup(&client->dev, 1);
+	device_init_wakeup(&client->dev, 0);
 
 	i2c_dev = get_free_i2c_dev(client->adapter);
 	if (IS_ERR(i2c_dev)) {
