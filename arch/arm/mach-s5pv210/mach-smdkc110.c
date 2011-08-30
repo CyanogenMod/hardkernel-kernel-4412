@@ -575,6 +575,9 @@ static struct platform_device *smdkc110_devices[] __initdata = {
 #ifdef CONFIG_REGULATOR
 	&smdkc110_b_pwr_5v,
 #endif
+#ifdef CONFIG_CRYPTO_S5P_DEV_ACE
+	&s5p_device_ace,
+#endif
 };
 
 static void __init smdkc110_button_init(void)

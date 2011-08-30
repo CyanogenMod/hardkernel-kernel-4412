@@ -21,11 +21,19 @@ static struct resource s5p_ace_resource[] = {
 		.end	= S5P_PA_ACE + SZ_32K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
+#if defined(CONFIG_ARCH_S5PV210)
+	[1] = {
+		.start	= IRQ_SSS_INT,
+		.end	= IRQ_SSS_HASH,
+		.flags	= IORESOURCE_IRQ,
+	},
+#elif defined(CONFIG_ARCH_EXYNOS4)
 	[1] = {
 		.start	= IRQ_INTFEEDCTRL_SSS,
 		.end	= IRQ_INTFEEDCTRL_SSS,
 		.flags	= IORESOURCE_IRQ,
 	},
+#endif
 };
 
 struct platform_device s5p_device_ace = {

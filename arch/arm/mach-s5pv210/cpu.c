@@ -40,6 +40,7 @@
 #include <plat/iic-core.h>
 #include <plat/sdhci.h>
 #include <plat/reset.h>
+#include <plat/ace-core.h>
 
 /* Initial IO mappings */
 
@@ -144,6 +145,10 @@ void __init s5pv210_map_io(void)
 	s3c_i2c2_setname("s3c2440-i2c");
 
 	s3c_fb_setname("s5pv210-fb");
+
+#ifdef CONFIG_S5P_DEV_ACE
+	s5p_ace_setname("s5pv210-ace");
+#endif
 }
 
 void __init s5pv210_init_clocks(int xtal)
