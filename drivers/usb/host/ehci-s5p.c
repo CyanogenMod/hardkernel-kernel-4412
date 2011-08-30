@@ -28,6 +28,40 @@ struct s5p_ehci_hcd {
 	struct clk *clk;
 };
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+int s5p_ehci_port_power_off(struct platform_device *pdev)
+{
+	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ehci->hcd;
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+
+	(void) ehci_hub_control(hcd,
+			ClearPortFeature,
+			USB_PORT_FEAT_POWER,
+			1, NULL, 0);
+	/* Flush those writes */
+	ehci_readl(ehci, &ehci->regs->command);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(s5p_ehci_port_power_off);
+
+int s5p_ehci_port_power_on(struct platform_device *pdev)
+{
+	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ehci->hcd;
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+
+	(void) ehci_hub_control(hcd,
+			SetPortFeature,
+			USB_PORT_FEAT_POWER,
+			1, NULL, 0);
+	/* Flush those writes */
+	ehci_readl(ehci, &ehci->regs->command);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(s5p_ehci_port_power_on);
+#endif
+
 static int s5p_ehci_configurate(struct usb_hcd *hcd)
 {
 	/* DMA burst Enable */
@@ -85,9 +119,8 @@ static int s5p_ehci_resume(struct device *dev)
 	struct usb_hcd *hcd = s5p_ehci->hcd;
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 
-#ifdef CONFIG_USB_SUSPEND
 	pm_runtime_resume(&pdev->dev);
-#endif
+
 	if (pdata->phy_init)
 		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 
@@ -143,10 +176,24 @@ static int s5p_ehci_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct s5p_ehci_platdata *pdata = pdev->dev.platform_data;
-
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	struct s5p_ehci_hcd *s5p_ehci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ehci->hcd;
+	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
+#endif
 	if (pdata && pdata->phy_suspend)
 		pdata->phy_suspend(pdev, S5P_USB_PHY_HOST);
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	(void) ehci_hub_control(hcd,
+			ClearPortFeature,
+			USB_PORT_FEAT_POWER,
+			1, NULL, 0);
+	/* Flush those writes */
+	ehci_readl(ehci, &ehci->regs->command);
+
+	msleep(20);
+#endif
 	return 0;
 }
 
@@ -159,28 +206,41 @@ static int s5p_ehci_runtime_resume(struct device *dev)
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	int rc = 0;
 
+	if (dev->power.is_suspended)
+		return 0;
+
 	/* platform device isn't suspended */
-	if (pdata && pdata->phy_resume && !dev->power.is_suspended)
+	if (pdata && pdata->phy_resume)
 		rc = pdata->phy_resume(pdev, S5P_USB_PHY_HOST);
 
-        if (rc) {
-                /* emptying the schedule aborts any urbs */
-                spin_lock_irq(&ehci->lock);
-                if (ehci->reclaim)
-                        end_unlink_async(ehci);
-                ehci_work(ehci);
-                spin_unlock_irq(&ehci->lock);
+	if (rc) {
+		/* emptying the schedule aborts any urbs */
+		spin_lock_irq(&ehci->lock);
+		if (ehci->reclaim)
+			end_unlink_async(ehci);
+		ehci_work(ehci);
+		spin_unlock_irq(&ehci->lock);
 
-                ehci_writel(ehci, ehci->command, &ehci->regs->command);
-                ehci_writel(ehci, FLAG_CF, &ehci->regs->configured_flag);
-                ehci_readl(ehci, &ehci->regs->command); /* unblock posted writes */
+		ehci_writel(ehci, ehci->command, &ehci->regs->command);
+		ehci_writel(ehci, FLAG_CF, &ehci->regs->configured_flag);
+		ehci_readl(ehci, &ehci->regs->command); /* unblock posted writes */
 
-                /* here we "know" root ports should always stay powered */
-                ehci_port_power(ehci, 1);
+		/* here we "know" root ports should always stay powered */
+		ehci_port_power(ehci, 1);
 
-                hcd->state = HC_STATE_SUSPENDED;
-                usb_root_hub_lost_power(hcd->self.root_hub);
-        }
+		hcd->state = HC_STATE_SUSPENDED;
+		usb_root_hub_lost_power(hcd->self.root_hub);
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	} else {
+		(void) ehci_hub_control(ehci_to_hcd(ehci),
+				SetPortFeature,
+				USB_PORT_FEAT_POWER,
+				1, NULL, 0);
+		/* Flush those writes */
+		ehci_readl(ehci, &ehci->regs->command);
+		msleep(20);
+#endif
+	}
 
 	return 0;
 }
@@ -310,11 +370,16 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, s5p_ehci);
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	(void) ehci_hub_control(ehci_to_hcd(ehci),
+			ClearPortFeature,
+			USB_PORT_FEAT_POWER,
+			1, NULL, 0);
+#endif
 #ifdef CONFIG_USB_SUSPEND
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 #endif
-
 	return 0;
 
 fail:

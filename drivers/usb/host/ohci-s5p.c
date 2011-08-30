@@ -28,6 +28,35 @@ struct s5p_ohci_hcd {
 	struct clk *clk;
 };
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+int s5p_ohci_port_power_off(struct platform_device *pdev)
+{
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ohci->hcd;
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
+
+	ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
+	(void)ohci_readl(ohci, &ohci->regs->intrdisable);
+
+	ohci_writel (ohci, RH_HS_LPS, &ohci->regs->roothub.status);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(s5p_ohci_port_power_off);
+
+int s5p_ohci_port_power_on(struct platform_device *pdev)
+{
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ohci->hcd;
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
+
+	ohci_writel (ohci, RH_HS_LPSC, &ohci->regs->roothub.status);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(s5p_ohci_port_power_on);
+#endif
+
 #ifdef CONFIG_PM
 static int ohci_hcd_s5p_drv_suspend(struct device *dev)
 {
@@ -71,6 +100,8 @@ static int ohci_hcd_s5p_drv_resume(struct device *dev)
 	struct usb_hcd *hcd = s5p_ohci->hcd;
 	int rc = 0;
 
+	pm_runtime_resume(&pdev->dev);
+
 	if (pdata->phy_init)
 		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 
@@ -85,6 +116,70 @@ static int ohci_hcd_s5p_drv_resume(struct device *dev)
 #else
 #define ohci_hcd_s5p_drv_suspend	NULL
 #define ohci_hcd_s5p_drv_resume		NULL
+#endif
+
+#ifdef CONFIG_USB_SUSPEND
+static int ohci_hcd_s5p_drv_runtime_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ohci->hcd;
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
+	unsigned long flags;
+	int rc = 0;
+
+	/* Root hub was already suspended. Disable irq emission and
+	 * mark HW unaccessible, bail out if RH has been resumed. Use
+	 * the spinlock to properly synchronize with possible pending
+	 * RH suspend or resume activity.
+	 *
+	 * This is still racy as hcd->state is manipulated outside of
+	 * any locks =P But that will be a different fix.
+	 */
+	spin_lock_irqsave(&ohci->lock, flags);
+	if (hcd->state != HC_STATE_SUSPENDED && hcd->state != HC_STATE_HALT) {
+		err("Not ready %s", hcd->self.bus_name);
+		goto fail;
+	}
+
+	ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
+	(void)ohci_readl(ohci, &ohci->regs->intrdisable);
+
+	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	ohci_writel (ohci, RH_HS_LPS, &ohci->regs->roothub.status);
+#endif
+fail:
+	spin_unlock_irqrestore(&ohci->lock, flags);
+
+	return rc;
+}
+
+static int ohci_hcd_s5p_drv_runtime_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ohci->hcd;
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
+#endif
+	if (dev->power.is_suspended)
+		return 0;
+
+	/* Mark hardware accessible again as we are out of D3 state by now */
+	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	ohci_writel (ohci, RH_HS_LPSC, &ohci->regs->roothub.status);
+#endif
+
+	ohci_finish_controller_resume(hcd);
+	return 0;
+}
+#else
+#define ohci_hcd_s5p_drv_runtime_suspend	NULL
+#define ohci_hcd_s5p_drv_runtime_resume		NULL
 #endif
 
 static int __devinit ohci_s5p_start(struct usb_hcd *hcd)
@@ -140,6 +235,7 @@ static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 	struct s5p_ohci_platdata *pdata;
 	struct s5p_ohci_hcd *s5p_ohci;
 	struct usb_hcd  *hcd = NULL;
+	struct ohci_hcd *ohci;
 	struct resource *res;
 	int irq;
 	int err;
@@ -203,7 +299,11 @@ static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 	if (pdata->phy_init)
 		pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 
-	ohci_hcd_init(hcd_to_ohci(hcd));
+	ohci = hcd_to_ohci(hcd);
+	ohci_hcd_init(ohci);
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	ohci->flags |= OHCI_QUIRK_SUPERIO;
+#endif
 
 	err = usb_add_hcd(hcd, irq,
 				IRQF_DISABLED | IRQF_SHARED);
@@ -215,6 +315,14 @@ static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, s5p_ohci);
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
+	(void)ohci_readl(ohci, &ohci->regs->intrdisable);
+
+	ohci_writel (ohci, RH_HS_LPS, &ohci->regs->roothub.status);
+#endif
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
 	return 0;
 
 fail:
@@ -265,6 +373,8 @@ static void ohci_hcd_s5p_drv_shutdown(struct platform_device *pdev)
 static const struct dev_pm_ops ohci_s5p_pm_ops = {
 	.suspend		= ohci_hcd_s5p_drv_suspend,
 	.resume			= ohci_hcd_s5p_drv_resume,
+	.runtime_suspend	= ohci_hcd_s5p_drv_runtime_suspend,
+	.runtime_resume		= ohci_hcd_s5p_drv_runtime_resume,
 };
 
 static struct platform_driver ohci_hcd_s5p_driver = {
