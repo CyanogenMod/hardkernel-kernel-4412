@@ -134,6 +134,9 @@ struct s3c_udc {
 	struct usb_ctrlrequest *usb_ctrl;
 	dma_addr_t usb_ctrl_dma;
 
+	void __iomem *regs;
+	struct resource *regs_res;
+	unsigned int irq;
 	unsigned req_pending:1, req_std:1, req_config:1;
 };
 

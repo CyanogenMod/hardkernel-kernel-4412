@@ -19,7 +19,7 @@
 #define S3C_USBOTG_PHY1CON		S3C_USBOTG_PHYREG(0x34)
 
 /* USB2.0 OTG Controller register */
-#define S3C_USBOTGREG(x) ((x) + S3C_VA_HSOTG)
+#define S3C_USBOTGREG(x) (x)
 /*============================================================================================== */
 	/* Core Global Registers */
 #define S3C_UDC_OTG_GOTGCTL		S3C_USBOTGREG(0x000)		/* OTG Control & Status */
