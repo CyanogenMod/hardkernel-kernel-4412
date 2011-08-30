@@ -57,6 +57,8 @@
 #define STUFF_BYTE		4
 #define MFC_WORKQUEUE_LEN	32
 
+#define MFC_BASE_MASK		((1 << 17) - 1)
+
 /**
  * enum s5p_mfc_inst_type - The type of an MFC device node.
  */

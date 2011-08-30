@@ -92,7 +92,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	}
 	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	if (s5p_mfc_bitproc_phys & (128 << 10)) {
+	if (s5p_mfc_bitproc_phys & MFC_BASE_MASK) {
 		mfc_err("The base memory is not aligned to 128KB.\n");
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
 							s5p_mfc_bitproc_buf);
@@ -130,7 +130,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	if (s5p_mfc_bitproc_phys & (128 << 10)) {
+	if (s5p_mfc_bitproc_phys & MFC_BASE_MASK) {
 		mfc_err("The base memory is not aligned to 128KB.\n");
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
 							s5p_mfc_bitproc_buf);
@@ -185,7 +185,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	if (s5p_mfc_bitproc_phys & (128 << 10)) {
+	if (s5p_mfc_bitproc_phys & MFC_BASE_MASK) {
 		mfc_err("The base memory is not aligned to 128KB.\n");
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
 							s5p_mfc_bitproc_buf);
