@@ -1716,7 +1716,7 @@ static const struct file_operations srp_fops = {
 
 static struct miscdevice srp_miscdev = {
 	.minor		= SRP_DEV_MINOR,
-	.name		= "s5p-rp",
+	.name		= "srp",
 	.fops		= &srp_fops,
 };
 
@@ -1731,7 +1731,7 @@ static const struct file_operations srp_ctrl_fops = {
 
 static struct miscdevice srp_ctrl_miscdev = {
 	.minor		= SRP_CTRL_DEV_MINOR,
-	.name		= "s5p-rp_ctrl",
+	.name		= "srp_ctrl",
 	.fops		= &srp_ctrl_fops,
 };
 
