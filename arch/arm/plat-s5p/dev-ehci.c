@@ -12,6 +12,7 @@
 #include <linux/platform_device.h>
 #include <mach/irqs.h>
 #include <mach/map.h>
+#include <mach/gpio.h>
 #include <plat/devs.h>
 #include <plat/ehci.h>
 #include <plat/usb-phy.h>
@@ -107,3 +108,40 @@ void __init s5p_ohci_set_platdata(struct s5p_ohci_platdata *pd)
 		npd->phy_resume = s5p_usb_phy_resume;
 }
 #endif
+
+#ifdef CONFIG_S5P_DEV_USB_SWITCH
+/* USB Switch */
+static struct resource s5p_usbswitch_resource[] = {
+	[0] = {
+		.start = IRQ_EINT(29),
+		.end   = IRQ_EINT(29),
+		.flags = IORESOURCE_IRQ,
+	},
+	[1] = {
+		.start = IRQ_EINT(28),
+		.end   = IRQ_EINT(28),
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device s5p_device_usbswitch = {
+	.name		= "exynos-usb-switch",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(s5p_usbswitch_resource),
+	.resource	= s5p_usbswitch_resource,
+};
+
+void __init s5p_usbswitch_set_platdata(struct s5p_usbswitch_platdata *pd)
+{
+	struct s5p_usbswitch_platdata *npd;
+
+	npd = s3c_set_platdata(pd, sizeof(struct s5p_usbswitch_platdata),
+			&s5p_device_usbswitch);
+
+	s5p_usbswitch_resource[0].start = gpio_to_irq(npd->gpio_host_detect);
+	s5p_usbswitch_resource[0].end = gpio_to_irq(npd->gpio_host_detect);
+
+	s5p_usbswitch_resource[1].start = gpio_to_irq(npd->gpio_device_detect);
+	s5p_usbswitch_resource[1].end = gpio_to_irq(npd->gpio_device_detect);
+}
+#endif /* CONFIG_USB_SWITCH */
