@@ -52,6 +52,7 @@
 #define MFC_ENC_OUT_PLANE_COUNT	2
 
 #define MFC_NAME_LEN		16
+#define MFC_FW_NAME		"mfc_fw.bin"
 
 #define STUFF_BYTE		4
 #define MFC_WORKQUEUE_LEN	32
