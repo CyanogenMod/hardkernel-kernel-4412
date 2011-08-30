@@ -22,6 +22,7 @@
 #include <plat/cputype.h>
 
 #define ETC6PUD		(S5P_VA_GPIO2 + 0x228)
+#define USB_CFG		(S3C_VA_SYS + 0x21C)
 
 #define PHY_ENABLE	(1 << 0)
 #define PHY_DISABLE	(0)
@@ -36,6 +37,12 @@ enum usb_phy_type {
 
 DEFINE_SPINLOCK(phy_lock);
 
+static atomic_t host_usage;
+
+static void exynos4_usb_mux_change(int val)
+{
+	writel(val, USB_CFG);
+}
 static int exynos4_usb_host_phy_is_on(void)
 {
 	return (readl(EXYNOS4_PHYPWR) & PHY1_STD_ANALOG_POWERDOWN) ? 0 : 1;
@@ -174,6 +181,10 @@ static int exynos4_usb_phy0_init(struct platform_device *pdev)
 	phyclk = exynos4_usb_phy_set_clock(pdev);
 	writel(phyclk, EXYNOS4_PHYCLK);
 
+	/* USB MUX change from Host to Device */
+	if (cpu_is_exynos4212())
+		exynos4_usb_mux_change(0);
+
 	/* set to normal of PHY0 */
 	phypwr = readl(EXYNOS4_PHYPWR) & ~PHY0_NORMAL_MASK;
 	writel(phypwr, EXYNOS4_PHYPWR);
@@ -205,6 +216,9 @@ static int exynos4_usb_phy0_exit(struct platform_device *pdev)
 
 	exynos4_usb_phy_control(USB_PHY0, PHY_DISABLE);
 
+	/* USB MUX change from Device to Host */
+	if (cpu_is_exynos4212())
+		exynos4_usb_mux_change(1);
 	clk_disable(otg_clk);
 	clk_put(otg_clk);
 
@@ -340,6 +354,9 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| EXYNOS4210_HSIC0_FORCE_SUSPEND
 				| EXYNOS4210_HSIC1_FORCE_SUSPEND);
 		} else if (cpu_is_exynos4212()) {
+			/* USB MUX change from Device to Host */
+			exynos4_usb_mux_change(1);
+
 			phypwr = readl(EXYNOS4_PHYPWR);
 			phypwr &= ~(PHY1_STD_FORCE_SUSPEND
 				| EXYNOS4212_HSIC0_FORCE_SUSPEND
@@ -372,6 +389,9 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 			exynos4_usb_phy_control(USB_PHY, PHY_ENABLE);
 			exynos4_usb_phy_control(USB_PHY_HSIC0, PHY_ENABLE);
 			exynos4_usb_phy_control(USB_PHY_HSIC1, PHY_ENABLE);
+
+			/* USB MUX change from Device to Host */
+			exynos4_usb_mux_change(1);
 
 			phypwr &= ~(PHY1_STD_NORMAL_MASK
 				| EXYNOS4212_HSIC0_NORMAL_MASK
@@ -419,7 +439,15 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 		return err;
 	}
 
-	exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
+	if (cpu_is_exynos4210()) {
+		exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
+	} else {
+		exynos4_usb_phy_control(USB_PHY, PHY_ENABLE);
+		exynos4_usb_phy_control(USB_PHY_HSIC0, PHY_ENABLE);
+		exynos4_usb_phy_control(USB_PHY_HSIC1, PHY_ENABLE);
+	}
+
+	atomic_inc(&host_usage);
 
 	if (exynos4_usb_host_phy_is_on()) {
 		dev_err(&pdev->dev, "Already power on PHY\n");
@@ -464,6 +492,9 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 			| EXYNOS4210_PHY1_SWRST_MASK);
 		writel(rstcon, EXYNOS4_RSTCON);
 	} else if (cpu_is_exynos4212()) {
+		/* USB MUX change from Device to Host */
+		exynos4_usb_mux_change(1);
+
 		phypwr &= ~(PHY1_STD_NORMAL_MASK
 			| EXYNOS4212_HSIC0_NORMAL_MASK
 			| EXYNOS4212_HSIC1_NORMAL_MASK);
@@ -494,6 +525,11 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 	u32 phypwr;
 	int err;
 
+	if (atomic_dec_return(&host_usage) > 0) {
+		dev_info(&pdev->dev, "still being used\n");
+		return -EBUSY;
+	}
+
 	otg_clk = clk_get(&pdev->dev, "usbotg");
 	if (IS_ERR(otg_clk)) {
 		dev_err(&pdev->dev, "Failed to get otg clock\n");
@@ -519,7 +555,13 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 	}
 	writel(phypwr, EXYNOS4_PHYPWR);
 
-	exynos4_usb_phy_control(USB_PHY1, PHY_DISABLE);
+	if (cpu_is_exynos4210()) {
+		exynos4_usb_phy_control(USB_PHY1, PHY_DISABLE);
+	} else {
+		exynos4_usb_phy_control(USB_PHY, PHY_DISABLE);
+		exynos4_usb_phy_control(USB_PHY_HSIC0, PHY_DISABLE);
+		exynos4_usb_phy_control(USB_PHY_HSIC1, PHY_DISABLE);
+	}
 
 	clk_disable(otg_clk);
 	clk_put(otg_clk);
