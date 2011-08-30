@@ -1413,6 +1413,40 @@ static struct fimg2d_platdata fimg2d_data __initdata = {
 };
 #endif
 
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+static struct s5p_usbswitch_platdata smdk4212_usbswitch_pdata;
+
+static void __init smdk4212_usbswitch_init(void)
+{
+	struct s5p_usbswitch_platdata *pdata = &smdk4212_usbswitch_pdata;
+	int err;
+
+	pdata->gpio_host_detect = EXYNOS4_GPX3(5); /* low active */
+	err = gpio_request_one(pdata->gpio_host_detect, GPIOF_IN, "HOST_DETECT");
+	if (err) {
+		printk(KERN_ERR "failed to request gpio_host_detect\n");
+		return;
+	}
+
+	s3c_gpio_cfgpin(pdata->gpio_host_detect, S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(pdata->gpio_host_detect, S3C_GPIO_PULL_NONE);
+	gpio_free(pdata->gpio_host_detect);
+
+	pdata->gpio_device_detect = EXYNOS4_GPX3(4); /* high active */
+	err = gpio_request_one(pdata->gpio_device_detect, GPIOF_IN, "DEVICE_DETECT");
+	if (err) {
+		printk(KERN_ERR "failed to request gpio_host_detect for\n");
+		return;
+	}
+
+	s3c_gpio_cfgpin(pdata->gpio_device_detect, S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(pdata->gpio_device_detect, S3C_GPIO_PULL_NONE);
+	gpio_free(pdata->gpio_device_detect);
+
+	s5p_usbswitch_set_platdata(pdata);
+}
+#endif
+
 static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
@@ -1768,6 +1802,10 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_USB_GADGET
 	smdk4212_usbgadget_init();
 #endif
+#ifdef CONFIG_USB_EXYNOS_SWITCH
+	smdk4212_usbswitch_init();
+#endif
+
 	samsung_bl_set(&smdk4212_bl_gpio_info, &smdk4212_bl_data);
 
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
