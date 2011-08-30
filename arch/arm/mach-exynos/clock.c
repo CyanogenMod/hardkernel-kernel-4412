@@ -271,6 +271,11 @@ static int exynos4_clk_ip_dmc_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_CLKGATE_IP_DMC, clk, enable);
 }
 
+int exynos4_clksrc_gate_isp_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_CLKGATE_IP_ISP, clk, enable);
+}
+
 /* Core list of CMU_CPU side */
 
 static struct clksrc_clk clk_mout_apll = {

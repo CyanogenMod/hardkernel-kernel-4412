@@ -225,6 +225,62 @@ static struct clksrc_clk clksrcs[] = {
 	},
 };
 
+static struct clk clk_isp[] = {
+	{
+		.name	= "aclk_400_muxed",
+		.id	= -1,
+		.parent = &clk_aclk_400.clk,
+	}, {
+		.name	= "aclk_200_muxed",
+		.id	= -1,
+		.parent	= &clk_aclk_200.clk,
+	},
+};
+
+static struct clksrc_clk clk_isp_srcs_div0 = {
+	.clk		= {
+		.name		= "sclk_mcuisp_div0",
+		.id		= -1,
+		.parent = &clk_aclk_400.clk,
+	},
+	.reg_div = { .reg = S5P_CLKDIV_ISP1, .shift = 4, .size = 3 },
+};
+
+static struct clksrc_clk clk_isp_srcs[] = {
+	{
+		.clk		= {
+			.name		= "sclk_mcuisp_div1",
+			.id		= -1,
+			.parent = &clk_isp_srcs_div0.clk,
+		},
+		.reg_div = { .reg = S5P_CLKDIV_ISP1, .shift = 0, .size = 3 },
+	}, {
+		.clk		= {
+			.name		= "sclk_aclk_div0",
+			.id		= -1,
+			.parent = &clk_aclk_200.clk,
+		},
+		.reg_div = { .reg = S5P_CLKDIV_ISP0, .shift = 0, .size = 3 },
+	}, {
+		.clk		= {
+			.name		= "sclk_aclk_div1",
+			.id		= -1,
+			.parent = &clk_aclk_200.clk,
+		},
+		.reg_div = { .reg = S5P_CLKDIV_ISP0, .shift = 4, .size = 3 },
+	}, {
+		.clk		= {
+			.name		= "sclk_uart_isp",
+			.id		= -1,
+			.enable		= exynos4_clksrc_gate_isp_ctrl,
+			.ctrlbit	= (1 << 3),
+		},
+		.sources = &clkset_group,
+		.reg_src = { .reg = S5P_CLKSRC_ISP, .shift = 12, .size = 4 },
+		.reg_div = { .reg = S5P_CLKDIV_ISP, .shift = 28, .size = 4 },
+	},
+};
+
 #ifdef CONFIG_PM
 static int exynos4212_clock_suspend(void)
 {
@@ -278,5 +334,10 @@ void __init exynos4212_register_clocks(void)
 
 	s3c_register_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
 	s3c_disable_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
+
+	s3c_register_clksrc(&clk_isp_srcs_div0, 1);
+	s3c_register_clksrc(clk_isp_srcs, ARRAY_SIZE(clk_isp_srcs));
+	s3c_register_clocks(clk_isp, ARRAY_SIZE(clk_isp));
+
 	register_syscore_ops(&exynos4212_clock_syscore_ops);
 }
