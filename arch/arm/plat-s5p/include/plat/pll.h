@@ -82,8 +82,6 @@ static inline unsigned long s5p_get_pll36xx(unsigned long baseclk,
 #define PLL45XX_PDIV_SHIFT	(8)
 #define PLL45XX_SDIV_SHIFT	(0)
 
-#include <asm/div64.h>
-
 enum pll45xx_type_t {
 	pll_4500,
 	pll_4502,
