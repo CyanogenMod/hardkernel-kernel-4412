@@ -167,7 +167,7 @@ struct exynos_ss_udc {
 			__attribute__ ((aligned(EXYNOS_USB3_EVENT_BUFF_BSIZE)));
 	dma_addr_t		event_buff_dma;	
 
-	int			ep0_state;
+	bool			ep0_setup;
 	struct usb_request	*ep0_reply;
 	struct usb_request	*ctrl_req;
 
@@ -844,6 +844,8 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 	struct exynos_ss_udc_ep *ep0 = &udc->eps[0];
 	int ret = 0;
 
+	udc->ep0_setup = false;
+
 	ep0->sent_zlp = 0;
 
 	dev_dbg(udc->dev, "ctrl Req=%02x, Type=%02x, V=%04x, L=%04x\n",
@@ -991,6 +993,8 @@ static void exynos_ss_udc_enqueue_setup(struct exynos_ss_udc *udc)
 	int ret;
 
 	dev_dbg(udc->dev, "%s: queueing setup request\n", __func__);
+
+	udc->ep0_setup = true;
 
 	req->zero = 0;
 	req->length = 8;
@@ -1251,9 +1255,7 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 			/* TODO: We need to distinguish Setup packets from other
 			 * OUT packets. We will use EP0 states for it. */
 
-/* This define is temporal so the code could be compiled */
-#define EP0_IDLE 0
-			if (epnum == 0 && udc->ep0_state == EP0_IDLE)
+			if (epnum == 0 && udc->ep0_setup)
 				exynos_ss_udc_handle_outdone(udc, epnum, true);
 			else
 				exynos_ss_udc_handle_outdone(udc, epnum, false);
