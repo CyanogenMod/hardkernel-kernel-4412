@@ -22,8 +22,9 @@ obj-$(CONFIG_VIDEO_TVOUT) :=	s5p_tvout.o		\
 				hw_if/mixer.o		\
 				hw_if/vp.o		\
 				hw_if/hdmi.o		\
-				hw_if/sdo.o		\
 				hw_if/hdcp.o
+
+obj-$(CONFIG_ANALOG_TVENC) +=	hw_if/sdo.o
 
 obj-$(CONFIG_HDMI_HPD) +=	s5p_tvout_hpd.o
 

@@ -46,8 +46,13 @@ extern void *s5p_getaddress(unsigned int cookie);
 
 #define V4L2_STD_ALL_HD				((v4l2_std_id)0xffffffff)
 
+#ifdef CONFIG_CPU_EXYNOS4210
 #define S5P_TVOUT_TVIF_MINOR			14
 #define S5P_TVOUT_VO_MINOR			21
+#else
+#define S5P_TVOUT_TVIF_MINOR			16
+#define S5P_TVOUT_VO_MINOR			20
+#endif
 
 #define V4L2_OUTPUT_TYPE_COMPOSITE		5
 #define V4L2_OUTPUT_TYPE_HDMI			10
@@ -75,6 +80,16 @@ extern void *s5p_getaddress(unsigned int cookie);
 #define V4L2_STD_1080I_59	((v4l2_std_id)0x10000000)
 #define V4L2_STD_1080P_59	((v4l2_std_id)0x11000000)
 #define V4L2_STD_1080P_30	((v4l2_std_id)0x12000000)
+
+#ifdef	CONFIG_HDMI_14A_3D
+#define V4L2_STD_TVOUT_720P_60_SBS_HALF	((v4l2_std_id)0x13000000)
+#define V4L2_STD_TVOUT_720P_59_SBS_HALF	((v4l2_std_id)0x14000000)
+#define V4L2_STD_TVOUT_720P_50_TB	((v4l2_std_id)0x15000000)
+#define V4L2_STD_TVOUT_1080P_24_TB	((v4l2_std_id)0x16000000)
+#define V4L2_STD_TVOUT_1080P_23_TB	((v4l2_std_id)0x17000000)
+#endif
+
+
 
 #define CVBS_S_VIDEO (V4L2_STD_NTSC_M | V4L2_STD_NTSC_M_JP| \
 	V4L2_STD_PAL | V4L2_STD_PAL_M | V4L2_STD_PAL_N | V4L2_STD_PAL_Nc | \
@@ -232,7 +247,34 @@ static const struct v4l2_standard s5p_tvout_tvif_standard[] = {
 		.index	= 21,
 		.id	= V4L2_STD_1080P_30,
 		.name	= "1080I_30",
-	}
+	},
+#ifdef CONFIG_HDMI_14A_3D
+	{
+		.index	= 22,
+		.id	= V4L2_STD_TVOUT_720P_60_SBS_HALF,
+		.name	= "720P_60_SBS_HALF",
+	},
+	{
+		.index	= 23,
+		.id	= V4L2_STD_TVOUT_720P_59_SBS_HALF,
+		.name	= "720P_59_SBS_HALF",
+	},
+	{
+		.index	= 24,
+		.id	= V4L2_STD_TVOUT_720P_50_TB,
+		.name	= "720P_50_TB",
+	},
+	{
+		.index	= 25,
+		.id	= V4L2_STD_TVOUT_1080P_24_TB,
+		.name	= "1080P_24_TB",
+	},
+	{
+		.index	= 26,
+		.id	= V4L2_STD_TVOUT_1080P_23_TB,
+		.name	= "1080P_23_TB",
+	},
+#endif
 };
 
 #define S5P_TVOUT_TVIF_NO_OF_STANDARD ARRAY_SIZE(s5p_tvout_tvif_standard)
@@ -512,6 +554,24 @@ static int s5p_tvout_tvif_s_output(
 		tv_std = TVOUT_1080P_50;
 		break;
 
+#ifdef CONFIG_HDMI_14A_3D
+	case V4L2_STD_TVOUT_720P_60_SBS_HALF:
+		tv_std = TVOUT_720P_60_SBS_HALF;
+		break;
+	case V4L2_STD_TVOUT_720P_59_SBS_HALF:
+		tv_std = TVOUT_720P_59_SBS_HALF;
+		break;
+	case V4L2_STD_TVOUT_720P_50_TB:
+		tv_std = TVOUT_720P_50_TB;
+		break;
+	case V4L2_STD_TVOUT_1080P_24_TB:
+		tv_std = TVOUT_1080P_24_TB;
+		break;
+	case V4L2_STD_TVOUT_1080P_23_TB:
+		tv_std = TVOUT_1080P_23_TB;
+		break;
+#endif
+
 	default:
 		tvout_err("Invalid standard id(0x%08Lx)\n",
 			s5p_tvout_v4l2_private.tvif_standard_id);
@@ -613,6 +673,35 @@ static int s5p_tvout_tvif_cropcap(
 		cropcap->defrect.width = 1920;
 		cropcap->defrect.height = 1080;
 		break;
+
+#ifdef CONFIG_HDMI_14A_3D
+	case TVOUT_720P_60_SBS_HALF:
+	case TVOUT_720P_59_SBS_HALF:
+	case TVOUT_720P_50_TB:
+		cropcap->bounds.top = 0;
+		cropcap->bounds.left = 0;
+		cropcap->bounds.width = 1280;
+		cropcap->bounds.height = 720;
+
+		cropcap->defrect.top = 0;
+		cropcap->defrect.left = 0;
+		cropcap->defrect.width = 1280;
+		cropcap->defrect.height = 720;
+		break;
+
+	case TVOUT_1080P_24_TB:
+	case TVOUT_1080P_23_TB:
+		cropcap->bounds.top = 0;
+		cropcap->bounds.left = 0;
+		cropcap->bounds.width = 1920;
+		cropcap->bounds.height = 1080;
+
+		cropcap->defrect.top = 0;
+		cropcap->defrect.left = 0;
+		cropcap->defrect.width = 1920;
+		cropcap->defrect.height = 1080;
+		break;
+#endif
 
 	default:
 		return -EINVAL;

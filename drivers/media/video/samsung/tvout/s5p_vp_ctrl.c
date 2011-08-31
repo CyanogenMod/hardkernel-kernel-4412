@@ -359,14 +359,14 @@ static void s5p_vp_ctrl_internal_stop(void)
 static void s5p_vp_ctrl_clock(bool on)
 {
 	if (on) {
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 		s5p_tvout_pm_runtime_get();
 #endif
 		clk_enable(s5p_vp_ctrl_private.clk.ptr);
 
 	} else {
 		clk_disable(s5p_vp_ctrl_private.clk.ptr);
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 		s5p_tvout_pm_runtime_put();
 #endif
 	}
@@ -566,6 +566,16 @@ int s5p_vp_ctrl_start(void)
 	case TVOUT_720P_60:
 		s5p_vp_ctrl_private.pp_param.csc_t = VP_CSC_HD_SD;
 		break;
+#ifdef CONFIG_HDMI_14A_3D
+	case TVOUT_720P_60_SBS_HALF:
+	case TVOUT_720P_59_SBS_HALF:
+	case TVOUT_720P_50_TB:
+	case TVOUT_1080P_24_TB:
+	case TVOUT_1080P_23_TB:
+		s5p_vp_ctrl_private.pp_param.csc_t = VP_CSC_HD_SD;
+		break;
+
+#endif
 
 	default:
 		break;

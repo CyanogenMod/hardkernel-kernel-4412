@@ -259,6 +259,31 @@ struct s5p_hdmi_o_reg {
 };
 
 struct s5p_hdmi_v_frame {
+#ifdef	CONFIG_HDMI_14A_3D
+	u32			vH_Line;
+	u32			vV_Line;
+	u32			vH_SYNC_START;
+	u32			vH_SYNC_END;
+	u32			vV1_Blank;
+	u32			vV2_Blank;
+	u16			vHBlank;
+	u32			VBLANK_F0;
+	u32			VBLANK_F1;
+	u32			vVSYNC_LINE_BEF_1;
+	u32			vVSYNC_LINE_BEF_2;
+	u32			vVSYNC_LINE_AFT_1;
+	u32			vVSYNC_LINE_AFT_2;
+	u32			vVSYNC_LINE_AFT_PXL_1;
+	u32			vVSYNC_LINE_AFT_PXL_2;
+	u32			vVACT_SPACE_1;
+	u32			vVACT_SPACE_2;
+	u8			Hsync_polarity;
+	u8			Vsync_polarity;
+	u8			interlaced;
+	u8			vAVI_VIC;
+	u8			vAVI_VIC_16_9;
+	u8			repetition;
+#else
 	u8			vic;
 	u8			vic_16_9;
 	u8			repetition;
@@ -273,7 +298,7 @@ struct s5p_hdmi_v_frame {
 
 	u16			v_total;
 	u16			v_blank;
-
+#endif
 	enum phy_freq		pixel_clock;
 };
 
@@ -285,13 +310,31 @@ struct s5p_hdmi_tg_sync {
 struct s5p_hdmi_v_format {
 	struct s5p_hdmi_v_frame	frame;
 
+#ifdef	CONFIG_HDMI_14A_3D
+	u16	tg_H_FSZ;
+	u16	tg_HACT_ST;
+	u16	tg_HACT_SZ;
+	u16	tg_V_FSZ;
+	u16	tg_VSYNC;
+	u16	tg_VSYNC2;
+	u16	tg_VACT_ST;
+	u16	tg_VACT_SZ;
+	u16	tg_FIELD_CHG;
+	u16	tg_VACT_ST2;
+	u16	tg_VACT_ST3;
+	u16	tg_VACT_ST4;
+	u16	tg_VSYNC_TOP_HDMI;
+	u16	tg_VSYNC_BOT_HDMI;
+	u16	tg_FIELD_TOP_HDMI;
+	u16	tg_FIELD_BOT_HDMI;
+#else
 	struct s5p_hdmi_tg_sync	h_sync;
 	struct s5p_hdmi_tg_sync	v_sync_top;
 	struct s5p_hdmi_tg_sync	v_sync_bottom;
 	struct s5p_hdmi_tg_sync	v_sync_h_pos;
 
 	struct s5p_hdmi_tg_sync	v_blank_f;
-
+#endif
 	u8			mhl_hsync;
 	u8			mhl_vsync;
 };
@@ -307,10 +350,19 @@ extern void s5p_hdmi_reg_gcp(u8 i_p, u8 *gcp);
 extern void s5p_hdmi_reg_acp(u8 *header, u8 *acp);
 extern void s5p_hdmi_reg_isrc(u8 *isrc1, u8 *isrc2);
 extern void s5p_hdmi_reg_gmp(u8 *gmp);
+#ifdef CONFIG_HDMI_14A_3D
+extern void s5p_hdmi_reg_infoframe(struct s5p_hdmi_infoframe *info, u8 *data, u8 type_3D);
+extern void s5p_hdmi_reg_tg(struct s5p_hdmi_v_format *v);
+#else
 extern void s5p_hdmi_reg_infoframe(struct s5p_hdmi_infoframe *info, u8 *data);
 extern void s5p_hdmi_reg_tg(struct s5p_hdmi_v_frame *frame);
+#endif
 extern void s5p_hdmi_reg_v_timing(struct s5p_hdmi_v_format *v);
+#ifdef CONFIG_HDMI_14A_3D
+extern void s5p_hdmi_reg_bluescreen_clr(u16 b, u16 g, u16 r);
+#else
 extern void s5p_hdmi_reg_bluescreen_clr(u8 cb_b, u8 y_g, u8 cr_r);
+#endif
 extern void s5p_hdmi_reg_bluescreen(bool en);
 extern void s5p_hdmi_reg_clr_range(u8 y_min, u8 y_max, u8 c_min, u8 c_max);
 extern void s5p_hdmi_reg_tg_cmd(bool time, bool bt656, bool tg);
@@ -341,6 +393,8 @@ extern void s5p_hdmi_reg_mute(bool en);
 /*****************************************************************************
  * for SDO
  ****************************************************************************/
+#ifdef CONFIG_ANALOG_TVENC
+
 enum s5p_sdo_level {
 	SDO_LEVEL_0IRE,
 	SDO_LEVEL_75IRE
@@ -501,7 +555,7 @@ extern void s5p_sdo_sw_reset(bool active);
 extern void s5p_sdo_set_interrupt_enable(bool vsync_intc_en);
 extern void s5p_sdo_clear_interrupt_pending(void);
 extern void s5p_sdo_init(void __iomem *addr);
-
+#endif
 
 /*****************************************************************************
  * for VP

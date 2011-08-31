@@ -224,7 +224,7 @@ static void s5p_mixer_ctrl_clock(bool on)
 	if (on) {
 		clk_enable(s5p_mixer_ctrl_private.clk[MUX].ptr);
 
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 		s5p_tvout_pm_runtime_get();
 #endif
 
@@ -233,7 +233,7 @@ static void s5p_mixer_ctrl_clock(bool on)
 	} else {
 		clk_disable(s5p_mixer_ctrl_private.clk[ACLK].ptr);
 
-#ifdef CONFIG_CPU_EXYNOS4210
+#ifdef CONFIG_ARCH_EXYNOS4
 		s5p_tvout_pm_runtime_put();
 #endif
 
@@ -469,6 +469,21 @@ int s5p_mixer_ctrl_set_dst_win_pos(enum s5p_mixer_layer layer,
 		h_t = 1080;
 		break;
 
+#ifdef CONFIG_HDMI_14A_3D
+	case TVOUT_720P_60_SBS_HALF:
+	case TVOUT_720P_59_SBS_HALF:
+	case TVOUT_720P_50_TB:
+		w_t = 1280;
+		h_t = 720;
+		break;
+
+	case TVOUT_1080P_24_TB:
+	case TVOUT_1080P_23_TB:
+		w_t = 1920;
+		h_t = 1080;
+		break;
+
+#endif
 	default:
 		w_t = 0;
 		h_t = 0;
@@ -881,6 +896,16 @@ int s5p_mixer_ctrl_start(
 		case TVOUT_1080P_50:
 			s5p_mixer_init_csc_coef_default(MIXER_CSC_709_FR);
 			break;
+#ifdef CONFIG_HDMI_14A_3D
+		case TVOUT_720P_60_SBS_HALF:
+		case TVOUT_720P_59_SBS_HALF:
+		case TVOUT_720P_50_TB:
+		case TVOUT_1080P_24_TB:
+		case TVOUT_1080P_23_TB:
+			s5p_mixer_init_csc_coef_default(MIXER_CSC_709_FR);
+			break;
+
+#endif
 		default:
 			break;
 		}

@@ -456,6 +456,17 @@ int s5p_mixer_init_display_mode(enum s5p_tvout_disp_mode mode,
 		temp_reg |= MIXER_RGB709_16_235<<9;
 		break;
 
+#ifdef CONFIG_HDMI_14A_3D
+	case TVOUT_720P_60_SBS_HALF:
+	case TVOUT_720P_59_SBS_HALF:
+	case TVOUT_720P_50_TB:
+		temp_reg |= S5P_MXR_CFG_HD;
+		temp_reg &= ~S5P_MXR_CFG_HD_1080I;
+		temp_reg |= S5P_MXR_CFG_PROGRASSIVE;
+		temp_reg |= MIXER_RGB709_16_235<<9;
+		break;
+#endif
+
 	case TVOUT_1080I_50:
 	case TVOUT_1080I_59:
 	case TVOUT_1080I_60:
@@ -475,6 +486,15 @@ int s5p_mixer_init_display_mode(enum s5p_tvout_disp_mode mode,
 		temp_reg |= MIXER_RGB709_16_235<<9;
 		break;
 
+#ifdef CONFIG_HDMI_14A_3D
+	case TVOUT_1080P_24_TB:
+	case TVOUT_1080P_23_TB:
+		temp_reg |= S5P_MXR_CFG_HD;
+		temp_reg |= S5P_MXR_CFG_HD_1080P;
+		temp_reg |= S5P_MXR_CFG_PROGRASSIVE;
+		temp_reg |= MIXER_RGB709_16_235<<9;
+		break;
+#endif
 	default:
 		tvout_err("invalid mode parameter = %d\n", mode);
 		return -1;
