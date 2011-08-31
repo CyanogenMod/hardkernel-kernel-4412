@@ -244,6 +244,35 @@ struct clksrc_clk exynos4212_clk_aclk_jpeg = {
 	.reg_div = { .reg = EXYNOS4_CLKDIV_CAM1, .shift = 0, .size = 4 },
 };
 
+static struct clk *exynos4212_clkset_c2c_list[] = {
+	[0] = &exynos4_clk_mout_mpll.clk,
+	[1] = &exynos4_clk_sclk_apll.clk,
+};
+
+static struct clksrc_sources exynos4212_clkset_sclk_c2c = {
+	.sources	= exynos4212_clkset_c2c_list,
+	.nr_sources	= ARRAY_SIZE(exynos4212_clkset_c2c_list),
+};
+
+static struct clksrc_clk exynos4212_clk_sclk_c2c = {
+	.clk	= {
+		.name		= "sclk_c2c",
+		.id		= -1,
+	},
+	.sources = &exynos4212_clkset_sclk_c2c,
+	.reg_src = { .reg = EXYNOS4_CLKSRC_DMC, .shift = 0, .size = 1 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_DMC1, .shift = 4, .size = 3 },
+};
+
+static struct clksrc_clk exynos4212_clk_aclk_c2c = {
+	.clk	= {
+		.name		= "aclk_c2c",
+		.id		= -1,
+		.parent		= &exynos4212_clk_sclk_c2c.clk,
+	},
+	.reg_div = { .reg = EXYNOS4_CLKDIV_DMC1, .shift = 12, .size = 3 },
+};
+
 static struct clksrc_clk *exynos4212_sysclks[] = {
 	&exynos4212_clk_mout_mpll_user,
 	&exynos4212_clk_aclk_gdl_user,
@@ -256,6 +285,8 @@ static struct clksrc_clk *exynos4212_sysclks[] = {
 	&exynos4212_clk_mout_jpeg0,
 	&exynos4212_clk_mout_jpeg1,
 	&exynos4212_clk_aclk_jpeg,
+	&exynos4212_clk_sclk_c2c,
+	&exynos4212_clk_aclk_c2c,
 };
 
 static struct clk exynos4212_init_clocks_off[] = {

@@ -52,6 +52,7 @@ obj-$(CONFIG_S5P_SYSTEM_MMU)		+= dev-sysmmu.o
 obj-$(CONFIG_EXYNOS4_DEV_DWMCI)		+= dev-dwmci.o
 obj-$(CONFIG_EXYNOS4_DEV_FIMC_IS)	+= dev-fimc-is.o
 obj-$(CONFIG_EXYNOS4_DEV_FIMC_LITE)	+= dev-fimc-lite.o
+obj-$(CONFIG_EXYNOS4_DEV_C2C)		+= dev-c2c.o
 
 obj-$(CONFIG_EXYNOS4_SETUP_FIMC)	+= setup-fimc.o
 obj-$(CONFIG_EXYNOS4_SETUP_FIMC0)	+= setup-fimc0.o
@@ -85,3 +86,4 @@ obj-$(CONFIG_EXYNOS4_SETUP_MIPI_DSI)	+= setup-dsim.o
 obj-$(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) += secmem-allocdev.o
 
 obj-$(CONFIG_ION_EXYNOS)		+= dev-ion.o
+obj-$(CONFIG_EXYNOS4_C2C)		+= setup-c2c.o

@@ -527,3 +527,15 @@ config EXYNOS4_MSHC_DDR
 endmenu
 
 endif
+
+config EXYNOS4_C2C
+	bool "C2C device support"
+	default y
+	depends on CPU_EXYNOS4212
+	help
+	  Add C2C device driver
+
+config EXYNOS4_DEV_C2C
+	bool
+	depends on EXYNOS4_C2C
+	default y
