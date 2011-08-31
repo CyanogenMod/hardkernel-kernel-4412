@@ -751,12 +751,13 @@ static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
 #if defined(CONFIG_EXYNOS4_MSHC_8BIT) && \
 	defined(CONFIG_EXYNOS4_MSHC_DDR)
 	.max_width		= 8,
-	.host_caps		= MMC_CAP_8_BIT_DATA | MMC_CAP_1_8V_DDR,
+	.host_caps		= MMC_CAP_8_BIT_DATA | MMC_CAP_1_8V_DDR |
+				  MMC_CAP_UHS_DDR50,
 #elif defined(CONFIG_EXYNOS4_MSHC_8BIT)
 	.max_width		= 8,
 	.host_caps		= MMC_CAP_8_BIT_DATA,
 #elif defined(CONFIG_EXYNOS4_MSHC_DDR)
-	.host_caps		= MMC_CAP_1_8V_DDR,
+	.host_caps		= MMC_CAP_1_8V_DDR | MMC_CAP_UHS_DDR50,
 #endif
 };
 #endif
