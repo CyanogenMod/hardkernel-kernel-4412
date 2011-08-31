@@ -12,6 +12,7 @@
 #include <linux/serial_core.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
+#include <linux/clk.h>
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <linux/i2c.h>
@@ -51,6 +52,7 @@
 #include <plat/mshci.h>
 #include <plat/ehci.h>
 #include <plat/usbgadget.h>
+#include <plat/s3c64xx-spi.h>
 #include <plat/fimc.h>
 #include <plat/csis.h>
 #include <plat/media.h>
@@ -60,6 +62,7 @@
 #include <media/m5mo_platform.h>
 
 #include <mach/map.h>
+#include <mach/spi-clocks.h>
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
@@ -445,6 +448,67 @@ static struct s3c_platform_fimc fimc_plat = {
 	.hw_ver		= 0x51,
 };
 #endif /* CONFIG_VIDEO_FIMC */
+
+#ifdef CONFIG_S3C64XX_DEV_SPI
+static struct s3c64xx_spi_csinfo spi0_csi[] = {
+	[0] = {
+		.line = EXYNOS4_GPB(1),
+		.set_level = gpio_set_value,
+	},
+};
+
+static struct spi_board_info spi0_board_info[] __initdata = {
+	{
+		.modalias = "spidev",
+		.platform_data = NULL,
+		.max_speed_hz = 10*1000*1000,
+		.bus_num = 0,
+		.chip_select = 0,
+		.mode = SPI_MODE_0,
+		.controller_data = &spi0_csi[0],
+	}
+};
+
+#ifndef CONFIG_FB_S5P_LMS501KF03
+static struct s3c64xx_spi_csinfo spi1_csi[] = {
+	[0] = {
+		.line = EXYNOS4_GPB(5),
+		.set_level = gpio_set_value,
+	},
+};
+
+static struct spi_board_info spi1_board_info[] __initdata = {
+	{
+		.modalias = "spidev",
+		.platform_data = NULL,
+		.max_speed_hz = 1200000,
+		.bus_num = 1,
+		.chip_select = 0,
+		.mode = SPI_MODE_3,
+		.controller_data = &spi1_csi[0],
+	}
+};
+#endif
+
+static struct s3c64xx_spi_csinfo spi2_csi[] = {
+	[0] = {
+		.line = EXYNOS4_GPC1(2),
+		.set_level = gpio_set_value,
+	},
+};
+
+static struct spi_board_info spi2_board_info[] __initdata = {
+	{
+		.modalias = "spidev",
+		.platform_data = NULL,
+		.max_speed_hz = 10*1000*1000,
+		.bus_num = 2,
+		.chip_select = 0,
+		.mode = SPI_MODE_0,
+		.controller_data = &spi2_csi[0],
+	}
+};
+#endif
 
 #ifdef CONFIG_FB_S5P
 #ifdef CONFIG_FB_S5P_LMS501KF03
@@ -1450,6 +1514,13 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&samsung_device_keypad,
 	&smdk4212_input_device,
 	&smdk4212_smsc911x,
+#ifdef CONFIG_S3C64XX_DEV_SPI
+	&exynos4_device_spi0,
+#ifndef CONFIG_FB_S5P_LMS501KF03
+	&exynos4_device_spi1,
+#endif
+	&exynos4_device_spi2,
+#endif
 };
 
 #if defined(CONFIG_S5P_MEM_CMA)
@@ -1626,6 +1697,15 @@ static void __init smdk4212_smsc911x_init(void)
 
 static void __init smdk4212_machine_init(void)
 {
+#ifdef CONFIG_S3C64XX_DEV_SPI
+	struct clk *sclk = NULL;
+	struct clk *prnt = NULL;
+	struct device *spi0_dev = &exynos4_device_spi0.dev;
+#ifndef CONFIG_FB_S5P_LMS501KF03
+	struct device *spi1_dev = &exynos4_device_spi1.dev;
+#endif
+	struct device *spi2_dev = &exynos4_device_spi2.dev;
+#endif
 #if defined(CONFIG_EXYNOS4_DEV_PD) && !defined(CONFIG_PM_RUNTIME)
 	/*
 	 * These power domains should be always on
@@ -1752,6 +1832,67 @@ static void __init smdk4212_machine_init(void)
 	smdk4212_smsc911x_init();
 
 	platform_add_devices(smdk4212_devices, ARRAY_SIZE(smdk4212_devices));
+
+#ifdef CONFIG_S3C64XX_DEV_SPI
+	sclk = clk_get(spi0_dev, "sclk_spi");
+	if (IS_ERR(sclk))
+		dev_err(spi0_dev, "failed to get sclk for SPI-0\n");
+	prnt = clk_get(spi0_dev, "mout_mpll_user");
+	if (IS_ERR(prnt))
+		dev_err(spi0_dev, "failed to get prnt\n");
+	clk_set_parent(sclk, prnt);
+	clk_put(sclk);
+	clk_put(prnt);
+
+	if (!gpio_request(EXYNOS4_GPB(1), "SPI_CS0")) {
+		gpio_direction_output(EXYNOS4_GPB(1), 1);
+		s3c_gpio_cfgpin(EXYNOS4_GPB(1), S3C_GPIO_SFN(1));
+		s3c_gpio_setpull(EXYNOS4_GPB(1), S3C_GPIO_PULL_UP);
+		exynos4_spi_set_info(0, EXYNOS4_SPI_SRCCLK_SCLK,
+			ARRAY_SIZE(spi0_csi));
+	}
+	spi_register_board_info(spi0_board_info, ARRAY_SIZE(spi0_board_info));
+
+#ifndef CONFIG_FB_S5P_LMS501KF03
+	sclk = clk_get(spi1_dev, "sclk_spi");
+	if (IS_ERR(sclk))
+		dev_err(spi1_dev, "failed to get sclk for SPI-1\n");
+	prnt = clk_get(spi1_dev, "mout_mpll_user");
+	if (IS_ERR(prnt))
+		dev_err(spi1_dev, "failed to get prnt\n");
+	clk_set_parent(sclk, prnt);
+	clk_put(sclk);
+	clk_put(prnt);
+
+	if (!gpio_request(EXYNOS4_GPB(5), "SPI_CS1")) {
+		gpio_direction_output(EXYNOS4_GPB(5), 1);
+		s3c_gpio_cfgpin(EXYNOS4_GPB(5), S3C_GPIO_SFN(1));
+		s3c_gpio_setpull(EXYNOS4_GPB(5), S3C_GPIO_PULL_UP);
+		exynos4_spi_set_info(1, EXYNOS4_SPI_SRCCLK_SCLK,
+			ARRAY_SIZE(spi1_csi));
+	}
+	spi_register_board_info(spi1_board_info, ARRAY_SIZE(spi1_board_info));
+#endif
+
+	sclk = clk_get(spi2_dev, "sclk_spi");
+	if (IS_ERR(sclk))
+		dev_err(spi2_dev, "failed to get sclk for SPI-2\n");
+	prnt = clk_get(spi2_dev, "mout_mpll_user");
+	if (IS_ERR(prnt))
+		dev_err(spi2_dev, "failed to get prnt\n");
+	clk_set_parent(sclk, prnt);
+	clk_put(sclk);
+	clk_put(prnt);
+
+	if (!gpio_request(EXYNOS4_GPC1(2), "SPI_CS2")) {
+		gpio_direction_output(EXYNOS4_GPC1(2), 1);
+		s3c_gpio_cfgpin(EXYNOS4_GPC1(2), S3C_GPIO_SFN(1));
+		s3c_gpio_setpull(EXYNOS4_GPC1(2), S3C_GPIO_PULL_UP);
+		exynos4_spi_set_info(2, EXYNOS4_SPI_SRCCLK_SCLK,
+			ARRAY_SIZE(spi2_csi));
+	}
+	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
+#endif
 }
 
 MACHINE_START(SMDK4212, "SMDK4212")
