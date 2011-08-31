@@ -2112,19 +2112,37 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	clk_fout_epll.ops = &exynos4_epll_ops;
 
 #ifdef CONFIG_EXYNOS4_MSHC_EPLL_45MHZ
-	clk_set_parent(&clk_dout_mmc4.clk, &clk_mout_epll.clk);
+	if (clk_set_parent(&clk_dout_mmc4.clk, &clk_mout_epll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				 clk_mout_epll.clk.name, clk_dout_mmc4.clk.name);
 #endif
 #ifdef CONFIG_EXYNOS4_MSHC_VPLL_46MHZ
-	clk_set_parent(&clk_dout_mmc4.clk, &clk_sclk_vpll.clk);
-	clk_set_parent(&clk_sclk_vpll.clk, &clk_fout_vpll);
+	if (clk_set_parent(&clk_dout_mmc4.clk, &clk_sclk_vpll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				clk_sclk_vpll.clk.name, clk_dout_mmc4.clk.name);
+	if (clk_set_parent(&clk_sclk_vpll.clk, &clk_fout_vpll))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				clk_fout_vpll.clk.name, clk_sclk_vpll.clk.name);
 #endif
 
-	clk_set_parent(&clk_sclk_audss_i2s.clk, &clk_mout_audss.clk);
-	clk_set_parent(&clk_mout_audss.clk, &clk_fout_epll);
-	clk_set_parent(&clk_sclk_audio0.clk, &clk_mout_epll.clk);
-	clk_set_parent(&clk_sclk_audio1.clk, &clk_mout_epll.clk);
-	clk_set_parent(&clk_sclk_audio2.clk, &clk_mout_epll.clk);
-	clk_set_parent(&clk_mout_epll.clk, &clk_fout_epll);
+	if (clk_set_parent(&clk_sclk_audss_i2s.clk, &clk_mout_audss.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				clk_mout_audss.clk.name, clk_sclk_audss_i2s.clk.name);
+	if (clk_set_parent(&clk_mout_audss.clk, &clk_fout_epll))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				clk_fout_epll.name, clk_mout_audss.clk.name);
+	if (clk_set_parent(&clk_sclk_audio0.clk, &clk_mout_epll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				clk_mout_epll.clk.name, clk_sclk_audio0.clk.name);
+	if (clk_set_parent(&clk_sclk_audio1.clk, &clk_mout_epll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				clk_mout_epll.clk.name, clk_sclk_audio1.clk.name);
+	if (clk_set_parent(&clk_sclk_audio2.clk, &clk_mout_epll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				clk_mout_epll.clk.name, clk_sclk_audio2.clk.name);
+	if (clk_set_parent(&clk_mout_epll.clk, &clk_fout_epll))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				clk_fout_epll.name, clk_mout_epll.clk.name);
 
 	clk_fout_vpll.enable = exynos4_clk_vpll_ctrl;
 	clk_fout_vpll.ops = &exynos4_vpll_ops;
