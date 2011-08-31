@@ -15,8 +15,10 @@
 #include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/gpio.h>
 #include <plat/clock.h>
 #include <plat/regs-dsim.h>
+#include <plat/gpio-cfg.h>
 #include <mach/map.h>
 #include <mach/regs-pmu.h>
 
@@ -65,4 +67,36 @@ void s5p_dsim_init_d_phy(unsigned int dsim_base)
 
 	/* enable DSI master block */
 	s5p_dsim_enable_dsi_master(1);
+}
+
+static void exynos4_dsim_cfg_gpios(unsigned int base, unsigned int nr)
+{
+	s3c_gpio_cfgrange_nopull(base, nr, S3C_GPIO_SFN(2));
+
+	for (; nr > 0; nr--, base++)
+		s5p_gpio_set_drvstr(base, S5P_GPIO_DRVSTR_LV1);
+}
+
+void exynos4_dsim_gpio_setup_24bpp(void)
+{
+	unsigned int reg = 0;
+
+	exynos4_dsim_cfg_gpios(EXYNOS4_GPF0(0), 8);
+	exynos4_dsim_cfg_gpios(EXYNOS4_GPF1(0), 8);
+	exynos4_dsim_cfg_gpios(EXYNOS4_GPF2(0), 8);
+	exynos4_dsim_cfg_gpios(EXYNOS4_GPF3(0), 4);
+
+	/*
+	 * Set DISPLAY_CONTROL register for Display path selection.
+	 *
+	 * DISPLAY_CONTROL[1:0]
+	 * ---------------------
+	 *  00 | MIE
+	 *  01 | MDINE
+	 *  10 | FIMD : selected
+	 *  11 | FIMD
+	 */
+	reg = __raw_readl(S3C_VA_SYS + 0x0210);
+	reg |= (1 << 1);
+	__raw_writel(reg, S3C_VA_SYS + 0x0210);
 }
