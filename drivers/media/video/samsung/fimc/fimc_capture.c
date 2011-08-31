@@ -1548,6 +1548,13 @@ int fimc_streamon_capture(void *fh)
 				}
 			}
 
+			ret = subdev_call(ctrl, video, s_stream, 1);
+			if (ret < 0) {
+				dev_err(ctrl->dev, "%s: s_stream failed\n",
+						__func__);
+				return ret;
+			}
+
 			if (cam->type == CAM_TYPE_MIPI) {
 				if (cam->id == CAMERA_CSI_C)
 					s3c_csis_start(CSI_CH_0, cam->mipi_lanes,
@@ -1570,9 +1577,6 @@ int fimc_streamon_capture(void *fh)
 			fimc_hwset_sysreg_camblk_fimd1_wb(ctrl);
 
 		s3cfb_direct_ioctl(0, S3CFB_SET_WRITEBACK, 1);
-	} else {
-		subdev_call(ctrl, video, s_stream, 0);
-		subdev_call(ctrl, video, s_stream, 1);
 	}
 
 	fimc_hwset_camera_type(ctrl);
