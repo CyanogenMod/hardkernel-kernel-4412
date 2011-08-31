@@ -65,8 +65,10 @@ int fimc_dma_alloc(struct fimc_control *ctrl, struct fimc_buf_set *bs,
 	end = ctrl->mem.base + ctrl->mem.size;
 	curr = &ctrl->mem.curr;
 
-	if (!bs->length[i])
+	if (!bs->length[i]) {
+		mutex_unlock(&ctrl->lock);
 		return -EINVAL;
+	}
 
 	if (!align) {
 		if (*curr + bs->length[i] > end) {
