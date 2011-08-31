@@ -671,6 +671,16 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= ((1 << 11) | (1 << 6)),
 	}, {
+		.name		= "pxl_async0",
+		.id		= -1,
+		.enable		= exynos4_clk_ip_cam_ctrl,
+		.ctrlbit	= (1 << 17),
+	}, {
+		.name		= "pxl_async1",
+		.id		= -1,
+		.enable		= exynos4_clk_ip_cam_ctrl,
+		.ctrlbit	= (1 << 18),
+	}, {
 		.name		= "lcd",
 		.id		= 0,
 		.enable		= exynos4_clk_ip_lcd0_ctrl,
