@@ -1501,6 +1501,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_MFC5X
 	&s5p_device_mfc,
 #endif
+#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+	&exynos4_device_sysmmu[SYSMMU_MDMA],
+#endif
 #ifdef CONFIG_VIDEO_FIMG2D
 	&s5p_device_fimg2d,
 #endif
@@ -1733,10 +1736,6 @@ static void __init smdk4212_machine_init(void)
 	s3c_i2c7_set_platdata(NULL);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
-#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
-	&exynos4_device_sysmmu[SYSMMU_MDMA],
-#endif
-
 #ifdef CONFIG_ANDROID_PMEM
 	android_pmem_set_platdata();
 #endif
@@ -1824,9 +1823,6 @@ static void __init smdk4212_machine_init(void)
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
 	s5p_fimg2d_set_platdata(&fimg2d_data);
-#ifdef CONFIG_EXYNOS4_DEV_PD
-	s5p_device_fimg2d.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
-#endif
 #endif
 	samsung_keypad_set_platdata(&smdk4212_keypad_data);
 	smdk4212_smsc911x_init();
