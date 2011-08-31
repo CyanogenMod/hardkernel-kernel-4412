@@ -33,7 +33,6 @@
 #include <linux/cma.h>
 #include <plat/fimc.h>
 #include <plat/clock.h>
-#include <plat/cputype.h>
 #include <mach/regs-pmu.h>
 
 #include "fimc.h"

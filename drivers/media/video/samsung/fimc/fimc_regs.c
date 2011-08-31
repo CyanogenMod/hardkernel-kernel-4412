@@ -1938,17 +1938,14 @@ int fimc_hwget_check_framecount_sequence(struct fimc_control *ctrl, u32 frame)
 int fimc_hwset_sysreg_camblk_fimd0_wb(struct fimc_control *ctrl)
 {
 	u32 camblk_cfg = readl(SYSREG_CAMERA_BLK);
-	camblk_cfg = camblk_cfg & (~(0x3 << 14));
-	if (ctrl->id == 0)
-		camblk_cfg = camblk_cfg | FIMD0_WB_DEST_FIMC0;
-	else if (ctrl->id == 1)
-		camblk_cfg = camblk_cfg | FIMD0_WB_DEST_FIMC1;
-	else if (ctrl->id == 2)
-		camblk_cfg = camblk_cfg | FIMD0_WB_DEST_FIMC2;
-	else if (ctrl->id == 3)
-		camblk_cfg = camblk_cfg | FIMD0_WB_DEST_FIMC3;
-	else
-		fimc_err("%s: not supported id : %d\n", __func__, ctrl->id);
+
+	if (cpu_is_exynos4212()) {
+		camblk_cfg &= (~(0x3 << 23));
+		camblk_cfg |= ctrl->id << 23;
+	} else {
+		camblk_cfg &= (~(0x3 << 14));
+		camblk_cfg |= ctrl->id << 14;
+	}
 
 	writel(camblk_cfg, SYSREG_CAMERA_BLK);
 
@@ -1958,17 +1955,9 @@ int fimc_hwset_sysreg_camblk_fimd0_wb(struct fimc_control *ctrl)
 int fimc_hwset_sysreg_camblk_fimd1_wb(struct fimc_control *ctrl)
 {
 	u32 camblk_cfg = readl(SYSREG_CAMERA_BLK);
-	camblk_cfg = camblk_cfg & (~(0x3 << 10));
-	if (ctrl->id == 0)
-		camblk_cfg = camblk_cfg | FIMD1_WB_DEST_FIMC0;
-	else if (ctrl->id == 1)
-		camblk_cfg = camblk_cfg | FIMD1_WB_DEST_FIMC1;
-	else if (ctrl->id == 2)
-		camblk_cfg = camblk_cfg | FIMD1_WB_DEST_FIMC2;
-	else if (ctrl->id == 3)
-		camblk_cfg = camblk_cfg | FIMD1_WB_DEST_FIMC3;
-	else
-		fimc_err("%s: not supported id : %d\n", __func__, ctrl->id);
+
+	camblk_cfg &= (~(0x3 << 10));
+	camblk_cfg |= ctrl->id << 10;
 
 	writel(camblk_cfg, SYSREG_CAMERA_BLK);
 

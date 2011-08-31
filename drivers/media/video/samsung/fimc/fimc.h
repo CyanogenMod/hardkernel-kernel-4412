@@ -27,6 +27,7 @@
 #include <media/videobuf-core.h>
 #include <plat/media.h>
 #include <plat/fimc.h>
+#include <plat/cputype.h>
 #endif
 
 #ifdef CONFIG_PM_RUNTIME
