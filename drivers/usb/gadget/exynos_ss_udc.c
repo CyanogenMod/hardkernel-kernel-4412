@@ -687,11 +687,15 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 		return;
 	}
 
-	udc_req->trb.buff_ptr_low = (u32) ureq->dma;
+	udc_req->trb.buff_ptr_low = (u32) ureq->dma + ureq->actual;
 	udc_req->trb.buff_ptr_high = 0;
-	udc_req->trb.param1 = EXYNOS_USB3_TRB_BUFSIZ(ureq->length);
+	/* According to Buffer Size Rules for OUT endpoints the total size
+	   of a buffer must be a multiple of MaxPacketSize. But if not what
+	   can we do? */
+	udc_req->trb.param1 =
+			EXYNOS_USB3_TRB_BUFSIZ(ureq->length - ureq->actual);
 	udc_req->trb.param2 = EXYNOS_USB3_TRB_IOC | EXYNOS_USB3_TRB_LST |
-					EXYNOS_USB3_TRB_HWO;
+			EXYNOS_USB3_TRB_HWO;
 
 	/* Start Transfer */
 	epcmd.ep = get_phys_epnum(udc_ep);
@@ -958,6 +962,7 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 
 	/* initialise status of the request */
 	INIT_LIST_HEAD(&udc_req->queue);
+
 	req->actual = 0;
 	req->status = -EINPROGRESS;
 
@@ -1139,13 +1144,26 @@ static void exynos_ss_udc_complete_in(struct exynos_ss_udc *udc,
 				  struct exynos_ss_udc_ep *udc_ep)
 {
 	struct exynos_ss_udc_req *udc_req = udc_ep->req;
+	int size_left;
 
 	if (!udc_req) {
 		dev_dbg(udc->dev, "XferCompl but no req\n");
 		return;
 	}
 
-	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, 0);
+	if (udc_req->trb.param2 & EXYNOS_USB3_TRB_HWO) {
+		dev_dbg(udc->dev, "%s: HWO bit set!\n", __func__);
+		return;
+	}
+
+	size_left = udc_req->trb.param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
+	udc_req->req.actual = udc_req->req.length - size_left;
+
+	if (udc_req->req.actual < udc_req->req.length) {
+		dev_dbg(udc->dev, "%s trying more for req...\n", __func__);
+		exynos_ss_udc_start_req(udc, udc_ep, udc_req, true);
+	} else
+		exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, 0);
 }
 
 /**
@@ -1206,10 +1224,25 @@ static void exynos_ss_udc_handle_outdone(struct exynos_ss_udc *udc,
 	struct exynos_ss_udc_ep *udc_ep = &udc->eps[epnum];
 	struct exynos_ss_udc_req *udc_req = udc_ep->req;
 	struct usb_request *req = &udc_req->req;
+	int size_left;
 	int result = 0;
+
 
 	if (!udc_req) {
 		dev_dbg(udc->dev, "%s: no request active\n", __func__);
+		return;
+	}
+
+	if (udc_req->trb.param2 & EXYNOS_USB3_TRB_HWO) {
+		dev_dbg(udc->dev, "%s: HWO bit set!\n", __func__);
+		return;
+	}
+
+	size_left = udc_req->trb.param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
+	udc_req->req.actual = udc_req->req.length - size_left;
+
+	if (req->actual < req->length) {
+		exynos_ss_udc_start_req(udc, udc_ep, udc_req, true);
 		return;
 	}
 
