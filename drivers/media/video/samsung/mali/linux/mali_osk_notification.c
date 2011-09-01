@@ -67,7 +67,7 @@ _mali_osk_notification_t *_mali_osk_notification_create( u32 type, u32 size )
 	/* OPT Recycling of notification objects */
     _mali_osk_notification_wrapper_t *notification;
 
-	notification = (_mali_osk_notification_wrapper_t *)kmalloc( sizeof(_mali_osk_notification_wrapper_t), GFP_KERNEL );
+	notification = (_mali_osk_notification_wrapper_t *)kmalloc( sizeof(_mali_osk_notification_wrapper_t) + size, GFP_KERNEL );
     if (NULL == notification)
     {
 		MALI_DEBUG_PRINT(1, ("Failed to create a notification object\n"));
@@ -77,17 +77,9 @@ _mali_osk_notification_t *_mali_osk_notification_create( u32 type, u32 size )
 	/* Init the list */
 	INIT_LIST_HEAD(&notification->list);
 
-	/* allocate memory for the buffer requested */
 	if (0 != size)
 	{
-		notification->data.result_buffer = kmalloc( size, GFP_KERNEL );
-		if ( NULL == notification->data.result_buffer )
-		{
-			/* failed to buffer, cleanup */
-			MALI_DEBUG_PRINT(1, ("Failed to allocate memory for notification object buffer of size %d\n", size));
-			kfree(notification);
-			return NULL;
-		}
+		notification->data.result_buffer = ((u8*)notification) + sizeof(_mali_osk_notification_wrapper_t);
 	}
 	else
 	{
@@ -111,8 +103,6 @@ void _mali_osk_notification_delete( _mali_osk_notification_t *object )
 
 	/* Remove from the list */
 	list_del(&notification->list);
-	/* Free the buffer */
-	kfree(notification->data.result_buffer);
 	/* Free the container */
 	kfree(notification);
 }

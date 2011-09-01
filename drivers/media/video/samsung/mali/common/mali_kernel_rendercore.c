@@ -873,11 +873,11 @@ _mali_osk_errcode_t mali_core_subsystem_ioctl_number_of_cores_get(mali_core_sess
 	if ( NULL != number_of_cores )
 	{
 		*number_of_cores = subsystem->number_of_cores;
+
+		MALI_DEBUG_PRINT(4, ("Core: ioctl_number_of_cores_get: %s: %u\n", subsystem->name, *number_of_cores) ) ;
 	}
 
-	MALI_DEBUG_PRINT(4, ("Core: ioctl_number_of_cores_get: %s: %u\n", subsystem->name, *number_of_cores) ) ;
-
-    MALI_SUCCESS;
+	MALI_SUCCESS;
 }
 
 _mali_osk_errcode_t mali_core_subsystem_ioctl_start_job(mali_core_session * session, void *job_data)
@@ -1068,16 +1068,8 @@ static void mali_core_subsystem_move_core_set_idle(mali_core_renderunit *core)
 #if USING_MALI_PMM
 
 	oldstatus = core->state;
-	
-	if( core->pend_power_down )
-	{
-		core->state = CORE_OFF ;
-		_mali_osk_list_move( &core->list, &subsystem->renderunit_off_head );
-		/* Done the move from the active queues, so the pending power down can be done */
-		core->pend_power_down = MALI_FALSE;
-		malipmm_core_power_down_okay( core->pmm_id );
-	}
-	else
+
+	if ( !core->pend_power_down )
 	{
 		core->state = CORE_IDLE ;
 		_mali_osk_list_move( &core->list, &subsystem->renderunit_idle_head );
@@ -1100,6 +1092,15 @@ static void mali_core_subsystem_move_core_set_idle(mali_core_renderunit *core)
 #endif /* USING_MMU */
 	}
 
+	if( core->pend_power_down )
+	{
+		core->state = CORE_OFF ;
+		_mali_osk_list_move( &core->list, &subsystem->renderunit_off_head );
+
+		/* Done the move from the active queues, so the pending power down can be done */
+		core->pend_power_down = MALI_FALSE;
+		malipmm_core_power_down_okay( core->pmm_id );
+	}
 
 #else /* !USING_MALI_PMM */
 
@@ -1402,9 +1403,9 @@ void mali_core_session_begin(mali_core_session * session)
 	_mali_osk_list_add(&session->all_sessions_list, &session->subsystem->all_sessions_head);
 
 #if MALI_STATE_TRACKING
-	 _mali_osk_atomic_init(&session->jobs_received, 0);
-        _mali_osk_atomic_init(&session->jobs_returned, 0);
-        session->pid = _mali_osk_get_pid();
+	_mali_osk_atomic_init(&session->jobs_received, 0);
+	_mali_osk_atomic_init(&session->jobs_returned, 0);
+	session->pid = _mali_osk_get_pid();
 #endif
 
 	MALI_CORE_SUBSYSTEM_MUTEX_RELEASE(subsystem);
