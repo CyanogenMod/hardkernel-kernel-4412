@@ -10,6 +10,7 @@
 
 #include <linux/sched.h>
 #include <linux/sysdev.h>
+#include <linux/delay.h>
 
 #include <asm/mach/map.h>
 #include <asm/mach/irq.h>
@@ -31,8 +32,10 @@
 #include <plat/iic-core.h>
 #include <plat/cputype.h>
 #include <plat/ace-core.h>
+#include <plat/reset.h>
 
 #include <mach/regs-irq.h>
+#include <mach/regs-pmu.h>
 #include <mach/smc.h>
 
 extern int combiner_init(unsigned int combiner_nr, void __iomem *base,
@@ -354,12 +357,25 @@ int exynos4_subrev(void)
 	return subrev;
 }
 
+static void exynos4_sw_reset(void)
+{
+	int count = 3;
+
+	while (count--) {
+		__raw_writel(0x1, S5P_SWRESET);
+		mdelay(500);
+	}
+}
+
 int __init exynos4_init(void)
 {
 	printk(KERN_INFO "EXYNOS4: Initializing architecture\n");
 
 	/* set idle function */
 	pm_idle = exynos4_idle;
+
+	/* set sw_reset function */
+	s5p_reset_hook = exynos4_sw_reset;
 
 	return sysdev_register(&exynos4_sysdev);
 }
