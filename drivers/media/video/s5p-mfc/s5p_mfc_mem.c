@@ -287,7 +287,7 @@ void s5p_mfc_mem_resume(void *alloc_ctx)
 
 void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
 {
-	/* NOP */
+	vb2_cma_phys_set_cacheable(alloc_ctx, cacheable);
 }
 
 void s5p_mfc_mem_get_cacheable(void *alloc_ctx)
@@ -297,7 +297,7 @@ void s5p_mfc_mem_get_cacheable(void *alloc_ctx)
 
 int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
 {
-	/* NOP */
+	vb2_cma_phys_cache_flush(vb, plane_no);
 	return 0;
 }
 #endif

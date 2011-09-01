@@ -90,6 +90,15 @@ static struct s5p_mfc_fmt *find_format(struct v4l2_format *f, unsigned int t)
 
 static struct v4l2_queryctrl controls[] = {
 	{
+		.id = V4L2_CID_CACHEABLE,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "Cacheable flag",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
 		.id = V4L2_CID_CODEC_MFC5X_ENC_GOP_SIZE,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "The period of intra frame",
@@ -1672,7 +1681,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			return -EINVAL;
 		}
 		*/
-
+		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],true);
 		if (ctx->capture_state != QUEUE_FREE) {
 			mfc_err("invalid capture state: %d\n", ctx->capture_state);
 			return -EINVAL;
@@ -1693,6 +1702,9 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			return -ENOMEM;
 		}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		/* cacheable setting */
+		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],ctx->cacheable);
+		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],ctx->cacheable);
 		if (ctx->output_state != QUEUE_FREE) {
 			mfc_err("invalid output state: %d\n", ctx->output_state);
 			return -EINVAL;
@@ -1880,6 +1892,9 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	int check = 0;
 
 	switch (ctrl->id) {
+	case V4L2_CID_CACHEABLE:
+		ctrl->value = ctx->cacheable;
+		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_STREAM_SIZE:
 		ctrl->value = ctx->enc_dst_buf_size;
 		break;
@@ -2139,6 +2154,14 @@ static int set_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	int check = 0;
 
 	switch (ctrl->id) {
+	case V4L2_CID_CACHEABLE:
+		/*if (stream_on)
+			return -EBUSY; */
+		if(ctrl->value == 0 || ctrl->value ==1)
+			ctx->cacheable = ctrl->value;
+		else
+			ctx->cacheable = 0;
+		break;
 	case V4L2_CID_CODEC_FRAME_TAG:
 	case V4L2_CID_CODEC_FRAME_INSERTION:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
@@ -2500,6 +2523,7 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 			mfc_err("plane size is too small for capture\n");
 			return -EINVAL;
 		}
+		s5p_mfc_mem_cache_flush(vb, 1);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		ret = check_vb_with_fmt(ctx->src_fmt, vb);
 		if (ret < 0)
@@ -2514,6 +2538,9 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 		    vb2_plane_size(vb, 1) < ctx->chroma_size) {
 			mfc_err("plane size is too small for output\n");
 			return -EINVAL;
+		}
+		if(ctx->cacheable) {
+			s5p_mfc_mem_cache_flush(vb, 2);
 		}
 		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
