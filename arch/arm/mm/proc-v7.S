@@ -332,8 +332,8 @@ __v7_setup:
 2:	ldr	r10, =0x00000c09		@ Cortex-A9 primary part number
 	teq	r0, r10
 	bne	3f
-	cmp	r6, #0x10			@ power ctrl reg added r1p0
 #ifndef CONFIG_ARM_TRUSTZONE
+	cmp	r6, #0x10			@ power ctrl reg added r1p0
 	mrcge	p15, 0, r10, c15, c0, 0		@ read power control register
 	orrge	r10, r10, #1			@ enable dynamic clock gating
 	mcrge	p15, 0, r10, c15, c0, 0		@ write power control register
