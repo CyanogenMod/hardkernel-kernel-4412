@@ -23,11 +23,26 @@
 #define	TOUCH_RELEASE           0
 
 /* Touch Configuration */
-#define GPX3DAT (S5P_VA_GPIO2 + 0xC64)
-#define EINT_43CON (S5P_VA_GPIO2 + 0xE0C)
 
 /* Touch Interrupt define */
+#ifdef CONFIG_MACH_SMDK4212
+
+#define	S5PV310_TS_IRQ          gpio_to_irq(EXYNOS4_GPX1(6))
+#define	TS_ATTB			(EXYNOS4_GPX1(6))
+
+/* Touch should be reset before using. In order to reset it, the reset pin
+   should be set OUTPUT HIGH. The Reset pin is EXYNOS4_GPX1(5) (XEINT 13).
+   However, the SMDK4212 uses this pin for resetting both LCD and touchscreen.
+   Therefore, it assumes that LCD driver will reset them by this pin. */
+
+#elif defined (CONFIG_MACH_SMDKV310)
+
 #define	S5PV310_TS_IRQ          gpio_to_irq(EXYNOS4_GPX3(5))
+#define	TS_ATTB			(EXYNOS4_GPX3(5))
+
+#else
+#error Unsupported board!
+#endif
 
 #define	TS_ABS_MIN_X            0
 #define	TS_ABS_MIN_Y            0
@@ -37,10 +52,6 @@
 #define	TS_X_THRESHOLD		1
 #define	TS_Y_THRESHOLD		1
 
-#define	TS_ATTB			(EXYNOS4_GPX3(5))
-
-/* Interrupt Check port */
-#define	GET_INT_STATUS()	(((*(unsigned long *)GPX3DAT) & 0x01) ? 1 : 0)
 
 /* touch register */
 #define	MODULE_CALIBRATION	0x37

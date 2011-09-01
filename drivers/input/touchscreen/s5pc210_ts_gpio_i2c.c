@@ -42,14 +42,30 @@
 #include "s5pc210_ts_gpio_i2c.h"
 #include "s5pc210_ts.h"
 
-#define GPB1CON (S5P_VA_GPIO + 0x40)
-#define GPB1DAT (S5P_VA_GPIO + 0x44)
 
 /* Touch I2C Address Define */
 #define	TOUCH_WR_ADDR 0xB8
 #define	TOUCH_RD_ADDR 0xB9
 
 /* Touch I2C Port define */
+#ifdef CONFIG_MACH_SMDK4212
+
+#define GPD0CON (S5P_VA_GPIO + 0xA0)
+#define GPD0DAT (S5P_VA_GPIO + 0xA4)
+
+#define	SDA_CON_PORT (*(unsigned long *)GPD0CON)
+#define	SDA_DAT_PORT (*(unsigned long *)GPD0DAT)
+#define	SDA_PIN 2
+
+#define	CLK_CON_PORT (*(unsigned long *)GPD0CON)
+#define	CLK_DAT_PORT (*(unsigned long *)GPD0DAT)
+#define	CLK_PIN 3
+
+#elif defined (CONFIG_MACH_SMDKV310)
+
+#define GPB1CON (S5P_VA_GPIO + 0x40)
+#define GPB1DAT (S5P_VA_GPIO + 0x44)
+
 #define	SDA_CON_PORT (*(unsigned long *)GPB1CON)
 #define	SDA_DAT_PORT (*(unsigned long *)GPB1DAT)
 #define	SDA_PIN 6
@@ -57,6 +73,10 @@
 #define	CLK_CON_PORT (*(unsigned long *)GPB1CON)
 #define	CLK_DAT_PORT (*(unsigned long *)GPB1DAT)
 #define	CLK_PIN 7
+
+#else
+#error Unsupported board!
+#endif
 
 #define	DELAY_TIME 5
 #define	PORT_CHANGE_DELAY_TIME 5

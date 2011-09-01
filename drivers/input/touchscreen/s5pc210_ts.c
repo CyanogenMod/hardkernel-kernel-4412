@@ -284,8 +284,7 @@ static void s5pv310_ts_config(unsigned char state)
 		}
 
 		s3c_gpio_cfgpin(TS_ATTB, (0xf << 20));
-		s3c_gpio_cfgpin((unsigned int) EINT_43CON, ~((0x7) << 20));
-		s3c_gpio_setpull(TS_ATTB, S3C_GPIO_PULL_UP);
+		s3c_gpio_setpull(TS_ATTB, S3C_GPIO_PULL_NONE);
 
 		irq_set_irq_type(S5PV310_TS_IRQ, IRQ_TYPE_EDGE_RISING);
 
