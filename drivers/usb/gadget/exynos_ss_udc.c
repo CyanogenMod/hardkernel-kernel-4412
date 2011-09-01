@@ -49,6 +49,80 @@
 	    (_udc)->driver && (_udc)->driver->_entry)	\
 		(_udc)->driver->_entry(&(_udc)->gadget);
 
+/* BOS Descriptor (Binary Object Store) */
+struct bos_desc {
+	uint8_t bLength;
+	uint8_t bDescriptorType;
+	uint16_t wTotalLength;
+	uint8_t bNumDeviceCaps;
+} __attribute__((__packed__));
+
+struct usb20_ext_cap_desc {
+	uint8_t bLength;
+	uint8_t bDescriptorType;
+	uint8_t bDevCapabilityType;
+	uint32_t bmAttributes;
+} __attribute__((__packed__));
+
+struct superspeed_cap_desc {
+	uint8_t bLength;
+	uint8_t bDescriptorType;
+	uint8_t bDevCapabilityType;
+	uint8_t bmAttributes;
+	uint16_t wSpeedsSupported;
+	uint8_t bFunctionalitySupport;
+	uint8_t bU1DevExitLat;
+	uint16_t wU2DevExitLat;
+} __attribute__((__packed__));
+
+struct container_id_cap_desc {
+	uint8_t bLength;
+	uint8_t bDescriptorType;
+	uint8_t bDevCapabilityType;
+	uint8_t bReserved;
+	uint8_t containerID[16];
+} __attribute__((__packed__));
+
+#define USB_CAP_20_EXT	0x2
+#define USB_CAP_SS	0x3
+#define USB_CAP_CID	0x4
+
+static struct usb20_ext_cap_desc cap1 = {
+	.bLength = sizeof(struct usb20_ext_cap_desc),
+	.bDescriptorType = USB_DT_DEVICE_CAPABILITY,
+	.bDevCapabilityType = USB_CAP_20_EXT,
+	.bmAttributes = 0x2,
+};
+
+static struct superspeed_cap_desc cap2 = {
+	.bLength = sizeof(struct superspeed_cap_desc),
+	.bDescriptorType = USB_DT_DEVICE_CAPABILITY,
+	.bDevCapabilityType = USB_CAP_SS,
+	.bmAttributes = 0x0,
+	.wSpeedsSupported = 0xc,
+	.bFunctionalitySupport = 2,
+	/* @todo set these to correct value */
+	.bU1DevExitLat = 0x4,
+	.wU2DevExitLat = 0x4,
+};
+
+static struct container_id_cap_desc cap3 = {
+	.bLength = sizeof(struct container_id_cap_desc),
+	.bDescriptorType = USB_DT_DEVICE_CAPABILITY,
+	.bDevCapabilityType = USB_CAP_CID,
+	.bReserved = 0x0,
+	/* @todo Create UUID */
+	.containerID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+};
+
+static struct bos_desc bos = {
+	.bLength = sizeof(struct bos_desc),
+	.bDescriptorType = USB_DT_BOS,
+	.wTotalLength = sizeof(struct bos_desc) +
+			sizeof(cap1) + sizeof(cap2) + sizeof(cap3),
+	.bNumDeviceCaps = 3,
+};
+
 /**
  * struct exynos_ss_udc_trb - transfer request block (TRB)
  * @buff_ptr_low: Buffer pointer low.
@@ -168,6 +242,7 @@ struct exynos_ss_udc {
 	dma_addr_t		event_buff_dma;	
 
 	bool			ep0_setup;
+	u8			*ep0_buff;
 	struct usb_request	*ep0_reply;
 	struct usb_request	*ctrl_req;
 
@@ -639,12 +714,12 @@ static int exynos_ss_udc_send_reply(struct exynos_ss_udc *udc,
 
 	udc_req = our_req(req);
 
-	req->buf = &udc_req->trb;
+	req->buf = udc->ep0_buff;
 	req->length = length;
 	req->zero = 1; /* always do zero-length final transfer */
 	req->complete = exynos_ss_udc_complete_oursetup;
 
-	if (length)
+	if (length && (buff != req->buf))
 		memcpy(req->buf, buff, length);
 	else
 		ep->sent_zlp = 1;
@@ -847,6 +922,8 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 {
 	struct exynos_ss_udc_ep *ep0 = &udc->eps[0];
 	int ret = 0;
+	u8 *buf = udc->ep0_buff;
+	int len;
 
 	udc->ep0_setup = false;
 
@@ -887,6 +964,24 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 		case USB_REQ_CLEAR_FEATURE:
 		case USB_REQ_SET_FEATURE:
 			ret = exynos_ss_udc_process_req_feature(udc, ctrl);
+			break;
+
+		case USB_REQ_GET_DESCRIPTOR:
+			if ((ctrl->wValue >> 8) == 0x0f) {
+				/* Get BOS descriptor */
+				memcpy(buf, &bos, sizeof(bos));
+				buf += sizeof(bos);
+				memcpy(buf, &cap1, sizeof(cap1));
+				buf += sizeof(cap1);
+				memcpy(buf, &cap2, sizeof(cap2));
+				buf += sizeof(cap2);
+				memcpy(buf, &cap3, sizeof(cap3));
+				len = bos.wTotalLength < ctrl->wLength ?
+				      bos.wTotalLength : ctrl->wLength;
+
+				ret = exynos_ss_udc_send_reply(udc, ep0,
+					udc->ep0_buff, len);
+			}
 			break;
 		}
 	}
@@ -1835,6 +1930,13 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	udc->ep0_buff = kzalloc(512, GFP_KERNEL);
+	if (!udc->ep0_buff) {
+		dev_err(dev, "cannot get memory for EP0 buffer\n");
+		ret = -ENOMEM;
+		goto err_mem;
+	}
+
 	udc->dev = dev;
 	udc->plat = plat;
 
@@ -1949,6 +2051,7 @@ err_regs_res:
 err_clk:
 	clk_put(udc->clk);
 err_mem:
+	kfree(udc->ep0_buff);
 	kfree(udc);
 	return ret;
 
