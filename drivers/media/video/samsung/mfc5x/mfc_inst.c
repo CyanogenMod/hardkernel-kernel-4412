@@ -86,18 +86,18 @@ void mfc_destroy_inst(struct mfc_inst_ctx* ctx)
 		/* Free Decoder/Encoder context private memory */
 		if (ctx->type == DECODER) {
 			dec_ctx = ctx->c_priv;
-			if (!dec_ctx)
+			if (dec_ctx)
 				kfree(dec_ctx->d_priv);
 		} else if (ctx->type == ENCODER) {
 			enc_ctx = ctx->c_priv;
-			if (!enc_ctx)
+			if (enc_ctx)
 				kfree(enc_ctx->e_priv);
 		} else {
 			mfc_err("mfc_destroy_inst(): wrong codec type");
 		}
 
 		/* Free Decoder/Encoder Context */
-		if (!ctx->c_priv)
+		if (ctx->c_priv)
 			kfree(ctx->c_priv);
 
 		/* Free instance context memory */

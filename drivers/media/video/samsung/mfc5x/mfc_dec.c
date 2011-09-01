@@ -1772,12 +1772,12 @@ err_handling:
 
 	mfc_free_buf_inst(ctx->id);
 
-	if (!dec_ctx) {
+	if (dec_ctx) {
 		kfree(dec_ctx->d_priv);
 		dec_ctx->d_priv = NULL;
 	}
 
-	if (!ctx->c_priv) {
+	if (ctx->c_priv) {
 		kfree(ctx->c_priv);
 		ctx->c_priv = NULL;
 	}
