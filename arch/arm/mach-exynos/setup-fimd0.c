@@ -18,6 +18,7 @@
 
 #include <plat/fb.h>
 #include <plat/gpio-cfg.h>
+#include <plat/clock.h>
 
 #include <mach/regs-clock.h>
 #include <mach/map.h>
@@ -74,10 +75,23 @@ int __init exynos4_fimd0_setup_clock(struct device *dev, const char *parent,
 		return PTR_ERR(clk_parent);
 	}
 
-	clk_set_parent(sclk, clk_parent);
+	if (clk_set_parent(sclk, clk_parent)) {
+		pr_err("Unable to set parent %s of clock %s.\n",
+				clk_parent->name, sclk->name);
+		clk_put(sclk);
+		clk_put(clk_parent);
+		return PTR_ERR(sclk);
+	}
+
 	if (!clk_rate)
 		clk_rate = 134000000UL;
-	clk_set_rate(sclk, clk_rate);
+
+	if (clk_set_rate(sclk, clk_rate)) {
+		pr_err("%s rate change failed: %lu\n", sclk->name, clk_rate);
+		clk_put(sclk);
+		clk_put(clk_parent);
+		return PTR_ERR(sclk);
+	}
 
 	clk_put(sclk);
 	clk_put(clk_parent);

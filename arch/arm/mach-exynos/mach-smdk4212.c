@@ -1908,7 +1908,9 @@ static void __init smdk4212_machine_init(void)
 	prnt = clk_get(spi0_dev, "mout_mpll_user");
 	if (IS_ERR(prnt))
 		dev_err(spi0_dev, "failed to get prnt\n");
-	clk_set_parent(sclk, prnt);
+	if (clk_set_parent(sclk, prnt))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				prnt->name, sclk->name);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -1928,7 +1930,9 @@ static void __init smdk4212_machine_init(void)
 	prnt = clk_get(spi1_dev, "mout_mpll_user");
 	if (IS_ERR(prnt))
 		dev_err(spi1_dev, "failed to get prnt\n");
-	clk_set_parent(sclk, prnt);
+	if (clk_set_parent(sclk, prnt))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				prnt->name, sclk->name);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -1948,7 +1952,9 @@ static void __init smdk4212_machine_init(void)
 	prnt = clk_get(spi2_dev, "mout_mpll_user");
 	if (IS_ERR(prnt))
 		dev_err(spi2_dev, "failed to get prnt\n");
-	clk_set_parent(sclk, prnt);
+	if (clk_set_parent(sclk, prnt))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				prnt->name, sclk->name);
 	clk_put(sclk);
 	clk_put(prnt);
 

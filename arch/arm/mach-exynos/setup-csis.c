@@ -100,12 +100,20 @@ int s3c_csis_clk_on(struct platform_device *pdev, struct clk **clk)
 		goto err_clk2;
 	}
 
-	clk_set_parent(sclk_csis, mout_mpll);
-	clk_set_rate(sclk_csis, pdata->clk_rate);
+	if (clk_set_parent(sclk_csis, mout_mpll)) {
+		dev_err(&pdev->dev, "Unable to set parent %s of clock %s.\n",
+				mout_mpll->name, sclk_csis->name);
+		goto err_clk3;
+	}
+
+	if (clk_set_rate(sclk_csis, pdata->clk_rate)) {
+		dev_err(&pdev->dev, "%s rate change failed: %lu\n",
+				sclk_csis->name, pdata->clk_rate);
+		goto err_clk3;
+	}
 
 	/* csis */
 	*clk = clk_get(&pdev->dev, "csis");
-
 	if (IS_ERR(clk)) {
 		dev_err(&pdev->dev, "failed to get csis clock\n");
 		goto err_clk3;

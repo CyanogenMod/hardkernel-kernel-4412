@@ -183,7 +183,9 @@ static void set_apll(unsigned int new_index,
 
 	/* 1. MUX_CORE_SEL = MPLL,
 	 * ARMCLK uses MPLL for lock time */
-	clk_set_parent(moutcore, mout_mpll);
+	if (clk_set_parent(moutcore, mout_mpll))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				mout_mpll->name, moutcore->name);
 
 	do {
 		tmp = (__raw_readl(S5P_CLKMUX_STATCPU)
@@ -206,7 +208,9 @@ static void set_apll(unsigned int new_index,
 	} while (!(tmp & (0x1 << S5P_APLLCON0_LOCKED_SHIFT)));
 
 	/* 5. MUX_CORE_SEL = APLL */
-	clk_set_parent(moutcore, mout_apll);
+	if (clk_set_parent(moutcore, mout_apll))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				mout_apll->name, moutcore->name);
 
 	do {
 		tmp = __raw_readl(S5P_CLKMUX_STATCPU);

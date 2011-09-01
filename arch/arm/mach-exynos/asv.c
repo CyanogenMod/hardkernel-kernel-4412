@@ -20,6 +20,7 @@
 #include <asm/mach-types.h>
 
 #include <plat/cputype.h>
+#include <plat/clock.h>
 
 #include <mach/map.h>
 #include <mach/regs-iem.h>
@@ -48,7 +49,9 @@ static int __init iem_clock_init(void)
 			clk_put(clk_copy);
 			return -EINVAL;
 		}
-		clk_set_parent(clk_copy, clk_parent);
+		if (clk_set_parent(clk_copy, clk_parent))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+					clk_parent->name, clk_copy->name);
 
 		clk_put(clk_parent);
 	}
@@ -68,7 +71,9 @@ static int __init iem_clock_init(void)
 			clk_put(clk_copy);
 			return -EINVAL;
 		}
-		clk_set_parent(clk_copy, clk_parent);
+		if (clk_set_parent(clk_copy, clk_parent))
+			printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+					clk_parent->name, clk_copy->name);
 
 		clk_put(clk_parent);
 	}
