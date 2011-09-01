@@ -444,11 +444,11 @@ static int g2d_remove(struct platform_device *dev)
 
 	mutex_destroy(&g2d_dev->lock);
 	
-	kfree(g2d_dev);
-	
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 	unregister_early_suspend(&g2d_dev->early_suspend);
 #endif
+
+	kfree(g2d_dev);
 
 #if defined(CONFIG_EXYNOS4_DEV_PD)
 	/* disable the power domain */
