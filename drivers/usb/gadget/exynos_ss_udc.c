@@ -1403,7 +1403,7 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 {
 	struct exynos_ss_udc_ep_command epcmd;
-	u32 reg;
+	u32 reg, speed;
 	int epnum;
 	int mps;
 	bool res;
@@ -1419,25 +1419,37 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 
 		/* TODO: 
 		   1. program GCTL:RAMClkSel
-		   2. suspend the inactive Phy 
 		 */
+		speed = reg & EXYNOS_USB3_DSTS_ConnectSpd_MASK;
 
-		switch (reg & EXYNOS_USB3_DSTS_ConnectSpd_MASK) {
+		/* Suspend the inactive Phy */
+		if (speed == USB_SPEED_SUPER)
+			__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+				EXYNOS_USB3_GUSB2PHYCFGx_SusPHY);
+		else
+			__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+				EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
+
+		switch (speed) {
 		/* High-speed */
 		case 0:
+			udc->gadget.speed = USB_SPEED_HIGH;
 			mps = 64;
 			break;
 		/* Full-speed */
 		case 1:
 		case 3:
+			udc->gadget.speed = USB_SPEED_FULL;
 			mps = 64;
 			break;
 		/* Low-speed */
 		case 2:
+			udc->gadget.speed = USB_SPEED_LOW;
 			mps = 8;
 			break;
 		/* SuperSpeed */
 		case 4:
+			udc->gadget.speed = USB_SPEED_SUPER;
 			mps = 512;
 			break;
 		}
