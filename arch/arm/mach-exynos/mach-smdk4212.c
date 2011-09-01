@@ -54,6 +54,7 @@
 #include <plat/usbgadget.h>
 #include <plat/s3c64xx-spi.h>
 #include <plat/fimc.h>
+#include <plat/tvout.h>
 #include <plat/csis.h>
 #include <plat/media.h>
 #include <plat/regs-srom.h>
@@ -1279,6 +1280,9 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 		I2C_BOARD_INFO("wm8994", 0x1a),
 		.platform_data	= &wm8994_platform_data,
 	},
+};
+
+static struct i2c_board_info i2c_devs2[] __initdata = {
 #ifdef CONFIG_VIDEO_TVOUT
 	{
 		I2C_BOARD_INFO("s5p_ddc", (0x74 >> 1)),
@@ -1470,6 +1474,7 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&s3c_device_rtc,
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
+	&s3c_device_i2c2,
 	&s3c_device_i2c3,
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
@@ -1523,6 +1528,11 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_SND_SAMSUNG_RP
 	&exynos4_device_srp,
 #endif
+#ifdef CONFIG_VIDEO_TVOUT
+	&s5p_device_tvout,
+	&s5p_device_cec,
+	&s5p_device_hpd,
+#endif
 #ifdef CONFIG_VIDEO_FIMC
 	&s3c_device_fimc0,
 	&s3c_device_fimc1,
@@ -1560,6 +1570,15 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&exynos4_device_spi2,
 #endif
 };
+
+#if defined(CONFIG_VIDEO_TVOUT)
+static struct s5p_platform_hpd hdmi_hpd_data __initdata = {
+
+};
+static struct s5p_platform_cec hdmi_cec_data __initdata = {
+
+};
+#endif
 
 #if defined(CONFIG_S5P_MEM_CMA)
 static void __init exynos4_reserve_mem(void)
@@ -1762,6 +1781,9 @@ static void __init smdk4212_machine_init(void)
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 
+	s3c_i2c2_set_platdata(NULL);
+	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
+
 	s3c_i2c3_set_platdata(NULL);
 	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
 
@@ -1854,6 +1876,14 @@ static void __init smdk4212_machine_init(void)
 	smdk4212_cam1_reset(1);
 #endif
 #endif /* CONFIG_VIDEO_FIMC */
+
+#if defined(CONFIG_VIDEO_TVOUT)
+	s5p_hdmi_hpd_set_platdata(&hdmi_hpd_data);
+	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_tvout.dev.parent = &exynos4_device_pd[PD_TV].dev;
+#endif
+#endif
 
 #ifdef CONFIG_VIDEO_MFC5X
 #ifdef CONFIG_EXYNOS4_DEV_PD
