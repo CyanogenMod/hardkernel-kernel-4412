@@ -1044,6 +1044,7 @@ static void mshci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct mshci_host *host;
 	unsigned long flags;
+	u32 regs;
 
 	host = mmc_priv(mmc);
 
@@ -1074,28 +1075,35 @@ static void mshci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	else
 		mshci_set_power(host, ios->vdd);
 
+	regs = mshci_readl(host, MSHCI_UHS_REG);
+
 	if (ios->bus_width == MMC_BUS_WIDTH_8) {
 		mshci_writel(host, (0x1<<16), MSHCI_CTYPE);
 		if (ios->ddr == MMC_1_2V_DDR_MODE ||
 			ios->ddr == MMC_1_8V_DDR_MODE) {
-			mshci_writel(host, (0x1<<16), MSHCI_UHS_REG);
+			regs |= (0x1 << 16);
+			mshci_writel(host, regs, MSHCI_UHS_REG);
 			mshci_writel(host, (0x00020002), MSHCI_CLKSEL);
 		} else {
-			mshci_writel(host, (0x0<<0), MSHCI_UHS_REG);
+			regs &= ~(0x1 << 16);
+			mshci_writel(host, regs|(0x0<<0), MSHCI_UHS_REG);
 			mshci_writel(host, (0x00010001), MSHCI_CLKSEL);
 		}
 	} else if (ios->bus_width == MMC_BUS_WIDTH_4) {
 		mshci_writel(host, (0x1<<0), MSHCI_CTYPE);
 		if (ios->ddr == MMC_1_2V_DDR_MODE ||
 			ios->ddr == MMC_1_8V_DDR_MODE) {
-			mshci_writel(host, (0x1<<16), MSHCI_UHS_REG);
+			regs |= (0x1 << 16);
+			mshci_writel(host, regs, MSHCI_UHS_REG);
 			mshci_writel(host, (0x00010001), MSHCI_CLKSEL);
 		} else {
-			mshci_writel(host, (0x0<<0), MSHCI_UHS_REG);
+			regs &= ~(0x1 << 16);
+			mshci_writel(host, regs|(0x0<<0), MSHCI_UHS_REG);
 			mshci_writel(host, (0x00010001), MSHCI_CLKSEL);
 		}
 	} else {
-		mshci_writel(host, 0, MSHCI_UHS_REG);
+		regs &= ~(0x1 << 16);
+		mshci_writel(host, regs|0, MSHCI_UHS_REG);
 		mshci_writel(host, (0x0<<0), MSHCI_CTYPE);
 		mshci_writel(host, (0x00010001), MSHCI_CLKSEL);
 	}
