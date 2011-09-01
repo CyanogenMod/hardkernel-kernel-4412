@@ -28,7 +28,7 @@
 #define PHY0_OTG_DISABLE			(1 << 4)
 #define PHY0_ANALOG_POWERDOWN			(1 << 3)
 #define PHY0_FORCE_SUSPEND			(1 << 0)
-#define PHY0_NORMAL_MASK			(0x39 << 0)
+#define PHY0_NORMAL_MASK			(0x29 << 0)
 
 #define EXYNOS4_PHYCLK				EXYNOS4_HSOTG_PHYREG(0x04)
 #define PHY1_COMMON_ON_N			(1 << 7)
