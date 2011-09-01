@@ -286,23 +286,23 @@ static int __devinit s5p_tmu_probe(struct platform_device *pdev)
 			IRQF_DISABLED,  "s5p-tmu interrupt", tz);
 	if (ret) {
 		dev_err(&pdev->dev, "IRQ%d error %d\n", irq_tmu, ret);
-		goto err_irq;
+		goto err_noirq;
 	}
 
 	ret = tmu_initialize(pdev);
 	if (ret)
-		goto err_nores;
+		goto err_noinit;
 
 	tmu_start(pdev);
 
 	return ret;
 
+err_noinit:
+	free_irq(irq_tmu, tz);
+err_noirq:
+	iounmap(tz->tmu_base);
 err_nomap:
 	release_resource(s5p_tmu_mem);
-
-err_irq:
-	free_irq(irq_tmu, tz);
-
 err_nores:
 	return ret;
 }
