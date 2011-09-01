@@ -97,7 +97,7 @@ config FB_S5P_HT101HD1
 
 config FB_S5P_WA101S
 	bool "WA101S"
-	depends on MACH_SMDKV310 || MACH_SMDKC210
+	depends on MACH_SMDKV310 || MACH_SMDKC210 || MACH_SMDK4212
 	select TOUCHSCREEN_S5PV310_MT
 	help
 	  This enables support for 10.1" 1366*768 LCD panel
