@@ -90,20 +90,30 @@ ENTRY(exynos4_enter_lp)
 
 resume_with_mmu:
 	/* Enable L2 cache */
+#ifdef CONFIG_ARM_TRUSTZONE
+	ldr	r0, =SMC_CMD_L2X0CTRL
+	mov	r1, #1
+	mov	r2, #0
+	mov	r3, #0
+	smc	0
+#else
 	mov	r0, #1
 	ldr	r1, =0xF8600000
-#ifndef CONFIG_ARM_TRUSTZONE
 	str	r0, [r1, #0x100]
 #endif
 	adr	r0, sleep_save_misc
 
+#ifdef CONFIG_ARM_TRUSTZONE
 	ldr	r1, [r0], #4
-#ifndef CONFIG_ARM_TRUSTZONE
+	ldr	r2, [r0], #4
+	ldr	r0, =SMC_CMD_C15RESUME
+	mov	r3, #0
+	smc	0
+#else
+	ldr	r1, [r0], #4
 	mcr	p15, 0, r1, c15, c0, 0	@ write power control register
-#endif
 
 	ldr	r1, [r0], #4
-#ifndef CONFIG_ARM_TRUSTZONE
 	mcr	p15, 0, r1, c15, c0, 1	@ write diagnostic register
 #endif
 

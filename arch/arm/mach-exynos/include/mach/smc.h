@@ -20,6 +20,8 @@
 #define SMC_CMD_L2X0UP		(-5)
 #define SMC_CMD_CPU0AFTR	(-6)
 #define SMC_CMD_L2X0DEBUG	(-7)
+#define SMC_CMD_L2X0CTRL	(-8)
+#define SMC_CMD_C15RESUME	(-9)
 
 #ifndef __ASSEMBLY__
 static inline u32 exynos_smc(u32 cmd, u32 arg1, u32 arg2, u32 arg3)
