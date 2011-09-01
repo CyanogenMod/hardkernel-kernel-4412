@@ -68,6 +68,8 @@ static struct s3c_gpio_cfg gpio_cfg_noint = {
 static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 	{
 		.base	= S5P_VA_GPIO1,
+		.eint_offset = 0x0,
+		.group	= 0,
 		.chip	= {
 			.base	= EXYNOS4_GPA0(0),
 			.ngpio	= EXYNOS4_GPIO_A0_NR,
@@ -75,6 +77,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base	= (S5P_VA_GPIO1 + 0x20),
+		.eint_offset = 0x4,
+		.group	= 1,
 		.chip	= {
 			.base	= EXYNOS4_GPA1(0),
 			.ngpio	= EXYNOS4_GPIO_A1_NR,
@@ -82,6 +86,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base	= (S5P_VA_GPIO1 + 0x40),
+		.eint_offset = 0x8,
+		.group	= 2,
 		.chip	= {
 			.base	= EXYNOS4_GPB(0),
 			.ngpio	= EXYNOS4_GPIO_B_NR,
@@ -89,6 +95,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x60),
+		.eint_offset = 0xC,
+		.group	= 3,
 		.chip	= {
 			.base	= EXYNOS4_GPC0(0),
 			.ngpio	= EXYNOS4_GPIO_C0_NR,
@@ -96,6 +104,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x80),
+		.eint_offset = 0x10,
+		.group	= 4,
 		.chip	= {
 			.base	= EXYNOS4_GPC1(0),
 			.ngpio	= EXYNOS4_GPIO_C1_NR,
@@ -103,6 +113,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0xA0),
+		.eint_offset = 0x14,
+		.group	= 5,
 		.chip	= {
 			.base	= EXYNOS4_GPD0(0),
 			.ngpio	= EXYNOS4_GPIO_D0_NR,
@@ -110,6 +122,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0xC0),
+		.eint_offset = 0x18,
+		.group	= 6,
 		.chip	= {
 			.base	= EXYNOS4_GPD1(0),
 			.ngpio	= EXYNOS4_GPIO_D1_NR,
@@ -117,6 +131,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x180),
+		.eint_offset = 0x30,
+		.group	= 7,
 		.chip	= {
 			.base	= EXYNOS4_GPF0(0),
 			.ngpio	= EXYNOS4_GPIO_F0_NR,
@@ -124,6 +140,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x1A0),
+		.eint_offset = 0x34,
+		.group	= 8,
 		.chip	= {
 			.base	= EXYNOS4_GPF1(0),
 			.ngpio	= EXYNOS4_GPIO_F1_NR,
@@ -131,6 +149,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x1C0),
+		.eint_offset = 0x38,
+		.group	= 9,
 		.chip	= {
 			.base	= EXYNOS4_GPF2(0),
 			.ngpio	= EXYNOS4_GPIO_F2_NR,
@@ -138,6 +158,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x1E0),
+		.eint_offset = 0x3C,
+		.group	= 10,
 		.chip	= {
 			.base	= EXYNOS4_GPF3(0),
 			.ngpio	= EXYNOS4_GPIO_F3_NR,
@@ -145,6 +167,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO2 + 0x40),
+		.eint_offset = 0x8,
+		.group	= 16,
 		.chip	= {
 			.base	= EXYNOS4_GPK0(0),
 			.ngpio	= EXYNOS4_GPIO_K0_NR,
@@ -152,6 +176,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO2 + 0x60),
+		.eint_offset = 0xC,
+		.group	= 17,
 		.chip	= {
 			.base	= EXYNOS4_GPK1(0),
 			.ngpio	= EXYNOS4_GPIO_K1_NR,
@@ -159,6 +185,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO2 + 0x80),
+		.eint_offset = 0x10,
+		.group	= 18,
 		.chip	= {
 			.base	= EXYNOS4_GPK2(0),
 			.ngpio	= EXYNOS4_GPIO_K2_NR,
@@ -166,6 +194,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO2 + 0xA0),
+		.eint_offset = 0x14,
+		.group	= 19,
 		.chip	= {
 			.base	= EXYNOS4_GPK3(0),
 			.ngpio	= EXYNOS4_GPIO_K3_NR,
@@ -173,6 +203,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO2 + 0xC0),
+		.eint_offset = 0x18,
+		.group	= 20,
 		.chip	= {
 			.base	= EXYNOS4_GPL0(0),
 			.ngpio	= EXYNOS4_GPIO_L0_NR,
@@ -180,6 +212,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO2 + 0xE0),
+		.eint_offset = 0x1C,
+		.group	= 21,
 		.chip	= {
 			.base	= EXYNOS4_GPL1(0),
 			.ngpio	= EXYNOS4_GPIO_L1_NR,
@@ -187,6 +221,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO2 + 0x100),
+		.eint_offset = 0x20,
+		.group	= 22,
 		.chip	= {
 			.base	= EXYNOS4_GPL2(0),
 			.ngpio	= EXYNOS4_GPIO_L2_NR,
@@ -301,6 +337,8 @@ static struct s3c_gpio_chip exynos4_gpio_common_4bit[] = {
 static struct s3c_gpio_chip exynos4210_gpio_4bit[] = {
 	{
 		.base   = (S5P_VA_GPIO1 + 0xE0),
+		.eint_offset = 0x1C,
+		.group	= 11,
 		.chip	= {
 			.base	= EXYNOS4210_GPE0(0),
 			.ngpio	= EXYNOS4210_GPIO_E0_NR,
@@ -308,6 +346,8 @@ static struct s3c_gpio_chip exynos4210_gpio_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x100),
+		.eint_offset = 0x20,
+		.group	= 12,
 		.chip	= {
 			.base	= EXYNOS4210_GPE1(0),
 			.ngpio	= EXYNOS4210_GPIO_E1_NR,
@@ -315,6 +355,8 @@ static struct s3c_gpio_chip exynos4210_gpio_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x120),
+		.eint_offset = 0x24,
+		.group	= 13,
 		.chip	= {
 			.base	= EXYNOS4210_GPE2(0),
 			.ngpio	= EXYNOS4210_GPIO_E2_NR,
@@ -322,6 +364,8 @@ static struct s3c_gpio_chip exynos4210_gpio_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x140),
+		.eint_offset = 0x28,
+		.group	= 14,
 		.chip	= {
 			.base	= EXYNOS4210_GPE3(0),
 			.ngpio	= EXYNOS4210_GPIO_E3_NR,
@@ -329,13 +373,17 @@ static struct s3c_gpio_chip exynos4210_gpio_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x160),
+		.eint_offset = 0x2C,
+		.group	= 15,
 		.chip	= {
 			.base	= EXYNOS4210_GPE4(0),
 			.ngpio	= EXYNOS4210_GPIO_E4_NR,
 			.label	= "GPE4",
 		},
 	}, {
-		.base   = (S5P_VA_GPIO2 + 0x0),
+		.base   = S5P_VA_GPIO2,
+		.group	= 23,
+		.eint_offset = 0x0,
 		.chip	= {
 			.base	= EXYNOS4210_GPJ0(0),
 			.ngpio	= EXYNOS4210_GPIO_J0_NR,
@@ -343,6 +391,8 @@ static struct s3c_gpio_chip exynos4210_gpio_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO2 + 0x20),
+		.eint_offset = 0x4,
+		.group	= 24,
 		.chip	= {
 			.base	= EXYNOS4210_GPJ1(0),
 			.ngpio	= EXYNOS4210_GPIO_J1_NR,
@@ -354,6 +404,8 @@ static struct s3c_gpio_chip exynos4210_gpio_4bit[] = {
 static struct s3c_gpio_chip exynos4212_gpio_4bit[] = {
 	{
 		.base   = (S5P_VA_GPIO1 + 0x240),
+		.eint_offset = 0x40,
+		.group	= 11,
 		.chip	= {
 			.base	= EXYNOS4212_GPJ0(0),
 			.ngpio	= EXYNOS4212_GPIO_J0_NR,
@@ -361,6 +413,8 @@ static struct s3c_gpio_chip exynos4212_gpio_4bit[] = {
 		},
 	}, {
 		.base   = (S5P_VA_GPIO1 + 0x260),
+		.eint_offset = 0x44,
+		.group	= 12,
 		.chip	= {
 			.base	= EXYNOS4212_GPJ1(0),
 			.ngpio	= EXYNOS4212_GPIO_J1_NR,
@@ -368,6 +422,8 @@ static struct s3c_gpio_chip exynos4212_gpio_4bit[] = {
 		}
 	}, {
 		.base	= (S5P_VA_GPIO2 + 0x260),
+		.eint_offset = 0x24,
+		.group	= 23,
 		.chip	= {
 			.base	= EXYNOS4212_GPM0(0),
 			.ngpio	= EXYNOS4212_GPIO_M0_NR,
@@ -375,6 +431,8 @@ static struct s3c_gpio_chip exynos4212_gpio_4bit[] = {
 		},
 	}, {
 		.base	= (S5P_VA_GPIO2 + 0x280),
+		.eint_offset = 0x28,
+		.group	= 24,
 		.chip	= {
 			.base	= EXYNOS4212_GPM1(0),
 			.ngpio	= EXYNOS4212_GPIO_M1_NR,
@@ -382,6 +440,8 @@ static struct s3c_gpio_chip exynos4212_gpio_4bit[] = {
 		},
 	}, {
 		.base	= (S5P_VA_GPIO2 + 0x2A0),
+		.eint_offset = 0x2C,
+		.group	= 25,
 		.chip	= {
 			.base	= EXYNOS4212_GPM2(0),
 			.ngpio	= EXYNOS4212_GPIO_M2_NR,
@@ -389,6 +449,8 @@ static struct s3c_gpio_chip exynos4212_gpio_4bit[] = {
 		},
 	}, {
 		.base	= (S5P_VA_GPIO2 + 0x2C0),
+		.eint_offset = 0x30,
+		.group	= 26,
 		.chip	= {
 			.base	= EXYNOS4212_GPM3(0),
 			.ngpio	= EXYNOS4212_GPIO_M3_NR,
@@ -396,13 +458,15 @@ static struct s3c_gpio_chip exynos4212_gpio_4bit[] = {
 		},
 	}, {
 		.base	= (S5P_VA_GPIO2 + 0x2E0),
+		.eint_offset = 0x34,
+		.group	= 27,
 		.chip	= {
 			.base	= EXYNOS4212_GPM4(0),
 			.ngpio	= EXYNOS4212_GPIO_M4_NR,
 			.label	= "GPM4",
 		},
 	}, {
-		.base   = (S5P_VA_GPIO4 + 0x0),
+		.base   = S5P_VA_GPIO4,
 		.chip	= {
 			.base	= EXYNOS4212_GPV0(0),
 			.ngpio	= EXYNOS4212_GPIO_V0_NR,
@@ -452,11 +516,8 @@ static __init int exynos4_gpiolib_init(void)
 	nr_chips = ARRAY_SIZE(exynos4_gpio_common_4bit);
 
 	for (i = 0; i < nr_chips; i++, chip++) {
-		if (chip->config == NULL) {
+		if (chip->config == NULL)
 			chip->config = &gpio_cfg;
-			/* Assign the GPIO interrupt group */
-			chip->group = group++;
-		}
 		if (chip->base == NULL)
 			pr_err("No allocation of base address for [common gpio]");
 	}
@@ -469,11 +530,8 @@ static __init int exynos4_gpiolib_init(void)
 		nr_chips = ARRAY_SIZE(exynos4210_gpio_4bit);
 
 		for (i = 0; i < nr_chips; i++, chip++) {
-			if (chip->config == NULL) {
+			if (chip->config == NULL)
 				chip->config = &gpio_cfg;
-				/* Assign the GPIO interrupt group */
-				chip->group = group++;
-			}
 			if (chip->base == NULL)
 				pr_err("No allocation of base address [4210 gpio]");
 		}
@@ -485,11 +543,8 @@ static __init int exynos4_gpiolib_init(void)
 		nr_chips = ARRAY_SIZE(exynos4212_gpio_4bit);
 
 		for (i = 0; i < nr_chips; i++, chip++) {
-			if (chip->config == NULL) {
+			if (chip->config == NULL)
 				chip->config = &gpio_cfg;
-				/* Assign the GPIO interrupt group */
-				chip->group = group++;
-			}
 			if (chip->base == NULL)
 				pr_err("No allocation of base address [4212 gpio]");
 		}

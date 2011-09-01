@@ -382,6 +382,7 @@ config MACH_FPGA4212
 config MACH_SMDK4212
 	bool "SMDK4212 board"
 	select CPU_EXYNOS4212
+	select S5P_GPIO_INT
 	select S3C_DEV_WDT
 	select S3C_DEV_RTC
 	select S3C_DEV_HSMMC2
