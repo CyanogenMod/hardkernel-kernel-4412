@@ -696,9 +696,14 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		if (ios->bus_width == MMC_BUS_WIDTH_4)
 			mci_writel(slot->host, CLKSEL, 0x00020001);
 		else if (ios->bus_width == MMC_BUS_WIDTH_8)
-			mci_writel(slot->host, CLKSEL, 0x00020002);
-	} else /* 1, 4, 8 Bit SDR */
+			mci_writel(slot->host, CLKSEL, 0x00020001);
+	} else {
+		/* 1, 4, 8 Bit SDR */
+		regs = mci_readl(slot->host, UHS_REG);
+		regs &= ~(0x1 << slot->id) << 16;
+		mci_writel(slot->host, UHS_REG, regs);
 		mci_writel(slot->host, CLKSEL, 0x00010001);
+	}
 
 	if (ios->clock) {
 		/*
