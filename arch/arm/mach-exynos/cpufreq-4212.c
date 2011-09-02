@@ -293,9 +293,18 @@ static void __init set_volt_table(void)
 		break;
 	}
 #else
+
+#ifdef CONFIG_EXYNOS4212_1500MHZ_SUPPORT
 	for_1400 = true;
 	max_support_idx = L0;
 	asv_group = 0;
+#else
+	for_1000 = true;
+	max_support_idx = L2;
+	asv_group = 0;
+
+#endif
+
 #endif
 	/*
 	 * Should be fixed !!!
