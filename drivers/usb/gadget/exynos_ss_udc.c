@@ -1349,6 +1349,136 @@ static void exynos_ss_udc_handle_outdone(struct exynos_ss_udc *udc,
 	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, result);
 }
 
+static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
+{
+	struct exynos_ss_udc_ep_command epcmd;
+	u32 reg, speed;
+	int mps;
+	bool res;
+
+	dev_dbg(udc->dev, "%s: connect done\n", __func__);
+
+	reg = readl(udc->regs + EXYNOS_USB3_DSTS);
+
+	/* TODO:
+	   1. program GCTL:RAMClkSel
+	 */
+	speed = reg & EXYNOS_USB3_DSTS_ConnectSpd_MASK;
+
+	/* Suspend the inactive Phy */
+	if (speed == USB_SPEED_SUPER)
+		__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+			EXYNOS_USB3_GUSB2PHYCFGx_SusPHY);
+	else
+		__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+			EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
+
+	switch (speed) {
+	/* High-speed */
+	case 0:
+		udc->gadget.speed = USB_SPEED_HIGH;
+		mps = 64;
+		break;
+	/* Full-speed */
+	case 1:
+	case 3:
+		udc->gadget.speed = USB_SPEED_FULL;
+		mps = 64;
+		break;
+	/* Low-speed */
+	case 2:
+		udc->gadget.speed = USB_SPEED_LOW;
+		mps = 8;
+		break;
+	/* SuperSpeed */
+	case 4:
+		udc->gadget.speed = USB_SPEED_SUPER;
+		mps = 512;
+		break;
+	}
+
+	epcmd.ep = 0;
+	epcmd.param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(mps);
+	epcmd.param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
+			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
+	if (!res)
+		dev_err(udc->dev, "Failed to configure physical EP0\n");
+
+	epcmd.ep = 1;
+	epcmd.param1 = EXYNOS_USB3_DEPCMDPAR1x_EpDir |
+			EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
+			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
+	if (!res)
+		dev_err(udc->dev, "Failed to configure physical EP1\n");
+}
+
+static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
+{
+	struct exynos_ss_udc_ep_command epcmd;
+	bool res;
+	int epnum;
+
+	dev_info(udc->dev, "%s: USB reset\n", __func__);
+
+	/* End transfer for EP0-OUT */
+	epcmd.ep = 0;
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
+	if (!res)
+		dev_err(udc->dev, "Failed to end transfer\n");
+
+	/* End transfer for EP0-IN */
+	epcmd.ep = 1;
+
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
+	if (!res)
+		dev_err(udc->dev, "Failed to end transfer\n");
+
+	exynos_ss_udc_kill_all_requests(udc,
+				     &udc->eps[0],
+				     -ECONNRESET, true);
+
+	exynos_ss_udc_enqueue_setup(udc);
+
+	/* Clear STALL if EP0 is halted */
+	if (udc->eps[0].halted)
+		exynos_ss_udc_ep_sethalt(&udc->eps[0].ep, 0);
+
+	/* End transfer, kill all requests and clear STALL on the
+	   rest of endpoints */
+	for (epnum = 1; epnum < EXYNOS_USB3_EPS; epnum++) {
+		int index = get_phys_epnum(&udc->eps[epnum]);
+
+		epcmd.ep = index;
+
+		res = exynos_ss_udc_issue_cmd(udc, &epcmd);
+		if (!res)
+			dev_err(udc->dev, "Failed to end transfer\n");
+
+
+		exynos_ss_udc_kill_all_requests(udc,
+					     &udc->eps[epnum],
+					     -ECONNRESET, true);
+
+		if (udc->eps[epnum].halted)
+			exynos_ss_udc_ep_sethalt(&udc->eps[epnum].ep, 0);
+	}
+
+	/* Set device address to 0 */
+	__bic32(udc->regs + EXYNOS_USB3_DCFG, EXYNOS_USB3_DCFG_DevAddr_MASK);
+
+	exynos_ss_udc_enqueue_setup(udc);
+}
+
 /**
  * exynos_ss_udc_handle_depevt - handle endpoint-specific event
  * @udc: The driver state
@@ -1402,135 +1532,17 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 */
 static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 {
-	struct exynos_ss_udc_ep_command epcmd;
-	u32 reg, speed;
-	int epnum;
-	int mps;
-	bool res;
 
 	switch (event & EXYNOS_USB3_DEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEVT_EVENT_ULStChng:
 		break;	
 
 	case EXYNOS_USB3_DEVT_EVENT_ConnectDone:
-		/* TODO: I think it's good idea to bring it function */
-
-		reg = readl(udc->regs + EXYNOS_USB3_DSTS);
-
-		/* TODO: 
-		   1. program GCTL:RAMClkSel
-		 */
-		speed = reg & EXYNOS_USB3_DSTS_ConnectSpd_MASK;
-
-		/* Suspend the inactive Phy */
-		if (speed == USB_SPEED_SUPER)
-			__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
-				EXYNOS_USB3_GUSB2PHYCFGx_SusPHY);
-		else
-			__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
-				EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
-
-		switch (speed) {
-		/* High-speed */
-		case 0:
-			udc->gadget.speed = USB_SPEED_HIGH;
-			mps = 64;
-			break;
-		/* Full-speed */
-		case 1:
-		case 3:
-			udc->gadget.speed = USB_SPEED_FULL;
-			mps = 64;
-			break;
-		/* Low-speed */
-		case 2:
-			udc->gadget.speed = USB_SPEED_LOW;
-			mps = 8;
-			break;
-		/* SuperSpeed */
-		case 4:
-			udc->gadget.speed = USB_SPEED_SUPER;
-			mps = 512;
-			break;
-		}
-
-		epcmd.ep = 0;
-		epcmd.param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(mps);
-		epcmd.param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
-				EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
-		epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
-		epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-		res = exynos_ss_udc_issue_cmd(udc, &epcmd);
-		if (!res)
-			dev_err(udc->dev, "Failed to configure physical EP0\n");
-
-		epcmd.ep = 1;
-		epcmd.param1 = EXYNOS_USB3_DEPCMDPAR1x_EpDir |
-				EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
-				EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
-		epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-		res = exynos_ss_udc_issue_cmd(udc, &epcmd);
-		if (!res)
-			dev_err(udc->dev, "Failed to configure physical EP1\n");
-
+		exynos_ss_udc_irq_connectdone(udc);
 		break;
 
 	case EXYNOS_USB3_DEVT_EVENT_USBRst:
-		/* TODO: I think it's good idea to bring it function */
-		dev_info(udc->dev, "%s: USBRst\n", __func__);
-
-		/* End transfer for EP0-OUT */
-		epcmd.ep = 0;
-		epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
-		epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-		res = exynos_ss_udc_issue_cmd(udc, &epcmd);
-		if (!res)
-			dev_err(udc->dev, "Failed to end transfer\n");
-
-		/* End transfer for EP0-IN */
-		epcmd.ep = 1;
-
-		res = exynos_ss_udc_issue_cmd(udc, &epcmd);
-		if (!res)
-			dev_err(udc->dev, "Failed to end transfer\n");
-
-		exynos_ss_udc_kill_all_requests(udc,
-					     &udc->eps[0],
-					     -ECONNRESET, true);
-
-		exynos_ss_udc_enqueue_setup(udc);
-
-		/* Clear STALL if EP0 is halted */
-		if (udc->eps[0].halted)
-			exynos_ss_udc_ep_sethalt(&udc->eps[0].ep, 0);
-
-		/* End transfer, kill all requests and clear STALL on the
-		   rest of endpoints */ 
-		for (epnum = 1; epnum < EXYNOS_USB3_EPS; epnum++) {
-			int index = get_phys_epnum(&udc->eps[epnum]);
-
-			epcmd.ep = index;
-
-			res = exynos_ss_udc_issue_cmd(udc, &epcmd);
-			if (!res)
-				dev_err(udc->dev, "Failed to end transfer\n");
-
-
-			exynos_ss_udc_kill_all_requests(udc,
-						     &udc->eps[epnum],
-						     -ECONNRESET, true);
-
-			if (udc->eps[epnum].halted)
-				exynos_ss_udc_ep_sethalt(&udc->eps[epnum].ep, 0);
-		}
-
-		/* Set device address to 0 */
-		__bic32(udc->regs + EXYNOS_USB3_DCFG, EXYNOS_USB3_DCFG_DevAddr_MASK);
-
-		exynos_ss_udc_enqueue_setup(udc);
+		exynos_ss_udc_irq_usbrst(udc);
 		break;
 
 	default:
