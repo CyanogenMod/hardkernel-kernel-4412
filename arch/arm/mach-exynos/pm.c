@@ -195,12 +195,8 @@ void exynos4_cpu_suspend(void)
 
 static void exynos4_pm_prepare(void)
 {
-	u32 tmp;
-
 	s3c_pm_do_save(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
 	s3c_pm_do_save(exynos4_l2cc_save, ARRAY_SIZE(exynos4_l2cc_save));
-
-	tmp = __raw_readl(REG_INFORM1);
 
 	/* Set value of power down register for sleep mode */
 
@@ -331,6 +327,8 @@ static void exynos4_pm_resume(void)
 #endif
 
 early_wakeup:
+	/* Clear Check mode */
+	__raw_writel(0x0, REG_INFORM1);
 
 	return;
 }
