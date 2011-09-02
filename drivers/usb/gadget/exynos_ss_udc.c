@@ -41,7 +41,7 @@
 #define EXYNOS_USB3_EPS	(9)
 
 /* Has to be multiple of four */
-#define EXYNOS_USB3_EVENT_BUFF_WSIZE	4
+#define EXYNOS_USB3_EVENT_BUFF_WSIZE	256
 #define EXYNOS_USB3_EVENT_BUFF_BSIZE	(EXYNOS_USB3_EVENT_BUFF_WSIZE << 2)
 
 #define call_gadget(_udc, _entry) \
@@ -1557,7 +1557,9 @@ static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
 	u32 event;
 	u32 ecode1, ecode2;
 
-	gevntcount = readl(udc->regs + EXYNOS_USB3_GEVNTCOUNT(0));
+	gevntcount = readl(udc->regs + EXYNOS_USB3_GEVNTCOUNT(0)) &
+			EXYNOS_USB3_GEVNTCOUNTx_EVNTCount_MASK;
+	/* TODO: what if number of events more then buffer size? */
 
 	while (gevntcount--) {
 		event = udc->event_buff[indx++];
