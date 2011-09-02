@@ -21,6 +21,7 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 #include <linux/videodev2.h>
+#include <mach/videonode.h>
 #include <media/videobuf2-core.h>
 
 #include "regs-mfc.h"
@@ -1050,7 +1051,7 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	vfd->v4l2_dev = &dev->v4l2_dev;
 	snprintf(vfd->name, sizeof(vfd->name), "%s", s5p_mfc_dec_videodev.name);
 
-	ret = video_register_device(vfd, VFL_TYPE_GRABBER, 0);
+	ret = video_register_device(vfd, VFL_TYPE_GRABBER, S5P_VIDEONODE_MFC_DEC);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to register video device\n");
 		video_device_release(vfd);
@@ -1077,7 +1078,7 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	vfd->v4l2_dev = &dev->v4l2_dev;
 	snprintf(vfd->name, sizeof(vfd->name), "%s", s5p_mfc_enc_videodev.name);
 
-	ret = video_register_device(vfd, VFL_TYPE_GRABBER, 0);
+	ret = video_register_device(vfd, VFL_TYPE_GRABBER, S5P_VIDEONODE_MFC_ENC);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev, "Failed to register video device\n");
 		video_device_release(vfd);
