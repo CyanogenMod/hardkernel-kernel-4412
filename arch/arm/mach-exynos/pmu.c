@@ -22,6 +22,8 @@ static struct exynos4_pmu_conf *exynos4_pmu_config;
 
 static unsigned int entry_cnt;
 
+static bool use_c2c_pwr_mode = false;
+
 static struct exynos4_pmu_conf exynos4210_pmu_config[] = {
 	/* { .reg = address, .val = { AFTR, LPA, SLEEP } */
 	{ S5P_ARM_CORE0_SYS,			{ 0, 0, 2 } },
@@ -204,6 +206,13 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_CMU_SYSCLK_GPS_SYS,		{ 1, 0, 0 } },
 };
 
+static struct exynos4_c2c_pmu_conf exynos4212_config_for_c2c[]= {
+	/* Register Address	       Value */
+	{ S5P_TOP_BUS_COREBLK_SYS,	0x0},
+	{ S5P_TOP_PWR_COREBLK_SYS,	0x0},
+	{ S5P_MPLL_SYSCLK_SYS,		0x0},
+	{ S5P_XUSBXTI_SYS,		0x0},
+};
 void exynos4_sys_powerdown_conf(enum sys_powerdown mode)
 {
 	unsigned int count = entry_cnt;
@@ -211,6 +220,40 @@ void exynos4_sys_powerdown_conf(enum sys_powerdown mode)
 	for (; count > 0; count--)
 		__raw_writel(exynos4_pmu_config[count - 1].val[mode],
 				exynos4_pmu_config[count - 1].reg);
+
+	if ((cpu_is_exynos4212()) && use_c2c_pwr_mode) {
+		for (count = 0 ; count < ARRAY_SIZE(exynos4212_config_for_c2c) ; count++)
+			__raw_writel(exynos4212_config_for_c2c[count].val,
+					exynos4212_config_for_c2c[count].reg);
+	}
+}
+
+void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode)
+{
+	exynos4212_config_for_c2c[0].val = 0x3;
+
+	switch(mode) {
+	/* If C2C mode is MAXIMAL LATENCY */
+	case MAX_LATENCY:
+		exynos4212_config_for_c2c[1].val = 0x0;
+		exynos4212_config_for_c2c[2].val = 0x0;
+		exynos4212_config_for_c2c[3].val = 0x0;
+		break;
+	/* If C2C mode is Minimal or Short LATENCY */
+	default:
+		exynos4212_config_for_c2c[1].val = 0x3;
+		exynos4212_config_for_c2c[2].val = 0x1;
+		exynos4212_config_for_c2c[3].val = 0x1;
+		break;
+	}
+}
+
+void exynos4_c2c_pwr_mode_enable(bool enable_c2c)
+{
+	use_c2c_pwr_mode = enable_c2c;
+
+	printk(KERN_INFO "EXYNOS4 C2C POWER MODE %sable\n",
+			(use_c2c_pwr_mode ? "En":"Dis"));
 }
 
 static int __init exynos4_pmu_init(void)
@@ -228,6 +271,7 @@ static int __init exynos4_pmu_init(void)
 	} else {
 		printk(KERN_INFO "%s: PMU not supported\n", __func__);
 	}
+
 	return 0;
 }
 
