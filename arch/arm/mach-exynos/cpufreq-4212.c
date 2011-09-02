@@ -39,11 +39,11 @@ struct cpufreq_clkdiv {
 static unsigned int exynos4212_volt_table[CPUFREQ_LEVEL_END];
 
 static struct cpufreq_frequency_table exynos4212_freq_table[] = {
-	{L0, 1400*1000},
+	{L0, 1500*1000},
 	{L1, 1200*1000},
 	{L2, 1000*1000},
 	{L3, 800*1000},
-	{L4, 400*1000},
+	{L4, 500*1000},
 	{L5, 200*1000},
 	{0, CPUFREQ_TABLE_END},
 };
@@ -63,20 +63,20 @@ static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
 	 * { DIVCORE, DIVCOREM0, DIVCOREM1, DIVPERIPH,
 	 *		DIVATB, DIVPCLK_DBG, DIVAPLL }
 	 */
-	/* To be fixed */
-	{ 0, 3, 7, 3, 4, 1, 7 },
+	/* ARM L0: 1500Mhz */
+	{ 0, 5, 11, 5, 6, 1, 2 },
 
-	/* To be fixed */
-	{ 0, 3, 7, 3, 4, 1, 7 },
+	/* ARM L1: 1200Mhz */
+	{ 0, 4, 9, 4, 5, 1, 2 },
 
 	/* ARM L2: 1000MHz */
-	{ 0, 3, 7, 3, 4, 1, 7 },
+	{ 0, 3, 7, 3, 4, 1, 1 },
 
 	/* ARM L3: 800MHz */
-	{ 0, 3, 7, 3, 3, 1, 7 },
+	{ 0, 3, 7, 3, 3, 1, 1 },
 
-	/* ARM L4: 400MHz */
-	{ 0, 3, 7, 3, 3, 1, 7 },
+	/* ARM L4: 500MHz */
+	{ 0, 3, 7, 3, 3, 1, 1 },
 
 	/* ARM L5: 200MHz */
 	{ 0, 1, 3, 1, 3, 1, 0 },
@@ -86,10 +86,10 @@ static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
 	/* Clock divider value for following
 	 * { DIVCOPY, DIVHPM }
 	 */
-	/* To be fixed */
-	{ 5, 0 },
+	/* ARM L0: 1500MHz */
+	{ 6, 0 },
 
-	/* To be fixed */
+	/* ARM L1: 1200MHz */
 	{ 5, 0 },
 
 	/* ARM L2: 1000MHz */
@@ -98,7 +98,7 @@ static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
 	/* ARM L3: 800MHz */
 	{ 3, 0 },
 
-	/* ARM L4: 400MHz */
+	/* ARM L4: 500MHz */
 	{ 3, 0 },
 
 	/* ARM L5: 200MHz */
@@ -106,11 +106,11 @@ static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
 };
 
 static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
-	/* To be fixed */
-	((350<<16)|(6<<8)|(0x1)),
+	/* APLL FOUT L0: 1500MHz */
+	((250<<16)|(4<<8)|(0x0)),
 
-	/* To be fixed */
-	((150<<16)|(3<<8)|(0x1)),
+	/* APLL FOUT L1: 1200MHz */
+	((150<<16)|(3<<8)|(0x0)),
 
 	/* APLL FOUT L2: 1000MHz */
 	((125<<16)|(3<<8)|(0x0)),
@@ -118,8 +118,8 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
 	/* APLL FOUT L3: 800MHz */
 	((100<<16)|(3<<8)|(0x0)),
 
-	/* APLL FOUT L4: 400MHz */
-	((100<<16)|(3<<8)|(0x1)),
+	/* APLL FOUT L4: 500MHz */
+	((125<<16)|(3<<8)|(0x1)),
 
 	/* APLL FOUT L5: 200MHz */
 	((100<<16)|(3<<8)|(0x2)),
@@ -133,15 +133,15 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
 
 static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	/*
-	 * @N/A  :
-	 * @N/A  :
+	 * @1500 :
+	 * @1200 :
 	 * @1000 :
 	 * @800	 :	ASV_VOLTAGE_TABLE
 	 * @400  :
 	 * @200  :
 	 */
-	{ 0 },
-	{ 0 },
+	{ 1350000 },
+	{ 1200000 },
 	{ 1100000 },
 	{ 1000000 },
 	{ 950000 },
@@ -293,17 +293,20 @@ static void __init set_volt_table(void)
 		break;
 	}
 #else
-	for_1000 = true;
-	max_support_idx = L2;
+	for_1400 = true;
+	max_support_idx = L0;
 	asv_group = 0;
 #endif
 	/*
-	 * If ASV group is S, can not support 1.4GHz
-	 * Disabling table entry
+	 * Should be fixed !!!
 	 */
+#if 0
 	if ((asv_group == 0) || !for_1400)
 		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
-
+#else
+	if (!for_1400)
+		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
+#endif
 	if (for_1000)
 		exynos4212_freq_table[L1].frequency = CPUFREQ_ENTRY_INVALID;
 
