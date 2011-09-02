@@ -2000,15 +2000,22 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 		exe_arg->out_crop_left_offset = read_shm(ctx, CROP_INFO1) & 0xFFFF;
 		exe_arg->out_crop_bottom_offset = (read_shm(ctx, CROP_INFO2) >> 16) & 0xFFFF;
 		exe_arg->out_crop_top_offset = read_shm(ctx, CROP_INFO2)  & 0xFFFF;
+
+		mfc_dbg("crop info t: %d, r: %d, b: %d, l: %d\n",
+			exe_arg->out_crop_top_offset,
+			exe_arg->out_crop_right_offset,
+			exe_arg->out_crop_bottom_offset,
+			exe_arg->out_crop_left_offset);
 	}
 
 	mfc_dbg("decode frame type: %d\n", dec_ctx->decframetype);
+	mfc_dbg("display frame type: %d\n", exe_arg->out_disp_pic_frame_type);
 	mfc_dbg("display y: 0x%08x, c: 0x%08x\n",
-		  exe_arg->out_display_Y_addr, exe_arg->out_display_C_addr);
+		exe_arg->out_display_Y_addr, exe_arg->out_display_C_addr);
 
 	*consumed = read_reg(MFC_SI_FRM_COUNT);
 	mfc_dbg("stream size: %d, consumed: %d\n",
-		  exe_arg->in_strm_size, *consumed);
+		exe_arg->in_strm_size, *consumed);
 
 	return MFC_OK;
 }
