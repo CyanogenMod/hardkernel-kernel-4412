@@ -80,6 +80,10 @@ static struct check_device_op chk_sdhc_op[] = {
 #endif
 };
 
+static struct check_device_op chk_usbotg_op = {
+	.base = 0, .pdev = &s3c_device_usbgadget, .type = 0
+};
+
 #define S3C_HSMMC_PRNSTS	(0x24)
 #define S3C_HSMMC_CLKCON	(0x2c)
 #define S3C_HSMMC_CMD_INHIBIT	0x00000001
@@ -231,9 +235,11 @@ static int loop_sdmmc_check(void)
  */
 static int check_usbotg_op(void)
 {
+	void __iomem *base_addr;
 	unsigned int val;
 
-	val = __raw_readl(S3C_UDC_OTG_GOTGCTL);
+	base_addr = chk_usbotg_op.base;
+	val = __raw_readl(base_addr + S3C_UDC_OTG_GOTGCTL);
 
 	return val & (A_SESSION_VALID | B_SESSION_VALID);
 }
@@ -733,6 +739,20 @@ static int __init exynos4_init_cpuidle(void)
 			printk(KERN_ERR "failed to map io region\n");
 			return -EINVAL;
 		}
+	}
+
+	pdev = chk_usbotg_op.pdev;
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		printk(KERN_ERR "failed to get iomem region\n");
+		return -EINVAL;
+	}
+
+	chk_usbotg_op.base = ioremap(res->start, resource_size(res));
+
+	if (!chk_usbotg_op.base) {
+		printk(KERN_ERR "failed to map io region\n");
+		return -EINVAL;
 	}
 
 	register_pm_notifier(&exynos4_cpuidle_notifier);
