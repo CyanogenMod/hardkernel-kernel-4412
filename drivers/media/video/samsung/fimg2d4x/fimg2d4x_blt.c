@@ -30,27 +30,69 @@
 #include <linux/pm_runtime.h>
 #endif
 
+#undef POST_BLIT
+
 /* bitblt time measure */
 #undef PERF
 
-static int fimg2d4x_is_valid_param(struct fimg2d_bltcmd *cmd)
+#ifdef PERF
+static long get_blit_perf(struct timeval *start, struct timeval *end)
 {
-	return 0;
+	long sec, usec, time;
+
+	sec = end->tv_sec - start->tv_sec;
+	if (end->tv_usec >= start->tv_usec) {
+		usec = end->tv_usec - start->tv_usec;
+	} else {
+		usec = end->tv_usec + 1000000 - start->tv_usec;
+		sec--;
+	}
+	time = sec * 1000000 + usec;
+	printk(KERN_INFO "[%s] bitblt perf: %ld usec elapsed\n", __func__, time);
+
+	return time; /* microseconds */
+}
+#endif
+
+static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
+{
+	bool flush_all;
+	struct fimg2d_addr *src, *msk, *dst;
+
+	/* FIXME */
+	flush_all = true;
+
+	spin_lock(&info->bltlock);
+
+	if (flush_all) {
+		fimg2d_dma_sync_all();
+	} else {
+		if (cmd->srcen) {
+			src = &cmd->src.addr;
+			fimg2d_dma_sync_pagetable(cmd->ctx->mm, src->start, src->size, src->type);
+		}
+
+		if (cmd->msken) {
+			msk = &cmd->msk.addr;
+			fimg2d_dma_sync_pagetable(cmd->ctx->mm, msk->start, msk->size, msk->type);
+		}
+
+		if (cmd->dsten) {
+			dst = &cmd->dst.addr;
+			fimg2d_dma_sync_pagetable(cmd->ctx->mm, dst->start, dst->size, dst->type);
+		}
+	}
+
+	spin_unlock(&info->bltlock);
 }
 
-/* for workaround */
-static void fimg2d4x_pre_bitblt(struct fimg2d_control *info,
-		struct fimg2d_context *ctx, struct fimg2d_bltcmd *cmd)
+#ifdef POST_BLIT
+static void fimg2d4x_post_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
+	/* TODO */
 	return;
 }
-
-/* for workaround */
-static void fimg2d4x_post_bitblt(struct fimg2d_control *info,
-		struct fimg2d_context *ctx, struct fimg2d_bltcmd *cmd)
-{
-	return;
-}
+#endif
 
 /**
  * blitter
@@ -62,7 +104,6 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 	int ret = 0;
 #ifdef PERF
 	struct timeval start, end;
-	long sec, usec, time;
 #endif
 
 	fimg2d_debug("enter blitter\n");
@@ -76,21 +117,22 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 	while ((cmd = fimg2d_get_first_command(info))) {
 
-		if (fimg2d4x_is_valid_param(cmd))
-			goto noblt;
-
 		ctx = cmd->ctx;
 
 		atomic_set(&info->busy, 1);
 
-		/* set SFR */
+		/* cache operation */
+		fimg2d4x_pre_bitblt(info, cmd);
+
+		/* set sfr */
 		info->configure(info, cmd);
 
-		/* set SysMMU */
-		if (cmd->dsten && cmd->dst.addr.type == ADDR_USER) {
+		/* set sysmmu */
+		if (cmd->dst.addr.type == ADDR_USER) {
 #ifdef CONFIG_S5P_SYSTEM_MMU
-			s5p_sysmmu_set_tablebase_pgd(SYSMMU_MDMA, ctx->pgd);
-			fimg2d_debug("set sysmmu: context(%p) pgd(0x%lx)\n", ctx, ctx->pgd);
+			s5p_sysmmu_set_tablebase_pgd(SYSMMU_MDMA, virt_to_phys(ctx->mm->pgd));
+			fimg2d_debug("set sysmmu ctx: %p pgd: %p\n",
+					ctx, (void *)virt_to_phys(ctx->mm->pgd));
 #endif
 		}
 
@@ -101,8 +143,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		/* start bitblt */
 		info->run(info);
 
-		fimg2d_debug("wait irq\n");
-		ret = wait_event_timeout(info->wait_q, !atomic_read(&info->busy), 5000);
+		ret = wait_event_timeout(info->wait_q, !atomic_read(&info->busy), 1000);
 		if (!ret) {
 			info->err = true;
 			printk(KERN_ERR "[%s] wait timeout\n", __func__);
@@ -112,18 +153,9 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 #ifdef PERF
 		do_gettimeofday(&end);
-		sec = end.tv_sec - start.tv_sec;
-		if (end.tv_usec >= start.tv_usec) {
-			usec = end.tv_usec - start.tv_usec;
-		} else {
-			usec = end.tv_usec + 1000000 - start.tv_usec;
-			sec--;
-		}
-		time = sec * 1000000 + usec;
-		printk(KERN_INFO "[%s] bitblt perf: %ld usec elapsed\n", __func__, time);
+		get_blit_perf(&start, &end);
 #endif
 
-noblt:
 		spin_lock(&info->bltlock);
 		fimg2d_dequeue(info, &cmd->node);
 		kfree(cmd);
@@ -131,7 +163,7 @@ noblt:
 
 		/* wake up context */
 		if (!atomic_read(&ctx->ncmd)) {
-			fimg2d_debug("no more blit jobs for context(%p)\n", ctx);
+			fimg2d_debug("no more blit jobs for ctx %p\n", ctx);
 			wake_up(&ctx->wait_q);
 		}
 		spin_unlock(&info->bltlock);
@@ -156,7 +188,7 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 {
 	enum image_sel srcsel, dstsel;
 
-	fimg2d_debug("context(%p) seq_no(%u)\n", cmd->ctx, cmd->seq_no);
+	fimg2d_debug("ctx %p seq_no(%u)\n", cmd->ctx, cmd->seq_no);
 
 	/* TODO: batch blit */
 	fimg2d4x_reset(info);

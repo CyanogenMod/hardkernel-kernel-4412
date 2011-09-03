@@ -22,8 +22,11 @@
 #include <linux/platform_device.h>
 #include <linux/atomic.h>
 
+#include <asm/cacheflush.h>
+#include <linux/dma-mapping.h>
+
 #ifdef CONFIG_VIDEO_FIMG2D_DEBUG
-#define fimg2d_debug(fmt, arg...)	printk(KERN_DEBUG "[%s] " fmt, __func__, ## arg)
+#define fimg2d_debug(fmt, arg...)	printk(KERN_INFO "[%s] " fmt, __func__, ## arg)
 #else
 #define fimg2d_debug(fmt, arg...)	do { } while (0)
 #endif
@@ -374,7 +377,7 @@ struct fimg2d_blit {
  * @wait_q: conext wait queue head
 */
 struct fimg2d_context {
-	unsigned long pgd;
+	struct mm_struct *mm;
 	atomic_t ncmd;
 	wait_queue_head_t wait_q;
 };
@@ -461,7 +464,11 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 inline void fimg2d_add_context(struct fimg2d_control *info, struct fimg2d_context *ctx);
 inline void fimg2d_del_context(struct fimg2d_control *info, struct fimg2d_context *ctx);
 int fimg2d_register_ops(struct fimg2d_control *info);
-
+void fimg2d_dma_sync_pagetable(struct mm_struct *mm, unsigned long addr,
+				unsigned long size, enum addr_space type);
+void fimg2d_dma_sync_image(struct mm_struct *mm, unsigned long addr,
+				unsigned long size, enum addr_space type,enum cache_opr opr);
+void fimg2d_dma_sync_all(void);
 #endif /* __KERNEL__ */
 
 #endif /* __FIMG2D_H__ */

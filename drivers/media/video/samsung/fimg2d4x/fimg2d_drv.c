@@ -54,7 +54,8 @@ static inline void fimg2d_power_on(void)
 	fimg2d_debug("clock enable\n");
 #endif
 #ifdef CONFIG_S5P_SYSTEM_MMU
-	s5p_sysmmu_enable(SYSMMU_MDMA, 0);
+	s5p_sysmmu_enable(SYSMMU_MDMA, (unsigned long)init_mm.pgd);
+	fimg2d_debug("sysmmu enable\n");
 #endif
 	atomic_set(&info->pwron, 1);
 	spin_unlock(&info->pwrlock);
@@ -67,6 +68,7 @@ static inline void fimg2d_power_off(void)
 
 #ifdef CONFIG_S5P_SYSTEM_MMU
 	s5p_sysmmu_disable(SYSMMU_MDMA);
+	fimg2d_debug("sysmmu disable\n");
 #endif
 #ifndef CONFIG_MACH_FPGA4212
 	clk_disable(info->clock);
@@ -90,7 +92,6 @@ static DECLARE_WORK(fimg2d_work, fimg2d_worker);
 static irqreturn_t fimg2d_irq(int irq, void *dev_id)
 {
 	fimg2d_debug("irq\n");
-
 	info->stop(info);
 
 	return IRQ_HANDLED;
@@ -105,14 +106,14 @@ static void fimg2d_context_wait(struct fimg2d_context *ctx)
 
 	if (atomic_read(&ctx->ncmd)) {
 wait:
-		fimg2d_debug("context(%p) is waiting for bitblt complete\n", ctx);
-		ret = wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd), 10000);
+		fimg2d_debug("ctx %p is waiting for bitblt complete\n", ctx);
+		ret = wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd), 5000);
 		if (ret == 0) {
 			if (!info->err && atomic_read(&ctx->ncmd)) {
-				fimg2d_debug("context(%p) bitblt is not finished\n", ctx);
+				fimg2d_debug("ctx %p bitblt is not finished\n", ctx);
 				goto wait;
 			}
-			printk(KERN_ERR "context(%p) wait timeout\n", ctx);
+			printk(KERN_ERR "ctx %p wait timeout\n", ctx);
 		}
 	}
 }
@@ -125,7 +126,7 @@ static void fimg2d_request_bitblt(struct fimg2d_context *ctx)
 {
 	if (!atomic_read(&info->active)) {
 		atomic_set(&info->active, 1);
-		fimg2d_debug("dispatch context(%p) to kernel thread\n", ctx);
+		fimg2d_debug("dispatch ctx %p to kernel thread\n", ctx);
 		queue_work(info->work_q, &fimg2d_work);
 	}
 	fimg2d_context_wait(ctx);
@@ -137,16 +138,17 @@ static int fimg2d_open(struct inode *inode, struct file *file)
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx) {
-		printk(KERN_ERR "not enough memory for context\n");
+		printk(KERN_ERR "not enough memory for ctx\n");
 		return -ENOMEM;
 	}
-
 	file->private_data = (void *)ctx;
 
-	fimg2d_add_context(info, ctx);
+	ctx->mm = current->mm;
+	fimg2d_debug("ctx: %p pgd: %p, init_mm pgd: %p\n",
+			ctx, (void *)virt_to_phys(ctx->mm->pgd),
+			(void *)virt_to_phys(init_mm.pgd));
 
-	ctx->pgd = virt_to_phys(current->mm->pgd);
-	fimg2d_debug("context(%p), pgd(0x%lx)\n", ctx, ctx->pgd);
+	fimg2d_add_context(info, ctx);
 
 #ifndef CONFIG_PM_RUNTIME
 	if (atomic_read(&info->nctx) == 1)
@@ -160,7 +162,7 @@ static int fimg2d_release(struct inode *inode, struct file *file)
 {
 	struct fimg2d_context *ctx = file->private_data;
 
-	fimg2d_debug("context(%p)\n", ctx);
+	fimg2d_debug("ctx %p\n", ctx);
 	fimg2d_context_wait(ctx);
 	fimg2d_del_context(info, ctx);
 
@@ -193,13 +195,13 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	ctx = file->private_data;
 	if (!ctx) {
-		printk(KERN_ERR "fatal error: missing context\n");
+		printk(KERN_ERR "fatal error: missing ctx\n");
 		return -EFAULT;
 	}
 
 	switch (cmd) {
 	case FIMG2D_BITBLT_BLIT:
-		fimg2d_debug("FIMG2D_BITBLT_BLIT: context(%p)\n", ctx);
+		fimg2d_debug("FIMG2D_BITBLT_BLIT ctx: %p\n", ctx);
 		u.blit = (struct fimg2d_blit *)arg;
 		ret = fimg2d_add_command(info, ctx, u.blit);
 		if (!ret)
@@ -207,12 +209,12 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case FIMG2D_BITBLT_SYNC:
-		fimg2d_debug("FIMG2D_BITBLT_SYNC: context(%p)\n", ctx);
+		fimg2d_debug("FIMG2D_BITBLT_SYNC ctx: %p\n", ctx);
 		/* FIXME: */
 		break;
 
 	case FIMG2D_BITBLT_VERSION:
-		fimg2d_debug("FIMG2D_BITBLT_VERSION: context(%p)\n", ctx);
+		fimg2d_debug("FIMG2D_BITBLT_VERSION ctx: %p\n", ctx);
 		/* FIXME: */
 		break;
 
@@ -275,7 +277,7 @@ static int fimg2d_probe(struct platform_device *pdev)
 
 	pdata = to_fimg2d_plat(&pdev->dev);
 	if (!pdata) {
-		printk(KERN_ERR "no platform data\n");
+		printk(KERN_ERR "FIMG2D: no platform data\n");
 		ret = -ENOMEM;
 		goto err_plat;
 	}
@@ -283,7 +285,7 @@ static int fimg2d_probe(struct platform_device *pdev)
 	/* global structure */
 	info = kzalloc(sizeof(*info), GFP_KERNEL);
 	if (!info) {
-		printk(KERN_ERR "no memory for fimg2d info\n");
+		printk(KERN_ERR "FIMG2D: no memory for fimg2d info\n");
 		ret = -ENOMEM;
 		goto err_plat;
 	}
@@ -291,14 +293,14 @@ static int fimg2d_probe(struct platform_device *pdev)
 	/* setup global info */
 	ret = fimg2d_setup_controller(info);
 	if (ret) {
-		printk(KERN_ERR "failed to setup controller info\n");
+		printk(KERN_ERR "FIMG2D: failed to setup controller info\n");
 		goto err_setup;
 	}
 
 	/* memory region */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
-		printk(KERN_ERR "failed to get resource\n");
+		printk(KERN_ERR "FIMG2D: failed to get resource\n");
 		ret = -ENOENT;
 		goto err_res;
 	}
@@ -306,7 +308,7 @@ static int fimg2d_probe(struct platform_device *pdev)
 	info->mem = request_mem_region(res->start, resource_size(res),
 					pdev->name);
 	if (!info->mem) {
-		printk(KERN_ERR "failed to request memory region\n");
+		printk(KERN_ERR "FIMG2D: failed to request memory region\n");
 		ret = -ENOMEM;
 		goto err_region;
 	}
@@ -314,7 +316,7 @@ static int fimg2d_probe(struct platform_device *pdev)
 	/* ioremap */
 	info->regs = ioremap(res->start, resource_size(res));
 	if (!info->regs) {
-		printk(KERN_ERR "failed to ioremap\n");
+		printk(KERN_ERR "FIMG2D: failed to ioremap\n");
 		ret = -ENOENT;
 		goto err_map;
 	}
@@ -322,15 +324,15 @@ static int fimg2d_probe(struct platform_device *pdev)
 	/* irq */
 	info->irq = platform_get_irq(pdev, 0);
 	if (!info->irq) {
-		printk(KERN_ERR "failed to get irq resource\n");
+		printk(KERN_ERR "FIMG2D: failed to get irq resource\n");
 		ret = -ENOENT;
 		goto err_map;
 	}
-	printk(KERN_ERR "irq=%d\n", info->irq);
+	fimg2d_debug("irq: %d\n", info->irq);
 
 	ret = request_irq(info->irq, fimg2d_irq, IRQF_DISABLED, pdev->name, info);
 	if (ret) {
-		printk(KERN_ERR "failed to request irq\n");
+		printk(KERN_ERR "FIMG2D: failed to request irq\n");
 		ret = -ENOENT;
 		goto err_irq;
 	}
@@ -339,42 +341,46 @@ static int fimg2d_probe(struct platform_device *pdev)
 	/* clock for setting parent and rate */
 	parent = clk_get(&pdev->dev, pdata->parent_clkname);
 	if (IS_ERR(parent)) {
-		printk(KERN_ERR "failed to get parent clock\n");
+		printk(KERN_ERR "FIMG2D: failed to get parent clk\n");
 		ret = -ENOENT;
 		goto err_clk1;
 	}
+	fimg2d_debug("parent clk: %s\n", pdata->parent_clkname);
 
 	sclk = clk_get(&pdev->dev, pdata->clkname);
 	if (IS_ERR(sclk)) {
-		printk(KERN_ERR "failed to get sclk_g2d clock\n");
+		printk(KERN_ERR "FIMG2D: failed to get sclk\n");
 		ret = -ENOENT;
 		goto err_clk2;
 	}
+	fimg2d_debug("sclk: %s\n", pdata->clkname);
 
-	clk_set_parent(sclk, parent);
+	if (clk_set_parent(sclk, parent))
+		printk(KERN_ERR "FIMG2D: failed to set set parent\n");
+
 	clk_set_rate(sclk, pdata->clkrate);
-	fimg2d_debug("FIMG2D clock(name:%s, rate:%ld) parent(name:%s, rate:%ld)\n",
-			pdata->clkname, clk_get_rate(sclk),
-			pdata->parent_clkname, clk_get_rate(parent));
+	fimg2d_debug("clkrate: %ld parent clkrate: %ld\n",
+			clk_get_rate(sclk), clk_get_rate(parent));
 
 	/* clock for gating */
 	info->clock = clk_get(&pdev->dev, pdata->gate_clkname);
 	if (IS_ERR(info->clock)) {
-		printk(KERN_ERR "failed to get clock\n");
+		printk(KERN_ERR "FIMG2D: failed to get gate clk\n");
 		ret = -ENOENT;
 		goto err_clk3;
 	}
+	fimg2d_debug("gate clk: %s\n", pdata->gate_clkname);
 #endif
 
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_enable(&pdev->dev);
-	fimg2d_debug("FIMG2D PM runtime enabled\n");
+	fimg2d_debug("PM runtime enabled\n");
 #endif
 
 	/* misc register */
 	ret = misc_register(&fimg2d_dev);
 	if (ret) {
-		printk(KERN_ERR "FIMG2D failed to register misc driver\n");
+		printk(KERN_ERR "FIMG2D: failed to register misc driver\n");
 		goto err_reg;
 	}
 
