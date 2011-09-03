@@ -30,7 +30,7 @@ static struct resource s5p_mfc_resource[] = {
 };
 
 struct platform_device s5p_device_mfc = {
-	.name		= "s5p-mfc",
+	.name		= "s3c-mfc",
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(s5p_mfc_resource),
 	.resource	= s5p_mfc_resource,
