@@ -38,7 +38,7 @@
 #define MMAP_BUFFER_SIZE_MMAP          (62*1024*1024)
 #endif
 
-#define SAMSUNG_MFC_DEV_NAME           "/dev/s5p-mfc"
+#define SAMSUNG_MFC_DEV_NAME           "/dev/s3c-mfc"
 
 
 /*--------------------------------------------------------------------------------*/

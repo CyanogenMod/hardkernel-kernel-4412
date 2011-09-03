@@ -19,7 +19,7 @@
 
 #include "mfc_inst.h"
 
-#define MFC_DEV_NAME	"s5p-mfc"
+#define MFC_DEV_NAME	"s3c-mfc"
 #define MFC_NAME_LEN	16
 
 struct mfc_reg {
