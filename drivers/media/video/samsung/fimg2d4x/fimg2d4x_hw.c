@@ -43,13 +43,7 @@ void fimg2d4x_clear_irq(struct fimg2d_control *info)
 
 int fimg2d4x_is_blit_done(struct fimg2d_control *info)
 {
-	volatile unsigned long sts;
-
-	/* read twice */
-	sts = readl(info->regs + FIMG2D_FIFO_STAT_REG) & FIMG2D_BLIT_FINISHED;
-	sts = readl(info->regs + FIMG2D_FIFO_STAT_REG) & FIMG2D_BLIT_FINISHED;
-
-	return sts;
+	return readl(info->regs + FIMG2D_INTC_PEND_REG) & FIMG2D_BLIT_INT_FLAG;
 }
 
 void fimg2d4x_start_blit(struct fimg2d_control *info)
