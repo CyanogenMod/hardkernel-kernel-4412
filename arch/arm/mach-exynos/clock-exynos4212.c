@@ -317,6 +317,7 @@ void __init exynos4212_register_clocks(void)
 	/* mout_mpll_user is used instead of mout_mpll in exynos 4212 */
 	clkset_group_list[6] = &clk_mout_mpll_user.clk;
 	clkset_aclk_top_list[0] = &clk_mout_mpll_user.clk;
+	clkset_mout_mfc0_list[0] = &clk_mout_mpll_user.clk;
 
 	clk_mout_mpll.reg_src.reg = S5P_CLKSRC_DMC;
 	clk_mout_mpll.reg_src.shift = 12;

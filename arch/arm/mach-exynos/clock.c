@@ -1318,7 +1318,7 @@ static struct clksrc_sources clkset_mout_g2d = {
 	.nr_sources	= ARRAY_SIZE(clkset_mout_g2d_list),
 };
 
-static struct clk *clkset_mout_mfc0_list[] = {
+struct clk *clkset_mout_mfc0_list[] = {
 	[0] = &clk_mout_mpll.clk,
 	[1] = &clk_sclk_apll.clk,
 };
