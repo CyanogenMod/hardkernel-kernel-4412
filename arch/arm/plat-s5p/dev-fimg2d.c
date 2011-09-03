@@ -14,20 +14,18 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/ioport.h>
-#include <mach/map.h>
 #include <plat/fimg2d.h>
+#include <plat/cputype.h>
+#include <mach/map.h>
 
-#ifdef CONFIG_CPU_EXYNOS4212
-#define	PA_FIMG2D	S5P_PA_FIMG2D_M
-#else
-#define	PA_FIMG2D	S5P_PA_FIMG2D
-#endif
+#define S5P_PA_FIMG2D_OFFSET	0x02000000
+#define S5P_PA_FIMG2D_3X	(S5P_PA_FIMG2D+S5P_PA_FIMG2D_OFFSET)
 
 #ifdef CONFIG_VIDEO_FIMG2D
 static struct resource s5p_fimg2d_resource[] = {
 	[0] = {
-		.start	= PA_FIMG2D,
-		.end	= PA_FIMG2D + SZ_4K - 1,
+		.start	= S5P_PA_FIMG2D,
+		.end	= S5P_PA_FIMG2D + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -49,12 +47,17 @@ static struct fimg2d_platdata default_fimg2d_data __initdata = {
 	.parent_clkname = "mout_g2d0",
 	.clkname = "sclk_fimg2d",
 	.gate_clkname = "fimg2d",
-	.clkrate = 250 * 1000000,	/* 200 Mhz */
+	.clkrate = 250 * 1000000,
 };
 
 void __init s5p_fimg2d_set_platdata(struct fimg2d_platdata *pd)
 {
 	struct fimg2d_platdata *npd;
+
+	if (!cpu_is_exynos4212()) {
+		s5p_fimg2d_resource[0].start = S5P_PA_FIMG2D_3X;
+		s5p_fimg2d_resource[0].end = S5P_PA_FIMG2D_3X + SZ_4K - 1;
+	}
 
 	if (!pd)
 		pd = &default_fimg2d_data;
