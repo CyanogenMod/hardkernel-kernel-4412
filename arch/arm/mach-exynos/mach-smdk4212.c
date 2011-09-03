@@ -70,6 +70,9 @@
 #include <mach/dwmci.h>
 #endif
 #include <mach/dev.h>
+#ifdef CONFIG_EXYNOS4_C2C
+#include <mach/c2c.h>
+#endif
 
 #ifdef CONFIG_FB_S5P_MIPI_DSIM
 #include <mach/mipi_ddi.h>
@@ -1577,6 +1580,21 @@ static struct fimg2d_platdata fimg2d_data __initdata = {
 };
 #endif
 
+#ifdef CONFIG_EXYNOS4_C2C
+struct exynos_c2c_platdata smdk4212_c2c_pdata = {
+	.setup_gpio	= NULL,
+	.shdmem_addr	= C2C_SHAREDMEM_BASE,
+	.shdmem_size	= C2C_MEMSIZE_64,
+	.ap_sscm_addr	= NULL,
+	.cp_sscm_addr	= NULL,
+	.rx_width	= C2C_BUSWIDTH_16,
+	.tx_width	= C2C_BUSWIDTH_16,
+	.max_clk	= 400,
+	.default_clk 	= 200,
+	.get_c2c_state	= NULL,
+};
+#endif
+
 #ifdef CONFIG_USB_EXYNOS_SWITCH
 static struct s5p_usbswitch_platdata smdk4212_usbswitch_pdata;
 
@@ -1741,6 +1759,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&samsung_device_battery,
 #endif
 	&samsung_device_keypad,
+#ifdef CONFIG_EXYNOS4_C2C
+	&exynos_device_c2c,
+#endif
 	&smdk4212_input_device,
 	&smdk4212_smsc911x,
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -1885,6 +1906,9 @@ static void __init exynos4_reserve_mem(void)
 	};
 
 	static const char map[] __initconst =
+#ifdef CONFIG_EXYNOS4_C2C
+		"samsung-c2c=c2c_shdmem;"
+#endif
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0=fimd;exynos4-fb.0=fimd;"
 		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
@@ -2112,6 +2136,9 @@ static void __init smdk4212_machine_init(void)
 #endif
 	samsung_keypad_set_platdata(&smdk4212_keypad_data);
 	smdk4212_smsc911x_init();
+#ifdef CONFIG_EXYNOS4_C2C
+	exynos4_c2c_set_platdata(&smdk4212_c2c_pdata);
+#endif
 
 	platform_add_devices(smdk4212_devices, ARRAY_SIZE(smdk4212_devices));
 
@@ -2184,10 +2211,32 @@ static void __init smdk4212_machine_init(void)
 	dev_add(&busfreq, &exynos4_busfreq.dev);
 }
 
+#ifdef CONFIG_EXYNOS4_C2C
+static void __init exynos_c2c_reserve(void)
+{
+	static struct cma_region regions[] = {
+		{
+			.name = "c2c_shdmem",
+			.size = 64 * SZ_1M,
+			{ .alignment	= 64 * SZ_1M },
+			.start = C2C_SHAREDMEM_BASE
+		},
+		{
+			.size = 0
+		},
+	};
+
+	BUG_ON(cma_early_region_register(regions));
+}
+#endif
+
 MACHINE_START(SMDK4212, "SMDK4212")
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos4_init_irq,
 	.map_io		= smdk4212_map_io,
 	.init_machine	= smdk4212_machine_init,
 	.timer		= &exynos4_timer,
+#ifdef CONFIG_EXYNOS4_C2C
+	.reserve	= &exynos_c2c_reserve,
+#endif
 MACHINE_END
