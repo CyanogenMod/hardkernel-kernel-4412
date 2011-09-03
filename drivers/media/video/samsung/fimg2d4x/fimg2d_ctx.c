@@ -41,10 +41,228 @@ inline struct fimg2d_bltcmd *fimg2d_get_first_command(struct fimg2d_control *inf
 		return list_first_entry(&info->cmd_q, struct fimg2d_bltcmd, node);
 }
 
+#ifdef CONFIG_VIDEO_FIMG2D_DEBUG
+inline static void fimg2d_print_params(struct fimg2d_blit __user *u)
+{
+	fimg2d_debug("op: %d\n", u->op);
+	fimg2d_debug("fillcolor: 0x%lx\n", u->fillcolor);
+	fimg2d_debug("g_alpha: 0x%x\n", u->g_alpha);
+	fimg2d_debug("premultiplied: %d\n", u->premult);
+	fimg2d_debug("dither: %d\n", u->dither);
+	fimg2d_debug("rotate: %d\n", u->rotate);
+
+	if (u->scaling) {
+		fimg2d_debug("scaling mode: %d, factor: %d, percent(w:%d, h:%d)"
+				"pixel(s:%d,%d d:%d,%d)\n",
+				u->scaling->mode, u->scaling->factor,
+				u->scaling->scale_w, u->scaling->scale_h,
+				u->scaling->src_w, u->scaling->src_h,
+				u->scaling->dst_w, u->scaling->dst_h);
+	}
+
+	if (u->repeat) {
+		fimg2d_debug("repeat mode: %d, pad color: 0x%lx\n",
+				u->repeat->mode, u->repeat->pad_color);
+	}
+
+	if (u->bluscr) {
+		fimg2d_debug("bluescreen mode: %d, bs_color: 0x%lx bg_color: 0x%lx\n",
+				u->bluscr->mode, u->bluscr->bs_color, u->bluscr->bg_color);
+	}
+
+	if (u->clipping) {
+		fimg2d_debug("clipping mode: %d, LT(%d,%d) RB(%d,%d)\n",
+				u->clipping->enable, u->clipping->x1, u->clipping->y1,
+				u->clipping->x2, u->clipping->y2);
+	}
+
+	if (u->src) {
+		fimg2d_debug("src type: %d addr: 0x%lx size: %d cacheable: %d\n",
+				u->src->addr.type, u->src->addr.start, u->src->addr.size,
+				u->src->addr.cacheable);
+		fimg2d_debug("src width: %d height: %d stride: %d order: %d format: %d\n",
+				u->src->width, u->src->height, u->src->stride,
+				u->src->order, u->src->fmt);
+	}
+
+	if (u->dst) {
+		fimg2d_debug("dst type: %d addr: 0x%lx size: %d cacheable: %d\n",
+				u->dst->addr.type, u->dst->addr.start, u->dst->addr.size,
+				u->dst->addr.cacheable);
+		fimg2d_debug("dst width: %d height: %d stride: %d order: %d format: %d\n",
+				u->dst->width, u->dst->height, u->dst->stride,
+				u->dst->order, u->dst->fmt);
+	}
+
+	if (u->msk) {
+		fimg2d_debug("msk type: %d addr: 0x%lx size: %d cacheable: %d\n",
+				u->msk->addr.type, u->msk->addr.start, u->msk->addr.size,
+				u->msk->addr.cacheable);
+		fimg2d_debug("msk width: %d height: %d stride: %d order: %d format: %d\n",
+				u->msk->width, u->msk->height, u->msk->stride,
+				u->msk->order, u->msk->fmt);
+	}
+
+	if (u->src_rect) {
+		fimg2d_debug("src rect LT(%d,%d) RB(%d,%d)\n",
+				u->src_rect->x1, u->src_rect->y1,
+				u->src_rect->x2, u->src_rect->y2);
+	}
+
+	if (u->dst_rect) {
+		fimg2d_debug("dst rect LT(%d,%d) RB(%d,%d)\n",
+				u->dst_rect->x1, u->dst_rect->y1,
+				u->dst_rect->x2, u->dst_rect->y2);
+	}
+
+	if (u->msk_rect) {
+		fimg2d_debug("msk rect LT(%d,%d) RB(%d,%d)\n",
+				u->msk_rect->x1, u->msk_rect->y1,
+				u->msk_rect->x2, u->msk_rect->y2);
+	}
+}
+#endif
+
+static int fimg2d_check_params(struct fimg2d_blit __user *u)
+{
+	struct fimg2d_clip *c;
+	struct fimg2d_image *s, *d, *m;
+	struct fimg2d_rect *sr, *dr, *mr;
+
+	if (u->op < 0 || u->op >= BLIT_OP_END)
+		goto err_op;
+
+	if (!u->src && u->op != BLIT_OP_SOLID_FILL && u->op != BLIT_OP_CLR)
+		goto err_src;
+
+	if (u->src) {
+		s = u->src;
+		sr = u->src_rect;
+
+		if (!sr ||
+			sr->x1 < 0 || sr->x2 > s->width ||
+			sr->y1 < 0 || sr->y2 > s->height)
+			goto err_src_rect;
+
+		/* 8000: max width & height */
+		if (s->width > 8000 || s->height > 8000)
+			goto err_src_rect;
+	}
+
+	if (u->msk) {
+		m = u->msk;
+		mr = u->msk_rect;
+
+		if (!mr ||
+			mr->x1 < 0 || mr->x2 > m->width ||
+			mr->y1 < 0 || mr->y2 > m->height)
+			goto err_msk_rect;
+
+		/* 8000: max width & height */
+		if (m->width > 8000 || m->height > 8000)
+			goto err_msk_rect;
+	}
+
+	if (u->dst) {
+		d = u->dst;
+		dr = u->dst_rect;
+
+		if (!dr || dr->x1 < 0 || dr->y1 < 0)
+			goto err_dst_rect;
+
+		if (!u->clipping && (dr->x2 > d->width || dr->y2 > d->height))
+			goto err_dst_rect;
+
+		/* 8000: max width & height */
+		if (d->width > 8000 || d->height > 8000)
+			goto err_src_rect;
+	}
+
+	if (u->clipping && u->clipping->enable) {
+		c = u->clipping;
+		d = u->dst;
+
+		if (c->x1 < 0 || c->x1 >= d->width ||
+			c->y1 < 0 || c->y1 >= d->height)
+			goto err_clip;
+	}
+
+	return 0;
+
+err_op:
+	printk(KERN_ERR "%s: invalid op or src\n", __func__);
+	return -1;
+err_src:
+	printk(KERN_ERR "%s: invalid src\n", __func__);
+	return -1;
+err_dst:
+	printk(KERN_ERR "%s: invalid dst\n", __func__);
+	return -1;
+err_src_rect:
+	printk(KERN_ERR "%s: invalid src rect\n", __func__);
+	return -1;
+err_msk_rect:
+	printk(KERN_ERR "%s: invalid msk rect\n", __func__);
+	return -1;
+err_dst_rect:
+	printk(KERN_ERR "%s: invalid dst rect\n", __func__);
+	return -1;
+err_clip:
+	printk(KERN_ERR "%s: invalid clipping\n", __func__);
+	return -1;
+}
+
+static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
+{
+	if (cmd->scaling.mode != NO_SCALING) {
+		if (cmd->scaling.factor == SCALING_PERCENTAGE) {
+			if ((!cmd->scaling.scale_w && !cmd->scaling.scale_h) ||
+				(cmd->scaling.scale_w == 100 && cmd->scaling.scale_h == 100)) {
+				cmd->scaling.mode = NO_SCALING;
+			}
+		} else if (cmd->scaling.factor == SCALING_PIXELS) {
+			if ((cmd->scaling.src_w == cmd->scaling.dst_w) &&
+				(cmd->scaling.src_h == cmd->scaling.dst_h)) {
+				cmd->scaling.mode = NO_SCALING;
+			}
+		}
+	}
+
+	if (cmd->clipping.enable) {
+		if (cmd->clipping.x2 > cmd->dst.width) {
+			fimg2d_debug("fixing up cipping coord x2: %d --> %d\n",
+					cmd->clipping.x2, cmd->dst.width);
+			cmd->clipping.x2 = cmd->dst.width;
+		}
+
+		if (cmd->clipping.y2 > cmd->dst.height) {
+			fimg2d_debug("fixing up cipping coord y2: %d --> %d\n",
+					cmd->clipping.y2, cmd->dst.height);
+			cmd->clipping.y2 = cmd->dst.height;
+		}
+	} else {
+		if (cmd->dst_rect.x2 > cmd->dst.width ||
+			cmd->dst_rect.y2 > cmd->dst.height) {
+			cmd->clipping.enable = true;
+			cmd->clipping.x1 = 0;
+			cmd->clipping.y1 = 0;
+			cmd->clipping.x2 = cmd->dst.width;
+			cmd->clipping.y2 = cmd->dst.height;
+			fimg2d_debug("auto clipping (LT:%d,%d RB:%d,%d)\n",
+					cmd->clipping.x1, cmd->clipping.y1,
+					cmd->clipping.x2, cmd->clipping.y2);
+		}
+	}
+}
+
 int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 			struct fimg2d_blit __user *u)
 {
 	struct fimg2d_bltcmd *cmd;
+
+#ifdef CONFIG_VIDEO_FIMG2D_DEBUG
+	fimg2d_print_params(u);
+#endif
 
 	cmd = kzalloc(sizeof(*cmd), GFP_KERNEL);
 	if (!cmd) {
@@ -55,7 +273,15 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 	cmd->ctx = ctx;
 	cmd->seq_no = u->seq_no;
 
-	fimg2d_debug("context(%p), seq_no(%u)\n", cmd->ctx, cmd->seq_no);
+	fimg2d_debug("ctx: %p, seq_no(%u)\n", cmd->ctx, cmd->seq_no);
+
+	if (info->err) {
+		printk(KERN_ERR "%s: unrecoverable hardware error\n", __func__);
+		goto err_user;
+	}
+
+	if (fimg2d_check_params(u))
+		goto err_user;
 
 	cmd->op = u->op;
 	cmd->fillcolor = u->fillcolor;
@@ -117,10 +343,14 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 			goto err_user;
 	}
 
+	fimg2d_fixup_params(cmd);
+
 	/* add command node and increase ncmd */
 	spin_lock(&info->bltlock);
 	atomic_inc(&ctx->ncmd);
 	fimg2d_enqueue(info, &cmd->node, &info->cmd_q);
+	fimg2d_debug("ctx: %p, ncmd(%d) seq_no(%u)\n",
+			cmd->ctx, atomic_read(&ctx->ncmd), cmd->seq_no);
 	spin_unlock(&info->bltlock);
 
 	return 0;
@@ -136,10 +366,12 @@ inline void fimg2d_add_context(struct fimg2d_control *info, struct fimg2d_contex
 	init_waitqueue_head(&ctx->wait_q);
 
 	atomic_inc(&info->nctx);
+	fimg2d_debug("ctx: %p nctx(%d)\n", ctx, atomic_read(&info->nctx));
 }
 
 inline void fimg2d_del_context(struct fimg2d_control *info, struct fimg2d_context *ctx)
 {
 	atomic_dec(&info->nctx);
+	fimg2d_debug("ctx: %p nctx(%d)\n", ctx, atomic_read(&info->nctx));
 }
 
