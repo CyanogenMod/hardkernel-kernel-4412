@@ -75,7 +75,7 @@ void s3c_mshci_set_platdata(struct s3c_mshci_platdata *pd)
 		set->max_width = pd->max_width;
 	if (pd->host_caps)
 		set->host_caps |= pd->host_caps;
-	if (cpu_is_exynos4210) {
+	if (cpu_is_exynos4210()) {
 		if (pd->host_caps && exynos4_subrev() == 0) {
 			printk(KERN_INFO "MSHC: This exynos4 is EVT1.0. "
 				"Disable DDR R/W for eMMC.\n");
