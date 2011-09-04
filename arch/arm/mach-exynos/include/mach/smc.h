@@ -15,13 +15,18 @@
 
 #define SMC_CMD_INIT		(-1)
 #define SMC_CMD_INFO		(-2)
+/* For Power Management */
 #define SMC_CMD_SLEEP		(-3)
 #define SMC_CMD_CPU1BOOT	(-4)
-#define SMC_CMD_L2X0UP		(-5)
-#define SMC_CMD_CPU0AFTR	(-6)
-#define SMC_CMD_L2X0DEBUG	(-7)
-#define SMC_CMD_L2X0CTRL	(-8)
-#define SMC_CMD_C15RESUME	(-9)
+#define SMC_CMD_CPU0AFTR	(-5)
+/* For CP15 Access */
+#define SMC_CMD_C15RESUME	(-11)
+/* For L2 Cache Access */
+#define SMC_CMD_L2X0CTRL	(-21)
+#define SMC_CMD_L2X0SETUP1	(-22)
+#define SMC_CMD_L2X0SETUP2	(-23)
+#define SMC_CMD_L2X0INVALL	(-24)
+#define SMC_CMD_L2X0DEBUG	(-25)
 
 #ifndef __ASSEMBLY__
 static inline u32 exynos_smc(u32 cmd, u32 arg1, u32 arg2, u32 arg3)

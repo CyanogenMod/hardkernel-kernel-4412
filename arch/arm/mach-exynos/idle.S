@@ -151,7 +151,6 @@ sys_pwr_conf_addr:
 	 */
 
 ENTRY(exynos4_idle_resume)
-#ifndef CONFIG_ARM_TRUSTZONE
 	/* SCU enable */
 	ldr	r1, =0x10500000
 	ldr	r0, [r1]
@@ -167,6 +166,20 @@ ENTRY(exynos4_idle_resume)
 	/* Check soc id */
 	ldr	r2, =0x43220
 	cmp	r0, r2
+#ifdef CONFIG_ARM_TRUSTZONE
+	ldr	r0, =SMC_CMD_L2X0SETUP1
+	ldr	r1, =0x110
+	ldrne	r2, =0x110
+	ldreq	r2, =0x120
+	ldr	r3, =0x30000007
+	smc	0
+
+	ldr	r0, =SMC_CMD_L2X0SETUP2
+	ldr	r1, =0x3
+	ldr	r2, =0x7C470001
+	ldr	r3, =0xC200FFFF
+	smc	0
+#else
 	beq	exynos4212_l2_cache
 
 	/* Outer cache TAG,DATA latency */

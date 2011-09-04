@@ -317,7 +317,15 @@ static void exynos4_pm_resume(void)
 
 #ifdef CONFIG_CACHE_L2X0
 #ifdef CONFIG_ARM_TRUSTZONE
-	exynos_smc(SMC_CMD_L2X0UP, 0, 0, 0);
+	if (cpu_is_exynos4212())
+		exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, 0x120, 0x30000007);
+	else
+		exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, 0x110, 0x30000007);
+	exynos_smc(SMC_CMD_L2X0SETUP2,
+		   L2X0_DYNAMIC_CLK_GATING_EN | L2X0_STNDBY_MODE_EN,
+		   0x7C470001, 0xC200FFFF);
+	exynos_smc(SMC_CMD_L2X0INVALL, 0, 0, 0);
+	exynos_smc(SMC_CMD_L2X0CTRL, 1, 0, 0);
 #else
 	s3c_pm_do_restore_core(exynos4_l2cc_save, ARRAY_SIZE(exynos4_l2cc_save));
 	outer_inv_all();
