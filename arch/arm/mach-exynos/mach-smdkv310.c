@@ -678,7 +678,7 @@ static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
 #ifdef CONFIG_VIDEO_FIMG2D
 static struct fimg2d_platdata fimg2d_data __initdata = {
 	.hw_ver = 30,
-	.parent_clkname = "mout_mpll",
+	.parent_clkname = "mout_g2d0",
 	.clkname = "sclk_fimg2d",
 	.gate_clkname = "fimg2d",
 	.clkrate = 267 * 1000000,	/* 266 Mhz */
