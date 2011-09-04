@@ -169,6 +169,8 @@
 #define MFC_ENC_MAP_FOR_CUR		S5P_MFCREG(0xc51c) /* linear or 64x32 tiled mode */
 #define MFC_ENC_PADDING_CTRL		S5P_MFCREG(0xc520) /* padding control */
 
+#define MFC_ENC_NV21_SEL		S5P_MFCREG(0xc548) /* chroma interleaving order */
+
 #define MFC_ENC_INTRA_BIAS		S5P_MFCREG(0xc588) /* intra mode bias for the MB mode */
 #define MFC_ENC_BI_DIRECT_BIAS		S5P_MFCREG(0xc58c) /* bi-directional mode bias for the MB mode */
 
