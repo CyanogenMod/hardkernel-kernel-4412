@@ -507,7 +507,6 @@ static __init int exynos4_gpiolib_init(void)
 {
 	struct s3c_gpio_chip *chip;
 	int i;
-	int group = 0;
 	int nr_chips;
 
 	/* GPIO common part  */
