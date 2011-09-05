@@ -40,5 +40,4 @@ extern void exynos4_sys_powerdown_conf(enum sys_powerdown mode);
 extern int exynos4_enter_lp(unsigned long *saveblk, long);
 extern void exynos4_idle_resume(void);
 extern void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode);
-extern void exynos4_c2c_pwr_mode_enable(bool enable_c2c);
 #endif /* __ASM_ARCH_PMU_H */

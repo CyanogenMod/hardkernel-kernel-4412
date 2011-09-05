@@ -22,8 +22,6 @@ static struct exynos4_pmu_conf *exynos4_pmu_config;
 
 static unsigned int entry_cnt;
 
-static bool use_c2c_pwr_mode = false;
-
 static struct exynos4_pmu_conf exynos4210_pmu_config[] = {
 	/* { .reg = address, .val = { AFTR, LPA, SLEEP } */
 	{ S5P_ARM_CORE0_SYS,			{ 0, 0, 2 } },
@@ -158,21 +156,21 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_LOGIC_RESET_COREBLK_SYS,		{ 1, 1, 0 } },
 	{ S5P_OSCCLK_GATE_COREBLK_SYS,		{ 1, 0, 1 } },
 	{ S5P_ONENAND_MEM_SYS,			{ 3, 0, 0 } },
-	{ S5P_ONENAND_MEM_OPTION,		{ 1, 1, 0 } },
+	{ S5P_ONENAND_MEM_OPTION,		{ 0x10, 0x10, 0 } },
 	{ S5P_HSI_MEM_SYS,			{ 3, 0, 0 } },
-	{ S5P_HSI_MEM_OPTION,			{ 1, 1, 0 } },
+	{ S5P_HSI_MEM_OPTION,			{ 0x10, 0x10, 0 } },
 	{ S5P_G2D_ACP_MEM_SYS,			{ 3, 0, 0 } },
-	{ S5P_G2D_ACP_MEM_OPTION,		{ 1, 1, 0 } },
+	{ S5P_G2D_ACP_MEM_OPTION,		{ 0x10, 0x10, 0 } },
 	{ S5P_USBOTG_MEM_SYS,			{ 3, 0, 0 } },
-	{ S5P_USBOTG_MEM_OPTION,		{ 1, 1, 0 } },
+	{ S5P_USBOTG_MEM_OPTION,		{ 0x10, 0x10, 0 } },
 	{ S5P_SDMMC_MEM_SYS,			{ 3, 0, 0 } },
-	{ S5P_SDMMC_MEM_OPTION,			{ 1, 1, 0 } },
+	{ S5P_SDMMC_MEM_OPTION,			{ 0x10, 0x10, 0 } },
 	{ S5P_CSSYS_MEM_SYS,			{ 3, 0, 0 } },
-	{ S5P_CSSYS_MEM_OPTION,			{ 1, 1, 0 } },
+	{ S5P_CSSYS_MEM_OPTION,			{ 0x10, 0x10, 0 } },
 	{ S5P_SECSS_MEM_SYS,			{ 3, 0, 0 } },
-	{ S5P_SECSS_MEM_OPTION,			{ 1, 1, 0 } },
+	{ S5P_SECSS_MEM_OPTION,			{ 0x10, 0x10, 0 } },
 	{ S5P_ROTATOR_MEM_SYS,			{ 3, 0, 0 } },
-	{ S5P_ROTATOR_MEM_OPTION,		{ 1, 1, 0 } },
+	{ S5P_ROTATOR_MEM_OPTION,		{ 0x10, 0x10, 0 } },
 	{ S5P_PAD_RETENTION_DRAM_SYS,		{ 1, 0, 0 } },
 	{ S5P_PAD_RETENTION_MAUDIO_SYS,		{ 1, 1, 0 } },
 	{ S5P_PAD_RETENTION_GPIO_SYS,		{ 1, 0, 0 } },
@@ -206,6 +204,19 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_CMU_SYSCLK_GPS_SYS,		{ 1, 0, 0 } },
 };
 
+static struct exynos4_pmu_conf exynos4212_c2c_pmu_conf[] = {
+	{ S5P_LPDDR_PHY_DLL_LOCK_SYS,		{ 1, 0, 0 } },
+	{ S5P_CMU_RESET_COREBLK_SYS,		{ 1, 1, 1 } },
+	{ S5P_MPLLUSER_SYSCLK_SYS,		{ 1, 0, 0 } },
+	{ S5P_TOP_RETENTION_COREBLK_SYS,	{ 1, 0, 0 } },
+	{ S5P_TOP_PWR_COREBLK_SYS,		{ 3, 0, 0 } },
+	{ S5P_LOGIC_RESET_COREBLK_SYS,		{ 1, 1, 1 } },
+	{ S5P_OSCCLK_GATE_COREBLK_SYS,		{ 1, 0, 0 } },
+	{ S5P_PAD_RETENTION_GPIO_COREBLK_SYS,	{ 1, 1, 1 } },
+	{ S5P_TOP_ASB_RESET_SYS,		{ 1, 1, 0 } },
+	{ S5P_TOP_ASB_ISOLATION_SYS,		{ 1, 0, 0 } },
+};
+
 static struct exynos4_c2c_pmu_conf exynos4212_config_for_c2c[]= {
 	/* Register Address	       Value */
 	{ S5P_TOP_BUS_COREBLK_SYS,	0x0},
@@ -213,18 +224,35 @@ static struct exynos4_c2c_pmu_conf exynos4212_config_for_c2c[]= {
 	{ S5P_MPLL_SYSCLK_SYS,		0x0},
 	{ S5P_XUSBXTI_SYS,		0x0},
 };
+
+static int exynos4_is_c2c_use(void)
+{
+	unsigned int ret;
+
+	ret = __raw_readl(S5P_C2C_CTRL);
+
+	return ret;
+}
+
 void exynos4_sys_powerdown_conf(enum sys_powerdown mode)
 {
 	unsigned int count = entry_cnt;
+	unsigned int tmp;
 
 	for (; count > 0; count--)
 		__raw_writel(exynos4_pmu_config[count - 1].val[mode],
 				exynos4_pmu_config[count - 1].reg);
 
-	if ((cpu_is_exynos4212()) && use_c2c_pwr_mode) {
-		for (count = 0 ; count < ARRAY_SIZE(exynos4212_config_for_c2c) ; count++)
-			__raw_writel(exynos4212_config_for_c2c[count].val,
-					exynos4212_config_for_c2c[count].reg);
+	if ((cpu_is_exynos4212()) && (exynos4_is_c2c_use())) {
+		for (count = 0 ; count < ARRAY_SIZE(exynos4212_c2c_pmu_conf) ; count++)
+			__raw_writel(exynos4212_c2c_pmu_conf[count].val[mode],
+					exynos4212_c2c_pmu_conf[count].reg);
+
+		for (count = 0 ; count < ARRAY_SIZE(exynos4212_config_for_c2c) ; count++) {
+			tmp = __raw_readl(exynos4212_config_for_c2c[count].reg);
+			tmp |= exynos4212_config_for_c2c[count].val;
+			__raw_writel(tmp, exynos4212_config_for_c2c[count].reg);
+		}
 	}
 }
 
@@ -246,14 +274,6 @@ void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode)
 		exynos4212_config_for_c2c[3].val = 0x1;
 		break;
 	}
-}
-
-void exynos4_c2c_pwr_mode_enable(bool enable_c2c)
-{
-	use_c2c_pwr_mode = enable_c2c;
-
-	printk(KERN_INFO "EXYNOS4 C2C POWER MODE %sable\n",
-			(use_c2c_pwr_mode ? "En":"Dis"));
 }
 
 static int __init exynos4_pmu_init(void)

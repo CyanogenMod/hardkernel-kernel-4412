@@ -418,9 +418,9 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	exynos4_gpio_conpdn_reg();
 
 	/* ensure at least INFORM0 has the resume address */
-	__raw_writel(virt_to_phys(s3c_cpu_resume), S5P_INFORM0);
+	__raw_writel(virt_to_phys(exynos4_idle_resume), S5P_INFORM0);
 
-	__raw_writel(virt_to_phys(s3c_cpu_resume), REG_DIRECTGO_ADDR);
+	__raw_writel(virt_to_phys(exynos4_idle_resume), REG_DIRECTGO_ADDR);
 	__raw_writel(0xfcba0d10, REG_DIRECTGO_FLAG);
 
 	__raw_writel(S5P_CHECK_LPA, S5P_INFORM1);
