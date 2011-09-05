@@ -114,7 +114,7 @@ int s3c_csis_clk_on(struct platform_device *pdev, struct clk **clk)
 
 	/* csis */
 	*clk = clk_get(&pdev->dev, "csis");
-	if (IS_ERR(clk)) {
+	if (IS_ERR(*clk)) {
 		dev_err(&pdev->dev, "failed to get csis clock\n");
 		goto err_clk3;
 	}
