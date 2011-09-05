@@ -25,6 +25,7 @@
 #include <mach/pmu.h>
 #include <mach/gpio.h>
 #include <mach/smc.h>
+#include <mach/clock-domain.h>
 
 #include <plat/regs-otg.h>
 #include <plat/exynos4.h>
@@ -160,7 +161,7 @@ static int check_power_domain(void)
 	return 0;
 }
 
-static int check_clock_gating(void)
+static int __maybe_unused check_clock_gating(void)
 {
 	unsigned long tmp;
 
@@ -253,7 +254,7 @@ static int exynos4_check_operation(void)
 	if (check_power_domain())
 		return 1;
 
-	if (check_clock_gating())
+	if (clock_domain_enabled(LPA_DOMAIN))
 		return 1;
 
 	if (loop_sdmmc_check() || check_usbotg_op())

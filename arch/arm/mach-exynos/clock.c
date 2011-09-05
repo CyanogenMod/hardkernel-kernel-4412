@@ -30,6 +30,7 @@
 #include <mach/regs-audss.h>
 #include <mach/sysmmu.h>
 #include <mach/exynos-clock.h>
+#include <mach/clock-domain.h>
 
 #ifdef CONFIG_PM
 static struct sleep_save exynos4_clock_save[] = {
@@ -863,54 +864,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_image_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
-		.name		= "i2c",
-		.id		= 0,
-		.parent		= &clk_aclk_100.clk,
-		.enable		= exynos4_clk_ip_peril_ctrl,
-		.ctrlbit	= (1 << 6),
-	}, {
-		.name		= "i2c",
-		.id		= 1,
-		.parent		= &clk_aclk_100.clk,
-		.enable		= exynos4_clk_ip_peril_ctrl,
-		.ctrlbit	= (1 << 7),
-	}, {
-		.name		= "i2c",
-		.id		= 2,
-		.parent		= &clk_aclk_100.clk,
-		.enable		= exynos4_clk_ip_peril_ctrl,
-		.ctrlbit	= (1 << 8),
-	}, {
-		.name		= "i2c",
-		.id		= 3,
-		.parent		= &clk_aclk_100.clk,
-		.enable		= exynos4_clk_ip_peril_ctrl,
-		.ctrlbit	= (1 << 9),
-	}, {
-		.name		= "i2c",
-		.id		= 4,
-		.parent		= &clk_aclk_100.clk,
-		.enable		= exynos4_clk_ip_peril_ctrl,
-		.ctrlbit	= (1 << 10),
-	}, {
-		.name		= "i2c",
-		.id		= 5,
-		.parent		= &clk_aclk_100.clk,
-		.enable		= exynos4_clk_ip_peril_ctrl,
-		.ctrlbit	= (1 << 11),
-	}, {
-		.name		= "i2c",
-		.id		= 6,
-		.parent		= &clk_aclk_100.clk,
-		.enable		= exynos4_clk_ip_peril_ctrl,
-		.ctrlbit	= (1 << 12),
-	}, {
-		.name		= "i2c",
-		.id		= 7,
-		.parent		= &clk_aclk_100.clk,
-		.enable		= exynos4_clk_ip_peril_ctrl,
-		.ctrlbit	= (1 << 13),
-	}, {
 		.name		= "sysmmu",
 		.id		= SYSMMU_MDMA,
 		.enable		= exynos4_clk_ip_image_ctrl,
@@ -1004,6 +957,58 @@ static struct clk init_clocks_off[] = {
 		.parent		= &clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= (0x1 << 0),
+	}
+};
+
+static struct clk i2cs_clocks[] = {
+	{
+		.name		= "i2c",
+		.id		= 0,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 6),
+	}, {
+		.name		= "i2c",
+		.id		= 1,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 7),
+	}, {
+		.name		= "i2c",
+		.id		= 2,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 8),
+	}, {
+		.name		= "i2c",
+		.id		= 3,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 9),
+	}, {
+		.name		= "i2c",
+		.id		= 4,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 10),
+	}, {
+		.name		= "i2c",
+		.id		= 5,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 11),
+	}, {
+		.name		= "i2c",
+		.id		= 6,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 12),
+	}, {
+		.name		= "i2c",
+		.id		= 7,
+		.parent		= &clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 13),
 	}
 };
 
@@ -2204,7 +2209,24 @@ void __init exynos4_register_clocks(void)
 	s3c_register_clocks(init_dmaclocks, ARRAY_SIZE(init_dmaclocks));
 	s3c_disable_clocks(init_dmaclocks, ARRAY_SIZE(init_dmaclocks));
 #endif
+	s3c_register_clocks(i2cs_clocks, ARRAY_SIZE(i2cs_clocks));
+	s3c_disable_clocks(i2cs_clocks, ARRAY_SIZE(i2cs_clocks));
 
 	register_syscore_ops(&exynos4_clock_syscore_ops);
 	s3c_pwmclk_init();
 }
+
+static int __init clock_domain_init(void)
+{
+	int index;
+
+	clock_add_domain(LPA_DOMAIN, &init_dmaclocks[0]);
+	clock_add_domain(LPA_DOMAIN, &init_dmaclocks[1]);
+	clock_add_domain(LPA_DOMAIN, &init_dmaclocks[2]);
+
+	for (index = 0; index < ARRAY_SIZE(i2cs_clocks); index++)
+		clock_add_domain(LPA_DOMAIN, &i2cs_clocks[index]);
+
+	return 0;
+}
+late_initcall(clock_domain_init);
