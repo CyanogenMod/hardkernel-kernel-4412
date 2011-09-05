@@ -17,8 +17,8 @@
 #include "mfc_dev.h"
 #include "mfc_log.h"
 
-#if defined(CONFIG_ARCH_S5PV210)
 #include <plat/clock.h>
+#if defined(CONFIG_ARCH_S5PV210)
 #include <mach/pd.h>
 
 #define MFC_CLK_NAME	"mfc"
@@ -108,7 +108,11 @@ static int mfc_cpufreq_transition(struct notifier_block *nb,
 		if (bus_rate != prev_bus_rate) {
 			mfc_dbg("MFC freq pre: %lu\n",
 				clk_get_rate(pm->op_clk));
-			clk_set_rate(pm->op_clk, bus_rate);
+			if (clk_set_rate(pm->op_clk, bus_rate)) {
+				printk(KERN_ERR "%s rate change failed: %lu\n",
+						pm->op_clk->name, bus_rate);
+				return -EINVAL;
+			}
 			mfc_dbg("MFC freq post: %lu\n",
 				clk_get_rate(pm->op_clk));
 		}
@@ -134,8 +138,14 @@ static inline int mfc_cpufreq_register(void)
 
 	rate = clk_get_rate(pm->clock);
 
-	if (rate != prev_bus_rate)
-		clk_set_rate(pm->op_clk, prev_bus_rate);
+	if (rate != prev_bus_rate) {
+		if (clk_set_rate(pm->op_clk, prev_bus_rate)) {
+			printk(KERN_ERR "%s rate change failed: %u\n",
+					pm->op_clk->name, prev_bus_rate);
+			ret = -EINVAL;
+			goto err_bus_clk;
+		}
+	}
 
 	pm->freq_transition.notifier_call = mfc_cpufreq_transition;
 
@@ -188,9 +198,16 @@ int mfc_init_pm(struct mfc_dev *mfcdev)
 		goto err_s_clk;
 	}
 
-	clk_set_parent(sclk, parent);
+	if (clk_set_parent(sclk, parent)) {
+		printk(KERN_ERR "unable to set parent %s of clock %s.\n",
+				parent->name, sclk->name);
+		goto err_g_clk;
+	}
 	/* FIXME : */
-	clk_set_rate(sclk, 200 * 1000000);
+	if (clk_set_rate(sclk, 200 * 1000000)) {
+		printk(KERN_ERR "%s rate change failed: %u\n", sclk->name, 200 * 1000000);
+		goto err_g_clk;
+	}
 
 	/* clock for gating */
 	pm->clock = clk_get(mfcdev->device, MFC_GATE_CLK_NAME);
