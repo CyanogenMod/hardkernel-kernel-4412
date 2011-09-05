@@ -700,6 +700,10 @@ static void fimc_mmap_open(struct vm_area_struct *vma)
 	u32 ctx		= (pri_data - (id * 0x100)) / 0x10;
 	u32 idx		= pri_data % 0x10;
 
+	BUG_ON(id >= FIMC_DEVICES);
+	BUG_ON(ctx >= FIMC_MAX_CTXS);
+	BUG_ON(idx >= FIMC_OUTBUFS);
+
 	atomic_inc(&dev->ctrl[id].out->ctx[ctx].src[idx].mapped_cnt);
 }
 
@@ -710,6 +714,10 @@ static void fimc_mmap_close(struct vm_area_struct *vma)
 	u32 id		= pri_data / 0x100;
 	u32 ctx		= (pri_data - (id * 0x100)) / 0x10;
 	u32 idx		= pri_data % 0x10;
+
+	BUG_ON(id >= FIMC_DEVICES);
+	BUG_ON(ctx >= FIMC_MAX_CTXS);
+	BUG_ON(idx >= FIMC_OUTBUFS);
 
 	atomic_dec(&dev->ctrl[id].out->ctx[ctx].src[idx].mapped_cnt);
 }
