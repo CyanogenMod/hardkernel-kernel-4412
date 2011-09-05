@@ -202,6 +202,7 @@ static void lms501kf03_panel_send_sequence(const unsigned short *wbuf)
 		else
 			lms501kf03_spi_write(DATA_ONLY, wbuf[i]);
 
+		udelay(100);
 		i += 1;
 	}
 }
