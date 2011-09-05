@@ -57,9 +57,21 @@ static int set_audio_clock_heirachy(struct platform_device *pdev)
 	}
 
 	/* Set audio clock hierarchy for S/PDIF */
-	clk_set_parent(mout_epll, fout_epll);
-	clk_set_parent(sclk_audio0, mout_epll);
-	clk_set_parent(sclk_spdif, sclk_audio0);
+	if (clk_set_parent(mout_epll, fout_epll)) {
+		pr_err("unable to set parent %s of clock %s.\n",
+				fout_epll->name, mout_epll->name);
+		ret = -EINVAL;
+	}
+	if (clk_set_parent(sclk_audio0, mout_epll)) {
+		pr_err("unable to set parent %s of clock %s.\n",
+				mout_epll->name, sclk_audio0->name);
+		ret = -EINVAL;
+	}
+	if (clk_set_parent(sclk_spdif, sclk_audio0)) {
+		pr_err("unable to set parent %s of clock %s.\n",
+				sclk_audio0, sclk_spdif->name);
+		ret = -EINVAL;
+	}
 
 	clk_put(sclk_spdif);
 out3:

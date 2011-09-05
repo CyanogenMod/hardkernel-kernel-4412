@@ -19,6 +19,7 @@
 #include <sound/pcm_params.h>
 
 #include <plat/audio.h>
+#include <plat/clock.h>
 #include <mach/map.h>
 #include <mach/regs-audss.h>
 
@@ -252,11 +253,17 @@ static __devinit int audss_init(void)
 	}
 	pr_debug("%s: i2s rclk source is %s\n", __func__, audss.rclksrc);
 
-	if (!strcmp(audss.rclksrc, "busclk"))
-		clk_set_parent(audss.rclk, audss.mout_audss);
+	if (clk_set_parent(audss.rclk, audss.mout_audss)) {
+		pr_err("unable to set parent %s of clock %s.\n",
+				audss.mout_audss->name, audss.rclk->name);
+		goto err3;
+	}
 
-	if (audss.srp_clk)
-		clk_set_parent(audss.srp_clk, audss.mout_audss);
+	if (clk_set_parent(audss.srp_clk, audss.mout_audss)) {
+		pr_err("unable to set parent %s of clock %s.\n",
+				audss.mout_audss->name, audss.srp_clk->name);
+		goto err3;
+	}
 
 	ret = audss_set_clk_div(AUDSS_INACTIVE);
 	if (ret < 0) {
