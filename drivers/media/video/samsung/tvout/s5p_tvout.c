@@ -71,18 +71,29 @@ static int __devinit s5p_tvout_clk_get(struct platform_device *pdev,
 	TV_CLK_GET_WITH_ERR_CHECK(mout_vpll,		pdev, "sclk_vpll");
 
 #ifdef CONFIG_VPLL_USE_FOR_TVENC
-	if (clk_set_rate(fout_vpll, 54000000) < 0)
+	if (clk_set_rate(fout_vpll, 54000000)) {
+		tvout_err("%s rate change failed: %lu\n", fout_vpll->name, 54000000);
 		return -1;
+	}
 
-	if (clk_set_parent(mout_vpll_src, ext_xtal_clk) < 0)
+	if (clk_set_parent(mout_vpll_src, ext_xtal_clk)) {
+		tvout_err("unable to set parent %s of clock %s.\n",
+			   ext_xtal_clk->name, mout_vpll_src->name);
 		return -1;
+	}
 
-	if (clk_set_parent(mout_vpll, fout_vpll) < 0)
+	if (clk_set_parent(mout_vpll, fout_vpll)) {
+		tvout_err("unable to set parent %s of clock %s.\n",
+			   fout_vpll->name, mout_vpll->name);
 		return -1;
+	}
 
 	/* sclk_dac's parent is fixed as mout_vpll */
-	if (clk_set_parent(ctrl->sclk_dac, mout_vpll) < 0)
+	if (clk_set_parent(ctrl->sclk_dac, mout_vpll)) {
+		tvout_err("unable to set parent %s of clock %s.\n",
+			   mout_vpll->name, ctrl->sclk_dac->name);
 		return -1;
+	}
 
 	/* It'll be moved in the future */
 	if (clk_enable(mout_vpll_src) < 0)

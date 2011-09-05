@@ -15,6 +15,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
 
+#include <plat/clock.h>
+
 #include "hw_if/hw_if.h"
 #include "s5p_tvout_ctrl.h"
 
@@ -781,11 +783,9 @@ int s5p_mixer_ctrl_scaling(enum s5p_mixer_layer layer,
 
 int s5p_mixer_ctrl_mux_clk(struct clk *ptr)
 {
-	int ret = 0;
-
-	ret = clk_set_parent(s5p_mixer_ctrl_private.clk[MUX].ptr, ptr);
-	if (ret < 0) {
-		tvout_err("mixer clock mux failed\n");
+	if (clk_set_parent(s5p_mixer_ctrl_private.clk[MUX].ptr, ptr)) {
+		tvout_err("unable to set parent %s of clock %s.\n",
+				ptr->name, s5p_mixer_ctrl_private.clk[MUX].ptr->name);
 		return -1;
 	}
 
@@ -853,7 +853,11 @@ int s5p_mixer_ctrl_start(
 
 	switch (out) {
 	case TVOUT_COMPOSITE:
-		clk_set_parent(sclk_mixer, st->sclk_dac);
+		if (clk_set_parent(sclk_mixer, st->sclk_dac)) {
+			tvout_err("unable to set parent %s of clock %s.\n",
+				   st->sclk_dac->name, sclk_mixer->name);
+			return -1;
+		}
 
 		if (!s5p_mixer_ctrl_private.running) {
 			s5p_mixer_ctrl_clock(true);
@@ -866,8 +870,17 @@ int s5p_mixer_ctrl_start(
 	case TVOUT_HDMI_RGB:
 	case TVOUT_HDMI:
 	case TVOUT_DVI:
-		clk_set_parent(sclk_mixer, st->sclk_hdmi);
-		clk_set_parent(st->sclk_hdmi, st->sclk_hdmiphy);
+		if (clk_set_parent(sclk_mixer, st->sclk_hdmi)) {
+			tvout_err("unable to set parent %s of clock %s.\n",
+				   st->sclk_hdmi->name, sclk_mixer->name);
+			return -1;
+		}
+
+		if (clk_set_parent(st->sclk_hdmi, st->sclk_hdmiphy)) {
+			tvout_err("unable to set parent %s of clock %s.\n",
+				   st->sclk_hdmiphy->name, st->sclk_hdmi->name);
+			return -1;
+		}
 
 		if (!s5p_mixer_ctrl_private.running) {
 			s5p_mixer_ctrl_clock(true);

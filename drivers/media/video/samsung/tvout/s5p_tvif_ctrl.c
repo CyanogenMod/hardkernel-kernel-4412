@@ -45,6 +45,8 @@
 #include <linux/delay.h>
 #include <linux/err.h>
 
+#include <plat/clock.h>
+
 #include "s5p_tvout_common_lib.h"
 #include "hw_if/hw_if.h"
 #include "s5p_tvout_ctrl.h"
@@ -2593,8 +2595,11 @@ int s5p_hdmi_ctrl_phy_power(bool on)
 		 * switch to internal clk - SCLK_DAC, SCLK_PIXEL
 		 */
 		s5p_mixer_ctrl_mux_clk(s5ptv_status.sclk_dac);
-		clk_set_parent(s5ptv_status.sclk_hdmi,
-					s5ptv_status.sclk_pixel);
+		if (clk_set_parent(s5ptv_status.sclk_hdmi, s5ptv_status.sclk_pixel)) {
+			tvout_err("unable to set parent %s of clock %s.\n",
+				   s5ptv_status.sclk_pixel->name, s5ptv_status.sclk_hdmi->name);
+			return -1;
+		}
 
 		s5p_hdmi_phy_power(false);
 
@@ -2822,7 +2827,9 @@ static void s5p_tvenc_src_to_hdmiphy_on(void)
 	s5p_hdmi_ctrl_phy_power(1);
 	if (s5p_hdmi_phy_config(ePHY_FREQ_54, HDMI_CD_24) < 0)
 		tvout_err("hdmi phy configuration failed.\n");
-	clk_set_parent(s5ptv_status.sclk_dac, s5ptv_status.sclk_hdmiphy);
+	if (clk_set_parent(s5ptv_status.sclk_dac, s5ptv_status.sclk_hdmiphy))
+		tvout_err("unable to set parent %s of clock %s.\n",
+			   s5ptv_status.sclk_hdmiphy->name, s5ptv_status.sclk_dac->name);
 }
 
 static void s5p_tvenc_src_to_hdmiphy_off(void)
