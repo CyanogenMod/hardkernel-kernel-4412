@@ -644,7 +644,10 @@ static int m5mo_dump_fw(struct v4l2_subdev *sd)
 	/* set pin */
 	val = 0x7E;
 	err = m5mo_mem_write(sd, 0x04, sizeof(val), 0x50000308, &val);
-	CHECK_ERR(err);
+	if (err < 0) {
+		cam_err("i2c falied, err %d\n", err);
+		goto out1;
+	}
 
 	addr = M5MO_FLASH_BASE_ADDR;
 	unit = SZ_64K;
@@ -1705,7 +1708,7 @@ static int m5mo_get_exif(struct v4l2_subdev *sd)
 	/* iso */
 	err = m5mo_readw(sd, M5MO_CATEGORY_EXIF, M5MO_EXIF_ISO, &num);
 	CHECK_ERR(err);
-	for (i = 0; i < sizeof(iso_qtable); i++) {
+	for (i = 0; i < ARRAY_SIZE(iso_qtable); i++) {
 		if (num <= iso_qtable[i]) {
 			state->exif.iso = iso_std_values[i];
 			break;
