@@ -690,14 +690,28 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 	else
 		fimc_src_clk = clk_get(&pdev->dev, "mout_mpll_user");
 
-	if (IS_ERR(fimc_src_clk))
+	if (IS_ERR(fimc_src_clk)) {
 		dev_err(&pdev->dev, "failed to get parent clock\n");
+		iounmap(ctrl->regs);
+		return NULL;
+	}
 
 	sclk_fimc_lclk = clk_get(&pdev->dev, FIMC_CORE_CLK);
-	if (IS_ERR(sclk_fimc_lclk))
+	if (IS_ERR(sclk_fimc_lclk)) {
 		dev_err(&pdev->dev, "failed to get sclk_fimc_lclk\n");
+		iounmap(ctrl->regs);
+		clk_put(fimc_src_clk);
+		return NULL;
+	}
 
-	clk_set_parent(sclk_fimc_lclk, fimc_src_clk);
+	if (clk_set_parent(sclk_fimc_lclk, fimc_src_clk)) {
+		dev_err(&pdev->dev, "unable to set parent %s of clock %s.\n",
+				fimc_src_clk->name, sclk_fimc_lclk->name);
+		iounmap(ctrl->regs);
+		clk_put(sclk_fimc_lclk);
+		clk_put(fimc_src_clk);
+		return NULL;
+	}
 	clk_set_rate(sclk_fimc_lclk, FIMC_CLK_RATE);
 	clk_put(sclk_fimc_lclk);
 	clk_put(fimc_src_clk);
@@ -1400,7 +1414,13 @@ static int fimc_init_global(struct platform_device *pdev)
 			return -EINVAL;
 		}
 
-		clk_set_parent(cam->clk, srclk);
+		if (clk_set_parent(cam->clk, srclk)) {
+			dev_err(&pdev->dev, "unable to set parent %s of clock %s.\n",
+					srclk->name, cam->clk->name);
+			clk_put(srclk);
+			clk_put(cam->clk);
+			return -EINVAL;
+		}
 
 		/* Assign camera device to fimc */
 		fimc_dev->camera[i] = cam;
