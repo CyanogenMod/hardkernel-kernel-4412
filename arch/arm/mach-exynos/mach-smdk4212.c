@@ -350,8 +350,8 @@ static struct s3c_platform_camera writeback = {
 
 static int m5mo_config_isp_irq(void)
 {
-	s3c_gpio_cfgpin(EXYNOS4_GPX3(5), S3C_GPIO_SFN(0xF));
-	s3c_gpio_setpull(EXYNOS4_GPX3(5), S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(EXYNOS4_GPX2(6), S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(EXYNOS4_GPX2(6), S3C_GPIO_PULL_NONE);
 	return 0;
 }
 
@@ -362,13 +362,13 @@ static struct m5mo_platform_data m5mo_plat = {
 	.freq = 24000000,
 	.is_mipi = 1,
 	.config_isp_irq = m5mo_config_isp_irq,
-	.irq = IRQ_EINT(29),
+	.irq = IRQ_EINT(22),
 };
 
 static struct i2c_board_info m5mo_i2c_info = {
 	I2C_BOARD_INFO("M5MO", 0x1F),
 	.platform_data = &m5mo_plat,
-	.irq = IRQ_EINT(29),
+	.irq = IRQ_EINT(22),
 };
 
 static struct s3c_platform_camera m5mo = {
