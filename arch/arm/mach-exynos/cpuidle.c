@@ -604,16 +604,14 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 		__raw_writel(tmp, S5P_CENTRAL_SEQ_OPTION);
 	}
 
-	if (new_state == &dev->states[0]) {
+	if (new_state == &dev->states[0])
 		return exynos4_enter_idle(dev, new_state);
-	} else {
-		enter_mode = exynos4_check_entermode();
-		if (enter_mode == S5P_CHECK_DIDLE)
-			return exynos4_enter_core0_aftr(dev, new_state);
-		else
-			return exynos4_enter_core0_lpa(dev, new_state);
-	}
-	return exynos4_enter_idle(dev, new_state);
+
+	enter_mode = exynos4_check_entermode();
+	if (enter_mode == S5P_CHECK_DIDLE)
+		return exynos4_enter_core0_aftr(dev, new_state);
+	else
+		return exynos4_enter_core0_lpa(dev, new_state);
 }
 
 static int exynos4_cpuidle_notifier_event(struct notifier_block *this,
