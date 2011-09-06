@@ -583,6 +583,13 @@
 #define EXYNOS_USB3_DEPCMDx_CommandParam_LIMIT		(0xffff)
 #define EXYNOS_USB3_DEPCMDx_CommandParam(_x)		((_x) << 16)
 
+#define EXYNOS_USB3_DEPCMDx_EventParam_MASK		(0xffff << 16)
+#define EXYNOS_USB3_DEPCMDx_EventParam_SHIFT		(16)
+#define EXYNOS_USB3_DEPCMDx_EventParam_LIMIT		(0xffff)
+#define EXYNOS_USB3_DEPCMDx_EventParam(_x)		((_x) << 16)
+
+#define EXYNOS_USB3_DEPCMDx_XferRscIdx_LIMIT		(0x7f)
+
 #define EXYNOS_USB3_DEPCMDx_CmdStatus_MASK			(0xf << 12)
 #define EXYNOS_USB3_DEPCMDx_CmdStatus_SHIFT		(12)
 #define EXYNOS_USB3_DEPCMDx_CmdStatus_LIMIT		(0xf)

@@ -147,6 +147,7 @@ struct exynos_ss_udc_trb {
  *       and has yet to be completed (maybe due to data move, or simply
  *	 awaiting an ack from the core all the data has been completed).
  * @lock: State lock to protect contents of endpoint.
+ * @tri: Transfer resource index.
  * @epnum: The USB endpoint number.
  * @dir_in: Set to true if this endpoint is of the IN direction, which
  *	    means that it is sending data to the Host.
@@ -166,6 +167,8 @@ struct exynos_ss_udc_ep {
 	struct exynos_ss_udc	*parent;
 	struct exynos_ss_udc_req	*req;
 	spinlock_t		lock;
+
+	u8			tri;
 
 	unsigned char		epnum;
 	unsigned int		dir_in:1;
@@ -785,6 +788,9 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 	if (!res)
 		dev_err(udc->dev, "Failed to start transfer\n");
 
+	udc_ep->tri = (readl(udc->regs + EXYNOS_USB3_DEPCMD(0)) >>
+				EXYNOS_USB3_DEPCMDx_EventParam_SHIFT) &
+				EXYNOS_USB3_DEPCMDx_XferRscIdx_LIMIT;
 }
 
 /**
@@ -1424,55 +1430,49 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 {
 	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	struct exynos_ss_udc_ep *ep;
 	bool res;
 	int epnum;
 
 	dev_info(udc->dev, "%s: USB reset\n", __func__);
 
-	/* End transfer for EP0-OUT */
-	epcmd->ep = 0;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	ep = &udc->eps[0];
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res)
-		dev_err(udc->dev, "Failed to end transfer\n");
-
-	/* End transfer for EP0-IN */
-	epcmd->ep = 1;
-
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res)
-		dev_err(udc->dev, "Failed to end transfer\n");
-
-	exynos_ss_udc_kill_all_requests(udc,
-				     &udc->eps[0],
-				     -ECONNRESET, true);
+	exynos_ss_udc_kill_all_requests(udc, ep, -ECONNRESET, true);
 
 	exynos_ss_udc_enqueue_setup(udc);
 
 	/* Clear STALL if EP0 is halted */
-	if (udc->eps[0].halted)
-		exynos_ss_udc_ep_sethalt(&udc->eps[0].ep, 0);
+	if (ep->halted)
+		exynos_ss_udc_ep_sethalt(&ep->ep, 0);
+
+	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
 
 	/* End transfer, kill all requests and clear STALL on the
 	   rest of endpoints */
 	for (epnum = 1; epnum < EXYNOS_USB3_EPS; epnum++) {
-		int index = get_phys_epnum(&udc->eps[epnum]);
 
-		epcmd->ep = index;
+		ep = &udc->eps[epnum];
 
-		res = exynos_ss_udc_issue_cmd(udc, epcmd);
-		if (!res)
-			dev_err(udc->dev, "Failed to end transfer\n");
+		epcmd->ep = get_phys_epnum(ep);
 
+		if (ep->tri) {
+			epcmd->cmdflags = (ep->tri <<
+				EXYNOS_USB3_DEPCMDx_CommandParam_SHIFT) |
+				EXYNOS_USB3_DEPCMDx_HiPri_ForceRM |
+				EXYNOS_USB3_DEPCMDx_CmdAct;
 
-		exynos_ss_udc_kill_all_requests(udc,
-					     &udc->eps[epnum],
-					     -ECONNRESET, true);
+			res = exynos_ss_udc_issue_cmd(udc, epcmd);
+			if (!res)
+				dev_err(udc->dev, "Failed to end transfer\n");
 
-		if (udc->eps[epnum].halted)
-			exynos_ss_udc_ep_sethalt(&udc->eps[epnum].ep, 0);
+			ep->tri = 0;
+		}
+
+		exynos_ss_udc_kill_all_requests(udc, ep, -ECONNRESET, true);
+
+		if (ep->halted)
+			exynos_ss_udc_ep_sethalt(&ep->ep, 0);
 	}
 
 	/* Set device address to 0 */
