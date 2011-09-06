@@ -259,11 +259,13 @@ static __devinit int audss_init(void)
 		goto err3;
 	}
 
+#ifdef CONFIG_SND_SAMSUNG_RP
 	if (clk_set_parent(audss.srp_clk, audss.mout_audss)) {
 		pr_err("unable to set parent %s of clock %s.\n",
 				audss.mout_audss->name, audss.srp_clk->name);
 		goto err3;
 	}
+#endif
 
 	ret = audss_set_clk_div(AUDSS_INACTIVE);
 	if (ret < 0) {
