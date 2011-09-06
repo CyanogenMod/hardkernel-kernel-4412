@@ -19,10 +19,12 @@ obj-$(CONFIG_ARCH_EXYNOS5)	+= cpu-exynos5.o
 obj-$(CONFIG_CPU_EXYNOS4210)	+= clock-exynos4210.o
 obj-$(CONFIG_CPU_EXYNOS4212)	+= clock-exynos4212.o
 obj-$(CONFIG_PM)		+= pm.o sleep.o
-obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o asv.o busfreq.o
+obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o asv.o
 obj-$(CONFIG_CPU_FREQ)		+= cpufreq-4210.o cpufreq-4212.o
 obj-$(CONFIG_CPU_IDLE)		+= cpuidle.o idle.o
 
+obj-$(CONFIG_BUSFREQ)		+= busfreq.o
+obj-$(CONFIG_BUSFREQ_OPP)	+= busfreq_opp.o
 obj-$(CONFIG_SMP)		+= platsmp.o headsmp.o
 
 obj-$(CONFIG_EXYNOS_MCT)	+= mct.o

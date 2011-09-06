@@ -95,6 +95,7 @@
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 #include <mach/secmem.h>
 #endif
+#include <mach/dev.h>
 
 #include <media/s5p_fimc.h>
 #include <media/s5k4ba_platform.h>
@@ -1790,6 +1791,14 @@ static void __init smdkv310_usbgadget_init(void)
 }
 #endif
 
+/* BUSFREQ to control memory/bus*/
+static struct device_domain busfreq;
+
+static struct platform_device exynos4_busfreq = {
+	.id = -1,
+	.name = "exynos4-busfreq",
+};
+
 static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
@@ -1958,6 +1967,7 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
 #endif
+	&exynos4_busfreq,
 };
 
 #if defined(CONFIG_VIDEO_TVOUT)
@@ -2608,6 +2618,7 @@ static void __init smdkv310_machine_init(void)
 	}
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
+	dev_add(&busfreq, &exynos4_busfreq.dev);
 }
 
 MACHINE_START(SMDKC210, "SMDKC210")

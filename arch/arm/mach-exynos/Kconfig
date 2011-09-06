@@ -251,6 +251,20 @@ menu "Support dynamic cpu hotplug (Experimental)"
 	  Support integrated DVFS CPU hotplug
 endmenu
 
+choice
+	prompt "Busfreq Model"
+	default BUSFREQ
+
+config BUSFREQ
+	bool "Busfreq with PPC/PPMU"
+	depends on CPU_FREQ
+
+config BUSFREQ_OPP
+	bool "Busfreq with OPP"
+	depends on CPU_FREQ
+
+endchoice
+
 # machine support
 
 menu "EXYNOS4 Machines"
