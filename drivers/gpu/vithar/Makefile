@@ -1,0 +1,74 @@
+#############################################################################################
+#
+#   Vithar DDK Makefile
+#
+#############################################################################################
+
+MALI_KBASE_SCHEDULING_POLICY=rr
+MALI_DEBUG=0
+MALI_HW_TYPE=2
+MALI_KBASE_USE_UMP=1
+MALI_HW_VERSION=r0p0_beta_eco1
+MALI_BASE_TRACK_MEMLEAK=0
+MALI_ANDROID=0
+PLATFORM=dummy
+
+# define path
+#ROOT=.
+VITHAR_ROOT=drivers/gpu/vithar
+#CONFIG_VITHAR = y
+
+##############################################################################################
+#OSK
+##############################################################################################
+ROOT=$(VITHAR_ROOT)
+OSK_PATH=osk/src/linux
+KBUILD_EXTMOD=$(VITHAR_ROOT)/$(OSK_PATH)
+
+include $(ROOT)/$(OSK_PATH)/Makefile
+
+#$(filter-out $(SRC:.c=.o),$(lib-y))
+
+obj-$(CONFIG_VITHAR) += $(addprefix $(OSK_PATH)/,$(SRC:.c=.o))
+
+##############################################################################################
+#KBASE
+##############################################################################################
+ROOT=$(VITHAR_ROOT)
+KBASE_PATH=kbase/src
+KBUILD_EXTMOD=$(VITHAR_ROOT)/$(KBASE_PATH)
+
+include $(ROOT)/$(KBASE_PATH)/Makefile
+
+obj-$(CONFIG_VITHAR) += $(addprefix $(KBASE_PATH)/,$(SRC:.c=.o))
+
+##############################################################################################
+# UKK
+##############################################################################################
+
+ROOT=$(VITHAR_ROOT)
+UKK_PATH=uk/src/ukk/linux
+KBUILD_EXTMOD=$(VITHAR_ROOT)/$(UKK_PATH)
+
+include $(ROOT)/$(UKK_PATH)/Makefile
+
+obj-$(CONFIG_VITHAR) += $(addprefix $(UKK_PATH)/,$(SRC:.c=.o))
+
+
+##############################################################################################
+# UMP
+##############################################################################################
+
+ROOT=$(VITHAR_ROOT)
+UMP_PATH=ump/src/devicedrv
+UMP_FILE_PREFIX=
+KBUILD_EXTMOD=$(VITHAR_ROOT)/$(UMP_PATH)
+
+include $(ROOT)/$(UMP_PATH)/Makefile
+
+obj-$(CONFIG_VITHAR) += $(addprefix $(UMP_PATH)/,$(SRC:.c=.o))
+
+#=============================================================================================
+
+
+

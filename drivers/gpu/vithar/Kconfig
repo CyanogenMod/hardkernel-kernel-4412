@@ -1,0 +1,6 @@
+config VITHAR
+	tristate "Enable Vithar DDK"
+	default n
+	help
+	  Chose this option to enable 3D rendering with vithar DDK.
+
