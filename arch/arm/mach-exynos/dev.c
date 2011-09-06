@@ -88,8 +88,8 @@ int dev_lock(struct device *device, struct device *dev, unsigned long freq)
 	mutex_lock(&domains_mutex);
 	list_for_each_entry(lock, &domain->domain_list, node) {
 		if (lock->device == dev) {
-			ret = -EINVAL;
-			dev_err(dev, "%s is already registered.\n", dev_name(dev));
+			/* If the lock already exist, only update the freq */
+			lock->freq = freq;
 			goto out;
 		}
 	}
