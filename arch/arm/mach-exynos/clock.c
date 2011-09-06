@@ -216,7 +216,7 @@ static int exynos4_clk_ip_g3d_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_CLKGATE_IP_G3D, clk, enable);
 }
 
-static int exynos4_clk_ip_image_ctrl(struct clk *clk, int enable)
+int exynos4_clk_ip_image_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(S5P_CLKGATE_IP_IMAGE, clk, enable);
 }
@@ -864,11 +864,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
-		.name		= "fimg2d",
-		.id		= -1,
-		.enable		= exynos4_clk_ip_image_ctrl,
-		.ctrlbit	= (1 << 0),
-	}, {
 		.name		= "sysmmu",
 		.id		= SYSMMU_MDMA,
 		.enable		= exynos4_clk_ip_image_ctrl,
@@ -1280,7 +1275,7 @@ static struct clksrc_sources clkset_mout_g2d0 = {
 	.nr_sources	= ARRAY_SIZE(clkset_mout_g2d0_list),
 };
 
-static struct clksrc_clk clk_mout_g2d0 = {
+struct clksrc_clk clk_mout_g2d0 = {
 	.clk	= {
 		.name		= "mout_g2d0",
 		.id		= -1,
@@ -1294,12 +1289,12 @@ static struct clk *clkset_mout_g2d1_list[] = {
 	[1] = &clk_sclk_vpll.clk,
 };
 
-static struct clksrc_sources clkset_mout_g2d1 = {
+struct clksrc_sources clkset_mout_g2d1 = {
 	.sources	= clkset_mout_g2d1_list,
 	.nr_sources	= ARRAY_SIZE(clkset_mout_g2d1_list),
 };
 
-static struct clksrc_clk clk_mout_g2d1 = {
+struct clksrc_clk clk_mout_g2d1 = {
 	.clk	= {
 		.name		= "mout_g2d1",
 		.id		= -1,
@@ -1316,6 +1311,19 @@ static struct clk *clkset_mout_g2d_list[] = {
 static struct clksrc_sources clkset_mout_g2d = {
 	.sources	= clkset_mout_g2d_list,
 	.nr_sources	= ARRAY_SIZE(clkset_mout_g2d_list),
+};
+
+struct clksrc_clk clk_sclk_fimg2d = {
+	.clk    = {
+		.name           = "sclk_fimg2d",
+		.id             = -1,
+	},
+	.sources = &clkset_mout_g2d,
+};
+
+struct clk clk_fimg2d = {
+	.name           = "fimg2d",
+	.id             = -1,
 };
 
 struct clk *clkset_mout_mfc0_list[] = {
@@ -1676,14 +1684,6 @@ static struct clksrc_clk clksrcs[] = {
 		.reg_div = { .reg = S5P_CLKDIV_PERIL2, .shift = 8, .size = 8 },
 	}, {
 		.clk	= {
-			.name		= "sclk_fimg2d",
-			.id		= -1,
-		},
-		.sources = &clkset_mout_g2d,
-		.reg_src = { .reg = S5P_CLKSRC_IMAGE, .shift = 8, .size = 1 },
-		.reg_div = { .reg = S5P_CLKDIV_IMAGE, .shift = 0, .size = 4 },
-	}, {
-		.clk	= {
 			.name		= "sclk_mfc",
 			.id		= -1,
 		},
@@ -1848,6 +1848,7 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_sclk_hdmi,
 	&clk_mout_g3d0,
 	&clk_mout_g3d1,
+	&clk_sclk_fimg2d,
 };
 
 static unsigned long exynos4_epll_get_rate(struct clk *clk)
@@ -2216,6 +2217,9 @@ void __init exynos4_register_clocks(void)
 #endif
 	s3c_register_clocks(i2cs_clocks, ARRAY_SIZE(i2cs_clocks));
 	s3c_disable_clocks(i2cs_clocks, ARRAY_SIZE(i2cs_clocks));
+
+	s3c_register_clocks(&clk_fimg2d, 1);
+	s3c_disable_clocks(&clk_fimg2d, 1);
 
 	register_syscore_ops(&exynos4_clock_syscore_ops);
 	s3c_pwmclk_init();

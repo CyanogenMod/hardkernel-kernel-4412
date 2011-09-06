@@ -50,6 +50,11 @@ static struct sleep_save exynos4212_clock_save[] = {
 	SAVE_ITEM(S5P_CLKGATE_BUS_PERIR),
 };
 
+static int exynos4_clk_bus_dmc0_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_CLKGATE_BUS_DMC0, clk, enable);
+}
+
 static struct sleep_save exynos4212_epll_save[] = {
 	SAVE_ITEM(S5P_EPLL_CON2),
 };
@@ -331,6 +336,24 @@ void __init exynos4212_register_clocks(void)
 	clk_aclk_200.reg_src.reg = S5P_CLKSRC_TOP1;
 	clk_aclk_200.reg_src.shift = 20;
 	clk_aclk_200.reg_src.size = 1;
+
+	clk_fimg2d.enable = exynos4_clk_bus_dmc0_ctrl;
+	clk_fimg2d.ctrlbit = (1 << 10);
+
+	clk_mout_g2d0.reg_src.reg = S5P_CLKSRC_DMC;
+	clk_mout_g2d0.reg_src.shift = 20;
+	clk_mout_g2d0.reg_src.size = 1;
+
+	clk_mout_g2d1.reg_src.reg = S5P_CLKSRC_DMC;
+	clk_mout_g2d1.reg_src.shift = 24;
+	clk_mout_g2d1.reg_src.size = 1;
+
+	clk_sclk_fimg2d.reg_src.reg = S5P_CLKSRC_DMC;
+	clk_sclk_fimg2d.reg_src.shift = 28;
+	clk_sclk_fimg2d.reg_src.size = 1;
+	clk_sclk_fimg2d.reg_div.reg = S5P_CLKDIV_DMC1;
+	clk_sclk_fimg2d.reg_div.shift = 0;
+	clk_sclk_fimg2d.reg_div.size = 4;
 
 	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
 		s3c_register_clksrc(sysclks[ptr], 1);

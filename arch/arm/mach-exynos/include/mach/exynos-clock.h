@@ -20,6 +20,7 @@ extern struct clk clk_sclk_hdmi27m;
 extern struct clk clk_sclk_usbphy0;
 extern struct clk clk_sclk_usbphy1;
 extern struct clk clk_sclk_hdmiphy;
+extern struct clk clk_fimg2d;
 
 extern struct clksrc_clk clk_sclk_apll;
 extern struct clksrc_clk clk_mout_mpll;
@@ -29,6 +30,9 @@ extern struct clksrc_clk clk_aclk_266;
 extern struct clksrc_clk clk_aclk_400;
 extern struct clksrc_clk clk_mout_epll;
 extern struct clksrc_clk clk_sclk_vpll;
+extern struct clksrc_clk clk_mout_g2d0;
+extern struct clksrc_clk clk_mout_g2d1;
+extern struct clksrc_clk clk_sclk_fimg2d;
 
 extern struct clk *clkset_corebus_list[];
 extern struct clksrc_sources clkset_mout_corebus;
@@ -45,5 +49,6 @@ extern int exynos4_clksrc_mask_fsys_ctrl(struct clk *clk, int enable);
 extern int exynos4_clk_ip_fsys_ctrl(struct clk *clk, int enable);
 extern int exynos4_clk_ip_lcd1_ctrl(struct clk *clk, int enable);
 extern int exynos4_clksrc_gate_isp_ctrl(struct clk *clk, int enable);
+extern int exynos4_clk_ip_image_ctrl(struct clk *clk, int enable);
 
 #endif /* __ASM_ARCH_CLOCK_H */

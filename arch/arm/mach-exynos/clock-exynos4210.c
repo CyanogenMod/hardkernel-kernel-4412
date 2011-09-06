@@ -117,6 +117,24 @@ void __init exynos4210_register_clocks(void)
 	clk_aclk_200.reg_div.shift = 0;
 	clk_aclk_200.reg_div.size = 3;
 
+	clk_fimg2d.enable = exynos4_clk_ip_image_ctrl;
+	clk_fimg2d.ctrlbit = (1 << 0);
+
+	clk_mout_g2d0.reg_src.reg = S5P_CLKSRC_IMAGE;
+	clk_mout_g2d0.reg_src.shift = 0;
+	clk_mout_g2d0.reg_src.size = 1;
+
+	clk_mout_g2d1.reg_src.reg = S5P_CLKSRC_IMAGE;
+	clk_mout_g2d1.reg_src.shift = 4;
+	clk_mout_g2d1.reg_src.size = 1;
+
+	clk_sclk_fimg2d.reg_src.reg = S5P_CLKSRC_IMAGE;
+	clk_sclk_fimg2d.reg_src.shift = 8;
+	clk_sclk_fimg2d.reg_src.size = 1;
+	clk_sclk_fimg2d.reg_div.reg = S5P_CLKDIV_IMAGE;
+	clk_sclk_fimg2d.reg_div.shift = 0;
+	clk_sclk_fimg2d.reg_div.size = 4;
+
 	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
 		s3c_register_clksrc(sysclks[ptr], 1);
 
