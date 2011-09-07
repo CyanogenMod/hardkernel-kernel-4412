@@ -188,25 +188,28 @@ int mfc_init_pm(struct mfc_dev *mfcdev)
 	if (IS_ERR(parent)) {
 		printk(KERN_ERR "failed to get parent clock\n");
 		ret = -ENOENT;
-		goto err_p_clk;
+		goto err_gp_clk;
 	}
 
 	sclk = clk_get(mfcdev->device, MFC_CLKNAME);
 	if (IS_ERR(sclk)) {
 		printk(KERN_ERR "failed to get source clock\n");
 		ret = -ENOENT;
-		goto err_s_clk;
+		goto err_gs_clk;
 	}
 
-	if (clk_set_parent(sclk, parent)) {
-		printk(KERN_ERR "unable to set parent %s of clock %s.\n",
+	ret = clk_set_parent(sclk, parent);
+	if (ret) {
+		printk(KERN_ERR "unable to set parent %s of clock %s\n",
 				parent->name, sclk->name);
-		goto err_g_clk;
+		goto err_sp_clk;
 	}
-	/* FIXME : */
-	if (clk_set_rate(sclk, 200 * 1000000)) {
+
+	/* FIXME: clock name & rate have to move to machine code */
+	ret = clk_set_rate(sclk, 200 * 1000000);
+	if (ret) {
 		printk(KERN_ERR "%s rate change failed: %u\n", sclk->name, 200 * 1000000);
-		goto err_g_clk;
+		goto err_ss_clk;
 	}
 
 	/* clock for gating */
@@ -214,7 +217,7 @@ int mfc_init_pm(struct mfc_dev *mfcdev)
 	if (IS_ERR(pm->clock)) {
 		printk(KERN_ERR "failed to get clock-gating control\n");
 		ret = -ENOENT;
-		goto err_g_clk;
+		goto err_gg_clk;
 	}
 
 	atomic_set(&pm->power, 0);
@@ -246,11 +249,13 @@ int mfc_init_pm(struct mfc_dev *mfcdev)
 err_cpufreq:
 	clk_put(pm->clock);
 #endif
-err_g_clk:
+err_gg_clk:
+err_ss_clk:
+err_sp_clk:
 	clk_put(sclk);
-err_s_clk:
+err_gs_clk:
 	clk_put(parent);
-err_p_clk:
+err_gp_clk:
 	return ret;
 }
 
