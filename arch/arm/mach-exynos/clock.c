@@ -2225,10 +2225,11 @@ static int __init clock_domain_init(void)
 {
 	int index;
 
+#ifndef CONFIG_MACH_FPGA5210
 	clock_add_domain(LPA_DOMAIN, &init_dmaclocks[0]);
 	clock_add_domain(LPA_DOMAIN, &init_dmaclocks[1]);
 	clock_add_domain(LPA_DOMAIN, &init_dmaclocks[2]);
-
+#endif
 	for (index = 0; index < ARRAY_SIZE(i2cs_clocks); index++)
 		clock_add_domain(LPA_DOMAIN, &i2cs_clocks[index]);
 
