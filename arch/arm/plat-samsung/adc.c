@@ -380,7 +380,7 @@ static int s3c_adc_probe(struct platform_device *pdev)
 		goto err_alloc;
 	}
 
-	adc->clk = clk_get(dev, "adc");
+	adc->clk = clk_get(NULL, "adc");
 	if (unlikely(IS_ERR(adc->clk))) {
 		dev_err(dev, "failed to get adc clock\n");
 		ret = PTR_ERR(adc->clk);
