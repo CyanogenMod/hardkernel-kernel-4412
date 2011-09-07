@@ -62,6 +62,9 @@
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 #include <plat/mipi_csis.h>
 #endif
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+#include <plat/s5p-mfc.h>
+#endif
 #include <plat/gpio-cfg.h>
 #include <plat/adc.h>
 #include <plat/ts.h>
@@ -2550,6 +2553,10 @@ static void __init smdkv310_machine_init(void)
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 #endif
+#endif
+
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	s5p_mfc_setname("s5p-mfc");
 #endif
 
 #ifdef CONFIG_VIDEO_FIMG2D
