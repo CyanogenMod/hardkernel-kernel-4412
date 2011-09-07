@@ -27,6 +27,7 @@ enum S5P_SYSMMU_INTERRUPT_TYPE {
 
 #include <mach/sysmmu.h>
 
+#define SYSMMU_NONE S5P_SYSMMU_TOTAL_IPNUM
 #ifdef CONFIG_S5P_SYSTEM_MMU
 
 /**
