@@ -1,0 +1,15 @@
+#
+# Configuration for JPEG
+#
+
+config VIDEO_JPEG_V2X
+	bool "Samsung JPEG_v2.x driver"
+	depends on VIDEO_SAMSUNG
+	default n
+	---help---
+	  This is a Samsung JPEG H/W driver for V2.x
+
+config VIDEO_JPEG_DEBUG
+	bool "print JPEG debug message"
+	depends on VIDEO_JPEG_V2X
+	default n
