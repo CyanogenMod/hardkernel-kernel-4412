@@ -1125,20 +1125,17 @@ static struct clk init_dmaclocks[] = {
 		.devname	= "s3c-pl330.0",
 		.enable		= exynos4_clk_ip_image_ctrl,
 		.ctrlbit	= ((1 << 8) | (1 << 5) | (1 << 2)),
-		.dev		= &exynos4_device_mdma.dev,
 	}, {
 		.name		= "pdma",
 		.devname	= "s3c-pl330.1",
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 0),
-		.dev		= &exynos4_device_pdma0.dev,
 	}, {
 		.name		= "pdma",
 		.devname	= "s3c-pl330.2",
 		.parent		= &init_dmaclocks[1],
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 1),
-		.dev		= &exynos4_device_pdma1.dev,
 	},
 };
 #endif
