@@ -1249,9 +1249,15 @@ s32 s5p_hdmi_phy_config(
 	s5p_hdmi_reg_core_reset();
 #endif
 
+#ifdef CONFIG_HDMI_PHY_32N
+	do {
+		reg = readb(hdmi_base + S5P_HDMI_PHY_STATUS0);
+	} while (!(reg & S5P_HDMI_PHY_STATUS_READY));
+#else
 	do {
 		reg = readb(hdmi_base + S5P_HDMI_PHY_STATUS);
 	} while (!(reg & S5P_HDMI_PHY_STATUS_READY));
+#endif
 
 	writeb(I2C_CLK_PEND_INT, i2c_hdmi_phy_base + HDMI_I2C_CON);
 	writeb(I2C_IDLE, i2c_hdmi_phy_base + HDMI_I2C_STAT);
