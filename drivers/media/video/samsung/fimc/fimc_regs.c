@@ -1173,7 +1173,7 @@ int fimc_hwset_disable_capture(struct fimc_control *ctrl)
 
 void fimc_wait_disable_capture(struct fimc_control *ctrl)
 {
-	unsigned long timeo = jiffies + 20; /* timeout of 100 ms */
+	unsigned long timeo = jiffies + 40; /* timeout of 200 ms */
 	u32 cfg;
 	if (!ctrl || !ctrl->cap)
 		return;
