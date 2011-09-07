@@ -89,6 +89,7 @@
 #include <mach/media.h>
 #include <mach/sysmmu.h>
 #include <mach/regs-clock.h>
+#include <mach/exynos-ion.h>
 #ifdef CONFIG_S3C64XX_DEV_SPI
 #include <mach/spi-clocks.h>
 #endif
@@ -1876,6 +1877,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos_device_sysmmu[SYSMMU_MFC_L],
 	&exynos_device_sysmmu[SYSMMU_MFC_R],
 #endif
+#ifdef CONFIG_ION_EXYNOS
+	&exynos_device_ion,
+#endif
 	&wm8994_fixed_voltage0,
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
@@ -2320,7 +2324,8 @@ static void __init exynos4_reserve_mem(void)
 		"s5p-jpeg=jpeg;"
 		"s5p-fimg2d=fimg2d;"
 		"s5p-smem/mfc=mfc0;"
-		"s5p-smem/fimc=fimc1;";
+		"s5p-smem/fimc=fimc1;"
+		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;";
 	struct cma_region *reg;
 
 	cma_set_defaults(regions, map);
@@ -2572,6 +2577,10 @@ static void __init smdkv310_machine_init(void)
 						&exynos4_device_pd[PD_MFC].dev;
 	exynos_device_sysmmu[SYSMMU_MFC_R].dev.parent =
 						&exynos4_device_pd[PD_MFC].dev;
+#endif
+
+#ifdef CONFIG_ION_EXYNOS
+	exynos_ion_set_platdata();
 #endif
 
 #ifdef CONFIG_EXYNOS4_SETUP_THERMAL

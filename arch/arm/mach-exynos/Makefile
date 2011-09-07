@@ -82,3 +82,5 @@ obj-$(CONFIG_EXYNOS4_SETUP_TVOUT)	+= setup-tvout.o
 obj-$(CONFIG_EXYNOS4_SETUP_THERMAL)	+= tmu.o
 obj-$(CONFIG_EXYNOS4_SETUP_MIPI_DSI)	+= setup-dsim.o
 obj-$(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) += secmem-allocdev.o
+
+obj-$(CONFIG_ION_EXYNOS)		+= dev-ion.o
