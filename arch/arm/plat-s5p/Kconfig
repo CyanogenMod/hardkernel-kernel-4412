@@ -134,6 +134,8 @@ config S5P_DEV_CSIS1
 
 config S5P_DEV_JPEG
 	bool
+	depends on VIDEO_JPEG || VIDEO_JPEG_V2X
+	default y
 	help
 	  Compile in platform device definitions for JPEG
 
