@@ -25,7 +25,7 @@
 
 #define CPUFREQ_LEVEL_END	(L8 + 1)
 
-#define ENABLE_CLKOUT
+/* #define ENABLE_CLKOUT */
 
 static int max_support_idx;
 static int min_support_idx = (CPUFREQ_LEVEL_END - 1);
