@@ -35,6 +35,8 @@
 #define S5P_HSIC_1_PHY_ENABLE			(0x1 << 0)
 #define S5P_HSIC_2_PHY_ENABLE			(0x1 << 0)
 
+#define S5P_PMU_DEBUG				S5P_PMUREG(0x0A00)
+
 /* SYS_PWR registers */
 #define S5P_ISP_ARM_SYS				S5P_PMUREG(0x1050)
 #define S5P_DIS_IRQ_ISP_ARM_LOCAL_SYS		S5P_PMUREG(0x1054)

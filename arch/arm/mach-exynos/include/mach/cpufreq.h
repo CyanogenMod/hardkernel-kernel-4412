@@ -15,7 +15,7 @@
 */
 
 enum cpufreq_level_index {
-	L0, L1, L2, L3, L4, L5, L6
+	L0, L1, L2, L3, L4, L5, L6, L7, L8
 };
 
 enum cpufreq_level_request {

@@ -18,11 +18,14 @@
 
 #include <mach/map.h>
 #include <mach/regs-clock.h>
+#include <mach/regs-pmu.h>
 #include <mach/cpufreq.h>
 
 #include <plat/clock.h>
 
-#define CPUFREQ_LEVEL_END	L6
+#define CPUFREQ_LEVEL_END	(L8 + 1)
+
+#define ENABLE_CLKOUT
 
 static int max_support_idx;
 static int min_support_idx = (CPUFREQ_LEVEL_END - 1);
@@ -40,11 +43,14 @@ static unsigned int exynos4212_volt_table[CPUFREQ_LEVEL_END];
 
 static struct cpufreq_frequency_table exynos4212_freq_table[] = {
 	{L0, 1500*1000},
-	{L1, 1200*1000},
-	{L2, 1000*1000},
-	{L3, 800*1000},
-	{L4, 500*1000},
-	{L5, 200*1000},
+	{L1, 1400*1000},
+	{L2, 1300*1000},
+	{L3, 1200*1000},
+	{L4, 1100*1000},
+	{L5, 1000*1000},
+	{L6, 800*1000},
+	{L7, 500*1000},
+	{L8, 200*1000},
 	{0, CPUFREQ_TABLE_END},
 };
 
@@ -55,6 +61,9 @@ static struct cpufreq_clkdiv exynos4212_clkdiv_table[] = {
 	{L3, 0},
 	{L4, 0},
 	{L5, 0},
+	{L6, 0},
+	{L7, 0},
+	{L8, 0},
 };
 
 static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
@@ -66,19 +75,28 @@ static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
 	/* ARM L0: 1500Mhz */
 	{ 0, 5, 11, 5, 6, 1, 2 },
 
-	/* ARM L1: 1200Mhz */
-	{ 0, 4, 9, 4, 5, 1, 2 },
+	/* ARM L1: 1400Mhz */
+	{ 0, 6, 13, 6, 5, 1, 2 },
 
-	/* ARM L2: 1000MHz */
-	{ 0, 3, 7, 3, 4, 1, 1 },
+	/* ARM L2: 1300Mhz */
+	{ 0, 5, 11, 5, 4, 1, 2 },
 
-	/* ARM L3: 800MHz */
+	/* ARM L3: 1200Mhz */
+	{ 0, 5, 11, 5, 5, 1, 2 },
+
+	/* ARM L4: 1100MHz */
+	{ 0, 4, 9, 4, 4, 1, 1 },
+
+	/* ARM L5: 1000MHz */
+	{ 0, 4, 9, 4, 4, 1, 1 },
+
+	/* ARM L6: 800MHz */
 	{ 0, 3, 7, 3, 3, 1, 1 },
 
-	/* ARM L4: 500MHz */
-	{ 0, 3, 7, 3, 3, 1, 1 },
+	/* ARM L7: 500MHz */
+	{ 0, 2, 5, 2, 3, 1, 1 },
 
-	/* ARM L5: 200MHz */
+	/* ARM L8: 200MHz */
 	{ 0, 1, 3, 1, 3, 1, 0 },
 };
 
@@ -87,21 +105,30 @@ static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
 	 * { DIVCOPY, DIVHPM }
 	 */
 	/* ARM L0: 1500MHz */
-	{ 6, 0 },
-
-	/* ARM L1: 1200MHz */
 	{ 5, 0 },
 
-	/* ARM L2: 1000MHz */
+	/* ARM L1: 1400MHz */
+	{ 5, 0 },
+
+	/* ARM L2: 1300MHz */
 	{ 4, 0 },
 
-	/* ARM L3: 800MHz */
+	/* ARM L3: 1200MHz */
+	{ 5, 0 },
+
+	/* ARM L4: 1100MHz */
+	{ 4, 0 },
+
+	/* ARM L5: 1000MHz */
+	{ 4, 0 },
+
+	/* ARM L6: 800MHz */
 	{ 3, 0 },
 
-	/* ARM L4: 500MHz */
-	{ 3, 0 },
+	/* ARM L7: 500MHz */
+	{ 2, 0 },
 
-	/* ARM L5: 200MHz */
+	/* ARM L8: 200MHz */
 	{ 3, 0 },
 };
 
@@ -109,19 +136,28 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
 	/* APLL FOUT L0: 1500MHz */
 	((250<<16)|(4<<8)|(0x0)),
 
-	/* APLL FOUT L1: 1200MHz */
+	/* APLL FOUT L1: 1400MHz */
+	((175<<16)|(3<<8)|(0x0)),
+
+	/* APLL FOUT L2: 1300MHz */
+	((325<<16)|(6<<8)|(0x0)),
+
+	/* APLL FOUT L3: 1200MHz */
 	((150<<16)|(3<<8)|(0x0)),
 
-	/* APLL FOUT L2: 1000MHz */
+	/* APLL FOUT L4: 1100MHz */
+	((275<<16)|(6<<8)|(0x0)),
+
+	/* APLL FOUT L5: 1000MHz */
 	((125<<16)|(3<<8)|(0x0)),
 
-	/* APLL FOUT L3: 800MHz */
+	/* APLL FOUT L6: 800MHz */
 	((100<<16)|(3<<8)|(0x0)),
 
-	/* APLL FOUT L4: 500MHz */
+	/* APLL FOUT L7: 500MHz */
 	((125<<16)|(3<<8)|(0x1)),
 
-	/* APLL FOUT L5: 200MHz */
+	/* APLL FOUT L8: 200MHz */
 	((100<<16)|(3<<8)|(0x2)),
 };
 
@@ -140,10 +176,13 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	 * @400  :
 	 * @200  :
 	 */
+	{ 1400000 },
 	{ 1350000 },
+	{ 1300000 },
+	{ 1250000 },
 	{ 1200000 },
-	{ 1100000 },
-	{ 1000000 },
+	{ 1125000 },
+	{ 1025000 },
 	{ 950000 },
 	{ 950000 },
 };
@@ -271,7 +310,7 @@ static void exynos4212_set_frequency(unsigned int old_index,
 static void __init set_volt_table(void)
 {
 	unsigned int asv_group = 0;
-	bool for_1400 = false, for_1000 = false;
+	bool for_1500 = false, for_1000 = false;
 	unsigned int i;
 #if 0
 	tmp = __raw_readl(S5P_INFORM2);
@@ -299,12 +338,12 @@ static void __init set_volt_table(void)
 #else
 
 #ifdef CONFIG_EXYNOS4212_1500MHZ_SUPPORT
-	for_1400 = true;
+	for_1500 = true;
 	max_support_idx = L0;
 	asv_group = 0;
 #else
 	for_1000 = true;
-	max_support_idx = L2;
+	max_support_idx = L5;
 	asv_group = 0;
 
 #endif
@@ -317,11 +356,14 @@ static void __init set_volt_table(void)
 	if ((asv_group == 0) || !for_1400)
 		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
 #else
-	if (!for_1400)
+	if (!for_1500) {
 		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
-#endif
-	if (for_1000)
 		exynos4212_freq_table[L1].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4212_freq_table[L2].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4212_freq_table[L3].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4212_freq_table[L4].frequency = CPUFREQ_ENTRY_INVALID;
+	}
+#endif
 
 	printk(KERN_INFO "DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
 
@@ -378,8 +420,8 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 	}
 
 	info->mpll_freq_khz = rate;
-	info->pm_lock_idx = L2;
-	info->pll_safe_idx = L2;
+	info->pm_lock_idx = L6;
+	info->pll_safe_idx = L6;
 	info->max_support_idx = max_support_idx;
 	info->min_support_idx = min_support_idx;
 	info->cpu_clk = cpu_clk;
@@ -387,6 +429,19 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 	info->freq_table = exynos4212_freq_table;
 	info->set_freq = exynos4212_set_frequency;
 	info->need_apll_change = exynos4212_pms_change;
+
+#ifdef ENABLE_CLKOUT
+	tmp = __raw_readl(S5P_CLKOUT_CMU_CPU);
+	tmp &= ~0x1f;
+	tmp |= 0x304;
+	__raw_writel(tmp, S5P_CLKOUT_CMU_CPU);
+
+	tmp = __raw_readl(S5P_PMU_DEBUG);
+	tmp &= ~0xf00;
+	tmp |= 0x400;
+	__raw_writel(tmp, S5P_PMU_DEBUG);
+
+#endif
 
 	return 0;
 
