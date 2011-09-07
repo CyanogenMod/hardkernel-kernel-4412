@@ -70,8 +70,8 @@
 #define SRP_CFGR_USE_ICACHE_MEM		(0x1 << 3)
 #define SRP_CFGR_FLOW_CTRL_ON		(0x1 << 4)
 #define SRP_CFGR_FLOW_CTRL_OFF		(0x0 << 4)
-#define SRP_CFGR_USE_I2S_INTR		(0x1 << 5)
-#define SRP_CFGR_NOTUSE_I2S_INTR	(0x0 << 5)
+#define SRP_CFGR_USE_I2S_INTR		(0x1 << 6)
+#define SRP_CFGR_NOTUSE_I2S_INTR	(0x0 << 6)
 
 /*
  * SRP Pending control register
