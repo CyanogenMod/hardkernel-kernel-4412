@@ -58,7 +58,8 @@ static irqreturn_t s3cfb_irq_frame(int irq, void *dev_id)
 	struct s3cfb_global *fbdev[2];
 	fbdev[0] = fbfimd->fbdev[0];
 
-	s3cfb_clear_interrupt(fbdev[0]);
+	if (fbdev[0]->regs != 0)
+		s3cfb_clear_interrupt(fbdev[0]);
 
 	fbdev[0]->wq_count++;
 	wake_up(&fbdev[0]->wq);
@@ -72,7 +73,8 @@ static irqreturn_t s3cfb_irq_fifo(int irq, void *dev_id)
 	struct s3cfb_global *fbdev[2];
 	fbdev[0] = fbfimd->fbdev[0];
 
-	s3cfb_clear_interrupt(fbdev[0]);
+	if (fbdev[0]->regs != 0)
+		s3cfb_clear_interrupt(fbdev[0]);
 
 	return IRQ_HANDLED;
 }
