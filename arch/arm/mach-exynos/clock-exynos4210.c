@@ -52,13 +52,11 @@ static struct sleep_save exynos4210_clock_save[] = {
 static struct clk init_clocks_off[] = {
 	{
 		.name		= "sataphy",
-		.id		= -1,
 		.parent		= &clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
 		.name		= "sata",
-		.id		= -1,
 		.parent		= &clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 10),
@@ -69,7 +67,6 @@ static struct clksrc_clk clksrcs[] = {
 	{
 		.clk	= {
 			.name		= "sclk_sata",
-			.id		= -1,
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
 			.ctrlbit	= (1 << 24),
 		},

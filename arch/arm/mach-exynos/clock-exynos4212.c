@@ -87,7 +87,6 @@ static struct clksrc_sources clk_src_mpll_user = {
 static struct clksrc_clk clk_mout_mpll_user = {
 	.clk	= {
 		.name		= "mout_mpll_user",
-		.id		= -1,
 	},
 	.sources = &clk_src_mpll_user,
 	.reg_src = { .reg = S5P_CLKSRC_CPU, .shift = 24, .size = 1 },
@@ -106,7 +105,6 @@ static struct clksrc_sources clkset_aclk_lrbus_user = {
 static struct clksrc_clk clk_aclk_gdl_user = {
 	.clk	= {
 		.name		= "aclk_gdl_user",
-		.id		= -1,
 	},
 	.sources = &clkset_aclk_lrbus_user,
 	.reg_src = { .reg = S5P_CLKSRC_LEFTBUS, .shift = 4, .size = 1 },
@@ -115,7 +113,6 @@ static struct clksrc_clk clk_aclk_gdl_user = {
 static struct clksrc_clk clk_aclk_gdr_user = {
 	.clk	= {
 		.name		= "aclk_gdr_user",
-		.id		= -1,
 	},
 	.sources = &clkset_aclk_lrbus_user,
 	.reg_src = { .reg = S5P_CLKSRC_RIGHTBUS, .shift = 4, .size = 1 },
@@ -124,7 +121,6 @@ static struct clksrc_clk clk_aclk_gdr_user = {
 static struct clksrc_clk clk_mout_aclk_400 = {
 	.clk	= {
 		.name		= "mout_aclk_400",
-		.id		= -1,
 	},
 	.sources = &clkset_aclk,
 	.reg_src = { .reg = S5P_CLKSRC_TOP1, .shift = 8, .size = 1 },
@@ -134,7 +130,6 @@ static struct clksrc_clk clk_mout_aclk_400 = {
 static struct clksrc_clk clk_mout_aclk_266 = {
 	.clk	= {
 		.name		= "mout_aclk_266",
-		.id		= -1,
 	},
 	.sources = &clkset_aclk,
 	.reg_src = { .reg = S5P_CLKSRC_TOP1, .shift = 4, .size = 1 },
@@ -144,7 +139,6 @@ static struct clksrc_clk clk_mout_aclk_266 = {
 static struct clksrc_clk clk_mout_aclk_200 = {
 	.clk	= {
 		.name		= "mout_aclk_200",
-		.id		= -1,
 	},
 	.sources = &clkset_aclk,
 	.reg_src = { .reg = S5P_CLKSRC_TOP0, .shift = 12, .size = 1 },
@@ -164,7 +158,6 @@ static struct clksrc_sources clkset_aclk_400 = {
 struct clksrc_clk clk_aclk_400 = {
 	.clk	= {
 		.name		= "aclk_400",
-		.id		= -1,
 	},
 	.sources = &clkset_aclk_400,
 	.reg_src = { .reg = S5P_CLKSRC_TOP1, .shift = 24, .size = 1 },
@@ -183,7 +176,6 @@ static struct clksrc_sources clkset_aclk_266 = {
 struct clksrc_clk clk_aclk_266 = {
 	.clk	= {
 		.name		= "aclk_266",
-		.id		= -1,
 	},
 	.sources = &clkset_aclk_266,
 	.reg_src = { .reg = S5P_CLKSRC_TOP1, .shift = 16, .size = 1 },
@@ -213,7 +205,6 @@ static struct clksrc_clk *sysclks[] = {
 static struct clk init_clocks_off[] = {
 	{
 		.name		= "mipihsi",
-		.id		= -1,
 		.parent		= &clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 10),
@@ -224,7 +215,6 @@ static struct clksrc_clk clksrcs[] = {
 	{
 		.clk	= {
 			.name		= "sclk_mipihsi",
-			.id		= -1,
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
 			.ctrlbit	= (1 << 24),
 		},
@@ -237,11 +227,9 @@ static struct clksrc_clk clksrcs[] = {
 static struct clk clk_isp[] = {
 	{
 		.name	= "aclk_400_muxed",
-		.id	= -1,
 		.parent = &clk_aclk_400.clk,
 	}, {
 		.name	= "aclk_200_muxed",
-		.id	= -1,
 		.parent	= &clk_aclk_200.clk,
 	},
 };
@@ -249,7 +237,6 @@ static struct clk clk_isp[] = {
 static struct clksrc_clk clk_isp_srcs_div0 = {
 	.clk		= {
 		.name		= "sclk_mcuisp_div0",
-		.id		= -1,
 		.parent = &clk_aclk_400.clk,
 	},
 	.reg_div = { .reg = S5P_CLKDIV_ISP1, .shift = 4, .size = 3 },
@@ -259,28 +246,24 @@ static struct clksrc_clk clk_isp_srcs[] = {
 	{
 		.clk		= {
 			.name		= "sclk_mcuisp_div1",
-			.id		= -1,
 			.parent = &clk_isp_srcs_div0.clk,
 		},
 		.reg_div = { .reg = S5P_CLKDIV_ISP1, .shift = 0, .size = 3 },
 	}, {
 		.clk		= {
 			.name		= "sclk_aclk_div0",
-			.id		= -1,
 			.parent = &clk_aclk_200.clk,
 		},
 		.reg_div = { .reg = S5P_CLKDIV_ISP0, .shift = 0, .size = 3 },
 	}, {
 		.clk		= {
 			.name		= "sclk_aclk_div1",
-			.id		= -1,
 			.parent = &clk_aclk_200.clk,
 		},
 		.reg_div = { .reg = S5P_CLKDIV_ISP0, .shift = 4, .size = 3 },
 	}, {
 		.clk		= {
 			.name		= "sclk_uart_isp",
-			.id		= -1,
 			.enable		= exynos4_clksrc_gate_isp_ctrl,
 			.ctrlbit	= (1 << 3),
 		},
