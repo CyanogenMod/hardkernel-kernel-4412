@@ -47,6 +47,9 @@ struct vb2_fileio_data;
  * @cookie:	return allocator specific cookie for a given memory buffer
  *		associated with the passed private structure or NULL if not
  *		available
+ * @share:	return allocator specific object to share a given memory buffer
+ *		associated with the passed private structure or NULL if not
+ *		available
  * @num_users:	return the current number of users of a memory buffer;
  *		return 1 if the videobuf layer (or actually the driver using
  *		it) is the only user
@@ -67,6 +70,7 @@ struct vb2_mem_ops {
 
 	void		*(*vaddr)(void *buf_priv);
 	void		*(*cookie)(void *buf_priv);
+	void		*(*share)(void *buf_priv);
 
 	unsigned int	(*num_users)(void *buf_priv);
 

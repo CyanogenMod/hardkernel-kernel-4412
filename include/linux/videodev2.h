@@ -603,7 +603,8 @@ struct v4l2_plane {
 	} m;
 	__u32			data_offset;
 	void			*cookie;
-	__u32			reserved[10];
+	void			*share;
+	__u32			reserved[9];
 };
 
 /**
