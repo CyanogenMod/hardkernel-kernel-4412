@@ -367,7 +367,7 @@ static int __devinit s3c2410ts_probe(struct platform_device *pdev)
 
 	dev_dbg(dev, "initialising touchscreen\n");
 
-	ts.clock = clk_get(dev, "adc");
+	ts.clock = clk_get(NULL, "adc");
 	if (IS_ERR(ts.clock)) {
 		dev_err(dev, "cannot get adc clock source\n");
 		return -ENOENT;
