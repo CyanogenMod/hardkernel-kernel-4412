@@ -2545,6 +2545,35 @@ static void __init smdkv310_machine_init(void)
 #endif
 #endif
 
+#if defined(CONFIG_S5P_SYSTEM_MMU) && defined(CONFIG_EXYNOS4_DEV_PD)
+	exynos4_device_sysmmu[SYSMMU_MDMA].dev.parent =
+						&exynos4_device_pd[PD_LCD0].dev;
+	exynos4_device_sysmmu[SYSMMU_FIMC0].dev.parent =
+						&exynos4_device_pd[PD_CAM].dev;
+	exynos4_device_sysmmu[SYSMMU_FIMC1].dev.parent =
+						&exynos4_device_pd[PD_CAM].dev;
+	exynos4_device_sysmmu[SYSMMU_FIMC2].dev.parent =
+						&exynos4_device_pd[PD_CAM].dev;
+	exynos4_device_sysmmu[SYSMMU_FIMC3].dev.parent =
+						&exynos4_device_pd[PD_CAM].dev;
+	exynos4_device_sysmmu[SYSMMU_JPEG].dev.parent =
+						&exynos4_device_pd[PD_CAM].dev;
+	exynos4_device_sysmmu[SYSMMU_FIMD0].dev.parent =
+						&exynos4_device_pd[PD_LCD0].dev;
+	exynos4_device_sysmmu[SYSMMU_FIMD1].dev.parent =
+						&exynos4_device_pd[PD_LCD1].dev;
+	exynos4_device_sysmmu[SYSMMU_G2D].dev.parent =
+						&exynos4_device_pd[PD_LCD0].dev;
+	exynos4_device_sysmmu[SYSMMU_ROTATOR].dev.parent =
+						&exynos4_device_pd[PD_LCD0].dev;
+	exynos4_device_sysmmu[SYSMMU_TV].dev.parent =
+						&exynos4_device_pd[PD_TV].dev;
+	exynos4_device_sysmmu[SYSMMU_MFC_L].dev.parent =
+						&exynos4_device_pd[PD_MFC].dev;
+	exynos4_device_sysmmu[SYSMMU_MFC_R].dev.parent =
+						&exynos4_device_pd[PD_MFC].dev;
+#endif
+
 #ifdef CONFIG_EXYNOS4_SETUP_THERMAL
 	s5p_tmu_set_platdata(NULL);
 #endif

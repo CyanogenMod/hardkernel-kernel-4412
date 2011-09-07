@@ -12,6 +12,7 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/pm_runtime.h>
 
 #include <asm/pgtable.h>
 
@@ -23,8 +24,6 @@
 #define CTRL_ENABLE	0x5
 #define CTRL_BLOCK	0x7
 #define CTRL_DISABLE	0x0
-
-static struct device *dev;
 
 static unsigned short fault_reg_offset[SYSMMU_FAULTS_NUM] = {
 	S5P_PAGE_FAULT_ADDR,
@@ -53,6 +52,7 @@ static int (*fault_handlers[S5P_SYSMMU_TOTAL_IPNUM])(
 		unsigned long pgtable_base,
 		unsigned long fault_addr);
 
+static struct device *sysmmu_dev[S5P_SYSMMU_TOTAL_IPNUM];
 /*
  * If adjacent 2 bits are true, the system MMU is enabled.
  * The system MMU is disabled, otherwise.
@@ -82,19 +82,19 @@ static void __iomem *sysmmusfrs[S5P_SYSMMU_TOTAL_IPNUM];
 static inline void sysmmu_block(sysmmu_ips ips)
 {
 	__raw_writel(CTRL_BLOCK, sysmmusfrs[ips] + S5P_MMU_CTRL);
-	dev_dbg(dev, "%s is blocked.\n", get_sysmmu_name(ips));
+	dev_dbg(sysmmu_dev[ips], "Blocked.\n");
 }
 
 static inline void sysmmu_unblock(sysmmu_ips ips)
 {
 	__raw_writel(CTRL_ENABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
-	dev_dbg(dev, "%s is unblocked.\n", get_sysmmu_name(ips));
+	dev_dbg(sysmmu_dev[ips], "Unblocked.\n");
 }
 
 static inline void __sysmmu_tlb_invalidate(sysmmu_ips ips)
 {
 	__raw_writel(0x1, sysmmusfrs[ips] + S5P_MMU_FLUSH);
-	dev_dbg(dev, "TLB of %s is invalidated.\n", get_sysmmu_name(ips));
+	dev_dbg(sysmmu_dev[ips], "TLB invalidated.\n");
 }
 
 static inline void __sysmmu_set_ptbase(sysmmu_ips ips, unsigned long pgd)
@@ -108,8 +108,8 @@ static inline void __sysmmu_set_ptbase(sysmmu_ips ips, unsigned long pgd)
 
 	__raw_writel(pgd, sysmmusfrs[ips] + S5P_PT_BASE_ADDR);
 
-	dev_dbg(dev, "Page table base of %s is initialized with 0x%08lX.\n",
-						get_sysmmu_name(ips), pgd);
+	dev_dbg(sysmmu_dev[ips],
+			"Page table base is initialized with 0x%08lX.\n", pgd);
 	__sysmmu_tlb_invalidate(ips);
 }
 
@@ -136,8 +136,7 @@ static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 
 	BUG_ON(!((itype >= 0) && (itype < 8)));
 
-	dev_alert(dev, "%s occurred by %s.\n", sysmmu_fault_name[itype],
-							get_sysmmu_name(ips));
+	dev_alert(sysmmu_dev[ips], "%s occurred.\n", sysmmu_fault_name[itype]);
 
 	if (fault_handlers[ips]) {
 		unsigned long addr;
@@ -148,9 +147,9 @@ static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 		if (fault_handlers[ips](itype, base, addr)) {
 			__raw_writel(1 << itype,
 					sysmmusfrs[ips] + S5P_INT_CLEAR);
-			dev_notice(dev, "%s from %s is resolved."
-					" Retrying translation.\n",
-				sysmmu_fault_name[itype], get_sysmmu_name(ips));
+			dev_notice(sysmmu_dev[ips],
+				"%s is resolved. Retrying translation.\n",
+				sysmmu_fault_name[itype]);
 		} else {
 			base = 0;
 		}
@@ -158,9 +157,10 @@ static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 
 	sysmmu_unblock(ips);
 
-	if (!base)
-		dev_notice(dev, "%s from %s is not handled.\n",
-			sysmmu_fault_name[itype], get_sysmmu_name(ips));
+	if (!base) {
+		dev_notice(sysmmu_dev[ips], "%s is not handled.\n",
+						sysmmu_fault_name[itype]);
+	}
 
 	return IRQ_HANDLED;
 }
@@ -172,25 +172,31 @@ void s5p_sysmmu_set_tablebase_pgd(sysmmu_ips ips, unsigned long pgd)
 		__sysmmu_set_ptbase(ips, pgd);
 		sysmmu_unblock(ips);
 	} else {
-		dev_dbg(dev, "%s is disabled. "
-			"Skipping initializing page table base.\n",
-						get_sysmmu_name(ips));
+		dev_dbg(sysmmu_dev[ips],
+			"Disabled: Skipping initializing page table base.\n");
 	}
 }
 
 void s5p_sysmmu_enable(sysmmu_ips ips, unsigned long pgd)
 {
+	if (!sysmmu_dev[ips]) {
+		dev_err(sysmmu_dev[ips],
+				"Failed to enable: not initialized.\n");
+		return;
+	}
+
 	if (set_sysmmu_active(ips)) {
+		pm_runtime_get_sync(sysmmu_dev[ips]);
+
 		sysmmu_clk_enable(ips);
 
 		__sysmmu_set_ptbase(ips, pgd);
 
 		__raw_writel(CTRL_ENABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
 
-		set_sysmmu_active(ips);
-		dev_dbg(dev, "%s is enabled.\n", get_sysmmu_name(ips));
+		dev_dbg(sysmmu_dev[ips], "Enabled.\n");
 	} else {
-		dev_dbg(dev, "%s is already enabled.\n", get_sysmmu_name(ips));
+		dev_dbg(sysmmu_dev[ips], "Already enabled.\n");
 	}
 }
 
@@ -199,9 +205,12 @@ void s5p_sysmmu_disable(sysmmu_ips ips)
 	if (set_sysmmu_inactive(ips)) {
 		__raw_writel(CTRL_DISABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
 		sysmmu_clk_disable(ips);
-		dev_dbg(dev, "%s is disabled.\n", get_sysmmu_name(ips));
+
+		pm_runtime_put_sync(sysmmu_dev[ips]);
+
+		dev_dbg(sysmmu_dev[ips], "Disabled.\n");
 	} else {
-		dev_dbg(dev, "%s is already disabled.\n", get_sysmmu_name(ips));
+		dev_dbg(sysmmu_dev[ips], "Already disabled.\n");
 	}
 }
 
@@ -212,8 +221,8 @@ void s5p_sysmmu_tlb_invalidate(sysmmu_ips ips)
 		__sysmmu_tlb_invalidate(ips);
 		sysmmu_unblock(ips);
 	} else {
-		dev_dbg(dev, "%s is disabled. "
-			"Skipping invalidating TLB.\n", get_sysmmu_name(ips));
+		dev_dbg(sysmmu_dev[ips],
+			"Disabled: Skipping invalidating TLB.\n");
 	}
 }
 
@@ -223,12 +232,13 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 	struct resource *res, *ioarea;
 	int ret;
 	int irq;
+	struct device *dev;
 
 	dev = &pdev->dev;
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
-		dev_err(dev, "Failed probing system MMU: "
-						"failed to get resource.");
+		dev_err(dev,
+			"Failed probing system MMU: failed to get resource.");
 		return -ENOENT;
 	}
 
@@ -272,6 +282,12 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 	sysmmu_clk_init(id, &pdev->dev);
 
 	dev_dbg(dev, "Probing system MMU succeeded.");
+
+	if (pdev->dev.parent) {
+		pm_runtime_enable(&pdev->dev);
+		sysmmu_dev[id] = &pdev->dev;
+	}
+
 	return 0;
 
 err_irq:
