@@ -26,6 +26,7 @@ struct s5p_ohci_hcd {
 	struct device *dev;
 	struct usb_hcd *hcd;
 	struct clk *clk;
+	int power_on;
 };
 
 #ifdef CONFIG_USB_EXYNOS_SWITCH
@@ -230,6 +231,75 @@ static const struct hc_driver ohci_s5p_hc_driver = {
 	.start_port_reset	= ohci_start_port_reset,
 };
 
+static ssize_t show_ohci_power(struct device *dev,
+			       struct device_attribute *attr,
+			       char *buf)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+
+	return sprintf(buf, "EHCI Power %s\n", (s5p_ohci->power_on) ? "on" : "off");
+}
+
+static ssize_t store_ohci_power(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct s5p_ohci_platdata *pdata = pdev->dev.platform_data;
+	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
+	struct usb_hcd *hcd = s5p_ohci->hcd;
+	int power_on;
+	int irq;
+	int retval;
+
+	if (sscanf(buf, "%d", &power_on) != 1)
+		return -EINVAL;
+
+	device_lock(dev);
+	if (!power_on && s5p_ohci->power_on) {
+		printk(KERN_DEBUG "%s: EHCI turns off\n", __func__);
+		s5p_ohci->power_on = 0;
+		usb_remove_hcd(hcd);
+
+		if (pdata && pdata->phy_exit)
+			pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
+	} else if (power_on) {
+		printk(KERN_DEBUG "%s: EHCI turns on\n", __func__);
+		if (s5p_ohci->power_on) {
+			usb_remove_hcd(hcd);
+		}
+
+		if (pdata->phy_init)
+			pdata->phy_init(pdev, S5P_USB_PHY_HOST);
+
+		irq = platform_get_irq(pdev, 0);
+		retval = usb_add_hcd(hcd, irq,
+				IRQF_DISABLED | IRQF_SHARED);
+		if (retval < 0) {
+			dev_err(dev, "Power On Fail\n");
+			goto exit;
+		}
+
+		s5p_ohci->power_on = 1;
+	}
+exit:
+	device_unlock(dev);
+	return count;
+}
+static DEVICE_ATTR(ohci_power, 0664, show_ohci_power, store_ohci_power);
+
+static inline int create_ohci_sys_file(struct ohci_hcd *ohci)
+{
+	return device_create_file(ohci_to_hcd(ohci)->self.controller,
+			&dev_attr_ohci_power);
+}
+
+static inline void remove_ohci_sys_file(struct ohci_hcd *ohci)
+{
+	device_remove_file(ohci_to_hcd(ohci)->self.controller,
+			&dev_attr_ohci_power);
+}
 static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 {
 	struct s5p_ohci_platdata *pdata;
@@ -315,6 +385,9 @@ static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, s5p_ohci);
 
+	create_ohci_sys_file(ohci);
+	s5p_ohci->power_on = 1;
+
 #ifdef CONFIG_USB_EXYNOS_SWITCH
 	ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
 	(void)ohci_readl(ohci, &ohci->regs->intrdisable);
@@ -345,6 +418,9 @@ static int ohci_hcd_s5p_drv_remove(struct platform_device *pdev)
 	struct usb_hcd *hcd = s5p_ohci->hcd;
 
 	usb_remove_hcd(hcd);
+
+	s5p_ohci->power_on = 0;
+	remove_ohci_sys_file(hcd_to_ohci(hcd));
 
 	if (pdata && pdata->phy_exit)
 		pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
