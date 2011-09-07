@@ -1552,6 +1552,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_FIMG2D
 	&s5p_device_fimg2d,
 #endif
+#ifdef CONFIG_VIDEO_JPEG_V2X
+	&s5p_device_jpeg,
+#endif
 	&wm8994_fixed_voltage0,
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
@@ -1885,6 +1888,12 @@ static void __init smdk4212_machine_init(void)
 	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s5p_device_tvout.dev.parent = &exynos4_device_pd[PD_TV].dev;
+#endif
+#endif
+
+#ifdef CONFIG_VIDEO_JPEG_V2X
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 #endif
 #endif
 
