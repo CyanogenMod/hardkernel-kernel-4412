@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos/busfreq.c
+/* linux/arch/arm/mach-exynos/busfreq_opp.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/
@@ -396,7 +396,7 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 	data->exynos4_buspm_notifier.notifier_call =
 		exynos4_buspm_notifier_event;
 	data->exynos4_reboot_notifier.notifier_call =
-		exynos4_busfreq_reboot_event,
+		exynos4_busfreq_reboot_event;
 
 	tmp = __raw_readl(S5P_CLKDIV_DMC0);
 
