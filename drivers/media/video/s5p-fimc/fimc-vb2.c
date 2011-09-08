@@ -49,7 +49,7 @@ const struct fimc_vb2 fimc_vb2_sdvmm = {
 	.set_cacheable	= vb2_sdvmm_set_cacheable,
 };
 
-#else
+#elif defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 void *fimc_cma_init(struct fimc_dev *fimc)
 {
 	return vb2_cma_phys_init(&fimc->pdev->dev, NULL, 0, false);

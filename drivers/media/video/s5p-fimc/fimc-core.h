@@ -26,7 +26,7 @@
 #ifdef CONFIG_VIDEOBUF2_SDVMM
 #include <media/videobuf2-sdvmm.h>
 #include <plat/s5p-vcm.h>
-#else
+#elif defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 #include <media/videobuf2-cma-phys.h>
 #endif
 
@@ -751,7 +751,7 @@ int fimc_vid_cap_buf_queue(struct fimc_dev *fimc,
 /* fimc-vb2.c						*/
 #ifdef CONFIG_VIDEOBUF2_SDVMM
 extern const struct fimc_vb2 fimc_vb2_sdvmm;
-#else
+#elif defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 extern const struct fimc_vb2 fimc_vb2_cma;
 #endif
 

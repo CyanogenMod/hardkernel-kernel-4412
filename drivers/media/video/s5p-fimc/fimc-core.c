@@ -1968,7 +1968,7 @@ static int fimc_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_VIDEOBUF2_SDVMM
 	fimc->vb2 = &fimc_vb2_sdvmm;
-#else
+#elif defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	fimc->vb2 = &fimc_vb2_cma;
 #endif
 
