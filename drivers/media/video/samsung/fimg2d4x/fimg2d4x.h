@@ -170,6 +170,7 @@ void fimg2d4x_enable_irq(struct fimg2d_control *info);
 void fimg2d4x_disable_irq(struct fimg2d_control *info);
 void fimg2d4x_clear_irq(struct fimg2d_control *info);
 int fimg2d4x_is_blit_done(struct fimg2d_control *info);
+int fimg2d4x_blit_done_status(struct fimg2d_control *info);
 void fimg2d4x_start_blit(struct fimg2d_control *info);
 void fimg2d4x_set_max_burst_length(struct fimg2d_control *info, enum max_burst_len len);
 void fimg2d4x_set_src_type(struct fimg2d_control *info, enum image_sel type);

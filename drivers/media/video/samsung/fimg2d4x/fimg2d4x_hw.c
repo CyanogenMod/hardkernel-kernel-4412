@@ -24,6 +24,9 @@ static int blend_round = (int)DEFAULT_BLEND_ROUND_MODE;
 void fimg2d4x_reset(struct fimg2d_control *info)
 {
 	writel(FIMG2D_SOFT_RESET, info->regs + FIMG2D_SOFT_RESET_REG);
+
+	/* remove wince option */
+	writel(0x0, info->regs + FIMG2D_BLEND_FUNCTION_REG);
 }
 
 void fimg2d4x_enable_irq(struct fimg2d_control *info)
@@ -44,6 +47,17 @@ void fimg2d4x_clear_irq(struct fimg2d_control *info)
 int fimg2d4x_is_blit_done(struct fimg2d_control *info)
 {
 	return readl(info->regs + FIMG2D_INTC_PEND_REG) & FIMG2D_BLIT_INT_FLAG;
+}
+
+int fimg2d4x_blit_done_status(struct fimg2d_control *info)
+{
+	volatile unsigned long sts;
+
+	/* read twice */
+	sts = readl(info->regs + FIMG2D_FIFO_STAT_REG);
+	sts = readl(info->regs + FIMG2D_FIFO_STAT_REG);
+
+	return (int)(sts & FIMG2D_BLIT_FINISHED);
 }
 
 void fimg2d4x_start_blit(struct fimg2d_control *info)
@@ -628,11 +642,8 @@ static struct fimg2d_blend_coeff const coeff_table[MAX_FIMG2D_BLIT_OP] = {
 void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 		enum blit_op op, unsigned char g_alpha)
 {
-	unsigned long cfg;
+	unsigned long cfg = 0;
 	struct fimg2d_blend_coeff const *tbl;
-
-	/* remove wince option */
-	cfg = 0;
 
 	switch (op) {
 	case BLIT_OP_SOLID_FILL:
