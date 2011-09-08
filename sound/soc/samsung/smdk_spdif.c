@@ -11,6 +11,7 @@
  */
 
 #include <linux/clk.h>
+#include <plat/clock.h>
 
 #include <sound/soc.h>
 
@@ -69,7 +70,7 @@ static int set_audio_clock_heirachy(struct platform_device *pdev)
 	}
 	if (clk_set_parent(sclk_spdif, sclk_audio0)) {
 		pr_err("unable to set parent %s of clock %s.\n",
-				sclk_audio0, sclk_spdif->name);
+				sclk_audio0->name, sclk_spdif->name);
 		ret = -EINVAL;
 	}
 
