@@ -130,11 +130,8 @@ void **s5p_mfc_mem_init_multi(struct device *dev)
 	ion.name = MFC_ION_NAME;
 	ion.dev = dev;
 	ion.cacheable = true;
-	ion.align = 0x1000;
+	ion.align = SZ_4K;
 	ion.contig = true;
-
-	/* FIXME: check port count */
-	vb2_drv.dev = dev;
 
 	s5p_mfc_power_on();
 	alloc_ctxes = (void **)vb2_ion_init_multi(MFC_ALLOC_CTX_NUM, &ion,
@@ -295,11 +292,9 @@ int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
 #elif defined(CONFIG_S5P_MFC_VB2_ION)
 void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
 {
-	unsigned long paddr;
-
-	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
-	paddr = __pa((unsigned long)start_addr);
-	outer_clean_range(paddr, paddr + size);
+	/* TODO : to be changed to cache clean */
+	flush_cache_all();	/* L1 */
+	outer_flush_all();	/* L2 */
 }
 
 void s5p_mfc_cache_inv(const void *start_addr, unsigned long size)
