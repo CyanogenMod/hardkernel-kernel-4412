@@ -98,11 +98,15 @@ static int exynos_change_usb_mode(struct exynos_usb_switch *usb_switch,
 		pm_runtime_put(&s5p_device_ehci.dev);
 
 		enable_irq(usb_switch->device_detect_irq);
+#if defined(CONFIG_BATTERY_SAMSUNG)
 		exynos_usb_cable_disconnect();
+#endif
 		atomic_set(&usb_switch->connect, 0);
 		break;
 	case USB_HOST_ATTACHED:
+#if defined(CONFIG_BATTERY_SAMSUNG)
 		exynos_usb_cable_connect();
+#endif
 		disable_irq(usb_switch->device_detect_irq);
 
 		pm_runtime_get(&s5p_device_ehci.dev);
