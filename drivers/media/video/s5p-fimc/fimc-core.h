@@ -23,11 +23,13 @@
 #include <media/s5p_fimc.h>
 #include "regs-fimc.h"
 
-#ifdef CONFIG_VIDEOBUF2_SDVMM
+#if defined(CONFIG_VIDEOBUF2_SDVMM)
 #include <media/videobuf2-sdvmm.h>
 #include <plat/s5p-vcm.h>
 #elif defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 #include <media/videobuf2-cma-phys.h>
+#elif defined(CONFIG_VIDEOBUF2_ION)
+#include <media/videobuf2-ion.h>
 #endif
 
 #ifdef CONFIG_PM_RUNTIME
@@ -454,6 +456,7 @@ struct fimc_vb2 {
 
 	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
+	void (*set_sharable)(void *alloc_ctx, bool sharable);
 };
 
 struct fimc_ctx;
@@ -749,10 +752,12 @@ int fimc_vid_cap_buf_queue(struct fimc_dev *fimc,
 			     struct fimc_vid_buffer *fimc_vb);
 /* -----------------------------------------------------*/
 /* fimc-vb2.c						*/
-#ifdef CONFIG_VIDEOBUF2_SDVMM
+#if defined(CONFIG_VIDEOBUF2_SDVMM)
 extern const struct fimc_vb2 fimc_vb2_sdvmm;
 #elif defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 extern const struct fimc_vb2 fimc_vb2_cma;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+extern const struct fimc_vb2 fimc_vb2_ion;
 #endif
 
 /* Locking: the caller holds fimc->slock */

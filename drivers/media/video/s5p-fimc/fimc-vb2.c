@@ -13,7 +13,7 @@
 #include <linux/platform_device.h>
 #include "fimc-core.h"
 
-#ifdef CONFIG_VIDEOBUF2_SDVMM
+#if defined(CONFIG_VIDEOBUF2_SDVMM)
 void *fimc_sdvmm_init(struct fimc_dev *fimc)
 {
 	struct vb2_vcm vb2_vcm;
@@ -73,5 +73,36 @@ const struct fimc_vb2 fimc_vb2_cma = {
 	.suspend	= fimc_cma_suspend,
 	.cache_flush	= fimc_cma_cache_flush,
 	.set_cacheable	= fimc_cma_set_cacheable,
+};
+
+#elif defined(CONFIG_VIDEOBUF2_ION)
+void *fimc_ion_init(struct fimc_dev *fimc)
+{
+	struct vb2_ion vb2_ion;
+	struct vb2_drv vb2_drv = {0, };
+	char ion_name[16] = {0,};
+
+	vb2_ion.dev = &fimc->pdev->dev;
+	sprintf(ion_name, "fimc%d", fimc->id);
+	vb2_ion.name = ion_name;
+	vb2_ion.contig = false;
+	vb2_ion.cacheable = false;
+	vb2_ion.align = SZ_4K;
+
+	vb2_drv.use_mmu = true;
+
+	return vb2_ion_init(&vb2_ion, &vb2_drv);
+}
+
+const struct fimc_vb2 fimc_vb2_ion = {
+	.ops		= &vb2_ion_memops,
+	.init		= fimc_ion_init,
+	.cleanup	= vb2_ion_cleanup,
+	.plane_addr	= vb2_ion_plane_dvaddr,
+	.resume		= vb2_ion_resume,
+	.suspend	= vb2_ion_suspend,
+	.cache_flush	= vb2_ion_cache_flush,
+	.set_cacheable	= vb2_ion_set_cacheable,
+	.set_sharable	= vb2_ion_set_sharable,
 };
 #endif

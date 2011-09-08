@@ -232,6 +232,13 @@ static struct v4l2_queryctrl fimc_ctrls[] = {
 		.minimum	= 0,
 		.maximum	= 1,
 		.default_value	= 0,
+	}, {
+		.id		= V4L2_CID_SET_SHARABLE,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Enable cache configuration",
+		.minimum	= 3,
+		.maximum	= 256,
+		.default_value	= 0,
 	},
 };
 
@@ -1326,6 +1333,10 @@ int fimc_s_ctrl(struct fimc_ctx *ctx, struct v4l2_control *ctrl)
 		ctx->cacheable = (bool)ctrl->value;
 		break;
 
+	case V4L2_CID_SET_SHARABLE:
+		fimc->vb2->set_sharable(fimc->alloc_ctx, ctrl->value);
+		break;
+
 	default:
 		v4l2_err(&fimc->m2m.v4l2_dev, "Invalid control\n");
 		return -EINVAL;
@@ -1970,6 +1981,8 @@ static int fimc_probe(struct platform_device *pdev)
 	fimc->vb2 = &fimc_vb2_sdvmm;
 #elif defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	fimc->vb2 = &fimc_vb2_cma;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+	fimc->vb2 = &fimc_vb2_ion;
 #endif
 
 	ret = fimc_register_m2m_device(fimc);
