@@ -55,6 +55,11 @@ static int exynos4_usb_host_phy_is_on(void)
 	return (readl(EXYNOS4_PHYPWR) & PHY1_STD_ANALOG_POWERDOWN) ? 0 : 1;
 }
 
+static int exynos4_usb_device_phy_is_on(void)
+{
+	return (readl(EXYNOS4_PHYPWR) & PHY0_ANALOG_POWERDOWN) ? 0 : 1;
+}
+
 static u32 exynos4_usb_phy_set_clock(struct platform_device *pdev)
 {
 	struct clk *xusbxti_clk;
@@ -251,7 +256,7 @@ int exynos4_check_usb_op(void)
 	phypwr = readl(EXYNOS4_PHYPWR);
 
 	/*If USB Device is power on,  */
-	if (!(phypwr & PHY0_ANALOG_POWERDOWN)) {
+	if (exynos4_usb_device_phy_is_on()) {
 		op = 1;
 		goto done;
 	} else if (!exynos4_usb_host_phy_is_on()) {
@@ -398,7 +403,8 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				PHY_ENABLE);
 
 			/* USB MUX change from Device to Host */
-			exynos4_usb_mux_change(1);
+			if (!exynos4_usb_device_phy_is_on())
+				exynos4_usb_mux_change(1);
 
 			phypwr &= ~(PHY1_STD_NORMAL_MASK
 				| EXYNOS4212_HSIC0_NORMAL_MASK
