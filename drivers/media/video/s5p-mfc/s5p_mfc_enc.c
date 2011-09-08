@@ -1704,7 +1704,6 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		/* cacheable setting */
 		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],ctx->cacheable);
-		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],ctx->cacheable);
 		if (ctx->output_state != QUEUE_FREE) {
 			mfc_err("invalid output state: %d\n", ctx->output_state);
 			return -EINVAL;
