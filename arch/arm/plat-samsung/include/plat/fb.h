@@ -31,6 +31,9 @@
 						struct s3c_fb_user_chroma)
 #define S3CFB_SET_VSYNC_INT		_IOW('F', 206, u32)
 
+#define S3CFB_GET_ION_USER_HANDLE	_IOWR('F', 207, \
+						struct s3c_fb_user_ion_client)
+
 /**
  * struct s3c_fb_pd_win - per window setup data
  * @win_mode: The display parameters to initialise (not for window 0)
