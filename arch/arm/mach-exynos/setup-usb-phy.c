@@ -28,21 +28,28 @@
 #define PHY_DISABLE	(0)
 
 enum usb_phy_type {
-	USB_PHY		= 0x0,
-	USB_PHY0	= 0x0,
-	USB_PHY1	= 0x1,
-	USB_PHY_HSIC0	= 0x1,
-	USB_PHY_HSIC1	= 0x2,
+	USB_PHY		= (0x1 << 0),
+	USB_PHY0	= (0x1 << 0),
+	USB_PHY1	= (0x1 << 1),
+	USB_PHY_HSIC0	= (0x1 << 1),
+	USB_PHY_HSIC1	= (0x1 << 2),
 };
 
-DEFINE_SPINLOCK(phy_lock);
+struct exynos4_usb_phy {
+	u8 phy0_usage;
+	u8 phy1_usage;
+	u8 phy2_usage;
+	spinlock_t phy_lock;
+};
 
+static struct exynos4_usb_phy usb_phy_control;
 static atomic_t host_usage;
 
 static void exynos4_usb_mux_change(int val)
 {
 	writel(val, USB_CFG);
 }
+
 static int exynos4_usb_host_phy_is_on(void)
 {
 	return (readl(EXYNOS4_PHYPWR) & PHY1_STD_ANALOG_POWERDOWN) ? 0 : 1;
@@ -110,49 +117,47 @@ static u32 exynos4_usb_phy_set_clock(struct platform_device *pdev)
 
 static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
 {
-	spin_lock(&phy_lock);
+	spin_lock(&usb_phy_control.phy_lock);
 
 	if (cpu_is_exynos4210()) {
-		static int phy0_usage;
-		static int phy1_usage;
-
-		if (phy_type == USB_PHY0) {
-			if (on == PHY_ENABLE && (phy0_usage++) == 0)
+		if (phy_type & USB_PHY0) {
+			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
 				writel(PHY_ENABLE, S5P_USBOTG_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--phy0_usage) == 0)
+			else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
 				writel(PHY_DISABLE, S5P_USBOTG_PHY_CONTROL);
-		} else if (phy_type == USB_PHY1) {
-			if (on == PHY_ENABLE && (phy1_usage++) == 0)
+		}
+		if (phy_type & USB_PHY1) {
+			if (on == PHY_ENABLE && (usb_phy_control.phy1_usage++) == 0)
 				writel(PHY_ENABLE, S5P_USBHOST_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--phy1_usage) == 0)
+			else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
 				writel(PHY_DISABLE, S5P_USBHOST_PHY_CONTROL);
-		} else
-			printk(KERN_ERR"Failed to control usb_phy\n");
+		}
 	} else if (cpu_is_exynos4212()) {
-		static int phy_usage;
-		static int hsic0_usage;
-		static int hsic1_usage;
-
-		if (phy_type == USB_PHY) {
-			if (on == PHY_ENABLE && (phy_usage++) == 0)
+		if (phy_type & USB_PHY) {
+			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
 				writel(PHY_ENABLE, S5P_USB_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--phy_usage) == 0)
+			else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
 				writel(PHY_DISABLE, S5P_USB_PHY_CONTROL);
-		} else if (phy_type == USB_PHY_HSIC0) {
-			if (on == PHY_ENABLE && (hsic0_usage++) == 0)
+		}
+#ifdef CONFIG_USB_S5P_HSIC0
+		if (phy_type & USB_PHY_HSIC0) {
+			if (on == PHY_ENABLE && (usb_phy_control.phy1_usage++) == 0)
 				writel(PHY_ENABLE, S5P_HSIC_1_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--hsic1_usage) == 0)
+			else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
 				writel(PHY_DISABLE, S5P_HSIC_1_PHY_CONTROL);
-		} else if (phy_type == USB_PHY_HSIC1) {
-			if (on == PHY_ENABLE && (hsic1_usage++) == 0)
+		}
+#endif
+#ifdef CONFIG_USB_S5P_HSIC1
+		if (phy_type & USB_PHY_HSIC1) {
+			if (on == PHY_ENABLE && (usb_phy_control.phy2_usage++) == 0)
 				writel(PHY_ENABLE, S5P_HSIC_2_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--hsic1_usage) == 0)
+			else if (on == PHY_DISABLE && (--usb_phy_control.phy2_usage) == 0)
 				writel(PHY_DISABLE, S5P_HSIC_2_PHY_CONTROL);
-		} else
-			printk(KERN_ERR"Failed to control usb_phy\n");
+		}
+#endif
 	}
 
-	spin_unlock(&phy_lock);
+	spin_unlock(&usb_phy_control.phy_lock);
 }
 
 static int exynos4_usb_phy0_init(struct platform_device *pdev)
@@ -275,9 +280,10 @@ int exynos4_check_usb_op(void)
 				| EXYNOS4212_HSIC0_ANALOG_POWERDOWN
 				| EXYNOS4212_HSIC1_ANALOG_POWERDOWN,
 				EXYNOS4_PHYPWR);
-			exynos4_usb_phy_control(USB_PHY, PHY_DISABLE);
-			exynos4_usb_phy_control(USB_PHY_HSIC0, PHY_DISABLE);
-			exynos4_usb_phy_control(USB_PHY_HSIC1, PHY_DISABLE);
+			exynos4_usb_phy_control(USB_PHY
+				| USB_PHY_HSIC0
+				| USB_PHY_HSIC1,
+				PHY_DISABLE);
 
 			op = 0;
 		}
@@ -386,9 +392,10 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| EXYNOS4210_PHY1_SWRST_MASK);
 			writel(rstcon, EXYNOS4_RSTCON);
 		} else if (cpu_is_exynos4212()) {
-			exynos4_usb_phy_control(USB_PHY, PHY_ENABLE);
-			exynos4_usb_phy_control(USB_PHY_HSIC0, PHY_ENABLE);
-			exynos4_usb_phy_control(USB_PHY_HSIC1, PHY_ENABLE);
+			exynos4_usb_phy_control(USB_PHY
+				| USB_PHY_HSIC0
+				| USB_PHY_HSIC1,
+				PHY_ENABLE);
 
 			/* USB MUX change from Device to Host */
 			exynos4_usb_mux_change(1);
@@ -442,9 +449,10 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 	if (cpu_is_exynos4210()) {
 		exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
 	} else {
-		exynos4_usb_phy_control(USB_PHY, PHY_ENABLE);
-		exynos4_usb_phy_control(USB_PHY_HSIC0, PHY_ENABLE);
-		exynos4_usb_phy_control(USB_PHY_HSIC1, PHY_ENABLE);
+		exynos4_usb_phy_control(USB_PHY
+			| USB_PHY_HSIC0
+			| USB_PHY_HSIC1,
+			PHY_ENABLE);
 	}
 
 	atomic_inc(&host_usage);
@@ -558,9 +566,10 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 	if (cpu_is_exynos4210()) {
 		exynos4_usb_phy_control(USB_PHY1, PHY_DISABLE);
 	} else {
-		exynos4_usb_phy_control(USB_PHY, PHY_DISABLE);
-		exynos4_usb_phy_control(USB_PHY_HSIC0, PHY_DISABLE);
-		exynos4_usb_phy_control(USB_PHY_HSIC1, PHY_DISABLE);
+		exynos4_usb_phy_control(USB_PHY
+			| USB_PHY_HSIC0
+			| USB_PHY_HSIC1,
+			PHY_DISABLE);
 	}
 
 	clk_disable(otg_clk);
