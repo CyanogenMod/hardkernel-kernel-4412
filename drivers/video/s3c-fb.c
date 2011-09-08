@@ -352,6 +352,7 @@ static int s3c_fb_check_var(struct fb_var_screeninfo *var,
 	return 0;
 }
 
+#ifndef CONFIG_MACH_FPGA5210
 /**
  * s3c_fb_calc_pixclk() - calculate the divider to create the pixel clock.
  * @sfb: The hardware state.
@@ -382,6 +383,7 @@ static int s3c_fb_calc_pixclk(struct s3c_fb *sfb, unsigned int pixclk)
 
 	return result;
 }
+#endif
 
 /**
  * s3c_fb_align_word() - align pixel count to word boundary
@@ -518,7 +520,12 @@ static int s3c_fb_set_par(struct fb_info *info)
 	/* use platform specified window as the basis for the lcd timings */
 
 	if (win_no == sfb->pdata->default_win) {
+#ifdef CONFIG_MACH_FPGA5210
+		/* 13.5MHz / 4 = 3.375MHz */
+		clkdiv = 4;
+#else
 		clkdiv = s3c_fb_calc_pixclk(sfb, var->pixclock);
+#endif
 
 		data = sfb->pdata->vidcon0;
 		data &= ~(VIDCON0_CLKVAL_F_MASK | VIDCON0_CLKDIR);
@@ -533,7 +540,9 @@ static int s3c_fb_set_par(struct fb_info *info)
 		if (sfb->variant.is_2443)
 			data |= (1 << 5);
 
+#ifndef CONFIG_MACH_FPGA5210
 		data |= VIDCON0_ENVID | VIDCON0_ENVID_F;
+#endif
 		writel(data, regs + VIDCON0);
 
 		data = VIDTCON0_VBPD(var->upper_margin - 1) |
@@ -1715,6 +1724,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 
 	spin_lock_init(&sfb->slock);
 
+#ifndef CONFIG_MACH_FPGA5210
 	sfb->bus_clk = clk_get(dev, "lcd");
 	if (IS_ERR(sfb->bus_clk)) {
 		dev_err(dev, "failed to get bus clock\n");
@@ -1734,6 +1744,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 
 		clk_enable(sfb->lcd_clk);
 	}
+#endif
 
 	pm_runtime_enable(sfb->dev);
 
@@ -1780,7 +1791,9 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 
 	/* setup gpio and output polarity controls */
 
+#ifndef CONFIG_MACH_FPGA5210
 	pd->setup_gpio();
+#endif
 
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
 
@@ -1857,11 +1870,13 @@ err_lcd_clk:
 		clk_put(sfb->lcd_clk);
 	}
 
+#ifndef CONFIG_MACH_FPGA5210
 err_bus_clk:
 	clk_disable(sfb->bus_clk);
 	clk_put(sfb->bus_clk);
 
 err_sfb:
+#endif
 	kfree(sfb);
 	return ret;
 }
