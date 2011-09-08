@@ -10,14 +10,18 @@
 
 #include <linux/platform_device.h>
 #include <linux/serial_core.h>
+#include <linux/fb.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 
 #include <plat/regs-serial.h>
+#include <plat/regs-fb-v4.h>
 #include <plat/exynos5.h>
 #include <plat/cpu.h>
 #include <plat/clock.h>
+#include <plat/devs.h>
+#include <plat/fb.h>
 
 #include <mach/map.h>
 
@@ -66,7 +70,29 @@ static struct s3c2410_uartcfg fpga5210_uartcfgs[] __initdata = {
 	},
 };
 
+static struct s3c_fb_pd_win smdkc210_fb_win0 = {
+	.win_mode = {
+		.left_margin	= 13,
+		.right_margin	= 8,
+		.upper_margin	= 7,
+		.lower_margin	= 5,
+		.hsync_len	= 3,
+		.vsync_len	= 1,
+		.xres		= 800,
+		.yres		= 480,
+	},
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_platdata smdkc210_lcd1_pdata __initdata = {
+	.win[0]		= &smdkc210_fb_win0,
+	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
+	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
+};
+
 static struct platform_device *fpga5210_devices[] __initdata = {
+	&s5p_device_fimd1,
 };
 
 static void __init fpga5210_map_io(void)
@@ -79,6 +105,7 @@ static void __init fpga5210_map_io(void)
 
 static void __init fpga5210_machine_init(void)
 {
+	s5p_fimd1_set_platdata(&smdkc210_lcd1_pdata);
 	platform_add_devices(fpga5210_devices, ARRAY_SIZE(fpga5210_devices));
 }
 
