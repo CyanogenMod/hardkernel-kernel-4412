@@ -96,6 +96,11 @@ config S5P_DEV_FIMD0
 	help
 	  Compile in platform device definitions for FIMD controller 0
 
+config S5P_DEV_FIMD1
+	bool
+	help
+	  Compile in platform device definitions for FIMD controller 1
+
 config S5P_DEV_TVOUT
 	bool
 	help
