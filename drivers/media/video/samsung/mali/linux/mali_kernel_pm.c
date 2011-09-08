@@ -431,7 +431,12 @@ static int mali_pm_resume(struct device *dev)
 
 #ifdef CONFIG_REGULATOR
 	mali_regulator_enable();
+#ifdef CONFIG_CPU_EXYNOS4210
 	mali_clk_set_rate(260,1000000);
+#endif
+#ifdef CONFIG_CPU_EXYNOS4212
+	mali_clk_set_rate(350,1000000);
+#endif
 #endif
 
 	if (mali_device_state == _MALI_DEVICE_RESUME)

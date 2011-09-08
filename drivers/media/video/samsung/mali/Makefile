@@ -46,8 +46,12 @@ USING_MALI_RUN_TIME_PM=1
 endif
 
 ifeq ($(CONFIG_VIDEO_MALI400MP_DVFS),y)
+ifeq ($(CONFIG_CPU_EXYNOS4210),y)
 USING_GPU_UTILIZATION=1
 USING_MALI_DVFS_ENABLED=1
+endif
+ifeq ($(CONFIG_CPU_EXYNOS4212),y)
+endif
 endif
 
 ifeq ($(CONFIG_VIDEO_MALI400MP_DEBUG),y)
@@ -172,7 +176,11 @@ OSKFILES=\
         $(FILES_PREFIX)$(OSKOS)/mali_osk_timers.o
 endif #($(CONFIG_VIDEO_UMP),y)
 
+ifeq ($(CONFIG_CPU_EXYNOS4212),y)
+	MALI_PLATFORM_FILE = platform/pegasus-m400/mali_platform.o
+else
 	MALI_PLATFORM_FILE = platform/orion-m400/mali_platform.o
+endif #($(CONFIG_CPU_EXYNOS4212),y)
 
 UKKFILES=\
         $(FILES_PREFIX)$(OSKOS)/mali_ukk_mem.o \
@@ -260,9 +268,14 @@ ifneq ($(call submodule_enabled, $M, MALI400L2),0)
 endif
 
 ifeq ($(USING_MALI_DVFS_ENABLED),1)
+ifeq ($(CONFIG_CPU_EXYNOS4212),y)
+mali-y += \
+	platform/pegasus-m400/mali_platform_dvfs.o
+else
 mali-y += \
 	platform/orion-m400/mali_platform_dvfs.o
-endif
+endif #($(CONFIG_CPU_EXYNOS4212),y)
+endif #($(USING_MALI_DVFS_ENABLED),1)
 
 ifeq ($(PANIC_ON_WATCHDOG_TIMEOUT),1)
 	EXTRA_CFLAGS += -DUSING_KERNEL_PANIC
