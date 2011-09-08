@@ -37,6 +37,9 @@
 #ifdef CONFIG_S5P_MEM_CMA
 #include <linux/cma.h>
 #endif
+#ifdef CONFIG_ION_EXYNOS
+#include <linux/ion.h>
+#endif
 
 /* This driver will export a number of framebuffer interfaces depending
  * on the configuration passed in via the platform data. Each fb instance
@@ -66,6 +69,10 @@
 #define VSYNC_TIMEOUT_MSEC 50
 
 struct s3c_fb;
+
+#ifdef CONFIG_ION_EXYNOS
+extern struct ion_device *ion_exynos;
+#endif
 
 #define VALID_BPP(x) (1 << ((x) - 1))
 
@@ -185,6 +192,9 @@ struct s3c_fb_win {
 	u32			*palette_buffer;
 	u32			 pseudo_palette[16];
 	unsigned int		 index;
+#ifdef CONFIG_ION_EXYNOS
+	struct ion_handle *fb_ion_handle;
+#endif
 };
 
 /**
@@ -236,6 +246,10 @@ struct s3c_fb {
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend	early_suspend;
+#endif
+
+#ifdef CONFIG_ION_EXYNOS
+	struct ion_client *fb_ion_client;
 #endif
 };
 
@@ -1073,6 +1087,10 @@ struct s3c_fb_user_chroma {
 	unsigned char	blue;
 };
 
+struct s3c_fb_user_ion_client {
+	int	fd;
+};
+
 int s3c_fb_set_window_position(struct fb_info *info,
 				struct s3c_fb_user_window user_window)
 {
@@ -1172,6 +1190,20 @@ int s3c_fb_set_chroma_key(struct fb_info *info,
 	return 0;
 }
 
+#ifdef CONFIG_ION_EXYNOS
+static int s3c_fb_get_user_ion_handle(struct s3c_fb *sfb, struct s3c_fb_win *win,
+				struct s3c_fb_user_ion_client *user_ion_client)
+{
+	/* Create fd for ion_buffer */
+	user_ion_client->fd = ion_share_fd(sfb->fb_ion_client, win->fb_ion_handle);
+	if (user_ion_client->fd < 0) {
+		pr_err("ion_share_fd failed\n");
+		return user_ion_client->fd;
+	}
+	return 0;
+}
+#endif
+
 static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
 {
@@ -1184,6 +1216,7 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		struct s3c_fb_user_window user_window;
 		struct s3c_fb_user_plane_alpha user_alpha;
 		struct s3c_fb_user_chroma user_chroma;
+		struct s3c_fb_user_ion_client user_ion_client;
 	} p;
 
 	switch (cmd) {
@@ -1238,6 +1271,29 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		/* unnecessary, but for compatibility */
 		ret = 0;
 		break;
+
+#ifdef CONFIG_ION_EXYNOS
+	case S3CFB_GET_ION_USER_HANDLE:
+		if (copy_from_user(&p.user_ion_client,
+				(struct s3c_fb_user_ion_client __user *)arg,
+				sizeof(p.user_ion_client))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (s3c_fb_get_user_ion_handle(sfb, win, &p.user_ion_client)) {
+			ret = -EFAULT;
+			break;
+		}
+
+		if (copy_to_user((struct s3c_fb_user_ion_client __user *)arg, &p.user_ion_client,
+					sizeof(p.user_ion_client))) {
+			ret = -EFAULT;
+			break;
+		}
+		ret = 0;
+		break;
+#endif
 
 	default:
 		ret = -ENOTTY;
@@ -1360,12 +1416,26 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 
 	dev_dbg(sfb->dev, "want %u bytes for window\n", size);
 
-#ifdef CONFIG_S5P_MEM_CMA
+#if defined(CONFIG_S5P_MEM_CMA) && !defined(CONFIG_ION_EXYNOS)
 	err = cma_info(&mem_info, sfb->dev, 0);
 	if (ERR_PTR(err))
 		return -ENOMEM;
 	map_dma = (dma_addr_t)cma_alloc(sfb->dev, "fimd", (size_t)size, 0);
 	fbi->screen_base = cma_get_virt(map_dma, size, 1);
+#elif defined(CONFIG_ION_EXYNOS)
+	win->fb_ion_handle = ion_alloc(sfb->fb_ion_client, (size_t)size, 0, ION_HEAP_SYSTEM_CONTIG_MASK);
+	if (IS_ERR(win->fb_ion_handle)) {
+		dev_err(sfb->dev, "failed to ion_alloc\n");
+		return -ENOMEM;
+	}
+
+	fbi->screen_base = (unsigned char __iomem *)ion_map_kernel(sfb->fb_ion_client, win->fb_ion_handle);
+	if (IS_ERR(fbi->screen_base)) {
+		dev_err(sfb->dev, "failed to ion_map_kernel handle\n");
+		goto err_map_kernel;
+	}
+
+	ion_phys(sfb->fb_ion_client, win->fb_ion_handle, (ion_phys_addr_t *)&map_dma, (size_t *)&size);
 #else
 	fbi->screen_base = dma_alloc_writecombine(sfb->dev, size,
 						  &map_dma, GFP_KERNEL);
@@ -1380,6 +1450,12 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 	fbi->fix.smem_start = map_dma;
 
 	return 0;
+
+#ifdef CONFIG_ION_EXYNOS
+err_map_kernel:
+	ion_free(sfb->fb_ion_client, win->fb_ion_handle);
+	return -ENOMEM;
+#endif
 }
 
 /**
@@ -1394,8 +1470,10 @@ static void s3c_fb_free_memory(struct s3c_fb *sfb, struct s3c_fb_win *win)
 	struct fb_info *fbi = win->fbinfo;
 
 	if (fbi->screen_base)
-#ifdef CONFIG_S5P_MEM_CMA
+#if defined(CONFIG_S5P_MEM_CMA) && !defined(CONFIG_ION_EXYNOS)
 		cma_free(fbi->fix.smem_start);
+#elif defined(CONFIG_ION_EXYNOS)
+		ion_free(sfb->fb_ion_client, win->fb_ion_handle);
 #else
 		dma_free_writecombine(sfb->dev, PAGE_ALIGN(fbi->fix.smem_len),
 			      fbi->screen_base, fbi->fix.smem_start);
@@ -1818,6 +1896,13 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		writel(0xffffff, regs + WKEYCON0);
 		writel(0xffffff, regs + WKEYCON1);
 	}
+#ifdef CONFIG_ION_EXYNOS
+	sfb->fb_ion_client = ion_client_create(ion_exynos, (ION_HEAP_SYSTEM_MASK|ION_HEAP_SYSTEM_CONTIG_MASK), "fimd");
+	if (IS_ERR(sfb->fb_ion_client)) {
+		dev_err(sfb->dev, "failed to ion_client_create\n");
+		goto err_ioremap;
+	}
+#endif
 
 	/* we have the register setup, start allocating framebuffers */
 	default_win = sfb->pdata->default_win;
