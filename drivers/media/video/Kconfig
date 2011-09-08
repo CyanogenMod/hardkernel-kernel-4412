@@ -67,19 +67,24 @@ config VIDEOBUF2_DMA_SG
 	select VIDEOBUF2_MEMOPS
 	tristate
 
+choice
+prompt "Select Videobuf2 allocator"
+default VIDEOBUF2_CMA_PHYS
 config VIDEOBUF2_CMA_PHYS
+	bool "CMA_PHYS"
 	depends on CMA
 	select VIDEOBUF2_CORE
 	select VIDEOBUF2_MEMOPS
-	tristate
-
-config S5P_FIMC_VB2_CMA_PHYS
-	bool "CMA_PHYS"
-	depends on CMA
-	select VIDEOBUF2_CMA_PHYS
-	select V4L2_MEM2MEM_DEV
 	help
-	  Use videobuf2 CMA-phys allocator for FIMC
+	  Use videobuf2 CMA-phys allocator
+
+config VIDEOBUF2_ION
+	bool "Android ION"
+	select VIDEOBUF2_CORE
+	select VIDEOBUF2_MEMOPS
+	help
+	  Use videobuf2 Android ION allocator
+endchoice
 
 #
 # Multimedia Video device configuration
