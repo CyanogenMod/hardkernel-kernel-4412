@@ -76,7 +76,7 @@ int audss_set_clk_div(u32 mode)
 		case 192000000:
 		case 180000000:
 			rclk_shift = 2;
-			srp_shift = 1;
+			srp_shift = 0;
 			break;
 		case 96000000:
 			rclk_shift = 1;
