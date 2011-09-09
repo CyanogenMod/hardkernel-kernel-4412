@@ -25,7 +25,7 @@ void jpeg_sw_reset(void __iomem *base)
 	writel(reg & ~S5P_JPEG_SOFT_RESET_HI,
 			base + S5P_JPEG_CNTL_REG);
 
-	mdelay(100);
+	ndelay(100000);
 
 	writel(reg | S5P_JPEG_SOFT_RESET_HI,
 			base + S5P_JPEG_CNTL_REG);
