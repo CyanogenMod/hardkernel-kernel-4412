@@ -67,6 +67,7 @@
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
+#include <mach/dev.h>
 
 #ifdef CONFIG_FB_S5P_MIPI_DSIM
 #include <mach/mipi_ddi.h>
@@ -1451,6 +1452,14 @@ static void __init smdk4212_usbswitch_init(void)
 }
 #endif
 
+/* BUSFREQ to control memory/bus*/
+static struct device_domain busfreq;
+
+static struct platform_device exynos4_busfreq = {
+	.id = -1,
+	.name = "exynos4-busfreq",
+};
+
 static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
@@ -1575,6 +1584,7 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
 #endif
+	&exynos4_busfreq,
 };
 
 #if defined(CONFIG_VIDEO_TVOUT)
@@ -1976,6 +1986,7 @@ static void __init smdk4212_machine_init(void)
 	}
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
+	dev_add(&busfreq, &exynos4_busfreq.dev);
 }
 
 MACHINE_START(SMDK4212, "SMDK4212")
