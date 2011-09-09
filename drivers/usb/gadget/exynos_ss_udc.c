@@ -567,6 +567,7 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 {
 	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
 	struct exynos_ss_udc *udc = udc_ep->parent;
+	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
 	int index = get_phys_epnum(udc_ep);
 	unsigned long flags;
 
@@ -575,6 +576,23 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 	if (ep == &udc->eps[0].ep) {
 		dev_err(udc->dev, "%s: called for ep0\n", __func__);
 		return -EINVAL;
+	}
+
+	if (udc_ep->tri) {
+		bool res;
+
+		epcmd->ep = get_phys_epnum(udc_ep);
+		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
+		epcmd->cmdflags = (udc_ep->tri <<
+			EXYNOS_USB3_DEPCMDx_CommandParam_SHIFT) |
+			EXYNOS_USB3_DEPCMDx_HiPri_ForceRM |
+			EXYNOS_USB3_DEPCMDx_CmdAct;
+
+		res = exynos_ss_udc_issue_cmd(udc, epcmd);
+		if (!res)
+			dev_err(udc->dev, "Failed to end transfer\n");
+
+		udc_ep->tri = 0;
 	}
 
 	/* terminate all requests with shutdown */
