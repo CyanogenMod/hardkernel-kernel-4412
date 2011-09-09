@@ -43,6 +43,7 @@
 
 #include <mach/hardware.h>
 #include <mach/irqs.h>
+#include <plat/cputype.h>
 
 #include "../audss.h"
 #include "../idma.h"
@@ -62,16 +63,16 @@
 #if (defined CONFIG_ARCH_EXYNOS4)
 	#define _IMEM_MAX_		(64 * 1024)	/* 64KBytes */
 	#define _DMEM_MAX_		(128 * 1024)	/* 128KBytes */
-	#define _IBUF_SIZE_		(16 * 1024)	/* 128KBytes in DRAM */
-	#define _WBUF_SIZE_		(_IBUF_SIZE_ * 4)	/* in DRAM */
-	#define _SBUF_SIZE_		(_IBUF_SIZE_ * 4)	/* in DRAM */
+	#define _IBUF_SIZE_		(128 * 1024)	/* 128KBytes in DRAM */
+	#define _WBUF_SIZE_		(_IBUF_SIZE_ * 6)	/* in DRAM */
+	#define _SBUF_SIZE_		(_IBUF_SIZE_ * 6)	/* in DRAM */
 	#define _FWBUF_SIZE_		(4 * 1024)	/* 4KBytes in F/W */
 	#define _IRAM_SIZE_		(128 * 1024)	/* Total size in IRAM */
 
 	#define _IMEM_OFFSET_		(0x00400)	/* 1KB offset ok */
-	#define _OBUF_SIZE_AB_		(45056)		/* 9Frames */
+	#define _OBUF_SIZE_AB_		(0x8000)	/* 9Frames */
 	#define _OBUF0_OFFSET_AB_	(0x0A000)
-	#define _OBUF1_OFFSET_AB_	(0x15000)
+	#define _OBUF1_OFFSET_AB_	(_OBUF_SIZE_AB_ + _OBUF0_OFFSET_AB_)
 	#define _OBUF_SIZE_C_		(4608 * 2)	/* 2Frames */
 	#define _OBUF0_OFFSET_C_	(0x19800)
 	#define _OBUF1_OFFSET_C_	(0x1CC00)
@@ -160,7 +161,6 @@ struct srp_info {
 	unsigned long gain_subr;		/* Gain sub right */
 	int dram_in_use;			/* DRAM is accessed by SRP */
 	int op_mode;				/* Operation mode: typeA/B/C */
-	int i2s_irq_enabled;			/* I2S irq state */
 	int early_suspend_entered;		/* Early suspend state */
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
@@ -347,10 +347,9 @@ static void srp_commbox_init(void)
 
 	writel(srp.fw_data_pa, srp.commbox + SRP_DATA_START_ADDR);
 	writel(srp.pcm_dump_pa, srp.commbox + SRP_PCM_DUMP_ADDR);
-	writel(srp.fw_code_cga_pa,
-			srp.commbox + SRP_CONF_START_ADDR);
-	writel(srp.fw_code_cga_sa_pa,
-			srp.commbox + SRP_LOAD_CGA_SA_ADDR);
+	writel(srp.fw_code_cga_pa, srp.commbox + SRP_CONF_START_ADDR);
+	writel(srp.fw_code_cga_sa_pa, srp.commbox + SRP_LOAD_CGA_SA_ADDR);
+	writel(srp.am_filter_pa, srp.commbox + SRP_INFORMATION);
 
 	srp_set_effect_apply();
 	srp_set_gain_apply();
@@ -443,6 +442,18 @@ static void srp_flush_ibuf(void)
 	srp.wbuf_fill_size = 0;
 }
 
+static void srp_flush_obuf(void)
+{
+	int n;
+
+	if (srp.obuf_size) {
+		for (n = 0; n < srp.obuf_size; n += 4) {
+			writel(0, srp.obuf0 + n);
+			writel(0, srp.obuf1 + n);
+		}
+	}
+}
+
 static void srp_reset_frame_counter(void)
 {
 	srp.frame_count = 0;
@@ -503,10 +514,17 @@ static void srp_reset(void)
 
 	writel(SRP_STALL, srp.commbox + SRP_PENDING);
 
-	/* Operation mode (A/B/C) & PCM dump */
+	/* Operation mode (A/B/C) & PCM dump & AM filter load & SB tablet mode */
 	writel((srp.pcm_dump_enabled ? SRP_ARM_INTR_CODE_PCM_DUMP_ON : 0) |
+		(srp.am_filter_loaded ? SRP_ARM_INTR_CODE_AM_FILTER_LOAD : 0) |
+		(srp.sb_tablet_mode ? SRP_ARM_INTR_CODE_SB_TABLET : 0) |
 		srp.op_mode, srp.commbox + SRP_ARM_INTERRUPT_CODE);
+
 	writel(srp.vliw_rp, srp.commbox + SRP_CODE_START_ADDR);
+	writel(srp.obuf0_pa, srp.commbox + SRP_PCM_BUFF0);
+	writel(srp.obuf1_pa, srp.commbox + SRP_PCM_BUFF1);
+	writel(srp.obuf_size >> 2, srp.commbox + SRP_PCM_BUFF_SIZE);
+
 	writel(reg, srp.commbox + SRP_FRAME_INDEX);
 	writel(reg, srp.commbox + SRP_READ_BITSTREAM_SIZE);
 	writel(srp.ibuf_size, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_SIZE);
@@ -585,6 +603,7 @@ static void srp_stop(void)
 {
 	writel(SRP_STALL, srp.commbox + SRP_PENDING);
 	idma_stop();
+	srp_flush_obuf();
 	srp.pause_request = 0;
 }
 
@@ -612,63 +631,28 @@ static void srp_set_pcm_dump(int on)
 }
 #endif
 
-static irqreturn_t srp_i2s_irq(int irqno, void *dev_id)
+static void srp_init_op_mode(void)
 {
-	if (srp.is_running) {
-		if (idma_irq_callback()) {
-			if (srp.pause_request) {
-				s5pdbg("Pause_req after IDMA irq...\n");
-				srp_pause();
-				srp.pause_request = 0;
-				srp.is_running = 0;
-			}
-
-			writel(SRP_RUN, srp.commbox + SRP_PENDING);
-		}
-	}
-	return IRQ_HANDLED;
-}
-
-static int srp_i2s_request_irq(void)
-{
-	int ret;
-
-	if (!srp.i2s_irq_enabled) {
-		ret = request_irq(IRQ_I2S0, srp_i2s_irq,
-					0, "s3c-i2s", &srp);
-		if (ret < 0) {
-			s5pdbg("fail to claim i2s irq, ret = %d\n", ret);
-			return ret;
-		}
-		srp.i2s_irq_enabled = 1;
-	}
-
-	return 0;
-}
-
-static int srp_i2s_free_irq(void)
-{
-	if (srp.i2s_irq_enabled) {
-		free_irq(IRQ_I2S0, &srp);
-		srp.i2s_irq_enabled = 0;
-	}
-
-	return 0;
-}
-
-static void srp_init_op_mode(int mode)
-{
-	srp.op_mode = mode;
-
-	if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_CTYPE)
-		srp.vliw_rp = SRP_IRAM_BASE + _IMEM_OFFSET_;
+	if (cpu_is_exynos4210())
+		srp.op_mode = SRP_ARM_INTR_CODE_ULP_CTYPE;
 	else
+		srp.op_mode = SRP_ARM_INTR_CODE_ULP_BTYPE;
+
+	if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_CTYPE) {
+		srp.vliw_rp   = SRP_IRAM_BASE + _IMEM_OFFSET_;
+		srp.obuf0_pa  = SRP_IRAM_BASE + _OBUF0_OFFSET_C_;
+		srp.obuf1_pa  = SRP_IRAM_BASE + _OBUF1_OFFSET_C_;
+		srp.obuf0     = srp.iram  + _OBUF0_OFFSET_C_;
+		srp.obuf1     = srp.iram  + _OBUF1_OFFSET_C_;
+		srp.obuf_size = _OBUF_SIZE_C_;
+	} else {
 		srp.vliw_rp = srp.fw_code_vliw_pa;
-
-	if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_BTYPE)
-		srp_i2s_request_irq();
-	else
-		srp_i2s_free_irq();
+		srp.obuf0_pa  = SRP_IRAM_BASE + _OBUF0_OFFSET_AB_;
+		srp.obuf1_pa  = SRP_IRAM_BASE + _OBUF1_OFFSET_AB_;
+		srp.obuf0     = srp.iram  + _OBUF0_OFFSET_AB_;
+		srp.obuf1     = srp.iram  + _OBUF1_OFFSET_AB_;
+		srp.obuf_size = _OBUF_SIZE_AB_;
+	}
 }
 
 #ifdef _USE_EOS_TIMEOUT_
@@ -853,13 +837,14 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 	if (srp.decoding_started &&
 		(!srp.is_running || srp.auto_paused)) {
 		s5pdbg("Resume SRP\n");
+		srp_flush_obuf();
 		srp_continue();
 		srp.is_running = 1;
 		srp.auto_paused = 0;
 	}
 	mutex_unlock(&rp_mutex);
 
-	if (srp.wbuf_pos > srp.ibuf_size * 2) {
+	if (srp.wbuf_pos > srp.ibuf_size * 4) {
 		printk(KERN_ERR "SRP: wbuf_pos is full (0x%08lX), frame(0x%08X)\n",
 			srp.wbuf_pos, readl(srp.commbox + SRP_FRAME_INDEX));
 		return 0;
@@ -1024,6 +1009,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case SRP_RESUME_EOS:
 		s5pdbg("Resume after EOS pause\n");
+		srp_flush_obuf();
 		if (srp.restart_after_resume) {
 			srp_fill_ibuf();		/* Fill IBUF0 */
 #ifdef _USE_START_WITH_BUF0_
@@ -1226,9 +1212,16 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			break;
 
 		case SRP_INTR_CODE_DRAM_REQUEST:
+			if (srp.op_mode == SRP_ARM_INTR_CODE_ULP_CTYPE) {
+				if (srp.block_mode && !srp.stop_after_eos)
+					wakeup_req = 1;
+			}
 			srp.dram_in_use = 1;
-			if (srp.block_mode && !srp.stop_after_eos)
-				wakeup_req = 1;
+			break;
+
+		case SRP_INTR_CODE_PENDING_ULP:
+			srp.dram_in_use = 0;
+			srp_check_stream_info();
 			break;
 
 		default:
@@ -1241,7 +1234,6 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			srp.obuf_size = readl(srp.commbox + SRP_PCM_BUFF_SIZE);
 			srp.obuf0_pa = readl(srp.commbox + SRP_PCM_BUFF0);
 			srp.obuf1_pa = readl(srp.commbox + SRP_PCM_BUFF1);
-
 			srp.obuf0 = srp.sram + (srp.obuf0_pa & 0xffff);
 			srp.obuf1 = srp.sram + (srp.obuf1_pa & 0xffff);
 
@@ -1814,11 +1806,8 @@ static int __init srp_probe(struct platform_device *pdev)
 	/* Information for I2S driver */
 	srp.is_opened = 0;
 	srp.is_running = 0;
-
-	/* I2S irq usage */
-	srp.i2s_irq_enabled = 0;
 	/* Default C type (iRAM instruction)*/
-	srp_init_op_mode(SRP_ARM_INTR_CODE_ULP_ATYPE);
+	srp_init_op_mode();
 	/* Set Default Gain to 1.0 */
 	srp.gain = 1<<24;
 	srp.gain_subl = 100;
