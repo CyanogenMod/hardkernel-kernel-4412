@@ -125,75 +125,64 @@ inline static void fimg2d_print_params(struct fimg2d_blit __user *u)
 
 static int fimg2d_check_params(struct fimg2d_blit __user *u)
 {
-	struct fimg2d_clip *c;
-	struct fimg2d_image *s, *d, *m;
+	int w, h;
 	struct fimg2d_rect *sr, *dr, *mr;
 
 	if (u->op < 0 || u->op >= BLIT_OP_END)
 		goto err_op;
 
-	if (!u->src && u->op != BLIT_OP_SOLID_FILL && u->op != BLIT_OP_CLR)
-		goto err_src;
-
 	if (u->src) {
-		s = u->src;
+		w = u->src->width;
+		h = u->src->height;
 		sr = u->src_rect;
 
 		if (!sr ||
-			sr->x1 < 0 || sr->x2 > s->width ||
-			sr->y1 < 0 || sr->y2 > s->height)
+			sr->x1 < 0 || sr->x2 > w ||
+			sr->y1 < 0 || sr->y2 > h ||
+			sr->x1 == sr->x2 || sr->y1 == sr->y2)
 			goto err_src_rect;
 
 		/* 8000: max width & height */
-		if (s->width > 8000 || s->height > 8000)
+		if (w > 8000 || h > 8000)
 			goto err_src_rect;
 	}
 
 	if (u->msk) {
-		m = u->msk;
+		w = u->msk->width;
+		h = u->msk->height;
 		mr = u->msk_rect;
 
 		if (!mr ||
-			mr->x1 < 0 || mr->x2 > m->width ||
-			mr->y1 < 0 || mr->y2 > m->height)
+			mr->x1 < 0 || mr->x2 > w ||
+			mr->y1 < 0 || mr->y2 > h ||
+			mr->x1 == mr->x2 || mr->y1 == mr->y2)
 			goto err_msk_rect;
 
 		/* 8000: max width & height */
-		if (m->width > 8000 || m->height > 8000)
+		if (w > 8000 || h > 8000)
 			goto err_msk_rect;
 	}
 
 	if (u->dst) {
-		d = u->dst;
+		w = u->dst->width;
+		h = u->dst->height;
 		dr = u->dst_rect;
 
-		if (!dr || dr->x1 < 0 || dr->y1 < 0)
-			goto err_dst_rect;
-
-		if (!u->clipping && (dr->x2 > d->width || dr->y2 > d->height))
+		if (!dr ||
+			dr->x1 < 0 || dr->x1 >= w ||
+			dr->y1 < 0 || dr->y1 >= h ||
+			dr->x1 == dr->x2 || dr->y1 == dr->y2)
 			goto err_dst_rect;
 
 		/* 8000: max width & height */
-		if (d->width > 8000 || d->height > 8000)
+		if (w > 8000 || h > 8000)
 			goto err_src_rect;
-	}
-
-	if (u->clipping && u->clipping->enable) {
-		c = u->clipping;
-		d = u->dst;
-
-		if (c->x1 < 0 || c->x1 >= d->width ||
-			c->y1 < 0 || c->y1 >= d->height)
-			goto err_clip;
 	}
 
 	return 0;
 
 err_op:
-	printk(KERN_ERR "%s: invalid op or src\n", __func__);
-	return -1;
-err_src:
-	printk(KERN_ERR "%s: invalid src\n", __func__);
+	printk(KERN_ERR "%s: invalid op\n", __func__);
 	return -1;
 err_src_rect:
 	printk(KERN_ERR "%s: invalid src rect\n", __func__);
@@ -204,14 +193,12 @@ err_msk_rect:
 err_dst_rect:
 	printk(KERN_ERR "%s: invalid dst rect\n", __func__);
 	return -1;
-err_clip:
-	printk(KERN_ERR "%s: invalid clipping\n", __func__);
-	return -1;
 }
 
 static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 {
-	if (cmd->scaling.mode != NO_SCALING) {
+	/* fix up scaling */
+	if (cmd->scaling.mode) {
 		if (cmd->scaling.factor == SCALING_PERCENTAGE) {
 			if ((!cmd->scaling.scale_w && !cmd->scaling.scale_h) ||
 				(cmd->scaling.scale_w == 100 && cmd->scaling.scale_h == 100)) {
@@ -225,29 +212,39 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 		}
 	}
 
-	if (cmd->clipping.enable) {
-		if (cmd->clipping.x2 > cmd->dst.width) {
-			fimg2d_debug("fixing up cipping coord x2: %d --> %d\n",
-					cmd->clipping.x2, cmd->dst.width);
-			cmd->clipping.x2 = cmd->dst.width;
-		}
+	/* fix up dst rect */
+	if (cmd->dst_rect.x2 > cmd->dst.width) {
+		fimg2d_debug("fixing up dst coord x2: %d --> %d\n",
+				cmd->dst_rect.x2, cmd->dst.width);
+		cmd->dst_rect.x2 = cmd->dst.width;
+	}
+	if (cmd->dst_rect.y2 > cmd->dst.height) {
+		fimg2d_debug("fixing up dst coord y2: %d --> %d\n",
+				cmd->dst_rect.y2, cmd->dst.height);
+		cmd->dst_rect.y2 = cmd->dst.height;
+	}
 
-		if (cmd->clipping.y2 > cmd->dst.height) {
-			fimg2d_debug("fixing up cipping coord y2: %d --> %d\n",
-					cmd->clipping.y2, cmd->dst.height);
-			cmd->clipping.y2 = cmd->dst.height;
+	/* fix up clip rect */
+	if (cmd->clipping.enable) {
+		if (cmd->clipping.x1 < cmd->dst_rect.x1) {
+			fimg2d_debug("fixing up cipping coord x1: %d --> %d\n",
+					cmd->clipping.x1, cmd->dst_rect.x1);
+			cmd->clipping.x1 = cmd->dst_rect.x1;
 		}
-	} else {
-		if (cmd->dst_rect.x2 > cmd->dst.width ||
-			cmd->dst_rect.y2 > cmd->dst.height) {
-			cmd->clipping.enable = true;
-			cmd->clipping.x1 = 0;
-			cmd->clipping.y1 = 0;
-			cmd->clipping.x2 = cmd->dst.width;
-			cmd->clipping.y2 = cmd->dst.height;
-			fimg2d_debug("auto clipping (LT:%d,%d RB:%d,%d)\n",
-					cmd->clipping.x1, cmd->clipping.y1,
-					cmd->clipping.x2, cmd->clipping.y2);
+		if (cmd->clipping.y1 < cmd->dst_rect.y1) {
+			fimg2d_debug("fixing up cipping coord y1: %d --> %d\n",
+					cmd->clipping.y1, cmd->dst_rect.y1);
+			cmd->clipping.y1 = cmd->dst_rect.y1;
+		}
+		if (cmd->clipping.x2 > cmd->dst_rect.x2) {
+			fimg2d_debug("fixing up cipping coord x2: %d --> %d\n",
+					cmd->clipping.x2, cmd->dst_rect.x2);
+			cmd->clipping.x2 = cmd->dst_rect.x2;
+		}
+		if (cmd->clipping.y2 > cmd->dst_rect.y2) {
+			fimg2d_debug("fixing up cipping coord y2: %d --> %d\n",
+					cmd->clipping.y2, cmd->dst_rect.y2);
+			cmd->clipping.y2 = cmd->dst_rect.y2;
 		}
 	}
 }
@@ -287,22 +284,22 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 	cmd->dither = u->dither;
 	cmd->rotate = u->rotate;
 
-	if (u->scaling) {
+	if (u->scaling && u->scaling->mode) {
 		if (copy_from_user(&cmd->scaling, u->scaling, sizeof(cmd->scaling)))
 			goto err_user;
 	}
 
-	if (u->repeat) {
+	if (u->repeat && u->repeat->mode) {
 		if (copy_from_user(&cmd->repeat, u->repeat, sizeof(cmd->repeat)))
 			goto err_user;
 	}
 
-	if (u->bluscr) {
+	if (u->bluscr && u->bluscr->mode) {
 		if (copy_from_user(&cmd->bluscr, u->bluscr, sizeof(cmd->bluscr)))
 			goto err_user;
 	}
 
-	if (u->clipping) {
+	if (u->clipping && u->clipping->enable) {
 		if (copy_from_user(&cmd->clipping, u->clipping, sizeof(cmd->clipping)))
 			goto err_user;
 	}

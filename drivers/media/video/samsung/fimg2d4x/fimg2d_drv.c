@@ -111,6 +111,7 @@ wait:
 			}
 			printk(KERN_ERR "ctx %p wait timeout\n", ctx);
 		}
+		fimg2d_debug("ctx %p wake up\n", ctx);
 	}
 }
 

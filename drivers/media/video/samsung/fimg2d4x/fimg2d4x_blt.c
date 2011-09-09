@@ -119,6 +119,11 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 		ctx = cmd->ctx;
 
+		if (info->err) {
+			printk(KERN_ERR "%s: fatal error\n", __func__);
+			goto blitend;
+		}
+
 		atomic_set(&info->busy, 1);
 
 		/* cache operation */
@@ -131,7 +136,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		if (cmd->dst.addr.type == ADDR_USER) {
 #ifdef CONFIG_S5P_SYSTEM_MMU
 			s5p_sysmmu_set_tablebase_pgd(SYSMMU_MDMA, virt_to_phys(ctx->mm->pgd));
-			fimg2d_debug("set sysmmu ctx: %p pgd: %p\n",
+			fimg2d_debug("set sysmmu table base: ctx %p pgd %p\n",
 					ctx, (void *)virt_to_phys(ctx->mm->pgd));
 #endif
 		}
@@ -146,7 +151,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		ret = wait_event_timeout(info->wait_q, !atomic_read(&info->busy), 1000);
 		if (!ret) {
 			info->err = true;
-			printk(KERN_ERR "[%s] wait timeout\n", __func__);
+			printk(KERN_ERR "[%s] ctx %p wait timeout\n", __func__, ctx);
 		} else {
 			fimg2d_debug("blitter wake up\n");
 		}
@@ -156,6 +161,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		get_blit_perf(&start, &end);
 #endif
 
+blitend:
 		spin_lock(&info->bltlock);
 		fimg2d_dequeue(info, &cmd->node);
 		kfree(cmd);
