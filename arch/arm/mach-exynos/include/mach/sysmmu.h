@@ -39,7 +39,7 @@ typedef enum exynos4_sysmmu_ips sysmmu_ips;
 
 static inline const char *get_sysmmu_name(sysmmu_ips ips)
 {
-#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+#ifdef CONFIG_S5P_SYSTEM_MMU
 	extern const char *sysmmu_ips_name[EXYNOS4_SYSMMU_TOTAL_IPNUM];
 	return sysmmu_ips_name[ips];
 #else
@@ -47,7 +47,7 @@ static inline const char *get_sysmmu_name(sysmmu_ips ips)
 #endif
 }
 
-#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+#ifdef CONFIG_S5P_SYSTEM_MMU
 struct device;
 void sysmmu_clk_init(sysmmu_ips ips, struct device *dev);
 void sysmmu_clk_enable(sysmmu_ips ips);

@@ -81,11 +81,6 @@ config EXYNOS4_DEV_PD
 	help
 	  Compile in platform device definitions for Power Domain
 
-config EXYNOS4_DEV_SYSMMU
-	bool
-	help
-	  Common setup code for SYSTEM MMU in EXYNOS4
-
 config EXYNOS4_DEV_DWMCI
 	bool
 	help
@@ -295,6 +290,7 @@ config MACH_SMDKC210
 	select S3C_DEV_HSMMC3
 	select S3C_DEV_HWMON if S3C_ADC
 	select S5P_DEV_USB_EHCI
+	select S5P_SYSTEM_MMU
 	select SAMSUNG_DEV_KEYPAD
 	select SAMSUNG_DEV_ADC
 	select SAMSUNG_DEV_TS
@@ -302,7 +298,6 @@ config MACH_SMDKC210
 	select SAMSUNG_DEV_PWM
 	select SAMSUNG_DEV_BACKLIGHT
 	select EXYNOS4_DEV_PD
-	select EXYNOS4_DEV_SYSMMU
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
@@ -331,6 +326,7 @@ config MACH_SMDKV310
 	select S3C_DEV_HSMMC3
 	select S3C_DEV_HWMON if S3C_ADC
 	select S5P_DEV_USB_EHCI
+	select S5P_SYSTEM_MMU
 	select SAMSUNG_DEV_PWM
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_KEYPAD
@@ -338,7 +334,6 @@ config MACH_SMDKV310
 	select SAMSUNG_DEV_TS
 	select SAMSUNG_DEV_TS1
 	select EXYNOS4_DEV_PD
-	select EXYNOS4_DEV_SYSMMU
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
@@ -356,8 +351,8 @@ config MACH_ARMLEX4210
 	select S3C_DEV_HSMMC
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
+	select S5P_SYSTEM_MMU
 	select EXYNOS4_DEV_AHCI
-	select EXYNOS4_DEV_SYSMMU
 	select EXYNOS4_SETUP_SDHCI
 	help
 	  Machine support for Samsung ARMLEX4210 based on EXYNOS4210
@@ -401,7 +396,7 @@ config MACH_NURI
 config MACH_FPGA4212
 	bool "FPGA4212 board"
 	select CPU_EXYNOS4212
-	select EXYNOS4_DEV_SYSMMU
+	select S5P_SYSTEM_MMU
 	select S5P_DEV_FIMG2D
 	help
 	  Machine support for Samsung FPGA4212
@@ -427,6 +422,7 @@ config MACH_SMDK4212
 	select S5P_DEV_USB_EHCI
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_USB_SWITCH
+	select S5P_SYSTEM_MMU
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_I2C1
@@ -437,7 +433,6 @@ config MACH_SMDK4212
 	select EXYNOS4_SETUP_I2C7
 	select EXYNOS4_SETUP_USB_PHY
 	select EXYNOS4_SETUP_KEYPAD
-	select EXYNOS4_DEV_SYSMMU
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_PWM
 	select SAMSUNG_DEV_KEYPAD

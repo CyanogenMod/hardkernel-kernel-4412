@@ -1858,7 +1858,7 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos4_device_pd[PD_CAM],
 	&exynos4_device_pd[PD_TV],
 	&exynos4_device_pd[PD_GPS],
-#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+#ifdef CONFIG_S5P_SYSTEM_MMU
 	&exynos4_device_sysmmu[SYSMMU_MDMA],
 	&exynos4_device_sysmmu[SYSMMU_SSS],
 	&exynos4_device_sysmmu[SYSMMU_FIMC0],

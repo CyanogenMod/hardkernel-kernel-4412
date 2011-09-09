@@ -1555,7 +1555,7 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_MFC5X
 	&s5p_device_mfc,
 #endif
-#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+#ifdef CONFIG_S5P_SYSTEM_MMU
 	&exynos4_device_sysmmu[SYSMMU_MDMA],
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D

@@ -614,7 +614,7 @@ static struct platform_device *universal_devices[] __initdata = {
 	&s3c_device_hsmmc2,
 	&s3c_device_hsmmc3,
 	&s3c_device_i2c5,
-#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+#ifdef CONFIG_S5P_SYSTEM_MMU
 	&exynos4_device_sysmmu[SYSMMU_MDMA],
 	&exynos4_device_sysmmu[SYSMMU_SSS],
 	&exynos4_device_sysmmu[SYSMMU_FIMC0],

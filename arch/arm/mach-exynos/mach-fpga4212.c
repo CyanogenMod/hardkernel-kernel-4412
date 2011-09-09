@@ -81,7 +81,7 @@ static struct fimg2d_platdata fimg2d_data __initdata = {
 #endif
 
 static struct platform_device *smdkv310_devices[] __initdata = {
-#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+#ifdef CONFIG_S5P_SYSTEM_MMU
 	&exynos4_device_sysmmu[SYSMMU_MDMA],
 	&exynos4_device_sysmmu[SYSMMU_SSS],
 	&exynos4_device_sysmmu[SYSMMU_FIMC0],

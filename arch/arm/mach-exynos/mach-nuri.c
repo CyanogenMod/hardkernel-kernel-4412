@@ -371,7 +371,7 @@ static struct platform_device *nuri_devices[] __initdata = {
 	&s5p_device_ehci,
 	&s3c_device_i2c3,
 
-#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+#ifdef CONFIG_S5P_SYSTEM_MMU
 	&exynos4_device_sysmmu[SYSMMU_MDMA],
 	&exynos4_device_sysmmu[SYSMMU_SSS],
 	&exynos4_device_sysmmu[SYSMMU_FIMC0],

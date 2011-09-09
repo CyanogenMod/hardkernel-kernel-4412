@@ -156,7 +156,7 @@ static struct platform_device *armlex4210_devices[] __initdata = {
 	&s3c_device_hsmmc3,
 	&s3c_device_rtc,
 	&s3c_device_wdt,
-#ifdef CONFIG_EXYNOS4_DEV_SYSMMU
+#ifdef CONFIG_S5P_SYSTEM_MMU
 	&exynos4_device_sysmmu[SYSMMU_MDMA],
 	&exynos4_device_sysmmu[SYSMMU_SSS],
 	&exynos4_device_sysmmu[SYSMMU_FIMC0],
