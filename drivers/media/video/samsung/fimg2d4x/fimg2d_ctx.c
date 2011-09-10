@@ -264,19 +264,16 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 		return -ENOMEM;
 	}
 
-	cmd->ctx = ctx;
-	cmd->seq_no = u->seq_no;
-
-	fimg2d_debug("ctx: %p, seq_no(%u)\n", cmd->ctx, cmd->seq_no);
-
 	if (info->err) {
-		printk(KERN_ERR "%s: unrecoverable hardware error\n", __func__);
+		printk(KERN_ERR "%s: previous unrecoverable hardware error\n", __func__);
 		goto err_user;
 	}
 
 	if (fimg2d_check_params(u))
 		goto err_user;
 
+	cmd->ctx = ctx;
+	cmd->seq_no = u->seq_no;
 	cmd->op = u->op;
 	cmd->fillcolor = u->fillcolor;
 	cmd->g_alpha = u->g_alpha;
@@ -343,8 +340,10 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 	spin_lock(&info->bltlock);
 	atomic_inc(&ctx->ncmd);
 	fimg2d_enqueue(info, &cmd->node, &info->cmd_q);
-	fimg2d_debug("ctx: %p, ncmd(%d) seq_no(%u)\n",
-			cmd->ctx, atomic_read(&ctx->ncmd), cmd->seq_no);
+	fimg2d_debug("ctx %p pgd %p ncmd(%d) seq_no(%u)\n",
+			cmd->ctx, (void *)virt_to_phys(cmd->ctx->mm->pgd),
+			atomic_read(&ctx->ncmd), cmd->seq_no);
+
 	spin_unlock(&info->bltlock);
 
 	return 0;
@@ -360,12 +359,12 @@ inline void fimg2d_add_context(struct fimg2d_control *info, struct fimg2d_contex
 	init_waitqueue_head(&ctx->wait_q);
 
 	atomic_inc(&info->nctx);
-	fimg2d_debug("ctx: %p nctx(%d)\n", ctx, atomic_read(&info->nctx));
+	fimg2d_debug("ctx %p nctx(%d)\n", ctx, atomic_read(&info->nctx));
 }
 
 inline void fimg2d_del_context(struct fimg2d_control *info, struct fimg2d_context *ctx)
 {
 	atomic_dec(&info->nctx);
-	fimg2d_debug("ctx: %p nctx(%d)\n", ctx, atomic_read(&info->nctx));
+	fimg2d_debug("ctx %p nctx(%d)\n", ctx, atomic_read(&info->nctx));
 }
 
