@@ -882,7 +882,9 @@ static inline int fimc_mmap_cap(struct file *filp, struct vm_area_struct *vma)
 	u32 size = vma->vm_end - vma->vm_start;
 	u32 pfn, idx = vma->vm_pgoff;
 
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	if (!ctrl->cap->cacheable)
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
 	vma->vm_flags |= VM_RESERVED;
 
 	/*

@@ -96,6 +96,10 @@
 #define FRAME_SEQ		0xf
 
 #define fimc_cam_use		((pdata->use_cam) ? 1 : 0)
+
+#define L2_FLUSH_ALL	SZ_1M
+#define L1_FLUSH_ALL	SZ_64K
+
 /*
  * ENUMERATIONS
 */
@@ -257,6 +261,7 @@ struct fimc_capinfo {
 	/* flip: V4L2_CID_xFLIP, rotate: 90, 180, 270 */
 	u32			flip;
 	u32			rotate;
+	bool			cacheable;
 };
 
 /* for output overlay device */

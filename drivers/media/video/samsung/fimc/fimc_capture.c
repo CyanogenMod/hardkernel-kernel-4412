@@ -18,12 +18,15 @@
 #include <linux/videodev2_samsung.h>
 #include <linux/clk.h>
 #include <linux/mm.h>
+#include <linux/dma-mapping.h>
 #include <linux/io.h>
 #include <linux/uaccess.h>
 #include <plat/media.h>
 #include <plat/clock.h>
 #include <plat/fimc.h>
 #include <linux/delay.h>
+
+#include <asm/cacheflush.h>
 
 #include "fimc.h"
 
@@ -175,6 +178,14 @@ static const struct v4l2_queryctrl fimc_controls[] = {
 		.step = 1,
 		.default_value = 0,
 		.flags = V4L2_CTRL_FLAG_READ_ONLY,
+	}, {
+		.id = V4L2_CID_CACHEABLE,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "Cacheable",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
 	},
 };
 
@@ -1488,6 +1499,10 @@ int fimc_g_ctrl_capture(void *fh, struct v4l2_control *c)
 		c->value = (ctrl->cap->flip & FIMC_YFLIP) ? 1 : 0;
 		break;
 
+	case V4L2_CID_CACHEABLE:
+		c->value = ctrl->cap->cacheable;
+		break;
+
 	default:
 		/* get ctrl supported by subdev */
 		/* WriteBack doesn't have subdev_call */
@@ -1616,6 +1631,12 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		if (ctrl->is.sd)
 			ret = v4l2_subdev_call(ctrl->is.sd, core, s_ctrl, c);
 		break;
+
+	case V4L2_CID_CACHEABLE:
+		ctrl->cap->cacheable = c->value;
+		ret = 0;
+		break;
+
 	default:
 		/* try on subdev */
 		/* WriteBack doesn't have subdev_call */
@@ -2094,7 +2115,8 @@ int fimc_dqbuf_capture(void *fh, struct v4l2_buffer *b)
 	struct fimc_control *ctrl = fh;
 	struct fimc_capinfo *cap = ctrl->cap;
 	struct fimc_buf_set *buf;
-	int pp, ret = 0;
+	size_t length = 0;
+	int i, pp, ret = 0;
 
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 
@@ -2138,6 +2160,48 @@ int fimc_dqbuf_capture(void *fh, struct v4l2_buffer *b)
 		if (ret) {
 			b->index = -1;
 			fimc_err("%s: no inqueue buffer\n", __func__);
+		}
+	}
+
+	if (!cap->cacheable)
+		return ret;
+
+	for (i = 0; i < 3; i++) {
+		if (cap->bufs[b->index].base[i])
+			length += cap->bufs[b->index].length[i];
+		else
+			break;
+	}
+
+	if (length > (unsigned long) L2_FLUSH_ALL) {
+		flush_cache_all();      /* L1 */
+		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
+		outer_flush_all();      /* L2 */
+	} else if (length > (unsigned long) L1_FLUSH_ALL) {
+		flush_cache_all();      /* L1 */
+		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
+
+		for (i = 0; i < 3; i++) {
+			phys_addr_t start = cap->bufs[b->index].base[i];
+			phys_addr_t end   = cap->bufs[b->index].base[i] +
+					    cap->bufs[b->index].length[i] - 1;
+
+			if (!start)
+				break;
+
+			outer_flush_range(start, end);  /* L2 */
+		}
+	} else {
+		for (i = 0; i < 3; i++) {
+			phys_addr_t start = cap->bufs[b->index].base[i];
+			phys_addr_t end   = cap->bufs[b->index].base[i] +
+					    cap->bufs[b->index].length[i] - 1;
+
+			if (!start)
+				break;
+
+			dmac_flush_range(phys_to_virt(start), phys_to_virt(end));
+			outer_flush_range(start, end);  /* L2 */
 		}
 	}
 
