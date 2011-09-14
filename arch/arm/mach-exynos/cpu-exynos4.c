@@ -333,10 +333,10 @@ static int __init exynos4_l2x0_cache_init(void)
 #else
 	/* TAG, Data Latency Control: 2cycle */
 	__raw_writel(0x110, S5P_VA_L2CC + L2X0_TAG_LATENCY_CTRL);
-	if (cpu_is_exynos4212())
-		__raw_writel(0x120, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
-	else
+	if (cpu_is_exynos4210())
 		__raw_writel(0x110, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
+	else
+		__raw_writel(0x120, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
 
 	/* L2X0 Prefetch Control */
 	__raw_writel(0x30000007, S5P_VA_L2CC + L2X0_PREFETCH_CTRL);
