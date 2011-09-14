@@ -45,6 +45,20 @@ extern struct clksrc_sources clkset_group;
 
 extern struct clk *clkset_mout_mfc0_list[];
 
+/* For vpll  */
+struct vpll_div_data {
+	u32 rate;
+	u32 pdiv;
+	u32 mdiv;
+	u32 sdiv;
+	u32 k;
+	u32 mfr;
+	u32 mrr;
+	u32 vsel;
+};
+
+extern struct clk_ops exynos4_vpll_ops;
+
 extern int exynos4_clksrc_mask_fsys_ctrl(struct clk *clk, int enable);
 extern int exynos4_clk_ip_fsys_ctrl(struct clk *clk, int enable);
 extern int exynos4_clk_ip_lcd1_ctrl(struct clk *clk, int enable);

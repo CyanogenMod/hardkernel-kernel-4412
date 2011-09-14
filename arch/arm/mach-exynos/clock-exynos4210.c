@@ -76,6 +76,68 @@ static struct clksrc_clk clksrcs[] = {
 	},
 };
 
+static struct vpll_div_4210_data vpll_div_4210[] = {
+	{54000000, 3, 53, 3, 1024, 0, 17, 0},
+	{108000000, 3, 53, 2, 1024, 0, 17, 0},
+	{260000000, 3, 63, 1, 1950, 0, 20, 1},
+	{330000000, 2, 53, 1, 2048, 1,  1, 1},
+#ifdef CONFIG_EXYNOS4_MSHC_VPLL_46MHZ
+	{370882812, 3, 44, 0, 2417, 0, 14, 0},
+#endif
+};
+
+static unsigned long exynos4210_vpll_get_rate(struct clk *clk)
+{
+	return clk->rate;
+}
+
+static int exynos4210_vpll_set_rate(struct clk *clk, unsigned long rate)
+{
+	unsigned int vpll_con0, vpll_con1;
+	unsigned int i;
+
+	/* Return if nothing changed */
+	if (clk->rate == rate)
+		return 0;
+
+	vpll_con0 = __raw_readl(S5P_VPLL_CON0);
+	vpll_con0 &= ~(0x1 << 27 |					\
+			PLL90XX_MDIV_MASK << PLL90XX_MDIV_SHIFT |	\
+			PLL90XX_PDIV_MASK << PLL90XX_PDIV_SHIFT |	\
+			PLL90XX_SDIV_MASK << PLL90XX_SDIV_SHIFT);
+
+	vpll_con1 = __raw_readl(S5P_VPLL_CON1);
+	vpll_con1 &= ~(0x1f << 24 |	\
+			0x3f << 16 |	\
+			0xfff << 0);
+
+	for (i = 0; i < ARRAY_SIZE(vpll_div_4210); i++) {
+		if (vpll_div_4210[i].rate == rate) {
+			vpll_con0 |= vpll_div_4210[i].vsel << 27;
+			vpll_con0 |= vpll_div_4210[i].pdiv << PLL90XX_PDIV_SHIFT;
+			vpll_con0 |= vpll_div_4210[i].mdiv << PLL90XX_MDIV_SHIFT;
+			vpll_con0 |= vpll_div_4210[i].sdiv << PLL90XX_SDIV_SHIFT;
+			vpll_con1 |= vpll_div_4210[i].mrr << 24;
+			vpll_con1 |= vpll_div_4210[i].mfr << 16;
+			vpll_con1 |= vpll_div_4210[i].k << 0;
+			break;
+		}
+	}
+
+	if (i == ARRAY_SIZE(vpll_div_4210)) {
+		printk(KERN_ERR "%s: Invalid Clock VPLL Frequency\n",
+				__func__);
+		return -EINVAL;
+	}
+
+	__raw_writel(vpll_con0, S5P_VPLL_CON0);
+	__raw_writel(vpll_con1, S5P_VPLL_CON1);
+
+	clk->rate = rate;
+
+	return 0;
+}
+
 #ifdef CONFIG_PM
 static int exynos4210_clock_suspend(void)
 {
@@ -131,6 +193,9 @@ void __init exynos4210_register_clocks(void)
 	clk_sclk_fimg2d.reg_div.reg = S5P_CLKDIV_IMAGE;
 	clk_sclk_fimg2d.reg_div.shift = 0;
 	clk_sclk_fimg2d.reg_div.size = 4;
+
+	exynos4_vpll_ops.get_rate = exynos4210_vpll_get_rate;
+	exynos4_vpll_ops.set_rate = exynos4210_vpll_set_rate;
 
 	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
 		s3c_register_clksrc(sysclks[ptr], 1);
