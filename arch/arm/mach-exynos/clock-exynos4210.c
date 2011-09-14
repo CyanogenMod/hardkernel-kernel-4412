@@ -76,7 +76,7 @@ static struct clksrc_clk clksrcs[] = {
 	},
 };
 
-static struct vpll_div_4210_data vpll_div_4210[] = {
+static struct vpll_div_data vpll_div_4210[] = {
 	{54000000, 3, 53, 3, 1024, 0, 17, 0},
 	{108000000, 3, 53, 2, 1024, 0, 17, 0},
 	{260000000, 3, 63, 1, 1950, 0, 20, 1},
