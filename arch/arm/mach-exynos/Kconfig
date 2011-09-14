@@ -86,6 +86,11 @@ config EXYNOS4_DEV_DWMCI
 	help
 	  Compile in platform device definitions for DWMCI
 
+config EXYNOS4_DEV_FIMC_LITE
+	bool
+	help
+	  Compile in platform device definitions for FIMC_LITE
+
 config EXYNOS4_DEV_FIMC_IS
 	bool
 	depends on VIDEO_EXYNOS_FIMC_IS
@@ -437,6 +442,7 @@ config MACH_SMDK4212
 	select SAMSUNG_DEV_PWM
 	select SAMSUNG_DEV_KEYPAD
 	select EXYNOS4_DEV_PD
+	select EXYNOS4_DEV_FIMC_LITE
 	help
 	  Machine support for Samsung SMDK4212
 endmenu
