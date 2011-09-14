@@ -25,16 +25,11 @@ static struct resource exynos4_fimc_is_resource[] = {
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
-		.start	= 0x12390000,
-		.end	= 0x12390000 + SZ_64K - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	[2] = {
 		.start	= IRQ_FIMC_IS0,
 		.end	= IRQ_FIMC_IS0,
 		.flags	= IORESOURCE_IRQ,
 	},
-	[3] = {
+	[2] = {
 		.start	= IRQ_FIMC_IS1,
 		.end	= IRQ_FIMC_IS1,
 		.flags	= IORESOURCE_IRQ,
@@ -43,7 +38,7 @@ static struct resource exynos4_fimc_is_resource[] = {
 
 struct platform_device exynos4_device_fimc_is = {
 	.name		= "exynos4-fimc-is",
-	.id		= 0,
+	.id		= -1,
 	.num_resources	= ARRAY_SIZE(exynos4_fimc_is_resource),
 	.resource	= exynos4_fimc_is_resource,
 };
@@ -60,6 +55,7 @@ void __init exynos4_fimc_is_set_platdata(struct exynos4_platform_fimc_is *pd)
 		pd = &exynos4_fimc_is_default_data;
 
 	npd = kmemdup(pd, sizeof(struct exynos4_platform_fimc_is), GFP_KERNEL);
+
 	if (!npd)
 		printk(KERN_ERR "%s: no memory for platform data\n", __func__);
 	else
