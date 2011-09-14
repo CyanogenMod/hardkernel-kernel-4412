@@ -42,6 +42,12 @@ config CPU_EXYNOS4212
 	help
 	  Enable EXYNOS4212 CPU support
 
+config CPU_EXYNOS4412
+	bool
+	select S3C_PL330_DMA
+	help
+	  Enable EXYNOS4412 CPU support
+
 config CPU_EXYNOS5210
 	bool
 	help
@@ -403,6 +409,7 @@ config MACH_FPGA4212
 config MACH_SMDK4212
 	bool "SMDK4212 board"
 	select CPU_EXYNOS4212
+	select CPU_EXYNOS4412
 	select S5P_GPIO_INT
 	select S3C_DEV_WDT
 	select S3C_DEV_RTC

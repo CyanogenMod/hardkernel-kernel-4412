@@ -38,6 +38,8 @@
 #include <mach/regs-pmu.h>
 #include <mach/smc.h>
 
+unsigned int gic_bank_offset __read_mostly;
+
 extern int combiner_init(unsigned int combiner_nr, void __iomem *base,
 			 unsigned int irq_start);
 extern void combiner_cascade_irq(unsigned int combiner_nr, unsigned int irq);
@@ -192,10 +194,10 @@ void __init exynos4_map_io(void)
 {
 	iotable_init(exynos4_iodesc, ARRAY_SIZE(exynos4_iodesc));
 
-	if (cpu_is_exynos4212())
-		iotable_init(exynos4_iodesc_4212, ARRAY_SIZE(exynos4_iodesc_4212));
-	else
+	if (cpu_is_exynos4210())
 		iotable_init(exynos4_iodesc_4210, ARRAY_SIZE(exynos4_iodesc_4210));
+	else
+		iotable_init(exynos4_iodesc_4212, ARRAY_SIZE(exynos4_iodesc_4212));
 
 #ifndef CONFIG_MACH_FPGA4212
 	/* initialize device information early */
@@ -244,7 +246,7 @@ void __init exynos4_init_clocks(int xtal)
 
 	if (cpu_is_exynos4210())
 		exynos4210_register_clocks();
-	else if (cpu_is_exynos4212())
+	else
 		exynos4212_register_clocks();
 
 #ifndef CONFIG_MACH_FPGA4212
@@ -259,15 +261,17 @@ static void exynos4_gic_fix_base(struct irq_data *d)
 	struct gic_chip_data *gic_data = irq_data_get_irq_chip_data(d);
 
 	gic_data->cpu_base = S5P_VA_GIC_CPU +
-			    (EXYNOS4_GIC_BANK_OFFSET * smp_processor_id());
+			    (gic_bank_offset * smp_processor_id());
 
 	gic_data->dist_base = S5P_VA_GIC_DIST +
-			    (EXYNOS4_GIC_BANK_OFFSET * smp_processor_id());
+			    (gic_bank_offset * smp_processor_id());
 }
 
 void __init exynos4_init_irq(void)
 {
 	int irq;
+
+	gic_bank_offset = cpu_is_exynos4412() ? 0x4000 : 0x8000;
 
 	gic_init(0, IRQ_PPI_MCT_L, S5P_VA_GIC_DIST, S5P_VA_GIC_CPU);
 	gic_arch_extn.irq_eoi = exynos4_gic_fix_base;

@@ -21,6 +21,7 @@ extern unsigned long cpu_idcode;
 #define	S5P_CPU_ID_V210			0x43110000
 #define	EXYNOS_CPU_ID_4210		0x43210000
 #define	EXYNOS_CPU_ID_4212		0x43220000
+#define	EXYNOS_CPU_ID_4412		0xe4412200
 
 #ifdef CONFIG_MACH_FPGA5210
 #define	EXYNOS_CPU_ID_5210		0x00000000
@@ -39,6 +40,7 @@ static inline int is_exynos ##type(void)		\
 
 IS_EXYNOS_CPU(4210, EXYNOS_CPU_ID_4210, EXYNOS_CPU_MASK)
 IS_EXYNOS_CPU(4212, EXYNOS_CPU_ID_4212, EXYNOS_CPU_MASK)
+IS_EXYNOS_CPU(4412, EXYNOS_CPU_ID_4412, EXYNOS_CPU_MASK)
 
 #ifdef CONFIG_CPU_EXYNOS4210
 #define cpu_is_exynos4210() is_exynos4210()
@@ -50,6 +52,12 @@ IS_EXYNOS_CPU(4212, EXYNOS_CPU_ID_4212, EXYNOS_CPU_MASK)
 #define cpu_is_exynos4212() is_exynos4212()
 #else
 #define cpu_is_exynos4212() 0
+#endif
+
+#ifdef CONFIG_CPU_EXYNOS4412
+#define cpu_is_exynos4412() is_exynos4412()
+#else
+#define cpu_is_exynos4412() 0
 #endif
 
 #endif /* __ASM_PLAT_CPUTYPE_H */

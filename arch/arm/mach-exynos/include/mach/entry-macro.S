@@ -17,13 +17,25 @@
 		.endm
 
 		.macro  get_irqnr_preamble, base, tmp
-		ldr	\base, =gic_cpu_base_addr
-		ldr	\base, [\base]
 #ifdef CONFIG_ARCH_EXYNOS4
-		mrc     p15, 0, \tmp, c0, c0, 5
-		and     \tmp, \tmp, #3
-		cmp     \tmp, #1
-		addeq   \base, \base, #EXYNOS4_GIC_BANK_OFFSET
+		mov	\tmp, #0
+		mrc	p15, 0, \base, c0, c0, 5
+		and	\base, \base, #3
+		cmp	\base, #0
+		beq	1f
+		ldr	\tmp, =gic_bank_offset
+		ldr	\tmp, [\tmp]
+		cmp	\base, #1
+		beq	1f
+		cmp	\base, #2
+		addeq	\tmp, \tmp, \tmp
+		addne	\tmp, \tmp, \tmp, LSL #1
+#endif
+1:		ldr	\base, =gic_cpu_base_addr
+		ldr	\base, [\base]
+
+#ifdef CONFIG_ARCH_EXYNOS4
+		add	\base, \base, \tmp
 #endif
 		.endm
 

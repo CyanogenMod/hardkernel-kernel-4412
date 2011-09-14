@@ -44,7 +44,7 @@ struct mct_clock_event_device {
 	void __iomem *base;
 };
 
-struct mct_clock_event_device mct_tick[2];
+struct mct_clock_event_device mct_tick[NR_CPUS];
 
 static void exynos4_mct_write(unsigned int value, void *addr)
 {
@@ -397,12 +397,26 @@ static void exynos4_mct_tick_init(struct clock_event_device *evt)
 
 	mct_tick[cpu].evt = evt;
 
-	if (cpu == 0) {
+	switch (cpu) {
+	case 0:
 		mct_tick[cpu].base = EXYNOS4_MCT_L0_BASE;
 		evt->name = "mct_tick0";
-	} else {
+		break;
+	case 1:
 		mct_tick[cpu].base = EXYNOS4_MCT_L1_BASE;
 		evt->name = "mct_tick1";
+		break;
+	case 2:
+		mct_tick[cpu].base = EXYNOS4_MCT_L2_BASE;
+		evt->name = "mct_tick2";
+		break;
+	case 3:
+		mct_tick[cpu].base = EXYNOS4_MCT_L3_BASE;
+		evt->name = "mct_tick3";
+		break;
+	default:
+		printk(KERN_WARNING "parameter %d exceeed mct tick number", cpu);
+		return;
 	}
 
 	evt->cpumask = cpumask_of(cpu);
@@ -465,10 +479,10 @@ static void __init exynos4_timer_resources(void)
 
 static void __init exynos4_timer_init(void)
 {
-	if (cpu_is_exynos4212())
-		mct_int_type = MCT_INT_PPI;
-	else
+	if (cpu_is_exynos4210())
 		mct_int_type = MCT_INT_SPI;
+	else
+		mct_int_type = MCT_INT_PPI;
 
 	exynos4_timer_resources();
 	exynos4_clocksource_init();
