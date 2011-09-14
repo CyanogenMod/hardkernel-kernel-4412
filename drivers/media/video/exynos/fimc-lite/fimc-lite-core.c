@@ -17,43 +17,55 @@
 
 #include "fimc-lite-core.h"
 
+static int debug = 7;
+module_param(debug, int, 0644);
+MODULE_PARM_DESC(debug, "Enable module debug trace. Set to 1 to enable.");
+
 #define MODULE_NAME		"exynos-fimc-lite"
 static struct flite_fmt flite_formats[] = {
 	{
 		.name		= "YUV422 8-bit 1 plane(UYVY)",
 		.code		= V4L2_MBUS_FMT_UYVY8_2X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_YUV422_1P,
+		.is_yuv		= 1,
 	},{
 		.name		= "YUV422 8-bit 1 plane(VYUY)",
 		.code		= V4L2_MBUS_FMT_VYUY8_2X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_YUV422_1P,
+		.is_yuv		= 1,
 	},{
 		.name		= "YUV422 8-bit 1 plane(YUYV)",
 		.code		= V4L2_MBUS_FMT_YUYV8_2X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_YUV422_1P,
+		.is_yuv		= 1,
 	},{
 		.name		= "YUV422 8-bit 1 plane(YVYU)",
 		.code		= V4L2_MBUS_FMT_YVYU8_2X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_YUV422_1P,
+		.is_yuv		= 1,
 	},{
 		/* ISP supports only GRBG order in 4212 */
 		.name		= "RAW8(GRBG)",
 		.code		= V4L2_MBUS_FMT_SGRBG8_1X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_RAW8,
+		.is_yuv		= 0,
 	},{
 		/* ISP supports only GRBG order in 4212 */
 		.name		= "RAW10(GRBG)",
 		.code		= V4L2_MBUS_FMT_SGRBG10_1X10,
 		.fmt_reg	= FLITE_REG_CIGCTRL_RAW10,
+		.is_yuv		= 0,
 	},{
 		/* ISP supports only GRBG order in 4212 */
 		.name		= "RAW12(GRBG)",
 		.code		= V4L2_MBUS_FMT_SGRBG12_1X12,
 		.fmt_reg	= FLITE_REG_CIGCTRL_RAW12,
+		.is_yuv		= 0,
 	},{
 		.name		= "User Defined(JPEG)",
 		.code		= V4L2_MBUS_FMT_JPEG_1X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_USER(1),
+		.is_yuv		= 0,
 	},
 };
 
@@ -174,9 +186,9 @@ static int flite_s_stream(struct v4l2_subdev *sd, int enable)
 	struct flite_dev *flite = to_flite_dev(sd);
 	struct s3c_platform_camera *cam = flite->pdata->cam;
 	int ret = 0;
-	u32 int_src = FLITE_REG_CIGCTRL_IRQ_STARTEN0_ENABLE |
-		FLITE_REG_CIGCTRL_IRQ_LASTEN0_ENABLE |
-		FLITE_REG_CIGCTRL_IRQ_ENDEN0_DISABLE;
+	u32 int_src = FLITE_REG_CIGCTRL_IRQ_STARTEN0_ENABLE
+		| FLITE_REG_CIGCTRL_IRQ_LASTEN0_ENABLE
+		| FLITE_REG_CIGCTRL_IRQ_ENDEN0_DISABLE;
 	unsigned long flags;
 
 	spin_lock_irqsave(&flite->slock, flags);
@@ -184,9 +196,8 @@ static int flite_s_stream(struct v4l2_subdev *sd, int enable)
 	if (test_bit(FLITE_ST_SUSPENDED, &flite->state))
 		goto s_stream_unlock;
 	if (enable) {
-		ret = flite_hw_set_cam_source_size(flite);
-		if (unlikely(ret < 0))
-			goto s_stream_unlock;
+		flite_hw_set_cam_channel(flite);
+		flite_hw_set_cam_source_size(flite);
 		flite_hw_set_camera_type(flite, cam);
 		ret = flite_hw_set_source_format(flite);
 		if (unlikely(ret < 0))
@@ -201,15 +212,18 @@ static int flite_s_stream(struct v4l2_subdev *sd, int enable)
 
 		set_bit(FLITE_ST_STREAMING, &flite->state);
 	} else {
-		if (test_and_clear_bit(FLITE_ST_STREAMING, &flite->state)) {
+		if (test_bit(FLITE_ST_STREAMING, &flite->state)) {
 			flite_hw_set_capture_stop(flite);
+			spin_unlock_irqrestore(&flite->slock, flags);
 			ret = wait_event_timeout(flite->irq_queue,
-			test_bit(FLITE_ST_STREAMING, &flite->state), HZ/20); /* 50 ms */
+			!test_bit(FLITE_ST_STREAMING, &flite->state), HZ/20); /* 50 ms */
 			if (unlikely(!ret)) {
 				v4l2_err(sd, "wait timeout\n");
 				ret = -EBUSY;
 			}
 		}
+
+		return ret;
 	}
 s_stream_unlock:
 	spin_unlock_irqrestore(&flite->slock, flags);
@@ -230,6 +244,7 @@ static irqreturn_t flite_irq_handler(int irq, void *priv)
 		v4l2_dbg(1, debug, &flite->sd, "overflow generated\n");
 		break;
 	case FLITE_REG_CISTATUS_IRQ_SRC_LASTCAPEND:
+		flite_hw_set_last_capture_end_clear(flite);
 		v4l2_dbg(1, debug, &flite->sd, "last capture end\n");
 		clear_bit(FLITE_ST_STREAMING, &flite->state);
 		wake_up(&flite->irq_queue);
@@ -258,9 +273,19 @@ static int flite_s_power(struct v4l2_subdev *sd, int on)
 
 	if (on) {
 		set_bit(FLITE_ST_POWERED, &flite->state);
+		/*
+		implement not yet
 		ret = pm_runtime_get_sync(&flite->pdev->dev);
+		if (ret)
+			v4l2_err(sd, "get_sync failed\n");
+		*/
+		clear_bit(FLITE_ST_SUSPENDED, &flite->state);
 	} else {
+		/*
+		implement not yet
 		ret = pm_runtime_put_sync(&flite->pdev->dev);
+		*/
+		set_bit(FLITE_ST_SUSPENDED, &flite->state);
 	}
 
 	if ((!ret && !on) || (ret && on))
@@ -331,6 +356,38 @@ static int flite_resume(struct device *dev)
 	return 0;
 }
 
+static int flite_runtime_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
+	struct flite_dev *flite = to_flite_dev(sd);
+	unsigned long flags;
+
+	spin_lock_irqsave(&flite->slock, flags);
+
+	set_bit(FLITE_ST_SUSPENDED, &flite->state);
+
+	spin_unlock_irqrestore(&flite->slock, flags);
+
+	return 0;
+}
+
+static int flite_runtime_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
+	struct flite_dev *flite = to_flite_dev(sd);
+	unsigned long flags;
+
+	spin_lock_irqsave(&flite->slock, flags);
+
+	clear_bit(FLITE_ST_SUSPENDED, &flite->state);
+
+	spin_unlock_irqrestore(&flite->slock, flags);
+
+	return 0;
+}
+
 static int flite_probe(struct platform_device *pdev)
 {
 	struct resource *mem_res;
@@ -344,6 +401,7 @@ static int flite_probe(struct platform_device *pdev)
 
 	flite->pdev = pdev;
 	flite->pdata = pdev->dev.platform_data;
+	flite->id = pdev->id;
 
 	init_waitqueue_head(&flite->irq_queue);
 	spin_lock_init(&flite->slock);
@@ -389,10 +447,14 @@ static int flite_probe(struct platform_device *pdev)
 
 	/* .. and a pointer to the subdev. */
 	platform_set_drvdata(pdev, &flite->sd);
-
+	/*
+	implement not yet
 	pm_runtime_enable(&pdev->dev);
+	*/
 
 	set_bit(FLITE_ST_SUSPENDED, &flite->state);
+
+	printk("probe success lite %d\n", pdev->id);
 
 	return 0;
 
@@ -412,8 +474,10 @@ static int flite_remove(struct platform_device *pdev)
 	struct resource *res = flite->regs_res;
 
 	flite_s_power(&flite->sd, 0);
+	/*
+	implement not yet
 	pm_runtime_disable(&pdev->dev);
-
+	*/
 	free_irq(flite->irq, flite);
 	iounmap(flite->regs);
 	release_mem_region(res->start, resource_size(res));
@@ -425,6 +489,8 @@ static int flite_remove(struct platform_device *pdev)
 static const struct dev_pm_ops flite_pm_ops = {
 	.suspend		= flite_suspend,
 	.resume			= flite_resume,
+	.runtime_suspend	= flite_runtime_suspend,
+	.runtime_resume		= flite_runtime_resume,
 };
 
 static struct platform_driver flite_driver = {

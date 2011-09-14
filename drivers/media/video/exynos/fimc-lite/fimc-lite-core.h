@@ -25,10 +25,6 @@
 
 #include "fimc-lite-reg.h"
 
-static int debug;
-module_param(debug, int, 0644);
-MODULE_PARM_DESC(debug, "Enable module debug trace. Set to 1 to enable.");
-
 #define FLITE_MAX_RESET_READY_TIME	20 /* 100ms */
 
 #define err(fmt, args...) \
@@ -62,6 +58,7 @@ struct flite_fmt {
 	char 				*name;
 	enum v4l2_mbus_pixelcode	code;
 	u32				fmt_reg;
+	u32				is_yuv;
 };
 
 /**
@@ -114,6 +111,7 @@ struct flite_dev {
 	unsigned long			state;
 	u32				out_path;
 	wait_queue_head_t		irq_queue;
+	u32				id;
 };
 
 /* inline function for performance-sensitive region */
@@ -133,7 +131,8 @@ static inline void flite_hw_get_int_src(struct flite_dev *dev, u32 *src)
 inline struct flite_fmt const *find_flite_format(struct
 		v4l2_mbus_framefmt *mf);
 /* fimc-reg.c */
-int flite_hw_set_cam_source_size(struct flite_dev *dev);
+void flite_hw_set_cam_source_size(struct flite_dev *dev);
+void flite_hw_set_cam_channel(struct flite_dev *dev);
 void flite_hw_set_camera_type(struct flite_dev *dev, struct s3c_platform_camera *cam);
 int flite_hw_set_source_format(struct flite_dev *dev);
 void flite_hw_set_output_dma(struct flite_dev *dev, bool enable);
@@ -142,5 +141,6 @@ void flite_hw_set_config_irq(struct flite_dev *dev, struct s3c_platform_camera *
 void flite_hw_set_window_offset(struct flite_dev *dev);
 void flite_hw_set_capture_start(struct flite_dev *dev);
 void flite_hw_set_capture_stop(struct flite_dev *dev);
+void flite_hw_set_last_capture_end_clear(struct flite_dev *dev);
 
 #endif /* FLITE_CORE_H */

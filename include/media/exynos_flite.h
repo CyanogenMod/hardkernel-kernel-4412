@@ -22,6 +22,6 @@ struct exynos_platform_flite {
 	struct s3c_platform_camera *cam;
 };
 
-extern struct exynos_platform_flite exynos_flite0_default_data;
-extern struct exynos_platform_flite exynos_flite1_default_data;
+extern void exynos_flite0_set_platdata(struct exynos_platform_flite *pd);
+extern void exynos_flite1_set_platdata(struct exynos_platform_flite *pd);
 #endif /* EXYNOS_FLITE_H_*/
