@@ -27,10 +27,10 @@
 
 static struct audss_runtime_data {
 	struct clk *mout_audss;
+	struct clk *dout_srp;
 	struct clk *rclk;
 	struct clk *srp_clk;
 
-	char	*rclksrc;
 	u32	clk_src_rate;
 	u32	suspend_audss_clksrc;
 	u32	suspend_audss_clkdiv;
@@ -122,16 +122,14 @@ int audss_set_clk_div(u32 mode)
 	pr_debug("%s: rclk shift [%d], srp shift[%d]\n",
 		__func__, rclk_shift, srp_shift);
 
-	if (audss.srp_clk) {
-		srp_clk_rate = audss.clk_src_rate >> srp_shift;
-		if (srp_clk_rate != clk_get_rate(audss.srp_clk)) {
-			clk_set_rate(audss.srp_clk, srp_clk_rate);
-			pr_debug("%s: SRP_CLK[%ld]\n",
-				__func__, clk_get_rate(audss.srp_clk));
-		}
+	srp_clk_rate = audss.clk_src_rate >> srp_shift;
+	if (srp_clk_rate != clk_get_rate(audss.srp_clk)) {
+		clk_set_rate(audss.dout_srp, srp_clk_rate);
+		pr_debug("%s: SRP_CLK[%ld]\n",
+			__func__, clk_get_rate(audss.srp_clk));
 	}
 
-	rclk_rate = audss.clk_src_rate >> rclk_shift;
+	rclk_rate = srp_clk_rate >> rclk_shift;
 	if (rclk_rate != clk_get_rate(audss.rclk)) {
 		clk_set_rate(audss.rclk, rclk_rate);
 		pr_debug("%s: I2S_CLK[%ld]\n",
@@ -183,9 +181,9 @@ void audss_clk_enable(bool enable)
 		}
 
 		clk_enable(audss.rclk);
-		if (audss.srp_clk)
-			clk_enable(audss.srp_clk);
-
+#ifdef CONFIG_SND_SAMSUNG_RP
+		clk_enable(audss.srp_clk);
+#endif
 		audss_reg_save_restore(AUDSS_REG_RESTORE);
 		audss_set_clk_div(AUDSS_ACTIVE);
 		audss.clk_enabled = true;
@@ -206,9 +204,9 @@ void audss_clk_enable(bool enable)
 		audss_reg_save_restore(AUDSS_REG_SAVE);
 
 		clk_disable(audss.rclk);
-		if (audss.srp_clk)
-			clk_disable(audss.srp_clk);
-
+#ifdef CONFIG_SND_SAMSUNG_RP
+		clk_disable(audss.srp_clk);
+#endif
 		audss.clk_enabled = false;
 
 		pr_debug("%s: CLKSRC[0x%x], CLKGATE[0x%x]\n", __func__,
@@ -226,64 +224,59 @@ static __devinit int audss_init(void)
 {
 	int ret = 0;
 
-	audss.rclksrc = rclksrc[BUSCLK];
-	audss.rclk = NULL;
-	audss.srp_clk = NULL;
-
-#ifdef CONFIG_SND_SAMSUNG_RP
-	audss.srp_clk = clk_get(NULL, "srp_clk");
-	if (IS_ERR(audss.srp_clk)) {
-		pr_err("%s:failed to get srp_clk\n", __func__);
-		ret = PTR_ERR(audss.srp_clk);
-		return ret;
-	}
-#endif
 	audss.mout_audss = clk_get(NULL, "mout_audss");
 	if (IS_ERR(audss.mout_audss)) {
 		pr_err("%s: failed to get mout audss\n", __func__);
 		ret = PTR_ERR(audss.mout_audss);
+		return ret;
+	}
+
+	audss.dout_srp = clk_get(NULL, "dout_srp");
+	if (IS_ERR(audss.dout_srp)) {
+		pr_err("%s: failed to get dout_srp\n", __func__);
+		ret = PTR_ERR(audss.dout_srp);
 		goto err1;
 	}
 
-	audss.rclk = clk_get(NULL, audss.rclksrc);
+	audss.rclk = clk_get(NULL, rclksrc[BUSCLK]);
 	if (IS_ERR(audss.rclk)) {
 		pr_err("%s: failed to get i2s root clk\n", __func__);
 		ret = PTR_ERR(audss.rclk);
 		goto err2;
 	}
-	pr_debug("%s: i2s rclk source is %s\n", __func__, audss.rclksrc);
 
-	if (clk_set_parent(audss.rclk, audss.mout_audss)) {
-		pr_err("unable to set parent %s of clock %s.\n",
+	audss.srp_clk = clk_get(NULL, "srpclk");
+	if (IS_ERR(audss.srp_clk)) {
+		pr_err("%s:failed to get srp_clk\n", __func__);
+		ret = PTR_ERR(audss.srp_clk);
+		goto err3;
+	}
+
+	if (!strcmp(audss.rclk->name, "i2sclk")) {
+		if (clk_set_parent(audss.rclk, audss.mout_audss)) {
+			pr_err("unable to set parent %s of clock %s.\n",
 				audss.mout_audss->name, audss.rclk->name);
-		goto err3;
+			goto err4;
+		}
 	}
-
-#ifdef CONFIG_SND_SAMSUNG_RP
-	if (clk_set_parent(audss.srp_clk, audss.mout_audss)) {
-		pr_err("unable to set parent %s of clock %s.\n",
-				audss.mout_audss->name, audss.srp_clk->name);
-		goto err3;
-	}
-#endif
 
 	ret = audss_set_clk_div(AUDSS_INACTIVE);
 	if (ret < 0) {
 		pr_err("%s:failed to set clock rate\n", __func__);
-		goto err3;
+		goto err4;
 	}
 
 	audss.reg_saved = false;
 
 	return ret;
-
+err4:
+	clk_put(audss.srp_clk);
 err3:
 	clk_put(audss.rclk);
 err2:
-	clk_put(audss.mout_audss);
+	clk_put(audss.dout_srp);
 err1:
-	if (audss.srp_clk)
-		clk_put(audss.srp_clk);
+	clk_put(audss.mout_audss);
 
 	return ret;
 }

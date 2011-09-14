@@ -761,16 +761,6 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 18),
 	}, {
-		.name		= "srp",
-		.enable		= exynos4_clk_audss_ctrl,
-		.ctrlbit	= S5P_AUDSS_CLKGATE_RP | S5P_AUDSS_CLKGATE_UART
-				| S5P_AUDSS_CLKGATE_TIMER,
-	}, {
-		.name		= "iis",
-		.devname	= "samsing-i2s.0",
-		.enable		= exynos4_clk_audss_ctrl,
-		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL | S5P_AUDSS_CLKGATE_I2SBUS,
-	}, {
 		.name		= "iis",
 		.devname	= "samsing-i2s.1",
 		.enable		= exynos4_clk_ip_peril_ctrl,
@@ -780,11 +770,7 @@ static struct clk init_clocks_off[] = {
 		.devname	= "samsing-i2s.2",
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 21),
-	}, {
-		.name		= "pcm",
-		.enable		= exynos4_clk_audss_ctrl,
-		.ctrlbit	= S5P_AUDSS_CLKGATE_PCMSPECIAL | S5P_AUDSS_CLKGATE_PCMBUS,
-	}, {
+	},{
 		.name		= "pcm",
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 22),
@@ -1045,26 +1031,41 @@ static struct clksrc_clk clk_sclk_audss_i2s = {
 	.reg_div = { .reg = S5P_CLKDIV_AUDSS, .shift = 8, .size = 4 },
 };
 
+static struct clksrc_clk clk_dout_audss_srp = {
+	.clk	= {
+		.name		= "dout_srp",
+		.parent		= &clk_mout_audss.clk,
+	},
+	.reg_div = { .reg = S5P_CLKDIV_AUDSS, .shift = 0, .size = 4 },
+};
+
 static struct clksrc_clk clk_sclk_audss_bus = {
 	.clk	= {
 		.name		= "busclk",
+		.parent		= &clk_dout_audss_srp.clk,
 		.enable		= exynos4_clk_audss_ctrl,
 		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SBUS,
 	},
-	.sources = &clkset_sclk_audss,
-	.reg_src = { .reg = S5P_CLKSRC_AUDSS, .shift = 2, .size = 2 },
 	.reg_div = { .reg = S5P_CLKDIV_AUDSS, .shift = 4, .size = 4 },
 };
 
-static struct clksrc_clk clk_sclk_audss_srp = {
-	.clk	= {
-		.name		= "srp_clk",
+static struct clk init_audss_clocks[] = {
+	{
+		.name		= "srpclk",
+		.parent		= &clk_dout_audss_srp.clk,
 		.enable		= exynos4_clk_audss_ctrl,
-		.ctrlbit	= S5P_AUDSS_CLKGATE_RP,
+		.ctrlbit	= S5P_AUDSS_CLKGATE_RP | S5P_AUDSS_CLKGATE_UART
+				| S5P_AUDSS_CLKGATE_TIMER,
+	}, {
+		.name		= "iis",
+		.devname	= "samsing-i2s.0",
+		.enable		= exynos4_clk_audss_ctrl,
+		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL | S5P_AUDSS_CLKGATE_I2SBUS,
+	}, {
+		.name		= "pcm",
+		.enable		= exynos4_clk_audss_ctrl,
+		.ctrlbit	= S5P_AUDSS_CLKGATE_PCMSPECIAL | S5P_AUDSS_CLKGATE_PCMBUS,
 	},
-	.sources = &clkset_sclk_audss,
-	.reg_src = { .reg = S5P_CLKSRC_AUDSS, .shift = 2, .size = 2 },
-	.reg_div = { .reg = S5P_CLKDIV_AUDSS, .shift = 0, .size = 4 },
 };
 
 static struct clk *clkset_sclk_audio1_list[] = {
@@ -1787,7 +1788,7 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_mout_audss,
 	&clk_sclk_audss_bus,
 	&clk_sclk_audss_i2s,
-	&clk_sclk_audss_srp,
+	&clk_dout_audss_srp,
 	&clk_sclk_audio0,
 	&clk_sclk_audio1,
 	&clk_sclk_audio2,
@@ -2001,9 +2002,6 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 				clk_fout_vpll.clk.name, clk_sclk_vpll.clk.name);
 #endif
 
-	if (clk_set_parent(&clk_sclk_audss_i2s.clk, &clk_mout_audss.clk))
-		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
-				clk_mout_audss.clk.name, clk_sclk_audss_i2s.clk.name);
 	if (clk_set_parent(&clk_mout_audss.clk, &clk_fout_epll))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				clk_fout_epll.name, clk_mout_audss.clk.name);
@@ -2074,6 +2072,9 @@ void __init exynos4_register_clocks(void)
 
 	s3c_register_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
 	s3c_disable_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
+
+	s3c_register_clocks(init_audss_clocks, ARRAY_SIZE(init_audss_clocks));
+	s3c_disable_clocks(init_audss_clocks, ARRAY_SIZE(init_audss_clocks));
 
 #ifndef CONFIG_MACH_FPGA5210
 	/* Register DMA Clock */
