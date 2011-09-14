@@ -271,6 +271,7 @@ const struct v4l2_ioctl_ops fimc_v4l2_ops = {
 	.vidioc_enum_fmt_vid_cap	= fimc_enum_fmt_vid_capture,
 	.vidioc_g_fmt_vid_cap		= fimc_g_fmt_vid_capture,
 	.vidioc_s_fmt_vid_cap		= fimc_s_fmt_vid_capture,
+	.vidioc_s_fmt_type_private	= fimc_s_fmt_vid_private,
 	.vidioc_try_fmt_vid_cap		= fimc_try_fmt_vid_capture,
 	.vidioc_enum_input		= fimc_enum_input,
 	.vidioc_g_input			= fimc_g_input,

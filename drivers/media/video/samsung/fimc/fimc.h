@@ -25,6 +25,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf-core.h>
+#include <media/v4l2-mediabus.h>
 #include <plat/media.h>
 #include <plat/fimc.h>
 #include <plat/cputype.h>
@@ -93,6 +94,8 @@
 
 #define check_bit(data, loc)	((data) & (0x1<<(loc)))
 #define FRAME_SEQ		0xf
+
+#define fimc_cam_use		((pdata->use_cam) ? 1 : 0)
 /*
  * ENUMERATIONS
 */
@@ -386,6 +389,17 @@ struct fimc_effect {
 	int pat_cr;
 };
 
+struct fimc_is {
+	struct v4l2_pix_format	fmt;
+	struct v4l2_mbus_framefmt mbus_fmt;
+	struct v4l2_subdev      *sd;
+	u32 frame_count;
+	u32 valid;
+	u32 bad_mark;
+	u32 offset_x;
+	u32 offset_y;
+};
+
 /* fimc controller abstration */
 struct fimc_control {
 	int				id;		/* controller id */
@@ -409,7 +423,8 @@ struct fimc_control {
 	/* v4l2 related */
 	struct video_device		*vd;
 	struct v4l2_device		v4l2_dev;
-
+	struct v4l2_subdev		*flite_sd;
+	struct fimc_is			is;
 	/* fimc specific */
 	struct fimc_limit		*limit;		/* H/W limitation */
 	struct s3c_platform_camera	*cam;		/* activated camera */
@@ -447,7 +462,8 @@ struct fimc_prv_data {
 
 /* debug macro */
 #define FIMC_LOG_DEFAULT	(FIMC_LOG_WARN | FIMC_LOG_ERR)
-
+/*#define FIMC_LOG_DEFAULT	(FIMC_LOG_WARN | FIMC_LOG_ERR |\
+		FIMC_LOG_INFO_L1 | FIMC_LOG_INFO_L2 | FIMC_LOG_DEBUG)*/
 #define FIMC_DEBUG(fmt, ...)						\
 	do {								\
 		if (ctrl->log & FIMC_LOG_DEBUG)				\
@@ -527,6 +543,7 @@ extern int fimc_s_input(struct file *file, void *fh, unsigned int i);
 extern int fimc_enum_fmt_vid_capture(struct file *file, void *fh, struct v4l2_fmtdesc *f);
 extern int fimc_g_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f);
 extern int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f);
+extern int fimc_s_fmt_vid_private(struct file *file, void *fh, struct v4l2_format *f);
 extern int fimc_try_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f);
 extern int fimc_reqbufs_capture(void *fh, struct v4l2_requestbuffers *b);
 extern int fimc_querybuf_capture(void *fh, struct v4l2_buffer *b);
@@ -670,6 +687,7 @@ extern int fimc_hwget_check_framecount_sequence(struct fimc_control *ctrl, u32 f
 extern int fimc_hwset_image_effect(struct fimc_control *ctrl);
 extern int fimc_hwset_sysreg_camblk_fimd0_wb(struct fimc_control *ctrl);
 extern int fimc_hwset_sysreg_camblk_fimd1_wb(struct fimc_control *ctrl);
+extern int fimc_hwset_sysreg_camblk_isp_wb(struct fimc_control *ctrl);
 extern int fimc_hwget_last_frame_end(struct fimc_control *ctrl);
 extern void fimc_hwset_enable_frame_end_irq(struct fimc_control *ctrl);
 extern void fimc_hwset_disable_frame_end_irq(struct fimc_control *ctrl);

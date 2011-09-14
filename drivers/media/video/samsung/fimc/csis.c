@@ -234,9 +234,11 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 	/* FIXME: how configure the followings with FIMC dynamically? */
 	s3c_csis_set_hs_settle(pdev, settle);	/* s5k6aa */
 	s3c_csis_set_data_align(pdev, align);
-	s3c_csis_set_wclk(pdev, 0);
+	s3c_csis_set_wclk(pdev, 1);
 	if (pixel_format == V4L2_PIX_FMT_JPEG)
 		s3c_csis_set_format(pdev, MIPI_USER_DEF_PACKET_1);
+	else if (pixel_format == V4L2_PIX_FMT_SGRBG10)
+		s3c_csis_set_format(pdev, MIPI_CSI_RAW10);
 	else
 		s3c_csis_set_format(pdev, MIPI_CSI_YCBCR422_8BIT);
 	s3c_csis_set_resol(pdev, width, height);

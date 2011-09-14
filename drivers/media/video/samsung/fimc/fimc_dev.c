@@ -473,8 +473,8 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 #ifdef DEBUG
 	static struct timeval curr_time, before_time;
-	if (ctrl->id == FIMC2) {
-	do_gettimeofday(&curr_time);
+	if (!fimc_cam_use) {
+		do_gettimeofday(&curr_time);
 		printk(KERN_INFO "%s : time : %ld\n", __func__,
 				curr_time.tv_usec - before_time.tv_usec);
 		before_time.tv_usec = curr_time.tv_usec;
@@ -1040,7 +1040,7 @@ static int fimc_open(struct file *filp)
 	mutex_lock(&ctrl->lock);
 
 	in_use = atomic_read(&ctrl->in_use);
-	if (ctrl->id == FIMC0 || ctrl->id == FIMC2)
+	if (pdata->camera[0])
 		max_use = 1;
 	else
 		max_use = FIMC_MAX_CTXS + 1;
@@ -1093,46 +1093,6 @@ static int fimc_open(struct file *filp)
 
 		ctrl->mem.curr = ctrl->mem.base;
 		ctrl->status = FIMC_STREAMOFF;
-
-		if (ctrl->id == FIMC2) {
-			/* ioremap for register block */
-			qos_regs0 = ioremap(0x11600400, 0x10);
-			if (!qos_regs0) {
-				fimc_err("%s: failed to remap io region\n",
-						__func__);
-				ret = -1;
-				goto resource_busy;
-			}
-			fimc_info1("0x11600400 = 0x%x , 0x11600404 = 0x%x \n",
-					readl(qos_regs0 + 0), readl(qos_regs0 + 4));
-			writel(0x7, qos_regs0 + 0x0);
-			writel(0xb, qos_regs0 + 0x4);
-			fimc_info1("0x11600400 = 0x%x , 0x11600404 = 0x%x \n",
-					readl(qos_regs0 + 0), readl(qos_regs0 + 4));
-
-			iounmap(qos_regs0);
-			qos_regs0 = NULL;
-
-			/* ioremap for register block */
-			qos_regs1 = ioremap(0x11200400, 0x10);
-			if (!qos_regs1) {
-				fimc_err("%s: failed to remap io region\n",
-						__func__);
-				ret = -1;
-				goto resource_busy;
-			}
-			fimc_info1("0x11200400 = 0x%x , 0x11200404 = 0x%x \n",
-					readl(qos_regs1 + 0), readl(qos_regs1 + 4));
-
-			writel(0x7, qos_regs1 + 0x0);
-			writel(0x3f, qos_regs1 + 0x4);
-			fimc_info1("0x11200400 = 0x%x , 0x11200404 = 0x%x \n",
-					readl(qos_regs1 + 0), readl(qos_regs1 + 4));
-
-			iounmap(qos_regs1);
-			qos_regs1 = NULL;
-		}
-
 	}
 	prv_data->ctrl = ctrl;
 	if (prv_data->ctrl->out != NULL) {
@@ -1182,7 +1142,7 @@ static int fimc_release(struct file *filp)
 		fimc_streamoff_capture((void *)ctrl);
 
 	/* FIXME: turning off actual working camera */
-	if (ctrl->cam && ctrl->id != FIMC2) {
+	if (ctrl->cam && fimc_cam_use) {
 		/* Unload the subdev (camera sensor) module,
 		 * reset related status flags */
 		fimc_release_subdev(ctrl);
@@ -1398,7 +1358,6 @@ static int fimc_init_global(struct platform_device *pdev)
 		cam = pdata->camera[i];
 		if (!cam)
 			break;
-
 		/* WriteBack doesn't need clock setting */
 		if ((cam->id == CAMERA_WB) || (cam->id == CAMERA_WB_B)) {
 			fimc_dev->camera[i] = cam;

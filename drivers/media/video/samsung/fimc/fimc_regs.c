@@ -142,8 +142,13 @@ int fimc_hwset_camera_source(struct fimc_control *ctrl)
 	if (cam->type == CAM_TYPE_ITU)
 		cfg |= cam->fmt;
 
-	cfg |= S3C_CISRCFMT_SOURCEHSIZE(cam->width);
-	cfg |= S3C_CISRCFMT_SOURCEVSIZE(cam->height);
+	if (ctrl->is.sd) {
+		cfg |= S3C_CISRCFMT_SOURCEHSIZE(ctrl->is.fmt.width);
+		cfg |= S3C_CISRCFMT_SOURCEVSIZE(ctrl->is.fmt.height);
+	} else {
+		cfg |= S3C_CISRCFMT_SOURCEHSIZE(cam->width);
+		cfg |= S3C_CISRCFMT_SOURCEVSIZE(cam->height);
+	}
 
 	writel(cfg, ctrl->regs + S3C_CISRCFMT);
 
@@ -488,7 +493,7 @@ int fimc51_hwset_camera_type(struct fimc_control *ctrl)
 	if (cam->id == CAMERA_WB) {
 		cfg |= S3C_CIGCTRL_SELWB_CAMIF_WRITEBACK;
 		cfg |= S3C_CIGCTRL_SELWRITEBACK_A;
-	} else if (cam->id == CAMERA_WB_B) {
+	} else if (cam->id == CAMERA_WB_B || cam->use_isp) {
 		cfg |= S3C_CIGCTRL_SELWB_CAMIF_WRITEBACK;
 		cfg |= S3C_CIGCTRL_SELWRITEBACK_B;
 	} else if (cam->type == CAM_TYPE_MIPI) {
@@ -1960,6 +1965,35 @@ int fimc_hwset_sysreg_camblk_fimd1_wb(struct fimc_control *ctrl)
 	camblk_cfg |= ctrl->id << 10;
 
 	writel(camblk_cfg, SYSREG_CAMERA_BLK);
+
+	return 0;
+}
+
+int fimc_hwset_sysreg_camblk_isp_wb(struct fimc_control *ctrl)
+{
+	u32 camblk_cfg = readl(SYSREG_CAMERA_BLK);
+	u32 ispblk_cfg = readl(SYSREG_ISP_BLK);
+	camblk_cfg = camblk_cfg & (~(0x7 << 20));
+	if (ctrl->id == 0)
+		camblk_cfg = camblk_cfg | (0x1 << 20);
+	else if (ctrl->id == 1)
+		camblk_cfg = camblk_cfg | (0x2 << 20);
+	else if (ctrl->id == 2)
+		camblk_cfg = camblk_cfg | (0x4 << 20);
+	else if (ctrl->id == 3)
+		camblk_cfg = camblk_cfg | (0x7 << 20); /* FIXME*/
+	else
+		fimc_err("%s: not supported id : %d\n", __func__, ctrl->id);
+
+	camblk_cfg = camblk_cfg & (~(0x1 << 15));
+	writel(camblk_cfg, SYSREG_CAMERA_BLK);
+	camblk_cfg = camblk_cfg | (0x1 << 15);
+	writel(camblk_cfg, SYSREG_CAMERA_BLK);
+
+	ispblk_cfg = 0x00000c00;
+	writel(ispblk_cfg, SYSREG_ISP_BLK);
+	ispblk_cfg = 0x00003f80;
+	writel(ispblk_cfg, SYSREG_ISP_BLK);
 
 	return 0;
 }
