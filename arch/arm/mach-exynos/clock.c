@@ -662,12 +662,20 @@ static struct clk init_clocks_off[] = {
 		.ctrlbit	= (1 << 18),
 	}, {
 		.name		= "lcd",
+#ifdef CONFIG_FB_S3C
+		.devname	= "exynos4-fb.0",
+#else
 		.devname	= "s3cfb.0",
+#endif
 		.enable		= exynos4_clk_ip_lcd0_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
 		.name		= "lcd",
+#ifdef CONFIG_FB_S3C
+		.devname	= "exynos4-fb.1",
+#else
 		.devname	= "s3cfb.1",
+#endif
 		.enable		= exynos4_clk_ip_lcd1_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
@@ -1591,7 +1599,11 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimd",
+#ifdef CONFIG_FB_S3C
+			.devname	= "exynos4-fb.0",
+#else
 			.devname	= "s3cfb.0",
+#endif
 			.enable		= exynos4_clksrc_mask_lcd0_ctrl,
 			.ctrlbit	= (1 << 0),
 		},
@@ -1601,7 +1613,11 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimd",
+#ifdef CONFIG_FB_S3C
+			.devname	= "exynos4-fb.1",
+#else
 			.devname	= "s3cfb.1",
+#endif
 			.enable		= exynos4_clksrc_mask_lcd1_ctrl,
 			.ctrlbit	= (1 << 0),
 		},
