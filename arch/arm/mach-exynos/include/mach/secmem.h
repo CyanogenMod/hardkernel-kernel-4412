@@ -23,7 +23,8 @@ struct secchunk_info {
 
 extern struct miscdevice secmem;
 
-#define SECMEM_IOC_CHUNKINFO	_IOWR('S', 1, struct secchunk_info)
-#define SECMEM_IOC_DRM_ONOFF	_IOWR('S', 2, int)
+#define SECMEM_IOC_CHUNKINFO		_IOWR('S', 1, struct secchunk_info)
+#define SECMEM_IOC_SET_DRM_ONOFF	_IOWR('S', 2, int)
+#define SECMEM_IOC_GET_DRM_ONOFF	_IOWR('S', 3, int)
 
 #endif /* __ASM_ARCH_SECMEM_H */

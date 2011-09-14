@@ -34,6 +34,8 @@ static char *secmem_info[] = {
 	NULL
 };
 
+static bool drm_onoff = false;
+
 static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	switch (cmd) {
@@ -72,17 +74,29 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 	}
 		break;
-	case SECMEM_IOC_DRM_ONOFF:
+	case SECMEM_IOC_GET_DRM_ONOFF:
+		if (copy_to_user((void __user *)arg, &drm_onoff, sizeof(int)))
+			return -EFAULT;
+		break;
+	case SECMEM_IOC_SET_DRM_ONOFF:
 	{
 		int val = 0;
-		int __user *argp = (int __user *)arg;
-		if (copy_from_user(&val, argp, sizeof(int)))
+		if (copy_from_user(&val, (int __user *)arg, sizeof(int)))
 			return -EFAULT;
 
-		if(val)
-			pm_runtime_forbid(secmem.this_device);
-		else
-			pm_runtime_allow(secmem.this_device);
+		if (val) {
+			if (drm_onoff == false) {
+				drm_onoff = true;
+				pm_runtime_forbid(secmem.this_device);
+			} else
+				printk(KERN_ERR "%s: DRM is already on\n", __func__);
+		} else {
+			if (drm_onoff == true) {
+				drm_onoff = false;
+				pm_runtime_allow(secmem.this_device);
+			} else
+				printk(KERN_ERR "%s: DRM is already off\n", __func__);
+		}
 	}
 		break;
 	default:
