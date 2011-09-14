@@ -614,22 +614,38 @@ static struct clk init_clocks_off[] = {
 		.ctrlbit	= (1 << 5),
 	}, {
 		.name		= "fimc",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+		.devname	= "exynos4210-fimc.0",
+#else
 		.devname	= "s3c-fimc.0",
+#endif
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
 		.name		= "fimc",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+		.devname	= "exynos4210-fimc.1",
+#else
 		.devname	= "s3c-fimc.1",
+#endif
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 1),
 	}, {
 		.name		= "fimc",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+		.devname	= "exynos4210-fimc.2",
+#else
 		.devname	= "s3c-fimc.2",
+#endif
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 2),
 	}, {
 		.name		= "fimc",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+		.devname	= "exynos4210-fimc.3",
+#else
 		.devname	= "s3c-fimc.3",
+#endif
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
@@ -890,7 +906,11 @@ static struct clk init_clocks_off[] = {
 		.ctrlbit	= ((0x1 << 2) | (0x1 << 1)),
 	}, {
 		.name		= "mfc",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
+		.devname	= "s5p-mfc",
+#else
 		.devname	= "s3c-mfc",
+#endif
 		.parent		= &clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= (0x1 << 0),
@@ -1479,7 +1499,11 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_cam0",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+			.devname	= "exynos4210-fimc.0",
+#else
 			.devname	= "s3c-fimc.0",
+#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 16),
 		},
@@ -1489,7 +1513,11 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_cam1",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+			.devname	= "exynos4210-fimc.1",
+#else
 			.devname	= "s3c-fimc.1",
+#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 20),
 		},
@@ -1499,7 +1527,11 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+			.devname	= "exynos4210-fimc.0",
+#else
 			.devname	= "s3c-fimc.0",
+#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 0),
 		},
@@ -1509,7 +1541,11 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+			.devname	= "exynos4210-fimc.1",
+#else
 			.devname	= "s3c-fimc.1",
+#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 4),
 		},
@@ -1519,7 +1555,11 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+			.devname	= "exynos4210-fimc.2",
+#else
 			.devname	= "s3c-fimc.2",
+#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 8),
 		},
@@ -1529,7 +1569,11 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+			.devname	= "exynos4210-fimc.3",
+#else
 			.devname	= "s3c-fimc.3",
+#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 12),
 		},
