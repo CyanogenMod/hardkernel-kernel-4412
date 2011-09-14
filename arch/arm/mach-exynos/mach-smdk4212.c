@@ -61,6 +61,8 @@
 #include <media/s5k4ba_platform.h>
 #include <media/s5k4ea_platform.h>
 #include <media/m5mo_platform.h>
+#include <media/exynos_flite.h>
+#include <media/exynos_fimc_is.h>
 
 #include <mach/map.h>
 #include <mach/spi-clocks.h>
@@ -337,6 +339,53 @@ static struct s3c_platform_camera writeback = {
 };
 #endif
 
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
+#ifdef CONFIG_VIDEO_S5K3H2
+static struct s3c_platform_camera s5k3h2 = {
+#ifdef CONFIG_CSI_C
+	.id		= CAMERA_CSI_C,
+	.clk_name	= "sclk_cam0",
+	.cam_power	= smdk4212_cam0_reset,
+#endif
+#ifdef CONFIG_CSI_D
+	.id		= CAMERA_CSI_D,
+	.clk_name	= "sclk_cam1",
+	.cam_power	= smdk4212_cam1_reset,
+#endif
+	.type		= CAM_TYPE_MIPI,
+	.fmt		= MIPI_CSI_RAW10,
+	.order422	= CAM_ORDER422_8BIT_YCBYCR,
+	.pixelformat	= V4L2_PIX_FMT_UYVY,
+	.line_length	= 1920,
+	.width		= 1920,
+	.height		= 1080,
+	.window		= {
+		.left	= 0,
+		.top	= 0,
+		.width	= 1920,
+		.height	= 1080,
+	},
+	.srclk_name	= "xusbxti",
+	.clk_rate	= 24000000,
+	.mipi_lanes	= 2,
+	.mipi_settle	= 12,
+	.mipi_align	= 24,
+
+	.initialized	= 0,
+	.flite_id	= FLITE_IDX_A,
+	.use_isp	= true,
+};
+#endif
+#endif
+
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
+static struct exynos_platform_flite flite_plat = {
+#ifdef CONFIG_VIDEO_S5K3H2
+	.cam = &s5k3h2,
+#endif
+};
+#endif
+
 /* legacy M5MOLS Camera driver configuration */
 #ifdef CONFIG_VIDEO_M5MO
 #define CAM_CHECK_ERR_RET(x, msg)	\
@@ -442,6 +491,9 @@ static struct s3c_platform_fimc fimc_plat = {
 #endif
 #ifdef CONFIG_VIDEO_M5MO
 		&m5mo,
+#endif
+#ifdef CONFIG_VIDEO_S5K3H2
+		&s5k3h2,
 #endif
 #ifdef WRITEBACK_ENABLED
 		&writeback,
@@ -1537,6 +1589,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_SND_SAMSUNG_RP
 	&exynos4_device_srp,
 #endif
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
+	&exynos4_device_fimc_is,
+#endif
 #ifdef CONFIG_VIDEO_TVOUT
 	&s5p_device_tvout,
 	&s5p_device_cec,
@@ -1557,6 +1612,10 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #endif
 #ifdef CONFIG_S5P_SYSTEM_MMU
 	&exynos_device_sysmmu[SYSMMU_MDMA],
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
+	&exynos_device_flite0,
+	&exynos_device_flite1,
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
 	&s5p_device_fimg2d,
@@ -1700,6 +1759,16 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
+		{
+			.name = "fimc_is",
+			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS * SZ_1K,
+			{
+				.alignment = 1 << 26,
+			},
+			.start = 0
+		},
+#endif
 		{
 			.size = 0
 		},
@@ -1713,6 +1782,7 @@ static void __init exynos4_reserve_mem(void)
 		"s3c-mfc=mfc,mfc0,mfc1;"
 		"samsung-rp=srp;"
 		"s5p-jpeg=jpeg;"
+		"exynos4-fimc-is=fimc_is;"
 		"s5p-fimg2d=fimg2d";
 
 	cma_set_defaults(regions, map);
@@ -1850,6 +1920,9 @@ static void __init smdk4212_machine_init(void)
 	exynos4_dwmci_set_platdata(&exynos4_dwmci_pdata);
 #endif
 
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
+	exynos4_fimc_is_set_platdata(NULL);
+#endif
 #ifdef CONFIG_S3C_DEV_HSMMC
 	s3c_sdhci0_set_platdata(&smdk4212_hsmmc0_pdata);
 #endif
@@ -1868,9 +1941,9 @@ static void __init smdk4212_machine_init(void)
 
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);
-	s3c_fimc1_set_platdata(&fimc_plat);
+	s3c_fimc1_set_platdata(NULL);
 	s3c_fimc2_set_platdata(&fimc_plat);
-	s3c_fimc3_set_platdata(&fimc_plat);
+	s3c_fimc3_set_platdata(NULL);
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s3c_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
@@ -1884,6 +1957,10 @@ static void __init smdk4212_machine_init(void)
 	s3c_device_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_csis1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 #endif
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
+	exynos_flite0_set_platdata(&flite_plat);
+	exynos_flite1_set_platdata(&flite_plat);
 #endif
 #if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C)
 	smdk4212_cam0_reset(1);
