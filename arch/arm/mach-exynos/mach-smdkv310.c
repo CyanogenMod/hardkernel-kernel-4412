@@ -2312,10 +2312,10 @@ static void __init exynos4_reserve_mem(void)
 		"s3cfb.0=fimd;exynos4-fb.0=fimd;"
 		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
 		"exynos4210-fimc.0=fimc0;exynos4210-fimc.1=fimc1;exynos4210-fimc.2=fimc2;exynos4210-fimc.3=fimc3;"
-#if !defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+#ifdef CONFIG_VIDEO_MFC5X
 		"s3c-mfc=mfc,mfc0,mfc1;"
-#else
-		"mfc=mfc,mfc0,mfc1;"
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
 		"s5p-mfc/f=fw;"
 		"s5p-mfc/a=b1;"
 		"s5p-mfc/b=b2;"
