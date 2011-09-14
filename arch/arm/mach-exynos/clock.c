@@ -1927,8 +1927,6 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	unsigned long xtal;
 	unsigned long armclk;
 	unsigned long sclk_dmc;
-	unsigned long aclk_400;
-	unsigned long aclk_266;
 	unsigned long aclk_200;
 	unsigned long aclk_160;
 	unsigned long aclk_133;
@@ -1984,22 +1982,14 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	aclk_160 = clk_get_rate(&clk_aclk_160.clk);
 	aclk_133 = clk_get_rate(&clk_aclk_133.clk);
 
-	if (cpu_is_exynos4210()) {
-		printk(KERN_INFO "EXYNOS4: ARMCLK=%ld, DMC=%ld, ACLK200=%ld\n"
-				"ACLK160=%ld, ACLK133=%ld, ACLK100=%ld\n",
-				armclk, sclk_dmc, aclk_200,
-				aclk_160, aclk_133, aclk_100);
-	} else {
-		aclk_400 = clk_get_rate(&clk_aclk_400.clk);
-		aclk_266 = clk_get_rate(&clk_aclk_266.clk);
-
-		printk(KERN_INFO "EXYNOS4: ARMCLK=%ld, DMC=%ld, ACLK400=%ld\n"
-				"ACLK266=%ld, ACLK200=%ld, ACLK160=%ld\n"
-				"ACLK133=%ld, ACLK100=%ld\n",
-				armclk, sclk_dmc, aclk_400,
-				aclk_266, aclk_200, aclk_160,
-				aclk_133, aclk_100);
-	}
+	printk(KERN_INFO "EXYNOS4: ARMCLK=%ld, DMC=%ld, ACLK200=%ld\n"
+			"ACLK160=%ld, ACLK133=%ld, ACLK100=%ld\n",
+			armclk, sclk_dmc, aclk_200,
+			aclk_160, aclk_133, aclk_100);
+#ifdef CONFIG_CPU_EXYNOS4212
+	printk(KERN_INFO "EXYNOS4: ACLK400=%ld ACLK266=%ld\n",
+			clk_get_rate(&clk_aclk_400.clk), clk_get_rate(&clk_aclk_266.clk));
+#endif
 
 	clk_f.rate = armclk;
 	clk_h.rate = sclk_dmc;
