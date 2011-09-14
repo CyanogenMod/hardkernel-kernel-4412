@@ -1906,10 +1906,10 @@ static int xtal_rate;
 
 static unsigned long exynos4_fout_apll_get_rate(struct clk *clk)
 {
-	if (cpu_is_exynos4212())
-		return s5p_get_pll35xx(xtal_rate, __raw_readl(S5P_APLL_CON0), pll_3500);
-	else
+	if (cpu_is_exynos4210())
 		return s5p_get_pll45xx(xtal_rate, __raw_readl(S5P_APLL_CON0), pll_4508);
+	else
+		return s5p_get_pll35xx(xtal_rate, __raw_readl(S5P_APLL_CON0), pll_3500);
 }
 
 static struct clk_ops exynos4_fout_apll_ops = {
@@ -1948,16 +1948,7 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 
 	printk(KERN_DEBUG "%s: xtal is %ld\n", __func__, xtal);
 
-	if (cpu_is_exynos4212()) {
-		apll = s5p_get_pll35xx(xtal, __raw_readl(S5P_APLL_CON0), pll_3500);
-		mpll = s5p_get_pll35xx(xtal, __raw_readl(S5P_MPLL_CON0), pll_3500);
-		epll = s5p_get_pll36xx(xtal, __raw_readl(S5P_EPLL_CON0),
-				__raw_readl(S5P_EPLL_CON1), pll_3600);
-
-		vpllsrc = clk_get_rate(&clk_vpllsrc.clk);
-		vpll = s5p_get_pll36xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
-				__raw_readl(S5P_VPLL_CON1), pll_3600);
-	} else {
+	if (cpu_is_exynos4210()) {
 		apll = s5p_get_pll45xx(xtal, __raw_readl(S5P_APLL_CON0), pll_4508);
 		mpll = s5p_get_pll45xx(xtal, __raw_readl(S5P_MPLL_CON0), pll_4508);
 		epll = s5p_get_pll46xx(xtal, __raw_readl(S5P_EPLL_CON0),
@@ -1966,6 +1957,15 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 		vpllsrc = clk_get_rate(&clk_vpllsrc.clk);
 		vpll = s5p_get_pll46xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
 				__raw_readl(S5P_VPLL_CON1), pll_4650c);
+	} else {
+		apll = s5p_get_pll35xx(xtal, __raw_readl(S5P_APLL_CON0), pll_3500);
+		mpll = s5p_get_pll35xx(xtal, __raw_readl(S5P_MPLL_CON0), pll_3500);
+		epll = s5p_get_pll36xx(xtal, __raw_readl(S5P_EPLL_CON0),
+				__raw_readl(S5P_EPLL_CON1), pll_3600);
+
+		vpllsrc = clk_get_rate(&clk_vpllsrc.clk);
+		vpll = s5p_get_pll36xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
+				__raw_readl(S5P_VPLL_CON1), pll_3600);
 	}
 
 	clk_fout_apll.ops = &exynos4_fout_apll_ops;
@@ -1984,7 +1984,12 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	aclk_160 = clk_get_rate(&clk_aclk_160.clk);
 	aclk_133 = clk_get_rate(&clk_aclk_133.clk);
 
-	if (cpu_is_exynos4212()) {
+	if (cpu_is_exynos4210()) {
+		printk(KERN_INFO "EXYNOS4: ARMCLK=%ld, DMC=%ld, ACLK200=%ld\n"
+				"ACLK160=%ld, ACLK133=%ld, ACLK100=%ld\n",
+				armclk, sclk_dmc, aclk_200,
+				aclk_160, aclk_133, aclk_100);
+	} else {
 		aclk_400 = clk_get_rate(&clk_aclk_400.clk);
 		aclk_266 = clk_get_rate(&clk_aclk_266.clk);
 
@@ -1994,11 +1999,6 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 				armclk, sclk_dmc, aclk_400,
 				aclk_266, aclk_200, aclk_160,
 				aclk_133, aclk_100);
-	} else {
-		printk(KERN_INFO "EXYNOS4: ARMCLK=%ld, DMC=%ld, ACLK200=%ld\n"
-				"ACLK160=%ld, ACLK133=%ld, ACLK100=%ld\n",
-				armclk, sclk_dmc, aclk_200,
-				aclk_160, aclk_133, aclk_100);
 	}
 
 	clk_f.rate = armclk;

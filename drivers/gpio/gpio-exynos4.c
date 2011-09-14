@@ -536,8 +536,8 @@ static __init int exynos4_gpiolib_init(void)
 		}
 
 		samsung_gpiolib_add_4bit_chips(exynos4210_gpio_4bit, nr_chips);
-	} else if (cpu_is_exynos4212()) {
-	/* Only 4212 GPIO part */
+	} else {
+	/* Only 4212/4412 GPIO part */
 		chip = exynos4212_gpio_4bit;
 		nr_chips = ARRAY_SIZE(exynos4212_gpio_4bit);
 

@@ -57,7 +57,7 @@ void __init s3c_csis0_set_platdata(struct s3c_platform_csis *pd)
 		return;
 	}
 
-	if (cpu_is_exynos4212())
+	if (cpu_is_exynos4212() || cpu_is_exynos4412())
 		npd->srclk_name = "mout_mpll_user";
 	npd->cfg_gpio = s3c_csis0_cfg_gpio;
 	npd->cfg_phy_global = s3c_csis0_cfg_phy_global;
@@ -104,7 +104,7 @@ void __init s3c_csis1_set_platdata(struct s3c_platform_csis *pd)
 		return;
 	}
 
-	if (cpu_is_exynos4212())
+	if (cpu_is_exynos4212() || cpu_is_exynos4412())
 		npd->srclk_name = "mout_mpll_user";
 	npd->cfg_gpio = s3c_csis1_cfg_gpio;
 	npd->cfg_phy_global = s3c_csis1_cfg_phy_global;

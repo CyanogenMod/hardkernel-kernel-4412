@@ -647,10 +647,10 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 	if (request_irq(ctrl->irq, fimc_irq, IRQF_DISABLED, ctrl->name, ctrl))
 		fimc_err("%s: request_irq failed\n", __func__);
 
-	if (cpu_is_exynos4212())
-		fimc_src_clk = clk_get(&pdev->dev, "mout_mpll_user");
-	else
+	if (cpu_is_exynos4210())
 		fimc_src_clk = clk_get(&pdev->dev, "mout_mpll");
+	else
+		fimc_src_clk = clk_get(&pdev->dev, "mout_mpll_user");
 
 	if (IS_ERR(fimc_src_clk))
 		dev_err(&pdev->dev, "failed to get parent clock\n");

@@ -28,7 +28,16 @@ struct platform_device; /* don't need the contents */
 
 void s3c_fimc0_cfg_gpio(struct platform_device *pdev)
 {
-	if (cpu_is_exynos4212()) {
+	if (cpu_is_exynos4210()) {
+		/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
+		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPJ0(0), 8, S3C_GPIO_SFN(2));
+		/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
+		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPJ1(0), 5, S3C_GPIO_SFN(2));
+		/* CAM B port(b0011) : DATA[0-7] */
+		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPE1(0), 8, S3C_GPIO_SFN(3));
+		/* CAM B port(b0011) : PCLK, VSYNC, HREF, FIELD, CLKOUT */
+		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPE0(0), 5, S3C_GPIO_SFN(3));
+	} else {
 		/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ0(0), 8, S3C_GPIO_SFN(2));
 		/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
@@ -39,15 +48,6 @@ void s3c_fimc0_cfg_gpio(struct platform_device *pdev)
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM1(0), 2, S3C_GPIO_SFN(3));
 		/* CAM B port(b0011) : VSYNC, HREF, CLKOUT*/
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM2(0), 3, S3C_GPIO_SFN(3));
-	} else {
-		/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
-		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPJ0(0), 8, S3C_GPIO_SFN(2));
-		/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
-		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPJ1(0), 5, S3C_GPIO_SFN(2));
-		/* CAM B port(b0011) : DATA[0-7] */
-		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPE1(0), 8, S3C_GPIO_SFN(3));
-		/* CAM B port(b0011) : PCLK, VSYNC, HREF, FIELD, CLKOUT */
-		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPE0(0), 5, S3C_GPIO_SFN(3));
 	}
 	/* note : driver strength to max is unnecessary */
 }

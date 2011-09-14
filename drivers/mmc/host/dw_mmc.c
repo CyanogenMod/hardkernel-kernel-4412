@@ -1606,12 +1606,12 @@ static int dw_mci_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	/* IP version conrtol */
-	if (cpu_is_exynos4212()) {
-		host->data_addr = 0x100;
-		host->hold_bit = SDMMC_USE_HOLD_REG;
-	} else {
+	if (cpu_is_exynos4210()) {
 		host->data_addr = 0x0;
 		host->hold_bit = 0;
+	} else {
+		host->data_addr = 0x100;
+		host->hold_bit = SDMMC_USE_HOLD_REG;
 	}
 
 	host->pdev = pdev;

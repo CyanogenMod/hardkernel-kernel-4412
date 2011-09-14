@@ -32,6 +32,7 @@
 #include <mach/smc.h>
 
 #include <plat/exynos4.h>
+#include <plat/cputype.h>
 
 extern void exynos4_secondary_startup(void);
 

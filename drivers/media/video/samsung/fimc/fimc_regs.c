@@ -1939,12 +1939,12 @@ int fimc_hwset_sysreg_camblk_fimd0_wb(struct fimc_control *ctrl)
 {
 	u32 camblk_cfg = readl(SYSREG_CAMERA_BLK);
 
-	if (cpu_is_exynos4212()) {
-		camblk_cfg &= (~(0x3 << 23));
-		camblk_cfg |= ctrl->id << 23;
-	} else {
+	if (cpu_is_exynos4210()) {
 		camblk_cfg &= (~(0x3 << 14));
 		camblk_cfg |= ctrl->id << 14;
+	} else {
+		camblk_cfg &= (~(0x3 << 23));
+		camblk_cfg |= ctrl->id << 23;
 	}
 
 	writel(camblk_cfg, SYSREG_CAMERA_BLK);

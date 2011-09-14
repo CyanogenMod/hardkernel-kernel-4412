@@ -108,10 +108,10 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 		goto err_clk1;
 	}
 
-	if (cpu_is_exynos4212()) 
-		mout_mpll = clk_get(&pdev->dev, "mout_mpll_user");
-	else
+	if (cpu_is_exynos4210())
 		mout_mpll = clk_get(&pdev->dev, "mout_mpll");
+	else
+		mout_mpll = clk_get(&pdev->dev, "mout_mpll_user");
 
 	if (IS_ERR(mout_mpll)) {
 		dev_err(&pdev->dev, "failed to get mout_mpll for fimd\n");
