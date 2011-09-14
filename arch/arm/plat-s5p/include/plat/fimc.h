@@ -16,6 +16,7 @@
 
 #define FIMC_SRC_MAX_W		4224
 #define FIMC_SRC_MAX_H		4224
+#define FLITE_MAX_NUM		2
 
 struct platform_device;
 
@@ -53,6 +54,11 @@ enum fimc_cam_index {
 	CAMERA_WB 	= 4,
 	CAMERA_WB_B 	= 5,
 	CAMERA_PATTERN	= 6,
+};
+
+enum flite_index {
+	FLITE_IDX_A = 0,
+	FLITE_IDX_B = 1,
 };
 
 /* struct s3c_platform_camera: abstraction for input camera */
@@ -97,6 +103,7 @@ struct s3c_platform_camera {
 
 	/* Board specific power pin control */
 	int				(*cam_power)(int onoff);
+	enum flite_index		flite_id;
 	bool				use_isp;
 };
 
@@ -109,6 +116,7 @@ struct s3c_platform_fimc {
 	struct s3c_platform_camera	*camera[5];		/* FIXME */
 #endif
 	int				hw_ver;
+	bool				use_cam;
 
 	void				(*cfg_gpio)(struct platform_device *pdev);
 	int				(*clk_on)(struct platform_device *pdev, struct clk **clk);

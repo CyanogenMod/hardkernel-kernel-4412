@@ -505,14 +505,6 @@
 
 /* SYSREG for FIMC writeback */
 #define SYSREG_CAMERA_BLK			(S3C_VA_SYS + 0x0218)
-#define FIMD0_WB_DEST_FIMC0			(0x0 << 14)
-#define FIMD0_WB_DEST_FIMC1			(0x1 << 14)
-#define FIMD0_WB_DEST_FIMC2			(0x2 << 14)
-#define FIMD0_WB_DEST_FIMC3			(0x3 << 14)
-
-#define FIMD1_WB_DEST_FIMC0			(0x0 << 10)
-#define FIMD1_WB_DEST_FIMC1			(0x1 << 10)
-#define FIMD1_WB_DEST_FIMC2			(0x2 << 10)
-#define FIMD1_WB_DEST_FIMC3			(0x3 << 10)
+#define SYSREG_ISP_BLK				(S3C_VA_SYS + 0x020c)
 
 #endif /* __ASM_PLAT_REGS_FIMC_H */

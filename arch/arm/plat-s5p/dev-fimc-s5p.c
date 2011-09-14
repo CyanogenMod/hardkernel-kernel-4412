@@ -63,8 +63,9 @@ void __init s3c_fimc0_set_platdata(struct s3c_platform_fimc *pd)
 
 		if (!npd->clk_off)
 			npd->clk_off = s3c_fimc_clk_off;
-		npd->hw_ver = 0x51;
 
+		npd->hw_ver = 0x51;
+		npd->use_cam = true;
 		s3c_device_fimc0.dev.platform_data = npd;
 	}
 }
@@ -113,8 +114,8 @@ void __init s3c_fimc1_set_platdata(struct s3c_platform_fimc *pd)
 
 		if (!npd->clk_off)
 			npd->clk_off = s3c_fimc_clk_off;
-		npd->hw_ver = 0x51;
 
+		npd->hw_ver = 0x51;
 		s3c_device_fimc1.dev.platform_data = npd;
 	}
 }
@@ -163,8 +164,8 @@ void __init s3c_fimc2_set_platdata(struct s3c_platform_fimc *pd)
 
 		if (!npd->clk_off)
 			npd->clk_off = s3c_fimc_clk_off;
-		npd->hw_ver = 0x51;
 
+		npd->hw_ver = 0x51;
 		s3c_device_fimc2.dev.platform_data = npd;
 	}
 }
@@ -213,8 +214,8 @@ void __init s3c_fimc3_set_platdata(struct s3c_platform_fimc *pd)
 
 		if (!npd->clk_off)
 			npd->clk_off = s3c_fimc_clk_off;
-		npd->hw_ver = 0x51;
 
+		npd->hw_ver = 0x51;
 		s3c_device_fimc3.dev.platform_data = npd;
 	}
 }
