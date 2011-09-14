@@ -48,15 +48,9 @@ static int fimc_is_s_fimc_lite(struct v4l2_subdev *sd, u32 val)
 {
 	int ret = 0;
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
-	fimc_is_hw_set_lite(dev,
-		dev->is_p_region->parameter.isp.otf_input.width,
-		dev->is_p_region->parameter.isp.otf_input.height);
-	dbg("lite set : w= %d, h = %d\n",
-		dev->is_p_region->parameter.isp.otf_input.width+
-		dev->sensor.offset_x,
-		dev->is_p_region->parameter.isp.otf_input.height+
-		dev->sensor.offset_y);
-
+	dbg("fimc_is_s_fimc_lite - %d,%d\n",
+		dev->sensor.width, dev->sensor.height);
+	fimc_is_hw_set_lite(dev, dev->sensor.width, dev->sensor.height);
 	return ret;
 }
 
@@ -86,7 +80,6 @@ static int fimc_is_load_fw(struct v4l2_subdev *sd)
 
 static int fimc_is_reset(struct v4l2_subdev *sd, u32 val)
 {
-	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 	dbg("fimc_is_reset\n");
 	if (val)
 		dbg("hard reset start\n");
@@ -115,7 +108,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 			return -EBUSY;
 		}
 		/* Debug only */
-		dbg("Header addr = 0x%x\n", dev->is_p_region->header);
+		dbg("Header addr = 0x%x\n", (u32)dev->is_p_region->header);
 		dbg("FN[0] addr = 0x%x\n",
 			virt_to_phys(&dev->is_p_region->header[0]
 							.frame_number));
@@ -133,8 +126,11 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		dbg("Default setting : preview_still\n");
 		dev->scenario_id = ISS_PREVIEW_STILL;
 		fimc_is_hw_set_init(dev);
+
+		printk("cache size = %x\n", (u32)&dev->is_p_region);
+
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			(unsigned long)sizeof(IS_PARAM));
+			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
 			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state),
@@ -149,7 +145,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		dev->scenario_id = ISS_PREVIEW_VIDEO;
 		fimc_is_hw_set_init(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			(unsigned long)sizeof(IS_PARAM));
+			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
 			test_bit(IS_ST_INIT_CAPTURE_STILL, &dev->state),
@@ -164,7 +160,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		dev->scenario_id = ISS_CAPTURE_STILL;
 		fimc_is_hw_set_init(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			(unsigned long)sizeof(IS_PARAM));
+			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
 			test_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state),
@@ -179,7 +175,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		dev->scenario_id = ISS_CAPTURE_VIDEO;
 		fimc_is_hw_set_init(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			(unsigned long)sizeof(IS_PARAM));
+			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
 			test_bit(IS_ST_RUN, &dev->state),
@@ -192,11 +188,12 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 
 		dbg("Stream Off\n");
 		clear_bit(IS_ST_RUN, &dev->state); /* FIX ME */
-		set_bit(IS_ST_STREAM, &dev->state); /* FIX ME */
+		clear_bit(IS_ST_STREAM_OFF, &dev->state); /* FIX ME */
 		fimc_is_hw_set_stream(dev, 0); /*stream off */
 		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_RUN, &dev->state),
+			test_bit(IS_ST_STREAM_OFF, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
+		clear_bit(IS_ST_STREAM_OFF, &dev->state);
 		if (!ret) {
 			dev_err(&dev->pdev->dev,
 				"wait timeout : %s\n", __func__);
@@ -256,6 +253,12 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_IS_GET_SENSOR_OFFSET_Y:
 		ctrl->value = dev->sensor.offset_y;
 		break;
+	case V4L2_CID_IS_GET_SENSOR_WIDTH:
+		ctrl->value = dev->sensor.width;
+		break;
+	case V4L2_CID_IS_GET_SENSOR_HEIGHT:
+		ctrl->value = dev->sensor.height;
+		break;
 	case V4L2_CID_IS_GET_FRAME_VALID:
 		fimc_is_mem_cache_inv((void *)IS_HEADER,
 			(unsigned long)sizeof(IS_HEADER));
@@ -266,8 +269,7 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 							ctrl->value);
 		dev->is_p_region->header
 			[dev->frame_count%MAX_FRAME_COUNT_PREVIEW].valid = 0;
-		fimc_is_mem_cache_clean((void *)IS_HEADER,
-			(unsigned long)sizeof(IS_HEADER));
+		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
 		dev->frame_count++;
 		break;
 	case V4L2_CID_IS_GET_FRAME_BADMARK:
@@ -280,8 +282,7 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			[index%MAX_FRAME_COUNT_PREVIEW].valid = 0;
 		dev->is_p_region->header
 			[index%MAX_FRAME_COUNT_PREVIEW].captured = 0;
-		fimc_is_mem_cache_clean((void *)IS_HEADER,
-			(unsigned long)sizeof(IS_HEADER));
+		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
 		break;
 	case V4L2_CID_IS_GET_FRAME_NUMBER:
 		fimc_is_mem_cache_inv((void *)IS_HEADER,
@@ -313,11 +314,13 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			ret = wait_event_timeout(dev->irq_queue1,
 					test_bit(IS_ST_RUN, &dev->state),
 					FIMC_IS_SHUTDOWN_TIMEOUT);
-				if (!ret) {
-					dev_err(&dev->pdev->dev,
-						"wait timeout:%s\n", __func__);
-					return -EBUSY;
-				}
+			if (!ret) {
+				dev_err(&dev->pdev->dev,
+					"wait timeout:%s\n", __func__);
+				return -EBUSY;
+			}
+			dbg("sensor width = %d\n", dev->sensor.width);
+			dbg("sensor height = %d\n", dev->sensor.height);
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_SHOT_MODE_NORMAL:
@@ -329,7 +332,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			(unsigned long)sizeof(IS_PARAM));
+			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
 		break;
 	case V4L2_CID_IS_CAMERA_SHOT_MODE_SMILE:
@@ -341,7 +344,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			(unsigned long)sizeof(IS_PARAM));
+			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
 		break;
 	case V4L2_CID_IS_CAMERA_SHOT_MODE_EYEBLINK:
@@ -353,7 +356,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			(unsigned long)sizeof(IS_PARAM));
+			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
 		break;
 	case V4L2_CID_IS_CAMERA_OBJECT_POSITION_X:
@@ -460,7 +463,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -501,7 +504,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -541,7 +544,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -573,7 +576,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -622,7 +625,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -662,7 +665,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -698,7 +701,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -734,7 +737,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -770,7 +773,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -782,7 +785,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -794,7 +797,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -817,7 +820,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -844,7 +847,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -854,7 +857,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -873,7 +876,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -896,7 +899,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -919,7 +922,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -938,7 +941,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -957,7 +960,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -976,7 +979,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				(unsigned long)sizeof(IS_PARAM));
+				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
 		break;
@@ -986,16 +989,14 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		dev->is_p_region->header[1].valid = 0;
 		dev->is_p_region->header[2].valid = 0;
 		dev->is_p_region->header[3].valid = 0;
-		fimc_is_mem_cache_clean((void *)IS_HEADER,
-			(unsigned long)sizeof(IS_HEADER));
+		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
 		break;
 	case V4L2_CID_IS_SET_FRAME_VALID:
 		dev->is_p_region->header[0].valid = ctrl->value;
 		dev->is_p_region->header[1].valid = ctrl->value;
 		dev->is_p_region->header[2].valid = ctrl->value;
 		dev->is_p_region->header[3].valid = ctrl->value;
-		fimc_is_mem_cache_clean((void *)IS_HEADER,
-			(unsigned long)sizeof(IS_HEADER));
+		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
 		break;
 	default:
 		dbg("Invalid control\n");
@@ -1691,8 +1692,7 @@ static int fimc_is_s_ext_ctrls(struct v4l2_subdev *sd,
 			break;
 		}
 	}
-	fimc_is_mem_cache_clean((void *)dev->is_p_region,
-		(unsigned long)sizeof(IS_PARAM));
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
 	fimc_is_hw_set_param(dev);
 	return ret;
 }
@@ -1703,7 +1703,9 @@ static int fimc_is_try_mbus_fmt(struct v4l2_subdev *sd,
 struct v4l2_mbus_framefmt *mf)
 {
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
-	dbg("----fimc_is_try_mbus_fmt----\n");
+	dbg("fimc_is_try_mbus_fmt - %d, %d\n", mf->width, mf->height);
+	dev->sensor.width = mf->width;
+	dev->sensor.height = mf->height;
 	/* for otf, only one image format is available */
 	IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, mf->width);
 	IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev, mf->height);
@@ -1813,8 +1815,7 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 	IS_SET_PARAM_BIT(dev, PARAM_FD_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 
-	fimc_is_mem_cache_clean((void *)dev->is_p_region,
-		(unsigned long)sizeof(IS_PARAM));
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
 	fimc_is_hw_set_param(dev);
 
 	return 0;
@@ -1826,24 +1827,43 @@ static int fimc_is_s_stream(struct v4l2_subdev *sd, int enable)
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 
 	if (enable) {
-		if (test_bit(IS_ST_RUN, &dev->state)) {
+		if (test_bit(IS_ST_RUN, &dev->state) &&
+				!test_bit(IS_ST_STREAM_ON, &dev->state)) {
 			dbg("IS Stream On\n");
 			clear_bit(IS_ST_RUN, &dev->state);
 			fimc_is_hw_set_stream(dev, enable);
 			ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_STREAM, &dev->state),
+			test_bit(IS_ST_STREAM_ON, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 			if (!ret) {
 				dev_err(&dev->pdev->dev,
 					"wait timeout : %s\n", __func__);
 				return -EBUSY;
 			}
+			clear_bit(IS_ST_STREAM_ON, &dev->state);
 		} else {
 			dev_err(&dev->pdev->dev, "not stream-on condition\n");
 			return -EINVAL;
 		}
 	} else {
 		dbg("IS Stream Off\n");
+		if (test_bit(IS_ST_STREAM_ON, &dev->state) &&
+				!test_bit(IS_ST_STREAM_OFF, &dev->state)) {
+			fimc_is_hw_set_stream(dev, enable);
+			ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_STREAM_OFF, &dev->state),
+						FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&dev->pdev->dev,
+					"wait timeout : %s\n", __func__);
+				return -EBUSY;
+			}
+			clear_bit(IS_ST_STREAM_OFF, &dev->state);
+		} else {
+			dev_err(&dev->pdev->dev, "not stream-on condition\n");
+			return -EINVAL;
+		}
+		/*
 		if (test_and_clear_bit(IS_ST_STREAM, &dev->state))
 			clear_bit(IS_ST_RUN, &dev->state);
 		fimc_is_hw_set_stream(dev, enable);
@@ -1855,6 +1875,7 @@ static int fimc_is_s_stream(struct v4l2_subdev *sd, int enable)
 				"wait timeout : %s\n", __func__);
 			return -EBUSY;
 		}
+		*/
 	}
 	return 0;
 }

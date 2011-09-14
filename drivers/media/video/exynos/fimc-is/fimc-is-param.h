@@ -27,7 +27,7 @@
 #define IS_PARAM_DRC		(dev->is_p_region->parameter.drc)
 #define IS_PARAM_FD		(dev->is_p_region->parameter.fd)
 #define IS_HEADER		(dev->is_p_region->header)
-#define IS_PARAM		(dev->is_p_region)
+#define IS_PARAM_SIZE		0x5001
 
 /* Global control */
 #define IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, x) \

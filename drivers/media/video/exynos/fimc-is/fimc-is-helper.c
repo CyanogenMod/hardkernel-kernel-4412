@@ -34,7 +34,501 @@
 #include "fimc-is-cmd.h"
 #include "fimc-is-param.h"
 
-#define ISP_STRGEN
+/*
+Default setting values
+*/
+#define PREVIEW_WIDTH		1920
+#define PREVIEW_HEIGHT		1080
+#define CAPTURE_WIDTH		3232
+#define CAPTURE_HEIGHT		2424
+#define CAMCORDING_WIDTH	3232
+#define CAMCORDING_HEIGHT	2424
+
+static const struct isp_param init_val_isp_preview = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_DISABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+#ifndef ISP_STRGEN
+		.format = OTF_INPUT_FORMAT_BAYER,
+#else
+		.format = OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER,
+#endif
+		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma1_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.dma2_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.af = {
+		.cmd = ISP_AF_COMMAND_SET_FOCUSMODE,
+		.mode = ISP_AF_MODE_AUTO,
+		.face = ISP_AF_FACE_DISABLE,
+		.continuous = ISP_AF_CONTINUOUS_DISABLE,
+		.win_pos_x = 0, .win_pos_y = 0,
+		.win_width = 0, .win_height = 0,
+		.err = ISP_AF_ERROR_NO,
+	},
+	.flash = {
+		.cmd = ISP_FLASH_COMMAND_DISABLE,
+		.redeye = ISP_FLASH_REDEYE_DISABLE,
+		.err = ISP_FLASH_ERROR_NO,
+	},
+	.awb = {
+		.cmd = ISP_AWB_COMMAND_AUTO,
+		.illumination = 0,
+		.err = ISP_AWB_ERROR_NO,
+	},
+	.effect = {
+		.cmd = ISP_IMAGE_EFFECT_DISABLE,
+		.err = ISP_IMAGE_EFFECT_ERROR_NO,
+	},
+	.iso = {
+		.cmd = ISP_ISO_COMMAND_AUTO,
+		.value = 0,
+		.err = ISP_ISO_ERROR_NO,
+	},
+	.adjust = {
+		.cmd = ISP_ADJUST_COMMAND_AUTOCONTRAST,
+		.contrast = 0,
+		.saturation = 0,
+		.sharpness = 0,
+		.exposure = 0,
+		.brightness = 0,
+		.hue = 0,
+		.err = ISP_ADJUST_ERROR_NO,
+	},
+	.metering = {
+		.cmd = ISP_METERING_COMMAND_MATRIX,
+		.win_pos_x = 0, .win_pos_y = 0,
+		.win_width = PREVIEW_WIDTH, .win_height = PREVIEW_HEIGHT,
+		.err = ISP_METERING_ERROR_NO,
+	},
+	.afc = {
+		.cmd = ISP_AFC_COMMAND_AUTO,
+		.manual = 0, .err = ISP_AFC_ERROR_NO,
+	},
+	.otf_output = {
+		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
+		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.format = OTF_OUTPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_12BIT,
+		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_OUTPUT_ERROR_NO,
+	},
+	.dma1_output = {
+		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = DMA_OUTPUT_ERROR_NO,
+	},
+	.dma2_output = {
+		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = DMA_OUTPUT_ERROR_NO,
+	},
+};
+
+static const struct drc_param init_val_drc_preview = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_ENABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.format = OTF_INPUT_FORMAT_YUV444,
+		.bitwidth = OTF_INPUT_BIT_WIDTH_12BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.otf_output = {
+		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
+		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.format = OTF_OUTPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
+		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_OUTPUT_ERROR_NO,
+	},
+};
+
+static const struct fd_param init_val_fd_preview = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_ENABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.format = OTF_INPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.fd_ctrl = {
+		.max_number = 10,
+		.err = FD_ERROR_NO,
+	},
+};
+
+static const struct isp_param init_val_isp_capture = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_DISABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+#ifndef ISP_STRGEN
+		.format = OTF_INPUT_FORMAT_BAYER,
+#else
+		.format = OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER,
+#endif
+		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma1_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.dma2_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.af = {
+		.cmd = ISP_AF_COMMAND_SET_FOCUSMODE,
+		.mode = ISP_AF_MODE_AUTO,
+		.face = ISP_AF_FACE_DISABLE,
+		.continuous = ISP_AF_CONTINUOUS_DISABLE,
+		.win_pos_x = 0, .win_pos_y = 0,
+		.win_width = 0, .win_height = 0,
+		.err = ISP_AF_ERROR_NO,
+	},
+	.flash = {
+		.cmd = ISP_FLASH_COMMAND_DISABLE,
+		.redeye = ISP_FLASH_REDEYE_DISABLE,
+		.err = ISP_FLASH_ERROR_NO,
+	},
+	.awb = {
+		.cmd = ISP_AWB_COMMAND_AUTO,
+		.illumination = 0,
+		.err = ISP_AWB_ERROR_NO,
+	},
+	.effect = {
+		.cmd = ISP_IMAGE_EFFECT_DISABLE,
+		.err = ISP_IMAGE_EFFECT_ERROR_NO,
+	},
+	.iso = {
+		.cmd = ISP_ISO_COMMAND_AUTO,
+		.value = 0,
+		.err = ISP_ISO_ERROR_NO,
+	},
+	.adjust = {
+		.cmd = ISP_ADJUST_COMMAND_AUTOCONTRAST,
+		.contrast = 0,
+		.saturation = 0,
+		.sharpness = 0,
+		.exposure = 0,
+		.brightness = 0,
+		.hue = 0,
+		.err = ISP_ADJUST_ERROR_NO,
+	},
+	.metering = {
+		.cmd = ISP_METERING_COMMAND_MATRIX,
+		.win_pos_x = 0, .win_pos_y = 0,
+		.win_width = CAPTURE_WIDTH, .win_height = CAPTURE_HEIGHT,
+		.err = ISP_METERING_ERROR_NO,
+	},
+	.afc = {
+		.cmd = ISP_AFC_COMMAND_AUTO,
+		.manual = 0, .err = ISP_AFC_ERROR_NO,
+	},
+	.otf_output = {
+		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
+		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+		.format = OTF_OUTPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_12BIT,
+		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_OUTPUT_ERROR_NO,
+	},
+	.dma1_output = {
+		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = DMA_OUTPUT_ERROR_NO,
+	},
+	.dma2_output = {
+		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = DMA_OUTPUT_ERROR_NO,
+	},
+};
+
+static const struct drc_param init_val_drc_capture = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_ENABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+		.format = OTF_INPUT_FORMAT_YUV444,
+		.bitwidth = OTF_INPUT_BIT_WIDTH_12BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.otf_output = {
+		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
+		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+		.format = OTF_OUTPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
+		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_OUTPUT_ERROR_NO,
+	},
+};
+
+static const struct fd_param init_val_fd_capture = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_ENABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+		.format = OTF_INPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.fd_ctrl = {
+		.max_number = 10,
+		.err = FD_ERROR_NO,
+	},
+};
+
+static const struct isp_param init_val_isp_camcording = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_DISABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+#ifndef ISP_STRGEN
+		.format = OTF_INPUT_FORMAT_BAYER,
+#else
+		.format = OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER,
+#endif
+		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma1_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.dma2_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.af = {
+		.cmd = ISP_AF_COMMAND_SET_FOCUSMODE,
+		.mode = ISP_AF_MODE_AUTO,
+		.face = ISP_AF_FACE_DISABLE,
+		.continuous = ISP_AF_CONTINUOUS_DISABLE,
+		.win_pos_x = 0, .win_pos_y = 0,
+		.win_width = 0, .win_height = 0,
+		.err = ISP_AF_ERROR_NO,
+	},
+	.flash = {
+		.cmd = ISP_FLASH_COMMAND_DISABLE,
+		.redeye = ISP_FLASH_REDEYE_DISABLE,
+		.err = ISP_FLASH_ERROR_NO,
+	},
+	.awb = {
+		.cmd = ISP_AWB_COMMAND_AUTO,
+		.illumination = 0,
+		.err = ISP_AWB_ERROR_NO,
+	},
+	.effect = {
+		.cmd = ISP_IMAGE_EFFECT_DISABLE,
+		.err = ISP_IMAGE_EFFECT_ERROR_NO,
+	},
+	.iso = {
+		.cmd = ISP_ISO_COMMAND_AUTO,
+		.value = 0,
+		.err = ISP_ISO_ERROR_NO,
+	},
+	.adjust = {
+		.cmd = ISP_ADJUST_COMMAND_AUTOCONTRAST,
+		.contrast = 0,
+		.saturation = 0,
+		.sharpness = 0,
+		.exposure = 0,
+		.brightness = 0,
+		.hue = 0,
+		.err = ISP_ADJUST_ERROR_NO,
+	},
+	.metering = {
+		.cmd = ISP_METERING_COMMAND_MATRIX,
+		.win_pos_x = 0, .win_pos_y = 0,
+		.win_width = CAMCORDING_WIDTH, .win_height = CAMCORDING_HEIGHT,
+		.err = ISP_METERING_ERROR_NO,
+	},
+	.afc = {
+		.cmd = ISP_AFC_COMMAND_AUTO,
+		.manual = 0, .err = ISP_AFC_ERROR_NO,
+	},
+	.otf_output = {
+		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
+		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.format = OTF_OUTPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_12BIT,
+		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_OUTPUT_ERROR_NO,
+	},
+	.dma1_output = {
+		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = DMA_OUTPUT_ERROR_NO,
+	},
+	.dma2_output = {
+		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = DMA_OUTPUT_ERROR_NO,
+	},
+};
+
+static const struct drc_param init_val_drc_camcording = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_ENABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.format = OTF_INPUT_FORMAT_YUV444,
+		.bitwidth = OTF_INPUT_BIT_WIDTH_12BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.otf_output = {
+		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
+		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.format = OTF_OUTPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
+		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_OUTPUT_ERROR_NO,
+	},
+};
+
+static const struct fd_param init_val_fd_camcording = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_ENABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.format = OTF_INPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.fd_ctrl = {
+		.max_number = 10,
+		.err = FD_ERROR_NO,
+	},
+};
 /*
  Group 1. Interrupt
 */
@@ -110,8 +604,8 @@ void fimc_is_hw_set_lite(struct fimc_is_dev *dev, u32 width, u32 height)
 	writel(cfg, dev->regs_fimc_lite);
 
 	cfg = 0;
-	cfg |= ((width+dev->sensor.offset_x));
 	cfg |= (height+dev->sensor.offset_y)<<16;
+	cfg |= ((width+dev->sensor.offset_x));
 	writel(cfg, dev->regs_fimc_lite+0x20);
 }
 
@@ -120,7 +614,7 @@ void fimc_is_hw_io_init(struct fimc_is_dev *dev)
 	void __iomem *reg_gpio3con;
 	void __iomem *reg_gpm4con;
 	/* 1. FIMC Lite0 setting - temp */
-
+#if 0
 	int i;
 	u32 cfg[16][2] = {
 		{0x04, 0x00080008},
@@ -142,7 +636,7 @@ void fimc_is_hw_io_init(struct fimc_is_dev *dev)
 	};
 	for (i = 0; i < 16; i++)
 		writel(cfg[i][1], dev->regs_fimc_lite + cfg[i][0]);
-
+#endif
 	/* 2. UART setting for FIMC-IS */
 	reg_gpio3con = ioremap(0x110002c0, 0x4);
 	writel(0x33330000, reg_gpio3con);
@@ -305,930 +799,1330 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 	switch (dev->scenario_id) {
 	case ISS_PREVIEW_STILL:
 		/* ISP */
-		IS_ISP_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
-		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_DISABLE);
-		IS_ISP_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
+			init_val_isp_preview.control.cmd);
+		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_isp_preview.control.bypass);
+		IS_ISP_SET_PARAM_CONTROL_ERR(dev,
+			init_val_isp_preview.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev, OTF_INPUT_COMMAND_ENABLE);
-		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, 1920);
-		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev, 1080);
-#ifndef ISP_STRGEN
-		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev, OTF_INPUT_FORMAT_BAYER);
-#else
+		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev,
+			init_val_isp_preview.otf_input.cmd);
+		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_isp_preview.otf_input.width);
+		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_isp_preview.otf_input.height);
 		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER);
-#endif
+			init_val_isp_preview.otf_input.format);
 		IS_ISP_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_10BIT);
+			init_val_isp_preview.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_isp_preview.otf_input.order);
+		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_isp_preview.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev, 0);
+			init_val_isp_preview.dma1_input.cmd);
+		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev,
+			init_val_isp_preview.dma1_input.width);
+		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev,
+			init_val_isp_preview.dma1_input.height);
+		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev,
+			init_val_isp_preview.dma1_input.format);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev,
+			init_val_isp_preview.dma1_input.bitwidth);
+		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev,
+			init_val_isp_preview.dma1_input.plane);
+		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev,
+			init_val_isp_preview.dma1_input.order);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev,
+			init_val_isp_preview.dma1_input.buffer_number);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev,
+			init_val_isp_preview.dma1_input.buffer_address);
+		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev,
+			init_val_isp_preview.dma1_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT2_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev, 0);
+			init_val_isp_preview.dma2_input.cmd);
+		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev,
+			init_val_isp_preview.dma2_input.width);
+		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev,
+			init_val_isp_preview.dma2_input.height);
+		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev,
+			init_val_isp_preview.dma2_input.format);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev,
+			init_val_isp_preview.dma2_input.bitwidth);
+		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev,
+			init_val_isp_preview.dma2_input.plane);
+		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev,
+			init_val_isp_preview.dma2_input.order);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev,
+			init_val_isp_preview.dma2_input.buffer_number);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev,
+			init_val_isp_preview.dma2_input.buffer_address);
+		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev,
+			init_val_isp_preview.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AF_CMD(dev, ISP_AF_COMMAND_SET_FOCUSMODE);
-		IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
-		IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
-		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev, ISP_AF_CONTINUOUS_DISABLE);
-		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+		IS_ISP_SET_PARAM_AF_CMD(dev, init_val_isp_preview.af.cmd);
+		IS_ISP_SET_PARAM_AF_MODE(dev, init_val_isp_preview.af.mode);
+		IS_ISP_SET_PARAM_AF_FACE(dev, init_val_isp_preview.af.face);
+		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+			init_val_isp_preview.af.continuous);
+		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev,
+			init_val_isp_preview.af.win_pos_x);
+		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev,
+			init_val_isp_preview.af.win_pos_y);
+		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev,
+			init_val_isp_preview.af.win_width);
+		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev,
+			init_val_isp_preview.af.win_height);
+		IS_ISP_SET_PARAM_AF_ERR(dev, init_val_isp_preview.af.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
-			ISP_FLASH_COMMAND_DISABLE);
+			init_val_isp_preview.flash.cmd);
 		IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-			ISP_FLASH_REDEYE_DISABLE);
-		IS_ISP_SET_PARAM_FLASH_ERR(dev, ISP_FLASH_ERROR_NO);
+			init_val_isp_preview.flash.redeye);
+		IS_ISP_SET_PARAM_FLASH_ERR(dev,
+			init_val_isp_preview.flash.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
-		IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+		IS_ISP_SET_PARAM_AWB_CMD(dev, init_val_isp_preview.awb.cmd);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+			init_val_isp_preview.awb.illumination);
+		IS_ISP_SET_PARAM_AWB_ERR(dev, init_val_isp_preview.awb.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_DISABLE);
-		IS_ISP_SET_PARAM_EFFECT_ERR(dev, ISP_IMAGE_EFFECT_ERROR_NO);
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev,
+			init_val_isp_preview.effect.cmd);
+		IS_ISP_SET_PARAM_EFFECT_ERR(dev,
+			init_val_isp_preview.effect.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
-		IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+		IS_ISP_SET_PARAM_ISO_CMD(dev,
+			init_val_isp_preview.iso.cmd);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev,
+			init_val_isp_preview.iso.value);
+		IS_ISP_SET_PARAM_ISO_ERR(dev,
+			init_val_isp_preview.iso.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-			ISP_ADJUST_COMMAND_AUTOCONTRAST);
-		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_ERR(dev, ISP_ADJUST_ERROR_NO);
+			init_val_isp_preview.adjust.cmd);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev,
+			init_val_isp_preview.adjust.contrast);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev,
+			init_val_isp_preview.adjust.saturation);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev,
+			init_val_isp_preview.adjust.sharpness);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev,
+			init_val_isp_preview.adjust.exposure);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev,
+			init_val_isp_preview.adjust.brightness);
+		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
+			init_val_isp_preview.adjust.hue);
+		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+			init_val_isp_preview.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_METERING_CMD(dev,
-			ISP_METERING_COMMAND_MATRIX);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
-		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 1920);
-		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 1080);
+			init_val_isp_preview.metering.cmd);
+		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev,
+			init_val_isp_preview.metering.win_pos_x);
+		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev,
+			init_val_isp_preview.metering.win_pos_y);
+		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
+			init_val_isp_preview.metering.win_width);
+		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
+			init_val_isp_preview.metering.win_height);
 		IS_ISP_SET_PARAM_METERING_ERR(dev,
-			ISP_METERING_ERROR_NO);
+			init_val_isp_preview.metering.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
-		IS_ISP_SET_PARAM_AFC_ERR(dev, ISP_AFC_ERROR_NO);
+		IS_ISP_SET_PARAM_AFC_CMD(dev, init_val_isp_preview.afc.cmd);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev,
+			init_val_isp_preview.afc.manual);
+		IS_ISP_SET_PARAM_AFC_ERR(dev, init_val_isp_preview.afc.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			OTF_OUTPUT_COMMAND_ENABLE);
-		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev, 1920);
-		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, 1080);
+			init_val_isp_preview.otf_output.cmd);
+		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
+			init_val_isp_preview.otf_output.width);
+		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
+			init_val_isp_preview.otf_output.height);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			OTF_OUTPUT_FORMAT_YUV444);
+			init_val_isp_preview.otf_output.format);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			OTF_OUTPUT_BIT_WIDTH_12BIT);
+			init_val_isp_preview.otf_output.bitwidth);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			OTF_OUTPUT_ORDER_BAYER_GR_BG);
+			init_val_isp_preview.otf_output.order);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ERR(dev,
-			OTF_OUTPUT_ERROR_NO);
+			init_val_isp_preview.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_CMD(dev,
-			DMA_OUTPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev, 0);
+			init_val_isp_preview.dma1_output.cmd);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev,
+			init_val_isp_preview.dma1_output.width);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev,
+			init_val_isp_preview.dma1_output.height);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev,
+			init_val_isp_preview.dma1_output.format);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev,
+			init_val_isp_preview.dma1_output.bitwidth);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev,
+			init_val_isp_preview.dma1_output.plane);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev,
+			init_val_isp_preview.dma1_output.order);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev,
+			init_val_isp_preview.dma1_output.buffer_number);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev,
+			init_val_isp_preview.dma1_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_ERR(dev,
-			DMA_OUTPUT_ERROR_NO);
+			init_val_isp_preview.dma1_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(dev,
-			DMA_OUTPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev, 0);
+			init_val_isp_preview.dma2_output.cmd);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev,
+			init_val_isp_preview.dma2_output.width);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev,
+			init_val_isp_preview.dma2_output.height);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev,
+			init_val_isp_preview.dma2_output.format);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev,
+			init_val_isp_preview.dma2_output.bitwidth);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev,
+			init_val_isp_preview.dma2_output.plane);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev,
+			init_val_isp_preview.dma2_output.order);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev,
+			init_val_isp_preview.dma2_output.buffer_number);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev,
+			init_val_isp_preview.dma2_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_ERR(dev,
-			DMA_OUTPUT_ERROR_NO);
+			init_val_isp_preview.dma2_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* DRC */
-		IS_DRC_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
-		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-		IS_DRC_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_DRC_SET_PARAM_CONTROL_CMD(dev,
+			init_val_drc_preview.control.cmd);
+		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_drc_preview.control.bypass);
+		IS_DRC_SET_PARAM_CONTROL_ERR(dev,
+			init_val_drc_preview.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
 		IS_INC_PARAM_NUM(dev);
-		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev, OTF_INPUT_COMMAND_ENABLE);
-		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev, 1920);
-		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev, 1080);
+		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev,
+			init_val_drc_preview.otf_input.cmd);
+		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_drc_preview.otf_input.width);
+		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_drc_preview.otf_input.height);
 		IS_DRC_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_YUV444);
+			init_val_drc_preview.otf_input.format);
 		IS_DRC_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_12BIT);
+			init_val_drc_preview.otf_input.bitwidth);
 		IS_DRC_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_drc_preview.otf_input.order);
+		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_drc_preview.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev, DMA_INPUT_COMMAND_DISABLE);
-		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev, 1920);
-		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev, 1080);
+		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev,
+			init_val_drc_preview.dma_input.cmd);
+		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev,
+			init_val_drc_preview.dma_input.width);
+		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev,
+			init_val_drc_preview.dma_input.height);
 		IS_DRC_SET_PARAM_DMA_INPUT_FORMAT(dev,
-			OTF_OUTPUT_FORMAT_YUV444);
+			init_val_drc_preview.dma_input.format);
 		IS_DRC_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
-			OTF_OUTPUT_BIT_WIDTH_8BIT);
-		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev, 0);
+			init_val_drc_preview.dma_input.bitwidth);
+		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev,
+			init_val_drc_preview.dma_input.plane);
+		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev,
+			init_val_drc_preview.dma_input.order);
+		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
+			init_val_drc_preview.dma_input.buffer_number);
+		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
+			init_val_drc_preview.dma_input.buffer_address);
+		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev,
+			init_val_drc_preview.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			OTF_OUTPUT_COMMAND_ENABLE);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev, 1920);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, 1080);
+			init_val_drc_preview.otf_output.cmd);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
+			init_val_drc_preview.otf_output.width);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
+			init_val_drc_preview.otf_output.height);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			OTF_OUTPUT_FORMAT_YUV444);
+			init_val_drc_preview.otf_output.format);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			OTF_OUTPUT_BIT_WIDTH_8BIT);
+			init_val_drc_preview.otf_output.bitwidth);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			OTF_OUTPUT_ORDER_BAYER_GR_BG);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev, OTF_OUTPUT_ERROR_NO);
+			init_val_drc_preview.otf_output.order);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev,
+			init_val_drc_preview.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* FD */
-		IS_FD_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_STOP);
-		IS_FD_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-		IS_FD_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_FD_SET_PARAM_CONTROL_CMD(dev,
+			init_val_fd_preview.control.cmd);
+		IS_FD_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_fd_preview.control.bypass);
+		IS_FD_SET_PARAM_CONTROL_ERR(dev,
+			init_val_fd_preview.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_OTF_INPUT_CMD(dev,
-			OTF_INPUT_COMMAND_ENABLE);
-		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev, 1920);
-		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev, 1080);
+			init_val_fd_preview.otf_input.cmd);
+		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_fd_preview.otf_input.width);
+		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_fd_preview.otf_input.height);
 		IS_FD_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_YUV444);
+			init_val_fd_preview.otf_input.format);
 		IS_FD_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_8BIT);
+			init_val_fd_preview.otf_input.bitwidth);
 		IS_FD_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_fd_preview.otf_input.order);
+		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_fd_preview.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_DMA_INPUT_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev, 0);
+			init_val_fd_preview.dma_input.cmd);
+		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev,
+			init_val_fd_preview.dma_input.width);
+		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev,
+			init_val_fd_preview.dma_input.height);
+		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev,
+			init_val_fd_preview.dma_input.format);
+		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
+			init_val_fd_preview.dma_input.bitwidth);
+		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev,
+			init_val_fd_preview.dma_input.plane);
+		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev,
+			init_val_fd_preview.dma_input.order);
+		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
+			init_val_fd_preview.dma_input.buffer_number);
+		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
+			init_val_fd_preview.dma_input.buffer_address);
+		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev,
+			init_val_fd_preview.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev, 10);
-		IS_FD_SET_PARAM_FDCONTROL_ERR(dev, FD_ERROR_NO);
+		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev,
+			init_val_fd_preview.fd_ctrl.max_number);
+		IS_FD_SET_PARAM_FDCONTROL_ERR(dev,
+			init_val_fd_preview.fd_ctrl.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
 		IS_INC_PARAM_NUM(dev);
-		break;
 
+		dev->sensor.width = init_val_isp_preview.otf_input.width;
+		dev->sensor.height = init_val_isp_preview.otf_input.height;
+		break;
 	case ISS_PREVIEW_VIDEO:
 		/* ISP */
-		IS_ISP_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
-		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_DISABLE);
-		IS_ISP_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
+			init_val_isp_preview.control.cmd);
+		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_isp_preview.control.bypass);
+		IS_ISP_SET_PARAM_CONTROL_ERR(dev,
+			init_val_isp_preview.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev, OTF_INPUT_COMMAND_ENABLE);
-		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, 640);
-		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev, 480);
-#ifndef ISP_STRGEN
-		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev, OTF_INPUT_FORMAT_BAYER);
-#else
+		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev,
+			init_val_isp_preview.otf_input.cmd);
+		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_isp_preview.otf_input.width);
+		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_isp_preview.otf_input.height);
 		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER);
-#endif
+			init_val_isp_preview.otf_input.format);
 		IS_ISP_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_10BIT);
+			init_val_isp_preview.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_isp_preview.otf_input.order);
+		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_isp_preview.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev, 0);
+			init_val_isp_preview.dma1_input.cmd);
+		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev,
+			init_val_isp_preview.dma1_input.width);
+		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev,
+			init_val_isp_preview.dma1_input.height);
+		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev,
+			init_val_isp_preview.dma1_input.format);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev,
+			init_val_isp_preview.dma1_input.bitwidth);
+		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev,
+			init_val_isp_preview.dma1_input.plane);
+		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev,
+			init_val_isp_preview.dma1_input.order);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev,
+			init_val_isp_preview.dma1_input.buffer_number);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev,
+			init_val_isp_preview.dma1_input.buffer_address);
+		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev,
+			init_val_isp_preview.dma1_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT2_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev, 0);
+			init_val_isp_preview.dma2_input.cmd);
+		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev,
+			init_val_isp_preview.dma2_input.width);
+		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev,
+			init_val_isp_preview.dma2_input.height);
+		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev,
+			init_val_isp_preview.dma2_input.format);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev,
+			init_val_isp_preview.dma2_input.bitwidth);
+		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev,
+			init_val_isp_preview.dma2_input.plane);
+		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev,
+			init_val_isp_preview.dma2_input.order);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev,
+			init_val_isp_preview.dma2_input.buffer_number);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev,
+			init_val_isp_preview.dma2_input.buffer_address);
+		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev,
+			init_val_isp_preview.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AF_CMD(dev, ISP_AF_COMMAND_SET_FOCUSMODE);
-		IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
-		IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
-		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev, ISP_AF_CONTINUOUS_DISABLE);
-		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+		IS_ISP_SET_PARAM_AF_CMD(dev, init_val_isp_preview.af.cmd);
+		IS_ISP_SET_PARAM_AF_MODE(dev, init_val_isp_preview.af.mode);
+		IS_ISP_SET_PARAM_AF_FACE(dev, init_val_isp_preview.af.face);
+		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+			init_val_isp_preview.af.continuous);
+		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev,
+			init_val_isp_preview.af.win_pos_x);
+		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev,
+			init_val_isp_preview.af.win_pos_y);
+		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev,
+			init_val_isp_preview.af.win_width);
+		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev,
+			init_val_isp_preview.af.win_height);
+		IS_ISP_SET_PARAM_AF_ERR(dev, init_val_isp_preview.af.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
-			ISP_FLASH_COMMAND_DISABLE);
+			init_val_isp_preview.flash.cmd);
 		IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-			ISP_FLASH_REDEYE_DISABLE);
-		IS_ISP_SET_PARAM_FLASH_ERR(dev, ISP_FLASH_ERROR_NO);
+			init_val_isp_preview.flash.redeye);
+		IS_ISP_SET_PARAM_FLASH_ERR(dev,
+			init_val_isp_preview.flash.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
-		IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+		IS_ISP_SET_PARAM_AWB_CMD(dev, init_val_isp_preview.awb.cmd);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+			init_val_isp_preview.awb.illumination);
+		IS_ISP_SET_PARAM_AWB_ERR(dev, init_val_isp_preview.awb.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_DISABLE);
-		IS_ISP_SET_PARAM_EFFECT_ERR(dev, ISP_IMAGE_EFFECT_ERROR_NO);
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev,
+			init_val_isp_preview.effect.cmd);
+		IS_ISP_SET_PARAM_EFFECT_ERR(dev,
+			init_val_isp_preview.effect.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
-		IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+		IS_ISP_SET_PARAM_ISO_CMD(dev,
+			init_val_isp_preview.iso.cmd);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev,
+			init_val_isp_preview.iso.value);
+		IS_ISP_SET_PARAM_ISO_ERR(dev,
+			init_val_isp_preview.iso.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-			ISP_ADJUST_COMMAND_AUTOCONTRAST);
-		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_ERR(dev, ISP_ADJUST_ERROR_NO);
+			init_val_isp_preview.adjust.cmd);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev,
+			init_val_isp_preview.adjust.contrast);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev,
+			init_val_isp_preview.adjust.saturation);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev,
+			init_val_isp_preview.adjust.sharpness);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev,
+			init_val_isp_preview.adjust.exposure);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev,
+			init_val_isp_preview.adjust.brightness);
+		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
+			init_val_isp_preview.adjust.hue);
+		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+			init_val_isp_preview.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_METERING_CMD(dev,
-			ISP_METERING_COMMAND_MATRIX);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
-		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 640);
-		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 480);
+			init_val_isp_preview.metering.cmd);
+		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev,
+			init_val_isp_preview.metering.win_pos_x);
+		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev,
+			init_val_isp_preview.metering.win_pos_y);
+		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
+			init_val_isp_preview.metering.win_width);
+		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
+			init_val_isp_preview.metering.win_height);
 		IS_ISP_SET_PARAM_METERING_ERR(dev,
-			ISP_METERING_ERROR_NO);
+			init_val_isp_preview.metering.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
-		IS_ISP_SET_PARAM_AFC_ERR(dev, ISP_AFC_ERROR_NO);
+		IS_ISP_SET_PARAM_AFC_CMD(dev, init_val_isp_preview.afc.cmd);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev,
+			init_val_isp_preview.afc.manual);
+		IS_ISP_SET_PARAM_AFC_ERR(dev, init_val_isp_preview.afc.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			OTF_OUTPUT_COMMAND_ENABLE);
-		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev, 640);
-		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, 480);
+			init_val_isp_preview.otf_output.cmd);
+		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
+			init_val_isp_preview.otf_output.width);
+		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
+			init_val_isp_preview.otf_output.height);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			OTF_OUTPUT_FORMAT_YUV444);
+			init_val_isp_preview.otf_output.format);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			OTF_OUTPUT_BIT_WIDTH_12BIT);
+			init_val_isp_preview.otf_output.bitwidth);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			OTF_OUTPUT_ORDER_BAYER_GR_BG);
+			init_val_isp_preview.otf_output.order);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ERR(dev,
-			OTF_OUTPUT_ERROR_NO);
+			init_val_isp_preview.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_CMD(dev,
-			DMA_OUTPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev, 0);
+			init_val_isp_preview.dma1_output.cmd);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev,
+			init_val_isp_preview.dma1_output.width);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev,
+			init_val_isp_preview.dma1_output.height);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev,
+			init_val_isp_preview.dma1_output.format);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev,
+			init_val_isp_preview.dma1_output.bitwidth);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev,
+			init_val_isp_preview.dma1_output.plane);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev,
+			init_val_isp_preview.dma1_output.order);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev,
+			init_val_isp_preview.dma1_output.buffer_number);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev,
+			init_val_isp_preview.dma1_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_ERR(dev,
-			DMA_OUTPUT_ERROR_NO);
+			init_val_isp_preview.dma1_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(dev,
-			DMA_OUTPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev, 0);
+			init_val_isp_preview.dma2_output.cmd);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev,
+			init_val_isp_preview.dma2_output.width);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev,
+			init_val_isp_preview.dma2_output.height);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev,
+			init_val_isp_preview.dma2_output.format);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev,
+			init_val_isp_preview.dma2_output.bitwidth);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev,
+			init_val_isp_preview.dma2_output.plane);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev,
+			init_val_isp_preview.dma2_output.order);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev,
+			init_val_isp_preview.dma2_output.buffer_number);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev,
+			init_val_isp_preview.dma2_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_ERR(dev,
-			DMA_OUTPUT_ERROR_NO);
+			init_val_isp_preview.dma2_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* DRC */
-		IS_DRC_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
-		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-		IS_DRC_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_DRC_SET_PARAM_CONTROL_CMD(dev,
+			init_val_drc_preview.control.cmd);
+		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_drc_preview.control.bypass);
+		IS_DRC_SET_PARAM_CONTROL_ERR(dev,
+			init_val_drc_preview.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
 		IS_INC_PARAM_NUM(dev);
-		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev, OTF_INPUT_COMMAND_ENABLE);
-		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev, 640);
-		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev, 480);
+		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev,
+			init_val_drc_preview.otf_input.cmd);
+		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_drc_preview.otf_input.width);
+		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_drc_preview.otf_input.height);
 		IS_DRC_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_YUV444);
+			init_val_drc_preview.otf_input.format);
 		IS_DRC_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_12BIT);
+			init_val_drc_preview.otf_input.bitwidth);
 		IS_DRC_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_drc_preview.otf_input.order);
+		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_drc_preview.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev, DMA_INPUT_COMMAND_DISABLE);
-		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_FORMAT(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BITWIDTH(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev, 0);
+		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev,
+			init_val_drc_preview.dma_input.cmd);
+		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev,
+			init_val_drc_preview.dma_input.width);
+		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev,
+			init_val_drc_preview.dma_input.height);
+		IS_DRC_SET_PARAM_DMA_INPUT_FORMAT(dev,
+			init_val_drc_preview.dma_input.format);
+		IS_DRC_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
+			init_val_drc_preview.dma_input.bitwidth);
+		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev,
+			init_val_drc_preview.dma_input.plane);
+		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev,
+			init_val_drc_preview.dma_input.order);
+		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
+			init_val_drc_preview.dma_input.buffer_number);
+		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
+			init_val_drc_preview.dma_input.buffer_address);
+		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev,
+			init_val_drc_preview.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			OTF_OUTPUT_COMMAND_ENABLE);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev, 640);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, 480);
+			init_val_drc_preview.otf_output.cmd);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
+			init_val_drc_preview.otf_output.width);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
+			init_val_drc_preview.otf_output.height);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			OTF_OUTPUT_FORMAT_YUV444);
+			init_val_drc_preview.otf_output.format);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			OTF_OUTPUT_BIT_WIDTH_8BIT);
+			init_val_drc_preview.otf_output.bitwidth);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			OTF_OUTPUT_ORDER_BAYER_GR_BG);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev, OTF_OUTPUT_ERROR_NO);
+			init_val_drc_preview.otf_output.order);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev,
+			init_val_drc_preview.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* FD */
-		IS_FD_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_STOP);
-		IS_FD_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-		IS_FD_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_FD_SET_PARAM_CONTROL_CMD(dev,
+			init_val_fd_preview.control.cmd);
+		IS_FD_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_fd_preview.control.bypass);
+		IS_FD_SET_PARAM_CONTROL_ERR(dev,
+			init_val_fd_preview.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_OTF_INPUT_CMD(dev,
-			OTF_INPUT_COMMAND_ENABLE);
-		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev, 640);
-		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev, 480);
+			init_val_fd_preview.otf_input.cmd);
+		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_fd_preview.otf_input.width);
+		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_fd_preview.otf_input.height);
 		IS_FD_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_YUV444);
+			init_val_fd_preview.otf_input.format);
 		IS_FD_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_8BIT);
+			init_val_fd_preview.otf_input.bitwidth);
 		IS_FD_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_fd_preview.otf_input.order);
+		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_fd_preview.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_DMA_INPUT_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev, 0);
+			init_val_fd_preview.dma_input.cmd);
+		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev,
+			init_val_fd_preview.dma_input.width);
+		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev,
+			init_val_fd_preview.dma_input.height);
+		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev,
+			init_val_fd_preview.dma_input.format);
+		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
+			init_val_fd_preview.dma_input.bitwidth);
+		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev,
+			init_val_fd_preview.dma_input.plane);
+		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev,
+			init_val_fd_preview.dma_input.order);
+		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
+			init_val_fd_preview.dma_input.buffer_number);
+		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
+			init_val_fd_preview.dma_input.buffer_address);
+		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev,
+			init_val_fd_preview.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev, 10);
-		IS_FD_SET_PARAM_FDCONTROL_ERR(dev, FD_ERROR_NO);
+		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev,
+			init_val_fd_preview.fd_ctrl.max_number);
+		IS_FD_SET_PARAM_FDCONTROL_ERR(dev,
+			init_val_fd_preview.fd_ctrl.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
 		IS_INC_PARAM_NUM(dev);
 		break;
 
 	case ISS_CAPTURE_STILL:
 		/* ISP */
-		IS_ISP_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
-		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_DISABLE);
-		IS_ISP_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
+			init_val_isp_capture.control.cmd);
+		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_isp_capture.control.bypass);
+		IS_ISP_SET_PARAM_CONTROL_ERR(dev,
+			init_val_isp_capture.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev, OTF_INPUT_COMMAND_ENABLE);
-		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, 640);
-		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev, 480);
-#ifndef ISP_STRGEN
-		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev, OTF_INPUT_FORMAT_BAYER);
-#else
+		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev,
+			init_val_isp_capture.otf_input.cmd);
+		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_isp_capture.otf_input.width);
+		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_isp_capture.otf_input.height);
 		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER);
-#endif
+			init_val_isp_capture.otf_input.format);
 		IS_ISP_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_10BIT);
+			init_val_isp_capture.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_isp_capture.otf_input.order);
+		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_isp_capture.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev, 0);
+			init_val_isp_capture.dma1_input.cmd);
+		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev,
+			init_val_isp_capture.dma1_input.width);
+		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev,
+			init_val_isp_capture.dma1_input.height);
+		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev,
+			init_val_isp_capture.dma1_input.format);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev,
+			init_val_isp_capture.dma1_input.bitwidth);
+		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev,
+			init_val_isp_capture.dma1_input.plane);
+		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev,
+			init_val_isp_capture.dma1_input.order);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev,
+			init_val_isp_capture.dma1_input.buffer_number);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev,
+			init_val_isp_capture.dma1_input.buffer_address);
+		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev,
+			init_val_isp_capture.dma1_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT2_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev, 0);
+			init_val_isp_capture.dma2_input.cmd);
+		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev,
+			init_val_isp_capture.dma2_input.width);
+		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev,
+			init_val_isp_capture.dma2_input.height);
+		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev,
+			init_val_isp_capture.dma2_input.format);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev,
+			init_val_isp_capture.dma2_input.bitwidth);
+		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev,
+			init_val_isp_capture.dma2_input.plane);
+		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev,
+			init_val_isp_capture.dma2_input.order);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev,
+			init_val_isp_capture.dma2_input.buffer_number);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev,
+			init_val_isp_capture.dma2_input.buffer_address);
+		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev,
+			init_val_isp_capture.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AF_CMD(dev, ISP_AF_COMMAND_SET_FOCUSMODE);
-		IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
-		IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
-		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev, ISP_AF_CONTINUOUS_DISABLE);
-		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+		IS_ISP_SET_PARAM_AF_CMD(dev, init_val_isp_capture.af.cmd);
+		IS_ISP_SET_PARAM_AF_MODE(dev, init_val_isp_capture.af.mode);
+		IS_ISP_SET_PARAM_AF_FACE(dev, init_val_isp_capture.af.face);
+		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+			init_val_isp_capture.af.continuous);
+		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev,
+			init_val_isp_capture.af.win_pos_x);
+		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev,
+			init_val_isp_capture.af.win_pos_y);
+		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev,
+			init_val_isp_capture.af.win_width);
+		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev,
+			init_val_isp_capture.af.win_height);
+		IS_ISP_SET_PARAM_AF_ERR(dev, init_val_isp_capture.af.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
-			ISP_FLASH_COMMAND_DISABLE);
+			init_val_isp_capture.flash.cmd);
 		IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-			ISP_FLASH_REDEYE_DISABLE);
-		IS_ISP_SET_PARAM_FLASH_ERR(dev, ISP_FLASH_ERROR_NO);
+			init_val_isp_capture.flash.redeye);
+		IS_ISP_SET_PARAM_FLASH_ERR(dev,
+			init_val_isp_capture.flash.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
-		IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+		IS_ISP_SET_PARAM_AWB_CMD(dev, init_val_isp_capture.awb.cmd);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+			init_val_isp_capture.awb.illumination);
+		IS_ISP_SET_PARAM_AWB_ERR(dev, init_val_isp_capture.awb.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_DISABLE);
-		IS_ISP_SET_PARAM_EFFECT_ERR(dev, ISP_IMAGE_EFFECT_ERROR_NO);
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev,
+			init_val_isp_capture.effect.cmd);
+		IS_ISP_SET_PARAM_EFFECT_ERR(dev,
+			init_val_isp_capture.effect.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
-		IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+		IS_ISP_SET_PARAM_ISO_CMD(dev,
+			init_val_isp_capture.iso.cmd);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev,
+			init_val_isp_capture.iso.value);
+		IS_ISP_SET_PARAM_ISO_ERR(dev,
+			init_val_isp_capture.iso.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-			ISP_ADJUST_COMMAND_AUTOCONTRAST);
-		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_ERR(dev, ISP_ADJUST_ERROR_NO);
+			init_val_isp_capture.adjust.cmd);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev,
+			init_val_isp_capture.adjust.contrast);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev,
+			init_val_isp_capture.adjust.saturation);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev,
+			init_val_isp_capture.adjust.sharpness);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev,
+			init_val_isp_capture.adjust.exposure);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev,
+			init_val_isp_capture.adjust.brightness);
+		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
+			init_val_isp_capture.adjust.hue);
+		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+			init_val_isp_capture.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_METERING_CMD(dev,
-			ISP_METERING_COMMAND_MATRIX);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
-		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 640);
-		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 480);
+			init_val_isp_capture.metering.cmd);
+		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev,
+			init_val_isp_capture.metering.win_pos_x);
+		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev,
+			init_val_isp_capture.metering.win_pos_y);
+		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
+			init_val_isp_capture.metering.win_width);
+		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
+			init_val_isp_capture.metering.win_height);
 		IS_ISP_SET_PARAM_METERING_ERR(dev,
-			ISP_METERING_ERROR_NO);
+			init_val_isp_capture.metering.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
-		IS_ISP_SET_PARAM_AFC_ERR(dev, ISP_AFC_ERROR_NO);
+		IS_ISP_SET_PARAM_AFC_CMD(dev, init_val_isp_capture.afc.cmd);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev,
+			init_val_isp_capture.afc.manual);
+		IS_ISP_SET_PARAM_AFC_ERR(dev, init_val_isp_capture.afc.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			OTF_OUTPUT_COMMAND_ENABLE);
-		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev, 640);
-		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, 480);
+			init_val_isp_capture.otf_output.cmd);
+		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
+			init_val_isp_capture.otf_output.width);
+		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
+			init_val_isp_capture.otf_output.height);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			OTF_OUTPUT_FORMAT_YUV444);
+			init_val_isp_capture.otf_output.format);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			OTF_OUTPUT_BIT_WIDTH_12BIT);
+			init_val_isp_capture.otf_output.bitwidth);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			OTF_OUTPUT_ORDER_BAYER_GR_BG);
+			init_val_isp_capture.otf_output.order);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ERR(dev,
-			OTF_OUTPUT_ERROR_NO);
+			init_val_isp_capture.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_CMD(dev,
-			DMA_OUTPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev, 0);
+			init_val_isp_capture.dma1_output.cmd);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev,
+			init_val_isp_capture.dma1_output.width);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev,
+			init_val_isp_capture.dma1_output.height);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev,
+			init_val_isp_capture.dma1_output.format);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev,
+			init_val_isp_capture.dma1_output.bitwidth);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev,
+			init_val_isp_capture.dma1_output.plane);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev,
+			init_val_isp_capture.dma1_output.order);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev,
+			init_val_isp_capture.dma1_output.buffer_number);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev,
+			init_val_isp_capture.dma1_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_ERR(dev,
-			DMA_OUTPUT_ERROR_NO);
+			init_val_isp_capture.dma1_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(dev,
-			DMA_OUTPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev, 0);
+			init_val_isp_capture.dma2_output.cmd);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev,
+			init_val_isp_capture.dma2_output.width);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev,
+			init_val_isp_capture.dma2_output.height);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev,
+			init_val_isp_capture.dma2_output.format);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev,
+			init_val_isp_capture.dma2_output.bitwidth);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev,
+			init_val_isp_capture.dma2_output.plane);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev,
+			init_val_isp_capture.dma2_output.order);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev,
+			init_val_isp_capture.dma2_output.buffer_number);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev,
+			init_val_isp_capture.dma2_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_ERR(dev,
-			DMA_OUTPUT_ERROR_NO);
+			init_val_isp_capture.dma2_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* DRC */
-		IS_DRC_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
-		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-		IS_DRC_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_DRC_SET_PARAM_CONTROL_CMD(dev,
+			init_val_drc_capture.control.cmd);
+		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_drc_capture.control.bypass);
+		IS_DRC_SET_PARAM_CONTROL_ERR(dev,
+			init_val_drc_capture.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
 		IS_INC_PARAM_NUM(dev);
-		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev, OTF_INPUT_COMMAND_ENABLE);
-		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev, 640);
-		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev, 480);
+		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev,
+			init_val_drc_capture.otf_input.cmd);
+		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_drc_capture.otf_input.width);
+		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_drc_capture.otf_input.height);
 		IS_DRC_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_YUV444);
+			init_val_drc_capture.otf_input.format);
 		IS_DRC_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_12BIT);
+			init_val_drc_capture.otf_input.bitwidth);
 		IS_DRC_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_drc_capture.otf_input.order);
+		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_drc_capture.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev, DMA_INPUT_COMMAND_DISABLE);
-		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_FORMAT(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BITWIDTH(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev, 0);
+		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev,
+			init_val_drc_capture.dma_input.cmd);
+		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev,
+			init_val_drc_capture.dma_input.width);
+		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev,
+			init_val_drc_capture.dma_input.height);
+		IS_DRC_SET_PARAM_DMA_INPUT_FORMAT(dev,
+			init_val_drc_capture.dma_input.format);
+		IS_DRC_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
+			init_val_drc_capture.dma_input.bitwidth);
+		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev,
+			init_val_drc_capture.dma_input.plane);
+		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev,
+			init_val_drc_capture.dma_input.order);
+		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
+			init_val_drc_capture.dma_input.buffer_number);
+		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
+			init_val_drc_capture.dma_input.buffer_address);
+		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev,
+			init_val_drc_capture.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			OTF_OUTPUT_COMMAND_ENABLE);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev, 640);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, 480);
+			init_val_drc_capture.otf_output.cmd);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
+			init_val_drc_capture.otf_output.width);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
+			init_val_drc_capture.otf_output.height);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			OTF_OUTPUT_FORMAT_YUV444);
+			init_val_drc_capture.otf_output.format);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			OTF_OUTPUT_BIT_WIDTH_8BIT);
+			init_val_drc_capture.otf_output.bitwidth);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			OTF_OUTPUT_ORDER_BAYER_GR_BG);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev, OTF_OUTPUT_ERROR_NO);
+			init_val_drc_capture.otf_output.order);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev,
+			init_val_drc_capture.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* FD */
-		IS_FD_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_STOP);
-		IS_FD_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-		IS_FD_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_FD_SET_PARAM_CONTROL_CMD(dev,
+			init_val_fd_capture.control.cmd);
+		IS_FD_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_fd_capture.control.bypass);
+		IS_FD_SET_PARAM_CONTROL_ERR(dev,
+			init_val_fd_capture.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_OTF_INPUT_CMD(dev,
-			OTF_INPUT_COMMAND_ENABLE);
-		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev, 640);
-		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev, 480);
+			init_val_fd_capture.otf_input.cmd);
+		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_fd_capture.otf_input.width);
+		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_fd_capture.otf_input.height);
 		IS_FD_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_YUV444);
+			init_val_fd_capture.otf_input.format);
 		IS_FD_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_8BIT);
+			init_val_fd_capture.otf_input.bitwidth);
 		IS_FD_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_fd_capture.otf_input.order);
+		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_fd_capture.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_DMA_INPUT_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev, 0);
+			init_val_fd_capture.dma_input.cmd);
+		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev,
+			init_val_fd_capture.dma_input.width);
+		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev,
+			init_val_fd_capture.dma_input.height);
+		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev,
+			init_val_fd_capture.dma_input.format);
+		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
+			init_val_fd_capture.dma_input.bitwidth);
+		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev,
+			init_val_fd_capture.dma_input.plane);
+		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev,
+			init_val_fd_capture.dma_input.order);
+		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
+			init_val_fd_capture.dma_input.buffer_number);
+		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
+			init_val_fd_capture.dma_input.buffer_address);
+		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev,
+			init_val_fd_capture.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev, 10);
-		IS_FD_SET_PARAM_FDCONTROL_ERR(dev, FD_ERROR_NO);
+		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev,
+			init_val_fd_capture.fd_ctrl.max_number);
+		IS_FD_SET_PARAM_FDCONTROL_ERR(dev,
+			init_val_fd_capture.fd_ctrl.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
 		IS_INC_PARAM_NUM(dev);
 		break;
 
 	case ISS_CAPTURE_VIDEO:
 		/* ISP */
-		IS_ISP_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
-		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_DISABLE);
-		IS_ISP_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
+			init_val_isp_camcording.control.cmd);
+		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_isp_camcording.control.bypass);
+		IS_ISP_SET_PARAM_CONTROL_ERR(dev,
+			init_val_isp_camcording.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev, OTF_INPUT_COMMAND_ENABLE);
-		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, 1920);
-		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev, 1080);
-#ifndef ISP_STRGEN
-		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev, OTF_INPUT_FORMAT_BAYER);
-#else
+		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev,
+			init_val_isp_camcording.otf_input.cmd);
+		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_isp_camcording.otf_input.width);
+		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_isp_camcording.otf_input.height);
 		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER);
-#endif
+			init_val_isp_camcording.otf_input.format);
 		IS_ISP_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_10BIT);
+			init_val_isp_camcording.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_isp_camcording.otf_input.order);
+		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_isp_camcording.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev, 0);
+			init_val_isp_camcording.dma1_input.cmd);
+		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev,
+			init_val_isp_camcording.dma1_input.width);
+		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev,
+			init_val_isp_camcording.dma1_input.height);
+		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev,
+			init_val_isp_camcording.dma1_input.format);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev,
+			init_val_isp_camcording.dma1_input.bitwidth);
+		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev,
+			init_val_isp_camcording.dma1_input.plane);
+		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev,
+			init_val_isp_camcording.dma1_input.order);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev,
+			init_val_isp_camcording.dma1_input.buffer_number);
+		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev,
+			init_val_isp_camcording.dma1_input.buffer_address);
+		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev,
+			init_val_isp_camcording.dma1_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT2_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev, 0);
-		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev, 0);
+			init_val_isp_camcording.dma2_input.cmd);
+		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev,
+			init_val_isp_camcording.dma2_input.width);
+		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev,
+			init_val_isp_camcording.dma2_input.height);
+		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev,
+			init_val_isp_camcording.dma2_input.format);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev,
+			init_val_isp_camcording.dma2_input.bitwidth);
+		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev,
+			init_val_isp_camcording.dma2_input.plane);
+		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev,
+			init_val_isp_camcording.dma2_input.order);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev,
+			init_val_isp_camcording.dma2_input.buffer_number);
+		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev,
+			init_val_isp_camcording.dma2_input.buffer_address);
+		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev,
+			init_val_isp_camcording.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AF_CMD(dev, ISP_AF_COMMAND_SET_FOCUSMODE);
-		IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
-		IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
-		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev, ISP_AF_CONTINUOUS_DISABLE);
-		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+		IS_ISP_SET_PARAM_AF_CMD(dev, init_val_isp_camcording.af.cmd);
+		IS_ISP_SET_PARAM_AF_MODE(dev, init_val_isp_camcording.af.mode);
+		IS_ISP_SET_PARAM_AF_FACE(dev, init_val_isp_camcording.af.face);
+		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+			init_val_isp_camcording.af.continuous);
+		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev,
+			init_val_isp_camcording.af.win_pos_x);
+		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev,
+			init_val_isp_camcording.af.win_pos_y);
+		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev,
+			init_val_isp_camcording.af.win_width);
+		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev,
+			init_val_isp_camcording.af.win_height);
+		IS_ISP_SET_PARAM_AF_ERR(dev, init_val_isp_camcording.af.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
-			ISP_FLASH_COMMAND_DISABLE);
+			init_val_isp_camcording.flash.cmd);
 		IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-			ISP_FLASH_REDEYE_DISABLE);
-		IS_ISP_SET_PARAM_FLASH_ERR(dev, ISP_FLASH_ERROR_NO);
+			init_val_isp_camcording.flash.redeye);
+		IS_ISP_SET_PARAM_FLASH_ERR(dev,
+			init_val_isp_camcording.flash.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
-		IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+		IS_ISP_SET_PARAM_AWB_CMD(dev, init_val_isp_camcording.awb.cmd);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+			init_val_isp_camcording.awb.illumination);
+		IS_ISP_SET_PARAM_AWB_ERR(dev, init_val_isp_camcording.awb.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_DISABLE);
-		IS_ISP_SET_PARAM_EFFECT_ERR(dev, ISP_IMAGE_EFFECT_ERROR_NO);
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev,
+			init_val_isp_camcording.effect.cmd);
+		IS_ISP_SET_PARAM_EFFECT_ERR(dev,
+			init_val_isp_camcording.effect.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
-		IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+		IS_ISP_SET_PARAM_ISO_CMD(dev,
+			init_val_isp_camcording.iso.cmd);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev,
+			init_val_isp_camcording.iso.value);
+		IS_ISP_SET_PARAM_ISO_ERR(dev,
+			init_val_isp_camcording.iso.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-			ISP_ADJUST_COMMAND_AUTOCONTRAST);
-		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_ERR(dev, ISP_ADJUST_ERROR_NO);
+			init_val_isp_camcording.adjust.cmd);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev,
+			init_val_isp_camcording.adjust.contrast);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev,
+			init_val_isp_camcording.adjust.saturation);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev,
+			init_val_isp_camcording.adjust.sharpness);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev,
+			init_val_isp_camcording.adjust.exposure);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev,
+			init_val_isp_camcording.adjust.brightness);
+		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
+			init_val_isp_camcording.adjust.hue);
+		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+			init_val_isp_camcording.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_METERING_CMD(dev,
-			ISP_METERING_COMMAND_MATRIX);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
-		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 1920);
-		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 1080);
+			init_val_isp_camcording.metering.cmd);
+		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev,
+			init_val_isp_camcording.metering.win_pos_x);
+		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev,
+			init_val_isp_camcording.metering.win_pos_y);
+		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
+			init_val_isp_camcording.metering.win_width);
+		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
+			init_val_isp_camcording.metering.win_height);
 		IS_ISP_SET_PARAM_METERING_ERR(dev,
-			ISP_METERING_ERROR_NO);
+			init_val_isp_camcording.metering.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
-		IS_ISP_SET_PARAM_AFC_ERR(dev, ISP_AFC_ERROR_NO);
+		IS_ISP_SET_PARAM_AFC_CMD(dev, init_val_isp_camcording.afc.cmd);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev,
+			init_val_isp_camcording.afc.manual);
+		IS_ISP_SET_PARAM_AFC_ERR(dev, init_val_isp_camcording.afc.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			OTF_OUTPUT_COMMAND_ENABLE);
-		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev, 1920);
-		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, 1080);
+			init_val_isp_camcording.otf_output.cmd);
+		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
+			init_val_isp_camcording.otf_output.width);
+		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
+			init_val_isp_camcording.otf_output.height);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			OTF_OUTPUT_FORMAT_YUV444);
+			init_val_isp_camcording.otf_output.format);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			OTF_OUTPUT_BIT_WIDTH_12BIT);
+			init_val_isp_camcording.otf_output.bitwidth);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			OTF_OUTPUT_ORDER_BAYER_GR_BG);
+			init_val_isp_camcording.otf_output.order);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ERR(dev,
-			OTF_OUTPUT_ERROR_NO);
+			init_val_isp_camcording.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_CMD(dev,
-			DMA_OUTPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev, 0);
+			init_val_isp_camcording.dma1_output.cmd);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev,
+			init_val_isp_camcording.dma1_output.width);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev,
+			init_val_isp_camcording.dma1_output.height);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev,
+			init_val_isp_camcording.dma1_output.format);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev,
+			init_val_isp_camcording.dma1_output.bitwidth);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev,
+			init_val_isp_camcording.dma1_output.plane);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev,
+			init_val_isp_camcording.dma1_output.order);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev,
+			init_val_isp_camcording.dma1_output.buffer_number);
+		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev,
+			init_val_isp_camcording.dma1_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_ERR(dev,
-			DMA_OUTPUT_ERROR_NO);
+			init_val_isp_camcording.dma1_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(dev,
-			DMA_OUTPUT_COMMAND_DISABLE);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev, 0);
-		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev, 0);
+			init_val_isp_camcording.dma2_output.cmd);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev,
+			init_val_isp_camcording.dma2_output.width);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev,
+			init_val_isp_camcording.dma2_output.height);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev,
+			init_val_isp_camcording.dma2_output.format);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev,
+			init_val_isp_camcording.dma2_output.bitwidth);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev,
+			init_val_isp_camcording.dma2_output.plane);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev,
+			init_val_isp_camcording.dma2_output.order);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev,
+			init_val_isp_camcording.dma2_output.buffer_number);
+		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev,
+			init_val_isp_camcording.dma2_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_ERR(dev,
-			DMA_OUTPUT_ERROR_NO);
+			init_val_isp_camcording.dma2_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* DRC */
-		IS_DRC_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
-		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-		IS_DRC_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_DRC_SET_PARAM_CONTROL_CMD(dev,
+			init_val_drc_camcording.control.cmd);
+		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_drc_camcording.control.bypass);
+		IS_DRC_SET_PARAM_CONTROL_ERR(dev,
+			init_val_drc_camcording.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
 		IS_INC_PARAM_NUM(dev);
-		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev, OTF_INPUT_COMMAND_ENABLE);
-		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev, 1920);
-		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev, 1080);
+		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev,
+			init_val_drc_camcording.otf_input.cmd);
+		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_drc_camcording.otf_input.width);
+		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_drc_camcording.otf_input.height);
 		IS_DRC_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_YUV444);
+			init_val_drc_camcording.otf_input.format);
 		IS_DRC_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_12BIT);
+			init_val_drc_camcording.otf_input.bitwidth);
 		IS_DRC_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_drc_camcording.otf_input.order);
+		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_drc_camcording.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev, DMA_INPUT_COMMAND_DISABLE);
-		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_FORMAT(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BITWIDTH(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev, 0);
-		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev, 0);
+		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev,
+			init_val_drc_camcording.dma_input.cmd);
+		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev,
+			init_val_drc_camcording.dma_input.width);
+		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev,
+			init_val_drc_camcording.dma_input.height);
+		IS_DRC_SET_PARAM_DMA_INPUT_FORMAT(dev,
+			init_val_drc_camcording.dma_input.format);
+		IS_DRC_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
+			init_val_drc_camcording.dma_input.bitwidth);
+		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev,
+			init_val_drc_camcording.dma_input.plane);
+		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev,
+			init_val_drc_camcording.dma_input.order);
+		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
+			init_val_drc_camcording.dma_input.buffer_number);
+		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
+			init_val_drc_camcording.dma_input.buffer_address);
+		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev,
+			init_val_drc_camcording.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			OTF_OUTPUT_COMMAND_ENABLE);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev, 1920);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, 1080);
+			init_val_drc_camcording.otf_output.cmd);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
+			init_val_drc_camcording.otf_output.width);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
+			init_val_drc_camcording.otf_output.height);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			OTF_OUTPUT_FORMAT_YUV444);
+			init_val_drc_camcording.otf_output.format);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			OTF_OUTPUT_BIT_WIDTH_8BIT);
+			init_val_drc_camcording.otf_output.bitwidth);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			OTF_OUTPUT_ORDER_BAYER_GR_BG);
-		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev, OTF_OUTPUT_ERROR_NO);
+			init_val_drc_camcording.otf_output.order);
+		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev,
+			init_val_drc_camcording.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* FD */
-		IS_FD_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_STOP);
-		IS_FD_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
-		IS_FD_SET_PARAM_CONTROL_ERR(dev, CONTROL_ERROR_NO);
+		IS_FD_SET_PARAM_CONTROL_CMD(dev,
+			init_val_fd_camcording.control.cmd);
+		IS_FD_SET_PARAM_CONTROL_BYPASS(dev,
+			init_val_fd_camcording.control.bypass);
+		IS_FD_SET_PARAM_CONTROL_ERR(dev,
+			init_val_fd_camcording.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_OTF_INPUT_CMD(dev,
-			OTF_INPUT_COMMAND_ENABLE);
-		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev, 1920);
-		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev, 1080);
+			init_val_fd_camcording.otf_input.cmd);
+		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev,
+			init_val_fd_camcording.otf_input.width);
+		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev,
+			init_val_fd_camcording.otf_input.height);
 		IS_FD_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			OTF_INPUT_FORMAT_YUV444);
+			init_val_fd_camcording.otf_input.format);
 		IS_FD_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			OTF_INPUT_BIT_WIDTH_8BIT);
+			init_val_fd_camcording.otf_input.bitwidth);
 		IS_FD_SET_PARAM_OTF_INPUT_ORDER(dev,
-			OTF_INPUT_ORDER_BAYER_GR_BG);
-		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev, OTF_INPUT_ERROR_NO);
+			init_val_fd_camcording.otf_input.order);
+		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev,
+			init_val_fd_camcording.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_DMA_INPUT_CMD(dev,
-			DMA_INPUT_COMMAND_DISABLE);
-		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev, 0);
-		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev, 0);
+			init_val_fd_camcording.dma_input.cmd);
+		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev,
+			init_val_fd_camcording.dma_input.width);
+		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev,
+			init_val_fd_camcording.dma_input.height);
+		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev,
+			init_val_fd_camcording.dma_input.format);
+		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
+			init_val_fd_camcording.dma_input.bitwidth);
+		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev,
+			init_val_fd_camcording.dma_input.plane);
+		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev,
+			init_val_fd_camcording.dma_input.order);
+		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
+			init_val_fd_camcording.dma_input.buffer_number);
+		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
+			init_val_fd_camcording.dma_input.buffer_address);
+		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev,
+			init_val_fd_camcording.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev, 10);
-		IS_FD_SET_PARAM_FDCONTROL_ERR(dev, FD_ERROR_NO);
+		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev,
+			init_val_fd_camcording.fd_ctrl.max_number);
+		IS_FD_SET_PARAM_FDCONTROL_ERR(dev,
+			init_val_fd_camcording.fd_ctrl.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
 		IS_INC_PARAM_NUM(dev);
 		break;

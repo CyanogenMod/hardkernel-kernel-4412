@@ -132,8 +132,7 @@ int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
 		(struct is_region *)(phys_to_virt(dev->mem.base+0x3ffb000));
 	memset((void *)dev->is_p_region, 0,
 		(unsigned long)sizeof(dev->is_p_region));
-	fimc_is_mem_cache_clean((void *)dev->is_p_region,
-		(unsigned long)sizeof(IS_PARAM));
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
 
 	printk(KERN_INFO "ctrl->mem.size = 0x%x\n", dev->mem.size);
 	printk(KERN_INFO "ctrl->mem.base = 0x%x\n", dev->mem.base);
@@ -166,6 +165,9 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	case ISR_DONE:
 		fimc_is_hw_get_param(dev, 3);
 		break;
+	case ISR_NDONE:
+		fimc_is_hw_get_param(dev, 3);
+		break;
 	}
 	/* Just clear the interrupt pending bits. */
 	fimc_is_fw_clear_irq1(dev);
@@ -193,10 +195,10 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 			break;
 		case HIC_STREAM_ON:
 			clear_bit(IS_ST_RUN, &dev->state);
-			set_bit(IS_ST_STREAM, &dev->state);
+			set_bit(IS_ST_STREAM_ON, &dev->state);
 			break;
 		case HIC_STREAM_OFF:
-			clear_bit(IS_ST_STREAM, &dev->state);
+			set_bit(IS_ST_STREAM_OFF, &dev->state);
 			set_bit(IS_ST_RUN, &dev->state);
 			break;
 		case HIC_SET_PARAMETER:
@@ -249,15 +251,6 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		}
 	}
 	wake_up(&dev->irq_queue1);
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t fimc_is_irq_handler2(int irq, void *dev_id)
-{
-	struct fimc_is_dev *dev = dev_id;
-
-	/* Just clear the interrupt pending bits. */
-	fimc_is_fw_clear_irq2(dev);
 	return IRQ_HANDLED;
 }
 
@@ -320,25 +313,6 @@ static int fimc_is_probe(struct platform_device *pdev)
 	dev->regs = ioremap(mem_res->start, resource_size(mem_res));
 	if (!dev->regs) {
 		dev_err(&pdev->dev, "Failed to remap io region\n");
-		goto p_err2;
-	}
-
-	/* temp for FPGA test */
-	/* FIMC-Lite */
-	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (!mem_res) {
-		dev_err(&pdev->dev, "Failed to get io memory region\n");
-		goto p_err1;
-	}
-	mem_res = request_mem_region(mem_res->start,
-		resource_size(mem_res), pdev->name);
-	if (!mem_res) {
-		dev_err(&pdev->dev, "Failed to request io memory region\n");
-		goto p_err1;
-	}
-	dev->regs_fimc_lite = ioremap(mem_res->start, resource_size(mem_res));
-	if (!dev->regs_fimc_lite) {
-		dev_err(&pdev->dev, "Failed to remap regs_fimc_lite region\n");
 		goto p_err2;
 	}
 
@@ -461,13 +435,6 @@ static int fimc_is_probe(struct platform_device *pdev)
 		ret = dev->irq2;
 		dev_err(&pdev->dev, "Failed to get irq\n");
 		goto e_clkput;
-	}
-
-	ret = request_irq(dev->irq2, fimc_is_irq_handler2,
-		IRQF_DISABLED, dev_name(&pdev->dev), dev);
-	if (ret) {
-		dev_err(&pdev->dev, "failed to allocate irq (%d)\n", ret);
-		goto e_irqfree2;
 	}
 
 	/*

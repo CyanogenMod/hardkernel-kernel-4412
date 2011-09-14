@@ -46,7 +46,7 @@
 
 #define FIMC_IS_SENSOR_NUM	1
 
-#define FIMC_IS_SHUTDOWN_TIMEOUT	((4000*HZ)/1000)
+#define FIMC_IS_SHUTDOWN_TIMEOUT	((20000*HZ)/1000)
 
 #define DEBUG
 
@@ -69,7 +69,8 @@ enum fimc_is_state_flag {
 	IS_ST_INIT_CAPTURE_STILL,
 	IS_ST_INIT_CAPTURE_VIDEO,
 	IS_ST_RUN,
-	IS_ST_STREAM,
+	IS_ST_STREAM_ON,
+	IS_ST_STREAM_OFF,
 	IS_ST_CHANGE_MODE,
 	IS_ST_SET_PARAM,
 	IS_ST_PEND,
@@ -109,8 +110,6 @@ struct is_to_host_cmd {
 };
 
 struct is_sensor {
-	int id;
-	u32 num;
 	u32 width;
 	u32 height;
 	u32 offset_x;
@@ -123,7 +122,8 @@ struct fimc_is_dev {
 	unsigned long			state;
 	struct platform_device		*pdev;
 	struct exynos4_platform_fimc_is	*pdata;
-
+	u32				scenario_id;
+	u32				frame_count;
 	int				sensor_id;
 	u32				sensor_num;
 	struct is_sensor		sensor;
@@ -139,8 +139,6 @@ struct fimc_is_dev {
 	int				irq2;
 	wait_queue_head_t		irq_queue1;
 	struct is_to_host_cmd		i2h_cmd;
-	u32				scenario_id;
-	u32				frame_count;
 
 	unsigned long			power;
 
