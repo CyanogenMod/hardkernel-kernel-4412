@@ -762,12 +762,12 @@ static struct clk init_clocks_off[] = {
 		.ctrlbit	= (1 << 18),
 	}, {
 		.name		= "iis",
-		.devname	= "samsing-i2s.1",
+		.devname	= "samsung-i2s.1",
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 20),
 	}, {
 		.name		= "iis",
-		.devname	= "samsing-i2s.2",
+		.devname	= "samsung-i2s.2",
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 21),
 	},{
@@ -1058,7 +1058,7 @@ static struct clk init_audss_clocks[] = {
 				| S5P_AUDSS_CLKGATE_TIMER,
 	}, {
 		.name		= "iis",
-		.devname	= "samsing-i2s.0",
+		.devname	= "samsung-i2s.0",
 		.enable		= exynos4_clk_audss_ctrl,
 		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL | S5P_AUDSS_CLKGATE_I2SBUS,
 	}, {
