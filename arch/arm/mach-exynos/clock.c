@@ -1148,7 +1148,7 @@ static struct clksrc_clk clk_sclk_spdif = {
 };
 
 #ifndef CONFIG_MACH_FPGA5210
-static struct clk init_dmaclocks[] = {
+struct clk init_dmaclocks[] = {
 	{
 		.name		= "pdma",
 		.devname	= "s3c-pl330.0",
@@ -1162,7 +1162,6 @@ static struct clk init_dmaclocks[] = {
 	}, {
 		.name		= "pdma",
 		.devname	= "s3c-pl330.2",
-		.parent		= &init_dmaclocks[1],
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 1),
 	},

@@ -47,6 +47,9 @@ extern struct clksrc_sources clkset_group;
 
 extern struct clk *clkset_mout_mfc0_list[];
 
+#ifndef CONFIG_MACH_FPGA5210
+extern struct clk init_dmaclocks[];
+#endif
 /* For vpll  */
 struct vpll_div_data {
 	u32 rate;

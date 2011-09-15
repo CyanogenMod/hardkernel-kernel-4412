@@ -194,6 +194,8 @@ void __init exynos4210_register_clocks(void)
 	clk_sclk_fimg2d.reg_div.shift = 0;
 	clk_sclk_fimg2d.reg_div.size = 4;
 
+	init_dmaclocks[2].parent = &init_dmaclocks[1];
+
 	exynos4_vpll_ops.get_rate = exynos4210_vpll_get_rate;
 	exynos4_vpll_ops.set_rate = exynos4210_vpll_set_rate;
 
