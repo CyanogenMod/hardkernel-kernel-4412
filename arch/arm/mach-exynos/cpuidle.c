@@ -643,6 +643,8 @@ static void __init exynos4_core_down_clk(void)
 
 	tmp = __raw_readl(S5P_PWR_CTRL1);
 
+	tmp &= ~(PWR_CTRL1_CORE2_DOWN_MASK | PWR_CTRL1_CORE1_DOWN_MASK);
+
 	/* set arm clock divider value on idle state */
 	tmp |= ((0x7 << PWR_CTRL1_CORE2_DOWN_RATIO) |
 		(0x7 << PWR_CTRL1_CORE1_DOWN_RATIO));
@@ -658,6 +660,9 @@ static void __init exynos4_core_down_clk(void)
 	__raw_writel(tmp, S5P_PWR_CTRL1);
 
 	tmp = __raw_readl(S5P_PWR_CTRL2);
+
+	tmp &= ~(PWR_CTRL2_DUR_STANDBY2_MASK | PWR_CTRL2_DUR_STANDBY1_MASK |
+		PWR_CTRL2_CORE2_UP_MASK | PWR_CTRL2_CORE1_UP_MASK);
 
 	/* set duration value on middle wakeup step */
 	tmp |=  ((0x1 << PWR_CTRL2_DUR_STANDBY2) |
