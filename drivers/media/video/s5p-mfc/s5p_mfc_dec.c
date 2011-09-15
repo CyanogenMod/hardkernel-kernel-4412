@@ -237,7 +237,7 @@ static struct v4l2_queryctrl controls[] = {
 	},
 #if defined(CONFIG_S5P_MFC_VB2_ION)
 	{
-		.id		= V4L2_CID_SET_SHARABLE,
+		.id		= V4L2_CID_SET_SHAREABLE,
 		.type		= V4L2_CTRL_TYPE_BOOLEAN,
 		.name		= "File descriptor for ION",
 		.minimum	= 0,
@@ -1208,7 +1208,7 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 		ctrl->value = ctx->crc_chroma0;
 		break;
 #if defined(CONFIG_S5P_MFC_VB2_ION)
-	case V4L2_CID_SET_SHARABLE:
+	case V4L2_CID_SET_SHAREABLE:
 		ctrl->value = ctx->fd_ion;
 		break;
 #endif
@@ -1289,7 +1289,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 			ctx->cacheable = 0;
 		break;
 #if defined(CONFIG_S5P_MFC_VB2_ION)
-	case V4L2_CID_SET_SHARABLE:
+	case V4L2_CID_SET_SHAREABLE:
 		ctx->fd_ion = ctrl->value;
 		mfc_debug(2, "fd_ion : %d\n", ctx->fd_ion);
 		break;
