@@ -33,6 +33,7 @@
 #include <mach/map.h>
 #include <mach/irqs.h>
 
+#include <plat/cputype.h>
 #include <plat/s3c-pl330-pdata.h>
 
 static u64 dma_dmamask = DMA_BIT_MASK(32);
@@ -315,14 +316,12 @@ static struct platform_device *exynos4_dmacs[] __initdata = {
 
 static int __init exynos4_dma_init(void)
 {
-	unsigned int id = __raw_readl(S5P_VA_CHIPID) & 0xFFFFF000;
-
-	if (id == 0x43220) {
-		exynos4_device_pdma0.dev.platform_data = &exynos4212_pdma0_pdata;
-		exynos4_device_pdma1.dev.platform_data = &exynos4212_pdma1_pdata;
-	} else {
+	if (cpu_is_exynos4210()) {
 		exynos4_device_pdma0.dev.platform_data = &exynos4210_pdma0_pdata;
 		exynos4_device_pdma1.dev.platform_data = &exynos4210_pdma1_pdata;
+	} else {
+		exynos4_device_pdma0.dev.platform_data = &exynos4212_pdma0_pdata;
+		exynos4_device_pdma1.dev.platform_data = &exynos4212_pdma1_pdata;
 	}
 
 	platform_add_devices(exynos4_dmacs, ARRAY_SIZE(exynos4_dmacs));
