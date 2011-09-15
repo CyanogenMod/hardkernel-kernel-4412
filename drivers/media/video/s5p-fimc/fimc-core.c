@@ -233,7 +233,7 @@ static struct v4l2_queryctrl fimc_ctrls[] = {
 		.maximum	= 1,
 		.default_value	= 0,
 	}, {
-		.id		= V4L2_CID_SET_SHARABLE,
+		.id		= V4L2_CID_SET_SHAREABLE,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Enable cache configuration",
 		.minimum	= 3,
@@ -1333,7 +1333,7 @@ int fimc_s_ctrl(struct fimc_ctx *ctx, struct v4l2_control *ctrl)
 		ctx->cacheable = (bool)ctrl->value;
 		break;
 
-	case V4L2_CID_SET_SHARABLE:
+	case V4L2_CID_SET_SHAREABLE:
 		fimc->vb2->set_sharable(fimc->alloc_ctx, ctrl->value);
 		break;
 
