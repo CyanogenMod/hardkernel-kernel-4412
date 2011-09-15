@@ -1,4 +1,4 @@
-/* linux/arch/arm/plat-s5p/include/plat/regs-jpeg_v2.h
+/* linux/arch/arm/plat-s5p/include/plat/regs-jpeg_v2_x.h
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  * http://www.samsung.com/
@@ -141,8 +141,8 @@
 #define S5P_JPEG_ENC_FMT_YUV_422		(2 << S5P_JPEG_ENC_FMT_SHIFT)
 #define S5P_JPEG_ENC_FMT_YUV_420		(3 << S5P_JPEG_ENC_FMT_SHIFT)
 
-#define S5P_JPEG_SWAP_CHROMA_CrCb		(0 << 26)
-#define S5P_JPEG_SWAP_CHROMA_CbCr		(1 << 26)
+#define S5P_JPEG_SWAP_CHROMA_CrCb		(1 << 26)
+#define S5P_JPEG_SWAP_CHROMA_CbCr		(0 << 26)
 
 /* JPEG HUFF count Register bit */
 #define S5P_JPEG_HUFF_COUNT_MASK		0xffff
