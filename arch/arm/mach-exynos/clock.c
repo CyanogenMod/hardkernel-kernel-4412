@@ -1507,11 +1507,6 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_cam0",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-			.devname	= "exynos4210-fimc.0",
-#else
-			.devname	= "s3c-fimc.0",
-#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 16),
 		},
@@ -1521,11 +1516,6 @@ static struct clksrc_clk clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_cam1",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-			.devname	= "exynos4210-fimc.1",
-#else
-			.devname	= "s3c-fimc.1",
-#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 20),
 		},
