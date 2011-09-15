@@ -244,6 +244,7 @@ struct exynos_ss_udc {
 			__attribute__ ((aligned(EXYNOS_USB3_EVENT_BUFF_BSIZE)));
 	dma_addr_t		event_buff_dma;	
 
+	bool			eps_enabled;
 	bool			ep0_setup;
 	u8			*ep0_buff;
 	struct usb_request	*ep0_reply;
@@ -490,6 +491,23 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 		return -EINVAL;
 	}
 
+	if (!udc->eps_enabled) {
+		udc->eps_enabled = true;
+
+		/* Start New Configuration */
+		epcmd->ep = 0;
+		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTARTCFG;
+		epcmd->cmdflags =
+			(2 << EXYNOS_USB3_DEPCMDx_CommandParam_SHIFT) |
+			EXYNOS_USB3_DEPCMDx_CmdAct;
+
+		res = exynos_ss_udc_issue_cmd(udc, epcmd);
+		if (!res) {
+			dev_err(udc->dev, "Failed to start new configuration\n");
+			return -EINVAL;
+		}
+	}
+
 	mps = le16_to_cpu(desc->wMaxPacketSize);
 
 	spin_lock_irqsave(&udc_ep->lock, flags);
@@ -577,6 +595,8 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 		dev_err(udc->dev, "%s: called for ep0\n", __func__);
 		return -EINVAL;
 	}
+
+	udc->eps_enabled = false;
 
 	if (udc_ep->tri) {
 		bool res;
