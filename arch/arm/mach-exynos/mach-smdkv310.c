@@ -2481,9 +2481,9 @@ static void __init smdkv310_machine_init(void)
 #endif
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);
-	s3c_fimc1_set_platdata(&fimc_plat);
+	s3c_fimc1_set_platdata(NULL);
 	s3c_fimc2_set_platdata(&fimc_plat);
-	s3c_fimc3_set_platdata(&fimc_plat);
+	s3c_fimc3_set_platdata(NULL);
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s3c_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
