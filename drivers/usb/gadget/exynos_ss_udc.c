@@ -1781,9 +1781,11 @@ static int exynos_ss_udc_init(struct exynos_ss_udc *udc)
 	/* Event buffer */
 	writel(0, udc->regs + EXYNOS_USB3_GEVNTADR_63_32(0));
 	writel(udc->event_buff_dma, udc->regs + EXYNOS_USB3_GEVNTADR_31_0(0));
-	/* FIXME: do we need to set Event Interrupt Mask now? */
+	/* Flush any pending events */
+	reg = readl(udc->regs + EXYNOS_USB3_GEVNTCOUNT(0));
+	writel(reg, udc->regs + EXYNOS_USB3_GEVNTCOUNT(0));
+	/* Enable Event Buffer interrupt and set Event Buffer size */
 	writel(EXYNOS_USB3_EVENT_BUFF_BSIZE, udc->regs + EXYNOS_USB3_GEVNTSIZ(0));
-	writel(0, udc->regs + EXYNOS_USB3_GEVNTCOUNT(0));
 
 	/* TODO: GCTL - will use default values? */
 
