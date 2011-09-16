@@ -142,25 +142,71 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 */
 	write_pen_release(cpu);
 
-	if (!(__raw_readl(S5P_ARM_CORE1_STATUS) & S5P_CORE_LOCAL_PWR_EN)) {
-		__raw_writel(S5P_CORE_LOCAL_PWR_EN,
-			     S5P_ARM_CORE1_CONFIGURATION);
+	if (cpu == 1) {
+		if (!(__raw_readl(S5P_ARM_CORE1_STATUS) & S5P_CORE_LOCAL_PWR_EN)) {
+			__raw_writel(S5P_CORE_LOCAL_PWR_EN,
+				     S5P_ARM_CORE1_CONFIGURATION);
 
-		timeout = 10;
+			timeout = 10;
 
-		/* wait max 10 ms until cpu1 is on */
-		while ((__raw_readl(S5P_ARM_CORE1_STATUS)
-			& S5P_CORE_LOCAL_PWR_EN) != S5P_CORE_LOCAL_PWR_EN) {
-			if (timeout-- == 0)
-				break;
+			/* wait max 10 ms until cpu1 is on */
+			while ((__raw_readl(S5P_ARM_CORE1_STATUS)
+				& S5P_CORE_LOCAL_PWR_EN) != S5P_CORE_LOCAL_PWR_EN) {
+				if (timeout-- == 0)
+					break;
 
-			mdelay(1);
+				mdelay(1);
+			}
+
+			if (timeout == 0) {
+				printk(KERN_ERR "cpu1 power enable failed");
+				spin_unlock(&boot_lock);
+				return -ETIMEDOUT;
+			}
 		}
+	} else if (cpu == 2) {
+		if (!(__raw_readl(S5P_ARM_CORE2_STATUS) & S5P_CORE_LOCAL_PWR_EN)) {
+			__raw_writel(S5P_CORE_LOCAL_PWR_EN,
+				     S5P_ARM_CORE2_CONFIGURATION);
 
-		if (timeout == 0) {
-			printk(KERN_ERR "cpu1 power enable failed");
-			spin_unlock(&boot_lock);
-			return -ETIMEDOUT;
+			timeout = 10;
+
+			/* wait max 10 ms until cpu2 is on */
+			while ((__raw_readl(S5P_ARM_CORE2_STATUS)
+				& S5P_CORE_LOCAL_PWR_EN) != S5P_CORE_LOCAL_PWR_EN) {
+				if (timeout-- == 0)
+					break;
+
+				mdelay(1);
+			}
+
+			if (timeout == 0) {
+				printk(KERN_ERR "cpu2 power enable failed");
+				spin_unlock(&boot_lock);
+				return -ETIMEDOUT;
+			}
+		}
+	} else if (cpu ==3) {
+		if (!(__raw_readl(S5P_ARM_CORE3_STATUS) & S5P_CORE_LOCAL_PWR_EN)) {
+			__raw_writel(S5P_CORE_LOCAL_PWR_EN,
+				     S5P_ARM_CORE3_CONFIGURATION);
+
+			timeout = 10;
+
+			/* wait max 10 ms until cpu3 is on */
+			while ((__raw_readl(S5P_ARM_CORE3_STATUS)
+				& S5P_CORE_LOCAL_PWR_EN) != S5P_CORE_LOCAL_PWR_EN) {
+				if (timeout-- == 0)
+					break;
+
+				mdelay(1);
+			}
+
+			if (timeout == 0) {
+				printk(KERN_ERR "cpu3 power enable failed");
+				spin_unlock(&boot_lock);
+				return -ETIMEDOUT;
+			}
 		}
 	}
 
@@ -182,8 +228,16 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
 
-		__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
-			     CPU1_BOOT_REG);
+		if (cpu == 1)
+			__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
+					CPU1_BOOT_REG + 0x4);
+		else if (cpu == 2)
+			__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
+					CPU1_BOOT_REG + 0x8);
+		else if (cpu == 3)
+			__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
+					CPU1_BOOT_REG + 0xc);
+
 		smp_send_reschedule(cpu);
 
 		if (pen_release == -1)
