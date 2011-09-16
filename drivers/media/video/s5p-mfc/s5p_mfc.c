@@ -226,8 +226,6 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 	size_t dspl_y_addr = MFC_GET_ADR(DEC_DISPLAY_Y);
 	unsigned int index;
 	unsigned int frame_type = s5p_mfc_get_frame_type();
-	unsigned int crc_luma = s5p_mfc_get_crc_luma();
-	unsigned int crc_chroma = s5p_mfc_get_crc_chroma();
 
 	ctx->sequence++;
 	/* If frame is same as previous then skip and do not dequeue */
@@ -276,9 +274,6 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 					V4L2_BUF_FLAG_KEYFRAME;
 				break;
 			}
-
-			ctx->crc_luma0 = crc_luma;
-			ctx->crc_chroma0 = crc_chroma;
 
 			vb2_buffer_done(&dst_buf->vb,
 				s5p_mfc_err_dspl(err) ?

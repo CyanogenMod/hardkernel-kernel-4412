@@ -96,10 +96,6 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx);
 						S5P_FIMV_ENC_SI_STRM_SIZE)
 #define s5p_mfc_get_enc_slice_type()	readl(dev->regs_base + \
 						S5P_FIMV_ENC_SI_SLICE_TYPE)
-#define s5p_mfc_get_crc_luma()		readl(dev->regs_base + \
-						S5P_FIMV_CRC_LUMA0)
-#define s5p_mfc_get_crc_chroma()	readl(dev->regs_base + \
-						S5P_FIMV_CRC_CHROMA0)
 
 /* Interrupt handling routines */
 /*

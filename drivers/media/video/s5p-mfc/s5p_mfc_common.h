@@ -477,10 +477,6 @@ struct s5p_mfc_ctx {
 	int display_delay;
 	int cacheable;
 	int crc_enable;
-	int crc_luma0;
-	int crc_chroma0;
-	int crc_luma1;
-	int crc_chroma1;
 
 	/* Extra Buffers */
 	unsigned int ctx_buf_size;
