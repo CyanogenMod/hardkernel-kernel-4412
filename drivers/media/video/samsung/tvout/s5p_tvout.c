@@ -150,7 +150,7 @@ static int __devinit s5p_tvout_probe(struct platform_device *pdev)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	s5ptv_early_suspend.suspend = s5p_tvout_early_suspend;
 	s5ptv_early_suspend.resume = s5p_tvout_late_resume;
-	s5ptv_early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
+	s5ptv_early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 4;
 	register_early_suspend(&s5ptv_early_suspend);
 	suspend_status = 0;
 #endif
