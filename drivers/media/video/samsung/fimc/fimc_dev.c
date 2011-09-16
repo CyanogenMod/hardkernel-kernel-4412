@@ -39,7 +39,6 @@
 
 char buf[32];
 struct fimc_global *fimc_dev;
-void __iomem			*qos_regs0 , *qos_regs1;
 
 void s3c_fimc_irq_work(struct work_struct *work)
 {
@@ -1162,33 +1161,6 @@ static int fimc_release(struct file *filp)
 			pm_runtime_put_sync(ctrl->dev);
 		}
 #endif
-		if (ctrl->id == FIMC2) {
-			/* ioremap for register block */
-			qos_regs0 = ioremap(0x11600400, 0x10);
-			if (!qos_regs0) {
-				fimc_err("%s: failed to remap io region\n",
-						__func__);
-				return -1;
-			}
-
-			writel(0, qos_regs0 + 0x0);
-			writel(0, qos_regs0 + 0x4);
-			iounmap(qos_regs0);
-			qos_regs0 = NULL;
-
-			/* ioremap for register block */
-			qos_regs1 = ioremap(0x11200400, 0x10);
-			if (!qos_regs1) {
-				fimc_err("%s: failed to remap io region\n", __func__);
-				return -1;
-			}
-
-			writel(0, qos_regs1 + 0x0);
-			writel(0, qos_regs1 + 0x4);
-			iounmap(qos_regs1);
-			qos_regs1 = NULL;
-		}
-
 	}
 	if (ctrl->out) {
 		if (ctx->status != FIMC_STREAMOFF) {

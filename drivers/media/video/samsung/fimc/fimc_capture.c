@@ -415,6 +415,7 @@ int fimc_g_parm(struct file *file, void *fh, struct v4l2_streamparm *a)
 int fimc_s_parm(struct file *file, void *fh, struct v4l2_streamparm *a)
 {
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
+	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 	int ret = 0;
 	int new_fps = a->parm.capture.timeperframe.denominator /
 					a->parm.capture.timeperframe.numerator;
@@ -426,8 +427,10 @@ int fimc_s_parm(struct file *file, void *fh, struct v4l2_streamparm *a)
 		return 0;
 
 	mutex_lock(&ctrl->v4l2_lock);
-	if (ctrl->id != FIMC2)
+
+	if (ctrl->cam->sd && fimc_cam_use)
 		ret = v4l2_subdev_call(ctrl->cam->sd, video, s_parm, a);
+
 	mutex_unlock(&ctrl->v4l2_lock);
 
 	return ret;
@@ -852,8 +855,8 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 	if (!fimc_cam_use) {
 		if (i == fimc->active_camera) {
 			ctrl->cam = fimc->camera[i];
-			fimc_info2("fimc_s_input activating subdev FIMC2 %d\n",
-							ctrl->cam->initialized);
+			fimc_info2("fimc_s_input activating subdev FIMC%d\n",
+							ctrl->id);
 		} else {
 			mutex_unlock(&ctrl->v4l2_lock);
 			return -EINVAL;
