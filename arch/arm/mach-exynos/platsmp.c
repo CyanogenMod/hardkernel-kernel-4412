@@ -228,15 +228,20 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
 
-		if (cpu == 1)
+		if (cpu_is_exynos4412()) {
+			if (cpu == 1)
+				__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
+						CPU1_BOOT_REG + 0x4);
+			else if (cpu == 2)
+				__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
+						CPU1_BOOT_REG + 0x8);
+			else if (cpu == 3)
+				__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
+						CPU1_BOOT_REG + 0xc);
+		} else {
 			__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
-					CPU1_BOOT_REG + 0x4);
-		else if (cpu == 2)
-			__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
-					CPU1_BOOT_REG + 0x8);
-		else if (cpu == 3)
-			__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
-					CPU1_BOOT_REG + 0xc);
+					CPU1_BOOT_REG);
+		}
 
 		smp_send_reschedule(cpu);
 
