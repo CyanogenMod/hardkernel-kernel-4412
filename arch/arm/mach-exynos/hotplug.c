@@ -65,8 +65,19 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 	for (;;) {
 
 		/* make cpu1 to be turned off at next WFI command */
-		if (cpu == 1)
-			__raw_writel(0, S5P_ARM_CORE1_CONFIGURATION);
+		if ((cpu >= 1) && (cpu < NR_CPUS)) {
+			switch(cpu) {
+			case 1:
+				__raw_writel(0, S5P_ARM_CORE1_CONFIGURATION);
+				break;
+			case 2:
+				__raw_writel(0, S5P_ARM_CORE2_CONFIGURATION);
+				break;
+			case 3:
+				__raw_writel(0, S5P_ARM_CORE3_CONFIGURATION);
+				break;
+			}
+		}
 
 		/*
 		 * here's the WFI
