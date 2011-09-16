@@ -292,13 +292,73 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.flag_shft = 0,
 	},
 	{
-		.type = MFC_CTRL_TYPE_GET,
+		.type = MFC_CTRL_TYPE_GET_DST,
 		.id = V4L2_CID_CODEC_FRAME_TAG,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SHM,
 		.addr = S5P_FIMV_SHARED_GET_FRAME_TAG_TOP,
 		.mask = 0xFFFFFFFF,
 		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET_SRC,
+		.id = V4L2_CID_CODEC_CRC_DATA_LUMA,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_CRC_LUMA0,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET_SRC,
+		.id = V4L2_CID_CODEC_CRC_DATA_CHROMA,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_CRC_CHROMA0,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET_SRC,
+		.id = V4L2_CID_CODEC_CRC_DATA_LUMA_BOT,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_CRC_LUMA1,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET_SRC,
+		.id = V4L2_CID_CODEC_CRC_DATA_CHROMA_BOT,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_CRC_CHROMA1,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET_SRC,
+		.id = V4L2_CID_CODEC_CRC_GENERATED,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_SI_DECODED_STATUS,
+		.mask = 0x3,
+		.shft = 4,
 		.flag_mode = MFC_CTRL_MODE_NONE,
 		.flag_addr = 0,
 		.flag_shft = 0,
@@ -373,7 +433,8 @@ static int dec_init_ctx_ctrls(struct s5p_mfc_ctx *ctx)
 
 		list_add_tail(&ctx_ctrl->list, &ctx->ctrls);
 
-		mfc_debug(5, "add ctx ctrl id: 0x%08x\n", ctx_ctrl->id);
+		mfc_debug(5, "add ctx ctrl id: 0x%08x, type : %d\n",
+				ctx_ctrl->id, ctx_ctrl->type);
 	}
 
 	return 0;
@@ -402,21 +463,35 @@ static int dec_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 	enum s5p_mfc_ctrl_type type, unsigned int index)
 {
 	int i;
+	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
 	struct s5p_mfc_buf_ctrl *buf_ctrl;
 	struct list_head *head;
 
-	if (type == MFC_CTRL_TYPE_SET)
+	if (type & MFC_CTRL_TYPE_SRC) {
 		head = &ctx->src_ctrls[index];
-	else if (type == MFC_CTRL_TYPE_GET)
+		ctx->src_ctrls_flag[index] = 1;
+	} else if (type & MFC_CTRL_TYPE_DST) {
 		head = &ctx->dst_ctrls[index];
-	else
+		ctx->dst_ctrls_flag[index] = 1;
+	} else {
+		mfc_err("Control type missmatch. type : %d\n", type);
 		return -EINVAL;
+	}
 
 	INIT_LIST_HEAD(head);
 
-	for (i = 0; i < NUM_CTRL_CFGS; i++) {
-		if (type != mfc_ctrl_list[i].type)
+	list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
+		if (!(type & ctx_ctrl->type))
 			continue;
+
+		for (i = 0; i < NUM_CTRL_CFGS; i++)
+			if (ctx_ctrl->id == mfc_ctrl_list[i].id)
+				break;
+
+		if (i == NUM_CTRL_CFGS) {
+			mfc_err("Failed to get control. id : 0x%x\n", ctx_ctrl->id);
+			return -EINVAL;
+		}
 
 		buf_ctrl = kzalloc(sizeof(struct s5p_mfc_buf_ctrl), GFP_KERNEL);
 		if (buf_ctrl == NULL) {
@@ -426,7 +501,8 @@ static int dec_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 			return -ENOMEM;
 		}
 
-		buf_ctrl->id = mfc_ctrl_list[i].id;
+		buf_ctrl->id = ctx_ctrl->id;
+		buf_ctrl->type = ctx_ctrl->type;
 		buf_ctrl->has_new = 0;
 		buf_ctrl->val = 0;
 		buf_ctrl->old_val = 0;
@@ -441,7 +517,8 @@ static int dec_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 
 		list_add_tail(&buf_ctrl->list, head);
 
-		mfc_debug(5, "add buf ctrl id: 0x%08x\n", buf_ctrl->id);
+		mfc_debug(5, "add buf ctrl id: 0x%08x, type : %d\n",
+				buf_ctrl->id, buf_ctrl->type);
 	}
 
 	return 0;
@@ -507,7 +584,7 @@ static int dec_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 			continue;
 
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
-			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET)
+			if ((ctx_ctrl->type & MFC_CTRL_TYPE_GET) == 0)
 				continue;
 
 			if (ctx_ctrl->id == buf_ctrl->id) {
@@ -585,6 +662,9 @@ static int dec_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 	unsigned int value = 0;
 
 	list_for_each_entry(buf_ctrl, head, list) {
+		if ((buf_ctrl->type & MFC_CTRL_TYPE_GET) == 0)
+			continue;
+
 		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
 			value = s5p_mfc_read_reg(buf_ctrl->addr);
 		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
@@ -822,6 +902,9 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 	int ret = 0;
 	struct s5p_mfc_fmt *fmt;
 	struct v4l2_pix_format_mplane *pix_mp;
+	int i;
+	enum s5p_mfc_ctrl_type type;
+	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
 
 	mfc_debug_enter();
 	ret = vidioc_try_fmt(file, priv, f);
@@ -885,6 +968,38 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		s5p_mfc_release_dec_desc_buffer(ctx);
 
 		ctx->state = MFCINST_INIT;
+	}
+
+	if (ctx->crc_enable) {
+		/* CRC related control types should be changed by the codec mode. */
+		type = (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) ?
+				MFC_CTRL_TYPE_GET_DST : MFC_CTRL_TYPE_GET_SRC;
+
+		mfc_debug(5, "ctx type is %d\n", type);
+		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
+			switch (ctx_ctrl->id) {
+			case V4L2_CID_CODEC_CRC_DATA_LUMA:
+			case V4L2_CID_CODEC_CRC_DATA_CHROMA:
+			case V4L2_CID_CODEC_CRC_DATA_LUMA_BOT:
+			case V4L2_CID_CODEC_CRC_DATA_CHROMA_BOT:
+			case V4L2_CID_CODEC_CRC_GENERATED:
+				ctx_ctrl->type = type;
+				break;
+			default:
+				break;
+			}
+		}
+
+		/* Reinitialize controls for source buffers */
+		for (i = 0; i < MFC_MAX_BUFFERS; i++) {
+			if (ctx->src_ctrls_flag[i]) {
+				if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->src_ctrls[i]) < 0)
+					mfc_err("failed in cleanup_buf_ctrls\n");
+				ctx->src_ctrls_flag[i] = 0;
+				if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SRC, i) < 0)
+					mfc_err("failed in init_buf_ctrls\n");
+			}
+		}
 	}
 
 	s5p_mfc_alloc_instance_buffer(ctx);
@@ -1201,12 +1316,6 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 	case V4L2_CID_CODEC_CRC_ENABLE:
 		ctrl->value = ctx->crc_enable;
 		break;
-	case V4L2_CID_CODEC_CRC_DATA_LUMA:
-		ctrl->value = ctx->crc_luma0;
-		break;
-	case V4L2_CID_CODEC_CRC_DATA_CHROMA:
-		ctrl->value = ctx->crc_chroma0;
-		break;
 #if defined(CONFIG_S5P_MFC_VB2_ION)
 	case V4L2_CID_SET_SHAREABLE:
 		ctrl->value = ctx->fd_ion;
@@ -1214,7 +1323,7 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 #endif
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
-			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET)
+			if ((ctx_ctrl->type & MFC_CTRL_TYPE_GET) == 0)
 				continue;
 
 			if (ctx_ctrl->id == ctrl->id) {
@@ -1501,7 +1610,7 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 		list_add_tail(&buf->list, &ctx->dpb_queue);
 		ctx->dpb_queue_cnt++;
 
-		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_GET, vb->v4l2_buf.index) < 0)
+		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_DST, vb->v4l2_buf.index) < 0)
 			mfc_err("failed in init_buf_ctrls\n");
 
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
@@ -1517,7 +1626,7 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 		}
 		buf->cookie.stream = mfc_plane_cookie(vb, 0);
 
-		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SET, vb->v4l2_buf.index) < 0)
+		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SRC, vb->v4l2_buf.index) < 0)
 			mfc_err("failed in init_buf_ctrls\n");
 	} else {
 		mfc_err("s5p_mfc_buf_init: unknown queue type.\n");
@@ -1557,6 +1666,8 @@ static int s5p_mfc_buf_finish(struct vb2_buffer *vb)
 		if (call_cop(ctx, to_ctx_ctrls, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		if (call_cop(ctx, to_ctx_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
+			mfc_err("failed in to_buf_ctrls\n");
 		#if 0
 		/* if there are not-handled mfc_ctrl, remove all */
 		while (!list_empty(&ctx->src_ctrls[index])) {
@@ -1584,9 +1695,11 @@ static void s5p_mfc_buf_cleanup(struct vb2_buffer *vb)
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err("failed in cleanup_buf_ctrls\n");
+		ctx->dst_ctrls_flag[index] = 0;
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		if (call_cop(ctx, cleanup_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in cleanup_buf_ctrls\n");
+		ctx->src_ctrls_flag[index] = 0;
 	} else {
 		mfc_err("s5p_mfc_buf_cleanup: unknown queue type.\n");
 	}
@@ -1727,6 +1840,7 @@ const struct v4l2_ioctl_ops *get_dec_v4l2_ioctl_ops(void)
 
 int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 {
+	int i;
 	int ret = 0;
 
 	ctx->inst_no = MFC_NO_INSTANCE_SET;
@@ -1735,6 +1849,11 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 	INIT_LIST_HEAD(&ctx->dst_queue);
 	ctx->src_queue_cnt = 0;
 	ctx->dst_queue_cnt = 0;
+
+	for (i = 0; i < MFC_MAX_BUFFERS; i++) {
+		ctx->src_ctrls_flag[i] = 0;
+		ctx->dst_ctrls_flag[i] = 0;
+	}
 
 	ctx->capture_state = QUEUE_FREE;
 	ctx->output_state = QUEUE_FREE;

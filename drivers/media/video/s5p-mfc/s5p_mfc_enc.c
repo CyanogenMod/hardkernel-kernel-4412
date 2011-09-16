@@ -740,7 +740,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.flag_shft = 0,
 	},
 	{
-		.type = MFC_CTRL_TYPE_GET,
+		.type = MFC_CTRL_TYPE_GET_DST,
 		.id = V4L2_CID_CODEC_FRAME_TAG,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SHM,
@@ -764,7 +764,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.flag_shft = 0,
 	},
 	{
-		.type = MFC_CTRL_TYPE_GET,
+		.type = MFC_CTRL_TYPE_GET_DST,
 		.id = V4L2_CID_CODEC_FRAME_INSERTION,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SFR,
@@ -861,7 +861,7 @@ static int enc_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 		mfc_debug(5, "ctx->src_ctrls[%d] is initialized\n", index);
 		return 0;
 	}
-	if ((type == MFC_CTRL_TYPE_GET) && (ctx->dst_ctrls_flag[index])) {
+	if ((type == MFC_CTRL_TYPE_GET_DST) && (ctx->dst_ctrls_flag[index])) {
 		mfc_debug(5, "ctx->dst_ctrls[%d] is initialized\n", index);
 		return 0;
 	}
@@ -870,7 +870,7 @@ static int enc_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 		head = &ctx->src_ctrls[index];
 		ctx->src_ctrls_flag[index] = 1;
 	}
-	else if (type == MFC_CTRL_TYPE_GET) {
+	else if (type == MFC_CTRL_TYPE_GET_DST) {
 		head = &ctx->dst_ctrls[index];
 		ctx->dst_ctrls_flag[index] = 1;
 	}
@@ -972,7 +972,7 @@ static int enc_to_ctx_ctrls(struct s5p_mfc_ctx *ctx, struct list_head *head)
 			continue;
 
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
-			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET)
+			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET_DST)
 				continue;
 
 			if (ctx_ctrl->id == buf_ctrl->id) {
@@ -1906,7 +1906,7 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	case V4L2_CID_CODEC_FRAME_TAG:
 	case V4L2_CID_CODEC_FRAME_INSERTION:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
-			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET)
+			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET_DST)
 				continue;
 
 			if (ctx_ctrl->id == ctrl->id) {
@@ -2477,7 +2477,7 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 
 		buf->cookie.stream = mfc_plane_cookie(vb, 0);
 
-		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_GET, vb->v4l2_buf.index) < 0)
+		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_GET_DST, vb->v4l2_buf.index) < 0)
 			mfc_err("failed in init_buf_ctrls\n");
 
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {

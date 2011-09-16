@@ -145,6 +145,7 @@
 								a frame */
 #define S5P_FIMV_SI_DISPLAY_STATUS	0x201c /* status of decoded picture */
 #define S5P_FIMV_SI_FRAME_TYPE		0x2020 /* frame type such as skip/I/P/B */
+#define S5P_FIMV_SI_DECODED_STATUS	0x202c /* status of decoded picture */
 
 #define S5P_FIMV_SI_CH0_SB_ST_ADR	0x2044 /* start addr of stream buf */
 #define S5P_FIMV_SI_CH0_SB_FRM_SIZE	0x2048 /* size of stream buf */

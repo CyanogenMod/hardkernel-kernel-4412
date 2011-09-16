@@ -285,9 +285,14 @@ struct s5p_mfc_enc_params {
 };
 
 enum s5p_mfc_ctrl_type {
-	MFC_CTRL_TYPE_SET	= 0x1,
-	MFC_CTRL_TYPE_GET	= 0x2,
+	MFC_CTRL_TYPE_GET_SRC	= 0x1,
+	MFC_CTRL_TYPE_GET_DST	= 0x2,
+	MFC_CTRL_TYPE_SET	= 0x4,
 };
+
+#define	MFC_CTRL_TYPE_GET	(MFC_CTRL_TYPE_GET_SRC | MFC_CTRL_TYPE_GET_DST)
+#define	MFC_CTRL_TYPE_SRC	(MFC_CTRL_TYPE_SET | MFC_CTRL_TYPE_GET_SRC)
+#define	MFC_CTRL_TYPE_DST	(MFC_CTRL_TYPE_GET_DST)
 
 enum s5p_mfc_ctrl_mode {
 	MFC_CTRL_MODE_NONE	= 0x0,
@@ -326,6 +331,7 @@ struct s5p_mfc_ctx_ctrl {
 struct s5p_mfc_buf_ctrl {
 	struct list_head list;
 	unsigned int id;
+	enum s5p_mfc_ctrl_type type;
 	int has_new;
 	int val;
 	unsigned int old_val;		/* only for MFC_CTRL_TYPE_SET */

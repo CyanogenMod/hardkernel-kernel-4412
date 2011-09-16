@@ -389,6 +389,9 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 				vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_ERROR);
 			else
 				vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_DONE);
+
+			if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
+				mfc_err("failed in get_buf_ctrls_val\n");
 		}
 	}
 leave_handle_frame:
