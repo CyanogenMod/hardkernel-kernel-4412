@@ -18,26 +18,6 @@
 #include <mach/sysmmu.h>
 #include <plat/s5p-clock.h>
 
-/* These names must be equal to the clock names in mach-exynos/clock.c */
-const char *sysmmu_ips_name[S5P_SYSMMU_TOTAL_IPNUM] = {
-	"SYSMMU_MDMA"	,
-	"SYSMMU_SSS"	,
-	"SYSMMU_FIMC0"	,
-	"SYSMMU_FIMC1"	,
-	"SYSMMU_FIMC2"	,
-	"SYSMMU_FIMC3"	,
-	"SYSMMU_JPEG"	,
-	"SYSMMU_FIMD0"	,
-	"SYSMMU_FIMD1"	,
-	"SYSMMU_PCIe"	,
-	"SYSMMU_G2D"	,
-	"SYSMMU_ROTATOR",
-	"SYSMMU_MDMA2"	,
-	"SYSMMU_TV"	,
-	"SYSMMU_MFC_L"	,
-	"SYSMMU_MFC_R"	,
-};
-
 #define SYSMMU_RESOURCE(name, irq) [SYSMMU_##name] = {\
 		[0] = {\
 			.start	= EXYNOS4_PA_SYSMMU_##name,\
