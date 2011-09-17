@@ -105,6 +105,7 @@ struct s3c_platform_camera {
 	int				(*cam_power)(int onoff);
 	enum flite_index		flite_id;
 	bool				use_isp;
+	int				sensor_index;
 };
 
 /* For camera interface driver */
