@@ -533,7 +533,8 @@ int fimc_release_subdev(struct fimc_control *ctrl)
 		fimc_dbg("%s called\n", __func__);
 
 		/* WriteBack doesn't need clock setting */
-		if ((ctrl->cam->id == CAMERA_WB) || (ctrl->cam->id == CAMERA_WB_B)) {
+		if ((ctrl->cam->id == CAMERA_WB) ||
+			(ctrl->cam->id == CAMERA_WB_B)) {
 			ctrl->cam->initialized = 0;
 			ctrl->cam = NULL;
 			fimc->active_camera = -1;
@@ -548,7 +549,7 @@ int fimc_release_subdev(struct fimc_control *ctrl)
 
 		/* shutdown the MCLK */
 		if (fimc->mclk_status == CAM_MCLK_ON) {
-		clk_disable(ctrl->cam->clk);
+			clk_disable(ctrl->cam->clk);
 			fimc->mclk_status = CAM_MCLK_OFF;
 		}
 
@@ -638,7 +639,7 @@ static int flite_register_callback(struct device *dev, void *p)
 	return 0; /* non-zero value stops iteration */
 }
 
-static struct v4l2_subdev * exynos_flite_get_subdev(int id)
+static struct v4l2_subdev *exynos_flite_get_subdev(int id)
 {
 	const char *module_name = "exynos-fimc-lite";
 	struct device_driver *drv;
@@ -690,20 +691,27 @@ static int fimc_is_register_callback(struct device *dev, void *p)
 	return 0; /* non-zero value stops iteration */
 }
 
-static int fimc_is_release_subdev(struct fimc_control *ctrl)
+int fimc_is_release_subdev(struct fimc_control *ctrl)
 {
+	int ret;
 	struct fimc_global *fimc = get_fimc_dev();
 	if (ctrl->is.sd) {
-		v4l2_device_unregister_subdev(ctrl->is.sd);
-		ctrl->is.sd = NULL;
 		if (ctrl->cam->cam_power)
 			ctrl->cam->cam_power(0);
 		/* shutdown the MCLK */
 		if (fimc->mclk_status == CAM_MCLK_ON) {
-		clk_disable(ctrl->cam->clk);
+			clk_disable(ctrl->cam->clk);
 			fimc->mclk_status = CAM_MCLK_OFF;
 		}
 
+		ret = v4l2_subdev_call(ctrl->is.sd, core, s_power, 0);
+		if (ret < 0) {
+			fimc_dbg("FIMC-IS init failed");
+			return -ENODEV;
+		}
+
+		v4l2_device_unregister_subdev(ctrl->is.sd);
+		ctrl->is.sd = NULL;
 		ctrl->cam->initialized = 0;
 		ctrl->cam = NULL;
 		fimc->active_camera = -1;
@@ -761,9 +769,8 @@ static int fimc_is_init_cam(struct fimc_control *ctrl)
 			fimc_err("\nfail to power on\n");
 	}
 #if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-	if (ctrl->power_status == FIMC_POWER_OFF) {
+	if (ctrl->power_status == FIMC_POWER_OFF)
 		pm_runtime_get_sync(&pdev->dev);
-	}
 #endif
 	cam->initialized = 1;
 	return ret;
@@ -796,9 +803,8 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 	 * We need to unregister that subdev first. */
 	if (i != fimc->active_camera) {
 		fimc_info1("\n\nfimc_s_input activating subdev\n");
-		if (ctrl->cam && (ctrl->cam->sd || ctrl->flite_sd)) {
+		if (ctrl->cam && (ctrl->cam->sd || ctrl->flite_sd))
 			fimc_release_subdev(ctrl);
-		}
 		else if (ctrl->is.sd)
 			fimc_is_release_subdev(ctrl);
 		ctrl->cam = fimc->camera[i];
@@ -809,7 +815,7 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 			if (ret < 0) {
 				mutex_unlock(&ctrl->v4l2_lock);
 				fimc_err("%s: Could not register camera" \
-						" sensor with V4L2.\n", __func__);
+					" sensor with V4L2.\n", __func__);
 				return -ENODEV;
 			}
 		}
@@ -836,12 +842,17 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 				fimc_dbg("FIMC-IS init clock failed");
 				return -ENODEV;
 			}
+			ret = v4l2_subdev_call(ctrl->is.sd, core, s_power, 1);
+			if (ret < 0) {
+				fimc_dbg("FIMC-IS init failed");
+				return -ENODEV;
+			}
 			ret = v4l2_subdev_call(ctrl->is.sd, core, load_fw);
 			if (ret < 0) {
 				fimc_dbg("FIMC-IS init failed");
 				return -ENODEV;
 			}
-			ret = v4l2_subdev_call(ctrl->is.sd, core, init, 0);
+			ret = v4l2_subdev_call(ctrl->is.sd, core, init, ctrl->cam->sensor_index);
 			if (ret < 0) {
 				fimc_dbg("FIMC-IS init failed");
 				return -ENODEV;
@@ -1003,7 +1014,8 @@ int fimc_s_fmt_vid_private(struct file *file, void *fh, struct v4l2_format *f)
 		mbus_fmt->code = V4L2_MBUS_FMT_YUYV8_2X8; /*dummy*/
 		mbus_fmt->field = f->fmt.pix.field;
 		mbus_fmt->colorspace = V4L2_COLORSPACE_SRGB;
-		ret = v4l2_subdev_call(ctrl->is.sd, video, s_mbus_fmt, mbus_fmt);
+		ret = v4l2_subdev_call(ctrl->is.sd, video,
+					s_mbus_fmt, mbus_fmt);
 
 		return ret;
 	}
@@ -1042,9 +1054,8 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 		/* assign to ctrl */
 		ctrl->cap = cap;
 #if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-		if (ctrl->power_status == FIMC_POWER_OFF) {
+		if (ctrl->power_status == FIMC_POWER_OFF)
 			pm_runtime_get_sync(&pdev->dev);
-		}
 #endif
 	} else {
 		memset(cap, 0, sizeof(*cap));
@@ -1117,14 +1128,9 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_HEIGHT;
 		v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
 		ctrl->is.fmt.height = ctrl->is.mbus_fmt.height = is_ctrl.value;
-
-		ctrl->is.mbus_fmt.width += 16;
-		ctrl->is.mbus_fmt.height += 12;
-	}
-
-	if (ctrl->flite_sd && fimc_cam_use) {
-		ret = v4l2_subdev_call(ctrl->flite_sd, video, s_mbus_fmt,
-				&ctrl->is.mbus_fmt);
+		/* default offset values */
+		ctrl->is.offset_x = 16;
+		ctrl->is.offset_y = 12;
 	}
 
 	if (ctrl->cam->sd && fimc_cam_use)
@@ -1432,7 +1438,7 @@ int fimc_querybuf_capture(void *fh, struct v4l2_buffer *b)
 		b->length = ctrl->cap->bufs[b->index].length[0]
 			+ ctrl->cap->bufs[b->index].length[1];
 		break;
-	case V4L2_PIX_FMT_NV12: 	/* fall through */
+	case V4L2_PIX_FMT_NV12:		/* fall through */
 	case V4L2_PIX_FMT_NV12T:
 		b->length = ALIGN(ctrl->cap->bufs[b->index].length[0], SZ_64K)
 			+ ALIGN(ctrl->cap->bufs[b->index].length[1], SZ_64K);
@@ -1502,7 +1508,7 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 
 	fimc_dbg("%s\n", __func__);
 
-	if (!ctrl->cam || !ctrl->cap || ((!ctrl->cam->sd) && (!ctrl->is.sd))){
+	if (!ctrl->cam || !ctrl->cap || ((!ctrl->cam->sd) && (!ctrl->is.sd))) {
 		fimc_err("%s: No capture device.\n", __func__);
 		return -ENODEV;
 	}
@@ -1868,6 +1874,14 @@ int fimc_streamon_capture(void *fh)
 		fimc_dbg("CSI setting width = %d, height = %d\n",
 				ctrl->is.fmt.width + ctrl->is.offset_x,
 				ctrl->is.fmt.height + ctrl->is.offset_y);
+
+		if (ctrl->flite_sd && fimc_cam_use) {
+			ctrl->is.mbus_fmt.width += ctrl->is.offset_x;
+			ctrl->is.mbus_fmt.height += ctrl->is.offset_y;
+			ret = v4l2_subdev_call(ctrl->flite_sd, video,
+				s_mbus_fmt, &ctrl->is.mbus_fmt);
+		}
+
 		if (ctrl->cam->id == CAMERA_CSI_C)
 			s3c_csis_start(CSI_CH_0, cam->mipi_lanes,
 			cam->mipi_settle, cam->mipi_align,

@@ -280,7 +280,8 @@ static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
 	/* just clearing the pends */
 	cfg = readl(s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
-
+	/* receiving non-image data is not error */
+	cfg &= 0x0FFFFFFF;
 	if (unlikely(cfg))
 		err("csis error interrupt: 0x%x\n", cfg);
 

@@ -568,6 +568,7 @@ extern int fimc_stop_capture(struct fimc_control *ctrl);
 extern int fimc_enum_framesizes(struct file *filp, void *fh, struct v4l2_frmsizeenum *fsize);
 extern int fimc_enum_frameintervals(struct file *filp, void *fh, struct v4l2_frmivalenum *fival);
 extern int fimc_release_subdev(struct fimc_control *ctrl);
+extern int fimc_is_release_subdev(struct fimc_control *ctrl);
 
 /* output device */
 extern void fimc_outdev_set_src_addr(struct fimc_control *ctrl, dma_addr_t *base);

@@ -467,7 +467,9 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 	int buf_index;
 	int framecnt_seq;
 	int available_bufnum;
-	static int is_frame_end_irq = 0;
+	static int is_frame_end_irq;
+	struct v4l2_control is_ctrl;
+	u32 is_fn;
 
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 #ifdef DEBUG
@@ -499,6 +501,43 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 			return;
 		}
 		buf_index = pp - 1;
+		if (ctrl->cam->use_isp) {
+			is_ctrl.id = V4L2_CID_IS_GET_FRAME_NUMBER;
+			v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
+			is_fn = is_ctrl.value;
+			if (ctrl->is.frame_count == is_fn) {
+				is_ctrl.id = V4L2_CID_IS_GET_FRAME_VALID;
+				v4l2_subdev_call(ctrl->is.sd, core, g_ctrl,
+					&is_ctrl);
+				if (is_ctrl.value) {
+					is_ctrl.id =
+						V4L2_CID_IS_SET_FRAME_VALID;
+					is_ctrl.value = 0;
+					v4l2_subdev_call(ctrl->is.sd,
+						core, s_ctrl, &is_ctrl);
+				} else {
+					printk(KERN_INFO
+					"Invalid frame - fn %d\n", is_fn);
+					is_ctrl.id =
+						V4L2_CID_IS_SET_FRAME_VALID;
+					is_ctrl.value = 0;
+					v4l2_subdev_call(ctrl->is.sd,
+						core, s_ctrl, &is_ctrl);
+				}
+				ctrl->is.frame_count++;
+			} else {
+			/* Frame lost case */
+				is_ctrl.id =
+					V4L2_CID_IS_GET_LOSTED_FRAME_NUMBER;
+				v4l2_subdev_call(ctrl->is.sd,
+					core, g_ctrl, &is_ctrl);
+				ctrl->is.frame_count = is_ctrl.value;
+				is_ctrl.id = V4L2_CID_IS_CLEAR_FRAME_NUMBER;
+				is_ctrl.value = ctrl->is.frame_count;
+				v4l2_subdev_call(ctrl->is.sd,
+					core, s_ctrl, &is_ctrl);
+			}
+		}
 		fimc_add_outgoing_queue(ctrl, buf_index);
 		fimc_hwset_output_buf_sequence(ctrl, buf_index,
 				FIMC_FRAMECNT_SEQ_DISABLE);
@@ -1153,6 +1192,7 @@ static int fimc_release(struct file *filp)
 		/* Unload the subdev (camera sensor) module,
 		 * reset related status flags */
 		fimc_release_subdev(ctrl);
+		fimc_is_release_subdev(ctrl);
 	}
 
 	if (atomic_read(&ctrl->in_use) == 0) {
