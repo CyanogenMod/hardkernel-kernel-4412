@@ -26,7 +26,7 @@
 #define IS_ERROR_INVALID_PATH		(IS_ERROR_SET_PARAMETER + 1)
 #define IS_ERROR_UNKNOWN		100
 
-#define IS_COMMAND_VER 105 /* IS COMMAND VERSION 1.05 */
+#define IS_COMMAND_VER 106 /* IS COMMAND VERSION 1.05 */
 
 enum is_cmd {
 	/* HOST -> IS */
@@ -39,15 +39,14 @@ enum is_cmd {
 	HIC_SET_PARAMETER,
 	HIC_GET_PARAMETER,
 	HIC_SET_TUNE,
-	HIC_LOAD_SET_FILE,
 	RESERVED1,
 	HIC_GET_STATE,
 	/* SENSOR PART*/
 	HIC_OPEN_SENSOR,
 	HIC_CLOSE_SENSOR,
-	RESERVED2,
-	RESERVED3,
-	RESERVED4,
+	HIC_SIMMIAN_INIT,
+	HIC_SIMMIAN_WRITE,
+	HIC_SIMMIAN_READ,
 	/* IS -> HOST */
 	IHC_GET_SENSOR_NUMBER = 0x1000,
 	IHC_SET_SHOT_MARK,
@@ -75,6 +74,17 @@ enum is_scenario_id {
 	ISS_CAPTURE_STILL,
 	ISS_CAPTURE_VIDEO,
 	ISS_END
+};
+
+struct is_setfile_header_element {
+	u32 binary_addr;
+	u32 binary_size;
+};
+
+struct is_setfile_header {
+	struct is_setfile_header_element isp[ISS_END];
+	struct is_setfile_header_element drc[ISS_END];
+	struct is_setfile_header_element fd[ISS_END];
 };
 
 #define HOST_SET_INT_BIT	0x00000001

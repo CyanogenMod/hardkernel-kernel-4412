@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 105  /* IS REGION VERSION 1.05 */
+#define IS_REGION_VER 110  /* IS REGION VERSION 1.10 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -1413,10 +1413,6 @@ struct is_face_marker {
 #define MAX_FRAME_COUNT_PREVIEW	4
 #define MAX_FRAME_COUNT_CAPTURE	1
 #define MAX_FACE_COUNT		16
-
-#define SENSOR_S5K3H1	0
-#define SENSOR_S5K3H2	1
-#define SENSOR_S5K6A3	2
 
 #if defined(MIDAS)
 #define SENSOR		SENSOR_S5K6A3

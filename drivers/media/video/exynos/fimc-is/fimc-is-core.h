@@ -46,7 +46,7 @@
 
 #define FIMC_IS_SENSOR_NUM	1
 
-#define FIMC_IS_SHUTDOWN_TIMEOUT	((20000*HZ)/1000)
+#define FIMC_IS_SHUTDOWN_TIMEOUT	((2000*HZ)/1000)
 
 #define DEBUG
 
@@ -89,6 +89,12 @@ enum fimc_is_clk {
 	FIMC_IS_CLK_GATE,
 };
 
+enum sensor_list {
+	SENSOR_S5K3H1 = 0,
+	SENSOR_S5K3H2 = 1,
+	SENSOR_S5K6A3 = 2,
+};
+
 struct is_meminfo {
 	dma_addr_t	base;		/* buffer base */
 	size_t		size;		/* total length */
@@ -110,8 +116,14 @@ struct is_to_host_cmd {
 };
 
 struct is_sensor {
-	u32 width;
-	u32 height;
+	int id;
+	enum sensor_list sensor_name;
+	u32 width_prev;
+	u32 height_prev;
+	u32 width_prev_cam;
+	u32 height_prev_cam;
+	u32 width_cap;
+	u32 height_cap;
 	u32 offset_x;
 	u32 offset_y;
 };
@@ -124,19 +136,16 @@ struct fimc_is_dev {
 	struct exynos4_platform_fimc_is	*pdata;
 	u32				scenario_id;
 	u32				frame_count;
-	int				sensor_id;
-	u32				sensor_num;
+
 	struct is_sensor		sensor;
+	u32				sensor_num;
+
 	u16				num_clocks;
 	struct clk			*clock[NUM_FIMC_IS_CLOCKS];
 	void __iomem			*regs;
 	struct resource			*regs_res;
 
-	void __iomem			*regs_fimc_lite;
-	void __iomem			*regs_uart;
-	void __iomem			*regs_pmu;
 	int				irq1;
-	int				irq2;
 	wait_queue_head_t		irq_queue1;
 	struct is_to_host_cmd		i2h_cmd;
 
@@ -201,10 +210,10 @@ extern void fimc_is_hw_set_init(struct fimc_is_dev *dev);
 extern void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val);
 extern void fimc_is_hw_set_lite(struct fimc_is_dev *dev, u32 width, u32 height);
 extern void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev);
+extern void fimc_is_hw_disable(struct fimc_is_dev *dev);
 
 void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size);
 void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size);
 
 struct fimc_is_dev *to_fimc_is_dev(struct v4l2_subdev *sdev);
-
 #endif

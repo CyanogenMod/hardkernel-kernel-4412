@@ -28,6 +28,9 @@
 #include <media/v4l2-subdev.h>
 #include <linux/videodev2.h>
 #include <linux/videodev2_samsung.h>
+#include <linux/gpio.h>
+#include <linux/gpio_event.h>
+#include <plat/gpio-cfg.h>
 
 #include "fimc-is-core.h"
 #include "fimc-is-regs.h"
@@ -37,12 +40,30 @@
 /*
 Default setting values
 */
-#define PREVIEW_WIDTH		1920
-#define PREVIEW_HEIGHT		1080
+#ifdef CONFIG_VIDEO_S5K3H1
+#define PREVIEW_WIDTH		640
+#define PREVIEW_HEIGHT		480
 #define CAPTURE_WIDTH		3232
 #define CAPTURE_HEIGHT		2424
-#define CAMCORDING_WIDTH	3232
-#define CAMCORDING_HEIGHT	2424
+#define CAMCORDING_WIDTH	1920
+#define CAMCORDING_HEIGHT	1080
+#endif
+#ifdef CONFIG_VIDEO_S5K3H2
+#define PREVIEW_WIDTH		640
+#define PREVIEW_HEIGHT		480
+#define CAPTURE_WIDTH		3232
+#define CAPTURE_HEIGHT		2424
+#define CAMCORDING_WIDTH	1920
+#define CAMCORDING_HEIGHT	1080
+#endif
+#ifdef CONFIG_VIDEO_S5K6A3
+#define PREVIEW_WIDTH		800
+#define PREVIEW_HEIGHT		480
+#define CAPTURE_WIDTH		1408
+#define CAPTURE_HEIGHT		1412
+#define CAMCORDING_WIDTH	1280
+#define CAMCORDING_HEIGHT	720
+#endif
 
 static const struct isp_param init_val_isp_preview = {
 	.control = {
@@ -181,7 +202,7 @@ static const struct drc_param init_val_drc_preview = {
 
 static const struct fd_param init_val_fd_preview = {
 	.control = {
-		.cmd = CONTROL_COMMAND_START,
+		.cmd = CONTROL_COMMAND_STOP,
 		.bypass = CONTROL_BYPASS_ENABLE,
 		.err = CONTROL_ERROR_NO,
 	},
@@ -343,7 +364,8 @@ static const struct drc_param init_val_drc_capture = {
 
 static const struct fd_param init_val_fd_capture = {
 	.control = {
-		.cmd = CONTROL_COMMAND_START,
+		.cmd = CONTROL_COMMAND_STOP,
+		/* in FD case , bypass is not available */
 		.bypass = CONTROL_BYPASS_ENABLE,
 		.err = CONTROL_ERROR_NO,
 	},
@@ -505,7 +527,7 @@ static const struct drc_param init_val_drc_camcording = {
 
 static const struct fd_param init_val_fd_camcording = {
 	.control = {
-		.cmd = CONTROL_COMMAND_START,
+		.cmd = CONTROL_COMMAND_STOP,
 		.bypass = CONTROL_BYPASS_ENABLE,
 		.err = CONTROL_ERROR_NO,
 	},
@@ -569,21 +591,25 @@ int fimc_is_fw_clear_irq2(struct fimc_is_dev *dev)
 */
 void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 scenario_id)
 {
-	dev->sensor_id = id;
 	writel(HIC_OPEN_SENSOR, dev->regs + ISSR0);
-	writel(dev->sensor_id, dev->regs + ISSR1);
-	writel(dev->sensor_id, dev->regs + ISSR2);
-	writel(scenario_id, dev->regs + ISSR3);
+	writel(dev->sensor.id, dev->regs + ISSR1);
+	/* Parameter1 : Sensor Name(IS_Sensor.h) */
+	writel(id, dev->regs + ISSR2);
+	/* Parameter2 : I2c channel used by parameter1 sensor */
+	/* FIXME*/
+	writel(0, dev->regs + ISSR3); /* CSI0*/
+	/* Parameter3 : Scenario ID(Initial Scenario) */
+	writel(scenario_id, dev->regs + ISSR4);
 	fimc_is_hw_wait_intsr0_intsd0(dev);
 	fimc_is_hw_set_intgr0_gd0(dev);
 }
 
 void fimc_is_hw_close_sensor(struct fimc_is_dev *dev, u32 id)
 {
-	if (dev->sensor_id == id) {
+	if (dev->sensor.id == id) {
 		writel(HIC_CLOSE_SENSOR, dev->regs + ISSR0);
-		writel(dev->sensor_id, dev->regs + ISSR1);
-		writel(dev->sensor_id, dev->regs + ISSR2);
+		writel(dev->sensor.id, dev->regs + ISSR1);
+		writel(dev->sensor.id, dev->regs + ISSR2);
 		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	}
@@ -594,65 +620,78 @@ void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev)
 	writel(0x00008000, dev->regs + WDT);
 }
 
-void fimc_is_hw_set_lite(struct fimc_is_dev *dev, u32 width, u32 height)
-{
-
-	u32 cfg = readl(dev->regs_fimc_lite);
-	cfg = cfg & 0x0000C000;
-	cfg |= ((width+dev->sensor.offset_x)<<16);
-	cfg |= (height+dev->sensor.offset_y);
-	writel(cfg, dev->regs_fimc_lite);
-
-	cfg = 0;
-	cfg |= (height+dev->sensor.offset_y)<<16;
-	cfg |= ((width+dev->sensor.offset_x));
-	writel(cfg, dev->regs_fimc_lite+0x20);
-}
-
 void fimc_is_hw_io_init(struct fimc_is_dev *dev)
 {
-	void __iomem *reg_gpio3con;
-	void __iomem *reg_gpm4con;
-	/* 1. FIMC Lite0 setting - temp */
-#if 0
-	int i;
-	u32 cfg[16][2] = {
-		{0x04, 0x00080008},
-		{0x04, 0x000e0008},
-		{0x04, 0x00100008},
-		{0x04, 0x2b100008},
-		{0x04, 0x2b100008},
-		{0x10, 0x4000c000},
-		{0x10, 0x00000000},
-		{0x04, 0x2b100008},
-		{0x04, 0x2b100008},
-		{0x00, 0x028c01e8},
-		{0x10, 0x00000000},
-		{0x30, 0x42000000},
-		{0x20, 0x01e8028c},
-		{0x04, 0x2b100048},
-		{0xfc, 0x00000000},
-		{0x08, 0x80000000},
-	};
-	for (i = 0; i < 16; i++)
-		writel(cfg[i][1], dev->regs_fimc_lite + cfg[i][0]);
-#endif
-	/* 2. UART setting for FIMC-IS */
-	reg_gpio3con = ioremap(0x110002c0, 0x4);
-	writel(0x33330000, reg_gpio3con);
-	iounmap(reg_gpio3con);
-	reg_gpio3con = NULL;
-	/* 3. GPIO setting for FIMC-IS */
-	reg_gpm4con = ioremap(0x110002e0, 0x4);
-	writel(0x00000022, reg_gpm4con);
-	iounmap(reg_gpm4con);
-	reg_gpm4con = NULL;
+	int ret;
+
+	/* 1. UART setting for FIMC-IS */
+	ret = gpio_request(EXYNOS4212_GPM3(4), "GPM3");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPM3_4 ####\n");
+	s3c_gpio_cfgpin(EXYNOS4212_GPM3(4), (0x3<<16));
+	s3c_gpio_setpull(EXYNOS4212_GPM3(4), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS4212_GPM3(4));
+
+	ret = gpio_request(EXYNOS4212_GPM3(5), "GPM3");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPM3_5 ####\n");
+	s3c_gpio_cfgpin(EXYNOS4212_GPM3(5), (0x3<<20));
+	s3c_gpio_setpull(EXYNOS4212_GPM3(5), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS4212_GPM3(5));
+
+	ret = gpio_request(EXYNOS4212_GPM3(6), "GPM3");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPM3_6 ####\n");
+	s3c_gpio_cfgpin(EXYNOS4212_GPM3(6), (0x3<<24));
+	s3c_gpio_setpull(EXYNOS4212_GPM3(6), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS4212_GPM3(6));
+
+	ret = gpio_request(EXYNOS4212_GPM3(7), "GPM3");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPM3_7 ####\n");
+	s3c_gpio_cfgpin(EXYNOS4212_GPM3(7), (0x3<<28));
+	s3c_gpio_setpull(EXYNOS4212_GPM3(7), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS4212_GPM3(7));
+
+	/* 2. GPIO setting for FIMC-IS */
+	ret = gpio_request(EXYNOS4212_GPM4(0), "GPM4");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPM4_0 ####\n");
+	s3c_gpio_cfgpin(EXYNOS4212_GPM4(0), (0x2<<0));
+	s3c_gpio_setpull(EXYNOS4212_GPM4(0), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS4212_GPM4(0));
+
+	ret = gpio_request(EXYNOS4212_GPM4(1), "GPM4");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPM4_1 ####\n");
+	s3c_gpio_cfgpin(EXYNOS4212_GPM4(1), (0x2<<4));
+	s3c_gpio_setpull(EXYNOS4212_GPM4(1), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS4212_GPM4(1));
+
+	ret = gpio_request(EXYNOS4212_GPM4(2), "GPM4");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPM4_2 ####\n");
+	s3c_gpio_cfgpin(EXYNOS4212_GPM4(2), (0x2<<8));
+	s3c_gpio_setpull(EXYNOS4212_GPM4(2), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS4212_GPM4(2));
+
+	ret = gpio_request(EXYNOS4212_GPM4(3), "GPM4");
+	if (ret)
+		printk(KERN_ERR "#### failed to request GPM4_3 ####\n");
+	s3c_gpio_cfgpin(EXYNOS4212_GPM4(3), (0x2<<12));
+	s3c_gpio_setpull(EXYNOS4212_GPM4(3), S3C_GPIO_PULL_NONE);
+	gpio_free(EXYNOS4212_GPM4(3));
 }
 
 void fimc_is_hw_reset(struct fimc_is_dev *dev)
 {
 	u32 cfg;
 	void __iomem *reg_isp_arm_option;
+	void __iomem *reg_isp_arm_config;
+
+	reg_isp_arm_config = ioremap(0x10022280, 0x4);
+	writel(0x1, reg_isp_arm_config);
+	iounmap(reg_isp_arm_config);
 	cfg = dev->mem.base;
 
 	writel(cfg, dev->regs + BBOAR);
@@ -660,14 +699,40 @@ void fimc_is_hw_reset(struct fimc_is_dev *dev)
 	reg_isp_arm_option = ioremap(0x10022288, 0x4);
 	writel(0x00018000, reg_isp_arm_option);
 	iounmap(reg_isp_arm_option);
+	reg_isp_arm_config = NULL;
 	reg_isp_arm_option = NULL;
+}
+
+void fimc_is_hw_disable(struct fimc_is_dev *dev)
+{
+	u32 sts;
+	void __iomem *reg_isp_arm_option;
+	void __iomem *reg_isp_arm_config;
+	void __iomem *reg_isp_arm_status;
+
+	reg_isp_arm_option = ioremap(0x10022288, 0x4);
+	writel(0x01010000, reg_isp_arm_option);
+	iounmap(reg_isp_arm_option);
+
+	reg_isp_arm_config = ioremap(0x10022280, 0x4);
+	reg_isp_arm_status = ioremap(0x10022284, 0x4);
+	writel(0x0, reg_isp_arm_config);
+	do {
+		sts = readl(reg_isp_arm_status);
+		sts &= 0x00000001;
+	} while (sts != 0x0);
+	iounmap(reg_isp_arm_config);
+	iounmap(reg_isp_arm_status);
+	reg_isp_arm_config = NULL;
+	reg_isp_arm_option = NULL;
+	reg_isp_arm_status = NULL;
 }
 
 void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev)
 {
 	u32 cfg;
 	writel(ISR_DONE, dev->regs + ISSR0);
-	cfg = dev->sensor_id;
+	cfg = dev->sensor.id;
 	writel(cfg, dev->regs + ISSR1);
 	/* param 1 */
 	writel(IHC_GET_SENSOR_NUMBER, dev->regs + ISSR2);
@@ -688,7 +753,7 @@ int fimc_is_hw_get_sensor_num(struct fimc_is_dev *dev)
 int fimc_is_hw_set_param(struct fimc_is_dev *dev)
 {
 	writel(HIC_SET_PARAMETER, dev->regs + ISSR0);
-	writel(dev->sensor_id, dev->regs + ISSR1);
+	writel(dev->sensor.id, dev->regs + ISSR1);
 
 	writel(dev->scenario_id, dev->regs + ISSR2);
 
@@ -739,12 +804,12 @@ void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on)
 {
 	if (on) {
 		writel(HIC_STREAM_ON, dev->regs + ISSR0);
-		writel(dev->sensor_id, dev->regs + ISSR1);
+		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	} else {
 		writel(HIC_STREAM_OFF, dev->regs + ISSR0);
-		writel(dev->sensor_id, dev->regs + ISSR1);
+		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	}
@@ -758,7 +823,7 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_PREVIEW_STILL, dev->regs + ISSR0);
-		writel(dev->sensor_id, dev->regs + ISSR1);
+		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
@@ -767,7 +832,7 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_PREVIEW_VIDEO, dev->regs + ISSR0);
-		writel(dev->sensor_id, dev->regs + ISSR1);
+		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
@@ -776,7 +841,7 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_CAPTURE_STILL, dev->regs + ISSR0);
-		writel(dev->sensor_id, dev->regs + ISSR1);
+		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
@@ -785,7 +850,7 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_CAPTURE_VIDEO, dev->regs + ISSR0);
-		writel(dev->sensor_id, dev->regs + ISSR1);
+		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
@@ -1128,8 +1193,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
 		IS_INC_PARAM_NUM(dev);
 
-		dev->sensor.width = init_val_isp_preview.otf_input.width;
-		dev->sensor.height = init_val_isp_preview.otf_input.height;
+		dev->sensor.width_prev =
+			init_val_isp_preview.otf_input.width;
+		dev->sensor.height_prev =
+			init_val_isp_preview.otf_input.height;
 		break;
 	case ISS_PREVIEW_VIDEO:
 		/* ISP */
@@ -1461,6 +1528,11 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_fd_preview.fd_ctrl.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
 		IS_INC_PARAM_NUM(dev);
+
+		dev->sensor.width_prev_cam =
+			init_val_isp_preview.otf_input.width;
+		dev->sensor.height_prev_cam =
+			init_val_isp_preview.otf_input.height;
 		break;
 
 	case ISS_CAPTURE_STILL:
