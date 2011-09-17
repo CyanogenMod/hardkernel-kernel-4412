@@ -17,7 +17,7 @@
 
 #include "fimc-lite-core.h"
 
-static int debug = 7;
+static int debug = 0;
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Enable module debug trace. Set to 1 to enable.");
 
