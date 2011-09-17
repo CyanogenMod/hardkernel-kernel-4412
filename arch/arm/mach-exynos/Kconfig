@@ -398,14 +398,6 @@ config MACH_NURI
 	help
 	  Machine support for Samsung Mobile NURI Board.
 
-config MACH_FPGA4212
-	bool "FPGA4212 board"
-	select CPU_EXYNOS4212
-	select S5P_SYSTEM_MMU
-	select S5P_DEV_FIMG2D
-	help
-	  Machine support for Samsung FPGA4212
-
 config MACH_SMDK4212
 	bool "SMDK4212 board"
 	select CPU_EXYNOS4212

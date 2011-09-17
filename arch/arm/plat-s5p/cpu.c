@@ -81,11 +81,7 @@ static struct cpu_table cpu_ids[] __initdata = {
 		.init		= exynos4_init,
 		.name		= name_exynos4210,
 	}, {
-#ifdef CONFIG_MACH_FPGA4212
-		.idcode		= 0x00000000,
-#else
 		.idcode		= EXYNOS_CPU_ID_4212,
-#endif
 		.idmask		= EXYNOS_CPU_MASK,
 		.map_io		= exynos4_map_io,
 		.init_clocks	= exynos4_init_clocks,

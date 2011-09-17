@@ -199,9 +199,6 @@ void __init exynos4_map_io(void)
 	else
 		iotable_init(exynos4_iodesc_4212, ARRAY_SIZE(exynos4_iodesc_4212));
 
-#ifndef CONFIG_MACH_FPGA4212
-	/* initialize device information early */
-
 #ifdef CONFIG_S3C_DEV_HSMMC
 	exynos4_default_sdhci0();
 #endif
@@ -226,7 +223,6 @@ void __init exynos4_map_io(void)
 	s5p_fb_setname(0, "exynos4-fb");	/* FIMD0 */
 #endif
 	s3c_adc_setname("s5pv210-adc");
-#endif
 
 	/* The I2C bus controllers are directly compatible with s3c2440 */
 	s3c_i2c0_setname("s3c2440-i2c");
@@ -249,11 +245,9 @@ void __init exynos4_init_clocks(int xtal)
 	else
 		exynos4212_register_clocks();
 
-#ifndef CONFIG_MACH_FPGA4212
 	s5p_register_clocks(xtal);
 	exynos4_register_clocks();
 	exynos4_setup_clocks();
-#endif
 }
 
 static void exynos4_gic_fix_base(struct irq_data *d)
@@ -317,9 +311,6 @@ static void exynos4_l2x0_set_debug(unsigned long val)
 
 static int __init exynos4_l2x0_cache_init(void)
 {
-#ifdef CONFIG_MACH_FPGA4212
-	l2x0_init(S5P_VA_L2CC, 0x70000, 0xffffffff);
-#else
 #ifdef CONFIG_ARM_TRUSTZONE
 	if (cpu_is_exynos4212())
 		exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, 0x120, 0x30000007);
@@ -350,7 +341,6 @@ static int __init exynos4_l2x0_cache_init(void)
 
 #ifdef CONFIG_ARM_TRUSTZONE
 	outer_cache.set_debug = exynos4_l2x0_set_debug;
-#endif
 #endif
 
 	return 0;

@@ -49,10 +49,8 @@ static inline void fimg2d_power_on(void)
 {
 	spin_lock(&info->pwrlock);
 
-#ifndef CONFIG_MACH_FPGA4212
 	clk_enable(info->clock);
 	fimg2d_debug("clock enable\n");
-#endif
 #ifdef CONFIG_S5P_SYSTEM_MMU
 	s5p_sysmmu_enable(SYSMMU_MDMA, (unsigned long)init_mm.pgd);
 	fimg2d_debug("sysmmu enable\n");
@@ -70,10 +68,8 @@ static inline void fimg2d_power_off(void)
 	s5p_sysmmu_disable(SYSMMU_MDMA);
 	fimg2d_debug("sysmmu disable\n");
 #endif
-#ifndef CONFIG_MACH_FPGA4212
 	clk_disable(info->clock);
 	fimg2d_debug("clock disable\n");
-#endif
 	spin_unlock(&info->pwrlock);
 }
 
@@ -268,10 +264,7 @@ static int fimg2d_setup_controller(struct fimg2d_control *info)
 static int fimg2d_probe(struct platform_device *pdev)
 {
 	struct resource *res;
-
-#ifndef CONFIG_MACH_FPGA4212
 	struct clk *parent, *sclk;
-#endif
 	struct fimg2d_platdata *pdata;
 	int ret;
 
@@ -337,7 +330,6 @@ static int fimg2d_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
-#ifndef CONFIG_MACH_FPGA4212
 	/* clock for setting parent and rate */
 	parent = clk_get(&pdev->dev, pdata->parent_clkname);
 	if (IS_ERR(parent)) {
@@ -370,7 +362,6 @@ static int fimg2d_probe(struct platform_device *pdev)
 		goto err_clk3;
 	}
 	fimg2d_debug("gate clk: %s\n", pdata->gate_clkname);
-#endif
 
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_enable(&pdev->dev);
@@ -390,7 +381,6 @@ static int fimg2d_probe(struct platform_device *pdev)
 	return 0;
 
 err_reg:
-#ifndef CONFIG_MACH_FPGA4212
 	clk_put(info->clock);
 
 err_clk3:
@@ -400,7 +390,6 @@ err_clk2:
 	clk_put(parent);
 
 err_clk1:
-#endif
 	free_irq(info->irq, NULL);
 
 err_irq:
