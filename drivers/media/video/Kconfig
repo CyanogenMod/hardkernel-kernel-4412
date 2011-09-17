@@ -397,11 +397,23 @@ config VIDEO_VPX3220
 	  To compile this driver as a module, choose M here: the
 	  module will be called vpx3220.
 
+config VIDEO_S5K3H1
+	tristate "S5K3H1 supporting camera driver"
+	depends on VIDEO_V4L2 && VIDEO_FIMC_MIPI && VIDEO_EXYNOS_FIMC_IS
+	---help---
+	  This driver supports S5K3H1 sensor.
+
 config VIDEO_S5K3H2
         tristate "S5K3H2 supporting camera driver"
 	depends on VIDEO_V4L2 && VIDEO_FIMC_MIPI && VIDEO_EXYNOS_FIMC_IS
         ---help---
           This driver supports S5K3H2 sensor.
+
+config VIDEO_S5K6A3
+	tristate "S5K6A3 supporting camera driver"
+	depends on VIDEO_V4L2 && VIDEO_FIMC_MIPI && VIDEO_EXYNOS_FIMC_IS
+	---help---
+	  This driver supports S5K6A3 sensor.
 
 config VIDEO_M5MO
         tristate "M5MO supporting camera driver"
@@ -425,7 +437,7 @@ config VIDEO_S5K4EA
 #source "drivers/media/video/m5mols/Kconfig"
 
 choice
-depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_M5MO || VIDEO_M5MOLS || VIDEO_S5K3H2
+depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_M5MO || VIDEO_M5MOLS || VIDEO_S5K3H1 || VIDEO_S5K3H2 || VIDEO_S5K6A3
 prompt "Select ITU / MIPI Camera port"
 default ITU_A
 config ITU_A
