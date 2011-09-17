@@ -215,6 +215,7 @@ struct platform_device exynos4_device_pd[] = {
 				.base		= S5P_PMU_ISP_CONF,
 				.data		= &(struct exynos4_pd_data) {
 					.clk_base	= S5P_CLKGATE_IP_ISP,
+					.read_phy_addr	= EXYNOS4_PA_FIMC_IS,
 				},
 			},
 		},
