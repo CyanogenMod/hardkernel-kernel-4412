@@ -195,9 +195,6 @@ err_op:
 err_src:
 	printk(KERN_ERR "%s: invalid src\n", __func__);
 	return -1;
-err_dst:
-	printk(KERN_ERR "%s: invalid dst\n", __func__);
-	return -1;
 err_src_rect:
 	printk(KERN_ERR "%s: invalid src rect\n", __func__);
 	return -1;
