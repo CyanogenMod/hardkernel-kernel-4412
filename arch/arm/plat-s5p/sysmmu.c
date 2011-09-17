@@ -13,6 +13,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
+#include <linux/clk.h>
 
 #include <asm/pgtable.h>
 
@@ -186,9 +187,22 @@ void s5p_sysmmu_enable(sysmmu_ips ips, unsigned long pgd)
 	}
 
 	if (set_sysmmu_active(ips)) {
+		struct clk *clk;
+
 		pm_runtime_get_sync(sysmmu_dev[ips]);
 
-		sysmmu_clk_enable(ips);
+		clk = clk_get(sysmmu_dev[ips], "sysmmu");
+		if (!clk) {
+			dev_err(sysmmu_dev[ips],
+				"Failed to enable: unable to enable clock\n");
+			pm_runtime_put_sync(sysmmu_dev[ips]);
+			set_sysmmu_inactive(ips);
+			return;
+		}
+
+		clk_enable(clk);
+
+		clk_put(clk);
 
 		__sysmmu_set_ptbase(ips, pgd);
 
@@ -203,8 +217,21 @@ void s5p_sysmmu_enable(sysmmu_ips ips, unsigned long pgd)
 void s5p_sysmmu_disable(sysmmu_ips ips)
 {
 	if (set_sysmmu_inactive(ips)) {
+		struct clk *clk;
+
+		clk = clk_get(sysmmu_dev[ips], "sysmmu");
+		if (!clk) {
+			dev_err(sysmmu_dev[ips],
+				"Failed to enable: unable to enable clock\n");
+			set_sysmmu_active(ips);
+			return;
+		}
+
 		__raw_writel(CTRL_DISABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
-		sysmmu_clk_disable(ips);
+
+		clk_disable(clk);
+
+		clk_put(clk);
 
 		pm_runtime_put_sync(sysmmu_dev[ips]);
 
@@ -278,8 +305,6 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 		ret = -ENOENT;
 		goto err_irq;
 	}
-
-	sysmmu_clk_init(id, &pdev->dev);
 
 	dev_dbg(dev, "Probing system MMU succeeded.");
 

@@ -82,23 +82,3 @@ struct platform_device exynos_device_sysmmu[S5P_SYSMMU_TOTAL_IPNUM] = {
 	SYSMMU_PLATFORM_DEVICE(MFC_L),
 	SYSMMU_PLATFORM_DEVICE(MFC_R),
 };
-
-static struct clk *sysmmu_clk[S5P_SYSMMU_TOTAL_IPNUM];
-void sysmmu_clk_init(sysmmu_ips ips, struct device *dev)
-{
-	sysmmu_clk[ips] = clk_get(dev, "sysmmu");
-	if (IS_ERR(sysmmu_clk[ips]))
-		sysmmu_clk[ips] = NULL;
-}
-
-void sysmmu_clk_enable(sysmmu_ips ips)
-{
-	if (sysmmu_clk[ips])
-		clk_enable(sysmmu_clk[ips]);
-}
-
-void sysmmu_clk_disable(sysmmu_ips ips)
-{
-	if (sysmmu_clk[ips])
-		clk_disable(sysmmu_clk[ips]);
-}
