@@ -639,6 +639,7 @@ static struct usb_ep_ops exynos_ss_udc_ep_ops = {
 	.alloc_request	= exynos_ss_udc_ep_alloc_request,
 	.free_request	= exynos_ss_udc_ep_free_request,
 	.queue		= exynos_ss_udc_ep_queue,
+	.dequeue	= exynos_ss_udc_ep_dequeue,
 	.set_halt	= exynos_ss_udc_ep_sethalt,
 }; 
 
@@ -1055,6 +1056,35 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 		exynos_ss_udc_start_req(udc, udc_ep, udc_req, false);
 
 	spin_unlock_irqrestore(&udc_ep->lock, irqflags);
+
+	return 0;
+}
+
+/**
+ * exynos_ss_udc_ep_dequeue - dequeue a request from an endpoint
+ * @ep: The endpoint the request was on.
+ * @req: The request to dequeue.
+ *
+ * Dequeue a request and call its completion routine.
+ */
+static int exynos_ss_udc_ep_dequeue(struct usb_ep *ep, struct usb_request *req)
+{
+	struct exynos_ss_udc_req *udc_req = our_req(req);
+	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
+	struct exynos_ss_udc *udc = udc_ep->parent;
+	unsigned long flags;
+
+	dev_info(udc->dev, "ep_dequeue(%p,%p)\n", ep, req);
+
+	spin_lock_irqsave(&udc_ep->lock, flags);
+
+	if (!on_list(udc_ep, udc_req)) {
+		spin_unlock_irqrestore(&udc_ep->lock, flags);
+		return -EINVAL;
+	}
+
+	exynos_ss_udc_complete_request(udc, udc_ep, udc_req, -ECONNRESET);
+	spin_unlock_irqrestore(&udc_ep->lock, flags);
 
 	return 0;
 }
