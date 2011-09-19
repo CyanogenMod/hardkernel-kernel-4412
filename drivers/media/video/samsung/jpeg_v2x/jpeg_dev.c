@@ -768,13 +768,12 @@ static int jpeg_remove(struct platform_device *pdev)
 	mutex_destroy(&dev->lock);
 	iounmap(dev->reg_base);
 
-	kfree(dev);
-
 	clk_put(dev->clk);
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_put_sync(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 #endif
+	kfree(dev);
 	return 0;
 }
 
