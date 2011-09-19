@@ -1959,21 +1959,38 @@ static inline int fimc_resume_out(struct fimc_control *ctrl)
 
 	pdata = to_fimc_plat(ctrl->dev);
 
-	for (i = 0; i < FIMC_MAX_CTXS; i++) {
-		ctx = &ctrl->out->ctx[i];
-		__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_CAM_CONF);
+	__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_CAM_CONF);
 
-		/*  Wait max 1ms */
-		timeout = 10;
+	/* Wait max 1ms */
+	timeout = 1000;
+	while ((__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN)
+		!= S5P_INT_LOCAL_PWR_EN) {
+		if (timeout == 0) {
+			printk(KERN_ERR "Power domain CAM enable failed.\n");
+			break;
+		}
+		timeout--;
+		udelay(1);
+	}
+
+	if (timeout ==0) {
+		timeout = 1000;
+		__raw_writel(0x1, S5P_PMU_CAM_CONF + 0x8);
+		__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_CAM_CONF);
 		while ((__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN)
-				!= S5P_INT_LOCAL_PWR_EN) {
+			!= S5P_INT_LOCAL_PWR_EN) {
 			if (timeout == 0) {
-				printk(KERN_ERR "Power domain CAM enable failed.\n");
-				break;
+				printk(KERN_ERR "Power domain CAM enable failed 2nd.\n");
+				BUG();
 			}
 			timeout--;
-			udelay(100);
+			udelay(1);
 		}
+		__raw_writel(0x2, S5P_PMU_CAM_CONF + 0x8);
+	}
+
+	for (i = 0; i < FIMC_MAX_CTXS; i++) {
+		ctx = &ctrl->out->ctx[i];
 
 		if (pdata->clk_on) {
 			pdata->clk_on(to_platform_device(ctrl->dev),
@@ -2000,6 +2017,34 @@ static inline int fimc_resume_out(struct fimc_control *ctrl)
 		default:
 			break;
 		}
+	}
+
+	__raw_writel(0, S5P_PMU_CAM_CONF);
+
+	/* Wait max 1ms */
+	timeout = 1000;
+	while (__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN) {
+		if (timeout == 0) {
+			printk(KERN_ERR "Power domain CAM disable failed.\n");
+			break;
+		}
+		timeout--;
+		udelay(1);
+	}
+
+	if (timeout ==0) {
+		timeout = 1000;
+		__raw_writel(0x1, S5P_PMU_CAM_CONF + 0x8);
+		__raw_writel(0, S5P_PMU_CAM_CONF);
+		while (__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN) {
+			if (timeout == 0) {
+				printk(KERN_ERR "Power domain CAM disable failed 2nd.\n");
+				BUG();
+			}
+			timeout--;
+			udelay(1);
+		}
+		__raw_writel(0x2, S5P_PMU_CAM_CONF + 0x8);
 	}
 
 	if ((state & FIMC_STREAMON) == FIMC_STREAMON)
