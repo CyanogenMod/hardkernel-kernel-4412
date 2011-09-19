@@ -587,7 +587,7 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 	pcm->pclk = clk_get(&pdev->dev, "pcm");
 	if (IS_ERR(pcm->pclk)) {
 		dev_err(&pdev->dev, "failed to get pcm_clock\n");
-		ret = -ENOENT;
+		ret = PTR_ERR(pcm->pclk);
 		goto err4;
 	}
 	clk_enable(pcm->pclk);
