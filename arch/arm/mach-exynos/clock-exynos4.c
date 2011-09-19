@@ -28,7 +28,7 @@
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/regs-audss.h>
-#include <mach/sysmmu.h>
+#include <mach/dev-sysmmu.h>
 #include <mach/exynos-clock.h>
 #include <mach/clock-domain.h>
 
@@ -806,71 +806,92 @@ static struct clk exynos4_init_clocks_off[] = {
 		.devname	= "s5p-sysmmu.0",
 		.enable		= exynos4_clk_ip_image_ctrl,
 		.ctrlbit	= (1 << 5),
+		.devname	= SYSMMU_CLOCK_NAME(sss, 0),
+		.enable		= exynos4_clk_ip_dmc_ctrl,
+		.ctrlbit	= (1 << 12),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.2",
+		.devname	= SYSMMU_CLOCK_NAME(fimc0, 1),
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 7),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.3",
+		.devname	= SYSMMU_CLOCK_NAME(fimc1, 2),
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 8),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.4",
+		.devname	= SYSMMU_CLOCK_NAME(fimc2, 3),
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 9),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.5",
+		.devname	= SYSMMU_CLOCK_NAME(fimc3, 4),
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 10),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.6",
+		.devname	= SYSMMU_CLOCK_NAME(jpeg, 5),
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 11),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.7",
+		.devname	= SYSMMU_CLOCK_NAME(fimd0, 6),
 		.enable		= exynos4_clk_ip_lcd0_ctrl,
 		.ctrlbit	= (1 << 4),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.8",
+		.devname	= SYSMMU_CLOCK_NAME(fimd1, 7),
 		.enable		= exynos4_clk_ip_lcd1_ctrl,
 		.ctrlbit	= (1 << 4),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.9",
+		.devname	= SYSMMU_CLOCK_NAME(pcie, 8),
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 18),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.10",
+		.devname	= SYSMMU_CLOCK_NAME(g2d, 9),
 		.enable		= exynos4_clk_ip_image_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.11",
+		.devname	= SYSMMU_CLOCK_NAME(rot, 10),
 		.enable		= exynos4_clk_ip_image_ctrl,
 		.ctrlbit	= (1 << 4),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.13",
+		.devname	= SYSMMU_CLOCK_NAME(tv, 12),
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 4),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.14",
+		.devname	= SYSMMU_CLOCK_NAME(mfc_l, 13),
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 1),
 	}, {
 		.name		= "sysmmu",
 		.devname	= "s5p-sysmmu.15",
+		.devname	= SYSMMU_CLOCK_NAME(mfc_r, 14),
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 2),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(g2d_acp, 15),
+		.enable		= exynos4_clk_ip_dmc_ctrl,
+		.ctrlbit	= (1 << 24),
 	}, {
 		.name		= "secss",
 		.parent		= &exynos4_clk_aclk_acp.clk,
@@ -881,11 +902,6 @@ static struct clk exynos4_init_clocks_off[] = {
 		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= ((0x1 << 4) | (0x1 << 3)),
-	}, {
-		.name		= "smmumfc",
-		.parent		= &exynos4_clk_aclk_100.clk,
-		.enable		= exynos4_clk_ip_mfc_ctrl,
-		.ctrlbit	= ((0x1 << 2) | (0x1 << 1)),
 	}, {
 		.name		= "mfc",
 		.devname	= "s3c-mfc",
