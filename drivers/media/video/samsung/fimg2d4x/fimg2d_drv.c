@@ -34,10 +34,7 @@
 #include <linux/pm_runtime.h>
 #endif
 
-#ifdef CONFIG_S5P_SYSTEM_MMU
 #include <plat/sysmmu.h>
-#include <mach/sysmmu.h>
-#endif
 
 #include "fimg2d.h"
 
@@ -52,7 +49,7 @@ static inline void fimg2d_power_on(void)
 	clk_enable(info->clock);
 	fimg2d_debug("clock enable\n");
 #ifdef CONFIG_S5P_SYSTEM_MMU
-	s5p_sysmmu_enable(SYSMMU_MDMA, (unsigned long)init_mm.pgd);
+	s5p_sysmmu_enable(info->dev, (unsigned long)init_mm.pgd);
 	fimg2d_debug("sysmmu enable\n");
 #endif
 	atomic_set(&info->pwron, 1);
@@ -65,7 +62,7 @@ static inline void fimg2d_power_off(void)
 	atomic_set(&info->pwron, 0);
 
 #ifdef CONFIG_S5P_SYSTEM_MMU
-	s5p_sysmmu_disable(SYSMMU_MDMA);
+	s5p_sysmmu_disable(info->dev);
 	fimg2d_debug("sysmmu disable\n");
 #endif
 	clk_disable(info->clock);

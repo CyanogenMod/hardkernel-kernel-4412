@@ -49,7 +49,7 @@ int g2d_clk_disable(struct g2d_global *g2d_dev)
 void g2d_sysmmu_on(struct g2d_global *g2d_dev)
 {
 	g2d_clk_enable(g2d_dev);
-	s5p_sysmmu_enable(SYSMMU_G2D,
+	s5p_sysmmu_enable(g2d_dev->dev,
 			(unsigned long)virt_to_phys((void *)init_mm.pgd));
 	g2d_clk_disable(g2d_dev);
 }
@@ -57,13 +57,8 @@ void g2d_sysmmu_on(struct g2d_global *g2d_dev)
 void g2d_sysmmu_off(struct g2d_global *g2d_dev)
 {
 	g2d_clk_enable(g2d_dev);
-	s5p_sysmmu_disable(SYSMMU_G2D);
+	s5p_sysmmu_disable(g2d_dev->dev);
 	g2d_clk_disable(g2d_dev);
-}
-
-void g2d_sysmmu_set_pgd(u32 pgd)
-{
-	s5p_sysmmu_set_tablebase_pgd(SYSMMU_G2D, pgd);
 }
 
 void g2d_fail_debug(g2d_params *params)
@@ -207,7 +202,8 @@ int g2d_do_blit(struct g2d_global *g2d_dev, g2d_params *params)
 		}
 	}
 
-	g2d_sysmmu_set_pgd((u32)virt_to_phys((void *)pgd));
+	s5p_sysmmu_set_tablebase_pgd(g2d_dev->dev,
+					(u32)virt_to_phys((void *)pgd));
 
 	if(g2d_init_regs(g2d_dev, params) < 0) {
 		return false;

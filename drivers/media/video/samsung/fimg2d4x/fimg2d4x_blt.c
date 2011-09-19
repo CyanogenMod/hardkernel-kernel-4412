@@ -21,10 +21,7 @@
 #include "fimg2d.h"
 #include "fimg2d4x.h"
 
-#ifdef CONFIG_S5P_SYSTEM_MMU
 #include <plat/sysmmu.h>
-#include <mach/sysmmu.h>
-#endif
 
 #ifdef CONFIG_PM_RUNTIME
 #include <plat/devs.h>
@@ -143,7 +140,8 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		/* set sysmmu */
 		if (cmd->dst.addr.type == ADDR_USER) {
 #ifdef CONFIG_S5P_SYSTEM_MMU
-			s5p_sysmmu_set_tablebase_pgd(SYSMMU_MDMA, pgd);
+			s5p_sysmmu_set_tablebase_pgd(info->dev,
+						virt_to_phys(ctx->mm->pgd));
 			fimg2d_debug("set sysmmu table base: ctx %p pgd %p seq_no(%u)\n",
 					ctx, (void *)pgd, cmd->seq_no);
 #endif
