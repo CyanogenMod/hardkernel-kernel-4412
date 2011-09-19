@@ -1201,9 +1201,6 @@ static int dapm_power_widgets(struct snd_soc_dapm_context *dapm, int event)
 					&async_domain);
 	async_synchronize_full_domain(&async_domain);
 
-#ifdef CONFIG_SND_SAMSUNG_RP
-	if (!srp_get_status(SRP_IS_RUNNING))
-#endif
 	/* Power down widgets first; try to avoid amplifying pops. */
 	dapm_seq_run(dapm, &down_list, event, false);
 
@@ -2416,6 +2413,9 @@ static void soc_dapm_stream_event(struct snd_soc_dapm_context *dapm,
 				w->active = 1;
 				break;
 			case SND_SOC_DAPM_STREAM_STOP:
+#ifdef CONFIG_SND_SAMSUNG_RP
+				if (!srp_get_status(SRP_IS_RUNNING))
+#endif
 				w->active = 0;
 				break;
 			case SND_SOC_DAPM_STREAM_SUSPEND:
