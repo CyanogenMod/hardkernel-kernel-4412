@@ -454,51 +454,46 @@ void jpeg_set_frame_buf_address(void __iomem *base,
 void jpeg_set_encode_tbl_select(void __iomem *base,
 		enum jpeg_img_quality_level level)
 {
-#if 0
 	unsigned int	reg;
 
 	switch (level) {
 	case QUALITY_LEVEL_1:
 		reg = S5P_JPEG_Q_TBL_COMP1_0 | S5P_JPEG_Q_TBL_COMP2_0 |
 			S5P_JPEG_Q_TBL_COMP3_0 |
-			S5P_JPEG_HUFF_TBL_COMP1_AC_0_DC_0 |
+			S5P_JPEG_HUFF_TBL_COMP1_AC_0_DC_1 |
 			S5P_JPEG_HUFF_TBL_COMP2_AC_0_DC_0 |
-			S5P_JPEG_HUFF_TBL_COMP3_AC_0_DC_0;
+			S5P_JPEG_HUFF_TBL_COMP3_AC_1_DC_1;
 		break;
 	case QUALITY_LEVEL_2:
 		reg = S5P_JPEG_Q_TBL_COMP1_1 | S5P_JPEG_Q_TBL_COMP2_1 |
 			S5P_JPEG_Q_TBL_COMP3_1 |
 			S5P_JPEG_HUFF_TBL_COMP1_AC_0_DC_1 |
-			S5P_JPEG_HUFF_TBL_COMP2_AC_0_DC_1 |
-			S5P_JPEG_HUFF_TBL_COMP3_AC_0_DC_1;
+			S5P_JPEG_HUFF_TBL_COMP2_AC_0_DC_0 |
+			S5P_JPEG_HUFF_TBL_COMP3_AC_1_DC_1;
 		break;
 	case QUALITY_LEVEL_3:
 		reg = S5P_JPEG_Q_TBL_COMP1_2 | S5P_JPEG_Q_TBL_COMP2_2 |
 			S5P_JPEG_Q_TBL_COMP3_2 |
-			S5P_JPEG_HUFF_TBL_COMP1_AC_1_DC_0 |
-			S5P_JPEG_HUFF_TBL_COMP2_AC_1_DC_0 |
-			S5P_JPEG_HUFF_TBL_COMP3_AC_1_DC_0;
+			S5P_JPEG_HUFF_TBL_COMP1_AC_0_DC_1 |
+			S5P_JPEG_HUFF_TBL_COMP2_AC_0_DC_0 |
+			S5P_JPEG_HUFF_TBL_COMP3_AC_1_DC_1;
 		break;
 	case QUALITY_LEVEL_4:
 		reg = S5P_JPEG_Q_TBL_COMP1_3 | S5P_JPEG_Q_TBL_COMP2_3 |
 			S5P_JPEG_Q_TBL_COMP3_3 |
-			S5P_JPEG_HUFF_TBL_COMP1_AC_1_DC_1 |
-			S5P_JPEG_HUFF_TBL_COMP2_AC_1_DC_1 |
+			S5P_JPEG_HUFF_TBL_COMP1_AC_0_DC_1 |
+			S5P_JPEG_HUFF_TBL_COMP2_AC_0_DC_0 |
 			S5P_JPEG_HUFF_TBL_COMP3_AC_1_DC_1;
 		break;
 	default:
 		reg = S5P_JPEG_Q_TBL_COMP1_0 | S5P_JPEG_Q_TBL_COMP2_0 |
-			S5P_JPEG_Q_TBL_COMP3_0 |
-			S5P_JPEG_HUFF_TBL_COMP1_AC_0_DC_0 |
+			S5P_JPEG_Q_TBL_COMP3_1 |
+			S5P_JPEG_HUFF_TBL_COMP1_AC_0_DC_1 |
 			S5P_JPEG_HUFF_TBL_COMP2_AC_0_DC_0 |
-			S5P_JPEG_HUFF_TBL_COMP3_AC_0_DC_0;
+			S5P_JPEG_HUFF_TBL_COMP3_AC_1_DC_1;
 		break;
 	}
 	writel(reg, base + S5P_JPEG_TBL_SEL_REG);
-#else
-	writel(0xc20,
-		base + S5P_JPEG_TBL_SEL_REG);
-#endif
 }
 
 void jpeg_set_encode_hoff_cnt(void __iomem *base, enum jpeg_stream_format fmt)
