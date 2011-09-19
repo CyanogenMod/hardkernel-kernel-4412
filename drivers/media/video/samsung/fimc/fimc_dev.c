@@ -1229,8 +1229,10 @@ static int fimc_release(struct file *filp)
 	if (ctrl->out) {
 		if (ctx->status != FIMC_STREAMOFF) {
 			ret = fimc_outdev_stop_streaming(ctrl, ctx);
-			if (ret < 0)
+			if (ret < 0) {
 				fimc_err("Fail: fimc_stop_streaming\n");
+				return -EINVAL;
+			}
 
 			ret = fimc_init_in_queue(ctrl, ctx);
 			if (ret < 0) {

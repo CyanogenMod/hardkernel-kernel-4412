@@ -143,6 +143,11 @@ int fimc_outdev_stop_streaming(struct fimc_control *ctrl, struct fimc_ctx *ctx)
 					(ctx->status == FIMC_STREAMOFF),
 					FIMC_ONESHOT_TIMEOUT);
 		if (ret == 0) {
+			if (ctrl->out == NULL) {
+				fimc_err("%s: ctrl->out is changed to null\n",
+						__func__, ctrl->out);
+				return -EINVAL;
+			}
 			fimc_dump_context(ctrl, ctx);
 			fimc_err("fail %s: %d\n", __func__, ctx->ctx_num);
 		}
