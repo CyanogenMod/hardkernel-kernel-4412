@@ -2467,6 +2467,8 @@ int fimc_qbuf_output(void *fh, struct v4l2_buffer *b)
 			ctrl->out->last_ctx = ctx->ctx_num;
 			ret = fimc_outdev_set_ctx_param(ctrl, ctx);
 			if (ret < 0) {
+				ctx->src[b->index].state = VIDEOBUF_IDLE;
+				ctrl->out->last_ctx = -1;
 				fimc_err("Fail: fimc_outdev_set_ctx_param\n");
 				return -EINVAL;
 			}
