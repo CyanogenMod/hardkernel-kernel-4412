@@ -191,6 +191,61 @@ static struct clksrc_sources clkset_aclk_200 = {
 	.nr_sources	= ARRAY_SIZE(clk_aclk_200_list),
 };
 
+static struct clk *clkset_mout_jpeg0_list[] = {
+	[0] = &clk_mout_mpll_user.clk,
+	[1] = &clk_sclk_apll.clk,
+};
+
+static struct clksrc_sources clkset_mout_jpeg0 = {
+	.sources	= clkset_mout_jpeg0_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mout_jpeg0_list),
+};
+
+struct clksrc_clk clk_mout_jpeg0 = {
+	.clk	= {
+		.name		= "mout_jpeg0",
+	},
+	.sources = &clkset_mout_jpeg0,
+	.reg_src = { .reg = S5P_CLKSRC_CAM1, .shift = 0, .size = 1 },
+};
+
+static struct clk *clkset_mout_jpeg1_list[] = {
+	[0] = &clk_mout_epll.clk,
+	[1] = &clk_sclk_vpll.clk,
+};
+
+struct clksrc_sources clkset_mout_jpeg1 = {
+	.sources	= clkset_mout_jpeg1_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mout_jpeg1_list),
+};
+
+struct clksrc_clk clk_mout_jpeg1 = {
+	.clk	= {
+		.name		= "mout_jpeg1",
+	},
+	.sources = &clkset_mout_jpeg1,
+	.reg_src = { .reg = S5P_CLKSRC_CAM1, .shift = 4, .size = 1 },
+};
+
+static struct clk *clkset_mout_jpeg_list[] = {
+	[0] = &clk_mout_jpeg0.clk,
+	[1] = &clk_mout_jpeg1.clk,
+};
+
+static struct clksrc_sources clkset_mout_jpeg = {
+	.sources	= clkset_mout_jpeg_list,
+	.nr_sources	= ARRAY_SIZE(clkset_mout_jpeg_list),
+};
+
+struct clksrc_clk clk_aclk_jpeg = {
+	.clk    = {
+		.name           = "aclk_clk_jpeg",
+	},
+	.sources = &clkset_mout_jpeg,
+	.reg_src = { .reg = S5P_CLKSRC_CAM1, .shift = 8, .size = 1 },
+	.reg_div = { .reg = S5P_CLKDIV_CAM1, .shift = 0, .size = 4 },
+};
+
 static struct clksrc_clk *sysclks[] = {
 	&clk_mout_mpll_user,
 	&clk_aclk_gdl_user,
@@ -200,6 +255,9 @@ static struct clksrc_clk *sysclks[] = {
 	&clk_mout_aclk_200,
 	&clk_aclk_400,
 	&clk_aclk_266,
+	&clk_mout_jpeg0,
+	&clk_mout_jpeg1,
+	&clk_aclk_jpeg,
 };
 
 static struct clk init_clocks_off[] = {
