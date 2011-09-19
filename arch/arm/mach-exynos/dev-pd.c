@@ -214,7 +214,7 @@ struct platform_device exynos4_device_pd[] = {
 				.disable	= exynos4_pd_disable,
 				.base		= S5P_PMU_ISP_CONF,
 				.data		= &(struct exynos4_pd_data) {
-					.clk_base	= NULL,
+					.clk_base	= S5P_CLKGATE_IP_ISP,
 				},
 			},
 		},
