@@ -42,6 +42,7 @@
 #define S5P_SECTION_ORDER	(S5P_SECTION_SHIFT - S5P_SPAGE_SHIFT)
 
 #define S5P_LV1TABLE_ENTRIES	(1 << (BITS_PER_LONG - S5P_SECTION_SHIFT))
+#define S5P_LV1TABLE_ORDER	2 /* get_order(S5P_LV1TABLE_ENTRIES) */
 
 #define S5P_LV2TABLE_ENTRIES	(1 << S5P_SECTION_ORDER)
 #define S5P_LV2TABLE_SIZE	(S5P_LV2TABLE_ENTRIES * sizeof(long))
@@ -70,72 +71,12 @@
 
 struct s5p_iommu_domain {
 	struct device *dev;
-	sysmmu_ips ips;
 	unsigned long *pgtable;
 	spinlock_t lock;
 };
 
 /* slab cache for level 2 page tables */
 static struct kmem_cache *l2table_cachep;
-
-static LIST_HEAD(dev_lookup_list);
-static DEFINE_SPINLOCK(dev_lookup_list_lock);
-
-struct dev_dom {
-	struct list_head node;
-	struct s5p_iommu_domain *dom;
-	struct device *dev;
-};
-
-static inline struct dev_dom *lookup_dev(struct device *dev)
-{
-	struct list_head *pos;
-	struct dev_dom *rel = NULL;
-
-	list_for_each(pos, &dev_lookup_list) {
-		rel = list_entry(pos, struct dev_dom, node);
-		if (rel->dev == dev)
-			return rel;
-	}
-
-	return NULL;
-}
-
-static inline int bind_dev(struct s5p_iommu_domain *dom, struct device *dev)
-{
-	struct dev_dom *rel;
-
-	rel = kmalloc(sizeof(*rel), GFP_KERNEL);
-	if (!rel)
-		return -ENOMEM;
-
-	if (!lookup_dev(dev)) {
-		rel->dom = dom;
-		rel->dev = dev;
-		INIT_LIST_HEAD(&rel->node);
-		spin_lock(&dev_lookup_list_lock);
-		list_add(&rel->node, &dev_lookup_list);
-		spin_unlock(&dev_lookup_list_lock);
-	} else {
-		kfree(rel);
-	}
-
-	return 0;
-}
-
-static inline void unbind_dev(struct device *dev)
-{
-	struct dev_dom *rel;
-	unsigned long flags;
-
-	spin_lock_irqsave(&dev_lookup_list_lock, flags);
-
-	rel = lookup_dev(dev);
-	if (rel)
-		list_del(&rel->node);
-
-	spin_unlock_irqrestore(&dev_lookup_list_lock, flags);
-}
 
 static inline void pgtable_flush(void *vastart, void *vaend)
 {
@@ -152,14 +93,12 @@ static int s5p_iommu_domain_init(struct iommu_domain *domain)
 	if (!priv)
 		return -ENOMEM;
 
-	priv->pgtable = (unsigned long *)__get_free_pages(GFP_KERNEL,
-		(S5P_LV1TABLE_ENTRIES * sizeof(unsigned long)) >> PAGE_SHIFT);
+	priv->pgtable = (unsigned long *)__get_free_pages(S5P_LV1TABLE_ORDER,
+							  GFP_KERNEL);
 	if (!priv->pgtable) {
 		kfree(priv);
 		return -ENOMEM;
 	}
-
-	priv->ips = SYSMMU_NONE;
 
 	memset(priv->pgtable, 0, S5P_LV1TABLE_ENTRIES * sizeof(unsigned long));
 	pgtable_flush(priv->pgtable, priv->pgtable + S5P_LV1TABLE_ENTRIES);
@@ -174,64 +113,26 @@ static void s5p_iommu_domain_destroy(struct iommu_domain *domain)
 {
 	struct s5p_iommu_domain *priv = domain->priv;
 
-	free_pages((unsigned long)priv->pgtable, 2);
+	free_pages((unsigned long)priv->pgtable, S5P_LV1TABLE_ORDER);
 	kfree(domain->priv);
 	domain->priv = NULL;
 }
 
-static char *pdev_names[] = {
-	"s3c-pl330.0",
-	"s5p-sss",
-	"exynos4210-fimc.0",
-	"exynos4210-fimc.1",
-	"exynos4210-fimc.2",
-	"exynos4210-fimc.3",
-	"s5p-jpeg",
-	"s5p-fb.0",
-	"s5p-fb.1",
-	"s5p-pcie",
-	"s5p-fimg2d",
-	"s5p-rotator",
-	"s5p-mdma2",
-	"s5p-mixer",
-	"s5p-mfc", /* SYSMMU_MFC_L */
-};
-
-#define NUM_IOMMU (sizeof(pdev_names) / sizeof(pdev_names[0]))
-
 static int s5p_iommu_attach_device(struct iommu_domain *domain,
 				   struct device *dev)
 {
-	sysmmu_ips ips;
-	int ret = 0;
+	int ret;
 	struct s5p_iommu_domain *s5p_domain = domain->priv;
-	const char *dname = dev_name(dev);
 
-	if (dname == NULL)
-		return -ENODEV;
-
-	for (ips = 0; ips < NUM_IOMMU; ips++)
-		if (strcmp(dname, pdev_names[ips]) == 0)
-			break;
-
-	if (ips == NUM_IOMMU)
-		return -ENODEV;
+	ret = s5p_sysmmu_enable(dev, virt_to_phys(s5p_domain->pgtable));
+	if (ret)
+		return ret;
 
 	spin_lock(&s5p_domain->lock);
-
-	s5p_domain->ips = ips;
-
-	s5p_sysmmu_enable(ips, virt_to_phys(s5p_domain->pgtable));
-	if (ips == SYSMMU_MFC_L)
-		s5p_sysmmu_enable(ips + 1, virt_to_phys(s5p_domain->pgtable));
-
 	s5p_domain->dev = dev;
-
-	ret = bind_dev(s5p_domain, dev);
-
 	spin_unlock(&s5p_domain->lock);
 
-	return ret;
+	return 0;
 }
 
 static void s5p_iommu_detach_device(struct iommu_domain *domain,
@@ -243,16 +144,15 @@ static void s5p_iommu_detach_device(struct iommu_domain *domain,
 	spin_lock_irqsave(&s5p_domain->lock, flags);
 
 	if (s5p_domain->dev == dev) {
-		s5p_sysmmu_disable(s5p_domain->ips);
-		if (s5p_domain->ips == SYSMMU_MFC_L)
-			s5p_sysmmu_disable(s5p_domain->ips + 1);
-
-		unbind_dev(dev);
-		s5p_domain->ips = SYSMMU_NONE;
 		s5p_domain->dev = NULL;
+
+		spin_unlock_irqrestore(&s5p_domain->lock, flags);
+
+		s5p_sysmmu_disable(s5p_domain->dev);
+	} else {
+		spin_unlock_irqrestore(&s5p_domain->lock, flags);
 	}
 
-	spin_unlock_irqrestore(&s5p_domain->lock, flags);
 }
 
 static bool section_available(struct iommu_domain *domain,
@@ -477,13 +377,10 @@ static int s5p_iommu_unmap(struct iommu_domain *domain, unsigned long iova,
 		}
 	}
 
-	if (s5p_domain->dev) {
-		s5p_sysmmu_tlb_invalidate(s5p_domain->ips);
-		if (s5p_domain->ips == SYSMMU_MFC_L)
-			s5p_sysmmu_tlb_invalidate(s5p_domain->ips + 1);
-	}
-
 	spin_unlock_irqrestore(&s5p_domain->lock, flags);
+
+	if (s5p_domain->dev)
+		s5p_sysmmu_tlb_invalidate(s5p_domain->dev);
 
 	return 0;
 }
