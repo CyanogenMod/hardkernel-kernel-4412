@@ -149,10 +149,11 @@ struct exynos_ss_udc_trb {
  * @lock: State lock to protect contents of endpoint.
  * @tri: Transfer resource index.
  * @epnum: The USB endpoint number.
+ * @type: The endpoint type.
+ * @maxburst: The Max burst size.
  * @dir_in: Set to true if this endpoint is of the IN direction, which
  *	    means that it is sending data to the Host.
  * @halted: Set if the endpoint has been halted.
- * @periodic: Set if this is a periodic ep, such as Interrupt
  * @sent_zlp: Set if we've sent a zero-length packet.
  * @name: The driver generated name for the endpoint.
  *
@@ -171,10 +172,11 @@ struct exynos_ss_udc_ep {
 	u8			tri;
 
 	unsigned char		epnum;
+	unsigned int		type;
+	unsigned int		maxburst;
 	unsigned int		dir_in:1;
 
 	unsigned int		halted:1;
-	unsigned int		periodic:1;
 	unsigned int		sent_zlp:1;
 
 	char			name[10];
@@ -263,6 +265,10 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 static void exynos_ss_udc_kill_all_requests(struct exynos_ss_udc *udc,
 			      struct exynos_ss_udc_ep *ep,
 			      int result, bool force);
+static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
+				      struct exynos_ss_udc_ep *udc_ep);
+static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
+					struct exynos_ss_udc_ep *udc_ep);
 
 static struct exynos_ss_udc *our_udc;
 
@@ -469,13 +475,9 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 {
 	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
 	struct exynos_ss_udc *udc = udc_ep->parent;
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
 	unsigned long flags;
-	int epnum = udc_ep->epnum;
-	u32 mps;
 	int dir_in;
-	int ret = 0;
-	bool res;
+	int epnum;
 
 	dev_dbg(udc->dev,
 		"%s: ep %s: a 0x%02x, attr 0x%02x, mps 0x%04x, intr %d\n",
@@ -483,110 +485,60 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 		desc->wMaxPacketSize, desc->bInterval);
 
 	/* not to be called for EP0 */
-	WARN_ON(epnum == 0);
+	WARN_ON(udc_ep->epnum == 0);
 
-	dir_in = (desc->bEndpointAddress & USB_ENDPOINT_DIR_MASK) ? 1 : 0;
-	if (dir_in != udc_ep->dir_in) {
-		dev_err(udc->dev, "%s: direction mismatch!\n", __func__);
+	epnum = (desc->bEndpointAddress & USB_ENDPOINT_NUMBER_MASK);
+	if (epnum != udc_ep->epnum) {
+		dev_err(udc->dev, "%s: EP number mismatch!\n", __func__);
 		return -EINVAL;
 	}
 
-	if (!udc->eps_enabled) {
-		udc->eps_enabled = true;
-
-		/* Start New Configuration */
-		epcmd->ep = 0;
-		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTARTCFG;
-		epcmd->cmdflags =
-			(2 << EXYNOS_USB3_DEPCMDx_CommandParam_SHIFT) |
-			EXYNOS_USB3_DEPCMDx_CmdAct;
-
-		res = exynos_ss_udc_issue_cmd(udc, epcmd);
-		if (!res) {
-			dev_err(udc->dev, "Failed to start new configuration\n");
-			return -EINVAL;
-		}
+	dir_in = (desc->bEndpointAddress & USB_ENDPOINT_DIR_MASK) ? 1 : 0;
+	if (dir_in != udc_ep->dir_in) {
+		dev_err(udc->dev, "%s: EP direction mismatch!\n", __func__);
+		return -EINVAL;
 	}
-
-	mps = le16_to_cpu(desc->wMaxPacketSize);
 
 	spin_lock_irqsave(&udc_ep->lock, flags);
 
-	epcmd->ep = get_phys_epnum(udc_ep);
-
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(mps);
-
 	/* update the endpoint state */
-	udc_ep->ep.maxpacket = mps;
+	udc_ep->ep.maxpacket = le16_to_cpu(desc->wMaxPacketSize);
+	udc_ep->type = desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK;
+	udc_ep->maxburst = 0; /* FIXME */
 
-	/* default, set to non-periodic */
-	udc_ep->periodic = 0;
-
-	switch (desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) {
+	switch (udc_ep->type) {
 	case USB_ENDPOINT_XFER_ISOC:
 		dev_err(udc->dev, "no current ISOC support\n");
-		ret = -EINVAL;
-		goto out;
+		return -EINVAL;
 
 	case USB_ENDPOINT_XFER_BULK:
-		epcmd->param0 |= EXYNOS_USB3_DEPCMDPAR0x_EPType(2);
 		break;
 
 	case USB_ENDPOINT_XFER_INT:
-		if (dir_in)
-			udc_ep->periodic = 1;
-
-		epcmd->param0 |= EXYNOS_USB3_DEPCMDPAR0x_EPType(3);
 		break;
 
 	case USB_ENDPOINT_XFER_CONTROL:
 		break;
 	}
 
-	if (dir_in)
-		/* Assigne FIFO Number by simply using the endpoint number */
-		epcmd->param0 |= EXYNOS_USB3_DEPCMDPAR0x_FIFONum(epnum);
+	exynos_ss_udc_ep_activate(udc, udc_ep);
 
-	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_EpNum(epnum) |
-			(dir_in ? EXYNOS_USB3_DEPCMDPAR1x_EpDir : 0) |
-			EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
-			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res) {
-		dev_err(udc->dev, "Failed to configure physical EP\n");
-		ret = -EINVAL;
-		goto out;
-	}
-	
-	/* Configure Pysical Endpoint Transfer Resource */
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res) {
-		dev_err(udc->dev,
-			"Failed to configure physical EP transfer resource\n");
-		ret = -EINVAL;
-		goto out;
-	}
-
-	/* Enable Physical Endpoint */
-	__orr32(udc->regs + EXYNOS_USB3_DALEPENA, 1 << epcmd->ep);
-out:
 	spin_unlock_irqrestore(&udc_ep->lock, flags);
-	return ret;
+
+	return 0;
 }
 
+/**
+ * exynos_ss_udc_ep_disable - disable the given endpoint
+ * @ep: The USB endpint to configure
+ * @desc: The USB endpoint descriptor to configure with.
+ *
+ * This is called from the USB gadget code's usb_ep_disable().
+*/
 static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 {
 	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
 	struct exynos_ss_udc *udc = udc_ep->parent;
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
-	int index = get_phys_epnum(udc_ep);
 	unsigned long flags;
 
 	dev_dbg(udc->dev, "%s(ep %p)\n", __func__, ep);
@@ -596,31 +548,13 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 		return -EINVAL;
 	}
 
-	udc->eps_enabled = false;
-
-	if (udc_ep->tri) {
-		bool res;
-
-		epcmd->ep = get_phys_epnum(udc_ep);
-		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
-		epcmd->cmdflags = (udc_ep->tri <<
-			EXYNOS_USB3_DEPCMDx_CommandParam_SHIFT) |
-			EXYNOS_USB3_DEPCMDx_HiPri_ForceRM |
-			EXYNOS_USB3_DEPCMDx_CmdAct;
-
-		res = exynos_ss_udc_issue_cmd(udc, epcmd);
-		if (!res)
-			dev_err(udc->dev, "Failed to end transfer\n");
-
-		udc_ep->tri = 0;
-	}
+	spin_lock_irqsave(&udc_ep->lock, flags);
+	exynos_ss_udc_ep_deactivate(udc, udc_ep);
+	spin_unlock_irqrestore(&udc_ep->lock, flags);
 
 	/* terminate all requests with shutdown */
 	exynos_ss_udc_kill_all_requests(udc, udc_ep, -ESHUTDOWN, false);
 
-	spin_lock_irqsave(&udc_ep->lock, flags);
-	__bic32(udc->regs + EXYNOS_USB3_DALEPENA, 1 << index);
-	spin_unlock_irqrestore(&udc_ep->lock, flags);
 	return 0;
 }
 
@@ -1750,11 +1684,178 @@ static int exynos_ss_udc_corereset(struct exynos_ss_udc *udc)
 	return 0;
 }
 
-static int exynos_ss_udc_init(struct exynos_ss_udc *udc)
+/**
+ * exynos_ss_udc_ep0_activate - activate USB endpoint 0
+ * @udc: The device state
+ *
+ * Configure physical endpoints 0 & 1.
+ */
+static void exynos_ss_udc_ep0_activate(struct exynos_ss_udc *udc)
 {
 	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
-	u32 reg;
 	bool res;
+
+	/* Start New Configuration */
+	epcmd->ep = 0;
+	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTARTCFG;
+	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	if (!res)
+		dev_err(udc->dev, "Failed to start new configuration\n");
+
+	/* Configure Physical Endpoint 0 */
+	epcmd->ep = 0;
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(0x200);
+	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
+			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
+	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
+	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	if (!res)
+		dev_err(udc->dev, "Failed to configure physical EP0\n");
+	
+	/* Configure Physical Endpoint 1 */
+	epcmd->ep = 1;
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(0x200);
+	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_EpDir |
+			EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
+			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
+	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
+	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	if (!res)
+		dev_err(udc->dev, "Failed to configure physical EP1\n");
+
+	/* Configure Pysical Endpoint 0 Transfer Resource */
+	epcmd->ep = 0;
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
+	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
+	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	if (!res)
+		dev_err(udc->dev,
+			"Failed to configure physical EP0 transfer resource\n");
+
+	/* Configure Pysical Endpoint 1 Transfer Resource */
+	epcmd->ep = 1;
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
+	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
+	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	if (!res)
+		dev_err(udc->dev,
+			"Failed to configure physical EP1 transfer resource\n");
+
+	/* Enable Physical Endpoints 0 and 1 */
+	writel(3, udc->regs + EXYNOS_USB3_DALEPENA);
+}
+
+/**
+ * exynos_ss_udc_ep_activate - activate USB endpoint
+ * @udc: The device state
+ * @udc_ep: The endpoint to activate.
+ *
+ * Configure physical endpoints > 1.
+ */
+static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
+				      struct exynos_ss_udc_ep *udc_ep)
+{
+	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	int epnum = udc_ep->epnum;
+	bool res;
+
+	if (!udc->eps_enabled) {
+		udc->eps_enabled = true;
+
+		/* Start New Configuration */
+		epcmd->ep = 0;
+		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTARTCFG;
+		epcmd->cmdflags =
+			(2 << EXYNOS_USB3_DEPCMDx_CommandParam_SHIFT) |
+			EXYNOS_USB3_DEPCMDx_CmdAct;
+
+		res = exynos_ss_udc_issue_cmd(udc, epcmd);
+		if (!res)
+			dev_err(udc->dev, "Failed to start new configuration\n");
+	}
+
+	epcmd->ep = get_phys_epnum(udc_ep);
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_EPType(udc_ep->type) |
+			EXYNOS_USB3_DEPCMDPAR0x_MPS(udc_ep->ep.maxpacket) |
+			EXYNOS_USB3_DEPCMDPAR0x_BrstSiz(udc_ep->maxburst);
+	if (udc_ep->dir_in)
+		/* FIXME: Assigne FIFO Number by simply using
+		 * the endpoint number
+		 */
+		epcmd->param0 |= EXYNOS_USB3_DEPCMDPAR0x_FIFONum(epnum);
+	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_EpNum(epnum) |
+			(udc_ep->dir_in ? EXYNOS_USB3_DEPCMDPAR1x_EpDir : 0) |
+			EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
+			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
+	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
+	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	if (!res)
+		dev_err(udc->dev, "Failed to configure physical EP\n");
+
+	/* Configure Pysical Endpoint Transfer Resource */
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
+	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
+	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+
+	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	if (!res)
+		dev_err(udc->dev,
+			"Failed to configure physical EP transfer resource\n");
+
+	/* Enable Physical Endpoint */
+	__orr32(udc->regs + EXYNOS_USB3_DALEPENA, 1 << epcmd->ep);
+}
+
+/**
+ * exynos_ss_udc_ep_deactivate - deactivate USB endpoint
+ * @udc: The device state.
+ * @udc_ep: The endpoint to deactivate.
+ *
+ * End any active transfer and disable endpoint.
+ */
+static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
+					struct exynos_ss_udc_ep *udc_ep)
+{
+	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	int index = get_phys_epnum(udc_ep);
+
+	udc->eps_enabled = false;
+
+	if (udc_ep->tri) {
+		bool res;
+
+		epcmd->ep = get_phys_epnum(udc_ep);
+		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
+		epcmd->cmdflags = (udc_ep->tri <<
+			EXYNOS_USB3_DEPCMDx_CommandParam_SHIFT) |
+			EXYNOS_USB3_DEPCMDx_HiPri_ForceRM |
+			EXYNOS_USB3_DEPCMDx_CmdAct;
+
+		res = exynos_ss_udc_issue_cmd(udc, epcmd);
+		if (!res)
+			dev_err(udc->dev, "Failed to end transfer\n");
+
+		udc_ep->tri = 0;
+	}
+
+	__bic32(udc->regs + EXYNOS_USB3_DALEPENA, 1 << index);
+}
+
+static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
+{
+	u32 reg;
 
 	/* TODO: GSBUSCFG0/1 - are power-on values correct
 	   in coreConsultant? */
@@ -1795,85 +1896,13 @@ static int exynos_ss_udc_init(struct exynos_ss_udc *udc)
 	writel(EXYNOS_USB3_DEVTEN_ULStCngEn | EXYNOS_USB3_DEVTEN_ConnectDoneEn |
 		EXYNOS_USB3_DEVTEN_USBRstEn, udc->regs + EXYNOS_USB3_DEVTEN);
 
-	/* (!!!) Now we will issue the first command. How about write
-	 * separate functions for each command? */
-
-	/* Start New Configuration */
-	epcmd->ep = 0;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTARTCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res) {
-		dev_err(udc->dev, "Failed to start new configuration\n");
-		return -EINVAL;
-	}
-
-	/* Configure Physical Endpoint 0 */
-	epcmd->ep = 0;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(0x200);
-	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
-			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res) {
-		dev_err(udc->dev, "Failed to configure physical EP0\n");
-		return -EINVAL;
-	}
-	
-	/* Configure Physical Endpoint 1 */
-	epcmd->ep = 1;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(0x200);
-	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_EpDir |
-			EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
-			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res) {
-		dev_err(udc->dev, "Failed to configure physical EP1\n");
-		return -EINVAL;
-	}
-
-	/* Configure Pysical Endpoint 0 Transfer Resource */
-	epcmd->ep = 0;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res) {
-		dev_err(udc->dev,
-			"Failed to configure physical EP0 transfer resource\n");
-		return -EINVAL;
-	}
-
-	/* Configure Pysical Endpoint 1 Transfer Resource */
-	epcmd->ep = 1;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res) {
-		dev_err(udc->dev,
-			"Failed to configure physical EP1 transfer resource\n");
-		return -EINVAL;
-	}
+	exynos_ss_udc_ep0_activate(udc);
 
 	/* According to documentation we need here to start transfer on
 	   Phys EP 0 and 1, but we will do it after USB Reset */
 
-	/* Enable Physical Endpoints 0 and 1 */
-	writel(3, udc->regs + EXYNOS_USB3_DALEPENA);
-
 	/* Start the device controller operation */
 	__orr32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_Run_Stop);
-
-	return 0;
 }
 
 int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
