@@ -476,6 +476,11 @@ static int i2s_set_sysclk(struct snd_soc_dai *dai,
 
 			i2s->op_clk = clk_get(&i2s->pdev->dev,
 						i2s->src_clk[clk_id]);
+			if (IS_ERR(i2s->op_clk)) {
+				dev_err(&i2s->pdev->dev,
+					"failed to get i2s opclk\n");
+				return PTR_ERR(i2s->op_clk);
+			}
 			clk_enable(i2s->op_clk);
 			i2s->rclk_srcrate = clk_get_rate(i2s->op_clk);
 

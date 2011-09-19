@@ -55,7 +55,7 @@ static int set_epll_rate(unsigned long rate)
 	fout_epll = clk_get(NULL, "fout_epll");
 	if (IS_ERR(fout_epll)) {
 		printk(KERN_ERR "%s: failed to get fout_epll\n", __func__);
-		return -ENOENT;
+		return PTR_ERR(fout_epll);
 	}
 
 	if (rate == clk_get_rate(fout_epll))
