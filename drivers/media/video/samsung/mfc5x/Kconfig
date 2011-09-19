@@ -2,9 +2,28 @@
 # Configuration for Multi Format Codecs (MFC)
 #
 
+choice
+prompt "Select MFC driver type"
+default USE_LEGACY_MFC
+config USE_LEGACY_MFC
+	bool "Lecacy style MFC"
+	depends on VIDEO_SAMSUNG && ARCH_EXYNOS4
+	select VIDEO_MFC5X
+	help
+	  Use MFC legacy style driver.
+
+config USE_V4L2_MFC
+	bool "V4L2 style MFC"
+	depends on VIDEO_V4L2 && PLAT_S5P
+	select VIDEO_SAMSUNG_S5P_MFC
+	help
+	  Use MFC V4L2 style driver.
+
+endchoice
+
 config VIDEO_MFC5X
 	bool "Samsung MFC (Multi Format Codec - FIMV 5.x) Driver"
-	depends on VIDEO_SAMSUNG && ARCH_EXYNOS4
+	depends on USE_LEGACY_MFC
 	default n
 	---help---
 	  This is a Samsung Multi Format Codecs (MFC) FIMV V5.x - driver for Samsung S5PV310
@@ -30,3 +49,44 @@ config VIDEO_MFC5X_DEBUG
 	bool "MFC driver debug message"
 	depends on VIDEO_MFC5X
 	default n
+
+config VIDEO_SAMSUNG_S5P_MFC
+	tristate "Samsung S5P MFC 5.1 Video Codec"
+	depends on USE_V4L2_MFC
+	select VIDEOBUF2_CORE
+	default n
+	help
+	  MFC 5.1 driver for V4L2.
+
+choice
+	prompt "VB2 memory allocator for MFC"
+	depends on VIDEO_SAMSUNG_S5P_MFC
+	default S5P_MFC_VB2_CMA if CMA
+
+config S5P_MFC_VB2_ION
+	bool "ION"
+	depends on ION
+	select VIDEOBUF2_ION
+	help
+	  Use videobuf2 ION allocator for MFC
+
+config S5P_MFC_VB2_CMA
+	bool "CMA"
+	depends on CMA
+	select VIDEOBUF2_CMA
+	help
+	  Use videobuf2 CMA allocator for MFC
+
+config S5P_MFC_VB2_DMA_POOL
+	bool "DMA Pool"
+	select VIDEOBUF2_DMA_POOL
+	help
+	  use videobuf2 DMA pool allocator for MFC
+
+config S5P_MFC_VB2_SDVMM
+	bool "SDVMM"
+	depends on VCM && VCM_MMU && VIDEO_UMP && S5P_SYSTEM_MMU
+	select VIDEOBUF2_SDVMM
+	help
+	  use videobuf2 SDVMM allocator for MFC
+endchoice
