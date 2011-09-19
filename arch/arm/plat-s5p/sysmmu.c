@@ -14,6 +14,7 @@
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk.h>
+#include <linux/err.h>
 
 #include <asm/pgtable.h>
 
@@ -45,110 +46,181 @@ static char *sysmmu_fault_name[SYSMMU_FAULTS_NUM] = {
 	"AR SECURITY PROTECTION FAULT",
 	"AR ACCESS PROTECTION FAULT",
 	"AW SECURITY PROTECTION FAULT",
-	"AW ACCESS PROTECTION FAULT"
+	"AW ACCESS PROTECTION FAULT",
+	"UNKNOWN FAULT"
 };
 
-static int (*fault_handlers[S5P_SYSMMU_TOTAL_IPNUM])(
-		enum S5P_SYSMMU_INTERRUPT_TYPE itype,
-		unsigned long pgtable_base,
-		unsigned long fault_addr);
+struct sysmmu_drvdata {
+	struct list_head node;
+	struct device *dev;
+	struct device *owner;
+	void __iomem *sfrbase;
+	struct clk *clk;
+	int activations;
+	rwlock_t lock;
+	s5p_sysmmu_fault_handler_t fault_handler;
+};
 
-static struct device *sysmmu_dev[S5P_SYSMMU_TOTAL_IPNUM];
-/*
- * If adjacent 2 bits are true, the system MMU is enabled.
- * The system MMU is disabled, otherwise.
- */
-static unsigned long sysmmu_states;
+static LIST_HEAD(sysmmu_list);
 
-static inline int set_sysmmu_active(sysmmu_ips ips)
+void s5p_sysmmu_set_owner(struct device *sysmmu, struct device *owner)
 {
-	/* return true if it is not set */
-	return !test_and_set_bit(ips, &sysmmu_states);
+	struct sysmmu_drvdata *data;
+
+	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	if (data) {
+		data->owner = owner;
+		data->dev = sysmmu;
+
+		INIT_LIST_HEAD(&data->node);
+	}
+
+	sysmmu->platform_data = data;
 }
 
-static inline int set_sysmmu_inactive(sysmmu_ips ips)
+static struct sysmmu_drvdata *get_sysmmu_data(struct device *owner,
+						struct sysmmu_drvdata *start)
 {
-	/* return true if it is set */
-	return test_and_clear_bit(ips, &sysmmu_states);
+	if (start) {
+		list_for_each_entry_continue(start, &sysmmu_list, node)
+			if (start->owner == owner)
+				return start;
+	} else  {
+		list_for_each_entry(start, &sysmmu_list, node)
+			if (start->owner == owner)
+				return start;
+	}
+
+	return NULL;
 }
 
-static inline int is_sysmmu_active(sysmmu_ips ips)
+static struct sysmmu_drvdata *get_sysmmu_data_rollback(struct device *owner,
+						struct sysmmu_drvdata *start)
 {
-	/* BUG_ON(ips >= S5P_SYSMMU_TOTAL_IPNUM); */
-	return sysmmu_states & (1 << ips);
+	if (start) {
+		list_for_each_entry_continue_reverse(start, &sysmmu_list, node)
+			if (start->owner == owner)
+				return start;
+	}
+
+	return NULL;
 }
 
-static void __iomem *sysmmusfrs[S5P_SYSMMU_TOTAL_IPNUM];
-
-static inline void sysmmu_block(sysmmu_ips ips)
+static bool set_sysmmu_active(struct sysmmu_drvdata *mmudata)
 {
-	__raw_writel(CTRL_BLOCK, sysmmusfrs[ips] + S5P_MMU_CTRL);
-	dev_dbg(sysmmu_dev[ips], "Blocked.\n");
+	/* return true if the System MMU was not active previously
+	   and it needs to be initialized */
+	mmudata->activations++;
+	return mmudata->activations == 1;
 }
 
-static inline void sysmmu_unblock(sysmmu_ips ips)
+static bool set_sysmmu_inactive(struct sysmmu_drvdata *mmudata)
 {
-	__raw_writel(CTRL_ENABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
-	dev_dbg(sysmmu_dev[ips], "Unblocked.\n");
+	/* return true if the System MMU is needed to be disabled */
+	mmudata->activations--;
+
+	WARN_ON(mmudata->activations < 0);
+
+	return mmudata->activations == 0;
 }
 
-static inline void __sysmmu_tlb_invalidate(sysmmu_ips ips)
+static bool is_sysmmu_active(struct sysmmu_drvdata *mmudata)
 {
-	__raw_writel(0x1, sysmmusfrs[ips] + S5P_MMU_FLUSH);
-	dev_dbg(sysmmu_dev[ips], "TLB invalidated.\n");
+	return mmudata->activations != 0;
 }
 
-static inline void __sysmmu_set_ptbase(sysmmu_ips ips, unsigned long pgd)
+static void sysmmu_block(void __iomem *sfrbase)
+{
+	__raw_writel(CTRL_BLOCK, sfrbase + S5P_MMU_CTRL);
+}
+
+static void sysmmu_unblock(void __iomem *sfrbase)
+{
+	__raw_writel(CTRL_ENABLE, sfrbase + S5P_MMU_CTRL);
+}
+
+static void __sysmmu_tlb_invalidate(void __iomem *sfrbase)
+{
+	__raw_writel(0x1, sfrbase + S5P_MMU_FLUSH);
+}
+
+static void __sysmmu_set_ptbase(void __iomem *sfrbase,
+				       unsigned long pgd)
 {
 	if (unlikely(pgd == 0)) {
 		pgd = (unsigned long)ZERO_PAGE(0);
-		__raw_writel(0x20, sysmmusfrs[ips] + S5P_MMU_CFG); /* 4KB LV1 */
+		__raw_writel(0x20, sfrbase + S5P_MMU_CFG); /* 4KB LV1 */
 	} else {
-		__raw_writel(0x0, sysmmusfrs[ips] + S5P_MMU_CFG); /* 16KB LV1 */
+		__raw_writel(0x0, sfrbase + S5P_MMU_CFG); /* 16KB LV1 */
 	}
 
-	__raw_writel(pgd, sysmmusfrs[ips] + S5P_PT_BASE_ADDR);
+	__raw_writel(pgd, sfrbase + S5P_PT_BASE_ADDR);
 
-	dev_dbg(sysmmu_dev[ips],
-			"Page table base is initialized with 0x%08lX.\n", pgd);
-	__sysmmu_tlb_invalidate(ips);
+	__sysmmu_tlb_invalidate(sfrbase);
 }
 
-void sysmmu_set_fault_handler(sysmmu_ips ips,
-			int (*handler)(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
-					unsigned long pgtable_base,
-					unsigned long fault_addr))
+static void __set_fault_handler(struct sysmmu_drvdata *mmudata,
+					s5p_sysmmu_fault_handler_t handler)
 {
-	BUG_ON(!((ips >= SYSMMU_MDMA) && (ips < S5P_SYSMMU_TOTAL_IPNUM)));
-	fault_handlers[ips] = handler;
+	unsigned long flags;
+
+	write_lock_irqsave(&mmudata->lock, flags);
+	mmudata->fault_handler = handler;
+	write_unlock_irqrestore(&mmudata->lock, flags);
+}
+
+void s5p_sysmmu_set_fault_handler(struct device *owner,
+					s5p_sysmmu_fault_handler_t handler)
+{
+	struct sysmmu_drvdata *data = NULL;
+
+	while ((data = get_sysmmu_data(owner, data)))
+		__set_fault_handler(data, handler);
+}
+
+static int default_fault_handler(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
+			     unsigned long pgtable_base,
+			     unsigned long fault_addr)
+{
+	if ((itype >= SYSMMU_FAULTS_NUM) || (itype < SYSMMU_PAGEFAULT))
+		itype = SYSMMU_FAULT_UNKNOWN;
+
+	pr_err("%s occured at 0x%lx(Page table base: 0x%lx)\n",
+			sysmmu_fault_name[itype], pgtable_base, fault_addr);
+	pr_err("\t\tGenerating Kernel OOPS... because it is unrecoverable.\n");
+
+	BUG();
+
+	return 0;
 }
 
 static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 {
 	/* SYSMMU is in blocked when interrupt occurred. */
 	unsigned long base = 0;
-	sysmmu_ips ips = (sysmmu_ips)dev_id;
+	struct sysmmu_drvdata *mmudata = dev_id;
 	enum S5P_SYSMMU_INTERRUPT_TYPE itype;
 
-	BUG_ON(!is_sysmmu_active(ips));
+	read_lock(&mmudata->lock);
+
+	WARN_ON(!is_sysmmu_active(mmudata));
 
 	itype = (enum S5P_SYSMMU_INTERRUPT_TYPE)
-		__ffs(__raw_readl(sysmmusfrs[ips] + S5P_INT_STATUS));
+		__ffs(__raw_readl(mmudata->sfrbase + S5P_INT_STATUS));
 
 	BUG_ON(!((itype >= 0) && (itype < 8)));
 
-	dev_alert(sysmmu_dev[ips], "%s occurred.\n", sysmmu_fault_name[itype]);
-
-	if (fault_handlers[ips]) {
+	if (mmudata->fault_handler) {
 		unsigned long addr;
 
-		base = __raw_readl(sysmmusfrs[ips] + S5P_PT_BASE_ADDR);
-		addr = __raw_readl(sysmmusfrs[ips] + fault_reg_offset[itype]);
+		base = __raw_readl(mmudata->sfrbase + S5P_PT_BASE_ADDR);
+		addr = __raw_readl(mmudata->sfrbase + fault_reg_offset[itype]);
 
-		if (fault_handlers[ips](itype, base, addr)) {
+		if (mmudata->fault_handler(itype, base, addr) != 0) {
+
 			__raw_writel(1 << itype,
-					sysmmusfrs[ips] + S5P_INT_CLEAR);
-			dev_notice(sysmmu_dev[ips],
+					mmudata->sfrbase + S5P_INT_CLEAR);
+			dev_dbg(mmudata->dev,
 				"%s is resolved. Retrying translation.\n",
 				sysmmu_fault_name[itype]);
 		} else {
@@ -156,112 +228,169 @@ static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 		}
 	}
 
-	sysmmu_unblock(ips);
+	sysmmu_unblock(mmudata->sfrbase);
 
-	if (!base) {
-		dev_notice(sysmmu_dev[ips], "%s is not handled.\n",
+	read_unlock(&mmudata->lock);
+
+	if (!base)
+		dev_notice(mmudata->dev, "%s is not handled.\n",
 						sysmmu_fault_name[itype]);
-	}
 
 	return IRQ_HANDLED;
 }
 
-void s5p_sysmmu_set_tablebase_pgd(sysmmu_ips ips, unsigned long pgd)
+void s5p_sysmmu_set_tablebase_pgd(struct device *owner, unsigned long pgd)
 {
-	if (is_sysmmu_active(ips)) {
-		sysmmu_block(ips);
-		__sysmmu_set_ptbase(ips, pgd);
-		sysmmu_unblock(ips);
-	} else {
-		dev_dbg(sysmmu_dev[ips],
-			"Disabled: Skipping initializing page table base.\n");
-	}
-}
+	struct sysmmu_drvdata *mmudata = NULL;
 
-void s5p_sysmmu_enable(sysmmu_ips ips, unsigned long pgd)
-{
-	if (!sysmmu_dev[ips]) {
-		dev_err(sysmmu_dev[ips],
-				"Failed to enable: not initialized.\n");
-		return;
-	}
+	while ((mmudata = get_sysmmu_data(owner, mmudata))) {
+		unsigned long flags;
 
-	if (set_sysmmu_active(ips)) {
-		struct clk *clk;
+		read_lock_irqsave(&mmudata->lock, flags);
 
-		pm_runtime_get_sync(sysmmu_dev[ips]);
-
-		clk = clk_get(sysmmu_dev[ips], "sysmmu");
-		if (!clk) {
-			dev_err(sysmmu_dev[ips],
-				"Failed to enable: unable to enable clock\n");
-			pm_runtime_put_sync(sysmmu_dev[ips]);
-			set_sysmmu_inactive(ips);
-			return;
+		if (is_sysmmu_active(mmudata)) {
+			sysmmu_block(mmudata->sfrbase);
+			__sysmmu_set_ptbase(mmudata->sfrbase, pgd);
+			sysmmu_unblock(mmudata->sfrbase);
+			dev_dbg(mmudata->dev, "New page table base is %p\n",
+								(void *)pgd);
+		} else {
+			dev_dbg(mmudata->dev,
+			"Disabled: Skipping setting page table base.\n");
 		}
 
-		clk_enable(clk);
-
-		clk_put(clk);
-
-		__sysmmu_set_ptbase(ips, pgd);
-
-		__raw_writel(CTRL_ENABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
-
-		dev_dbg(sysmmu_dev[ips], "Enabled.\n");
-	} else {
-		dev_dbg(sysmmu_dev[ips], "Already enabled.\n");
+		read_unlock_irqrestore(&mmudata->lock, flags);
 	}
 }
 
-void s5p_sysmmu_disable(sysmmu_ips ips)
+int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 {
-	if (set_sysmmu_inactive(ips)) {
-		struct clk *clk;
+	unsigned long flags;
+	struct sysmmu_drvdata *mmudata = NULL;
+	int ret = 0;
 
-		clk = clk_get(sysmmu_dev[ips], "sysmmu");
-		if (!clk) {
-			dev_err(sysmmu_dev[ips],
-				"Failed to enable: unable to enable clock\n");
-			set_sysmmu_active(ips);
-			return;
+	/* There are some devices that control more System MMUs than one such
+	 * as MFC.
+	 */
+	while ((mmudata = get_sysmmu_data(owner, mmudata))) {
+
+		ret = pm_runtime_get_sync(mmudata->dev);
+		if (ret)
+			break;
+
+		write_lock_irqsave(&mmudata->lock, flags);
+
+		if (set_sysmmu_active(mmudata)) {
+
+			__sysmmu_set_ptbase(mmudata->sfrbase, pgd);
+
+			__raw_writel(CTRL_ENABLE,
+					mmudata->sfrbase + S5P_MMU_CTRL);
+
+			dev_dbg(mmudata->dev, "Enabled.\n");
+		} else {
+			dev_dbg(mmudata->dev, "Already enabled.\n");
 		}
 
-		__raw_writel(CTRL_DISABLE, sysmmusfrs[ips] + S5P_MMU_CTRL);
+		write_unlock_irqrestore(&mmudata->lock, flags);
+	}
 
-		clk_disable(clk);
+	if (ret) {
+		do {
+			write_lock_irqsave(&mmudata->lock, flags);
+			set_sysmmu_inactive(mmudata);
+			/* deinitialization is not required actually. */
+			write_unlock_irqrestore(&mmudata->lock, flags);
 
-		clk_put(clk);
+			pm_runtime_put_sync(mmudata->dev);
 
-		pm_runtime_put_sync(sysmmu_dev[ips]);
+			dev_dbg(mmudata->dev, "Failed to enable.\n");
+		} while ((mmudata = get_sysmmu_data_rollback(owner, mmudata)));
+	}
 
-		dev_dbg(sysmmu_dev[ips], "Disabled.\n");
-	} else {
-		dev_dbg(sysmmu_dev[ips], "Already disabled.\n");
+	return ret;
+}
+
+void s5p_sysmmu_disable(struct device *owner)
+{
+	struct sysmmu_drvdata *mmudata = NULL;
+
+	while ((mmudata = get_sysmmu_data(owner, mmudata))) {
+		unsigned long flags;
+
+		write_lock_irqsave(&mmudata->lock, flags);
+
+		if (set_sysmmu_inactive(mmudata)) {
+			__raw_writel(CTRL_DISABLE,
+					mmudata->sfrbase + S5P_MMU_CTRL);
+
+			dev_dbg(mmudata->dev, "Disabled.\n");
+		} else {
+			dev_dbg(mmudata->dev,
+					"Inactivation request ignorred\n");
+		}
+
+		write_unlock_irqrestore(&mmudata->lock, flags);
+
+		pm_runtime_put_sync(mmudata->dev);
 	}
 }
 
-void s5p_sysmmu_tlb_invalidate(sysmmu_ips ips)
+void s5p_sysmmu_tlb_invalidate(struct device *owner)
 {
-	if (is_sysmmu_active(ips)) {
-		sysmmu_block(ips);
-		__sysmmu_tlb_invalidate(ips);
-		sysmmu_unblock(ips);
-	} else {
-		dev_dbg(sysmmu_dev[ips],
-			"Disabled: Skipping invalidating TLB.\n");
+	struct sysmmu_drvdata *mmudata = NULL;
+
+	while ((mmudata = get_sysmmu_data(owner, mmudata))) {
+		unsigned long flags;
+
+		read_lock_irqsave(&mmudata->lock, flags);
+
+		if (is_sysmmu_active(mmudata)) {
+			sysmmu_block(mmudata->sfrbase);
+			__sysmmu_tlb_invalidate(mmudata->sfrbase);
+			sysmmu_unblock(mmudata->sfrbase);
+		} else {
+			dev_dbg(mmudata->dev,
+				"Disabled: Skipping invalidating TLB.\n");
+		}
+
+		read_unlock_irqrestore(&mmudata->lock, flags);
 	}
 }
 
 static int s5p_sysmmu_probe(struct platform_device *pdev)
 {
-	sysmmu_ips id;
 	struct resource *res, *ioarea;
 	int ret;
 	int irq;
 	struct device *dev;
+	void *sfr;
+	struct sysmmu_drvdata *data;
 
 	dev = &pdev->dev;
+
+	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	if (!data) {
+		dev_err(dev, "Failed to probing System MMU: "
+							"Not enough memory");
+		return -ENOMEM;
+	}
+
+	if (!dev_get_platdata(dev)) {
+		dev_err(dev, "Failed to probing system MMU: "
+						"Owner device is not set.");
+
+		ret = -ENODEV;
+		goto err_init;
+	}
+
+	ret = dev_set_drvdata(dev, data);
+	if (ret) {
+		dev_err(dev, "Failed to probing system MMU: "
+						"Unable to set driver data.");
+		goto err_init;
+	}
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(dev,
@@ -269,21 +398,16 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
-	id = (sysmmu_ips)pdev->id;
-	if (id >= S5P_SYSMMU_TOTAL_IPNUM) {
-		dev_err(dev, "Unknown System MMU ID %d.", id);
-		return -ENOENT;
-	}
-
-	ioarea = request_mem_region(res->start, resource_size(res), pdev->name);
+	ioarea = request_mem_region(res->start, resource_size(res),
+								dev_name(dev));
 	if (ioarea == NULL) {
 		dev_err(dev, "Failed probing system MMU: "
 					"failed to request memory region.");
 		return -ENOMEM;
 	}
 
-	sysmmusfrs[id] = ioremap(res->start, resource_size(res));
-	if (!sysmmusfrs[id]) {
+	sfr = ioremap(res->start, resource_size(res));
+	if (!sfr) {
 		dev_err(dev, "Failed probing system MMU: "
 						"failed to call ioremap().");
 		ret = -ENOENT;
@@ -298,44 +422,62 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
-	if (request_irq(irq, s5p_sysmmu_irq, 0, dev_name(&pdev->dev),
-								(void *)id)) {
+	ret = request_irq(irq, s5p_sysmmu_irq, 0, dev_name(dev), data);
+	if (ret) {
 		dev_err(dev, "Failed probing system MMU: "
 						"failed to request irq.");
-		ret = -ENOENT;
 		goto err_irq;
 	}
 
-	dev_dbg(dev, "Probing system MMU succeeded.");
-
-	if (pdev->dev.parent) {
-		pm_runtime_enable(&pdev->dev);
-		sysmmu_dev[id] = &pdev->dev;
+	data->clk = clk_get(dev, "sysmmu");
+	if (IS_ERR(data->clk)) {
+		dev_err(dev, "Failed to probing System MMU: "
+					"failed to get clock descriptor");
+		ret = PTR_ERR(data->clk);
+		goto err_clk;
 	}
 
-	return 0;
+	data->dev = dev;
+	data->owner = dev_get_platdata(dev);
+	data->sfrbase = sfr;
+	__set_fault_handler(data, &default_fault_handler);
+	rwlock_init(&data->lock);
+	INIT_LIST_HEAD(&data->node);
 
+	list_add(&data->node, &sysmmu_list);
+
+	if (dev->parent)
+		pm_runtime_enable(dev);
+
+	dev_dbg(dev, "Initialized for %s.\n", dev_name(data->owner));
+	return 0;
+err_clk:
+	free_irq(irq, data);
 err_irq:
-	iounmap(sysmmusfrs[id]);
+	iounmap(sfr);
 err_ioremap:
 	release_resource(ioarea);
 	kfree(ioarea);
+err_init:
+	kfree(data);
 	dev_err(dev, "Probing system MMU failed.");
 	return ret;
 }
 
-static int s5p_sysmmu_remove(struct platform_device *pdev)
-{
-	return 0;
-}
 int s5p_sysmmu_runtime_suspend(struct device *dev)
 {
+	struct sysmmu_drvdata *data = dev_get_drvdata(dev);
+
+	clk_disable(data->clk);
+
 	return 0;
 }
 
 int s5p_sysmmu_runtime_resume(struct device *dev)
 {
-	return 0;
+	struct sysmmu_drvdata *data = dev_get_drvdata(dev);
+
+	return clk_enable(data->clk);
 }
 
 const struct dev_pm_ops s5p_sysmmu_pm_ops = {
@@ -345,7 +487,6 @@ const struct dev_pm_ops s5p_sysmmu_pm_ops = {
 
 static struct platform_driver s5p_sysmmu_driver = {
 	.probe		= s5p_sysmmu_probe,
-	.remove		= s5p_sysmmu_remove,
 	.driver		= {
 		.owner		= THIS_MODULE,
 		.name		= "s5p-sysmmu",
