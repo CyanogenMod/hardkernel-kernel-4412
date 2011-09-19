@@ -133,6 +133,7 @@ struct mfc_dec_ctx {
 	int predisplumaaddr;		/* H */
 	int predispchromaaddr;		/* H */
 	int predispframetype;		/* H */
+	int predispframetag;		/* H */
 
 	enum dec_frame decframetype;	/* H */
 

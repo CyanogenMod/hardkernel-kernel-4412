@@ -1936,12 +1936,11 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 	int display_luma_addr;
 	int display_chroma_addr;
 	int display_frame_type;
-	unsigned int inSeqId;
+	int display_frame_tag;
 	unsigned char *stream_vir;
 	int ret;
 
 	struct mfc_dec_ctx *dec_ctx = (struct mfc_dec_ctx *)ctx->c_priv;
-	inSeqId = dec_ctx->frametag;
 
 #ifdef CONFIG_VIDEO_MFC_VCM_UMP
 	void *ump_handle;
@@ -1997,11 +1996,13 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 		display_chroma_addr = 0;
 
 		display_frame_type = DISP_FRM_X;
+		display_frame_tag = read_shm(ctx, GET_FRAME_TAG_TOP);
 	} else {
 		display_luma_addr = read_reg(MFC_SI_DISPLAY_Y_ADR);
 		display_chroma_addr = read_reg(MFC_SI_DISPLAY_C_ADR);
 
 		display_frame_type = get_disp_frame_type();
+		display_frame_tag = read_shm(ctx, GET_FRAME_TAG_TOP);
 
 		if (dec_ctx->ispackedpb) {
 			if ((dec_ctx->decframetype == DEC_FRM_P) || (dec_ctx->decframetype == DEC_FRM_I)) {
@@ -2010,8 +2011,9 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 			} else {
 				display_luma_addr = dec_ctx->predisplumaaddr;
 				display_chroma_addr = dec_ctx->predispchromaaddr;
-
 				display_frame_type = dec_ctx->predispframetype;
+				/* over write frame tag */
+				display_frame_tag = dec_ctx->predispframetag;
 			}
 
 			/* save the display addr */
@@ -2019,10 +2021,15 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 			dec_ctx->predispchromaaddr = read_reg(MFC_SI_DISPLAY_C_ADR);
 
 			/* save the display frame type */
-			if (get_disp_frame_type() != DISP_FRM_N)
+			if (get_disp_frame_type() != DISP_FRM_N) {
 				dec_ctx->predispframetype = get_disp_frame_type();
+				/* Set Frame Tag */
+				dec_ctx->predispframetag =
+					read_shm(ctx, GET_FRAME_TAG_TOP);
+			}
 
-			mfc_dbg("pre_luma_addr: 0x%08x, pre_chroma_addr: 0x%08x, pre_disp_frame_type: %d\n",
+			mfc_dbg("pre_luma_addr: 0x%08x, pre_chroma_addr:"
+					"0x%08x, pre_disp_frame_type: %d\n",
 					(dec_ctx->predisplumaaddr << 11),
 					(dec_ctx->predispchromaaddr << 11),
 					dec_ctx->predispframetype);
@@ -2034,7 +2041,7 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 		mfc_dbg("Immediately display\n");
 		dec_ctx->dispstatus = dec_ctx->decstatus;
 		/* update frame tag information with current ID */
-		exe_arg->out_frametag_top = inSeqId;
+		exe_arg->out_frametag_top = dec_ctx->frametag;
 		/* FIXME : need to check this */
 		exe_arg->out_frametag_bottom = 0;
 
@@ -2047,7 +2054,7 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 		dec_ctx->immediatelydisplay = 0;
 	} else {
 		/* Get Frame Tag top and bottom */
-		exe_arg->out_frametag_top = read_shm(ctx, GET_FRAME_TAG_TOP);
+		exe_arg->out_frametag_top = display_frame_tag;
 		exe_arg->out_frametag_bottom = read_shm(ctx, GET_FRAME_TAG_BOT);
 	}
 
@@ -2104,11 +2111,20 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 			exe_arg->out_crop_bottom_offset,
 			exe_arg->out_crop_left_offset);
 	}
-
+/*
 	mfc_dbg("decode frame type: %d\n", dec_ctx->decframetype);
 	mfc_dbg("display frame type: %d\n", exe_arg->out_disp_pic_frame_type);
 	mfc_dbg("display y: 0x%08x, c: 0x%08x\n",
 		exe_arg->out_display_Y_addr, exe_arg->out_display_C_addr);
+		*/
+
+	mfc_dbg("decode frame type: %d\n", dec_ctx->decframetype);
+	mfc_dbg("display frame type: %d,%d\n",
+			exe_arg->out_disp_pic_frame_type,
+			exe_arg->out_frametag_top);
+	mfc_dbg("display y: 0x%08x, c: 0x%08x\n",
+			exe_arg->out_display_Y_addr,
+			exe_arg->out_display_C_addr);
 
 	*consumed = read_reg(MFC_SI_FRM_COUNT);
 	mfc_dbg("stream size: %d, consumed: %d\n",
@@ -2123,6 +2139,7 @@ int mfc_exec_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	int ret;
 	int consumed = 0;
 	struct mfc_dec_ctx *dec_ctx = (struct mfc_dec_ctx *)ctx->c_priv;
+	int sec_try_tag; /* tag store for second try */
 
 	exe_arg = (struct mfc_dec_exe_arg *)args;
 
@@ -2135,6 +2152,7 @@ int mfc_exec_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	mfc_set_inst_state(ctx, INST_STATE_EXE);
 
 	ret = mfc_decoding_frame(ctx, exe_arg, &consumed);
+	sec_try_tag = exe_arg->out_frametag_top;
 
 	mfc_set_inst_state(ctx, INST_STATE_EXE_DONE);
 
@@ -2143,41 +2161,42 @@ int mfc_exec_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 		if (ctx->resolution_status == RES_SET_CHANGE) {
 			ret = mfc_decoding_frame(ctx, exe_arg, &consumed);
 		} else if ((ctx->resolution_status == RES_WAIT_FRAME_DONE) &&
-		     (exe_arg->out_display_status == DISP_S_FINISH)) {
+			(exe_arg->out_display_status == DISP_S_FINISH)) {
 			exe_arg->out_display_status = 4;
 			mfc_change_resolution(ctx, exe_arg);
 			ctx->resolution_status = RES_NO_CHANGE;
 		}
 
-	if ((dec_ctx->ispackedpb) &&
-		(dec_ctx->decframetype == DEC_FRM_P) &&
-		(exe_arg->in_strm_size - consumed > 4)) {
-		unsigned char *stream_vir;
-		int offset = 0;
+		if ((dec_ctx->ispackedpb) &&
+				(dec_ctx->decframetype == DEC_FRM_P) &&
+				(exe_arg->in_strm_size - consumed > 4)) {
+			unsigned char *stream_vir;
+			int offset = 0;
 
 			mfc_dbg("[%s] strmsize : %d consumed : %d\n", __func__,
-				 exe_arg->in_strm_size, consumed);
+					exe_arg->in_strm_size, consumed);
 
-		stream_vir = phys_to_virt(exe_arg->in_strm_buf);
+			stream_vir = phys_to_virt(exe_arg->in_strm_buf);
 
 			mfc_mem_cache_inv((void *)stream_vir,
-						 exe_arg->in_strm_size);
+					exe_arg->in_strm_size);
 
 			offset = CheckMPEG4StartCode(stream_vir+consumed,
-					 dec_ctx->streamsize - consumed);
-		if (offset > 4)
-			consumed += offset;
+					dec_ctx->streamsize - consumed);
+			if (offset > 4)
+				consumed += offset;
 
-		exe_arg->in_strm_size -= consumed;
-		dec_ctx->frametag = exe_arg->in_frametag;
-		dec_ctx->immediatelydisplay = exe_arg->in_immediately_disp;
+			exe_arg->in_strm_size -= consumed;
+			dec_ctx->frametag = exe_arg->in_frametag;
+			dec_ctx->immediatelydisplay =
+				exe_arg->in_immediately_disp;
 
-		mfc_set_inst_state(ctx, INST_STATE_EXE);
+			mfc_set_inst_state(ctx, INST_STATE_EXE);
 
-		ret = mfc_decoding_frame(ctx, exe_arg, &consumed);
+			ret = mfc_decoding_frame(ctx, exe_arg, &consumed);
+			exe_arg->out_frametag_top = sec_try_tag;
 
-		mfc_set_inst_state(ctx, INST_STATE_EXE_DONE);
-
+			mfc_set_inst_state(ctx, INST_STATE_EXE_DONE);
 		}
 	}
 
