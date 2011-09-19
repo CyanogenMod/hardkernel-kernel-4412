@@ -30,14 +30,14 @@ static int set_audio_clock_heirachy(struct platform_device *pdev)
 	if (IS_ERR(fout_epll)) {
 		printk(KERN_WARNING "%s: Cannot find fout_epll.\n",
 				__func__);
-		return -EINVAL;
+		return PTR_ERR(fout_epll);
 	}
 
 	mout_epll = clk_get(NULL, "mout_epll");
 	if (IS_ERR(mout_epll)) {
 		printk(KERN_WARNING "%s: Cannot find mout_epll.\n",
 				__func__);
-		ret = -EINVAL;
+		ret = PTR_ERR(mout_epll);
 		goto out1;
 	}
 
@@ -45,7 +45,7 @@ static int set_audio_clock_heirachy(struct platform_device *pdev)
 	if (IS_ERR(sclk_audio0)) {
 		printk(KERN_WARNING "%s: Cannot find sclk_audio.\n",
 				__func__);
-		ret = -EINVAL;
+		ret = PTR_ERR(sclk_audio0);
 		goto out2;
 	}
 
@@ -53,7 +53,7 @@ static int set_audio_clock_heirachy(struct platform_device *pdev)
 	if (IS_ERR(sclk_spdif)) {
 		printk(KERN_WARNING "%s: Cannot find sclk_spdif.\n",
 				__func__);
-		ret = -EINVAL;
+		ret = PTR_ERR(sclk_spdif);
 		goto out3;
 	}
 
@@ -97,7 +97,7 @@ static int set_audio_clock_rate(unsigned long epll_rate,
 	fout_epll = clk_get(NULL, "fout_epll");
 	if (IS_ERR(fout_epll)) {
 		printk(KERN_ERR "%s: failed to get fout_epll\n", __func__);
-		return -ENOENT;
+		return PTR_ERR(fout_epll);
 	}
 
 	clk_set_rate(fout_epll, epll_rate);
@@ -106,7 +106,7 @@ static int set_audio_clock_rate(unsigned long epll_rate,
 	sclk_spdif = clk_get(NULL, "sclk_spdif");
 	if (IS_ERR(sclk_spdif)) {
 		printk(KERN_ERR "%s: failed to get sclk_spdif\n", __func__);
-		return -ENOENT;
+		return PTR_ERR(sclk_spdif);
 	}
 
 	clk_set_rate(sclk_spdif, audio_rate);
