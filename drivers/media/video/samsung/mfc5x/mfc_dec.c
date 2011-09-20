@@ -1562,6 +1562,10 @@ static int CheckDecStartCode(unsigned char *src_mem,
 	} else
 		nFlag = 0xFF;
 
+	/* Last frame detection from user */
+	if (nstreamSize == 0)
+		nFlag = 0xFF;
+
 	if (nFlag == 0xFF)
 		return 0;
 
