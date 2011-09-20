@@ -583,6 +583,7 @@ config MACH_FPGA5210
 	select S5P_DEV_MFC
 	select EXYNOS4_SETUP_DP
 	select EXYNOS4_SETUP_MFC
+	select EXYNOS_DEV_SS_UDC
 	help
 	  Machine support for Samsung FPGA5210
 
