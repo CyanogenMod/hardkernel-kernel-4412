@@ -1600,7 +1600,7 @@ static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
 			EXYNOS_USB3_GEVNTCOUNTx_EVNTCount_MASK;
 	/* TODO: what if number of events more then buffer size? */
 
-	while (gevntcount--) {
+	while (gevntcount) {
 		event = udc->event_buff[indx++];
 
 		ecode1 = event & 0x01;
@@ -1639,6 +1639,8 @@ static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
 
 		if (indx > (EXYNOS_USB3_EVENT_BUFF_WSIZE - 1))
 			indx = 0;
+
+		gevntcount -= 4;
 	}
 
 	/* Do we need to read GEVENTCOUNT here and retry? */
