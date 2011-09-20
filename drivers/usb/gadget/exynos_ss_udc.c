@@ -269,6 +269,11 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 				      struct exynos_ss_udc_ep *udc_ep);
 static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
 					struct exynos_ss_udc_ep *udc_ep);
+static int exynos_ss_udc_ep_dequeue(struct usb_ep *ep, struct usb_request *req);
+static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
+				       struct exynos_ss_udc_ep *udc_ep,
+				       struct exynos_ss_udc_req *udc_req,
+				       int result);
 
 static struct exynos_ss_udc *our_udc;
 
@@ -1058,6 +1063,24 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 	spin_unlock_irqrestore(&udc_ep->lock, irqflags);
 
 	return 0;
+}
+
+/**
+ * on_list - check request is on the given endpoint
+ * @ep: The endpoint to check.
+ * @test: The request to test if it is on the endpoint.
+*/
+static bool on_list(struct exynos_ss_udc_ep *udc_ep,
+		    struct exynos_ss_udc_req *test)
+{
+	struct exynos_ss_udc_req *udc_req, *treq;
+
+	list_for_each_entry_safe(udc_req, treq, &udc_ep->queue, queue) {
+		if (udc_req == test)
+			return true;
+	}
+
+	return false;
 }
 
 /**
