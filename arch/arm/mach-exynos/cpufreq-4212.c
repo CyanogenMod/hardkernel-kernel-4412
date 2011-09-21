@@ -22,8 +22,11 @@
 #include <mach/cpufreq.h>
 
 #include <plat/clock.h>
+#include <plat/cputype.h>
 
 #define CPUFREQ_LEVEL_END	(L8 + 1)
+
+#undef PRINT_DIV_VAL
 
 /* #define ENABLE_CLKOUT */
 
@@ -37,6 +40,7 @@ static struct clk *mout_apll;
 struct cpufreq_clkdiv {
 	unsigned int	index;
 	unsigned int	clkdiv;
+	unsigned int	clkdiv1;
 };
 
 static unsigned int exynos4212_volt_table[CPUFREQ_LEVEL_END];
@@ -54,41 +58,31 @@ static struct cpufreq_frequency_table exynos4212_freq_table[] = {
 	{0, CPUFREQ_TABLE_END},
 };
 
-static struct cpufreq_clkdiv exynos4212_clkdiv_table[] = {
-	{L0, 0},
-	{L1, 0},
-	{L2, 0},
-	{L3, 0},
-	{L4, 0},
-	{L5, 0},
-	{L6, 0},
-	{L7, 0},
-	{L8, 0},
-};
+static struct cpufreq_clkdiv exynos4212_clkdiv_table[CPUFREQ_LEVEL_END];
 
-static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
+static unsigned int clkdiv_cpu0_4212[CPUFREQ_LEVEL_END][7] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVCORE, DIVCOREM0, DIVCOREM1, DIVPERIPH,
 	 *		DIVATB, DIVPCLK_DBG, DIVAPLL }
 	 */
 	/* ARM L0: 1500Mhz */
-	{ 0, 6, 13, 7, 6, 1, 2 },
+	{ 0, 6, 7, 7, 6, 1, 2 },
 
 	/* ARM L1: 1400Mhz */
-	{ 0, 6, 13, 7, 6, 1, 2 },
+	{ 0, 6, 7, 7, 6, 1, 2 },
 
 	/* ARM L2: 1300Mhz */
-	{ 0, 5, 11, 7, 5, 1, 2 },
+	{ 0, 5, 7, 7, 5, 1, 2 },
 
 	/* ARM L3: 1200Mhz */
-	{ 0, 5, 11, 7, 5, 1, 2 },
+	{ 0, 5, 7, 7, 5, 1, 2 },
 
 	/* ARM L4: 1100MHz */
-	{ 0, 4, 9, 7, 4, 1, 2 },
+	{ 0, 4, 7, 7, 4, 1, 2 },
 
 	/* ARM L5: 1000MHz */
-	{ 0, 4, 9, 7, 4, 1, 1 },
+	{ 0, 4, 7, 7, 4, 1, 1 },
 
 	/* ARM L6: 800MHz */
 	{ 0, 3, 7, 7, 3, 1, 1 },
@@ -100,18 +94,52 @@ static unsigned int clkdiv_cpu0[CPUFREQ_LEVEL_END][7] = {
 	{ 0, 1, 3, 7, 0, 1, 0 },
 };
 
-static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
+static unsigned int clkdiv_cpu0_4412[CPUFREQ_LEVEL_END][7] = {
+	/*
+	 * Clock divider value for following
+	 * { DIVCORE, DIVCOREM0, DIVCOREM1, DIVPERIPH,
+	 *		DIVATB, DIVPCLK_DBG, DIVAPLL }
+	 */
+	/* ARM L0: 1500Mhz */
+	{ 0, 4, 7, 5, 6, 1, 2 },
+
+	/* ARM L1: 1400Mhz */
+	{ 0, 4, 7, 5, 6, 1, 2 },
+
+	/* ARM L2: 1300Mhz */
+	{ 0, 4, 7, 5, 5, 1, 2 },
+
+	/* ARM L3: 1200Mhz */
+	{ 0, 3, 7, 4, 5, 1, 2 },
+
+	/* ARM L4: 1100MHz */
+	{ 0, 3, 6, 4, 4, 1, 2 },
+
+	/* ARM L5: 1000MHz */
+	{ 0, 2, 5, 3, 4, 1, 1 },
+
+	/* ARM L6: 800MHz */
+	{ 0, 2, 5, 3, 3, 1, 1 },
+
+	/* ARM L7: 500MHz */
+	{ 0, 1, 3, 2, 3, 1, 1 },
+
+	/* ARM L8: 200MHz */
+	{ 0, 1, 3, 1, 3, 1, 0 },
+};
+
+static unsigned int clkdiv_cpu1_4212[CPUFREQ_LEVEL_END][2] = {
 	/* Clock divider value for following
 	 * { DIVCOPY, DIVHPM }
 	 */
 	/* ARM L0: 1500MHz */
-	{ 5, 0 },
+	{ 6, 0 },
 
 	/* ARM L1: 1400MHz */
-	{ 5, 0 },
+	{ 6, 0 },
 
 	/* ARM L2: 1300MHz */
-	{ 4, 0 },
+	{ 5, 0 },
 
 	/* ARM L3: 1200MHz */
 	{ 5, 0 },
@@ -129,7 +157,39 @@ static unsigned int clkdiv_cpu1[CPUFREQ_LEVEL_END][2] = {
 	{ 2, 0 },
 
 	/* ARM L8: 200MHz */
-	{ 3, 0 },
+	{ 0, 0 },
+};
+
+static unsigned int clkdiv_cpu1_4412[CPUFREQ_LEVEL_END][3] = {
+	/* Clock divider value for following
+	 * { DIVCOPY, DIVHPM, DIVCORES }
+	 */
+	/* ARM L0: 1500MHz */
+	{ 6, 0, 5 },
+
+	/* ARM L1: 1400MHz */
+	{ 6, 0, 5 },
+
+	/* ARM L2: 1300MHz */
+	{ 5, 0, 5 },
+
+	/* ARM L3: 1200MHz */
+	{ 5, 0, 4 },
+
+	/* ARM L4: 1100MHz */
+	{ 4, 0, 4 },
+
+	/* ARM L5: 1000MHz */
+	{ 4, 0, 3 },
+
+	/* ARM L6: 800MHz */
+	{ 3, 0, 3 },
+
+	/* ARM L7: 500MHz */
+	{ 2, 0, 2 },
+
+	/* ARM L8: 200MHz */
+	{ 0, 0, 1 },
 };
 
 static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
@@ -190,6 +250,8 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 static void set_clkdiv(unsigned int div_index)
 {
 	unsigned int tmp;
+	unsigned int stat_cpu1;
+
 	/* Change Divider - CPU0 */
 
 	tmp = exynos4212_clkdiv_table[div_index].clkdiv;
@@ -200,19 +262,28 @@ static void set_clkdiv(unsigned int div_index)
 		tmp = __raw_readl(S5P_CLKDIV_STATCPU);
 	} while (tmp & 0x1111111);
 
+#ifdef PRINT_DIV_VAL
+	tmp = __raw_readl(S5P_CLKDIV_CPU);
+	pr_info("DIV_CPU0[0x%x]\n", tmp);
+
+#endif
+
 	/* Change Divider - CPU1 */
-	tmp = __raw_readl(S5P_CLKDIV_CPU1);
-
-	tmp &= ~((0x7 << 4) | (0x7));
-
-	tmp |= ((clkdiv_cpu1[div_index][0] << 4) |
-		(clkdiv_cpu1[div_index][1] << 0));
+	tmp = exynos4212_clkdiv_table[div_index].clkdiv1;
 
 	__raw_writel(tmp, S5P_CLKDIV_CPU1);
+	if (cpu_is_exynos4212())
+		stat_cpu1 = 0x11;
+	else
+		stat_cpu1 = 0x111;
 
 	do {
 		tmp = __raw_readl(S5P_CLKDIV_STATCPU1);
-	} while (tmp & 0x11);
+	} while (tmp & stat_cpu1);
+#ifdef PRINT_DIV_VAL
+	tmp = __raw_readl(S5P_CLKDIV_CPU1);
+	pr_info("DIV_CPU1[0x%x]\n", tmp);
+#endif
 }
 
 static void set_apll(unsigned int new_index,
@@ -397,9 +468,12 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 	if (IS_ERR(mout_apll))
 		goto err_mout_apll;
 
-	tmp = __raw_readl(S5P_CLKDIV_CPU);
-
 	for (i = L0; i <  CPUFREQ_LEVEL_END; i++) {
+
+		exynos4212_clkdiv_table[i].index = i;
+
+		tmp = __raw_readl(S5P_CLKDIV_CPU);
+
 		tmp &= ~(S5P_CLKDIV_CPU0_CORE_MASK |
 			S5P_CLKDIV_CPU0_COREM0_MASK |
 			S5P_CLKDIV_CPU0_COREM1_MASK |
@@ -408,15 +482,43 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 			S5P_CLKDIV_CPU0_PCLKDBG_MASK |
 			S5P_CLKDIV_CPU0_APLL_MASK);
 
-		tmp |= ((clkdiv_cpu0[i][0] << S5P_CLKDIV_CPU0_CORE_SHIFT) |
-			(clkdiv_cpu0[i][1] << S5P_CLKDIV_CPU0_COREM0_SHIFT) |
-			(clkdiv_cpu0[i][2] << S5P_CLKDIV_CPU0_COREM1_SHIFT) |
-			(clkdiv_cpu0[i][3] << S5P_CLKDIV_CPU0_PERIPH_SHIFT) |
-			(clkdiv_cpu0[i][4] << S5P_CLKDIV_CPU0_ATB_SHIFT) |
-			(clkdiv_cpu0[i][5] << S5P_CLKDIV_CPU0_PCLKDBG_SHIFT) |
-			(clkdiv_cpu0[i][6] << S5P_CLKDIV_CPU0_APLL_SHIFT));
+		if (cpu_is_exynos4212()) {
+			tmp |= ((clkdiv_cpu0_4212[i][0] << S5P_CLKDIV_CPU0_CORE_SHIFT) |
+				(clkdiv_cpu0_4212[i][1] << S5P_CLKDIV_CPU0_COREM0_SHIFT) |
+				(clkdiv_cpu0_4212[i][2] << S5P_CLKDIV_CPU0_COREM1_SHIFT) |
+				(clkdiv_cpu0_4212[i][3] << S5P_CLKDIV_CPU0_PERIPH_SHIFT) |
+				(clkdiv_cpu0_4212[i][4] << S5P_CLKDIV_CPU0_ATB_SHIFT) |
+				(clkdiv_cpu0_4212[i][5] << S5P_CLKDIV_CPU0_PCLKDBG_SHIFT) |
+				(clkdiv_cpu0_4212[i][6] << S5P_CLKDIV_CPU0_APLL_SHIFT));
+		} else {
+			tmp |= ((clkdiv_cpu0_4412[i][0] << S5P_CLKDIV_CPU0_CORE_SHIFT) |
+				(clkdiv_cpu0_4412[i][1] << S5P_CLKDIV_CPU0_COREM0_SHIFT) |
+				(clkdiv_cpu0_4412[i][2] << S5P_CLKDIV_CPU0_COREM1_SHIFT) |
+				(clkdiv_cpu0_4412[i][3] << S5P_CLKDIV_CPU0_PERIPH_SHIFT) |
+				(clkdiv_cpu0_4412[i][4] << S5P_CLKDIV_CPU0_ATB_SHIFT) |
+				(clkdiv_cpu0_4412[i][5] << S5P_CLKDIV_CPU0_PCLKDBG_SHIFT) |
+				(clkdiv_cpu0_4412[i][6] << S5P_CLKDIV_CPU0_APLL_SHIFT));
+
+		}
 
 		exynos4212_clkdiv_table[i].clkdiv = tmp;
+
+		tmp = __raw_readl(S5P_CLKDIV_CPU1);
+
+		if (cpu_is_exynos4212()) {
+			tmp &= ~(S5P_CLKDIV_CPU1_COPY_MASK |
+				S5P_CLKDIV_CPU1_HPM_MASK);
+			tmp |= ((clkdiv_cpu1_4212[i][0] << S5P_CLKDIV_CPU1_COPY_SHIFT) |
+				(clkdiv_cpu1_4212[i][1] << S5P_CLKDIV_CPU1_HPM_SHIFT));
+		} else {
+			tmp &= ~(S5P_CLKDIV_CPU1_COPY_MASK |
+				S5P_CLKDIV_CPU1_HPM_MASK |
+				S5P_CLKDIV_CPU1_CORES_MASK);
+			tmp |= ((clkdiv_cpu1_4412[i][0] << S5P_CLKDIV_CPU1_COPY_SHIFT) |
+				(clkdiv_cpu1_4412[i][1] << S5P_CLKDIV_CPU1_HPM_SHIFT) |
+				(clkdiv_cpu1_4412[i][2] << S5P_CLKDIV_CPU1_CORES_SHIFT));
+		}
+		exynos4212_clkdiv_table[i].clkdiv1 = tmp;
 	}
 
 	info->mpll_freq_khz = rate;
