@@ -29,6 +29,10 @@
 
 #include "csis.h"
 
+#ifdef CONFIG_VIDEO_FIMC_MIPI_IRQ_DEBUG
+static s32 err_print_cnt;
+#endif
+
 static struct s3c_csis_info *s3c_csis[S3C_CSIS_CH_NUM];
 
 static int s3c_csis_set_info(struct platform_device *pdev)
@@ -217,6 +221,8 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 	struct platform_device *pdev = NULL;
 	struct s3c_platform_csis *pdata = NULL;
 
+	printk(KERN_INFO "csis width = %d, height = %d\n", width, height);
+
 	/* clock & power on */
 	pdev = to_platform_device(s3c_csis[csis_id]->dev);
 	pdata = to_csis_plat(&pdev->dev);
@@ -249,6 +255,10 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 	s3c_csis_system_on(pdev);
 	s3c_csis_phy_on(pdev);
 
+#ifdef CONFIG_VIDEO_FIMC_MIPI_IRQ_DEBUG
+	err_print_cnt = 0;
+#endif
+
 	info("Samsung MIPI-CSIS%d operation started\n", pdev->id);
 }
 
@@ -276,6 +286,7 @@ void s3c_csis_stop(int csis_id)
 static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
 {
 	u32 cfg;
+
 	struct platform_device *pdev = (struct platform_device *) dev_id;
 	/* just clearing the pends */
 	cfg = readl(s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
@@ -284,6 +295,15 @@ static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
 	cfg &= 0x0FFFFFFF;
 	if (unlikely(cfg))
 		err("csis error interrupt: 0x%x\n", cfg);
+
+#ifdef CONFIG_VIDEO_FIMC_MIPI_IRQ_DEBUG
+	if (unlikely(cfg & S3C_CSIS_INTSRC_ERR)) {
+		if (err_print_cnt < 30) {
+			err("csis error interrupt[%d]: %#x\n", err_print_cnt, cfg);
+			err_print_cnt++;
+		}
+	}
+#endif
 
 	return IRQ_HANDLED;
 }
