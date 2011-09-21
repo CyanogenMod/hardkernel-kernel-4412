@@ -15,12 +15,13 @@
 #include <linux/sched.h>
 #include <linux/uaccess.h>
 #include <linux/atomic.h>
+#include <linux/dma-mapping.h>
+#include <asm/cacheflush.h>
 
 #include "fimg2d.h"
 #include "fimg2d4x.h"
 
 #ifdef CONFIG_S5P_SYSTEM_MMU
-#include <asm/pgtable.h>
 #include <plat/sysmmu.h>
 #include <mach/sysmmu.h>
 #endif
@@ -30,10 +31,11 @@
 #include <linux/pm_runtime.h>
 #endif
 
-#undef POST_BLIT
+#define L1_CACHE_SIZE	SZ_64K
+#define L2_CACHE_SIZE	SZ_1M
 
-/* bitblt time measure */
 #undef PERF
+#undef POST_BLIT
 
 #ifdef PERF
 static long get_blit_perf(struct timeval *start, struct timeval *end)
@@ -54,37 +56,74 @@ static long get_blit_perf(struct timeval *start, struct timeval *end)
 }
 #endif
 
+#ifdef CONFIG_OUTER_CACHE
 static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
-	bool flush_all;
-	struct fimg2d_addr *src, *msk, *dst;
+	int size_all, size;
+	unsigned long addr;
+	struct mm_struct *mm;
 
-	/* FIXME */
-	flush_all = true;
+	size_all = 0;
+
+	if (cmd->srcen && cmd->src.addr.cacheable)
+		size_all += cmd->src.addr.size;
+
+	if (cmd->msken && cmd->msk.addr.cacheable)
+		size_all += cmd->msk.addr.size;
+
+	if (cmd->dsten && cmd->dst.addr.cacheable)
+		size_all += cmd->dst.addr.size;
 
 	spin_lock(&info->bltlock);
 
-	if (flush_all) {
-		fimg2d_dma_sync_all();
-	} else {
-		if (cmd->srcen) {
-			src = &cmd->src.addr;
-			fimg2d_dma_sync_pagetable(cmd->ctx->mm, src->start, src->size, src->type);
-		}
-
-		if (cmd->msken) {
-			msk = &cmd->msk.addr;
-			fimg2d_dma_sync_pagetable(cmd->ctx->mm, msk->start, msk->size, msk->type);
-		}
-
-		if (cmd->dsten) {
-			dst = &cmd->dst.addr;
-			fimg2d_dma_sync_pagetable(cmd->ctx->mm, dst->start, dst->size, dst->type);
-		}
+	if (size_all >= L2_CACHE_SIZE) {
+		flush_all_cpu_caches();	/* inner all */
+		outer_flush_all();	/* outer all */
+		goto cacheflush_end;
+	} else if (size_all >= L1_CACHE_SIZE) {
+		flush_all_cpu_caches();	/* inner all */
 	}
 
+	mm = cmd->ctx->mm;
+
+	if (cmd->srcen) {
+		addr = cmd->src.addr.start + cmd->src.stride * cmd->src_rect.y1;
+		/* horizontally clipped region */
+		size = cmd->src.stride * (cmd->src_rect.y2 - cmd->src_rect.y1);
+
+		if (size_all < L1_CACHE_SIZE)
+			fimg2d_dma_sync_inner(addr, size, DMA_TO_DEVICE);
+
+		fimg2d_clean_outer_pagetable(mm, addr, size);
+		fimg2d_dma_sync_outer(mm, addr, size, CACHE_CLEAN);
+	}
+
+	if (cmd->msken) {
+		addr = cmd->msk.addr.start + cmd->msk.stride * cmd->msk_rect.y1;
+		size = cmd->msk.stride * (cmd->msk_rect.y2 - cmd->msk_rect.y1);
+
+		if (size_all < L1_CACHE_SIZE)
+			fimg2d_dma_sync_inner(addr, size, DMA_TO_DEVICE);
+
+		fimg2d_clean_outer_pagetable(mm, addr, size);
+		fimg2d_dma_sync_outer(mm, addr, size, CACHE_CLEAN);
+	}
+
+	if (cmd->dsten) {
+		addr = cmd->dst.addr.start + cmd->dst.stride * cmd->dst_rect.y1;
+		size = cmd->dst.stride * (cmd->dst_rect.y2 - cmd->dst_rect.y1);
+
+		if (size_all < L1_CACHE_SIZE)
+			fimg2d_dma_sync_inner(addr, size, DMA_BIDIRECTIONAL);
+
+		fimg2d_clean_outer_pagetable(mm, addr, size);
+		fimg2d_dma_sync_outer(mm, addr, size, CACHE_FLUSH);
+	}
+
+cacheflush_end:
 	spin_unlock(&info->bltlock);
 }
+#endif
 
 #ifdef POST_BLIT
 static void fimg2d4x_post_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
@@ -101,7 +140,6 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 {
 	struct fimg2d_context *ctx;
 	struct fimg2d_bltcmd *cmd;
-	int ret = 0;
 	unsigned long saddr, daddr, maddr;
 	unsigned long ssize, dsize, msize;
 	unsigned long pgd;
@@ -119,7 +157,6 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 #endif
 
 	while ((cmd = fimg2d_get_first_command(info))) {
-
 		ctx = cmd->ctx;
 		pgd = virt_to_phys(ctx->mm->pgd);
 
@@ -130,8 +167,9 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 		atomic_set(&info->busy, 1);
 
-		/* cache operation */
+#ifdef CONFIG_OUTER_CACHE
 		fimg2d4x_pre_bitblt(info, cmd);
+#endif
 
 		/* set sfr */
 		info->configure(info, cmd);
@@ -152,9 +190,8 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		/* start bitblt */
 		info->run(info);
 
-		ret = wait_event_timeout(info->wait_q, !atomic_read(&info->busy),
-				msecs_to_jiffies(1000));
-		if (!ret) {
+		if (!wait_event_timeout(info->wait_q, !atomic_read(&info->busy),
+				msecs_to_jiffies(1000))) {
 			if (!fimg2d4x_blit_done_status(info)) {
 				saddr = daddr = maddr = 0;
 				ssize = dsize = msize = 0;
@@ -196,7 +233,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 blitend:
 		spin_lock(&info->bltlock);
-		fimg2d_dequeue(info, &cmd->node);
+		fimg2d_dequeue(&cmd->node);
 		kfree(cmd);
 		atomic_dec(&ctx->ncmd);
 
@@ -318,7 +355,7 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 /**
  * enable irq and start bitblt
  */
-static inline void fimg2d4x_run(struct fimg2d_control *info)
+static void fimg2d4x_run(struct fimg2d_control *info)
 {
 	fimg2d_debug("start bitblt\n");
 	fimg2d4x_enable_irq(info);

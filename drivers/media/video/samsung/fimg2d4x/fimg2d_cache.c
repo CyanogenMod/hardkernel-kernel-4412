@@ -16,47 +16,15 @@
 
 #include "fimg2d.h"
 
-static void inner_cache_opr(unsigned long addr, unsigned long size, int dir)
-{
-	if (dir == DMA_TO_DEVICE || dir == DMA_FROM_DEVICE)
-		dmac_map_area((void *)addr, size, dir);
-	else /* DMA_BIDIRECTIONAL */
-		dmac_flush_range((void *)addr, (void *)(addr + size));
-}
+#define LV1_SHIFT		20
+#define LV1_PT_SIZE		SZ_1M
+#define LV2_PT_SIZE		SZ_1K
+#define LV2_BASE_MASK		0x3ff
+#define LV2_PT_MASK		0xff000
+#define LV2_SHIFT		12
+#define DESC_MASK		0x3
 
-#if defined(CONFIG_OUTER_CACHE) && defined(CONFIG_ARM)
-static void outer_clean_pagetable(struct mm_struct *mm, unsigned long addr,
-                                        unsigned long size)
-{
-	unsigned long end;
-	pgd_t *pgd, *pgd_end;
-	pmd_t *pmd;
-	pte_t *pte, *pte_end;
-	unsigned long next;
-
-	end = addr + size;
-	pgd = pgd_offset(mm, addr);
-	pgd_end = pgd_offset(mm, end + PGDIR_SIZE - 1);
-
-	/* Clean L1 page table entries */
-	outer_flush_range(virt_to_phys(pgd), virt_to_phys(pgd_end));
-
-	/* clean L2 page table entries */
-	/* this regards pgd == pmd and no pud */
-	do {
-		next = pgd_addr_end(addr, end);
-		pgd = pgd_offset(mm, addr);
-		pmd = pmd_offset(pgd, addr);
-		pte = pte_offset_map(pmd, addr) - PTRS_PER_PTE;
-		pte_end = pte_offset_map(pmd, next-4) - PTRS_PER_PTE + 1;
-		outer_flush_range(virt_to_phys(pte), virt_to_phys(pte_end));
-		pte_unmap(pte);
-		pte_unmap(pte_end);
-		addr = next;
-	} while (addr < end);
-}
-
-static unsigned long virt2phys(struct mm_struct *mm, unsigned long addr)
+static inline unsigned long virt2phys(struct mm_struct *mm, unsigned long addr)
 {
 	pgd_t *pgd;
 	pmd_t *pmd;
@@ -69,22 +37,49 @@ static unsigned long virt2phys(struct mm_struct *mm, unsigned long addr)
 	return (pte_val(*pte) & PAGE_MASK) | (addr & (PAGE_SIZE-1));
 }
 
-static void outer_cache_opr(struct mm_struct *mm, unsigned long addr,
+void fimg2d_dma_sync_inner(unsigned long addr, unsigned long size, int dir)
+{
+	if (dir == DMA_TO_DEVICE || dir == DMA_FROM_DEVICE) {
+		dmac_map_area((void *)addr, size, dir);
+		dmac_unmap_area((void *)addr, size, dir);
+	} else { /* DMA_BIDIRECTIONAL */
+		dmac_flush_range((void *)addr, (void *)(addr + size));
+	}
+}
+
+#if defined(CONFIG_OUTER_CACHE)
+void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long addr,
+                                        unsigned long size)
+{
+	unsigned long *lv1, *lv1end;
+	unsigned long lv2pa;
+	unsigned long pgd;
+
+	pgd = (unsigned long)mm->pgd;
+
+	lv1 = (unsigned long *)pgd + (addr >> LV1_SHIFT);
+	lv1end = (unsigned long *)pgd + ((addr + size + LV1_PT_SIZE-1) >> LV1_SHIFT);
+
+	/* clean level1 page table */
+	outer_clean_range(virt_to_phys(lv1), virt_to_phys(lv1end));
+
+	do {
+		lv2pa = *lv1 & ~LV2_BASE_MASK;	/* lv2 pt base */
+		/* clean level2 page table */
+		outer_clean_range(lv2pa, lv2pa + LV2_PT_SIZE);
+		lv1++;
+	} while (lv1 != lv1end);
+}
+
+void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long addr,
 					unsigned long size, enum cache_opr opr)
 {
-	u32 paddr, cur_addr, end_addr;
+	unsigned long paddr, cur_addr, end_addr;
 
 	cur_addr = addr & PAGE_MASK;
 	end_addr = cur_addr + PAGE_ALIGN(size);
 
-	if (opr == CACHE_INVAL) {
-		do {
-			paddr = virt2phys(mm, cur_addr);
-			if (paddr)
-				outer_inv_range(paddr, paddr + PAGE_SIZE);
-			cur_addr += PAGE_SIZE;
-		} while (cur_addr < end_addr);
-	} else if (opr == CACHE_CLEAN) {
+	if (opr == CACHE_CLEAN) {
 		do {
 			paddr = virt2phys(mm, cur_addr);
 			if (paddr)
@@ -98,44 +93,53 @@ static void outer_cache_opr(struct mm_struct *mm, unsigned long addr,
 				outer_flush_range(paddr, paddr + PAGE_SIZE);
 			cur_addr += PAGE_SIZE;
 		} while (cur_addr < end_addr);
+	} else if (opr == CACHE_INVAL) {
+		do {
+			paddr = virt2phys(mm, cur_addr);
+			if (paddr)
+				outer_inv_range(paddr, paddr + PAGE_SIZE);
+			cur_addr += PAGE_SIZE;
+		} while (cur_addr < end_addr);
 	}
 }
-#else
-#define outer_clean_pagetable(mm, addr, size) do {} while(0)
-#define outer_cache_opr(mm, addr, size, opr) do {} while(0)
-#endif /* CONFIG_OUTER_CACHE && CONFIG_ARM */
 
-void fimg2d_dma_sync_pagetable(struct mm_struct *mm, unsigned long addr,
-                                        unsigned long size, enum addr_space type)
+enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long addr,
+					unsigned long size)
 {
-	if (type != ADDR_USER)
-		return;
+	unsigned long *lv1d, *lv2d;
+	unsigned long pgd;
 
-	outer_clean_pagetable(mm, addr, size);
-}
+	pgd = (unsigned long)mm->pgd;
 
-void fimg2d_dma_sync_image(struct mm_struct *mm, unsigned long addr,
-			unsigned long size, enum addr_space type, enum cache_opr opr)
-{
-	int dir;
+	do {
+		lv1d = (unsigned long *)pgd + (addr >> LV1_SHIFT);
 
-	if (type != ADDR_USER)
-		return;
+		/* check level 1 descriptor */
+		if ((*lv1d & DESC_MASK) == 0x0 || ((*lv1d & DESC_MASK) == 0x3)) {
+			printk(KERN_ERR "[%s] LV1 PT fault, pgd 0x%lx addr 0x%lx"
+					"lv1 descriptor 0x%lx\n",
+					__func__, pgd, addr, *lv1d);
+			return PT_FAULT;
+		}
 
-	if (opr == CACHE_INVAL)
-		dir = DMA_FROM_DEVICE;
-	else if (opr == CACHE_CLEAN)
-		dir = DMA_TO_DEVICE;
+		/* check level 2 descriptor */
+		lv2d = (unsigned long *)phys_to_virt(*lv1d & ~LV2_BASE_MASK) +
+				((addr & LV2_PT_MASK) >> LV2_SHIFT);
+
+		if ((*lv2d & DESC_MASK) == 0x0) {
+			printk(KERN_ERR "[%s] LV2 PT fault, pgd 0x%lx addr 0x%lx "
+					"lv2 descriptor 0x%lx\n",
+					__func__, pgd, addr, *lv2d);
+			return PT_FAULT;
+		}
+
+		addr += PAGE_SIZE;
+		size -= PAGE_SIZE;
+	} while ((long)size > 0);
+
+	if (*lv2d & 0x08)
+		return PT_CACHED;
 	else
-		dir = DMA_BIDIRECTIONAL;
-
-	/* flush_cache_user_range(addr, (addr + size)); */
-	inner_cache_opr(addr, size, dir);
-	outer_cache_opr(mm, addr, size, opr);
+		return PT_UNCACHED;
 }
-
-void fimg2d_dma_sync_all(void)
-{
-	flush_all_cpu_caches(); /* inner */
-	outer_flush_all(); /* outer */
-}
+#endif /* CONFIG_OUTER_CACHE */

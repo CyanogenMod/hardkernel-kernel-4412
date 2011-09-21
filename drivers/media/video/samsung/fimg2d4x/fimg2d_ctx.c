@@ -17,32 +17,8 @@
 
 #include "fimg2d.h"
 
-inline void fimg2d_enqueue(struct fimg2d_control *info,
-			struct list_head *node, struct list_head *q)
-{
-	list_add_tail(node, q);
-}
-
-inline void fimg2d_dequeue(struct fimg2d_control *info, struct list_head *node)
-{
-	list_del(node);
-}
-
-inline int fimg2d_queue_is_empty(struct list_head *q)
-{
-	return list_empty(q);
-}
-
-inline struct fimg2d_bltcmd *fimg2d_get_first_command(struct fimg2d_control *info)
-{
-	if (list_empty(&info->cmd_q))
-		return NULL;
-	else
-		return list_first_entry(&info->cmd_q, struct fimg2d_bltcmd, node);
-}
-
 #ifdef CONFIG_VIDEO_FIMG2D_DEBUG
-inline static void fimg2d_print_params(struct fimg2d_blit __user *u)
+static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 {
 	fimg2d_debug("op: %d\n", u->op);
 	fimg2d_debug("fillcolor: 0x%lx\n", u->fillcolor);
@@ -185,13 +161,16 @@ err_op:
 	printk(KERN_ERR "%s: invalid op\n", __func__);
 	return -1;
 err_src_rect:
-	printk(KERN_ERR "%s: invalid src rect\n", __func__);
+	printk(KERN_ERR "%s: invalid src rect LT(%d,%d) RB(%d,%d)\n",
+			__func__, sr->x1, sr->y1, sr->x2, sr->y2);
 	return -1;
 err_msk_rect:
-	printk(KERN_ERR "%s: invalid msk rect\n", __func__);
+	printk(KERN_ERR "%s: invalid msk rect, LT(%d,%d) RB(%d,%d)\n",
+			__func__, mr->x1, mr->y1, mr->x2, mr->y2);
 	return -1;
 err_dst_rect:
-	printk(KERN_ERR "%s: invalid dst rect\n", __func__);
+	printk(KERN_ERR "%s: invalid dst rect, LT(%d,%d) RB(%d,%d)\n",
+			__func__, dr->x1, dr->y1, dr->x2, dr->y2);
 	return -1;
 }
 
@@ -305,18 +284,36 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 		cmd->srcen = true;
 		if (copy_from_user(&cmd->src, u->src, sizeof(cmd->src)))
 			goto err_user;
+
+#ifdef CONFIG_OUTER_CACHE
+		if (fimg2d_check_pagetable(cmd->ctx->mm, cmd->src.addr.start,
+					cmd->src.addr.size) == PT_FAULT)
+			goto err_user;
+#endif
 	}
 
 	if (u->dst) {
 		cmd->dsten = true;
 		if (copy_from_user(&cmd->dst, u->dst, sizeof(cmd->dst)))
 			goto err_user;
+
+#ifdef CONFIG_OUTER_CACHE
+		if (fimg2d_check_pagetable(cmd->ctx->mm, cmd->dst.addr.start,
+					cmd->dst.addr.size) == PT_FAULT)
+			goto err_user;
+#endif
 	}
 
 	if (u->msk) {
 		cmd->msken = true;
 		if (copy_from_user(&cmd->msk, u->msk, sizeof(cmd->msk)))
 			goto err_user;
+
+#ifdef CONFIG_OUTER_CACHE
+		if (fimg2d_check_pagetable(cmd->ctx->mm, cmd->msk.addr.start,
+					cmd->msk.addr.size) == PT_FAULT)
+			goto err_user;
+#endif
 	}
 
 	if (u->src_rect) {
@@ -339,7 +336,7 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 	/* add command node and increase ncmd */
 	spin_lock(&info->bltlock);
 	atomic_inc(&ctx->ncmd);
-	fimg2d_enqueue(info, &cmd->node, &info->cmd_q);
+	fimg2d_enqueue(&cmd->node, &info->cmd_q);
 	fimg2d_debug("ctx %p pgd %p ncmd(%d) seq_no(%u)\n",
 			cmd->ctx, (void *)virt_to_phys(cmd->ctx->mm->pgd),
 			atomic_read(&ctx->ncmd), cmd->seq_no);
@@ -367,4 +364,3 @@ inline void fimg2d_del_context(struct fimg2d_control *info, struct fimg2d_contex
 	atomic_dec(&info->nctx);
 	fimg2d_debug("ctx %p nctx(%d)\n", ctx, atomic_read(&info->nctx));
 }
-

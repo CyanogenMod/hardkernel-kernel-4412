@@ -22,9 +22,6 @@
 #include <linux/platform_device.h>
 #include <linux/atomic.h>
 
-#include <asm/cacheflush.h>
-#include <linux/dma-mapping.h>
-
 #ifdef CONFIG_VIDEO_FIMG2D_DEBUG
 #define fimg2d_debug(fmt, arg...)	printk(KERN_INFO "[%s] " fmt, __func__, ## arg)
 #else
@@ -234,16 +231,32 @@ enum blit_sync {
 };
 
 /**
- * @CACHE_INVAL: invalidate
- * @CACHE_CLEAN: clean
- * @CACHE_FLUSH: clean and invalidate
- * @CACHE_FLUSH_ALL: clean and invalidate for whole cache
+ * cache_opr - [kernel] cache operation mode
+ * @CACHE_INVAL: do cache invalidate
+ * @CACHE_CLEAN: do cache clean for src and msk image
+ * @CACHE_FLUSH: do cache clean and invalidate for dst image
+ * @CACHE_FLUSH_INNER_ALL: clean and invalidate for innercache
+ * @CACHE_FLUSH_ALL: clean and invalidate for whole caches
  */
 enum cache_opr {
 	CACHE_INVAL,
 	CACHE_CLEAN,
 	CACHE_FLUSH,
+	CACHE_FLUSH_INNER_ALL,
 	CACHE_FLUSH_ALL
+};
+
+/**
+ * @PT_CACHED: cacheable
+ * @PT_UNCACHED: non-cacheable
+ * @PT_FAULT: invalid pagetable
+ * @PT_UNKNOWN: invalid address type
+ */
+enum pt_status {
+	PT_CACHED,
+	PT_UNCACHED,
+	PT_FAULT,
+	PT_UNKNOWN
 };
 
 #endif /* __KERNEL__ */
@@ -454,21 +467,38 @@ struct fimg2d_control {
 	void (*finalize)(struct fimg2d_control *info);
 };
 
-inline void fimg2d_enqueue(struct fimg2d_control *info,
-			struct list_head *node, struct list_head *q);
-inline void fimg2d_dequeue(struct fimg2d_control *info, struct list_head *node);
-inline int fimg2d_queue_is_empty(struct list_head *q);
-inline struct fimg2d_bltcmd * fimg2d_get_first_command(struct fimg2d_control *info);
-int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
-			struct fimg2d_blit __user *u);
+static inline void fimg2d_enqueue(struct list_head *node, struct list_head *q)
+{
+	list_add_tail(node, q);
+}
+
+static inline void fimg2d_dequeue(struct list_head *node)
+{
+	list_del(node);
+}
+
+static inline int fimg2d_queue_is_empty(struct list_head *q)
+{
+	return list_empty(q);
+}
+
+static inline struct fimg2d_bltcmd *fimg2d_get_first_command(struct fimg2d_control *info)
+{
+	if (list_empty(&info->cmd_q))
+		return NULL;
+	else
+		return list_first_entry(&info->cmd_q, struct fimg2d_bltcmd, node);
+}
+
 inline void fimg2d_add_context(struct fimg2d_control *info, struct fimg2d_context *ctx);
 inline void fimg2d_del_context(struct fimg2d_control *info, struct fimg2d_context *ctx);
+int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx, struct fimg2d_blit __user *u);
 int fimg2d_register_ops(struct fimg2d_control *info);
-void fimg2d_dma_sync_pagetable(struct mm_struct *mm, unsigned long addr,
-				unsigned long size, enum addr_space type);
-void fimg2d_dma_sync_image(struct mm_struct *mm, unsigned long addr,
-				unsigned long size, enum addr_space type,enum cache_opr opr);
-void fimg2d_dma_sync_all(void);
+void fimg2d_dma_sync_inner(unsigned long addr, unsigned long size, int dir);
+void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long addr, unsigned long size);
+void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long addr, unsigned long size, enum cache_opr opr);
+enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long addr, unsigned long size);
+
 #endif /* __KERNEL__ */
 
 #endif /* __FIMG2D_H__ */
