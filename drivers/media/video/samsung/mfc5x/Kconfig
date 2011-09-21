@@ -5,8 +5,14 @@
 choice
 prompt "Select MFC driver type"
 default USE_LEGACY_MFC
+config NOT_USE_MFC
+	bool "Turn off MFC"
+	select VIDEO_MFC_OFF
+	help
+	  To turn off MFC.
+
 config USE_LEGACY_MFC
-	bool "Lecacy style MFC"
+	bool "Legacy style MFC"
 	depends on VIDEO_SAMSUNG && ARCH_EXYNOS4
 	select VIDEO_MFC5X
 	help
