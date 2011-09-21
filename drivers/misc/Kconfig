@@ -74,7 +74,7 @@ config ANDROID_PMEM_MEMSIZE_PMEM
 
 config ANDROID_PMEM_MEMSIZE_PMEM_GPU1
 	int "Memory size in kbytes for android surface using pmem_gpu1"
-	default "4096"
+	default "10240"
 endif
 
 config ATMEL_PWM
