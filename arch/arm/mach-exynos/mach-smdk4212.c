@@ -1614,7 +1614,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&exynos4_device_pd[PD_CAM],
 	&exynos4_device_pd[PD_TV],
 	&exynos4_device_pd[PD_GPS],
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 	&exynos4_device_pd[PD_ISP],
+#endif
 	/* legacy fimd */
 #ifdef CONFIG_FB_S5P
 	&s3c_device_fb,
@@ -1951,7 +1953,9 @@ static void __init smdk4212_machine_init(void)
 	exynos4_pd_enable(&exynos4_device_pd[PD_CAM].dev);
 	exynos4_pd_enable(&exynos4_device_pd[PD_TV].dev);
 	exynos4_pd_enable(&exynos4_device_pd[PD_GPS].dev);
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 	exynos4_pd_enable(&exynos4_device_pd[PD_ISP].dev);
+#endif
 #endif
 	s3c_i2c0_set_platdata(NULL);
 	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
