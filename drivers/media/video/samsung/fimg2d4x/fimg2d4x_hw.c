@@ -543,6 +543,7 @@ void fimg2d4x_enable_alpha(struct fimg2d_control *info, unsigned char g_alpha)
 	/* set global(constant) alpha */
 	if (g_alpha < 0xff) {	/* initial value */
 		cfg = readl(info->regs + FIMG2D_ALPHA_REG);
+		cfg &= ~FIMG2D_GALPHA_MASK;
 		cfg |= g_alpha << FIMG2D_GALPHA_SHIFT;
 		writel(cfg, info->regs + FIMG2D_ALPHA_REG);
 	}
