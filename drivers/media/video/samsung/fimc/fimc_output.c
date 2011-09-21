@@ -145,7 +145,7 @@ int fimc_outdev_stop_streaming(struct fimc_control *ctrl, struct fimc_ctx *ctx)
 		if (ret == 0) {
 			if (ctrl->out == NULL) {
 				fimc_err("%s: ctrl->out is changed to null\n",
-						__func__, ctrl->out);
+						__func__);
 				return -EINVAL;
 			}
 			fimc_dump_context(ctrl, ctx);
