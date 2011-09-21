@@ -372,7 +372,12 @@ static struct s3c_platform_camera s5k3h1 = {
 	.mipi_align	= 24,
 
 	.initialized	= 0,
+#ifdef CONFIG_CSI_C
 	.flite_id	= FLITE_IDX_A,
+#endif
+#ifdef CONFIG_CSI_D
+	.flite_id	= FLITE_IDX_B,
+#endif
 	.use_isp	= true,
 	.sensor_index	= 0,
 };
@@ -410,7 +415,12 @@ static struct s3c_platform_camera s5k3h2 = {
 	.mipi_align	= 24,
 
 	.initialized	= 0,
+#ifdef CONFIG_CSI_C
 	.flite_id	= FLITE_IDX_A,
+#endif
+#ifdef CONFIG_CSI_D
+	.flite_id	= FLITE_IDX_B,
+#endif
 	.use_isp	= true,
 	.sensor_index	= 1,
 };
@@ -448,7 +458,12 @@ static struct s3c_platform_camera s5k6a3 = {
 	.mipi_align	= 24,
 
 	.initialized	= 0,
+#ifdef CONFIG_CSI_C
 	.flite_id	= FLITE_IDX_A,
+#endif
+#ifdef CONFIG_CSI_D
+	.flite_id	= FLITE_IDX_B,
+#endif
 	.use_isp	= true,
 	.sensor_index	= 2,
 };
