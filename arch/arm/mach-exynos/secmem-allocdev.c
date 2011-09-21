@@ -87,13 +87,13 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		if (val) {
 			if (drm_onoff == false) {
 				drm_onoff = true;
-				pm_runtime_forbid(secmem.this_device);
+				pm_runtime_forbid((*(secmem.this_device)).parent);
 			} else
 				printk(KERN_ERR "%s: DRM is already on\n", __func__);
 		} else {
 			if (drm_onoff == true) {
 				drm_onoff = false;
-				pm_runtime_allow(secmem.this_device);
+				pm_runtime_allow((*(secmem.this_device)).parent);
 			} else
 				printk(KERN_ERR "%s: DRM is already off\n", __func__);
 		}
