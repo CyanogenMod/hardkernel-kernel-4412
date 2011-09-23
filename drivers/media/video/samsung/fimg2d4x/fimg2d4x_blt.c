@@ -343,9 +343,11 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 	if (cmd->rotate != ORIGIN)
 		fimg2d4x_set_rotation(info, cmd->rotate);
 
+#ifdef ENABLE_CLIPPING
 	/* clipping */
 	if (cmd->clipping.enable)
 		fimg2d4x_enable_clipping(info, &cmd->clipping);
+#endif
 
 	/* dithering */
 	if (cmd->dither)

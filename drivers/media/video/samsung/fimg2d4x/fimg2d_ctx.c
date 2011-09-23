@@ -103,6 +103,7 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 {
 	int w, h;
 	struct fimg2d_rect *sr, *dr, *mr;
+	struct fimg2d_clip *ur;
 
 	if (u->op < 0 || u->op >= BLIT_OP_END)
 		goto err_op;
@@ -153,6 +154,14 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 		/* 8000: max width & height */
 		if (w > 8000 || h > 8000)
 			goto err_src_rect;
+
+		/* out of dst_rect */
+		if (u->clipping && u->clipping->enable) {
+			ur = u->clipping;
+			if (ur->x1 >= dr->x2 || ur->x2 <= dr->x1 ||
+				ur->y1 >= dr->y2 || ur->y2 <= dr->y1)
+				goto err_clip_rect;
+		}
 	}
 
 	return 0;
@@ -171,6 +180,10 @@ err_msk_rect:
 err_dst_rect:
 	printk(KERN_ERR "%s: invalid dst rect, LT(%d,%d) RB(%d,%d)\n",
 			__func__, dr->x1, dr->y1, dr->x2, dr->y2);
+	return -1;
+err_clip_rect:
+	printk(KERN_ERR "%s: invalid clip rect, LT(%d,%d) RB(%d,%d)\n",
+			__func__, ur->x1, ur->y1, ur->x2, ur->y2);
 	return -1;
 }
 
@@ -203,8 +216,10 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 		cmd->dst_rect.y2 = cmd->dst.height;
 	}
 
+#ifdef ENABLE_CLIPPING
 	/* fix up clip rect */
 	if (cmd->clipping.enable) {
+		/* fit to smaller dst region  as a clip rect */
 		if (cmd->clipping.x1 < cmd->dst_rect.x1) {
 			fimg2d_debug("fixing up cipping coord x1: %d --> %d\n",
 					cmd->clipping.x1, cmd->dst_rect.x1);
@@ -226,6 +241,38 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 			cmd->clipping.y2 = cmd->dst_rect.y2;
 		}
 	}
+#else
+	/*
+	 * Contrary to G2D 3.1, there's no need to use clipping in G2D 4.1
+	 * G2D 3.1 needs clipping to scale up or down, but G2D 4.1 does not.
+	 */
+	if (cmd->clipping.enable) {
+		/* fit to smaller clip region as a dst rect */
+		if (cmd->clipping.x1 > cmd->dst_rect.x1) {
+			fimg2d_debug("fixing up dst(clip) coord x1: %d --> %d\n",
+					cmd->dst_rect.x1, cmd->clipping.x1);
+			cmd->dst_rect.x1 = cmd->clipping.x1;
+		}
+		if (cmd->clipping.y1 > cmd->dst_rect.y1) {
+			fimg2d_debug("fixing up dst(clip) coord y1: %d --> %d\n",
+					cmd->dst_rect.y1, cmd->clipping.y1);
+			cmd->dst_rect.y1 = cmd->clipping.y1;
+		}
+		if (cmd->clipping.x2 < cmd->dst_rect.x2) {
+			fimg2d_debug("fixing up dst(clip) coord x2: %d --> %d\n",
+					cmd->dst_rect.x2, cmd->clipping.x2);
+			cmd->dst_rect.x2 = cmd->clipping.x2;
+		}
+		if (cmd->clipping.y2 < cmd->dst_rect.y2) {
+			fimg2d_debug("fixing up dst(clip) coord y2: %d --> %d\n",
+					cmd->clipping.y2, cmd->dst_rect.y2);
+			cmd->dst_rect.y2 = cmd->clipping.y2;
+		}
+
+		/* disable clipping */
+		cmd->clipping.enable = false;
+	}
+#endif
 }
 
 int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
@@ -340,7 +387,6 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 	fimg2d_debug("ctx %p pgd %p ncmd(%d) seq_no(%u)\n",
 			cmd->ctx, (void *)virt_to_phys(cmd->ctx->mm->pgd),
 			atomic_read(&ctx->ncmd), cmd->seq_no);
-
 	spin_unlock(&info->bltlock);
 
 	return 0;
