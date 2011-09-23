@@ -427,6 +427,10 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel(S5P_CHECK_LPA, S5P_INFORM1);
 	exynos4_sys_powerdown_conf(SYS_LPA);
 
+	/* Should be fixed on EVT1 */
+	if (cpu_is_exynos4412())
+		exynos4_reset_assert_ctrl(0);
+
 	do {
 		/* Waiting for flushing UART fifo */
 	} while (exynos4_check_enter());
@@ -460,6 +464,8 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
 
 early_wakeup:
+	if (cpu_is_exynos4412())
+		exynos4_reset_assert_ctrl(1);
 
 	/* Clear wakeup state register */
 	__raw_writel(0x0, S5P_WAKEUP_STAT);
