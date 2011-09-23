@@ -131,6 +131,7 @@ struct usb_ep_ops {
  * @maxpacket:The maximum packet size used on this endpoint.  The initial
  *	value can sometimes be reduced (hardware allowing), according to
  *      the endpoint descriptor used to configure the endpoint.
+ * @maxburst: The maximum burst size.
  * @driver_data:for use by the gadget driver.  all other fields are
  *	read-only to gadget drivers.
  *
@@ -145,6 +146,8 @@ struct usb_ep {
 	const struct usb_ep_ops	*ops;
 	struct list_head	ep_list;
 	unsigned		maxpacket:16;
+
+	unsigned		maxburst:4;
 };
 
 /*-------------------------------------------------------------------------*/
