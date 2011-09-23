@@ -772,10 +772,12 @@ static struct clk init_clocks_off[] = {
 		.ctrlbit	= (1 << 21),
 	},{
 		.name		= "pcm",
+		.devname	= "samsung-pcm.1",
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 22),
 	}, {
 		.name		= "pcm",
+		.devname	= "samsung-pcm.2",
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 23),
 	}, {
@@ -1063,6 +1065,7 @@ static struct clk init_audss_clocks[] = {
 		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL | S5P_AUDSS_CLKGATE_I2SBUS,
 	}, {
 		.name		= "pcm",
+		.devname	= "samsung-pcm.0",
 		.enable		= exynos4_clk_audss_ctrl,
 		.ctrlbit	= S5P_AUDSS_CLKGATE_PCMSPECIAL | S5P_AUDSS_CLKGATE_PCMBUS,
 	},
