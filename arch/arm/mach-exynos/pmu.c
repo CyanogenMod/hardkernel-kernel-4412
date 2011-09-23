@@ -225,15 +225,6 @@ static struct exynos4_c2c_pmu_conf exynos4212_config_for_c2c[] = {
 	{ S5P_XUSBXTI_SYS,		0x0},
 };
 
-static int exynos4_is_c2c_use(void)
-{
-	unsigned int ret;
-
-	ret = __raw_readl(S5P_C2C_CTRL);
-
-	return ret;
-}
-
 void exynos4_sys_powerdown_conf(enum sys_powerdown mode)
 {
 	unsigned int count = entry_cnt;
@@ -296,5 +287,4 @@ static int __init exynos4_pmu_init(void)
 
 	return 0;
 }
-
 arch_initcall(exynos4_pmu_init);

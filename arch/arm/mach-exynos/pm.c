@@ -192,7 +192,9 @@ void exynos4_cpu_suspend(void)
 
 static void exynos4_pm_prepare(void)
 {
-	s3c_pm_do_save(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
+	if (!exynos4_is_c2c_use())
+		s3c_pm_do_save(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
+
 	s3c_pm_do_save(exynos4_l2cc_save, ARRAY_SIZE(exynos4_l2cc_save));
 
 	/* Set value of power down register for sleep mode */
@@ -274,11 +276,17 @@ static int exynos4_pm_suspend(void)
 	/* When enter sleep mode, USE_DELAYED_RESET_ASSERTION have to disable */
 	exynos4_reset_assert_ctrl(0);
 
-	if (cpu_is_exynos4212()) {
+	if (!cpu_is_exynos4210()) {
 		tmp = __raw_readl(S5P_CENTRAL_SEQ_OPTION);
 		tmp &= ~(S5P_USE_STANDBYWFI_ISP_ARM |
 			 S5P_USE_STANDBYWFE_ISP_ARM);
 		__raw_writel(tmp, S5P_CENTRAL_SEQ_OPTION);
+
+		if (exynos4_is_c2c_use()) {
+			tmp = __raw_readl(S5P_CENTRAL_SEQ_CONFIGURATION_COREBLK);
+			tmp &= ~S5P_CENTRAL_SEQ_COREBLK_CONF;
+			__raw_writel(tmp, S5P_CENTRAL_SEQ_CONFIGURATION_COREBLK);
+		}
 	}
 
 	return 0;
@@ -313,7 +321,8 @@ static void exynos4_pm_resume(void)
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIA_OPTION);
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
 
-	s3c_pm_do_restore_core(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
+	if (!exynos4_is_c2c_use())
+		s3c_pm_do_restore_core(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
 
 	exynos4_scu_enable(S5P_VA_SCU);
 

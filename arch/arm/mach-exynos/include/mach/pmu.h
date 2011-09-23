@@ -28,6 +28,15 @@ static inline void exynos4_reset_assert_ctrl(unsigned int on)
 	}
 }
 
+static inline int exynos4_is_c2c_use(void)
+{
+	unsigned int ret;
+
+	ret = __raw_readl(S5P_C2C_CTRL);
+
+	return ret;
+}
+
 enum sys_powerdown {
 	SYS_AFTR,
 	SYS_LPA,
