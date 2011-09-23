@@ -150,7 +150,6 @@ struct exynos_ss_udc_trb {
  * @tri: Transfer resource index.
  * @epnum: The USB endpoint number.
  * @type: The endpoint type.
- * @maxburst: The Max burst size.
  * @dir_in: Set to true if this endpoint is of the IN direction, which
  *	    means that it is sending data to the Host.
  * @halted: Set if the endpoint has been halted.
@@ -173,7 +172,6 @@ struct exynos_ss_udc_ep {
 
 	unsigned char		epnum;
 	unsigned int		type;
-	unsigned int		maxburst;
 	unsigned int		dir_in:1;
 
 	unsigned int		halted:1;
@@ -509,7 +507,6 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 	/* update the endpoint state */
 	udc_ep->ep.maxpacket = le16_to_cpu(desc->wMaxPacketSize);
 	udc_ep->type = desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK;
-	udc_ep->maxburst = 0; /* FIXME */
 
 	switch (udc_ep->type) {
 	case USB_ENDPOINT_XFER_ISOC:
@@ -1822,6 +1819,7 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 {
 	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
 	int epnum = udc_ep->epnum;
+	int maxburst = udc_ep->ep.maxburst;
 	bool res;
 
 	if (!udc->eps_enabled) {
@@ -1842,7 +1840,7 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 	epcmd->ep = get_phys_epnum(udc_ep);
 	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_EPType(udc_ep->type) |
 			EXYNOS_USB3_DEPCMDPAR0x_MPS(udc_ep->ep.maxpacket) |
-			EXYNOS_USB3_DEPCMDPAR0x_BrstSiz(udc_ep->maxburst);
+			EXYNOS_USB3_DEPCMDPAR0x_BrstSiz(maxburst);
 	if (udc_ep->dir_in)
 		/* FIXME: Assigne FIFO Number by simply using
 		 * the endpoint number
