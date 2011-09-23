@@ -217,7 +217,7 @@ static struct exynos4_pmu_conf exynos4212_c2c_pmu_conf[] = {
 	{ S5P_TOP_ASB_ISOLATION_SYS,		{ 1, 0, 0 } },
 };
 
-static struct exynos4_c2c_pmu_conf exynos4212_config_for_c2c[]= {
+static struct exynos4_c2c_pmu_conf exynos4212_config_for_c2c[] = {
 	/* Register Address	       Value */
 	{ S5P_TOP_BUS_COREBLK_SYS,	0x0},
 	{ S5P_TOP_PWR_COREBLK_SYS,	0x0},
@@ -260,7 +260,7 @@ void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode)
 {
 	exynos4212_config_for_c2c[0].val = 0x3;
 
-	switch(mode) {
+	switch (mode) {
 	/* If C2C mode is MAXIMAL LATENCY */
 	case MAX_LATENCY:
 		exynos4212_config_for_c2c[1].val = 0x0;
@@ -278,6 +278,8 @@ void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode)
 
 static int __init exynos4_pmu_init(void)
 {
+	exynos4_reset_assert_ctrl(1);
+
 	if (cpu_is_exynos4210()) {
 		exynos4_pmu_config = exynos4210_pmu_config;
 		entry_cnt = ARRAY_SIZE(exynos4210_pmu_config);

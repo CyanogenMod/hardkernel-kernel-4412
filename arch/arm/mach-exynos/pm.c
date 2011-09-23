@@ -271,6 +271,9 @@ static int exynos4_pm_suspend(void)
 	tmp &= ~(S5P_CENTRAL_LOWPWR_CFG);
 	__raw_writel(tmp, S5P_CENTRAL_SEQ_CONFIGURATION);
 
+	/* When enter sleep mode, USE_DELAYED_RESET_ASSERTION have to disable */
+	exynos4_reset_assert_ctrl(0);
+
 	if (cpu_is_exynos4212()) {
 		tmp = __raw_readl(S5P_CENTRAL_SEQ_OPTION);
 		tmp &= ~(S5P_USE_STANDBYWFI_ISP_ARM |
@@ -297,6 +300,8 @@ static void exynos4_pm_resume(void)
 		/* No need to perform below restore code */
 		goto early_wakeup;
 	}
+
+	exynos4_reset_assert_ctrl(1);
 
 	/* For release retention */
 
