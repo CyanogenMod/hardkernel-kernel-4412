@@ -110,24 +110,24 @@ static unsigned int clkdiv_dmc1[LV_END][6] = {
 	{7, 7, 1},
 };
 
-static unsigned int clkdiv_top[LV_END][7] = {
+static unsigned int clkdiv_top[LV_END][5] = {
 	/*
 	 * Clock divider value for following
-	 * { DIVACLK400_MCUISP, DIVACLK266_GPS, DIVACLK200, DIVACLK100,
-			DIVACLK160, DIVACLK133, DIVONENAND }
+	 * { DIVACLK266_GPS, DIVACLK100, DIVACLK160,
+		DIVACLK133, DIVONENAND }
 	 */
 
-	/* ACLK200 L0: 160MHz */
-	{1, 2, 4, 7, 4, 5, 1},
+	/* ACLK160 L0: 160MHz */
+	{2, 7, 4, 5, 1},
 
-	/* ACLK200 L1: 133MHz */
-	{2, 4, 5, 7, 5, 6, 1},
+	/* ACLK160 L1: 133MHz */
+	{4, 7, 5, 7, 1},
 
-	/* ACLK200 L1: 133MHz */
-	{2, 4, 5, 7, 5, 6, 1},
+	/* ACLK160 L1: 133MHz */
+	{4, 7, 5, 7, 1},
 
-	/* ACLK200 L2: 100MHz */
-	{7, 7, 7, 7, 7, 7, 1},
+	/* ACLK160 L2: 100MHz */
+	{7, 7, 7, 7, 1},
 };
 
 static unsigned int clkdiv_lr_bus[LV_END][2] = {
@@ -147,26 +147,6 @@ static unsigned int clkdiv_lr_bus[LV_END][2] = {
 
 	/* ACLK_GDL/R L3: 100MHz */
 	{7, 1},
-};
-
-static unsigned int clkdiv_isp[LV_END][5] = {
-	/*
-	 * Clock divider value for following
-	 * { DIVMCUISP0, DIVMCDUISP1, DIVISP0, DIVISP1,
-	 *			DIVISP2 }
-	 */
-
-	/* ACLK_MCUISP0: 200MHz */
-	{1, 1, 1, 1, 0},
-
-	/* ACLK_MCUISP0: 100MHz */
-	{1, 1, 1, 1, 0},
-
-	/* ACLK_MCUISP0: 100MHz */
-	{1, 1, 1, 1, 0},
-
-	/* ACLK_MCUISP0: 50MHz */
-	{1, 1, 1, 1, 0},
 };
 
 static unsigned int clkdiv_sclkip[LV_END][3] = {
@@ -250,7 +230,15 @@ void exynos4212_target(struct opp *opp)
 	} while (tmp & 0x11111111);
 
 	/* Change Divider - DMC1 */
-	tmp = exynos4_busfreq_table[div_index].clk_dmc1div;
+	tmp = __raw_readl(S5P_CLKDIV_DMC1);
+
+	tmp &= ~(S5P_CLKDIV_DMC1_G2D_ACP_MASK |
+		S5P_CLKDIV_DMC1_C2C_MASK |
+		S5P_CLKDIV_DMC1_C2CACLK_MASK);
+
+	tmp |= ((clkdiv_dmc1[div_index][0] << S5P_CLKDIV_DMC1_G2D_ACP_SHIFT) |
+		(clkdiv_dmc1[div_index][1] << S5P_CLKDIV_DMC1_C2C_SHIFT) |
+		(clkdiv_dmc1[div_index][2] << S5P_CLKDIV_DMC1_C2CACLK_SHIFT));
 
 	__raw_writel(tmp, S5P_CLKDIV_DMC1);
 
@@ -259,7 +247,19 @@ void exynos4212_target(struct opp *opp)
 	} while (tmp & 0x111111);
 
 	/* Change Divider - TOP */
-	tmp = exynos4_busfreq_table[div_index].clk_topdiv;
+	tmp = __raw_readl(S5P_CLKDIV_TOP);
+
+	tmp &= ~(S5P_CLKDIV_TOP_ACLK266_GPS_MASK |
+		S5P_CLKDIV_TOP_ACLK100_MASK |
+		S5P_CLKDIV_TOP_ACLK160_MASK |
+		S5P_CLKDIV_TOP_ACLK133_MASK |
+		S5P_CLKDIV_TOP_ONENAND_MASK);
+
+	tmp |= ((clkdiv_top[div_index][0] << S5P_CLKDIV_TOP_ACLK266_GPS_SHIFT) |
+		(clkdiv_top[div_index][1] << S5P_CLKDIV_TOP_ACLK100_SHIFT) |
+		(clkdiv_top[div_index][2] << S5P_CLKDIV_TOP_ACLK160_SHIFT) |
+		(clkdiv_top[div_index][3] << S5P_CLKDIV_TOP_ACLK133_SHIFT) |
+		(clkdiv_top[div_index][4] << S5P_CLKDIV_TOP_ONENAND_SHIFT));
 
 	__raw_writel(tmp, S5P_CLKDIV_TOP);
 
@@ -294,36 +294,6 @@ void exynos4212_target(struct opp *opp)
 	do {
 		tmp = __raw_readl(S5P_CLKDIV_STAT_RIGHTBUS);
 	} while (tmp & 0x11);
-
-	/* Change Divider - ISP0 */
-	tmp = __raw_readl(S5P_CLKDIV_ISP0);
-
-	tmp &= ~(S5P_CLKDIV_ISP0_ISP0_MASK | S5P_CLKDIV_ISP0_ISP1_MASK);
-
-	tmp |= ((clkdiv_isp[div_index][2] << S5P_CLKDIV_ISP0_ISP0_SHIFT) |
-		(clkdiv_isp[div_index][3] << S5P_CLKDIV_ISP0_ISP1_SHIFT));
-
-	__raw_writel(tmp, S5P_CLKDIV_ISP0);
-
-	do {
-		tmp = __raw_readl(S5P_CLKDIV_STAT_ISP0);
-	} while (tmp & 0x11);
-
-	/* Change Divider - ISP1 */
-	tmp = __raw_readl(S5P_CLKDIV_ISP1);
-
-	tmp &= ~(S5P_CLKDIV_ISP1_MCUISP0_MASK | S5P_CLKDIV_ISP1_MCUISP1_MASK |
-		S5P_CLKDIV_ISP1_MPWM_MASK);
-
-	tmp |= ((clkdiv_isp[div_index][0] << S5P_CLKDIV_ISP1_MCUISP0_SHIFT) |
-		(clkdiv_isp[div_index][1] << S5P_CLKDIV_ISP1_MCUISP1_SHIFT) |
-		(clkdiv_isp[div_index][4] << S5P_CLKDIV_ISP1_MCUISP1_SHIFT));
-
-	__raw_writel(tmp, S5P_CLKDIV_ISP1);
-
-	do {
-		tmp = __raw_readl(S5P_CLKDIV_STAT_ISP1);
-	} while (tmp & 0x111);
 
 	/* Change Divider - MFC */
 	tmp = __raw_readl(S5P_CLKDIV_MFC);
@@ -414,42 +384,6 @@ int exynos4212_init(struct device *dev, struct busfreq_data *data)
 			(clkdiv_dmc0[i][5] << S5P_CLKDIV_DMC0_DMCP_SHIFT));
 
 		exynos4_busfreq_table[i].clk_dmc0div = tmp;
-	}
-
-	tmp = __raw_readl(S5P_CLKDIV_DMC1);
-
-	for (i = 0; i <  LV_END; i++) {
-		tmp &= ~(S5P_CLKDIV_DMC1_G2D_ACP_MASK |
-			S5P_CLKDIV_DMC1_C2C_MASK |
-			S5P_CLKDIV_DMC1_C2CACLK_MASK);
-
-		tmp |= ((clkdiv_dmc1[i][0] << S5P_CLKDIV_DMC1_G2D_ACP_SHIFT) |
-			(clkdiv_dmc1[i][1] << S5P_CLKDIV_DMC1_C2C_SHIFT) |
-			(clkdiv_dmc1[i][2] << S5P_CLKDIV_DMC1_C2CACLK_SHIFT));
-
-		exynos4_busfreq_table[i].clk_dmc1div = tmp;
-	}
-
-	tmp = __raw_readl(S5P_CLKDIV_TOP);
-
-	for (i = 0; i <  LV_END; i++) {
-		tmp &= ~(S5P_CLKDIV_TOP_ACLK400_MCUISP_MASK |
-			S5P_CLKDIV_TOP_ACLK266_GPS_MASK |
-			S5P_CLKDIV_TOP_ACLK200_MASK |
-			S5P_CLKDIV_TOP_ACLK100_MASK |
-			S5P_CLKDIV_TOP_ACLK160_MASK |
-			S5P_CLKDIV_TOP_ACLK133_MASK |
-			S5P_CLKDIV_TOP_ONENAND_MASK);
-
-		tmp |= ((clkdiv_top[i][0] << S5P_CLKDIV_TOP_ACLK400_MCUISP_SHIFT) |
-			(clkdiv_top[i][1] << S5P_CLKDIV_TOP_ACLK266_GPS_SHIFT) |
-			(clkdiv_top[i][1] << S5P_CLKDIV_TOP_ACLK200_SHIFT) |
-			(clkdiv_top[i][1] << S5P_CLKDIV_TOP_ACLK100_SHIFT) |
-			(clkdiv_top[i][2] << S5P_CLKDIV_TOP_ACLK160_SHIFT) |
-			(clkdiv_top[i][3] << S5P_CLKDIV_TOP_ACLK133_SHIFT) |
-			(clkdiv_top[i][4] << S5P_CLKDIV_TOP_ONENAND_SHIFT));
-
-		exynos4_busfreq_table[i].clk_topdiv = tmp;
 	}
 
 	exynos4212_set_bus_volt();
