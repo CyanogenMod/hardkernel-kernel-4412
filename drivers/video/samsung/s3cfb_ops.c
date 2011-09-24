@@ -849,10 +849,8 @@ int s3cfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *fb)
 	struct s3cfb_global *fbdev = get_fimd_global(win->id);
 
 #ifdef CONFIG_EXYNOS4_DEV_PD
-	if (fbdev->system_state == POWER_OFF) {
-		dev_err(fbdev->dev, "system_state is POWER_OFF\n");
+	if (fbdev->system_state == POWER_OFF)
 		return 0;
-	}
 #endif
 
 	if (var->yoffset + var->yres > var->yres_virtual) {
@@ -906,11 +904,8 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 	} p;
 
 #ifdef CONFIG_EXYNOS4_DEV_PD
-	if (fbdev->system_state == POWER_OFF) {
-		dev_err(fbdev->dev,
-			"system_state is POWER_OFF cmd is 0x%08x\n", cmd);
+	if (fbdev->system_state == POWER_OFF)
 		return 0;
-	}
 #endif
 
 	switch (cmd) {
