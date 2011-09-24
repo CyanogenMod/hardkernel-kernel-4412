@@ -23,11 +23,8 @@ enum MFC_SHM_OFS
 	PIC_TIME_TOP			= 0x10, /* D */
 	PIC_TIME_BOT			= 0x14, /* D */
 	START_BYTE_NUM			= 0x18, /* D */
-	/*
-	DEC_FRM_SIZE			= 0x1C,
-	*/
-	CROP_INFO1			= 0x20, /* D */
-	CROP_INFO2			= 0x24, /* D */
+	CROP_INFO1			= 0x20, /* D, H.264 */
+	CROP_INFO2			= 0x24, /* D, H.264 */
 	EXT_ENC_CONTROL			= 0x28,	/* E */
 	ENC_PARAM_CHANGE		= 0x2C,	/* E */
 	VOP_TIMING			= 0x30,	/* E, MPEG4 */
@@ -38,13 +35,6 @@ enum MFC_SHM_OFS
 	EXT_METADATA_START_ADDR		= 0x44, /* C */
 	PUT_EXTRADATA			= 0x48, /* C */
 	EXTRADATA_ADDR			= 0x4C, /* C */
-	/*
-	DBG_INFO_OUTPUT1		= 0x50,
-	DBG_INFO_INPUT0			= 0x54,
-	DBG_INFO_INPUT1			= 0x58,
-	REF_L0_PHY_IDX			= 0x5C,
-	REF_L1_PHY_IDX			= 0x60,
-	*/
 	ALLOCATED_LUMA_DPB_SIZE		= 0x64,	/* D */
 	ALLOCATED_CHROMA_DPB_SIZE	= 0x68,	/* D */
 	ALLOCATED_MV_SIZE		= 0x6C,	/* D */
