@@ -62,6 +62,7 @@
 #include <plat/csis.h>
 #include <plat/media.h>
 #include <plat/regs-srom.h>
+#include <plat/sysmmu.h>
 #include <media/s5k4ba_platform.h>
 #include <media/s5k4ea_platform.h>
 #include <media/m5mo_platform.h>
@@ -90,7 +91,7 @@
 #include <../../../drivers/video/samsung/s3cfb.h>
 #endif
 #include <plat/fimg2d.h>
-#include <mach/sysmmu.h>
+#include <mach/dev-sysmmu.h>
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #include <plat/jpeg.h>
 #endif
@@ -2240,7 +2241,15 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&s5p_device_mfc,
 #endif
 #ifdef CONFIG_S5P_SYSTEM_MMU
-	&exynos_device_sysmmu[SYSMMU_MDMA],
+	&SYSMMU_PLATDEV(g2d_acp),
+	&SYSMMU_PLATDEV(fimc0),
+	&SYSMMU_PLATDEV(fimc1),
+	&SYSMMU_PLATDEV(fimc2),
+	&SYSMMU_PLATDEV(fimc3),
+	&SYSMMU_PLATDEV(jpeg),
+	&SYSMMU_PLATDEV(mfc_l),
+	&SYSMMU_PLATDEV(mfc_r),
+	&SYSMMU_PLATDEV(tv),
 #endif
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
@@ -2477,6 +2486,38 @@ static void __init smdk4212_smsc911x_init(void)
 		     (0x1 << S5P_SROM_BCX__TACS__SHIFT), S5P_SROM_BC1);
 }
 
+static void __init exynos_sysmmu_init(void)
+{
+	ASSIGN_SYSMMU_POWERDOMAIN(fimc0, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(fimc1, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(fimc2, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(fimc3, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(jpeg, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(mfc_l, &exynos4_device_pd[PD_MFC].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(mfc_r, &exynos4_device_pd[PD_MFC].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(tv, &exynos4_device_pd[PD_TV].dev);
+#ifdef CONFIG_VIDEO_FIMG2D
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(g2d_acp).dev,
+							&s5p_device_fimg2d.dev);
+#endif
+#ifdef CONFIG_VIDEO_MFC5X
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_l).dev, &s5p_device_mfc.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_r).dev, &s5p_device_mfc.dev);
+#endif
+#ifdef CONFIG_VIDEO_FIMC
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc0).dev, &s3c_device_fimc0.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc1).dev, &s3c_device_fimc1.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc2).dev, &s3c_device_fimc2.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc3).dev, &s3c_device_fimc3.dev);
+#endif
+#ifdef CONFIG_VIDEO_TVOUT
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(tv).dev, &s5p_device_tvout.dev);
+#endif
+#ifdef CONFIG_VIDEO_JPEG_V2X
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(jpeg).dev, &s5p_device_jpeg.dev);
+#endif
+}
+
 static void __init smdk4212_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -2671,6 +2712,8 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_EXYNOS4_C2C
 	exynos4_c2c_set_platdata(&smdk4212_c2c_pdata);
 #endif
+
+	exynos_sysmmu_init();
 
 	platform_add_devices(smdk4212_devices, ARRAY_SIZE(smdk4212_devices));
 
