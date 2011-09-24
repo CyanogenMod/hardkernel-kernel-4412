@@ -72,6 +72,7 @@
 #include <plat/sdhci.h>
 #include <plat/mshci.h>
 #include <plat/iic.h>
+#include <plat/sysmmu.h>
 #include <plat/pd.h>
 #include <plat/backlight.h>
 #include <plat/regs-fb-v4.h>
@@ -87,7 +88,7 @@
 
 #include <mach/map.h>
 #include <mach/media.h>
-#include <mach/sysmmu.h>
+#include <mach/dev-sysmmu.h>
 #include <mach/regs-clock.h>
 #include <mach/exynos-ion.h>
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -1863,22 +1864,21 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos4_device_pd[PD_TV],
 	&exynos4_device_pd[PD_GPS],
 #ifdef CONFIG_S5P_SYSTEM_MMU
-	&exynos_device_sysmmu[SYSMMU_MDMA],
-	&exynos_device_sysmmu[SYSMMU_SSS],
-	&exynos_device_sysmmu[SYSMMU_FIMC0],
-	&exynos_device_sysmmu[SYSMMU_FIMC1],
-	&exynos_device_sysmmu[SYSMMU_FIMC2],
-	&exynos_device_sysmmu[SYSMMU_FIMC3],
-	&exynos_device_sysmmu[SYSMMU_JPEG],
-	&exynos_device_sysmmu[SYSMMU_FIMD0],
-	&exynos_device_sysmmu[SYSMMU_FIMD1],
-	&exynos_device_sysmmu[SYSMMU_PCIe],
-	&exynos_device_sysmmu[SYSMMU_G2D],
-	&exynos_device_sysmmu[SYSMMU_ROTATOR],
-	&exynos_device_sysmmu[SYSMMU_MDMA2],
-	&exynos_device_sysmmu[SYSMMU_TV],
-	&exynos_device_sysmmu[SYSMMU_MFC_L],
-	&exynos_device_sysmmu[SYSMMU_MFC_R],
+	&SYSMMU_PLATDEV(sss),
+	&SYSMMU_PLATDEV(fimc0),
+	&SYSMMU_PLATDEV(fimc1),
+	&SYSMMU_PLATDEV(fimc2),
+	&SYSMMU_PLATDEV(fimc3),
+	&SYSMMU_PLATDEV(jpeg),
+	&SYSMMU_PLATDEV(fimd0),
+	&SYSMMU_PLATDEV(fimd1),
+	&SYSMMU_PLATDEV(pcie),
+	&SYSMMU_PLATDEV(g2d),
+	&SYSMMU_PLATDEV(rot),
+	&SYSMMU_PLATDEV(mdma),
+	&SYSMMU_PLATDEV(tv),
+	&SYSMMU_PLATDEV(mfc_l),
+	&SYSMMU_PLATDEV(mfc_r),
 #endif
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
@@ -2369,6 +2369,48 @@ static void __init smdkv310_map_io(void)
 #endif
 }
 
+static void __init exynos_sysmmu_init(void)
+{
+	ASSIGN_SYSMMU_POWERDOMAIN(fimc0, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(fimc1, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(fimc2, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(fimc3, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(jpeg, &exynos4_device_pd[PD_CAM].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(fimd0, &exynos4_device_pd[PD_LCD0].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(g2d, &exynos4_device_pd[PD_LCD0].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(rot, &exynos4_device_pd[PD_LCD0].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(tv, &exynos4_device_pd[PD_TV].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(mfc_l, &exynos4_device_pd[PD_MFC].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(mfc_r, &exynos4_device_pd[PD_MFC].dev);
+#if defined CONFIG_VIDEO_FIMC
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc0).dev, &s3c_device_fimc0.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc1).dev, &s3c_device_fimc1.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc2).dev, &s3c_device_fimc2.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc3).dev, &s3c_device_fimc3.dev);
+#elif defined CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc0).dev, &s5p_device_fimc0.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc1).dev, &s5p_device_fimc1.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc2).dev, &s5p_device_fimc2.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimc3).dev, &s5p_device_fimc3.dev);
+#endif
+#ifdef CONFIG_VIDEO_JPEG
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(jpeg).dev, &s5p_device_jpeg.dev);
+#endif
+#ifdef CONFIG_FB_S3C
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(fimd0).dev, &s5p_device_fimd0.dev);
+#endif
+#ifdef CONFIG_VIDEO_FIMG2D
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(g2d).dev, &s5p_device_fimg2d.dev);
+#endif
+#ifdef CONFIG_VIDEO_TVOUT
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(tv).dev, &s5p_device_tvout.dev);
+#endif
+#if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_l).dev, &s5p_device_mfc.dev);
+	s5p_sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_r).dev, &s5p_device_mfc.dev);
+#endif
+}
+
 static void __init smdkv310_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -2574,35 +2616,6 @@ static void __init smdkv310_machine_init(void)
 #endif
 #endif
 
-#if defined(CONFIG_S5P_SYSTEM_MMU) && defined(CONFIG_EXYNOS4_DEV_PD)
-	exynos_device_sysmmu[SYSMMU_MDMA].dev.parent =
-						&exynos4_device_pd[PD_LCD0].dev;
-	exynos_device_sysmmu[SYSMMU_FIMC0].dev.parent =
-						&exynos4_device_pd[PD_CAM].dev;
-	exynos_device_sysmmu[SYSMMU_FIMC1].dev.parent =
-						&exynos4_device_pd[PD_CAM].dev;
-	exynos_device_sysmmu[SYSMMU_FIMC2].dev.parent =
-						&exynos4_device_pd[PD_CAM].dev;
-	exynos_device_sysmmu[SYSMMU_FIMC3].dev.parent =
-						&exynos4_device_pd[PD_CAM].dev;
-	exynos_device_sysmmu[SYSMMU_JPEG].dev.parent =
-						&exynos4_device_pd[PD_CAM].dev;
-	exynos_device_sysmmu[SYSMMU_FIMD0].dev.parent =
-						&exynos4_device_pd[PD_LCD0].dev;
-	exynos_device_sysmmu[SYSMMU_FIMD1].dev.parent =
-						&exynos4_device_pd[PD_LCD1].dev;
-	exynos_device_sysmmu[SYSMMU_G2D].dev.parent =
-						&exynos4_device_pd[PD_LCD0].dev;
-	exynos_device_sysmmu[SYSMMU_ROTATOR].dev.parent =
-						&exynos4_device_pd[PD_LCD0].dev;
-	exynos_device_sysmmu[SYSMMU_TV].dev.parent =
-						&exynos4_device_pd[PD_TV].dev;
-	exynos_device_sysmmu[SYSMMU_MFC_L].dev.parent =
-						&exynos4_device_pd[PD_MFC].dev;
-	exynos_device_sysmmu[SYSMMU_MFC_R].dev.parent =
-						&exynos4_device_pd[PD_MFC].dev;
-#endif
-
 #ifdef CONFIG_ION_EXYNOS
 	exynos_ion_set_platdata();
 #endif
@@ -2641,6 +2654,8 @@ static void __init smdkv310_machine_init(void)
 #ifdef CONFIG_USB_GADGET
 	smdkv310_usbgadget_init();
 #endif
+
+	exynos_sysmmu_init();
 
 	platform_add_devices(smdkv310_devices, ARRAY_SIZE(smdkv310_devices));
 
