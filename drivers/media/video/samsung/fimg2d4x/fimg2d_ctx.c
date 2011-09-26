@@ -275,6 +275,76 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 #endif
 }
 
+static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
+{
+	struct fimg2d_cache *csrc, *cdst, *cmsk;
+
+	csrc = &cmd->src_cache;
+	cdst = &cmd->dst_cache;
+	cmsk = &cmd->msk_cache;
+
+	/* caculate horizontally clipped region */
+	if (cmd->srcen) {
+		csrc->addr = cmd->src.addr.start +
+				(cmd->src.stride * cmd->src_rect.y1);
+		csrc->size = cmd->src.stride *
+				(cmd->src_rect.y2 - cmd->src_rect.y1);
+	}
+
+	if (cmd->dsten) {
+		cdst->addr = cmd->dst.addr.start +
+				(cmd->dst.stride * cmd->dst_rect.y1);
+		cdst->size = cmd->dst.stride *
+				(cmd->dst_rect.y2 - cmd->dst_rect.y1);
+	}
+
+	if (cmd->msken) {
+		cmsk->addr = cmd->msk.addr.start +
+				(cmd->msk.stride * cmd->msk_rect.y1);
+		cmsk->size = cmd->msk.stride *
+				(cmd->msk_rect.y2 - cmd->msk_rect.y1);
+	}
+
+#ifdef CONFIG_OUTER_CACHE
+	if (cmd->srcen && fimg2d_check_pagetable(cmd->ctx->mm,
+				csrc->addr, csrc->size) == PT_FAULT)
+		return -1;
+
+	if (cmd->dsten && fimg2d_check_pagetable(cmd->ctx->mm,
+				cdst->addr, cdst->size) == PT_FAULT)
+		return -1;
+
+	if (cmd->msken && fimg2d_check_pagetable(cmd->ctx->mm,
+				cmsk->addr, cmsk->size) == PT_FAULT)
+		return -1;
+#endif
+
+	cmd->size_all = 0;
+
+	if (cmd->srcen && cmd->src.addr.cacheable)
+		cmd->size_all += csrc->size;
+	if (cmd->msken && cmd->msk.addr.cacheable)
+		cmd->size_all += cmsk->size;
+	if (cmd->dsten && cmd->dst.addr.cacheable)
+		cmd->size_all += cdst->size;
+
+	fimg2d_debug("cached size all = %d\n", cmd->size_all);
+
+	if (cmd->size_all < L1_CACHE_SIZE) {
+		fimg2d_debug("innercache range\n");
+		if (cmd->srcen && cmd->src.addr.cacheable)
+			fimg2d_dma_sync_inner(csrc->addr, csrc->size, DMA_TO_DEVICE);
+
+		if (cmd->msken && cmd->msk.addr.cacheable)
+			fimg2d_dma_sync_inner(cmsk->addr, cmsk->size, DMA_TO_DEVICE);
+
+		if (cmd->dsten && cmd->dst.addr.cacheable)
+			fimg2d_dma_sync_inner(cdst->addr, cdst->size, DMA_BIDIRECTIONAL);
+	}
+
+	return 0;
+}
+
 int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 			struct fimg2d_blit __user *u)
 {
@@ -331,36 +401,18 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 		cmd->srcen = true;
 		if (copy_from_user(&cmd->src, u->src, sizeof(cmd->src)))
 			goto err_user;
-
-#ifdef CONFIG_OUTER_CACHE
-		if (fimg2d_check_pagetable(cmd->ctx->mm, cmd->src.addr.start,
-					cmd->src.addr.size) == PT_FAULT)
-			goto err_user;
-#endif
 	}
 
 	if (u->dst) {
 		cmd->dsten = true;
 		if (copy_from_user(&cmd->dst, u->dst, sizeof(cmd->dst)))
 			goto err_user;
-
-#ifdef CONFIG_OUTER_CACHE
-		if (fimg2d_check_pagetable(cmd->ctx->mm, cmd->dst.addr.start,
-					cmd->dst.addr.size) == PT_FAULT)
-			goto err_user;
-#endif
 	}
 
 	if (u->msk) {
 		cmd->msken = true;
 		if (copy_from_user(&cmd->msk, u->msk, sizeof(cmd->msk)))
 			goto err_user;
-
-#ifdef CONFIG_OUTER_CACHE
-		if (fimg2d_check_pagetable(cmd->ctx->mm, cmd->msk.addr.start,
-					cmd->msk.addr.size) == PT_FAULT)
-			goto err_user;
-#endif
 	}
 
 	if (u->src_rect) {
@@ -379,6 +431,9 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 	}
 
 	fimg2d_fixup_params(cmd);
+
+	if (fimg2d_check_dma_sync(cmd))
+		goto err_user;
 
 	/* add command node and increase ncmd */
 	spin_lock(&info->bltlock);

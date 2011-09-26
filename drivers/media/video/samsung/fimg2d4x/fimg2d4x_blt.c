@@ -31,9 +31,6 @@
 #include <linux/pm_runtime.h>
 #endif
 
-#define L1_CACHE_SIZE	SZ_64K
-#define L2_CACHE_SIZE	SZ_1M
-
 #undef PERF
 #undef POST_BLIT
 
@@ -56,79 +53,52 @@ static long get_blit_perf(struct timeval *start, struct timeval *end)
 }
 #endif
 
-#ifdef CONFIG_OUTER_CACHE
 static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
-	int size_all, size;
-	unsigned long addr;
 	struct mm_struct *mm;
+	struct fimg2d_cache *csrc, *cdst, *cmsk;
 
-	size_all = 0;
+	csrc = &cmd->src_cache;
+	cdst = &cmd->dst_cache;
+	cmsk = &cmd->msk_cache;
 
-	if (cmd->srcen && cmd->src.addr.cacheable)
-		size_all += cmd->src.addr.size;
-
-	if (cmd->msken && cmd->msk.addr.cacheable)
-		size_all += cmd->msk.addr.size;
-
-	if (cmd->dsten && cmd->dst.addr.cacheable)
-		size_all += cmd->dst.addr.size;
-
-	spin_lock(&info->bltlock);
-
-	if (size_all >= L2_CACHE_SIZE) {
-		flush_all_cpu_caches();	/* inner all */
-		outer_flush_all();	/* outer all */
-		goto cacheflush_end;
-	} else if (size_all >= L1_CACHE_SIZE) {
-		flush_all_cpu_caches();	/* inner all */
+	if (cmd->size_all >= L2_CACHE_SIZE) {
+		flush_all_cpu_caches();	/* innercache all */
+#ifdef CONFIG_OUTER_CACHE
+		outer_flush_all();	/* outercache all */
+#endif
+		return;
+	} else if (cmd->size_all >= L1_CACHE_SIZE) {
+		flush_all_cpu_caches();	/* innercache all */
 	}
 
+#ifdef CONFIG_OUTER_CACHE
+	fimg2d_debug("outercache range\n");
 	mm = cmd->ctx->mm;
-
 	if (cmd->srcen) {
-		addr = cmd->src.addr.start + cmd->src.stride * cmd->src_rect.y1;
-		/* horizontally clipped region */
-		size = cmd->src.stride * (cmd->src_rect.y2 - cmd->src_rect.y1);
-
-		if (size_all < L1_CACHE_SIZE)
-			fimg2d_dma_sync_inner(addr, size, DMA_TO_DEVICE);
-
-		fimg2d_clean_outer_pagetable(mm, addr, size);
-		fimg2d_dma_sync_outer(mm, addr, size, CACHE_CLEAN);
+		fimg2d_clean_outer_pagetable(mm, csrc->addr, csrc->size);
+		if (cmd->src.addr.cacheable)
+			fimg2d_dma_sync_outer(mm, csrc->addr, csrc->size, CACHE_CLEAN);
 	}
 
 	if (cmd->msken) {
-		addr = cmd->msk.addr.start + cmd->msk.stride * cmd->msk_rect.y1;
-		size = cmd->msk.stride * (cmd->msk_rect.y2 - cmd->msk_rect.y1);
-
-		if (size_all < L1_CACHE_SIZE)
-			fimg2d_dma_sync_inner(addr, size, DMA_TO_DEVICE);
-
-		fimg2d_clean_outer_pagetable(mm, addr, size);
-		fimg2d_dma_sync_outer(mm, addr, size, CACHE_CLEAN);
+		fimg2d_clean_outer_pagetable(mm, cmsk->addr, cmsk->size);
+		if (cmd->msk.addr.cacheable)
+			fimg2d_dma_sync_outer(mm, cmsk->addr, cmsk->size, CACHE_CLEAN);
 	}
 
 	if (cmd->dsten) {
-		addr = cmd->dst.addr.start + cmd->dst.stride * cmd->dst_rect.y1;
-		size = cmd->dst.stride * (cmd->dst_rect.y2 - cmd->dst_rect.y1);
-
-		if (size_all < L1_CACHE_SIZE)
-			fimg2d_dma_sync_inner(addr, size, DMA_BIDIRECTIONAL);
-
-		fimg2d_clean_outer_pagetable(mm, addr, size);
-		fimg2d_dma_sync_outer(mm, addr, size, CACHE_FLUSH);
+		fimg2d_clean_outer_pagetable(mm, cdst->addr, cdst->size);
+		if (cmd->dst.addr.cacheable)
+			fimg2d_dma_sync_outer(mm, cdst->addr, cdst->size, CACHE_FLUSH);
 	}
-
-cacheflush_end:
-	spin_unlock(&info->bltlock);
-}
 #endif
+}
 
 #ifdef POST_BLIT
 static void fimg2d4x_post_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
-	/* TODO */
+	/* FIXME */
 	return;
 }
 #endif
@@ -140,9 +110,9 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 {
 	struct fimg2d_context *ctx;
 	struct fimg2d_bltcmd *cmd;
-	unsigned long saddr, daddr, maddr;
-	unsigned long ssize, dsize, msize;
 	unsigned long pgd;
+	unsigned long saddr, daddr, maddr;
+	size_t ssize, dsize, msize;
 #ifdef PERF
 	struct timeval start, end;
 #endif
@@ -167,10 +137,6 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 		atomic_set(&info->busy, 1);
 
-#ifdef CONFIG_OUTER_CACHE
-		fimg2d4x_pre_bitblt(info, cmd);
-#endif
-
 		/* set sfr */
 		info->configure(info, cmd);
 
@@ -183,10 +149,11 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 #endif
 		}
 
+		fimg2d4x_pre_bitblt(info, cmd);
+
 #ifdef PERF
 		do_gettimeofday(&start);
 #endif
-
 		/* start bitblt */
 		info->run(info);
 
@@ -208,9 +175,9 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 					msize = cmd->msk.addr.size;
 				}
 				printk(KERN_ERR "[%s] fatal error, ctx %p pgd %p seq_no(%u)\n"
-						"\t src addr %p end %p size %ld\n"
-						"\t dst addr %p end %p size %ld\n"
-						"\t msk addr %p end %p size %ld\n",
+						"\t src addr %p end %p size %d\n"
+						"\t dst addr %p end %p size %d\n"
+						"\t msk addr %p end %p size %d\n",
 						__func__, ctx, (void *)pgd, cmd->seq_no,
 						(void *)saddr, (void *)saddr+ssize, ssize,
 						(void *)daddr, (void *)daddr+dsize, dsize,

@@ -21,6 +21,8 @@
 #include <linux/workqueue.h>
 #include <linux/platform_device.h>
 #include <linux/atomic.h>
+#include <linux/dma-mapping.h>
+#include <asm/cacheflush.h>
 
 #ifdef CONFIG_VIDEO_FIMG2D_DEBUG
 #define fimg2d_debug(fmt, arg...)	printk(KERN_INFO "[%s] " fmt, __func__, ## arg)
@@ -213,6 +215,9 @@ enum blit_op {
 
 #ifdef __KERNEL__
 
+#define L1_CACHE_SIZE	SZ_64K
+#define L2_CACHE_SIZE	SZ_1M
+
 /**
  * blit_sync - [kernel] bitblt sync mode
  * @BLIT_SYNC: sync mode
@@ -247,16 +252,21 @@ enum cache_opr {
 };
 
 /**
- * @PT_CACHED: cacheable
- * @PT_UNCACHED: non-cacheable
+ * @PT_NORMAL: pagetable exists
  * @PT_FAULT: invalid pagetable
- * @PT_UNKNOWN: invalid address type
  */
 enum pt_status {
-	PT_CACHED,
-	PT_UNCACHED,
+	PT_NORMAL,
 	PT_FAULT,
-	PT_UNKNOWN
+};
+
+/**
+ * @addr: start address of clipped region for cache operation
+ * @size: size of clipped region for cache operation
+ */
+struct fimg2d_cache {
+	unsigned long addr;
+	size_t size;
 };
 
 #endif /* __KERNEL__ */
@@ -422,6 +432,11 @@ struct fimg2d_bltcmd {
 	struct fimg2d_rect dst_rect;
 	struct fimg2d_rect msk_rect;
 
+	size_t size_all;
+	struct fimg2d_cache src_cache;
+	struct fimg2d_cache dst_cache;
+	struct fimg2d_cache msk_cache;
+
 	unsigned int seq_no;
 	struct fimg2d_context *ctx;
 	struct list_head node;
@@ -490,14 +505,27 @@ static inline struct fimg2d_bltcmd *fimg2d_get_first_command(struct fimg2d_contr
 		return list_first_entry(&info->cmd_q, struct fimg2d_bltcmd, node);
 }
 
+static inline void fimg2d_dma_sync_inner(unsigned long addr, size_t size, int dir)
+{
+	if (dir == DMA_TO_DEVICE)
+		dmac_map_area((void *)addr, size, dir);
+	else if (dir == DMA_BIDIRECTIONAL)
+		dmac_flush_range((void *)addr, (void *)(addr + size));
+}
+
+static inline void fimg2d_dma_unsync_inner(unsigned long addr, size_t size, int dir)
+{
+	if (dir == DMA_TO_DEVICE)
+		dmac_unmap_area((void *)addr, size, dir);
+}
+
 inline void fimg2d_add_context(struct fimg2d_control *info, struct fimg2d_context *ctx);
 inline void fimg2d_del_context(struct fimg2d_control *info, struct fimg2d_context *ctx);
 int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx, struct fimg2d_blit __user *u);
 int fimg2d_register_ops(struct fimg2d_control *info);
-void fimg2d_dma_sync_inner(unsigned long addr, unsigned long size, int dir);
-void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long addr, unsigned long size);
-void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long addr, unsigned long size, enum cache_opr opr);
-enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long addr, unsigned long size);
+void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long addr, size_t size);
+void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long addr, size_t size, enum cache_opr opr);
+enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long addr, size_t size);
 
 #endif /* __KERNEL__ */
 

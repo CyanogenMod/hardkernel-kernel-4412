@@ -37,19 +37,9 @@ static inline unsigned long virt2phys(struct mm_struct *mm, unsigned long addr)
 	return (pte_val(*pte) & PAGE_MASK) | (addr & (PAGE_SIZE-1));
 }
 
-void fimg2d_dma_sync_inner(unsigned long addr, unsigned long size, int dir)
-{
-	if (dir == DMA_TO_DEVICE || dir == DMA_FROM_DEVICE) {
-		dmac_map_area((void *)addr, size, dir);
-		dmac_unmap_area((void *)addr, size, dir);
-	} else { /* DMA_BIDIRECTIONAL */
-		dmac_flush_range((void *)addr, (void *)(addr + size));
-	}
-}
-
-#if defined(CONFIG_OUTER_CACHE)
+#ifdef CONFIG_OUTER_CACHE
 void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long addr,
-                                        unsigned long size)
+                                        size_t size)
 {
 	unsigned long *lv1, *lv1end;
 	unsigned long lv2pa;
@@ -72,7 +62,7 @@ void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long addr,
 }
 
 void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long addr,
-					unsigned long size, enum cache_opr opr)
+					size_t size, enum cache_opr opr)
 {
 	unsigned long paddr, cur_addr, end_addr;
 
@@ -93,18 +83,11 @@ void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long addr,
 				outer_flush_range(paddr, paddr + PAGE_SIZE);
 			cur_addr += PAGE_SIZE;
 		} while (cur_addr < end_addr);
-	} else if (opr == CACHE_INVAL) {
-		do {
-			paddr = virt2phys(mm, cur_addr);
-			if (paddr)
-				outer_inv_range(paddr, paddr + PAGE_SIZE);
-			cur_addr += PAGE_SIZE;
-		} while (cur_addr < end_addr);
 	}
 }
 
 enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long addr,
-					unsigned long size)
+					size_t size)
 {
 	unsigned long *lv1d, *lv2d;
 	unsigned long pgd;
@@ -137,9 +120,6 @@ enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long addr,
 		size -= PAGE_SIZE;
 	} while ((long)size > 0);
 
-	if (*lv2d & 0x08)
-		return PT_CACHED;
-	else
-		return PT_UNCACHED;
+	return PT_NORMAL;
 }
 #endif /* CONFIG_OUTER_CACHE */
