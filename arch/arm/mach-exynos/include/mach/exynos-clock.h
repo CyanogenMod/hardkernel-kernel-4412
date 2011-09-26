@@ -16,39 +16,39 @@
 
 #include <linux/clk.h>
 
-extern struct clk clk_sclk_hdmi27m;
-extern struct clk clk_sclk_usbphy0;
-extern struct clk clk_sclk_usbphy1;
-extern struct clk clk_sclk_hdmiphy;
-extern struct clk clk_fimg2d;
+extern struct clk exynos4_clk_sclk_hdmi27m;
+extern struct clk exynos4_clk_sclk_usbphy0;
+extern struct clk exynos4_clk_sclk_usbphy1;
+extern struct clk exynos4_clk_sclk_hdmiphy;
+extern struct clk exynos4_clk_fimg2d;
 
-extern struct clksrc_clk clk_sclk_apll;
-extern struct clksrc_clk clk_mout_mpll;
-extern struct clksrc_clk clk_aclk_133;
-extern struct clksrc_clk clk_aclk_200;
+extern struct clksrc_clk exynos4_clk_sclk_apll;
+extern struct clksrc_clk exynos4_clk_mout_mpll;
+extern struct clksrc_clk exynos4_clk_aclk_133;
+extern struct clksrc_clk exynos4_clk_aclk_200;
 #ifdef CONFIG_CPU_EXYNOS4212
-extern struct clksrc_clk clk_aclk_266;
-extern struct clksrc_clk clk_aclk_400;
+extern struct clksrc_clk exynos4212_clk_aclk_266;
+extern struct clksrc_clk exynos4212_clk_aclk_400;
 #endif
-extern struct clksrc_clk clk_mout_epll;
-extern struct clksrc_clk clk_sclk_vpll;
-extern struct clksrc_clk clk_mout_g2d0;
-extern struct clksrc_clk clk_mout_g2d1;
-extern struct clksrc_clk clk_sclk_fimg2d;
+extern struct clksrc_clk exynos4_clk_mout_epll;
+extern struct clksrc_clk exynos4_clk_sclk_vpll;
+extern struct clksrc_clk exynos4_clk_mout_g2d0;
+extern struct clksrc_clk exynos4_clk_mout_g2d1;
+extern struct clksrc_clk exynos4_clk_sclk_fimg2d;
 
-extern struct clk *clkset_corebus_list[];
-extern struct clksrc_sources clkset_mout_corebus;
+extern struct clk *exynos4_clkset_corebus_list[];
+extern struct clksrc_sources exynos4_clkset_mout_corebus;
 
-extern struct clk *clkset_aclk_top_list[];
-extern struct clksrc_sources clkset_aclk;
+extern struct clk *exynos4_clkset_aclk_top_list[];
+extern struct clksrc_sources exynos4_clkset_aclk;
 
-extern struct clk *clkset_group_list[];
-extern struct clksrc_sources clkset_group;
+extern struct clk *exynos4_clkset_group_list[];
+extern struct clksrc_sources exynos4_clkset_group;
 
-extern struct clk *clkset_mout_mfc0_list[];
+extern struct clk *exynos4_clkset_mout_mfc0_list[];
 
 #ifndef CONFIG_MACH_FPGA5210
-extern struct clk init_dmaclocks[];
+extern struct clk exynos4_init_dmaclocks[];
 #endif
 /* For vpll  */
 struct vpll_div_data {

@@ -52,12 +52,12 @@ static struct sleep_save exynos4210_clock_save[] = {
 static struct clk init_clocks_off[] = {
 	{
 		.name		= "sataphy",
-		.parent		= &clk_aclk_133.clk,
+		.parent		= &exynos4_clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
 		.name		= "sata",
-		.parent		= &clk_aclk_133.clk,
+		.parent		= &exynos4_clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 10),
 	},
@@ -70,7 +70,7 @@ static struct clksrc_clk clksrcs[] = {
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
 			.ctrlbit	= (1 << 24),
 		},
-		.sources = &clkset_mout_corebus,
+		.sources = &exynos4_clkset_mout_corebus,
 		.reg_src = { .reg = EXYNOS4_CLKSRC_FSYS, .shift = 24, .size = 1 },
 		.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS0, .shift = 20, .size = 4 },
 	},
@@ -164,37 +164,37 @@ void __init exynos4210_register_clocks(void)
 {
 	int ptr;
 
-	clk_mout_mpll.reg_src.reg = EXYNOS4_CLKSRC_CPU;
-	clk_mout_mpll.reg_src.shift = 8;
-	clk_mout_mpll.reg_src.size = 1;
+	exynos4_clk_mout_mpll.reg_src.reg = EXYNOS4_CLKSRC_CPU;
+	exynos4_clk_mout_mpll.reg_src.shift = 8;
+	exynos4_clk_mout_mpll.reg_src.size = 1;
 
-	clk_aclk_200.sources = &clkset_aclk;
-	clk_aclk_200.reg_src.reg = EXYNOS4_CLKSRC_TOP0;
-	clk_aclk_200.reg_src.shift = 12;
-	clk_aclk_200.reg_src.size = 1;
-	clk_aclk_200.reg_div.reg = EXYNOS4_CLKDIV_TOP;
-	clk_aclk_200.reg_div.shift = 0;
-	clk_aclk_200.reg_div.size = 3;
+	exynos4_clk_aclk_200.sources = &exynos4_clkset_aclk;
+	exynos4_clk_aclk_200.reg_src.reg = EXYNOS4_CLKSRC_TOP0;
+	exynos4_clk_aclk_200.reg_src.shift = 12;
+	exynos4_clk_aclk_200.reg_src.size = 1;
+	exynos4_clk_aclk_200.reg_div.reg = EXYNOS4_CLKDIV_TOP;
+	exynos4_clk_aclk_200.reg_div.shift = 0;
+	exynos4_clk_aclk_200.reg_div.size = 3;
 
-	clk_fimg2d.enable = exynos4_clk_ip_image_ctrl;
-	clk_fimg2d.ctrlbit = (1 << 0);
+	exynos4_clk_fimg2d.enable = exynos4_clk_ip_image_ctrl;
+	exynos4_clk_fimg2d.ctrlbit = (1 << 0);
 
-	clk_mout_g2d0.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
-	clk_mout_g2d0.reg_src.shift = 0;
-	clk_mout_g2d0.reg_src.size = 1;
+	exynos4_clk_mout_g2d0.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
+	exynos4_clk_mout_g2d0.reg_src.shift = 0;
+	exynos4_clk_mout_g2d0.reg_src.size = 1;
 
-	clk_mout_g2d1.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
-	clk_mout_g2d1.reg_src.shift = 4;
-	clk_mout_g2d1.reg_src.size = 1;
+	exynos4_clk_mout_g2d1.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
+	exynos4_clk_mout_g2d1.reg_src.shift = 4;
+	exynos4_clk_mout_g2d1.reg_src.size = 1;
 
-	clk_sclk_fimg2d.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
-	clk_sclk_fimg2d.reg_src.shift = 8;
-	clk_sclk_fimg2d.reg_src.size = 1;
-	clk_sclk_fimg2d.reg_div.reg = EXYNOS4_CLKDIV_IMAGE;
-	clk_sclk_fimg2d.reg_div.shift = 0;
-	clk_sclk_fimg2d.reg_div.size = 4;
+	exynos4_clk_sclk_fimg2d.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
+	exynos4_clk_sclk_fimg2d.reg_src.shift = 8;
+	exynos4_clk_sclk_fimg2d.reg_src.size = 1;
+	exynos4_clk_sclk_fimg2d.reg_div.reg = EXYNOS4_CLKDIV_IMAGE;
+	exynos4_clk_sclk_fimg2d.reg_div.shift = 0;
+	exynos4_clk_sclk_fimg2d.reg_div.size = 4;
 
-	init_dmaclocks[2].parent = &init_dmaclocks[1];
+	exynos4_init_dmaclocks[2].parent = &exynos4_init_dmaclocks[1];
 
 	exynos4_vpll_ops.get_rate = exynos4210_vpll_get_rate;
 	exynos4_vpll_ops.set_rate = exynos4210_vpll_set_rate;

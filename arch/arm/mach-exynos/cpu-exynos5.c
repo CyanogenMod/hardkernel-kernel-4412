@@ -100,6 +100,10 @@ void __init exynos5_init_clocks(int xtal)
 	printk(KERN_DEBUG "%s: initializing clocks\n", __func__);
 
 	s3c24xx_register_baseclocks(xtal);
+
+	s5p_register_clocks(xtal);
+	exynos5_register_clocks();
+	exynos5_setup_clocks();
 }
 
 void __init exynos5_init_irq(void)
