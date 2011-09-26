@@ -96,24 +96,24 @@ static int __init iem_clock_init(void)
 void __init iem_clock_set(void)
 {
 	/* APLL_CON0 level register */
-	__raw_writel(0x80FA0601, S5P_APLL_CON0L8);
-	__raw_writel(0x80C80601, S5P_APLL_CON0L7);
-	__raw_writel(0x80C80602, S5P_APLL_CON0L6);
-	__raw_writel(0x80C80604, S5P_APLL_CON0L5);
-	__raw_writel(0x80C80601, S5P_APLL_CON0L4);
-	__raw_writel(0x80C80601, S5P_APLL_CON0L3);
-	__raw_writel(0x80C80601, S5P_APLL_CON0L2);
-	__raw_writel(0x80C80601, S5P_APLL_CON0L1);
+	__raw_writel(0x80FA0601, EXYNOS4_APLL_CON0L8);
+	__raw_writel(0x80C80601, EXYNOS4_APLL_CON0L7);
+	__raw_writel(0x80C80602, EXYNOS4_APLL_CON0L6);
+	__raw_writel(0x80C80604, EXYNOS4_APLL_CON0L5);
+	__raw_writel(0x80C80601, EXYNOS4_APLL_CON0L4);
+	__raw_writel(0x80C80601, EXYNOS4_APLL_CON0L3);
+	__raw_writel(0x80C80601, EXYNOS4_APLL_CON0L2);
+	__raw_writel(0x80C80601, EXYNOS4_APLL_CON0L1);
 
 	/* IEM Divider register */
-	__raw_writel(0x00500000, S5P_CLKDIV_IEM_L8);
-	__raw_writel(0x00500000, S5P_CLKDIV_IEM_L7);
-	__raw_writel(0x00500000, S5P_CLKDIV_IEM_L6);
-	__raw_writel(0x00500000, S5P_CLKDIV_IEM_L5);
-	__raw_writel(0x00500000, S5P_CLKDIV_IEM_L4);
-	__raw_writel(0x00500000, S5P_CLKDIV_IEM_L3);
-	__raw_writel(0x00500000, S5P_CLKDIV_IEM_L2);
-	__raw_writel(0x00500000, S5P_CLKDIV_IEM_L1);
+	__raw_writel(0x00500000, EXYNOS4_CLKDIV_IEM_L8);
+	__raw_writel(0x00500000, EXYNOS4_CLKDIV_IEM_L7);
+	__raw_writel(0x00500000, EXYNOS4_CLKDIV_IEM_L6);
+	__raw_writel(0x00500000, EXYNOS4_CLKDIV_IEM_L5);
+	__raw_writel(0x00500000, EXYNOS4_CLKDIV_IEM_L4);
+	__raw_writel(0x00500000, EXYNOS4_CLKDIV_IEM_L3);
+	__raw_writel(0x00500000, EXYNOS4_CLKDIV_IEM_L2);
+	__raw_writel(0x00500000, EXYNOS4_CLKDIV_IEM_L1);
 }
 
 #define IDS_OFFSET			24

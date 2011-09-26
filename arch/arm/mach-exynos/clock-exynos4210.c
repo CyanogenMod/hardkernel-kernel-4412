@@ -38,14 +38,14 @@ static struct clksrc_clk *sysclks[] = {
 #ifdef CONFIG_PM
 static struct sleep_save exynos4210_clock_save[] = {
 	/* CMU side */
-	SAVE_ITEM(S5P_CLKSRC_IMAGE),
-	SAVE_ITEM(S5P_CLKSRC_LCD1),
-	SAVE_ITEM(S5P_CLKDIV_IMAGE),
-	SAVE_ITEM(S5P_CLKDIV_LCD1),
-	SAVE_ITEM(S5P_CLKSRC_MASK_LCD1),
-	SAVE_ITEM(S5P_CLKGATE_IP_IMAGE_4210),
-	SAVE_ITEM(S5P_CLKGATE_IP_LCD1),
-	SAVE_ITEM(S5P_CLKGATE_IP_PERIR_4210),
+	SAVE_ITEM(EXYNOS4_CLKSRC_IMAGE),
+	SAVE_ITEM(EXYNOS4_CLKSRC_LCD1),
+	SAVE_ITEM(EXYNOS4_CLKDIV_IMAGE),
+	SAVE_ITEM(EXYNOS4_CLKDIV_LCD1),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_LCD1),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_IMAGE_4210),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_LCD1),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_PERIR_4210),
 };
 #endif
 
@@ -71,8 +71,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 24),
 		},
 		.sources = &clkset_mout_corebus,
-		.reg_src = { .reg = S5P_CLKSRC_FSYS, .shift = 24, .size = 1 },
-		.reg_div = { .reg = S5P_CLKDIV_FSYS0, .shift = 20, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_FSYS, .shift = 24, .size = 1 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS0, .shift = 20, .size = 4 },
 	},
 };
 
@@ -100,13 +100,13 @@ static int exynos4210_vpll_set_rate(struct clk *clk, unsigned long rate)
 	if (clk->rate == rate)
 		return 0;
 
-	vpll_con0 = __raw_readl(S5P_VPLL_CON0);
+	vpll_con0 = __raw_readl(EXYNOS4_VPLL_CON0);
 	vpll_con0 &= ~(0x1 << 27 |					\
 			PLL90XX_MDIV_MASK << PLL90XX_MDIV_SHIFT |	\
 			PLL90XX_PDIV_MASK << PLL90XX_PDIV_SHIFT |	\
 			PLL90XX_SDIV_MASK << PLL90XX_SDIV_SHIFT);
 
-	vpll_con1 = __raw_readl(S5P_VPLL_CON1);
+	vpll_con1 = __raw_readl(EXYNOS4_VPLL_CON1);
 	vpll_con1 &= ~(0x1f << 24 |	\
 			0x3f << 16 |	\
 			0xfff << 0);
@@ -130,8 +130,8 @@ static int exynos4210_vpll_set_rate(struct clk *clk, unsigned long rate)
 		return -EINVAL;
 	}
 
-	__raw_writel(vpll_con0, S5P_VPLL_CON0);
-	__raw_writel(vpll_con1, S5P_VPLL_CON1);
+	__raw_writel(vpll_con0, EXYNOS4_VPLL_CON0);
+	__raw_writel(vpll_con1, EXYNOS4_VPLL_CON1);
 
 	clk->rate = rate;
 
@@ -164,33 +164,33 @@ void __init exynos4210_register_clocks(void)
 {
 	int ptr;
 
-	clk_mout_mpll.reg_src.reg = S5P_CLKSRC_CPU;
+	clk_mout_mpll.reg_src.reg = EXYNOS4_CLKSRC_CPU;
 	clk_mout_mpll.reg_src.shift = 8;
 	clk_mout_mpll.reg_src.size = 1;
 
 	clk_aclk_200.sources = &clkset_aclk;
-	clk_aclk_200.reg_src.reg = S5P_CLKSRC_TOP0;
+	clk_aclk_200.reg_src.reg = EXYNOS4_CLKSRC_TOP0;
 	clk_aclk_200.reg_src.shift = 12;
 	clk_aclk_200.reg_src.size = 1;
-	clk_aclk_200.reg_div.reg = S5P_CLKDIV_TOP;
+	clk_aclk_200.reg_div.reg = EXYNOS4_CLKDIV_TOP;
 	clk_aclk_200.reg_div.shift = 0;
 	clk_aclk_200.reg_div.size = 3;
 
 	clk_fimg2d.enable = exynos4_clk_ip_image_ctrl;
 	clk_fimg2d.ctrlbit = (1 << 0);
 
-	clk_mout_g2d0.reg_src.reg = S5P_CLKSRC_IMAGE;
+	clk_mout_g2d0.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
 	clk_mout_g2d0.reg_src.shift = 0;
 	clk_mout_g2d0.reg_src.size = 1;
 
-	clk_mout_g2d1.reg_src.reg = S5P_CLKSRC_IMAGE;
+	clk_mout_g2d1.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
 	clk_mout_g2d1.reg_src.shift = 4;
 	clk_mout_g2d1.reg_src.size = 1;
 
-	clk_sclk_fimg2d.reg_src.reg = S5P_CLKSRC_IMAGE;
+	clk_sclk_fimg2d.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
 	clk_sclk_fimg2d.reg_src.shift = 8;
 	clk_sclk_fimg2d.reg_src.size = 1;
-	clk_sclk_fimg2d.reg_div.reg = S5P_CLKDIV_IMAGE;
+	clk_sclk_fimg2d.reg_div.reg = EXYNOS4_CLKDIV_IMAGE;
 	clk_sclk_fimg2d.reg_div.shift = 0;
 	clk_sclk_fimg2d.reg_div.size = 4;
 

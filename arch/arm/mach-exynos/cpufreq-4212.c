@@ -256,14 +256,14 @@ static void set_clkdiv(unsigned int div_index)
 
 	tmp = exynos4212_clkdiv_table[div_index].clkdiv;
 
-	__raw_writel(tmp, S5P_CLKDIV_CPU);
+	__raw_writel(tmp, EXYNOS4_CLKDIV_CPU);
 
 	do {
-		tmp = __raw_readl(S5P_CLKDIV_STATCPU);
+		tmp = __raw_readl(EXYNOS4_CLKDIV_STATCPU);
 	} while (tmp & 0x1111111);
 
 #ifdef PRINT_DIV_VAL
-	tmp = __raw_readl(S5P_CLKDIV_CPU);
+	tmp = __raw_readl(EXYNOS4_CLKDIV_CPU);
 	pr_info("DIV_CPU0[0x%x]\n", tmp);
 
 #endif
@@ -271,17 +271,17 @@ static void set_clkdiv(unsigned int div_index)
 	/* Change Divider - CPU1 */
 	tmp = exynos4212_clkdiv_table[div_index].clkdiv1;
 
-	__raw_writel(tmp, S5P_CLKDIV_CPU1);
+	__raw_writel(tmp, EXYNOS4_CLKDIV_CPU1);
 	if (cpu_is_exynos4212())
 		stat_cpu1 = 0x11;
 	else
 		stat_cpu1 = 0x111;
 
 	do {
-		tmp = __raw_readl(S5P_CLKDIV_STATCPU1);
+		tmp = __raw_readl(EXYNOS4_CLKDIV_STATCPU1);
 	} while (tmp & stat_cpu1);
 #ifdef PRINT_DIV_VAL
-	tmp = __raw_readl(S5P_CLKDIV_CPU1);
+	tmp = __raw_readl(EXYNOS4_CLKDIV_CPU1);
 	pr_info("DIV_CPU1[0x%x]\n", tmp);
 #endif
 }
@@ -298,24 +298,24 @@ static void set_apll(unsigned int new_index,
 				mout_mpll->name, moutcore->name);
 
 	do {
-		tmp = (__raw_readl(S5P_CLKMUX_STATCPU)
-			>> S5P_CLKSRC_CPU_MUXCORE_SHIFT);
+		tmp = (__raw_readl(EXYNOS4_CLKMUX_STATCPU)
+			>> EXYNOS4_CLKSRC_CPU_MUXCORE_SHIFT);
 		tmp &= 0x7;
 	} while (tmp != 0x2);
 
 	/* 2. Set APLL Lock time */
-	__raw_writel(S5P_APLL_LOCKTIME, S5P_APLL_LOCK);
+	__raw_writel(EXYNOS4_APLL_LOCKTIME, EXYNOS4_APLL_LOCK);
 
 	/* 3. Change PLL PMS values */
-	tmp = __raw_readl(S5P_APLL_CON0);
+	tmp = __raw_readl(EXYNOS4_APLL_CON0);
 	tmp &= ~((0x3ff << 16) | (0x3f << 8) | (0x7 << 0));
 	tmp |= exynos4_apll_pms_table[new_index];
-	__raw_writel(tmp, S5P_APLL_CON0);
+	__raw_writel(tmp, EXYNOS4_APLL_CON0);
 
 	/* 4. wait_lock_time */
 	do {
-		tmp = __raw_readl(S5P_APLL_CON0);
-	} while (!(tmp & (0x1 << S5P_APLLCON0_LOCKED_SHIFT)));
+		tmp = __raw_readl(EXYNOS4_APLL_CON0);
+	} while (!(tmp & (0x1 << EXYNOS4_APLLCON0_LOCKED_SHIFT)));
 
 	/* 5. MUX_CORE_SEL = APLL */
 	if (clk_set_parent(moutcore, mout_apll))
@@ -323,9 +323,9 @@ static void set_apll(unsigned int new_index,
 				mout_apll->name, moutcore->name);
 
 	do {
-		tmp = __raw_readl(S5P_CLKMUX_STATCPU);
-		tmp &= S5P_CLKMUX_STATCPU_MUXCORE_MASK;
-	} while (tmp != (0x1 << S5P_CLKSRC_CPU_MUXCORE_SHIFT));
+		tmp = __raw_readl(EXYNOS4_CLKMUX_STATCPU);
+		tmp &= EXYNOS4_CLKMUX_STATCPU_MUXCORE_MASK;
+	} while (tmp != (0x1 << EXYNOS4_CLKSRC_CPU_MUXCORE_SHIFT));
 
 }
 
@@ -347,10 +347,10 @@ static void exynos4212_set_frequency(unsigned int old_index,
 			/* 1. Change the system clock divider values */
 			set_clkdiv(new_index);
 			/* 2. Change just s value in apll m,p,s value */
-			tmp = __raw_readl(S5P_APLL_CON0);
+			tmp = __raw_readl(EXYNOS4_APLL_CON0);
 			tmp &= ~(0x7 << 0);
 			tmp |= (exynos4_apll_pms_table[new_index] & 0x7);
-			__raw_writel(tmp, S5P_APLL_CON0);
+			__raw_writel(tmp, EXYNOS4_APLL_CON0);
 
 		} else {
 			/* Clock Configuration Procedure */
@@ -362,10 +362,10 @@ static void exynos4212_set_frequency(unsigned int old_index,
 	} else if (old_index < new_index) {
 		if (!exynos4212_pms_change(old_index, new_index)) {
 			/* 1. Change just s value in apll m,p,s value */
-			tmp = __raw_readl(S5P_APLL_CON0);
+			tmp = __raw_readl(EXYNOS4_APLL_CON0);
 			tmp &= ~(0x7 << 0);
 			tmp |= (exynos4_apll_pms_table[new_index] & 0x7);
-			__raw_writel(tmp, S5P_APLL_CON0);
+			__raw_writel(tmp, EXYNOS4_APLL_CON0);
 			/* 2. Change the system clock divider values */
 			set_clkdiv(new_index);
 		} else {
@@ -384,7 +384,7 @@ static void __init set_volt_table(void)
 	bool for_1500 = false, for_1000 = false;
 	unsigned int i;
 #if 0
-	tmp = __raw_readl(S5P_INFORM2);
+	tmp = __raw_readl(EXYNOS4_INFORM2);
 
 	asv_group = (tmp & 0xF);
 
@@ -472,51 +472,51 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 
 		exynos4212_clkdiv_table[i].index = i;
 
-		tmp = __raw_readl(S5P_CLKDIV_CPU);
+		tmp = __raw_readl(EXYNOS4_CLKDIV_CPU);
 
-		tmp &= ~(S5P_CLKDIV_CPU0_CORE_MASK |
-			S5P_CLKDIV_CPU0_COREM0_MASK |
-			S5P_CLKDIV_CPU0_COREM1_MASK |
-			S5P_CLKDIV_CPU0_PERIPH_MASK |
-			S5P_CLKDIV_CPU0_ATB_MASK |
-			S5P_CLKDIV_CPU0_PCLKDBG_MASK |
-			S5P_CLKDIV_CPU0_APLL_MASK);
+		tmp &= ~(EXYNOS4_CLKDIV_CPU0_CORE_MASK |
+			EXYNOS4_CLKDIV_CPU0_COREM0_MASK |
+			EXYNOS4_CLKDIV_CPU0_COREM1_MASK |
+			EXYNOS4_CLKDIV_CPU0_PERIPH_MASK |
+			EXYNOS4_CLKDIV_CPU0_ATB_MASK |
+			EXYNOS4_CLKDIV_CPU0_PCLKDBG_MASK |
+			EXYNOS4_CLKDIV_CPU0_APLL_MASK);
 
 		if (cpu_is_exynos4212()) {
-			tmp |= ((clkdiv_cpu0_4212[i][0] << S5P_CLKDIV_CPU0_CORE_SHIFT) |
-				(clkdiv_cpu0_4212[i][1] << S5P_CLKDIV_CPU0_COREM0_SHIFT) |
-				(clkdiv_cpu0_4212[i][2] << S5P_CLKDIV_CPU0_COREM1_SHIFT) |
-				(clkdiv_cpu0_4212[i][3] << S5P_CLKDIV_CPU0_PERIPH_SHIFT) |
-				(clkdiv_cpu0_4212[i][4] << S5P_CLKDIV_CPU0_ATB_SHIFT) |
-				(clkdiv_cpu0_4212[i][5] << S5P_CLKDIV_CPU0_PCLKDBG_SHIFT) |
-				(clkdiv_cpu0_4212[i][6] << S5P_CLKDIV_CPU0_APLL_SHIFT));
+			tmp |= ((clkdiv_cpu0_4212[i][0] << EXYNOS4_CLKDIV_CPU0_CORE_SHIFT) |
+				(clkdiv_cpu0_4212[i][1] << EXYNOS4_CLKDIV_CPU0_COREM0_SHIFT) |
+				(clkdiv_cpu0_4212[i][2] << EXYNOS4_CLKDIV_CPU0_COREM1_SHIFT) |
+				(clkdiv_cpu0_4212[i][3] << EXYNOS4_CLKDIV_CPU0_PERIPH_SHIFT) |
+				(clkdiv_cpu0_4212[i][4] << EXYNOS4_CLKDIV_CPU0_ATB_SHIFT) |
+				(clkdiv_cpu0_4212[i][5] << EXYNOS4_CLKDIV_CPU0_PCLKDBG_SHIFT) |
+				(clkdiv_cpu0_4212[i][6] << EXYNOS4_CLKDIV_CPU0_APLL_SHIFT));
 		} else {
-			tmp |= ((clkdiv_cpu0_4412[i][0] << S5P_CLKDIV_CPU0_CORE_SHIFT) |
-				(clkdiv_cpu0_4412[i][1] << S5P_CLKDIV_CPU0_COREM0_SHIFT) |
-				(clkdiv_cpu0_4412[i][2] << S5P_CLKDIV_CPU0_COREM1_SHIFT) |
-				(clkdiv_cpu0_4412[i][3] << S5P_CLKDIV_CPU0_PERIPH_SHIFT) |
-				(clkdiv_cpu0_4412[i][4] << S5P_CLKDIV_CPU0_ATB_SHIFT) |
-				(clkdiv_cpu0_4412[i][5] << S5P_CLKDIV_CPU0_PCLKDBG_SHIFT) |
-				(clkdiv_cpu0_4412[i][6] << S5P_CLKDIV_CPU0_APLL_SHIFT));
+			tmp |= ((clkdiv_cpu0_4412[i][0] << EXYNOS4_CLKDIV_CPU0_CORE_SHIFT) |
+				(clkdiv_cpu0_4412[i][1] << EXYNOS4_CLKDIV_CPU0_COREM0_SHIFT) |
+				(clkdiv_cpu0_4412[i][2] << EXYNOS4_CLKDIV_CPU0_COREM1_SHIFT) |
+				(clkdiv_cpu0_4412[i][3] << EXYNOS4_CLKDIV_CPU0_PERIPH_SHIFT) |
+				(clkdiv_cpu0_4412[i][4] << EXYNOS4_CLKDIV_CPU0_ATB_SHIFT) |
+				(clkdiv_cpu0_4412[i][5] << EXYNOS4_CLKDIV_CPU0_PCLKDBG_SHIFT) |
+				(clkdiv_cpu0_4412[i][6] << EXYNOS4_CLKDIV_CPU0_APLL_SHIFT));
 
 		}
 
 		exynos4212_clkdiv_table[i].clkdiv = tmp;
 
-		tmp = __raw_readl(S5P_CLKDIV_CPU1);
+		tmp = __raw_readl(EXYNOS4_CLKDIV_CPU1);
 
 		if (cpu_is_exynos4212()) {
-			tmp &= ~(S5P_CLKDIV_CPU1_COPY_MASK |
-				S5P_CLKDIV_CPU1_HPM_MASK);
-			tmp |= ((clkdiv_cpu1_4212[i][0] << S5P_CLKDIV_CPU1_COPY_SHIFT) |
-				(clkdiv_cpu1_4212[i][1] << S5P_CLKDIV_CPU1_HPM_SHIFT));
+			tmp &= ~(EXYNOS4_CLKDIV_CPU1_COPY_MASK |
+				EXYNOS4_CLKDIV_CPU1_HPM_MASK);
+			tmp |= ((clkdiv_cpu1_4212[i][0] << EXYNOS4_CLKDIV_CPU1_COPY_SHIFT) |
+				(clkdiv_cpu1_4212[i][1] << EXYNOS4_CLKDIV_CPU1_HPM_SHIFT));
 		} else {
-			tmp &= ~(S5P_CLKDIV_CPU1_COPY_MASK |
-				S5P_CLKDIV_CPU1_HPM_MASK |
-				S5P_CLKDIV_CPU1_CORES_MASK);
-			tmp |= ((clkdiv_cpu1_4412[i][0] << S5P_CLKDIV_CPU1_COPY_SHIFT) |
-				(clkdiv_cpu1_4412[i][1] << S5P_CLKDIV_CPU1_HPM_SHIFT) |
-				(clkdiv_cpu1_4412[i][2] << S5P_CLKDIV_CPU1_CORES_SHIFT));
+			tmp &= ~(EXYNOS4_CLKDIV_CPU1_COPY_MASK |
+				EXYNOS4_CLKDIV_CPU1_HPM_MASK |
+				EXYNOS4_CLKDIV_CPU1_CORES_MASK);
+			tmp |= ((clkdiv_cpu1_4412[i][0] << EXYNOS4_CLKDIV_CPU1_COPY_SHIFT) |
+				(clkdiv_cpu1_4412[i][1] << EXYNOS4_CLKDIV_CPU1_HPM_SHIFT) |
+				(clkdiv_cpu1_4412[i][2] << EXYNOS4_CLKDIV_CPU1_CORES_SHIFT));
 		}
 		exynos4212_clkdiv_table[i].clkdiv1 = tmp;
 	}
@@ -533,15 +533,15 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 	info->need_apll_change = exynos4212_pms_change;
 
 #ifdef ENABLE_CLKOUT
-	tmp = __raw_readl(S5P_CLKOUT_CMU_CPU);
+	tmp = __raw_readl(EXYNOS4_CLKOUT_CMU_CPU);
 	tmp &= ~0x1f;
 	tmp |= 0x304;
-	__raw_writel(tmp, S5P_CLKOUT_CMU_CPU);
+	__raw_writel(tmp, EXYNOS4_CLKOUT_CMU_CPU);
 
-	tmp = __raw_readl(S5P_PMU_DEBUG);
+	tmp = __raw_readl(EXYNOS4_PMU_DEBUG);
 	tmp &= ~0xf00;
 	tmp |= 0x400;
-	__raw_writel(tmp, S5P_PMU_DEBUG);
+	__raw_writel(tmp, EXYNOS4_PMU_DEBUG);
 
 #endif
 

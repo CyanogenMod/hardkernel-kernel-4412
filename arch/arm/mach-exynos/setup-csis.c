@@ -3,7 +3,7 @@
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *	http://www.samsung.com/
  *
- * S5P - Base MIPI-CSI2 gpio configuration
+ * EXYNOS4 - Base MIPI-CSI2 gpio configuration
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -36,20 +36,20 @@ void s3c_csis0_cfg_phy_global(int on)
 
 	if (on) {
 		/* MIPI D-PHY Power Enable */
-		cfg = __raw_readl(S5P_MIPI_CONTROL0);
-		cfg |= S5P_MIPI_DPHY_S_RESETN;
-		__raw_writel(cfg, S5P_MIPI_CONTROL0);
+		cfg = __raw_readl(EXYNOS4_MIPI_CONTROL0);
+		cfg |= EXYNOS4_MIPI_DPHY_S_RESETN;
+		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL0);
 
-		cfg = __raw_readl(S5P_MIPI_CONTROL0);
-		cfg |= S5P_MIPI_DPHY_EN;
-		__raw_writel(cfg, S5P_MIPI_CONTROL0);
+		cfg = __raw_readl(EXYNOS4_MIPI_CONTROL0);
+		cfg |= EXYNOS4_MIPI_DPHY_EN;
+		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL0);
 
 		printk(KERN_INFO "csis0 on\n");
 	} else {
 		/* MIPI Power Disable */
-		cfg = __raw_readl(S5P_MIPI_CONTROL0);
-		cfg &= ~S5P_MIPI_DPHY_EN;
-		__raw_writel(cfg, S5P_MIPI_CONTROL0);
+		cfg = __raw_readl(EXYNOS4_MIPI_CONTROL0);
+		cfg &= ~EXYNOS4_MIPI_DPHY_EN;
+		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL0);
 
 		printk(KERN_INFO "csis0 off\n");
 	}
@@ -60,20 +60,20 @@ void s3c_csis1_cfg_phy_global(int on)
 
 	if (on) {
 		/* MIPI D-PHY Power Enable */
-		cfg = __raw_readl(S5P_MIPI_CONTROL1);
-		cfg |= S5P_MIPI_DPHY_S_RESETN;
-		__raw_writel(cfg, S5P_MIPI_CONTROL1);
+		cfg = __raw_readl(EXYNOS4_MIPI_CONTROL1);
+		cfg |= EXYNOS4_MIPI_DPHY_S_RESETN;
+		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL1);
 
-		cfg = __raw_readl(S5P_MIPI_CONTROL1);
-		cfg |= S5P_MIPI_DPHY_EN;
-		__raw_writel(cfg, S5P_MIPI_CONTROL1);
+		cfg = __raw_readl(EXYNOS4_MIPI_CONTROL1);
+		cfg |= EXYNOS4_MIPI_DPHY_EN;
+		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL1);
 
 		printk(KERN_INFO "csis1 on\n");
 	} else {
 		/* MIPI Power Disable */
-		cfg = __raw_readl(S5P_MIPI_CONTROL1);
-		cfg &= ~S5P_MIPI_DPHY_EN;
-		__raw_writel(cfg, S5P_MIPI_CONTROL1);
+		cfg = __raw_readl(EXYNOS4_MIPI_CONTROL1);
+		cfg &= ~EXYNOS4_MIPI_DPHY_EN;
+		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL1);
 
 		printk(KERN_INFO "csis1 off\n");
 	}

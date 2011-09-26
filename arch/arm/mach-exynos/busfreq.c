@@ -160,47 +160,47 @@ static void exynos4_set_busfreq(unsigned int div_index)
 	/* Change Divider - DMC0 */
 	tmp = exynos4_busfreq_table[div_index].clk_dmcdiv;
 
-	__raw_writel(tmp, S5P_CLKDIV_DMC0);
+	__raw_writel(tmp, EXYNOS4_CLKDIV_DMC0);
 
 	do {
-		tmp = __raw_readl(S5P_CLKDIV_STAT_DMC0);
+		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_DMC0);
 	} while (tmp & 0x11111111);
 
 	/* Change Divider - TOP */
 	tmp = exynos4_busfreq_table[div_index].clk_topdiv;
 
-	__raw_writel(tmp, S5P_CLKDIV_TOP);
+	__raw_writel(tmp, EXYNOS4_CLKDIV_TOP);
 
 	do {
-		tmp = __raw_readl(S5P_CLKDIV_STAT_TOP);
+		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_TOP);
 	} while (tmp & 0x11111);
 
 	/* Change Divider - LEFTBUS */
-	tmp = __raw_readl(S5P_CLKDIV_LEFTBUS);
+	tmp = __raw_readl(EXYNOS4_CLKDIV_LEFTBUS);
 
-	tmp &= ~(S5P_CLKDIV_BUS_GDLR_MASK | S5P_CLKDIV_BUS_GPLR_MASK);
+	tmp &= ~(EXYNOS4_CLKDIV_BUS_GDLR_MASK | EXYNOS4_CLKDIV_BUS_GPLR_MASK);
 
-	tmp |= ((clkdiv_lr_bus[div_index][0] << S5P_CLKDIV_BUS_GDLR_SHIFT) |
-		(clkdiv_lr_bus[div_index][1] << S5P_CLKDIV_BUS_GPLR_SHIFT));
+	tmp |= ((clkdiv_lr_bus[div_index][0] << EXYNOS4_CLKDIV_BUS_GDLR_SHIFT) |
+		(clkdiv_lr_bus[div_index][1] << EXYNOS4_CLKDIV_BUS_GPLR_SHIFT));
 
-	__raw_writel(tmp, S5P_CLKDIV_LEFTBUS);
+	__raw_writel(tmp, EXYNOS4_CLKDIV_LEFTBUS);
 
 	do {
-		tmp = __raw_readl(S5P_CLKDIV_STAT_LEFTBUS);
+		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_LEFTBUS);
 	} while (tmp & 0x11);
 
 	/* Change Divider - RIGHTBUS */
-	tmp = __raw_readl(S5P_CLKDIV_RIGHTBUS);
+	tmp = __raw_readl(EXYNOS4_CLKDIV_RIGHTBUS);
 
-	tmp &= ~(S5P_CLKDIV_BUS_GDLR_MASK | S5P_CLKDIV_BUS_GPLR_MASK);
+	tmp &= ~(EXYNOS4_CLKDIV_BUS_GDLR_MASK | EXYNOS4_CLKDIV_BUS_GPLR_MASK);
 
-	tmp |= ((clkdiv_lr_bus[div_index][0] << S5P_CLKDIV_BUS_GDLR_SHIFT) |
-		(clkdiv_lr_bus[div_index][1] << S5P_CLKDIV_BUS_GPLR_SHIFT));
+	tmp |= ((clkdiv_lr_bus[div_index][0] << EXYNOS4_CLKDIV_BUS_GDLR_SHIFT) |
+		(clkdiv_lr_bus[div_index][1] << EXYNOS4_CLKDIV_BUS_GPLR_SHIFT));
 
-	__raw_writel(tmp, S5P_CLKDIV_RIGHTBUS);
+	__raw_writel(tmp, EXYNOS4_CLKDIV_RIGHTBUS);
 
 	do {
-		tmp = __raw_readl(S5P_CLKDIV_STAT_RIGHTBUS);
+		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_RIGHTBUS);
 	} while (tmp & 0x11);
 
 }
@@ -581,44 +581,44 @@ static int __init busfreq_mon_init(void)
 	p_idx = LV_0;
 	up_threshold = UP_THRESHOLD_DEFAULT;
 
-	tmp = __raw_readl(S5P_CLKDIV_DMC0);
+	tmp = __raw_readl(EXYNOS4_CLKDIV_DMC0);
 
 	for (i = 0; i <  LV_END; i++) {
-		tmp &= ~(S5P_CLKDIV_DMC0_ACP_MASK |
-			S5P_CLKDIV_DMC0_ACPPCLK_MASK |
-			S5P_CLKDIV_DMC0_DPHY_MASK |
-			S5P_CLKDIV_DMC0_DMC_MASK |
-			S5P_CLKDIV_DMC0_DMCD_MASK |
-			S5P_CLKDIV_DMC0_DMCP_MASK |
-			S5P_CLKDIV_DMC0_COPY2_MASK |
-			S5P_CLKDIV_DMC0_CORETI_MASK);
+		tmp &= ~(EXYNOS4_CLKDIV_DMC0_ACP_MASK |
+			EXYNOS4_CLKDIV_DMC0_ACPPCLK_MASK |
+			EXYNOS4_CLKDIV_DMC0_DPHY_MASK |
+			EXYNOS4_CLKDIV_DMC0_DMC_MASK |
+			EXYNOS4_CLKDIV_DMC0_DMCD_MASK |
+			EXYNOS4_CLKDIV_DMC0_DMCP_MASK |
+			EXYNOS4_CLKDIV_DMC0_COPY2_MASK |
+			EXYNOS4_CLKDIV_DMC0_CORETI_MASK);
 
-		tmp |= ((clkdiv_dmc0[i][0] << S5P_CLKDIV_DMC0_ACP_SHIFT) |
-			(clkdiv_dmc0[i][1] << S5P_CLKDIV_DMC0_ACPPCLK_SHIFT) |
-			(clkdiv_dmc0[i][2] << S5P_CLKDIV_DMC0_DPHY_SHIFT) |
-			(clkdiv_dmc0[i][3] << S5P_CLKDIV_DMC0_DMC_SHIFT) |
-			(clkdiv_dmc0[i][4] << S5P_CLKDIV_DMC0_DMCD_SHIFT) |
-			(clkdiv_dmc0[i][5] << S5P_CLKDIV_DMC0_DMCP_SHIFT) |
-			(clkdiv_dmc0[i][6] << S5P_CLKDIV_DMC0_COPY2_SHIFT) |
-			(clkdiv_dmc0[i][7] << S5P_CLKDIV_DMC0_CORETI_SHIFT));
+		tmp |= ((clkdiv_dmc0[i][0] << EXYNOS4_CLKDIV_DMC0_ACP_SHIFT) |
+			(clkdiv_dmc0[i][1] << EXYNOS4_CLKDIV_DMC0_ACPPCLK_SHIFT) |
+			(clkdiv_dmc0[i][2] << EXYNOS4_CLKDIV_DMC0_DPHY_SHIFT) |
+			(clkdiv_dmc0[i][3] << EXYNOS4_CLKDIV_DMC0_DMC_SHIFT) |
+			(clkdiv_dmc0[i][4] << EXYNOS4_CLKDIV_DMC0_DMCD_SHIFT) |
+			(clkdiv_dmc0[i][5] << EXYNOS4_CLKDIV_DMC0_DMCP_SHIFT) |
+			(clkdiv_dmc0[i][6] << EXYNOS4_CLKDIV_DMC0_COPY2_SHIFT) |
+			(clkdiv_dmc0[i][7] << EXYNOS4_CLKDIV_DMC0_CORETI_SHIFT));
 
 		exynos4_busfreq_table[i].clk_dmcdiv = tmp;
 	}
 
-	tmp = __raw_readl(S5P_CLKDIV_TOP);
+	tmp = __raw_readl(EXYNOS4_CLKDIV_TOP);
 
 	for (i = 0; i <  LV_END; i++) {
-		tmp &= ~(S5P_CLKDIV_TOP_ACLK200_MASK |
-			S5P_CLKDIV_TOP_ACLK100_MASK |
-			S5P_CLKDIV_TOP_ACLK160_MASK |
-			S5P_CLKDIV_TOP_ACLK133_MASK |
-			S5P_CLKDIV_TOP_ONENAND_MASK);
+		tmp &= ~(EXYNOS4_CLKDIV_TOP_ACLK200_MASK |
+			EXYNOS4_CLKDIV_TOP_ACLK100_MASK |
+			EXYNOS4_CLKDIV_TOP_ACLK160_MASK |
+			EXYNOS4_CLKDIV_TOP_ACLK133_MASK |
+			EXYNOS4_CLKDIV_TOP_ONENAND_MASK);
 
-		tmp |= ((clkdiv_top[i][0] << S5P_CLKDIV_TOP_ACLK200_SHIFT) |
-			(clkdiv_top[i][1] << S5P_CLKDIV_TOP_ACLK100_SHIFT) |
-			(clkdiv_top[i][2] << S5P_CLKDIV_TOP_ACLK160_SHIFT) |
-			(clkdiv_top[i][3] << S5P_CLKDIV_TOP_ACLK133_SHIFT) |
-			(clkdiv_top[i][4] << S5P_CLKDIV_TOP_ONENAND_SHIFT));
+		tmp |= ((clkdiv_top[i][0] << EXYNOS4_CLKDIV_TOP_ACLK200_SHIFT) |
+			(clkdiv_top[i][1] << EXYNOS4_CLKDIV_TOP_ACLK100_SHIFT) |
+			(clkdiv_top[i][2] << EXYNOS4_CLKDIV_TOP_ACLK160_SHIFT) |
+			(clkdiv_top[i][3] << EXYNOS4_CLKDIV_TOP_ACLK133_SHIFT) |
+			(clkdiv_top[i][4] << EXYNOS4_CLKDIV_TOP_ONENAND_SHIFT));
 
 		exynos4_busfreq_table[i].clk_topdiv = tmp;
 	}

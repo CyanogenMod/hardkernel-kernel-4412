@@ -165,17 +165,17 @@ static int __maybe_unused check_clock_gating(void)
 {
 	unsigned long tmp;
 
-	tmp = __raw_readl(S5P_CLKGATE_IP_IMAGE);
-	if (tmp & (S5P_CLKGATE_IP_IMAGE_MDMA | S5P_CLKGATE_IP_IMAGE_SMMUMDMA
-		| S5P_CLKGATE_IP_IMAGE_QEMDMA))
+	tmp = __raw_readl(EXYNOS4_CLKGATE_IP_IMAGE);
+	if (tmp & (EXYNOS4_CLKGATE_IP_IMAGE_MDMA | EXYNOS4_CLKGATE_IP_IMAGE_SMMUMDMA
+		| EXYNOS4_CLKGATE_IP_IMAGE_QEMDMA))
 		return 1;
 
-	tmp = __raw_readl(S5P_CLKGATE_IP_FSYS);
-	if (tmp & (S5P_CLKGATE_IP_FSYS_PDMA0 | S5P_CLKGATE_IP_FSYS_PDMA1))
+	tmp = __raw_readl(EXYNOS4_CLKGATE_IP_FSYS);
+	if (tmp & (EXYNOS4_CLKGATE_IP_FSYS_PDMA0 | EXYNOS4_CLKGATE_IP_FSYS_PDMA1))
 		return 1;
 
-	tmp = __raw_readl(S5P_CLKGATE_IP_PERIL);
-	if (tmp & S5P_CLKGATE_IP_PERIL_I2C0_7)
+	tmp = __raw_readl(EXYNOS4_CLKGATE_IP_PERIL);
+	if (tmp & EXYNOS4_CLKGATE_IP_PERIL_I2C0_7)
 		return 1;
 
 	return 0;
@@ -270,32 +270,32 @@ static int exynos4_check_operation(void)
 
 static struct sleep_save exynos4_lpa_save[] = {
 	/* CMU side */
-	SAVE_ITEM(S5P_CLKSRC_MASK_TOP),
-	SAVE_ITEM(S5P_CLKSRC_MASK_CAM),
-	SAVE_ITEM(S5P_CLKSRC_MASK_TV),
-	SAVE_ITEM(S5P_CLKSRC_MASK_LCD0),
-	SAVE_ITEM(S5P_CLKSRC_MASK_LCD1),
-	SAVE_ITEM(S5P_CLKSRC_MASK_MAUDIO),
-	SAVE_ITEM(S5P_CLKSRC_MASK_FSYS),
-	SAVE_ITEM(S5P_CLKSRC_MASK_PERIL0),
-	SAVE_ITEM(S5P_CLKSRC_MASK_PERIL1),
-	SAVE_ITEM(S5P_CLKSRC_MASK_DMC),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_TOP),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_CAM),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_TV),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_LCD0),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_LCD1),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_MAUDIO),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_FSYS),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_PERIL0),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_PERIL1),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_DMC),
 };
 
 static struct sleep_save exynos4_set_clksrc[] = {
-	{ .reg = S5P_CLKSRC_MASK_TOP			, .val = 0x00000001, },
-	{ .reg = S5P_CLKSRC_MASK_CAM			, .val = 0x11111111, },
-	{ .reg = S5P_CLKSRC_MASK_TV			, .val = 0x00000111, },
-	{ .reg = S5P_CLKSRC_MASK_LCD0			, .val = 0x00001111, },
-	{ .reg = S5P_CLKSRC_MASK_MAUDIO			, .val = 0x00000001, },
-	{ .reg = S5P_CLKSRC_MASK_FSYS			, .val = 0x01011111, },
-	{ .reg = S5P_CLKSRC_MASK_PERIL0			, .val = 0x01111111, },
-	{ .reg = S5P_CLKSRC_MASK_PERIL1			, .val = 0x01110111, },
-	{ .reg = S5P_CLKSRC_MASK_DMC			, .val = 0x00010000, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_TOP			, .val = 0x00000001, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_CAM			, .val = 0x11111111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_TV			, .val = 0x00000111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_LCD0			, .val = 0x00001111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_MAUDIO			, .val = 0x00000001, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_FSYS			, .val = 0x01011111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_PERIL0			, .val = 0x01111111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_PERIL1			, .val = 0x01110111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_DMC			, .val = 0x00010000, },
 };
 
 static struct sleep_save exynos4210_set_clksrc[] = {
-	{ .reg = S5P_CLKSRC_MASK_LCD1			, .val = 0x00001111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_LCD1			, .val = 0x00001111, },
 };
 
 static int exynos4_check_enter(void)
@@ -536,13 +536,13 @@ static int exynos4_enter_idle(struct cpuidle_device *dev,
 		cpu_core |= (1 << cpu);
 
 		if ((cpu_core == 0x3) || (cpu_online(1) == 0)) {
-			old_div = __raw_readl(S5P_CLKDIV_CPU);
+			old_div = __raw_readl(EXYNOS4_CLKDIV_CPU);
 			tmp = old_div;
 			tmp |= ((0x7 << 28) | (0x7 << 0));
-			__raw_writel(tmp, S5P_CLKDIV_CPU);
+			__raw_writel(tmp, EXYNOS4_CLKDIV_CPU);
 
 			do {
-				tmp = __raw_readl(S5P_CLKDIV_STATCPU);
+				tmp = __raw_readl(EXYNOS4_CLKDIV_STATCPU);
 			} while (tmp & 0x10000001);
 
 		}
@@ -554,10 +554,10 @@ static int exynos4_enter_idle(struct cpuidle_device *dev,
 		spin_lock(&idle_lock);
 
 		if ((cpu_core == 0x3) || (cpu_online(1) == 0)) {
-			__raw_writel(old_div, S5P_CLKDIV_CPU);
+			__raw_writel(old_div, EXYNOS4_CLKDIV_CPU);
 
 			do {
-				tmp = __raw_readl(S5P_CLKDIV_STATCPU);
+				tmp = __raw_readl(EXYNOS4_CLKDIV_STATCPU);
 			} while (tmp & 0x10000001);
 
 		}

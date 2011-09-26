@@ -109,7 +109,7 @@ struct platform_device exynos4_device_pd[] = {
 				.disable	= exynos4_pd_disable,
 				.base		= S5P_PMU_MFC_CONF,
 				.data		= &(struct exynos4_pd_data) {
-					.clk_base	= S5P_CLKGATE_IP_MFC,
+					.clk_base	= EXYNOS4_CLKGATE_IP_MFC,
 					.read_phy_addr	= EXYNOS4_PA_MFC,
 				},
 			},
@@ -124,7 +124,7 @@ struct platform_device exynos4_device_pd[] = {
 				.disable	= exynos4_pd_disable,
 				.base		= S5P_PMU_G3D_CONF,
 				.data		= &(struct exynos4_pd_data) {
-					.clk_base	= S5P_CLKGATE_IP_G3D,
+					.clk_base	= EXYNOS4_CLKGATE_IP_G3D,
 					.read_phy_addr	= EXYNOS4_PA_G3D,
 				},
 			},
@@ -139,7 +139,7 @@ struct platform_device exynos4_device_pd[] = {
 				.disable	= exynos4_pd_disable,
 				.base		= S5P_PMU_LCD0_CONF,
 				.data		= &(struct exynos4_pd_data) {
-					.clk_base	= S5P_CLKGATE_IP_LCD0,
+					.clk_base	= EXYNOS4_CLKGATE_IP_LCD0,
 					.read_phy_addr	= EXYNOS4_PA_FIMD0,
 				},
 			},
@@ -154,7 +154,7 @@ struct platform_device exynos4_device_pd[] = {
 				.disable	= exynos4_pd_disable,
 				.base		= S5P_PMU_LCD1_CONF,
 				.data		= &(struct exynos4_pd_data) {
-					.clk_base	= S5P_CLKGATE_IP_LCD1,
+					.clk_base	= EXYNOS4_CLKGATE_IP_LCD1,
 					.read_phy_addr	= EXYNOS4_PA_FIMD1,
 				},
 			},
@@ -169,7 +169,7 @@ struct platform_device exynos4_device_pd[] = {
 				.disable	= exynos4_pd_disable,
 				.base		= S5P_PMU_TV_CONF,
 				.data		= &(struct exynos4_pd_data) {
-					.clk_base	= S5P_CLKGATE_IP_TV,
+					.clk_base	= EXYNOS4_CLKGATE_IP_TV,
 					.read_phy_addr	= EXYNOS4_PA_VP,
 				},
 			},
@@ -184,7 +184,7 @@ struct platform_device exynos4_device_pd[] = {
 				.disable	= exynos4_pd_disable,
 				.base		= S5P_PMU_CAM_CONF,
 				.data		= &(struct exynos4_pd_data) {
-					.clk_base	= S5P_CLKGATE_IP_CAM,
+					.clk_base	= EXYNOS4_CLKGATE_IP_CAM,
 					.read_phy_addr	= EXYNOS4_PA_FIMC0,
 				},
 			},
@@ -199,7 +199,7 @@ struct platform_device exynos4_device_pd[] = {
 				.disable	= exynos4_pd_disable,
 				.base		= S5P_PMU_GPS_CONF,
 				.data		= &(struct exynos4_pd_data) {
-					.clk_base	= S5P_CLKGATE_IP_GPS,
+					.clk_base	= EXYNOS4_CLKGATE_IP_GPS,
 					.read_phy_addr	= EXYNOS4_PA_GPS,
 				},
 			},
@@ -214,7 +214,7 @@ struct platform_device exynos4_device_pd[] = {
 				.disable	= exynos4_pd_disable,
 				.base		= S5P_PMU_ISP_CONF,
 				.data		= &(struct exynos4_pd_data) {
-					.clk_base	= S5P_CLKGATE_IP_ISP,
+					.clk_base	= EXYNOS4_CLKGATE_IP_ISP,
 					.read_phy_addr	= EXYNOS4_PA_FIMC_IS,
 				},
 			},

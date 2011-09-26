@@ -1,9 +1,9 @@
-/* linux/arch/arm/mach-exynos4/clock.c
+/* linux/arch/arm/mach-exynos/clock.c
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * EXYNOS4 - Clock support
+ * EXYNOS - Clock support
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -35,72 +35,72 @@
 #ifdef CONFIG_PM
 static struct sleep_save exynos4_clock_save[] = {
 	/* CMU side */
-	SAVE_ITEM(S5P_CLKDIV_LEFTBUS),
-	SAVE_ITEM(S5P_CLKGATE_IP_LEFTBUS),
-	SAVE_ITEM(S5P_CLKDIV_RIGHTBUS),
-	SAVE_ITEM(S5P_CLKGATE_IP_RIGHTBUS),
-	SAVE_ITEM(S5P_CLKSRC_TOP0),
-	SAVE_ITEM(S5P_CLKSRC_TOP1),
-	SAVE_ITEM(S5P_CLKSRC_CAM),
-	SAVE_ITEM(S5P_CLKSRC_MFC),
-	SAVE_ITEM(S5P_CLKSRC_LCD0),
-	SAVE_ITEM(S5P_CLKSRC_MAUDIO),
-	SAVE_ITEM(S5P_CLKSRC_FSYS),
-	SAVE_ITEM(S5P_CLKSRC_PERIL0),
-	SAVE_ITEM(S5P_CLKSRC_PERIL1),
-	SAVE_ITEM(S5P_CLKDIV_CAM),
-	SAVE_ITEM(S5P_CLKDIV_TV),
-	SAVE_ITEM(S5P_CLKDIV_MFC),
-	SAVE_ITEM(S5P_CLKDIV_G3D),
-	SAVE_ITEM(S5P_CLKDIV_LCD0),
-	SAVE_ITEM(S5P_CLKDIV_MAUDIO),
-	SAVE_ITEM(S5P_CLKDIV_FSYS0),
-	SAVE_ITEM(S5P_CLKDIV_FSYS1),
-	SAVE_ITEM(S5P_CLKDIV_FSYS2),
-	SAVE_ITEM(S5P_CLKDIV_FSYS3),
-	SAVE_ITEM(S5P_CLKDIV_PERIL0),
-	SAVE_ITEM(S5P_CLKDIV_PERIL1),
-	SAVE_ITEM(S5P_CLKDIV_PERIL2),
-	SAVE_ITEM(S5P_CLKDIV_PERIL3),
-	SAVE_ITEM(S5P_CLKDIV_PERIL4),
-	SAVE_ITEM(S5P_CLKDIV_PERIL5),
-	SAVE_ITEM(S5P_CLKDIV_TOP),
-	SAVE_ITEM(S5P_CLKSRC_MASK_CAM),
-	SAVE_ITEM(S5P_CLKSRC_MASK_TV),
-	SAVE_ITEM(S5P_CLKSRC_MASK_LCD0),
-	SAVE_ITEM(S5P_CLKSRC_MASK_MAUDIO),
-	SAVE_ITEM(S5P_CLKSRC_MASK_FSYS),
-	SAVE_ITEM(S5P_CLKSRC_MASK_PERIL0),
-	SAVE_ITEM(S5P_CLKSRC_MASK_PERIL1),
-	SAVE_ITEM(S5P_CLKGATE_SCLKCAM),
-	SAVE_ITEM(S5P_CLKGATE_IP_CAM),
-	SAVE_ITEM(S5P_CLKGATE_IP_TV),
-	SAVE_ITEM(S5P_CLKGATE_IP_MFC),
-	SAVE_ITEM(S5P_CLKGATE_IP_G3D),
-	SAVE_ITEM(S5P_CLKGATE_IP_LCD0),
-	SAVE_ITEM(S5P_CLKGATE_IP_FSYS),
-	SAVE_ITEM(S5P_CLKGATE_IP_GPS),
-	SAVE_ITEM(S5P_CLKGATE_IP_PERIL),
-	SAVE_ITEM(S5P_CLKGATE_BLOCK),
-	SAVE_ITEM(S5P_CLKSRC_MASK_DMC),
-	SAVE_ITEM(S5P_CLKSRC_DMC),
-	SAVE_ITEM(S5P_CLKDIV_DMC0),
-	SAVE_ITEM(S5P_CLKDIV_DMC1),
-	SAVE_ITEM(S5P_CLKGATE_IP_DMC),
-	SAVE_ITEM(S5P_CLKSRC_CPU),
-	SAVE_ITEM(S5P_CLKDIV_CPU),
-	SAVE_ITEM(S5P_CLKGATE_SCLKCPU),
-	SAVE_ITEM(S5P_CLKGATE_IP_CPU),
+	SAVE_ITEM(EXYNOS4_CLKDIV_LEFTBUS),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_LEFTBUS),
+	SAVE_ITEM(EXYNOS4_CLKDIV_RIGHTBUS),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_RIGHTBUS),
+	SAVE_ITEM(EXYNOS4_CLKSRC_TOP0),
+	SAVE_ITEM(EXYNOS4_CLKSRC_TOP1),
+	SAVE_ITEM(EXYNOS4_CLKSRC_CAM),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MFC),
+	SAVE_ITEM(EXYNOS4_CLKSRC_LCD0),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MAUDIO),
+	SAVE_ITEM(EXYNOS4_CLKSRC_FSYS),
+	SAVE_ITEM(EXYNOS4_CLKSRC_PERIL0),
+	SAVE_ITEM(EXYNOS4_CLKSRC_PERIL1),
+	SAVE_ITEM(EXYNOS4_CLKDIV_CAM),
+	SAVE_ITEM(EXYNOS4_CLKDIV_TV),
+	SAVE_ITEM(EXYNOS4_CLKDIV_MFC),
+	SAVE_ITEM(EXYNOS4_CLKDIV_G3D),
+	SAVE_ITEM(EXYNOS4_CLKDIV_LCD0),
+	SAVE_ITEM(EXYNOS4_CLKDIV_MAUDIO),
+	SAVE_ITEM(EXYNOS4_CLKDIV_FSYS0),
+	SAVE_ITEM(EXYNOS4_CLKDIV_FSYS1),
+	SAVE_ITEM(EXYNOS4_CLKDIV_FSYS2),
+	SAVE_ITEM(EXYNOS4_CLKDIV_FSYS3),
+	SAVE_ITEM(EXYNOS4_CLKDIV_PERIL0),
+	SAVE_ITEM(EXYNOS4_CLKDIV_PERIL1),
+	SAVE_ITEM(EXYNOS4_CLKDIV_PERIL2),
+	SAVE_ITEM(EXYNOS4_CLKDIV_PERIL3),
+	SAVE_ITEM(EXYNOS4_CLKDIV_PERIL4),
+	SAVE_ITEM(EXYNOS4_CLKDIV_PERIL5),
+	SAVE_ITEM(EXYNOS4_CLKDIV_TOP),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_CAM),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_TV),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_LCD0),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_MAUDIO),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_FSYS),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_PERIL0),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_PERIL1),
+	SAVE_ITEM(EXYNOS4_CLKGATE_SCLKCAM),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_CAM),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_TV),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_MFC),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_G3D),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_LCD0),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_FSYS),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_GPS),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_PERIL),
+	SAVE_ITEM(EXYNOS4_CLKGATE_BLOCK),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_DMC),
+	SAVE_ITEM(EXYNOS4_CLKSRC_DMC),
+	SAVE_ITEM(EXYNOS4_CLKDIV_DMC0),
+	SAVE_ITEM(EXYNOS4_CLKDIV_DMC1),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_DMC),
+	SAVE_ITEM(EXYNOS4_CLKSRC_CPU),
+	SAVE_ITEM(EXYNOS4_CLKDIV_CPU),
+	SAVE_ITEM(EXYNOS4_CLKGATE_SCLKCPU),
+	SAVE_ITEM(EXYNOS4_CLKGATE_IP_CPU),
 };
 
 static struct sleep_save exynos4_epll_save[] = {
-	SAVE_ITEM(S5P_EPLL_CON0),
-	SAVE_ITEM(S5P_EPLL_CON1),
+	SAVE_ITEM(EXYNOS4_EPLL_CON0),
+	SAVE_ITEM(EXYNOS4_EPLL_CON1),
 };
 
 static struct sleep_save exynos4_vpll_save[] = {
-	SAVE_ITEM(S5P_VPLL_CON0),
-	SAVE_ITEM(S5P_VPLL_CON1),
+	SAVE_ITEM(EXYNOS4_VPLL_CON0),
+	SAVE_ITEM(EXYNOS4_VPLL_CON1),
 };
 #endif
 
@@ -148,97 +148,97 @@ static struct clk clk_spdifcdclk = {
 
 static int exynos4_clksrc_mask_top_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKSRC_MASK_TOP, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKSRC_MASK_TOP, clk, enable);
 }
 
 static int exynos4_clksrc_mask_cam_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKSRC_MASK_CAM, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKSRC_MASK_CAM, clk, enable);
 }
 
 static int exynos4_clksrc_mask_lcd0_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKSRC_MASK_LCD0, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKSRC_MASK_LCD0, clk, enable);
 }
 
 int exynos4_clksrc_mask_lcd1_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKSRC_MASK_LCD1, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKSRC_MASK_LCD1, clk, enable);
 }
 
 int exynos4_clksrc_mask_fsys_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKSRC_MASK_FSYS, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKSRC_MASK_FSYS, clk, enable);
 }
 
 static int exynos4_clksrc_mask_peril0_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKSRC_MASK_PERIL0, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKSRC_MASK_PERIL0, clk, enable);
 }
 
 static int exynos4_clksrc_mask_peril1_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKSRC_MASK_PERIL1, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKSRC_MASK_PERIL1, clk, enable);
 }
 
 static int exynos4_clksrc_mask_tv_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKSRC_MASK_TV, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKSRC_MASK_TV, clk, enable);
 }
 
 static int exynos4_clk_ip_mfc_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_MFC, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_MFC, clk, enable);
 }
 
 static int exynos4_clk_ip_cam_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_CAM, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_CAM, clk, enable);
 }
 
 static int exynos4_clk_ip_tv_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_TV, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_TV, clk, enable);
 }
 
 static int exynos4_clk_ip_g3d_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_G3D, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_G3D, clk, enable);
 }
 
 int exynos4_clk_ip_image_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_IMAGE, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_IMAGE, clk, enable);
 }
 
 static int exynos4_clk_ip_lcd0_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_LCD0, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_LCD0, clk, enable);
 }
 
 int exynos4_clk_ip_lcd1_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_LCD1, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_LCD1, clk, enable);
 }
 
 int exynos4_clk_ip_fsys_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_FSYS, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_FSYS, clk, enable);
 }
 
 static int exynos4_clk_ip_peril_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_PERIL, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_PERIL, clk, enable);
 }
 
 static int exynos4_clk_ip_perir_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_PERIR, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_PERIR, clk, enable);
 }
 
 static int exynos4_clksrc_mask_maudio_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKSRC_MASK_MAUDIO, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKSRC_MASK_MAUDIO, clk, enable);
 }
 
 static int exynos4_clk_audss_ctrl(struct clk *clk, int enable)
@@ -248,22 +248,22 @@ static int exynos4_clk_audss_ctrl(struct clk *clk, int enable)
 
 static int __maybe_unused exynos4_clk_epll_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_EPLL_CON0, clk, enable);
+	return s5p_gatectrl(EXYNOS4_EPLL_CON0, clk, enable);
 }
 
 static int exynos4_clk_vpll_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_VPLL_CON0, clk, enable);
+	return s5p_gatectrl(EXYNOS4_VPLL_CON0, clk, enable);
 }
 
 static int exynos4_clk_ip_dmc_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_DMC, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_DMC, clk, enable);
 }
 
 int exynos4_clksrc_gate_isp_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(S5P_CLKGATE_IP_ISP, clk, enable);
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_ISP, clk, enable);
 }
 
 /* Core list of CMU_CPU side */
@@ -273,7 +273,7 @@ static struct clksrc_clk clk_mout_apll = {
 		.name		= "mout_apll",
 	},
 	.sources = &clk_src_apll,
-	.reg_src = { .reg = S5P_CLKSRC_CPU, .shift = 0, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_CPU, .shift = 0, .size = 1 },
 };
 
 struct clksrc_clk clk_sclk_apll = {
@@ -281,7 +281,7 @@ struct clksrc_clk clk_sclk_apll = {
 		.name		= "sclk_apll",
 		.parent		= &clk_mout_apll.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_CPU, .shift = 24, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_CPU, .shift = 24, .size = 3 },
 };
 
 struct clksrc_clk clk_mout_epll = {
@@ -290,7 +290,7 @@ struct clksrc_clk clk_mout_epll = {
 		.parent = &clk_fout_epll,
 	},
 	.sources = &clk_src_epll,
-	.reg_src = { .reg = S5P_CLKSRC_TOP0, .shift = 4, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP0, .shift = 4, .size = 1 },
 };
 
 struct clksrc_clk clk_mout_mpll = {
@@ -316,7 +316,7 @@ static struct clksrc_clk clk_moutcore = {
 		.name		= "moutcore",
 	},
 	.sources = &clkset_moutcore,
-	.reg_src = { .reg = S5P_CLKSRC_CPU, .shift = 16, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_CPU, .shift = 16, .size = 1 },
 };
 
 static struct clksrc_clk clk_coreclk = {
@@ -324,7 +324,7 @@ static struct clksrc_clk clk_coreclk = {
 		.name		= "core_clk",
 		.parent		= &clk_moutcore.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_CPU, .shift = 0, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_CPU, .shift = 0, .size = 3 },
 };
 
 static struct clksrc_clk clk_armclk = {
@@ -339,7 +339,7 @@ static struct clksrc_clk clk_aclk_corem0 = {
 		.name		= "aclk_corem0",
 		.parent		= &clk_coreclk.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_CPU, .shift = 4, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_CPU, .shift = 4, .size = 3 },
 };
 
 static struct clksrc_clk clk_aclk_cores = {
@@ -347,7 +347,7 @@ static struct clksrc_clk clk_aclk_cores = {
 		.name		= "aclk_cores",
 		.parent		= &clk_coreclk.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_CPU, .shift = 4, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_CPU, .shift = 4, .size = 3 },
 };
 
 static struct clksrc_clk clk_aclk_corem1 = {
@@ -355,7 +355,7 @@ static struct clksrc_clk clk_aclk_corem1 = {
 		.name		= "aclk_corem1",
 		.parent		= &clk_coreclk.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_CPU, .shift = 8, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_CPU, .shift = 8, .size = 3 },
 };
 
 static struct clksrc_clk clk_periphclk = {
@@ -363,7 +363,7 @@ static struct clksrc_clk clk_periphclk = {
 		.name		= "periphclk",
 		.parent		= &clk_coreclk.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_CPU, .shift = 12, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_CPU, .shift = 12, .size = 3 },
 };
 
 /* Core list of CMU_CORE side */
@@ -383,7 +383,7 @@ static struct clksrc_clk clk_mout_corebus = {
 		.name		= "mout_corebus",
 	},
 	.sources = &clkset_mout_corebus,
-	.reg_src = { .reg = S5P_CLKSRC_DMC, .shift = 4, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_DMC, .shift = 4, .size = 1 },
 };
 
 static struct clksrc_clk clk_sclk_dmc = {
@@ -391,7 +391,7 @@ static struct clksrc_clk clk_sclk_dmc = {
 		.name		= "sclk_dmc",
 		.parent		= &clk_mout_corebus.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_DMC0, .shift = 12, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_DMC0, .shift = 12, .size = 3 },
 };
 
 static struct clksrc_clk clk_aclk_cored = {
@@ -399,7 +399,7 @@ static struct clksrc_clk clk_aclk_cored = {
 		.name		= "aclk_cored",
 		.parent		= &clk_sclk_dmc.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_DMC0, .shift = 16, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_DMC0, .shift = 16, .size = 3 },
 };
 
 static struct clksrc_clk clk_aclk_corep = {
@@ -407,7 +407,7 @@ static struct clksrc_clk clk_aclk_corep = {
 		.name		= "aclk_corep",
 		.parent		= &clk_aclk_cored.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_DMC0, .shift = 20, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_DMC0, .shift = 20, .size = 3 },
 };
 
 static struct clksrc_clk clk_aclk_acp = {
@@ -415,7 +415,7 @@ static struct clksrc_clk clk_aclk_acp = {
 		.name		= "aclk_acp",
 		.parent		= &clk_mout_corebus.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_DMC0, .shift = 0, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_DMC0, .shift = 0, .size = 3 },
 };
 
 static struct clksrc_clk clk_pclk_acp = {
@@ -423,7 +423,7 @@ static struct clksrc_clk clk_pclk_acp = {
 		.name		= "pclk_acp",
 		.parent		= &clk_aclk_acp.clk,
 	},
-	.reg_div = { .reg = S5P_CLKDIV_DMC0, .shift = 4, .size = 3 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_DMC0, .shift = 4, .size = 3 },
 };
 
 /* Core list of CMU_TOP side */
@@ -449,8 +449,8 @@ static struct clksrc_clk clk_aclk_100 = {
 		.name		= "aclk_100",
 	},
 	.sources = &clkset_aclk,
-	.reg_src = { .reg = S5P_CLKSRC_TOP0, .shift = 16, .size = 1 },
-	.reg_div = { .reg = S5P_CLKDIV_TOP, .shift = 4, .size = 4 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP0, .shift = 16, .size = 1 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_TOP, .shift = 4, .size = 4 },
 };
 
 static struct clksrc_clk clk_aclk_160 = {
@@ -458,8 +458,8 @@ static struct clksrc_clk clk_aclk_160 = {
 		.name		= "aclk_160",
 	},
 	.sources = &clkset_aclk,
-	.reg_src = { .reg = S5P_CLKSRC_TOP0, .shift = 20, .size = 1 },
-	.reg_div = { .reg = S5P_CLKDIV_TOP, .shift = 8, .size = 3 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP0, .shift = 20, .size = 1 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_TOP, .shift = 8, .size = 3 },
 };
 
 struct clksrc_clk clk_aclk_133 = {
@@ -467,8 +467,8 @@ struct clksrc_clk clk_aclk_133 = {
 		.name		= "aclk_133",
 	},
 	.sources = &clkset_aclk,
-	.reg_src = { .reg = S5P_CLKSRC_TOP0, .shift = 24, .size = 1 },
-	.reg_div = { .reg = S5P_CLKDIV_TOP, .shift = 12, .size = 3 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP0, .shift = 24, .size = 1 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_TOP, .shift = 12, .size = 3 },
 };
 
 /* CMU_LEFT/RIGHTBUS side */
@@ -487,8 +487,8 @@ static struct clksrc_clk clk_aclk_gdl = {
 		.name		= "aclk_gdl",
 	},
 	.sources = &clkset_aclk_lrbus,
-	.reg_src = { .reg = S5P_CLKSRC_LEFTBUS, .shift = 0, .size = 1 },
-	.reg_div = { .reg = S5P_CLKDIV_LEFTBUS, .shift = 0, .size = 3 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_LEFTBUS, .shift = 0, .size = 1 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_LEFTBUS, .shift = 0, .size = 3 },
 };
 
 static struct clksrc_clk clk_aclk_gdr = {
@@ -496,8 +496,8 @@ static struct clksrc_clk clk_aclk_gdr = {
 		.name		= "aclk_gdr",
 	},
 	.sources = &clkset_aclk_lrbus,
-	.reg_src = { .reg = S5P_CLKSRC_RIGHTBUS, .shift = 0, .size = 1 },
-	.reg_div = { .reg = S5P_CLKDIV_RIGHTBUS, .shift = 0, .size = 3 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_RIGHTBUS, .shift = 0, .size = 1 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_RIGHTBUS, .shift = 0, .size = 3 },
 };
 
 static struct clk *clkset_vpllsrc_list[] = {
@@ -517,7 +517,7 @@ static struct clksrc_clk clk_vpllsrc = {
 		.ctrlbit	= (1 << 0),
 	},
 	.sources = &clkset_vpllsrc,
-	.reg_src = { .reg = S5P_CLKSRC_TOP1, .shift = 0, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP1, .shift = 0, .size = 1 },
 };
 
 static struct clk *clkset_sclk_vpll_list[] = {
@@ -535,7 +535,7 @@ struct clksrc_clk clk_sclk_vpll = {
 		.name		= "sclk_vpll",
 	},
 	.sources = &clkset_sclk_vpll,
-	.reg_src = { .reg = S5P_CLKSRC_TOP0, .shift = 8, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP0, .shift = 8, .size = 1 },
 };
 
 static struct clk *clkset_sclk_dac_list[] = {
@@ -555,7 +555,7 @@ static struct clksrc_clk clk_sclk_dac = {
 		.ctrlbit	= (1 << 8),
 	},
 	.sources = &clkset_sclk_dac,
-	.reg_src = { .reg = S5P_CLKSRC_TV, .shift = 8, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TV, .shift = 8, .size = 1 },
 };
 
 static struct clksrc_clk clk_sclk_pixel = {
@@ -563,7 +563,7 @@ static struct clksrc_clk clk_sclk_pixel = {
 		.name		= "sclk_pixel",
 		.parent		= &clk_sclk_vpll.clk,
 	},
-	.reg_div	= { .reg = S5P_CLKDIV_TV, .shift = 0, .size = 4 },
+	.reg_div	= { .reg = EXYNOS4_CLKDIV_TV, .shift = 0, .size = 4 },
 };
 
 static struct clk *clkset_sclk_hdmi_list[] = {
@@ -583,7 +583,7 @@ static struct clksrc_clk clk_sclk_hdmi = {
 		.ctrlbit	= (1 << 0),
 	},
 	.sources = &clkset_sclk_hdmi,
-	.reg_src = { .reg = S5P_CLKSRC_TV, .shift = 0, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TV, .shift = 0, .size = 1 },
 };
 
 static struct clk *clkset_sclk_mixer_list[] = {
@@ -989,8 +989,8 @@ static struct clksrc_clk clk_sclk_audio0 = {
 		.ctrlbit	= (1 << 0),
 	},
 	.sources = &clkset_sclk_audio0,
-	.reg_src = { .reg = S5P_CLKSRC_MAUDIO, .shift = 0, .size = 4 },
-	.reg_div = { .reg = S5P_CLKDIV_MAUDIO, .shift = 0, .size = 4 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_MAUDIO, .shift = 0, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_MAUDIO, .shift = 0, .size = 4 },
 };
 
 static struct clk *clkset_mout_audss_list[] = {
@@ -1095,8 +1095,8 @@ static struct clksrc_clk clk_sclk_audio1 = {
 		.ctrlbit	= (1 << 0),
 	},
 	.sources = &clkset_sclk_audio1,
-	.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 0, .size = 4 },
-	.reg_div = { .reg = S5P_CLKDIV_PERIL4, .shift = 4, .size = 8 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 0, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 4, .size = 8 },
 };
 
 static struct clk *clkset_sclk_audio2_list[] = {
@@ -1123,8 +1123,8 @@ static struct clksrc_clk clk_sclk_audio2 = {
 		.ctrlbit	= (1 << 4),
 	},
 	.sources = &clkset_sclk_audio2,
-	.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 4, .size = 4 },
-	.reg_div = { .reg = S5P_CLKDIV_PERIL4, .shift = 16, .size = 4 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 4, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 16, .size = 4 },
 };
 
 static struct clk *clkset_sclk_spdif_list[] = {
@@ -1147,7 +1147,7 @@ static struct clksrc_clk clk_sclk_spdif = {
 		.ops		= &s5p_sclk_spdif_ops,
 	},
 	.sources = &clkset_sclk_spdif,
-	.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 8, .size = 2 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 8, .size = 2 },
 };
 
 #ifndef CONFIG_MACH_FPGA5210
@@ -1237,7 +1237,7 @@ struct clksrc_clk clk_mout_g2d0 = {
 		.name		= "mout_g2d0",
 	},
 	.sources = &clkset_mout_g2d0,
-	.reg_src = { .reg = S5P_CLKSRC_IMAGE, .shift = 0, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_IMAGE, .shift = 0, .size = 1 },
 };
 
 static struct clk *clkset_mout_g2d1_list[] = {
@@ -1255,7 +1255,7 @@ struct clksrc_clk clk_mout_g2d1 = {
 		.name		= "mout_g2d1",
 	},
 	.sources = &clkset_mout_g2d1,
-	.reg_src = { .reg = S5P_CLKSRC_IMAGE, .shift = 4, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_IMAGE, .shift = 4, .size = 1 },
 };
 
 static struct clk *clkset_mout_g2d_list[] = {
@@ -1296,7 +1296,7 @@ static struct clksrc_clk clk_mout_mfc0 = {
 		.name		= "mout_mfc0",
 	},
 	.sources = &clkset_mout_mfc0,
-	.reg_src = { .reg = S5P_CLKSRC_MFC, .shift = 0, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_MFC, .shift = 0, .size = 1 },
 };
 
 static struct clk *clkset_mout_mfc1_list[] = {
@@ -1314,7 +1314,7 @@ static struct clksrc_clk clk_mout_mfc1 = {
 		.name		= "mout_mfc1",
 	},
 	.sources = &clkset_mout_mfc1,
-	.reg_src = { .reg = S5P_CLKSRC_MFC, .shift = 4, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_MFC, .shift = 4, .size = 1 },
 };
 
 static struct clk *clkset_mout_mfc_list[] = {
@@ -1342,7 +1342,7 @@ static struct clksrc_clk clk_mout_g3d0 = {
 		.name		= "mout_g3d0",
 	},
 	.sources = &clkset_mout_g3d0,
-	.reg_src = { .reg = S5P_CLKSRC_G3D, .shift = 0, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_G3D, .shift = 0, .size = 1 },
 };
 
 static struct clk *clkset_mout_g3d1_list[] = {
@@ -1360,7 +1360,7 @@ static struct clksrc_clk clk_mout_g3d1 = {
 		.name		= "mout_g3d1",
 	},
 	.sources = &clkset_mout_g3d1,
-	.reg_src = { .reg = S5P_CLKSRC_G3D, .shift = 4, .size = 1 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_G3D, .shift = 4, .size = 1 },
 };
 
 static struct clk *clkset_mout_g3d_list[] = {
@@ -1378,8 +1378,8 @@ static struct clksrc_clk clk_dout_mmc0 = {
 		.name		= "dout_mmc0",
 	},
 	.sources = &clkset_group,
-	.reg_src = { .reg = S5P_CLKSRC_FSYS, .shift = 0, .size = 4 },
-	.reg_div = { .reg = S5P_CLKDIV_FSYS1, .shift = 0, .size = 4 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_FSYS, .shift = 0, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS1, .shift = 0, .size = 4 },
 };
 
 static struct clksrc_clk clk_dout_mmc1 = {
@@ -1387,8 +1387,8 @@ static struct clksrc_clk clk_dout_mmc1 = {
 		.name		= "dout_mmc1",
 	},
 	.sources = &clkset_group,
-	.reg_src = { .reg = S5P_CLKSRC_FSYS, .shift = 4, .size = 4 },
-	.reg_div = { .reg = S5P_CLKDIV_FSYS1, .shift = 16, .size = 4 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_FSYS, .shift = 4, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS1, .shift = 16, .size = 4 },
 };
 
 static struct clksrc_clk clk_dout_mmc2 = {
@@ -1396,8 +1396,8 @@ static struct clksrc_clk clk_dout_mmc2 = {
 		.name		= "dout_mmc2",
 	},
 	.sources = &clkset_group,
-	.reg_src = { .reg = S5P_CLKSRC_FSYS, .shift = 8, .size = 4 },
-	.reg_div = { .reg = S5P_CLKDIV_FSYS2, .shift = 0, .size = 4 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_FSYS, .shift = 8, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS2, .shift = 0, .size = 4 },
 };
 
 static struct clksrc_clk clk_dout_mmc3 = {
@@ -1405,8 +1405,8 @@ static struct clksrc_clk clk_dout_mmc3 = {
 		.name		= "dout_mmc3",
 	},
 	.sources = &clkset_group,
-	.reg_src = { .reg = S5P_CLKSRC_FSYS, .shift = 12, .size = 4 },
-	.reg_div = { .reg = S5P_CLKDIV_FSYS2, .shift = 16, .size = 4 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_FSYS, .shift = 12, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS2, .shift = 16, .size = 4 },
 };
 
 static struct clksrc_clk clk_dout_mmc4 = {
@@ -1414,8 +1414,8 @@ static struct clksrc_clk clk_dout_mmc4 = {
 		.name		= "dout_mmc4",
 	},
 	.sources = &clkset_group,
-	.reg_src = { .reg = S5P_CLKSRC_FSYS, .shift = 16, .size = 4 },
-	.reg_div = { .reg = S5P_CLKDIV_FSYS3, .shift = 0, .size = 4 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_FSYS, .shift = 16, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS3, .shift = 0, .size = 4 },
 };
 
 static struct clk *clkset_mout_hpm_list[] = {
@@ -1433,8 +1433,8 @@ static struct clksrc_clk clk_dout_copy = {
 		.name		= "dout_copy",
 	},
 	.sources = &clkset_sclk_hpm,
-	.reg_src = { .reg = S5P_CLKSRC_CPU, .shift = 20, .size = 1 },
-	.reg_div = { .reg = S5P_CLKDIV_CPU1, .shift = 0, .size = 3 },
+	.reg_src = { .reg = EXYNOS4_CLKSRC_CPU, .shift = 20, .size = 1 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_CPU1, .shift = 0, .size = 3 },
 };
 
 static struct clksrc_clk clksrcs[] = {
@@ -1446,8 +1446,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 0),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_PERIL0, .shift = 0, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL0, .shift = 0, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL0, .shift = 0, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL0, .shift = 0, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "uclk1",
@@ -1456,8 +1456,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 4),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_PERIL0, .shift = 4, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL0, .shift = 4, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL0, .shift = 4, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL0, .shift = 4, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "uclk1",
@@ -1466,8 +1466,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 8),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_PERIL0, .shift = 8, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL0, .shift = 8, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL0, .shift = 8, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL0, .shift = 8, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "uclk1",
@@ -1476,8 +1476,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 12),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_PERIL0, .shift = 12, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL0, .shift = 12, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL0, .shift = 12, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL0, .shift = 12, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_pwm",
@@ -1485,8 +1485,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 24),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_PERIL0, .shift = 24, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL3, .shift = 0, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL0, .shift = 24, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL3, .shift = 0, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_csis",
@@ -1495,8 +1495,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 24),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_CAM, .shift = 24, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 24, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_CAM, .shift = 24, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_CAM, .shift = 24, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_csis",
@@ -1505,8 +1505,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 28),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_CAM, .shift = 28, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 28, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_CAM, .shift = 28, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_CAM, .shift = 28, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_cam0",
@@ -1514,8 +1514,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 16),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_CAM, .shift = 16, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 16, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_CAM, .shift = 16, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_CAM, .shift = 16, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_cam1",
@@ -1523,8 +1523,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 20),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_CAM, .shift = 20, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 20, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_CAM, .shift = 20, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_CAM, .shift = 20, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
@@ -1537,8 +1537,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 0),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_CAM, .shift = 0, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 0, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_CAM, .shift = 0, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_CAM, .shift = 0, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
@@ -1551,8 +1551,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 4),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_CAM, .shift = 4, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 4, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_CAM, .shift = 4, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_CAM, .shift = 4, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
@@ -1565,8 +1565,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 8),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_CAM, .shift = 8, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 8, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_CAM, .shift = 8, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_CAM, .shift = 8, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
@@ -1579,8 +1579,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 12),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_CAM, .shift = 12, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_CAM, .shift = 12, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_CAM, .shift = 12, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_CAM, .shift = 12, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_mixer",
@@ -1588,7 +1588,7 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 4),
 		},
 		.sources = &clkset_sclk_mixer,
-		.reg_src = { .reg = S5P_CLKSRC_TV, .shift = 4, .size = 1 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_TV, .shift = 4, .size = 1 },
 	}, {
 		.clk	= {
 			.name		= "sclk_fimd",
@@ -1601,8 +1601,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 0),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_LCD0, .shift = 0, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_LCD0, .shift = 0, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_LCD0, .shift = 0, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_LCD0, .shift = 0, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_fimd",
@@ -1615,8 +1615,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 0),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_LCD1, .shift = 0, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_LCD1, .shift = 0, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_LCD1, .shift = 0, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_LCD1, .shift = 0, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_spi",
@@ -1625,8 +1625,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 16),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 16, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL1, .shift = 8, .size = 8 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 16, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL1, .shift = 8, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_spi",
@@ -1635,8 +1635,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 20),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 20, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL1, .shift = 24, .size = 8 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 20, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL1, .shift = 24, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_spi",
@@ -1645,15 +1645,15 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 24),
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_PERIL1, .shift = 24, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_PERIL2, .shift = 8, .size = 8 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 24, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL2, .shift = 8, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_mfc",
 		},
 		.sources = &clkset_mout_mfc,
-		.reg_src = { .reg = S5P_CLKSRC_MFC, .shift = 8, .size = 1 },
-		.reg_div = { .reg = S5P_CLKDIV_MFC, .shift = 0, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_MFC, .shift = 8, .size = 1 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_MFC, .shift = 0, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_g3d",
@@ -1661,8 +1661,8 @@ static struct clksrc_clk clksrcs[] = {
 			.ctrlbit	= (1 << 0),
 		},
 		.sources = &clkset_mout_g3d,
-		.reg_src = { .reg = S5P_CLKSRC_G3D, .shift = 8, .size = 1 },
-		.reg_div = { .reg = S5P_CLKDIV_G3D, .shift = 0, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_G3D, .shift = 8, .size = 1 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_G3D, .shift = 0, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_mmc",
@@ -1671,7 +1671,7 @@ static struct clksrc_clk clksrcs[] = {
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
 			.ctrlbit	= (1 << 0),
 		},
-		.reg_div = { .reg = S5P_CLKDIV_FSYS1, .shift = 8, .size = 8 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS1, .shift = 8, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_mmc",
@@ -1680,7 +1680,7 @@ static struct clksrc_clk clksrcs[] = {
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
 			.ctrlbit	= (1 << 4),
 		},
-		.reg_div = { .reg = S5P_CLKDIV_FSYS1, .shift = 24, .size = 8 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS1, .shift = 24, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_mmc",
@@ -1689,7 +1689,7 @@ static struct clksrc_clk clksrcs[] = {
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
 			.ctrlbit	= (1 << 8),
 		},
-		.reg_div = { .reg = S5P_CLKDIV_FSYS2, .shift = 8, .size = 8 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS2, .shift = 8, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_mmc",
@@ -1698,7 +1698,7 @@ static struct clksrc_clk clksrcs[] = {
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
 			.ctrlbit	= (1 << 12),
 		},
-		.reg_div = { .reg = S5P_CLKDIV_FSYS2, .shift = 24, .size = 8 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS2, .shift = 24, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_dwmci",
@@ -1706,50 +1706,50 @@ static struct clksrc_clk clksrcs[] = {
 			.enable		= exynos4_clksrc_mask_fsys_ctrl,
 			.ctrlbit	= (1 << 16),
 		},
-		.reg_div = { .reg = S5P_CLKDIV_FSYS3, .shift = 8, .size = 8 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_FSYS3, .shift = 8, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_pcm",
 			.parent		= &clk_sclk_audio0.clk,
 		},
-			.reg_div = { .reg = S5P_CLKDIV_MAUDIO, .shift = 4, .size = 8 },
+			.reg_div = { .reg = EXYNOS4_CLKDIV_MAUDIO, .shift = 4, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_pcm",
 			.parent		= &clk_sclk_audio1.clk,
 		},
-			.reg_div = { .reg = S5P_CLKDIV_PERIL4, .shift = 4, .size = 8 },
+			.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 4, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_pcm",
 			.parent		= &clk_sclk_audio2.clk,
 		},
-			.reg_div = { .reg = S5P_CLKDIV_PERIL4, .shift = 20, .size = 8 },
+			.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 20, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_i2s",
 			.parent		= &clk_sclk_audio1.clk,
 		},
-			.reg_div = { .reg = S5P_CLKDIV_PERIL5, .shift = 0, .size = 6 },
+			.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL5, .shift = 0, .size = 6 },
 	}, {
 		.clk	= {
 			.name		= "sclk_i2s",
 			.parent		= &clk_sclk_audio2.clk,
 		},
-			.reg_div = { .reg = S5P_CLKDIV_PERIL5, .shift = 8, .size = 6 },
+			.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL5, .shift = 8, .size = 6 },
 	}, {
 		.clk	= {
 			.name		= "sclk_hpm",
 			.parent		= &clk_dout_copy.clk,
 		},
-		.reg_div = { .reg = S5P_CLKDIV_CPU1, .shift = 4, .size = 3 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_CPU1, .shift = 4, .size = 3 },
 	}, {
 		.clk	= {
 			.name		= "sclk_pwi",
 		},
 		.sources = &clkset_group,
-		.reg_src = { .reg = S5P_CLKSRC_DMC, .shift = 16, .size = 4 },
-		.reg_div = { .reg = S5P_CLKDIV_DMC1, .shift = 8, .size = 4 },
+		.reg_src = { .reg = EXYNOS4_CLKSRC_DMC, .shift = 16, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_DMC1, .shift = 8, .size = 4 },
 	},
 };
 
@@ -1845,7 +1845,7 @@ static int exynos4_epll_set_rate(struct clk *clk, unsigned long rate)
 	}
 
 
-	epll_con = __raw_readl(S5P_EPLL_CON0);
+	epll_con = __raw_readl(EXYNOS4_EPLL_CON0);
 	epll_con &= ~(0x1 << 27 | \
 			PLL46XX_MDIV_MASK << PLL46XX_MDIV_SHIFT |   \
 			PLL46XX_PDIV_MASK << PLL46XX_PDIV_SHIFT | \
@@ -1874,14 +1874,14 @@ static int exynos4_epll_set_rate(struct clk *clk, unsigned long rate)
 	locktime = 3000 / epll_rate * epll_div[i][3];
 	lockcnt = locktime * 10000 / (10000 / epll_rate);
 
-	__raw_writel(lockcnt, S5P_EPLL_LOCK);
+	__raw_writel(lockcnt, EXYNOS4_EPLL_LOCK);
 
-	__raw_writel(epll_con, S5P_EPLL_CON0);
-	__raw_writel(epll_con_k, S5P_EPLL_CON1);
+	__raw_writel(epll_con, EXYNOS4_EPLL_CON0);
+	__raw_writel(epll_con_k, EXYNOS4_EPLL_CON1);
 
 	do {
-		tmp = __raw_readl(S5P_EPLL_CON0);
-	} while (!(tmp & 0x1 << S5P_EPLLCON0_LOCKED_SHIFT));
+		tmp = __raw_readl(EXYNOS4_EPLL_CON0);
+	} while (!(tmp & 0x1 << EXYNOS4_EPLLCON0_LOCKED_SHIFT));
 
 	clk->rate = rate;
 
@@ -1900,9 +1900,9 @@ static int xtal_rate;
 static unsigned long exynos4_fout_apll_get_rate(struct clk *clk)
 {
 	if (cpu_is_exynos4210())
-		return s5p_get_pll45xx(xtal_rate, __raw_readl(S5P_APLL_CON0), pll_4508);
+		return s5p_get_pll45xx(xtal_rate, __raw_readl(EXYNOS4_APLL_CON0), pll_4508);
 	else
-		return s5p_get_pll35xx(xtal_rate, __raw_readl(S5P_APLL_CON0), pll_3500);
+		return s5p_get_pll35xx(xtal_rate, __raw_readl(EXYNOS4_APLL_CON0), pll_3500);
 }
 
 static struct clk_ops exynos4_fout_apll_ops = {
@@ -1940,23 +1940,23 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	printk(KERN_DEBUG "%s: xtal is %ld\n", __func__, xtal);
 
 	if (cpu_is_exynos4210()) {
-		apll = s5p_get_pll45xx(xtal, __raw_readl(S5P_APLL_CON0), pll_4508);
-		mpll = s5p_get_pll45xx(xtal, __raw_readl(S5P_MPLL_CON0), pll_4508);
-		epll = s5p_get_pll46xx(xtal, __raw_readl(S5P_EPLL_CON0),
-				__raw_readl(S5P_EPLL_CON1), pll_4600);
+		apll = s5p_get_pll45xx(xtal, __raw_readl(EXYNOS4_APLL_CON0), pll_4508);
+		mpll = s5p_get_pll45xx(xtal, __raw_readl(EXYNOS4_MPLL_CON0), pll_4508);
+		epll = s5p_get_pll46xx(xtal, __raw_readl(EXYNOS4_EPLL_CON0),
+				__raw_readl(EXYNOS4_EPLL_CON1), pll_4600);
 
 		vpllsrc = clk_get_rate(&clk_vpllsrc.clk);
-		vpll = s5p_get_pll46xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
-				__raw_readl(S5P_VPLL_CON1), pll_4650c);
+		vpll = s5p_get_pll46xx(vpllsrc, __raw_readl(EXYNOS4_VPLL_CON0),
+				__raw_readl(EXYNOS4_VPLL_CON1), pll_4650c);
 	} else {
-		apll = s5p_get_pll35xx(xtal, __raw_readl(S5P_APLL_CON0), pll_3500);
-		mpll = s5p_get_pll35xx(xtal, __raw_readl(S5P_MPLL_CON0), pll_3500);
-		epll = s5p_get_pll36xx(xtal, __raw_readl(S5P_EPLL_CON0),
-				__raw_readl(S5P_EPLL_CON1), pll_3600);
+		apll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS4_APLL_CON0), pll_3500);
+		mpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS4_MPLL_CON0), pll_3500);
+		epll = s5p_get_pll36xx(xtal, __raw_readl(EXYNOS4_EPLL_CON0),
+				__raw_readl(EXYNOS4_EPLL_CON1), pll_3600);
 
 		vpllsrc = clk_get_rate(&clk_vpllsrc.clk);
-		vpll = s5p_get_pll36xx(vpllsrc, __raw_readl(S5P_VPLL_CON0),
-				__raw_readl(S5P_VPLL_CON1), pll_3600);
+		vpll = s5p_get_pll36xx(vpllsrc, __raw_readl(EXYNOS4_VPLL_CON0),
+				__raw_readl(EXYNOS4_VPLL_CON1), pll_3600);
 	}
 
 	clk_fout_apll.ops = &exynos4_fout_apll_ops;
