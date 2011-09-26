@@ -31,6 +31,24 @@
 #include <mach/sysmmu.h>
 #include <mach/exynos-clock.h>
 
+/* Core list of CMU_CPU side */
+
+static struct clksrc_clk exynos5_clk_mout_apll = {
+	.clk	= {
+		.name		= "mout_apll",
+	},
+	.sources = &clk_src_apll,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_CPU, .shift = 0, .size = 1 },
+};
+
+struct clksrc_clk exynos5_clk_sclk_apll = {
+	.clk	= {
+		.name		= "sclk_apll",
+		.parent		= &exynos5_clk_mout_apll.clk,
+	},
+	.reg_div = { .reg = EXYNOS5_CLKDIV_CPU, .shift = 24, .size = 3 },
+};
+
 void __init_or_cpufreq exynos5_setup_clocks(void)
 {
 }
