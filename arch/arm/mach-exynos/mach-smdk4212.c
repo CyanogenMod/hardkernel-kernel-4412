@@ -78,7 +78,9 @@
 #endif
 #include <plat/fimg2d.h>
 #include <mach/sysmmu.h>
-
+#ifdef CONFIG_VIDEO_JPEG_V2X
+#include <plat/jpeg.h>
+#endif
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK4212_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -2096,6 +2098,7 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	exynos4_jpeg_setup_clock(&s5p_device_jpeg.dev, 160000000);
 #endif
 #endif
 
