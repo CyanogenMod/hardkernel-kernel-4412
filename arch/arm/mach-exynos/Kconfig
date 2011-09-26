@@ -234,6 +234,13 @@ config EXYNOS4_SETUP_MIPI_DSI
 	help
 	  Common setup code for MIPI_DSIM.
 
+config EXYNOS4_SETUP_JPEG
+	bool
+	depends on VIDEO_JPEG_V2X
+	default y
+	help
+	  Common setup code for JPEG
+
 config EXYNOS4_ENBLE_CLOCK_DOWN
 	bool "ARM core clock down feature enable"
 	depends on CPU_IDLE
