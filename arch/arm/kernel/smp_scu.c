@@ -14,11 +14,15 @@
 #include <asm/smp_scu.h>
 #include <asm/cacheflush.h>
 
+#include <plat/cputype.h>
+
 #define SCU_CTRL		0x00
 #define SCU_CONFIG		0x04
 #define SCU_CPU_STATUS		0x08
 #define SCU_INVALIDATE		0x0c
 #define SCU_FPGA_REVISION	0x10
+#define SCU_FILTER_START	0x40
+#define SCU_FILTER_END		0x44
 
 /*
  * Get the number of CPU cores from the SCU configuration
@@ -41,7 +45,18 @@ void __init scu_enable(void __iomem *scu_base)
 	if (scu_ctrl & 1)
 		return;
 
-	scu_ctrl |= 1;
+	if (cpu_is_exynos4412()) {
+		/*
+		 * Use SCU address filtering feature.
+		 * It should be removed on exynos4412 EVT1.
+		 */
+		scu_ctrl |= 3;
+		__raw_writel(0x10500000, scu_base + SCU_FILTER_START);
+		__raw_writel(0x10600000, scu_base + SCU_FILTER_END);
+	} else {
+		scu_ctrl |= 1;
+	}
+
 	__raw_writel(scu_ctrl, scu_base + SCU_CTRL);
 
 	/*
