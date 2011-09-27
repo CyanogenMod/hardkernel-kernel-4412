@@ -71,6 +71,7 @@
 
 #include <mach/map.h>
 #include <mach/spi-clocks.h>
+#include <mach/exynos-ion.h>
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
@@ -2241,6 +2242,9 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_S5P_SYSTEM_MMU
 	&exynos_device_sysmmu[SYSMMU_MDMA],
 #endif
+#ifdef CONFIG_ION_EXYNOS
+	&exynos_device_ion,
+#endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 	&exynos_device_flite0,
 	&exynos_device_flite1,
@@ -2417,7 +2421,8 @@ static void __init exynos4_reserve_mem(void)
 		"samsung-rp=srp;"
 		"s5p-jpeg=jpeg;"
 		"exynos4-fimc-is=fimc_is;"
-		"s5p-fimg2d=fimg2d";
+		"s5p-fimg2d=fimg2d;"
+		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;";
 
 	cma_set_defaults(regions, map);
 	cma_early_regions_reserve(NULL);
@@ -2639,6 +2644,10 @@ static void __init smdk4212_machine_init(void)
 	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	exynos4_jpeg_setup_clock(&s5p_device_jpeg.dev, 160000000);
 #endif
+#endif
+
+#ifdef CONFIG_ION_EXYNOS
+	exynos_ion_set_platdata();
 #endif
 
 #ifdef CONFIG_VIDEO_MFC5X
