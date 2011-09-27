@@ -1480,15 +1480,6 @@ static struct clksrc_clk exynos4_clksrcs[] = {
 		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL0, .shift = 12, .size = 4 },
 	}, {
 		.clk	= {
-			.name		= "sclk_pwm",
-			.enable		= exynos4_clksrc_mask_peril0_ctrl,
-			.ctrlbit	= (1 << 24),
-		},
-		.sources = &exynos4_clkset_group,
-		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL0, .shift = 24, .size = 4 },
-		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL3, .shift = 0, .size = 4 },
-	}, {
-		.clk	= {
 			.name		= "sclk_csis",
 			.devname	= "s3c-csis.0",
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
