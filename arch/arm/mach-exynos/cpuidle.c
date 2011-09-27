@@ -647,7 +647,7 @@ static void __init exynos4_core_down_clk(void)
 {
 	unsigned int tmp;
 
-	tmp = __raw_readl(S5P_PWR_CTRL1);
+	tmp = __raw_readl(EXYNOS4_PWR_CTRL1);
 
 	tmp &= ~(PWR_CTRL1_CORE2_DOWN_MASK | PWR_CTRL1_CORE1_DOWN_MASK);
 
@@ -676,9 +676,9 @@ static void __init exynos4_core_down_clk(void)
 			PWR_CTRL1_USE_CORE0_WFI);
 	}
 
-	__raw_writel(tmp, S5P_PWR_CTRL1);
+	__raw_writel(tmp, EXYNOS4_PWR_CTRL1);
 
-	tmp = __raw_readl(S5P_PWR_CTRL2);
+	tmp = __raw_readl(EXYNOS4_PWR_CTRL2);
 
 	tmp &= ~(PWR_CTRL2_DUR_STANDBY2_MASK | PWR_CTRL2_DUR_STANDBY1_MASK |
 		PWR_CTRL2_CORE2_UP_MASK | PWR_CTRL2_CORE1_UP_MASK);
@@ -694,7 +694,7 @@ static void __init exynos4_core_down_clk(void)
 	/* Set PWR_CTRL2 register to use step up for arm clock */
 	tmp |= (PWR_CTRL2_DIV2_UP_EN | PWR_CTRL2_DIV1_UP_EN);
 
-	__raw_writel(tmp, S5P_PWR_CTRL2);
+	__raw_writel(tmp, EXYNOS4_PWR_CTRL2);
 
 	printk(KERN_INFO "Exynos4 : ARM Clock down on idle mode is enabled\n");
 }
