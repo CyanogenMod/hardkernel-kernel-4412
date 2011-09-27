@@ -12,7 +12,7 @@ obj-				:=
 
 # Core support for EXYNOS system
 
-obj-y				+= init.o clock.o irq-combiner.o
+obj-y				+= init.o irq-combiner.o
 obj-$(CONFIG_ARCH_EXYNOS4)	+= cpu-exynos4.o clock-exynos4.o dma.o pmu.o irq-eint.o ppc.o ppmu.o clock-domain.o dev.o
 obj-$(CONFIG_ARCH_EXYNOS5)	+= cpu-exynos5.o clock-exynos5.o clock-domain.o
 
