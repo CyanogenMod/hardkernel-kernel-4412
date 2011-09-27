@@ -246,7 +246,7 @@ struct clksrc_clk exynos4212_clk_aclk_jpeg = {
 	.reg_div = { .reg = EXYNOS4_CLKDIV_CAM1, .shift = 0, .size = 4 },
 };
 
-static struct clksrc_clk *sysclks[] = {
+static struct clksrc_clk *exynos4212_sysclks[] = {
 	&exynos4212_clk_mout_mpll_user,
 	&exynos4212_clk_aclk_gdl_user,
 	&exynos4212_clk_aclk_gdr_user,
@@ -260,7 +260,7 @@ static struct clksrc_clk *sysclks[] = {
 	&exynos4212_clk_aclk_jpeg,
 };
 
-static struct clk init_clocks_off[] = {
+static struct clk exynos4212_init_clocks_off[] = {
 	{
 		.name		= "mipihsi",
 		.parent		= &exynos4_clk_aclk_133.clk,
@@ -269,7 +269,7 @@ static struct clk init_clocks_off[] = {
 	},
 };
 
-static struct clksrc_clk clksrcs[] = {
+static struct clksrc_clk exynos4212_clksrcs[] = {
 	{
 		.clk	= {
 			.name		= "sclk_mipihsi",
@@ -282,7 +282,7 @@ static struct clksrc_clk clksrcs[] = {
 	},
 };
 
-static struct clk clk_isp[] = {
+static struct clk exynos4212_clk_isp[] = {
 	{
 		.name	= "aclk_400_muxed",
 		.parent = &exynos4212_clk_aclk_400.clk,
@@ -292,7 +292,7 @@ static struct clk clk_isp[] = {
 	},
 };
 
-static struct clksrc_clk clk_isp_srcs_div0 = {
+static struct clksrc_clk exynos4212_clk_isp_srcs_div0 = {
 	.clk		= {
 		.name		= "sclk_mcuisp_div0",
 		.parent = &exynos4212_clk_aclk_400.clk,
@@ -300,11 +300,11 @@ static struct clksrc_clk clk_isp_srcs_div0 = {
 	.reg_div = { .reg = EXYNOS4_CLKDIV_ISP1, .shift = 4, .size = 3 },
 };
 
-static struct clksrc_clk clk_isp_srcs[] = {
+static struct clksrc_clk exynos4212_clk_isp_srcs[] = {
 	{
 		.clk		= {
 			.name		= "sclk_mcuisp_div1",
-			.parent = &clk_isp_srcs_div0.clk,
+			.parent = &exynos4212_clk_isp_srcs_div0.clk,
 		},
 		.reg_div = { .reg = EXYNOS4_CLKDIV_ISP1, .shift = 0, .size = 3 },
 	}, {
@@ -453,17 +453,17 @@ void __init exynos4212_register_clocks(void)
 	exynos4_vpll_ops.get_rate = exynos4212_vpll_get_rate;
 	exynos4_vpll_ops.set_rate = exynos4212_vpll_set_rate;
 
-	for (ptr = 0; ptr < ARRAY_SIZE(sysclks); ptr++)
-		s3c_register_clksrc(sysclks[ptr], 1);
+	for (ptr = 0; ptr < ARRAY_SIZE(exynos4212_sysclks); ptr++)
+		s3c_register_clksrc(exynos4212_sysclks[ptr], 1);
 
-	s3c_register_clksrc(clksrcs, ARRAY_SIZE(clksrcs));
+	s3c_register_clksrc(exynos4212_clksrcs, ARRAY_SIZE(exynos4212_clksrcs));
 
-	s3c_register_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
-	s3c_disable_clocks(init_clocks_off, ARRAY_SIZE(init_clocks_off));
+	s3c_register_clocks(exynos4212_init_clocks_off, ARRAY_SIZE(exynos4212_init_clocks_off));
+	s3c_disable_clocks(exynos4212_init_clocks_off, ARRAY_SIZE(exynos4212_init_clocks_off));
 
-	s3c_register_clksrc(&clk_isp_srcs_div0, 1);
-	s3c_register_clksrc(clk_isp_srcs, ARRAY_SIZE(clk_isp_srcs));
-	s3c_register_clocks(clk_isp, ARRAY_SIZE(clk_isp));
+	s3c_register_clksrc(&exynos4212_clk_isp_srcs_div0, 1);
+	s3c_register_clksrc(exynos4212_clk_isp_srcs, ARRAY_SIZE(exynos4212_clk_isp_srcs));
+	s3c_register_clocks(exynos4212_clk_isp, ARRAY_SIZE(exynos4212_clk_isp));
 
 	register_syscore_ops(&exynos4212_clock_syscore_ops);
 }
