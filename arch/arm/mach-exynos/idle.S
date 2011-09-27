@@ -164,7 +164,7 @@ ENTRY(exynos4_idle_resume)
 	ldr	r0, [r1]
 	mov	r0, r0, lsr #12
 	/* Check soc id */
-	ldr	r2, =0x43220
+	ldr	r2, =0x43210
 	cmp	r0, r2
 #ifdef CONFIG_ARM_TRUSTZONE
 	ldr	r0, =SMC_CMD_L2X0SETUP1
@@ -180,7 +180,7 @@ ENTRY(exynos4_idle_resume)
 	ldr	r3, =0xC200FFFF
 	smc	0
 #else
-	beq	exynos4212_l2_cache
+	bne	exynos4212_l2_cache
 
 	/* Outer cache TAG,DATA latency */
 	ldr	r1, =0x10502000
