@@ -675,15 +675,19 @@ static struct v4l2_subdev *exynos_flite_get_subdev(int id)
 int fimc_subdev_attatch(struct fimc_control *ctrl)
 {
 	int ret = 0;
+	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 
 	ctrl->flite_sd = exynos_flite_get_subdev(ctrl->cam->flite_id);
 	if (IS_ERR_OR_NULL(ctrl->flite_sd)) {
 			ctrl->flite_sd = NULL;
 			return PTR_ERR(ctrl->flite_sd);
 	} else {
-		ret = v4l2_subdev_call(ctrl->flite_sd, core, s_power, 1);
-		if (ret)
-			fimc_err("s_power failed: %d", ret);
+		if (fimc_cam_use) {
+			ret = v4l2_subdev_call(ctrl->flite_sd, core, s_power, 1);
+			if (ret)
+				fimc_err("s_power failed: %d", ret);
+		}
+
 	}
 
 	return 0;
@@ -821,7 +825,7 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 		ctrl->cam = fimc->camera[i];
 
 		if ((ctrl->cam->id != CAMERA_WB) && (ctrl->cam->id !=
-					CAMERA_WB_B) && (!ctrl->cam->use_isp)) {
+			CAMERA_WB_B) && (!ctrl->cam->use_isp) && fimc_cam_use) {
 			ret = fimc_configure_subdev(ctrl);
 			if (ret < 0) {
 				mutex_unlock(&ctrl->v4l2_lock);
@@ -830,46 +834,6 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 				return -ENODEV;
 			}
 		}
-
-		if (ctrl->cam->use_isp) {
-			/* fimc-lite attatch */
-			ret = fimc_subdev_attatch(ctrl);
-			if (ret) {
-				fimc_err("subdev_attatch failed\n");
-				return -ENODEV;
-			}
-			/* fimc-is attatch */
-			ctrl->is.sd = fimc_is_get_subdev(i);
-			if (IS_ERR_OR_NULL(ctrl->is.sd)) {
-				ctrl->is.sd = NULL;
-				return -ENODEV;
-			}
-			ctrl->is.fmt.width = ctrl->cam->width;
-			ctrl->is.fmt.height = ctrl->cam->height;
-			ctrl->is.frame_count = 0;
-
-			ret = fimc_is_init_cam(ctrl);
-			if (ret < 0) {
-				fimc_dbg("FIMC-IS init clock failed");
-				return -ENODEV;
-			}
-			ret = v4l2_subdev_call(ctrl->is.sd, core, s_power, 1);
-			if (ret < 0) {
-				fimc_dbg("FIMC-IS init failed");
-				return -ENODEV;
-			}
-			ret = v4l2_subdev_call(ctrl->is.sd, core, load_fw);
-			if (ret < 0) {
-				fimc_dbg("FIMC-IS init failed");
-				return -ENODEV;
-			}
-			ret = v4l2_subdev_call(ctrl->is.sd, core, init, ctrl->cam->sensor_index);
-			if (ret < 0) {
-				fimc_dbg("FIMC-IS init failed");
-				return -ENODEV;
-			}
-		}
-
 		fimc->active_camera = i;
 		fimc_info2("fimc_s_input activated subdev = %d\n", i);
 	}
@@ -883,6 +847,46 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 			mutex_unlock(&ctrl->v4l2_lock);
 			return -EINVAL;
 		}
+	}
+
+	if (ctrl->cam->use_isp) {
+	    /* fimc-lite attatch */
+	    ret = fimc_subdev_attatch(ctrl);
+	    if (ret) {
+		    fimc_err("subdev_attatch failed\n");
+		    return -ENODEV;
+	    }
+	    /* fimc-is attatch */
+	    ctrl->is.sd = fimc_is_get_subdev(i);
+	    if (IS_ERR_OR_NULL(ctrl->is.sd)) {
+		    ctrl->is.sd = NULL;
+		    return -ENODEV;
+	    }
+	    ctrl->is.fmt.width = ctrl->cam->width;
+	    ctrl->is.fmt.height = ctrl->cam->height;
+	    ctrl->is.frame_count = 0;
+	    if (fimc_cam_use) {
+		ret = fimc_is_init_cam(ctrl);
+		if (ret < 0) {
+			fimc_dbg("FIMC-IS init clock failed");
+			return -ENODEV;
+		}
+		ret = v4l2_subdev_call(ctrl->is.sd, core, s_power, 1);
+		if (ret < 0) {
+			fimc_dbg("FIMC-IS init failed");
+			return -ENODEV;
+		}
+		ret = v4l2_subdev_call(ctrl->is.sd, core, load_fw);
+		if (ret < 0) {
+			fimc_dbg("FIMC-IS init failed");
+			return -ENODEV;
+		}
+		ret = v4l2_subdev_call(ctrl->is.sd, core, init, ctrl->cam->sensor_index);
+		if (ret < 0) {
+			fimc_dbg("FIMC-IS init failed");
+			return -ENODEV;
+		}
+	    }
 	}
 
 	mutex_unlock(&ctrl->v4l2_lock);
@@ -1005,6 +1009,7 @@ static int fimc_fmt_depth(struct fimc_control *ctrl, struct v4l2_pix_format *f)
 int fimc_s_fmt_vid_private(struct file *file, void *fh, struct v4l2_format *f)
 {
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
+	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 	struct v4l2_mbus_framefmt *mbus_fmt;
 	int ret = 0;
 
@@ -1025,7 +1030,8 @@ int fimc_s_fmt_vid_private(struct file *file, void *fh, struct v4l2_format *f)
 		mbus_fmt->code = V4L2_MBUS_FMT_YUYV8_2X8; /*dummy*/
 		mbus_fmt->field = f->fmt.pix.field;
 		mbus_fmt->colorspace = V4L2_COLORSPACE_SRGB;
-		ret = v4l2_subdev_call(ctrl->is.sd, video,
+		if (fimc_cam_use)
+			ret = v4l2_subdev_call(ctrl->is.sd, video,
 					s_mbus_fmt, mbus_fmt);
 
 		return ret;
