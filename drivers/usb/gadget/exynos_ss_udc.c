@@ -30,7 +30,7 @@
 
 #include <plat/regs-usb3-exynos-udc-phy.h>
 #include <plat/regs-usb3-exynos-udc.h>
-//#include <mach/regs-sys.h>
+#include <mach/regs-pmu.h>
 #include <plat/udc-ss.h>
 #include <plat/cpu.h>
 
@@ -1699,6 +1699,19 @@ static void __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
  */
 static void exynos_ss_udc_gate(struct platform_device *pdev, bool on)
 {
+	unsigned long flags;
+	u32 reg;
+
+	local_irq_save(flags);
+
+	reg = __raw_readl(S5P_USBDRD_PHY_CONTROL);
+	if (on)
+		reg |= S5P_USBDRD_PHY_ENABLE;
+	else
+		reg &= ~S5P_USBDRD_PHY_ENABLE;
+	__raw_writel(reg, S5P_USBDRD_PHY_CONTROL);
+
+	local_irq_restore(flags);
 }
 
 /**
