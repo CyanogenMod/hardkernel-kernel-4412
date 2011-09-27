@@ -55,14 +55,14 @@ struct codec_operations {
 	int (*multi_data_frame) (struct mfc_inst_ctx *ctx);
 	int (*set_exe_arg) (struct mfc_inst_ctx *ctx, void *arg);
 	/* configuration routines */
-	int (*get_codec_cfg) (struct mfc_inst_ctx *ctx, unsigned int type, int *value);
-	int (*set_codec_cfg) (struct mfc_inst_ctx *ctx, unsigned int type, int *value);
+	int (*get_codec_cfg) (struct mfc_inst_ctx *ctx, int type, void *arg);
+	int (*set_codec_cfg) (struct mfc_inst_ctx *ctx, int type, void *arg);
 };
 
 struct mfc_pre_cfg {
 	struct list_head list;
 	unsigned int type;
-	unsigned int value[4];
+	unsigned int values[4];
 };
 
 struct mfc_dec_cfg {
@@ -157,6 +157,7 @@ struct mfc_inst_ctx *mfc_create_inst(void);
 void mfc_destroy_inst(struct mfc_inst_ctx* ctx);
 int mfc_set_inst_state(struct mfc_inst_ctx *ctx, enum instance_state state);
 int mfc_chk_inst_state(struct mfc_inst_ctx *ctx, enum instance_state state);
-int mfc_set_inst_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value);
+int mfc_set_inst_cfg(struct mfc_inst_ctx *ctx, int type, void *arg);
+int mfc_get_inst_cfg(struct mfc_inst_ctx *ctx, int type, void *arg);
 
 #endif /* __MFC_INST_H */

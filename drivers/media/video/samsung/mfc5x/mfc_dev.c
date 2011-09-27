@@ -258,12 +258,11 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int ret, ex_ret;
 	struct mfc_common_args in_param;
 	struct mfc_buf_alloc_arg buf_arg;
+	struct mfc_config_arg *cfg_arg;
 	int port;
 
 	struct mfc_dev *dev;
 	int i;
-
-	struct mfc_set_config_arg *set_cnf_arg;
 
 	mfc_ctx = (struct mfc_inst_ctx *)file->private_data;
 	if (!mfc_ctx)
@@ -468,21 +467,27 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		/* in_param.ret_code = mfc_set_config(mfc_ctx, &(in_param.args)); */
 
-		set_cnf_arg = (struct mfc_set_config_arg *)&in_param.args;
+		cfg_arg = (struct mfc_config_arg *)&in_param.args;
 
-		in_param.ret_code = mfc_set_inst_cfg(mfc_ctx, set_cnf_arg->in_config_param, set_cnf_arg->in_config_value);
+		in_param.ret_code = mfc_set_inst_cfg(mfc_ctx, cfg_arg->type,
+				(void *)&cfg_arg->args);
 		ret = in_param.ret_code;
 
 		mutex_unlock(&dev->lock);
 		break;
 
 	case IOCTL_MFC_GET_CONFIG:
-		/* FIXME: */
 		/* FIXME: mfc_chk_inst_state */
 		/* RMVME: need locking ? */
+		mutex_lock(&dev->lock);
 
-		in_param.ret_code = MFC_OK;
-		ret = MFC_OK;
+		cfg_arg = (struct mfc_config_arg *)&in_param.args;
+
+		in_param.ret_code = mfc_get_inst_cfg(mfc_ctx, cfg_arg->type,
+				(void *)&cfg_arg->args);
+		ret = in_param.ret_code;
+
+		mutex_unlock(&dev->lock);
 		break;
 
 	case IOCTL_MFC_SET_BUF_CACHE:

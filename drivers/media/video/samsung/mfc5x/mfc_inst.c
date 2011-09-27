@@ -125,17 +125,16 @@ int mfc_chk_inst_state(struct mfc_inst_ctx *ctx, enum instance_state state)
 		return 0;
 }
 
-int mfc_set_inst_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value)
+int mfc_set_inst_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 {
 	int ret = MFC_OK;
 	struct mfc_pre_cfg *precfg;
-
-	/*
+	union _mfc_config_arg *usercfg = (union _mfc_config_arg *)arg;
 	struct list_head *pos, *nxt;
-	*/
 
 	mfc_dbg("type: 0x%08x, ctx->type: 0x%08x", type, ctx->type);
 
+	/* pre-configuration supports only basic type */
 	if (ctx->state <= INST_STATE_CREATE) {
 		precfg = (struct mfc_pre_cfg *)
 			kzalloc(sizeof(struct mfc_pre_cfg), GFP_KERNEL);
@@ -149,77 +148,89 @@ int mfc_set_inst_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value)
 		memset(precfg, 0x00, sizeof(precfg));
 
 		precfg->type = type;
-		memcpy(precfg->value, value, sizeof(precfg->value));
+		memcpy(precfg->values, usercfg->basic.values, sizeof(precfg->values));
 
-		/*
-		mfc_dbg("type: 0x%08x, precfg->type: 0x%08x", type, precfg->type);
-		mfc_dbg("value1: %d, precfg->value1: %d", value[0], precfg->value[0]);
-		mfc_dbg("value2: %d, precfg->value2: %d", value[1], precfg->value[1]);
-		mfc_dbg("value3: %d, precfg->value3: %d", value[2], precfg->value[2]);
-		mfc_dbg("value4: %d, precfg->value4: %d", value[3], precfg->value[3]);
-		*/
+		mfc_dbg("precfg new entry");
+		mfc_dbg("type: 0x%08x", precfg->type);
+		mfc_dbg("values: %d %d %d %d", precfg->values[0],
+			precfg->values[1], precfg->values[2], precfg->values[3]);
 
 		list_add_tail(&precfg->list, &ctx->presetcfgs);
 
-		/*
 		mfc_dbg("precfg enties...");
 		precfg = NULL;
 
 		list_for_each_safe(pos, nxt, &ctx->presetcfgs) {
 			precfg = list_entry(pos, struct mfc_pre_cfg, list);
 
-			mfc_dbg("type: 0x%08x, precfg->type: 0x%08x", type, precfg->type);
-			mfc_dbg("value1: %d, precfg->value1: %d", value[0], precfg->value[0]);
-			mfc_dbg("value2: %d, precfg->value2: %d", value[1], precfg->value[1]);
-			mfc_dbg("value3: %d, precfg->value3: %d", value[2], precfg->value[2]);
-			mfc_dbg("value4: %d, precfg->value4: %d", value[3], precfg->value[3]);
+			mfc_dbg("type: 0x%08x", precfg->type);
+			mfc_dbg("values: %d %d %d %d", precfg->values[0],
+				precfg->values[1], precfg->values[2], precfg->values[3]);
 		}
-		*/
 
 		return MFC_OK;
 	}
 
-	switch(type){
-                case MFC_DEC_SETCONF_POST_ENABLE:
-                case MFC_DEC_SETCONF_EXTRA_BUFFER_NUM:
-                case MFC_DEC_SETCONF_DISPLAY_DELAY:
-                case MFC_DEC_SETCONF_IS_LAST_FRAME:
-                case MFC_DEC_SETCONF_SLICE_ENABLE:
-                case MFC_DEC_SETCONF_CRC_ENABLE:
-                case MFC_DEC_SETCONF_FIMV1_WIDTH_HEIGHT:
-                case MFC_DEC_SETCONF_FRAME_TAG:
-                case MFC_DEC_SETCONF_IMMEDIATELY_DISPLAY:
-                case MFC_DEC_SETCONF_DPB_FLUSH:
-                case MFC_DEC_SETCONF_PIXEL_CACHE:
-                case MFC_ENC_SETCONF_FRAME_TYPE:
-                case MFC_ENC_SETCONF_CHANGE_FRAME_RATE:
-                case MFC_ENC_SETCONF_CHANGE_BIT_RATE:
-                case MFC_ENC_SETCONF_FRAME_TAG:
-                case MFC_ENC_SETCONF_ALLOW_FRAME_SKIP:
-                case MFC_ENC_SETCONF_VUI_INFO:
-                case MFC_ENC_SETCONF_I_PERIOD:
-                case MFC_ENC_SETCONF_HIER_P:
-			mfc_dbg("[%s] SetConf %d\n",__func__,type);
+	switch (type) {
+		case MFC_DEC_SETCONF_POST_ENABLE:
+		case MFC_DEC_SETCONF_EXTRA_BUFFER_NUM:
+		case MFC_DEC_SETCONF_DISPLAY_DELAY:
+		case MFC_DEC_SETCONF_IS_LAST_FRAME:
+		case MFC_DEC_SETCONF_SLICE_ENABLE:
+		case MFC_DEC_SETCONF_CRC_ENABLE:
+		case MFC_DEC_SETCONF_FIMV1_WIDTH_HEIGHT:
+		case MFC_DEC_SETCONF_FRAME_TAG:
+		case MFC_DEC_SETCONF_IMMEDIATELY_DISPLAY:
+		case MFC_DEC_SETCONF_DPB_FLUSH:
+		case MFC_DEC_SETCONF_SEI_PARSE:
+		case MFC_DEC_SETCONF_PIXEL_CACHE:
+		case MFC_ENC_SETCONF_FRAME_TYPE:
+		case MFC_ENC_SETCONF_CHANGE_FRAME_RATE:
+		case MFC_ENC_SETCONF_CHANGE_BIT_RATE:
+		case MFC_ENC_SETCONF_FRAME_TAG:
+		case MFC_ENC_SETCONF_ALLOW_FRAME_SKIP:
+		case MFC_ENC_SETCONF_VUI_INFO:
+		case MFC_ENC_SETCONF_I_PERIOD:
+		case MFC_ENC_SETCONF_HIER_P:
+		case MFC_ENC_SETCONF_SEI_GEN:
+		case MFC_ENC_SETCONF_FRAME_PACKING:
 			if (ctx->c_ops->set_codec_cfg) {
-				if ((ctx->c_ops->set_codec_cfg(ctx, type, value)) < 0)
+				if ((ctx->c_ops->set_codec_cfg(ctx, type, arg)) < 0)
 					return MFC_SET_CONF_FAIL;
 			}
 			break;
 
-                case MFC_DEC_GETCONF_CRC_DATA:
-                case MFC_DEC_GETCONF_BUF_WIDTH_HEIGHT:
-                case MFC_DEC_GETCONF_CROP_INFO:
-                case MFC_DEC_GETCONF_FRAME_TAG:
-                case MFC_DEC_GETCONF_WIDTH_HEIGHT:
-                case MFC_ENC_GETCONF_FRAME_TAG:
+		default:
+			mfc_err("invalid set config type: 0x%08x\n", type);
+			return MFC_FAIL;
+	}
+
+	return ret;
+}
+
+int mfc_get_inst_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
+{
+	int ret = MFC_OK;
+
+	mfc_dbg("type: 0x%08x, ctx->type: 0x%08x", type, ctx->type);
+
+	switch (type) {
+		case MFC_DEC_GETCONF_CRC_DATA:
+		case MFC_DEC_GETCONF_BUF_WIDTH_HEIGHT:
+		case MFC_DEC_GETCONF_CROP_INFO:
+		case MFC_DEC_GETCONF_FRAME_TAG:
+		case MFC_DEC_GETCONF_WIDTH_HEIGHT:
+		case MFC_DEC_GETCONF_FRAME_PACKING:
+		case MFC_ENC_GETCONF_FRAME_TAG:
 			if (ctx->c_ops->get_codec_cfg) {
-				if ((ctx->c_ops->get_codec_cfg(ctx, type, value)) < 0)
+				if ((ctx->c_ops->get_codec_cfg(ctx, type, arg)) < 0)
 					return MFC_GET_CONF_FAIL;
 			}
 			break;
-		default :
-		     printk(KERN_ERR "Invalid config paramter\n");
-		     return MFC_FAIL;
+
+		default:
+			mfc_err("invalid get config type: 0x%08x\n", type);
+			return MFC_FAIL;
 	}
 
 	return ret;

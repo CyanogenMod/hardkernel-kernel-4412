@@ -68,11 +68,17 @@ struct mfc_enc_ctx {
 	void *e_priv;
 };
 
+#define CHG_FRAME_PACKING	0x00000001
+#define CHG_I_PERIOD		0x00000002
 struct mfc_enc_h264 {
+	unsigned int change;
 	unsigned int vui_enable;
 	unsigned int hier_p_enable;
 
 	unsigned int i_period;
+
+	unsigned int sei_gen;		/* H */
+	struct mfc_frame_packing fp;	/* H */
 };
 
 int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args);

@@ -164,6 +164,9 @@ struct mfc_dec_h264 {
 	unsigned int crop_l_ofs;	/* H */
 	unsigned int crop_b_ofs;	/* H */
 	unsigned int crop_t_ofs;	/* H */
+
+	unsigned int sei_parse;		/* H */
+	struct mfc_frame_packing fp;	/* H */
 };
 
 struct mfc_dec_mpeg4 {

@@ -487,9 +487,11 @@ static int pre_seq_start(struct mfc_inst_ctx *ctx)
 static int h264_pre_seq_start(struct mfc_inst_ctx *ctx)
 {
 	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
+	struct mfc_enc_h264 *h264 = (struct mfc_enc_h264 *)enc_ctx->e_priv;
+	unsigned int shm;
+
 	/*
 	unsigned int reg;
-	unsigned int shm;
 	*/
 
 	#if 0
@@ -537,6 +539,18 @@ static int h264_pre_seq_start(struct mfc_inst_ctx *ctx)
 	/* Set stream buffer addr */
 	write_reg(mfc_mem_base_ofs(enc_ctx->streamaddr) >> 11, MFC_ENC_SI_CH1_SB_ADR);
 	write_reg(enc_ctx->streamsize, MFC_ENC_SI_CH1_SB_SIZE);
+
+	write_shm(ctx, h264->sei_gen << 1, SEI_ENABLE);
+
+	if (h264->change & CHG_FRAME_PACKING) {
+		/* change type value to meet standard */
+		shm = (h264->fp.arrangement_type - 3) & 0x3;
+		/* only valid when type is temporal interleaving (5) */
+		shm |= ((h264->fp.current_frame_is_frame0_flag & 0x1) << 2);
+		write_shm(ctx, shm, FRAME_PACK_ENC_INFO);
+
+		h264->change &= ~(CHG_FRAME_PACKING);
+	}
 
 	return 0;
 }
@@ -712,6 +726,26 @@ static int pre_frame_start(struct mfc_inst_ctx *ctx)
 	return 0;
 }
 
+static int h264_pre_frame_start(struct mfc_inst_ctx *ctx)
+{
+	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
+	struct mfc_enc_h264 *h264 = (struct mfc_enc_h264 *)enc_ctx->e_priv;
+	unsigned int shm;
+
+	pre_frame_start(ctx);
+
+	if (h264->change & CHG_FRAME_PACKING) {
+		/* change type value to meet standard */
+		shm = (h264->fp.arrangement_type - 3) & 0x3;
+		/* only valid when type is temporal interleaving (5) */
+		shm |= ((h264->fp.current_frame_is_frame0_flag & 0x1) << 2);
+		write_shm(ctx, shm, FRAME_PACK_ENC_INFO);
+
+		h264->change &= ~(CHG_FRAME_PACKING);
+	}
+
+	return 0;
+}
 /*
  * [9] post_frame_start() implementations
  */
@@ -752,7 +786,7 @@ static int set_exe_arg(struct mfc_inst_ctx *ctx, void *arg)
 /*
  * [12] get_codec_cfg() implementations
  */
-static int get_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value)
+static int get_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 {
 	//struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
 	int ret = 0;
@@ -779,9 +813,10 @@ static int get_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 /*
  * [13] set_codec_cfg() implementations
  */
-static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value)
+static int set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 {
 	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
+	union _mfc_config_arg *usercfg = (union _mfc_config_arg *)arg;
 	int ret = 0;
 
 	mfc_dbg("type: 0x%08x", type);
@@ -806,9 +841,9 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 				return MFC_STATE_INVALID;
 			}
 
-			if ((value[0] >= DONT_CARE) && (value[0] <= NOT_CODED))	{
-				mfc_dbg("Frame Type : %d\n", value[0]);
-				enc_ctx->forceframe = value[0];
+			if ((usercfg->basic.values[0] >= DONT_CARE) && (usercfg->basic.values[0] <= NOT_CODED))	{
+				mfc_dbg("Frame Type : %d\n", usercfg->basic.values[0]);
+				enc_ctx->forceframe = usercfg->basic.values[0];
 				enc_ctx->FrameTypeCngTag = 1;
 				enc_ctx->setflag = 1;
 			} else {
@@ -825,9 +860,9 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 				return MFC_STATE_INVALID;
 			}
 
-			if (value[0] > 0) {
-				mfc_dbg("Frame rate : %d\n", value[0]);
-				enc_ctx->framerate = value[0];
+			if (usercfg->basic.values[0] > 0) {
+				mfc_dbg("Frame rate : %d\n", usercfg->basic.values[0]);
+				enc_ctx->framerate = usercfg->basic.values[0];
 				enc_ctx->FrameRateCngTag = 1;
 				enc_ctx->setflag = 1;
 			} else {
@@ -844,9 +879,9 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 				return MFC_STATE_INVALID;
 			}
 
-			if (value[0] > 0) {
-				mfc_dbg("Bit rate : %d\n", value[0]);
-				enc_ctx->bitrate = value[0];
+			if (usercfg->basic.values[0] > 0) {
+				mfc_dbg("Bit rate : %d\n", usercfg->basic.values[0]);
+				enc_ctx->bitrate = usercfg->basic.values[0];
 				enc_ctx->BitRateCngTag = 1;
 				enc_ctx->setflag = 1;
 			} else {
@@ -863,11 +898,11 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 				return MFC_STATE_INVALID;
 			}
 
-			if (value[0] > 0) {
-				mfc_dbg("Allow_frame_skip enable : %d\n", value[0]);
-				enc_ctx->frame_skip_enable = value[0];
+			if (usercfg->basic.values[0] > 0) {
+				mfc_dbg("Allow_frame_skip enable : %d\n", usercfg->basic.values[0]);
+				enc_ctx->frame_skip_enable = usercfg->basic.values[0];
 				if (enc_ctx->frame_skip_enable == 2)
-					enc_ctx->frameskip = value[1];
+					enc_ctx->frameskip = usercfg->basic.values[1];
 				enc_ctx->FrameSkipCngTag = 1;
 				enc_ctx->setflag = 1;
 			}
@@ -882,11 +917,11 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 				return MFC_STATE_INVALID;
 			}
 
-			if (value[0] > 0) {
-				mfc_dbg("VUI_info enable : %d\n", value[1]);
-				enc_ctx->vuiinfoval = value[0];
+			if (usercfg->basic.values[0] > 0) {
+				mfc_dbg("VUI_info enable : %d\n", usercfg->basic.values[1]);
+				enc_ctx->vuiinfoval = usercfg->basic.values[0];
 				if (enc_ctx->vuiinfoval == 255)
-					enc_ctx->vuiextendsar = value[1];
+					enc_ctx->vuiextendsar = usercfg->basic.values[1];
 				enc_ctx->vui_info_enable = 1;
 				enc_ctx->VUIInfoCngTag = 1;
 				enc_ctx->setflag = 1;
@@ -902,9 +937,9 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 				return MFC_STATE_INVALID;
 			}
 
-			if (value[0]) {
-				mfc_dbg("I_PERIOD value : %d\n", value[0]);
-				enc_ctx->iperiodval = value[0];
+			if (usercfg->basic.values[0]) {
+				mfc_dbg("I_PERIOD value : %d\n", usercfg->basic.values[0]);
+				enc_ctx->iperiodval = usercfg->basic.values[0];
 				enc_ctx->IPeriodCngTag = 1;
 				enc_ctx->setflag = 1;
 			}
@@ -919,9 +954,9 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 				return MFC_STATE_INVALID;
 			}
 
-			if (value[0]) {
-				mfc_dbg("HIER_P enable : %d\n", value[0]);
-				enc_ctx->hier_p_enable = value[0];
+			if (usercfg->basic.values[0]) {
+				mfc_dbg("HIER_P enable : %d\n", usercfg->basic.values[0]);
+				enc_ctx->hier_p_enable = usercfg->basic.values[0];
 				enc_ctx->HierPCngTag = 1;
 				enc_ctx->setflag = 1;
 			}
@@ -933,6 +968,66 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, unsigned int type, int *value
 			ret = 1;
 
 			break;
+	}
+
+	return ret;
+}
+
+static int h264_set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
+{
+	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
+	struct mfc_enc_h264 *h264 = (struct mfc_enc_h264 *)enc_ctx->e_priv;
+	union _mfc_config_arg *usercfg = (union _mfc_config_arg *)arg;
+	int ret;
+
+	mfc_dbg("type: 0x%08x", type);
+	mfc_dbg("ctx->state: 0x%08x", ctx->state);
+
+	ret = set_codec_cfg(ctx, type, arg);
+	if (ret <= 0)
+		return ret;
+
+	ret = 0;
+
+	switch (type) {
+	case MFC_ENC_SETCONF_SEI_GEN:
+		mfc_dbg("ctx->state: 0x%08x", ctx->state);
+
+		if (ctx->state >= INST_STATE_INIT) {
+			mfc_dbg("invalid instance state: 0x%08x\n", type);
+			return MFC_STATE_INVALID;
+		}
+
+		if (usercfg->basic.values[0] > 0)
+			h264->sei_gen = 1;
+		else
+			h264->sei_gen = 0;
+
+		break;
+
+	case MFC_ENC_SETCONF_FRAME_PACKING:
+		if (ctx->state >= INST_STATE_EXE) {
+			mfc_dbg("invalid instance state: 0x%08x\n", type);
+			return MFC_STATE_INVALID;
+		}
+
+		if ((usercfg->basic.values[0] < 3) || (usercfg->basic.values[0] > 5) ) {
+			mfc_err("invalid param: FRAME_PACKING: %d\n",
+				usercfg->basic.values[0]);
+			return MFC_ENC_GET_CONF_FAIL;
+		}
+
+		h264->fp.arrangement_type = usercfg->basic.values[0] & 0x7F;
+		h264->fp.current_frame_is_frame0_flag = usercfg->basic.values[1] & 0x1;
+
+		h264->change |= CHG_FRAME_PACKING;
+
+		break;
+	default:
+		mfc_dbg("invalid set cfg type: 0x%08x\n", type);
+		ret = -2;
+
+		break;
 	}
 
 	return ret;
@@ -981,12 +1076,12 @@ static struct mfc_enc_info h264_enc = {
 		.set_codec_bufs		= h264_set_codec_bufs,
 		.set_dpbs		= NULL,
 		.get_exe_arg		= NULL,
-		.pre_frame_start	= pre_frame_start,
+		.pre_frame_start	= h264_pre_frame_start,
 		.post_frame_start	= post_frame_start,
 		.multi_data_frame	= multi_data_frame,
 		.set_exe_arg		= set_exe_arg,
 		.get_codec_cfg		= get_codec_cfg,
-		.set_codec_cfg		= set_codec_cfg,
+		.set_codec_cfg		= h264_set_codec_cfg,
 	},
 };
 
@@ -1201,7 +1296,7 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 		precfg = list_entry(pos, struct mfc_pre_cfg, list);
 
 		if (ctx->c_ops->set_codec_cfg) {
-			ret = ctx->c_ops->set_codec_cfg(ctx, precfg->type, precfg->value);
+			ret = ctx->c_ops->set_codec_cfg(ctx, precfg->type, precfg->values);
 			if (ret < 0)
 				mfc_warn("cannot set preset config type: 0x%08x: %d",
 					precfg->type, ret);
@@ -1287,7 +1382,7 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 				write_shm(ctx, ((enc_ctx->frame_skip_enable << 1)|read_shm(ctx, EXT_ENC_CONTROL)), EXT_ENC_CONTROL);
 		}
 
-		if( enc_ctx->VUIInfoCngTag == 1)	{
+		if (enc_ctx->VUIInfoCngTag == 1) {
 			mfc_dbg("Encoding Param Setting - VUI_info enable : %d\n", enc_ctx->vui_info_enable);
 
 			write_shm(ctx, enc_ctx->vuiinfoval, ASPECT_RATIO_IDC);
