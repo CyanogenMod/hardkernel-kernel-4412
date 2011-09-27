@@ -403,7 +403,7 @@ int exynos4_busfreq_lock(unsigned int nId,
 	unsigned int int_volt;
 
 	if (!init_done) {
-		pr_err("Busfreq does not support smdkv310\n");
+		pr_debug("Busfreq does not support on this system\n");
 		return -ENODEV;
 	}
 
@@ -436,7 +436,7 @@ void exynos4_busfreq_lock_free(unsigned int nId)
 	unsigned int i;
 
 	if (!init_done) {
-		pr_err("Busfreq does not support smdkv310\n");
+		pr_debug("Busfreq does not support on this system\n");
 		return;
 	}
 
