@@ -2089,6 +2089,7 @@ static void __init smdk4212_machine_init(void)
 	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s5p_device_tvout.dev.parent = &exynos4_device_pd[PD_TV].dev;
+	exynos4_device_pd[PD_TV].dev.parent= &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
 
