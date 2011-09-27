@@ -50,7 +50,7 @@
 #define IRQ_SPI2		IRQ_SPI(70)
 
 #define IRQ_USB_HOST		IRQ_SPI(71)
-
+#define IRQ_USB3_DRD		IRQ_SPI(72)
 #define IRQ_USB_HSOTG		IRQ_SPI(73)
 #define IRQ_MODEM_IF		IRQ_SPI(74)
 #define IRQ_HSMMC0		IRQ_SPI(75)

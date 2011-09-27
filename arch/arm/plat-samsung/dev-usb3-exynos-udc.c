@@ -20,31 +20,28 @@
 
 #include <plat/devs.h>
 
-/* FIXME */
-static struct resource dwc_usb3_udc_resources[] = {
-#if 0
+static struct resource exynos_ss_udc_resources[] = {
 	[0] = {
-		.start	= S5P_PA_OTG,
-		.end	= S5P_PA_OTG + 0x10000 - 1,
+		.start	= EXYNOS5_PA_SS_UDC,
+		.end	= EXYNOS5_PA_SS_UDC + 0xB00 - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
-		.start	= IRQ_OTG,
-		.end	= IRQ_OTG,
+		.start	= IRQ_USB3_DRD,
+		.end	= IRQ_USB3_DRD,
 		.flags	= IORESOURCE_IRQ,
 	},
-#endif
 };
-/********************/
-static u64 dwc_usb3_udc_dmamask = DMA_BIT_MASK(32);
 
-struct platform_device dwc_device_usb3_udc = {
-	.name		= "dwc-usb3-udc",
+static u64 exynos_ss_udc_dmamask = DMA_BIT_MASK(32);
+
+struct platform_device exynos_device_ss_udc = {
+	.name		= "exynos-ss-udc",
 	.id		= -1,
-	.num_resources	= ARRAY_SIZE(dwc_usb3_udc_resources),
-	.resource	= dwc_usb3_udc_resources,
+	.num_resources	= ARRAY_SIZE(exynos_ss_udc_resources),
+	.resource	= exynos_ss_udc_resources,
 	.dev		= {
-		.dma_mask		= &dwc_usb3_udc_dmamask,
+		.dma_mask		= &exynos_ss_udc_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	},
 };
