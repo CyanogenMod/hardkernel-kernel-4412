@@ -1410,6 +1410,19 @@ void s5p_hdmi_reg_infoframe(struct s5p_hdmi_infoframe *info, u8 *data, u8 type_3
 			writeb((u8)0x10, hdmi_base + S5P_HDMI_VSI_DATA06);
 
 		} else {
+			writeb((u8)0x0, hdmi_base + S5P_HDMI_VSI_HEADER2);
+			ucChecksum = VENDOR_HEADER00 + VENDOR_HEADER01 + 0x06;
+
+			for (i = 0; i < 7; i++)
+				ucChecksum += readb(hdmi_base + S5P_HDMI_VSI_DATA01+4*i);
+
+			writeb((u8)0x0, hdmi_base + S5P_HDMI_VSI_DATA00);
+			writeb((u8)0x0, hdmi_base + S5P_HDMI_VSI_DATA01);
+			writeb((u8)0x0, hdmi_base + S5P_HDMI_VSI_DATA02);
+			writeb((u8)0x0, hdmi_base + S5P_HDMI_VSI_DATA03);
+			writeb((u8)0x0, hdmi_base + S5P_HDMI_VSI_DATA04);
+			writeb((u8)0x0, hdmi_base + S5P_HDMI_VSI_DATA05);
+			writeb((u8)0x0, hdmi_base + S5P_HDMI_VSI_DATA06);
 			tvout_dbg("2D format is supported.\n");
 			return ;
 		}
