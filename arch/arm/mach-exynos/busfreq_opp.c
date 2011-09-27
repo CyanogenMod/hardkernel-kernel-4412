@@ -214,14 +214,14 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 	data->exynos4_reboot_notifier.notifier_call =
 		exynos4_busfreq_reboot_event;
 
-	if (cpu_is_exynos4212()) {
-		data->init = exynos4212_init;
-		data->target = exynos4212_target;
-		data->get_int_volt = exynos4212_get_int_volt;
-	} else {
+	if (cpu_is_exynos4210()) {
 		data->init = exynos4210_init;
 		data->target = exynos4210_target;
 		data->get_int_volt = NULL;
+	} else {
+		data->init = exynos4212_init;
+		data->target = exynos4212_target;
+		data->get_int_volt = exynos4212_get_int_volt;
 	}
 
 	if (data->init(&pdev->dev, data)) {
