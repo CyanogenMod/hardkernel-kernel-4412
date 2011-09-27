@@ -47,7 +47,6 @@
 
 static unsigned up_threshold;
 static struct regulator *int_regulator;
-static struct regulator *mif_regulator;
 static struct exynos4_ppmu_hw dmc[2];
 static struct exynos4_ppmu_hw cpu;
 static unsigned int bus_utilization[2];
@@ -631,15 +630,6 @@ static int __init busfreq_mon_init(void)
 		return -ENODEV;
 	}
 
-	if (cpu_is_exynos4212()) {
-		mif_regulator = regulator_get(NULL, "vdd_mif");
-		if (IS_ERR(mif_regulator))
-			pr_err("failed to get resource %s\n", "vdd_mif");
-		else
-			regulator_set_voltage(mif_regulator, 1100000,
-					1100000);
-	}
-
 	busfreq_mon_reset();
 
 	if (cpufreq_register_notifier(&exynos4_busfreq_notifier,
@@ -669,9 +659,6 @@ err_pm:
 err_cpufreq:
 	if (!IS_ERR(int_regulator))
 		regulator_put(int_regulator);
-
-	if (!IS_ERR(mif_regulator))
-		regulator_put(mif_regulator);
 
 	return -ENODEV;
 }
