@@ -29,6 +29,7 @@
 #include <linux/reboot.h>
 #include <linux/slab.h>
 #include <linux/opp.h>
+#include <linux/clk.h>
 
 #include <asm/mach-types.h>
 
@@ -44,6 +45,7 @@
 #include <plat/map-s5p.h>
 #include <plat/gpio-cfg.h>
 #include <plat/cputype.h>
+#include <plat/clock.h>
 
 static struct opp *busfreq_monitor(struct busfreq_data *data)
 {
@@ -190,6 +192,8 @@ void exynos4_busfreq_lock_free(unsigned int nId)
 static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
+	struct clk *sclk_dmc;
+	unsigned long freq;
 	unsigned int val;
 
 	val = __raw_readl(S5P_VA_DMC0 + 0x4);
@@ -228,6 +232,18 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		pr_err("Failed to init busfreq.\n");
 		goto err_cpufreq;
 	}
+
+	sclk_dmc = clk_get(NULL, "sclk_dmc");
+
+	if (IS_ERR(sclk_dmc)) {
+		pr_err("Failed to get sclk_dmc.!\n");
+		freq = 400000;
+	} else {
+		freq = clk_get_rate(sclk_dmc) / 1000;
+		clk_put(sclk_dmc);
+	}
+
+	data->curr_opp = opp_find_freq_ceil(&pdev->dev, &freq);
 
 	if (cpufreq_register_notifier(&data->exynos4_busfreq_notifier,
 				CPUFREQ_TRANSITION_NOTIFIER)) {

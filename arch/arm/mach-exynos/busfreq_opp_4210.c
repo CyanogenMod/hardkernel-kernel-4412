@@ -222,7 +222,6 @@ int exynos4210_init(struct device *dev, struct busfreq_data *data)
 	struct cpufreq_frequency_table *table;
 	unsigned long freq;
 	unsigned long min_cpufreq = UINT_MAX;
-	unsigned long minfreq = 0;
 	unsigned long maxfreq = UINT_MAX;
 	int ret;
 
@@ -296,9 +295,6 @@ int exynos4210_init(struct device *dev, struct busfreq_data *data)
 
 	/* Find max frequency */
 	data->max_opp = opp_find_freq_floor(dev, &maxfreq);
-	/* Find min frequency */
-	data->curr_opp = opp_find_freq_ceil(dev, &minfreq);
-
 
 	data->vdd_int = regulator_get(NULL, "vdd_int");
 	if (IS_ERR(data->vdd_int)) {
