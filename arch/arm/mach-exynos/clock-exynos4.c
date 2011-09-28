@@ -886,11 +886,7 @@ static struct clk exynos4_init_clocks_off[] = {
 		.ctrlbit	= ((0x1 << 2) | (0x1 << 1)),
 	}, {
 		.name		= "mfc",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
-		.devname	= "s5p-mfc",
-#else
 		.devname	= "s3c-mfc",
-#endif
 		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= (0x1 << 0),

@@ -2612,6 +2612,8 @@ static void __init smdkv310_machine_init(void)
 #endif
 
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
+	clk_add_alias("mfc", "s5p-mfc", "mfc", &s5p_device_mfc.dev);
 	s5p_mfc_setname("s5p-mfc");
 #endif
 
