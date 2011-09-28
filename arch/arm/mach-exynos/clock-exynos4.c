@@ -614,38 +614,22 @@ static struct clk exynos4_init_clocks_off[] = {
 		.ctrlbit	= (1 << 5),
 	}, {
 		.name		= "fimc",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-		.devname	= "exynos4210-fimc.0",
-#else
 		.devname	= "s3c-fimc.0",
-#endif
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
 		.name		= "fimc",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-		.devname	= "exynos4210-fimc.1",
-#else
 		.devname	= "s3c-fimc.1",
-#endif
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 1),
 	}, {
 		.name		= "fimc",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-		.devname	= "exynos4210-fimc.2",
-#else
 		.devname	= "s3c-fimc.2",
-#endif
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 2),
 	}, {
 		.name		= "fimc",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-		.devname	= "exynos4210-fimc.3",
-#else
 		.devname	= "s3c-fimc.3",
-#endif
 		.enable		= exynos4_clk_ip_cam_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
@@ -1519,11 +1503,7 @@ static struct clksrc_clk exynos4_clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-			.devname	= "exynos4210-fimc.0",
-#else
 			.devname	= "s3c-fimc.0",
-#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 0),
 		},
@@ -1533,11 +1513,7 @@ static struct clksrc_clk exynos4_clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-			.devname	= "exynos4210-fimc.1",
-#else
 			.devname	= "s3c-fimc.1",
-#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 4),
 		},
@@ -1547,11 +1523,7 @@ static struct clksrc_clk exynos4_clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-			.devname	= "exynos4210-fimc.2",
-#else
 			.devname	= "s3c-fimc.2",
-#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 8),
 		},
@@ -1561,11 +1533,7 @@ static struct clksrc_clk exynos4_clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimc",
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
-			.devname	= "exynos4210-fimc.3",
-#else
 			.devname	= "s3c-fimc.3",
-#endif
 			.enable		= exynos4_clksrc_mask_cam_ctrl,
 			.ctrlbit	= (1 << 12),
 		},

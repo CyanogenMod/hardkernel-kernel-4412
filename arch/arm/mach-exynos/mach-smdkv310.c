@@ -2513,6 +2513,24 @@ static void __init smdkv310_machine_init(void)
 	smdkv310_camera_config();
 	smdkv310_subdev_config();
 
+	dev_set_name(&s5p_device_fimc0.dev, "s3c-fimc.0");
+	dev_set_name(&s5p_device_fimc1.dev, "s3c-fimc.1");
+	dev_set_name(&s5p_device_fimc2.dev, "s3c-fimc.2");
+	dev_set_name(&s5p_device_fimc3.dev, "s3c-fimc.3");
+
+	clk_add_alias("fimc", "exynos4210-fimc.0", "fimc", &s5p_device_fimc0.dev);
+	clk_add_alias("sclk_fimc", "exynos4210-fimc.0", "sclk_fimc",
+			&s5p_device_fimc0.dev);
+	clk_add_alias("fimc", "exynos4210-fimc.1", "fimc", &s5p_device_fimc1.dev);
+	clk_add_alias("sclk_fimc", "exynos4210-fimc.1", "sclk_fimc",
+			&s5p_device_fimc1.dev);
+	clk_add_alias("fimc", "exynos4210-fimc.2", "fimc", &s5p_device_fimc2.dev);
+	clk_add_alias("sclk_fimc", "exynos4210-fimc.2", "sclk_fimc",
+			&s5p_device_fimc2.dev);
+	clk_add_alias("fimc", "exynos4210-fimc.3", "fimc", &s5p_device_fimc3.dev);
+	clk_add_alias("sclk_fimc", "exynos4210-fimc.3", "sclk_fimc",
+			&s5p_device_fimc3.dev);
+
 	s3c_fimc_setname(0, "exynos4210-fimc");
 	s3c_fimc_setname(1, "exynos4210-fimc");
 	s3c_fimc_setname(2, "exynos4210-fimc");
