@@ -243,7 +243,7 @@ static void s5p_mixer_ctrl_clock(bool on)
 		clk_disable(s5p_mixer_ctrl_private.clk[MUX].ptr);
 	}
 
-	mdelay(20);
+	mdelay(10);
 }
 
 void s5p_mixer_ctrl_init_fb_addr_phy(enum s5p_mixer_layer layer,
