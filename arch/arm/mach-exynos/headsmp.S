@@ -1,5 +1,5 @@
 /*
- *  linux/arch/arm/mach-exynos4/headsmp.S
+ *  linux/arch/arm/mach-exynos/headsmp.S
  *
  *  Cloned from linux/arch/arm/mach-realview/headsmp.S
  *

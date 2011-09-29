@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/sysmmu.h
+/* linux/arch/arm/mach-exynos/include/mach/sysmmu.h
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

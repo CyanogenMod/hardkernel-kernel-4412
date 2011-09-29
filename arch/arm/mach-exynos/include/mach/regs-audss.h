@@ -1,4 +1,4 @@
-/* arch/arm/mach-exynos4/include/mach/regs-audss.h
+/* arch/arm/mach-exynos/include/mach/regs-audss.h
  *
  * Copyright 2011 Samsung Electronics
  *

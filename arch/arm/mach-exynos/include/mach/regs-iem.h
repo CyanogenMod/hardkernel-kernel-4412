@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/regs-iem.h
+/* linux/arch/arm/mach-exynos/include/mach/regs-iem.h
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

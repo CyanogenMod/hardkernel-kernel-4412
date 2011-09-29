@@ -1,4 +1,4 @@
-/* arch/arm/mach-exynos4/include/mach/entry-macro.S
+/* arch/arm/mach-exynos/include/mach/entry-macro.S
  *
  * Cloned from arch/arm/mach-realview/include/mach/entry-macro.S
  *

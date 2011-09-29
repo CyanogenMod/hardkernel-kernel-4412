@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/regs-vp.h
+/* linux/arch/arm/mach-exynos/include/mach/regs-vp.h
  *
  * Copyright (c) 2009 Samsung Electronics
  *		http://www.samsung.com/

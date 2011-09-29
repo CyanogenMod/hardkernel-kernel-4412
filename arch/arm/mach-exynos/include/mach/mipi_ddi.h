@@ -1,4 +1,4 @@
-/* linux/arm/arch/mach-exynos4/include/mach/mipi_ddi.h
+/* linux/arm/arch/mach-exynos/include/mach/mipi_ddi.h
  *
  * definitions for DDI based MIPI-DSI.
  *

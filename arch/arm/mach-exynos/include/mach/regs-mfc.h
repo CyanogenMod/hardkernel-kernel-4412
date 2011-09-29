@@ -1,5 +1,5 @@
 /*
- * linux/arch/arm/mach-exynos4/include/mach/regs-mfc.h
+ * linux/arch/arm/mach-exynos/include/mach/regs-mfc.h
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

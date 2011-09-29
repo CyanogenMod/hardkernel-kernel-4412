@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/irq-eint.c
+/* linux/arch/arm/mach-exynos/irq-eint.c
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

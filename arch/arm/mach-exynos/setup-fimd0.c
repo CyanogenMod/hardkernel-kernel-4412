@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/setup-fimd0.c
+/* linux/arch/arm/mach-exynos/setup-fimd0.c
  *
  * Copyright (c) 2009-2011 Samsung Electronics Co., Ltd.
  *             http://www.samsung.com

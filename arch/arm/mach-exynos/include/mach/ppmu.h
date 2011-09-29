@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/ppmu.h
+/* linux/arch/arm/mach-exynos/include/mach/ppmu.h
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/
@@ -59,7 +59,7 @@ extern void exynos4_ppmu_setevent(struct exynos4_ppmu_hw *ppmu,
 		unsigned int evt, unsigned int evt_num);
 extern void exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu);
 
-/* mach-exynos4/busfreq.c */
+/* mach-exynos/busfreq.c */
 struct notifier_block;
 extern int register_busfreq_notifier(struct notifier_block *nb);
 extern int unregister_busfreq_notifier(struct notifier_block *nb);

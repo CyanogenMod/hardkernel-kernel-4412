@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/spi-clocks.h
+/* linux/arch/arm/mach-exynos/include/mach/spi-clocks.h
  *
  * Copyright (C) 2010 Samsung Electronics Co. Ltd.
  *	Jaswinder Singh <jassi.brar@samsung.com>

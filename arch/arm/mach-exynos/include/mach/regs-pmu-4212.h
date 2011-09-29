@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/regs-pmu-4212.h
+/* linux/arch/arm/mach-exynos/include/mach/regs-pmu-4212.h
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

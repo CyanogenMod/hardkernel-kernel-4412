@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/asv.c
+/* linux/arch/arm/mach-exynos/asv.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

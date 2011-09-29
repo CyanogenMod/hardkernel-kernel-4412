@@ -1,4 +1,4 @@
-/* linux/arm/arch/mach-exynos4/include/mach/dsim.h
+/* linux/arm/arch/mach-exynos/include/mach/dsim.h
  *
  * Platform data header for Samsung MIPI-DSIM.
  *

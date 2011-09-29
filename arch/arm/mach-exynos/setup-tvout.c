@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/setup-tvout.c
+/* linux/arch/arm/mach-exynos/setup-tvout.c
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/setup-fb-s5p.c
+/* linux/arch/arm/mach-exynos/setup-fb-s5p.c
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

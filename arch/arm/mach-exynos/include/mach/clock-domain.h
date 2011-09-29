@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/clock-domain.h
+/* linux/arch/arm/mach-exynos/include/mach/clock-domain.h
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

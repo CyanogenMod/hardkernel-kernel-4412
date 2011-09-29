@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/setup-sdhci-gpio.c
+/* linux/arch/arm/mach-exynos/setup-sdhci-gpio.c
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

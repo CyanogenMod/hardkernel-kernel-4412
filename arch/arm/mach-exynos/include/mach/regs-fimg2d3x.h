@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/regs-fimg2d3x.h
+/* linux/arch/arm/mach-exynos/include/mach/regs-fimg2d3x.h
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *	http://www.samsung.com/

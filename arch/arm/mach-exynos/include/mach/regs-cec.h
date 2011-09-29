@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/regs-cec.h
+/* linux/arch/arm/mach-exynos/include/mach/regs-cec.h
  *
  * Copyright (c) 2010 Samsung Electronics
  *		http://www.samsung.com/

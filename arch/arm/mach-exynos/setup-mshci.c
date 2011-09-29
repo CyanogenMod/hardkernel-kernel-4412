@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/setup-mshci.c
+/* linux/arch/arm/mach-exynos/setup-mshci.c
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

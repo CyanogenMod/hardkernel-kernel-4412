@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/include/mach/regs-sdo.h
+/* linux/arch/arm/mach-exynos/include/mach/regs-sdo.h
  *
  * Copyright (c) 2010 Samsung Electronics
  *		http://www.samsung.com/

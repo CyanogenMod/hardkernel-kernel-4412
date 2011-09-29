@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/cpufreq-4210.c
+/* linux/arch/arm/mach-exynos/cpufreq-4210.c
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/setup-csis.c
+/* linux/arch/arm/mach-exynos/setup-csis.c
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *	http://www.samsung.com/

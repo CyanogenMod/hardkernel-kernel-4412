@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/mach-universal_c210.c
+/* linux/arch/arm/mach-exynos/mach-universal_c210.c
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *

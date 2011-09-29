@@ -1,4 +1,4 @@
-/* linux arch/arm/mach-exynos4/hotplug.c
+/* linux arch/arm/mach-exynos/hotplug.c
  *
  *  Cloned from linux/arch/arm/mach-realview/hotplug.c
  *

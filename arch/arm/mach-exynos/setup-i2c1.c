@@ -1,5 +1,5 @@
 /*
- * linux/arch/arm/mach-exynos4/setup-i2c1.c
+ * linux/arch/arm/mach-exynos/setup-i2c1.c
  *
  * Copyright (C) 2010 Samsung Electronics Co., Ltd.
  *

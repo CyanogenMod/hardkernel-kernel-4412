@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/dvfs-hotplug.c
+/* linux/arch/arm/mach-exynos/dvfs-hotplug.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

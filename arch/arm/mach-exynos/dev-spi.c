@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/dev-spi.c
+/* linux/arch/arm/mach-exynos/dev-spi.c
  *
  * Copyright (C) 2010 Samsung Electronics Co. Ltd.
  *	Jaswinder Singh <jassi.brar@samsung.com>

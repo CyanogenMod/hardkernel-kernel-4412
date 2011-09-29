@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/dev-pd.c
+/* linux/arch/arm/mach-exynos/dev-pd.c
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

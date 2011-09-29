@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/reserve_mem-exynos4.c
+/* linux/arch/arm/mach-exynos/reserve_mem-exynos4.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

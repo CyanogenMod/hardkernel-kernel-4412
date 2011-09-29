@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/sleep.S
+/* linux/arch/arm/mach-exynos/sleep.S
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

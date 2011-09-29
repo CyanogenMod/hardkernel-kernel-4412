@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/ppmu.c
+/* linux/arch/arm/mach-exynos/ppmu.c
  *
  * Copyright (c) 2010 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/

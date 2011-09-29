@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/cpu.c
+/* linux/arch/arm/mach-exynos/cpu.c
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

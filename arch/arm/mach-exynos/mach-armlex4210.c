@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos4/mach-armlex4210.c
+/* linux/arch/arm/mach-exynos/mach-armlex4210.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
