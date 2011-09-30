@@ -882,7 +882,11 @@ static struct clk exynos4_init_clocks_off[] = {
 		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= (0x1 << 0),
-	}
+	}, {
+		.name		= "onenand",
+		.enable		= exynos4_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 15),
+	},
 };
 
 static struct clk exynos4_i2cs_clocks[] = {
