@@ -102,6 +102,10 @@
 #include <media/s5p_fimc.h>
 #endif
 
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+#include <plat/s5p-mfc.h>
+#endif
+
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #include <plat/jpeg.h>
 #endif
@@ -2371,7 +2375,7 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&s5p_device_fimc3,
 #endif
 
-#ifdef CONFIG_VIDEO_MFC5X
+#if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	&s5p_device_mfc,
 #endif
 #ifdef CONFIG_S5P_SYSTEM_MMU
@@ -2607,6 +2611,24 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
+	defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+		{
+			.name		= "b2",
+			.size		= 32 << 20,
+			{ .alignment	= 128 << 10 },
+		},
+		{
+			.name		= "b1",
+			.size		= 32 << 20,
+			{ .alignment	= 128 << 10 },
+		},
+		{
+			.name		= "fw",
+			.size		= 1 << 20,
+			{ .alignment	= 128 << 10 },
+		},
+#endif
 		{
 			.size = 0
 		},
@@ -2643,7 +2665,14 @@ static void __init exynos4_reserve_mem(void)
 		"s3cfb.0=fimd;exynos4-fb.0=fimd;"
 		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
 		"exynos4210-fimc.0=fimc0;exynos4210-fimc.1=fimc1;exynos4210-fimc.2=fimc2;exynos4210-fimc.3=fimc3;"
+#ifdef CONFIG_VIDEO_MFC5X
 		"s3c-mfc=mfc,mfc0,mfc1;"
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
+		"s5p-mfc/f=fw;"
+		"s5p-mfc/a=b1;"
+		"s5p-mfc/b=b2;"
+#endif
 		"samsung-rp=srp;"
 		"s5p-jpeg=jpeg;"
 		"exynos4-fimc-is=fimc_is;"
@@ -2720,7 +2749,7 @@ static void __init exynos_sysmmu_init(void)
 #ifdef CONFIG_VIDEO_FIMG2D
 	sysmmu_set_owner(&SYSMMU_PLATDEV(g2d_acp).dev, &s5p_device_fimg2d.dev);
 #endif
-#ifdef CONFIG_VIDEO_MFC5X
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC) || defined(CONFIG_VIDEO_MFC5X)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_l).dev, &s5p_device_mfc.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_r).dev, &s5p_device_mfc.dev);
 #endif
@@ -2986,7 +3015,7 @@ static void __init smdk4x12_machine_init(void)
 	exynos_ion_set_platdata();
 #endif
 
-#ifdef CONFIG_VIDEO_MFC5X
+#if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 #ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 #endif
