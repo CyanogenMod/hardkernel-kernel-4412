@@ -88,6 +88,7 @@
 #define IRQ_CEC			IRQ_SPI(114)
 #define IRQ_TSI			IRQ_SPI(115)
 #define IRQ_SATA		IRQ_SPI(116)
+#define IRQ_MDMA1		IRQ_SPI(124)
 
 #define MAX_IRQ_IN_COMBINER	8
 #define COMBINER_GROUP(x)	((x) * MAX_IRQ_IN_COMBINER + IRQ_SPI(128))
