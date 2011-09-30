@@ -180,6 +180,26 @@ static struct sleep_save exynos4_l2cc_save[] = {
 
 void exynos4_cpu_suspend(void)
 {
+	unsigned int tmp;
+
+	if ((!cpu_is_exynos4210()) && (exynos4_is_c2c_use())) {
+		/* Gating CLK_IEM_APC */
+		tmp = __raw_readl(EXYNOS4_CLKGATE_IP_DMC);
+		tmp &= ~(0x1 << 17);
+		__raw_writel(tmp, EXYNOS4_CLKGATE_IP_DMC);
+
+		/* Set MAX divider for PWI */
+		tmp = __raw_readl(EXYNOS4_CLKDIV_DMC1);
+		tmp |= (0xF << 8);
+		__raw_writel(tmp, EXYNOS4_CLKDIV_DMC1);
+
+		/* Set clock source for PWI */
+		tmp = __raw_readl(EXYNOS4_CLKSRC_DMC);
+		tmp &= ~EXYNOS4_CLKSRC_DMC_MASK;
+		tmp |= ((0x6 << 16)|(0x1 << 12));
+		__raw_writel(tmp, EXYNOS4_CLKSRC_DMC);
+	}
+
 	outer_flush_all();
 
 #ifdef CONFIG_ARM_TRUSTZONE
