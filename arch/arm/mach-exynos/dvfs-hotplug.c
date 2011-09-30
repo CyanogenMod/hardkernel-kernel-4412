@@ -10,12 +10,14 @@
  * published by the Free Software Foundation.
 */
 
+#include <linux/sched.h>
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
 #include <linux/err.h>
 #include <linux/notifier.h>
 #include <linux/reboot.h>
 #include <linux/suspend.h>
+#include <plat/cputype.h>
 
 static unsigned int total_num_target_freq;
 static unsigned int consecutv_highestlevel_cnt;
@@ -24,28 +26,81 @@ static unsigned int num_hotplug_in;
 static unsigned int num_hotplug_out;
 
 static unsigned int freq_max;
+static unsigned int freq_in_trg;
 static unsigned int freq_min = -1UL;
 
 static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 					unsigned int freq_new)
 {
 	total_num_target_freq++;
-	if (((freq_old >= freq_max) && (freq_new >= freq_max))
-				   && (cpu_online(1) == 0)) {
-		if (consecutv_highestlevel_cnt >= 10) {
-			cpu_up(1);
-			num_hotplug_in++;
-			consecutv_highestlevel_cnt = 0;
-		} else
+	freq_in_trg = 800000;
+
+	if ((freq_old >= freq_in_trg) && (freq_new >= freq_in_trg)) {
+		if (cpu_is_exynos4412()) {
+			if (cpu_online(3) == 0) {
+				if (consecutv_highestlevel_cnt >= 2) {
+					cpu_up(3);
+					num_hotplug_in++;
+					consecutv_highestlevel_cnt = 0;
+				}
+			} else if (cpu_online(2) == 0) {
+				if (consecutv_highestlevel_cnt >= 2) {
+					cpu_up(2);
+					num_hotplug_in++;
+					consecutv_highestlevel_cnt = 0;
+				}
+			} else if (cpu_online(1) == 0) {
+				if (consecutv_highestlevel_cnt >= 2) {
+					cpu_up(2);
+					num_hotplug_in++;
+					consecutv_highestlevel_cnt = 0;
+				}
+			}
 			consecutv_highestlevel_cnt++;
-	} else if ((freq_old <= freq_min && freq_new <= freq_min)
-				       && (cpu_online(1) == 1)) {
-		if (consecutv_lowestlevel_cnt >= 10) {
-			cpu_down(1);
-			num_hotplug_out++;
-			consecutv_lowestlevel_cnt = 0;
-		} else
-			consecutv_lowestlevel_cnt++;
+		} else {
+			if (cpu_online(1) == 0) {
+				if (consecutv_highestlevel_cnt >= 2) {
+					cpu_up(1);
+					num_hotplug_in++;
+					consecutv_highestlevel_cnt = 0;
+				}
+			}
+			consecutv_highestlevel_cnt++;
+		}
+	} else if ((freq_old <= freq_min) && (freq_new <= freq_min)) {
+		if (cpu_is_exynos4412()) {
+			if (cpu_online(1) == 1) {
+				if (consecutv_lowestlevel_cnt >= 2) {
+					cpu_down(1);
+					num_hotplug_out++;
+					consecutv_lowestlevel_cnt = 1;
+				} else
+					consecutv_lowestlevel_cnt++;
+			} else if (cpu_online(2) == 1) {
+				if (consecutv_lowestlevel_cnt >= 2) {
+					cpu_down(2);
+					num_hotplug_out++;
+					consecutv_lowestlevel_cnt = 0;
+				} else
+					consecutv_lowestlevel_cnt++;
+			} else if (cpu_online(3) == 1) {
+				if (consecutv_lowestlevel_cnt >= 2) {
+					cpu_down(3);
+					num_hotplug_out++;
+					consecutv_lowestlevel_cnt = 0;
+				} else
+					consecutv_lowestlevel_cnt++;
+			}
+		} else {
+			if (cpu_online(1) == 1) {
+				if (consecutv_lowestlevel_cnt >= 2) {
+					cpu_down(1);
+					num_hotplug_out++;
+					consecutv_lowestlevel_cnt = 1;
+				} else
+					consecutv_lowestlevel_cnt++;
+			}
+		}
 	} else {
 		consecutv_highestlevel_cnt = 0;
 		consecutv_lowestlevel_cnt = 0;
