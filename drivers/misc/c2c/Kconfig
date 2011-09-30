@@ -5,7 +5,7 @@
 menuconfig SAMSUNG_C2C
 	tristate "C2C Support"
 	depends on CPU_EXYNOS4212
-	default y
+	default n
 	help
 	  It is for supporting C2C driver.
 
