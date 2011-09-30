@@ -26,7 +26,7 @@ static struct dsim_config dsim_info = {
 
 	.eot_disable = false,		/* only DSIM_1_02 or DSIM_1_03 */
 
-	.auto_vertical_cnt = false,
+	.auto_vertical_cnt = true,
 	.hse = false,
 	.hfp = false,
 	.hbp = false,
@@ -36,7 +36,7 @@ static struct dsim_config dsim_info = {
 	.e_byte_clk = DSIM_PLL_OUT_DIV8,
 
 	.p = 3,
-	.m = 100,
+	.m = 90,
 	.s = 1,
 
 	.pll_stable_time = 500,		/* D-PHY PLL stable time spec :min = 200usec ~ max 400usec */
@@ -91,6 +91,7 @@ static struct s5p_platform_dsim dsim_platform_data = {
 	.enable_clk = s5p_dsim_enable_clk,
 	.part_reset = s5p_dsim_part_reset,
 	.init_d_phy = s5p_dsim_init_d_phy,
+	.cfg_gpio = exynos4_dsim_gpio_setup_24bpp,
 };
 
 struct platform_device s5p_device_dsim = {
