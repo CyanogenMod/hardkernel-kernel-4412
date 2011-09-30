@@ -530,8 +530,8 @@ endif
 
 config EXYNOS4_C2C
 	bool "C2C device support"
+	depends on CPU_EXYNOS4212 && SAMSUNG_C2C
 	default y
-	depends on CPU_EXYNOS4212
 	help
 	  Add C2C device driver
 
