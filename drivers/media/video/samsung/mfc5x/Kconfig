@@ -38,7 +38,7 @@ config VIDEO_MFC_MAX_INSTANCE
 	int "Maximum size of MFC instance (1-4)"
 	range 1 4
 	depends on VIDEO_MFC5X
-	default 1
+	default 4
 
 config VIDEO_MFC_MEM_PORT_COUNT
 	int "Default number of MFC memory ports (1-2)"
