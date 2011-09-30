@@ -420,6 +420,9 @@ static int s5p_dsim_late_resume_init_dsim(unsigned int dsim_base)
 	if (dsim.pd->init_d_phy)
 		dsim.pd->init_d_phy(dsim.reg_base);
 
+	if (dsim.pd->cfg_gpio)
+		dsim.pd->cfg_gpio();
+
 	dsim.state = DSIM_STATE_RESET;
 
 	switch (dsim.dsim_info->e_no_data_lane) {
@@ -457,6 +460,9 @@ static int s5p_dsim_init_dsim(unsigned int dsim_base)
 {
 	if (dsim.pd->init_d_phy)
 		dsim.pd->init_d_phy(dsim.reg_base);
+
+	if (dsim.pd->cfg_gpio)
+		dsim.pd->cfg_gpio();
 
 	dsim.state = DSIM_STATE_RESET;
 
@@ -810,6 +816,9 @@ void s5p_dsim_late_resume(struct early_suspend *h)
 	if (dsim.pd->mipi_power)
 		dsim.pd->mipi_power(1);
 
+	/* reset lcd */
+	dsim.mipi_ddi_pd->lcd_reset();
+
 	mdelay(10);
 
 	clk_enable(dsim.clock);
@@ -860,6 +869,9 @@ int s5p_dsim_resume(struct platform_device *pdev)
 {
 	if (dsim.pd->mipi_power)
 		dsim.pd->mipi_power(1);
+
+	/* reset lcd */
+	dsim.mipi_ddi_pd->lcd_reset();
 
 	mdelay(10);
 
