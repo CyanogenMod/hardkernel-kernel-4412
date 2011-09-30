@@ -74,12 +74,12 @@ config VIDEO_SAMSUNG_MEMSIZE_MFC
 config VIDEO_SAMSUNG_MEMSIZE_MFC0
 	int "Memory size in kbytes for MFC port0"
 	depends on ((VIDEO_MFC5X) && (!VIDEO_MFC_MEM_PORT_COUNT = 1))
-	default "32768"
+	default "41984"
 
 config VIDEO_SAMSUNG_MEMSIZE_MFC1
 	int "Memory size in kbytes for MFC port1"
 	depends on ((VIDEO_MFC5X) && (!VIDEO_MFC_MEM_PORT_COUNT = 1))
-	default "32768"
+	default "41984"
 
 config VIDEO_SAMSUNG_MEMSIZE_JPEG
 	int "Memory size in kbytes for JPEG"
