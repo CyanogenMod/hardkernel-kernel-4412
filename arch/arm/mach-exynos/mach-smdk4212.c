@@ -772,6 +772,16 @@ static int reset_lcd(void)
 		return err;
 	}
 
+#ifdef CONFIG_CPU_EXYNOS4212
+	gpio_direction_output(EXYNOS4_GPX2(7), 1);
+	mdelay(100);
+
+	gpio_set_value(EXYNOS4_GPX2(7), 0);
+	mdelay(100);
+	gpio_set_value(EXYNOS4_GPX2(7), 1);
+	mdelay(100);
+	gpio_free(EXYNOS4_GPX2(7));
+#else
 	gpio_direction_output(EXYNOS4_GPX3(1), 1);
 	mdelay(100);
 
@@ -780,7 +790,7 @@ static int reset_lcd(void)
 	gpio_set_value(EXYNOS4_GPX3(1), 1);
 	mdelay(100);
 	gpio_free(EXYNOS4_GPX3(1));
-
+#endif
 	return 0;
 }
 
@@ -2026,8 +2036,6 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_FB_S5P_LMS501KF03
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 	s3cfb_set_platdata(&lms501kf03_data);
-#elif defined(CONFIG_FB_S5P_DUMMY_MIPI_LCD)
-	exynos4_dsim_gpio_setup_24bpp();
 #else
 	s3cfb_set_platdata(NULL);
 #endif

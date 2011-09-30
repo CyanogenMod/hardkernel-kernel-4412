@@ -239,6 +239,7 @@ struct s5p_platform_dsim {
 	void (*enable_clk) (void *d_clk, unsigned char enable);
 	void (*part_reset) (void);
 	void (*init_d_phy) (unsigned int dsim_base);
+	void (*cfg_gpio) (void);
 };
 
 extern void s5p_dsim_enable_clk(void *d_clk, unsigned char enable);
