@@ -381,7 +381,7 @@ static void exynos4212_set_frequency(unsigned int old_index,
 static void __init set_volt_table(void)
 {
 	unsigned int asv_group = 0;
-	bool for_1500 = false, for_1000 = false;
+	bool for_1500 = false;
 	unsigned int i;
 #if 0
 	tmp = __raw_readl(EXYNOS4_INFORM2);
@@ -413,7 +413,6 @@ static void __init set_volt_table(void)
 	max_support_idx = L0;
 	asv_group = 0;
 #else
-	for_1000 = true;
 	max_support_idx = L5;
 	asv_group = 0;
 
