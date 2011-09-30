@@ -96,6 +96,12 @@
 #endif
 #include <plat/fimg2d.h>
 #include <mach/dev-sysmmu.h>
+
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+#include <plat/fimc-core.h>
+#include <media/s5p_fimc.h>
+#endif
+
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #include <plat/jpeg.h>
 #endif
@@ -2355,6 +2361,16 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&s3c_device_csis0,
 	&s3c_device_csis1,
 #endif
+
+/* CONFIG_VIDEO_SAMSUNG_S5P_FIMC is the
+ * feature for mainline */
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+	&s5p_device_fimc0,
+	&s5p_device_fimc1,
+	&s5p_device_fimc2,
+	&s5p_device_fimc3,
+#endif
+
 #ifdef CONFIG_VIDEO_MFC5X
 	&s5p_device_mfc,
 #endif
@@ -2909,6 +2925,46 @@ static void __init smdk4x12_machine_init(void)
 	smdk4x12_cam1_reset(1);
 #endif
 #endif /* CONFIG_VIDEO_FIMC */
+
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+	dev_set_name(&s5p_device_fimc0.dev, "s3c-fimc.0");
+	dev_set_name(&s5p_device_fimc1.dev, "s3c-fimc.1");
+	dev_set_name(&s5p_device_fimc2.dev, "s3c-fimc.2");
+	dev_set_name(&s5p_device_fimc3.dev, "s3c-fimc.3");
+
+	clk_add_alias("fimc", "exynos4210-fimc.0", "fimc", &s5p_device_fimc0.dev);
+	clk_add_alias("sclk_fimc", "exynos4210-fimc.0", "sclk_fimc",
+			&s5p_device_fimc0.dev);
+	clk_add_alias("fimc", "exynos4210-fimc.1", "fimc", &s5p_device_fimc1.dev);
+	clk_add_alias("sclk_fimc", "exynos4210-fimc.1", "sclk_fimc",
+			&s5p_device_fimc1.dev);
+	clk_add_alias("fimc", "exynos4210-fimc.2", "fimc", &s5p_device_fimc2.dev);
+	clk_add_alias("sclk_fimc", "exynos4210-fimc.2", "sclk_fimc",
+			&s5p_device_fimc2.dev);
+	clk_add_alias("fimc", "exynos4210-fimc.3", "fimc", &s5p_device_fimc3.dev);
+	clk_add_alias("sclk_fimc", "exynos4210-fimc.3", "sclk_fimc",
+			&s5p_device_fimc3.dev);
+
+	s3c_fimc_setname(0, "exynos4210-fimc");
+	s3c_fimc_setname(1, "exynos4210-fimc");
+	s3c_fimc_setname(2, "exynos4210-fimc");
+	s3c_fimc_setname(3, "exynos4210-fimc");
+	/* FIMC */
+	s3c_set_platdata(&s3c_fimc0_default_data,
+			 sizeof(s3c_fimc0_default_data), &s5p_device_fimc0);
+	s3c_set_platdata(&s3c_fimc1_default_data,
+			 sizeof(s3c_fimc1_default_data), &s5p_device_fimc1);
+	s3c_set_platdata(&s3c_fimc2_default_data,
+			 sizeof(s3c_fimc2_default_data), &s5p_device_fimc2);
+	s3c_set_platdata(&s3c_fimc3_default_data,
+			 sizeof(s3c_fimc3_default_data), &s5p_device_fimc3);
+#ifdef CONFIG_EXYNOS_DEV_PD
+	s5p_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+	s5p_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
+#endif
 
 #if defined(CONFIG_VIDEO_TVOUT)
 	s5p_hdmi_hpd_set_platdata(&hdmi_hpd_data);
