@@ -28,8 +28,8 @@
 
 #include <mach/map.h>
 
-#include <plat/regs-usb3-exynos-udc-phy.h>
-#include <plat/regs-usb3-exynos-udc.h>
+#include <plat/regs-usb3-exynos-drd-phy.h>
+#include <plat/regs-usb3-exynos-drd.h>
 #include <mach/regs-pmu.h>
 #include <plat/udc-ss.h>
 #include <plat/cpu.h>
