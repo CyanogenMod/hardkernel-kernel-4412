@@ -176,7 +176,9 @@ static struct platform_device smdk4212_smsc911x = {
  * This function also called at fimc_init_camera()
  * Do optimization for cameras on your platform.
 */
-#if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C)
+#if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C) \
+	|| defined(CONFIG_S5K3H1_CSI_C) || defined(CONFIG_S5K3H2_CSI_C) \
+	|| defined(CONFIG_S5K6A3_CSI_C)
 static int smdk4212_cam0_reset(int dummy)
 {
 	int err;
@@ -193,7 +195,9 @@ static int smdk4212_cam0_reset(int dummy)
 	return 0;
 }
 #endif
-#if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D)
+#if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D) \
+	|| defined(CONFIG_S5K3H1_CSI_D) || defined(CONFIG_S5K3H2_CSI_D) \
+	|| defined(CONFIG_S5K6A3_CSI_D)
 static int smdk4212_cam1_reset(int dummy)
 {
 	int err;
@@ -353,12 +357,12 @@ static struct s3c_platform_camera writeback = {
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 #ifdef CONFIG_VIDEO_S5K3H1
 static struct s3c_platform_camera s5k3h1 = {
-#ifdef CONFIG_CSI_C
+#ifdef CONFIG_S5K3H1_CSI_C
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
 	.cam_power	= smdk4212_cam0_reset,
 #endif
-#ifdef CONFIG_CSI_D
+#ifdef CONFIG_S5K3H1_CSI_D
 	.id		= CAMERA_CSI_D,
 	.clk_name	= "sclk_cam1",
 	.cam_power	= smdk4212_cam1_reset,
@@ -383,25 +387,30 @@ static struct s3c_platform_camera s5k3h1 = {
 	.mipi_align	= 24,
 
 	.initialized	= 0,
-#ifdef CONFIG_CSI_C
+#ifdef CONFIG_S5K3H1_CSI_C
 	.flite_id	= FLITE_IDX_A,
 #endif
-#ifdef CONFIG_CSI_D
+#ifdef CONFIG_S5K3H1_CSI_D
 	.flite_id	= FLITE_IDX_B,
 #endif
 	.use_isp	= true,
+#ifdef CONFIG_S5K3H1_CSI_C
 	.sensor_index	= 0,
+#endif
+#ifdef CONFIG_S5K3H1_CSI_D
+	.sensor_index	= 100,
+#endif
 };
 #endif
 
 #ifdef CONFIG_VIDEO_S5K3H2
 static struct s3c_platform_camera s5k3h2 = {
-#ifdef CONFIG_CSI_C
+#ifdef CONFIG_S5K3H2_CSI_C
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
 	.cam_power	= smdk4212_cam0_reset,
 #endif
-#ifdef CONFIG_CSI_D
+#ifdef CONFIG_S5K3H2_CSI_D
 	.id		= CAMERA_CSI_D,
 	.clk_name	= "sclk_cam1",
 	.cam_power	= smdk4212_cam1_reset,
@@ -426,25 +435,30 @@ static struct s3c_platform_camera s5k3h2 = {
 	.mipi_align	= 24,
 
 	.initialized	= 0,
-#ifdef CONFIG_CSI_C
+#ifdef CONFIG_S5K3H2_CSI_C
 	.flite_id	= FLITE_IDX_A,
 #endif
-#ifdef CONFIG_CSI_D
+#ifdef CONFIG_S5K3H2_CSI_D
 	.flite_id	= FLITE_IDX_B,
 #endif
 	.use_isp	= true,
+#ifdef CONFIG_S5K3H2_CSI_C
 	.sensor_index	= 1,
+#endif
+#ifdef CONFIG_S5K3H2_CSI_D
+	.sensor_index	= 101,
+#endif
 };
 #endif
 
 #ifdef CONFIG_VIDEO_S5K6A3
 static struct s3c_platform_camera s5k6a3 = {
-#ifdef CONFIG_CSI_C
+#ifdef CONFIG_S5K6A3_CSI_C
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
 	.cam_power	= smdk4212_cam0_reset,
 #endif
-#ifdef CONFIG_CSI_D
+#ifdef CONFIG_S5K6A3_CSI_D
 	.id		= CAMERA_CSI_D,
 	.clk_name	= "sclk_cam1",
 	.cam_power	= smdk4212_cam1_reset,
@@ -469,14 +483,19 @@ static struct s3c_platform_camera s5k6a3 = {
 	.mipi_align	= 24,
 
 	.initialized	= 0,
-#ifdef CONFIG_CSI_C
+#ifdef CONFIG_S5K6A3_CSI_C
 	.flite_id	= FLITE_IDX_A,
 #endif
-#ifdef CONFIG_CSI_D
+#ifdef CONFIG_S5K6A3_CSI_D
 	.flite_id	= FLITE_IDX_B,
 #endif
 	.use_isp	= true,
+#ifdef CONFIG_S5K6A3_CSI_C
 	.sensor_index	= 2,
+#endif
+#ifdef CONFIG_S5K6A3_CSI_D
+	.sensor_index	= 102,
+#endif
 };
 #endif
 
@@ -2589,10 +2608,14 @@ static void __init smdk4212_machine_init(void)
 	exynos_flite0_set_platdata(&flite_plat);
 	exynos_flite1_set_platdata(&flite_plat);
 #endif
-#if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C)
+#if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C) \
+	|| defined(CONFIG_S5K3H1_CSI_C) || defined(CONFIG_S5K3H2_CSI_C) \
+	|| defined(CONFIG_S5K6A3_CSI_C)
 	smdk4212_cam0_reset(1);
 #endif
-#if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D)
+#if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D) \
+	|| defined(CONFIG_S5K3H1_CSI_D) || defined(CONFIG_S5K3H2_CSI_D) \
+	|| defined(CONFIG_S5K6A3_CSI_D)
 	smdk4212_cam1_reset(1);
 #endif
 #endif /* CONFIG_VIDEO_FIMC */
