@@ -1987,12 +1987,14 @@ int fimc_hwset_sysreg_camblk_isp_wb(struct fimc_control *ctrl)
 
 	camblk_cfg = camblk_cfg & (~(0x1 << 15));
 	writel(camblk_cfg, SYSREG_CAMERA_BLK);
+	udelay(1000);
 	camblk_cfg = camblk_cfg | (0x1 << 15);
 	writel(camblk_cfg, SYSREG_CAMERA_BLK);
 
-	ispblk_cfg = 0x00000c00;
+	ispblk_cfg = ispblk_cfg & (~(0x1 << 7));
 	writel(ispblk_cfg, SYSREG_ISP_BLK);
-	ispblk_cfg = 0x00003f80;
+	udelay(1000);
+	ispblk_cfg = ispblk_cfg | (0x1 << 7);
 	writel(ispblk_cfg, SYSREG_ISP_BLK);
 
 	return 0;

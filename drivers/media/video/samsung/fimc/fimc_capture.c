@@ -1614,8 +1614,6 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		break;
 	case V4L2_CID_IS_S_SCENARIO_MODE:
 	case V4L2_CID_IS_CAMERA_SHOT_MODE_NORMAL:
-	case V4L2_CID_IS_CAMERA_SHOT_MODE_SMILE:
-	case V4L2_CID_IS_CAMERA_SHOT_MODE_EYEBLINK:
 	case V4L2_CID_IS_CAMERA_FOCUS_MODE:
 	case V4L2_CID_IS_CAMERA_FLASH_MODE:
 	case V4L2_CID_IS_CAMERA_AWB_MODE:
@@ -1634,6 +1632,8 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 	case V4L2_CID_IS_SET_ISP:
 	case V4L2_CID_IS_SET_DRC:
 	case V4L2_CID_IS_SET_FD:
+	case V4L2_CID_IS_CMD_FD:
+	case V4L2_CID_IS_ISP_DMA_BUFFER_NUM:
 		if (ctrl->is.sd)
 			ret = v4l2_subdev_call(ctrl->is.sd, core, s_ctrl, c);
 		break;
@@ -1651,7 +1651,12 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 			 (ctrl->cam->id == CAMERA_WB_B))
 			break;
 		if (fimc_cam_use)
-			ret = v4l2_subdev_call(ctrl->cam->sd, core, s_ctrl, c);
+			if (ctrl->cam->sd)
+				ret = v4l2_subdev_call(ctrl->cam->sd,
+							core, s_ctrl, c);
+			if (ctrl->is.sd)
+				ret = v4l2_subdev_call(ctrl->is.sd,
+							core, s_ctrl, c);
 		else
 			ret = 0;
 		break;
@@ -1916,7 +1921,7 @@ int fimc_streamon_capture(void *fh)
 			ctrl->is.fmt.height + ctrl->is.offset_y,
 			V4L2_PIX_FMT_SGRBG10);
 		else if (ctrl->cam->id == CAMERA_CSI_D)
-			s3c_csis_start(CSI_CH_0, cam->mipi_lanes,
+			s3c_csis_start(CSI_CH_1, cam->mipi_lanes,
 			cam->mipi_settle, cam->mipi_align,
 			ctrl->is.fmt.width + ctrl->is.offset_x,
 			ctrl->is.fmt.height + ctrl->is.offset_y,

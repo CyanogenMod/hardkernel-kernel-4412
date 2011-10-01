@@ -531,6 +531,9 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 					V4L2_CID_IS_GET_LOSTED_FRAME_NUMBER;
 				v4l2_subdev_call(ctrl->is.sd,
 					core, g_ctrl, &is_ctrl);
+				printk(KERN_INFO "%d Frame lost - %d,%d",
+					(is_ctrl.value-ctrl->is.frame_count),
+					ctrl->is.frame_count, is_ctrl.value);
 				ctrl->is.frame_count = is_ctrl.value;
 				is_ctrl.id = V4L2_CID_IS_CLEAR_FRAME_NUMBER;
 				is_ctrl.value = ctrl->is.frame_count;
@@ -1977,7 +1980,7 @@ static inline int fimc_resume_out(struct fimc_control *ctrl)
 		udelay(1);
 	}
 
-	if (timeout ==0) {
+	if (timeout == 0) {
 		timeout = 1000;
 		__raw_writel(0x1, S5P_PMU_CAM_CONF + 0x8);
 		__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_CAM_CONF);
@@ -2036,7 +2039,7 @@ static inline int fimc_resume_out(struct fimc_control *ctrl)
 		udelay(1);
 	}
 
-	if (timeout ==0) {
+	if (timeout == 0) {
 		timeout = 1000;
 		__raw_writel(0x1, S5P_PMU_CAM_CONF + 0x8);
 		__raw_writel(0, S5P_PMU_CAM_CONF);
