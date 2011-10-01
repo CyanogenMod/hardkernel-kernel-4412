@@ -61,6 +61,7 @@ obj-$(CONFIG_EXYNOS4_SETUP_FIMC2)	+= setup-fimc2.o
 obj-$(CONFIG_EXYNOS4_SETUP_FIMC3)	+= setup-fimc3.o
 obj-$(CONFIG_EXYNOS4_SETUP_CSIS)	+= setup-csis.o
 obj-$(CONFIG_EXYNOS4_SETUP_FIMD0)	+= setup-fimd0.o
+obj-$(CONFIG_EXYNOS4_SETUP_FIMC_IS)	+= setup-fimc-is.o
 obj-y					+= setup-i2c0.o
 obj-$(CONFIG_EXYNOS4_SETUP_I2C1)	+= setup-i2c1.o
 obj-$(CONFIG_EXYNOS4_SETUP_I2C2)	+= setup-i2c2.o
