@@ -44,7 +44,7 @@ struct platform_device exynos4_device_fimc_is = {
 };
 
 struct exynos4_platform_fimc_is exynos4_fimc_is_default_data __initdata = {
-	.fmt		= IS_MIPI_CSI_RAW10,
+	.hw_ver = 15,
 };
 
 void __init exynos4_fimc_is_set_platdata(struct exynos4_platform_fimc_is *pd)
@@ -56,9 +56,19 @@ void __init exynos4_fimc_is_set_platdata(struct exynos4_platform_fimc_is *pd)
 
 	npd = kmemdup(pd, sizeof(struct exynos4_platform_fimc_is), GFP_KERNEL);
 
-	if (!npd)
+	if (!npd) {
 		printk(KERN_ERR "%s: no memory for platform data\n", __func__);
-	else
+	} else {
+		if (!npd->cfg_gpio)
+			npd->cfg_gpio = exynos_fimc_is_cfg_gpio;
+		if (!npd->clk_cfg)
+			npd->clk_cfg = exynos_fimc_is_cfg_clk;
+		if (!npd->clk_on)
+			npd->clk_on = exynos_fimc_is_clk_on;
+		if (!npd->clk_off)
+			npd->clk_off = exynos_fimc_is_clk_off;
+
 		exynos4_device_fimc_is.dev.platform_data = npd;
+	}
 }
 
