@@ -21,7 +21,7 @@
 static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 {
 	fimg2d_debug("op: %d\n", u->op);
-	fimg2d_debug("fillcolor: 0x%lx\n", u->fillcolor);
+	fimg2d_debug("solid color: 0x%lx\n", u->solid_color);
 	fimg2d_debug("g_alpha: 0x%x\n", u->g_alpha);
 	fimg2d_debug("premultiplied: %d\n", u->premult);
 	fimg2d_debug("dither: %d\n", u->dither);
@@ -370,12 +370,13 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 
 	cmd->ctx = ctx;
 	cmd->seq_no = u->seq_no;
+
 	cmd->op = u->op;
-	cmd->fillcolor = u->fillcolor;
-	cmd->g_alpha = u->g_alpha;
 	cmd->premult = u->premult;
+	cmd->g_alpha = u->g_alpha;
 	cmd->dither = u->dither;
 	cmd->rotate = u->rotate;
+	cmd->solid_color = u->solid_color;
 
 	if (u->scaling && u->scaling->mode) {
 		if (copy_from_user(&cmd->scaling, u->scaling, sizeof(cmd->scaling)))

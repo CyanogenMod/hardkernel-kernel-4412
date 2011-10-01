@@ -352,28 +352,31 @@ struct fimg2d_image {
 	enum color_format fmt;
 };
 
-struct fimg2d_param {
-	enum blit_op op;
-	unsigned long fillcolor;
-	unsigned char g_alpha;
-	enum premultiplied premult;
-	bool dither;
-	enum rotation rotate;
-	struct fimg2d_scale *scaling;
-	struct fimg2d_repeat *repeat;
-	struct fimg2d_bluscr *bluscr;
-	struct fimg2d_clip *clipping;
-};
 
 /**
- * @g_alpha: 0xff is opaque, 0x0 is transparnet
- * @seq_no: used for debugging
+ * @op: bitblt operation mode
+ * @premult: premultiplied or non_premultiplied mode
+ * @g_alpha: global(constant) alpha. 0xff is opaque, 0x0 is transparnet
+ * @dither: dithering
+ * @rotate: rotation degree in clockwise
+ * @scaling: common scaling info for source and mask image.
+ * @repeat: repeat type (tile mode)
+ * @bluscr: blue screen and transparent mode
+ * @clipping: clipping region must be the same to or smaller than dest rect
+ * @solid_color: valid when op is solid fill or src is null
+ * @src: source image info. set null when use solid_color
+ * @msk: mask image info. set null when does not use mask
+ * @dst: dest image info. must be set
+ * @src_rect: source region to read. set null when use solid_color
+ * @dst_rect: dest region to write. must be set
+ * @msk_rect: mask region to read. set null when does not use mask
+ * @seq_no: debugging info. set sequence number or pid
  */
 struct fimg2d_blit {
 	enum blit_op op;
-	unsigned long fillcolor;
-	unsigned char g_alpha;
+
 	enum premultiplied premult;
+	unsigned char g_alpha;
 	bool dither;
 	enum rotation rotate;
 	struct fimg2d_scale *scaling;
@@ -381,6 +384,7 @@ struct fimg2d_blit {
 	struct fimg2d_bluscr *bluscr;
 	struct fimg2d_clip *clipping;
 
+	unsigned long solid_color;
 	struct fimg2d_image *src;
 	struct fimg2d_image *dst;
 	struct fimg2d_image *msk;
@@ -411,9 +415,9 @@ struct fimg2d_context {
  */
 struct fimg2d_bltcmd {
 	enum blit_op op;
-	unsigned long fillcolor;
-	unsigned char g_alpha;
+
 	enum premultiplied premult;
+	unsigned char g_alpha;
 	bool dither;
 	enum rotation rotate;
 	struct fimg2d_scale scaling;
@@ -424,6 +428,8 @@ struct fimg2d_bltcmd {
 	bool srcen;
 	bool dsten;
 	bool msken;
+
+	unsigned long solid_color;
 	struct fimg2d_image src;
 	struct fimg2d_image dst;
 	struct fimg2d_image msk;
