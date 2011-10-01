@@ -13,6 +13,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
 #include <linux/clk.h>
+#include <linux/lcd.h>
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <linux/i2c.h>
@@ -43,7 +44,10 @@
 #include <plat/clock.h>
 #include <plat/keypad.h>
 #include <plat/devs.h>
+#include <plat/fb.h>
 #include <plat/fb-s5p.h>
+#include <plat/fb-core.h>
+#include <plat/regs-fb-v4.h>
 #include <plat/backlight.h>
 #include <plat/gpio-cfg.h>
 #include <plat/iic.h>
@@ -63,6 +67,7 @@
 #include <media/m5mo_platform.h>
 #include <media/exynos_flite.h>
 #include <media/exynos_fimc_is.h>
+#include <video/platform_lcd.h>
 
 #include <mach/map.h>
 #include <mach/spi-clocks.h>
@@ -84,6 +89,7 @@
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #include <plat/jpeg.h>
 #endif
+
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK4212_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -671,6 +677,455 @@ static struct spi_board_info spi2_board_info[] __initdata = {
 		.mode = SPI_MODE_0,
 		.controller_data = &spi2_csi[0],
 	}
+};
+#endif
+
+#ifdef CONFIG_FB_S3C
+#if defined(CONFIG_LCD_AMS369FG06)
+static int lcd_power_on(struct lcd_device *ld, int enable)
+{
+	return 1;
+}
+
+static int reset_lcd(struct lcd_device *ld)
+{
+	int err = 0;
+
+	err = gpio_request_one(EXYNOS4_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX0 for "
+				"lcd reset control\n");
+		return err;
+	}
+	gpio_set_value(EXYNOS4_GPX0(6), 0);
+	mdelay(1);
+
+	gpio_set_value(EXYNOS4_GPX0(6), 1);
+
+	gpio_free(EXYNOS4_GPX0(6));
+
+	return 1;
+}
+
+static struct lcd_platform_data ams369fg06_platform_data = {
+	.reset			= reset_lcd,
+	.power_on		= lcd_power_on,
+	.lcd_enabled		= 0,
+	.reset_delay		= 100,	/* 100ms */
+};
+
+#define		LCD_BUS_NUM	3
+#define		DISPLAY_CS	EXYNOS4_GPB(5)
+#define		DISPLAY_CLK	EXYNOS4_GPB(4)
+#define		DISPLAY_SI	EXYNOS4_GPB(7)
+
+static struct spi_board_info spi_board_info[] __initdata = {
+	{
+		.modalias		= "ams369fg06",
+		.platform_data		= (void *)&ams369fg06_platform_data,
+		.max_speed_hz		= 1200000,
+		.bus_num		= LCD_BUS_NUM,
+		.chip_select		= 0,
+		.mode			= SPI_MODE_3,
+		.controller_data	= (void *)DISPLAY_CS,
+	}
+};
+
+static struct spi_gpio_platform_data ams369fg06_spi_gpio_data = {
+	.sck	= DISPLAY_CLK,
+	.mosi	= DISPLAY_SI,
+	.miso	= -1,
+	.num_chipselect = 1,
+};
+
+static struct platform_device s3c_device_spi_gpio = {
+	.name	= "spi_gpio",
+	.id	= LCD_BUS_NUM,
+	.dev	= {
+		.parent		= &s5p_device_fimd0.dev,
+		.platform_data	= &ams369fg06_spi_gpio_data,
+	},
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win0 = {
+	.win_mode = {
+		.left_margin	= 9,
+		.right_margin	= 9,
+		.upper_margin	= 5,
+		.lower_margin	= 5,
+		.hsync_len	= 2,
+		.vsync_len	= 2,
+		.xres		= 480,
+		.yres		= 800,
+	},
+	.virtual_x		= 480,
+	.virtual_y		= 1600,
+	.width			= 48,
+	.height			= 80,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win1 = {
+	.win_mode = {
+		.left_margin	= 9,
+		.right_margin	= 9,
+		.upper_margin	= 5,
+		.lower_margin	= 5,
+		.hsync_len	= 2,
+		.vsync_len	= 2,
+		.xres		= 480,
+		.yres		= 800,
+	},
+	.virtual_x		= 480,
+	.virtual_y		= 1600,
+	.width			= 48,
+	.height			= 80,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win2 = {
+	.win_mode = {
+		.left_margin	= 9,
+		.right_margin	= 9,
+		.upper_margin	= 5,
+		.lower_margin	= 5,
+		.hsync_len	= 2,
+		.vsync_len	= 2,
+		.xres		= 480,
+		.yres		= 800,
+	},
+	.virtual_x		= 480,
+	.virtual_y		= 1600,
+	.width			= 48,
+	.height			= 80,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+#elif defined (CONFIG_LCD_LMS501KF03)
+static int lcd_power_on(struct lcd_device *ld, int enable)
+{
+	return 1;
+}
+
+static int reset_lcd(struct lcd_device *ld)
+{
+	int err = 0;
+
+	err = gpio_request_one(EXYNOS4_GPX1(5), GPIOF_OUT_INIT_HIGH, "GPX1");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX1 for "
+				"lcd reset control\n");
+		return err;
+	}
+	gpio_set_value(EXYNOS4_GPX1(5), 0);
+	mdelay(1);
+
+	gpio_set_value(EXYNOS4_GPX1(5), 1);
+
+	gpio_free(EXYNOS4_GPX1(5));
+
+	return 1;
+}
+
+static struct lcd_platform_data lms501kf03_platform_data = {
+	.reset			= reset_lcd,
+	.power_on		= lcd_power_on,
+	.lcd_enabled		= 0,
+	.reset_delay		= 100,	/* 100ms */
+};
+
+#define		LCD_BUS_NUM	3
+#define		DISPLAY_CS	EXYNOS4_GPB(5)
+#define		DISPLAY_CLK	EXYNOS4_GPB(4)
+#define		DISPLAY_SI	EXYNOS4_GPB(7)
+
+static struct spi_board_info spi_board_info[] __initdata = {
+	{
+		.modalias		= "lms501kf03",
+		.platform_data		= (void *)&lms501kf03_platform_data,
+		.max_speed_hz		= 1200000,
+		.bus_num		= LCD_BUS_NUM,
+		.chip_select		= 0,
+		.mode			= SPI_MODE_3,
+		.controller_data	= (void *)DISPLAY_CS,
+	}
+};
+
+static struct spi_gpio_platform_data lms501kf03_spi_gpio_data = {
+	.sck	= DISPLAY_CLK,
+	.mosi	= DISPLAY_SI,
+	.miso	= -1,
+	.num_chipselect = 1,
+};
+
+static struct platform_device s3c_device_spi_gpio = {
+	.name	= "spi_gpio",
+	.id	= LCD_BUS_NUM,
+	.dev	= {
+		.parent		= &s5p_device_fimd0.dev,
+		.platform_data	= &lms501kf03_spi_gpio_data,
+	},
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win0 = {
+	.win_mode = {
+		.left_margin	= 8,		/* HBPD */
+		.right_margin	= 8,		/* HFPD */
+		.upper_margin	= 6,	/* VBPD */
+		.lower_margin	= 6,		/* VFPD */
+		.hsync_len	= 6,		/* HSPW */
+		.vsync_len	= 4,		/* VSPW */
+		.xres		= 480,
+		.yres		= 800,
+	},
+	.virtual_x		= 480,
+	.virtual_y		= 1600,
+	.width			= 48,
+	.height			= 80,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win1 = {
+	.win_mode = {
+		.left_margin	= 8,		/* HBPD */
+		.right_margin	= 8,		/* HFPD */
+		.upper_margin	= 6,	/* VBPD */
+		.lower_margin	= 6,		/* VFPD */
+		.hsync_len	= 6,		/* HSPW */
+		.vsync_len	= 4,		/* VSPW */
+		.xres		= 480,
+		.yres		= 800,
+	},
+	.virtual_x		= 480,
+	.virtual_y		= 1600,
+	.width			= 48,
+	.height			= 80,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win2 = {
+	.win_mode = {
+		.left_margin	= 8,		/* HBPD */
+		.right_margin	= 8,		/* HFPD */
+		.upper_margin	= 6,	/* VBPD */
+		.lower_margin	= 6,		/* VFPD */
+		.hsync_len	= 6,		/* HSPW */
+		.vsync_len	= 4,		/* VSPW */
+		.xres		= 480,
+		.yres		= 800,
+	},
+	.virtual_x		= 480,
+	.virtual_y		= 1600,
+	.width			= 48,
+	.height			= 80,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+#elif defined(CONFIG_LCD_WA101S)
+static void lcd_wa101s_set_power(struct plat_lcd_data *pd,
+				   unsigned int power)
+{
+	if (power) {
+#if !defined(CONFIG_BACKLIGHT_PWM)
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
+		gpio_free(EXYNOS4_GPD0(1));
+#endif
+	} else {
+#if !defined(CONFIG_BACKLIGHT_PWM)
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
+		gpio_free(EXYNOS4_GPD0(1));
+#endif
+	}
+}
+
+static struct plat_lcd_data smdk4212_lcd_wa101s_data = {
+	.set_power		= lcd_wa101s_set_power,
+};
+
+static struct platform_device smdk4212_lcd_wa101s = {
+	.name			= "platform-lcd",
+	.dev.parent		= &s5p_device_fimd0.dev,
+	.dev.platform_data      = &smdk4212_lcd_wa101s_data,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win0 = {
+	.win_mode = {
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 14,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 5,
+		.xres		= 1360, /* real size : 1366 */
+		.yres		= 768,
+	},
+	.virtual_x		= 1360, /* real size : 1366 */
+	.virtual_y		= 768 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win1 = {
+	.win_mode = {
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 14,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 5,
+		.xres		= 1360, /* real size : 1366 */
+		.yres		= 768,
+	},
+	.virtual_x		= 1360, /* real size : 1366 */
+	.virtual_y		= 768 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win2 = {
+	.win_mode = {
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 14,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 5,
+		.xres		= 1360, /* real size : 1366 */
+		.yres		= 768,
+	},
+	.virtual_x		= 1360, /* real size : 1366 */
+	.virtual_y		= 768 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+#elif defined(CONFIG_LCD_LTE480WV)
+static void lcd_lte480wv_set_power(struct plat_lcd_data *pd,
+				   unsigned int power)
+{
+	if (power) {
+#if !defined(CONFIG_BACKLIGHT_PWM)
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
+		gpio_free(EXYNOS4_GPD0(1));
+#endif
+		/* fire nRESET on power up */
+		gpio_request_one(EXYNOS4_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
+		mdelay(100);
+
+		gpio_set_value(EXYNOS4_GPX0(6), 0);
+		mdelay(10);
+
+		gpio_set_value(EXYNOS4_GPX0(6), 1);
+		mdelay(10);
+
+		gpio_free(EXYNOS4_GPX0(6));
+	} else {
+#if !defined(CONFIG_BACKLIGHT_PWM)
+		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
+		gpio_free(EXYNOS4_GPD0(1));
+#endif
+	}
+}
+
+static struct plat_lcd_data smdk4212_lcd_lte480wv_data = {
+	.set_power		= lcd_lte480wv_set_power,
+};
+
+static struct platform_device smdk4212_lcd_lte480wv = {
+	.name			= "platform-lcd",
+	.dev.parent		= &s5p_device_fimd0.dev,
+	.dev.platform_data      = &smdk4212_lcd_lte480wv_data,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win0 = {
+	.win_mode = {
+		.left_margin	= 13,
+		.right_margin	= 8,
+		.upper_margin	= 7,
+		.lower_margin	= 5,
+		.hsync_len	= 3,
+		.vsync_len	= 1,
+		.xres		= 800,
+		.yres		= 480,
+	},
+	.virtual_x		= 800,
+	.virtual_y		= 960,
+	.width			= 104,
+	.height			= 62,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win1 = {
+	.win_mode = {
+		.left_margin	= 13,
+		.right_margin	= 8,
+		.upper_margin	= 7,
+		.lower_margin	= 5,
+		.hsync_len	= 3,
+		.vsync_len	= 1,
+		.xres		= 800,
+		.yres		= 480,
+	},
+	.virtual_x		= 800,
+	.virtual_y		= 960,
+	.width			= 104,
+	.height			= 62,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk4212_fb_win2 = {
+	.win_mode = {
+		.left_margin	= 13,
+		.right_margin	= 8,
+		.upper_margin	= 7,
+		.lower_margin	= 5,
+		.hsync_len	= 3,
+		.vsync_len	= 1,
+		.xres		= 800,
+		.yres		= 480,
+	},
+	.virtual_x		= 800,
+	.virtual_y		= 960,
+	.width			= 104,
+	.height			= 62,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+#endif
+
+static struct s3c_fb_platdata smdk4212_lcd0_pdata __initdata = {
+#if defined(CONFIG_LCD_AMS369FG06) || defined(CONFIG_LCD_WA101S) || \
+	defined(CONFIG_LCD_LTE480WV) || defined(CONFIG_LCD_LMS501KF03)
+	.win[0]		= &smdk4212_fb_win0,
+	.win[1]		= &smdk4212_fb_win1,
+	.win[2]		= &smdk4212_fb_win2,
+#endif
+	.default_win	= 2,
+	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
+#if defined(CONFIG_LCD_AMS369FG06)
+	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_VDEN |
+			  VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
+#elif defined(CONFIG_LCD_LMS501KF03)
+	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
+#elif defined(CONFIG_LCD_WA101S)
+	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_HSYNC |
+			  VIDCON1_INV_VSYNC,
+#elif defined(CONFIG_LCD_LTE480WV)
+	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
+#endif
+	.setup_gpio	= exynos4_fimd0_gpio_setup_24bpp,
 };
 #endif
 
@@ -1662,6 +2117,17 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 	&exynos4_device_pd[PD_ISP],
 #endif
+/* mainline fimd */
+#ifdef CONFIG_FB_S3C
+	&s5p_device_fimd0,
+#if defined(CONFIG_LCD_AMS369FG06) || defined(CONFIG_LCD_LMS501KF03)
+	&s3c_device_spi_gpio,
+#elif defined(CONFIG_LCD_WA101S)
+	&smdk4212_lcd_wa101s,
+#elif defined(CONFIG_LCD_LTE480WV)
+	&smdk4212_lcd_lte480wv,
+#endif
+#endif
 	/* legacy fimd */
 #ifdef CONFIG_FB_S5P
 	&s3c_device_fb,
@@ -2032,6 +2498,19 @@ static void __init smdk4212_machine_init(void)
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
 	mipi_fb_init();
 #endif
+#ifdef CONFIG_FB_S3C
+	dev_set_name(&s5p_device_fimd0.dev, "s3cfb.0");
+	clk_add_alias("lcd", "exynos4-fb.0", "lcd", &s5p_device_fimd0.dev);
+	clk_add_alias("sclk_fimd", "exynos4-fb.0", "sclk_fimd", &s5p_device_fimd0.dev);
+	s5p_fb_setname(0, "exynos4-fb");
+#if defined(CONFIG_LCD_AMS369FG06) || defined(CONFIG_LCD_LMS501KF03)
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+#endif
+	s5p_fimd0_set_platdata(&smdk4212_lcd0_pdata);
+#ifdef CONFIG_EXYNOS4_DEV_PD
+	s5p_device_fimd0.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+#endif
+#endif
 #ifdef CONFIG_FB_S5P
 #ifdef CONFIG_FB_S5P_LMS501KF03
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
@@ -2150,6 +2629,10 @@ static void __init smdk4212_machine_init(void)
 
 	platform_add_devices(smdk4212_devices, ARRAY_SIZE(smdk4212_devices));
 
+#ifdef CONFIG_FB_S3C
+	exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev, "mout_mpll_user",
+				800 * MHZ);
+#endif
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	sclk = clk_get(spi0_dev, "sclk_spi");
 	if (IS_ERR(sclk))
