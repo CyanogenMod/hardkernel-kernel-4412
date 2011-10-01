@@ -11,18 +11,11 @@
 #ifndef EXYNOS_FIMC_IS_H_
 #define EXYNOS_FIMC_IS_H_ __FILE__
 
-#include <plat/fimc.h>
 #include <linux/videodev2.h>
 
 #define FIMC_IS_MAX_CAMIF_CLIENTS	2
 
-enum fimc_is_cam_format {
-	IS_MIPI_CSI_YCBCR422_8BIT	= 0x1e,
-	IS_MIPI_CSI_RAW8		= 0x2a,
-	IS_MIPI_CSI_RAW10		= 0x2b,
-	IS_MIPI_CSI_RAW12		= 0x2c,
-	IS_MIPI_USER_DEF_PACKET_1       = 0x30,
-};
+struct platform_device;
 
 /**
  * struct exynos4_fimc_is_sensor_info  - image sensor information required for host
@@ -46,15 +39,23 @@ struct exynos4_fimc_is_sensor_info {
  * @isp_info: properties of camera sensor required for host interface setup
 */
 struct exynos4_platform_fimc_is {
+	int	hw_ver;
 	struct exynos4_fimc_is_sensor_info
 		*sensor_info[FIMC_IS_MAX_CAMIF_CLIENTS];
-	enum fimc_is_cam_format	fmt;	/* input format */
-	int mipi_lanes;     /* MIPI data lanes */
-	int mipi_settle;    /* MIPI settle */
-	int mipi_align;     /* MIPI data align: 24/32 */
+	void	(*cfg_gpio)(struct platform_device *pdev);
+	int	(*clk_cfg)(struct platform_device *pdev);
+	int	(*clk_on)(struct platform_device *pdev);
+	int	(*clk_off)(struct platform_device *pdev);
 };
 
 extern struct exynos4_platform_fimc_is exynos4_fimc_is_default_data;
 extern void exynos4_fimc_is_set_platdata(struct exynos4_platform_fimc_is *pd);
 
+/* defined by architecture to configure gpio */
+extern void exynos_fimc_is_cfg_gpio(struct platform_device *pdev);
+
+/* platform specific clock functions */
+extern int exynos_fimc_is_cfg_clk(struct platform_device *pdev);
+extern int exynos_fimc_is_clk_on(struct platform_device *pdev);
+extern int exynos_fimc_is_clk_off(struct platform_device *pdev);
 #endif /* EXYNOS_FIMC_IS_H_ */
