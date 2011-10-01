@@ -23,27 +23,35 @@
 #include <mach/regs-clock.h>
 #include <mach/map.h>
 
-static void exynos4_fimd0_cfg_gpios(unsigned int base, unsigned int nr)
+static void exynos4_fimd0_cfg_gpios(unsigned int base, unsigned int nr,
+		unsigned int cfg, s5p_gpio_drvstr_t drvstr)
 {
-	s3c_gpio_cfgrange_nopull(base, nr, S3C_GPIO_SFN(2));
+	s3c_gpio_cfgrange_nopull(base, nr, cfg);
 
 	for (; nr > 0; nr--, base++)
-#if defined(CONFIG_LCD_WA101S) || defined(CONFIG_LCD_LTE480WV)
-		s5p_gpio_set_drvstr(base, S5P_GPIO_DRVSTR_LV4);
-#else
-		s5p_gpio_set_drvstr(base, S5P_GPIO_DRVSTR_LV1);
-#endif
+		s5p_gpio_set_drvstr(base, drvstr);
 }
+
 
 void exynos4_fimd0_gpio_setup_24bpp(void)
 {
 	unsigned int reg = 0;
-
-	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF0(0), 8);
-	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF1(0), 8);
-	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF2(0), 8);
-	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF3(0), 4);
-
+#if defined(CONFIG_LCD_WA101S) || defined(CONFIG_LCD_LTE480WV)
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF3(0), 4, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+#elif defined(CONFIG_LCD_AMS369FG06)
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF3(0), 4, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+#elif defined(CONFIG_LCD_LMS501KF03)
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd0_cfg_gpios(EXYNOS4_GPF3(0), 4, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+#endif
 	/*
 	 * Set DISPLAY_CONTROL register for Display path selection.
 	 *
