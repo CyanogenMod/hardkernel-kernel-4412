@@ -2426,6 +2426,9 @@ static void __init smdkv310_machine_init(void)
 #endif
 
 #ifdef CONFIG_FB_S3C
+	dev_set_name(&s5p_device_fimd0.dev, "s3cfb.0");
+	clk_add_alias("lcd", "exynos4-fb.0", "lcd", &s5p_device_fimd0.dev);
+	clk_add_alias("sclk_fimd", "exynos4-fb.0", "sclk_fimd", &s5p_device_fimd0.dev);
 #ifdef CONFIG_LCD_AMS369FG06
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 #endif
