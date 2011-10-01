@@ -57,10 +57,10 @@ Default setting values
 #define CAMCORDING_HEIGHT	1080
 #endif
 #ifdef CONFIG_VIDEO_S5K6A3
-#define PREVIEW_WIDTH		800
+#define PREVIEW_WIDTH		640
 #define PREVIEW_HEIGHT		480
-#define CAPTURE_WIDTH		1408
-#define CAPTURE_HEIGHT		1412
+#define CAPTURE_WIDTH		1396
+#define CAPTURE_HEIGHT		1400
 #define CAMCORDING_WIDTH	1280
 #define CAMCORDING_HEIGHT	720
 #endif
@@ -154,17 +154,33 @@ static const struct isp_param init_val_isp_preview = {
 		.err = OTF_OUTPUT_ERROR_NO,
 	},
 	.dma1_output = {
+#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-		.width = 0, .height = 0,
-		.format = 0, .bitwidth = 0, .plane = 0,
-		.order = 0, .buffer_number = 0, .buffer_address = 0,
+#else
+		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
+#endif
+		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.format = DMA_OUTPUT_FORMAT_YUV422,
+		.bitwidth = DMA_OUTPUT_BIT_WIDTH_8BIT,
+		.plane = DMA_OUTPUT_PLANE_3,
+		.order = DMA_INPUT_ORDER_NO,
+		.buffer_number = 1,
+		.buffer_address = 0x50060400,
 		.err = DMA_OUTPUT_ERROR_NO,
 	},
 	.dma2_output = {
+#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-		.width = 0, .height = 0,
-		.format = 0, .bitwidth = 0, .plane = 0,
-		.order = 0, .buffer_number = 0, .buffer_address = 0,
+#else
+		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
+#endif
+		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.format = DMA_OUTPUT_FORMAT_BAYER,
+		.bitwidth = DMA_OUTPUT_BIT_WIDTH_10BIT,
+		.plane = DMA_OUTPUT_PLANE_1,
+		.order = DMA_OUTPUT_ORDER_GB_BG,
+		.buffer_number = 1,
+		.buffer_address = 0x501D0000,
 		.err = DMA_OUTPUT_ERROR_NO,
 	},
 };
@@ -203,14 +219,14 @@ static const struct drc_param init_val_drc_preview = {
 static const struct fd_param init_val_fd_preview = {
 	.control = {
 		.cmd = CONTROL_COMMAND_STOP,
-		.bypass = CONTROL_BYPASS_ENABLE,
+		.bypass = CONTROL_BYPASS_DISABLE,
 		.err = CONTROL_ERROR_NO,
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
 		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
 		.format = OTF_INPUT_FORMAT_YUV444,
-		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
+		.bitwidth = OTF_INPUT_BIT_WIDTH_8BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
 		.err = OTF_INPUT_ERROR_NO,
 	},
@@ -221,8 +237,13 @@ static const struct fd_param init_val_fd_preview = {
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
 		.err = 0,
 	},
-	.fd_ctrl = {
+	.result = {
 		.max_number = 10,
+		.err = FD_ERROR_NO,
+	},
+	.mode = {
+		.smile = FD_MODE_SMILE_DISABLE,
+		.blink = FD_MODE_BLINK_DISABLE,
 		.err = FD_ERROR_NO,
 	},
 };
@@ -366,7 +387,7 @@ static const struct fd_param init_val_fd_capture = {
 	.control = {
 		.cmd = CONTROL_COMMAND_STOP,
 		/* in FD case , bypass is not available */
-		.bypass = CONTROL_BYPASS_ENABLE,
+		.bypass = CONTROL_BYPASS_DISABLE,
 		.err = CONTROL_ERROR_NO,
 	},
 	.otf_input = {
@@ -384,8 +405,13 @@ static const struct fd_param init_val_fd_capture = {
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
 		.err = 0,
 	},
-	.fd_ctrl = {
+	.result = {
 		.max_number = 10,
+		.err = FD_ERROR_NO,
+	},
+	.mode = {
+		.smile = FD_MODE_SMILE_DISABLE,
+		.blink = FD_MODE_BLINK_DISABLE,
 		.err = FD_ERROR_NO,
 	},
 };
@@ -479,17 +505,33 @@ static const struct isp_param init_val_isp_camcording = {
 		.err = OTF_OUTPUT_ERROR_NO,
 	},
 	.dma1_output = {
+#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-		.width = 0, .height = 0,
-		.format = 0, .bitwidth = 0, .plane = 0,
-		.order = 0, .buffer_number = 0, .buffer_address = 0,
+#else
+		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
+#endif
+		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.format = DMA_OUTPUT_FORMAT_YUV422,
+		.bitwidth = DMA_OUTPUT_BIT_WIDTH_8BIT,
+		.plane = DMA_OUTPUT_PLANE_3,
+		.order = DMA_INPUT_ORDER_NO,
+		.buffer_number = 1,
+		.buffer_address = 0x50060400,
 		.err = DMA_OUTPUT_ERROR_NO,
 	},
 	.dma2_output = {
+#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-		.width = 0, .height = 0,
-		.format = 0, .bitwidth = 0, .plane = 0,
-		.order = 0, .buffer_number = 0, .buffer_address = 0,
+#else
+		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
+#endif
+		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.format = DMA_OUTPUT_FORMAT_BAYER,
+		.bitwidth = DMA_OUTPUT_BIT_WIDTH_10BIT,
+		.plane = DMA_OUTPUT_PLANE_1,
+		.order = DMA_OUTPUT_ORDER_GB_BG,
+		.buffer_number = 1,
+		.buffer_address = 0x501D0000,
 		.err = DMA_OUTPUT_ERROR_NO,
 	},
 };
@@ -528,7 +570,7 @@ static const struct drc_param init_val_drc_camcording = {
 static const struct fd_param init_val_fd_camcording = {
 	.control = {
 		.cmd = CONTROL_COMMAND_STOP,
-		.bypass = CONTROL_BYPASS_ENABLE,
+		.bypass = CONTROL_BYPASS_DISABLE,
 		.err = CONTROL_ERROR_NO,
 	},
 	.otf_input = {
@@ -546,8 +588,13 @@ static const struct fd_param init_val_fd_camcording = {
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
 		.err = 0,
 	},
-	.fd_ctrl = {
+	.result = {
 		.max_number = 10,
+		.err = FD_ERROR_NO,
+	},
+	.mode = {
+		.smile = FD_MODE_SMILE_DISABLE,
+		.blink = FD_MODE_BLINK_DISABLE,
 		.err = FD_ERROR_NO,
 	},
 };
@@ -589,17 +636,40 @@ int fimc_is_fw_clear_irq2(struct fimc_is_dev *dev)
 /*
  Group 2. Common
 */
-void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 scenario_id)
+void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 {
 	writel(HIC_OPEN_SENSOR, dev->regs + ISSR0);
-	writel(dev->sensor.id, dev->regs + ISSR1);
-	/* Parameter1 : Sensor Name(IS_Sensor.h) */
-	writel(id, dev->regs + ISSR2);
-	/* Parameter2 : I2c channel used by parameter1 sensor */
-	/* FIXME*/
-	writel(0, dev->regs + ISSR3); /* CSI0*/
+	writel(id, dev->regs + ISSR1);
+	switch (sensor_index) {
+	case SENSOR_S5K3H1_CSI_A:
+		/* Parameter1 : Sensor Name(IS_Sensor.h) */
+		writel(SENSOR_NAME_S5K3H1, dev->regs + ISSR2);
+		/* Parameter2 : I2c channel used by parameter1 sensor */
+		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
+		break;
+	case SENSOR_S5K3H1_CSI_B:
+		writel(SENSOR_NAME_S5K3H1, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
+		break;
+	case SENSOR_S5K3H2_CSI_A:
+		writel(SENSOR_NAME_S5K3H2, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
+		break;
+	case SENSOR_S5K3H2_CSI_B:
+		writel(SENSOR_NAME_S5K3H2, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
+		break;
+	case SENSOR_S5K6A3_CSI_A:
+		writel(SENSOR_NAME_S5K6A3, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
+		break;
+	case SENSOR_S5K6A3_CSI_B:
+		writel(SENSOR_NAME_S5K6A3, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
+		break;
+	}
 	/* Parameter3 : Scenario ID(Initial Scenario) */
-	writel(scenario_id, dev->regs + ISSR4);
+	writel(ISS_PREVIEW_STILL, dev->regs + ISSR4);
 	fimc_is_hw_wait_intsr0_intsd0(dev);
 	fimc_is_hw_set_intgr0_gd0(dev);
 }
@@ -620,112 +690,55 @@ void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev)
 	writel(0x00008000, dev->regs + WDT);
 }
 
-void fimc_is_hw_io_init(struct fimc_is_dev *dev)
+int fimc_is_hw_io_init(struct fimc_is_dev *dev)
 {
-	int ret;
-
-	/* 1. UART setting for FIMC-IS */
-	ret = gpio_request(EXYNOS4212_GPM3(4), "GPM3");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM3_4 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM3(4), (0x3<<16));
-	s3c_gpio_setpull(EXYNOS4212_GPM3(4), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM3(4));
-
-	ret = gpio_request(EXYNOS4212_GPM3(5), "GPM3");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM3_5 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM3(5), (0x3<<20));
-	s3c_gpio_setpull(EXYNOS4212_GPM3(5), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM3(5));
-
-	ret = gpio_request(EXYNOS4212_GPM3(6), "GPM3");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM3_6 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM3(6), (0x3<<24));
-	s3c_gpio_setpull(EXYNOS4212_GPM3(6), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM3(6));
-
-	ret = gpio_request(EXYNOS4212_GPM3(7), "GPM3");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM3_7 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM3(7), (0x3<<28));
-	s3c_gpio_setpull(EXYNOS4212_GPM3(7), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM3(7));
-
-	/* 2. GPIO setting for FIMC-IS */
-	ret = gpio_request(EXYNOS4212_GPM4(0), "GPM4");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM4_0 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM4(0), (0x2<<0));
-	s3c_gpio_setpull(EXYNOS4212_GPM4(0), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM4(0));
-
-	ret = gpio_request(EXYNOS4212_GPM4(1), "GPM4");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM4_1 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM4(1), (0x2<<4));
-	s3c_gpio_setpull(EXYNOS4212_GPM4(1), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM4(1));
-
-	ret = gpio_request(EXYNOS4212_GPM4(2), "GPM4");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM4_2 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM4(2), (0x2<<8));
-	s3c_gpio_setpull(EXYNOS4212_GPM4(2), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM4(2));
-
-	ret = gpio_request(EXYNOS4212_GPM4(3), "GPM4");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM4_3 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM4(3), (0x2<<12));
-	s3c_gpio_setpull(EXYNOS4212_GPM4(3), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM4(3));
+	struct platform_device *pdev = to_platform_device(&dev->pdev->dev);
+	if (dev->pdata->cfg_gpio) {
+		dev->pdata->cfg_gpio(pdev);
+	} else {
+		printk(KERN_ERR "#### failed to Config GPIO ####\n");
+		return -EINVAL;
+	}
+	return 0;
 }
 
-void fimc_is_hw_reset(struct fimc_is_dev *dev)
+void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev)
+{
+	/* 1. Make FIMC-IS power-off state */
+	writel(HIC_POWER_DOWN, dev->regs + ISSR0);
+	writel(dev->sensor.id, dev->regs + ISSR1);
+	fimc_is_hw_wait_intsr0_intsd0(dev);
+	fimc_is_hw_set_intgr0_gd0(dev);
+}
+
+void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 {
 	u32 cfg;
-	void __iomem *reg_isp_arm_option;
-	void __iomem *reg_isp_arm_config;
+	u32 timeout;
 
-	reg_isp_arm_config = ioremap(0x10022280, 0x4);
-	writel(0x1, reg_isp_arm_config);
-	iounmap(reg_isp_arm_config);
-	cfg = dev->mem.base;
-
-	writel(cfg, dev->regs + BBOAR);
-
-	reg_isp_arm_option = ioremap(0x10022288, 0x4);
-	writel(0x00018000, reg_isp_arm_option);
-	iounmap(reg_isp_arm_option);
-	reg_isp_arm_config = NULL;
-	reg_isp_arm_option = NULL;
-}
-
-void fimc_is_hw_disable(struct fimc_is_dev *dev)
-{
-	u32 sts;
-	void __iomem *reg_isp_arm_option;
-	void __iomem *reg_isp_arm_config;
-	void __iomem *reg_isp_arm_status;
-
-	reg_isp_arm_option = ioremap(0x10022288, 0x4);
-	writel(0x01010000, reg_isp_arm_option);
-	iounmap(reg_isp_arm_option);
-
-	reg_isp_arm_config = ioremap(0x10022280, 0x4);
-	reg_isp_arm_status = ioremap(0x10022284, 0x4);
-	writel(0x0, reg_isp_arm_config);
-	do {
-		sts = readl(reg_isp_arm_status);
-		sts &= 0x00000001;
-	} while (sts != 0x0);
-	iounmap(reg_isp_arm_config);
-	iounmap(reg_isp_arm_status);
-	reg_isp_arm_config = NULL;
-	reg_isp_arm_option = NULL;
-	reg_isp_arm_status = NULL;
+	if (on) {
+		/* 1. A5 start address setting */
+		cfg = dev->mem.base;
+		writel(cfg, dev->regs + BBOAR);
+		/* 2. enable A5 */
+		writel(0x00018000, PMUREG_ISP_ARM_OPTION);
+		/* 3. A5 power on*/
+		writel(0x1, PMUREG_ISP_ARM_CONFIGURATION);
+	} else {
+		/* 1. disable A5 */
+		writel(0x00010000, PMUREG_ISP_ARM_OPTION);
+		/* 2. A5 power off*/
+		writel(0x0, PMUREG_ISP_ARM_CONFIGURATION);
+		/* 3. Check A5 power off status register */
+		timeout = 1000;
+		while (__raw_readl(PMUREG_ISP_ARM_STATUS) & 0x1) {
+			if (timeout == 0)
+				printk(KERN_ERR "A5 power off failed\n");
+			printk(KERN_INFO "Wait A5 power off\n");
+			timeout--;
+			udelay(1);
+		}
+	}
 }
 
 void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev)
@@ -736,6 +749,19 @@ void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev)
 	writel(cfg, dev->regs + ISSR1);
 	/* param 1 */
 	writel(IHC_GET_SENSOR_NUMBER, dev->regs + ISSR2);
+	/* param 2 */
+	cfg = dev->sensor_num;
+	writel(cfg, dev->regs + ISSR3);
+}
+
+void fimc_is_hw_set_load_setfile(struct fimc_is_dev *dev)
+{
+	u32 cfg;
+	writel(ISR_DONE, dev->regs + ISSR0);
+	cfg = dev->sensor.id;
+	writel(cfg, dev->regs + ISSR1);
+	/* param 1 */
+	writel(IHC_LOAD_SET_FILE, dev->regs + ISSR2);
 	/* param 2 */
 	cfg = dev->sensor_num;
 	writel(cfg, dev->regs + ISSR3);
@@ -863,6 +889,9 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 {
 	switch (dev->scenario_id) {
 	case ISS_PREVIEW_STILL:
+		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
+		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
+		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
 			init_val_isp_preview.control.cmd);
@@ -1186,11 +1215,19 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_fd_preview.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev,
-			init_val_fd_preview.fd_ctrl.max_number);
-		IS_FD_SET_PARAM_FDCONTROL_ERR(dev,
-			init_val_fd_preview.fd_ctrl.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
+		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev,
+			init_val_fd_preview.result.max_number);
+		IS_FD_SET_PARAM_FD_RESULT_ERR(dev,
+			init_val_fd_preview.result.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
+		IS_INC_PARAM_NUM(dev);
+		IS_FD_SET_PARAM_FD_MODE_SMILE(dev,
+			init_val_fd_preview.mode.smile);
+		IS_FD_SET_PARAM_FD_MODE_BLINK(dev,
+			init_val_fd_preview.mode.blink);
+		IS_FD_SET_PARAM_FD_MODE_ERR(dev,
+			init_val_fd_preview.mode.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_MODE);
 		IS_INC_PARAM_NUM(dev);
 
 		dev->sensor.width_prev =
@@ -1199,6 +1236,9 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview.otf_input.height;
 		break;
 	case ISS_PREVIEW_VIDEO:
+		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
+		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
+		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
 			init_val_isp_preview.control.cmd);
@@ -1522,11 +1562,19 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_fd_preview.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev,
-			init_val_fd_preview.fd_ctrl.max_number);
-		IS_FD_SET_PARAM_FDCONTROL_ERR(dev,
-			init_val_fd_preview.fd_ctrl.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
+		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev,
+			init_val_fd_preview.result.max_number);
+		IS_FD_SET_PARAM_FD_RESULT_ERR(dev,
+			init_val_fd_preview.result.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
+		IS_INC_PARAM_NUM(dev);
+		IS_FD_SET_PARAM_FD_MODE_SMILE(dev,
+			init_val_fd_preview.mode.smile);
+		IS_FD_SET_PARAM_FD_MODE_BLINK(dev,
+			init_val_fd_preview.mode.blink);
+		IS_FD_SET_PARAM_FD_MODE_ERR(dev,
+			init_val_fd_preview.mode.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_MODE);
 		IS_INC_PARAM_NUM(dev);
 
 		dev->sensor.width_prev_cam =
@@ -1536,6 +1584,9 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		break;
 
 	case ISS_CAPTURE_STILL:
+		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
+		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
+		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
 			init_val_isp_capture.control.cmd);
@@ -1859,15 +1910,26 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_fd_capture.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev,
-			init_val_fd_capture.fd_ctrl.max_number);
-		IS_FD_SET_PARAM_FDCONTROL_ERR(dev,
-			init_val_fd_capture.fd_ctrl.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
+		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev,
+			init_val_fd_preview.result.max_number);
+		IS_FD_SET_PARAM_FD_RESULT_ERR(dev,
+			init_val_fd_preview.result.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
+		IS_INC_PARAM_NUM(dev);
+		IS_FD_SET_PARAM_FD_MODE_SMILE(dev,
+			init_val_fd_preview.mode.smile);
+		IS_FD_SET_PARAM_FD_MODE_BLINK(dev,
+			init_val_fd_preview.mode.blink);
+		IS_FD_SET_PARAM_FD_MODE_ERR(dev,
+			init_val_fd_preview.mode.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_MODE);
 		IS_INC_PARAM_NUM(dev);
 		break;
 
 	case ISS_CAPTURE_VIDEO:
+		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
+		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
+		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
 			init_val_isp_camcording.control.cmd);
@@ -2191,11 +2253,19 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_fd_camcording.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev,
-			init_val_fd_camcording.fd_ctrl.max_number);
-		IS_FD_SET_PARAM_FDCONTROL_ERR(dev,
-			init_val_fd_camcording.fd_ctrl.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
+		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev,
+			init_val_fd_preview.result.max_number);
+		IS_FD_SET_PARAM_FD_RESULT_ERR(dev,
+			init_val_fd_preview.result.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
+		IS_INC_PARAM_NUM(dev);
+		IS_FD_SET_PARAM_FD_MODE_SMILE(dev,
+			init_val_fd_preview.mode.smile);
+		IS_FD_SET_PARAM_FD_MODE_BLINK(dev,
+			init_val_fd_preview.mode.blink);
+		IS_FD_SET_PARAM_FD_MODE_ERR(dev,
+			init_val_fd_preview.mode.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_MODE);
 		IS_INC_PARAM_NUM(dev);
 		break;
 	}

@@ -27,15 +27,11 @@
 #define IS_PARAM_DRC		(dev->is_p_region->parameter.drc)
 #define IS_PARAM_FD		(dev->is_p_region->parameter.fd)
 #define IS_HEADER		(dev->is_p_region->header)
-#define IS_PARAM_SIZE		0x5001
+#define IS_PARAM_SIZE		(FIMC_IS_REGION_SIZE+1)
 
 /* Global control */
 #define IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, x) \
 		(dev->is_p_region->parameter.global.shotmode.cmd = x)
-#define IS_SET_PARAM_GLOBAL_SHOTMODE_SMILE(dev, x) \
-		(dev->is_p_region->parameter.global.shotmode.smile = x)
-#define IS_SET_PARAM_GLOBAL_SHOTMODE_EYEBLINK(dev, x) \
-		(dev->is_p_region->parameter.global.shotmode.eyeblink = x)
 
 /* ISP Macros */
 #define IS_ISP_SET_PARAM_CONTROL_CMD(dev, x) \
@@ -348,10 +344,16 @@
 #define IS_FD_SET_PARAM_DMA_INPUT_ERR(dev, x) \
 	(dev->is_p_region->parameter.fd.dma_input.err = x)
 
-#define IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev, x) \
-	(dev->is_p_region->parameter.fd.fd_ctrl.max_number = x)
-#define IS_FD_SET_PARAM_FDCONTROL_ERR(dev, x) \
-	(dev->is_p_region->parameter.fd.fd_ctrl.err = x)
+#define IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev, x) \
+	(dev->is_p_region->parameter.fd.result.max_number = x)
+#define IS_FD_SET_PARAM_FD_RESULT_ERR(dev, x) \
+	(dev->is_p_region->parameter.fd.result.err = x)
+#define IS_FD_SET_PARAM_FD_MODE_SMILE(dev, x) \
+	(dev->is_p_region->parameter.fd.mode.smile = x)
+#define IS_FD_SET_PARAM_FD_MODE_BLINK(dev, x) \
+	(dev->is_p_region->parameter.fd.mode.blink = x)
+	#define IS_FD_SET_PARAM_FD_MODE_ERR(dev, x) \
+	(dev->is_p_region->parameter.fd.mode.err = x)
 
 #ifndef BIT0
 #define  BIT0     0x00000001
@@ -444,14 +446,15 @@ enum is_param_set_bit {
 	PARAM_GLOBAL_SHOTMODE = 0,
 	PARAM_SENSOR_CONTROL,
 	PARAM_SENSOR_OTF_OUTPUT,
-	PARAM_BUFFER_BYPASS,
+	PARAM_SENSOR_FRAME_RATE,
+	PARAM_BUFFER_CONTROL,
 	PARAM_BUFFER_OTF_INPUT,
 	PARAM_BUFFER_OTF_OUTPUT,
 	PARAM_ISP_CONTROL,
 	PARAM_ISP_OTF_INPUT,
 	PARAM_ISP_DMA1_INPUT,
-	PARAM_ISP_DMA2_INPUT,
-	PARAM_ISP_AF = 10,
+	PARAM_ISP_DMA2_INPUT = 10,
+	PARAM_ISP_AF,
 	PARAM_ISP_FLASH,
 	PARAM_ISP_AWB,
 	PARAM_ISP_IMAGE_EFFECT,
@@ -460,8 +463,8 @@ enum is_param_set_bit {
 	PARAM_ISP_METERING,
 	PARAM_ISP_AFC,
 	PARAM_ISP_OTF_OUTPUT,
-	PARAM_ISP_DMA1_OUTPUT,
-	PARAM_ISP_DMA2_OUTPUT = 20,
+	PARAM_ISP_DMA1_OUTPUT = 20,
+	PARAM_ISP_DMA2_OUTPUT,
 	PARAM_DRC_CONTROL,
 	PARAM_DRC_OTF_INPUT,
 	PARAM_DRC_DMA_INPUT,
@@ -470,18 +473,18 @@ enum is_param_set_bit {
 	PARAM_SCALERC_OTF_INPUT,
 	PARAM_SCALERC_IMAGE_EFFECT,
 	PARAM_SCALERC_CROP,
-	PARAM_SCALERC_SCALING,
-	PARAM_SCALERC_OTF_OUTPUT = 30,
-	PARAM_SCALERC_DMA_OUTPUT,
-	PARAM_ODC_CONTROL = 32,
+	PARAM_SCALERC_SCALING = 30,
+	PARAM_SCALERC_OTF_OUTPUT,
+	PARAM_SCALERC_DMA_OUTPUT = 32,
+	PARAM_ODC_CONTROL,
 	PARAM_ODC_OTF_INPUT,
 	PARAM_ODC_OTF_OUTPUT,
 	PARAM_DIS_CONTROL,
 	PARAM_DIS_OTF_INPUT,
 	PARAM_DIS_OTF_OUTPUT,
 	PARAM_TDNR_CONTROL,
-	PARAM_TDNR_OTF_INPUT,
-	PARAM_TDNR_1ST_FRAME = 40,
+	PARAM_TDNR_OTF_INPUT = 40,
+	PARAM_TDNR_1ST_FRAME,
 	PARAM_TDNR_OTF_OUTPUT,
 	PARAM_TDNR_DMA_OUTPUT,
 	PARAM_SCALERP_CONTROL,
@@ -490,13 +493,14 @@ enum is_param_set_bit {
 	PARAM_SCALERP_CROP,
 	PARAM_SCALERP_SCALING,
 	PARAM_SCALERP_ROTATION,
-	PARAM_SCALERP_FLIP,
-	PARAM_SCALERP_OTF_OUTPUT = 50,
+	PARAM_SCALERP_FLIP = 50,
+	PARAM_SCALERP_OTF_OUTPUT,
 	PARAM_SCALERP_DMA_OUTPUT,
 	PARAM_FD_CONTROL,
 	PARAM_FD_OTF_INPUT,
 	PARAM_FD_DMA_INPUT,
-	PARAM_FD_FD = 55,
+	PARAM_FD_RESULT,
+	PARAM_FD_MODE = 57,
 	PARAM_END,
 };
 
@@ -514,7 +518,8 @@ enum is_param_set_bit {
 #define PARAM_GLOBAL_SHOTMODE		0
 #define PARAM_SENSOR_CONTROL		INC_NUM(PARAM_GLOBAL_SHOTMODE)
 #define PARAM_SENSOR_OTF_OUTPUT		INC_NUM(PARAM_SENSOR_CONTROL)
-#define PARAM_BUFFER_CONTROL		INC_NUM(PARAM_SENSOR_OTF_OUTPUT)
+#define PARAM_SENSOR_FRAME_RATE		INC_NUM(PARAM_SENSOR_OTF_OUTPUT)
+#define PARAM_BUFFER_CONTROL		INC_NUM(PARAM_SENSOR_FRAME_RATE)
 #define PARAM_BUFFER_OTF_INPUT		INC_NUM(PARAM_BUFFER_CONTROL)
 #define PARAM_BUFFER_OTF_OUTPUT		INC_NUM(PARAM_BUFFER_OTF_INPUT)
 #define PARAM_ISP_CONTROL		INC_NUM(PARAM_BUFFER_OTF_OUTPUT)
@@ -542,8 +547,9 @@ enum is_param_set_bit {
 #define PARAM_SCALERC_CROP		INC_NUM(PARAM_SCALERC_IMAGE_EFFECT)
 #define PARAM_SCALERC_SCALING		INC_NUM(PARAM_SCALERC_CROP)
 #define PARAM_SCALERC_OTF_OUTPUT	INC_NUM(PARAM_SCALERC_SCALING)
-#define PARAM_SCALERC_DMA_OUTPUT	INC_NUM(PARAM_SCALERC_OTF_OUTPUT)
+
 /* 32~63 */
+#define PARAM_SCALERC_DMA_OUTPUT	INC_NUM(PARAM_SCALERC_OTF_OUTPUT)
 #define PARAM_ODC_CONTROL		INC_NUM(PARAM_SCALERC_DMA_OUTPUT)
 #define PARAM_ODC_OTF_INPUT		INC_NUM(PARAM_ODC_CONTROL)
 #define PARAM_ODC_OTF_OUTPUT		INC_NUM(PARAM_ODC_OTF_INPUT)
@@ -567,13 +573,14 @@ enum is_param_set_bit {
 #define PARAM_FD_CONTROL		INC_NUM(PARAM_SCALERP_DMA_OUTPUT)
 #define PARAM_FD_OTF_INPUT		INC_NUM(PARAM_FD_CONTROL)
 #define PARAM_FD_DMA_INPUT		INC_NUM(PARAM_FD_OTF_INPUT)
-#define PARAM_FD_FD			INC_NUM(PARAM_FD_DMA_INPUT)
+#define PARAM_FD_RESULT			INC_NUM(PARAM_FD_DMA_INPUT)
+#define PARAM_FD_MODE			INC_NUM(PARAM_FD_RESULT)
 #define PARAM_END			INC_NUM(PARAM_FD_FD)
 
 #define PARAM_STRNUM_GLOBAL		(PARAM_GLOBAL_SHOTMODE)
 #define PARAM_RANGE_GLOBAL		1
 #define PARAM_STRNUM_SENSOR		(PARAM_SENSOR_BYPASS)
-#define PARAM_RANGE_SENSOR		2
+#define PARAM_RANGE_SENSOR		3
 #define PARAM_STRNUM_BUFFER		(PARAM_BUFFER_BYPASS)
 #define PARAM_RANGE_BUFFER		3
 #define PARAM_STRNUM_ISP		(PARAM_ISP_BYPASS)
@@ -591,7 +598,7 @@ enum is_param_set_bit {
 #define PARAM_STRNUM_SCALERP		(PARAM_SCALERP_BYPASS)
 #define PARAM_RANGE_SCALERP		9
 #define PARAM_STRNUM_LHFD		(PARAM_FD_BYPASS)
-#define PARAM_RANGE_LHFD		4
+#define PARAM_RANGE_LHFD		5
 
 /* Enumerations
 *
@@ -704,10 +711,10 @@ enum otf_output_command {
 };
 
 enum orf_output_format {
-	OTF_OUTPUT_FORMAT_YUV444	= 0,
-	OTF_OUTPUT_FORMAT_YUV422	= 1,
-	OTF_OUTPUT_FORMAT_YUV420	= 2,
-	OTF_OUTPUT_FORMAT_RGB		= 3
+	OTF_OUTPUT_FORMAT_YUV444	= 1,
+	OTF_OUTPUT_FORMAT_YUV422	= 2,
+	OTF_OUTPUT_FORMAT_YUV420	= 3,
+	OTF_OUTPUT_FORMAT_RGB		= 4
 };
 
 enum otf_output_bitwidth {
@@ -733,7 +740,7 @@ enum dma_output_command {
 };
 
 enum dma_output_format {
-	DMA_OUTPUT_FORAMT_BAYER		= 0,
+	DMA_OUTPUT_FORMAT_BAYER		= 0,
 	DMA_OUTPUT_FORMAT_YUV444	= 1,
 	DMA_OUTPUT_FORMAT_YUV422	= 2,
 	DMA_OUTPUT_FORMAT_YUV420	= 3,
@@ -874,11 +881,11 @@ enum isp_awb_error {
 
 /* --------------------------  Effect  ----------------------------------- */
 enum isp_imageeffect_command {
-	ISP_IMAGE_EFFECT_DISABLE	= 0,
-	ISP_IMAGE_EFFECT_BLACK_WHITE	= 1,
-	ISP_IMAGE_EFFECT_ANTIQUE	= 2,
-	ISP_IMAGE_EFFECT_GREEN		= 3,
-	ISP_IMAGE_EFFECT_BLUE		= 4
+	ISP_IMAGE_EFFECT_DISABLE		= 0,
+	ISP_IMAGE_EFFECT_MONOCHROME		= 1,
+	ISP_IMAGE_EFFECT_NEGATIVE_MONO		= 2,
+	ISP_IMAGE_EFFECT_NEGATIVE_COLOR		= 3,
+	ISP_IMAGE_EFFECT_SEPIA			= 4
 };
 
 enum isp_imageeffect_error {
@@ -999,53 +1006,89 @@ enum tdnr_1st_frame_error {
 };
 
 /* ----------------------------  FD  ------------------------------------- */
+enum fd_mode_smile {
+	FD_MODE_SMILE_DISABLE	= 0,
+	FD_MODE_SMILE_ENABLE	= 1
+};
+
+enum fd_mode_blink {
+	FD_MODE_BLINK_DISABLE	= 0,
+	FD_MODE_BLINK_ENABLE	= 1
+};
+
 enum fd_error {
 	FD_ERROR_NO				= 0 /* fd setting is done */
 };
 
 enum error {
 	/* Common error (0~99) */
-	ERROR_COMMON_NO		= 0,
-	ERROR_COMMON_CMD	= 1,	/* Invalid command*/
-	ERROR_COMMON_PARAMETER	= 2,	/* Invalid parameter*/
-	ERROR_COMMON_SETFILE	= 3,	/* Set file isn't loaded */
+	ERROR_COMMON_NO			= 0,
+	ERROR_COMMON_CMD		= 1,	/* Invalid command*/
+	ERROR_COMMON_PARAMETER		= 2,	/* Invalid parameter*/
+	/* setfile is not loaded before adjusting */
+	ERROR_COMMON_SETFILE_LOAD	= 3,
+	/* setfile is not Adjusted before runnng. */
+	ERROR_COMMON_SETFILE_ADJUST	= 4,
+	/* Input path can be changed in ready state(stop) */
+	ERROR_COMMON_INPUT_PATH		= 5,
+	/* IP can not start if input path is not set */
+	ERROR_COMMON_INPUT_INIT		= 6,
+	/* IP can not start if output path is not set */
+	ERROR_COMMON_OUTPUT_INIT	= 7,
 
 	ERROR_CONTROL_NO		= ERROR_COMMON_NO,
-	ERROR_CONTROL_BYPASS		= 11,
+	ERROR_CONTROL_BYPASS		= 11,	/* Enable or Disable */
 
 	ERROR_OTF_INPUT_NO		= ERROR_COMMON_NO,
-	ERROR_OTF_INPUT_FORMAT		= 21,	/* Invalid format */
-	ERROR_OTF_INPUT_WIDTH		= 22,	/* invalid width */
-	ERROR_OTF_INPUT_HEIGHT		= 23,	/* invalid height */
-	ERROR_OTF_INPUT_BIT_WIDTH	= 24,	/* invalid bit-width */
+	/* invalid format  (DRC: YUV444, FD: YUV444, 422, 420) */
+	ERROR_OTF_INPUT_FORMAT		= 21,
+	/* invalid width (DRC: 128~8192, FD: 32~8190) */
+	ERROR_OTF_INPUT_WIDTH		= 22,
+	/* invalid height (DRC: 64~8192, FD: 16~8190) */
+	ERROR_OTF_INPUT_HEIGHT		= 23,
+	/* invalid bit-width (DRC: 8~12bits, FD: 8bit) */
+	ERROR_OTF_INPUT_BIT_WIDTH	= 24,
 
 	ERROR_DMA_INPUT_NO		= ERROR_COMMON_NO,
-	ERROR_DMA_INPUT_WIDTH		= 31,	/* invalid width */
-	ERROR_DMA_INPUT_HEIGHT		= 32,   /* invalid height */
-	ERROR_DMA_INPUT_FORMAT		= 33,   /* Invalid format */
-	ERROR_DMA_INPUT_BIT_WIDTH	= 34,   /* invalid bit-width */
-	ERROR_DMA_INPUT_ORDER		= 35,   /* invalid order */
-	ERROR_DMA_INPUT_PLANE		= 36,   /* invalid plane */
+	/* invalid width (DRC: 128~8192, FD: 32~8190) */
+	ERROR_DMA_INPUT_WIDTH		= 31,
+	/* invalid height (DRC: 64~8192, FD: 16~8190) */
+	ERROR_DMA_INPUT_HEIGHT		= 32,
+	/* invalid format (DRC: YUV444 or YUV422, FD: YUV444, 422, 420) */
+	ERROR_DMA_INPUT_FORMAT		= 33,
+	/* invalid bit-width (DRC: 8~12bit, FD: 8bit) */
+	ERROR_DMA_INPUT_BIT_WIDTH	= 34,
+	/* invalid order(DRC: YYCbCrorYCbYCr, FD:NO,YYCbCr,YCbYCr,CbCr,CrCb) */
+	ERROR_DMA_INPUT_ORDER		= 35,
+	/* invalid palne (DRC: 3, FD: 1, 2, 3) */
+	ERROR_DMA_INPUT_PLANE		= 36,
 
 	ERROR_OTF_OUTPUT_NO		= ERROR_COMMON_NO,
-	ERROR_OTF_OUTPUT_WIDTH		= 41,   /* invalid width */
-	ERROR_OTF_OUTPUT_HEIGHT		= 42,   /* invalid height */
-	ERROR_OTF_OUTPUT_FORMAT		= 43,   /* Invalid format */
-	ERROR_OTF_OUTPUT_BIT_WIDTH	= 44,   /* invalid bit-width */
+	/* invalid width (DRC: 128~8192) */
+	ERROR_OTF_OUTPUT_WIDTH		= 41,
+	/* invalid height (DRC: 64~8192) */
+	ERROR_OTF_OUTPUT_HEIGHT		= 42,
+	/* invalid format (DRC: YUV444) */
+	ERROR_OTF_OUTPUT_FORMAT		= 43,
+	/* invalid bit-width (DRC: 8~12bits) */
+	ERROR_OTF_OUTPUT_BIT_WIDTH	= 44,
 
 	ERROR_DMA_OUTPUT_NO		= ERROR_COMMON_NO,
-	ERROR_DMA_OUTPUT_WIDTH		= 51,
-	ERROR_DMA_OUTPUT_HEIGHT		= 52,
-	ERROR_DMA_OUTPUT_FORMAT		= 53,
-	ERROR_DMA_OUTPUT_BIT_WIDTH	= 54,
-	ERROR_DMA_OUTPUT_PLANE		= 55,
-	ERROR_DMA_OUTPUT_ORDER		= 56,
+	ERROR_DMA_OUTPUT_WIDTH		= 51,	/* invalid width */
+	ERROR_DMA_OUTPUT_HEIGHT		= 52,	/* invalid height */
+	ERROR_DMA_OUTPUT_FORMAT		= 53,	/* invalid format */
+	ERROR_DMA_OUTPUT_BIT_WIDTH	= 54,	/* invalid bit-width */
+	ERROR_DMA_OUTPUT_PLANE		= 55,	/* invalid plane */
+	ERROR_DMA_OUTPUT_ORDER		= 56,	/* invalid order */
 
 	ERROR_GLOBAL_SHOTMODE_NO	= ERROR_COMMON_NO,
 
-	/* ISP Error (100~199) */
+	/* SENSOR Error(100~199) */
+	ERROR_SENSOR_NO			= ERROR_COMMON_NO,
+
+	/* ISP Error (200~299) */
 	ERROR_ISP_AF_NO			= ERROR_COMMON_NO,
-	ERROR_ISP_AF_BUSY		= 101,
+	ERROR_ISP_AF_BUSY		= 201,
 	ERROR_ISP_FLASH_NO		= ERROR_COMMON_NO,
 	ERROR_ISP_AWB_NO		= ERROR_COMMON_NO,
 	ERROR_ISP_IMAGE_EFFECT_NO	= ERROR_COMMON_NO,
@@ -1054,10 +1097,12 @@ enum error {
 	ERROR_ISP_METERING_NO		= ERROR_COMMON_NO,
 	ERROR_ISP_AFC_NO		= ERROR_COMMON_NO,
 
-	/* DRC Error (200~299) */
-	/* FD Error  (300~399) */
+	/* DRC Error (300~399) */
+
+	/* FD Error  (400~499) */
 	ERROR_FD_NO			= ERROR_COMMON_NO,
-	ERROR_FD_MODE_CHANGE		= 301,  /* can accept mode-chage */
+	ERROR_FD_SMILE_MODE		= 402,  /* not valid smile mode */
+	ERROR_FD_BLINK_MODE		= 403,  /* not valid smile mode */
 };
 
 struct param_control {
@@ -1119,9 +1164,13 @@ struct param_dma_output {
 
 struct param_global_shotmode {
 	u32	cmd;
-	u32	smile;
-	u32	eyeblink;
-	u32	reserved[PARAMETER_MAX_MEMBER-4];
+	u32	reserved[PARAMETER_MAX_MEMBER-2];
+	u32	err;
+};
+
+struct param_sensor_framerate {
+	u32	frame_rate;
+	u32	reserved[PARAMETER_MAX_MEMBER-2];
 	u32	err;
 };
 
@@ -1233,9 +1282,16 @@ struct param_3dnr_1stframe {
 	u32	err;
 };
 
-struct param_fd {
+struct param_fd_result {
 	u32	max_number;
 	u32	reserved[PARAMETER_MAX_MEMBER-2];
+	u32	err;
+};
+
+struct param_fd_mode {
+	u32	smile;
+	u32	blink;
+	u32	reserved[PARAMETER_MAX_MEMBER-3];
 	u32	err;
 };
 
@@ -1245,8 +1301,9 @@ struct global_param {
 
 /* To be added */
 struct sensor_param {
-	struct param_control	control;
-	struct param_otf_output	otf_output;
+	struct param_control		control;
+	struct param_otf_output		otf_output;
+	struct param_sensor_framerate	frame_rate;
 };
 
 struct buffer_param {
@@ -1265,7 +1322,7 @@ struct isp_param {
 	struct param_isp_awb		awb;
 	struct param_isp_imageeffect	effect;
 	struct param_isp_iso		iso;
-	struct param_isp_adjust		adjust;		/* 10 */
+	struct param_isp_adjust		adjust;
 	struct param_isp_metering	metering;
 	struct param_isp_afc		afc;
 	struct param_otf_output		otf_output;
@@ -1281,7 +1338,7 @@ struct drc_param {
 };
 
 struct scalerc_param {
-	struct param_control		control;	 /* 20 */
+	struct param_control		control;
 	struct param_otf_input		otf_input;
 	struct param_scaler_imageeffect	effect;
 	struct param_scaler_crop	crop;
@@ -1297,7 +1354,7 @@ struct odc_param {
 };
 
 struct dis_param {
-	struct param_control		control;	/* 30 */
+	struct param_control		control;
 	struct param_otf_output		otf_input;
 	struct param_otf_output		otf_output;
 };
@@ -1313,7 +1370,7 @@ struct tdnr_param {
 struct scalerp_param {
 	struct param_control			control;
 	struct param_otf_input			otf_input;
-	struct param_scaler_imageeffect		effect;		/* 40 */
+	struct param_scaler_imageeffect		effect;
 	struct param_scaler_crop		crop;
 	struct param_scaler_scaling		scale;
 	struct param_scaler_rotation		rotation;
@@ -1326,7 +1383,8 @@ struct fd_param {
 	struct param_control			control;
 	struct param_otf_input			otf_input;
 	struct param_dma_input			dma_input;
-	struct param_fd				fd_ctrl;	/* 50 */
+	struct param_fd_result			result;
+	struct param_fd_mode			mode;
 };
 
 struct is_param_region {
@@ -1413,14 +1471,6 @@ struct is_face_marker {
 #define MAX_FRAME_COUNT_PREVIEW	4
 #define MAX_FRAME_COUNT_CAPTURE	1
 #define MAX_FACE_COUNT		16
-
-#if defined(MIDAS)
-#define SENSOR		SENSOR_S5K6A3
-#define CAM_CHANNEL	CAM_CH1
-#else
-#define SENSOR		SENSOR_S5K3H2
-#define CAM_CHANNEL	CAM_CH0
-#endif
 
 struct is_region {
 	struct is_param_region	parameter;

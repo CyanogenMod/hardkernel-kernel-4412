@@ -72,42 +72,6 @@ void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size)
 	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
 }
 
-static void fimc_is_firmware_request_complete_handler(const struct firmware *fw,
-						  void *context)
-{
-	struct fimc_is_dev *dev = context;
-	volatile unsigned char *fw_base;
-	if (fw != NULL) {
-		fw_base = phys_to_virt(dev->mem.base);
-		memcpy((void *)fw_base, fw->data, fw->size);
-		fimc_is_mem_cache_clean((void *)fw_base, fw->size);
-		dev->fw.state = 1;
-		dbg("FIMC_IS F/W loaded successfully - size:%d\n", fw->size);
-
-		dev->fw.info = fw;
-	} else {
-		dbg("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
-	}
-}
-
-static int fimc_is_request_firmware(struct fimc_is_dev *dev)
-{
-	int ret;
-	ret = request_firmware_nowait(THIS_MODULE,
-		FW_ACTION_HOTPLUG,
-		"fimc_is_fw.bin",
-		&dev->pdev->dev,
-		GFP_KERNEL,
-		dev,
-		fimc_is_firmware_request_complete_handler);
-	if (ret) {
-		dev_err(&dev->pdev->dev,
-			"could not load firmware (err=%d)\n", ret);
-		return -EINVAL;
-	}
-	return 0;
-}
-
 int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
 {
 #ifdef CONFIG_CMA
@@ -128,9 +92,10 @@ int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
 	dev->mem.base = (dma_addr_t)cma_alloc
 		(&dev->pdev->dev, dev->cma_name, (size_t)dev->mem.size, 0);
 	dev->is_p_region =
-		(struct is_region *)(phys_to_virt(dev->mem.base+0x3ffb000));
+		(struct is_region *)(phys_to_virt(dev->mem.base +
+				FIMC_IS_A5_MEM_SIZE - FIMC_IS_REGION_SIZE));
 	memset((void *)dev->is_p_region, 0,
-		(unsigned long)sizeof(dev->is_p_region));
+		(unsigned long)sizeof(struct is_region));
 	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
 
 	printk(KERN_INFO "ctrl->mem.size = 0x%x\n", dev->mem.size);
@@ -150,6 +115,8 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	case IHC_GET_SENSOR_NUMBER:
 		fimc_is_hw_set_sensor_num(dev);
 		break;
+	case IHC_LOAD_SET_FILE:
+		fimc_is_hw_get_param(dev, 2);
 	case IHC_SET_SHOT_MARK:
 		fimc_is_hw_get_param(dev, 3);
 		break;
@@ -177,6 +144,33 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		set_bit(IS_ST_FW_DOWNLOADED, &dev->state);
 		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
+		break;
+	case IHC_LOAD_SET_FILE:
+		printk(KERN_INFO "IHC_GET_SENSOR_NUMBER\n");
+		printk(KERN_INFO "Param1 = 0x%08x\n", dev->i2h_cmd.arg[0]);
+		printk(KERN_INFO "Param2 = 0x%08x\n", dev->i2h_cmd.arg[1]);
+		dev->setfile.base = dev->i2h_cmd.arg[0];
+		dev->setfile.size = dev->i2h_cmd.arg[1];
+		set_bit(IS_ST_SET_FILE, &dev->state);
+		break;
+	case IHC_SET_SHOT_MARK:
+		break;
+	case IHC_SET_FACE_MARK:
+		printk(KERN_INFO "Count = %d\n", dev->i2h_cmd.arg[0]);
+		printk(KERN_INFO "FN = %d\n",
+		dev->is_p_region->face[dev->i2h_cmd.arg[0]].frame_number);
+		printk(KERN_INFO "Confidence = %d\n",
+		dev->is_p_region->face[dev->i2h_cmd.arg[0]].confidence);
+		printk(KERN_INFO "Size = %d,%d\n",
+		dev->is_p_region->face[dev->i2h_cmd.arg[0]].width,
+		dev->is_p_region->face[dev->i2h_cmd.arg[0]].height);
+		printk(KERN_INFO "Offset = %d,%d\n",
+		dev->is_p_region->face[dev->i2h_cmd.arg[0]].offset_x,
+		dev->is_p_region->face[dev->i2h_cmd.arg[0]].offset_y);
+		break;
+	case IHC_FRAME_DONE:
+		break;
+	case IHC_LOCK_DONE:
 		break;
 	case ISR_DONE:
 		printk(KERN_INFO "ISR_DONE - %d\n", dev->i2h_cmd.arg[0]);
@@ -233,6 +227,9 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 			set_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state);
 			dev->sensor.id = 0;
 			break;
+		case HIC_POWER_DOWN:
+			set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
+			break;
 		}
 		break;
 	case ISR_NDONE:
@@ -246,6 +243,7 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 				dev->i2h_cmd.arg[3]);
 			break;
 		}
+		break;
 	}
 	wake_up(&dev->irq_queue1);
 	return IRQ_HANDLED;
@@ -278,7 +276,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Platform data not set\n");
 		goto p_err1;
 	}
-
+	dev->pdata = pdata;
 	/*
 	 * I/O remap
 	*/
@@ -328,16 +326,8 @@ static int fimc_is_probe(struct platform_device *pdev)
 			"failed to fimc_is_init_mem_mgr (%d)\n", ret);
 		goto e_irqfree1;
 	}
-	/*
-	 * load and init Firmware
-	*/
-	dev->fw.state = 0;
-	ret = fimc_is_request_firmware(dev);
-	if (ret) {
-		dev_err(&pdev->dev,
-			"failed to fimc_is_request_firmware (%d)\n", ret);
-		goto e_irqfree1;
-	}
+
+	/* Init v4l2 sub device */
 	v4l2_subdev_init(&dev->sd, &fimc_is_subdev_ops);
 	dev->sd.owner = THIS_MODULE;
 	strcpy(dev->sd.name, MODULE_NAME);
@@ -405,57 +395,16 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
-	struct clk *aclk_mcuisp_muxed = NULL;
-	struct clk *aclk_mcuisp_div0 = NULL;
-	struct clk *aclk_mcuisp_div1 = NULL;
-	struct clk *aclk_200 = NULL;
-	struct clk *aclk_200_div0 = NULL;
-	struct clk *aclk_200_div1 = NULL;
-	struct clk *sclk_uart_isp = NULL;
 
 	dbg("fimc_is_runtime_suspend\n");
 	mutex_lock(&is_dev->lock);
 	set_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
-
-	/* 1. MCUISP */
-	aclk_mcuisp_muxed = clk_get(&pdev->dev, "aclk_400_muxed");
-	if (IS_ERR(aclk_mcuisp_muxed))
-		printk(KERN_ERR "failed to get aclk_mcuisp_muxed\n");
-	aclk_mcuisp_div0 = clk_get(&pdev->dev, "sclk_mcuisp_div0");
-	if (IS_ERR(aclk_mcuisp_div0))
-		printk(KERN_ERR "failed to get aclk_mcuisp_div0\n");
-	aclk_mcuisp_div1 = clk_get(&pdev->dev, "sclk_mcuisp_div1");
-	if (IS_ERR(aclk_mcuisp_div1))
-		printk(KERN_ERR "failed to get aclk_mcuisp_div1\n");
-	clk_disable(aclk_mcuisp_muxed);
-	clk_disable(aclk_mcuisp_div0);
-	clk_disable(aclk_mcuisp_div1);
-	clk_put(aclk_mcuisp_muxed);
-	clk_put(aclk_mcuisp_div0);
-	clk_put(aclk_mcuisp_div1);
-	/* 2. ACLK_ISP */
-	aclk_200 = clk_get(&pdev->dev, "aclk_200_muxed");
-	if (IS_ERR(aclk_200))
-		printk(KERN_ERR "failed to get aclk_200\n");
-	aclk_200_div0 = clk_get(&pdev->dev, "sclk_aclk_div0");
-	if (IS_ERR(aclk_200_div0))
-		printk(KERN_ERR "failed to get aclk_200_div0\n");
-	aclk_200_div1 = clk_get(&pdev->dev, "sclk_aclk_div1");
-	if (IS_ERR(aclk_200_div1))
-		printk(KERN_ERR "failed to get aclk_200_div1\n");
-	clk_disable(aclk_200);
-	clk_disable(aclk_200_div0);
-	clk_disable(aclk_200_div1);
-	clk_put(aclk_200);
-	clk_put(aclk_200_div0);
-	clk_put(aclk_200_div1);
-	/* 3. UART-ISP */
-	sclk_uart_isp = clk_get(&pdev->dev, "sclk_uart_isp");
-	if (IS_ERR(sclk_uart_isp))
-		printk(KERN_ERR "failed to get sclk_uart_isp\n");
-	clk_disable(sclk_uart_isp);
-	clk_put(sclk_uart_isp);
-
+	if (is_dev->pdata->clk_off) {
+		is_dev->pdata->clk_off(pdev);
+	} else {
+		printk(KERN_ERR "#### failed to Clock OFF ####\n");
+		return -EINVAL;
+	}
 	mutex_unlock(&is_dev->lock);
 	return 0;
 }
@@ -465,69 +414,24 @@ static int fimc_is_runtime_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
-	struct clk *aclk_mcuisp_muxed = NULL;
-	struct clk *aclk_mcuisp_div0 = NULL;
-	struct clk *aclk_mcuisp_div1 = NULL;
-	struct clk *aclk_200 = NULL;
-	struct clk *aclk_200_div0 = NULL;
-	struct clk *aclk_200_div1 = NULL;
-	struct clk *sclk_uart_isp = NULL;
-	struct clk *sclk_uart_isp_src = NULL;
 
 	dbg("fimc_is_runtime_resume\n");
 	mutex_lock(&is_dev->lock);
 	clear_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
+	if (is_dev->pdata->clk_cfg) {
+		is_dev->pdata->clk_cfg(pdev);
+	} else {
+		printk(KERN_ERR "#### failed to Clock CONFIG ####\n");
+		return -EINVAL;
+	}
+	if (is_dev->pdata->clk_on) {
+		is_dev->pdata->clk_on(pdev);
+	} else {
+		printk(KERN_ERR "#### failed to Clock On ####\n");
+		return -EINVAL;
+	}
 
-	/*
-	 * initialize Clocks
-	*/
-	/* 1. MCUISP */
-	aclk_mcuisp_muxed = clk_get(&pdev->dev, "aclk_400_muxed");
-	if (IS_ERR(aclk_mcuisp_muxed))
-		printk(KERN_ERR "failed to get aclk_mcuisp_muxed\n");
-	aclk_mcuisp_div0 = clk_get(&pdev->dev, "sclk_mcuisp_div0");
-	if (IS_ERR(aclk_mcuisp_div0))
-		printk(KERN_ERR "failed to get aclk_mcuisp_div0\n");
-	aclk_mcuisp_div1 = clk_get(&pdev->dev, "sclk_mcuisp_div1");
-	if (IS_ERR(aclk_mcuisp_div1))
-		printk(KERN_ERR "failed to get aclk_mcuisp_div1\n");
-	clk_set_rate(aclk_mcuisp_div0, 400 * 1000000);
-	clk_set_rate(aclk_mcuisp_div1, 400 * 1000000);
-	clk_enable(aclk_mcuisp_muxed);
-	clk_enable(aclk_mcuisp_div0);
-	clk_enable(aclk_mcuisp_div1);
-	clk_put(aclk_mcuisp_muxed);
-	clk_put(aclk_mcuisp_div0);
-	clk_put(aclk_mcuisp_div1);
-	/* 2. ACLK_ISP */
-	aclk_200 = clk_get(&pdev->dev, "aclk_200_muxed");
-	if (IS_ERR(aclk_200))
-		printk(KERN_ERR "failed to get aclk_200\n");
-	aclk_200_div0 = clk_get(&pdev->dev, "sclk_aclk_div0");
-	if (IS_ERR(aclk_200_div0))
-		printk(KERN_ERR "failed to get aclk_200_div0\n");
-	aclk_200_div1 = clk_get(&pdev->dev, "sclk_aclk_div1");
-	if (IS_ERR(aclk_200_div1))
-		printk(KERN_ERR "failed to get aclk_200_div1\n");
-	clk_set_rate(aclk_200_div0, 80 * 1000000);
-	clk_set_rate(aclk_200_div1, 80 * 1000000);
-	clk_enable(aclk_200);
-	clk_enable(aclk_200_div0);
-	clk_enable(aclk_200_div1);
-	clk_put(aclk_200);
-	clk_put(aclk_200_div0);
-	clk_put(aclk_200_div1);
-	/* 3. UART-ISP */
-	sclk_uart_isp = clk_get(&pdev->dev, "sclk_uart_isp");
-	if (IS_ERR(sclk_uart_isp))
-		printk(KERN_ERR "failed to get sclk_uart_isp\n");
-	sclk_uart_isp_src = clk_get(&pdev->dev, "mout_mpll_user");
-	if (IS_ERR(sclk_uart_isp_src))
-		printk(KERN_ERR "failed to get sclk_uart_isp_src\n");
-	clk_set_parent(sclk_uart_isp, sclk_uart_isp_src);
-	clk_set_rate(sclk_uart_isp, 50 * 1000000);
-	clk_enable(sclk_uart_isp);
-	clk_put(sclk_uart_isp);
+	is_dev->frame_count = 0;
 	mutex_unlock(&is_dev->lock);
 	return 0;
 }

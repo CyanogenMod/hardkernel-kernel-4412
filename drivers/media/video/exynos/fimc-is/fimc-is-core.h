@@ -38,6 +38,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-mem2mem.h>
 #include <media/v4l2-mediabus.h>
+#include <media/exynos_fimc_is.h>
 
 #define MODULE_NAME	"exynos4-fimc-is"
 
@@ -46,7 +47,13 @@
 
 #define FIMC_IS_SENSOR_NUM	1
 
-#define FIMC_IS_SHUTDOWN_TIMEOUT	((2000*HZ)/1000)
+#define FIMC_IS_SHUTDOWN_TIMEOUT	(400*HZ)
+
+#define FIMC_IS_A5_MEM_SIZE	0x04000000
+#define FIMC_IS_REGION_SIZE	0x5000
+#define ISP_SETFILE_SIZE	(0x1000/4)
+#define DRC_SETFILE_SIZE	0x140
+#define FD_SETFILE_SIZE		0x88
 
 #define DEBUG
 
@@ -64,6 +71,7 @@ enum fimc_is_state_flag {
 	IS_ST_IDLE,
 	IS_ST_PWR_ON,
 	IS_ST_FW_DOWNLOADED,
+	IS_ST_SET_FILE,
 	IS_ST_INIT_PREVIEW_STILL,
 	IS_ST_INIT_PREVIEW_VIDEO,
 	IS_ST_INIT_CAPTURE_STILL,
@@ -82,6 +90,7 @@ enum fimc_is_power {
 	FIMC_IS_PWR_ST_POWERED,
 	FIMC_IS_PWR_ST_STREAMING,
 	FIMC_IS_PWR_ST_SUSPENDED,
+	FIMC_IS_PWR_ST_RESUMED,
 };
 
 enum fimc_is_clk {
@@ -90,9 +99,25 @@ enum fimc_is_clk {
 };
 
 enum sensor_list {
-	SENSOR_S5K3H1 = 0,
-	SENSOR_S5K3H2 = 1,
-	SENSOR_S5K6A3 = 2,
+	SENSOR_S5K3H1_CSI_A	= 0,
+	SENSOR_S5K3H2_CSI_A	= 1,
+	SENSOR_S5K6A3_CSI_A	= 2,
+	SENSOR_S5K3H1_CSI_B	= 100,
+	SENSOR_S5K3H2_CSI_B	= 101,
+	SENSOR_S5K6A3_CSI_B	= 102,
+};
+
+enum sensor_name {
+	SENSOR_NAME_S5K3H1	= 0,
+	SENSOR_NAME_S5K3H2	= 1,
+	SENSOR_NAME_S5K6A3	= 2,
+	SENSOR_NAME_CUSTOM	= 3,
+	SENSOR_NAME_END
+};
+
+enum sensor_channel {
+	SENSOR_CONTROL_I2C0	= 0,
+	SENSOR_CONTROL_I2C1	= 1
 };
 
 struct is_meminfo {
@@ -108,6 +133,14 @@ struct is_fw {
 	int			ver;
 };
 
+struct is_setfile {
+	const struct firmware	*info;
+	int			state;
+	int			ver;
+	u32			base;
+	u32			size;
+};
+
 struct is_to_host_cmd {
 	u32	cmd;
 	u32	sensor_id;
@@ -117,7 +150,7 @@ struct is_to_host_cmd {
 
 struct is_sensor {
 	int id;
-	enum sensor_list sensor_name;
+	enum sensor_list sensor_type;
 	u32 width_prev;
 	u32 height_prev;
 	u32 width_prev_cam;
@@ -152,6 +185,7 @@ struct fimc_is_dev {
 	unsigned long			power;
 
 	struct is_fw			fw;
+	struct is_setfile		setfile;
 	struct is_meminfo		mem;		/* for reserved mem */
 #ifdef CONFIG_CMA
 	char				cma_name[16];
@@ -196,21 +230,22 @@ extern struct is_region is_p_region;
 extern int fimc_is_fw_clear_irq2(struct fimc_is_dev *dev);
 extern int fimc_is_fw_clear_irq1(struct fimc_is_dev *dev);
 extern void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev);
+extern void fimc_is_hw_set_load_setfile(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_sensor_num(struct fimc_is_dev *dev);
 extern int fimc_is_hw_set_param(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_param(struct fimc_is_dev *dev, u16 offset);
 extern void fimc_is_hw_set_intgr0_gd0(struct fimc_is_dev *dev);
 extern int fimc_is_hw_wait_intsr0_intsd0(struct fimc_is_dev *dev);
-extern void fimc_is_hw_reset(struct fimc_is_dev *dev);
-extern void fimc_is_hw_io_init(struct fimc_is_dev *dev);
+extern void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on);
+extern int fimc_is_hw_io_init(struct fimc_is_dev *dev);
 extern void fimc_is_hw_open_sensor(struct fimc_is_dev *dev,
-					u32 id, u32 scenario_id);
+					u32 id, u32 sensor_index);
 extern void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on);
 extern void fimc_is_hw_set_init(struct fimc_is_dev *dev);
 extern void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val);
 extern void fimc_is_hw_set_lite(struct fimc_is_dev *dev, u32 width, u32 height);
 extern void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev);
-extern void fimc_is_hw_disable(struct fimc_is_dev *dev);
+extern void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev);
 
 void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size);
 void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size);

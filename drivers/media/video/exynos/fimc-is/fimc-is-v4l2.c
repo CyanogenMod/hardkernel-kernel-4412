@@ -37,29 +37,211 @@
 #include <media/v4l2-mem2mem.h>
 #include <media/v4l2-mediabus.h>
 
+#include <linux/firmware.h>
+#include <linux/dma-mapping.h>
+
 #include "fimc-is-core.h"
 #include "fimc-is-regs.h"
 #include "fimc-is-param.h"
 #include "fimc-is-cmd.h"
 
+/* Binary load functions */
+static void fimc_is_firmware_request_complete_handler(const struct firmware *fw,
+						  void *context)
+{
+	struct fimc_is_dev *dev = context;
+	volatile unsigned char *fw_base;
+	if (fw != NULL) {
+		fw_base = phys_to_virt(dev->mem.base);
+		memcpy((void *)fw_base, fw->data, fw->size);
+		fimc_is_mem_cache_clean((void *)fw_base, fw->size);
+		dev->fw.state = 1;
+		dbg("FIMC_IS F/W loaded successfully - size:%d\n", fw->size);
+		dev->fw.info = fw;
+	} else {
+		dbg("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
+	}
+}
+
+static int fimc_is_request_firmware(struct fimc_is_dev *dev)
+{
+	int ret;
+	ret = request_firmware_nowait(THIS_MODULE,
+		FW_ACTION_HOTPLUG,
+		"fimc_is_fw.bin",
+		&dev->pdev->dev,
+		GFP_KERNEL,
+		dev,
+		fimc_is_firmware_request_complete_handler);
+	if (ret) {
+		dev_err(&dev->pdev->dev,
+			"could not load firmware (err=%d)\n", ret);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static void fimc_is_setfile_request_complete_handler(const struct firmware *fw,
+						  void *context)
+{
+	struct fimc_is_dev *dev = context;
+	volatile unsigned char *fw_base;
+	if (fw != NULL) {
+		fw_base = phys_to_virt(dev->mem.base
+			+ dev->setfile.base + sizeof(struct is_setfile_header));
+		memcpy((void *)fw_base, fw->data, fw->size);
+		fimc_is_mem_cache_clean((void *)fw_base, fw->size);
+		dev->setfile.state = 1;
+		dbg("FIMC_IS setfile loaded successfully-size:%d\n", fw->size);
+		dev->setfile.info = fw;
+	} else {
+		dbg("failed to load setfile, FIMC-IS will not working\n");
+	}
+}
+
+static int fimc_is_request_setfile(struct fimc_is_dev *dev)
+{
+	int ret;
+	ret = request_firmware_nowait(THIS_MODULE,
+		FW_ACTION_HOTPLUG,
+		"setfile.bin",
+		&dev->pdev->dev,
+		GFP_KERNEL,
+		dev,
+		fimc_is_setfile_request_complete_handler);
+	if (ret) {
+		dev_err(&dev->pdev->dev,
+			"could not load firmware (err=%d)\n", ret);
+		return -EINVAL;
+	}
+	return 0;
+}
+
+static int fimc_is_load_setfile(struct fimc_is_dev *dev)
+{
+	struct is_setfile_header *header;
+	int ret;
+	u32 timeout;
+
+	header = (struct is_setfile_header *)(phys_to_virt(dev->mem.base +
+				dev->setfile.base));
+	memset((void *)header, 0,
+		(unsigned long)sizeof(struct is_setfile_header));
+	header->isp[ISS_PREVIEW_STILL].binary_addr
+		= dev->setfile.base + sizeof(struct is_setfile_header);
+	header->isp[ISS_PREVIEW_STILL].binary_size = ISP_SETFILE_SIZE;
+	header->isp[ISS_PREVIEW_VIDEO].binary_addr
+		= header->isp[ISS_PREVIEW_STILL].binary_addr
+		+ ISP_SETFILE_SIZE;
+	header->isp[ISS_PREVIEW_VIDEO].binary_size = ISP_SETFILE_SIZE;
+	header->isp[ISS_CAPTURE_STILL].binary_addr
+		= header->isp[ISS_PREVIEW_VIDEO].binary_addr
+		+ ISP_SETFILE_SIZE;
+	header->isp[ISS_CAPTURE_STILL].binary_size = ISP_SETFILE_SIZE;
+	header->isp[ISS_CAPTURE_VIDEO].binary_addr
+		= header->isp[ISS_CAPTURE_STILL].binary_addr
+		+ ISP_SETFILE_SIZE;
+	header->isp[ISS_CAPTURE_VIDEO].binary_size = ISP_SETFILE_SIZE;
+
+	header->drc[ISS_PREVIEW_STILL].binary_addr
+		= header->isp[ISS_CAPTURE_VIDEO].binary_addr
+		+ ISP_SETFILE_SIZE;
+	header->drc[ISS_PREVIEW_STILL].binary_size = DRC_SETFILE_SIZE;
+	header->drc[ISS_PREVIEW_VIDEO].binary_addr
+		= header->drc[ISS_PREVIEW_STILL].binary_addr
+		+ DRC_SETFILE_SIZE;
+	header->drc[ISS_PREVIEW_VIDEO].binary_size = DRC_SETFILE_SIZE;
+	header->drc[ISS_CAPTURE_STILL].binary_addr
+		= header->drc[ISS_PREVIEW_VIDEO].binary_addr
+		+ DRC_SETFILE_SIZE;
+	header->drc[ISS_CAPTURE_STILL].binary_size = DRC_SETFILE_SIZE;
+	header->drc[ISS_CAPTURE_VIDEO].binary_addr
+		= header->drc[ISS_CAPTURE_STILL].binary_addr
+		+ DRC_SETFILE_SIZE;
+	header->drc[ISS_CAPTURE_VIDEO].binary_size = DRC_SETFILE_SIZE;
+
+	header->fd[ISS_PREVIEW_STILL].binary_addr
+		= header->drc[ISS_CAPTURE_VIDEO].binary_addr
+		+ DRC_SETFILE_SIZE;
+	header->fd[ISS_PREVIEW_STILL].binary_size = FD_SETFILE_SIZE;
+	header->fd[ISS_PREVIEW_VIDEO].binary_addr
+		= header->fd[ISS_PREVIEW_STILL].binary_addr
+		+ FD_SETFILE_SIZE;
+	header->fd[ISS_PREVIEW_VIDEO].binary_size = FD_SETFILE_SIZE;
+	header->fd[ISS_CAPTURE_STILL].binary_addr
+		= header->fd[ISS_PREVIEW_VIDEO].binary_addr
+		+ FD_SETFILE_SIZE;
+	header->fd[ISS_CAPTURE_STILL].binary_size = FD_SETFILE_SIZE;
+	header->fd[ISS_CAPTURE_VIDEO].binary_addr
+		= header->fd[ISS_CAPTURE_STILL].binary_addr
+		+ FD_SETFILE_SIZE;
+	header->fd[ISS_CAPTURE_VIDEO].binary_size = FD_SETFILE_SIZE;
+
+	fimc_is_mem_cache_clean((void *)header,
+		sizeof(struct is_setfile_header));
+	dev->setfile.state = 0;
+	ret = fimc_is_request_setfile(dev);
+	if (ret) {
+		dev_err(&dev->pdev->dev,
+		"failed to fimc_is_request_setfile (%d)\n", ret);
+		return -EINVAL;
+	}
+	timeout = 30;
+	while (!dev->setfile.state) {
+		if (timeout == 0) {
+			dev_err(&dev->pdev->dev,
+			"Load setfile failed : %s\n", __func__);
+		}
+		timeout--;
+		mdelay(1);
+	}
+
+	return 0;
+}
+
 /* v4l2 subdev core operations
 */
 static int fimc_is_load_fw(struct v4l2_subdev *sd)
 {
+	u32 timeout;
 	int ret;
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 	dbg("fimc_is_load_fw\n");
 	if (test_bit(IS_ST_IDLE, &dev->state)) {
+		/* 1. Load IS firmware */
+		dev->fw.state = 0;
+		ret = fimc_is_request_firmware(dev);
+		if (ret) {
+			dev_err(&dev->pdev->dev,
+			"failed to fimc_is_request_firmware (%d)\n", ret);
+			return -EINVAL;
+		}
+		timeout = 30;
+		while (!dev->fw.state) {
+			if (timeout == 0) {
+				dev_err(&dev->pdev->dev,
+				"Load firmware failed : %s\n", __func__);
+			}
+			timeout--;
+			mdelay(1);
+		}
 		set_bit(IS_ST_PWR_ON, &dev->state);
-		fimc_is_hw_io_init(dev);
-		fimc_is_hw_reset(dev);
+		/* 2. Init GPIO (UART) */
+		ret = fimc_is_hw_io_init(dev);
+		if (ret) {
+			dev_err(&dev->pdev->dev,
+				"failed to init GPIO config\n");
+			return -EINVAL;
+		}
+		/* 3. A5 power on */
+		fimc_is_hw_a5_power(dev, 1);
 		ret = wait_event_timeout(dev->irq_queue1,
 			test_bit(IS_ST_FW_DOWNLOADED, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		if (!ret) {
 			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
+				"wait timeout A5 power on: %s\n", __func__);
+			return -EINVAL;
 		}
 		dbg("fimc_is_load_fw end\n");
 	} else {
@@ -83,24 +265,37 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 	int ret;
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 	fimc_is_hw_diable_wdt(dev);
-	dev->sensor.sensor_name = val;
+	dev->sensor.sensor_type = val;
 	dev->sensor.id = 0;
 	dbg("fimc_is_init\n");
 	if (test_bit(IS_ST_FW_DOWNLOADED, &dev->state)) {
+		/* Init sequence 1: Open sensor */
 		dbg("v4l2 : open sensor : %d\n", val);
-		fimc_is_hw_open_sensor(dev, val, ISS_PREVIEW_STILL);
+		fimc_is_hw_open_sensor(dev, dev->sensor.id, val);
 		ret = wait_event_timeout(dev->irq_queue1,
 			test_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		if (!ret) {
 			dev_err(&dev->pdev->dev,
 				"wait timeout:%s\n", __func__);
-			/* FIX ME */
-			set_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
 			return -EBUSY;
 		}
+		/* Init sequence 2: Load setfile */
+		clear_bit(IS_ST_SET_FILE, &dev->state);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_SET_FILE, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&dev->pdev->dev,
+				"wait timeout:%s\n", __func__);
+			return -EBUSY;
+		}
+		fimc_is_load_setfile(dev);
+		fimc_is_hw_set_load_setfile(dev);
+		fimc_is_hw_wait_intsr0_intsd0(dev);
+		fimc_is_hw_set_intgr0_gd0(dev);
+
 		/* Debug only */
-		dbg("Header addr = 0x%x\n", (u32)dev->is_p_region->header);
 		dbg("FN[0] addr = 0x%x\n",
 			virt_to_phys(&dev->is_p_region->header[0]
 							.frame_number));
@@ -202,10 +397,32 @@ static int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 
 	dbg("fimc_is_s_power\n");
 	if (on) {
+		clear_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
 		set_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
 		ret = pm_runtime_get_sync(dev);
 	} else {
 		clear_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
+		fimc_is_hw_subip_poweroff(is_dev);
+		ret = wait_event_timeout(is_dev->irq_queue1,
+			test_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&is_dev->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
+		fimc_is_hw_a5_power(is_dev, 0);
+		dbg("A5 power off\n");
+		ret = pm_runtime_put_sync(dev);
+
+		is_dev->sensor.id = 0;
+		is_dev->p_region_index1 = 0;
+		is_dev->p_region_index2 = 0;
+		atomic_set(&is_dev->p_region_num, 0);
+		is_dev->state = 0;
+		set_bit(IS_ST_IDLE, &is_dev->state);
+		is_dev->power = 0;
+		set_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
 	}
 
 	if ((!ret && !on) || (ret && on))
@@ -334,41 +551,13 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					FIMC_IS_SHUTDOWN_TIMEOUT);
 			if (!ret) {
 				dev_err(&dev->pdev->dev,
-					"wait timeout:%s\n", __func__);
+					"Mode change timeout:%s\n", __func__);
 				return -EBUSY;
 			}
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_SHOT_MODE_NORMAL:
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, ctrl->value);
-		IS_SET_PARAM_GLOBAL_SHOTMODE_SMILE(dev,
-			GLOBAL_SHOTMODE_SMILE_DISABLE);
-		IS_SET_PARAM_GLOBAL_SHOTMODE_EYEBLINK(dev,
-			GLOBAL_SHOTMODE_SMILE_DISABLE);
-		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
-		IS_INC_PARAM_NUM(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		break;
-	case V4L2_CID_IS_CAMERA_SHOT_MODE_SMILE:
-		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, ctrl->value);
-		IS_SET_PARAM_GLOBAL_SHOTMODE_SMILE(dev,
-			GLOBAL_SHOTMODE_SMILE_ENABLE);
-		IS_SET_PARAM_GLOBAL_SHOTMODE_EYEBLINK(dev,
-			GLOBAL_SHOTMODE_EYEBLINK_DISABLE);
-		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
-		IS_INC_PARAM_NUM(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		break;
-	case V4L2_CID_IS_CAMERA_SHOT_MODE_EYEBLINK:
-		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, ctrl->value);
-		IS_SET_PARAM_GLOBAL_SHOTMODE_SMILE(dev,
-			GLOBAL_SHOTMODE_SMILE_DISABLE);
-		IS_SET_PARAM_GLOBAL_SHOTMODE_EYEBLINK(dev,
-			GLOBAL_SHOTMODE_EYEBLINK_ENABLE);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
@@ -570,21 +759,21 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
 				ISP_IMAGE_EFFECT_DISABLE);
 			break;
-		case IS_IMAGE_EFFECT_BLACK_WHITE:
+		case IS_IMAGE_EFFECT_MONOCHROME:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_BLACK_WHITE);
+				ISP_IMAGE_EFFECT_MONOCHROME);
 			break;
-		case IS_IMAGE_EFFECT_ANTIQUE:
+		case IS_IMAGE_EFFECT_NEGATIVE_MONO:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_ANTIQUE);
+				ISP_IMAGE_EFFECT_NEGATIVE_MONO);
 			break;
-		case IS_IMAGE_EFFECT_GREEN:
+		case IS_IMAGE_EFFECT_NEGATIVE_COLOR:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_GREEN);
+				ISP_IMAGE_EFFECT_NEGATIVE_COLOR);
 			break;
-		case IS_IMAGE_EFFECT_BLUE:
+		case IS_IMAGE_EFFECT_SEPIA:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_BLUE);
+				ISP_IMAGE_EFFECT_SEPIA);
 			break;
 		}
 		/* only ISP effect in Pegasus */
@@ -612,9 +801,6 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_ISP_SET_PARAM_ISO_CMD(dev,
 				ISP_ISO_COMMAND_MANUAL);
 			IS_ISP_SET_PARAM_ISO_VALUE(dev, 100);
-			dev->is_p_region->parameter.isp.iso.cmd =
-				ISP_ISO_COMMAND_MANUAL;
-			dev->is_p_region->parameter.isp.iso.value = 100;
 			break;
 		case IS_ISO_200:
 			IS_ISP_SET_PARAM_ISO_CMD(dev,
@@ -869,8 +1055,8 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_IS_FD_NUM_FACE:
 		if (ctrl->value >= 0) {
-			IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
+			IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev, ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
 				IS_PARAM_SIZE);
@@ -919,29 +1105,6 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			fimc_is_hw_set_param(dev);
 		}
 		break;
-	case V4L2_CID_IS_SET_FD:
-		switch (ctrl->value) {
-		case IS_FD_BYPASS_DISABLE:
-			IS_FD_SET_PARAM_CONTROL_BYPASS(dev,
-				CONTROL_BYPASS_DISABLE);
-			IS_FD_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_START);
-			break;
-		case IS_FD_BYPASS_ENABLE:
-			IS_FD_SET_PARAM_CONTROL_BYPASS(dev,
-				CONTROL_BYPASS_ENABLE);
-			IS_FD_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_STOP);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_FD_BYPASS_ENABLE) {
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
-		break;
 	case V4L2_CID_IS_CMD_ISP:
 		switch (ctrl->value) {
 		case IS_ISP_COMMAND_STOP:
@@ -983,10 +1146,12 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_IS_CMD_FD:
 		switch (ctrl->value) {
 		case IS_FD_COMMAND_STOP:
+			dbg("IS_FD_COMMAND_STOP\n");
 			IS_FD_SET_PARAM_CONTROL_CMD(dev,
 				CONTROL_COMMAND_STOP);
 			break;
 		case IS_FD_COMMAND_START:
+			dbg("IS_FD_COMMAND_START\n");
 			IS_FD_SET_PARAM_CONTROL_CMD(dev,
 				CONTROL_COMMAND_START);
 			break;
@@ -1052,6 +1217,29 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				}
 			}
 		}
+		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
+		break;
+	case V4L2_CID_IS_ISP_DMA_BUFFER_NUM:
+		dbg("Debug mode - ISP DMA write\n");
+		dev->is_p_region->parameter.isp.dma1_output.cmd
+			= DMA_OUTPUT_COMMAND_ENABLE;
+		dev->is_p_region->parameter.isp.dma1_output.buffer_number
+			= ctrl->value;
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
+		IS_INC_PARAM_NUM(dev);
+		dev->is_p_region->parameter.isp.dma2_output.cmd
+			= DMA_OUTPUT_COMMAND_ENABLE;
+		dev->is_p_region->parameter.isp.dma2_output.buffer_number
+			= ctrl->value;
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case V4L2_CID_IS_ISP_DMA_BUFFER_ADDRESS:
+		dev->is_p_region->parameter.isp.dma1_output.buffer_address
+			= ctrl->value;
 		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
 		break;
 	default:
@@ -1579,33 +1767,33 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 			IS_INC_PARAM_NUM(dev);
 			break;
-		case IS_IMAGE_EFFECT_BLACK_WHITE:
+		case IS_IMAGE_EFFECT_MONOCHROME:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_BLACK_WHITE);
+				ISP_IMAGE_EFFECT_MONOCHROME);
 			IS_ISP_SET_PARAM_EFFECT_ERR(dev,
 				ISP_IMAGE_EFFECT_ERROR_NO);
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 			IS_INC_PARAM_NUM(dev);
 			break;
-		case IS_IMAGE_EFFECT_ANTIQUE:
+		case IS_IMAGE_EFFECT_NEGATIVE_MONO:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_ANTIQUE);
+				ISP_IMAGE_EFFECT_NEGATIVE_MONO);
 			IS_ISP_SET_PARAM_EFFECT_ERR(dev,
 				ISP_IMAGE_EFFECT_ERROR_NO);
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 			IS_INC_PARAM_NUM(dev);
 			break;
-		case IS_IMAGE_EFFECT_GREEN:
+		case IS_IMAGE_EFFECT_NEGATIVE_COLOR:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_GREEN);
+				ISP_IMAGE_EFFECT_NEGATIVE_COLOR);
 			IS_ISP_SET_PARAM_EFFECT_ERR(dev,
 				ISP_IMAGE_EFFECT_ERROR_NO);
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 			IS_INC_PARAM_NUM(dev);
 			break;
-		case IS_IMAGE_EFFECT_BLUE:
+		case IS_IMAGE_EFFECT_SEPIA:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_BLUE);
+				ISP_IMAGE_EFFECT_SEPIA);
 			IS_ISP_SET_PARAM_EFFECT_ERR(dev,
 				ISP_IMAGE_EFFECT_ERROR_NO);
 			IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
@@ -1726,9 +1914,9 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 		break;
 	/* FD  - Max face number */
 	case V4L2_CID_IS_FD_NUM_FACE:
-		IS_FD_SET_PARAM_FDCONTROL_MAX_NUMBER(dev, ctrl->value);
-		IS_FD_SET_PARAM_FDCONTROL_ERR(dev, FD_ERROR_NO);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_FD);
+		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev, ctrl->value);
+		IS_FD_SET_PARAM_FD_RESULT_ERR(dev, FD_ERROR_NO);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
 		IS_INC_PARAM_NUM(dev);
 		break;
 	default:
@@ -1835,6 +2023,7 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 		dev->sensor.height_cap = mf->height;
 		break;
 	}
+
 	/* 1. ISP input / output*/
 	IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, mf->width);
 	IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev, mf->height);
@@ -1844,7 +2033,14 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 	IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, mf->height);
 	IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_OUTPUT);
 	IS_INC_PARAM_NUM(dev);
-
+	IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev, mf->width);
+	IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev, mf->height);
+	IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
+	IS_INC_PARAM_NUM(dev);
+	IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev, mf->width);
+	IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev, mf->height);
+	IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
+	IS_INC_PARAM_NUM(dev);
 	/* 2. DRC input / output*/
 	IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev, mf->width);
 	IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev, mf->height);
@@ -1918,19 +2114,6 @@ static int fimc_is_s_stream(struct v4l2_subdev *sd, int enable)
 			dev_err(&dev->pdev->dev, "OFF : not stream-on condition\n");
 			return -EINVAL;
 		}
-		/*
-		if (test_and_clear_bit(IS_ST_STREAM, &dev->state))
-			clear_bit(IS_ST_RUN, &dev->state);
-		fimc_is_hw_set_stream(dev, enable);
-		ret = wait_event_timeout(dev->irq_queue1,
-		test_bit(IS_ST_RUN, &dev->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		*/
 	}
 	return 0;
 }

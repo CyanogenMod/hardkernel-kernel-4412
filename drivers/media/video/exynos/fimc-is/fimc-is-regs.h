@@ -14,6 +14,8 @@
 #ifndef FIMC_IS_REGS_H_
 #define FIMC_IS_REGS_H_
 
+#include <mach/map.h>
+
 /* WDT_ISP register */
 #define WDT			0x00170000
 /* MCUCTL register */
@@ -309,4 +311,9 @@
 #define ISSR61			(MCUCTL+0x174)
 #define ISSR62			(MCUCTL+0x178)
 #define ISSR63			(MCUCTL+0x17c)
+
+/* PMU for FIMC-IS*/
+#define PMUREG_ISP_ARM_CONFIGURATION		(S5P_VA_PMU  + 0x2280)
+#define PMUREG_ISP_ARM_STATUS			(S5P_VA_PMU  + 0x2284)
+#define PMUREG_ISP_ARM_OPTION			(S5P_VA_PMU  + 0x2288)
 #endif
