@@ -68,6 +68,8 @@ extern int exynos4_clksrc_mask_fsys_ctrl(struct clk *clk, int enable);
 extern int exynos4_clk_ip_fsys_ctrl(struct clk *clk, int enable);
 extern int exynos4_clk_ip_lcd1_ctrl(struct clk *clk, int enable);
 extern int exynos4_clksrc_gate_isp_ctrl(struct clk *clk, int enable);
+extern int exynos4_clksrc_gate_isp0_ctrl(struct clk *clk, int enable);
+extern int exynos4_clksrc_gate_isp1_ctrl(struct clk *clk, int enable);
 extern int exynos4_clk_ip_image_ctrl(struct clk *clk, int enable);
 
 #endif /* __ASM_ARCH_CLOCK_H */

@@ -324,7 +324,9 @@ static struct clk exynos4212_clk_isp[] = {
 static struct clksrc_clk exynos4212_clk_isp_srcs_div0 = {
 	.clk		= {
 		.name		= "sclk_mcuisp_div0",
-		.parent = &exynos4212_clk_aclk_400.clk,
+		.parent		= &exynos4212_clk_aclk_400.clk,
+		.enable		= exynos4_clksrc_gate_isp0_ctrl,
+		.ctrlbit	= (0xFFFFFFFF << 0),
 	},
 	.reg_div = { .reg = EXYNOS4_CLKDIV_ISP1, .shift = 4, .size = 3 },
 };
@@ -357,6 +359,15 @@ static struct clksrc_clk exynos4212_clk_isp_srcs[] = {
 		.sources = &exynos4_clkset_group,
 		.reg_src = { .reg = EXYNOS4_CLKSRC_ISP, .shift = 12, .size = 4 },
 		.reg_div = { .reg = EXYNOS4_CLKDIV_ISP, .shift = 28, .size = 4 },
+	}, {
+		.clk		= {
+			.name		= "sclk_pwm_isp",
+			.enable		= exynos4_clksrc_gate_isp_ctrl,
+			.ctrlbit	= (1 << 0),
+		},
+		.sources = &exynos4_clkset_group,
+		.reg_src = { .reg = EXYNOS4_CLKSRC_ISP, .shift = 0, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_ISP, .shift = 0, .size = 4 },
 	},
 };
 
