@@ -402,18 +402,93 @@ config VIDEO_S5K3H1
 	depends on VIDEO_V4L2 && VIDEO_FIMC_MIPI && VIDEO_EXYNOS_FIMC_IS
 	---help---
 	  This driver supports S5K3H1 sensor.
+choice
+depends on VIDEO_S5K3H1
+prompt "Select ITU / MIPI Camera port for S5K3H1"
+default S5K3H1_ITU_A
+config S5K3H1_ITU_A
+	bool "ITU Camera A port"
+	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for ITU A port
+config S5K3H1_ITU_B
+	bool "ITU Camera B port"
+	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for ITU B port
+config S5K3H1_CSI_C
+	bool "CSI Camera A port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  THis enables support for CSI A port
+config S5K3H1_CSI_D
+	bool "CSI Camera B port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for CSI B port
+endchoice
 
 config VIDEO_S5K3H2
         tristate "S5K3H2 supporting camera driver"
 	depends on VIDEO_V4L2 && VIDEO_FIMC_MIPI && VIDEO_EXYNOS_FIMC_IS
         ---help---
           This driver supports S5K3H2 sensor.
+choice
+depends on VIDEO_S5K3H2
+prompt "Select ITU / MIPI Camera port for S5K3H2"
+default S5K3H2_ITU_A
+config S5K3H2_ITU_A
+	bool "ITU Camera A port"
+	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for ITU A port
+config S5K3H2_ITU_B
+	bool "ITU_Camera B port"
+	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for ITU B port
+config S5K3H2_CSI_C
+	bool "CSI Camera A port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for CSI A port
+config S5K3H2_CSI_D
+	bool "CSI Camera B port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for CSI B port
+endchoice
 
 config VIDEO_S5K6A3
 	tristate "S5K6A3 supporting camera driver"
 	depends on VIDEO_V4L2 && VIDEO_FIMC_MIPI && VIDEO_EXYNOS_FIMC_IS
 	---help---
 	  This driver supports S5K6A3 sensor.
+choice
+depends on VIDEO_S5K6A3
+prompt "Select ITU / MIPI Camera port for S5K6A3"
+default S5K6A3_ITU_A
+config S5K6A3_ITU_A
+	bool "ITU Camera A port"
+	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for ITU A port
+config S5K6A3_ITU_B
+	bool "ITU Camera B port"
+	depends on !(VIDEO_FIMC_MIPI || VIDEo_S5P_MIPI_CSIS)
+	help
+	  This enables support for ITU B port
+config S5K6A3_CSI_C
+	bool "CSI Camera A port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for CSI A port
+config S5K6A3_CSI_D
+	bool "CSI Camera B port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enalbes support for CSI B port
+endchoice
 
 config VIDEO_M5MO
         tristate "M5MO supporting camera driver"
@@ -437,7 +512,7 @@ config VIDEO_S5K4EA
 #source "drivers/media/video/m5mols/Kconfig"
 
 choice
-depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_M5MO || VIDEO_M5MOLS || VIDEO_S5K3H1 || VIDEO_S5K3H2 || VIDEO_S5K6A3
+depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_M5MO || VIDEO_M5MOLS
 prompt "Select ITU / MIPI Camera port"
 default ITU_A
 config ITU_A
