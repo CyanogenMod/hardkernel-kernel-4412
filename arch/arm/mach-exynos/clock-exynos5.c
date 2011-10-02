@@ -82,6 +82,26 @@ static int exynos5_clk_ip_fsys_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_FSYS, clk, enable);
 }
 
+static int exynos5_clk_ip_disp0_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_DISP0, clk, enable);
+}
+
+static int exynos5_clk_ip_disp1_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_DISP1, clk, enable);
+}
+
+static int exynos5_clksrc_mask_disp0_0_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_DISP0_0, clk, enable);
+}
+
+static int exynos5_clksrc_mask_disp1_0_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_DISP1_0, clk, enable);
+}
+
 /* BPLL clock output
  * No need .ctrlbit, this is always on
 */
@@ -515,6 +535,16 @@ static struct clk exynos5_init_clocks_off[] = {
 		.parent		= &exynos5_clk_mout_aclk_200.clk,
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 16),
+	}, {
+		.name		= "lcd",
+		.devname	= "s3cfb.0",
+		.enable		= exynos5_clk_ip_disp0_ctrl,
+		.ctrlbit	= (1 << 0),
+	}, {
+		.name		= "lcd",
+		.devname	= "s3cfb.1",
+		.enable		= exynos5_clk_ip_disp1_ctrl,
+		.ctrlbit	= (1 << 0),
 	},
 };
 
@@ -718,6 +748,26 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 			.ctrlbit	= (1 << 16),
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_FSYS3, .shift = 8, .size = 8 },
+	}, {
+		.clk	= {
+			.name		= "sclk_fimd",
+			.devname	= "s3cfb.0",
+			.enable		= exynos5_clksrc_mask_disp0_0_ctrl,
+			.ctrlbit	= (1 << 0),
+		},
+		.sources = &exynos5_clkset_group,
+		.reg_src = { .reg = EXYNOS5_CLKSRC_DISP0_0, .shift = 0, .size = 4 },
+		.reg_div = { .reg = EXYNOS5_CLKDIV_DISP0_0, .shift = 0, .size = 4 },
+	}, {
+		.clk	= {
+			.name		= "sclk_fimd",
+			.devname	= "s3cfb.1",
+			.enable		= exynos5_clksrc_mask_disp1_0_ctrl,
+			.ctrlbit	= (1 << 0),
+		},
+		.sources = &exynos5_clkset_group,
+		.reg_src = { .reg = EXYNOS5_CLKSRC_DISP1_0, .shift = 0, .size = 4 },
+		.reg_div = { .reg = EXYNOS5_CLKDIV_DISP1_0, .shift = 0, .size = 4 },
 	},
 };
 
