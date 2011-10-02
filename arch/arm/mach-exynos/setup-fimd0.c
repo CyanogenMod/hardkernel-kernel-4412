@@ -23,6 +23,7 @@
 #include <mach/regs-clock.h>
 #include <mach/map.h>
 
+#ifdef CONFIG_FB_S3C
 static void exynos4_fimd0_cfg_gpios(unsigned int base, unsigned int nr,
 		unsigned int cfg, s5p_gpio_drvstr_t drvstr)
 {
@@ -31,7 +32,6 @@ static void exynos4_fimd0_cfg_gpios(unsigned int base, unsigned int nr,
 	for (; nr > 0; nr--, base++)
 		s5p_gpio_set_drvstr(base, drvstr);
 }
-
 
 void exynos4_fimd0_gpio_setup_24bpp(void)
 {
@@ -66,6 +66,7 @@ void exynos4_fimd0_gpio_setup_24bpp(void)
 	reg |= (1 << 1);
 	__raw_writel(reg, S3C_VA_SYS + 0x0210);
 }
+#endif
 
 int __init exynos4_fimd0_setup_clock(struct device *dev, const char *parent,
 					unsigned long clk_rate)
