@@ -524,9 +524,15 @@ extern struct fimc_limit fimc50_limits[FIMC_DEVICES];
 extern struct fimc_limit fimc51_limits[FIMC_DEVICES];
 
 /* FIMD */
+#ifdef CONFIG_FB_S5P /* Legacy FIMD */
 extern int s3cfb_direct_ioctl(int id, unsigned int cmd, unsigned long arg);
 extern int s3cfb_open_fifo(int id, int ch, int (*do_priv)(void *), void *param);
 extern int s3cfb_close_fifo(int id, int (*do_priv)(void *), void *param);
+#else /* Mainline FIMD */
+static inline int s3cfb_direct_ioctl(int id, unsigned int cmd, unsigned long arg) { return 0; }
+static inline int s3cfb_open_fifo(int id, int ch, int (*do_priv)(void *), void *param) { return 0; }
+static inline int s3cfb_close_fifo(int id, int (*do_priv)(void *), void *param) { return 0; }
+#endif
 
 /* general */
 extern void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, int height, int pixel_format);
