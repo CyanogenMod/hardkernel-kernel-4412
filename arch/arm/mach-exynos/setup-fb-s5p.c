@@ -30,6 +30,7 @@
 
 struct platform_device; /* don't need the contents */
 
+#ifdef CONFIG_FB_S5P
 static void s3cfb_gpio_setup_24bpp(unsigned int start, unsigned int size,
 		unsigned int cfg, s5p_gpio_drvstr_t drvstr)
 {
@@ -78,6 +79,7 @@ void s3cfb_cfg_gpio(struct platform_device *pdev)
 	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 6, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 }
+#endif
 #endif
 
 int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
