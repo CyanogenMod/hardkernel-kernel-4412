@@ -435,7 +435,11 @@ __v7_setup_stack:
 	__INITDATA
 
 	@ define struct processor (see <asm/proc-fns.h> and proc-macros.S)
+#ifdef CONFIG_PM_SLEEP
 	define_processor_functions v7, dabort=v7_early_abort, pabort=v7_pabort, suspend=1
+#else
+	define_processor_functions v7, dabort=v7_early_abort, pabort=v7_pabort, suspend=0
+#endif
 
 	.section ".rodata"
 
