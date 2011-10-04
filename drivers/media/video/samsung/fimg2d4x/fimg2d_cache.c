@@ -99,9 +99,8 @@ enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long addr,
 
 		/* check level 1 descriptor */
 		if ((*lv1d & DESC_MASK) == 0x0 || ((*lv1d & DESC_MASK) == 0x3)) {
-			printk(KERN_ERR "[%s] LV1 PT fault, pgd 0x%lx addr 0x%lx"
-					"lv1 descriptor 0x%lx\n",
-					__func__, pgd, addr, *lv1d);
+			fimg2d_debug("LV1 PT fault, pgd 0x%lx addr 0x%lx"
+					"lv1 descriptor 0x%lx\n", pgd, addr, *lv1d);
 			return PT_FAULT;
 		}
 
@@ -110,9 +109,8 @@ enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long addr,
 				((addr & LV2_PT_MASK) >> LV2_SHIFT);
 
 		if ((*lv2d & DESC_MASK) == 0x0) {
-			printk(KERN_ERR "[%s] LV2 PT fault, pgd 0x%lx addr 0x%lx "
-					"lv2 descriptor 0x%lx\n",
-					__func__, pgd, addr, *lv2d);
+			fimg2d_debug("LV2 PT fault, pgd 0x%lx addr 0x%lx "
+					"lv2 descriptor 0x%lx\n", pgd, addr, *lv2d);
 			return PT_FAULT;
 		}
 
