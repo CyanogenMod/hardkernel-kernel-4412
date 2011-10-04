@@ -79,9 +79,12 @@ static int exynos4_busfreq_notifier_event(struct notifier_block *this,
 	unsigned int voltage;
 	unsigned long currfreq;
 	unsigned long newfreq;
+	unsigned long long load;
 
 	switch (event) {
 	case CPUFREQ_PRECHANGE:
+		load = ppmu_update(data->dev);
+		pr_debug("ppmu_load = %lld\n", load);;
 		break;
 	case CPUFREQ_POSTCHANGE:
 		if (freq->old != data->min_cpufreq)
@@ -119,6 +122,7 @@ static int exynos4_busfreq_notifier_event(struct notifier_block *this,
 					voltage);
 		}
 		data->curr_opp = opp;
+		ppmu_start(data->dev);
 		break;
 	case CPUFREQ_RESUMECHANGE:
 		break;

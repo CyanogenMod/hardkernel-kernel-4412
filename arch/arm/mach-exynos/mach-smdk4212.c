@@ -75,6 +75,7 @@
 #include <mach/dwmci.h>
 #endif
 #include <mach/dev.h>
+#include <mach/ppmu.h>
 #ifdef CONFIG_EXYNOS4_C2C
 #include <mach/c2c.h>
 #endif
@@ -2735,6 +2736,7 @@ static void __init smdk4212_machine_init(void)
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
 	dev_add(&busfreq, &exynos4_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_CPU], &exynos4_busfreq.dev);
 }
 
 #ifdef CONFIG_EXYNOS4_C2C
