@@ -18,6 +18,8 @@
 #include "s5p_mfc_common.h"
 #include "s5p_mfc_mem.h"
 
+#define MFC_CTRL_MODE_CUSTOM	MFC_CTRL_MODE_SFR
+
 /*
 int s5p_mfc_release_firmware(struct s5p_mfc_dev *dev);
 int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev);
