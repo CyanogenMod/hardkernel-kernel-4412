@@ -18,10 +18,9 @@
 #include <linux/sched.h>
 #include <linux/io.h>
 
-#include "regs-mfc.h"
+#include "s5p_mfc_common.h"
 
 #include "s5p_mfc_intr.h"
-#include "s5p_mfc_common.h"
 #include "s5p_mfc_debug.h"
 
 int s5p_mfc_wait_for_done_dev(struct s5p_mfc_dev *dev, int command)

@@ -12,8 +12,8 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef S5P_MFC_OPR_H_
-#define S5P_MFC_OPR_H_
+#ifndef S5P_MFC_OPR_V6_H_
+#define S5P_MFC_OPR_V6_H_
 
 #include "s5p_mfc_common.h"
 #include "s5p_mfc_mem.h"
@@ -112,4 +112,4 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev);
 
 void s5p_mfc_cleanup_queue(struct list_head *lh, struct vb2_queue *vq);
 
-#endif /* S5P_MFC_OPR_H_ */
+#endif /* S5P_MFC_OPR_V6_H_ */

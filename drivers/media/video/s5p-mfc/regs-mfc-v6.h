@@ -9,8 +9,8 @@
  * published by the Free Software Foundation.
 */
 
-#ifndef _REGS_FIMV_H
-#define _REGS_FIMV_H
+#ifndef _REGS_FIMV_V6_H
+#define _REGS_FIMV_V6_H
 
 #define S5P_FIMV_REG_SIZE	(S5P_FIMV_END_ADDR - S5P_FIMV_START_ADDR)
 #define S5P_FIMV_REG_COUNT	((S5P_FIMV_END_ADDR - S5P_FIMV_START_ADDR) / 4)
@@ -379,4 +379,4 @@
 #define S5P_FIMV_SHARED_H264_I_PERIOD		0x009C
 #define S5P_FIMV_SHARED_RC_CONTROL_CONFIG	0x00A0
 
-#endif /* _REGS_FIMV_H */
+#endif /* _REGS_FIMV_V6_H */

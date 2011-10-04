@@ -27,16 +27,13 @@
 #include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
 
-#include "regs-mfc.h"
-
-#include "s5p_mfc_opr.h"
 #include "s5p_mfc_common.h"
+
 #include "s5p_mfc_mem.h"
 #include "s5p_mfc_intr.h"
 #include "s5p_mfc_inst.h"
 #include "s5p_mfc_pm.h"
 #include "s5p_mfc_debug.h"
-#include "s5p_mfc_shm.h"
 
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 #include <media/videobuf2-cma-phys.h>
@@ -56,147 +53,6 @@
 #define WRITEL(data, offset)	writel((data), dev->regs_base + (offset))
 #define OFFSETA(x)		(((x) - dev->port_a) >> S5P_FIMV_MEM_OFFSET)
 #define OFFSETB(x)		(((x) - dev->port_b) >> S5P_FIMV_MEM_OFFSET)
-
-/*
-static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
-{
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	return vb2_cma_memops.alloc(a, s);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	return vb2_dma_pool_memops.alloc(a, s);
-#endif
-}
-
-static inline size_t s5p_mfc_mem_paddr(void *a, void *b)
-{
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	return (size_t)vb2_cma_memops.cookie(b);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	return (size_t)vb2_dma_pool_memops.cookie(b);
-#endif
-}
-
-static inline void s5p_mfc_mem_put(void *a, void *b)
-{
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	vb2_cma_memops.put(b);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	vb2_dma_pool_memops.put(b);
-#endif
-}
-
-static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
-{
-#if defined(CONFIG_S5P_MFC_VB2_CMA)
-	return vb2_cma_memops.vaddr(b);
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	return vb2_dma_pool_memops.vaddr(b);
-#endif
-}
-*/
-
-#if 0
-static void s5p_mfc_mem_cache_clean(const void *start_addr, unsigned long size)
-{
-	unsigned long paddr;
-
-	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
-	/*
-	 * virtual & phsical addrees mapped directly, so we can convert
-	 * the address just using offset
-	 */
-	paddr = __pa((unsigned long)start_addr);
-	outer_clean_range(paddr, paddr + size);
-}
-
-static void s5p_mfc_mem_cache_inv(const void *start_addr, unsigned long size)
-{
-	unsigned long paddr;
-
-	paddr = __pa((unsigned long)start_addr);
-	outer_inv_range(paddr, paddr + size);
-	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
-}
-#endif
-
-#if 0
-/* Reset the device */
-static int s5p_mfc_cmd_reset(struct s5p_mfc_dev *dev)
-{
-	unsigned int mc_status;
-	unsigned long timeout;
-
-	mfc_debug_enter();
-	/* Stop procedure */
-	WRITEL(0x3f6, S5P_FIMV_SW_RESET);	/*  reset RISC */
-	WRITEL(0x3e2, S5P_FIMV_SW_RESET);	/*  All reset except for MC */
-	mdelay(10);
-	timeout = jiffies + msecs_to_jiffies(MFC_BW_TIMEOUT);
-	/* Check MC status */
-	do {
-		if (time_after(jiffies, timeout)) {
-			mfc_err("Timeout while resetting MFC.\n");
-			return -EIO;
-		}
-		mc_status = READL(S5P_FIMV_MC_STATUS);
-	} while (mc_status & 0x3);
-	WRITEL(0x0, S5P_FIMV_SW_RESET);
-	WRITEL(0x3fe, S5P_FIMV_SW_RESET);
-	mfc_debug_leave();
-	return 0;
-}
-#endif
-
-#if 0
-/* Send a command to the MFC */
-static int s5p_mfc_cmd_host2risc(struct s5p_mfc_dev *dev,
-				struct s5p_mfc_ctx *ctx, int cmd, int arg)
-{
-	int cur_cmd;
-	unsigned long timeout;
-
-	timeout = jiffies + msecs_to_jiffies(MFC_BW_TIMEOUT);
-	/* wait until host to risc command register becomes 'H2R_CMD_EMPTY' */
-	do {
-		if (time_after(jiffies, timeout)) {
-			mfc_err("Timeout while waiting for hardware.\n");
-			return -EIO;
-		}
-		cur_cmd = READL(S5P_FIMV_HOST2RISC_CMD);
-	} while (cur_cmd != S5P_FIMV_H2R_CMD_EMPTY);
-	WRITEL(arg, S5P_FIMV_HOST2RISC_ARG1);
-	if (cmd == S5P_FIMV_H2R_CMD_OPEN_INSTANCE) {
-		/* No CRC calculation (slow!) */
-		WRITEL(0, S5P_FIMV_HOST2RISC_ARG2);
-		/* Physical addr of the instance buffer */
-		WRITEL(OFFSETA(ctx->context_phys),
-		       S5P_FIMV_HOST2RISC_ARG3);
-		/* Size of the instance buffer */
-		WRITEL(ctx->context_size, S5P_FIMV_HOST2RISC_ARG4);
-	}
-	/* Issue the command */
-	WRITEL(cmd, S5P_FIMV_HOST2RISC_CMD);
-	return 0;
-}
-#endif
-
-/*
-static void s5p_mfc_cmd_sleep()
-{
-	WRITEL(-1, S5P_FIMV_CH_ID);
-	WRITEL(MFC_SLEEP, S5P_FIMV_COMMAND_TYPE);
-}
-*/
-
-/*
-static void s5p_mfc_cmd_wakeup()
-{
-	WRITEL(-1, S5P_FIMV_CH_ID);
-	WRITEL(MFC_WAKEUP, S5P_FIMV_COMMAND_TYPE);
-	mdelay(100);
-}
-*/
-
 
 /* Allocate temporary buffers for decoding */
 int s5p_mfc_alloc_dec_temp_buffers(struct s5p_mfc_ctx *ctx)

@@ -18,9 +18,8 @@
 #include <linux/sched.h>
 #include <linux/cma.h>
 
-#include "regs-mfc.h"
-
 #include "s5p_mfc_common.h"
+
 #include "s5p_mfc_mem.h"
 #include "s5p_mfc_intr.h"
 #include "s5p_mfc_debug.h"

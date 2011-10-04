@@ -12,9 +12,10 @@
 
 #include <linux/io.h>
 
+#include "s5p_mfc_common.h"
+
 #include "s5p_mfc_mem.h"
 #include "s5p_mfc_debug.h"
-#include "s5p_mfc_common.h"
 
 int s5p_mfc_init_shm(struct s5p_mfc_ctx *ctx)
 {

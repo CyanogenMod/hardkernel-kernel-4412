@@ -13,6 +13,8 @@
 #ifndef __S5P_MFC_SHM_H_
 #define __S5P_MFC_SHM_H_ __FILE__
 
+#include <linux/io.h>
+
 enum MFC_SHM_OFS
 {
 	EXTENEDED_DECODE_STATUS	= 0x00,	/* D */

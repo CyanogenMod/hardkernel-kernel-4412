@@ -18,14 +18,13 @@
 
 #include <linux/videodev2.h>
 #include <linux/workqueue.h>
+#include <linux/slab.h>
 
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-fh.h>
 
 #include <media/videobuf2-core.h>
-
-#include "regs-mfc.h"
 
 #if defined(CONFIG_S5P_SYSTEM_MMU)
 #define SYSMMU_MFC_ON
@@ -515,5 +514,14 @@ struct s5p_mfc_fmt {
 	u32 type;
 	u32 num_planes;
 };
+
+#if defined(CONFIG_S5P_MFC_V5)
+#include "regs-mfc-v5.h"
+#include "s5p_mfc_opr_v5.h"
+#include "s5p_mfc_shm.h"
+#elif defined(CONFIG_S5P_MFC_V6)
+#include "regs-mfc-v6.h"
+#include "s5p_mfc_opr_v6.h"
+#endif
 
 #endif /* S5P_MFC_COMMON_H_ */

@@ -21,16 +21,13 @@
 #include <linux/videodev2.h>
 #include <media/videobuf2-core.h>
 
-#include "regs-mfc.h"
+#include "s5p_mfc_common.h"
 
-#include "s5p_mfc_opr.h"
 #include "s5p_mfc_intr.h"
 #include "s5p_mfc_mem.h"
 #include "s5p_mfc_debug.h"
 #include "s5p_mfc_reg.h"
-#include "s5p_mfc_shm.h"
 #include "s5p_mfc_enc.h"
-#include "s5p_mfc_common.h"
 
 #define DEF_SRC_FMT	1
 #define DEF_DST_FMT	2
