@@ -53,6 +53,22 @@ config CPU_EXYNOS5210
 	help
 	  Enable EXYNOS5210 CPU support
 
+choice
+	prompt "EXYNOS5210 core type"
+	depends on CPU_EXYNOS5210
+	default CPU_A15
+
+config CPU_EXYNOS5210_A15
+	bool "A15 core"
+	help
+	  A15 dual core CPU support
+
+config CPU_EXYNOS5210_A5_IOP
+	bool "A5 IOP core"
+	help
+	  A5 single core CPU support
+endchoice
+
 config EXYNOS4_CONTENT_PATH_PROTECTION
 	bool "Exynos4 Content Path Protection"
 	depends on ARM_TRUSTZONE
