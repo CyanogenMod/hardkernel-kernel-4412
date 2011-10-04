@@ -100,6 +100,9 @@
 #include <mach/secmem.h>
 #endif
 #include <mach/dev.h>
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC) || defined(CONFIG_VIDEO_MFC5X)
+#include <plat/s5p-mfc.h>
+#endif
 
 #include <media/s5p_fimc.h>
 #include <media/s5k4ba_platform.h>
@@ -2614,10 +2617,13 @@ static void __init smdkv310_machine_init(void)
 #endif
 #endif
 
+#if defined(CONFIG_VIDEO_MFC5X)
+	exynos4_mfc_setup_clock(&s5p_device_fimd0.dev, 200 * MHZ);
+#endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
 	clk_add_alias("mfc", "s5p-mfc", "mfc", &s5p_device_mfc.dev);
-	s5p_mfc_setname("s5p-mfc");
+	s5p_mfc_setname(&s5p_device_mfc,"s5p-mfc");
 #endif
 
 #ifdef CONFIG_VIDEO_FIMG2D
