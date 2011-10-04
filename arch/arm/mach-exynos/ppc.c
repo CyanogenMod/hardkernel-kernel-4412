@@ -22,6 +22,7 @@
 void exynos4_ppc_reset(struct exynos4_ppmu_hw *ppmu)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
+	int i;
 
 	__raw_writel(0x8000000f, ppmu_base + 0xf010);
 	__raw_writel(0x8000000f, ppmu_base + 0xf050);
@@ -29,11 +30,8 @@ void exynos4_ppc_reset(struct exynos4_ppmu_hw *ppmu)
 	__raw_writel(0x0, ppmu_base + 0xf100);
 
 	ppmu->ccnt = 0;
-	ppmu->event = 0;
-	ppmu->count[0] = 0;
-	ppmu->count[1] = 0;
-	ppmu->count[2] = 0;
-	ppmu->count[3] = 0;
+	for (i = 0; i < NUMBER_OF_COUNTER; i++)
+		ppmu->count[i] = 0;
 }
 
 void exynos4_ppc_setevent(struct exynos4_ppmu_hw *ppmu,
@@ -41,7 +39,7 @@ void exynos4_ppc_setevent(struct exynos4_ppmu_hw *ppmu,
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
 
-	ppmu->event = evt;
+	ppmu->event[0] = evt;
 
 	__raw_writel(((evt << 12) | 0x1), ppmu_base + 0xfc);
 }
@@ -60,16 +58,17 @@ void exynos4_ppc_stop(struct exynos4_ppmu_hw *ppmu)
 	__raw_writel(0x0, ppmu_base + 0xf000);
 }
 
-void exynos4_ppc_update(struct exynos4_ppmu_hw *ppmu)
+unsigned long long exynos4_ppc_update(struct exynos4_ppmu_hw *ppmu)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
 	unsigned int i;
 
 	ppmu->ccnt = __raw_readl(ppmu_base + 0xf100);
 
-	for (i = 0; i < NUMBER_OF_COUNTER; i++) {
+	for (i = 0; i < NUMBER_OF_COUNTER; i++)
 		ppmu->count[i] =
 			__raw_readl(ppmu_base + (0xf110 + (0x10 * i)));
-	}
+
+	return 0;
 }
 

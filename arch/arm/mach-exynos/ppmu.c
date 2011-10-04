@@ -14,68 +14,157 @@
 #include <linux/kernel.h>
 #include <linux/err.h>
 #include <linux/io.h>
+#include <linux/list.h>
+#include <linux/math64.h>
+
+#include <plat/cputype.h>
 
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/ppmu.h>
 
+static LIST_HEAD(ppmu_list);
+
 void exynos4_ppmu_reset(struct exynos4_ppmu_hw *ppmu)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
+	int i;
 
 	__raw_writel(0x3 << 1, ppmu_base);
-	__raw_writel(0x8000000f, ppmu_base + 0x0010);
-	__raw_writel(0x8000000f, ppmu_base + 0x0030);
+	__raw_writel(0x8000000f, ppmu_base + PPMU_CNTENS);
 
-	__raw_writel(0x0, ppmu_base + DEVT0_ID);
-	__raw_writel(0x0, ppmu_base + DEVT0_IDMSK);
+	if (cpu_is_exynos4210())
+		for (i = 0; i < NUMBER_OF_COUNTER; i++) {
+			__raw_writel(0x0, ppmu_base + DEVT0_ID + (i * DEVT_ID_OFFSET));
+			__raw_writel(0x0, ppmu_base + DEVT0_IDMSK + (i * DEVT_ID_OFFSET));
+		}
 
-	__raw_writel(0x0, ppmu_base + DEVT1_ID);
-	__raw_writel(0x0, ppmu_base + DEVT1_IDMSK);
-
-	ppmu->ccnt = 0;
-	ppmu->event = 0;
-	ppmu->count[0] = 0;
-	ppmu->count[1] = 0;
-	ppmu->count[2] = 0;
-	ppmu->count[3] = 0;
+	for (i = 0; i < NUMBER_OF_COUNTER; i++)
+		ppmu->count[i] = 0;
 }
 
 void exynos4_ppmu_setevent(struct exynos4_ppmu_hw *ppmu,
-		unsigned int evt, unsigned int evt_num)
+				unsigned int evt_num)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
-
-	ppmu->event = evt;
-
-	__raw_writel(evt , ppmu_base + DEVT0_SEL + (evt_num * 0x100));
+	__raw_writel(ppmu->event[evt_num], ppmu_base + PPMU_BEVT0SEL + (evt_num * PPMU_BEVTSEL_OFFSET));
 }
 
 void exynos4_ppmu_start(struct exynos4_ppmu_hw *ppmu)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
-
+	ppmu->usage++;
 	__raw_writel(0x1, ppmu_base);
 }
 
 void exynos4_ppmu_stop(struct exynos4_ppmu_hw *ppmu)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
-
+	ppmu->usage--;
 	__raw_writel(0x0, ppmu_base);
 }
 
-void exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu)
+unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
 	unsigned int i;
+	unsigned long long total = 0;
 
-	ppmu->ccnt = __raw_readl(ppmu_base + 0x0100);
-
+	ppmu->ccnt = __raw_readl(ppmu_base + PPMU_CCNT);
 
 	for (i = 0; i < NUMBER_OF_COUNTER; i++) {
-		ppmu->count[i] =
-			__raw_readl(ppmu_base + (0x110 + (0x10 * i)));
+		if (ppmu->event[i] == 0)
+			continue;
+
+		if (i == 3)
+			total += (((u64)__raw_readl(ppmu_base + PMCNT_OFFSET(i)) << 32) |
+				__raw_readl(ppmu_base + PMCNT_OFFSET(i + 1)));
+		else
+			total += __raw_readl(ppmu_base + PMCNT_OFFSET(i));
 	}
 
+	if (ppmu->ccnt == 0)
+		ppmu->ccnt = MAX_CCNT;
+
+	return div_u64((total * ppmu->weight * 100), ppmu->ccnt);
 }
+
+void ppmu_start(struct device *dev)
+{
+	struct exynos4_ppmu_hw *ppmu;
+
+	list_for_each_entry(ppmu, &ppmu_list, node)
+		if (ppmu->dev == dev)
+			exynos4_ppmu_start(ppmu);
+}
+
+unsigned long long ppmu_update(struct device *dev)
+{
+	struct exynos4_ppmu_hw *ppmu;
+	unsigned long long average = 0;
+
+	list_for_each_entry(ppmu, &ppmu_list, node)
+		if ((ppmu->dev == dev) && (ppmu->usage > 0)) {
+			exynos4_ppmu_stop(ppmu);
+			average = exynos4_ppmu_update(ppmu);
+			exynos4_ppmu_reset(ppmu);
+			break;
+		}
+
+	return average;
+}
+
+unsigned long long ppmu_all_update(unsigned int flag)
+{
+	struct exynos4_ppmu_hw *ppmu;
+	unsigned long long average = 0;
+
+	list_for_each_entry(ppmu, &ppmu_list, node)
+		if ((ppmu->usage > 0) && (ppmu->flags & flag)) {
+			exynos4_ppmu_stop(ppmu);
+			average += exynos4_ppmu_update(ppmu);
+		}
+
+	return average;
+}
+
+void ppmu_init(struct exynos4_ppmu_hw *ppmu, struct device *dev)
+{
+	void __iomem *ppmu_base = ppmu->hw_base;
+	int i;
+
+	ppmu->dev = dev;
+	list_add(&ppmu->node, &ppmu_list);
+
+	if (cpu_is_exynos4210())
+		for (i = 0; i < NUMBER_OF_COUNTER; i++) {
+			__raw_writel(0x0, ppmu_base + DEVT0_ID + (i * DEVT_ID_OFFSET));
+			__raw_writel(0x0, ppmu_base + DEVT0_IDMSK + (i * DEVT_ID_OFFSET));
+		}
+
+	for (i = 0; i < NUMBER_OF_COUNTER; i++)
+		if (ppmu->event[i] != 0)
+			exynos4_ppmu_setevent(ppmu, i);
+}
+
+struct exynos4_ppmu_hw exynos_ppmu[] = {
+	[PPMU_DMC0] = {
+		.hw_base = S5P_VA_PPMU_DMC0,
+		.event[0] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+		.flags = ALL_DOMAIN,
+	},
+	[PPMU_DMC1] = {
+		.hw_base = S5P_VA_PPMU_DMC1,
+		.event[0] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+		.flags = ALL_DOMAIN,
+	},
+	[PPMU_CPU] = {
+		.hw_base = S5P_VA_PPMU_CPU,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+		.flags = ALL_DOMAIN,
+	},
+};
