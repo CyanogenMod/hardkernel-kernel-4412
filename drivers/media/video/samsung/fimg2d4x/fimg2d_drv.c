@@ -42,9 +42,9 @@
 
 static struct fimg2d_control *info;
 
-static inline void fimg2d_power_on(void)
+static inline void fimg2d_clk_on(void)
 {
-	spin_lock(&info->pwrlock);
+	spin_lock(&info->bltlock);
 
 	clk_enable(info->clock);
 	fimg2d_debug("clock enable\n");
@@ -52,14 +52,16 @@ static inline void fimg2d_power_on(void)
 	s5p_sysmmu_enable(info->dev, (unsigned long)init_mm.pgd);
 	fimg2d_debug("sysmmu enable\n");
 #endif
-	atomic_set(&info->pwron, 1);
-	spin_unlock(&info->pwrlock);
+	atomic_set(&info->clkon, 1);
+
+	spin_unlock(&info->bltlock);
 }
 
-static inline void fimg2d_power_off(void)
+static inline void fimg2d_clk_off(void)
 {
-	spin_lock(&info->pwrlock);
-	atomic_set(&info->pwron, 0);
+	spin_lock(&info->bltlock);
+
+	atomic_set(&info->clkon, 0);
 
 #ifdef CONFIG_S5P_SYSTEM_MMU
 	s5p_sysmmu_disable(info->dev);
@@ -67,7 +69,8 @@ static inline void fimg2d_power_off(void)
 #endif
 	clk_disable(info->clock);
 	fimg2d_debug("clock disable\n");
-	spin_unlock(&info->pwrlock);
+
+	spin_unlock(&info->bltlock);
 }
 
 static void fimg2d_worker(struct work_struct *work)
@@ -95,21 +98,22 @@ static irqreturn_t fimg2d_irq(int irq, void *dev_id)
  */
 static void fimg2d_context_wait(struct fimg2d_context *ctx)
 {
-	int ret = 0;
+	int ret;
 
 	if (atomic_read(&ctx->ncmd)) {
 wait:
 		fimg2d_debug("ctx %p is waiting for bitblt complete\n", ctx);
 		ret = wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd),
-				msecs_to_jiffies(5000));
-		if (ret == 0) {
+					msecs_to_jiffies(5000));
+		if (!ret) {
 			if (!info->err && atomic_read(&ctx->ncmd)) {
 				fimg2d_debug("ctx %p bitblt is not finished\n", ctx);
 				goto wait;
 			}
 			printk(KERN_ERR "[%s] ctx %p wait timeout\n", __func__, ctx);
+		} else {
+			fimg2d_debug("ctx %p wake up\n", ctx);
 		}
-		fimg2d_debug("ctx %p wake up\n", ctx);
 	}
 }
 
@@ -147,7 +151,7 @@ static int fimg2d_open(struct inode *inode, struct file *file)
 
 #ifndef CONFIG_PM_RUNTIME
 	if (atomic_read(&info->nctx) == 1)
-		fimg2d_power_on();
+		fimg2d_clk_on();
 #endif
 
 	return 0;
@@ -165,7 +169,7 @@ static int fimg2d_release(struct inode *inode, struct file *file)
 
 #ifndef CONFIG_PM_RUNTIME
 	if (atomic_read(&info->nctx) == 0)
-		fimg2d_power_off();
+		fimg2d_clk_off();
 #endif
 	return 0;
 }
@@ -241,12 +245,12 @@ static struct miscdevice fimg2d_dev = {
 
 static int fimg2d_setup_controller(struct fimg2d_control *info)
 {
-	atomic_set(&info->pwron, 0);
+	atomic_set(&info->suspended, 0);
+	atomic_set(&info->clkon, 0);
 	atomic_set(&info->busy, 0);
 	atomic_set(&info->nctx, 0);
 	atomic_set(&info->active, 0);
 
-	spin_lock_init(&info->pwrlock);
 	spin_lock_init(&info->bltlock);
 
 	INIT_LIST_HEAD(&info->cmd_q);
@@ -364,7 +368,7 @@ static int fimg2d_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_enable(&pdev->dev);
-	fimg2d_debug("PM runtime enabled\n");
+	fimg2d_debug("enable runtime pm\n");
 #endif
 
 	/* misc register */
@@ -426,7 +430,7 @@ static int fimg2d_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_disable(&pdev->dev);
-	fimg2d_debug("pm_runtime_disable\n");
+	fimg2d_debug("disable runtime pm\n");
 #endif
 
 	return 0;
@@ -434,30 +438,52 @@ static int fimg2d_remove(struct platform_device *pdev)
 
 static int fimg2d_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	if (atomic_read(&info->pwron) == 1)
-		fimg2d_power_off();
+	int ret;
+
+	fimg2d_debug("suspend... start\n");
+	atomic_set(&info->suspended, 1);
+
+	ret = wait_event_timeout(info->wait_q,
+				fimg2d_queue_is_empty(&info->cmd_q),
+				msecs_to_jiffies(5000));
+	if (!ret)
+		printk(KERN_INFO "[%s] blit cmd queue wait timeout\n", __func__);
+
+#ifndef CONFIG_PM_RUNTIME
+	if (atomic_read(&info->clkon) && fimg2d_queue_is_empty(&info->cmd_q))
+		fimg2d_clk_off();
+#endif
+	fimg2d_debug("suspend... done\n");
 
 	return 0;
 }
 
 static int fimg2d_resume(struct platform_device *pdev)
 {
-	if (atomic_read(&info->pwron) == 0)
-		fimg2d_power_on();
-
+	fimg2d_debug("resume... start\n");
+#ifndef CONFIG_PM_RUNTIME
+	if (!atomic_read(&info->clkon) && atomic_read(&info->nctx))
+		fimg2d_clk_on();
+#endif
+	atomic_set(&info->suspended, 0);
+	fimg2d_debug("resume... done\n");
 	return 0;
 }
 
 #ifdef CONFIG_PM_RUNTIME
 static int fimg2d_runtime_suspend(struct device *dev)
 {
-	fimg2d_power_off();
+	fimg2d_debug("runtime suspend... start\n");
+	fimg2d_clk_off();
+	fimg2d_debug("runtime suspend... done\n");
 	return 0;
 }
 
 static int fimg2d_runtime_resume(struct device *dev)
 {
-	fimg2d_power_on();
+	fimg2d_debug("runtime resume... start\n");
+	fimg2d_clk_on();
+	fimg2d_debug("runtime resume... done\n");
 	return 0;
 }
 

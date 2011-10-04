@@ -449,8 +449,8 @@ struct fimg2d_bltcmd {
 };
 
 /**
- * @pwron: power status for runtime pm
- * @pwrlock: spinlock for runtime pm
+ * @suspended: in suspend mode
+ * @clkon: power status for runtime pm
  * @mem: resource platform device
  * @regs: base address of hardware
  * @dev: pointer to device struct
@@ -464,8 +464,8 @@ struct fimg2d_bltcmd {
  * @workqueue: workqueue_struct for kfimg2dd
 */
 struct fimg2d_control {
-	atomic_t pwron;
-	spinlock_t pwrlock;
+	atomic_t suspended;
+	atomic_t clkon;
 	struct clk *clock;
 	struct device *dev;
 	struct resource *mem;

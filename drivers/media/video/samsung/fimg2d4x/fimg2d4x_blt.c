@@ -70,6 +70,7 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 	}
 
 #ifdef CONFIG_OUTER_CACHE
+	/* innercache range is done at fimg2d_check_dma_sync() */
 	fimg2d_debug("outercache range\n");
 	mm = cmd->ctx->mm;
 	if (cmd->srcen) {
@@ -117,7 +118,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 	fimg2d_debug("enter blitter\n");
 
 #ifdef CONFIG_PM_RUNTIME
-	if (atomic_read(&info->pwron) == 0) {
+	if (!atomic_read(&info->clkon)) {
 		fimg2d_debug("pm_runtime_get_sync\n");
 		pm_runtime_get_sync(&(s5p_device_fimg2d.dev));
 	}
@@ -213,7 +214,7 @@ blitend:
 	atomic_set(&info->active, 0);
 
 #ifdef CONFIG_PM_RUNTIME
-	if (atomic_read(&info->pwron) == 1) {
+	if (atomic_read(&info->clkon)) {
 		pm_runtime_put_sync(&(s5p_device_fimg2d.dev));
 		fimg2d_debug("pm_runtime_put_sync\n");
 	}
@@ -296,14 +297,16 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 
 	/* scaling */
 	if (cmd->scaling.mode != NO_SCALING) {
-		fimg2d4x_set_src_scaling(info, &cmd->scaling);
+		if (cmd->srcen)
+			fimg2d4x_set_src_scaling(info, &cmd->scaling);
 		if (cmd->msken)
 			fimg2d4x_set_msk_scaling(info, &cmd->scaling);
 	}
 
 	/* repeat */
 	if (cmd->repeat.mode != NO_REPEAT) {
-		fimg2d4x_set_src_repeat(info, &cmd->repeat);
+		if (cmd->srcen)
+			fimg2d4x_set_src_repeat(info, &cmd->repeat);
 		if (cmd->msken)
 			fimg2d4x_set_msk_repeat(info, &cmd->repeat);
 	}
