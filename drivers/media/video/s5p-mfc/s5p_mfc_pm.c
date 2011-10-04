@@ -18,37 +18,7 @@
 #include "s5p_mfc_debug.h"
 #include "s5p_mfc_pm.h"
 
-#if defined(CONFIG_ARCH_S5PV210)
-int s5p_mfc_init_pm(struct mfc_dev *mfcdev)
-{
-	return -1;
-}
-
-void s5p_mfc_final_pm(struct mfc_dev *mfcdev)
-{
-	/* NOP */
-}
-
-int s5p_mfc_clock_on(void)
-{
-	return -1;
-}
-
-void s5p_mfc_clock_off(void)
-{
-	/* NOP */
-}
-
-int s5p_mfc_power_on(void)
-{
-	return -1;
-}
-
-int s5p_mfc_power_off(void)
-{
-	return -1;
-}
-#elif defined(CONFIG_ARCH_EXYNOS4)
+#if defined(CONFIG_ARCH_EXYNOS4)
 #include <linux/platform_device.h>
 #ifdef CONFIG_PM_RUNTIME
 #include <linux/pm_runtime.h>
@@ -188,6 +158,37 @@ bool s5p_mfc_power_chk(void)
 	mfc_debug(2, "%s", atomic_read(&pm->power) ? "on" : "off");
 
 	return atomic_read(&pm->power) ? true : false;
+}
+#elif defined(CONFIG_ARCH_EXYNOS5)
+/* FIXME: For 6.x. FPGA does not use */
+int s5p_mfc_init_pm(struct s5p_mfc_dev *mfcdev)
+{
+		return 0;
+}
+
+void s5p_mfc_final_pm(struct s5p_mfc_dev *mfcdev)
+{
+		/* NOP */
+}
+
+int s5p_mfc_clock_on(void)
+{
+		return 0;
+}
+
+void s5p_mfc_clock_off(void)
+{
+		/* NOP */
+}
+
+int s5p_mfc_power_on(void)
+{
+		return 0;
+}
+
+int s5p_mfc_power_off(void)
+{
+		return 0;
 }
 #else /* CONFIG_ARCH_NOT_SUPPORT */
 int s5p_mfc_init_pm(struct s5p_mfc_dev *mfcdev)
