@@ -472,6 +472,12 @@ config MACH_FPGA5210
 	select S5P_DEV_FIMD1
 	help
 	  Machine support for Samsung FPGA5210
+
+config MACH_SMDK5210
+	bool "SMDK5210 board"
+	select CPU_EXYNOS5210
+	help
+	  Machine support for Samsung SMDK5210
 endmenu
 
 menu "MMC/SD slot setup"
