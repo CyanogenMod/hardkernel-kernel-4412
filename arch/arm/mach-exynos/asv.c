@@ -100,9 +100,18 @@ static int get_ids_value(struct samsung_asv *asv_info)
 
 static int __init exynos4_asv_init(void)
 {
+	int ret = -EINVAL;
+
 	exynos_asv = kzalloc(sizeof(struct samsung_asv), GFP_KERNEL);
 	if (!exynos_asv)
 		goto out1;
+
+	if (cpu_is_exynos4210())
+		ret = exynos4210_asv_init(exynos_asv);
+	else {
+		pr_info("EXYNOS: There is no type for ASV\n");
+		goto out2;
+	}
 
 	if (exynos_asv->check_vdd_arm) {
 		if (exynos_asv->check_vdd_arm()) {
