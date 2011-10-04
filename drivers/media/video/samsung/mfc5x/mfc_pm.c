@@ -18,6 +18,7 @@
 #include "mfc_log.h"
 
 #include <plat/clock.h>
+#include <plat/s5p-mfc.h>
 #if defined(CONFIG_ARCH_S5PV210)
 #include <mach/pd.h>
 
@@ -206,7 +207,7 @@ int mfc_init_pm(struct mfc_dev *mfcdev)
 	}
 
 	/* FIXME: clock name & rate have to move to machine code */
-	ret = clk_set_rate(sclk, 200 * 1000000);
+	ret = clk_set_rate(sclk, mfc_clk_rate);
 	if (ret) {
 		printk(KERN_ERR "%s rate change failed: %u\n", sclk->name, 200 * 1000000);
 		goto err_ss_clk;

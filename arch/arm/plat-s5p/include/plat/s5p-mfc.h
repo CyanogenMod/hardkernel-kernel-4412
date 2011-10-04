@@ -13,8 +13,16 @@
 #ifndef _S5P_MFC_H
 #define _S5P_MFC_H
 
-static inline void s5p_mfc_setname(char *name)
-{
-	s5p_device_mfc.name = name;
-}
+#include <linux/platform_device.h>
+
+#define MFC_PARENT_CLK_NAME	"mout_mfc0"
+#define MFC_CLKNAME		"sclk_mfc"
+#define MFC_GATE_CLK_NAME	"mfc"
+
+extern unsigned int mfc_clk_rate;
+void s5p_mfc_setname(struct platform_device *pdev,char *name);
+
+int exynos4_mfc_setup_clock(struct device *dev,
+		unsigned long clock_rate);
+
 #endif /* _S5P_MFC_H */
