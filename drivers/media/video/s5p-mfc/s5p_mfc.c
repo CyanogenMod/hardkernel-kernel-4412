@@ -1096,6 +1096,9 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	dev->watchdog_timer.data = (unsigned long)dev;
 	dev->watchdog_timer.function = s5p_mfc_watchdog;
 
+	dev->variant = (struct s5p_mfc_variant *)
+		platform_get_device_id(pdev)->driver_data;
+
 	dev->alloc_ctx = (struct vb2_alloc_ctx **)
 			s5p_mfc_mem_init_multi(&pdev->dev);
 
@@ -1266,9 +1269,74 @@ static const struct dev_pm_ops s5p_mfc_pm_ops = {
 #endif
 };
 
+struct s5p_mfc_buf_size_v5 mfc_buf_size_v5 = {
+	.h264_ctx_buf = 0x96000,
+	.non_h264_ctx_buf = 0x2800,
+	.desc_buf = 0x20000,
+	.shared_buf = 0x1000,
+};
+
+struct s5p_mfc_buf_size_v6 mfc_buf_size_v6 = {
+	.dev_ctx = 0x400,
+	.h264_dec_ctx = 0x200000,	/* FIXME: 1.6MB */
+	.other_dec_ctx = 0x2800,	/*  10KB */
+	.h264_enc_ctx = 0x19000,	/* 100KB */
+	.other_enc_ctx = 0x2800,	/*  10KB */
+};
+
+struct s5p_mfc_buf_size buf_size_v5 = {
+	.firmware_code = 0x60000,
+	.cpb_buf = 0x400000,		/*   4MB */
+	.buf = &mfc_buf_size_v5,
+};
+
+struct s5p_mfc_buf_size buf_size_v6 = {
+	.firmware_code = 0x60000,
+	.cpb_buf = 0x400000,		/*   4MB */
+	.buf = &mfc_buf_size_v6,
+};
+
+struct s5p_mfc_buf_align mfc_buf_align_v5 = {
+	.mfc_base_align = 17,
+};
+
+struct s5p_mfc_buf_align mfc_buf_align_v6 = {
+	.mfc_base_align = 0,
+};
+
+static struct s5p_mfc_variant mfc_drvdata_v5 = {
+	.version = 0x51,
+	.port_num = 2,
+	.buf_size = &buf_size_v5,
+	.buf_align = &mfc_buf_align_v5,
+};
+
+static struct s5p_mfc_variant mfc_drvdata_v6 = {
+	.version = 0x61,
+	.port_num = 1,
+	.buf_size = &buf_size_v6,
+	.buf_align = &mfc_buf_align_v6,
+};
+
+static struct platform_device_id mfc_driver_ids[] = {
+	{
+		.name = "s5p-mfc",
+		.driver_data = (unsigned long)&mfc_drvdata_v5,
+	}, {
+		.name = "s5p-mfc-v5",
+		.driver_data = (unsigned long)&mfc_drvdata_v5,
+	}, {
+		.name = "s5p-mfc-v6",
+		.driver_data = (unsigned long)&mfc_drvdata_v6,
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(platform, mfc_driver_ids);
+
 static struct platform_driver s5p_mfc_pdrv = {
 	.probe	= s5p_mfc_probe,
 	.remove	= __devexit_p(s5p_mfc_remove),
+	.id_table = mfc_driver_ids,
 	.driver	= {
 		.name	= S5P_MFC_NAME,
 		.owner	= THIS_MODULE,

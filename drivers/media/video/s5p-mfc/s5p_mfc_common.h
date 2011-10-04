@@ -107,6 +107,7 @@ enum s5p_mfc_queue_state {
 };
 
 struct s5p_mfc_ctx;
+struct s5p_mfc_extra_buf;
 
 /**
  * struct s5p_mfc_buf - MFC buffer
@@ -144,6 +145,54 @@ struct s5p_mfc_fw {
 	int			ver;
 };
 
+struct s5p_mfc_buf_align {
+	unsigned int mfc_base_align;
+};
+
+struct s5p_mfc_buf_size_v5 {
+	unsigned int h264_ctx_buf;
+	unsigned int non_h264_ctx_buf;
+	unsigned int desc_buf;
+	unsigned int shared_buf;
+};
+
+struct s5p_mfc_buf_size_v6 {
+	unsigned int dev_ctx;
+	unsigned int h264_dec_ctx;
+	unsigned int other_dec_ctx;
+	unsigned int h264_enc_ctx;
+	unsigned int other_enc_ctx;
+};
+
+struct s5p_mfc_buf_size {
+	unsigned int firmware_code;
+	unsigned int cpb_buf;
+	void *buf;
+};
+
+struct s5p_mfc_variant {
+	unsigned int version;
+	unsigned int port_num;
+	struct s5p_mfc_buf_size *buf_size;
+	struct s5p_mfc_buf_align *buf_align;
+};
+
+/**
+ * struct s5p_mfc_extra_buf - represents internal used buffer
+ * @alloc:		allocation-specific contexts for each buffer
+ *			(videobuf2 allocator)
+ * @ofs:		offset of each buffer, will be used for MFC
+ * @virt:		kernel virtual address, only valid when the
+ *			buffer accessed by driver
+ * @dma:		DMA address, only valid when kernel DMA API used
+ */
+struct s5p_mfc_extra_buf {
+	void		*alloc;
+	unsigned long	ofs;
+	void		*virt;
+	dma_addr_t	dma;
+};
+
 /**
  * struct s5p_mfc_dev - The struct containing driver internal parameters.
  */
@@ -159,6 +208,7 @@ struct s5p_mfc_dev {
 
 	struct s5p_mfc_pm	pm;
 	struct s5p_mfc_fw	fw;
+	struct s5p_mfc_variant	*variant;
 
 	int num_inst;
 	spinlock_t irqlock;
@@ -343,22 +393,6 @@ struct s5p_mfc_buf_ctrl {
 	unsigned int flag_mode;		/* only for MFC_CTRL_TYPE_SET */
 	unsigned int flag_addr;		/* only for MFC_CTRL_TYPE_SET */
 	unsigned int flag_shft;		/* only for MFC_CTRL_TYPE_SET */
-};
-
-/**
- * struct s5p_mfc_extra_buf - represents internal used buffer
- * @alloc:		allocation-specific contexts for each buffer
- *			(videobuf2 allocator)
- * @ofs:		offset of each buffer, will be used for MFC
- * @virt:		kernel virtual address, only valid when the
- *			buffer accessed by driver
- * @dma:		DMA address, only valid when kernel DMA API used
- */
-struct s5p_mfc_extra_buf {
-	void		*alloc;
-	unsigned long	ofs;
-	void		*virt;
-	dma_addr_t	dma;
 };
 
 struct s5p_mfc_codec_ops {
