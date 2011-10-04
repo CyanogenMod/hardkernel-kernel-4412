@@ -59,8 +59,8 @@ static struct busfreq_table exynos4_busfreq_table[] = {
 #define ASV_GROUP	5
 static unsigned int exynos4_asv_volt[ASV_GROUP][LV_END] = {
 	{1150000, 1050000, 1000000},
-	{1125000, 1025000, 975000},
-	{1100000, 1000000, 950000},
+	{1125000, 1025000, 1000000},
+	{1100000, 1000000, 975000},
 	{1075000, 975000, 950000},
 	{1050000, 950000, 950000},
 };
