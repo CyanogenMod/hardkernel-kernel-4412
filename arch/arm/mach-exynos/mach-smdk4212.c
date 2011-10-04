@@ -78,6 +78,9 @@
 #ifdef CONFIG_EXYNOS4_C2C
 #include <mach/c2c.h>
 #endif
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC) || defined(CONFIG_VIDEO_MFC5X)
+#include <plat/s5p-mfc.h>
+#endif
 
 #ifdef CONFIG_FB_S5P_MIPI_DSIM
 #include <mach/mipi_ddi.h>
@@ -2640,7 +2643,15 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_EXYNOS4_DEV_PD
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 #endif
+	exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 267 * MHZ);
 #endif
+
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
+	clk_add_alias("mfc", "s5p-mfc", "mfc", &s5p_device_mfc.dev);
+	s5p_mfc_setname(&s5p_device_mfc, "s5p-mfc");
+#endif
+
 #ifdef CONFIG_VIDEO_FIMG2D
 	s5p_fimg2d_set_platdata(&fimg2d_data);
 #endif
