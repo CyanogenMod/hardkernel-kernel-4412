@@ -57,12 +57,27 @@ config VIDEO_MFC5X_DEBUG
 	default n
 
 config VIDEO_SAMSUNG_S5P_MFC
-	tristate "Samsung S5P MFC 5.1 Video Codec"
+	tristate "Samsung S5P MFC Video Codec"
 	depends on USE_V4L2_MFC
 	select VIDEOBUF2_CORE
 	default n
 	help
-	  MFC 5.1 driver for V4L2.
+	  MFC driver for V4L2.
+
+choice
+	prompt "MFC V4L2 Driver"
+	default S5P_MFC_V5
+
+config S5P_MFC_V5
+	bool "MFC 5.1"
+	help
+	  Use MFC 5.1 V4L2 Driver
+
+config S5P_MFC_V6
+	bool "MFC 6.x"
+	help
+	  Use MFC 6.x V4L2 Driver
+endchoice
 
 choice
 	prompt "VB2 memory allocator for MFC"
