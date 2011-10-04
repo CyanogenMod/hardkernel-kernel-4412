@@ -203,8 +203,8 @@ static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 		dst_buf->vb.v4l2_buf.sequence = (ctx->sequence++);
 
 		/* FIXME: move to proper postion or REMOVE */
-		if (s5p_mfc_read_shm(ctx, PIC_TIME_TOP) ==
-			s5p_mfc_read_shm(ctx, PIC_TIME_BOT))
+		if (s5p_mfc_read_info(ctx, PIC_TIME_TOP) ==
+			s5p_mfc_read_info(ctx, PIC_TIME_BOT))
 			dst_buf->vb.v4l2_buf.field = V4L2_FIELD_NONE;
 		else
 			dst_buf->vb.v4l2_buf.field = V4L2_FIELD_INTERLACED;
@@ -240,8 +240,8 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 			list_del(&dst_buf->list);
 			ctx->dst_queue_cnt--;
 			dst_buf->vb.v4l2_buf.sequence = ctx->sequence;
-			if (s5p_mfc_read_shm(ctx, PIC_TIME_TOP) ==
-				s5p_mfc_read_shm(ctx, PIC_TIME_BOT))
+			if (s5p_mfc_read_info(ctx, PIC_TIME_TOP) ==
+				s5p_mfc_read_info(ctx, PIC_TIME_BOT))
 				dst_buf->vb.v4l2_buf.field = V4L2_FIELD_NONE;
 			else
 				dst_buf->vb.v4l2_buf.field = V4L2_FIELD_INTERLACED;

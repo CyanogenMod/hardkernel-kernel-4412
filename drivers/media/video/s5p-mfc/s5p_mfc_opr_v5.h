@@ -112,4 +112,7 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev);
 
 void s5p_mfc_cleanup_queue(struct list_head *lh, struct vb2_queue *vq);
 
+void s5p_mfc_write_info(struct s5p_mfc_ctx *ctx, unsigned int data, unsigned int ofs);
+unsigned int s5p_mfc_read_info(struct s5p_mfc_ctx *ctx, unsigned int ofs);
+
 #endif /* S5P_MFC_OPR_V5_H_ */

@@ -617,7 +617,7 @@ static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
 			value = s5p_mfc_read_reg(buf_ctrl->addr);
 		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
-			value = s5p_mfc_read_shm(ctx, buf_ctrl->addr);
+			value = s5p_mfc_read_info(ctx, buf_ctrl->addr);
 
 		/* save old vlaue for recovery */
 		if (buf_ctrl->is_volatile)
@@ -630,7 +630,7 @@ static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
 			s5p_mfc_write_reg(value, buf_ctrl->addr);
 		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
-			s5p_mfc_write_shm(ctx, value, buf_ctrl->addr);
+			s5p_mfc_write_info(ctx, value, buf_ctrl->addr);
 
 		/* set change flag bit */
 		if (buf_ctrl->flag_mode == MFC_CTRL_MODE_SFR) {
@@ -638,9 +638,9 @@ static int dec_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 			value |= (1 << buf_ctrl->flag_shft);
 			s5p_mfc_write_reg(value, buf_ctrl->flag_addr);
 		} else if (buf_ctrl->flag_mode == MFC_CTRL_MODE_SHM) {
-			value = s5p_mfc_read_shm(ctx, buf_ctrl->flag_addr);
+			value = s5p_mfc_read_info(ctx, buf_ctrl->flag_addr);
 			value |= (1 << buf_ctrl->flag_shft);
-			s5p_mfc_write_shm(ctx, value, buf_ctrl->flag_addr);
+			s5p_mfc_write_info(ctx, value, buf_ctrl->flag_addr);
 		}
 
 		buf_ctrl->has_new = 0;
@@ -665,7 +665,7 @@ static int dec_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
 			value = s5p_mfc_read_reg(buf_ctrl->addr);
 		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
-			value = s5p_mfc_read_shm(ctx, buf_ctrl->addr);
+			value = s5p_mfc_read_info(ctx, buf_ctrl->addr);
 
 		value = (value >> buf_ctrl->shft) & buf_ctrl->mask;
 
@@ -691,7 +691,7 @@ static int dec_recover_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *
 		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
 			value = s5p_mfc_read_reg(buf_ctrl->addr);
 		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
-			value = s5p_mfc_read_shm(ctx, buf_ctrl->addr);
+			value = s5p_mfc_read_info(ctx, buf_ctrl->addr);
 
 		value &= ~(buf_ctrl->mask << buf_ctrl->shft);
 		value |= ((buf_ctrl->old_val & buf_ctrl->mask) << buf_ctrl->shft);
@@ -699,7 +699,7 @@ static int dec_recover_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *
 		if (buf_ctrl->mode == MFC_CTRL_MODE_SFR)
 			s5p_mfc_write_reg(value, buf_ctrl->addr);
 		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
-			s5p_mfc_write_shm(ctx, value, buf_ctrl->addr);
+			s5p_mfc_write_info(ctx, value, buf_ctrl->addr);
 
 		/* clear change flag bit */
 		if (buf_ctrl->flag_mode == MFC_CTRL_MODE_SFR) {
@@ -707,9 +707,9 @@ static int dec_recover_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *
 			value &= ~(1 << buf_ctrl->flag_shft);
 			s5p_mfc_write_reg(value, buf_ctrl->flag_addr);
 		} else if (buf_ctrl->flag_mode == MFC_CTRL_MODE_SHM) {
-			value = s5p_mfc_read_shm(ctx, buf_ctrl->flag_addr);
+			value = s5p_mfc_read_info(ctx, buf_ctrl->flag_addr);
 			value &= ~(1 << buf_ctrl->flag_shft);
-			s5p_mfc_write_shm(ctx, value, buf_ctrl->flag_addr);
+			s5p_mfc_write_info(ctx, value, buf_ctrl->flag_addr);
 		}
 
 		mfc_debug(5, "id: 0x%08x old_val: %d\n", buf_ctrl->id,
@@ -1440,10 +1440,10 @@ static int vidioc_g_crop(struct file *file, void *priv,
 			return -EINVAL;
 		}
 	if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_H264) {
-		left = s5p_mfc_read_shm(ctx, CROP_INFO_H);
+		left = s5p_mfc_read_info(ctx, CROP_INFO_H);
 		right = left >> S5P_FIMV_SHARED_CROP_RIGHT_SHIFT;
 		left = left & S5P_FIMV_SHARED_CROP_LEFT_MASK;
-		top = s5p_mfc_read_shm(ctx, CROP_INFO_V);
+		top = s5p_mfc_read_info(ctx, CROP_INFO_V);
 		bottom = top >> S5P_FIMV_SHARED_CROP_BOTTOM_SHIFT;
 		top = top & S5P_FIMV_SHARED_CROP_TOP_MASK;
 		cr->c.left = left;

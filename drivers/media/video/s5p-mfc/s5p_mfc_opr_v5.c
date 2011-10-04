@@ -392,7 +392,7 @@ int s5p_mfc_set_dec_stream_buffer(struct s5p_mfc_ctx *ctx, int buf_addr,
 	WRITEL(buf_size, S5P_FIMV_SI_CH0_SB_FRM_SIZE);
 	mfc_debug(2, "Shared_virt: %p (start offset: %d)\n",
 					ctx->shm.virt, start_num_byte);
-	s5p_mfc_write_shm(ctx, start_num_byte, START_BYTE_NUM);
+	s5p_mfc_write_info(ctx, start_num_byte, START_BYTE_NUM);
 	mfc_debug_leave();
 	return 0;
 }
@@ -531,11 +531,11 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 		return -ENOMEM;
 	}
 
-	s5p_mfc_write_shm(ctx, frame_size, ALLOC_LUMA_DPB_SIZE);
-	s5p_mfc_write_shm(ctx, frame_size_ch, ALLOC_CHROMA_DPB_SIZE);
+	s5p_mfc_write_info(ctx, frame_size, ALLOC_LUMA_DPB_SIZE);
+	s5p_mfc_write_info(ctx, frame_size_ch, ALLOC_CHROMA_DPB_SIZE);
 
 	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC)
-		s5p_mfc_write_shm(ctx, frame_size_mv, ALLOC_MV_SIZE);
+		s5p_mfc_write_info(ctx, frame_size_mv, ALLOC_MV_SIZE);
 
 	WRITEL(((S5P_FIMV_CH_INIT_BUFS & S5P_FIMV_CH_MASK) << S5P_FIMV_CH_SHIFT)
 				| (ctx->inst_no), S5P_FIMV_SI_CH0_INST_ID);
@@ -815,7 +815,7 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 		WRITEL(p->rc_reaction_coeff, S5P_FIMV_ENC_RC_RPARA);
 
 	/* extended encoder ctrl */
-	shm = s5p_mfc_read_shm(ctx, EXT_ENC_CONTROL);
+	shm = s5p_mfc_read_info(ctx, EXT_ENC_CONTROL);
 	/** vbv buffer size */
 	if (p->frame_skip_mode == V4L2_CODEC_MFC5X_ENC_FRAME_SKIP_MODE_VBV_BUF_SIZE) {
 		shm &= ~(0xFFFF << 16);
@@ -827,10 +827,10 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	/** frame skip mode */
 	shm &= ~(0x3 << 1);
 	shm |= (p->frame_skip_mode << 1);
-	s5p_mfc_write_shm(ctx, shm, EXT_ENC_CONTROL);
+	s5p_mfc_write_info(ctx, shm, EXT_ENC_CONTROL);
 
 	/* fixed target bit */
-	s5p_mfc_write_shm(ctx, p->fixed_target_bit, RC_CONTROL_CONFIG);
+	s5p_mfc_write_info(ctx, p->fixed_target_bit, RC_CONTROL_CONFIG);
 
 	mfc_debug_leave();
 
@@ -959,39 +959,39 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 
 	if ((p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_DISABLE) &&
 	    (p_264->rc_mb == V4L2_CODEC_MFC5X_ENC_SW_DISABLE)) {
-		shm = s5p_mfc_read_shm(ctx, P_B_FRAME_QP);
+		shm = s5p_mfc_read_info(ctx, P_B_FRAME_QP);
 		shm &= ~(0xFFF);
 		shm |= ((p_264->rc_b_frame_qp & 0x3F) << 6);
 		shm |= (p_264->rc_p_frame_qp & 0x3F);
-		s5p_mfc_write_shm(ctx, shm, P_B_FRAME_QP);
+		s5p_mfc_write_info(ctx, shm, P_B_FRAME_QP);
 	}
 
 	/* extended encoder ctrl */
-	shm = s5p_mfc_read_shm(ctx, EXT_ENC_CONTROL);
+	shm = s5p_mfc_read_info(ctx, EXT_ENC_CONTROL);
 	/** AR VUI control */
 	shm &= ~(0x1 << 15);
 	shm |= (p_264->ar_vui << 1);
-	s5p_mfc_write_shm(ctx, shm, EXT_ENC_CONTROL);
+	s5p_mfc_write_info(ctx, shm, EXT_ENC_CONTROL);
 
 	if (p_264->ar_vui == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
 		/* aspect ration IDC */
-		shm = s5p_mfc_read_shm(ctx, ASPECT_RATIO_IDC);
+		shm = s5p_mfc_read_info(ctx, ASPECT_RATIO_IDC);
 		shm &= ~(0xFF);
 		shm |= p_264->ar_vui_idc;
-		s5p_mfc_write_shm(ctx, shm, ASPECT_RATIO_IDC);
+		s5p_mfc_write_info(ctx, shm, ASPECT_RATIO_IDC);
 
 		if (p_264->ar_vui_idc == 0xFF) {
 			/* sample  AR info */
-			shm = s5p_mfc_read_shm(ctx, EXTENDED_SAR);
+			shm = s5p_mfc_read_info(ctx, EXTENDED_SAR);
 			shm &= ~(0xFFFFFFFF);
 			shm |= p_264->ext_sar_width << 16;
 			shm |= p_264->ext_sar_height;
-			s5p_mfc_write_shm(ctx, shm, EXTENDED_SAR);
+			s5p_mfc_write_info(ctx, shm, EXTENDED_SAR);
 		}
 	}
 
 	/* intra picture period for H.264 */
-	shm = s5p_mfc_read_shm(ctx, H264_I_PERIOD);
+	shm = s5p_mfc_read_info(ctx, H264_I_PERIOD);
 	/** control */
 	shm &= ~(0x1 << 16);
 	shm |= (p_264->open_gop << 16);
@@ -1000,7 +1000,7 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 		shm &= ~(0xFFFF);
 		shm |= p_264->open_gop_size;
 	}
-	s5p_mfc_write_shm(ctx, shm, H264_I_PERIOD);
+	s5p_mfc_write_info(ctx, shm, H264_I_PERIOD);
 
 	mfc_debug_leave();
 
@@ -1041,11 +1041,11 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 
 	/* qp */
 	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_DISABLE) {
-		shm = s5p_mfc_read_shm(ctx, P_B_FRAME_QP);
+		shm = s5p_mfc_read_info(ctx, P_B_FRAME_QP);
 		shm &= ~(0xFFF);
 		shm |= ((p_mpeg4->rc_b_frame_qp & 0x3F) << 6);
 		shm |= (p_mpeg4->rc_p_frame_qp & 0x3F);
-		s5p_mfc_write_shm(ctx, shm, P_B_FRAME_QP);
+		s5p_mfc_write_info(ctx, shm, P_B_FRAME_QP);
 	}
 
 	/* frame rate */
@@ -1056,12 +1056,12 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 			/* FIXME: user set 1000x scale value */
 			WRITEL(p_mpeg4->rc_framerate * 1000,
 				S5P_FIMV_ENC_RC_FRAME_RATE);
-			shm = s5p_mfc_read_shm(ctx, RC_VOP_TIMING);
+			shm = s5p_mfc_read_info(ctx, RC_VOP_TIMING);
 			shm &= ~(0xFFFFFFFF);
 			shm |= (1 << 31);
 			shm |= ((p_mpeg4->vop_time_res & 0x7FFF) << 16);
 			shm |= (p_mpeg4->vop_frm_delta & 0xFFFF);
-			s5p_mfc_write_shm(ctx, shm, RC_VOP_TIMING);
+			s5p_mfc_write_info(ctx, shm, RC_VOP_TIMING);
 		}
 	} else {
 		WRITEL(0, S5P_FIMV_ENC_RC_FRAME_RATE);
@@ -1103,10 +1103,10 @@ static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 
 	/* qp */
 	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_DISABLE) {
-		shm = s5p_mfc_read_shm(ctx, P_B_FRAME_QP);
+		shm = s5p_mfc_read_info(ctx, P_B_FRAME_QP);
 		shm &= ~(0xFFF);
 		shm |= (p_mpeg4->rc_p_frame_qp & 0x3F);
-		s5p_mfc_write_shm(ctx, shm, P_B_FRAME_QP);
+		s5p_mfc_write_info(ctx, shm, P_B_FRAME_QP);
 	}
 
 	/* frame rate */
@@ -1676,3 +1676,14 @@ void s5p_mfc_cleanup_queue(struct list_head *lh, struct vb2_queue *vq)
 	}
 }
 
+void s5p_mfc_write_info(struct s5p_mfc_ctx *ctx, unsigned int data, unsigned int ofs)
+{
+	/* MFC 5.x uses shared memory for information */
+	s5p_mfc_write_shm(ctx, data, ofs);
+}
+
+unsigned int s5p_mfc_read_info(struct s5p_mfc_ctx *ctx, unsigned int ofs)
+{
+	/* MFC 5.x uses shared memory for information */
+	return s5p_mfc_read_shm(ctx, ofs);
+}
