@@ -885,11 +885,6 @@ static struct clk exynos4_init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_dmc_ctrl,
 		.ctrlbit	= (1 << 24),
 	}, {
-		.name		= "secss",
-		.parent		= &exynos4_clk_aclk_acp.clk,
-		.enable		= exynos4_clk_ip_dmc_ctrl,
-		.ctrlbit	= (1 << 4),
-	}, {
 		.name		= "ppmumfc",
 		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_mfc_ctrl,
@@ -1216,6 +1211,11 @@ static struct clk exynos4_init_clocks[] = {
 		.name		= "uart",
 		.devname	= "s5pv210-uart.4",
 		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 4),
+	}, {
+		.name		= "secss",
+		.parent		= &exynos4_clk_aclk_acp.clk,
+		.enable		= exynos4_clk_ip_dmc_ctrl,
 		.ctrlbit	= (1 << 4),
 	}
 };
