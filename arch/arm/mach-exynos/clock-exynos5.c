@@ -357,8 +357,8 @@ static struct clksrc_clk exynos5_clk_mout_aclk_400 = {
 		.name		= "mout_aclk_400",
 	},
 	.sources = &exynos5_clkset_aclk,
-	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP0, .shift = 20, .size = 1 },
-	.reg_div = { .reg = EXYNOS4_CLKDIV_TOP, .shift = 24, .size = 3 },
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 20, .size = 1 },
+	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 24, .size = 3 },
 };
 
 static struct clk exynos5_clk_aclk_400 = {
