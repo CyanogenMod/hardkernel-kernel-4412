@@ -363,6 +363,18 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 	mfc_debug_leave();
 }
 
+int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev)
+{
+	/* NOP */
+
+	return 0;
+}
+
+void s5p_mfc_release_dev_context_buffer(struct s5p_mfc_dev *dev)
+{
+	/* NOP */
+}
+
 /* Set registers for decoding temporary buffers */
 void s5p_mfc_set_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 {

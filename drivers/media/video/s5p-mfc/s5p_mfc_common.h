@@ -547,6 +547,11 @@ struct s5p_mfc_ctx {
 #define MFC_FMT_ENC	1
 #define MFC_FMT_RAW	2
 
+#define HAS_PORTNUM(dev)	(dev ? (dev->variant ? \
+				(dev->variant->port_num ? 1 : 0) : 0 ) : 0 )
+#define IS_TWOPORT(dev)		(dev->variant->port_num == 2 ? 1 : 0)
+#define IS_MFCV6(dev)		(dev->variant->version >= 0x60 ? 1 : 0)
+
 struct s5p_mfc_fmt {
 	char *name;
 	u32 fourcc;
