@@ -79,9 +79,10 @@ static struct ion_client *vb2_ion_init_ion(struct vb2_ion *ion,
 {
 	struct ion_client *client;
 	int ret;
+	int mask = ION_HEAP_EXYNOS_MASK | ION_HEAP_EXYNOS_CONTIG_MASK |
+						ION_HEAP_EXYNOS_USER_MASK;
 
-	client = ion_client_create(ion_exynos, (ION_HEAP_EXYNOS_MASK |
-				ION_HEAP_EXYNOS_CONTIG_MASK), ion->name);
+	client = ion_client_create(ion_exynos, mask, ion->name);
 	if (IS_ERR(client)) {
 		pr_err("ion_client_create: ion_name(%s)\n", ion->name);
 		return ERR_PTR(-EINVAL);
@@ -394,9 +395,25 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 	/* Getting handle, client from DVA */
 	buf->handle = ion_import_uva(conf->client, vaddr);
 	if (IS_ERR(buf->handle)) {
-		pr_err("ion_import_uva: conf->dev(%x)\n", (u32)conf->dev);
-		ret = -ENOMEM;
-		goto err_import_uva;
+		int flags = ION_HEAP_EXYNOS_USER_MASK;
+
+		if (conf->use_mmu) {
+			if (write)
+				flags |= ION_EXYNOS_WRITE_MASK;
+
+			buf->handle = ion_alloc(conf->client, size, vaddr,
+									flags);
+			if (IS_ERR(buf->handle))
+				ret = PTR_ERR(buf->handle);
+		} else {
+			ret = -EINVAL;
+		}
+
+		if (ret) {
+			pr_err("ion_import_uva: conf->dev(%x), %ld\n",
+					(u32)conf->dev, PTR_ERR(buf->handle));
+			goto err_import_uva;
+		}
 	}
 
 	/* TODO: Need to check whether already DVA is created or not */
