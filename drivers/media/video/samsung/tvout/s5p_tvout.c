@@ -126,9 +126,9 @@ static int __devinit s5p_tvout_probe(struct platform_device *pdev)
 	if (s5p_tvout_vcm_init() < 0)
 		goto err;
 #elif defined(CONFIG_S5P_SYSMMU_TV) && defined(CONFIG_S5P_VMEM)
-	sysmmu_on(SYSMMU_TV);
+	s5p_sysmmu_enable(&pdev->dev);
 	printk("sysmmu on\n");
-	sysmmu_set_tablebase_pgd(SYSMMU_TV, __pa(swapper_pg_dir));
+	s5p_sysmmu_set_tablebase_pgd(&pdev->dev, __pa(swapper_pg_dir));
 #endif
 	if (s5p_tvout_clk_get(pdev, &s5ptv_status) < 0)
 		goto err;
@@ -181,7 +181,7 @@ err:
 static int s5p_tvout_remove(struct platform_device *pdev)
 {
 #if defined(CONFIG_S5P_SYSMMU_TV) && defined(CONFIG_S5P_VMEM)
-	sysmmu_off(SYSMMU_TV);
+	s5p_sysmmu_off(&pdev->dev);
 	tvout_dbg("sysmmu off\n");
 #endif
 	s5p_vp_ctrl_destructor();

@@ -32,9 +32,6 @@ static void tvout_tlb_invalidator(enum vcm_dev_id id)
 		return (void)0;
 	}
 #endif
-#ifdef CONFIG_S5P_SYSMMU_TV
-	sysmmu_tlb_invalidate(SYSMMU_TV);
-#endif
 }
 
 static void tvout_pgd_base_specifier(enum vcm_dev_id id, unsigned long base)
@@ -44,9 +41,6 @@ static void tvout_pgd_base_specifier(enum vcm_dev_id id, unsigned long base)
 	if (atomic_read(&s5p_tvout_vcm_usage) == 0) {
 		return (void)0;
 	}
-#endif
-#ifdef CONFIG_S5P_SYSMMU_TV
-	sysmmu_set_tablebase_pgd(SYSMMU_TV, base);
 #endif
 }
 
@@ -84,17 +78,11 @@ int s5p_tvout_vcm_init(void)
 
 void s5p_tvout_vcm_activate(void)
 {
-#ifdef CONFIG_S5P_SYSMMU_TV
-	sysmmu_on(SYSMMU_TV);
-#endif
 	vcm_set_pgtable_base(VCM_DEV_TV);
 }
 
 void s5p_tvout_vcm_deactivate(void)
 {
-#ifdef CONFIG_S5P_SYSMMU_TV
-	sysmmu_off(SYSMMU_TV);
-#endif
 }
 
 
