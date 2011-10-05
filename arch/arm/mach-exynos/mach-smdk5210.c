@@ -148,12 +148,12 @@ static struct platform_device s3c_device_spi_gpio = {
 
 static struct s3c_fb_pd_win smdk5210_fb_win0 = {
 	.win_mode = {
-		.left_margin	= 8,		/* HBPD */
-		.right_margin	= 8,		/* HFPD */
+		.left_margin	= 8,	/* HBPD */
+		.right_margin	= 8,	/* HFPD */
 		.upper_margin	= 6,	/* VBPD */
-		.lower_margin	= 6,		/* VFPD */
-		.hsync_len	= 6,		/* HSPW */
-		.vsync_len	= 4,		/* VSPW */
+		.lower_margin	= 6,	/* VFPD */
+		.hsync_len	= 6,	/* HSPW */
+		.vsync_len	= 4,	/* VSPW */
 		.xres		= 480,
 		.yres		= 800,
 	},
@@ -167,12 +167,12 @@ static struct s3c_fb_pd_win smdk5210_fb_win0 = {
 
 static struct s3c_fb_pd_win smdk5210_fb_win1 = {
 	.win_mode = {
-		.left_margin	= 8,		/* HBPD */
-		.right_margin	= 8,		/* HFPD */
+		.left_margin	= 8,	/* HBPD */
+		.right_margin	= 8,	/* HFPD */
 		.upper_margin	= 6,	/* VBPD */
-		.lower_margin	= 6,		/* VFPD */
-		.hsync_len	= 6,		/* HSPW */
-		.vsync_len	= 4,		/* VSPW */
+		.lower_margin	= 6,	/* VFPD */
+		.hsync_len	= 6,	/* HSPW */
+		.vsync_len	= 4,	/* VSPW */
 		.xres		= 480,
 		.yres		= 800,
 	},
@@ -186,12 +186,12 @@ static struct s3c_fb_pd_win smdk5210_fb_win1 = {
 
 static struct s3c_fb_pd_win smdk5210_fb_win2 = {
 	.win_mode = {
-		.left_margin	= 8,		/* HBPD */
-		.right_margin	= 8,		/* HFPD */
+		.left_margin	= 8,	/* HBPD */
+		.right_margin	= 8,	/* HFPD */
 		.upper_margin	= 6,	/* VBPD */
-		.lower_margin	= 6,		/* VFPD */
-		.hsync_len	= 6,		/* HSPW */
-		.vsync_len	= 4,		/* VSPW */
+		.lower_margin	= 6,	/* VFPD */
+		.hsync_len	= 6,	/* HSPW */
+		.vsync_len	= 4,	/* VSPW */
 		.xres		= 480,
 		.yres		= 800,
 	},
@@ -304,26 +304,21 @@ static struct s3c_fb_platdata smdk5210_lcd1_pdata __initdata = {
 	.setup_gpio	= exynos4_fimd0_gpio_setup_24bpp,
 };
 #endif
-static struct platform_device *smdk5210_devices[] __initdata = {
 
-	/* Samsung Power Domain */
-	//&exynos5_device_pd[PD_LCD1],
-	
+static struct platform_device *smdk5210_devices[] __initdata = {
 #ifdef CONFIG_FB_S3C
 	&s5p_device_fimd1,
-#if  defined(CONFIG_LCD_LMS501KF03)
+#if defined(CONFIG_LCD_LMS501KF03)
 	&s3c_device_spi_gpio,
 #elif defined(CONFIG_LCD_WA101S)
 	&smdk5210_lcd_wa101s,
 #endif
 #endif
-
 };
 
 #ifdef SAMSUNG_DEV_BACKLIGHT
 /* LCD Backlight data */
 static struct samsung_bl_gpio_info smdk5210_bl_gpio_info = {
-	//.no = EXYNOS5_GPB2(0),
 	.func = S3C_GPIO_SFN(2),
 };
 
@@ -342,22 +337,19 @@ static void __init smdk5210_map_io(void)
 
 static void __init smdk5210_machine_init(void)
 {
-	//exynos5_pd_enable(&exynos5_device_pd[PD_LCD1].dev);
-
 #ifdef CONFIG_FB_S3C
 	dev_set_name(&s5p_device_fimd1.dev, "s3cfb.1");
 	clk_add_alias("lcd", "exynos5-fb.1", "lcd", &s5p_device_fimd1.dev);
-	clk_add_alias("sclk_fimd", "exynos5-fb.1", "sclk_fimd", &s5p_device_fimd1.dev);
+	clk_add_alias("sclk_fimd", "exynos5-fb.1", "sclk_fimd",
+			&s5p_device_fimd1.dev);
 	s5p_fb_setname(1, "exynos5-fb");
-	
-#if  defined(CONFIG_LCD_LMS501KF03)
+
+	exynos4_fimd0_setup_clock(&s5p_device_fimd1.dev, "mout_mpll_user",
+				800 * MHZ);
+#if defined(CONFIG_LCD_LMS501KF03)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 #endif
 	s5p_fimd1_set_platdata(&smdk5210_lcd1_pdata);
-
-#ifdef CONFIG_EXYNOS5_DEV_PD
-	s5p_device_fimd1.dev.parent = &exynos5_device_pd[PD_LCD1].dev;
-#endif
 #endif
 
 #ifdef SAMSUNG_DEV_BACKLIGHT
@@ -365,11 +357,7 @@ static void __init smdk5210_machine_init(void)
 #endif
 
 	platform_add_devices(smdk5210_devices, ARRAY_SIZE(smdk5210_devices));
-	
-#ifdef CONFIG_FB_S3C
-	exynos4_fimd0_setup_clock(&s5p_device_fimd1.dev, "mout_mpll_user",
-				800 * MHZ);
-#endif
+
 }
 
 MACHINE_START(SMDK5210, "SMDK5210")
