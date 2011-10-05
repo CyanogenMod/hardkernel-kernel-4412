@@ -535,6 +535,7 @@ struct s5p_mfc_ctx {
 
 	/* For 6.x */
 	size_t scratch_buf_size;
+	int remained_flag;
 
 	/* ION file descriptor */
 	int fd_ion;

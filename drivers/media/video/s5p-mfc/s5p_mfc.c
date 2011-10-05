@@ -535,6 +535,20 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 				ctx->state = MFCINST_ERROR;
 			else
 				ctx->state = MFCINST_HEAD_PARSED;
+
+			if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC
+					&& !list_empty(&ctx->src_queue)) {
+				struct s5p_mfc_buf *src_buf;
+				src_buf = list_entry(ctx->src_queue.next,
+						struct s5p_mfc_buf, list);
+				mfc_debug(2, "Check consumed size of header. ");
+				mfc_debug(2, "source : %d, consumed : %d\n",
+						s5p_mfc_get_consumed_stream(),
+						src_buf->vb.v4l2_planes[0].bytesused);
+				if (s5p_mfc_get_consumed_stream() <
+						src_buf->vb.v4l2_planes[0].bytesused)
+					ctx->remained_flag = 1;
+			}
 		}
 
 		s5p_mfc_clear_int_flags();
@@ -580,7 +594,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 		spin_unlock(&dev->condlock);
 		if (err == 0) {
 			ctx->state = MFCINST_RUNNING;
-			if (!ctx->dpb_flush_flag) {
+			if (!ctx->dpb_flush_flag && !ctx->remained_flag) {
 				mfc_debug(2, "INIT_BUFFERS with dpb_flush - leaving image in src queue.\n");
 				spin_lock_irqsave(&dev->irqlock, flags);
 				if (!list_empty(&ctx->src_queue)) {
@@ -592,7 +606,8 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 				}
 				spin_unlock_irqrestore(&dev->irqlock, flags);
 			} else {
-				ctx->dpb_flush_flag = 0;
+				if (ctx->dpb_flush_flag)
+					ctx->dpb_flush_flag = 0;
 			}
 			if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 				BUG();
