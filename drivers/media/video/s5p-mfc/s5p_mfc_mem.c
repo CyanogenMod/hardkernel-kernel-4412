@@ -23,15 +23,15 @@
 
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 static const char *s5p_mem_types[] = {
-	MFC_CMA_BANK2,
+	MFC_CMA_FW,
 	MFC_CMA_BANK1,
-	MFC_CMA_FW
+	MFC_CMA_BANK2,
 };
 
 static unsigned long s5p_mem_alignments[] = {
-	MFC_CMA_BANK2_ALIGN,
+	MFC_CMA_FW_ALIGN,
 	MFC_CMA_BANK1_ALIGN,
-	MFC_CMA_FW_ALIGN
+	MFC_CMA_BANK2_ALIGN,
 };
 
 struct vb2_mem_ops *s5p_mfc_mem_ops(void)
@@ -39,10 +39,10 @@ struct vb2_mem_ops *s5p_mfc_mem_ops(void)
 	return (struct vb2_mem_ops *)&vb2_cma_phys_memops;
 }
 
-void **s5p_mfc_mem_init_multi(struct device *dev)
+void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num)
 {
 /* TODO Cachable should be set */
-	return (void **)vb2_cma_phys_init_multi(dev, MFC_CMA_ALLOC_CTX_NUM,
+	return (void **)vb2_cma_phys_init_multi(dev, ctx_num,
 					   s5p_mem_types,
 					   s5p_mem_alignments,0);
 }
@@ -71,9 +71,9 @@ struct vb2_mem_ops *s5p_mfc_mem_ops(void)
 	return (struct vb2_mem_ops *)&vb2_dma_pool_memops;
 }
 
-void **s5p_mfc_mem_init_multi(struct device *dev)
+void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num)
 {
-	return (void **)vb2_dma_pool_init_multi(dev, MFC_ALLOC_CTX_NUM,
+	return (void **)vb2_dma_pool_init_multi(dev, ctx_num,
 						s5p_mem_base_align,
 						s5p_mem_bank_align,
 						s5p_mem_sizes);
@@ -89,7 +89,7 @@ struct vb2_mem_ops *s5p_mfc_mem_ops(void)
 	return (struct vb2_mem_ops *)&vb2_sdvmm_memops;
 }
 
-void **s5p_mfc_mem_init_multi(struct device *dev)
+void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num)
 {
 	struct vb2_vcm vcm;
 	void ** alloc_ctxes;
@@ -103,8 +103,8 @@ void **s5p_mfc_mem_init_multi(struct device *dev)
 	vb2_drv.cacheable = false;
 
 	s5p_mfc_power_on();
-	alloc_ctxes = (void **)vb2_sdvmm_init_multi(MFC_ALLOC_CTX_NUM, &vcm,
-								NULL, &vb2_drv);
+	alloc_ctxes = (void **)vb2_sdvmm_init_multi(ctx_num, &vcm,
+							NULL, &vb2_drv);
 	s5p_mfc_power_off();
 
 	return alloc_ctxes;
@@ -120,7 +120,7 @@ struct vb2_mem_ops *s5p_mfc_mem_ops(void)
 	return (struct vb2_mem_ops *)&vb2_ion_memops;
 }
 
-void **s5p_mfc_mem_init_multi(struct device *dev)
+void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num)
 {
 	struct vb2_ion ion;
 	void **alloc_ctxes;
@@ -134,8 +134,8 @@ void **s5p_mfc_mem_init_multi(struct device *dev)
 	ion.contig = true;
 
 	s5p_mfc_power_on();
-	alloc_ctxes = (void **)vb2_ion_init_multi(MFC_ALLOC_CTX_NUM, &ion,
-								&vb2_drv);
+	alloc_ctxes = (void **)vb2_ion_init_multi(ctx_num, &ion,
+							&vb2_drv);
 	s5p_mfc_power_off();
 
 	return alloc_ctxes;

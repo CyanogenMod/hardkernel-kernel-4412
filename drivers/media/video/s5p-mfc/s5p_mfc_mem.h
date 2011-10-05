@@ -30,15 +30,13 @@
 
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 /* Define names for CMA memory kinds used by MFC */
-#define MFC_CMA_ALLOC_CTX_NUM	3
-
 #define MFC_CMA_BANK1		"a"
 #define MFC_CMA_BANK2		"b"
 #define MFC_CMA_FW		"f"
 
+#define MFC_CMA_FW_ALLOC_CTX	0
 #define MFC_CMA_BANK1_ALLOC_CTX 1
-#define MFC_CMA_BANK2_ALLOC_CTX 0
-#define MFC_CMA_FW_ALLOC_CTX	2
+#define MFC_CMA_BANK2_ALLOC_CTX 2
 
 #define MFC_CMA_BANK1_ALIGN	0x2000	/* 8KB */
 #define MFC_CMA_BANK2_ALIGN	0x2000	/* 8KB */
@@ -167,7 +165,7 @@ static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 #endif
 
 struct vb2_mem_ops *s5p_mfc_mem_ops(void);
-void **s5p_mfc_mem_init_multi(struct device *dev);
+void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num);
 void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes);
 
 void s5p_mfc_cache_clean(const void *start_addr, unsigned long size);

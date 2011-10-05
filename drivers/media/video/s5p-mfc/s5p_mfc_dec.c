@@ -1073,7 +1073,8 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		/* cacheable setting */
-		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],ctx->cacheable);
+		if (!IS_MFCV6(dev))
+			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],ctx->cacheable);
 		s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],ctx->cacheable);
 
 		if (reqbufs->count == 0) {
@@ -1552,6 +1553,7 @@ static int s5p_mfc_queue_setup(struct vb2_queue *vq, unsigned int *buf_count,
 			       void *allocators[])
 {
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	struct s5p_mfc_dev *dev = ctx->dev;
 
 	mfc_debug_enter();
 
@@ -1592,8 +1594,11 @@ static int s5p_mfc_queue_setup(struct vb2_queue *vq, unsigned int *buf_count,
 	    vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		psize[0] = ctx->luma_size;
 		psize[1] = ctx->chroma_size;
-		/* FIXME: */
-		allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX];
+
+		if (IS_MFCV6(dev))
+			allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
+		else
+			allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX];
 		allocators[1] = ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE &&
 		   ctx->state == MFCINST_GOT_INST) {

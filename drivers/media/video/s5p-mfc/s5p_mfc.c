@@ -939,6 +939,7 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	struct video_device *vfd;
 	struct resource *res;
 	int ret = -ENOENT;
+	unsigned int alloc_ctx_num;
 	size_t size;
 	char workqueue_name[MFC_WORKQUEUE_LEN];
 
@@ -1086,8 +1087,10 @@ static int __devinit s5p_mfc_probe(struct platform_device *pdev)
 	dev->variant = (struct s5p_mfc_variant *)
 		platform_get_device_id(pdev)->driver_data;
 
+	/* default FW alloc is added */
+	alloc_ctx_num = dev->variant->port_num + 1;
 	dev->alloc_ctx = (struct vb2_alloc_ctx **)
-			s5p_mfc_mem_init_multi(&pdev->dev);
+			s5p_mfc_mem_init_multi(&pdev->dev, alloc_ctx_num);
 
 	if (IS_ERR(dev->alloc_ctx)) {
 		mfc_err("Couldn't prepare allocator ctx.\n");
