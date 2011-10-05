@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/bitops.h>
+#include <linux/pagemap.h>
 
 #include <asm/pgtable.h>
 
@@ -403,6 +404,8 @@ static int ion_exynos_contig_heap_allocate(struct ion_heap *heap,
 	if (IS_ERR_VALUE(buffer->priv_phys))
 		return (int)buffer->priv_phys;
 
+	buffer->flags = flags;
+
 	return 0;
 }
 
@@ -491,6 +494,125 @@ static void ion_exynos_contig_heap_destroy(struct ion_heap *heap)
 	kfree(heap);
 }
 
+static int ion_exynos_user_heap_allocate(struct ion_heap *heap,
+					   struct ion_buffer *buffer,
+					   unsigned long len,
+					   unsigned long align,
+					   unsigned long flags)
+{
+	unsigned long start = align;
+	struct page **pages;
+	int nr_pages;
+	int ret = 0, i;
+	struct sg_table *sgtable;
+	struct scatterlist *sgl;
+
+	len += offset_in_page(start);
+	len = PAGE_ALIGN(len);
+	start = round_down(start, PAGE_SIZE);
+
+	nr_pages = PFN_DOWN(len);
+
+	pages = kzalloc(nr_pages * sizeof(*pages), GFP_KERNEL);
+	if (!pages)
+		return -ENOMEM;
+
+	ret = get_user_pages_fast(start, nr_pages,
+				flags & ION_EXYNOS_WRITE_MASK, pages);
+
+	if (ret < 0)
+		goto err_get_pages;
+
+	if (ret != nr_pages) {
+		nr_pages = ret;
+		ret = -EFAULT;
+		goto err_smaller_pages;
+	}
+
+	sgtable = kmalloc(sizeof(*sgtable), GFP_KERNEL);
+	if (!sgtable) {
+		ret = -ENOMEM;
+		goto err_alloc_sgtable;
+	}
+
+	ret = sg_alloc_table(sgtable, nr_pages, GFP_KERNEL);
+	if (ret)
+		goto err_alloc_sglist;
+
+	sgl = sgtable->sgl;
+	for (i = 0; i < nr_pages; i++) {
+		sg_set_page(sgl, pages[i], PAGE_SIZE, 0);
+		sgl = sg_next(sgl);
+	}
+
+	buffer->priv_virt = sgtable;
+	buffer->flags = flags;
+
+	kfree(pages);
+	return 0;
+
+err_alloc_sglist:
+	sg_free_table(sgtable);
+	kfree(sgtable);
+err_alloc_sgtable:
+err_smaller_pages:
+	for (i = 0; i < nr_pages; i++)
+		page_cache_release(pages[i]);
+err_get_pages:
+	kfree(pages);
+
+	BUG();
+	return ret;
+}
+
+static void ion_exynos_user_heap_free(struct ion_buffer *buffer)
+{
+	struct scatterlist *sg;
+	int i;
+	struct sg_table *sgtable = buffer->priv_virt;
+
+	if (buffer->flags & ION_EXYNOS_WRITE_MASK) {
+		for_each_sg(sgtable->sgl, sg, sgtable->orig_nents, i) {
+			set_page_dirty_lock(sg_page(sg));
+			put_page(sg_page(sg));
+		}
+	} else {
+		for_each_sg(sgtable->sgl, sg, sgtable->orig_nents, i)
+			page_cache_release(sg_page(sg));
+	}
+
+	sg_free_table(sgtable);
+	kfree(sgtable);
+}
+
+static struct ion_heap_ops user_heap_ops = {
+	.allocate = ion_exynos_user_heap_allocate,
+	.free = ion_exynos_user_heap_free,
+	.map_dma = ion_exynos_heap_map_dma,
+	.unmap_dma = ion_exynos_heap_unmap_dma,
+	.map_kernel = ion_exynos_heap_map_kernel,
+	.unmap_kernel = ion_exynos_heap_unmap_kernel,
+	.map_user = ion_exynos_heap_map_user,
+};
+
+static struct ion_heap *ion_exynos_user_heap_create(
+					struct ion_platform_heap *unused)
+{
+	struct ion_heap *heap;
+
+	heap = kzalloc(sizeof(struct ion_heap), GFP_KERNEL);
+	if (!heap)
+		return ERR_PTR(-ENOMEM);
+	heap->ops = &user_heap_ops;
+	heap->type = ION_HEAP_TYPE_EXYNOS_USER;
+	return heap;
+}
+
+static void ion_exynos_user_heap_destroy(struct ion_heap *heap)
+{
+	kfree(heap);
+}
+
 static struct ion_heap *__ion_heap_create(struct ion_platform_heap *heap_data)
 {
 	struct ion_heap *heap = NULL;
@@ -501,6 +623,9 @@ static struct ion_heap *__ion_heap_create(struct ion_platform_heap *heap_data)
 		break;
 	case ION_HEAP_TYPE_EXYNOS_CONTIG:
 		heap = ion_exynos_contig_heap_create(heap_data);
+		break;
+	case ION_HEAP_TYPE_EXYNOS_USER:
+		heap = ion_exynos_user_heap_create(heap_data);
 		break;
 	default:
 		return ion_heap_create(heap_data);
@@ -515,6 +640,7 @@ static struct ion_heap *__ion_heap_create(struct ion_platform_heap *heap_data)
 
 	heap->name = heap_data->name;
 	heap->id = heap_data->id;
+
 	return heap;
 }
 
@@ -529,6 +655,9 @@ void __ion_heap_destroy(struct ion_heap *heap)
 		break;
 	case ION_HEAP_TYPE_EXYNOS_CONTIG:
 		ion_exynos_contig_heap_destroy(heap);
+		break;
+	case ION_HEAP_TYPE_EXYNOS_USER:
+		ion_exynos_user_heap_destroy(heap);
 		break;
 	default:
 		ion_heap_destroy(heap);
