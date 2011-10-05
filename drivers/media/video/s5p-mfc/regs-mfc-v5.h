@@ -341,6 +341,13 @@
 #define S5P_FIMV_R2H_CMD_EDFU_INIT_RET		16
 #define S5P_FIMV_R2H_CMD_ERR_RET		32
 
+/* Dummy definition for MFCv6 compatibilty */
+#define S5P_FIMV_R2H_CMD_FIELD_DONE_RET		-1
+#define S5P_FIMV_MFC_RESET			-1
+#define S5P_FIMV_RISC_ON			-1
+#define S5P_FIMV_RISC_BASE_ADDRESS		-1
+#define S5P_FIMV_CODEC_VP8_DEC			-1
+
 /* Error handling defines */
 #define S5P_FIMV_ERR_WARNINGS_START		145
 #define S5P_FIMV_ERR_DEC_MASK			0xFFFF
