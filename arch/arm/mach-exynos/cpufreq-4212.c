@@ -28,7 +28,7 @@
 
 #undef PRINT_DIV_VAL
 
-/* #define ENABLE_CLKOUT */
+#define ENABLE_CLKOUT
 
 static int max_support_idx;
 static int min_support_idx = (CPUFREQ_LEVEL_END - 1);
@@ -101,31 +101,31 @@ static unsigned int clkdiv_cpu0_4412[CPUFREQ_LEVEL_END][7] = {
 	 *		DIVATB, DIVPCLK_DBG, DIVAPLL }
 	 */
 	/* ARM L0: 1500Mhz */
-	{ 0, 4, 7, 5, 6, 1, 2 },
+	{ 0, 3, 7, 7, 6, 1, 2 },
 
 	/* ARM L1: 1400Mhz */
-	{ 0, 4, 7, 5, 6, 1, 2 },
+	{ 0, 3, 7, 7, 6, 1, 2 },
 
 	/* ARM L2: 1300Mhz */
-	{ 0, 4, 7, 5, 5, 1, 2 },
+	{ 0, 3, 7, 7, 5, 1, 2 },
 
 	/* ARM L3: 1200Mhz */
-	{ 0, 3, 7, 4, 5, 1, 2 },
+	{ 0, 3, 7, 7, 5, 1, 2 },
 
 	/* ARM L4: 1100MHz */
-	{ 0, 3, 6, 4, 4, 1, 2 },
+	{ 0, 3, 6, 7, 4, 1, 2 },
 
 	/* ARM L5: 1000MHz */
-	{ 0, 2, 5, 3, 4, 1, 1 },
+	{ 0, 2, 5, 7, 4, 1, 1 },
 
 	/* ARM L6: 800MHz */
-	{ 0, 2, 5, 3, 3, 1, 1 },
+	{ 0, 2, 5, 7, 3, 1, 1 },
 
 	/* ARM L7: 500MHz */
-	{ 0, 1, 3, 2, 3, 1, 1 },
+	{ 0, 1, 3, 7, 3, 1, 1 },
 
 	/* ARM L8: 200MHz */
-	{ 0, 1, 3, 1, 3, 1, 0 },
+	{ 0, 1, 3, 7, 1, 1, 0 },
 };
 
 static unsigned int clkdiv_cpu1_4212[CPUFREQ_LEVEL_END][2] = {
@@ -236,13 +236,13 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	 * @400  :
 	 * @200  :
 	 */
-	{ 1400000 },
-	{ 1350000 },
+	{ 1450000 },
+	{ 1375000 },
 	{ 1300000 },
 	{ 1250000 },
 	{ 1200000 },
-	{ 1125000 },
-	{ 1025000 },
+	{ 1100000 },
+	{ 1000000 },
 	{ 950000 },
 	{ 950000 },
 };
@@ -537,10 +537,10 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 	tmp |= 0x304;
 	__raw_writel(tmp, EXYNOS4_CLKOUT_CMU_CPU);
 
-	tmp = __raw_readl(EXYNOS4_PMU_DEBUG);
+	tmp = __raw_readl(S5P_PMU_DEBUG);
 	tmp &= ~0xf00;
 	tmp |= 0x400;
-	__raw_writel(tmp, EXYNOS4_PMU_DEBUG);
+	__raw_writel(tmp, S5P_PMU_DEBUG);
 
 #endif
 
