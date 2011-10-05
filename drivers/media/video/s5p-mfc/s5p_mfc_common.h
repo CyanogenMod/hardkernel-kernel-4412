@@ -533,6 +533,9 @@ struct s5p_mfc_ctx {
 
 	struct s5p_mfc_codec_ops *c_ops;
 
+	/* For 6.x */
+	size_t scratch_buf_size;
+
 	/* ION file descriptor */
 	int fd_ion;
 };
