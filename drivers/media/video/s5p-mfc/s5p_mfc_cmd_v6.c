@@ -48,12 +48,13 @@ static int s5p_mfc_cmd_host2risc(int cmd, struct s5p_mfc_cmd_args *args)
 int s5p_mfc_sys_init_cmd(struct s5p_mfc_dev *dev)
 {
 	struct s5p_mfc_cmd_args h2r_args;
+	struct s5p_mfc_buf_size *buf_size = dev->variant->buf_size;
 	int ret;
 
 	mfc_debug_enter();
 
 	memset(&h2r_args, 0, sizeof(struct s5p_mfc_cmd_args));
-	h2r_args.arg[0] = FIRMWARE_CODE_SIZE;
+	h2r_args.arg[0] = buf_size->firmware_code;
 
 	ret = s5p_mfc_cmd_host2risc(S5P_FIMV_H2R_CMD_SYS_INIT, &h2r_args);
 

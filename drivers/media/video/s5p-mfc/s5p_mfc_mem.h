@@ -28,13 +28,6 @@
 *  while mmaping */
 #define DST_QUEUE_OFF_BASE      (TASK_SIZE / 2)
 
-#define FIRMWARE_CODE_SIZE	0x60000		/* 384KB */
-#define MFC_H264_CTX_BUF_SIZE	0x96000		/* 600KB per H264 instance */
-#define MFC_CTX_BUF_SIZE	0x2800		/* 10KB per instance */
-#define DESC_BUF_SIZE		0x20000		/* 128KB for DESC buffer */
-#define SHARED_BUF_SIZE		0x01000		/* 4KB for shared buffer */
-#define CPB_BUF_SIZE		0x400000	/* 4MB fr decoder */
-
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 /* Define names for CMA memory kinds used by MFC */
 #define MFC_CMA_ALLOC_CTX_NUM	3

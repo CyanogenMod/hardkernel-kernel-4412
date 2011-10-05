@@ -62,7 +62,7 @@ int s5p_mfc_alloc_dec_temp_buffers(struct s5p_mfc_ctx *ctx)
 	mfc_debug_enter();
 
 	ctx->dsc.alloc = s5p_mfc_mem_alloc(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], DESC_BUF_SIZE);
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], 0);
 	if (IS_ERR(ctx->dsc.alloc)) {
 		mfc_err("Allocating DESC buffer failed.\n");
 		return PTR_ERR(ctx->dsc.alloc);
@@ -279,10 +279,13 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 
 	mfc_debug_enter();
 
+	/* Remove me later */
+#if 0
 	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC)
 		ctx->ctx_buf_size = MFC_H264_CTX_BUF_SIZE;
 	else
 		ctx->ctx_buf_size = MFC_CTX_BUF_SIZE;
+#endif
 
 	ctx->ctx.alloc = s5p_mfc_mem_alloc(
 		dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->ctx_buf_size);
@@ -356,7 +359,10 @@ void s5p_mfc_set_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_dev *dev = ctx->dev;
 
 	WRITEL(ctx->dsc.ofs, S5P_FIMV_SI_CH0_DESC_ADR);
+	/* Remove me later */
+#if 0
 	WRITEL(DESC_BUF_SIZE, S5P_FIMV_SI_CH0_DESC_SIZE);
+#endif
 }
 
 /* Set registers for shared buffer */
@@ -377,7 +383,10 @@ int s5p_mfc_set_dec_stream_buffer(struct s5p_mfc_ctx *ctx, int buf_addr,
 	mfc_debug(2, "inst_no: %d, buf_addr: 0x%08x, buf_size: 0x"
 		"%08x (%d)\n",  ctx->inst_no, buf_addr, buf_size, buf_size);
 	WRITEL(OFFSETA(buf_addr), S5P_FIMV_SI_CH0_SB_ST_ADR);
+	/* Remove me later */
+#if 0
 	WRITEL(CPB_BUF_SIZE, S5P_FIMV_SI_CH0_CPB_SIZE);
+#endif
 	WRITEL(buf_size, S5P_FIMV_SI_CH0_SB_FRM_SIZE);
 	mfc_debug(2, "Shared_virt: %p (start offset: %d)\n",
 					ctx->shm.virt, start_num_byte);

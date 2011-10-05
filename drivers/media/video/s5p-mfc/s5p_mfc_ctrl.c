@@ -42,6 +42,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	void *b_base;
 	size_t b_base_phys;
 #endif
+	struct s5p_mfc_buf_size *buf_size = dev->variant->buf_size;
 
 	mfc_debug_enter();
 
@@ -88,7 +89,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	}
 	mfc_debug(2, "Allocating memory for firmware.\n");
 	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
-		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], FIRMWARE_CODE_SIZE);
+		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], buf_size->firmware_code);
 	if (IS_ERR(s5p_mfc_bitproc_buf)) {
 		s5p_mfc_bitproc_buf = 0;
 		printk(KERN_ERR "Allocating bitprocessor buffer failed\n");
@@ -108,7 +109,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	dev->port_b = mem_info_b.lower_bound;
 	mfc_debug(2, "Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
 				dev->port_a, dev->port_b, s5p_mfc_bitproc_phys,
-							FIRMWARE_CODE_SIZE);
+							buf_size->firmware_code);
 
 	s5p_mfc_bitproc_virt = s5p_mfc_mem_vaddr(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
@@ -223,7 +224,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 #elif defined(CONFIG_S5P_MFC_VB2_ION)
 	mfc_debug(2, "Allocating memory for firmware.\n");
 	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
-		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], FIRMWARE_CODE_SIZE);
+		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], buf_size->firmware_code);
 	if (IS_ERR(s5p_mfc_bitproc_buf)) {
 		s5p_mfc_bitproc_buf = 0;
 		printk(KERN_ERR "Allocating bitprocessor buffer failed\n");
@@ -260,7 +261,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	mfc_debug(2, "Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
 			dev->port_a, dev->port_b,
 			s5p_mfc_bitproc_phys,
-			FIRMWARE_CODE_SIZE);
+			buf_size->firmware_code);
 
 #endif
 	mfc_debug_leave();
@@ -272,6 +273,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 int s5p_mfc_load_firmware(struct s5p_mfc_dev *dev)
 {
 	struct firmware *fw_blob;
+	struct s5p_mfc_buf_size *buf_size = dev->variant->buf_size;
 	int err;
 
 	/* Firmare has to be present as a separate file or compiled
@@ -288,7 +290,7 @@ int s5p_mfc_load_firmware(struct s5p_mfc_dev *dev)
 
 	mfc_debug(2, "Ret of request_firmware: %d Size: %d\n", err, fw_blob->size);
 
-	if (fw_blob->size > FIRMWARE_CODE_SIZE) {
+	if (fw_blob->size > buf_size->firmware_code) {
 		mfc_err("MFC firmware is too big to be loaded.\n");
 		release_firmware(fw_blob);
 		return -ENOMEM;
@@ -305,7 +307,7 @@ int s5p_mfc_load_firmware(struct s5p_mfc_dev *dev)
 					     FIRMWARE_CODE_SIZE,
 					     DMA_TO_DEVICE);
 	*/
-	s5p_mfc_cache_clean(s5p_mfc_bitproc_virt, FIRMWARE_CODE_SIZE);
+	s5p_mfc_cache_clean(s5p_mfc_bitproc_virt, buf_size->firmware_code);
 	release_firmware(fw_blob);
 	mfc_debug_leave();
 	return 0;
