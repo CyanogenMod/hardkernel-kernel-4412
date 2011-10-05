@@ -375,6 +375,42 @@ void s5p_mfc_release_dev_context_buffer(struct s5p_mfc_dev *dev)
 	/* NOP */
 }
 
+void s5p_mfc_dec_calc_dpb_size(struct s5p_mfc_ctx *ctx)
+{
+	unsigned int guard_width, guard_height;
+
+	ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN);
+	ctx->buf_height = ALIGN(ctx->img_height, S5P_FIMV_NV12MT_VALIGN);
+	mfc_debug(2, "SEQ Done: Movie dimensions %dx%d, "
+			"buffer dimensions: %dx%d\n", ctx->img_width,
+			ctx->img_height, ctx->buf_width, ctx->buf_height);
+
+	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) {
+		ctx->luma_size = ALIGN(ctx->buf_width * ctx->buf_height,
+				S5P_FIMV_DEC_BUF_ALIGN);
+		ctx->chroma_size = ALIGN(ctx->buf_width *
+				ALIGN((ctx->img_height >> 1),
+					S5P_FIMV_NV12MT_VALIGN),
+				S5P_FIMV_DEC_BUF_ALIGN);
+		ctx->mv_size = ALIGN(ctx->buf_width *
+				ALIGN((ctx->buf_height >> 2),
+					S5P_FIMV_NV12MT_VALIGN),
+				S5P_FIMV_DEC_BUF_ALIGN);
+	} else {
+		guard_width = ALIGN(ctx->img_width + 24, S5P_FIMV_NV12MT_HALIGN);
+		guard_height = ALIGN(ctx->img_height + 16, S5P_FIMV_NV12MT_VALIGN);
+		ctx->luma_size = ALIGN(guard_width * guard_height,
+				S5P_FIMV_DEC_BUF_ALIGN);
+
+		guard_width = ALIGN(ctx->img_width + 16, S5P_FIMV_NV12MT_HALIGN);
+		guard_height = ALIGN((ctx->img_height >> 1) + 4, S5P_FIMV_NV12MT_VALIGN);
+		ctx->chroma_size = ALIGN(guard_width * guard_height,
+				S5P_FIMV_DEC_BUF_ALIGN);
+
+		ctx->mv_size = 0;
+	}
+}
+
 /* Set registers for decoding temporary buffers */
 void s5p_mfc_set_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 {

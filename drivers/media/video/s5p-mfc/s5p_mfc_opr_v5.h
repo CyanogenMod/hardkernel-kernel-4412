@@ -70,6 +70,8 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx);
 int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev);
 void s5p_mfc_release_dev_context_buffer(struct s5p_mfc_dev *dev);
 
+void s5p_mfc_dec_calc_dpb_size(struct s5p_mfc_ctx *ctx);
+
 #define s5p_mfc_get_dspl_y_adr()	(readl(dev->regs_base + \
 					S5P_FIMV_SI_DISPLAY_Y_ADR) << 11)
 #define s5p_mfc_get_dspl_status()	readl(dev->regs_base + \

@@ -347,6 +347,39 @@ void s5p_mfc_release_dev_context_buffer(struct s5p_mfc_dev *dev)
 	}
 }
 
+static int calc_plane(int width, int height)
+{
+	int mbX, mbY;
+
+	mbX = (width + 15)/16;
+	mbY = (height + 15)/16;
+
+	if (width * height < 2048 * 1024)
+		mbY = (mbY + 1) / 2 * 2;
+
+	return (mbX * 16) * (mbY * 16);
+}
+
+void s5p_mfc_dec_calc_dpb_size(struct s5p_mfc_ctx *ctx)
+{
+	/* FIXME: Need to check the alignment value */
+	ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN);
+	ctx->buf_height = ALIGN(ctx->img_height, S5P_FIMV_NV12MT_VALIGN);
+	mfc_debug(2, "SEQ Done: Movie dimensions %dx%d, "
+			"buffer dimensions: %dx%d\n", ctx->img_width,
+			ctx->img_height, ctx->buf_width, ctx->buf_height);
+
+	ctx->luma_size = calc_plane(ctx->img_width, ctx->img_height);
+	ctx->chroma_size = calc_plane(ctx->img_width, (ctx->img_height >> 1));
+	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) {
+		ctx->mv_size = s5p_mfc_dec_mv_size(ctx->img_width,
+				ctx->img_height);
+		ctx->mv_size = ALIGN(ctx->mv_size, 16);
+	} else {
+		ctx->mv_size = 0;
+	}
+}
+
 /* Set registers for decoding stream buffer */
 int s5p_mfc_set_dec_stream_buffer(struct s5p_mfc_ctx *ctx, int buf_addr,
 		  unsigned int start_num_byte, unsigned int buf_size)

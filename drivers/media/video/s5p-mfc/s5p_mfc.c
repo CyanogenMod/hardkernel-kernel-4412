@@ -299,14 +299,15 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 
 	dst_frame_status = s5p_mfc_get_dspl_status()
 				& S5P_FIMV_DEC_STATUS_DECODING_STATUS_MASK;
-	res_change = s5p_mfc_get_dspl_status()
-				& S5P_FIMV_DEC_STATUS_RESOLUTION_MASK;
+	res_change = (s5p_mfc_get_dspl_status()
+				& S5P_FIMV_DEC_STATUS_RESOLUTION_MASK)
+				>> S5P_FIMV_DEC_STATUS_RESOLUTION_SHIFT;
 	mfc_debug(2, "Frame Status: %x\n", dst_frame_status);
 
 	if (ctx->state == MFCINST_RES_CHANGE_INIT)
 		ctx->state = MFCINST_RES_CHANGE_FLUSH;
 
-	if (res_change) {
+	if (res_change && res_change != 3) {
 		mfc_err("Resolution change set to %d\n", res_change);
 		ctx->state = MFCINST_RES_CHANGE_INIT;
 
@@ -480,7 +481,6 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	unsigned int reason;
 	unsigned int err;
 	unsigned long flags;
-	unsigned int guard_width, guard_height;
 
 	mfc_debug_enter();
 	/* Reset the timeout watchdog */
@@ -500,6 +500,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 			s5p_mfc_handle_error(ctx, reason, err);
 		break;
 	case S5P_FIMV_R2H_CMD_SLICE_DONE_RET:
+	case S5P_FIMV_R2H_CMD_FIELD_DONE_RET:
 	case S5P_FIMV_R2H_CMD_FRAME_DONE_RET:
 		if (ctx->c_ops->post_frame_start) {
 			if (ctx->c_ops->post_frame_start(ctx))
@@ -527,36 +528,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 				ctx->img_height = s5p_mfc_get_img_height();
 			}
 
-			ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN);
-			ctx->buf_height = ALIGN(ctx->img_height, S5P_FIMV_NV12MT_VALIGN);
-			mfc_debug(2, "SEQ Done: Movie dimensions %dx%d, "
-				  "buffer dimensions: %dx%d\n", ctx->img_width,
-				  ctx->img_height, ctx->buf_width, ctx->buf_height);
-
-			if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) {
-				ctx->luma_size = ALIGN(ctx->buf_width * ctx->buf_height,
-								S5P_FIMV_DEC_BUF_ALIGN);
-				ctx->chroma_size = ALIGN(ctx->buf_width *
-							 ALIGN((ctx->img_height >> 1),
-							       S5P_FIMV_NV12MT_VALIGN),
-							       S5P_FIMV_DEC_BUF_ALIGN);
-				ctx->mv_size = ALIGN(ctx->buf_width *
-							ALIGN((ctx->buf_height >> 2),
-							S5P_FIMV_NV12MT_VALIGN),
-							S5P_FIMV_DEC_BUF_ALIGN);
-			} else {
-				guard_width = ALIGN(ctx->img_width + 24, S5P_FIMV_NV12MT_HALIGN);
-				guard_height = ALIGN(ctx->img_height + 16, S5P_FIMV_NV12MT_VALIGN);
-				ctx->luma_size = ALIGN(guard_width * guard_height,
-						       S5P_FIMV_DEC_BUF_ALIGN);
-
-				guard_width = ALIGN(ctx->img_width + 16, S5P_FIMV_NV12MT_HALIGN);
-				guard_height = ALIGN((ctx->img_height >> 1) + 4, S5P_FIMV_NV12MT_VALIGN);
-				ctx->chroma_size = ALIGN(guard_width * guard_height,
-						       S5P_FIMV_DEC_BUF_ALIGN);
-
-				ctx->mv_size = 0;
-			}
+			s5p_mfc_dec_calc_dpb_size(ctx);
 
 			ctx->dpb_count = s5p_mfc_get_dpb_count();
 			if (ctx->img_width == 0 || ctx->img_width == 0)
