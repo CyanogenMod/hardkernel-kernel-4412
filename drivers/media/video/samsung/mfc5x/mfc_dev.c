@@ -123,21 +123,19 @@ static int mfc_open(struct inode *inode, struct file *file)
 #ifdef SYSMMU_MFC_ON
 		mfc_clock_on();
 
-		sysmmu_on(SYSMMU_MFC_L);
-		sysmmu_on(SYSMMU_MFC_R);
+		s5p_sysmmu_enable(mfcdev->device);
 
 #ifdef CONFIG_VIDEO_MFC_VCM_UMP
 		vcm_set_pgtable_base(VCM_DEV_MFC);
 #else /* CONFIG_S5P_VMEM or kernel virtual memory allocator */
-		sysmmu_set_tablebase_pgd(SYSMMU_MFC_L, __pa(swapper_pg_dir));
-		sysmmu_set_tablebase_pgd(SYSMMU_MFC_R, __pa(swapper_pg_dir));
+		s5p_sysmmu_set_tablebase_pgd(mfcdev->device,
+							__pa(swapper_pg_dir));
 
 		/*
 		 * RMVME: the power-gating work really (on <-> off),
 		 * all TBL entry was invalidated already when the power off
 		 */
-		sysmmu_tlb_invalidate(SYSMMU_MFC_L);
-		sysmmu_tlb_invalidate(SYSMMU_MFC_R);
+		s5p_sysmmu_tlb_invalidate(mfcdev->device, SYSMMU_MFC_R);
 #endif
 		mfc_clock_off();
 #endif
@@ -235,8 +233,7 @@ static int mfc_release(struct inode *inode, struct file *file)
 #if defined(SYSMMU_MFC_ON) && !defined(CONFIG_VIDEO_MFC_VCM_UMP)
 	mfc_clock_on();
 
-	sysmmu_tlb_invalidate(SYSMMU_MFC_L);
-	sysmmu_tlb_invalidate(SYSMMU_MFC_R);
+	s5p_sysmmu_tlb_invalidate(dev->device);
 
 	mfc_clock_off();
 #endif
@@ -1027,8 +1024,7 @@ err_act_vcm:
 #endif
 	mfc_clock_on();
 
-	sysmmu_off(SYSMMU_MFC_L);
-	sysmmu_off(SYSMMU_MFC_R);
+	s5p_sysmmu_disable(mfcdev->device);
 
 	mfc_clock_off();
 #endif
@@ -1082,8 +1078,7 @@ static int __devexit mfc_remove(struct platform_device *pdev)
 	vcm_deactivate(mfcdev->vcm_info.sysmmu_vcm);
 #endif
 
-	sysmmu_off(SYSMMU_MFC_L);
-	sysmmu_off(SYSMMU_MFC_R);
+	s5p_sysmmu_disable(mfcdev->device);
 
 	mfc_clock_off();
 #endif
@@ -1134,14 +1129,12 @@ static int mfc_resume(struct device *dev)
 #ifdef SYSMMU_MFC_ON
 	mfc_clock_on();
 
-	sysmmu_on(SYSMMU_MFC_L);
-	sysmmu_on(SYSMMU_MFC_R);
+	s5p_sysmmu_enable(dev);
 
 #ifdef CONFIG_VIDEO_MFC_VCM_UMP
 	vcm_set_pgtable_base(VCM_DEV_MFC);
 #else /* CONFIG_S5P_VMEM or kernel virtual memory allocator */
-	sysmmu_set_tablebase_pgd(SYSMMU_MFC_L, __pa(swapper_pg_dir));
-	sysmmu_set_tablebase_pgd(SYSMMU_MFC_R, __pa(swapper_pg_dir));
+	s5p_sysmmu_set_tablebase_pgd(dev, __pa(swapper_pg_dir));
 #endif
 
 	mfc_clock_off();
@@ -1200,14 +1193,12 @@ static int mfc_runtime_resume(struct device *dev)
 	if (pre_power == 0) {
 		mfc_clock_on();
 
-		sysmmu_on(SYSMMU_MFC_L);
-		sysmmu_on(SYSMMU_MFC_R);
+		s5p_sysmmu_enable(dev);
 
 #ifdef CONFIG_VIDEO_MFC_VCM_UMP
 		vcm_set_pgtable_base(VCM_DEV_MFC);
 #else /* CONFIG_S5P_VMEM or kernel virtual memory allocator */
-		sysmmu_set_tablebase_pgd(SYSMMU_MFC_L, __pa(swapper_pg_dir));
-		sysmmu_set_tablebase_pgd(SYSMMU_MFC_R, __pa(swapper_pg_dir));
+		s5p_sysmmu_set_tablebase_pgd(dev, __pa(swapper_pg_dir));
 #endif
 
 		mfc_clock_off();

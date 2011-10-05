@@ -338,8 +338,7 @@ static void mfc_tlb_invalidate(enum vcm_dev_id id)
 	if (mfc_power_chk()) {
 		mfc_clock_on();
 
-		sysmmu_tlb_invalidate(SYSMMU_MFC_L);
-		sysmmu_tlb_invalidate(SYSMMU_MFC_R);
+		s5p_sysmmu_tlb_invalidate(NULL);
 
 		mfc_clock_off();
 	}
@@ -350,8 +349,7 @@ static void mfc_set_pagetable(enum vcm_dev_id id, unsigned long base)
 	if (mfc_power_chk()) {
 		mfc_clock_on();
 
-		sysmmu_set_tablebase_pgd(SYSMMU_MFC_L, base);
-		sysmmu_set_tablebase_pgd(SYSMMU_MFC_R, base);
+		s5p_sysmmu_set_tablebase_pgd(NULL, base);
 
 		mfc_clock_off();
 	}
