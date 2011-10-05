@@ -99,15 +99,11 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx);
 #define s5p_mfc_get_enc_slice_type()	readl(dev->regs_base + \
 						S5P_FIMV_ENC_SI_SLICE_TYPE)
 
-/* Interrupt handling routines */
-/*
-#define s5p_mfc_clear_int_flags()					\
-	do {								\
-		writel(0, dev->regs_base + S5P_FIMV_RISC_HOST_INT);	\
-		writel(0, dev->regs_base + S5P_FIMV_RISC2HOST_CMD);	\
-		writel(0xffff, dev->regs_base + S5P_FIMV_SI_RTN_CHID);	\
+#define s5p_mfc_clear_int_flags()				\
+	do {							\
+		s5p_mfc_write_reg(0, S5P_FIMV_RISC2HOST_CMD);	\
+		s5p_mfc_write_reg(0, S5P_FIMV_RISC2HOST_INT);	\
 	} while (0)
-*/
 
 /* FIXME: temporal definition to avoid compile error */
 enum MFC_SHM_OFS

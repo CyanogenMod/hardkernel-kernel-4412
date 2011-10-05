@@ -106,13 +106,6 @@
 #define MFC_GET_ADR(target)						\
 	(s5p_mfc_read_reg(MFC_##target##_ADR_ADDR) << MFC_##target##_ADR_SHFT)
 
-#define s5p_mfc_clear_int_flags()				\
-	do {							\
-		s5p_mfc_write_reg(0, S5P_FIMV_RISC_HOST_INT);	\
-		s5p_mfc_write_reg(0, S5P_FIMV_RISC2HOST_CMD);	\
-		s5p_mfc_write_reg(0xffff, S5P_FIMV_SI_RTN_CHID);\
-	} while (0)
-
 void s5p_mfc_init_reg(void __iomem *base);
 void s5p_mfc_write_reg(unsigned int data, unsigned int offset);
 unsigned int s5p_mfc_read_reg(unsigned int offset);
