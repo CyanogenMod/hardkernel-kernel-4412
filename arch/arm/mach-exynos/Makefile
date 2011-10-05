@@ -52,7 +52,7 @@ obj-$(CONFIG_MACH_SMDK5250)		+= mach-smdk5250.o
 # device support
 
 obj-$(CONFIG_ARCH_EXYNOS)		+= dev-audio.o
-obj-$(CONFIG_EXYNOS4_DEV_AHCI)		+= dev-ahci.o
+obj-$(CONFIG_SATA_AHCI_PLATFORM)	+= dev-ahci.o
 obj-$(CONFIG_EXYNOS4_DEV_PD)		+= dev-pd.o
 obj-$(CONFIG_S5P_SYSTEM_MMU)		+= dev-sysmmu.o
 obj-$(CONFIG_EXYNOS4_DEV_DWMCI)		+= dev-dwmci.o

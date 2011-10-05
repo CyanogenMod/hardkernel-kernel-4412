@@ -1974,6 +1974,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS4_SETUP_THERMAL
 	&s5p_device_tmu,
 #endif
+#ifdef CONFIG_SATA_AHCI_PLATFORM
+	&exynos4_device_ahci,
+#endif
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
 #endif
