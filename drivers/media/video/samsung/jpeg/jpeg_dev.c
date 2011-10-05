@@ -280,10 +280,10 @@ static irqreturn_t jpeg_irq(int irq, void *dev_id)
 static int jpeg_setup_controller(struct jpeg_control *ctrl)
 {
 #if defined(CONFIG_S5P_SYSMMU_JPEG)
-	sysmmu_on(SYSMMU_JPEG);
+	s5p_sysmmu_enable(jpeg_pm);
 	jpeg_dbg("sysmmu on\n");
 	/* jpeg hw uses kernel virtual address */
-	sysmmu_set_tablebase_pgd(SYSMMU_JPEG, __pa(swapper_pg_dir));
+	s5p_sysmmu_set_tablebase_pgd(jpeg_pm, __pa(swapper_pg_dir));
 #endif
 	atomic_set(&ctrl->in_use, 0);
 	mutex_init(&ctrl->lock);
@@ -374,8 +374,8 @@ static int jpeg_probe(struct platform_device *pdev)
 		goto err_reg;
 	}
 
-#ifdef CONFIG_PM_RUNTIME
 	jpeg_pm = &pdev->dev;
+#ifdef CONFIG_PM_RUNTIME
 	pm_runtime_enable(jpeg_pm);
 #endif
 	return 0;
@@ -402,7 +402,7 @@ err_alloc:
 static int jpeg_remove(struct platform_device *dev)
 {
 #if defined(CONFIG_S5P_SYSMMU_JPEG)
-	sysmmu_off(SYSMMU_JPEG);
+	s5p_sysmmu_disable(jpeg_pm);
 	jpeg_dbg("sysmmu off\n");
 #endif
 	free_irq(jpeg_ctrl->irq_no, dev);
