@@ -20,4 +20,7 @@
 #define MAX_PHYSMEM_BITS	32
 #define SECTION_SIZE_BITS	28
 
+/* Required by ION to allocate scatterlist(sglist) with nents > 256 */
+#define ARCH_HAS_SG_CHAIN
+
 #endif /* __ASM_ARCH_MEMORY_H */
