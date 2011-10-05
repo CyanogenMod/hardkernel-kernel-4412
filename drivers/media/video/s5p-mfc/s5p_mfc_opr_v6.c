@@ -130,14 +130,12 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		ctx->scratch_buf_size = ALIGN(ctx->scratch_buf_size, 256);
 		ctx->port_a_size = ctx->scratch_buf_size;
 		break;
-
 	case S5P_FIMV_CODEC_VC1RCV_DEC:
 	case S5P_FIMV_CODEC_VC1_DEC:
 		ctx->scratch_buf_size = 2096 * (mb_width + mb_height + 1);
 		ctx->scratch_buf_size = ALIGN(ctx->scratch_buf_size, 256);
 		ctx->port_a_size = ctx->scratch_buf_size;
 		break;
-
 	case S5P_FIMV_CODEC_MPEG2_DEC:
 		ctx->port_a_size = 0;
 		ctx->port_b_size = 0;
@@ -147,7 +145,11 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		ctx->scratch_buf_size = ALIGN(ctx->scratch_buf_size, 256);
 		ctx->port_a_size = ctx->scratch_buf_size;
 		break;
-
+	case S5P_FIMV_CODEC_VP8_DEC:
+		ctx->scratch_buf_size = mb_width * 32 + mb_height * 128 + 34816;
+		ctx->scratch_buf_size = ALIGN(ctx->scratch_buf_size, 256);
+		ctx->port_a_size = ctx->scratch_buf_size;
+		break;
 	case S5P_FIMV_CODEC_H264_ENC:
 		ctx->port_a_size = (enc_ref_y_size * 2) +
 				   S5P_FIMV_ENC_UPMV_SIZE +

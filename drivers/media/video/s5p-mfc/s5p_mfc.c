@@ -353,7 +353,11 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			" %d\n", src_buf->vb.v4l2_planes[0].bytesused,
 			ctx->consumed_stream, s5p_mfc_get_consumed_stream());
 		ctx->consumed_stream += s5p_mfc_get_consumed_stream();
+		/* FIXME: codec mode check for VP8 is need to ignore consumed bytes
+		 *
+		 * Known Issue : consumed bytes mismatch in VP8 */
 		if (ctx->codec_mode != S5P_FIMV_CODEC_H264_DEC &&
+			ctx->codec_mode != S5P_FIMV_CODEC_VP8_DEC &&
 			s5p_mfc_get_frame_type() == S5P_FIMV_DECODE_FRAME_P_FRAME
 					&& ctx->consumed_stream + STUFF_BYTE <
 					src_buf->vb.v4l2_planes[0].bytesused) {
