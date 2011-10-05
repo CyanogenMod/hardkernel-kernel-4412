@@ -1419,6 +1419,8 @@ static int s5p_ace_sha_engine(struct s5p_ace_hash_ctx *sctx,
 	}
 
 	s5p_ace_resume_device(&s5p_ace_dev);
+
+	local_bh_disable();
 	while (test_and_set_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags))
 		udelay(1);
 
@@ -1555,6 +1557,7 @@ static int s5p_ace_sha_engine(struct s5p_ace_hash_ctx *sctx,
 		buffer[7] = s5p_ace_read_sfr(ACE_HASH_RESULT8);
 	}
 	clear_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags);
+	local_bh_enable();
 
 	return 0;
 }
