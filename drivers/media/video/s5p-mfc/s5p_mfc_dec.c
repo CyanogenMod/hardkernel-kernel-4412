@@ -267,7 +267,7 @@ static int check_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		return -EINVAL;
 
 	if (ctrl->value < c->minimum || ctrl->value > c->maximum
-	    || (c->step != 0 && ctrl->value % c->step != 0)) {
+		|| (c->step != 0 && ctrl->value % c->step != 0)) {
 		v4l2_err(&dev->v4l2_dev, "invalid control value\n");
 		return -ERANGE;
 	}
@@ -354,8 +354,8 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_SFR,
 		.addr = S5P_FIMV_SI_DECODED_STATUS,
-		.mask = 0x3,
-		.shft = 4,
+		.mask = S5P_FIMV_DEC_CRC_GEN_MASK,
+		.shft = S5P_FIMV_DEC_CRC_GEN_SHIFT,
 		.flag_mode = MFC_CTRL_MODE_NONE,
 		.flag_addr = 0,
 		.flag_shft = 0,
