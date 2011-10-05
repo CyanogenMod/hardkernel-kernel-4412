@@ -17,7 +17,7 @@
 #include "s5p_mfc_cmd.h"
 #include "s5p_mfc_mem.h"
 
-static int s5p_mfc_cmd_host2risc(int cmd, struct s5p_mfc_cmd_args *args)
+int s5p_mfc_cmd_host2risc(int cmd, struct s5p_mfc_cmd_args *args)
 {
 	int cur_cmd;
 	unsigned long timeout;

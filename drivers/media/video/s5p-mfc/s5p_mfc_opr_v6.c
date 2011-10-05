@@ -353,6 +353,55 @@ void s5p_mfc_release_instance_buffer(struct s5p_mfc_ctx *ctx)
 	mfc_debug_leave();
 }
 
+/* Allocate context buffers for SYS_INIT */
+int s5p_mfc_alloc_dev_context_buffer(struct s5p_mfc_dev *dev)
+{
+	struct s5p_mfc_buf_size_v6 *buf_size = dev->variant->buf_size->buf;
+
+	mfc_debug_enter();
+
+	dev->ctx_buf.alloc = s5p_mfc_mem_alloc(
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], buf_size->dev_ctx);
+	if (IS_ERR(dev->ctx_buf.alloc)) {
+		mfc_err("Allocating DESC buffer failed.\n");
+		return PTR_ERR(dev->ctx_buf.alloc);
+	}
+
+	dev->ctx_buf.ofs = s5p_mfc_mem_cookie(
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dev->ctx_buf.alloc);
+
+	dev->ctx_buf.virt = s5p_mfc_mem_vaddr(
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dev->ctx_buf.alloc);
+	if (!dev->ctx_buf.virt) {
+		s5p_mfc_mem_put(
+				dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dev->ctx_buf.alloc);
+		dev->ctx_buf.alloc = NULL;
+		dev->ctx_buf.ofs = 0;
+
+		mfc_err("Remapping DESC buffer failed.\n");
+		return -ENOMEM;
+	}
+
+	memset(dev->ctx_buf.virt, 0, buf_size->dev_ctx);
+	s5p_mfc_cache_clean(dev->ctx_buf.virt, buf_size->dev_ctx);
+
+	mfc_debug_leave();
+
+	return 0;
+}
+
+/* Release context buffers for SYS_INIT */
+void s5p_mfc_release_dev_context_buffer(struct s5p_mfc_dev *dev)
+{
+	if (dev->ctx_buf.alloc) {
+		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
+				dev->ctx_buf.alloc);
+		dev->ctx_buf.alloc = NULL;
+		dev->ctx_buf.ofs = 0;
+		dev->ctx_buf.virt = NULL;
+	}
+}
+
 /* Set registers for decoding temporary buffers */
 void s5p_mfc_set_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 {

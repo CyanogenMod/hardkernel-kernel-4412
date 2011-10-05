@@ -231,6 +231,9 @@ struct s5p_mfc_dev {
 	struct clk *clock2;
 	*/
 
+	/* For 6.x, Added for SYS_INIT context buffer */
+	struct s5p_mfc_extra_buf ctx_buf;
+
 	struct s5p_mfc_ctx *ctx[MFC_NUM_CONTEXTS];
 	int curr_ctx;
 	unsigned long ctx_work_bits;

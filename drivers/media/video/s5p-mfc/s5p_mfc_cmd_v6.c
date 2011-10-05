@@ -17,30 +17,16 @@
 #include "s5p_mfc_cmd.h"
 #include "s5p_mfc_mem.h"
 
-static int s5p_mfc_cmd_host2risc(int cmd, struct s5p_mfc_cmd_args *args)
+int s5p_mfc_cmd_host2risc(int cmd, struct s5p_mfc_cmd_args *args)
 {
-	int cur_cmd;
-	unsigned long timeout;
+	mfc_debug(2, "Issue the command: %d\n", cmd);
 
-	timeout = jiffies + msecs_to_jiffies(MFC_BW_TIMEOUT);
-
-	/* wait until host to risc command register becomes 'H2R_CMD_EMPTY' */
-	do {
-		if (time_after(jiffies, timeout)) {
-			mfc_err("Timeout while waiting for hardware.\n");
-			return -EIO;
-		}
-
-		cur_cmd = s5p_mfc_read_reg(S5P_FIMV_HOST2RISC_CMD);
-	} while (cur_cmd != S5P_FIMV_H2R_CMD_EMPTY);
-
-	s5p_mfc_write_reg(args->arg[0], S5P_FIMV_HOST2RISC_ARG1);
-	s5p_mfc_write_reg(args->arg[1], S5P_FIMV_HOST2RISC_ARG2);
-	s5p_mfc_write_reg(args->arg[2], S5P_FIMV_HOST2RISC_ARG3);
-	s5p_mfc_write_reg(args->arg[3], S5P_FIMV_HOST2RISC_ARG4);
+	/* Reset RISC2HOST command */
+	s5p_mfc_write_reg(0x0, S5P_FIMV_RISC2HOST_CMD);
 
 	/* Issue the command */
 	s5p_mfc_write_reg(cmd, S5P_FIMV_HOST2RISC_CMD);
+	s5p_mfc_write_reg(0x1, S5P_FIMV_HOST2RISC_INT);
 
 	return 0;
 }
@@ -48,13 +34,15 @@ static int s5p_mfc_cmd_host2risc(int cmd, struct s5p_mfc_cmd_args *args)
 int s5p_mfc_sys_init_cmd(struct s5p_mfc_dev *dev)
 {
 	struct s5p_mfc_cmd_args h2r_args;
-	struct s5p_mfc_buf_size *buf_size = dev->variant->buf_size;
+	struct s5p_mfc_buf_size_v6 *buf_size = dev->variant->buf_size->buf;
 	int ret;
 
 	mfc_debug_enter();
 
-	memset(&h2r_args, 0, sizeof(struct s5p_mfc_cmd_args));
-	h2r_args.arg[0] = buf_size->firmware_code;
+	s5p_mfc_alloc_dev_context_buffer(dev);
+
+	s5p_mfc_write_reg(dev->ctx_buf.ofs, S5P_FIMV_CONTEXT_MEM_ADDR);
+	s5p_mfc_write_reg(buf_size->dev_ctx, S5P_FIMV_CONTEXT_MEM_SIZE);
 
 	ret = s5p_mfc_cmd_host2risc(S5P_FIMV_H2R_CMD_SYS_INIT, &h2r_args);
 
@@ -105,11 +93,10 @@ int s5p_mfc_open_inst_cmd(struct s5p_mfc_ctx *ctx)
 
 	mfc_debug(2, "Requested codec mode: %d\n", ctx->codec_mode);
 
-	memset(&h2r_args, 0, sizeof(struct s5p_mfc_cmd_args));
-	h2r_args.arg[0] = ctx->codec_mode;
-	h2r_args.arg[1] = ctx->crc_enable << 31; /* no pixelcache */
-	h2r_args.arg[2] = ctx->ctx.ofs;
-	h2r_args.arg[3] = ctx->ctx_buf_size;
+	s5p_mfc_write_reg(ctx->codec_mode, S5P_FIMV_CODEC_TYPE);
+	s5p_mfc_write_reg(ctx->ctx.ofs, S5P_FIMV_CONTEXT_MEM_ADDR);
+	s5p_mfc_write_reg(ctx->ctx_buf_size, S5P_FIMV_CONTEXT_MEM_SIZE);
+	s5p_mfc_write_reg(ctx->crc_enable, S5P_FIMV_D_CRC_CTRL);
 
 	ret = s5p_mfc_cmd_host2risc(S5P_FIMV_H2R_CMD_OPEN_INSTANCE, &h2r_args);
 
@@ -127,8 +114,7 @@ int s5p_mfc_close_inst_cmd(struct s5p_mfc_ctx *ctx)
 	mfc_debug_enter();
 
 	if (ctx->state != MFCINST_FREE) {
-		memset(&h2r_args, 0, sizeof(struct s5p_mfc_cmd_args));
-		h2r_args.arg[0] = ctx->inst_no;
+		s5p_mfc_write_reg(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
 
 		ret = s5p_mfc_cmd_host2risc(S5P_FIMV_H2R_CMD_CLOSE_INSTANCE,
 					    &h2r_args);
