@@ -16,4 +16,9 @@ config C2C_DEBUG
 	help
 	  Print C2C debug messages.
 
+config C2C_IPC_ENABLE
+	bool "Enable C2C IPC via the Shared Memory"
+	default n
+	help
+	  Enable C2C IPC via the Shared Memory.
 endif # SAMSUNG_C2C

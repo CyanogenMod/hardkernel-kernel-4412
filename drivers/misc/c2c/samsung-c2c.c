@@ -26,6 +26,11 @@
 #ifdef ENABLE_C2CSTATE_TIMER
 #include <linux/timer.h>
 #endif
+#ifdef CONFIG_C2C_IPC_ENABLE
+#include <linux/vmalloc.h>
+#include <asm/page.h>
+#include <asm/pgtable.h>
+#endif
 #include <asm/mach-types.h>
 
 #include <mach/c2c.h>
@@ -123,6 +128,16 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 	u32 raw_irq, latency_val, opp_val, req_clk;
 	raw_irq = c2c_readl(EXYNOS4_C2C_IRQ_EN_STAT1);
 
+#ifdef CONFIG_C2C_IPC_ENABLE
+	if (raw_irq & 0x1) {
+		c2c_dbg("IPC interrupt occured : GENO[0]\n");
+		if (c2c_con.hd.handler)
+			c2c_con.hd.handler(c2c_con.hd.handler);
+
+		/* Interrupt Clear */
+		c2c_writel(0x1, EXYNOS4_C2C_IRQ_EN_STAT1);
+	}
+#endif
 	if ((raw_irq >> 27) & 1) { /* OPP Change */
 		/*
 		    If OPP clock is different with below table,
@@ -186,6 +201,103 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
+
+#ifdef CONFIG_C2C_IPC_ENABLE
+volatile void __iomem *c2c_request_cp_region(unsigned int cp_addr,
+		unsigned int size)
+{
+	dma_addr_t phy_cpmem;
+
+	phy_cpmem = cma_alloc(c2c_con.c2c_dev, "c2c_shdmem", size, 0);
+	if (IS_ERR_VALUE(phy_cpmem)) {
+		printk(KERN_ERR "C2C CMA Alloc Error!!!");
+		return -ENOMEM;
+	}
+
+	return phys_to_virt(phy_cpmem);
+}
+EXPORT_SYMBOL(c2c_request_cp_region);
+
+void c2c_release_cp_region(void *rgn)
+{
+	dma_addr_t phy_cpmem;
+
+	phy_cpmem = virt_to_phys(rgn);
+
+	cma_free(phy_cpmem);
+}
+EXPORT_SYMBOL(c2c_release_cp_region);
+
+volatile void __iomem *c2c_request_sh_region(unsigned int sh_addr,
+		unsigned int size)
+{
+	int i;
+	struct page **pages;
+	void *pv;
+
+	pages = kmalloc((size >> PAGE_SHIFT) * sizeof(*pages), GFP_KERNEL);
+	for (i = 0; i < (size >> PAGE_SHIFT); i++) {
+		pages[i] = phys_to_page(sh_addr);
+		sh_addr += PAGE_SIZE;
+	}
+
+	c2c_con.shd_pages = (void *)pages;
+
+	pv = vmap(pages, size >> PAGE_SHIFT, VM_MAP, pgprot_noncached(PAGE_KERNEL));
+
+	return (void __iomem *)pv;
+}
+EXPORT_SYMBOL(c2c_request_sh_region);
+
+void c2c_release_sh_region(void *rgn)
+{
+	vunmap(rgn);
+	kfree(c2c_con.shd_pages);
+	c2c_con.shd_pages = NULL;
+}
+EXPORT_SYMBOL(c2c_release_sh_region);
+
+int c2c_register_handler(void (*handler)(void *), void *data)
+{
+	if (!handler)
+		return -EINVAL;
+
+	c2c_con.hd.data = data;
+	c2c_con.hd.handler = handler;
+
+	c2c_reset_interrupt();
+
+	return 0;
+}
+EXPORT_SYMBOL(c2c_register_handler);
+
+int c2c_unregister_handler(void (*handler)(void *))
+{
+	if (!handler)
+		return -EINVAL;
+
+	if (c2c_con.hd.data == handler) {
+		c2c_con.hd.data = NULL;
+		c2c_con.hd.handler = NULL;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(c2c_unregister_handler);
+
+void c2c_send_interrupt(void) {
+	c2c_writel(c2c_readl(EXYNOS4_C2C_GENI_CONTROL) ^ 0x1,
+			EXYNOS4_C2C_GENI_CONTROL);
+}
+EXPORT_SYMBOL(c2c_send_interrupt);
+
+void c2c_reset_interrupt(void) {
+	c2c_writel(c2c_readl(EXYNOS4_C2C_IRQ_EN_SET1) | 0x1,
+			EXYNOS4_C2C_IRQ_EN_SET1);
+	c2c_con.rtt_enableset |= 0x1;
+}
+EXPORT_SYMBOL(c2c_reset_interrupt);
+#endif
 
 static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 {
@@ -266,6 +378,11 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 	c2c_con.tx_width = pdata->tx_width;
 	c2c_con.max_clk = pdata->max_clk;
 	c2c_con.default_clk = pdata->default_clk;
+#ifdef CONFIG_C2C_IPC_ENABLE
+	c2c_con.shd_pages = NULL;
+	c2c_con.hd.data = NULL;
+	c2c_con.hd.handler = NULL;
+#endif
 
 	/* Set clock to OPP50 mode */
 	clk_set_rate(clk_get(&pdev->dev, "sclk_c2c"), c2c_con.default_clk * 1000000);

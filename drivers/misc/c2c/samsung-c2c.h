@@ -17,6 +17,30 @@
 */
 #define C2C_DEV_NAME "c2c_dev"
 
+#ifdef CONFIG_C2C_IPC_ENABLE
+#define C2C_CP_RGN_ADDR		0x60000000
+#define C2C_CP_RGN_SIZE		56 * SZ_1M
+#define C2C_SH_RGN_ADDR		C2C_CP_RGN_ADDR + C2C_CP_RGN_SIZE
+#define C2C_SH_RGN_SIZE		8 * SZ_1M
+
+extern volatile void __iomem *c2c_request_cp_region(unsigned int cp_addr,
+		unsigned int size);
+extern volatile void __iomem *c2c_request_sh_region(unsigned int sh_addr,
+		unsigned int size);
+extern void c2c_release_cp_region(void *rgn);
+extern void c2c_release_sh_region(void *rgn);
+
+extern int c2c_register_handler(void (*handler)(void *), void *data);
+extern int c2c_unregister_handler(void (*handler)(void *));
+extern void c2c_send_interrupt(void);
+extern void c2c_reset_interrupt(void);
+
+struct c2c_ipc_handler {
+	void *data;
+	void (*handler)(void *);
+};
+#endif
+
 enum c2c_set_clear {
 	C2C_CLEAR = 0,
 	C2C_SET = 1,
@@ -25,7 +49,10 @@ enum c2c_set_clear {
 struct c2c_state_control {
 	void __iomem *ap_sscm_addr;
 	void __iomem *cp_sscm_addr;
-
+#ifdef CONFIG_C2C_IPC_ENABLE
+	void *shd_pages;
+	struct c2c_ipc_handler hd;
+#endif
 	struct device* c2c_dev;
 
 	u32 rx_width;
