@@ -29,23 +29,33 @@ struct platform_device; /* don't need the contents */
 
 void s5p_int_src_hdmi_hpd(struct platform_device *pdev)
 {
+#ifdef CONFIG_ARCH_EXYNOS4
 	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0x3));
 	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_DOWN);
+#endif
 }
 
 void s5p_int_src_ext_hpd(struct platform_device *pdev)
 {
+#ifdef CONFIG_ARCH_EXYNOS4
 	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0xf));
 	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_DOWN);
+#endif
 }
 
 int s5p_hpd_read_gpio(struct platform_device *pdev)
 {
+#ifdef CONFIG_ARCH_EXYNOS4
 	return gpio_get_value(EXYNOS4_GPX3(7));
+#else
+	return 0; /* FIXME : to prevent compile warning */
+#endif
 }
 
 void s5p_cec_cfg_gpio(struct platform_device *pdev)
 {
+#ifdef CONFIG_ARCH_EXYNOS4
 	s3c_gpio_cfgpin(EXYNOS4_GPX3(6), S3C_GPIO_SFN(0x3));
 	s3c_gpio_setpull(EXYNOS4_GPX3(6), S3C_GPIO_PULL_NONE);
+#endif
 }
