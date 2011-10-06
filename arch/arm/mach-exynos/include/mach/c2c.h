@@ -16,6 +16,13 @@
 
 #define C2C_SHAREDMEM_BASE 0x60000000
 
+enum c2c_opp_mode {
+	C2C_OPP0 = 0,
+	C2C_OPP25 = 1,
+	C2C_OPP50 = 2,
+	C2C_OPP100 = 3,
+};
+
 enum c2c_buswidth {
 	C2C_BUSWIDTH_8 = 0,
 	C2C_BUSWIDTH_10 = 1,
@@ -49,6 +56,7 @@ struct exynos_c2c_platdata {
 	enum c2c_buswidth tx_width;
 	u32 max_clk; /* Maximum clk */
 	u32 default_clk; /* Default(init) clk */
+	enum c2c_opp_mode default_opp_mode;
 
 	char *c2c_clk;
 };
