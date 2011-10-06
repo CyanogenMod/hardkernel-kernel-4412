@@ -67,6 +67,26 @@ static struct map_desc exynos5_iodesc[] __initdata = {
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_GIC_DIST),
 		.length		= SZ_64K,
 		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_GPIO1,
+		.pfn		= __phys_to_pfn(EXYNOS5_PA_GPIO1),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_GPIO2,
+		.pfn		= __phys_to_pfn(EXYNOS5_PA_GPIO2),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_GPIO3,
+		.pfn		= __phys_to_pfn(EXYNOS5_PA_GPIO3),
+		.length		= SZ_256,
+		.type		= MT_DEVICE,
+	}, {
+		.virtual	= (unsigned long)S5P_VA_GPIO4,
+		.pfn		= __phys_to_pfn(EXYNOS5_PA_GPIO4),
+		.length		= SZ_256,
+		.type		= MT_DEVICE,
 	},
 };
 

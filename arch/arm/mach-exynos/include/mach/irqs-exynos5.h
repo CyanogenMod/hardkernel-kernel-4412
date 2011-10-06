@@ -137,7 +137,15 @@
 #define S5P_EINT_BASE1		(S5P_IRQ_EINT_BASE + 0)
 #define S5P_EINT_BASE2		(S5P_IRQ_EINT_BASE + 16)
 
+/* optional GPIO interrupts */
+#define S5P_GPIOINT_BASE	(S5P_IRQ_EINT_BASE + 32)
+#define IRQ_GPIO1_NR_GROUPS	13
+#define IRQ_GPIO2_NR_GROUPS	18
+#define IRQ_GPIO_END		(S5P_GPIOINT_BASE + S5P_GPIOINT_COUNT)
+
+#define IRQ_BOARD_START		IRQ_GPIO_END
+
 /* Set the default NR_IRQS */
-#define NR_IRQS			(S5P_IRQ_EINT_BASE + 32)
+#define NR_IRQS			IRQ_GPIO_END
 
 #endif /* __ASM_ARCH_IRQS_EXYNOS5_H */
