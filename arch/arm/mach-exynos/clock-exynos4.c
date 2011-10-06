@@ -1136,7 +1136,6 @@ static struct clksrc_clk exynos4_clk_sclk_spdif = {
 	.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 8, .size = 2 },
 };
 
-#ifndef CONFIG_MACH_FPGA5210
 struct clk exynos4_init_dmaclocks[] = {
 	{
 		.name		= "pdma",
@@ -1155,7 +1154,6 @@ struct clk exynos4_init_dmaclocks[] = {
 		.ctrlbit	= (1 << 1),
 	},
 };
-#endif
 
 static struct clk exynos4_init_clocks[] = {
 	{
@@ -2031,11 +2029,9 @@ void __init exynos4_register_clocks(void)
 	s3c_register_clocks(exynos4_init_audss_clocks, ARRAY_SIZE(exynos4_init_audss_clocks));
 	s3c_disable_clocks(exynos4_init_audss_clocks, ARRAY_SIZE(exynos4_init_audss_clocks));
 
-#ifndef CONFIG_MACH_FPGA5210
 	/* Register DMA Clock */
 	s3c_register_clocks(exynos4_init_dmaclocks, ARRAY_SIZE(exynos4_init_dmaclocks));
 	s3c_disable_clocks(exynos4_init_dmaclocks, ARRAY_SIZE(exynos4_init_dmaclocks));
-#endif
 	s3c_register_clocks(exynos4_i2cs_clocks, ARRAY_SIZE(exynos4_i2cs_clocks));
 	s3c_disable_clocks(exynos4_i2cs_clocks, ARRAY_SIZE(exynos4_i2cs_clocks));
 
@@ -2050,11 +2046,9 @@ static int __init clock_domain_init(void)
 {
 	int index;
 
-#ifndef CONFIG_MACH_FPGA5210
 	clock_add_domain(LPA_DOMAIN, &exynos4_init_dmaclocks[0]);
 	clock_add_domain(LPA_DOMAIN, &exynos4_init_dmaclocks[1]);
 	clock_add_domain(LPA_DOMAIN, &exynos4_init_dmaclocks[2]);
-#endif
 	for (index = 0; index < ARRAY_SIZE(exynos4_i2cs_clocks); index++)
 		clock_add_domain(LPA_DOMAIN, &exynos4_i2cs_clocks[index]);
 

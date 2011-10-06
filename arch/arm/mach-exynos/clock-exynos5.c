@@ -605,6 +605,25 @@ static struct clk exynos5_i2cs_clocks[] = {
 	}
 };
 
+struct clk exynos5_init_dmaclocks[] = {
+	{
+		.name		= "pdma",
+		.devname	= "s3c-pl330.0",
+		.enable		= exynos5_clksrc_ip_gen_ctrl,
+		.ctrlbit	= (1 << 4),
+	}, {
+		.name		= "pdma",
+		.devname	= "s3c-pl330.1",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 1),
+	}, {
+		.name		= "pdma",
+		.devname	= "s3c-pl330.2",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 1),
+	},
+};
+
 struct clk *exynos5_clkset_group_list[] = {
 	[0] = &clk_ext_xtal_mux,
 	[1] = NULL,
@@ -920,6 +939,9 @@ void __init exynos5_register_clocks(void)
 
 	s3c_register_clocks(exynos5_init_clocks_off, ARRAY_SIZE(exynos5_init_clocks_off));
 	s3c_disable_clocks(exynos5_init_clocks_off, ARRAY_SIZE(exynos5_init_clocks_off));
+
+	s3c_register_clocks(exynos5_init_dmaclocks, ARRAY_SIZE(exynos5_init_dmaclocks));
+	s3c_disable_clocks(exynos5_init_dmaclocks, ARRAY_SIZE(exynos5_init_dmaclocks));
 
 	s3c_register_clocks(exynos5_i2cs_clocks, ARRAY_SIZE(exynos5_i2cs_clocks));
 	s3c_disable_clocks(exynos5_i2cs_clocks, ARRAY_SIZE(exynos5_i2cs_clocks));
