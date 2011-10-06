@@ -22,13 +22,6 @@ enum c2c_set_clear {
 	C2C_SET = 1,
 };
 
-enum c2c_opp_mode {
-	C2C_OPP0 = 0,
-	C2C_OPP25 = 1,
-	C2C_OPP50 = 2,
-	C2C_OPP100 = 3,
-};
-
 struct c2c_state_control {
 	void __iomem *ap_sscm_addr;
 	void __iomem *cp_sscm_addr;

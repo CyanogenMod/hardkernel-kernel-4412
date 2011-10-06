@@ -270,7 +270,7 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 	/* Set clock to OPP50 mode */
 	clk_set_rate(clk_get(&pdev->dev, "sclk_c2c"), c2c_con.default_clk * 1000000);
 	clk_set_rate(clk_get(&pdev->dev, "aclk_c2c"), (c2c_con.default_clk / 2) * 1000000);
-	c2c_con.opp_mode = C2C_OPP50;
+	c2c_con.opp_mode = pdata->default_opp_mode;
 
 	c2c_dbg("[C2C] Get C2C Clock rate : %ld\n", clk_get_rate(clk_get(&pdev->dev, "sclk_c2c")));
 	if (pdata->setup_gpio)
