@@ -54,7 +54,7 @@
 #define FIMC_SUBDEVS		3
 #define FIMC_OUTBUFS		3
 #define FIMC_INQUEUES		10
-#define FIMC_MAX_CTXS		4
+#define FIMC_MAX_CTXS		5
 #define FIMC_TPID		3
 #define FIMC_CAPBUFS		32
 #define FIMC_ONESHOT_TIMEOUT	200
@@ -200,6 +200,11 @@ enum cam_mclk_status {
 	CAM_MCLK_ON,
 };
 
+enum fimc_purpose {
+	FIMC_DEVICE,
+	FIMC_RESERVE_ALLOCATOR,
+};
+
 /*
  * STRUCTURES
 */
@@ -315,6 +320,8 @@ struct fimc_ctx {
 	u32			flip;
 	u32			rotate;
 	enum fimc_status	status;
+	enum fimc_purpose	purpose;
+	bool			cacheable;
 };
 
 struct fimc_outinfo {
