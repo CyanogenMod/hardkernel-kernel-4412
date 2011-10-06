@@ -11,6 +11,9 @@
 #include <linux/platform_device.h>
 #include <linux/serial_core.h>
 #include <linux/fb.h>
+#if defined(CONFIG_S5P_MEM_CMA)
+#include <linux/cma.h>
+#endif
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -22,6 +25,9 @@
 #include <plat/clock.h>
 #include <plat/devs.h>
 #include <plat/fb.h>
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+#include <plat/s5p-mfc.h>
+#endif
 
 #include <mach/map.h>
 
@@ -93,7 +99,48 @@ static struct s3c_fb_platdata smdkc210_lcd1_pdata __initdata = {
 
 static struct platform_device *fpga5210_devices[] __initdata = {
 	&s5p_device_fimd1,
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	&s5p_device_mfc,
+#endif
 };
+
+#if defined(CONFIG_S5P_MEM_CMA)
+static void __init exynos5_reserve_mem(void)
+{
+	static struct cma_region regions[] = {
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
+		{
+			.name		= "fw",
+			.size		= 1 << 20,
+			{ .alignment	= 128 << 10 },
+			.start		= 0x44000000,
+		},
+		{
+			.name		= "b1",
+			.size		= 32 << 20,
+			.start		= 0x45000000,
+		},
+		{
+			.name		= "b2",
+			.size		= 32 << 20,
+			.start		= 0x51000000,
+		},
+#endif
+		{
+			.size = 0
+		},
+	};
+
+	static const char map[] __initconst =
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
+		"s5p-mfc-v6/f=fw;"
+		"s5p-mfc-v6/a=b1;"
+		"s5p-mfc-v6/b=b2;";
+#endif
+	cma_set_defaults(regions, map);
+	cma_early_regions_reserve(NULL);
+}
+#endif
 
 static void __init fpga5210_map_io(void)
 {
@@ -101,11 +148,17 @@ static void __init fpga5210_map_io(void)
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(8000000);
 	s3c24xx_init_uarts(fpga5210_uartcfgs, ARRAY_SIZE(fpga5210_uartcfgs));
+#if defined(CONFIG_S5P_MEM_CMA)
+		exynos5_reserve_mem();
+#endif
 }
 
 static void __init fpga5210_machine_init(void)
 {
 	s5p_fimd1_set_platdata(&smdkc210_lcd1_pdata);
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	s5p_mfc_setname(&s5p_device_mfc, "s5p-mfc-v6");
+#endif
 	platform_add_devices(fpga5210_devices, ARRAY_SIZE(fpga5210_devices));
 }
 
