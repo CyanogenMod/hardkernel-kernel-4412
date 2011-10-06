@@ -92,6 +92,11 @@ static int exynos5_clk_ip_disp1_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_DISP1, clk, enable);
 }
 
+static int exynos5_clksrc_ip_gen_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GEN, clk, enable);
+}
+
 static int exynos5_clksrc_mask_disp0_0_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_DISP0_0, clk, enable);
