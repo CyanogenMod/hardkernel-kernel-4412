@@ -147,6 +147,7 @@ struct usb_ep {
 	struct list_head	ep_list;
 	unsigned		maxpacket:16;
 
+	unsigned		numstreams:5;
 	unsigned		maxburst:4;
 };
 
