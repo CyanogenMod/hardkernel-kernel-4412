@@ -51,7 +51,7 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 				}
 			} else if (cpu_online(1) == 0) {
 				if (consecutv_highestlevel_cnt >= 2) {
-					cpu_up(2);
+					cpu_up(1);
 					num_hotplug_in++;
 					consecutv_highestlevel_cnt = 0;
 				}
