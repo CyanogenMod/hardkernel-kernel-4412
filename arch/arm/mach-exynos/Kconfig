@@ -606,6 +606,7 @@ config MACH_SMDK5210
 	select SAMSUNG_DEV_PWM
 	select S5P_DEV_I2C_HDMIPHY
 	select S5P_DEV_TV
+	select EXYNOS_DEV_SS_UDC
 	help
 	  Machine support for Samsung SMDK5210
 
