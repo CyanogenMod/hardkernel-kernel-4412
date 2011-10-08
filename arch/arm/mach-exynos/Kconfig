@@ -18,6 +18,7 @@ config ARCH_EXYNOS4
 	select ARM_ERRATA_743622
 	select ARM_ERRATA_751472
 	select ARM_ERRATA_754322
+	select ARM_ERRATA_764369
 	help
 	  Samsung EXYNOS4 series based systems
 
