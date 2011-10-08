@@ -83,16 +83,21 @@ static int jpeg_dec_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 static int jpeg_dec_buf_prepare(struct vb2_buffer *vb)
 {
 	int i;
+	int num_plane = 0;
 
 	struct jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 
-	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		for (i = 0; i < ctx->param.dec_param.in_plane; i++)
-			vb2_set_plane_payload(vb, i, ctx->payload[i]);
-	} else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
-		for (i = 0; i < ctx->param.dec_param.out_plane; i++)
-			vb2_set_plane_payload(vb, i, ctx->payload[i]);
-	}
+	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+		num_plane = ctx->param.dec_param.in_plane;
+	else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+		num_plane = ctx->param.dec_param.out_plane;
+
+	if (ctx->cacheable == 1)
+		ctx->dev->vb2->cache_flush(vb, num_plane);
+
+	for (i = 0; i < num_plane; i++)
+		vb2_set_plane_payload(vb, i, ctx->payload[i]);
+
 	return 0;
 }
 
@@ -158,15 +163,21 @@ static int jpeg_enc_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 static int jpeg_enc_buf_prepare(struct vb2_buffer *vb)
 {
 	int i;
+	int num_plane = 0;
+
 	struct jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 
-	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		for (i = 0; i < ctx->param.enc_param.in_plane; i++)
-			vb2_set_plane_payload(vb, i, ctx->payload[i]);
-	} else {
-		for (i = 0; i < ctx->param.enc_param.out_plane; i++)
-			vb2_set_plane_payload(vb, i, ctx->payload[i]);
-	}
+	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+		num_plane = ctx->param.enc_param.in_plane;
+	else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+		num_plane = ctx->param.enc_param.out_plane;
+
+	if (ctx->cacheable == 1)
+		ctx->dev->vb2->cache_flush(vb, num_plane);
+
+	for (i = 0; i < num_plane; i++)
+		vb2_set_plane_payload(vb, i, ctx->payload[i]);
+
 	return 0;
 }
 

@@ -407,6 +407,7 @@ static int jpeg_enc_m2m_reqbufs(struct file *file, void *priv,
 			  struct v4l2_requestbuffers *reqbufs)
 {
 	struct jpeg_ctx *ctx = priv;
+	ctx->dev->vb2->set_cacheable(ctx->dev->alloc_ctx, ctx->cacheable);
 	return v4l2_m2m_reqbufs(file, ctx->m2m_ctx, reqbufs);
 }
 
@@ -480,6 +481,26 @@ static int vidioc_enc_g_jpegcomp(struct file *file, void *priv,
 	return 0;
 }
 
+static int jpeg_enc_vidioc_s_ctrl(struct file *file, void *priv,
+			struct v4l2_control *ctrl)
+{
+	struct jpeg_ctx *ctx = priv;
+
+	switch (ctrl->id) {
+	case V4L2_CID_CACHEABLE:
+		if (ctrl->value == 0 || ctrl->value == 1)
+			ctx->cacheable = ctrl->value;
+		else
+			ctx->cacheable = 0;
+		break;
+	default:
+		v4l2_err(&ctx->dev->v4l2_dev, "Invalid control\n");
+		break;
+	}
+
+	return 0;
+}
+
 static const struct v4l2_ioctl_ops jpeg_enc_ioctl_ops = {
 	.vidioc_querycap		= jpeg_enc_vidioc_querycap,
 
@@ -503,6 +524,7 @@ static const struct v4l2_ioctl_ops jpeg_enc_ioctl_ops = {
 	.vidioc_g_ctrl			= jpeg_enc_vidioc_g_ctrl,
 	.vidioc_g_jpegcomp		= vidioc_enc_g_jpegcomp,
 	.vidioc_s_jpegcomp		= vidioc_enc_s_jpegcomp,
+	.vidioc_s_ctrl			= jpeg_enc_vidioc_s_ctrl,
 };
 const struct v4l2_ioctl_ops *get_enc_v4l2_ioctl_ops(void)
 {

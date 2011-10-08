@@ -29,12 +29,6 @@ void *jpeg_cma_init(struct jpeg_dev *dev)
 
 void jpeg_cma_resume(void *alloc_ctx) {}
 void jpeg_cma_suspend(void *alloc_ctx) {}
-void jpeg_cma_set_cacheable(void *alloc_ctx, bool cacheable) {}
-
-int jpeg_cma_cache_flush(struct vb2_buffer *vb, u32 plane_no)
-{
-	return 0;
-}
 
 const struct jpeg_vb2 jpeg_vb2_cma = {
 	.ops		= &vb2_cma_phys_memops,
@@ -43,6 +37,6 @@ const struct jpeg_vb2 jpeg_vb2_cma = {
 	.plane_addr	= vb2_cma_phys_plane_paddr,
 	.resume		= jpeg_cma_resume,
 	.suspend	= jpeg_cma_suspend,
-	.cache_flush	= jpeg_cma_cache_flush,
-	.set_cacheable	= jpeg_cma_set_cacheable,
+	.cache_flush	= vb2_cma_phys_cache_flush,
+	.set_cacheable	= vb2_cma_phys_set_cacheable,
 };

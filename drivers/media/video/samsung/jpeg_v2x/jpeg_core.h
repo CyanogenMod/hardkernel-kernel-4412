@@ -165,6 +165,7 @@ struct jpeg_ctx {
 
 	int			index;
 	unsigned long		payload[VIDEO_MAX_PLANES];
+	bool			cacheable;
 };
 
 struct jpeg_vb2 {
