@@ -92,6 +92,11 @@ static int exynos5_clk_ip_disp1_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_DISP1, clk, enable);
 }
 
+static int exynos5_clk_ip_mfc_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_MFC, clk, enable);
+}
+
 static int exynos5_clksrc_ip_gen_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GEN, clk, enable);
@@ -549,6 +554,11 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "lcd",
 		.devname	= "s3cfb.1",
 		.enable		= exynos5_clk_ip_disp1_ctrl,
+		.ctrlbit	= (1 << 0),
+	}, {
+		.name		= "mfc",
+		.devname	= "s3c-mfc",
+		.enable		= exynos5_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 0),
 	},
 };
