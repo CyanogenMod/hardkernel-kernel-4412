@@ -26,6 +26,7 @@
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/mfd/max8997.h>
 #include <linux/v4l2-mediabus.h>
+#include <linux/memblock.h>
 #include <linux/delay.h>
 #if defined(CONFIG_S5P_MEM_CMA)
 #include <linux/cma.h>
@@ -2300,6 +2301,54 @@ static struct s5p_platform_cec hdmi_cec_data __initdata = {
 #endif
 
 #if defined(CONFIG_S5P_MEM_CMA)
+static void __init exynos4_cma_region_reserve(
+			struct cma_region *regions_normal,
+			struct cma_region *regions_secure)
+{
+	struct cma_region *reg;
+	size_t size_secure = 0, align_secure = 0;
+	phys_addr_t paddr = 0;
+
+	for (reg = regions_normal; reg->size != 0; reg++) {
+		if ((reg->alignment & (reg->alignment - 1)) || reg->reserved)
+			continue;
+
+		if (reg->start) {
+			if (!memblock_is_region_reserved(reg->start, reg->size)
+			    && memblock_reserve(reg->start, reg->size) >= 0)
+				reg->reserved = 1;
+		} else {
+			paddr = __memblock_alloc_base(reg->size, reg->alignment,
+					MEMBLOCK_ALLOC_ACCESSIBLE);
+			if (paddr) {
+				reg->start = paddr;
+				reg->reserved = 1;
+			}
+		}
+	}
+
+	if (regions_secure) {
+		for (reg = regions_secure; reg->size != 0; reg++)
+			size_secure += reg->size;
+
+		reg--;
+
+		align_secure = reg->alignment;
+		BUG_ON(align_secure & (align_secure - 1));
+
+		paddr -= size_secure;
+		paddr &= ~(align_secure - 1);
+
+		if (!memblock_reserve(paddr, size_secure)) {
+			do {
+				reg->start = paddr;
+				reg->reserved = 1;
+				paddr += reg->size;
+			} while (reg-- != regions_secure);
+		}
+	}
+}
+
 static void __init exynos4_reserve_mem(void)
 {
 	static struct cma_region regions[] = {
@@ -2315,71 +2364,6 @@ static void __init exynos4_reserve_mem(void)
 			.name = "pmem_gpu1",
 			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K,
 			.start = 0,
-		},
-#endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD
-		{
-			.name = "fimd",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD * SZ_1K,
-			.start = 0
-		},
-#endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0
-		{
-			.name = "fimc0",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0 * SZ_1K,
-			.start = 0
-		},
-#endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
-		{
-			.name = "fimc1",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
-			.start = 0
-		},
-#endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2
-		{
-			.name = "fimc2",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2 * SZ_1K,
-			.start = 0
-		},
-#endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
-		{
-			.name = "fimc3",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3 * SZ_1K,
-			.start = 0
-		},
-#endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1
-		{
-			.name = "mfc1",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1 * SZ_1K,
-			{
-				.alignment = 1 << 17,
-			},
-			.start = 0,
-		},
-#endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
-		{
-			.name = "mfc0",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
-			{
-				.alignment = 1 << 17,
-			},
-			.start = 0,
-		},
-#endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC
-		{
-			.name = "mfc",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC * SZ_1K,
-			{
-				.alignment = 1 << 17,
-			},
-			.start = 0
 		},
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_JPEG
@@ -2403,6 +2387,34 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD
+		{
+			.name = "fimd",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0
+		{
+			.name = "fimc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2
+		{
+			.name = "fimc2",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
+		{
+			.name = "fimc3",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3 * SZ_1K,
+			.start = 0
+		},
+#endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 		{
 			.name = "fimc_is",
@@ -2413,11 +2425,54 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1
+		{
+			.name = "mfc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1 * SZ_1K,
+			{
+				.alignment = 1 << 17,
+			},
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC
+		{
+			.name = "mfc",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC * SZ_1K,
+			{
+				.alignment = 1 << 17,
+			},
+			.start = 0
+		},
+#endif
 		{
 			.size = 0
 		},
 	};
-
+	static struct cma_region regions_secure[] = {
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
+		{
+			.name = "fimc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
+		{
+			.name = "mfc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
+			{
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+				.alignment = SZ_64M,
+#else
+				.alignment = 1 << 17,
+#endif
+			},
+		},
+#endif
+		{
+			.size = 0
+		},
+	};
 	static const char map[] __initconst =
 #ifdef CONFIG_EXYNOS4_C2C
 		"samsung-c2c=c2c_shdmem;"
@@ -2432,9 +2487,17 @@ static void __init exynos4_reserve_mem(void)
 		"exynos4-fimc-is=fimc_is;"
 		"s5p-fimg2d=fimg2d;"
 		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;";
+		"s5p-smem/mfc=mfc0;"
+		"s5p-smem/fimc=fimc1;";
+	struct cma_region *reg;
 
 	cma_set_defaults(regions, map);
-	cma_early_regions_reserve(NULL);
+
+	reg = regions_secure;
+	for (; reg->size; ++reg)
+		BUG_ON(cma_early_region_register(reg));
+
+	exynos4_cma_region_reserve(regions, regions_secure);
 }
 #endif
 
