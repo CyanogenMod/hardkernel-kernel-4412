@@ -37,14 +37,6 @@
 #include <linux/io.h>
 
 #ifdef CONFIG_VITHAR
-#define VITHAR_BRINGUP
-#define VITHAR_FPGA
-#endif
-
-#ifdef VITHAR_BRINGUP
-#include <linux/dma-mapping.h>
-#include <linux/interrupt.h>
-#include <linux/ioport.h>
 #include <mach/map.h>
 #endif
 
@@ -54,11 +46,11 @@
 #define FAKE_PLATFORM_TYPE "mali-t6f1"
 #else
 
-#ifdef VITHAR_BRINGUP
+#ifdef CONFIG_VITHAR
 #define FAKE_PLATFORM_TYPE "mali-t604"
 #else
 #define FAKE_PLATFORM_TYPE "mali-t6xm"
-#endif /*VITHAR_BRINGUP*/
+#endif
 
 #endif
 #endif
@@ -708,7 +700,8 @@ static int kbase_common_device_init(kbase_device *kbdev)
 		goto out_unmap;
 
 	dev_set_drvdata(osdev->dev, kbdev);
-#ifdef VITHAR_FPGA
+#ifdef CONFIG_MACH_FPGA5210
+	/* FPGA use ROM filesystem, so we can't MISC device node */
 	osdev->mdev.minor	= 77;
 #else
 	osdev->mdev.minor	= MISC_DYNAMIC_MINOR;
@@ -975,6 +968,34 @@ static int kbase_device_resume(struct device *dev)
 	return 0;
 }
 
+/** Suspend callback from the OS.
+ *
+ * This is called by Linux runtime PM when the device should suspend.
+ *
+ * @param dev	The device to suspend
+ *
+ * @return A standard Linux error code
+ */
+static int kbase_device_runtime_suspend(struct device *dev)
+{
+    /* TBI */
+    return 0;
+}
+
+/** Resume callback from the OS.
+ *
+ * This is called by Linux runtime PM when the device should resume from suspension.
+ *
+ * @param dev	The device to resume
+ *
+ * @return A standard Linux error code
+ */
+static int kbase_device_runtime_resume(struct device *dev)
+{
+    /* TBI */
+    return 0;
+}
+
 #define kbdev_info(x) ((kernel_ulong_t)&kbase_dev_info[(x)])
 
 static struct platform_device_id kbase_platform_id_table[] =
@@ -1016,6 +1037,8 @@ static struct dev_pm_ops kbase_pm_ops =
 {
 	.suspend	= kbase_device_suspend,
 	.resume		= kbase_device_resume,
+	.runtime_suspend	= kbase_device_runtime_suspend,
+	.runtime_resume		= kbase_device_runtime_resume,
 };
 
 static struct platform_driver kbase_platform_driver =
@@ -1041,7 +1064,6 @@ static struct pci_driver kbase_pci_driver =
 
 #ifdef FAKE_PLATFORM_DEVICE
 static struct platform_device *mali_device;
-
 #if defined(CONFIG_ARCH_VEXPRESS)
 #define JOB_IRQ_NUMBER  68
 #define MMU_IRQ_NUMBER  69
@@ -1054,20 +1076,16 @@ static struct platform_device *mali_device;
 #define JOB_IRQ_NUMBER  20
 #define MMU_IRQ_NUMBER  20
 #define GPU_IRQ_NUMBER  20
+#elif defined(CONFIG_ARCH_EXYNOS5)
+/* IRQs are defined in irqs-exynos5.h */
 #else
-//#error FAKE_PLATFORM_DEVICE defined and no known IRQ assignments
-#ifdef VITHAR_BRINGUP
-#define JOB_IRQ_NUMBER  IRQ_SPI(118) /*150*/
-#define MMU_IRQ_NUMBER  IRQ_SPI(119) /*51*/
-#define GPU_IRQ_NUMBER  IRQ_SPI(117) /*49*/
-#define EXYNOS5_PA_G3D 0x11800000
-#endif
+#error FAKE_PLATFORM_DEVICE defined and no known IRQ assignments
 #endif
 
 
 static struct resource mali_resource[] = {
 	[0] = {
-#ifdef VITHAR_BRINGUP
+#ifdef CONFIG_VITHAR
 		.start	= EXYNOS5_PA_G3D,
 		.end	= EXYNOS5_PA_G3D + (4096 * 5) - 1,
 #else
