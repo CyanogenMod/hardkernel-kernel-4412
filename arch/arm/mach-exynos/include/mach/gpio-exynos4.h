@@ -198,12 +198,4 @@ enum exynos4212_gpio_number {
 #define EXYNOS4XXX_GPIO_END	(EXYNOS4212_GPIO_END > EXYNOS4210_GPIO_END ? \
 				 EXYNOS4212_GPIO_END : EXYNOS4210_GPIO_END)
 #define EXYNOS4_GPIO_END	EXYNOS4XXX_GPIO_END
-#define S3C_GPIO_END		EXYNOS4_GPIO_END
-
-/* define the number of gpios we need to the one after the GPZ() range */
-#define ARCH_NR_GPIOS		(EXYNOS4XXX_GPIO_END +			\
-				CONFIG_SAMSUNG_GPIO_EXTRA)
-
-#include <asm-generic/gpio.h>
-
 #endif /* __ASM_ARCH_GPIO_EXYNOS4_H */

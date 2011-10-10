@@ -75,7 +75,7 @@
 #define EXYNOS5_GPIO_NEXT(__gpio) \
 	((__gpio##_START) + (__gpio##_NR) + CONFIG_S3C_GPIO_SPACE + 1)
 
-enum exynos4_gpio_number {
+enum exynos5_gpio_number {
 	EXYNOS5_GPIO_A0_START		= 0,
 	EXYNOS5_GPIO_A1_START		= EXYNOS5_GPIO_NEXT(EXYNOS5_GPIO_A0),
 	EXYNOS5_GPIO_A2_START		= EXYNOS5_GPIO_NEXT(EXYNOS5_GPIO_A1),
@@ -178,13 +178,4 @@ enum exynos4_gpio_number {
 
 /* the end of the EXYNOS5 specific gpios */
 #define EXYNOS5_GPIO_END	(EXYNOS5_GPZ(EXYNOS5_GPIO_Z_NR) + 1)
-
-#define S3C_GPIO_END		EXYNOS5_GPIO_END
-
-/* define the number of gpios we need to the one after the GPZ() range */
-#define ARCH_NR_GPIOS		(EXYNOS5_GPIO_END +			\
-				CONFIG_SAMSUNG_GPIO_EXTRA)
-
-#include <asm-generic/gpio.h>
-
 #endif /* __ASM_ARCH_GPIO_EXYNOS5_H */

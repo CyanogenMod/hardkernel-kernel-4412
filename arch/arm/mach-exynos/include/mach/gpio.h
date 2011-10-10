@@ -13,12 +13,21 @@
 #ifndef __ASM_ARCH_GPIO_H
 #define __ASM_ARCH_GPIO_H __FILE__
 
-#if defined(CONFIG_ARCH_EXYNOS4)
 #include "gpio-exynos4.h"
-#elif defined(CONFIG_ARCH_EXYNOS5)
 #include "gpio-exynos5.h"
+
+#if defined(CONFIG_ARCH_EXYNOS4)
+#define S3C_GPIO_END		EXYNOS4_GPIO_END
+#define ARCH_NR_GPIOS		(EXYNOS4XXX_GPIO_END +	\
+				CONFIG_SAMSUNG_GPIO_EXTRA)
+#elif defined(CONFIG_ARCH_EXYNOS5)
+#define S3C_GPIO_END		EXYNOS5_GPIO_END
+#define ARCH_NR_GPIOS		(EXYNOS5_GPIO_END +	\
+				CONFIG_SAMSUNG_GPIO_EXTRA)
 #else
 #error "ARCH_EXYNOS* is not defined"
 #endif
+
+#include <asm-generic/gpio.h>
 
 #endif /* __ASM_ARCH_GPIO_H */
