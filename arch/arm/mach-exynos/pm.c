@@ -182,7 +182,7 @@ void exynos4_cpu_suspend(void)
 {
 	unsigned int tmp;
 
-	if ((!cpu_is_exynos4210()) && (exynos4_is_c2c_use())) {
+	if ((!soc_is_exynos4210()) && (exynos4_is_c2c_use())) {
 		/* Gating CLK_IEM_APC */
 		tmp = __raw_readl(EXYNOS4_CLKGATE_IP_DMC);
 		tmp &= ~(0x1 << 17);
@@ -230,7 +230,7 @@ static void exynos4_pm_prepare(void)
 
 	s3c_pm_do_restore_core(exynos4_set_clksrc, ARRAY_SIZE(exynos4_set_clksrc));
 
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		s3c_pm_do_restore_core(exynos4210_set_clksrc, ARRAY_SIZE(exynos4210_set_clksrc));
 }
 
@@ -296,7 +296,7 @@ static int exynos4_pm_suspend(void)
 	/* When enter sleep mode, USE_DELAYED_RESET_ASSERTION have to disable */
 	exynos4_reset_assert_ctrl(0);
 
-	if (!cpu_is_exynos4210()) {
+	if (!soc_is_exynos4210()) {
 		tmp = __raw_readl(S5P_CENTRAL_SEQ_OPTION);
 		tmp &= ~(S5P_USE_STANDBYWFI_ISP_ARM |
 			 S5P_USE_STANDBYWFE_ISP_ARM);
@@ -348,7 +348,7 @@ static void exynos4_pm_resume(void)
 
 #ifdef CONFIG_CACHE_L2X0
 #ifdef CONFIG_ARM_TRUSTZONE
-	if (cpu_is_exynos4212())
+	if (soc_is_exynos4212())
 		exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, 0x120, 0x30000007);
 	else
 		exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, 0x110, 0x30000007);

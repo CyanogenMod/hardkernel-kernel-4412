@@ -403,7 +403,7 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	s3c_pm_do_restore_core(exynos4_set_clksrc,
 			       ARRAY_SIZE(exynos4_set_clksrc));
 
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		s3c_pm_do_restore_core(exynos4210_set_clksrc, ARRAY_SIZE(exynos4210_set_clksrc));
 
 	local_irq_disable();
@@ -428,7 +428,7 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	exynos4_sys_powerdown_conf(SYS_LPA);
 
 	/* Should be fixed on EVT1 */
-	if (cpu_is_exynos4412())
+	if (soc_is_exynos4412())
 		exynos4_reset_assert_ctrl(0);
 
 	do {
@@ -464,7 +464,7 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
 
 early_wakeup:
-	if (cpu_is_exynos4412())
+	if (soc_is_exynos4412())
 		exynos4_reset_assert_ctrl(1);
 
 	/* Clear wakeup state register */
@@ -603,7 +603,7 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 	}
 	dev->last_state = new_state;
 
-	if (!cpu_is_exynos4210()) {
+	if (!soc_is_exynos4210()) {
 		tmp = __raw_readl(S5P_CENTRAL_SEQ_OPTION);
 		tmp &= ~(S5P_USE_STANDBYWFI_ISP_ARM |
 			 S5P_USE_STANDBYWFE_ISP_ARM);
@@ -655,7 +655,7 @@ static void __init exynos4_core_down_clk(void)
 	tmp |= ((0x7 << PWR_CTRL1_CORE2_DOWN_RATIO) |
 		(0x7 << PWR_CTRL1_CORE1_DOWN_RATIO));
 
-	if (cpu_is_exynos4212()) {
+	if (soc_is_exynos4212()) {
 	/* Set PWR_CTRL1 register to use clock down feature */
 		tmp |= (PWR_CTRL1_DIV2_DOWN_EN |
 			PWR_CTRL1_DIV1_DOWN_EN |
@@ -663,7 +663,7 @@ static void __init exynos4_core_down_clk(void)
 			PWR_CTRL1_USE_CORE0_WFE |
 			PWR_CTRL1_USE_CORE1_WFI |
 			PWR_CTRL1_USE_CORE0_WFI);
-	} else if (cpu_is_exynos4412()) {
+	} else if (soc_is_exynos4412()) {
 		tmp |= (PWR_CTRL1_DIV2_DOWN_EN |
 			PWR_CTRL1_DIV1_DOWN_EN |
 			PWR_CTRL1_USE_CORE3_WFE |
@@ -709,7 +709,7 @@ static int __init exynos4_init_cpuidle(void)
 	struct platform_device *pdev;
 	struct resource *res;
 
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		use_clock_down = SW_CLK_DWN;
 	else
 		use_clock_down = HW_CLK_DWN;

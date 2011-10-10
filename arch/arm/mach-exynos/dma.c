@@ -390,13 +390,13 @@ static struct platform_device *exynos_dmacs[] __initdata = {
 
 static int __init exynos_dma_init(void)
 {
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		exynos_device_pdma0.dev.platform_data = &exynos4210_pdma0_pdata;
 		exynos_device_pdma1.dev.platform_data = &exynos4210_pdma1_pdata;
-	} else if (cpu_is_exynos4212() || cpu_is_exynos4412()) {
+	} else if (soc_is_exynos4212() || soc_is_exynos4412()) {
 		exynos_device_pdma0.dev.platform_data = &exynos4212_pdma0_pdata;
 		exynos_device_pdma1.dev.platform_data = &exynos4212_pdma1_pdata;
-	} else if (cpu_is_exynos5210()) {
+	} else if (soc_is_exynos5210()) {
 		exynos_device_pdma0.dev.platform_data = &exynos5210_pdma0_pdata;
 		exynos_device_pdma1.dev.platform_data = &exynos5210_pdma1_pdata;
 	}

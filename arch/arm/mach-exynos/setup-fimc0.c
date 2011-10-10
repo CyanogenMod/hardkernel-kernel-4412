@@ -28,7 +28,7 @@ struct platform_device; /* don't need the contents */
 
 void s3c_fimc0_cfg_gpio(struct platform_device *pdev)
 {
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
 		s3c_gpio_cfgrange_nopull(EXYNOS4210_GPJ0(0), 8, S3C_GPIO_SFN(2));
 		/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */

@@ -55,7 +55,7 @@ void __init scu_enable(void __iomem *scu_base)
 	if (scu_ctrl & 1)
 		return;
 
-	if (cpu_is_exynos4412()) {
+	if (soc_is_exynos4412()) {
 		/*
 		 * Use SCU address filtering feature.
 		 * It should be removed on exynos4412 EVT1.

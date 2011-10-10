@@ -546,7 +546,7 @@ static int __init busfreq_mon_init(void)
 	unsigned int freq;
 	unsigned int val;
 
-	if (!cpu_is_exynos4210())
+	if (!soc_is_exynos4210())
 		return -ENODEV;
 
 	val = __raw_readl(S5P_VA_DMC0 + 0x4);

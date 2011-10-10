@@ -1606,7 +1606,7 @@ static int dw_mci_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	/* IP version conrtol */
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		host->data_addr = 0x0;
 		host->hold_bit = 0;
 	} else {

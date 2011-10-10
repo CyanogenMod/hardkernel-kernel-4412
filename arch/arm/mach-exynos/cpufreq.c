@@ -389,9 +389,9 @@ static int __init exynos_cpufreq_init(void)
 	if (!exynos_info)
 		return -ENOMEM;
 
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		ret = exynos4210_cpufreq_init(exynos_info);
-	else if (cpu_is_exynos4212() || cpu_is_exynos4412())
+	else if (soc_is_exynos4212() || soc_is_exynos4412())
 		ret = exynos4212_cpufreq_init(exynos_info);
 	else
 		printk(KERN_ERR "%s: no cpu type defined\n", __func__);

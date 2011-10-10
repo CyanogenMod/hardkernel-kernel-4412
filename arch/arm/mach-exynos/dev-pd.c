@@ -26,7 +26,7 @@ static int exynos4_pd_init(struct device *dev)
 	struct samsung_pd_info *pdata =  dev->platform_data;
 	struct exynos4_pd_data *data = (struct exynos4_pd_data *) pdata->data;
 
-	if (cpu_is_exynos4210() && data->read_phy_addr) {
+	if (soc_is_exynos4210() && data->read_phy_addr) {
 		data->read_base = ioremap(data->read_phy_addr, SZ_4K);
 		if (!data->read_base)
 			return -ENOMEM;

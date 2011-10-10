@@ -1850,7 +1850,7 @@ static int xtal_rate;
 
 static unsigned long exynos4_fout_apll_get_rate(struct clk *clk)
 {
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		return s5p_get_pll45xx(xtal_rate, __raw_readl(EXYNOS4_APLL_CON0), pll_4508);
 	else
 		return s5p_get_pll35xx(xtal_rate, __raw_readl(EXYNOS4_APLL_CON0), pll_3500);
@@ -1890,7 +1890,7 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 
 	printk(KERN_DEBUG "%s: xtal is %ld\n", __func__, xtal);
 
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		apll = s5p_get_pll45xx(xtal, __raw_readl(EXYNOS4_APLL_CON0), pll_4508);
 		mpll = s5p_get_pll45xx(xtal, __raw_readl(EXYNOS4_MPLL_CON0), pll_4508);
 		epll = s5p_get_pll46xx(xtal, __raw_readl(EXYNOS4_EPLL_CON0),

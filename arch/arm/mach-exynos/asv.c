@@ -106,7 +106,7 @@ static int __init exynos4_asv_init(void)
 	if (!exynos_asv)
 		goto out1;
 
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		ret = exynos4210_asv_init(exynos_asv);
 	else {
 		pr_info("EXYNOS: There is no type for ASV\n");

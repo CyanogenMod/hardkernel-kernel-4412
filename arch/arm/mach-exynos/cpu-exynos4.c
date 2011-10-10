@@ -204,7 +204,7 @@ void __init exynos4_map_io(void)
 {
 	iotable_init(exynos4_iodesc, ARRAY_SIZE(exynos4_iodesc));
 
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		iotable_init(exynos4_iodesc_4210, ARRAY_SIZE(exynos4_iodesc_4210));
 	else
 		iotable_init(exynos4_iodesc_4212, ARRAY_SIZE(exynos4_iodesc_4212));
@@ -250,7 +250,7 @@ void __init exynos4_init_clocks(int xtal)
 
 	s3c24xx_register_baseclocks(xtal);
 
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		exynos4210_register_clocks();
 	else
 		exynos4212_register_clocks();
@@ -275,7 +275,7 @@ void __init exynos4_init_irq(void)
 {
 	int irq;
 
-	gic_bank_offset = cpu_is_exynos4412() ? 0x4000 : 0x8000;
+	gic_bank_offset = soc_is_exynos4412() ? 0x4000 : 0x8000;
 
 	gic_init(0, IRQ_PPI_MCT_L, S5P_VA_GIC_DIST, S5P_VA_GIC_CPU);
 	gic_arch_extn.irq_eoi = exynos4_gic_fix_base;
@@ -322,7 +322,7 @@ static void exynos4_l2x0_set_debug(unsigned long val)
 static int __init exynos4_l2x0_cache_init(void)
 {
 #ifdef CONFIG_ARM_TRUSTZONE
-	if (cpu_is_exynos4212())
+	if (soc_is_exynos4212())
 		exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, 0x120, 0x30000007);
 	else
 		exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, 0x110, 0x30000007);
@@ -334,7 +334,7 @@ static int __init exynos4_l2x0_cache_init(void)
 #else
 	/* TAG, Data Latency Control: 2cycle */
 	__raw_writel(0x110, S5P_VA_L2CC + L2X0_TAG_LATENCY_CTRL);
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		__raw_writel(0x110, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
 	else
 		__raw_writel(0x120, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);

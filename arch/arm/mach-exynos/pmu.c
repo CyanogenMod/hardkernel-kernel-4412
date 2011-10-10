@@ -335,12 +335,12 @@ void exynos4_sys_powerdown_conf(enum sys_powerdown mode)
 		__raw_writel(exynos4_pmu_config[count - 1].val[mode],
 				exynos4_pmu_config[count - 1].reg);
 
-	if ((!cpu_is_exynos4210()) && (exynos4_is_c2c_use())) {
+	if ((!soc_is_exynos4210()) && (exynos4_is_c2c_use())) {
 		for (count = 0 ; count < ARRAY_SIZE(exynos4x12_c2c_pmu_conf) ; count++)
 			__raw_writel(exynos4x12_c2c_pmu_conf[count].val[mode],
 					exynos4x12_c2c_pmu_conf[count].reg);
 
-		if (cpu_is_exynos4212())
+		if (soc_is_exynos4212())
 			__raw_writel(exynos4212_c2c_pmu_conf[0].val[mode],
 					exynos4212_c2c_pmu_conf[0].reg);
 
@@ -376,17 +376,17 @@ static int __init exynos4_pmu_init(void)
 {
 	exynos4_reset_assert_ctrl(1);
 
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		exynos4_pmu_config = exynos4210_pmu_config;
 		entry_cnt = ARRAY_SIZE(exynos4210_pmu_config);
 		printk(KERN_INFO "%s: PMU supports 4210(%d)\n",
 					__func__, entry_cnt);
-	} else if (cpu_is_exynos4212()) {
+	} else if (soc_is_exynos4212()) {
 		exynos4_pmu_config = exynos4212_pmu_config;
 		entry_cnt = ARRAY_SIZE(exynos4212_pmu_config);
 		printk(KERN_INFO "%s: PMU supports 4212(%d)\n",
 					__func__, entry_cnt);
-	} else if (cpu_is_exynos4412()) {
+	} else if (soc_is_exynos4412()) {
 		exynos4_pmu_config = exynos4412_pmu_config;
 		entry_cnt = ARRAY_SIZE(exynos4412_pmu_config);
 		printk(KERN_INFO "%s: PMU supports 4412(%d)\n",

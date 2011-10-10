@@ -272,7 +272,7 @@ static void set_clkdiv(unsigned int div_index)
 	tmp = exynos4212_clkdiv_table[div_index].clkdiv1;
 
 	__raw_writel(tmp, EXYNOS4_CLKDIV_CPU1);
-	if (cpu_is_exynos4212())
+	if (soc_is_exynos4212())
 		stat_cpu1 = 0x11;
 	else
 		stat_cpu1 = 0x111;
@@ -481,7 +481,7 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 			EXYNOS4_CLKDIV_CPU0_PCLKDBG_MASK |
 			EXYNOS4_CLKDIV_CPU0_APLL_MASK);
 
-		if (cpu_is_exynos4212()) {
+		if (soc_is_exynos4212()) {
 			tmp |= ((clkdiv_cpu0_4212[i][0] << EXYNOS4_CLKDIV_CPU0_CORE_SHIFT) |
 				(clkdiv_cpu0_4212[i][1] << EXYNOS4_CLKDIV_CPU0_COREM0_SHIFT) |
 				(clkdiv_cpu0_4212[i][2] << EXYNOS4_CLKDIV_CPU0_COREM1_SHIFT) |
@@ -504,7 +504,7 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 
 		tmp = __raw_readl(EXYNOS4_CLKDIV_CPU1);
 
-		if (cpu_is_exynos4212()) {
+		if (soc_is_exynos4212()) {
 			tmp &= ~(EXYNOS4_CLKDIV_CPU1_COPY_MASK |
 				EXYNOS4_CLKDIV_CPU1_HPM_MASK);
 			tmp |= ((clkdiv_cpu1_4212[i][0] << EXYNOS4_CLKDIV_CPU1_COPY_SHIFT) |

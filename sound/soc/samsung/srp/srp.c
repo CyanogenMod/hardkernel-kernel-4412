@@ -633,7 +633,7 @@ static void srp_set_pcm_dump(int on)
 
 static void srp_init_op_mode(void)
 {
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		srp.op_mode = SRP_ARM_INTR_CODE_ULP_CTYPE;
 	else
 		srp.op_mode = SRP_ARM_INTR_CODE_ULP_BTYPE;

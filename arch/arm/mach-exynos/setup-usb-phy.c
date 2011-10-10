@@ -71,7 +71,7 @@ static u32 exynos4_usb_phy_set_clock(struct platform_device *pdev)
 		return PTR_ERR(xusbxti_clk);
 	}
 
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		phyclk &= ~(EXYNOS4210_PHY0_ID_PULLUP |
 				EXYNOS4210_CLKSEL_MASK);
 		switch (clk_get_rate(xusbxti_clk)) {
@@ -124,7 +124,7 @@ static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
 {
 	spin_lock(&usb_phy_control.phy_lock);
 
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		if (phy_type & USB_PHY0) {
 			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
 				writel(PHY_ENABLE, S5P_USBOTG_PHY_CONTROL);
@@ -192,7 +192,7 @@ static int exynos4_usb_phy0_init(struct platform_device *pdev)
 	writel(phyclk, EXYNOS4_PHYCLK);
 
 	/* USB MUX change from Host to Device */
-	if (cpu_is_exynos4212() || cpu_is_exynos4412())
+	if (soc_is_exynos4212() || soc_is_exynos4412())
 		exynos4_usb_mux_change(0);
 
 	/* set to normal of PHY0 */
@@ -227,7 +227,7 @@ static int exynos4_usb_phy0_exit(struct platform_device *pdev)
 	exynos4_usb_phy_control(USB_PHY0, PHY_DISABLE);
 
 	/* USB MUX change from Device to Host */
-	if (cpu_is_exynos4212() || cpu_is_exynos4412())
+	if (soc_is_exynos4212() || soc_is_exynos4412())
 		exynos4_usb_mux_change(1);
 	clk_disable(otg_clk);
 	clk_put(otg_clk);
@@ -265,7 +265,7 @@ int exynos4_check_usb_op(void)
 	}
 
 	/*If USB Device & Host is suspended,  */
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		if (phypwr & (PHY1_STD_FORCE_SUSPEND
 			| EXYNOS4210_HSIC0_FORCE_SUSPEND
 			| EXYNOS4210_HSIC1_FORCE_SUSPEND)) {
@@ -320,7 +320,7 @@ static int exynos4_usb_phy1_suspend(struct platform_device *pdev)
 
 	/* set to suspend HSIC 0 and 1 and standard of PHY1 */
 	phypwr = readl(EXYNOS4_PHYPWR);
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		phypwr |= (PHY1_STD_FORCE_SUSPEND
 			| EXYNOS4210_HSIC0_FORCE_SUSPEND
 			| EXYNOS4210_HSIC1_FORCE_SUSPEND);
@@ -360,7 +360,7 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 	if (exynos4_usb_host_phy_is_on()) {
 		/* set to resume HSIC 0 and 1 and standard of PHY1 */
 		phypwr = readl(EXYNOS4_PHYPWR);
-		if (cpu_is_exynos4210()) {
+		if (soc_is_exynos4210()) {
 			phypwr &= ~(PHY1_STD_FORCE_SUSPEND
 				| EXYNOS4210_HSIC0_FORCE_SUSPEND
 				| EXYNOS4210_HSIC1_FORCE_SUSPEND);
@@ -378,7 +378,7 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 	} else {
 		phypwr = readl(EXYNOS4_PHYPWR);
 		/* set to normal HSIC 0 and 1 of PHY1 */
-		if (cpu_is_exynos4210()) {
+		if (soc_is_exynos4210()) {
 			exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
 
 			phypwr &= ~(PHY1_STD_NORMAL_MASK
@@ -452,7 +452,7 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 		return err;
 	}
 
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
 	} else {
 		exynos4_usb_phy_control(USB_PHY
@@ -486,7 +486,7 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 
 	phypwr = readl(EXYNOS4_PHYPWR);
 	/* set to normal HSIC 0 and 1 of PHY1 */
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		phypwr &= ~(PHY1_STD_NORMAL_MASK
 			| EXYNOS4210_HSIC0_NORMAL_MASK
 			| EXYNOS4210_HSIC1_NORMAL_MASK);
@@ -556,7 +556,7 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 		return err;
 	}
 
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		phypwr = readl(EXYNOS4_PHYPWR)
 			| PHY1_STD_NORMAL_MASK
 			| EXYNOS4210_HSIC0_NORMAL_MASK
@@ -569,7 +569,7 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 	}
 	writel(phypwr, EXYNOS4_PHYPWR);
 
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		exynos4_usb_phy_control(USB_PHY1, PHY_DISABLE);
 	} else {
 		exynos4_usb_phy_control(USB_PHY

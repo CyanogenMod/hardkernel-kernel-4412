@@ -53,7 +53,7 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	unsigned long lockfreq;
 	unsigned long newfreq = 0;
 
-	if (!cpu_is_exynos4210())
+	if (!soc_is_exynos4210())
 		newfreq = 160000;
 
 	lockfreq = dev_max_freq(data->dev);
@@ -218,7 +218,7 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 	data->exynos4_reboot_notifier.notifier_call =
 		exynos4_busfreq_reboot_event;
 
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		data->init = exynos4210_init;
 		data->target = exynos4210_target;
 		data->get_int_volt = NULL;

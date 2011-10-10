@@ -36,7 +36,7 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 	freq_in_trg = 800000;
 
 	if ((freq_old >= freq_in_trg) && (freq_new >= freq_in_trg)) {
-		if (cpu_is_exynos4412()) {
+		if (soc_is_exynos4412()) {
 			if (cpu_online(3) == 0) {
 				if (consecutv_highestlevel_cnt >= 2) {
 					cpu_up(3);
@@ -68,7 +68,7 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 			consecutv_highestlevel_cnt++;
 		}
 	} else if ((freq_old <= freq_min) && (freq_new <= freq_min)) {
-		if (cpu_is_exynos4412()) {
+		if (soc_is_exynos4412()) {
 			if (cpu_online(1) == 1) {
 				if (consecutv_lowestlevel_cnt >= 2) {
 					cpu_down(1);

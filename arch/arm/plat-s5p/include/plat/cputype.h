@@ -44,27 +44,27 @@ IS_EXYNOS_CPU(4412, EXYNOS_CPU_ID_4412, EXYNOS_CPU_MASK)
 IS_EXYNOS_CPU(5210, EXYNOS_CPU_ID_5210, EXYNOS_CPU_MASK)
 
 #ifdef CONFIG_CPU_EXYNOS4210
-#define cpu_is_exynos4210() is_exynos4210()
+#define soc_is_exynos4210() is_exynos4210()
 #else
-#define cpu_is_exynos4210() 0
+#define soc_is_exynos4210() 0
 #endif
 
 #ifdef CONFIG_CPU_EXYNOS4212
-#define cpu_is_exynos4212() is_exynos4212()
+#define soc_is_exynos4212() is_exynos4212()
 #else
-#define cpu_is_exynos4212() 0
+#define soc_is_exynos4212() 0
 #endif
 
 #ifdef CONFIG_CPU_EXYNOS4412
-#define cpu_is_exynos4412() is_exynos4412()
+#define soc_is_exynos4412() is_exynos4412()
 #else
-#define cpu_is_exynos4412() 0
+#define soc_is_exynos4412() 0
 #endif
 
 #ifdef CONFIG_CPU_EXYNOS5210
-#define cpu_is_exynos5210() is_exynos5210()
+#define soc_is_exynos5210() is_exynos5210()
 #else
-#define cpu_is_exynos5210() 0
+#define soc_is_exynos5210() 0
 #endif
 
 #endif /* __ASM_PLAT_CPUTYPE_H */

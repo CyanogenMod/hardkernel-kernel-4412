@@ -33,7 +33,7 @@ void exynos4_ppmu_reset(struct exynos4_ppmu_hw *ppmu)
 	__raw_writel(0x3 << 1, ppmu_base);
 	__raw_writel(0x8000000f, ppmu_base + PPMU_CNTENS);
 
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		for (i = 0; i < NUMBER_OF_COUNTER; i++) {
 			__raw_writel(0x0, ppmu_base + DEVT0_ID + (i * DEVT_ID_OFFSET));
 			__raw_writel(0x0, ppmu_base + DEVT0_IDMSK + (i * DEVT_ID_OFFSET));
@@ -136,7 +136,7 @@ void ppmu_init(struct exynos4_ppmu_hw *ppmu, struct device *dev)
 	ppmu->dev = dev;
 	list_add(&ppmu->node, &ppmu_list);
 
-	if (cpu_is_exynos4210())
+	if (soc_is_exynos4210())
 		for (i = 0; i < NUMBER_OF_COUNTER; i++) {
 			__raw_writel(0x0, ppmu_base + DEVT0_ID + (i * DEVT_ID_OFFSET));
 			__raw_writel(0x0, ppmu_base + DEVT0_IDMSK + (i * DEVT_ID_OFFSET));

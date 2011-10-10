@@ -180,7 +180,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
 
-		if (cpu_is_exynos4412()) {
+		if (soc_is_exynos4412()) {
 			if (cpu == 1)
 				__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
 						CPU1_BOOT_REG + 0x4);
@@ -258,7 +258,7 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	 * until it receives a soft interrupt, and then the
 	 * secondary CPU branches to this address.
 	 */
-	if (cpu_is_exynos4412()) {
+	if (soc_is_exynos4412()) {
 		__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
 				CPU1_BOOT_REG + 0x4);
 		__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),

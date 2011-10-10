@@ -332,7 +332,7 @@ void s3c_pm_save_gpios(void)
 	unsigned int gpio_max_nr;
 
 #if defined(CONFIG_ARCH_EXYNOS4)
-	gpio_max_nr = (cpu_is_exynos4212()) ? EXYNOS4212_GPIO_END :
+	gpio_max_nr = (soc_is_exynos4212()) ? EXYNOS4212_GPIO_END :
 						EXYNOS4210_GPIO_END;
 	for (gpio_nr = 0; gpio_nr < gpio_max_nr;) {
 #else
@@ -380,7 +380,7 @@ void s3c_pm_restore_gpios(void)
 	unsigned int gpio_max_nr;
 
 #if defined(CONFIG_ARCH_EXYNOS4)
-	gpio_max_nr = (cpu_is_exynos4212()) ? EXYNOS4212_GPIO_END :
+	gpio_max_nr = (soc_is_exynos4212()) ? EXYNOS4212_GPIO_END :
 						EXYNOS4210_GPIO_END;
 	for (gpio_nr = 0; gpio_nr < gpio_max_nr;) {
 #else

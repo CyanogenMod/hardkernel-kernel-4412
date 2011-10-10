@@ -54,7 +54,7 @@ void __init s5p_fimg2d_set_platdata(struct fimg2d_platdata *pd)
 {
 	struct fimg2d_platdata *npd;
 
-	if (cpu_is_exynos4210()) {
+	if (soc_is_exynos4210()) {
 		s5p_fimg2d_resource[0].start = S5P_PA_FIMG2D_3X;
 		s5p_fimg2d_resource[0].end = S5P_PA_FIMG2D_3X + SZ_4K - 1;
 	}
