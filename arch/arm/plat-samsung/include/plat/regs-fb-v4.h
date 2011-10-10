@@ -30,9 +30,17 @@
 #define VIDCON1_FSTATUS_EVEN	(1 << 15)
 
 /* Video timing controls */
+#ifdef CONFIG_FB_EXYNOS_FIMD_V8
+#define VIDTCON0				(0x20010)
+#define VIDTCON1				(0x20014)
+#define VIDTCON2				(0x20018)
+#define VIDTCON3				(0x2001C)
+#else
 #define VIDTCON0				(0x10)
 #define VIDTCON1				(0x14)
 #define VIDTCON2				(0x18)
+#define VIDTCON3				(0x1C)
+#endif
 
 /* Window position controls */
 
@@ -43,6 +51,7 @@
 #define VIDOSD_BASE				(0x40)
 
 #define VIDINTCON0				(0x130)
+#define VIDINTCON1				(0x134)
 
 /* WINCONx */
 

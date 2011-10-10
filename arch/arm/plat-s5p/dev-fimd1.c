@@ -27,7 +27,11 @@
 static struct resource s5p_fimd1_resource[] = {
 	[0] = {
 		.start  = S5P_PA_FIMD1,
+#ifdef CONFIG_FB_EXYNOS_FIMD_V8
+		.end    = S5P_PA_FIMD1 + SZ_256K - 1,
+#else
 		.end    = S5P_PA_FIMD1 + SZ_32K - 1,
+#endif
 		.flags  = IORESOURCE_MEM,
 	},
 	[1] = {

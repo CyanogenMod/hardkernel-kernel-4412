@@ -12,7 +12,11 @@
 #include <linux/serial_core.h>
 #include <linux/fb.h>
 #include <linux/lcd.h>
+#include <linux/gpio.h>
+#include <linux/delay.h>
 #include <linux/pwm_backlight.h>
+#include <linux/spi/spi.h>
+#include <linux/spi/spi_gpio.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -90,18 +94,18 @@ static int reset_lcd(struct lcd_device *ld)
 {
 	int err = 0;
 
-	err = gpio_request_one(EXYNOS4_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
+	err = gpio_request_one(EXYNOS5_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPX0 for "
 				"lcd reset control\n");
 		return err;
 	}
-	gpio_set_value(EXYNOS4_GPX0(6), 0);
+	gpio_set_value(EXYNOS5_GPX0(6), 0);
 	mdelay(1);
 
-	gpio_set_value(EXYNOS4_GPX0(6), 1);
+	gpio_set_value(EXYNOS5_GPX0(6), 1);
 
-	gpio_free(EXYNOS4_GPX0(6));
+	gpio_free(EXYNOS5_GPX0(6));
 
 	return 1;
 }
@@ -113,10 +117,10 @@ static struct lcd_platform_data lms501kf03_platform_data = {
 	.reset_delay		= 100,	/* 100ms */
 };
 
-#define		LCD_BUS_NUM	3
-#define		DISPLAY_CS	EXYNOS4_GPB(5)
-#define		DISPLAY_CLK	EXYNOS4_GPB(4)
-#define		DISPLAY_SI	EXYNOS4_GPB(7)
+#define	LCD_BUS_NUM	3
+#define	DISPLAY_CS	EXYNOS5_GPA2(5)		/*Chip select */
+#define	DISPLAY_CLK	EXYNOS5_GPA2(4)		/* SPI clock */
+#define	DISPLAY_SI	EXYNOS5_GPA2(7)		/* SPI MOSI */
 
 static struct spi_board_info spi_board_info[] __initdata = {
 	{
@@ -208,14 +212,25 @@ static void lcd_wa101s_set_power(struct plat_lcd_data *pd,
 				   unsigned int power)
 {
 	if (power) {
-#if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_HIGH, "GPD0");
-		gpio_free(EXYNOS4_GPD0(1));
+#ifndef CONFIG_BACKLIGHT_PWM
+		gpio_request_one(EXYNOS5_GPB2(0), GPIOF_OUT_INIT_HIGH, "GPB2");
+		gpio_free(EXYNOS5_GPB2(0));
 #endif
+		/* fire nRESET on power up */
+		gpio_request_one(EXYNOS5_GPX0(6), GPIOF_OUT_INIT_HIGH, "GPX0");
+		mdelay(100);
+
+		gpio_set_value(EXYNOS5_GPX0(6), 0);
+		mdelay(10);
+
+		gpio_set_value(EXYNOS5_GPX0(6), 1);
+		mdelay(10);
+
+		gpio_free(EXYNOS5_GPX0(6));
 	} else {
-#if !defined(CONFIG_BACKLIGHT_PWM)
-		gpio_request_one(EXYNOS4_GPD0(1), GPIOF_OUT_INIT_LOW, "GPD0");
-		gpio_free(EXYNOS4_GPD0(1));
+#ifndef CONFIG_BACKLIGHT_PWM
+		gpio_request_one(EXYNOS5_GPB2(0), GPIOF_OUT_INIT_LOW, "GPB2");
+		gpio_free(EXYNOS5_GPB2(0));
 #endif
 	}
 }
@@ -281,12 +296,49 @@ static struct s3c_fb_pd_win smdk5210_fb_win2 = {
 	},
 	.virtual_x		= 1360, /* real size : 1366 */
 	.virtual_y		= 768 * 2,
-	.width			= 223,
-	.height			= 125,
+	.width			= 1360,
+	.height			= 768,
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
 #endif
+
+static void exynos_fimd_gpio_setup_24bpp(void)
+{
+	unsigned int reg = 0;
+
+#if defined(CONFIG_LCD_WA101S)
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ0(0), 5, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ3(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ4(0), 2, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+#elif defined(CONFIG_LCD_LMS501KF03)
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ0(0), 5, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ3(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ4(0), 2, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+#endif
+
+	/*
+	 * Set DISP1BLK_CFG register for Display path selection
+	 * DISP1_BLK output source selection : DISP1BLK_CFG[28:27]
+	 *---------------------
+	 *  10 | From DISP0_BLK
+	 *  01 | From DISP1_BLK : selected
+	 *
+	 * FIMD of DISP1_BLK Bypass selection : DISP1BLK_CFG[15]
+	 * ---------------------
+	 *  0 | MIE/MDNIE
+	 *  1 | FIMD : selected
+	 */
+	  reg = __raw_readl(S3C_VA_SYS + 0x0214);
+	reg &= ~((1 << 28) | (1 << 27) | (1 << 15));	/* To save other reset values */
+	reg |=  (0 << 28) | (1 << 27) | (1 << 15);
+	__raw_writel(reg, S3C_VA_SYS + 0x0214);
+}
+
 static struct s3c_fb_platdata smdk5210_lcd1_pdata __initdata = {
 #if defined(CONFIG_LCD_WA101S) || defined(CONFIG_LCD_LMS501KF03)
 	.win[0]		= &smdk5210_fb_win0,
@@ -301,7 +353,7 @@ static struct s3c_fb_platdata smdk5210_lcd1_pdata __initdata = {
 	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_HSYNC |
 			  VIDCON1_INV_VSYNC,
 #endif
-	.setup_gpio	= exynos4_fimd0_gpio_setup_24bpp,
+	.setup_gpio	= exynos_fimd_gpio_setup_24bpp,
 };
 #endif
 
@@ -319,6 +371,7 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 #ifdef SAMSUNG_DEV_BACKLIGHT
 /* LCD Backlight data */
 static struct samsung_bl_gpio_info smdk5210_bl_gpio_info = {
+	.no = EXYNOS5_GPB2(0),
 	.func = S3C_GPIO_SFN(2),
 };
 
@@ -344,8 +397,6 @@ static void __init smdk5210_machine_init(void)
 			&s5p_device_fimd1.dev);
 	s5p_fb_setname(1, "exynos5-fb");
 
-	exynos4_fimd0_setup_clock(&s5p_device_fimd1.dev, "mout_mpll_user",
-				800 * MHZ);
 #if defined(CONFIG_LCD_LMS501KF03)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 #endif
@@ -358,6 +409,10 @@ static void __init smdk5210_machine_init(void)
 
 	platform_add_devices(smdk5210_devices, ARRAY_SIZE(smdk5210_devices));
 
+#ifdef CONFIG_FB_S3C
+	exynos4_fimd_setup_clock(&s5p_device_fimd1.dev, "sclk_fimd", "mout_mpll_user",
+				800 * MHZ);
+#endif
 }
 
 MACHINE_START(SMDK5210, "SMDK5210")

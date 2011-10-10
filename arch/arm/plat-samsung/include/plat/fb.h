@@ -15,6 +15,8 @@
 #ifndef __PLAT_S3C_FB_H
 #define __PLAT_S3C_FB_H __FILE__
 
+#include <plat/gpio-cfg.h>
+
 /* S3C_FB_MAX_WIN
  * Set to the maximum number of windows that any of the supported hardware
  * can use. Since the platform data uses this for an array size, having it
@@ -134,6 +136,14 @@ extern void s5pv210_fb_gpio_setup_24bpp(void);
 extern void exynos4_fimd0_gpio_setup_24bpp(void);
 
 /**
+ * exynos4_fimd_cfg_gpios() - Exynos4 setup function for 24bpp LCD
+ *
+ * Initialise the GPIO for an 24bpp LCD display on the RGB interface.
+ */
+extern void exynos4_fimd_cfg_gpios(unsigned int base, unsigned int nr,
+		unsigned int cfg, s5p_gpio_drvstr_t drvstr);
+
+/**
  * exynos4_fimd0_setup_clock() = Exynos4 setup function for parent clock.
  * @dev: device pointer
  * @parent: parent clock used for LCD pixel clock
@@ -142,4 +152,6 @@ extern void exynos4_fimd0_gpio_setup_24bpp(void);
 int __init exynos4_fimd0_setup_clock(struct device *dev, const char *parent,
 					unsigned long clk_rate);
 
+int __init exynos4_fimd_setup_clock(struct device *dev, const char *bus_clk,
+					const char *parent, unsigned long clk_rate);
 #endif /* __PLAT_S3C_FB_H */

@@ -94,6 +94,11 @@ config EXYNOS4_SETUP_FIMD0
 	help
 	  Common setup code for FIMD0.
 
+config EXYNOS4_SETUP_FIMD
+	bool
+	help
+	  Common setup code for FIMD.
+
 config EXYNOS4_DEV_PD
 	bool
 	help
@@ -496,7 +501,7 @@ config MACH_FPGA5210
 config MACH_SMDK5210
 	bool "SMDK5210 board"
 	select CPU_EXYNOS5210
-	select EXYNOS4_SETUP_FIMD0
+	select EXYNOS4_SETUP_FIMD
 	select S5P_DEV_FIMD1
 	help
 	  Machine support for Samsung SMDK5210

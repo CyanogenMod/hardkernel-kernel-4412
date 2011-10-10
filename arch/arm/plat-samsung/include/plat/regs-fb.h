@@ -81,7 +81,12 @@
 #define VIDCON0_ENVID				(1 << 1)
 #define VIDCON0_ENVID_F				(1 << 0)
 
+#ifdef CONFIG_FB_EXYNOS_FIMD_V8
+#define VIDCON1					(0x20004)
+#else
 #define VIDCON1					(0x04)
+#endif
+
 #define VIDCON1_LINECNT_MASK			(0x7ff << 16)
 #define VIDCON1_LINECNT_SHIFT			(16)
 #define VIDCON1_LINECNT_GET(_v)			(((_v) >> 16) & 0x7ff)
@@ -166,7 +171,8 @@
 #define VIDTCON1_HSPW_LIMIT			(0xff)
 #define VIDTCON1_HSPW(_x)			((_x) << 0)
 
-#define VIDTCON2				(0x18)
+/* VIDTCON2 */
+
 #define VIDTCON2_LINEVAL_MASK			(0x7ff << 11)
 #define VIDTCON2_LINEVAL_SHIFT			(11)
 #define VIDTCON2_LINEVAL_LIMIT			(0x7ff)
