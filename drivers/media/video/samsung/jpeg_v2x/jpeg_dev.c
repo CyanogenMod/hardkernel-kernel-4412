@@ -680,7 +680,7 @@ static int jpeg_probe(struct platform_device *pdev)
 	}
 
 	*vfd = jpeg_enc_videodev;
-	vfd->ioctl_ops = get_enc_v4l2_ioctl_ops();
+	vfd->ioctl_ops = get_jpeg_enc_v4l2_ioctl_ops();
 	ret = video_register_device(vfd, VFL_TYPE_GRABBER, 12);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev,
@@ -709,7 +709,7 @@ static int jpeg_probe(struct platform_device *pdev)
 	}
 
 	*vfd = jpeg_dec_videodev;
-	vfd->ioctl_ops = get_dec_v4l2_ioctl_ops();
+	vfd->ioctl_ops = get_jpeg_dec_v4l2_ioctl_ops();
 	ret = video_register_device(vfd, VFL_TYPE_GRABBER, 11);
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev,

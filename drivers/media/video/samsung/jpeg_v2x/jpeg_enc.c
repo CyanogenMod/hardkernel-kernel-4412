@@ -526,7 +526,7 @@ static const struct v4l2_ioctl_ops jpeg_enc_ioctl_ops = {
 	.vidioc_s_jpegcomp		= vidioc_enc_s_jpegcomp,
 	.vidioc_s_ctrl			= jpeg_enc_vidioc_s_ctrl,
 };
-const struct v4l2_ioctl_ops *get_enc_v4l2_ioctl_ops(void)
+const struct v4l2_ioctl_ops *get_jpeg_enc_v4l2_ioctl_ops(void)
 {
 	return &jpeg_enc_ioctl_ops;
 }

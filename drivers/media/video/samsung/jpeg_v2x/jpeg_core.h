@@ -252,8 +252,8 @@ enum jpeg_log {
 #define jpeg_err(fmt, ...)		JPEG_ERROR(fmt, ##__VA_ARGS__)
 
 /*=====================================================================*/
-const struct v4l2_ioctl_ops *get_dec_v4l2_ioctl_ops(void);
-const struct v4l2_ioctl_ops *get_enc_v4l2_ioctl_ops(void);
+const struct v4l2_ioctl_ops *get_jpeg_dec_v4l2_ioctl_ops(void);
+const struct v4l2_ioctl_ops *get_jpeg_enc_v4l2_ioctl_ops(void);
 
 int jpeg_int_pending(struct jpeg_dev *ctrl);
 
