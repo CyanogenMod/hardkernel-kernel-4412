@@ -28,7 +28,7 @@
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/regs-audss.h>
-#include <mach/sysmmu.h>
+#include <mach/dev-sysmmu.h>
 #include <mach/exynos-clock.h>
 
 #define clk_fin_bpll clk_ext_xtal_mux
