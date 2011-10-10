@@ -71,7 +71,7 @@ static int jpeg_dec_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 		*num_planes = ctx->param.dec_param.out_plane;
 		for (i = 0; i < ctx->param.dec_param.out_plane; i++) {
 			sizes[i] = (ctx->param.dec_param.out_width *
-				ctx->param.dec_param.out_width *
+				ctx->param.dec_param.out_height *
 				ctx->param.dec_param.out_depth) / 8;
 			allocators[i] = ctx->dev->alloc_ctx;
 		}

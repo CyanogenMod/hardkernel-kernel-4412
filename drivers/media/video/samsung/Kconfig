@@ -84,6 +84,6 @@ config VIDEO_SAMSUNG_MEMSIZE_MFC1
 config VIDEO_SAMSUNG_MEMSIZE_JPEG
 	int "Memory size in kbytes for JPEG"
 	depends on VIDEO_JPEG || VIDEO_JPEG_V2X
-	default "8192"
+	default "40960"
 endif
 
