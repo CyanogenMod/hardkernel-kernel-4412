@@ -40,6 +40,7 @@
 #endif
 
 #include <mach/map.h>
+#include <mach/exynos-ion.h>
 
 #include <video/platform_lcd.h>
 
@@ -374,6 +375,9 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	&s5p_device_mfc,
 #endif
+#ifdef CONFIG_ION_EXYNOS
+	&exynos_device_ion,
+#endif
 };
 
 #ifdef SAMSUNG_DEV_BACKLIGHT
@@ -454,6 +458,13 @@ static void __init exynos5_reserve_mem(void)
 			.start = 0,
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD
+		{
+			.name = "fimd",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD * SZ_1K,
+			.start = 0
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0
 		{
 			.name = "fimc0",
@@ -519,6 +530,7 @@ static void __init exynos5_reserve_mem(void)
 	static const char map[] __initconst =
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
+		"s3cfb.0=fimd;"
 		"ion-exynos=fimd,fimc0,fimc2,fimc3;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;";
@@ -568,6 +580,9 @@ static void __init smdk5210_machine_init(void)
 	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
 	clk_add_alias("mfc", "s5p-mfc-v6", "mfc", &s5p_device_mfc.dev);
 	s5p_mfc_setname(&s5p_device_mfc, "s5p-mfc-v6");
+#endif
+#ifdef CONFIG_ION_EXYNOS
+	exynos_ion_set_platdata();
 #endif
 	platform_add_devices(smdk5210_devices, ARRAY_SIZE(smdk5210_devices));
 
