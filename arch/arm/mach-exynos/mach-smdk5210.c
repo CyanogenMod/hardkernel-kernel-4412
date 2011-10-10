@@ -19,6 +19,7 @@
 #include <linux/spi/spi_gpio.h>
 #include <linux/cma.h>
 #include <linux/memblock.h>
+#include <linux/mmc/host.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -38,6 +39,7 @@
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 #include <plat/s5p-mfc.h>
 #endif
+#include <plat/sdhci.h>
 
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
@@ -363,6 +365,42 @@ static struct s3c_fb_platdata smdk5210_lcd1_pdata __initdata = {
 };
 #endif
 
+#ifdef CONFIG_S3C_DEV_HSMMC
+static struct s3c_sdhci_platdata smdk5210_hsmmc0_pdata __initdata = {
+	.cd_type		= S3C_SDHCI_CD_INTERNAL,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+#ifdef CONFIG_EXYNOS4_SDHCI_CH0_8BIT
+	.max_width		= 8,
+	.host_caps		= MMC_CAP_8_BIT_DATA,
+#endif
+};
+#endif
+
+#ifdef CONFIG_S3C_DEV_HSMMC1
+static struct s3c_sdhci_platdata smdk5210_hsmmc1_pdata __initdata = {
+	.cd_type		= S3C_SDHCI_CD_INTERNAL,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+};
+#endif
+
+#ifdef CONFIG_S3C_DEV_HSMMC2
+static struct s3c_sdhci_platdata smdk5210_hsmmc2_pdata __initdata = {
+	.cd_type		= S3C_SDHCI_CD_INTERNAL,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+#ifdef CONFIG_EXYNOS4_SDHCI_CH2_8BIT
+	.max_width		= 8,
+	.host_caps		= MMC_CAP_8_BIT_DATA,
+#endif
+};
+#endif
+
+#ifdef CONFIG_S3C_DEV_HSMMC3
+static struct s3c_sdhci_platdata smdk5210_hsmmc3_pdata __initdata = {
+	.cd_type		= S3C_SDHCI_CD_INTERNAL,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+};
+#endif
+
 static struct platform_device *smdk5210_devices[] __initdata = {
 #ifdef CONFIG_FB_S3C
 	&s5p_device_fimd1,
@@ -377,6 +415,18 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 #endif
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC
+	&s3c_device_hsmmc0,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
+	&s3c_device_hsmmc1,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC2
+	&s3c_device_hsmmc2,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC3
+	&s3c_device_hsmmc3,
 #endif
 };
 
@@ -584,6 +634,19 @@ static void __init smdk5210_machine_init(void)
 #ifdef CONFIG_ION_EXYNOS
 	exynos_ion_set_platdata();
 #endif
+#ifdef CONFIG_S3C_DEV_HSMMC
+	s3c_sdhci0_set_platdata(&smdk5210_hsmmc0_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
+	s3c_sdhci1_set_platdata(&smdk5210_hsmmc1_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC2
+	s3c_sdhci2_set_platdata(&smdk5210_hsmmc2_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC3
+	s3c_sdhci3_set_platdata(&smdk5210_hsmmc3_pdata);
+#endif
+
 	platform_add_devices(smdk5210_devices, ARRAY_SIZE(smdk5210_devices));
 
 #ifdef CONFIG_FB_S3C

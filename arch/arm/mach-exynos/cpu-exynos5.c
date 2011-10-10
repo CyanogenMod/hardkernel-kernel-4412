@@ -21,6 +21,7 @@
 #include <plat/devs.h>
 #include <plat/fb-core.h>
 #include <plat/exynos5.h>
+#include <plat/sdhci.h>
 #include <plat/pm.h>
 #include <plat/iic-core.h>
 
@@ -106,6 +107,19 @@ static void exynos5_idle(void)
 void __init exynos5_map_io(void)
 {
 	iotable_init(exynos5_iodesc, ARRAY_SIZE(exynos5_iodesc));
+
+#ifdef CONFIG_S3C_DEV_HSMMC
+	exynos5_default_sdhci0();
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
+	exynos5_default_sdhci1();
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC2
+	exynos5_default_sdhci2();
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC3
+	exynos5_default_sdhci3();
+#endif
 
 	s5p_fb_setname(1, "exynos5-fb");        /* FIMD1 */
 
