@@ -2037,6 +2037,7 @@ config FB_S3C
 	select FB_CFB_FILLRECT
 	select FB_CFB_COPYAREA
 	select FB_CFB_IMAGEBLIT
+	select FB_EXYNOS_FIMD_V8
 	---help---
 	  Frame buffer driver for the built-in FB controller in the Samsung
 	  SoC line from the S3C2443 onwards, including the S3C2416, S3C2450,
@@ -2048,6 +2049,11 @@ config FB_S3C
 	  currently only have two.
 
 	  Currently the support is only for the S3C6400 and S3C6410 SoCs.
+
+config FB_EXYNOS_FIMD_V8
+	bool "regiter extensions for FIMD version 8"
+	depends on ARCH_EXYNOS5
+	---help---
 
 config FB_S3C_DEBUG_REGWRITE
        bool "Debug register writes"
