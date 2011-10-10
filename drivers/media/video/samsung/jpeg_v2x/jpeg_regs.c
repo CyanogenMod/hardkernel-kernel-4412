@@ -371,8 +371,8 @@ void jpeg_set_dec_scaling(void __iomem *base,
 			~(S5P_JPEG_HOR_SCALING_MASK |
 				S5P_JPEG_VER_SCALING_MASK);
 
-	writel(S5P_JPEG_HOR_SCALING(x_value) |
-			S5P_JPEG_HOR_SCALING(y_value),
+	writel(reg | S5P_JPEG_HOR_SCALING(x_value) |
+			S5P_JPEG_VER_SCALING(y_value),
 				base + S5P_JPEG_CNTL_REG);
 }
 

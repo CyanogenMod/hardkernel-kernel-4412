@@ -457,6 +457,17 @@ static void jpeg_device_dec_run(void *priv)
 		dec_param.out_fmt, dev->vb2->plane_addr(vb, 0),
 		dec_param.in_width, dec_param.in_height);
 
+	if (dec_param.out_width > 0 && dec_param.out_height > 0) {
+		if ((dec_param.out_width * 2 == dec_param.in_width) &&
+			(dec_param.out_height * 2 == dec_param.in_height))
+			jpeg_set_dec_scaling(dev->reg_base, JPEG_SCALE_2, JPEG_SCALE_2);
+		else if ((dec_param.out_width * 4 == dec_param.in_width) &&
+			(dec_param.out_height * 4 == dec_param.in_height))
+			jpeg_set_dec_scaling(dev->reg_base, JPEG_SCALE_4, JPEG_SCALE_4);
+		else
+			jpeg_set_dec_scaling(dev->reg_base, JPEG_SCALE_NORMAL, JPEG_SCALE_NORMAL);
+	}
+
 	jpeg_set_dec_out_fmt(dev->reg_base, dec_param.out_fmt);
 
 	jpeg_set_enc_dec_mode(dev->reg_base, DECODING);
