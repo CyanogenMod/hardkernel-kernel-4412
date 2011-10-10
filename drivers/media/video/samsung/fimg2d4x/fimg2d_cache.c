@@ -70,19 +70,20 @@ void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long addr,
 	end_addr = cur_addr + PAGE_ALIGN(size);
 
 	if (opr == CACHE_CLEAN) {
-		do {
+		while (cur_addr <= end_addr) {
 			paddr = virt2phys(mm, cur_addr);
 			if (paddr)
 				outer_clean_range(paddr, paddr + PAGE_SIZE);
 			cur_addr += PAGE_SIZE;
-		} while (cur_addr < end_addr);
+		}
 	} else if (opr == CACHE_FLUSH) {
-		do {
+		while (cur_addr <= end_addr) {
+
 			paddr = virt2phys(mm, cur_addr);
 			if (paddr)
 				outer_flush_range(paddr, paddr + PAGE_SIZE);
 			cur_addr += PAGE_SIZE;
-		} while (cur_addr < end_addr);
+		}
 	}
 }
 
