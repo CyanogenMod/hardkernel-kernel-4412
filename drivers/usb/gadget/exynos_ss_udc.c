@@ -1715,15 +1715,37 @@ static void exynos_ss_udc_gate(struct platform_device *pdev, bool on)
 }
 
 /**
- * exynos_ss_udc_phyreset - reset the EXYNOS phy block
+ * exynos_ss_udc_phy_init - initialize the EXYNOS phy block
  * @udc: The host state.
- *
- * Power up the phy, set the basic configuration and start the PHY.
  */
-static void exynos_ss_udc_phyreset(struct exynos_ss_udc *udc)
+static void exynos_ss_udc_phy_init(struct exynos_ss_udc *udc)
 {
-}
+	u32 reg;
 
+	writel(0, EXYNOS_USB3_PHYUTMI);
+
+	/* Set 100MHz external clock */
+	reg = EXYNOS_USB3_PHYCLKRST_PORTRESET |
+	      /* HS PLL uses ref_pad_clk{p,m} or ref_alt_clk_{p,m}
+	       * as reference */
+	      EXYNOS_USB3_PHYCLKRST_REFCLKSEL(2) |
+	      /* Digital power supply in normal operating mode */
+	      EXYNOS_USB3_PHYCLKRST_RETENABLEN |
+	      /* 0x27-100MHz, 0x2a-24MHz, 0x31-20MHz, 0x38-19.2MHz */
+	      EXYNOS_USB3_PHYCLKRST_FSEL(0x27) |
+	      /* 0x19-100MHz, 0x68-24MHz, 0x7d-20Mhz */
+	      EXYNOS_USB3_PHYCLKRST_MPLL_MULTIPLIER(0x19) |
+	      /* Enable ref clock for SS function */
+	      EXYNOS_USB3_PHYCLKRST_REF_SSP_EN |
+	      /* Enable spread spectrum */
+	      EXYNOS_USB3_PHYCLKRST_SSC_EN;
+
+	writel(reg, EXYNOS_USB3_PHYCLKRST);
+
+	udelay(10);
+
+	__bic32(EXYNOS_USB3_PHYCLKRST, EXYNOS_USB3_PHYCLKRST_PORTRESET);
+}
 
 /**
  * exynos_ss_udc_corereset - issue softreset to the core
@@ -2192,8 +2214,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	clk_enable(udc->clk);
 	/* Need SoC datasheet */
 	exynos_ss_udc_gate(pdev, true);
-	/* Need SoC datasheet */
-	exynos_ss_udc_phyreset(udc);
+	exynos_ss_udc_phy_init(udc);
 	exynos_ss_udc_corereset(udc);
 	
 
