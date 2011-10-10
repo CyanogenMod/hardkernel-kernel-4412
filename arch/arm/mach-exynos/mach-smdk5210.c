@@ -17,9 +17,8 @@
 #include <linux/pwm_backlight.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
-#if defined(CONFIG_S5P_MEM_CMA)
 #include <linux/cma.h>
-#endif
+#include <linux/memblock.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -390,9 +389,92 @@ static struct platform_pwm_backlight_data smdk5210_bl_data = {
 #endif
 
 #if defined(CONFIG_S5P_MEM_CMA)
+static void __init exynos5_cma_region_reserve(
+			struct cma_region *regions_normal,
+			struct cma_region *regions_secure)
+{
+	struct cma_region *reg;
+	size_t size_secure = 0, align_secure = 0;
+	phys_addr_t paddr = 0;
+
+	for (reg = regions_normal; reg->size != 0; reg++) {
+		if ((reg->alignment & (reg->alignment - 1)) || reg->reserved)
+			continue;
+
+		if (reg->start) {
+			if (!memblock_is_region_reserved(reg->start, reg->size)
+			    && memblock_reserve(reg->start, reg->size) >= 0)
+				reg->reserved = 1;
+		} else {
+			paddr = __memblock_alloc_base(reg->size, reg->alignment,
+					MEMBLOCK_ALLOC_ACCESSIBLE);
+			if (paddr) {
+				reg->start = paddr;
+				reg->reserved = 1;
+			}
+		}
+	}
+
+	if (regions_secure && regions_secure->size) {
+		for (reg = regions_secure; reg->size != 0; reg++)
+			size_secure += reg->size;
+
+		reg--;
+
+		align_secure = reg->alignment;
+		BUG_ON(align_secure & (align_secure - 1));
+
+		paddr -= size_secure;
+		paddr &= ~(align_secure - 1);
+
+		if (!memblock_reserve(paddr, size_secure)) {
+			do {
+				reg->start = paddr;
+				reg->reserved = 1;
+				paddr += reg->size;
+			} while (reg-- != regions_secure);
+		}
+	}
+}
+
 static void __init exynos5_reserve_mem(void)
 {
 	static struct cma_region regions[] = {
+#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM
+		{
+			.name = "pmem",
+			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K,
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1
+		{
+			.name = "pmem_gpu1",
+			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K,
+			.start = 0,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0
+		{
+			.name = "fimc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2
+		{
+			.name = "fimc2",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
+		{
+			.name = "fimc3",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3 * SZ_1K,
+			.start = 0
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
 		{
 			.name		= "fw",
@@ -410,15 +492,48 @@ static void __init exynos5_reserve_mem(void)
 			.size = 0
 		},
 	};
-
+	static struct cma_region regions_secure[] = {
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
+		{
+			.name = "fimc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
+		{
+			.name = "mfc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
+			{
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+				.alignment = SZ_64M,
+#else
+				.alignment = 1 << 17,
+#endif
+			},
+		},
+#endif
+		{
+			.size = 0
+		},
+	};
 	static const char map[] __initconst =
-#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
+		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
+		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
+		"ion-exynos=fimd,fimc0,fimc2,fimc3;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;";
-#endif
+	struct cma_region *reg;
+
 	cma_set_defaults(regions, map);
-	cma_early_regions_reserve(NULL);
+
+	reg = regions_secure;
+	for (; reg->size; ++reg)
+		BUG_ON(cma_early_region_register(reg));
+
+	exynos5_cma_region_reserve(regions, regions_secure);
 }
+#else /* !CONFIG_S5P_MEM_CMA */
+static inline void exynos5_reserve_mem() { }
 #endif
 
 static void __init smdk5210_map_io(void)
@@ -427,9 +542,7 @@ static void __init smdk5210_map_io(void)
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(smdk5210_uartcfgs, ARRAY_SIZE(smdk5210_uartcfgs));
-#if defined(CONFIG_S5P_MEM_CMA)
 	exynos5_reserve_mem();
-#endif
 }
 
 static void __init smdk5210_machine_init(void)
