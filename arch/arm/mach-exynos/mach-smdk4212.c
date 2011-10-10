@@ -2736,7 +2736,11 @@ static void __init smdk4212_machine_init(void)
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
 	dev_add(&busfreq, &exynos4_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_DMC0], &exynos4_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_DMC1], &exynos4_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_CPU], &exynos4_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_RIGHT], &exynos4_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_LEFT], &exynos4_busfreq.dev);
 }
 
 #ifdef CONFIG_EXYNOS4_C2C

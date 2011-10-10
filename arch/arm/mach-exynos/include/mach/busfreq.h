@@ -25,12 +25,12 @@ struct busfreq_data {
 	bool use;
 	unsigned long min_cpufreq;
 	struct device *dev;
+	struct delayed_work worker;
 	struct opp *curr_opp;
 	struct opp *max_opp;
 	struct regulator *vdd_int;
 	struct regulator *vdd_mif;
 
-	struct notifier_block exynos4_busfreq_notifier;
 	struct notifier_block exynos4_buspm_notifier;
 	struct notifier_block exynos4_reboot_notifier;
 	int (*init)	(struct device *dev, struct busfreq_data *data);

@@ -30,6 +30,7 @@
 #include <linux/slab.h>
 #include <linux/opp.h>
 #include <linux/clk.h>
+#include <linux/workqueue.h>
 
 #include <asm/mach-types.h>
 
@@ -52,8 +53,21 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	struct opp *opp;
 	unsigned long lockfreq;
 	unsigned long newfreq = 0;
+	unsigned long long cpu_load = 0;
+	unsigned long long dmc_load = 0;
+	unsigned long long bus_load = 0;
 
-	if (!soc_is_exynos4210())
+	ppmu_all_update(ALL_DOMAIN);
+
+	cpu_load = ppmu_load[PPMU_CPU];
+	dmc_load = (ppmu_load[PPMU_DMC0] + ppmu_load[PPMU_DMC1]) / 2;
+	bus_load = (ppmu_load[PPMU_RIGHT] + ppmu_load[PPMU_LEFT]) / 2;
+
+	if (cpu_load != 0 && dmc_load !=0 && bus_load !=0 )
+		newfreq = 267000;
+	else if (cpu_load == 0 && dmc_load ==0 && bus_load ==0 )
+		newfreq = 0;
+	else if (cpu_load == 0)
 		newfreq = 160000;
 
 	lockfreq = dev_max_freq(data->dev);
@@ -68,70 +82,55 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	return opp;
 }
 
-static int exynos4_busfreq_notifier_event(struct notifier_block *this,
-		unsigned long event, void *ptr)
+static void exynos4_busfreq_timer(struct work_struct *work)
 {
-	struct busfreq_data *data = container_of(this, struct busfreq_data,
-			exynos4_busfreq_notifier);
+	struct delayed_work *delayed_work = to_delayed_work(work);
+	struct busfreq_data *data = container_of(delayed_work, struct busfreq_data,
+			worker);
 
-	struct cpufreq_freqs *freq = ptr;
 	struct opp *opp;
 	unsigned int voltage;
 	unsigned long currfreq;
 	unsigned long newfreq;
-	unsigned long long load;
 
-	switch (event) {
-	case CPUFREQ_PRECHANGE:
-		load = ppmu_update(data->dev);
-		pr_debug("ppmu_load = %lld\n", load);;
-		break;
-	case CPUFREQ_POSTCHANGE:
-		if (freq->old != data->min_cpufreq)
-			opp = data->max_opp;
-		else
-			opp = busfreq_monitor(data);
+	opp = busfreq_monitor(data);
 
-		newfreq = opp_get_freq(opp);
+	ppmu_all_start(data->dev);
 
-		currfreq = opp_get_freq(data->curr_opp);
+	newfreq = opp_get_freq(opp);
 
-		if (opp == data->curr_opp)
-			return NOTIFY_OK;
+	currfreq = opp_get_freq(data->curr_opp);
 
-		voltage = opp_get_voltage(opp);
-		if (newfreq > currfreq) {
-			if (!IS_ERR(data->vdd_mif)) {
-				regulator_set_voltage(data->vdd_mif, voltage,
-						voltage);
-				voltage = data->get_int_volt(newfreq);
-			}
-			regulator_set_voltage(data->vdd_int, voltage,
-					voltage);
-		}
-
-		data->target(opp);
-
-		if (newfreq < currfreq) {
-			if (!IS_ERR(data->vdd_mif)) {
-				regulator_set_voltage(data->vdd_mif, voltage,
-						voltage);
-				voltage = data->get_int_volt(newfreq);
-			}
-			regulator_set_voltage(data->vdd_int, voltage,
-					voltage);
-		}
-		data->curr_opp = opp;
-		ppmu_start(data->dev);
-		break;
-	case CPUFREQ_RESUMECHANGE:
-		break;
-	default:
-		/* ignore */
-		break;
+	if (opp == data->curr_opp) {
+		schedule_delayed_work(&data->worker, 100);
+		return;
 	}
 
-	return NOTIFY_OK;
+	voltage = opp_get_voltage(opp);
+	if (newfreq > currfreq) {
+		if (!IS_ERR(data->vdd_mif)) {
+			regulator_set_voltage(data->vdd_mif, voltage,
+					voltage);
+			voltage = data->get_int_volt(newfreq);
+		}
+		regulator_set_voltage(data->vdd_int, voltage,
+				voltage);
+	}
+
+	data->target(opp);
+
+	if (newfreq < currfreq) {
+		if (!IS_ERR(data->vdd_mif)) {
+			regulator_set_voltage(data->vdd_mif, voltage,
+					voltage);
+			voltage = data->get_int_volt(newfreq);
+		}
+		regulator_set_voltage(data->vdd_int, voltage,
+				voltage);
+	}
+	data->curr_opp = opp;
+
+	schedule_delayed_work(&data->worker, 100);
 }
 
 static int exynos4_buspm_notifier_event(struct notifier_block *this,
@@ -215,8 +214,6 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	data->exynos4_busfreq_notifier.notifier_call =
-		exynos4_busfreq_notifier_event;
 	data->exynos4_buspm_notifier.notifier_call =
 		exynos4_buspm_notifier_event;
 	data->exynos4_reboot_notifier.notifier_call =
@@ -231,6 +228,8 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		data->target = exynos4212_target;
 		data->get_int_volt = exynos4212_get_int_volt;
 	}
+
+	INIT_DELAYED_WORK_DEFERRABLE(&data->worker, exynos4_busfreq_timer);
 
 	if (data->init(&pdev->dev, data)) {
 		pr_err("Failed to init busfreq.\n");
@@ -249,15 +248,9 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 
 	data->curr_opp = opp_find_freq_ceil(&pdev->dev, &freq);
 
-	if (cpufreq_register_notifier(&data->exynos4_busfreq_notifier,
-				CPUFREQ_TRANSITION_NOTIFIER)) {
-		pr_err("Failed to setup cpufreq notifier\n");
-		goto err_cpufreq;
-	}
-
 	if (register_pm_notifier(&data->exynos4_buspm_notifier)) {
 		pr_err("Failed to setup buspm notifier\n");
-		goto err_pm;
+		goto err_cpufreq;
 	}
 
 	data->use = true;
@@ -267,10 +260,9 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, data);
 
+	schedule_delayed_work(&data->worker, 100);
 	return 0;
-err_pm:
-	cpufreq_unregister_notifier(&data->exynos4_busfreq_notifier,
-				CPUFREQ_TRANSITION_NOTIFIER);
+
 err_cpufreq:
 	if (!IS_ERR(data->vdd_int))
 		regulator_put(data->vdd_int);
@@ -286,8 +278,6 @@ static __devexit int exynos4_busfreq_remove(struct platform_device *pdev)
 {
 	struct busfreq_data *data = platform_get_drvdata(pdev);
 
-	cpufreq_unregister_notifier(&data->exynos4_busfreq_notifier,
-			CPUFREQ_TRANSITION_NOTIFIER);
 	unregister_pm_notifier(&data->exynos4_buspm_notifier);
 	unregister_reboot_notifier(&data->exynos4_reboot_notifier);
 	regulator_put(data->vdd_int);

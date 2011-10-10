@@ -25,6 +25,8 @@
 
 static LIST_HEAD(ppmu_list);
 
+unsigned long long ppmu_load[PPMU_END - 1];
+
 void exynos4_ppmu_reset(struct exynos4_ppmu_hw *ppmu)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
@@ -38,9 +40,6 @@ void exynos4_ppmu_reset(struct exynos4_ppmu_hw *ppmu)
 			__raw_writel(0x0, ppmu_base + DEVT0_ID + (i * DEVT_ID_OFFSET));
 			__raw_writel(0x0, ppmu_base + DEVT0_IDMSK + (i * DEVT_ID_OFFSET));
 		}
-
-	for (i = 0; i < NUMBER_OF_COUNTER; i++)
-		ppmu->count[i] = 0;
 }
 
 void exynos4_ppmu_setevent(struct exynos4_ppmu_hw *ppmu,
@@ -53,14 +52,12 @@ void exynos4_ppmu_setevent(struct exynos4_ppmu_hw *ppmu,
 void exynos4_ppmu_start(struct exynos4_ppmu_hw *ppmu)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
-	ppmu->usage++;
 	__raw_writel(0x1, ppmu_base);
 }
 
 void exynos4_ppmu_stop(struct exynos4_ppmu_hw *ppmu)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
-	ppmu->usage--;
 	__raw_writel(0x0, ppmu_base);
 }
 
@@ -114,18 +111,25 @@ unsigned long long ppmu_update(struct device *dev)
 	return average;
 }
 
-unsigned long long ppmu_all_update(unsigned int flag)
+void ppmu_all_start(struct device *dev)
 {
 	struct exynos4_ppmu_hw *ppmu;
-	unsigned long long average = 0;
 
 	list_for_each_entry(ppmu, &ppmu_list, node)
-		if ((ppmu->usage > 0) && (ppmu->flags & flag)) {
-			exynos4_ppmu_stop(ppmu);
-			average += exynos4_ppmu_update(ppmu);
-		}
+		if (ppmu->dev == dev)
+			exynos4_ppmu_start(ppmu);
+}
 
-	return average;
+void ppmu_all_update(unsigned int flag)
+{
+	struct exynos4_ppmu_hw *ppmu;
+
+	list_for_each_entry(ppmu, &ppmu_list, node)
+		if (ppmu->flags & flag) {
+			exynos4_ppmu_stop(ppmu);
+			ppmu_load[ppmu->id] = exynos4_ppmu_update(ppmu);
+			exynos4_ppmu_reset(ppmu);
+		}
 }
 
 void ppmu_init(struct exynos4_ppmu_hw *ppmu, struct device *dev)
@@ -149,19 +153,56 @@ void ppmu_init(struct exynos4_ppmu_hw *ppmu, struct device *dev)
 
 struct exynos4_ppmu_hw exynos_ppmu[] = {
 	[PPMU_DMC0] = {
+		.id = PPMU_DMC0,
 		.hw_base = S5P_VA_PPMU_DMC0,
-		.event[0] = WR_DATA_COUNT,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 		.flags = ALL_DOMAIN,
 	},
 	[PPMU_DMC1] = {
+		.id = PPMU_DMC1,
 		.hw_base = S5P_VA_PPMU_DMC1,
-		.event[0] = WR_DATA_COUNT,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 		.flags = ALL_DOMAIN,
 	},
 	[PPMU_CPU] = {
+		.id = PPMU_CPU,
 		.hw_base = S5P_VA_PPMU_CPU,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+		.flags = ALL_DOMAIN,
+	},
+	[PPMU_RIGHT] = {
+		.id = PPMU_RIGHT,
+		.hw_base = S5P_VA_PPMU_RIGHT,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+		.flags = ALL_DOMAIN,
+	},
+	[PPMU_LEFT] = {
+		.id = PPMU_LEFT,
+		.hw_base = S5P_VA_PPMU_LEFT,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+		.flags = ALL_DOMAIN,
+	},
+	[PPMU_MFC_L] = {
+		.id = PPMU_MFC_L,
+		.hw_base = S5P_VA_PPMU_MFC_L,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+		.flags = ALL_DOMAIN,
+	},
+	[PPMU_MFC_R] = {
+		.id = PPMU_MFC_R,
+		.hw_base = S5P_VA_PPMU_MFC_R,
 		.event[0] = RD_DATA_COUNT,
 		.event[1] = WR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
