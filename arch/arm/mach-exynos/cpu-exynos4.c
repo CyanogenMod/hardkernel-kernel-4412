@@ -403,6 +403,8 @@ static void exynos4_sw_reset(void)
 
 int __init exynos4_init(void)
 {
+	unsigned int value;
+
 	printk(KERN_INFO "EXYNOS4: Initializing architecture\n");
 
 	/* set idle function */
@@ -410,6 +412,15 @@ int __init exynos4_init(void)
 
 	/* set sw_reset function */
 	s5p_reset_hook = exynos4_sw_reset;
+
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+		value = __raw_readl(S5P_AUTOMATIC_WDT_RESET_DISABLE);
+		value &= ~S5P_SYS_WDTRESET;
+		__raw_writel(value, S5P_AUTOMATIC_WDT_RESET_DISABLE);
+		value = __raw_readl(S5P_MASK_WDT_RESET_REQUEST);
+		value &= ~S5P_SYS_WDTRESET;
+		__raw_writel(value, S5P_MASK_WDT_RESET_REQUEST);
+	}
 
 	return sysdev_register(&exynos4_sysdev);
 }
