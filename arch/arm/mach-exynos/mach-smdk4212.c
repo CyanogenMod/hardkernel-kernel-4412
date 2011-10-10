@@ -2492,7 +2492,7 @@ static void __init smdk4212_machine_init(void)
 	exynos4_pd_enable(&exynos4_device_pd[PD_LCD0].dev);
 	exynos4_pd_enable(&exynos4_device_pd[PD_CAM].dev);
 	exynos4_pd_enable(&exynos4_device_pd[PD_TV].dev);
-	exynos4_pd_enable(&exynos4_device_pd[PD_GPS].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_GPS].dev);
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 	exynos4_pd_enable(&exynos4_device_pd[PD_ISP].dev);
 #endif
