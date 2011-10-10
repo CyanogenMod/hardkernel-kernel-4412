@@ -17,6 +17,9 @@
 #include <linux/pwm_backlight.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_gpio.h>
+#if defined(CONFIG_S5P_MEM_CMA)
+#include <linux/cma.h>
+#endif
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -33,6 +36,9 @@
 #include <plat/fb-core.h>
 #include <plat/regs-fb-v4.h>
 #include <plat/backlight.h>
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+#include <plat/s5p-mfc.h>
+#endif
 
 #include <mach/map.h>
 
@@ -366,6 +372,9 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 	&smdk5210_lcd_wa101s,
 #endif
 #endif
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	&s5p_device_mfc,
+#endif
 };
 
 #ifdef SAMSUNG_DEV_BACKLIGHT
@@ -380,12 +389,47 @@ static struct platform_pwm_backlight_data smdk5210_bl_data = {
 };
 #endif
 
+#if defined(CONFIG_S5P_MEM_CMA)
+static void __init exynos5_reserve_mem(void)
+{
+	static struct cma_region regions[] = {
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
+		{
+			.name		= "fw",
+			.size		= 1 << 20,
+			{ .alignment	= 128 << 10 },
+			.start		= 0x44000000,
+		},
+		{
+			.name		= "b1",
+			.size		= 32 << 20,
+			.start		= 0x45000000,
+		},
+#endif
+		{
+			.size = 0
+		},
+	};
+
+	static const char map[] __initconst =
+#ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
+		"s5p-mfc-v6/f=fw;"
+		"s5p-mfc-v6/a=b1;";
+#endif
+	cma_set_defaults(regions, map);
+	cma_early_regions_reserve(NULL);
+}
+#endif
+
 static void __init smdk5210_map_io(void)
 {
 	clk_xusbxti.rate = 24000000;
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(smdk5210_uartcfgs, ARRAY_SIZE(smdk5210_uartcfgs));
+#if defined(CONFIG_S5P_MEM_CMA)
+	exynos5_reserve_mem();
+#endif
 }
 
 static void __init smdk5210_machine_init(void)
@@ -407,6 +451,11 @@ static void __init smdk5210_machine_init(void)
 	samsung_bl_set(&smdk5210_bl_gpio_info, &smdk5210_bl_data);
 #endif
 
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
+	clk_add_alias("mfc", "s5p-mfc-v6", "mfc", &s5p_device_mfc.dev);
+	s5p_mfc_setname(&s5p_device_mfc, "s5p-mfc-v6");
+#endif
 	platform_add_devices(smdk5210_devices, ARRAY_SIZE(smdk5210_devices));
 
 #ifdef CONFIG_FB_S3C

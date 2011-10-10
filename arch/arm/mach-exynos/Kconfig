@@ -502,7 +502,9 @@ config MACH_SMDK5210
 	bool "SMDK5210 board"
 	select CPU_EXYNOS5210
 	select EXYNOS4_SETUP_FIMD
+	select EXYNOS4_SETUP_MFC
 	select S5P_DEV_FIMD1
+	select S5P_DEV_MFC
 	help
 	  Machine support for Samsung SMDK5210
 endmenu
