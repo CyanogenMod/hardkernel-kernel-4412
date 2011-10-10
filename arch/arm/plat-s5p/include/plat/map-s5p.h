@@ -50,6 +50,8 @@
 #define S5P_VA_PPMU_DMC1	S3C_ADDR(0x02940000)
 #define S5P_VA_PPMU_CPU		S3C_ADDR(0x02950000)
 
+#define S5P_VA_SS_PHY		S3C_ADDR(0x02A00000)
+
 #define VA_VIC(x)		(S3C_VA_IRQ + ((x) * 0x10000))
 #define VA_VIC0			VA_VIC(0)
 #define VA_VIC1			VA_VIC(1)
