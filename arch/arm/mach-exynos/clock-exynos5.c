@@ -720,6 +720,11 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 25),
 	}, {
+		.name		= "usbdev30",
+		.parent		= &exynos5_clk_mout_aclk_200.clk,
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 19),
+	}, {
 		.name		= "lcd",
 		.devname	= "s3cfb.0",
 		.enable		= exynos5_clk_ip_disp0_ctrl,
@@ -1118,6 +1123,16 @@ static struct clksrc_clk exynos5_clk_sclk_spdif = {
 	.reg_src = { .reg = EXYNOS5_CLKSRC_PERIC1, .shift = 8, .size = 2 },
 };
 
+struct clk *exynos5_clkset_usbdev30_list[] = {
+	[0] = &exynos5_clk_mout_mpll.clk,
+	[1] = &exynos5_clk_mout_cpll.clk,
+};
+
+struct clksrc_sources exynos5_clkset_usbdev30 = {
+	.sources	= exynos5_clkset_usbdev30_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_usbdev30_list),
+};
+
 struct clk *exynos5_clkset_group_list[] = {
 	[0] = &clk_ext_xtal_mux,
 	[1] = NULL,
@@ -1234,6 +1249,15 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 		.sources = &exynos5_clkset_group,
 		.reg_src = { .reg = EXYNOS5_CLKSRC_PERIC0, .shift = 12, .size = 4 },
 		.reg_div = { .reg = EXYNOS5_CLKDIV_PERIC0, .shift = 12, .size = 4 },
+	}, {
+		.clk	= {
+			.name		= "sclk_usbdev30",
+			.enable		= exynos5_clksrc_mask_fsys_ctrl,
+			.ctrlbit	= (1 << 28),
+		},
+		.sources = &exynos5_clkset_usbdev30,
+		.reg_src = { .reg = EXYNOS5_CLKSRC_FSYS, .shift = 28, .size = 1 },
+		.reg_div = { .reg = EXYNOS5_CLKDIV_FSYS0, .shift = 24, .size = 4 },
 	}, {
 		.clk	= {
 			.name		= "sclk_mmc",
