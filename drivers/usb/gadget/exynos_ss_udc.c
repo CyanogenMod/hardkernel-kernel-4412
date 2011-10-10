@@ -2103,8 +2103,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	udc->dev = dev;
 	udc->plat = plat;
 
-	/* FIXME: clock name and error message */	
-	udc->clk = clk_get(&pdev->dev, "ssexynos");
+	udc->clk = clk_get(&pdev->dev, "usbdev30");
 	if (IS_ERR(udc->clk)) {
 		dev_err(dev, "cannot get UDC clock\n");
 		ret = -EINVAL;
