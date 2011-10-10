@@ -120,6 +120,7 @@ unsigned long long ppmu_update(struct device *dev);
 void ppmu_start(struct device *dev);
 void ppmu_init(struct exynos4_ppmu_hw *ppmu, struct device *dev);
 
+void ppmu_reset(void);
 void ppmu_all_start(struct device *dev);
 void ppmu_all_update(unsigned int flag);
 extern struct exynos4_ppmu_hw exynos_ppmu[];

@@ -30,6 +30,7 @@ struct busfreq_data {
 	struct opp *max_opp;
 	struct regulator *vdd_int;
 	struct regulator *vdd_mif;
+	unsigned int sampling_rate;
 
 	struct notifier_block exynos4_buspm_notifier;
 	struct notifier_block exynos4_reboot_notifier;

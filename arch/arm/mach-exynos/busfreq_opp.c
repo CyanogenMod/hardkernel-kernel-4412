@@ -63,9 +63,9 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	dmc_load = (ppmu_load[PPMU_DMC0] + ppmu_load[PPMU_DMC1]) / 2;
 	bus_load = (ppmu_load[PPMU_RIGHT] + ppmu_load[PPMU_LEFT]) / 2;
 
-	if (cpu_load != 0 && dmc_load !=0 && bus_load !=0 )
-		newfreq = 267000;
-	else if (cpu_load == 0 && dmc_load ==0 && bus_load ==0 )
+	if (cpu_load != 0 && dmc_load != 0 && bus_load != 0)
+		newfreq = 400000;
+	else if (cpu_load == 0 && dmc_load == 0 && bus_load == 0)
 		newfreq = 0;
 	else if (cpu_load == 0)
 		newfreq = 160000;
@@ -102,7 +102,7 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 	currfreq = opp_get_freq(data->curr_opp);
 
 	if (opp == data->curr_opp) {
-		schedule_delayed_work(&data->worker, 100);
+		schedule_delayed_work(&data->worker, data->sampling_rate);
 		return;
 	}
 
@@ -130,7 +130,7 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 	}
 	data->curr_opp = opp;
 
-	schedule_delayed_work(&data->worker, 100);
+	schedule_delayed_work(&data->worker, data->sampling_rate);
 }
 
 static int exynos4_buspm_notifier_event(struct notifier_block *this,
@@ -229,6 +229,8 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		data->get_int_volt = exynos4212_get_int_volt;
 	}
 
+	data->sampling_rate = usecs_to_jiffies(100000);
+
 	INIT_DELAYED_WORK_DEFERRABLE(&data->worker, exynos4_busfreq_timer);
 
 	if (data->init(&pdev->dev, data)) {
@@ -260,7 +262,7 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, data);
 
-	schedule_delayed_work(&data->worker, 100);
+	schedule_delayed_work(&data->worker, data->sampling_rate);
 	return 0;
 
 err_cpufreq:
@@ -289,6 +291,7 @@ static __devexit int exynos4_busfreq_remove(struct platform_device *pdev)
 
 static int exynos4_busfreq_resume(struct device *dev)
 {
+	ppmu_reset();
 	return 0;
 }
 

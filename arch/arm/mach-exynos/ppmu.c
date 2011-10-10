@@ -69,6 +69,9 @@ unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu)
 
 	ppmu->ccnt = __raw_readl(ppmu_base + PPMU_CCNT);
 
+	if (ppmu->ccnt == 0)
+		ppmu->ccnt = MAX_CCNT;
+
 	for (i = 0; i < NUMBER_OF_COUNTER; i++) {
 		if (ppmu->event[i] == 0)
 			continue;
@@ -79,9 +82,6 @@ unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu)
 		else
 			total += __raw_readl(ppmu_base + PMCNT_OFFSET(i));
 	}
-
-	if (ppmu->ccnt == 0)
-		ppmu->ccnt = MAX_CCNT;
 
 	return div_u64((total * ppmu->weight * 100), ppmu->ccnt);
 }
@@ -101,7 +101,7 @@ unsigned long long ppmu_update(struct device *dev)
 	unsigned long long average = 0;
 
 	list_for_each_entry(ppmu, &ppmu_list, node)
-		if ((ppmu->dev == dev) && (ppmu->usage > 0)) {
+		if (ppmu->dev == dev) {
 			exynos4_ppmu_stop(ppmu);
 			average = exynos4_ppmu_update(ppmu);
 			exynos4_ppmu_reset(ppmu);
@@ -130,6 +130,20 @@ void ppmu_all_update(unsigned int flag)
 			ppmu_load[ppmu->id] = exynos4_ppmu_update(ppmu);
 			exynos4_ppmu_reset(ppmu);
 		}
+}
+
+void ppmu_reset(void)
+{
+	struct exynos4_ppmu_hw *ppmu;
+	int i;
+
+	list_for_each_entry(ppmu, &ppmu_list, node) {
+		exynos4_ppmu_stop(ppmu);
+		for (i = 0; i < NUMBER_OF_COUNTER; i++)
+			if (ppmu->event[i] != 0)
+				exynos4_ppmu_setevent(ppmu, i);
+		exynos4_ppmu_reset(ppmu);
+	}
 }
 
 void ppmu_init(struct exynos4_ppmu_hw *ppmu, struct device *dev)
