@@ -160,35 +160,106 @@ bool s5p_mfc_power_chk(void)
 	return atomic_read(&pm->power) ? true : false;
 }
 #elif defined(CONFIG_ARCH_EXYNOS5)
-/* FIXME: For 6.x. FPGA does not use */
-int s5p_mfc_init_pm(struct s5p_mfc_dev *mfcdev)
+#include <linux/platform_device.h>
+#ifdef CONFIG_PM_RUNTIME
+#include <linux/pm_runtime.h>
+#endif
+
+#define MFC_PARENT_CLK_NAME	"mout_mfc0"
+#define MFC_CLKNAME		"sclk_mfc"
+#define MFC_GATE_CLK_NAME	"mfc"
+
+#define CLK_DEBUG
+
+static struct s5p_mfc_pm *pm;
+
+#ifdef CLK_DEBUG
+atomic_t clk_ref;
+#endif
+
+int s5p_mfc_init_pm(struct s5p_mfc_dev *dev)
 {
-		return 0;
+	int ret = 0;
+
+	pm = &dev->pm;
+
+
+	/* FIXME : move to platform resource NAME */
+	/* clock for gating */
+	pm->clock = clk_get(&dev->plat_dev->dev, MFC_GATE_CLK_NAME);
+	if (IS_ERR(pm->clock)) {
+		printk(KERN_ERR "failed to get clock-gating control\n");
+		ret = PTR_ERR(pm->clock);
+		goto err_g_clk;
+	}
+
+	atomic_set(&pm->power, 0);
+
+#ifdef CONFIG_PM_RUNTIME
+	pm->device = &dev->plat_dev->dev;
+
+	pm_runtime_enable(pm->device);
+#endif
+
+#ifdef CLK_DEBUG
+	atomic_set(&clk_ref, 0);
+#endif
+
+	return 0;
+
+err_g_clk:
+	return ret;
 }
 
-void s5p_mfc_final_pm(struct s5p_mfc_dev *mfcdev)
+void s5p_mfc_final_pm(struct s5p_mfc_dev *dev)
 {
-		/* NOP */
+	clk_put(pm->clock);
+
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_disable(pm->device);
+#endif
 }
 
 int s5p_mfc_clock_on(void)
 {
-		return 0;
+#ifdef CLK_DEBUG
+	atomic_inc(&clk_ref);
+	mfc_debug(3, "+ %d", atomic_read(&clk_ref));
+#endif
+
+	return clk_enable(pm->clock);
 }
 
 void s5p_mfc_clock_off(void)
 {
-		/* NOP */
+#ifdef CLK_DEBUG
+	atomic_dec(&clk_ref);
+	mfc_debug(3, "- %d", atomic_read(&clk_ref));
+#endif
+
+	clk_disable(pm->clock);
 }
 
 int s5p_mfc_power_on(void)
 {
-		return 0;
+#ifdef CONFIG_PM_RUNTIME
+	return pm_runtime_get_sync(pm->device);
+#else
+	atomic_set(&pm->power, 1);
+
+	return 0;
+#endif
 }
 
 int s5p_mfc_power_off(void)
 {
-		return 0;
+#ifdef CONFIG_PM_RUNTIME
+	return pm_runtime_put_sync(pm->device);
+#else
+	atomic_set(&pm->power, 0);
+
+	return 0;
+#endif
 }
 #else /* CONFIG_ARCH_NOT_SUPPORT */
 int s5p_mfc_init_pm(struct s5p_mfc_dev *mfcdev)

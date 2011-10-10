@@ -131,11 +131,9 @@ struct s5p_mfc_buf {
 
 struct s5p_mfc_pm {
 	struct clk	*clock;
-#ifdef CONFIG_ARCH_EXYNOS4
 	atomic_t	power;
 #ifdef CONFIG_PM_RUNTIME
 	struct device	*device;
-#endif
 #endif
 };
 
