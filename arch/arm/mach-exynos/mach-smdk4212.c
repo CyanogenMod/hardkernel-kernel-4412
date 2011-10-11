@@ -77,6 +77,9 @@
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#include <mach/secmem.h>
+#endif
 #include <mach/dev.h>
 #include <mach/ppmu.h>
 #ifdef CONFIG_EXYNOS4_C2C
@@ -2709,6 +2712,9 @@ static void __init smdk4212_machine_init(void)
 	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc3.dev.parent = &exynos4_device_pd[PD_CAM].dev;
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	secmem.parent = &exynos4_device_pd[PD_CAM].dev;
+#endif
 #endif
 #ifdef CONFIG_VIDEO_FIMC_MIPI
 	s3c_csis0_set_platdata(NULL);
