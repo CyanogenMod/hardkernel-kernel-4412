@@ -203,15 +203,7 @@ static void s5pv310_ts_get_data(void)
 		input_sync(s5pv310_ts.driver);
 		irq_count = 0;
 	} else {
-		 /* press */
-		input_report_abs(s5pv310_ts.driver,
-				ABS_MT_TOUCH_MAJOR, 0);
-		input_report_abs(s5pv310_ts.driver,
-				ABS_MT_WIDTH_MAJOR, 10);
-		input_report_abs(s5pv310_ts.driver,
-				ABS_MT_POSITION_X, s5pv310_ts.x);
-		input_report_abs(s5pv310_ts.driver,
-				ABS_MT_POSITION_Y, s5pv310_ts.y);
+		 /* up */
 		input_mt_sync(s5pv310_ts.driver);
 		input_sync(s5pv310_ts.driver);
 	}
