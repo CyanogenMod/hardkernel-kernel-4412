@@ -29,26 +29,12 @@ static DEFINE_SPINLOCK(eint_lock);
 
 static unsigned int eint0_15_data[16];
 
-static unsigned int exynos4_get_irq_nr(unsigned int number)
-{
-	u32 ret = 0;
-
-	switch (number) {
-	case 0 ... 3:
-		ret = (number + IRQ_EINT0);
-		break;
-	case 4 ... 7:
-		ret = (number + (IRQ_EINT4 - 4));
-		break;
-	case 8 ... 15:
-		ret = (number + (IRQ_EINT8 - 8));
-		break;
-	default:
-		printk(KERN_ERR "number available : %d\n", number);
-	}
-
-	return ret;
-}
+static unsigned int eint0_15_src_int[16] = {
+	IRQ_EINT0, IRQ_EINT1, IRQ_EINT2, IRQ_EINT3,
+	IRQ_EINT4, IRQ_EINT5, IRQ_EINT6, IRQ_EINT7,
+	IRQ_EINT8, IRQ_EINT9, IRQ_EINT10, IRQ_EINT11,
+	IRQ_EINT12, IRQ_EINT13, IRQ_EINT14, IRQ_EINT15,
+};
 
 static inline void exynos4_irq_eint_mask(struct irq_data *data)
 {
@@ -225,9 +211,9 @@ int __init exynos4_init_irq_eint(void)
 	for (irq = 0 ; irq <= 15 ; irq++) {
 		eint0_15_data[irq] = IRQ_EINT(irq);
 
-		irq_set_handler_data(exynos4_get_irq_nr(irq),
+		irq_set_handler_data(eint0_15_src_int[irq],
 				     &eint0_15_data[irq]);
-		irq_set_chained_handler(exynos4_get_irq_nr(irq),
+		irq_set_chained_handler(eint0_15_src_int[irq],
 					exynos4_irq_eint0_15);
 	}
 
