@@ -766,8 +766,8 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 	&s3c_device_spi_gpio,
 #elif defined(CONFIG_LCD_WA101S)
 	&smdk5210_lcd_wa101s,
-#endif
-#endif
+#endif	
+#endif	
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	&s5p_device_mfc,
 #endif
@@ -821,6 +821,9 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_EXYNOS_MIXER
 	&s5p_device_mixer,
 #endif
+#endif
+#if defined(CONFIG_EXYNOS_DEV_SS_UDC)
+	&exynos_device_ss_udc,
 #endif
 };
 
