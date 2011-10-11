@@ -33,6 +33,7 @@
 #include <plat/cputype.h>
 #include <plat/ace-core.h>
 #include <plat/reset.h>
+#include <plat/audio.h>
 
 #include <mach/regs-irq.h>
 #include <mach/regs-pmu.h>
@@ -244,6 +245,7 @@ void __init exynos4_map_io(void)
 #ifdef CONFIG_S5P_DEV_MSHC
 	exynos4_default_mshci();
 #endif
+	exynos4_i2sv3_setup_resource();
 
 	s3c_fimc_setname(0, "exynos4-fimc");
 	s3c_fimc_setname(1, "exynos4-fimc");

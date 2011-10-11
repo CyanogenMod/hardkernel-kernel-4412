@@ -17,6 +17,7 @@
 
 #include <plat/gpio-cfg.h>
 #include <plat/audio.h>
+#include <plat/cputype.h>
 
 #include <mach/map.h>
 #include <mach/dma.h>
@@ -384,3 +385,13 @@ struct platform_device exynos4_device_srp = {
 };
 EXPORT_SYMBOL(exynos4_device_srp);
 #endif
+
+void __init exynos4_i2sv3_setup_resource(void)
+{
+	if (!soc_is_exynos4210()) {
+		exynos4_i2s1_resource[0].start = EXYNOS4212_PA_I2S1;
+		exynos4_i2s1_resource[0].end   = EXYNOS4212_PA_I2S1 + 0x100 - 1;
+		exynos4_i2s2_resource[0].start = EXYNOS4212_PA_I2S2;
+		exynos4_i2s2_resource[0].end   = EXYNOS4212_PA_I2S2 + 0x100 - 1;
+	}
+}

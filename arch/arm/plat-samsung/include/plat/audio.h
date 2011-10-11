@@ -60,3 +60,5 @@ struct s3c_audio_pdata {
 		struct samsung_i2s i2s;
 	} type;
 };
+
+extern void __init exynos4_i2sv3_setup_resource(void);
