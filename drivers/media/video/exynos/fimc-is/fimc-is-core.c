@@ -104,6 +104,29 @@ int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
 	return 0;
 }
 
+int fimc_is_fd_handler(struct fimc_is_dev *dev, u32 count, u32 index)
+{
+	u32 i, buffer_index;
+
+	for (i = 0; i < count; i++) {
+		buffer_index = index + i;
+		if (buffer_index > 10) {
+			index = 0;
+			buffer_index = index + i;
+		}
+		printk(KERN_INFO "%d face conf = %d\n", i,
+			dev->is_p_region->face[buffer_index].confidence);
+		printk(KERN_INFO "%d face x , y = %d, %d\n", i,
+			dev->is_p_region->face[buffer_index].face.offset_x,
+			dev->is_p_region->face[buffer_index].face.offset_y);
+		printk(KERN_INFO "   size = %d, %d\n",
+			dev->is_p_region->face[buffer_index].face.width,
+			dev->is_p_region->face[buffer_index].face.height);
+	}
+
+	return 0;
+}
+
 static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 {
 	struct fimc_is_dev *dev = dev_id;
@@ -140,15 +163,11 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 
 	switch (dev->i2h_cmd.cmd) {
 	case IHC_GET_SENSOR_NUMBER:
-		printk(KERN_INFO "IHC_GET_SENSOR_NUMBER\n");
 		set_bit(IS_ST_FW_DOWNLOADED, &dev->state);
 		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IHC_LOAD_SET_FILE:
-		printk(KERN_INFO "IHC_GET_SENSOR_NUMBER\n");
-		printk(KERN_INFO "Param1 = 0x%08x\n", dev->i2h_cmd.arg[0]);
-		printk(KERN_INFO "Param2 = 0x%08x\n", dev->i2h_cmd.arg[1]);
 		dev->setfile.base = dev->i2h_cmd.arg[0];
 		dev->setfile.size = dev->i2h_cmd.arg[1];
 		set_bit(IS_ST_SET_FILE, &dev->state);
@@ -156,24 +175,16 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	case IHC_SET_SHOT_MARK:
 		break;
 	case IHC_SET_FACE_MARK:
-		printk(KERN_INFO "Count = %d\n", dev->i2h_cmd.arg[0]);
-		printk(KERN_INFO "FN = %d\n",
-		dev->is_p_region->face[dev->i2h_cmd.arg[0]].frame_number);
-		printk(KERN_INFO "Confidence = %d\n",
-		dev->is_p_region->face[dev->i2h_cmd.arg[0]].confidence);
-		printk(KERN_INFO "Size = %d,%d\n",
-		dev->is_p_region->face[dev->i2h_cmd.arg[0]].width,
-		dev->is_p_region->face[dev->i2h_cmd.arg[0]].height);
-		printk(KERN_INFO "Offset = %d,%d\n",
-		dev->is_p_region->face[dev->i2h_cmd.arg[0]].offset_x,
-		dev->is_p_region->face[dev->i2h_cmd.arg[0]].offset_y);
+		dev->fd_header.count = dev->i2h_cmd.arg[0];
+		dev->fd_header.index = dev->i2h_cmd.arg[1];
 		break;
 	case IHC_FRAME_DONE:
 		break;
 	case IHC_LOCK_DONE:
+		if (dev->af.state == FIMC_IS_AF_RUNNING)
+			dev->af.state = FIMC_IS_AF_LOCK;
 		break;
 	case ISR_DONE:
-		printk(KERN_INFO "ISR_DONE - %d\n", dev->i2h_cmd.arg[0]);
 		switch (dev->i2h_cmd.arg[0]) {
 		case HIC_PREVIEW_STILL:
 		case HIC_PREVIEW_VIDEO:
@@ -236,11 +247,44 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		printk(KERN_ERR "ISR_NDONE - %d: %d\n",
 			dev->i2h_cmd.arg[0], dev->i2h_cmd.arg[1]);
 		switch (dev->i2h_cmd.arg[1]) {
-		case HIC_SET_PARAMETER:
+		case IS_ERROR_SET_PARAMETER:
 			printk(KERN_ERR "SET_PARAMETER ERR : %d\n",
 				dev->i2h_cmd.arg[2]);
 			printk(KERN_ERR "SET_PARAMETER ERR : %d\n",
 				dev->i2h_cmd.arg[3]);
+			if (dev->is_p_region->parameter.isp.control.err)
+				printk(KERN_ERR "ISP - Control error : %d\n",
+				dev->is_p_region->parameter.isp.control.err);
+			if (dev->is_p_region->parameter.isp.otf_input.err)
+				printk(KERN_ERR "ISP - OTF In error : %d\n",
+				dev->is_p_region->parameter.isp.otf_input.err);
+			if (dev->is_p_region->parameter.isp.otf_output.err)
+				printk(KERN_ERR "ISP - OTF Out error : %d\n",
+			dev->is_p_region->parameter.isp.otf_output.err);
+			if (dev->is_p_region->parameter.isp.af.err)
+				printk(KERN_ERR "ISP - AF error : %d\n",
+				dev->is_p_region->parameter.isp.af.err);
+			if (dev->is_p_region->parameter.isp.flash.err)
+				printk(KERN_ERR "ISP - FLASH error : %d\n",
+				dev->is_p_region->parameter.isp.flash.err);
+			if (dev->is_p_region->parameter.isp.awb.err)
+				printk(KERN_ERR "ISP - AWB error : %d\n",
+				dev->is_p_region->parameter.isp.awb.err);
+			if (dev->is_p_region->parameter.isp.effect.err)
+				printk(KERN_ERR "ISP - EFFECT error : %d\n",
+				dev->is_p_region->parameter.isp.effect.err);
+			if (dev->is_p_region->parameter.isp.iso.err)
+				printk(KERN_ERR "ISP - ISO error : %d\n",
+				dev->is_p_region->parameter.isp.iso.err);
+			if (dev->is_p_region->parameter.isp.adjust.err)
+				printk(KERN_ERR "ISP - ADJUST error : %d\n",
+				dev->is_p_region->parameter.isp.adjust.err);
+			if (dev->is_p_region->parameter.isp.metering.err)
+				printk(KERN_ERR "ISP - METERING error : %d\n",
+				dev->is_p_region->parameter.isp.metering.err);
+			if (dev->is_p_region->parameter.isp.afc.err)
+				printk(KERN_ERR "ISP - AFC error : %d\n",
+				dev->is_p_region->parameter.isp.afc.err);
 			break;
 		}
 		break;
@@ -338,6 +382,9 @@ static int fimc_is_probe(struct platform_device *pdev)
 	pm_runtime_enable(&pdev->dev);
 	set_bit(FIMC_IS_PWR_ST_SUSPENDED, &dev->power);
 
+	/* To lock bus frequency in OPP mode */
+	dev->bus_dev = dev_get("exynos4-busfreq");
+
 	dev->sensor_num = FIMC_IS_SENSOR_NUM;
 	dev->sensor.id = 0;
 	dev->p_region_index1 = 0;
@@ -345,6 +392,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	atomic_set(&dev->p_region_num, 0);
 
 	set_bit(IS_ST_IDLE, &dev->state);
+	dev->af.state = FIMC_IS_AF_IDLE;
 	dbg("FIMC-IS probe completed\n");
 	return 0;
 
@@ -405,6 +453,8 @@ static int fimc_is_runtime_suspend(struct device *dev)
 		printk(KERN_ERR "#### failed to Clock OFF ####\n");
 		return -EINVAL;
 	}
+	/* Unlock bus frequency */
+	dev_unlock(is_dev->bus_dev, dev);
 	mutex_unlock(&is_dev->lock);
 	return 0;
 }
@@ -430,7 +480,8 @@ static int fimc_is_runtime_resume(struct device *dev)
 		printk(KERN_ERR "#### failed to Clock On ####\n");
 		return -EINVAL;
 	}
-
+	/* lock bus frequency */
+	dev_lock(is_dev->bus_dev, dev, 400000);
 	is_dev->frame_count = 0;
 	mutex_unlock(&is_dev->lock);
 	return 0;

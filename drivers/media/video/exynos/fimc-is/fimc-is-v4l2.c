@@ -87,8 +87,7 @@ static void fimc_is_setfile_request_complete_handler(const struct firmware *fw,
 	struct fimc_is_dev *dev = context;
 	volatile unsigned char *fw_base;
 	if (fw != NULL) {
-		fw_base = phys_to_virt(dev->mem.base
-			+ dev->setfile.base + sizeof(struct is_setfile_header));
+		fw_base = phys_to_virt(dev->mem.base + dev->setfile.base);
 		memcpy((void *)fw_base, fw->data, fw->size);
 		fimc_is_mem_cache_clean((void *)fw_base, fw->size);
 		dev->setfile.state = 1;
@@ -123,62 +122,6 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 	int ret;
 	u32 timeout;
 
-	header = (struct is_setfile_header *)(phys_to_virt(dev->mem.base +
-				dev->setfile.base));
-	memset((void *)header, 0,
-		(unsigned long)sizeof(struct is_setfile_header));
-	header->isp[ISS_PREVIEW_STILL].binary_addr
-		= dev->setfile.base + sizeof(struct is_setfile_header);
-	header->isp[ISS_PREVIEW_STILL].binary_size = ISP_SETFILE_SIZE;
-	header->isp[ISS_PREVIEW_VIDEO].binary_addr
-		= header->isp[ISS_PREVIEW_STILL].binary_addr
-		+ ISP_SETFILE_SIZE;
-	header->isp[ISS_PREVIEW_VIDEO].binary_size = ISP_SETFILE_SIZE;
-	header->isp[ISS_CAPTURE_STILL].binary_addr
-		= header->isp[ISS_PREVIEW_VIDEO].binary_addr
-		+ ISP_SETFILE_SIZE;
-	header->isp[ISS_CAPTURE_STILL].binary_size = ISP_SETFILE_SIZE;
-	header->isp[ISS_CAPTURE_VIDEO].binary_addr
-		= header->isp[ISS_CAPTURE_STILL].binary_addr
-		+ ISP_SETFILE_SIZE;
-	header->isp[ISS_CAPTURE_VIDEO].binary_size = ISP_SETFILE_SIZE;
-
-	header->drc[ISS_PREVIEW_STILL].binary_addr
-		= header->isp[ISS_CAPTURE_VIDEO].binary_addr
-		+ ISP_SETFILE_SIZE;
-	header->drc[ISS_PREVIEW_STILL].binary_size = DRC_SETFILE_SIZE;
-	header->drc[ISS_PREVIEW_VIDEO].binary_addr
-		= header->drc[ISS_PREVIEW_STILL].binary_addr
-		+ DRC_SETFILE_SIZE;
-	header->drc[ISS_PREVIEW_VIDEO].binary_size = DRC_SETFILE_SIZE;
-	header->drc[ISS_CAPTURE_STILL].binary_addr
-		= header->drc[ISS_PREVIEW_VIDEO].binary_addr
-		+ DRC_SETFILE_SIZE;
-	header->drc[ISS_CAPTURE_STILL].binary_size = DRC_SETFILE_SIZE;
-	header->drc[ISS_CAPTURE_VIDEO].binary_addr
-		= header->drc[ISS_CAPTURE_STILL].binary_addr
-		+ DRC_SETFILE_SIZE;
-	header->drc[ISS_CAPTURE_VIDEO].binary_size = DRC_SETFILE_SIZE;
-
-	header->fd[ISS_PREVIEW_STILL].binary_addr
-		= header->drc[ISS_CAPTURE_VIDEO].binary_addr
-		+ DRC_SETFILE_SIZE;
-	header->fd[ISS_PREVIEW_STILL].binary_size = FD_SETFILE_SIZE;
-	header->fd[ISS_PREVIEW_VIDEO].binary_addr
-		= header->fd[ISS_PREVIEW_STILL].binary_addr
-		+ FD_SETFILE_SIZE;
-	header->fd[ISS_PREVIEW_VIDEO].binary_size = FD_SETFILE_SIZE;
-	header->fd[ISS_CAPTURE_STILL].binary_addr
-		= header->fd[ISS_PREVIEW_VIDEO].binary_addr
-		+ FD_SETFILE_SIZE;
-	header->fd[ISS_CAPTURE_STILL].binary_size = FD_SETFILE_SIZE;
-	header->fd[ISS_CAPTURE_VIDEO].binary_addr
-		= header->fd[ISS_CAPTURE_STILL].binary_addr
-		+ FD_SETFILE_SIZE;
-	header->fd[ISS_CAPTURE_VIDEO].binary_size = FD_SETFILE_SIZE;
-
-	fimc_is_mem_cache_clean((void *)header,
-		sizeof(struct is_setfile_header));
 	dev->setfile.state = 0;
 	ret = fimc_is_request_setfile(dev);
 	if (ret) {
@@ -296,6 +239,10 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		fimc_is_hw_set_intgr0_gd0(dev);
 
 		/* Debug only */
+		dbg("Parameter region addr = 0x%08x\n",
+			virt_to_phys(dev->is_p_region));
+		dbg("ISP region addr = 0x%08x\n",
+			virt_to_phys(&dev->is_p_region->parameter.isp));
 		dbg("FN[0] addr = 0x%x\n",
 			virt_to_phys(&dev->is_p_region->header[0]
 							.frame_number));
@@ -438,30 +385,53 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 
 	switch (ctrl->id) {
+	/* EXIF information */
 	case V4L2_CID_IS_CAMERA_EXIF_EXPTIME:
+	case V4L2_CID_CAMERA_EXIF_EXPTIME: /* Exposure Time */
+		fimc_is_mem_cache_inv((void *)IS_HEADER,
+			(unsigned long)(sizeof(struct is_frame_header)*4));
 		ctrl->value = dev->is_p_region->header[0].
 			exif.exposure_time.num;
 		break;
 	case V4L2_CID_IS_CAMERA_EXIF_FLASH:
+	case V4L2_CID_CAMERA_EXIF_FLASH: /* Flash */
+		fimc_is_mem_cache_inv((void *)IS_HEADER,
+			(unsigned long)(sizeof(struct is_frame_header)*4));
 		ctrl->value = dev->is_p_region->header[0].exif.flash;
 		break;
 	case V4L2_CID_IS_CAMERA_EXIF_ISO:
+	case V4L2_CID_CAMERA_EXIF_ISO: /* ISO Speed Rating */
+		fimc_is_mem_cache_inv((void *)IS_HEADER,
+			(unsigned long)(sizeof(struct is_frame_header)*4));
 		ctrl->value = dev->is_p_region->header[0].
 			exif.iso_speed_rating;
 		break;
 	case V4L2_CID_IS_CAMERA_EXIF_SHUTTERSPEED:
+	case V4L2_CID_CAMERA_EXIF_TV: /* Shutter Speed */
+		fimc_is_mem_cache_inv((void *)IS_HEADER,
+			(unsigned long)(sizeof(struct is_frame_header)*4));
 		ctrl->value = dev->is_p_region->header[0].exif.
 			shutter_speed.num;
 		break;
 	case V4L2_CID_IS_CAMERA_EXIF_BRIGHTNESS:
+	case V4L2_CID_CAMERA_EXIF_BV: /* Brightness */
+		fimc_is_mem_cache_inv((void *)IS_HEADER,
+			(unsigned long)(sizeof(struct is_frame_header)*4));
 		ctrl->value = dev->is_p_region->header[0].exif.brightness.num;
 		break;
+	case V4L2_CID_CAMERA_EXIF_EBV: /* exposure bias */
+		fimc_is_mem_cache_inv((void *)IS_HEADER,
+			(unsigned long)(sizeof(struct is_frame_header)*4));
+		ctrl->value = dev->is_p_region->header[0].exif.brightness.den;
+		break;
+	/* Get x and y offset of sensor  */
 	case V4L2_CID_IS_GET_SENSOR_OFFSET_X:
 		ctrl->value = dev->sensor.offset_x;
 		break;
 	case V4L2_CID_IS_GET_SENSOR_OFFSET_Y:
 		ctrl->value = dev->sensor.offset_y;
 		break;
+	/* Get current sensor size  */
 	case V4L2_CID_IS_GET_SENSOR_WIDTH:
 		if (dev->scenario_id == ISS_PREVIEW_STILL)
 			ctrl->value = dev->sensor.width_prev;
@@ -478,9 +448,10 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		else
 			ctrl->value = dev->sensor.height_cap;
 		break;
+	/* Get information related to frame management  */
 	case V4L2_CID_IS_GET_FRAME_VALID:
 		fimc_is_mem_cache_inv((void *)IS_HEADER,
-			(unsigned long)sizeof(IS_HEADER));
+			(unsigned long)(sizeof(struct is_frame_header)*4));
 		ctrl->value = dev->is_p_region->header
 			[dev->frame_count%MAX_FRAME_COUNT_PREVIEW].valid;
 		break;
@@ -488,7 +459,7 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_IS_GET_FRAME_NUMBER:
 		fimc_is_mem_cache_inv((void *)IS_HEADER,
-			(unsigned long)sizeof(IS_HEADER));
+			(unsigned long)(sizeof(struct is_frame_header)*4));
 		ctrl->value =
 			dev->is_p_region->header
 			[dev->frame_count%MAX_FRAME_COUNT_PREVIEW].
@@ -496,7 +467,7 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_IS_GET_LOSTED_FRAME_NUMBER:
 		fimc_is_mem_cache_inv((void *)IS_HEADER,
-			(unsigned long)sizeof(IS_HEADER));
+			(unsigned long)(sizeof(struct is_frame_header)*4));
 		if (dev->scenario_id == ISS_CAPTURE_STILL) {
 			ctrl->value =
 				dev->is_p_region->header[1].frame_number;
@@ -523,11 +494,30 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_IS_GET_FRAME_CAPTURED:
 		fimc_is_mem_cache_inv((void *)IS_HEADER,
-			(unsigned long)sizeof(IS_HEADER));
+			(unsigned long)(sizeof(struct is_frame_header)*4));
 		ctrl->value =
 			dev->is_p_region->header
 			[dev->frame_count%MAX_FRAME_COUNT_PREVIEW].captured;
 		break;
+	case V4L2_CID_IS_FD_GET_DATA:
+		ctrl->value = dev->fd_header.count;
+		fimc_is_mem_cache_inv((void *)IS_FACE,
+		(unsigned long)(sizeof(struct is_face_marker)*MAX_FACE_COUNT));
+		memcpy((void *)dev->fd_header.target_addr,
+			&dev->is_p_region->face[dev->fd_header.index],
+			(sizeof(struct is_face_marker)*dev->fd_header.count));
+		break;
+	/* AF result */
+	case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT:
+		ctrl->value = dev->af.state;
+		if (dev->af.state == FIMC_IS_AF_LOCK) {
+			IS_ISP_SET_PARAM_AF_CMD(dev, ISP_AF_COMMAND_ABORT);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+		}
 	default:
 		return -EINVAL;
 	}
@@ -556,6 +546,24 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			}
 		}
 		break;
+	case V4L2_CID_IS_S_FORMAT_SCENARIO:
+		switch (ctrl->value) {
+		case IS_MODE_PREVIEW_STILL:
+			dev->scenario_id = ISS_PREVIEW_STILL;
+			break;
+		case IS_MODE_PREVIEW_VIDEO:
+			dev->scenario_id = ISS_PREVIEW_VIDEO;
+			break;
+		case IS_MODE_CAPTURE_STILL:
+			dev->scenario_id = ISS_CAPTURE_STILL;
+			break;
+		case IS_MODE_CAPTURE_VIDEO:
+			dev->scenario_id = ISS_CAPTURE_VIDEO;
+			break;
+		default:
+			return -EBUSY;
+		}
+		break;
 	case V4L2_CID_IS_CAMERA_SHOT_MODE_NORMAL:
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, ctrl->value);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
@@ -564,92 +572,81 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
 		break;
+	case V4L2_CID_CAMERA_FRAME_RATE:
+		IS_SENSOR_SET_FRAME_RATE(dev, ctrl->value);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	/* Focus */
 	case V4L2_CID_IS_CAMERA_OBJECT_POSITION_X:
+	case V4L2_CID_CAMERA_OBJECT_POSITION_X:
 		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, ctrl->value);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, ctrl->value);
+		/* default window size setting */
+		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, dev->sensor.width_prev);
 		break;
 	case V4L2_CID_IS_CAMERA_OBJECT_POSITION_Y:
+	case V4L2_CID_CAMERA_OBJECT_POSITION_Y:
 		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, ctrl->value);
-		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, ctrl->value);
+		/* default window size setting */
+		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, dev->sensor.height_prev);
 		break;
 	case V4L2_CID_IS_CAMERA_WINDOW_SIZE_X:
 		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, ctrl->value);
-		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_WINDOW_SIZE_Y:
 		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, ctrl->value);
-		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_FOCUS_MODE:
 		switch (ctrl->value) {
 		case IS_FOCUS_MODE_AUTO:
+			dev->af.mode = IS_FOCUS_MODE_AUTO;
 			IS_ISP_SET_PARAM_AF_CMD(dev,
 				ISP_AF_COMMAND_SET_FOCUSMODE);
 			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
 			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_DISABLE);
-			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
 			break;
 		case IS_FOCUS_MODE_MACRO:
+			dev->af.mode = IS_FOCUS_MODE_MACRO;
 			IS_ISP_SET_PARAM_AF_CMD(dev,
 				ISP_AF_COMMAND_SET_FOCUSMODE);
 			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_MACRO);
 			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_DISABLE);
-			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
 			break;
 		case IS_FOCUS_MODE_INFINITY:
+			dev->af.mode = IS_FOCUS_MODE_INFINITY;
 			IS_ISP_SET_PARAM_AF_CMD(dev,
 				ISP_AF_COMMAND_SET_FOCUSMODE);
 			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_INFINITY);
 			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_DISABLE);
-			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
 			break;
 		case IS_FOCUS_MODE_CONTINUOUS:
+			dev->af.mode = IS_FOCUS_MODE_CONTINUOUS;
 			IS_ISP_SET_PARAM_AF_CMD(dev,
 				ISP_AF_COMMAND_SET_FOCUSMODE);
 			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
 			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_ENABLE);
-			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
 			break;
 		case IS_FOCUS_MODE_TOUCH:
+			dev->af.mode = IS_FOCUS_MODE_TOUCH;
 			IS_ISP_SET_PARAM_AF_CMD(dev, ISP_AF_COMMAND_TOUCH);
 			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
 			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_ENABLE);
 			break;
-		case IS_FOCUS_MODE_HALFSHUTTER:
-			IS_ISP_SET_PARAM_AF_CMD(dev,
-				ISP_AF_COMMAND_HALFSHUTTER);
-			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
-			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
-			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
-				ISP_AF_CONTINUOUS_DISABLE);
-			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
-			break;
 		case IS_FOCUS_MODE_FACEDETECT:
+			dev->af.mode = IS_FOCUS_MODE_FACEDETECT;
 			IS_ISP_SET_PARAM_AF_CMD(dev,
 				ISP_AF_COMMAND_SET_FOCUSMODE);
 			IS_ISP_SET_PARAM_AF_MODE(dev,
@@ -658,10 +655,6 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				ISP_AF_FACE_ENABLE);
 			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_DISABLE);
-			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
-			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
 			break;
 		}
 		if (ctrl->value >= 0 && ctrl->value < IS_FOCUS_MODE_MAX) {
@@ -672,6 +665,99 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			fimc_is_hw_set_param(dev);
 		}
 		break;
+	case V4L2_CID_CAMERA_SET_AUTO_FOCUS:
+		switch (ctrl->value) {
+		case AUTO_FOCUS_OFF:
+			if ((dev->sensor.sensor_type == SENSOR_S5K6A3_CSI_A)
+			|| (dev->sensor.sensor_type == SENSOR_S5K6A3_CSI_B)) {
+				/* 6A3 can't support AF */
+				ret = 0;
+			} else {
+				/* Abort or lock AF */
+				IS_ISP_SET_PARAM_AF_CMD(dev,
+					ISP_AF_COMMAND_ABORT);
+				IS_ISP_SET_PARAM_AF_MODE(dev,
+					ISP_AF_MODE_AUTO);
+				IS_ISP_SET_PARAM_AF_FACE(dev,
+					ISP_AF_FACE_DISABLE);
+				IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+					ISP_AF_CONTINUOUS_DISABLE);
+				IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+				IS_INC_PARAM_NUM(dev);
+				fimc_is_mem_cache_clean(
+					(void *)dev->is_p_region,
+					IS_PARAM_SIZE);
+				fimc_is_hw_set_param(dev);
+			}
+			dev->af.state = FIMC_IS_AF_ABORT;
+			break;
+		case AUTO_FOCUS_ON:
+			if ((dev->sensor.sensor_type == SENSOR_S5K6A3_CSI_A)
+			|| (dev->sensor.sensor_type == SENSOR_S5K6A3_CSI_B)) {
+				/* 6A3 can't support AF */
+				ret = 0;
+			} else {
+				/* Abort or lock AF */
+				IS_ISP_SET_PARAM_AF_CMD(dev,
+					ISP_AF_COMMAND_HALFSHUTTER);
+				IS_ISP_SET_PARAM_AF_MODE(dev,
+					ISP_AF_MODE_AUTO);
+				IS_ISP_SET_PARAM_AF_FACE(dev,
+					ISP_AF_FACE_DISABLE);
+				IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+					ISP_AF_CONTINUOUS_DISABLE);
+				IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+				IS_INC_PARAM_NUM(dev);
+				fimc_is_mem_cache_clean(
+					(void *)dev->is_p_region,
+					IS_PARAM_SIZE);
+				fimc_is_hw_set_param(dev);
+			}
+			dev->af.state = FIMC_IS_AF_RUNNING;
+			break;
+		}
+		break;
+	case V4L2_CID_CAMERA_TOUCH_AF_START_STOP:
+		switch (ctrl->value) {
+		case TOUCH_AF_STOP:
+			if ((dev->sensor.sensor_type == SENSOR_S5K6A3_CSI_A)
+			|| (dev->sensor.sensor_type == SENSOR_S5K6A3_CSI_B)) {
+				/* 6A3 can't support Touch Focus */
+				ret = 0;
+			} else {
+				/* Abort or lock AF */
+				IS_ISP_SET_PARAM_AF_CMD(dev,
+					ISP_AF_COMMAND_ABORT);
+				IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+				IS_INC_PARAM_NUM(dev);
+				fimc_is_mem_cache_clean(
+					(void *)dev->is_p_region,
+					IS_PARAM_SIZE);
+				fimc_is_hw_set_param(dev);
+			}
+			dev->af.state = FIMC_IS_AF_ABORT;
+			break;
+		case TOUCH_AF_START:
+			if ((dev->sensor.sensor_type == SENSOR_S5K6A3_CSI_A)
+			|| (dev->sensor.sensor_type == SENSOR_S5K6A3_CSI_B)) {
+				/* 6A3 can't support Touch Focus */
+				ret = 0;
+			} else {
+				/* Abort or lock AF */
+				IS_ISP_SET_PARAM_AF_CMD(dev,
+					ISP_AF_COMMAND_HALFSHUTTER);
+				IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+				IS_INC_PARAM_NUM(dev);
+				fimc_is_mem_cache_clean(
+					(void *)dev->is_p_region,
+					IS_PARAM_SIZE);
+				fimc_is_hw_set_param(dev);
+			}
+			dev->af.state = FIMC_IS_AF_RUNNING;
+			break;
+		}
+		break;
+	/* FLASH */
 	case V4L2_CID_IS_CAMERA_FLASH_MODE:
 		switch (ctrl->value) {
 		case IS_FLASH_MODE_OFF:
@@ -1005,9 +1091,9 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_IS_CAMERA_METERING:
 		switch (ctrl->value) {
-		case IS_METERING_CENTER:
+		case IS_METERING_AVERAGE:
 			IS_ISP_SET_PARAM_METERING_CMD(dev,
-				ISP_METERING_COMMAND_CENTER);
+				ISP_METERING_COMMAND_AVERAGE);
 			break;
 		case IS_METERING_SPOT:
 			IS_ISP_SET_PARAM_METERING_CMD(dev,
@@ -1025,6 +1111,18 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
+		break;
+	case V4L2_CID_IS_CAMERA_METERING_POSITION_X:
+		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, ctrl->value);
+		break;
+	case V4L2_CID_IS_CAMERA_METERING_POSITION_Y:
+		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, ctrl->value);
+		break;
+	case V4L2_CID_IS_CAMERA_METERING_WINDOW_X:
+		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, ctrl->value);
+		break;
+	case V4L2_CID_IS_CAMERA_METERING_WINDOW_Y:
+		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_AFC_MODE:
 		switch (ctrl->value) {
@@ -1242,6 +1340,962 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			= ctrl->value;
 		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
 		break;
+	case V4L2_CID_IS_FD_SET_DATA_ADDRESS:
+		dev->fd_header.target_addr = ctrl->value;
+		break;
+	case V4L2_CID_CAMERA_SCENE_MODE:
+		switch (ctrl->value) {
+		case SCENE_MODE_NONE:
+			/* Cancel AF first */
+			if ((dev->af.state == FIMC_IS_AF_RUNNING) ||
+					(dev->af.state == FIMC_IS_AF_LOCK)) {
+				IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_ABORT);
+				IS_ISP_SET_PARAM_AF_MODE(dev,
+						ISP_AF_MODE_AUTO);
+				IS_ISP_SET_PARAM_AF_FACE(dev,
+						ISP_AF_FACE_DISABLE);
+				IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+					ISP_AF_CONTINUOUS_DISABLE);
+				IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+				IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+				IS_INC_PARAM_NUM(dev);
+				fimc_is_mem_cache_clean(
+					(void *)dev->is_p_region,
+					IS_PARAM_SIZE);
+				fimc_is_hw_set_param(dev);
+			}
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_ENABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+					ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+					ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_PORTRAIT:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, -1);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, -1);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_ENABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+					ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_ENABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+					ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_LANDSCAPE:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_MATRIX);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 1);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 1);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 1);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_SPORTS:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 800);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+					ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_PARTY_INDOOR:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 200);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 1);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_ENABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_BEACH_SNOW:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 50);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 1);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 1);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_SUNSET:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev,
+				ISP_AWB_COMMAND_ILLUMINATION);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_DUSK_DAWN:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev,
+				ISP_AWB_COMMAND_ILLUMINATION);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_FLUORESCENT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_FALL_COLOR:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 2);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_NIGHTSHOT:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_BACK_LIGHT:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		/* FIXME add with SCENE_MODE_BACK_LIGHT (FLASH mode) */
+		case SCENE_MODE_FIREWORKS:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 50);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_TEXT:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 2);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 2);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_MACRO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case SCENE_MODE_CANDLE_LIGHT:
+			/* ISO */
+			IS_ISP_SET_PARAM_ISO_CMD(dev,
+				ISP_ISO_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+			IS_ISP_SET_PARAM_ISO_ERR(dev, ISP_ISO_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+			IS_INC_PARAM_NUM(dev);
+			/* Metering */
+			IS_ISP_SET_PARAM_METERING_CMD(dev,
+				ISP_METERING_COMMAND_AVERAGE);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_METERING_ERR(dev,
+				ISP_METERING_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+			IS_INC_PARAM_NUM(dev);
+			/* AWB */
+			IS_ISP_SET_PARAM_AWB_CMD(dev,
+				ISP_AWB_COMMAND_ILLUMINATION);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+			IS_ISP_SET_PARAM_AWB_ERR(dev, ISP_AWB_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			/* Adjust */
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+				ISP_ADJUST_COMMAND_MANUAL);
+			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_ERR(dev,
+				ISP_ADJUST_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			/* Flash */
+			IS_ISP_SET_PARAM_FLASH_CMD(dev,
+				ISP_FLASH_COMMAND_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
+				ISP_FLASH_REDEYE_DISABLE);
+			IS_ISP_SET_PARAM_FLASH_ERR(dev,
+				ISP_FLASH_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+			IS_INC_PARAM_NUM(dev);
+			/* AF */
+			IS_ISP_SET_PARAM_AF_CMD(dev,
+						ISP_AF_COMMAND_SET_FOCUSMODE);
+			IS_ISP_SET_PARAM_AF_MODE(dev, ISP_AF_MODE_MACRO);
+			IS_ISP_SET_PARAM_AF_FACE(dev, ISP_AF_FACE_DISABLE);
+			IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
+						ISP_AF_CONTINUOUS_DISABLE);
+			IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, 0);
+			IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, 0);
+			IS_ISP_SET_PARAM_AF_ERR(dev, ISP_AF_ERROR_NO);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		default:
+			break;
+		}
+		break;
 	default:
 		dbg("Invalid control\n");
 		return -EINVAL;
@@ -1250,24 +2304,156 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	return ret;
 }
 
+static int fimc_is_g_ext_ctrls_handler(struct fimc_is_dev *dev,
+	struct v4l2_ext_control *ctrl, int index)
+{
+	int ret = 0;
+	switch (ctrl->id) {
+	/* Face Detection CID handler */
+	/* 1. Overall information */
+	case V4L2_CID_IS_FD_GET_FACE_COUNT:
+		ctrl->value = dev->fd_header.ref_end;
+		break;
+	case V4L2_CID_IS_FD_GET_FACE_FRAME_NUMBER:
+		if (index > 6) {
+			dev->fd_header.offset++;
+			if ((dev->fd_header.ref + dev->fd_header.offset)
+				> MAX_FACE_COUNT) {
+				dev->fd_header.ref = 0;
+				dev->fd_header.offset = 0;
+			}
+		}
+		if (dev->fd_header.offset < dev->fd_header.ref_end) {
+			ctrl->value =
+				dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].frame_number;
+		} else {
+			return -255;
+		}
+		break;
+	case V4L2_CID_IS_FD_GET_FACE_CONFIDENCE:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+					+ dev->fd_header.offset].confidence;
+		break;
+	case V4L2_CID_IS_FD_GET_FACE_SMILELEVEL:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+					+ dev->fd_header.offset].smile_level;
+		break;
+	case V4L2_CID_IS_FD_GET_FACE_BLINKLEVEL:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+					+ dev->fd_header.offset].blink_level;
+		break;
+	/* 2. Face information */
+	case V4L2_CID_IS_FD_GET_FACE_OFFSET_X:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+					+ dev->fd_header.offset].face.offset_x;
+		break;
+	case V4L2_CID_IS_FD_GET_FACE_OFFSET_Y:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+					+ dev->fd_header.offset].face.offset_y;
+		break;
+	case V4L2_CID_IS_FD_GET_FACE_SIZE_X:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+					+ dev->fd_header.offset].face.width;
+		break;
+	case V4L2_CID_IS_FD_GET_FACE_SIZE_Y:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+					+ dev->fd_header.offset].face.height;
+		break;
+	/* 3. Left eye information */
+	case V4L2_CID_IS_FD_GET_LEFT_EYE_OFFSET_X:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].left_eye.offset_x;
+		break;
+	case V4L2_CID_IS_FD_GET_LEFT_EYE_OFFSET_Y:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].left_eye.offset_y;
+		break;
+	case V4L2_CID_IS_FD_GET_LEFT_EYE_SIZE_X:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].left_eye.width;
+		break;
+	case V4L2_CID_IS_FD_GET_LEFT_EYE_SIZE_Y:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].left_eye.height;
+		break;
+	/* 4. Right eye information */
+	case V4L2_CID_IS_FD_GET_RIGHT_EYE_OFFSET_X:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].right_eye.offset_x;
+		break;
+	case V4L2_CID_IS_FD_GET_RIGHT_EYE_OFFSET_Y:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].right_eye.offset_y;
+		break;
+	case V4L2_CID_IS_FD_GET_RIGHT_EYE_SIZE_X:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].right_eye.width;
+		break;
+	case V4L2_CID_IS_FD_GET_RIGHT_EYE_SIZE_Y:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].right_eye.height;
+		break;
+	/* 5. Mouth eye information */
+	case V4L2_CID_IS_FD_GET_MOUTH_OFFSET_X:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].mouth.offset_x;
+		break;
+	case V4L2_CID_IS_FD_GET_MOUTH_OFFSET_Y:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].mouth.offset_y;
+		break;
+	case V4L2_CID_IS_FD_GET_MOUTH_SIZE_X:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].mouth.width;
+		break;
+	case V4L2_CID_IS_FD_GET_MOUTH_SIZE_Y:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+				+ dev->fd_header.offset].mouth.height;
+		break;
+	default:
+		return 255;
+		break;
+	}
+	return ret;
+}
+
 static int fimc_is_g_ext_ctrls(struct v4l2_subdev *sd,
 	struct v4l2_ext_controls *ctrls)
 {
+	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 	struct v4l2_ext_control *ctrl;
 	int i, ret = 0;
+	unsigned long flags;
 
-	dbg("fimc_is_g_ext_ctrls\n");
+	spin_lock_irqsave(&dev->slock, flags);
+	dev->fd_header.ref = dev->fd_header.index;
+	dev->fd_header.ref_end = dev->fd_header.count;
 	ctrl = ctrls->controls;
 	if (!ctrls->ctrl_class == V4L2_CTRL_CLASS_CAMERA)
 		return -EINVAL;
 
-	for (i = 0; i < ctrls->count; i++, ctrl++) {
-		/* ret = fimc_is_g_ctrl(sd, ctrl); */
-		if (ret) {
+	fimc_is_mem_cache_inv((void *)IS_FACE,
+		(unsigned long)(sizeof(struct is_face_marker)*MAX_FACE_COUNT));
+
+	dev->fd_header.offset = 0;
+	for (i = 0; i < ctrls->count; i++) {
+		ctrl = ctrls->controls + i;
+		ret = fimc_is_g_ext_ctrls_handler(dev, ctrl, i);
+		if (ret > 0) {
 			ctrls->error_idx = i;
+			break;
+		} else if (ret < 0) {
+			ret = 0;
 			break;
 		}
 	}
+
+	dev->fd_header.ref = 0;
+	dev->fd_header.ref_end = 0;
+	dev->fd_header.index = 0;
+	dev->fd_header.count = 0;
+	spin_unlock_irqrestore(&dev->slock, flags);
 	return ret;
 }
 
@@ -1835,9 +3021,9 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 	/* ISP - METERING mode */
 	case V4L2_CID_IS_CAMERA_METERING:
 		switch (ctrl->value) {
-		case IS_METERING_CENTER:
+		case IS_METERING_AVERAGE:
 			IS_ISP_SET_PARAM_METERING_CMD(dev,
-				ISP_METERING_COMMAND_CENTER);
+				ISP_METERING_COMMAND_AVERAGE);
 			IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, 0);
 			IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, 0);
 			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 0);
@@ -2000,6 +3186,7 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 	int ret = 0;
 
 	dbg("fimc_is_s_mbus_fmt- %d,%d", mf->width, mf->height);
+
 	/* scenario ID setting */
 	switch (mf->field) {
 	case 0:

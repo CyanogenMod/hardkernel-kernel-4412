@@ -39,6 +39,7 @@
 #include <media/v4l2-mem2mem.h>
 #include <media/v4l2-mediabus.h>
 #include <media/exynos_fimc_is.h>
+#include <mach/dev.h>
 
 #define MODULE_NAME	"exynos4-fimc-is"
 
@@ -49,13 +50,11 @@
 
 #define FIMC_IS_SHUTDOWN_TIMEOUT	(400*HZ)
 
-#define FIMC_IS_A5_MEM_SIZE	0x04000000
+#define FIMC_IS_A5_MEM_SIZE	0x02000000
 #define FIMC_IS_REGION_SIZE	0x5000
 #define ISP_SETFILE_SIZE	(0x1000/4)
 #define DRC_SETFILE_SIZE	0x140
 #define FD_SETFILE_SIZE		0x88
-
-#define DEBUG
 
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
@@ -120,6 +119,13 @@ enum sensor_channel {
 	SENSOR_CONTROL_I2C1	= 1
 };
 
+enum af_state {
+	FIMC_IS_AF_IDLE		= 0,
+	FIMC_IS_AF_RUNNING	= 1,
+	FIMC_IS_AF_LOCK		= 2,
+	FIMC_IS_AF_ABORT	= 4,
+};
+
 struct is_meminfo {
 	dma_addr_t	base;		/* buffer base */
 	size_t		size;		/* total length */
@@ -161,6 +167,23 @@ struct is_sensor {
 	u32 offset_y;
 };
 
+struct is_fd_result_header {
+	u32 ref;
+	u32 ref_end;
+	u32 offset;
+	u32 count;
+	u32 index;
+	u32 target_addr;
+};
+
+struct is_af_state {
+	u16 mode;
+	u32 state;
+	u16 lock;
+	u16 pos_x;
+	u16 pos_y;
+};
+
 struct fimc_is_dev {
 	spinlock_t			slock;
 	struct mutex			lock;
@@ -172,6 +195,7 @@ struct fimc_is_dev {
 
 	struct is_sensor		sensor;
 	u32				sensor_num;
+	struct is_af_state		af;
 
 	u16				num_clocks;
 	struct clk			*clock[NUM_FIMC_IS_CLOCKS];
@@ -187,10 +211,13 @@ struct fimc_is_dev {
 	struct is_fw			fw;
 	struct is_setfile		setfile;
 	struct is_meminfo		mem;		/* for reserved mem */
+	struct is_fd_result_header	fd_header;
 #ifdef CONFIG_CMA
 	char				cma_name[16];
 #endif
 	struct v4l2_subdev		sd;
+
+	struct device			*bus_dev;
 	/* Shared parameter region */
 	atomic_t			p_region_num;
 	unsigned long			p_region_index1;

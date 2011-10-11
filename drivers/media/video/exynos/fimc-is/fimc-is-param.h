@@ -27,11 +27,16 @@
 #define IS_PARAM_DRC		(dev->is_p_region->parameter.drc)
 #define IS_PARAM_FD		(dev->is_p_region->parameter.fd)
 #define IS_HEADER		(dev->is_p_region->header)
+#define IS_FACE			(dev->is_p_region->face)
 #define IS_PARAM_SIZE		(FIMC_IS_REGION_SIZE+1)
 
 /* Global control */
 #define IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, x) \
 		(dev->is_p_region->parameter.global.shotmode.cmd = x)
+
+/* Sensor control */
+#define IS_SENSOR_SET_FRAME_RATE(dev, x) \
+		(dev->is_p_region->parameter.sensor.frame_rate.frame_rate = x)
 
 /* ISP Macros */
 #define IS_ISP_SET_PARAM_CONTROL_CMD(dev, x) \
@@ -628,8 +633,8 @@ enum otf_input_format {
 	OTF_INPUT_FORMAT_YUV444		= 1, /* 3 Channel */
 	OTF_INPUT_FORMAT_YUV422		= 2, /* 3 Channel */
 	OTF_INPUT_FORMAT_YUV420		= 3, /* 3 Channel */
-
-	OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER = 10
+	OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER = 10,
+	OTF_INPUT_FORMAT_BAYER_DMA	= 11,
 };
 
 enum otf_input_bitwidth {
@@ -914,7 +919,7 @@ enum isp_adjust_error {
 
 /* -------------------------  Metering  ---------------------------------- */
 enum isp_metering_command {
-	ISP_METERING_COMMAND_CENTER	= 0,
+	ISP_METERING_COMMAND_AVERAGE	= 0,
 	ISP_METERING_COMMAND_SPOT	= 1,
 	ISP_METERING_COMMAND_MATRIX	= 2
 };
@@ -1085,6 +1090,13 @@ enum error {
 
 	/* SENSOR Error(100~199) */
 	ERROR_SENSOR_NO			= ERROR_COMMON_NO,
+	ERROR_SENSOR_I2C_FAIL		= 101,
+	ERROR_SENSOR_INVALID_FRAMERATE,
+	ERROR_SENSOR_INVALID_SIZE,
+	ERROR_SENSOR_ACTURATOR_INIT_FAIL,
+	ERROR_SENSOR_INVALID_AF_POS,
+	ERROR_SENSOR_UNSUPPORT_FUNC,
+	ERROR_SENSOR_UNSUPPORT_PERI,
 
 	/* ISP Error (200~299) */
 	ERROR_ISP_AF_NO			= ERROR_COMMON_NO,
@@ -1458,13 +1470,22 @@ struct is_frame_header {
 	struct exif_attribute	exif;
 };
 
+struct is_fd_rect {
+	u32 offset_x;
+	u32 offset_y;
+	u32 width;
+	u32 height;
+};
+
 struct is_face_marker {
 	u32	frame_number;
-	u32	offset_x;
-	u32	offset_y;
-	u32	width;
-	u32	height;
+	struct is_fd_rect face;
+	struct is_fd_rect left_eye;
+	struct is_fd_rect right_eye;
+	struct is_fd_rect mouth;
 	u32	confidence;
+	u32	smile_level;
+	u32	blink_level;
 };
 
 #define MAX_FRAME_COUNT		8

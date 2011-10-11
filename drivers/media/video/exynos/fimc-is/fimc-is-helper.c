@@ -47,6 +47,9 @@ Default setting values
 #define CAPTURE_HEIGHT		2424
 #define CAMCORDING_WIDTH	1920
 #define CAMCORDING_HEIGHT	1080
+#define PREVIEW_FRAMERATE	15
+#define CAPTURE_FRAMERATE	15
+#define CAMCORDING_FRAMERATE	15
 #endif
 #ifdef CONFIG_VIDEO_S5K3H2
 #define PREVIEW_WIDTH		640
@@ -55,6 +58,9 @@ Default setting values
 #define CAPTURE_HEIGHT		2424
 #define CAMCORDING_WIDTH	1920
 #define CAMCORDING_HEIGHT	1080
+#define PREVIEW_FRAMERATE	15
+#define CAPTURE_FRAMERATE	15
+#define CAMCORDING_FRAMERATE	15
 #endif
 #ifdef CONFIG_VIDEO_S5K6A3
 #define PREVIEW_WIDTH		640
@@ -63,7 +69,16 @@ Default setting values
 #define CAPTURE_HEIGHT		1400
 #define CAMCORDING_WIDTH	1280
 #define CAMCORDING_HEIGHT	720
+#define PREVIEW_FRAMERATE	30
+#define CAPTURE_FRAMERATE	30
+#define CAMCORDING_FRAMERATE	30
 #endif
+
+static const struct sensor_param init_val_sensor_preview = {
+	.frame_rate = {
+		.frame_rate = PREVIEW_FRAMERATE,
+	},
+};
 
 static const struct isp_param init_val_isp_preview = {
 	.control = {
@@ -248,6 +263,12 @@ static const struct fd_param init_val_fd_preview = {
 	},
 };
 
+static const struct sensor_param init_val_sensor_capture = {
+	.frame_rate = {
+		.frame_rate = CAPTURE_FRAMERATE,
+	},
+};
+
 static const struct isp_param init_val_isp_capture = {
 	.control = {
 		.cmd = CONTROL_COMMAND_START,
@@ -413,6 +434,12 @@ static const struct fd_param init_val_fd_capture = {
 		.smile = FD_MODE_SMILE_DISABLE,
 		.blink = FD_MODE_BLINK_DISABLE,
 		.err = FD_ERROR_NO,
+	},
+};
+
+static const struct sensor_param init_val_sensor_camcording = {
+	.frame_rate = {
+		.frame_rate = CAMCORDING_FRAMERATE,
 	},
 };
 
@@ -892,6 +919,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
+		IS_SENSOR_SET_FRAME_RATE(dev,
+			init_val_sensor_preview.frame_rate.frame_rate);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
 			init_val_isp_preview.control.cmd);
@@ -1238,6 +1269,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 	case ISS_PREVIEW_VIDEO:
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
+		IS_INC_PARAM_NUM(dev);
+		IS_SENSOR_SET_FRAME_RATE(dev,
+			init_val_sensor_preview.frame_rate.frame_rate);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
@@ -1587,6 +1622,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
+		IS_SENSOR_SET_FRAME_RATE(dev,
+			init_val_sensor_capture.frame_rate.frame_rate);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
 			init_val_isp_capture.control.cmd);
@@ -1928,7 +1967,11 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 
 	case ISS_CAPTURE_VIDEO:
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
-		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		IS_SENSOR_SET_FRAME_RATE(dev,
+			init_val_sensor_camcording.frame_rate.frame_rate);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
