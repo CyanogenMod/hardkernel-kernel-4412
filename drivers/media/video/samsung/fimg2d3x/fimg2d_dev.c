@@ -377,8 +377,6 @@ static int g2d_probe(struct platform_device *pdev)
 
 	mutex_init(&g2d_dev->lock);
 
-	g2d_sysmmu_on(g2d_dev);
-
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 	g2d_dev->early_suspend.suspend = g2d_early_suspend;
 	g2d_dev->early_suspend.resume = g2d_late_resume;
@@ -388,6 +386,8 @@ static int g2d_probe(struct platform_device *pdev)
 
 	g2d_dev->dev = &pdev->dev;
 	atomic_set(&g2d_dev->ready_to_run, 1);
+
+	g2d_sysmmu_on(g2d_dev);
 
 	FIMG2D_DEBUG("g2d_probe ok!\n");
 
