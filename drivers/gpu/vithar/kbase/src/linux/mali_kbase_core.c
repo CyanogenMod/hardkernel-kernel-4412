@@ -700,8 +700,8 @@ static int kbase_common_device_init(kbase_device *kbdev)
 		goto out_unmap;
 
 	dev_set_drvdata(osdev->dev, kbdev);
-#ifdef CONFIG_MACH_FPGA5210
-	/* FPGA use ROM filesystem, so we can't MISC device node */
+#ifdef CONFIG_VITHAR
+	/* FPGA use ROM filesystem, so we cannot MISC device node */
 	osdev->mdev.minor	= 77;
 #else
 	osdev->mdev.minor	= MISC_DYNAMIC_MINOR;

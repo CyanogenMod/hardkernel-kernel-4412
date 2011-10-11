@@ -47,7 +47,7 @@ module_param(ump_debug_level, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IRO
 MODULE_PARM_DESC(ump_debug_level, "Higher number, more dmesg output");
 
 /* By default the module uses any available major, but it's possible to set it at load time to a specific number */
-#ifdef CONFIG_MACH_FPGA5210
+#ifdef CONFIG_VITHAR
 int ump_major = 240;
 #else
 int ump_major = 0;
