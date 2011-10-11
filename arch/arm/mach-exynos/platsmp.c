@@ -122,10 +122,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
 
-#ifdef CONFIG_ARM_TRUSTZONE
-	static int callcount = 0;
-#endif
-
 	/*
 	 * Set synchronisation state between this boot processor
 	 * and the secondary one
@@ -162,14 +158,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		}
 	}
 
-#ifdef CONFIG_ARM_TRUSTZONE
-	/* SMC Call */
-	printk(KERN_INFO "DEBUG (%s): SMC call to enable CPU1\n", __func__);
-
-	if (callcount++)
-		exynos_smc(SMC_CMD_CPU1BOOT, 0, 0, 0);
-#endif
-
 	/*
 	 * Send the secondary CPU a soft interrupt, thereby causing
 	 * the boot monitor to read the system wide flags register,
@@ -179,6 +167,10 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
+
+#ifdef CONFIG_ARM_TRUSTZONE
+		exynos_smc(SMC_CMD_CPU1BOOT, 0, 0, 0);
+#endif
 
 		if (soc_is_exynos4412()) {
 			if (cpu == 1)
