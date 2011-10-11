@@ -537,14 +537,6 @@ static irqreturn_t jpeg_irq(int irq, void *priv)
 	src_vb = v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
 	dst_vb = v4l2_m2m_dst_buf_remove(ctx->m2m_ctx);
 
-	v4l2_m2m_buf_done(src_vb, VB2_BUF_STATE_DONE);
-	v4l2_m2m_buf_done(dst_vb, VB2_BUF_STATE_DONE);
-
-	if (ctrl->mode == ENCODING)
-		v4l2_m2m_job_finish(ctrl->m2m_dev_enc, ctx->m2m_ctx);
-	else
-		v4l2_m2m_job_finish(ctrl->m2m_dev_dec, ctx->m2m_ctx);
-
 	int_status = jpeg_int_pending(ctrl);
 
 	if (int_status) {
@@ -571,6 +563,20 @@ static irqreturn_t jpeg_irq(int irq, void *priv)
 	} else {
 		ctrl->irq_ret = ERR_UNKNOWN;
 	}
+
+	if (ctrl->irq_ret == OK_ENC_OR_DEC) {
+		v4l2_m2m_buf_done(src_vb, VB2_BUF_STATE_DONE);
+		v4l2_m2m_buf_done(dst_vb, VB2_BUF_STATE_DONE);
+	} else {
+		v4l2_m2m_buf_done(src_vb, VB2_BUF_STATE_ERROR);
+		v4l2_m2m_buf_done(dst_vb, VB2_BUF_STATE_ERROR);
+	}
+
+	if (ctrl->mode == ENCODING)
+		v4l2_m2m_job_finish(ctrl->m2m_dev_enc, ctx->m2m_ctx);
+	else
+		v4l2_m2m_job_finish(ctrl->m2m_dev_dec, ctx->m2m_ctx);
+
 	spin_unlock(&ctrl->slock);
 
 	return IRQ_HANDLED;
