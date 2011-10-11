@@ -2143,7 +2143,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	
 	udc->regs_res = request_mem_region(res->start, resource_size(res),
 					     dev_name(dev));
-	if (udc->regs_res) {
+	if (!udc->regs_res) {
 		dev_err(dev, "cannot reserve registers\n");
 		ret = -ENOENT;
 		goto err_clk;
