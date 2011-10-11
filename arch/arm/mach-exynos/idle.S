@@ -169,8 +169,8 @@ ENTRY(exynos4_idle_resume)
 #ifdef CONFIG_ARM_TRUSTZONE
 	ldr	r0, =SMC_CMD_L2X0SETUP1
 	ldr	r1, =0x110
-	ldrne	r2, =0x110
-	ldreq	r2, =0x120
+	ldreq	r2, =0x110
+	ldrne	r2, =0x120
 	ldr	r3, =0x30000007
 	smc	0
 
