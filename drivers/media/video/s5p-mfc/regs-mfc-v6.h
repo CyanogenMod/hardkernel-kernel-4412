@@ -22,6 +22,9 @@
 #define S5P_FIMV_START_ADDR		0x0000
 #define S5P_FIMV_END_ADDR		0xfd80
 
+#define S5P_FIMV_REG_CLEAR_BEGIN	0xf000
+#define S5P_FIMV_REG_CLEAR_COUNT	1024
+
 /* Codec Common Registers */
 #define S5P_FIMV_RISC_ON			0x0000
 #define S5P_FIMV_RISC2HOST_INT			0x003C

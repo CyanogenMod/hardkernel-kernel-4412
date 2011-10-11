@@ -351,6 +351,7 @@ int s5p_mfc_release_firmware(struct s5p_mfc_dev *dev)
 /* Reset the device */
 static int s5p_mfc_reset(struct s5p_mfc_dev *dev)
 {
+	int i;
 	unsigned int mc_status;
 	unsigned long timeout;
 
@@ -372,6 +373,9 @@ static int s5p_mfc_reset(struct s5p_mfc_dev *dev)
 		s5p_mfc_write_reg(0, S5P_FIMV_RISC2HOST_CMD);
 		s5p_mfc_write_reg(0, S5P_FIMV_HOST2RISC_CMD);
 		s5p_mfc_write_reg(0, S5P_FIMV_FW_VERSION);
+
+		for (i = 0; i < S5P_FIMV_REG_CLEAR_COUNT; i++)
+			s5p_mfc_write_reg(0, S5P_FIMV_REG_CLEAR_BEGIN + (i*4));
 
 		/* Reset */
 		s5p_mfc_write_reg(0, S5P_FIMV_RISC_ON);

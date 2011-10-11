@@ -350,6 +350,8 @@
 #define S5P_FIMV_RISC_ON			-1
 #define S5P_FIMV_RISC_BASE_ADDRESS		-1
 #define S5P_FIMV_CODEC_VP8_DEC			-1
+#define S5P_FIMV_REG_CLEAR_BEGIN		0
+#define S5P_FIMV_REG_CLEAR_COUNT		0
 
 /* Error handling defines */
 #define S5P_FIMV_ERR_WARNINGS_START		145
