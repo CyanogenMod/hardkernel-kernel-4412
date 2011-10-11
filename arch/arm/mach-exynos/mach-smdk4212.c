@@ -339,7 +339,7 @@ static struct s3c_platform_camera s5k4ea = {
 #endif
 
 #ifdef WRITEBACK_ENABLED
-static struct i2c_board_info  __initdata writeback_i2c_info = {
+static struct i2c_board_info writeback_i2c_info = {
 	I2C_BOARD_INFO("WriteBack", 0x0),
 };
 
@@ -2421,7 +2421,7 @@ static void __init exynos4_reserve_mem(void)
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 		{
 			.name = "fimc_is",
-			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS * SZ_1K,
+			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS * SZ_1M,
 			{
 				.alignment = 1 << 26,
 			},
