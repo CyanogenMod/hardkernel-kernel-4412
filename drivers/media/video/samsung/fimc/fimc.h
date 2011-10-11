@@ -474,8 +474,7 @@ struct fimc_prv_data {
 
 /* debug macro */
 #define FIMC_LOG_DEFAULT	(FIMC_LOG_WARN | FIMC_LOG_ERR)
-/*#define FIMC_LOG_DEFAULT	(FIMC_LOG_WARN | FIMC_LOG_ERR |\
-		FIMC_LOG_INFO_L1 | FIMC_LOG_INFO_L2 | FIMC_LOG_DEBUG)*/
+
 #define FIMC_DEBUG(fmt, ...)						\
 	do {								\
 		if (ctrl->log & FIMC_LOG_DEBUG)				\
@@ -566,6 +565,7 @@ extern int fimc_try_fmt_vid_capture(struct file *file, void *fh, struct v4l2_for
 extern int fimc_reqbufs_capture(void *fh, struct v4l2_requestbuffers *b);
 extern int fimc_querybuf_capture(void *fh, struct v4l2_buffer *b);
 extern int fimc_g_ctrl_capture(void *fh, struct v4l2_control *c);
+extern int fimc_g_ext_ctrls_capture(void *fh, struct v4l2_ext_controls *c);
 extern int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c);
 extern int fimc_s_ext_ctrls_capture(void *fh, struct v4l2_ext_controls *c);
 #if defined(CONFIG_CPU_S5PV210)

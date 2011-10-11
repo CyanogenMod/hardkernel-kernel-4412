@@ -320,7 +320,7 @@ static int fimc_capture_scaler_info(struct fimc_control *ctrl)
 		ty = ctrl->cap->fmt.height;
 	}
 
-	fimc_warn("%s: CamOut (%d, %d), TargetOut (%d, %d)\n",
+	fimc_dbg("%s: CamOut (%d, %d), TargetOut (%d, %d)\n",
 			__func__, sx, sy, tx, ty);
 
 	if (sx <= 0 || sy <= 0) {
@@ -1154,7 +1154,7 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 		ret = v4l2_subdev_call(ctrl->cam->sd, video, s_mbus_fmt, mbus_fmt);
 
 	mutex_unlock(&ctrl->v4l2_lock);
-	printk(KERN_INFO "%s -- FIMC%d\n", __func__, ctrl->id);
+	fimc_dbg("%s -- FIMC%d\n", __func__, ctrl->id);
 
 	return ret;
 }
@@ -1514,7 +1514,10 @@ int fimc_g_ctrl_capture(void *fh, struct v4l2_control *c)
 		/* WriteBack doesn't have subdev_call */
 		if ((ctrl->cam->id == CAMERA_WB) || (ctrl->cam->id == CAMERA_WB_B))
 			break;
-		ret = v4l2_subdev_call(ctrl->cam->sd, core, g_ctrl, c);
+		if (ctrl->cam->sd)
+			ret = v4l2_subdev_call(ctrl->cam->sd, core, g_ctrl, c);
+		if (ctrl->is.sd)
+			ret = v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, c);
 		break;
 	}
 
@@ -1613,6 +1616,7 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 			ret = v4l2_subdev_call(ctrl->is.sd, video, s_stream, c->value);
 		break;
 	case V4L2_CID_IS_S_SCENARIO_MODE:
+	case V4L2_CID_IS_S_FORMAT_SCENARIO:
 	case V4L2_CID_IS_CAMERA_SHOT_MODE_NORMAL:
 	case V4L2_CID_IS_CAMERA_FOCUS_MODE:
 	case V4L2_CID_IS_CAMERA_FLASH_MODE:
@@ -1628,12 +1632,12 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 	case V4L2_CID_IS_CAMERA_METERING:
 	case V4L2_CID_IS_CAMERA_AFC_MODE:
 	case V4L2_CID_IS_FD_NUM_FACE:
-	case V4L2_CID_IS_FD_ADDRESS:
 	case V4L2_CID_IS_SET_ISP:
 	case V4L2_CID_IS_SET_DRC:
 	case V4L2_CID_IS_SET_FD:
 	case V4L2_CID_IS_CMD_FD:
 	case V4L2_CID_IS_ISP_DMA_BUFFER_NUM:
+	case V4L2_CID_CAMERA_SCENE_MODE:
 		if (ctrl->is.sd)
 			ret = v4l2_subdev_call(ctrl->is.sd, core, s_ctrl, c);
 		break;
@@ -1661,6 +1665,21 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 			ret = 0;
 		break;
 	}
+
+	return ret;
+}
+
+int fimc_g_ext_ctrls_capture(void *fh, struct v4l2_ext_controls *c)
+{
+	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
+	int ret = 0;
+	mutex_lock(&ctrl->v4l2_lock);
+
+	if (ctrl->is.sd)
+		/* try on subdev */
+		ret = v4l2_subdev_call(ctrl->is.sd, core, g_ext_ctrls, c);
+
+	mutex_unlock(&ctrl->v4l2_lock);
 
 	return ret;
 }

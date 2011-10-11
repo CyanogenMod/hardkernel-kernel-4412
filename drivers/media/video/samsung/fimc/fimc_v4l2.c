@@ -111,6 +111,20 @@ static int fimc_s_ctrl(struct file *filp, void *fh, struct v4l2_control *c)
 	return ret;
 }
 
+static int fimc_g_ext_ctrls(struct file *filp, void *fh, struct v4l2_ext_controls *c)
+{
+	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
+	int ret = -1;
+
+	if (ctrl->cap != NULL) {
+		ret = fimc_g_ext_ctrls_capture(fh, c);
+	} else {
+		fimc_err("%s: Invalid case\n", __func__);
+		return -EINVAL;
+	}
+	return ret;
+}
+
 static int fimc_s_ext_ctrls(struct file *filp, void *fh, struct v4l2_ext_controls *c)
 {
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
@@ -259,6 +273,7 @@ const struct v4l2_ioctl_ops fimc_v4l2_ops = {
 	.vidioc_reqbufs			= fimc_reqbufs,
 	.vidioc_querybuf		= fimc_querybuf,
 	.vidioc_g_ctrl			= fimc_g_ctrl,
+	.vidioc_g_ext_ctrls		= fimc_g_ext_ctrls,
 	.vidioc_s_ctrl			= fimc_s_ctrl,
 	.vidioc_s_ext_ctrls		= fimc_s_ext_ctrls,
 	.vidioc_cropcap			= fimc_cropcap,

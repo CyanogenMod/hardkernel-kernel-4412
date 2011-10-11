@@ -1,7 +1,7 @@
 /* linux/drivers/media/video/samsung/csis.c
  *
  * Copyright (c) 2010 Samsung Electronics Co,. Ltd.
- * 	http://www.samsung.com/
+ *	http://www.samsung.com/
  *
  * MIPI-CSI2 Support file for FIMC driver
  *
@@ -221,8 +221,6 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 	struct platform_device *pdev = NULL;
 	struct s3c_platform_csis *pdata = NULL;
 
-	printk(KERN_INFO "csis width = %d, height = %d\n", width, height);
-
 	/* clock & power on */
 	pdev = to_platform_device(s3c_csis[csis_id]->dev);
 	pdata = to_csis_plat(&pdev->dev);
@@ -257,9 +255,9 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 
 #ifdef CONFIG_VIDEO_FIMC_MIPI_IRQ_DEBUG
 	err_print_cnt = 0;
-#endif
 
 	info("Samsung MIPI-CSIS%d operation started\n", pdev->id);
+#endif
 }
 
 void s3c_csis_stop(int csis_id)

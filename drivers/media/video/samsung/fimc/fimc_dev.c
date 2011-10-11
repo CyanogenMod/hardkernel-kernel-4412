@@ -516,7 +516,7 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 					v4l2_subdev_call(ctrl->is.sd,
 						core, s_ctrl, &is_ctrl);
 				} else {
-					printk(KERN_INFO
+					fimc_info2(
 					"Invalid frame - fn %d\n", is_fn);
 					is_ctrl.id =
 						V4L2_CID_IS_SET_FRAME_VALID;
@@ -531,7 +531,7 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 					V4L2_CID_IS_GET_LOSTED_FRAME_NUMBER;
 				v4l2_subdev_call(ctrl->is.sd,
 					core, g_ctrl, &is_ctrl);
-				printk(KERN_INFO "%d Frame lost - %d,%d",
+				fimc_info2("%d Frame lost - %d,%d",
 					(is_ctrl.value-ctrl->is.frame_count),
 					ctrl->is.frame_count, is_ctrl.value);
 				ctrl->is.frame_count = is_ctrl.value;
