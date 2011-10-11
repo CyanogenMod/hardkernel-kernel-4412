@@ -63,21 +63,6 @@ struct sysmmu_drvdata {
 
 static LIST_HEAD(sysmmu_list);
 
-void s5p_sysmmu_set_owner(struct device *sysmmu, struct device *owner)
-{
-	struct sysmmu_drvdata *data;
-
-	data = kzalloc(sizeof(*data), GFP_KERNEL);
-	if (data) {
-		data->owner = owner;
-		data->dev = sysmmu;
-
-		INIT_LIST_HEAD(&data->node);
-	}
-
-	sysmmu->platform_data = data;
-}
-
 static struct sysmmu_drvdata *get_sysmmu_data(struct device *owner,
 						struct sysmmu_drvdata *start)
 {
@@ -273,7 +258,6 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 	 * as MFC.
 	 */
 	while ((mmudata = get_sysmmu_data(owner, mmudata))) {
-
 		ret = pm_runtime_get_sync(mmudata->dev);
 		if (ret)
 			break;
@@ -376,7 +360,8 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	if (!dev_get_platdata(dev)) {
+	data->owner = dev_get_platdata(dev);
+	if (!data->owner) {
 		dev_err(dev, "Failed to probing system MMU: "
 						"Owner device is not set.");
 
@@ -438,7 +423,6 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 	}
 
 	data->dev = dev;
-	data->owner = dev_get_platdata(dev);
 	data->sfrbase = sfr;
 	__set_fault_handler(data, &default_fault_handler);
 	rwlock_init(&data->lock);
@@ -449,7 +433,7 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 	if (dev->parent)
 		pm_runtime_enable(dev);
 
-	dev_dbg(dev, "Initialized for %s.\n", dev_name(data->owner));
+	dev_dbg(dev, "Initialized.\n");
 	return 0;
 err_clk:
 	free_irq(irq, data);

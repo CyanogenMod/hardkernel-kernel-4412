@@ -42,18 +42,6 @@ typedef int (*s5p_sysmmu_fault_handler_t)(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
 
 #ifdef CONFIG_S5P_SYSTEM_MMU
 /**
- * s5p_sysmmu_set_owner - make relationship between a System MMU and a device.
- * @sysmmu: Device descriptor of a System MMU
- * @owner: Device descriptor of a device that wants to take control of sysmmu.
- *
- * This function make relationship of a System MMU and a device that will
- * control the System MMU. This function must be called before probe() of the
- * System MMU driver. probe() of the System MMU driver does not initialize
- * a System MMU driver that does not have a relationship with a device.
- */
-void s5p_sysmmu_set_owner(struct device *sysmmu, struct device *owner);
-
-/**
  * s5p_sysmmu_enable() - enable system mmu
  * @owner: The device whose System MMU is about to be enabled.
  * @pgd: Base physical address of the 1st level page table
@@ -104,7 +92,6 @@ void s5p_sysmmu_tlb_invalidate(struct device *owner);
 void s5p_sysmmu_set_fault_handler(struct device *sysmmu,
 					s5p_sysmmu_fault_handler_t handler);
 #else /* !CONFIG_S5P_SYSTEM_MMU */
-#define s5p_sysmmu_set_owner(sysmmu, owner) do { } while (0)
 #define s5p_sysmmu_enable(owner, pgd) do { } while (0)
 #define s5p_sysmmu_disable(owner) do { } while (0)
 #define s5p_sysmmu_set_tablebase_pgd(owner, pgd) do { } while (0)
