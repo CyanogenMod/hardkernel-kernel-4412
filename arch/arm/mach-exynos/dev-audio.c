@@ -39,7 +39,7 @@ static int exynos4_cfg_i2s(struct platform_device *pdev)
 		s3c_gpio_cfgpin_range(EXYNOS4_GPC0(0), 5, S3C_GPIO_SFN(2));
 		break;
 	case 2:
-		s3c_gpio_cfgpin_range(EXYNOS4_GPC1(0), 5, S3C_GPIO_SFN(4));
+		s3c_gpio_cfgpin_range(EXYNOS4_GPC1(0), 5, S3C_GPIO_SFN(2));
 		break;
 	default:
 		printk(KERN_ERR "Invalid Device %d\n", pdev->id);
