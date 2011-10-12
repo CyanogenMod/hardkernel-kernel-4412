@@ -595,7 +595,9 @@ static void __init exynos5_reserve_mem(void)
 	exynos5_cma_region_reserve(regions, regions_secure);
 }
 #else /* !CONFIG_S5P_MEM_CMA */
-static inline void exynos5_reserve_mem() { }
+static inline void exynos5_reserve_mem(void)
+{
+}
 #endif
 
 static void __init smdk5210_map_io(void)
