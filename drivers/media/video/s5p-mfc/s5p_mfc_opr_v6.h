@@ -99,20 +99,15 @@ void s5p_mfc_dec_calc_dpb_size(struct s5p_mfc_ctx *ctx);
 /* Definitions for shared memory compatibility */
 #define PIC_TIME_TOP		S5P_FIMV_D_RET_PICTURE_TAG_TOP
 #define PIC_TIME_BOT		S5P_FIMV_D_RET_PICTURE_TAG_BOT
+#define CROP_INFO_H		S5P_FIMV_D_DECODED_CROP_INFO1
+#define CROP_INFO_V		S5P_FIMV_D_DECODED_CROP_INFO2
 
 /* FIXME: temporal definition to avoid compile error */
 enum MFC_SHM_OFS
 {
-	START_BYTE_NUM		= 0x18, /* D */
-
-	CROP_INFO_H		= 0x20, /* D */
-	CROP_INFO_V		= 0x24, /* D */
 	EXT_ENC_CONTROL		= 0x28,	/* E */
 	RC_VOP_TIMING		= 0x30,	/* E, MPEG4 */
 
-	ALLOC_LUMA_DPB_SIZE	= 0x64,	/* D */
-	ALLOC_CHROMA_DPB_SIZE	= 0x68,	/* D */
-	ALLOC_MV_SIZE		= 0x6C,	/* D */
 	P_B_FRAME_QP		= 0x70,	/* E */
 	ASPECT_RATIO_IDC	= 0x74, /* E, H.264, depend on ASPECT_RATIO_VUI_ENABLE in EXT_ENC_CONTROL */
 	EXTENDED_SAR		= 0x78, /* E, H.264, depned on ASPECT_RATIO_VUI_ENABLE in EXT_ENC_CONTROL */
