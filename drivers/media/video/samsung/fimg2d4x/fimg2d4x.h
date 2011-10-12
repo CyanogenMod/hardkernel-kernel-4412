@@ -139,7 +139,7 @@ enum premult_round {
 	PREMULT_ROUND_3,	/* initial value */
 };
 
-#define DEFAULT_PREMULT_ROUND_MODE	PREMULT_ROUND_3
+#define DEFAULT_PREMULT_ROUND_MODE	PREMULT_ROUND_1
 
 /**
  * @BLEND_ROUND_0: (A+1)*B) >> 8
@@ -156,7 +156,7 @@ enum blend_round {
 	BLEND_ROUND_3,	/* initial value */
 };
 
-#define DEFAULT_BLEND_ROUND_MODE	BLEND_ROUND_3
+#define DEFAULT_BLEND_ROUND_MODE	BLEND_ROUND_0
 
 struct fimg2d_blend_coeff {
 	bool s_coeff_inv;

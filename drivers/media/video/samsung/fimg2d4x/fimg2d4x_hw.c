@@ -540,13 +540,15 @@ void fimg2d4x_enable_alpha(struct fimg2d_control *info, unsigned char g_alpha)
 
 	writel(cfg, info->regs + FIMG2D_BITBLT_COMMAND_REG);
 
-	/* set global(constant) alpha */
-	if (g_alpha < 0xff) {	/* initial value */
-		cfg = readl(info->regs + FIMG2D_ALPHA_REG);
-		cfg &= ~FIMG2D_GALPHA_MASK;
-		cfg |= g_alpha << FIMG2D_GALPHA_SHIFT;
-		writel(cfg, info->regs + FIMG2D_ALPHA_REG);
-	}
+	/*
+	 * global(constant) alpha
+	 * ex. if global alpha is 0x80, must set 0x80808080
+	 */
+	cfg = g_alpha;
+	cfg |= g_alpha << 8;
+	cfg |= g_alpha << 16;
+	cfg |= g_alpha << 24;
+	writel(cfg, info->regs + FIMG2D_ALPHA_REG);
 }
 
 /**
@@ -558,6 +560,7 @@ void fimg2d4x_enable_alpha(struct fimg2d_control *info, unsigned char g_alpha)
  *	D is destination color or alpha
  *
  * Caution: supposed that Sc and Dc are alpha-premultiplied value
+ *
  *
  * MODE:             coeff(S)               coeff(D)
  * ----------------------------------------------------------------------------
@@ -640,6 +643,50 @@ static struct fimg2d_blend_coeff const coeff_table[MAX_FIMG2D_BLIT_OP] = {
 	{ 0, 0, 0, 0 },		/* USER */
 };
 
+/*
+ * coefficient table with global (constant) alpha
+ * replace COEFF_ONE with COEFF_GA
+ */
+static struct fimg2d_blend_coeff const ga_coeff_table[MAX_FIMG2D_BLIT_OP] = {
+	{ 0, 0, 0, 0 },		/* FILL */
+	{ 0, COEFF_ZERO,	0, COEFF_ZERO },	/* CLEAR */
+	{ 0, COEFF_GA,		0, COEFF_ZERO },	/* SRC */
+	{ 0, COEFF_ZERO,	0, COEFF_GA },		/* DST */
+	{ 0, COEFF_GA,		1, COEFF_SA },		/* SRC_OVER */
+	{ 1, COEFF_DA,		0, COEFF_GA },		/* DST_OVER */
+	{ 0, COEFF_DA,		0, COEFF_ZERO },	/* SRC_IN */
+	{ 0, COEFF_ZERO,	0, COEFF_SA },		/* DST_IN */
+	{ 1, COEFF_DA,		0, COEFF_ZERO },	/* SRC_OUT */
+	{ 0, COEFF_ZERO,	1, COEFF_SA },		/* DST_OUT */
+	{ 0, COEFF_DA,		1, COEFF_SA },		/* SRC_ATOP */
+	{ 1, COEFF_DA,		0, COEFF_SA },		/* DST_ATOP */
+	{ 1, COEFF_DA,		1, COEFF_SA },		/* XOR */
+	{ 0, COEFF_GA,		0, COEFF_GA },		/* ADD */
+	{ 0, COEFF_DC,		0, COEFF_ZERO },	/* MULTIPLY */
+	{ 0, COEFF_GA,		1, COEFF_SC },		/* SCREEN */
+	{ 0, 0, 0, 0 },		/* DARKEN */
+	{ 0, 0, 0, 0 },		/* LIGHTEN */
+	{ 0, COEFF_GA,		0, COEFF_DISJ_S },	/* DISJ_SRC_OVER */
+	{ 0, COEFF_DISJ_D,	0, COEFF_GA },		/* DISJ_DST_OVER */
+	{ 1, COEFF_DISJ_D,	0, COEFF_ZERO },	/* DISJ_SRC_IN */
+	{ 0, COEFF_ZERO,	1, COEFF_DISJ_S },	/* DISJ_DST_IN */
+	{ 0, COEFF_DISJ_D,	0, COEFF_GA },		/* DISJ_SRC_OUT */
+	{ 0, COEFF_ZERO,	0, COEFF_DISJ_S },	/* DISJ_DST_OUT */
+	{ 1, COEFF_DISJ_D,	0, COEFF_DISJ_S },	/* DISJ_SRC_ATOP */
+	{ 0, COEFF_DISJ_D,	1, COEFF_DISJ_S },	/* DISJ_DST_ATOP */
+	{ 0, COEFF_DISJ_D,	0, COEFF_DISJ_S },	/* DISJ_XOR */
+	{ 0, COEFF_GA,		1, COEFF_DISJ_S },	/* CONJ_SRC_OVER */
+	{ 1, COEFF_DISJ_D,	0, COEFF_GA },		/* CONJ_DST_OVER */
+	{ 0, COEFF_CONJ_D,	0, COEFF_GA },		/* CONJ_SRC_IN */
+	{ 0, COEFF_ZERO,	0, COEFF_CONJ_S },	/* CONJ_DST_IN */
+	{ 1, COEFF_CONJ_D,	0, COEFF_ZERO },	/* CONJ_SRC_OUT */
+	{ 0, COEFF_ZERO,	1, COEFF_CONJ_S },	/* CONJ_DST_OUT */
+	{ 0, COEFF_CONJ_D,	1, COEFF_CONJ_S },	/* CONJ_SRC_ATOP */
+	{ 1, COEFF_CONJ_D,	0, COEFF_CONJ_D },	/* CONJ_DST_ATOP */
+	{ 1, COEFF_CONJ_D,	1, COEFF_CONJ_S },	/* CONJ_XOR */
+	{ 0, 0, 0, 0 },		/* USER */
+};
+
 void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 		enum blit_op op, unsigned char g_alpha)
 {
@@ -663,46 +710,46 @@ void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 		/* TODO */
 		return;
 	default:
-		tbl = &coeff_table[op];
+		if (g_alpha < 0xff)	/* with global alpha */
+			tbl = &ga_coeff_table[op];
+		else
+			tbl = &coeff_table[op];
 
-		/* src coeff */
+		/* src coefficient */
 		cfg |= tbl->s_coeff << FIMG2D_SRC_COEFF_SHIFT;
+
+		cfg |= alpha_opr << FIMG2D_SRC_COEFF_SA_SHIFT;
+		cfg |= alpha_opr << FIMG2D_SRC_COEFF_DA_SHIFT;
 
 		if (tbl->s_coeff_inv)
 			cfg |= FIMG2D_INV_SRC_COEFF;
 
-		if (alpha_opr != ALPHA_PERPIXEL && g_alpha < 0xff) {
-			cfg |= alpha_opr << FIMG2D_SRC_COEFF_DA_SHIFT;
-			cfg |= alpha_opr << FIMG2D_SRC_COEFF_SA_SHIFT;
-		}
-
-		/* dst coeff */
+		/* dst coefficient */
 		cfg |= tbl->d_coeff << FIMG2D_DST_COEFF_SHIFT;
+
+		cfg |= alpha_opr << FIMG2D_DST_COEFF_DA_SHIFT;
+		cfg |= alpha_opr << FIMG2D_DST_COEFF_SA_SHIFT;
 
 		if (tbl->d_coeff_inv)
 			cfg |= FIMG2D_INV_DST_COEFF;
 
-		if (alpha_opr != ALPHA_PERPIXEL && g_alpha < 0xff) {
-			cfg |= alpha_opr << FIMG2D_DST_COEFF_DA_SHIFT;
-			cfg |= alpha_opr << FIMG2D_DST_COEFF_SA_SHIFT;
-		}
 		break;
 	}
 
 	writel(cfg, info->regs + FIMG2D_BLEND_FUNCTION_REG);
 
-	/* round mode */
-	if (premult_round != PREMULT_ROUND_3 || blend_round != BLEND_ROUND_3) {
-		cfg = readl(info->regs + FIMG2D_ROUND_MODE_REG);
+	/* round mode: depremult round mode is not used */
+	cfg = readl(info->regs + FIMG2D_ROUND_MODE_REG);
 
-		cfg &= ~FIMG2D_PREMULT_ROUND_MASK;
-		cfg |= (premult_round << FIMG2D_PREMULT_ROUND_SHIFT);
+	/* premult */
+	cfg &= ~FIMG2D_PREMULT_ROUND_MASK;
+	cfg |= premult_round << FIMG2D_PREMULT_ROUND_SHIFT;
 
-		cfg &= ~FIMG2D_BLEND_ROUND_MASK;
-		cfg |= (blend_round << FIMG2D_BLEND_ROUND_SHIFT);
+	/* blend */
+	cfg &= ~FIMG2D_BLEND_ROUND_MASK;
+	cfg |= blend_round << FIMG2D_BLEND_ROUND_SHIFT;
 
-		writel(cfg, info->regs + FIMG2D_ROUND_MODE_REG);
-	}
+	writel(cfg, info->regs + FIMG2D_ROUND_MODE_REG);
 }
 
 
