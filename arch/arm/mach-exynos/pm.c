@@ -303,6 +303,9 @@ static int exynos4_pm_suspend(void)
 		__raw_writel(tmp, S5P_CENTRAL_SEQ_OPTION);
 
 		if (exynos4_is_c2c_use()) {
+			tmp = __raw_readl(S5P_WAKEUP_MASK_COREBLK);
+			tmp &= ~(1 << 20);
+			__raw_writel(tmp, S5P_WAKEUP_MASK_COREBLK);
 			tmp = __raw_readl(S5P_CENTRAL_SEQ_CONFIGURATION_COREBLK);
 			tmp &= ~S5P_CENTRAL_SEQ_COREBLK_CONF;
 			__raw_writel(tmp, S5P_CENTRAL_SEQ_CONFIGURATION_COREBLK);
