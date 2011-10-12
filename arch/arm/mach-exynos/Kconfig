@@ -321,6 +321,12 @@ menu "EXYNOS4 Machines"
 config MACH_SMDKC210
 	bool "SMDKC210"
 	select CPU_EXYNOS4210
+	select S3C_DEV_RTC
+	select S3C_DEV_WDT
+	select S3C_DEV_I2C1
+	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3
+	select S3C_DEV_HWMON if S3C_ADC
 	select S5P_GPIO_INT
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
@@ -330,20 +336,8 @@ config MACH_SMDKC210
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_JPEG
 	select S5P_DEV_THERMAL
-	select S3C_DEV_RTC
-	select S3C_DEV_WDT
-	select S3C_DEV_I2C1
-	select S3C_DEV_HSMMC2
-	select S3C_DEV_HSMMC3
-	select S3C_DEV_HWMON if S3C_ADC
 	select S5P_DEV_USB_EHCI
 	select S5P_SYSTEM_MMU
-	select SAMSUNG_DEV_KEYPAD
-	select SAMSUNG_DEV_ADC
-	select SAMSUNG_DEV_TS
-	select SAMSUNG_DEV_TS1
-	select SAMSUNG_DEV_PWM
-	select SAMSUNG_DEV_BACKLIGHT
 	select EXYNOS4_DEV_PD
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
@@ -352,12 +346,24 @@ config MACH_SMDKC210
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_USB_PHY
 	select EXYNOS4_SETUP_MFC
+	select SAMSUNG_DEV_KEYPAD
+	select SAMSUNG_DEV_ADC
+	select SAMSUNG_DEV_TS
+	select SAMSUNG_DEV_TS1
+	select SAMSUNG_DEV_PWM
+	select SAMSUNG_DEV_BACKLIGHT
 	help
 	  Machine support for Samsung SMDKC210
 
 config MACH_SMDKV310
 	bool "SMDKV310"
 	select CPU_EXYNOS4210
+	select S3C_DEV_RTC
+	select S3C_DEV_WDT
+	select S3C_DEV_I2C1
+	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3
+	select S3C_DEV_HWMON if S3C_ADC
 	select S5P_GPIO_INT
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
@@ -367,20 +373,8 @@ config MACH_SMDKV310
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_JPEG
 	select S5P_DEV_THERMAL
-	select S3C_DEV_RTC
-	select S3C_DEV_WDT
-	select S3C_DEV_I2C1
-	select S3C_DEV_HSMMC2
-	select S3C_DEV_HSMMC3
-	select S3C_DEV_HWMON if S3C_ADC
 	select S5P_DEV_USB_EHCI
 	select S5P_SYSTEM_MMU
-	select SAMSUNG_DEV_PWM
-	select SAMSUNG_DEV_BACKLIGHT
-	select SAMSUNG_DEV_KEYPAD
-	select SAMSUNG_DEV_ADC
-	select SAMSUNG_DEV_TS
-	select SAMSUNG_DEV_TS1
 	select EXYNOS4_DEV_PD
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
@@ -389,6 +383,12 @@ config MACH_SMDKV310
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_USB_PHY
 	select EXYNOS4_SETUP_MFC
+	select SAMSUNG_DEV_PWM
+	select SAMSUNG_DEV_BACKLIGHT
+	select SAMSUNG_DEV_KEYPAD
+	select SAMSUNG_DEV_ADC
+	select SAMSUNG_DEV_TS
+	select SAMSUNG_DEV_TS1
 	help
 	  Machine support for Samsung SMDKV310
 
@@ -446,7 +446,6 @@ config MACH_SMDK4212
 	bool "SMDK4212 board"
 	select CPU_EXYNOS4212
 	select CPU_EXYNOS4412
-	select S5P_GPIO_INT
 	select S3C_DEV_WDT
 	select S3C_DEV_RTC
 	select S3C_DEV_HSMMC2
@@ -456,6 +455,7 @@ config MACH_SMDK4212
 	select S3C_DEV_I2C4
 	select S3C_DEV_I2C5
 	select S3C_DEV_I2C7
+	select S5P_GPIO_INT
 	select S5P_DEV_MFC
 	select S5P_DEV_TVOUT
 	select S5P_DEV_FIMG2D
@@ -477,11 +477,11 @@ config MACH_SMDK4212
 	select EXYNOS4_SETUP_USB_PHY
 	select EXYNOS4_SETUP_KEYPAD
 	select EXYNOS4_SETUP_MFC
+	select EXYNOS4_DEV_PD
+	select EXYNOS4_DEV_FIMC_LITE
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_PWM
 	select SAMSUNG_DEV_KEYPAD
-	select EXYNOS4_DEV_PD
-	select EXYNOS4_DEV_FIMC_LITE
 	help
 	  Machine support for Samsung SMDK4212
 endmenu
@@ -503,11 +503,11 @@ config MACH_SMDK5210
 	select CPU_EXYNOS5210
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
+	select S5P_DEV_FIMD1
+	select S5P_DEV_MFC
 	select EXYNOS4_SETUP_FIMD
 	select EXYNOS4_SETUP_MFC
 	select EXYNOS4_SETUP_SDHCI
-	select S5P_DEV_FIMD1
-	select S5P_DEV_MFC
 	help
 	  Machine support for Samsung SMDK5210
 endmenu
