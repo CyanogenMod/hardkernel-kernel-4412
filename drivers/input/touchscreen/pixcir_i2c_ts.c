@@ -237,10 +237,12 @@ static struct workqueue_struct *pixcir_wq;
 struct pixcir_i2c_ts_data {
 	struct i2c_client *client;
 	struct input_dev *input;
+	struct input_dev *input_key;
 	struct delayed_work work;
 	int irq;
 };
 
+static unsigned char pixcir_keycode[] = {KEY_D, KEY_A, KEY_B};
 
 static void pixcir_ts_poscheck(struct work_struct *work)
 {
@@ -252,6 +254,7 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 	unsigned char Rdbuf[10], Wrbuf[1];
 	int z = 50;
 	int w = 15;
+	static int pressed_keycode = -1;
 
 	interrupt_flag = 1;
 
@@ -274,43 +277,72 @@ static void pixcir_ts_poscheck(struct work_struct *work)
 	touching = Rdbuf[0];
 	oldtouching = Rdbuf[1];
 
-	if (touching) {
-		input_report_abs(tsdata->input, ABS_X, posx1);
-		input_report_abs(tsdata->input, ABS_Y, posy1);
-		input_report_key(tsdata->input, BTN_TOUCH, 1);
-		input_report_abs(tsdata->input, ABS_PRESSURE, 1);
+	if (touching == 1 && posy1 > 800) {
+		if (posx1 < 100) 		/* MENU KEY */
+			pressed_keycode = 0;
+		else if (posx1 > (240 - 50) && posx1 < (240 + 50)) /* HOME KEY */
+			pressed_keycode = 1;
+		else if (posx1 > (480 - 100))	/* BACK KEY */
+			pressed_keycode = 2;
+		else
+			pressed_keycode = -1;
+
+		if (pressed_keycode != -1) {
+			input_event(tsdata->input_key, EV_MSC, MSC_SCAN,
+					pressed_keycode);
+			input_report_key(tsdata->input_key,
+					pixcir_keycode[pressed_keycode], 1);
+			input_sync(tsdata->input_key);
+		}
 	} else {
-		input_report_key(tsdata->input, BTN_TOUCH, 0);
-		input_report_abs(tsdata->input, ABS_PRESSURE, 0);
+		if (touching) {
+			input_report_abs(tsdata->input, ABS_X, posx1);
+			input_report_abs(tsdata->input, ABS_Y, posy1);
+			input_report_key(tsdata->input, BTN_TOUCH, 1);
+			input_report_abs(tsdata->input, ABS_PRESSURE, 1);
+		} else {
+			input_report_key(tsdata->input, BTN_TOUCH, 0);
+			input_report_abs(tsdata->input, ABS_PRESSURE, 0);
+		}
+
+		if (!(touching)) {
+			z = 0;
+			w = 0;
+		}
+		if (touching == 1) {
+			input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
+			input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
+			input_report_abs(tsdata->input, ABS_MT_POSITION_X, posx1);
+			input_report_abs(tsdata->input, ABS_MT_POSITION_Y, posy1);
+			input_mt_sync(tsdata->input);
+		} else if (touching == 2) {
+			input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
+			input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
+			input_report_abs(tsdata->input, ABS_MT_POSITION_X, posx1);
+			input_report_abs(tsdata->input, ABS_MT_POSITION_Y, posy1);
+			input_mt_sync(tsdata->input);
+
+			input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
+			input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
+			input_report_abs(tsdata->input, ABS_MT_POSITION_X, posx2);
+			input_report_abs(tsdata->input, ABS_MT_POSITION_Y, posy2);
+			input_mt_sync(tsdata->input);
+		}
+		input_sync(tsdata->input);
 	}
 
-	if (!(touching)) {
-		z = 0;
-		w = 0;
+	if (touching == 0) {
+		if (pressed_keycode != -1) {
+			input_event (tsdata->input_key, EV_MSC, MSC_SCAN, pressed_keycode);
+			input_report_key (tsdata->input_key, pixcir_keycode[pressed_keycode], 0);
+			input_sync(tsdata->input_key);
+			pressed_keycode = -1;
+		}
+		else {
+			input_mt_sync(tsdata->input);
+			input_sync(tsdata->input);
+		}
 	}
-	if (touching == 1) {
-		input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
-		input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
-		input_report_abs(tsdata->input, ABS_MT_POSITION_X, posx1);
-		input_report_abs(tsdata->input, ABS_MT_POSITION_Y, posy1);
-		input_mt_sync(tsdata->input);
-	} else if (touching == 2) {
-		input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
-		input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
-		input_report_abs(tsdata->input, ABS_MT_POSITION_X, posx1);
-		input_report_abs(tsdata->input, ABS_MT_POSITION_Y, posy1);
-		input_mt_sync(tsdata->input);
-
-		input_report_abs(tsdata->input, ABS_MT_TOUCH_MAJOR, z);
-		input_report_abs(tsdata->input, ABS_MT_WIDTH_MAJOR, w);
-		input_report_abs(tsdata->input, ABS_MT_POSITION_X, posx2);
-		input_report_abs(tsdata->input, ABS_MT_POSITION_Y, posy2);
-		input_mt_sync(tsdata->input);
-	} else {
-		input_mt_sync(tsdata->input);
-	}
-
-	input_sync(tsdata->input);
 
 	if (status_reg == NORMAL_MODE) {
 		global_touching =	touching;
@@ -354,6 +386,7 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 {
 	struct pixcir_i2c_ts_data *tsdata;
 	struct input_dev *input;
+	struct input_dev *input_key;
 	struct device *dev;
 	struct i2c_dev *i2c_dev;
 	int error;
@@ -413,6 +446,40 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 		kfree(tsdata);
 	}
 
+	/* for keypad */
+	input_key = input_allocate_device();
+	if (!input_key) {
+		dev_err(&client->dev, "failed to allocate input device!\n");
+		error = -ENOMEM;
+		input_free_device(input_key);
+		kfree(tsdata);
+	}
+
+	input_key->evbit[0] = BIT_MASK(EV_KEY);
+	input_set_capability(input_key, EV_MSC, MSC_SCAN);
+
+	input_key->keycode = pixcir_keycode;
+	input_key->keycodesize = sizeof(unsigned char);
+	input_key->keycodemax = ARRAY_SIZE(pixcir_keycode);
+
+	__set_bit(pixcir_keycode[0], input_key->keybit);
+	__set_bit(pixcir_keycode[1], input_key->keybit);
+	__set_bit(pixcir_keycode[2], input_key->keybit);
+	__clear_bit(KEY_RESERVED, input_key->keybit);
+
+	input_key->name = "pixcir-i2c-ts_key";
+	input_key->phys = "pixcir_ts/input2";
+	input_key->id.bustype = BUS_I2C;
+	input_key->dev.parent = &client->dev;
+	input_key->open = pixcir_ts_open;
+	input_key->close = pixcir_ts_close;
+
+	tsdata->input_key = input_key;
+
+	if (input_register_device(input_key)) {
+		input_free_device(input_key);
+		kfree(tsdata);
+	}
 
 	if (gpio_request(EXYNOS4_GPX1(6), "GPX1")) {
 		return error;
