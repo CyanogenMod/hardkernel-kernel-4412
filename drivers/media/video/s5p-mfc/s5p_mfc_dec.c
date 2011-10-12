@@ -1140,63 +1140,6 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		s5p_mfc_try_run(dev);
 		s5p_mfc_wait_for_done_ctx(ctx,
 				S5P_FIMV_R2H_CMD_INIT_BUFFERS_RET, 1);
-
-		/* Process the remained buffer after SEQ_START.
-		 * remained_flag is used only in MFCv6 */
-		if (ctx->remained_flag) {
-			if (!IS_MFCV6(dev)) {
-				mfc_debug(2, "Abnormal case. In MFC 5.x, "
-					"remained_flag should not be set.\n");
-			}else if (list_empty(&ctx->src_queue)) {
-				mfc_debug(2, "Abnormal case. buffer is dequeued "
-					"already before processing.\n");
-			} else {
-				struct s5p_mfc_buf *src_buf;
-				mfc_debug(2, "Process the buffer again that"
-						" has been queued for SEQ_START.\n");
-
-				/* Check whether hardware is not running */
-				if (test_and_set_bit(0, &dev->hw_lock) != 0) {
-					/* This is perfectly ok, the scheduled ctx should wait */
-					mfc_debug(1, "Couldn't lock HW.\n");
-					return -EINVAL;
-				}
-
-				if (test_and_set_bit(0, &dev->clk_state) == 0)
-					s5p_mfc_clock_on();
-				spin_lock_irqsave(&dev->irqlock, flags);
-				src_buf = list_entry(ctx->src_queue.next,
-						struct s5p_mfc_buf, list);
-				s5p_mfc_set_dec_stream_buffer(ctx,
-						src_buf->cookie.stream, 0,
-						src_buf->vb.v4l2_planes[0].bytesused);
-				dev->curr_ctx = ctx->num;
-				s5p_mfc_clean_ctx_int_flags(ctx);
-				/* FIXME: is it needed? */
-				spin_unlock_irqrestore(&dev->irqlock, flags);
-				s5p_mfc_clear_int_flags();
-				/* FIXME: is it needed? */
-				/*
-				wake_up_ctx(ctx, reason, err);
-				*/
-				s5p_mfc_decode_one_frame(ctx, 0);
-				if (s5p_mfc_wait_for_done_ctx
-						(ctx, S5P_FIMV_R2H_CMD_SLICE_DONE_RET, 0)) {
-					mfc_err("Err remained NAL_START.\n");
-				}
-				mfc_debug(2, "Remained data is decoded.\n");
-				spin_lock_irqsave(&dev->irqlock, flags);
-				if (!list_empty(&ctx->src_queue)) {
-					src_buf = list_entry(ctx->src_queue.next,
-							struct s5p_mfc_buf, list);
-					list_del(&src_buf->list);
-					ctx->src_queue_cnt--;
-					vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_DONE);
-				}
-				spin_unlock_irqrestore(&dev->irqlock, flags);
-				ctx->remained_flag = 0;
-			}
-		}
 	}
 
 	mfc_debug_leave();

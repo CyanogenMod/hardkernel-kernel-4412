@@ -323,6 +323,8 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 	}
 	if (ctx->dpb_flush_flag)
 		ctx->dpb_flush_flag = 0;
+	if (ctx->remained_flag)
+		ctx->remained_flag = 0;
 
 	spin_lock_irqsave(&dev->irqlock, flags);
 	/* All frames remaining in the buffer have been extracted  */
