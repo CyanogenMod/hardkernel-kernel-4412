@@ -36,6 +36,8 @@ struct i2s_dai {
 	void __iomem	*addr;
 	/* Physical base address of SFRs */
 	u32	base;
+	/* CMU's clock for I2S 1,2 interfaces */
+	struct clk *cclk;
 	/* Rate of RCLK source clock */
 	unsigned long rclk_srcrate;
 	/* Frame Clock */
@@ -665,13 +667,15 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	if (use_internal_dma(i2s, stream)) {
-		ahb |= (AHB_DMARLD | AHB_INTMASK);
-		mod |= MOD_TXS_IDMA;
-	} else if (is_srp_enabled(i2s, stream))
-		mod |= MOD_TXS_IDMA;
+	if (i2s->pdev->id == 0) {
+		if (use_internal_dma(i2s, stream)) {
+			ahb |= (AHB_DMARLD | AHB_INTMASK);
+			mod |= MOD_TXS_IDMA;
+		} else if (is_srp_enabled(i2s, stream))
+			mod |= MOD_TXS_IDMA;
 
-	writel(ahb, i2s->addr + I2SAHB);
+		writel(ahb, i2s->addr + I2SAHB);
+	}
 	writel(mod, i2s->addr + I2SMOD);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
@@ -693,7 +697,10 @@ static void i2s_reg_save(struct snd_soc_dai *dai)
 	i2s->suspend_i2smod = readl(i2s->addr + I2SMOD);
 	i2s->suspend_i2scon = readl(i2s->addr + I2SCON);
 	i2s->suspend_i2spsr = readl(i2s->addr + I2SPSR);
-	i2s->suspend_i2sahb = readl(i2s->addr + I2SAHB);
+
+	if (i2s->pdev->id == 0)
+		i2s->suspend_i2sahb = readl(i2s->addr + I2SAHB);
+
 	i2s->reg_saved = true;
 
 	dev_dbg(&i2s->pdev->dev, "Registers of I2S are saved\n");
@@ -708,12 +715,30 @@ static void i2s_reg_restore(struct snd_soc_dai *dai)
 	writel(i2s->suspend_i2smod, i2s->addr + I2SMOD);
 	writel(i2s->suspend_i2scon, i2s->addr + I2SCON);
 	writel(i2s->suspend_i2spsr, i2s->addr + I2SPSR);
-	writel(i2s->suspend_i2sahb, i2s->addr + I2SAHB);
+
+	if (i2s->pdev->id == 0)
+		writel(i2s->suspend_i2sahb, i2s->addr + I2SAHB);
+
 	i2s->reg_saved = false;
 
 	dev_dbg(&i2s->pdev->dev, "Registers of I2S are restored\n");
 
 	return;
+}
+
+static void i2s_clk_enable(struct i2s_dai *i2s, bool on)
+{
+	if (on) {
+		if (i2s->pdev->id == 0)
+			i2s->audss_clk_enable(true);
+		else
+			clk_enable(i2s->cclk);
+	} else {
+		if (i2s->pdev->id == 0)
+			i2s->audss_clk_enable(false);
+		else
+			clk_disable(i2s->cclk);
+	}
 }
 
 /* We set constraints on the substream acc to the version of I2S */
@@ -738,7 +763,7 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 
 	if (!i2s->tx_active && !i2s->rx_active
 		&& !srp_active(i2s, SRP_IS_OPENED)) {
-		i2s->audss_clk_enable(true);
+		i2s_clk_enable(i2s, true);
 
 		if (i2s->reg_saved)
 			i2s_reg_restore(dai);
@@ -788,7 +813,7 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 		if (!i2s->reg_saved)
 			i2s_reg_save(dai);
 
-		i2s->audss_clk_enable(false);
+		i2s_clk_enable(i2s, false);
 	}
 
 	spin_unlock_irqrestore(&lock, flags);
@@ -1019,7 +1044,13 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 		return -ENXIO;
 	}
 
-	i2s->audss_clk_enable(true);
+	i2s->cclk = clk_get(&i2s->pdev->dev, "iis");
+	if (IS_ERR(i2s->cclk)) {
+		pr_err("%s: failed to get cclk\n", __func__);
+		return PTR_ERR(i2s->cclk);
+	}
+
+	i2s_clk_enable(i2s, true);
 
 	if (other)
 		other->addr = i2s->addr;
@@ -1046,7 +1077,7 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 		i2s_set_sysclk(dai, SAMSUNG_I2S_CDCLK,
 				0, SND_SOC_CLOCK_IN);
 
-	i2s->audss_clk_enable(false);
+	i2s_clk_enable(i2s, false);
 
 probe_exit:
 	return 0;
@@ -1205,7 +1236,8 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 	pri_dai->dma_capture.dma_size = 4;
 	pri_dai->base = regs_base;
 	pri_dai->quirks = quirks;
-	pri_dai->audss_clk_enable = audss_clk_enable;
+	if (pdev->id == 0)
+		pri_dai->audss_clk_enable = audss_clk_enable;
 
 	if (quirks & QUIRK_PRI_6CHAN)
 		pri_dai->i2s_dai_drv.playback.channels_max = 6;
@@ -1228,7 +1260,8 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 		sec_dai->quirks = quirks;
 		sec_dai->pri_dai = pri_dai;
 		pri_dai->sec_dai = sec_dai;
-		sec_dai->audss_clk_enable = audss_clk_enable;
+		if (pdev->id == 0)
+			sec_dai->audss_clk_enable = audss_clk_enable;
 	}
 
 	if (quirks & QUIRK_USE_IDMA) {
