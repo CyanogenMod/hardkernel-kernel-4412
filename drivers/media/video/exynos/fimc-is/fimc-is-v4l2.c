@@ -118,7 +118,6 @@ static int fimc_is_request_setfile(struct fimc_is_dev *dev)
 
 static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 {
-	struct is_setfile_header *header;
 	int ret;
 	u32 timeout;
 
@@ -177,6 +176,7 @@ static int fimc_is_load_fw(struct v4l2_subdev *sd)
 			return -EINVAL;
 		}
 		/* 3. A5 power on */
+		clear_bit(IS_ST_FW_DOWNLOADED, &dev->state);
 		fimc_is_hw_a5_power(dev, 1);
 		ret = wait_event_timeout(dev->irq_queue1,
 			test_bit(IS_ST_FW_DOWNLOADED, &dev->state),
@@ -234,8 +234,8 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 			return -EBUSY;
 		}
 		fimc_is_load_setfile(dev);
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		fimc_is_hw_set_load_setfile(dev);
-		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 
 		/* Debug only */

@@ -136,6 +136,8 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 
 	switch (dev->i2h_cmd.cmd) {
 	case IHC_GET_SENSOR_NUMBER:
+		dbg("IHC_GET_SENSOR_NUMBER\n");
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		fimc_is_hw_set_sensor_num(dev);
 		break;
 	case IHC_LOAD_SET_FILE:
@@ -163,9 +165,8 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 
 	switch (dev->i2h_cmd.cmd) {
 	case IHC_GET_SENSOR_NUMBER:
-		set_bit(IS_ST_FW_DOWNLOADED, &dev->state);
-		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
+		set_bit(IS_ST_FW_DOWNLOADED, &dev->state);
 		break;
 	case IHC_LOAD_SET_FILE:
 		dev->setfile.base = dev->i2h_cmd.arg[0];
@@ -185,6 +186,7 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 			dev->af.state = FIMC_IS_AF_LOCK;
 		break;
 	case ISR_DONE:
+		dbg("ISR_DONE - %d\n", dev->i2h_cmd.arg[0]);
 		switch (dev->i2h_cmd.arg[0]) {
 		case HIC_PREVIEW_STILL:
 		case HIC_PREVIEW_VIDEO:
@@ -385,6 +387,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	/* To lock bus frequency in OPP mode */
 	dev->bus_dev = dev_get("exynos4-busfreq");
 
+	dev->state = 0;
 	dev->sensor_num = FIMC_IS_SENSOR_NUM;
 	dev->sensor.id = 0;
 	dev->p_region_index1 = 0;

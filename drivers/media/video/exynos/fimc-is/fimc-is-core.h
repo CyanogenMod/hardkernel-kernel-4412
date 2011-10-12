@@ -263,6 +263,7 @@ extern int fimc_is_hw_set_param(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_param(struct fimc_is_dev *dev, u16 offset);
 extern void fimc_is_hw_set_intgr0_gd0(struct fimc_is_dev *dev);
 extern int fimc_is_hw_wait_intsr0_intsd0(struct fimc_is_dev *dev);
+extern int fimc_is_hw_wait_intmsr0_intmsd0(struct fimc_is_dev *dev);
 extern void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on);
 extern int fimc_is_hw_io_init(struct fimc_is_dev *dev);
 extern void fimc_is_hw_open_sensor(struct fimc_is_dev *dev,

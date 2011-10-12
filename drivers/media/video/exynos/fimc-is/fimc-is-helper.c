@@ -644,6 +644,17 @@ int fimc_is_hw_wait_intsr0_intsd0(struct fimc_is_dev *dev)
 	return 0;
 }
 
+int fimc_is_hw_wait_intmsr0_intmsd0(struct fimc_is_dev *dev)
+{
+	u32 cfg = readl(dev->regs + INTMSR0);
+	u32 status = INTMSR0_GET_INTMSD0(cfg);
+	while (status) {
+		cfg = readl(dev->regs + INTMSR0);
+		status = INTMSR0_GET_INTMSD0(cfg);
+	}
+	return 0;
+}
+
 int fimc_is_fw_clear_irq1(struct fimc_is_dev *dev)
 {
 	u32 cfg = readl(dev->regs + INTSR1);
@@ -665,6 +676,7 @@ int fimc_is_fw_clear_irq2(struct fimc_is_dev *dev)
 */
 void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 {
+	fimc_is_hw_wait_intmsr0_intmsd0(dev);
 	writel(HIC_OPEN_SENSOR, dev->regs + ISSR0);
 	writel(id, dev->regs + ISSR1);
 	switch (sensor_index) {
@@ -697,17 +709,16 @@ void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 	}
 	/* Parameter3 : Scenario ID(Initial Scenario) */
 	writel(ISS_PREVIEW_STILL, dev->regs + ISSR4);
-	fimc_is_hw_wait_intsr0_intsd0(dev);
 	fimc_is_hw_set_intgr0_gd0(dev);
 }
 
 void fimc_is_hw_close_sensor(struct fimc_is_dev *dev, u32 id)
 {
 	if (dev->sensor.id == id) {
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_CLOSE_SENSOR, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
 		writel(dev->sensor.id, dev->regs + ISSR2);
-		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	}
 }
@@ -732,9 +743,9 @@ int fimc_is_hw_io_init(struct fimc_is_dev *dev)
 void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev)
 {
 	/* 1. Make FIMC-IS power-off state */
+	fimc_is_hw_wait_intmsr0_intmsd0(dev);
 	writel(HIC_POWER_DOWN, dev->regs + ISSR0);
 	writel(dev->sensor.id, dev->regs + ISSR1);
-	fimc_is_hw_wait_intsr0_intsd0(dev);
 	fimc_is_hw_set_intgr0_gd0(dev);
 }
 
@@ -805,6 +816,7 @@ int fimc_is_hw_get_sensor_num(struct fimc_is_dev *dev)
 
 int fimc_is_hw_set_param(struct fimc_is_dev *dev)
 {
+	fimc_is_hw_wait_intmsr0_intmsd0(dev);
 	writel(HIC_SET_PARAMETER, dev->regs + ISSR0);
 	writel(dev->sensor.id, dev->regs + ISSR1);
 
@@ -813,7 +825,6 @@ int fimc_is_hw_set_param(struct fimc_is_dev *dev)
 	writel(atomic_read(&dev->p_region_num), dev->regs + ISSR3);
 	writel(dev->p_region_index1, dev->regs + ISSR4);
 	writel(dev->p_region_index2, dev->regs + ISSR5);
-	fimc_is_hw_wait_intsr0_intsd0(dev);
 	fimc_is_hw_set_intgr0_gd0(dev);
 	return 0;
 }
@@ -856,14 +867,14 @@ int fimc_is_hw_get_param(struct fimc_is_dev *dev, u16 offset)
 void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on)
 {
 	if (on) {
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_STREAM_ON, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
-		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	} else {
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_STREAM_OFF, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
-		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	}
 }
@@ -873,38 +884,38 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 	switch (val) {
 	case IS_MODE_PREVIEW_STILL:
 		dev->scenario_id = ISS_PREVIEW_STILL;
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_PREVIEW_STILL, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
-		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IS_MODE_PREVIEW_VIDEO:
 		dev->scenario_id = ISS_PREVIEW_VIDEO;
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_PREVIEW_VIDEO, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
-		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IS_MODE_CAPTURE_STILL:
 		dev->scenario_id = ISS_CAPTURE_STILL;
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_CAPTURE_STILL, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
-		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IS_MODE_CAPTURE_VIDEO:
 		dev->scenario_id = ISS_CAPTURE_VIDEO;
+		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		clear_bit(IS_ST_RUN, &dev->state);
 		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_CAPTURE_VIDEO, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
-		fimc_is_hw_wait_intsr0_intsd0(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	}
