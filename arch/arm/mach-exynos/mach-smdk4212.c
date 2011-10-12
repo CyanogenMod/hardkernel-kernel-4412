@@ -1788,11 +1788,11 @@ static struct max8997_platform_data __initdata exynos4_max8997_info = {
 	.buck1_voltage[6] = 1000000, /* 1.0V */
 	.buck1_voltage[7] = 950000, /* 0.95V */
 
-	.buck2_voltage[0] = 1100000, /* 1.1V */
+	.buck2_voltage[0] = 1000000, /* 1.0V */
 	.buck2_voltage[1] = 1000000, /* 1.0V */
 	.buck2_voltage[2] = 950000, /* 0.95V */
 	.buck2_voltage[3] = 900000, /* 0.9V */
-	.buck2_voltage[4] = 1100000, /* 1.1V */
+	.buck2_voltage[4] = 1000000, /* 1.0V */
 	.buck2_voltage[5] = 1000000, /* 1.0V */
 	.buck2_voltage[6] = 950000, /* 0.95V */
 	.buck2_voltage[7] = 900000, /* 0.9V */
