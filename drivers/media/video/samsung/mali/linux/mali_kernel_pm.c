@@ -25,6 +25,8 @@
 #include <asm/current.h>
 #include <linux/suspend.h>
 
+#include <plat/cputype.h>
+
 #include "mali_platform.h"
 #include "mali_osk.h"
 #include "mali_uk_types.h"
@@ -309,6 +311,9 @@ static int mali_pm_suspend(struct device *dev)
 	}
 	err = mali_device_suspend(MALI_PMM_EVENT_OS_POWER_DOWN, &pm_thread);
 	mali_device_state = _MALI_DEVICE_SUSPEND;
+#ifdef CONFIG_REGULATOR
+	mali_regulator_disable();
+#endif
 	_mali_osk_lock_signal(lock, _MALI_OSK_LOCKMODE_RW);
 	return err;
 }
@@ -376,6 +381,15 @@ static int mali_pm_resume(struct device *dev)
 {
 	int err = 0;
 	_mali_osk_lock_wait(lock, _MALI_OSK_LOCKMODE_RW);
+
+#ifdef CONFIG_REGULATOR
+	mali_regulator_enable();
+	if (soc_is_exynos4210())
+		mali_clk_set_rate(260, 1000000);
+	else
+		mali_clk_set_rate(350, 1000000);
+#endif
+
 	if (mali_device_state == _MALI_DEVICE_RESUME)
 	{
 		_mali_osk_lock_signal(lock, _MALI_OSK_LOCKMODE_RW);
