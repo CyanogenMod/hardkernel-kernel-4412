@@ -29,6 +29,7 @@
 #include "s5p_mfc_debug.h"
 #include "s5p_mfc_reg.h"
 #include "s5p_mfc_dec.h"
+#include "s5p_mfc_pm.h"
 
 #define DEF_SRC_FMT	2
 #define DEF_DST_FMT	0
@@ -1161,6 +1162,8 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 					return -EINVAL;
 				}
 
+				if (test_and_set_bit(0, &dev->clk_state) == 0)
+					s5p_mfc_clock_on();
 				spin_lock_irqsave(&dev->irqlock, flags);
 				src_buf = list_entry(ctx->src_queue.next,
 						struct s5p_mfc_buf, list);
