@@ -1914,13 +1914,11 @@ static struct regulator_init_data wm8994_ldo2_data = {
 static struct wm8994_pdata wm8994_platform_data = {
 	/* configure gpio1 function: 0x0001(Logic level input/output) */
 	.gpio_defaults[0] = 0x0001,
-	/* configure gpio3/4/5/7 function for AIF2 voice */
-	.gpio_defaults[2] = 0x8100,/* BCLK2 in */
-	.gpio_defaults[3] = 0x8100,/* LRCLK2 in */
-	.gpio_defaults[4] = 0x8100,/* DACDAT2 in */
-	/* configure gpio6 function: 0x0001(Logic level input/output) */
-	.gpio_defaults[5] = 0x0001,
-	.gpio_defaults[6] = 0x0100,/* ADCDAT2 out */
+	/* If the i2s0 and i2s2 is enabled simultaneously */
+	.gpio_defaults[7] = 0x8100, /* GPIO8  DACDAT3 in */
+	.gpio_defaults[8] = 0x0100, /* GPIO9  ADCDAT3 out */
+	.gpio_defaults[9] = 0x0100, /* GPIO10 LRCLK3  out */
+	.gpio_defaults[10] = 0x0100,/* GPIO11 BCLK3   out */
 	.ldo[0] = { 0, NULL, &wm8994_ldo1_data },
 	.ldo[1] = { 0, NULL, &wm8994_ldo2_data },
 };
