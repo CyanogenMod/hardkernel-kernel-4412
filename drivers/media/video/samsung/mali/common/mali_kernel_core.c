@@ -106,14 +106,14 @@ static struct mali_kernel_subsystem mali_subsystem_core =
 
 static struct mali_kernel_subsystem * subsystems[] =
 {
-	/* always initialize the hw subsystems first */
-	/* always included */
-	&mali_subsystem_memory,
 
 #if USING_MALI_PMM
 	/* The PMM must be initialized before any cores - including L2 cache */
 	&mali_subsystem_pmm,
 #endif
+
+	/* always included */
+	&mali_subsystem_memory,
 
 	/* The rendercore subsystem must be initialized before any subsystem based on the
 	 * rendercores is started e.g. mali_subsystem_mali200 and mali_subsystem_gp2 */
@@ -192,6 +192,9 @@ void mali_kernel_destructor( void )
 {
 	MALI_DEBUG_PRINT(2, ("\n"));
 	MALI_DEBUG_PRINT(2, ("Unloading Mali v%d device driver.\n",_MALI_API_VERSION));
+#if USING_MALI_PMM
+	malipmm_force_powerup();
+#endif
 	terminate_subsystems(); /* subsystems are responsible for their registered resources */
     _mali_osk_term();
 
@@ -882,19 +885,27 @@ _mali_osk_errcode_t mali_core_signal_power_down( mali_pmm_core_id core, mali_boo
 
 #endif
 
+
 #if MALI_STATE_TRACKING
-void _mali_kernel_core_dump_state(void)
+u32 _mali_kernel_core_dump_state(char* buf, u32 size)
 {
-	int i;
+	int i, n;
+	char *original_buf = buf;
 	for (i = 0; i < SUBSYSTEMS_COUNT; ++i)
-    {
+	{
 		if (NULL != subsystems[i]->dump_state)
 		{
-			subsystems[i]->dump_state();
+			n = subsystems[i]->dump_state(buf, size);
+			size -= n;
+			buf += n;
 		}
-    }
+	}
 #if USING_MALI_PMM
-	mali_pmm_dump_os_thread_state();	
+	n = mali_pmm_dump_os_thread_state(buf, size);
+	size -= n;
+	buf += n;
 #endif
+	/* Return number of bytes written to buf */
+	return (u32)(buf - original_buf);
 }
 #endif

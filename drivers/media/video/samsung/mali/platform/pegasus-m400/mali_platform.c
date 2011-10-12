@@ -12,6 +12,7 @@
  * @file mali_platform.c
  * Platform specific Mali driver functions for a default platform
  */
+#include <linux/version.h>
 #include "mali_kernel_common.h"
 #include "mali_osk.h"
 #include "mali_platform.h"
@@ -84,7 +85,11 @@ struct regulator *g3d_regulator=NULL;
 #endif
 
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,36)
+extern struct platform_device s5pv310_device_pd[];
+#else
 extern struct platform_device exynos4_device_pd[];
+#endif
 #endif
 
 mali_io_address clk_register_map=0;
@@ -429,7 +434,11 @@ static _mali_osk_errcode_t disable_mali_clocks(void)
 void set_mali_parent_power_domain(struct platform_device* dev)
 {
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,36)
+	dev->dev.parent = &s5pv310_device_pd[PD_G3D].dev;
+#else
 	dev->dev.parent = &exynos4_device_pd[PD_G3D].dev;
+#endif
 #endif
 }
 
@@ -587,3 +596,7 @@ u32 pmu_get_power_up_down_info(void)
 
 #endif
 
+_mali_osk_errcode_t mali_platform_power_mode_change(mali_power_mode power_mode)
+{
+    MALI_SUCCESS;
+}

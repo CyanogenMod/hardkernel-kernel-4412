@@ -11,7 +11,6 @@
 #include "mali_kernel_common.h"
 #include "mali_kernel_core.h"
 #include "mali_osk.h"
-#include "mali_kernel_pp.h"
 #include "mali_kernel_subsystem.h"
 #include "mali_kernel_rendercore.h"
 #include "mali_osk_list.h"
@@ -28,21 +27,23 @@
 #include "mali_kernel_l2_cache.h"
 #endif /* USING_MALI400_L2_CACHE */
 
-#define HANG_CHECK_MSECS_MIN 100 /* 100 msecs */
+#define HANG_CHECK_MSECS_MIN 100
 #define HANG_CHECK_MSECS_MAX 2000 /* 2 secs */
-/* This is the timeout for max time a mali core can spend on 1 tile */
-#define HANG_CHECK_MSECS_DEFAULT (5*100) /* 500 msecs */
+#define HANG_CHECK_MSECS_DEFAULT 500 /* 500 ms */
 
-#define WATCHDOG_MSECS_MIN (1*1000) /* 1 secs */
+#define WATCHDOG_MSECS_MIN (10*HANG_CHECK_MSECS_MIN)
 #define WATCHDOG_MSECS_MAX 3600000 /* 1 hour */
-/* This is the timeout for the max time a job can use */
-#define WATCHDOG_MSECS_DEFAULT (1000*4) /* 4 secs */
+#define WATCHDOG_MSECS_DEFAULT 4000 /* 4 secs */
 
 /* max value that will be converted from jiffies to msecs and written to job->render_time_msecs */
 #define JOB_MAX_JIFFIES 100000
 
 int mali_hang_check_interval = HANG_CHECK_MSECS_DEFAULT;
 int mali_max_job_runtime = WATCHDOG_MSECS_DEFAULT;
+
+#if MALI_TIMELINE_PROFILING_ENABLED
+int mali_boot_profiling = 0;
+#endif
 
 /* Subsystem entrypoints: */
 static _mali_osk_errcode_t rendercore_subsystem_startup(mali_kernel_subsystem_identifier id);
@@ -159,7 +160,7 @@ static _mali_osk_errcode_t rendercore_subsystem_startup(mali_kernel_subsystem_id
 #endif
 
 #if MALI_TIMELINE_PROFILING_ENABLED
-	if (_mali_profiling_init() != _MALI_OSK_ERR_OK)
+	if (_mali_profiling_init(mali_boot_profiling ? MALI_TRUE : MALI_FALSE) != _MALI_OSK_ERR_OK)
 	{
 		/* No biggie if we wheren't able to initialize the profiling */
 		MALI_PRINT_ERROR(("Rendercore: Failed to initialize profiling, feature will be unavailable\n")) ;
@@ -367,7 +368,7 @@ void mali_core_renderunit_timeout_function_hang_detection(void *arg)
 	if( !core ) return;
 
 	/* if NOT idle OR has TIMED_OUT */
-	if ( !((CORE_WATCHDOG_TIMEOUT == core->state ) || (CORE_IDLE== core->state)) )
+	if ( !((CORE_WATCHDOG_TIMEOUT == core->state ) || (CORE_IDLE== core->state) || (CORE_OFF == core->state)) )
 	{
 		core->state = CORE_HANG_CHECK_TIMEOUT;
 		action = MALI_TRUE;
@@ -1434,19 +1435,6 @@ void mali_core_session_close(mali_core_session * session)
 	is owned by the subsystem */
 	MALI_CORE_SUBSYSTEM_MUTEX_GRAB( subsystem );
 
-#if MALI_STATE_TRACKING
-	if ( _mali_osk_atomic_read(&session->jobs_received) != _mali_osk_atomic_read(&session->jobs_returned) )
-        {
-                MALI_PRINT(("##############################\n"));
-                MALI_PRINT(("Mali error. Stopping application with mismatched jobs started and returned.\n"));
-                MALI_PRINT(("##############################\n"));
-
-		MALI_CORE_SUBSYSTEM_MUTEX_RELEASE( subsystem );
-                _mali_kernel_core_dump_state();
-		MALI_CORE_SUBSYSTEM_MUTEX_GRAB( subsystem );
-        }
-#endif
-
 	/* Return the potensial waiting job to user */
 	if ( session->job_waiting_to_run )
 	{
@@ -1968,104 +1956,126 @@ _mali_osk_errcode_t mali_core_subsystem_signal_power_up(mali_core_subsystem *sub
 #endif /* USING_MALI_PMM */
 
 #if MALI_STATE_TRACKING
-void mali_core_renderunit_dump_state(mali_core_subsystem* subsystem)
+u32 mali_core_renderunit_dump_state(mali_core_subsystem* subsystem, char *buf, u32 size)
 {
-	u32 i;
+	u32 i, len = 0;
 	mali_core_renderunit *core;
 	mali_core_renderunit *tmp_core;
 	
 	mali_core_session* session;
 	mali_core_session* tmp_session;
 
+	if (0 >= size)
+	{
+		return 0;
+	}
+
 	MALI_CORE_SUBSYSTEM_MUTEX_GRAB( subsystem );
 
-	MALI_PRINT(("Subsystem;\n"));
-	MALI_PRINT(("  Name: %s\n", subsystem->name));
+	len += _mali_osk_snprintf(buf + len, size - len, "Subsystem:\n");
+	len += _mali_osk_snprintf(buf + len, size - len, "  Name: %s\n", subsystem->name);
 
 	for (i = 0; i < subsystem->number_of_cores; i++)
 	{
-		MALI_PRINT(("  Core: #%u\n", subsystem->mali_core_array[i]->core_number));
-		MALI_PRINT(("    Description: %s\n", subsystem->mali_core_array[i]->description));
+		len += _mali_osk_snprintf(buf + len, size - len, "  Core: #%u\n",
+		                          subsystem->mali_core_array[i]->core_number);
+		len += _mali_osk_snprintf(buf + len, size - len, "    Description: %s\n",
+		                          subsystem->mali_core_array[i]->description);
 		switch(subsystem->mali_core_array[i]->state)
 		{
 			case CORE_IDLE:
-				MALI_PRINT(("    State: CORE_IDLE\n"));
+				len += _mali_osk_snprintf(buf + len, size - len, "    State: CORE_IDLE\n");
 				break;
 			case CORE_WORKING:
-				MALI_PRINT(("    State: CORE_WORKING\n"));
+				len += _mali_osk_snprintf(buf + len, size - len, "    State: CORE_WORKING\n");
 					break;
 			case CORE_WATCHDOG_TIMEOUT:
-				MALI_PRINT(("    State: CORE_WATCHDOG_TIMEOUT\n"));
+				len += _mali_osk_snprintf(buf + len, size - len, "    State: CORE_WATCHDOG_TIMEOUT\n");
 				break;
 			case CORE_POLL:
-				MALI_PRINT(("    State: CORE_POLL\n"));
+				len += _mali_osk_snprintf(buf + len, size - len, "    State: CORE_POLL\n");
 				break;
 			case CORE_HANG_CHECK_TIMEOUT:
-				MALI_PRINT(("    State: CORE_HANG_CHECK_TIMEOUT\n"));
+				len += _mali_osk_snprintf(buf + len, size - len, "    State: CORE_HANG_CHECK_TIMEOUT\n");
 				break;
 			case CORE_OFF:
-				MALI_PRINT(("    State: CORE_OFF\n"));
+				len += _mali_osk_snprintf(buf + len, size - len, "    State: CORE_OFF\n");
 				break;
 			default:
-				MALI_PRINT(("    State: Unknown (0x%X)\n", subsystem->mali_core_array[i]->state));
+				len += _mali_osk_snprintf(buf + len, size - len, "    State: Unknown (0x%X)\n",
+				                          subsystem->mali_core_array[i]->state);
 				break;
 		}
-		if (subsystem->mali_core_array[i]->state!=CORE_OFF)
-		{
-			/* Temporary debug code. Use reset framework to print registers in log.. */
-			subsystem->reset_core( subsystem->mali_core_array[i],  0xcafebabe );
-		}
-		MALI_PRINT(("    Current job: 0x%X\n", (u32)(subsystem->mali_core_array[i]->current_job)));
+		len += _mali_osk_snprintf(buf + len, size - len, "    Current job: 0x%X\n",
+		                          (u32)(subsystem->mali_core_array[i]->current_job));
 		if (subsystem->mali_core_array[i]->current_job)
 		{
-			MALI_PRINT(("      Current job session: 0x%X\n", subsystem->mali_core_array[i]->current_job->session));
-			MALI_PRINT(("      Current job number: %d\n", subsystem->mali_core_array[i]->current_job->job_nr));
-			MALI_PRINT(("      Current job render_time jiffies: %d\n", _mali_osk_time_tickcount()-subsystem->mali_core_array[i]->current_job->start_time_jiffies));
+			len += _mali_osk_snprintf(buf + len, size - len, "      Current job session: 0x%X\n",
+			                          subsystem->mali_core_array[i]->current_job->session);
+			len += _mali_osk_snprintf(buf + len, size - len, "      Current job number: %d\n",
+			                          subsystem->mali_core_array[i]->current_job->job_nr);
+			len += _mali_osk_snprintf(buf + len, size - len, "      Current job render_time jiffies: %d\n",
+			                          _mali_osk_time_tickcount()-subsystem->mali_core_array[i]->current_job->start_time_jiffies);
 		}
-		MALI_PRINT(("    Core version: 0x%X\n", subsystem->mali_core_array[i]->core_version));
+		len += _mali_osk_snprintf(buf + len, size - len, "    Core version: 0x%X\n",
+		                          subsystem->mali_core_array[i]->core_version);
 #if USING_MALI_PMM
-		MALI_PRINT(("    PMM id: 0x%X\n", subsystem->mali_core_array[i]->pmm_id));
-		MALI_PRINT(("    Power down requested: %s\n", subsystem->mali_core_array[i]->pend_power_down ? "TRUE" : "FALSE"));
+		len += _mali_osk_snprintf(buf + len, size - len, "    PMM id: 0x%X\n",
+		                          subsystem->mali_core_array[i]->pmm_id);
+		len += _mali_osk_snprintf(buf + len, size - len, "    Power down requested: %s\n",
+		                          subsystem->mali_core_array[i]->pend_power_down ? "TRUE" : "FALSE");
 #endif
 	}
 
-	MALI_PRINT(("  Cores on idle list:\n"));
+	len += _mali_osk_snprintf(buf + len, size - len, "  Cores on idle list:\n");
 	_MALI_OSK_LIST_FOREACHENTRY(core, tmp_core, &subsystem->renderunit_idle_head, mali_core_renderunit, list)
 	{
-		MALI_PRINT(("    Core #%u\n", core->core_number));
+		len += _mali_osk_snprintf(buf + len, size - len, "    Core #%u\n", core->core_number);
 	}
 
-	MALI_PRINT(("  Cores on off list:\n"));
+	len += _mali_osk_snprintf(buf + len, size - len, "  Cores on off list:\n");
 	_MALI_OSK_LIST_FOREACHENTRY(core, tmp_core, &subsystem->renderunit_off_head, mali_core_renderunit, list)
 	{
-		MALI_PRINT(("    Core #%u\n", core->core_number));
+		len += _mali_osk_snprintf(buf + len, size - len, "    Core #%u\n", core->core_number);
 	}
 
-	MALI_PRINT(("  Connected sessions:\n"));
+	len += _mali_osk_snprintf(buf + len, size - len, "  Connected sessions:\n");
 	_MALI_OSK_LIST_FOREACHENTRY(session, tmp_session, &subsystem->all_sessions_head, mali_core_session, all_sessions_list)
 	{
-		MALI_PRINT(("    Session 0x%X:\n", (u32)session));
-		MALI_PRINT(("      Waiting job: 0x%X\n", (u32)session->job_waiting_to_run));
-		MALI_PRINT(("      Notification queue: %s\n", _mali_osk_notification_queue_is_empty(session->notification_queue) ? "EMPTY" : "NON-EMPTY"));
-		MALI_PRINT(("      Jobs received:%4d\n", _mali_osk_atomic_read(&session->jobs_received)));
-                MALI_PRINT(("      Jobs started :%4d\n", _mali_osk_atomic_read(&session->jobs_started)));
-                MALI_PRINT(("      Jobs ended   :%4d\n", _mali_osk_atomic_read(&session->jobs_ended)));
-                MALI_PRINT(("      Jobs returned:%4d\n", _mali_osk_atomic_read(&session->jobs_returned)));
-		MALI_PRINT(("      PID:  %d\n", session->pid));
+		len += _mali_osk_snprintf(buf + len, size - len,
+				"    Session 0x%X:\n", (u32)session);
+		len += _mali_osk_snprintf(buf + len, size - len,
+				"      Waiting job: 0x%X\n", (u32)session->job_waiting_to_run);
+		len += _mali_osk_snprintf(buf + len, size - len, "      Notification queue: %s\n",
+				_mali_osk_notification_queue_is_empty(session->notification_queue) ? "EMPTY" : "NON-EMPTY");
+		len += _mali_osk_snprintf(buf + len, size - len,
+				"      Jobs received:%4d\n", _mali_osk_atomic_read(&session->jobs_received));
+		len += _mali_osk_snprintf(buf + len, size - len,
+				"      Jobs started :%4d\n", _mali_osk_atomic_read(&session->jobs_started));
+		len += _mali_osk_snprintf(buf + len, size - len,
+				"      Jobs ended   :%4d\n", _mali_osk_atomic_read(&session->jobs_ended));
+		len += _mali_osk_snprintf(buf + len, size - len,
+				"      Jobs returned:%4d\n", _mali_osk_atomic_read(&session->jobs_returned));
+		len += _mali_osk_snprintf(buf + len, size - len, "      PID:  %d\n", session->pid);
 	}
 
-	MALI_PRINT(("  Waiting sessions sum all priorities: %u\n", subsystem->awaiting_sessions_sum_all_priorities));
+	len += _mali_osk_snprintf(buf + len, size - len, "  Waiting sessions sum all priorities: %u\n",
+			subsystem->awaiting_sessions_sum_all_priorities);
 	for (i = 0; i < PRIORITY_LEVELS; i++)
 	{
-		MALI_PRINT(("    Waiting sessions with priority %u:\n", i));
-		_MALI_OSK_LIST_FOREACHENTRY(session, tmp_session, &subsystem->awaiting_sessions_head[i], mali_core_session, awaiting_sessions_list)
+		len += _mali_osk_snprintf(buf + len, size - len, "    Waiting sessions with priority %u:\n", i);
+		_MALI_OSK_LIST_FOREACHENTRY(session, tmp_session, &subsystem->awaiting_sessions_head[i],
+				mali_core_session, awaiting_sessions_list)
 		{
-			MALI_PRINT(("      Session 0x%X:\n", (u32)session));
-			MALI_PRINT(("        Waiting job: 0x%X\n", (u32)session->job_waiting_to_run));
-			MALI_PRINT(("        Notification queue: %s\n", _mali_osk_notification_queue_is_empty(session->notification_queue) ? "EMPTY" : "NON-EMPTY"));
+			len += _mali_osk_snprintf(buf + len, size - len, "      Session 0x%X:\n", (u32)session);
+			len += _mali_osk_snprintf(buf + len, size - len, "        Waiting job: 0x%X\n",
+					(u32)session->job_waiting_to_run);
+			len += _mali_osk_snprintf(buf + len, size - len, "        Notification queue: %s\n",
+					_mali_osk_notification_queue_is_empty(session->notification_queue) ? "EMPTY" : "NON-EMPTY");
 		}
 	}
 
 	MALI_CORE_SUBSYSTEM_MUTEX_RELEASE( subsystem );
+	return len;
 }
 #endif

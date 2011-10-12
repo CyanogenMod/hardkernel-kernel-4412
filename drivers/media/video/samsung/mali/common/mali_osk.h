@@ -54,7 +54,7 @@ extern "C"
 /** @brief Mali Boolean type which uses MALI_TRUE and MALI_FALSE
   */
 	typedef unsigned long mali_bool;
-	
+
 #ifndef MALI_TRUE
 	#define MALI_TRUE ((mali_bool)1)
 #endif
@@ -795,6 +795,10 @@ void _mali_osk_atomic_term( _mali_osk_atomic_t *atom );
  * Returns a buffer capable of containing at least \a n elements of \a size
  * bytes each. The buffer is initialized to zero.
  *
+ * If there is a need for a bigger block of memory (16KB or bigger), then
+ * consider to use _mali_osk_vmalloc() instead, as this function might
+ * map down to a OS function with size limitations.
+ *
  * The buffer is suitably aligned for storage and subsequent access of every
  * type that the compiler supports. Therefore, the pointer to the start of the
  * buffer may be cast into any pointer type, and be subsequently accessed from
@@ -816,6 +820,10 @@ void *_mali_osk_calloc( u32 n, u32 size );
  *
  * Returns a buffer capable of containing at least \a size bytes. The
  * contents of the buffer are undefined.
+ *
+ * If there is a need for a bigger block of memory (16KB or bigger), then
+ * consider to use _mali_osk_vmalloc() instead, as this function might
+ * map down to a OS function with size limitations.
  *
  * The buffer is suitably aligned for storage and subsequent access of every
  * type that the compiler supports. Therefore, the pointer to the start of the
@@ -850,6 +858,46 @@ void *_mali_osk_malloc( u32 size );
  */
 void _mali_osk_free( void *ptr );
 
+/** @brief Allocate memory.
+ *
+ * Returns a buffer capable of containing at least \a size bytes. The
+ * contents of the buffer are undefined.
+ *
+ * This function is potentially slower than _mali_osk_malloc() and _mali_osk_calloc(),
+ * but do support bigger sizes.
+ *
+ * The buffer is suitably aligned for storage and subsequent access of every
+ * type that the compiler supports. Therefore, the pointer to the start of the
+ * buffer may be cast into any pointer type, and be subsequently accessed from
+ * such a pointer, without loss of information.
+ *
+ * When the buffer is no longer in use, it must be freed with _mali_osk_free().
+ * Failure to do so will cause a memory leak.
+ *
+ * @note Most toolchains supply memory allocation functions that meet the
+ * compiler's alignment requirements.
+ *
+ * Remember to free memory using _mali_osk_free().
+ * @param size Number of bytes to allocate
+ * @return On success, the buffer allocated. NULL on failure.
+ */
+void *_mali_osk_valloc( u32 size );
+
+/** @brief Free memory.
+ *
+ * Reclaims the buffer pointed to by the parameter \a ptr for the system.
+ * All memory returned from _mali_osk_valloc() must be freed before the
+ * application exits. Otherwise a memory leak will occur.
+ *
+ * Memory must be freed once. It is an error to free the same non-NULL pointer
+ * more than once.
+ *
+ * It is legal to free the NULL pointer.
+ *
+ * @param ptr Pointer to buffer to free
+ */
+void _mali_osk_vfree( void *ptr );
+
 /** @brief Copies memory.
  *
  * Copies the \a len bytes from the buffer pointed by the parameter \a src
@@ -881,7 +929,7 @@ void *_mali_osk_memset( void *s, u32 c, u32 n );
 
 /** @brief Checks the amount of memory allocated
  *
- * Checks that not more than \a max_allocated bytes are allocated. 
+ * Checks that not more than \a max_allocated bytes are allocated.
  *
  * Some OS bring up an interactive out of memory dialogue when the
  * system runs out of memory. This can stall non-interactive
@@ -889,7 +937,7 @@ void *_mali_osk_memset( void *s, u32 c, u32 n );
  * not trigger the OOM dialogue by keeping allocations
  * within a certain limit.
  *
- * @return MALI_TRUE when \a max_allocated bytes are not in use yet. MALI_FALSE 
+ * @return MALI_TRUE when \a max_allocated bytes are not in use yet. MALI_FALSE
  * when at least \a max_allocated bytes are in use.
  */
 mali_bool _mali_osk_mem_check_allocated( u32 max_allocated );
@@ -1157,7 +1205,7 @@ void _mali_osk_cache_flushall( void );
  *
  * Some OS do not perform a full cache flush (including all outer caches) for uncached mapped memory.
  * They zero the memory through a cached mapping, then flush the inner caches but not the outer caches.
- * This is required for MALI to have the correct view of the memory. 
+ * This is required for MALI to have the correct view of the memory.
  */
 void _mali_osk_cache_ensure_uncached_range_flushed( void *uncached_mapping, u32 offset, u32 size );
 
@@ -1532,7 +1580,7 @@ u32	_mali_osk_time_tickcount( void );
 void _mali_osk_time_ubusydelay( u32 usecs );
 
 /** @brief Return time in nano seconds, since any given reference.
- * 
+ *
  * @return Time in nano seconds
  */
 u64 _mali_osk_time_get_ns( void );

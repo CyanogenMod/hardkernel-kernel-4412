@@ -8,31 +8,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __MALI_KERNEL_LINUX_H__
-#define __MALI_KERNEL_LINUX_H__
+#ifndef __MALI_KERNEL_SYSFS_H__
+#define __MALI_KERNEL_SYSFS_H__
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#include <linux/cdev.h>     /* character device definitions */
-#include "mali_kernel_license.h"
-#include "mali_osk.h"
+#define MALI_PROC_DIR "driver/mali"
 
-struct mali_dev
-{
-	struct cdev cdev;
-#if MALI_LICENSE_IS_GPL
-	struct class *  mali_class;
-#endif
-};
+int mali_sysfs_register(struct mali_dev *mali_class, dev_t dev, const char *mali_dev_name);
 
-_mali_osk_errcode_t initialize_kernel_device(void);
-void terminate_kernel_device(void);
+int mali_sysfs_unregister(struct mali_dev *mali_class, dev_t dev, const char *mali_dev_name);
 
-void mali_osk_low_level_mem_init(void);
-void mali_osk_low_level_mem_term(void);
 
 #ifdef __cplusplus
 }

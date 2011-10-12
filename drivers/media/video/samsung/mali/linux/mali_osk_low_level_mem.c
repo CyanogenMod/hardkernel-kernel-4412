@@ -21,7 +21,6 @@
 #include <linux/slab.h>
 #include <linux/mm.h>
 #include <linux/dma-mapping.h>
-#include <asm/cacheflush.h>
 
 #include "mali_osk.h"
 #include "mali_ukk.h" /* required to hook in _mali_ukk_mem_mmap handling */
@@ -77,7 +76,12 @@ static void _allocation_list_item_release(AllocationList * item);
 
 
 /* Variable declarations */
-spinlock_t allocation_list_spinlock; 
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,36)
+spinlock_t allocation_list_spinlock = SPIN_LOCK_UNLOCKED;
+#else
+spinlock_t allocation_list_spinlock;
+#endif
+
 static AllocationList * pre_allocated_memory = (AllocationList*) NULL ;
 static int pre_allocated_memory_size_current  = 0;
 #ifdef MALI_OS_MEMORY_KERNEL_BUFFER_SIZE_IN_MB
@@ -100,7 +104,6 @@ static struct vm_operations_struct mali_kernel_vm_ops =
 
 void mali_osk_low_level_mem_init(void)
 {
-	spin_lock_init( &allocation_list_spinlock );
 	pre_allocated_memory = (AllocationList*) NULL ;
 }
 
@@ -228,7 +231,7 @@ static unsigned long mali_kernel_memory_cpu_page_fault_handler(struct vm_area_st
 static void mali_kernel_memory_vma_open(struct vm_area_struct * vma)
 {
 	mali_vma_usage_tracker * vma_usage_tracker;
-	MALI_DEBUG_PRINT(2, ("Open called on vma %p\n", vma));
+	MALI_DEBUG_PRINT(4, ("Open called on vma %p\n", vma));
 
 	vma_usage_tracker = (mali_vma_usage_tracker*)vma->vm_private_data;
 	vma_usage_tracker->references++;
@@ -303,8 +306,7 @@ mali_io_address _mali_osk_mem_allocioregion( u32 *phys, u32 size )
 
  	if ( NULL == virt )
  	{
-		MALI_DEBUG_PRINT(1, ("allocioregion: Failed to allocate Pagetable memory, size=0x%.8X\n", size ));
-		MALI_DEBUG_PRINT(1, ("Solution: When configuring and building linux kernel, set CONSISTENT_DMA_SIZE to be 14 MB.\n"));
+		MALI_DEBUG_PRINT(5, ("allocioregion: Failed to allocate Pagetable memory, size=0x%.8X\n", size ));
  		return 0;
  	}
 
@@ -481,6 +483,11 @@ _mali_osk_errcode_t _mali_osk_mem_mapregion_map( mali_memory_allocation * descri
 		u32 linux_phys_frame_num;
 
 		alloc_item = _allocation_list_item_get();
+		if (NULL == alloc_item)
+		{
+			MALI_DEBUG_PRINT(1, ("Failed to allocate list item\n"));
+			return _MALI_OSK_ERR_NOMEM;
+		}
 
 		linux_phys_frame_num = alloc_item->physaddr >> PAGE_SHIFT;
 

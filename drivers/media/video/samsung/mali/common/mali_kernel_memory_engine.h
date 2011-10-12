@@ -47,7 +47,7 @@ typedef enum
 
 /**
  * Supplying this 'magic' physical address requests that the OS allocate the
- * physical address at page commit time, rather than commiting a specific page
+ * physical address at page commit time, rather than committing a specific page
  */
 #define MALI_MEMORY_ALLOCATION_OS_ALLOCATED_PHYSADDR_MAGIC ((u32)(-1))
 
@@ -96,7 +96,7 @@ typedef struct mali_kernel_mem_address_manager
 	  * @param[in] off Offset from the start of range
 	  * @param[in,out] phys_addr A pointer to the physical address of the start of the
 	  * physical block. When *phys_addr == MALI_MEMORY_ALLOCATION_OS_ALLOCATED_PHYSADDR_MAGIC
-	  * is used, this requests the function must allocate the physical page
+	  * is used, this requests the function to allocate the physical page
 	  * itself, and return it through the pointer provided.
 	  * @param[in] size Length in bytes of the physical block
 	  * @return _MALI_OSK_ERR_OK on success.

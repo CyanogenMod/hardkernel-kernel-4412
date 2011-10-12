@@ -189,10 +189,10 @@ typedef struct mali_core_session
 #endif
 	u32 magic_nr;
 #if MALI_STATE_TRACKING
-        _mali_osk_atomic_t jobs_received;
-        _mali_osk_atomic_t jobs_started;
-        _mali_osk_atomic_t jobs_ended;
-        _mali_osk_atomic_t jobs_returned;
+	_mali_osk_atomic_t jobs_received;
+	_mali_osk_atomic_t jobs_started;
+	_mali_osk_atomic_t jobs_ended;
+	_mali_osk_atomic_t jobs_returned;
 	u32 pid;
 #endif
 } mali_core_session;
@@ -357,7 +357,7 @@ _mali_osk_errcode_t mali_core_subsystem_signal_power_up(mali_core_subsystem *sub
 #endif
 
 #if MALI_STATE_TRACKING
-void mali_core_renderunit_dump_state(mali_core_subsystem* subsystem);
+u32 mali_core_renderunit_dump_state(mali_core_subsystem* subsystem, char *buf, u32 size);
 #endif
 
 #endif /* __MALI_RENDERCORE_H__ */

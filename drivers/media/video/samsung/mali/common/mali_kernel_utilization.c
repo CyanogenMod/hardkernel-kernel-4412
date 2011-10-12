@@ -8,13 +8,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "mali_kernel_common.h"
 #include "mali_kernel_utilization.h"
 #include "mali_osk.h"
 #include "mali_platform.h"
 
 /* Define how often to calculate and report GPU utilization, in milliseconds */
-#define MALI_GPU_UTILIZATION_TIMEOUT 1000 // 2000
+#define MALI_GPU_UTILIZATION_TIMEOUT 1000
 
 static _mali_osk_lock_t *time_data_lock;
 
@@ -110,18 +109,6 @@ static void calculate_gpu_utilization(void* arg)
 
 
 
-void mali_utilization_suspend(void)
-{
-        if (NULL != utilization_timer)
-        {
-		MALI_DEBUG_PRINT(1,( "delete mali util timer\n"));
-		_mali_osk_timer_del(utilization_timer);
-		timer_running = MALI_FALSE;
-	}
-}
-
-
-
 _mali_osk_errcode_t mali_utilization_init(void)
 {
 	time_data_lock = _mali_osk_lock_init( _MALI_OSK_LOCKFLAG_SPINLOCK_IRQ|_MALI_OSK_LOCKFLAG_NONINTERRUPTABLE, 0, 0 );
@@ -143,6 +130,14 @@ _mali_osk_errcode_t mali_utilization_init(void)
 	return _MALI_OSK_ERR_OK;
 }
 
+void mali_utilization_suspend(void)
+{
+	if (NULL != utilization_timer)
+	{
+		_mali_osk_timer_del(utilization_timer);
+		timer_running = MALI_FALSE;
+	}
+}
 
 void mali_utilization_term(void)
 {
@@ -181,7 +176,6 @@ void mali_utilization_core_start(void)
 
 			_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
-			MALI_DEBUG_PRINT(1,( "start mali util timer\n"));
 			_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(MALI_GPU_UTILIZATION_TIMEOUT));
 		}
 		else

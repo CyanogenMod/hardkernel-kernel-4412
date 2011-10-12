@@ -377,28 +377,28 @@ static u32 mali_mmu_register_read(mali_kernel_memory_mmu * unit, mali_mmu_regist
 static void mali_mmu_register_write(mali_kernel_memory_mmu * unit, mali_mmu_register reg, u32 val);
 
 /**
-  + * Issues the reset command to the MMU and waits for HW to be ready again
-  + * @param mmu The MMU to reset
-  + */
+ * Issues the reset command to the MMU and waits for HW to be ready again
+ * @param mmu The MMU to reset
+ */
 static void mali_mmu_raw_reset(mali_kernel_memory_mmu * mmu);
 
 /**
-  + * Issues the enable paging command to the MMU and waits for HW to complete the request
-  + * @param mmu The MMU to enable paging for
-  + */
+ * Issues the enable paging command to the MMU and waits for HW to complete the request
+ * @param mmu The MMU to enable paging for
+ */
 static void mali_mmu_enable_paging(mali_kernel_memory_mmu * mmu);
 
 /**
-  + * Issues the enable stall command to the MMU and waits for HW to complete the request
-  + * @param mmu The MMU to enable paging for
-  + * @return MALI_TRUE if HW stall was successfully engaged, otherwise MALI_FALSE (req timed out)
-  + */
+ * Issues the enable stall command to the MMU and waits for HW to complete the request
+ * @param mmu The MMU to enable paging for
+ * @return MALI_TRUE if HW stall was successfully engaged, otherwise MALI_FALSE (req timed out)
+ */
 static mali_bool mali_mmu_enable_stall(mali_kernel_memory_mmu * mmu);
 
 /**
-  + * Issues the disable stall command to the MMU and waits for HW to complete the request
-  + * @param mmu The MMU to enable paging for
-  + */
+ * Issues the disable stall command to the MMU and waits for HW to complete the request
+ * @param mmu The MMU to enable paging for
+ */
 static void mali_mmu_disable_stall(mali_kernel_memory_mmu * mmu);
 
 #if MALI_USE_UNIFIED_MEMORY_PROVIDER != 0
@@ -836,13 +836,11 @@ static void mali_free_empty_page_directory(void)
 
 static _mali_osk_errcode_t fill_page(mali_io_address mapping, u32 data)
 {
-	int i;
 	MALI_DEBUG_ASSERT_POINTER( mapping );
 
-	for(i = 0; i < MALI_MMU_PAGE_SIZE/4; i++)
-	{
-		_mali_osk_mem_iowrite32( mapping, i * sizeof(u32), data);
-	}
+	_mali_osk_memset(mapping, data, MALI_MMU_PAGE_SIZE);
+	_mali_osk_mem_barrier();
+
 	MALI_SUCCESS;
 }
 
@@ -1304,7 +1302,7 @@ static void mali_mmu_raw_reset(mali_kernel_memory_mmu * mmu)
 	mali_mmu_register_write(mmu, MALI_MMU_REGISTER_DTE_ADDR, 0xCAFEBABE);
 	mali_mmu_register_write(mmu, MALI_MMU_REGISTER_COMMAND, MALI_MMU_COMMAND_SOFT_RESET);
 
-    if (!mali_benchmark)
+	if (!mali_benchmark)
 	{
 		int i;
 		for (i = 0; i < max_loop_count; ++i)
@@ -1313,9 +1311,9 @@ static void mali_mmu_raw_reset(mali_kernel_memory_mmu * mmu)
 			{
 				break;
 			}
-		_mali_osk_time_ubusydelay(delay_in_usecs);
+			_mali_osk_time_ubusydelay(delay_in_usecs);
 		}
-	MALI_DEBUG_PRINT_IF(1, (max_loop_count == i), ("Reset request failed, MMU status is 0x%08X\n", mali_mmu_register_read(mmu, MALI_MMU_REGISTER_STATUS)));
+		MALI_DEBUG_PRINT_IF(1, (max_loop_count == i), ("Reset request failed, MMU status is 0x%08X\n", mali_mmu_register_read(mmu, MALI_MMU_REGISTER_STATUS)));
 	}
 }
 
@@ -1363,9 +1361,10 @@ static mali_bool mali_mmu_enable_stall(mali_kernel_memory_mmu * mmu)
 		if (max_loop_count == i)
 		{
 			return MALI_FALSE;
-		}													    }
+		}
+	}
 
-		return MALI_TRUE;
+	return MALI_TRUE;
 }
 
 static void mali_mmu_disable_stall(mali_kernel_memory_mmu * mmu)
@@ -2716,7 +2715,7 @@ _mali_osk_errcode_t _mali_ukk_mem_mmap( _mali_uk_mem_mmap_s *args )
     descriptor->lock = session_data->lock;
 	_mali_osk_list_init( &descriptor->list );
 
-   	_mali_osk_lock_wait(session_data->lock, _MALI_OSK_LOCKMODE_RW);
+	_mali_osk_lock_wait(session_data->lock, _MALI_OSK_LOCKMODE_RW);
 
 	if (0 == mali_allocation_engine_allocate_memory(memory_engine, descriptor, physical_memory_allocators, &session_data->memory_head))
 	{
@@ -2798,6 +2797,7 @@ static _mali_osk_errcode_t _mali_ukk_mem_munmap_internal( _mali_uk_mem_munmap_s 
 
 		_mali_osk_lock_signal(mmu->lock, _MALI_OSK_LOCKMODE_RW);
 	}
+
 	_MALI_OSK_LIST_FOREACHENTRY(mmu, temp_mmu, &session_data->active_mmus, mali_kernel_memory_mmu, session_link)
 	{
 		_mali_osk_lock_wait(mmu->lock, _MALI_OSK_LOCKMODE_RW);

@@ -31,16 +31,11 @@ int mali_dev_pause()
 {
 	int err = 0;
 	_mali_osk_lock_wait(lock, _MALI_OSK_LOCKMODE_RW);
-	if ((mali_dvfs_device_state == _MALI_DEVICE_SUSPEND)
-	      || (mali_device_state == _MALI_DEVICE_SUSPEND_IN_PROGRESS)
-	      || (mali_device_state == _MALI_DEVICE_SUSPEND)) {
+	if ((mali_dvfs_device_state ==  _MALI_DEVICE_SUSPEND)
+	      || (mali_device_state == _MALI_DEVICE_SUSPEND) )
+	{
 		err = -EPERM;
 	}
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	if (mali_device_state == _MALI_DEVICE_EARLYSUSPEND_DISABLE_FB) {
-		err = -EPERM;
-	}
-#endif
 	if ((mali_dvfs_device_state ==  _MALI_DEVICE_RESUME) && (!err))
 	{
 		mali_device_suspend(MALI_PMM_EVENT_DVFS_PAUSE, &dvfs_pm_thread);
@@ -57,15 +52,10 @@ int mali_dev_resume()
 	int err = 0;
 	_mali_osk_lock_wait(lock, _MALI_OSK_LOCKMODE_RW);
 	if ((mali_dvfs_device_state == _MALI_DEVICE_RESUME)
-	      || (mali_device_state == _MALI_DEVICE_SUSPEND_IN_PROGRESS)
-	      || (mali_device_state == _MALI_DEVICE_SUSPEND)) {
+	     || (mali_device_state == _MALI_DEVICE_SUSPEND) )
+	{
 		err = -EPERM;
 	}
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	if (mali_device_state == _MALI_DEVICE_EARLYSUSPEND_DISABLE_FB) {
-		err = -EPERM;
-	}
-#endif
 	if (!err)
 	{
 		mali_device_resume(MALI_PMM_EVENT_DVFS_RESUME, &dvfs_pm_thread);
