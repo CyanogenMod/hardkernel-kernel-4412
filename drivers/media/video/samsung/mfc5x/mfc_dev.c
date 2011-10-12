@@ -62,6 +62,30 @@
 
 static struct mfc_dev *mfcdev;
 
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#define MFC_DRM_MAGIC_SIZE	0x10
+#define MFC_DRM_MAGIC_CHUNK0	0x13cdbf16
+#define MFC_DRM_MAGIC_CHUNK1	0x8b803342
+#define MFC_DRM_MAGIC_CHUNK2	0x5e87f4f5
+#define MFC_DRM_MAGIC_CHUNK3	0x3bd05317
+
+static bool check_magic(unsigned char *addr)
+{
+	if (((u32)*(u32 *)(addr      ) == MFC_DRM_MAGIC_CHUNK0) &&
+	    ((u32)*(u32 *)(addr + 0x4) == MFC_DRM_MAGIC_CHUNK1) &&
+	    ((u32)*(u32 *)(addr + 0x8) == MFC_DRM_MAGIC_CHUNK2) &&
+	    ((u32)*(u32 *)(addr + 0xC) == MFC_DRM_MAGIC_CHUNK3))
+		return true;
+	else
+		return false;
+}
+
+static inline void clear_magic(unsigned char *addr)
+{
+	memset((void *)addr, 0x00, MFC_DRM_MAGIC_SIZE);
+}
+#endif
+
 static int get_free_inst_id(struct mfc_dev *dev)
 {
 	int slot = 0;
@@ -103,6 +127,21 @@ static int mfc_open(struct inode *inode, struct file *file)
 	}
 
 	if (atomic_read(&mfcdev->inst_cnt) == 0) {
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+		if (!check_magic(mfcdev->drm_info.addr)) {
+			/* reload F/W for first instance again */
+			mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data, mfcdev->fw.info->size);
+			if (!mfcdev->fw.state) {
+				printk(KERN_ERR "failed to load MFC F/W, MFC will not working\n");
+				ret = -ENODEV;
+				goto err_fw_state;
+			} else {
+				printk(KERN_INFO "MFC F/W reloaded successfully (size: %d)\n", mfcdev->fw.info->size);
+			}
+		} else {
+			clear_magic(mfcdev->drm_info.addr);
+		}
+#else
 		/* reload F/W for first instance again */
 		mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data, mfcdev->fw.info->size);
 		if (!mfcdev->fw.state) {
@@ -112,7 +151,7 @@ static int mfc_open(struct inode *inode, struct file *file)
 		} else {
 			printk(KERN_INFO "MFC F/W reloaded successfully (size: %d)\n", mfcdev->fw.info->size);
 		}
-
+#endif
 		ret = mfc_power_on();
 		if (ret < 0) {
 			mfc_err("power enable failed\n");

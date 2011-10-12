@@ -509,7 +509,19 @@ int mfc_init_mem_mgr(struct mfc_dev *dev)
 	/* kernel direct mapped memory address */
 	dev->mem_infos[0].addr = phys_to_virt(dev->mem_infos[0].base);
 
-	size = MFC_MEMSIZE_PORT_B;
+	size = MFC_MEMSIZE_DRM;
+	base = cma_alloc(dev->device, "mfc1", size, 0);
+
+	if (IS_ERR_VALUE(base)) {
+		mfc_err("failed to get rsv. memory from CMA for DRM");
+		return -ENOMEM;
+	}
+
+	dev->drm_info.base = base;
+	dev->drm_info.size = size;
+	dev->drm_info.addr = phys_to_virt(base);
+
+	size = MFC_MEMSIZE_PORT_B - MFC_MEMSIZE_DRM;
 	base = cma_alloc(dev->device, "mfc1", size, 0);
 
 	if (IS_ERR_VALUE(base)) {
