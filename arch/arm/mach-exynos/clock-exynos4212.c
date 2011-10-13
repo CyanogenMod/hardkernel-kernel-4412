@@ -295,6 +295,10 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.parent		= &exynos4_clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 10),
+	}, {
+		.name		= "ppmutv",
+		.enable		= exynos4_clksrc_gate_isp0_ctrl,
+		.ctrlbit	= (1 << 20 || 1 << 21),
 	},
 };
 

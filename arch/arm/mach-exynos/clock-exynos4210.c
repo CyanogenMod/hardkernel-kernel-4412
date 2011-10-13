@@ -60,6 +60,14 @@ static struct clk init_clocks_off[] = {
 		.parent		= &exynos4_clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 10),
+	}, {
+		.name		= "ppmuimage",
+		.enable		= exynos4_clk_ip_image_ctrl,
+		.ctrlbit	= (1 << 9),
+	}, {
+		.name		= "ppmulcd1",
+		.enable		= exynos4_clk_ip_lcd1_ctrl,
+		.ctrlbit	= (1 << 5),
 	},
 };
 

@@ -912,6 +912,22 @@ static struct clk exynos4_init_clocks_off[] = {
 		.name		= "onenand",
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 15),
+	}, {
+		.name		= "ppmug3d",
+		.enable		= exynos4_clk_ip_g3d_ctrl,
+		.ctrlbit	= (1 << 1),
+	}, {
+		.name		= "ppmulcd",
+		.enable		= exynos4_clk_ip_lcd0_ctrl,
+		.ctrlbit	= (1 << 5),
+	}, {
+		.name		= "ppmucam",
+		.enable		= exynos4_clk_ip_cam_ctrl,
+		.ctrlbit	= (1 << 16),
+	}, {
+		.name		= "ppmutv",
+		.enable		= exynos4_clk_ip_tv_ctrl,
+		.ctrlbit	= (1 << 5),
 	},
 };
 
