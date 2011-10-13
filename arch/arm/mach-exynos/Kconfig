@@ -246,7 +246,7 @@ config EXYNOS4_SETUP_CSIS
 
 config EXYNOS4_SETUP_FB_S5P
 	bool
-	default y
+	default n
 	help
 	  Setup code for EXYNOS4 FIMD
 
@@ -508,6 +508,8 @@ config MACH_SMDK5210
 	select EXYNOS4_SETUP_FIMD
 	select EXYNOS4_SETUP_MFC
 	select EXYNOS4_SETUP_SDHCI
+	select SAMSUNG_DEV_BACKLIGHT
+	select SAMSUNG_DEV_PWM
 	help
 	  Machine support for Samsung SMDK5210
 endmenu

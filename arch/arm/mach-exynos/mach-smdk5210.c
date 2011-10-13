@@ -115,6 +115,11 @@ static int reset_lcd(struct lcd_device *ld)
 
 	gpio_free(EXYNOS5_GPX0(6));
 
+#ifndef CONFIG_BACKLIGHT_PWM
+	gpio_request_one(EXYNOS5_GPB2(0), GPIOF_OUT_INIT_HIGH, "GPB2");
+	gpio_free(EXYNOS5_GPB2(0));
+#endif
+
 	return 1;
 }
 
@@ -430,7 +435,7 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 #endif
 };
 
-#ifdef SAMSUNG_DEV_BACKLIGHT
+#ifdef CONFIG_SAMSUNG_DEV_BACKLIGHT
 /* LCD Backlight data */
 static struct samsung_bl_gpio_info smdk5210_bl_gpio_info = {
 	.no = EXYNOS5_GPB2(0),
@@ -439,6 +444,9 @@ static struct samsung_bl_gpio_info smdk5210_bl_gpio_info = {
 
 static struct platform_pwm_backlight_data smdk5210_bl_data = {
 	.pwm_id = 1,
+#if defined(CONFIG_LCD_LMS501KF03)
+	.pwm_period_ns  = 1000,
+#endif
 };
 #endif
 
@@ -624,7 +632,7 @@ static void __init smdk5210_machine_init(void)
 	s5p_fimd1_set_platdata(&smdk5210_lcd1_pdata);
 #endif
 
-#ifdef SAMSUNG_DEV_BACKLIGHT
+#ifdef CONFIG_SAMSUNG_DEV_BACKLIGHT
 	samsung_bl_set(&smdk5210_bl_gpio_info, &smdk5210_bl_data);
 #endif
 
