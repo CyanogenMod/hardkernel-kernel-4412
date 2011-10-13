@@ -283,12 +283,23 @@ config EXYNOS4_ENBLE_CLOCK_DOWN
 	help
 	  ARM core clock down in idle time.
 
+choice
+	prompt "Max CPU frequency"
+	default EXYNOS4212_1200MHZ_SUPPORT
+
 config EXYNOS4212_1500MHZ_SUPPORT
 	bool "Max 1500MHz CPUFREQ LEVEL"
 	depends on CPU_FREQ && CPU_EXYNOS4212
-	default n
 	help
 	  Max 1.5Ghz support
+
+config EXYNOS4212_1200MHZ_SUPPORT
+	bool "Max 1200MHz CPUFREQ LEVEL"
+	depends on CPU_FREQ && CPU_EXYNOS4212
+	help
+	  Max 1.2Ghz support
+
+endchoice
 
 menu "Support dynamic cpu hotplug (Experimental)"
 	depends on (CPU_EXYNOS4210 || CPU_EXYNOS4212) && HOTPLUG_CPU && SMP && CPU_FREQ
