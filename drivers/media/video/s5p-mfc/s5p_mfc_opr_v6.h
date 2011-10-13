@@ -60,8 +60,11 @@ void s5p_mfc_dec_calc_dpb_size(struct s5p_mfc_ctx *ctx);
 						S5P_FIMV_D_DISPLAY_STATUS)
 #define s5p_mfc_get_decoded_status()	readl(dev->regs_base + \
 						S5P_FIMV_D_DECODED_STATUS)
-#define s5p_mfc_get_frame_type()	(readl(dev->regs_base + \
+#define s5p_mfc_get_dec_frame_type()	(readl(dev->regs_base + \
 						S5P_FIMV_D_DECODED_FRAME_TYPE) \
+						& S5P_FIMV_DECODE_FRAME_MASK)
+#define s5p_mfc_get_disp_frame_type()	(readl(dev->regs_base + \
+						S5P_FIMV_D_DISPLAY_FRAME_TYPE) \
 						& S5P_FIMV_DECODE_FRAME_MASK)
 #define s5p_mfc_get_consumed_stream()	readl(dev->regs_base + \
 						S5P_FIMV_D_DECODED_NAL_SIZE)

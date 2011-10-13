@@ -223,7 +223,7 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 	struct s5p_mfc_dev *dev = ctx->dev;
 	size_t dspl_y_addr = MFC_GET_ADR(DEC_DISPLAY_Y);
 	unsigned int index;
-	unsigned int frame_type = s5p_mfc_get_frame_type();
+	unsigned int frame_type = s5p_mfc_get_disp_frame_type();
 
 	ctx->sequence++;
 	/* If frame is same as previous then skip and do not dequeue */
@@ -250,8 +250,8 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 			clear_bit(dst_buf->vb.v4l2_buf.index, &ctx->dec_dst_flag);
 
 			dst_buf->vb.v4l2_buf.flags &=
-					(V4L2_BUF_FLAG_KEYFRAME &
-					V4L2_BUF_FLAG_PFRAME &
+					~(V4L2_BUF_FLAG_KEYFRAME |
+					V4L2_BUF_FLAG_PFRAME |
 					V4L2_BUF_FLAG_BFRAME);
 
 			switch (frame_type) {
@@ -268,8 +268,6 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 					V4L2_BUF_FLAG_BFRAME;
 				break;
 			default:
-				dst_buf->vb.v4l2_buf.flags |=
-					V4L2_BUF_FLAG_KEYFRAME;
 				break;
 			}
 
@@ -360,7 +358,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 		 * Known Issue : consumed bytes mismatch in VP8 */
 		if (ctx->codec_mode != S5P_FIMV_CODEC_H264_DEC &&
 			ctx->codec_mode != S5P_FIMV_CODEC_VP8_DEC &&
-			s5p_mfc_get_frame_type() == S5P_FIMV_DECODE_FRAME_P_FRAME
+			s5p_mfc_get_dec_frame_type() == S5P_FIMV_DECODE_FRAME_P_FRAME
 					&& ctx->consumed_stream + STUFF_BYTE <
 					src_buf->vb.v4l2_planes[0].bytesused) {
 			/* Run MFC again on the same buffer */
