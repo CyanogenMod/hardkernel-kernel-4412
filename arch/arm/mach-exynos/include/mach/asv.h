@@ -31,10 +31,15 @@ struct samsung_asv {
 	int (*check_vdd_arm)(void);		/* check vdd_arm value, this function is selectable */
 	int (*pre_clock_init)(void);		/* clock init function to get hpm */
 	int (*pre_clock_setup)(void);		/* clock setup function to get hpm */
+	/* specific get ids function */
+	int (*get_ids)(struct samsung_asv *asv_info);
+	/* specific get hpm function */
+	int (*get_hpm)(struct samsung_asv *asv_info);
 	/* store into some repository to send result of asv */
 	int (*store_result)(struct samsung_asv *asv_info);
 };
 
 extern int exynos4210_asv_init(struct samsung_asv *asv_info);
+extern int exynos4x12_asv_init(struct samsung_asv *asv_info);
 
 #endif /* __ASM_ARCH_ASV_H */

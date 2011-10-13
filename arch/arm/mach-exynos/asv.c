@@ -108,6 +108,8 @@ static int __init exynos4_asv_init(void)
 
 	if (soc_is_exynos4210())
 		ret = exynos4210_asv_init(exynos_asv);
+	else if (soc_is_exynos4412() || soc_is_exynos4212())
+		ret = exynos4x12_asv_init(exynos_asv);
 	else {
 		pr_info("EXYNOS: There is no type for ASV\n");
 		goto out2;
@@ -120,21 +122,37 @@ static int __init exynos4_asv_init(void)
 		}
 	}
 
-	if (get_hpm_value(exynos_asv)) {
+	/* Get HPM Delay value */
+	if (exynos_asv->get_hpm) {
+		if (exynos_asv->get_hpm(exynos_asv)) {
+			pr_info("EXYNOS: Fail to get HPM Value\n");
+			goto out2;
+		}
+	} else if (get_hpm_value(exynos_asv)) {
 		pr_info("EXYNOS: Fail to get HPM Value\n");
 		goto out2;
 	}
 
-	if (get_ids_value(exynos_asv)) {
+	/* Get IDS ARM Value */
+	if (exynos_asv->get_ids) {
+		if (exynos_asv->get_ids(exynos_asv)) {
+			pr_info("EXYNOS: Fail to get IDS Value\n");
+			goto out2;
+		}
+	} else if (get_ids_value(exynos_asv)) {
 		pr_info("EXYNOS: Fail to get IDS Value\n");
 		goto out2;
 	}
 
-	if (!exynos_asv->store_result) {
+	if (exynos_asv->store_result) {
+		if (exynos_asv->store_result(exynos_asv)) {
+			pr_info("EXYNOS: Can not success to store result\n");
+			goto out2;
+		}
+	} else {
 		pr_info("EXYNOS: No store_result function\n");
 		goto out2;
-	} else
-		exynos_asv->store_result(exynos_asv);
+	}
 
 	return 0;
 out2:
