@@ -57,7 +57,7 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	unsigned long long dmc_load = 0;
 	unsigned long long bus_load = 0;
 
-	ppmu_all_update(ALL_DOMAIN);
+	ppmu_update(data->dev);
 
 	cpu_load = ppmu_load[PPMU_CPU];
 	dmc_load = (ppmu_load[PPMU_DMC0] + ppmu_load[PPMU_DMC1]) / 2;
@@ -77,8 +77,6 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 
 	opp = opp_find_freq_ceil(data->dev, &newfreq);
 
-	newfreq = opp_get_freq(opp);
-
 	return opp;
 }
 
@@ -95,7 +93,7 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 
 	opp = busfreq_monitor(data);
 
-	ppmu_all_start(data->dev);
+	ppmu_start(data->dev);
 
 	newfreq = opp_get_freq(opp);
 
@@ -291,7 +289,7 @@ static __devexit int exynos4_busfreq_remove(struct platform_device *pdev)
 
 static int exynos4_busfreq_resume(struct device *dev)
 {
-	ppmu_reset();
+	ppmu_reset(dev);
 	return 0;
 }
 

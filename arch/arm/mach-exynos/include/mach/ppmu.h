@@ -87,7 +87,7 @@ enum exynos4_ppmu {
 	PPMU_END,
 };
 
-extern unsigned long long ppmu_load[PPMU_MFC_R];
+extern unsigned long long ppmu_load[PPMU_END];
 
 struct exynos4_ppmu_hw {
 	struct list_head node;
@@ -97,7 +97,6 @@ struct exynos4_ppmu_hw {
 	unsigned int weight;
 	int usage;
 	int id;
-	unsigned int flags;
 	struct device *dev;
 	unsigned int count[NUMBER_OF_COUNTER];
 };
@@ -116,13 +115,11 @@ void exynos4_ppmu_setevent(struct exynos4_ppmu_hw *ppmu,
 				   unsigned int evt_num);
 unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu);
 
-unsigned long long ppmu_update(struct device *dev);
-void ppmu_start(struct device *dev);
 void ppmu_init(struct exynos4_ppmu_hw *ppmu, struct device *dev);
+void ppmu_start(struct device *dev);
+void ppmu_update(struct device *dev);
+void ppmu_reset(struct device *dev);
 
-void ppmu_reset(void);
-void ppmu_all_start(struct device *dev);
-void ppmu_all_update(unsigned int flag);
 extern struct exynos4_ppmu_hw exynos_ppmu[];
 #endif /* __ASM_ARCH_PPMU_H */
 
