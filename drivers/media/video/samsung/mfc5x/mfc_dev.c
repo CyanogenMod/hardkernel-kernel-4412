@@ -110,6 +110,13 @@ static int mfc_open(struct inode *inode, struct file *file)
 
 	mutex_lock(&mfcdev->lock);
 
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	if (mfcdev->drm_playback) {
+		mfc_err("DRM playback was activated, cannot open no more instance\n");
+		ret = -EINVAL;
+		goto err_drm_playback;
+	}
+#endif
 	if (!mfcdev->fw.state) {
 		if (mfcdev->fw.requesting) {
 			printk(KERN_INFO "MFC F/W request is on-going, try again\n");
@@ -140,6 +147,8 @@ static int mfc_open(struct inode *inode, struct file *file)
 			}
 		} else {
 			clear_magic(mfcdev->drm_info.addr);
+
+			mfcdev->drm_playback = 1;
 		}
 #else
 		/* reload F/W for first instance again */
@@ -222,6 +231,9 @@ err_start_hw:
 
 err_pwr_enable:
 err_fw_state:
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+err_drm_playback:
+#endif
 	mutex_unlock(&mfcdev->lock);
 
 	return ret;
@@ -252,6 +264,10 @@ static int mfc_release(struct inode *inode, struct file *file)
 			mfc_dbg("[%s] Bus Freq lock Released Normal!\n", __func__);
 		}
 	}
+#endif
+
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	mfcdev->drm_playback = 0;
 #endif
 
 	file->private_data = NULL;
