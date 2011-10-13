@@ -183,9 +183,10 @@ void exynos4_cpu_suspend(void)
 	unsigned int tmp;
 
 	if ((!soc_is_exynos4210()) && (exynos4_is_c2c_use())) {
-		/* Gating CLK_IEM_APC */
+		/* Gating CLK_IEM_APC & Enable CLK_SSS */
 		tmp = __raw_readl(EXYNOS4_CLKGATE_IP_DMC);
 		tmp &= ~(0x1 << 17);
+		tmp |= (0x1 << 4);
 		__raw_writel(tmp, EXYNOS4_CLKGATE_IP_DMC);
 
 		/* Set MAX divider for PWI */
@@ -346,6 +347,14 @@ static void exynos4_pm_resume(void)
 
 	if (!exynos4_is_c2c_use())
 		s3c_pm_do_restore_core(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
+	else {
+		if (!soc_is_exynos4210()) {
+			/* Gating CLK_SSS */
+			tmp = __raw_readl(EXYNOS4_CLKGATE_IP_DMC);
+			tmp &= ~(0x1 << 4);
+			__raw_writel(tmp, EXYNOS4_CLKGATE_IP_DMC);
+		}
+	}
 
 	exynos4_scu_enable(S5P_VA_SCU);
 
