@@ -1384,7 +1384,7 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 	unsigned int real_size, virt_size, size;
 	struct fb_info *fbi = win->fbinfo;
 	dma_addr_t map_dma;
-#ifdef CONFIG_S5P_MEM_CMA
+#if defined(CONFIG_S5P_MEM_CMA) && !defined(CONFIG_ION_EXYNOS)
 	struct cma_info mem_info;
 	int err;
 #endif
