@@ -72,6 +72,21 @@ static int __maybe_unused exynos4212_clk_bus_perir_ctrl(struct clk *clk, int ena
 	return s5p_gatectrl(EXYNOS4_CLKGATE_BUS_PERIR, clk, enable);
 }
 
+static int exynos4_clk_ip_isp_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_ISP, clk, enable);
+}
+
+static int exynos4_clk_ip_isp0_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_ISP0, clk, enable);
+}
+
+static int __maybe_unused exynos4_clk_ip_isp1_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_ISP1, clk, enable);
+}
+
 static struct clk *exynos4212_clk_src_mpll_user_list[] = {
 	[0] = &clk_fin_mpll,
 	[1] = &exynos4_clk_mout_mpll.clk,
@@ -297,7 +312,7 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.ctrlbit	= (1 << 10),
 	}, {
 		.name		= "ppmutv",
-		.enable		= exynos4_clksrc_gate_isp0_ctrl,
+		.enable		= exynos4_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 20 || 1 << 21),
 	},
 };
@@ -329,7 +344,7 @@ static struct clksrc_clk exynos4212_clk_isp_srcs_div0 = {
 	.clk		= {
 		.name		= "sclk_mcuisp_div0",
 		.parent		= &exynos4212_clk_aclk_400.clk,
-		.enable		= exynos4_clksrc_gate_isp0_ctrl,
+		.enable		= exynos4_clk_ip_isp0_ctrl,
 		.ctrlbit	= (0xFFFFFFFF << 0),
 	},
 	.reg_div = { .reg = EXYNOS4_CLKDIV_ISP1, .shift = 4, .size = 3 },
@@ -357,7 +372,7 @@ static struct clksrc_clk exynos4212_clk_isp_srcs[] = {
 	}, {
 		.clk		= {
 			.name		= "sclk_uart_isp",
-			.enable		= exynos4_clksrc_gate_isp_ctrl,
+			.enable		= exynos4_clk_ip_isp_ctrl,
 			.ctrlbit	= (1 << 3),
 		},
 		.sources = &exynos4_clkset_group,
@@ -366,7 +381,7 @@ static struct clksrc_clk exynos4212_clk_isp_srcs[] = {
 	}, {
 		.clk		= {
 			.name		= "sclk_pwm_isp",
-			.enable		= exynos4_clksrc_gate_isp_ctrl,
+			.enable		= exynos4_clk_ip_isp_ctrl,
 			.ctrlbit	= (1 << 0),
 		},
 		.sources = &exynos4_clkset_group,
