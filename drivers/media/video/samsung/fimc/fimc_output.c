@@ -2419,9 +2419,9 @@ void fimc_output_cache_flush(struct fimc_ctx *ctx, u32 idx)
 	int i;
 	size_t length = 0;
 
-	length += ctx->src[idx].base[FIMC_ADDR_Y];
-	length += ctx->src[idx].base[FIMC_ADDR_CB];
-	length += ctx->src[idx].base[FIMC_ADDR_CR];
+	length += ctx->src[idx].length[FIMC_ADDR_Y];
+	length += ctx->src[idx].length[FIMC_ADDR_CB];
+	length += ctx->src[idx].length[FIMC_ADDR_CR];
 
 	if (length > (unsigned long) L2_FLUSH_ALL) {
 		flush_cache_all();      /* L1 */
