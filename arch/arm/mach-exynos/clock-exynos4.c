@@ -130,10 +130,6 @@ static struct clk exynos4_clk_sclk_xusbxti = {
 	.name           = "sclk_usbphy1",
 };
 
-static struct clk exynos4_clk_audiocdclk0 = {
-	.name           = "audiocdclk",
-};
-
 static struct clk exynos4_clk_audiocdclk1 = {
 	.name           = "audiocdclk",
 };
@@ -277,6 +273,13 @@ struct clksrc_clk exynos4_clk_sclk_apll = {
 		.parent		= &exynos4_clk_mout_apll.clk,
 	},
 	.reg_div = { .reg = EXYNOS4_CLKDIV_CPU, .shift = 24, .size = 3 },
+};
+
+struct clksrc_clk exynos4_clk_audiocdclk0 = {
+	.clk	= {
+		.name		= "audiocdclk",
+		.rate		= 16934400,
+	},
 };
 
 struct clksrc_clk exynos4_clk_mout_epll = {
@@ -969,7 +972,7 @@ static struct clk exynos4_i2cs_clocks[] = {
 };
 
 static struct clk *clkset_sclk_audio0_list[] = {
-	[0] = &exynos4_clk_audiocdclk0,
+	[0] = &exynos4_clk_audiocdclk0.clk,
 	[1] = NULL,
 	[2] = &exynos4_clk_sclk_hdmi27m,
 	[3] = &exynos4_clk_sclk_usbphy0,
@@ -1016,7 +1019,7 @@ static struct clksrc_clk exynos4_clk_mout_audss = {
 
 static struct clk *exynos4_clkset_sclk_audss_list[] = {
 	&exynos4_clk_mout_audss.clk,
-	&exynos4_clk_audiocdclk0,
+	&exynos4_clk_audiocdclk0.clk,
 	&exynos4_clk_sclk_audio0.clk,
 };
 
@@ -1723,6 +1726,7 @@ static struct clksrc_clk exynos4_clksrcs[] = {
 
 /* Clock initialization code */
 static struct clksrc_clk *exynos4_sysclks[] = {
+	&exynos4_clk_audiocdclk0,
 	&exynos4_clk_mout_apll,
 	&exynos4_clk_sclk_apll,
 	&exynos4_clk_mout_epll,
@@ -1975,9 +1979,17 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	if (clk_set_parent(&exynos4_clk_mout_audss.clk, &clk_fout_epll))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				clk_fout_epll.name, exynos4_clk_mout_audss.clk.name);
+
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
 	if (clk_set_parent(&exynos4_clk_sclk_audio0.clk, &exynos4_clk_mout_epll.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				exynos4_clk_mout_epll.clk.name, exynos4_clk_sclk_audio0.clk.name);
+#else /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+	if (clk_set_parent(&exynos4_clk_sclk_audio0.clk, &exynos4_clk_audiocdclk0.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos4_clk_audiocdclk0.clk.name, exynos4_clk_sclk_audio0.clk.name);
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+
 	if (clk_set_parent(&exynos4_clk_sclk_audio1.clk, &exynos4_clk_mout_epll.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				exynos4_clk_mout_epll.clk.name, exynos4_clk_sclk_audio1.clk.name);
