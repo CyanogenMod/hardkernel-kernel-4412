@@ -25,6 +25,7 @@
 #include <plat/clock.h>
 #include <plat/devs.h>
 #include <plat/fb.h>
+#include <plat/dp.h>
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 #include <plat/s5p-mfc.h>
 #endif
@@ -76,6 +77,22 @@ static struct s3c2410_uartcfg fpga5210_uartcfgs[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_S5P_DP
+static struct s3c_fb_pd_win smdkc210_fb_win0 = {
+	.win_mode = {
+		.left_margin	= 98,
+		.right_margin	= 48,
+		.upper_margin	= 23,
+		.lower_margin	= 1,
+		.hsync_len	= 128,
+		.vsync_len	= 4,
+		.xres		= 800,
+		.yres		= 600,
+	},
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+#else
 static struct s3c_fb_pd_win smdkc210_fb_win0 = {
 	.win_mode = {
 		.left_margin	= 13,
@@ -90,14 +107,84 @@ static struct s3c_fb_pd_win smdkc210_fb_win0 = {
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
+#endif
+
+static void exynos_fimd_gpio_setup(void)
+{
+	unsigned int reg = 0;
+
+	reg = __raw_readl(S3C_VA_SYS + 0x0214);
+	reg |= (1 << 15);
+	__raw_writel(reg, S3C_VA_SYS + 0x0214);
+}
 
 static struct s3c_fb_platdata smdkc210_lcd1_pdata __initdata = {
 	.win[0]		= &smdkc210_fb_win0,
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
+#ifdef CONFIG_S5P_DP
+	.vidcon1	= VIDCON1_INV_VCLK,
+#else
 	.vidcon1	= VIDCON1_INV_HSYNC | VIDCON1_INV_VSYNC,
+#endif
+	.setup_gpio	= exynos_fimd_gpio_setup,
 };
 
+#ifdef CONFIG_S5P_DP
+static struct video_info fpga5210_dp_config = {
+	.name			= "DELL U2410, for FPGA TEST",
+
+	.h_total		= 1074,
+	.h_active		= 800,
+	.h_sync_width		= 128,
+	.h_back_porch		= 98,
+	.h_front_porch		= 48,
+
+	.v_total		= 628,
+	.v_active		= 600,
+	.v_sync_width		= 4,
+	.v_back_porch		= 23,
+	.v_front_porch		= 1,
+
+	.v_sync_rate		= 5,
+
+	.mvid			= 0,
+	.nvid			= 0,
+
+	.h_sync_polarity	= 0,
+	.v_sync_polarity	= 0,
+	.interlaced		= 0,
+
+	.color_space		= COLOR_RGB,
+	.dynamic_range		= VESA,
+	.ycbcr_coeff		= COLOR_YCBCR601,
+	.color_depth		= COLOR_8,
+
+	.sync_clock		= 0,
+	.even_field		= 0,
+
+	.refresh_denominator	= REFRESH_DENOMINATOR_1,
+
+	.test_pattern		= COLORBAR_32,
+	.link_rate		= LINK_RATE_1_62GBPS,
+	.lane_count		= LANE_COUNT1,
+
+	.video_mute_on		= 0,
+
+	.master_mode		= 0,
+	.bist_mode		= 0,
+};
+
+static struct s5p_dp_platdata fpga5210_dp_data __initdata = {
+	.video_info	= &fpga5210_dp_config,
+	.phy_init	= s5p_dp_phy_init,
+	.phy_exit	= s5p_dp_phy_exit,
+};
+#endif
+
 static struct platform_device *fpga5210_devices[] __initdata = {
+#ifdef CONFIG_S5P_DP
+	&s5p_device_dp,
+#endif
 	&s5p_device_fimd1,
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	&s5p_device_mfc,
@@ -156,6 +243,9 @@ static void __init fpga5210_map_io(void)
 static void __init fpga5210_machine_init(void)
 {
 	s5p_fimd1_set_platdata(&smdkc210_lcd1_pdata);
+#ifdef CONFIG_S5P_DP
+	s5p_dp_set_platdata(&fpga5210_dp_data);
+#endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	s5p_mfc_setname(&s5p_device_mfc, "s5p-mfc-v6");
 #endif
