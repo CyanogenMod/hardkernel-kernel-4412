@@ -91,6 +91,10 @@ config SND_SOC_SAMSUNG_SMDK_WM8994_PCM
 	help
 	  Say Y if you want to add support for SoC audio on the SMDK.
 
+config SND_SAMSUNG_PCM_USE_EPLL
+	bool "PCM use epll clock"
+	depends on SND_SAMSUNG_PCM
+
 config SND_SOC_SAMSUNG_SMDK2443_WM9710
 	tristate "SoC AC97 Audio support for SMDK2443 - WM9710"
 	depends on SND_SOC_SAMSUNG && MACH_SMDK2443

@@ -42,6 +42,7 @@
 /* SMDK has a 16.934MHZ crystal attached to WM8994 */
 #define SMDK_WM8994_FREQ 16934000
 
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
 static int set_epll_rate(unsigned long rate)
 {
 	struct clk *fout_epll;
@@ -61,6 +62,7 @@ out:
 
 	return 0;
 }
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
 
 static int smdk_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_hw_params *params)
@@ -68,9 +70,12 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
 	unsigned long epll_out_rate;
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
 	int rfs, ret;
 
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
 	switch (params_rate(params)) {
 	case 8000:
 	case 12000:
@@ -93,6 +98,7 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 			__func__, __LINE__, params_rate(params));
 		return -EINVAL;
 	}
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
 
 	switch (params_rate(params)) {
 	case 16000:
@@ -103,7 +109,11 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 	case 48000:
 	case 96000:
 	case 24000:
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
 			rfs = 256;
+#else /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+			rfs = 384;
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
 		break;
 	case 64000:
 		rfs = 384;
@@ -125,17 +135,18 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 	/* Set the codec DAI configuration */
 	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_DSP_B
 				| SND_SOC_DAIFMT_IB_NF
-					 | SND_SOC_DAIFMT_CBS_CFS);
+				| SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
 		return ret;
 
 	/* Set the cpu DAI configuration */
 	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_DSP_B
 				| SND_SOC_DAIFMT_IB_NF
-					 | SND_SOC_DAIFMT_CBS_CFS);
+				| SND_SOC_DAIFMT_CBS_CFS);
 	if (ret < 0)
 		return ret;
 
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
 	/*
 	 * Samsung SoCs PCM has no MCLK(rclk) output support, so codec
 	 * should have to make its own MCLK with FLL(or PLL) from other
@@ -153,11 +164,20 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 				params_rate(params)*rfs);
 	if (ret < 0)
 		return ret;
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
 
+	ret = snd_soc_dai_set_sysclk(codec_dai, WM8994_SYSCLK_MCLK1,
+					params_rate(params)*rfs,
+					SND_SOC_CLOCK_IN);
+	if (ret < 0)
+		return ret;
+
+#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
 	/* Set EPLL clock rate */
 	ret = set_epll_rate(epll_out_rate);
 	if (ret < 0)
 		return ret;
+#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
 
 	/* Set SCLK_DIV for making bclk */
 	ret = snd_soc_dai_set_clkdiv(cpu_dai, S3C_PCM_SCLK_PER_FS, rfs);
