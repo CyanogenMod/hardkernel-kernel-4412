@@ -1973,6 +1973,10 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		}
 	}
 
+#ifdef CONFIG_S5P_DP
+	writel(DPCLKCON_ENABLE, sfb->regs + DPCLKCON);
+#endif
+
 	platform_set_drvdata(pdev, sfb);
 	pm_runtime_put_sync(sfb->dev);
 
