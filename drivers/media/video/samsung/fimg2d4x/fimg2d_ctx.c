@@ -29,7 +29,7 @@ static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 
 	if (u->scaling) {
 		fimg2d_debug("scaling mode: %d, factor: %d, percent(w:%d, h:%d)"
-				"pixel(s:%d,%d d:%d,%d)\n",
+				" pixel(s:%d,%d d:%d,%d)\n",
 				u->scaling->mode, u->scaling->factor,
 				u->scaling->scale_w, u->scaling->scale_h,
 				u->scaling->src_w, u->scaling->src_h,
@@ -216,7 +216,6 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 		cmd->dst_rect.y2 = cmd->dst.height;
 	}
 
-#ifdef ENABLE_CLIPPING
 	/* fix up clip rect */
 	if (cmd->clipping.enable) {
 		/* fit to smaller dst region  as a clip rect */
@@ -241,38 +240,6 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 			cmd->clipping.y2 = cmd->dst_rect.y2;
 		}
 	}
-#else
-	/*
-	 * Contrary to G2D 3.1, there's no need to use clipping in G2D 4.1
-	 * G2D 3.1 needs clipping to scale up or down, but G2D 4.1 does not.
-	 */
-	if (cmd->clipping.enable) {
-		/* fit to smaller clip region as a dst rect */
-		if (cmd->clipping.x1 > cmd->dst_rect.x1) {
-			fimg2d_debug("fixing up dst(clip) coord x1: %d --> %d\n",
-					cmd->dst_rect.x1, cmd->clipping.x1);
-			cmd->dst_rect.x1 = cmd->clipping.x1;
-		}
-		if (cmd->clipping.y1 > cmd->dst_rect.y1) {
-			fimg2d_debug("fixing up dst(clip) coord y1: %d --> %d\n",
-					cmd->dst_rect.y1, cmd->clipping.y1);
-			cmd->dst_rect.y1 = cmd->clipping.y1;
-		}
-		if (cmd->clipping.x2 < cmd->dst_rect.x2) {
-			fimg2d_debug("fixing up dst(clip) coord x2: %d --> %d\n",
-					cmd->dst_rect.x2, cmd->clipping.x2);
-			cmd->dst_rect.x2 = cmd->clipping.x2;
-		}
-		if (cmd->clipping.y2 < cmd->dst_rect.y2) {
-			fimg2d_debug("fixing up dst(clip) coord y2: %d --> %d\n",
-					cmd->clipping.y2, cmd->dst_rect.y2);
-			cmd->dst_rect.y2 = cmd->clipping.y2;
-		}
-
-		/* disable clipping */
-		cmd->clipping.enable = false;
-	}
-#endif
 }
 
 static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
