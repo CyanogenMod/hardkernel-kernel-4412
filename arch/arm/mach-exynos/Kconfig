@@ -99,6 +99,11 @@ config EXYNOS4_SETUP_FIMD
 	help
 	  Common setup code for FIMD.
 
+config EXYNOS4_SETUP_DP
+	bool
+	help
+	  Common setup code for DP.
+
 config EXYNOS4_DEV_PD
 	bool
 	help

@@ -175,6 +175,8 @@ extern struct platform_device s5p_device_mipi_csis1;
 extern struct platform_device s3c_device_csis0;
 extern struct platform_device s3c_device_csis1;
 #endif
+extern struct platform_device s5p_device_dp;
+
 extern struct platform_device s5p_device_jpeg;
 extern struct platform_device s5p_device_tvout;
 extern struct platform_device s5p_device_cec;

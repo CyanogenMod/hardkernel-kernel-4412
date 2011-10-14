@@ -36,6 +36,7 @@ obj-$(CONFIG_S5P_DEV_FIMC3)	+= dev-fimc3.o
 obj-$(CONFIG_S5P_DEV_MFC)	+= dev-mfc.o
 obj-$(CONFIG_S5P_DEV_FIMD0)	+= dev-fimd0.o
 obj-$(CONFIG_S5P_DEV_FIMD1)	+= dev-fimd1.o
+obj-$(CONFIG_S5P_DEV_DP)	+= dev-dp.o
 obj-$(CONFIG_S5P_DEV_FIMD_S5P)	+= dev-fimd-s5p.o
 obj-$(CONFIG_S5P_DEV_TVOUT)	+= dev-tvout.o
 obj-$(CONFIG_S5P_DEV_FIMG2D)	+= dev-fimg2d.o

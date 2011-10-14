@@ -105,6 +105,11 @@ config S5P_DEV_FIMD1
 	help
 	  Compile in platform device definitions for FIMD controller 1
 
+config S5P_DEV_DP
+	bool
+	help
+	  Compile in platform device definitions for DP controller
+
 config S5P_DEV_TVOUT
 	bool
 	help
