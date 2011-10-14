@@ -755,8 +755,8 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 
 	/* Start Transfer */
 	epcmd->ep = get_phys_epnum(udc_ep);
-	epcmd->param0 = (u32) virt_to_phys(&udc_req->trb);
-	epcmd->param1 = 0;
+	epcmd->param0 = 0;
+	epcmd->param1 = (u32) virt_to_phys(&udc_req->trb);
 	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTRTXFER;
 	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
