@@ -443,7 +443,7 @@ static struct samsung_bl_gpio_info smdk5210_bl_gpio_info = {
 };
 
 static struct platform_pwm_backlight_data smdk5210_bl_data = {
-	.pwm_id = 1,
+	.pwm_id = 0,
 #if defined(CONFIG_LCD_LMS501KF03)
 	.pwm_period_ns  = 1000,
 #endif
