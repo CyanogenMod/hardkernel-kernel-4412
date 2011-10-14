@@ -333,40 +333,34 @@ void fimg2d4x_enable_dithering(struct fimg2d_control *info)
 #define MAX_PRECISION 16
 
 /**
- * scale_factor_to_fixed16 - convert scaling factor to fixed pint 16
+ * scale_factor_to_fixed16 - convert scale factor to fixed pint 16
+ * @n: numerator
+ * @d: denominator
  */
-static unsigned long scale_factor_to_fixed16(int percental_factor)
+inline static unsigned long scale_factor_to_fixed16(int n, int d)
 {
 	int i;
-	unsigned long fixed16;
-	unsigned long intg;
-	unsigned short frac;
-	unsigned short temp;
+	u32 fixed16;
 
-	intg = percental_factor/100;
-	frac = 0;
-	temp = percental_factor%100;
+	fixed16 = (n/d) << 16;
+	n %= d;
 
 	for (i = 0; i < MAX_PRECISION; i++) {
-		if (temp == 0 || temp == 100)
+		if (!n)
 			break;
-
-		if (temp >= 50) {
-			frac |= 1 << (15-i);
-			temp -= 50;
-		}
-		temp <<= 1;
+		n <<= 1;
+		if (n/d)
+			fixed16 |= 1 << (15-i);
+		n %= d;
 	}
-
-	fixed16 = (intg << 16) | frac;
 
 	return fixed16;
 }
 
 void fimg2d4x_set_src_scaling(struct fimg2d_control *info, struct fimg2d_scale *s)
 {
-	int xinv, yinv;
-	unsigned long xcfg, ycfg;
+	int src_w, src_h, dst_w, dst_h;
+	unsigned long wcfg, hcfg;
 	unsigned long mode;
 
 	/* scaling algorithm */
@@ -378,28 +372,41 @@ void fimg2d4x_set_src_scaling(struct fimg2d_control *info, struct fimg2d_scale *
 	writel(mode, info->regs + FIMG2D_SRC_SCALE_CTRL_REG);
 
 	if (s->factor == SCALING_PERCENTAGE) {
-		/* inversed percental scaling factor:
-		 * scale-up 200%->50, scale-down 50%->200 */
-		xinv = 10000/s->scale_w;
-		yinv = 10000/s->scale_h;
+		/*
+		 * percental scaling factor
+		 * e.g scale-up: 200% --> src scaling factor: 0.5 (0x000080000)
+		 * e.g scale-down: 50% --> src scaling factor: 2.0 (0x00020000)
+		 */
+		src_w = 100;
+		src_h = 100;
+
+		dst_w = s->scale_w;
+		dst_h = s->scale_h;
 	} else {
-		/* inversed percental scaling factor */
-		xinv = (s->src_w*100)/s->dst_w;
-		yinv = (s->src_h*100)/s->dst_h;
+		/*
+		 * pixels scaling factor
+		 * e.g scale-up: src(1,1)-->dst(2,2), src scaling factor: 0.5 (0x000080000)
+		 * e.g scale-down: src(2,2)-->dst(1,1), src scaling factor: 2.0 (0x000200000)
+		 */
+		src_w = s->src_w * 100;
+		src_h = s->src_h * 100;
+
+		dst_w = s->dst_w * 100;
+		dst_h = s->dst_h * 100;
 	}
 
-	/* convert inversed scaling factor to fixed point 16 */
-	xcfg = scale_factor_to_fixed16(xinv);
-	ycfg = scale_factor_to_fixed16(yinv);
+	/* inversed scaling factor: src is numerator */
+	wcfg = scale_factor_to_fixed16(src_w, dst_w);
+	hcfg = scale_factor_to_fixed16(src_h, dst_h);
 
-	writel(xcfg, info->regs + FIMG2D_SRC_XSCALE_REG);
-	writel(ycfg, info->regs + FIMG2D_SRC_YSCALE_REG);
+	writel(wcfg, info->regs + FIMG2D_SRC_XSCALE_REG);
+	writel(hcfg, info->regs + FIMG2D_SRC_YSCALE_REG);
 }
 
 void fimg2d4x_set_msk_scaling(struct fimg2d_control *info, struct fimg2d_scale *s)
 {
-	int xinv, yinv;
-	unsigned long xcfg, ycfg;
+	int src_w, src_h, dst_w, dst_h;
+	unsigned long wcfg, hcfg;
 	unsigned long mode;
 
 	/* scaling algorithm */
@@ -411,22 +418,35 @@ void fimg2d4x_set_msk_scaling(struct fimg2d_control *info, struct fimg2d_scale *
 	writel(mode, info->regs + FIMG2D_MSK_SCALE_CTRL_REG);
 
 	if (s->factor == SCALING_PERCENTAGE) {
-		/* inversed percental scaling factor:
-		 * scale-up 200%->50, scale-down 50%->200 */
-		xinv = 10000/s->scale_w;
-		yinv = 10000/s->scale_h;
+		/*
+		 * percental scaling factor
+		 * e.g scale-up: 200% --> msk scaling factor: 0.5 (0x000080000)
+		 * e.g scale-down: 50% --> msk scaling factor: 2.0 (0x00020000)
+		 */
+		src_w = 100;
+		src_h = 100;
+
+		dst_w = s->scale_w;
+		dst_h = s->scale_h;
 	} else {
-		/* inversed percental scaling factor */
-		xinv = (s->src_w*100)/s->dst_w;
-		yinv = (s->src_h*100)/s->dst_h;
+		/*
+		 * pixels scaling factor
+		 * e.g scale-up: src(1,1)-->dst(2,2), msk scaling factor: 0.5 (0x000080000)
+		 * e.g scale-down: src(2,2)-->dst(1,1), msk scaling factor: 2.0 (0x000200000)
+		 */
+		src_w = s->src_w * 100;
+		src_h = s->src_h * 100;
+
+		dst_w = s->dst_w * 100;
+		dst_h = s->dst_h * 100;
 	}
 
-	/* convert inversed percental scaling factor to fixed point 16 */
-	xcfg = scale_factor_to_fixed16(xinv);
-	ycfg = scale_factor_to_fixed16(yinv);
+	/* inversed scaling factor: src is numerator */
+	wcfg = scale_factor_to_fixed16(src_w, dst_w);
+	hcfg = scale_factor_to_fixed16(src_h, dst_h);
 
-	writel(xcfg, info->regs + FIMG2D_MSK_XSCALE_REG);
-	writel(ycfg, info->regs + FIMG2D_MSK_YSCALE_REG);
+	writel(wcfg, info->regs + FIMG2D_MSK_XSCALE_REG);
+	writel(hcfg, info->regs + FIMG2D_MSK_YSCALE_REG);
 }
 
 void fimg2d4x_set_src_repeat(struct fimg2d_control *info, struct fimg2d_repeat *r)
