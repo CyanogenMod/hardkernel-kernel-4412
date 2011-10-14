@@ -20,6 +20,7 @@
 #include <linux/cma.h>
 #include <linux/memblock.h>
 #include <linux/mmc/host.h>
+#include <linux/smsc911x.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -40,6 +41,7 @@
 #include <plat/s5p-mfc.h>
 #endif
 #include <plat/sdhci.h>
+#include <plat/regs-srom.h>
 
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
@@ -91,6 +93,37 @@ static struct s3c2410_uartcfg smdk5210_uartcfgs[] __initdata = {
 		.ucon		= SMDK5210_UCON_DEFAULT,
 		.ulcon		= SMDK5210_ULCON_DEFAULT,
 		.ufcon		= SMDK5210_UFCON_DEFAULT,
+	},
+};
+
+static struct resource smdk5210_smsc911x_resources[] = {
+	[0] = {
+		.start	= EXYNOS4_PA_SROM_BANK(1),
+		.end	= EXYNOS4_PA_SROM_BANK(1) + SZ_64K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IRQ_EINT(5),
+		.end	= IRQ_EINT(5),
+		.flags	= IORESOURCE_IRQ | IRQF_TRIGGER_LOW,
+	},
+};
+
+static struct smsc911x_platform_config smsc9215_config = {
+	.irq_polarity	= SMSC911X_IRQ_POLARITY_ACTIVE_LOW,
+	.irq_type	= SMSC911X_IRQ_TYPE_PUSH_PULL,
+	.flags		= SMSC911X_USE_16BIT | SMSC911X_FORCE_INTERNAL_PHY,
+	.phy_interface	= PHY_INTERFACE_MODE_MII,
+	.mac		= {0x00, 0x80, 0x00, 0x23, 0x45, 0x67},
+};
+
+static struct platform_device smdk5210_smsc911x = {
+	.name		= "smsc911x",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(smdk5210_smsc911x_resources),
+	.resource	= smdk5210_smsc911x_resources,
+	.dev		= {
+		.platform_data	= &smsc9215_config,
 	},
 };
 
@@ -486,6 +519,7 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos4_device_dwmci,
 #endif
+	&smdk5210_smsc911x,
 };
 
 #ifdef CONFIG_SAMSUNG_DEV_BACKLIGHT
@@ -670,6 +704,29 @@ static void __init smdk5210_map_io(void)
 	exynos5_reserve_mem();
 }
 
+static void __init smdk5210_smsc911x_init(void)
+{
+	u32 cs1;
+
+	/* configure nCS1 width to 16 bits */
+	cs1 = __raw_readl(S5P_SROM_BW) &
+		~(S5P_SROM_BW__CS_MASK << S5P_SROM_BW__NCS1__SHIFT);
+	cs1 |= ((1 << S5P_SROM_BW__DATAWIDTH__SHIFT) |
+		(1 << S5P_SROM_BW__WAITENABLE__SHIFT) |
+		(1 << S5P_SROM_BW__BYTEENABLE__SHIFT)) <<
+		S5P_SROM_BW__NCS1__SHIFT;
+	__raw_writel(cs1, S5P_SROM_BW);
+
+	/* set timing for nCS1 suitable for ethernet chip */
+	__raw_writel((0x1 << S5P_SROM_BCX__PMC__SHIFT) |
+		     (0x9 << S5P_SROM_BCX__TACP__SHIFT) |
+		     (0xc << S5P_SROM_BCX__TCAH__SHIFT) |
+		     (0x1 << S5P_SROM_BCX__TCOH__SHIFT) |
+		     (0x6 << S5P_SROM_BCX__TACC__SHIFT) |
+		     (0x1 << S5P_SROM_BCX__TCOS__SHIFT) |
+		     (0x1 << S5P_SROM_BCX__TACS__SHIFT), S5P_SROM_BC1);
+}
+
 static void __init smdk5210_machine_init(void)
 {
 #ifdef CONFIG_FB_S3C
@@ -714,6 +771,7 @@ static void __init smdk5210_machine_init(void)
 	s3c_sdhci3_set_platdata(&smdk5210_hsmmc3_pdata);
 #endif
 
+	smdk5210_smsc911x_init();
 	platform_add_devices(smdk5210_devices, ARRAY_SIZE(smdk5210_devices));
 
 #ifdef CONFIG_FB_S3C
