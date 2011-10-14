@@ -614,9 +614,13 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 		return exynos4_enter_idle(dev, new_state);
 
 	enter_mode = exynos4_check_entermode();
-	if (enter_mode == S5P_CHECK_DIDLE)
-		return exynos4_enter_core0_aftr(dev, new_state);
-	else
+	if (enter_mode == S5P_CHECK_DIDLE) {
+		if (soc_is_exynos4210())
+			return exynos4_enter_core0_aftr(dev, new_state);
+		else
+			/* In this time, Exynos4x12 is not support aftr mode */
+			return exynos4_enter_idle(dev, new_state);
+	} else
 		return exynos4_enter_core0_lpa(dev, new_state);
 }
 
