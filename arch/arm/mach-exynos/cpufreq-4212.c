@@ -225,7 +225,7 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
  * ASV group voltage table
  */
 
-#define NUM_ASV_GROUP	1
+#define NUM_ASV_GROUP	2
 
 static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	/*
@@ -236,15 +236,15 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	 * @400  :
 	 * @200  :
 	 */
-	{ 1450000 },
-	{ 1375000 },
-	{ 1300000 },
-	{ 1250000 },
-	{ 1200000 },
-	{ 1100000 },
-	{ 1000000 },
-	{ 950000 },
-	{ 950000 },
+	{ 1500000, 1450000},
+	{ 1375000, 1375000},
+	{ 1350000, 1300000},
+	{ 1250000, 1250000},
+	{ 1200000, 1200000},
+	{ 1175000, 1100000},
+	{ 1050000, 1000000},
+	{ 1000000, 950000},
+	{ 950000, 950000},
 };
 
 static void set_clkdiv(unsigned int div_index)
@@ -411,13 +411,10 @@ static void __init set_volt_table(void)
 #ifdef CONFIG_EXYNOS4212_1500MHZ_SUPPORT
 	for_1500 = true;
 	max_support_idx = L0;
-	asv_group = 0;
 #else
 	max_support_idx = L5;
-	asv_group = 0;
-
 #endif
-
+	asv_group = __raw_readl(S5P_INFORM2);
 #endif
 	/*
 	 * Should be fixed !!!
