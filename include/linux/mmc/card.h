@@ -51,6 +51,7 @@ struct mmc_ext_csd {
 	u8			rel_param;
 	u8			part_config;
 	u8			rst_n_function;
+	u8			cache_ctrl;
 	unsigned int		part_time;		/* Units: ms */
 	unsigned int		sa_timeout;		/* Units: 100ns */
 	unsigned int		generic_cmd6_time;	/* Units: 10ms */
@@ -67,6 +68,7 @@ struct mmc_ext_csd {
 	unsigned long long	enhanced_area_offset;	/* Units: Byte */
 	unsigned int		enhanced_area_size;	/* Units: KB */
 	unsigned int		boot_size;		/* in bytes */
+	unsigned int		cache_size;		/* Units: KB */
 	u8			raw_partition_support;	/* 160 */
 	u8			raw_erased_mem_count;	/* 181 */
 	u8			raw_ext_csd_structure;	/* 194 */
