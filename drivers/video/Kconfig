@@ -2088,6 +2088,13 @@ config FB_S3C2410_DEBUG
 	  Turn on debugging messages. Note that you can set/unset at run time
 	  through sysfs
 
+config S5P_DP
+	tristate "Samsung SoC DP support"
+	depends on FB_S3C && ARCH_EXYNOS5
+	default n
+	---help---
+	  This enables support for DP device.
+
 config FB_NUC900
         bool "NUC900 LCD framebuffer support"
         depends on FB && ARCH_W90X900
