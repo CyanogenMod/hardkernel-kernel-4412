@@ -338,9 +338,10 @@ static bool exynos_ss_udc_issue_cmd(struct exynos_ss_udc *udc,
 	depcmd = epcmd->cmdtyp | epcmd->cmdflags;
 	writel(depcmd, udc->regs + EXYNOS_USB3_DEPCMD(epcmd->ep));
 
-	res = exynos_ss_udc_poll_bit_clear(udc->regs + EXYNOS_USB3_DEPCMD(0),
-					EXYNOS_USB3_DEPCMDx_CmdAct,
-					1000);
+	res = exynos_ss_udc_poll_bit_clear(udc->regs +
+					   EXYNOS_USB3_DEPCMD(epcmd->ep),
+					   EXYNOS_USB3_DEPCMDx_CmdAct,
+					   1000);
 	return res;
 }
 
@@ -763,7 +764,7 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 	if (!res)
 		dev_err(udc->dev, "Failed to start transfer\n");
 
-	udc_ep->tri = (readl(udc->regs + EXYNOS_USB3_DEPCMD(0)) >>
+	udc_ep->tri = (readl(udc->regs + EXYNOS_USB3_DEPCMD(epcmd->ep)) >>
 				EXYNOS_USB3_DEPCMDx_EventParam_SHIFT) &
 				EXYNOS_USB3_DEPCMDx_XferRscIdx_LIMIT;
 }
