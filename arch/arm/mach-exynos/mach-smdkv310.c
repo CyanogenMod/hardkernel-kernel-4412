@@ -2442,7 +2442,15 @@ static void __init smdkv310_machine_init(void)
 	mipi_fb_init();
 #endif
 
-#if defined(CONFIG_EXYNOS4_DEV_PD) && !defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+	exynos4_pd_disable(&exynos4_device_pd[PD_MFC].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_G3D].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_LCD0].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_LCD1].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_CAM].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_TV].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_GPS].dev);
+#elif defined(CONFIG_EXYNOS4_DEV_PD)
 	/*
 	 * These power domains should be always on
 	 * without runtime pm support.

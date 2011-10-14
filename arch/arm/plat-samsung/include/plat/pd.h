@@ -37,4 +37,5 @@ struct exynos4_pd_data {
 };
 
 int exynos4_pd_enable(struct device *dev);
+int exynos4_pd_disable(struct device *dev);
 #endif /* __ASM_PLAT_SAMSUNG_PD_H */

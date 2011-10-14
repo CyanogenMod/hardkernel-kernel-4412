@@ -2610,7 +2610,15 @@ static void __init smdk4212_machine_init(void)
 #endif
 	struct device *spi2_dev = &exynos4_device_spi2.dev;
 #endif
-#if defined(CONFIG_EXYNOS4_DEV_PD) && !defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+	exynos4_pd_disable(&exynos4_device_pd[PD_MFC].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_G3D].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_LCD0].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_CAM].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_TV].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_GPS].dev);
+	exynos4_pd_disable(&exynos4_device_pd[PD_ISP].dev);
+#elif defined(CONFIG_EXYNOS4_DEV_PD)
 	/*
 	 * These power domains should be always on
 	 * without runtime pm support.
@@ -2620,10 +2628,8 @@ static void __init smdk4212_machine_init(void)
 	exynos4_pd_enable(&exynos4_device_pd[PD_LCD0].dev);
 	exynos4_pd_enable(&exynos4_device_pd[PD_CAM].dev);
 	exynos4_pd_enable(&exynos4_device_pd[PD_TV].dev);
-	exynos4_pd_disable(&exynos4_device_pd[PD_GPS].dev);
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
+	exynos4_pd_enable(&exynos4_device_pd[PD_GPS].dev);
 	exynos4_pd_enable(&exynos4_device_pd[PD_ISP].dev);
-#endif
 #endif
 	s3c_i2c0_set_platdata(NULL);
 	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
