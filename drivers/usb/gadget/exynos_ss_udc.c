@@ -1384,16 +1384,13 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 {
 	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
 	u32 reg, speed;
-	int mps;
+	int mps0, mps;
+	int i;
 	bool res;
 
 	dev_dbg(udc->dev, "%s: connect done\n", __func__);
 
 	reg = readl(udc->regs + EXYNOS_USB3_DSTS);
-
-	/* TODO:
-	   1. program GCTL:RAMClkSel
-	 */
 	speed = reg & EXYNOS_USB3_DSTS_ConnectSpd_MASK;
 
 	/* Suspend the inactive Phy */
@@ -1408,28 +1405,36 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 	/* High-speed */
 	case 0:
 		udc->gadget.speed = USB_SPEED_HIGH;
-		mps = 64;
+		mps0 = 64;
+		mps = 512;
 		break;
 	/* Full-speed */
 	case 1:
 	case 3:
 		udc->gadget.speed = USB_SPEED_FULL;
+		mps0 = 64;
 		mps = 64;
 		break;
 	/* Low-speed */
 	case 2:
 		udc->gadget.speed = USB_SPEED_LOW;
+		mps0 = 8;
 		mps = 8;
 		break;
 	/* SuperSpeed */
 	case 4:
 		udc->gadget.speed = USB_SPEED_SUPER;
-		mps = 512;
+		mps0 = 512;
+		mps = 1024;
 		break;
 	}
 
+	udc->eps[0].ep.maxpacket = mps0;
+	for (i = 1; i < EXYNOS_USB3_EPS; i++)
+		udc->eps[i].ep.maxpacket = mps;
+
 	epcmd->ep = 0;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(mps);
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(mps0);
 	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
 			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
 	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
