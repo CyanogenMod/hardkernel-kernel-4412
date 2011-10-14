@@ -1747,6 +1747,44 @@ static void exynos_ss_udc_phy_init(struct exynos_ss_udc *udc)
 	__bic32(EXYNOS_USB3_PHYCLKRST, EXYNOS_USB3_PHYCLKRST_PORTRESET);
 }
 
+static void exynos_ss_udc_phy_set(struct exynos_ss_udc *udc)
+{
+	/* The reset values:
+	 *	GUSB2PHYCFG(0) 	= 0x00002400
+	 *	GUSB3PIPECTL(0)	= 0x00260002
+	 */
+
+	__orr32(udc->regs + EXYNOS_USB3_GCTL, EXYNOS_USB3_GCTL_CoreSoftReset);
+	__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+			    EXYNOS_USB3_GUSB2PHYCFGx_PHYSoftRst);
+	__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+			    EXYNOS_USB3_GUSB3PIPECTLx_PHYSoftRst);
+
+	/* PHY initialization */
+	exynos_ss_udc_phy_init(udc);
+
+	__bic32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+			    EXYNOS_USB3_GUSB2PHYCFGx_PHYSoftRst);
+	__bic32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+			    EXYNOS_USB3_GUSB3PIPECTLx_PHYSoftRst);
+	__bic32(udc->regs + EXYNOS_USB3_GCTL, EXYNOS_USB3_GCTL_CoreSoftReset);
+
+
+	__bic32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+		EXYNOS_USB3_GUSB2PHYCFGx_SusPHY |
+		EXYNOS_USB3_GUSB2PHYCFGx_EnblSlpM |
+		EXYNOS_USB3_GUSB2PHYCFGx_USBTrdTim_MASK);
+	__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+		EXYNOS_USB3_GUSB2PHYCFGx_USBTrdTim(9));
+
+	__bic32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+			    EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
+
+	dev_dbg(udc->dev, "GUSB2PHYCFG(0)=0x%08x, GUSB3PIPECTL(0)=0x%08x",
+		readl(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0)),
+		readl(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0)));
+}
+
 /**
  * exynos_ss_udc_corereset - issue softreset to the core
  * @udc: The device state
@@ -1945,49 +1983,39 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 {
 	u32 reg;
 
-	/* TODO: GSBUSCFG0/1 - are power-on values correct
-	   in coreConsultant? */
-
-	/* TODO: GTXTHRCFG/GRXTHRCFG - are power-on values correct
-	   in coreConsultant? */
-
 	reg = readl(udc->regs + EXYNOS_USB3_GSNPSID);
 	dev_info(udc->dev, "Core ID Number: 0x%04x\n", reg >> 16);
-	dev_info(udc->dev, "Release Number: %d\n", reg & 0xffff);
-	/* TODO: configure the driver for any version-specific features */
+	dev_info(udc->dev, "Release Number: 0x%04x\n", reg & 0xffff);
 
-	/* TODO: GUID - is this register selected for implementation
-	   in coreConsultant? */
-
-	/* TODO: GUSB2PHYCHG - are power-on values correct
-	   in coreConsultant? */
-
-	/* TODO: GUSB3PIPECTL - are power-on values correct
-	   in coreConsultatnt? */
-
-	/* TODO: GTXFIFOSIZn/GRXFIFOSIZ0 - will use default values? */
+	writel(EXYNOS_USB3_GSBUSCFG0_INCR16BrstEna,
+	       udc->regs + EXYNOS_USB3_GSBUSCFG0);
+	writel(EXYNOS_USB3_GSBUSCFG1_BREQLIMIT(3),
+	       udc->regs + EXYNOS_USB3_GSBUSCFG1);
 
 	/* Event buffer */
 	writel(0, udc->regs + EXYNOS_USB3_GEVNTADR_63_32(0));
 	writel(udc->event_buff_dma, udc->regs + EXYNOS_USB3_GEVNTADR_31_0(0));
-	/* Flush any pending events */
-	reg = readl(udc->regs + EXYNOS_USB3_GEVNTCOUNT(0));
-	writel(reg, udc->regs + EXYNOS_USB3_GEVNTCOUNT(0));
-	/* Enable Event Buffer interrupt and set Event Buffer size */
+	/* Set Event Buffer size */
 	writel(EXYNOS_USB3_EVENT_BUFF_BSIZE, udc->regs + EXYNOS_USB3_GEVNTSIZ(0));
 
-	/* TODO: GCTL - will use default values? */
+	writel(EXYNOS_USB3_DCFG_NumP(1) | EXYNOS_USB3_DCFG_PerFrInt(2) |
+	       EXYNOS_USB3_DCFG_DevSpd(4), udc->regs + EXYNOS_USB3_DCFG);
 
-	/* DCFG - will use default value (3'b100) for Device Speed */
+	/* Flush any pending events */
+	__orr32(udc->regs + EXYNOS_USB3_GEVNTSIZ(0),
+		EXYNOS_USB3_GEVNTSIZx_EvntIntMask);
+
+	reg = readl(udc->regs + EXYNOS_USB3_GEVNTCOUNT(0));
+	writel(reg, udc->regs + EXYNOS_USB3_GEVNTCOUNT(0));
+
+	__bic32(udc->regs + EXYNOS_USB3_GEVNTSIZ(0),
+		EXYNOS_USB3_GEVNTSIZx_EvntIntMask);
 
 	/* Enable events */
 	writel(EXYNOS_USB3_DEVTEN_ULStCngEn | EXYNOS_USB3_DEVTEN_ConnectDoneEn |
 		EXYNOS_USB3_DEVTEN_USBRstEn, udc->regs + EXYNOS_USB3_DEVTEN);
 
 	exynos_ss_udc_ep0_activate(udc);
-
-	/* According to documentation we need here to start transfer on
-	   Phys EP 0 and 1, but we will do it after USB Reset */
 
 	/* Start the device controller operation */
 	__orr32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_Run_Stop);
@@ -2212,10 +2240,8 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	/* reset the system */
 
 	clk_enable(udc->clk);
-	/* Need SoC datasheet */
 	exynos_ss_udc_gate(pdev, true);
-	exynos_ss_udc_phy_init(udc);
-	exynos_ss_udc_corereset(udc);
+	exynos_ss_udc_phy_set(udc);
 	
 
 	/* initialise the endpoints now the core has been initialised */
