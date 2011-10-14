@@ -2157,7 +2157,7 @@ static void __init exynos4_cma_region_reserve(
 		}
 	}
 
-	if (regions_secure) {
+	if (regions_secure && regions_secure->size) {
 		for (reg = regions_secure; reg->size != 0; reg++)
 			size_secure += reg->size;
 
