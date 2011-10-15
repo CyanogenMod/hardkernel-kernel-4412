@@ -405,7 +405,15 @@ static int jpeg_dec_m2m_reqbufs(struct file *file, void *priv,
 			  struct v4l2_requestbuffers *reqbufs)
 {
 	struct jpeg_ctx *ctx = priv;
-	ctx->dev->vb2->set_cacheable(ctx->dev->alloc_ctx, ctx->cacheable);
+	struct vb2_queue *vq;
+
+	if (ctx->input_cacheable == 1 || ctx->output_cacheable == 1) {
+		vq = v4l2_m2m_get_vq(ctx->m2m_ctx, reqbufs->type);
+		if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+			ctx->dev->vb2->set_cacheable(ctx->dev->alloc_ctx, ctx->input_cacheable);
+		else if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+			ctx->dev->vb2->set_cacheable(ctx->dev->alloc_ctx, ctx->output_cacheable);
+	}
 	return v4l2_m2m_reqbufs(file, ctx->m2m_ctx, reqbufs);
 }
 
@@ -456,13 +464,30 @@ static int jpeg_dec_vidioc_s_ctrl(struct file *file, void *priv,
 			struct v4l2_control *ctrl)
 {
 	struct jpeg_ctx *ctx = priv;
-
+/*
+*	0 : input/output noncacheable
+*	1 : input/output cacheable
+*	2 : input cacheable / output noncacheable
+*	3 : input noncacheable / output cacheable
+*/
 	switch (ctrl->id) {
 	case V4L2_CID_CACHEABLE:
-		if (ctrl->value == 0 || ctrl->value == 1)
-			ctx->cacheable = ctrl->value;
-		else
-			ctx->cacheable = 0;
+		if (ctrl->value == 0) {
+			ctx->input_cacheable = 0;
+			ctx->output_cacheable = 0;
+		} else if (ctrl->value == 1) {
+			ctx->input_cacheable = 1;
+			ctx->output_cacheable = 1;
+		} else if (ctrl->value == 2) {
+			ctx->input_cacheable = 1;
+			ctx->output_cacheable = 0;
+		} else if (ctrl->value == 3) {
+			ctx->input_cacheable = 0;
+			ctx->output_cacheable = 1;
+		} else {
+			ctx->input_cacheable = 0;
+			ctx->output_cacheable = 0;
+		}
 		break;
 	default:
 		v4l2_err(&ctx->dev->v4l2_dev, "Invalid control\n");

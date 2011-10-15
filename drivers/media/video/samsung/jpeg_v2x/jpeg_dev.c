@@ -138,13 +138,15 @@ static int jpeg_dec_buf_prepare(struct vb2_buffer *vb)
 
 	struct jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 
-	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		num_plane = ctx->param.dec_param.in_plane;
-	else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+		if (ctx->input_cacheable == 1)
+			ctx->dev->vb2->cache_flush(vb, num_plane);
+	} else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		num_plane = ctx->param.dec_param.out_plane;
-
-	if (ctx->cacheable == 1)
-		ctx->dev->vb2->cache_flush(vb, num_plane);
+		if (ctx->output_cacheable == 1)
+			ctx->dev->vb2->cache_flush(vb, num_plane);
+	}
 
 	for (i = 0; i < num_plane; i++)
 		vb2_set_plane_payload(vb, i, ctx->payload[i]);
@@ -218,13 +220,15 @@ static int jpeg_enc_buf_prepare(struct vb2_buffer *vb)
 
 	struct jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 
-	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+	if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		num_plane = ctx->param.enc_param.in_plane;
-	else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+		if (ctx->input_cacheable == 1)
+			ctx->dev->vb2->cache_flush(vb, num_plane);
+	} else if (vb->vb2_queue->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
 		num_plane = ctx->param.enc_param.out_plane;
-
-	if (ctx->cacheable == 1)
-		ctx->dev->vb2->cache_flush(vb, num_plane);
+		if (ctx->output_cacheable == 1)
+			ctx->dev->vb2->cache_flush(vb, num_plane);
+	}
 
 	for (i = 0; i < num_plane; i++)
 		vb2_set_plane_payload(vb, i, ctx->payload[i]);
@@ -478,6 +482,7 @@ static void jpeg_device_enc_run(void *priv)
 	struct jpeg_enc_param enc_param;
 	struct vb2_buffer *vb = NULL;
 	unsigned long flags;
+
 	dev = ctx->dev;
 	spin_lock_irqsave(&ctx->slock, flags);
 
@@ -525,6 +530,7 @@ static void jpeg_device_dec_run(void *priv)
 	unsigned long flags;
 
 	dev = ctx->dev;
+
 	spin_lock_irqsave(&ctx->slock, flags);
 
 	printk(KERN_DEBUG "dec_run.\n");
