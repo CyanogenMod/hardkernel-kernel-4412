@@ -308,6 +308,7 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.flag_addr = 0,
 		.flag_shft = 0,
 	},
+	/* CRC related definitinos are based on non-H.264 type */
 	{
 		.type = MFC_CTRL_TYPE_GET_SRC,
 		.id = V4L2_CID_CODEC_CRC_DATA_LUMA,
@@ -433,6 +434,7 @@ static int dec_init_ctx_ctrls(struct s5p_mfc_ctx *ctx)
 
 		ctx_ctrl->type = mfc_ctrl_list[i].type;
 		ctx_ctrl->id = mfc_ctrl_list[i].id;
+		ctx_ctrl->addr = mfc_ctrl_list[i].addr;
 		ctx_ctrl->has_new = 0;
 		ctx_ctrl->val = 0;
 
@@ -513,7 +515,7 @@ static int dec_init_buf_ctrls(struct s5p_mfc_ctx *ctx,
 		buf_ctrl->old_val = 0;
 		buf_ctrl->is_volatile = mfc_ctrl_list[i].is_volatile;
 		buf_ctrl->mode = mfc_ctrl_list[i].mode;
-		buf_ctrl->addr = mfc_ctrl_list[i].addr;
+		buf_ctrl->addr = ctx_ctrl->addr;
 		buf_ctrl->mask = mfc_ctrl_list[i].mask;
 		buf_ctrl->shft = mfc_ctrl_list[i].shft;
 		buf_ctrl->flag_mode = mfc_ctrl_list[i].flag_mode;
@@ -908,7 +910,6 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 	struct s5p_mfc_fmt *fmt;
 	struct v4l2_pix_format_mplane *pix_mp;
 	int i;
-	enum s5p_mfc_ctrl_type type;
 	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
 
 	mfc_debug_enter();
@@ -975,20 +976,26 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		ctx->state = MFCINST_INIT;
 	}
 
-	if (ctx->crc_enable) {
+	if (ctx->crc_enable && ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) {
 		/* CRC related control types should be changed by the codec mode. */
-		type = (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC) ?
-				MFC_CTRL_TYPE_GET_DST : MFC_CTRL_TYPE_GET_SRC;
-
-		mfc_debug(5, "ctx type is %d\n", type);
+		mfc_debug(5, "ctx_ctrl is changed for H.264\n");
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			switch (ctx_ctrl->id) {
 			case V4L2_CID_CODEC_CRC_DATA_LUMA:
+				ctx_ctrl->type = MFC_CTRL_TYPE_GET_DST;
+				ctx_ctrl->addr = S5P_FIMV_CRC_DISP_LUMA0;
+				break;
 			case V4L2_CID_CODEC_CRC_DATA_CHROMA:
+				ctx_ctrl->type = MFC_CTRL_TYPE_GET_DST;
+				ctx_ctrl->addr = S5P_FIMV_CRC_DISP_CHROMA0;
+				break;
+			case V4L2_CID_CODEC_CRC_GENERATED:
+				ctx_ctrl->type = MFC_CTRL_TYPE_GET_DST;
+				ctx_ctrl->addr = S5P_FIMV_CRC_DISP_STATUS;
+				break;
 			case V4L2_CID_CODEC_CRC_DATA_LUMA_BOT:
 			case V4L2_CID_CODEC_CRC_DATA_CHROMA_BOT:
-			case V4L2_CID_CODEC_CRC_GENERATED:
-				ctx_ctrl->type = type;
+				ctx_ctrl->type = MFC_CTRL_TYPE_GET_DST;
 				break;
 			default:
 				break;

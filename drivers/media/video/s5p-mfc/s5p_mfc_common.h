@@ -371,6 +371,7 @@ struct s5p_mfc_ctx_ctrl {
 	struct list_head list;
 	enum s5p_mfc_ctrl_type type;
 	unsigned int id;
+	unsigned int addr;
 	/*
 	unsigned int is_dynamic;
 	*/
