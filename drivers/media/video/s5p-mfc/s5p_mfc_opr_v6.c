@@ -1158,7 +1158,6 @@ int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 	WRITEL(0xffffffff, S5P_FIMV_D_AVAILABLE_DPB_FLAG_LOWER);
 	WRITEL(0xffffffff, S5P_FIMV_D_AVAILABLE_DPB_FLAG_UPPER);
 	WRITEL(0x0, S5P_FIMV_D_SLICE_IF_ENABLE);
-	WRITEL(0x0, S5P_FIMV_D_PICTURE_TAG);
 #endif
 
 	/* FIXME: Is it needed for 6.x? */
