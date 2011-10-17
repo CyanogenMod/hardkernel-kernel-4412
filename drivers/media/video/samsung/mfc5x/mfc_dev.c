@@ -196,6 +196,16 @@ static int mfc_open(struct inode *inode, struct file *file)
 			goto err_start_hw;
 		}
 	}
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	else {
+		if (check_magic(mfcdev->drm_info.addr)) {
+			clear_magic(mfcdev->drm_info.addr);
+			printk(KERN_ERR "MFC instances are not cleared before DRM playback!\n");
+			ret = -EINVAL;
+			goto err_drm_playback;
+		}
+	}
+#endif
 
 	mfc_ctx = mfc_create_inst();
 	if (!mfc_ctx) {
