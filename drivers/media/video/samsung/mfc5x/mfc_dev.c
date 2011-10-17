@@ -265,7 +265,7 @@ static int mfc_release(struct inode *inode, struct file *file)
 
 #ifdef CONFIG_BUSFREQ
 	/* Release MFC & Bus Frequency lock for High resolution */
-	if (mfc_ctx->busfreq_flag == true){
+	if (mfc_ctx->busfreq_flag == true) {
 		atomic_dec(&dev->busfreq_lock_cnt);
 		mfc_ctx->busfreq_flag = false;
 		if (atomic_read(&dev->busfreq_lock_cnt) == 0) {

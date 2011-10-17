@@ -149,7 +149,7 @@ struct mfc_inst_ctx {
 	unsigned long pgd;
 #endif
 #ifdef CONFIG_BUSFREQ
-	int busfreq_flag; /* context bus frequency flag*/
+	int busfreq_flag;		/* context bus frequency flag */
 #endif
 };
 

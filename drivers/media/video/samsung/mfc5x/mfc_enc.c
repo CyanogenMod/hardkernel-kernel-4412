@@ -1435,12 +1435,13 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 
 #ifdef CONFIG_BUSFREQ
 	/* Fix MFC & Bus Frequency for High resolution for better performance */
-	if (ctx->width >= 1920 || ctx->height >= 1080){
-		if (atomic_read(&ctx->dev->busfreq_lock_cnt) == 0){
+	if (ctx->width >= 1920 || ctx->height >= 1080) {
+		if (atomic_read(&ctx->dev->busfreq_lock_cnt) == 0) {
 			/* For fixed MFC & Bus Freq to 200 & 400 MHz for 1080p Contents */
 			exynos4_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L0);
 			mfc_dbg("[%s] Bus Freq Locked L0  \n",__func__);
 		}
+
 		atomic_inc(&ctx->dev->busfreq_lock_cnt);
 		ctx->busfreq_flag = true;
 	}
