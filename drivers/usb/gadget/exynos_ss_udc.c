@@ -168,6 +168,9 @@ struct exynos_ss_udc_ep {
 	struct exynos_ss_udc_req	*req;
 	spinlock_t		lock;
 
+	struct exynos_ss_udc_trb *trb;
+	dma_addr_t		trb_dma;
+
 	u8			tri;
 
 	unsigned char		epnum;
@@ -190,8 +193,6 @@ struct exynos_ss_udc_ep {
 struct exynos_ss_udc_req {
 	struct usb_request	req;
 	struct list_head	queue;
-	struct exynos_ss_udc_trb	trb __attribute__ ((aligned(16))); 
-
 	unsigned char		mapped;
 };
 
@@ -741,20 +742,20 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 		return;
 	}
 
-	udc_req->trb.buff_ptr_low = (u32) ureq->dma + ureq->actual;
-	udc_req->trb.buff_ptr_high = 0;
+	udc_ep->trb->buff_ptr_low = (u32) ureq->dma + ureq->actual;
+	udc_ep->trb->buff_ptr_high = 0;
 	/* According to Buffer Size Rules for OUT endpoints the total size
 	   of a buffer must be a multiple of MaxPacketSize. But if not what
 	   can we do? */
-	udc_req->trb.param1 =
+	udc_ep->trb->param1 =
 			EXYNOS_USB3_TRB_BUFSIZ(ureq->length - ureq->actual);
-	udc_req->trb.param2 = EXYNOS_USB3_TRB_IOC | EXYNOS_USB3_TRB_LST |
+	udc_ep->trb->param2 = EXYNOS_USB3_TRB_IOC | EXYNOS_USB3_TRB_LST |
 			EXYNOS_USB3_TRB_HWO;
 
 	/* Start Transfer */
 	epcmd->ep = get_phys_epnum(udc_ep);
 	epcmd->param0 = 0;
-	epcmd->param1 = (u32) virt_to_phys(&udc_req->trb);
+	epcmd->param1 = udc_ep->trb_dma;
 	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTRTXFER;
 	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
@@ -1275,12 +1276,12 @@ static void exynos_ss_udc_complete_in(struct exynos_ss_udc *udc,
 		return;
 	}
 
-	if (udc_req->trb.param2 & EXYNOS_USB3_TRB_HWO) {
+	if (udc_ep->trb->param2 & EXYNOS_USB3_TRB_HWO) {
 		dev_dbg(udc->dev, "%s: HWO bit set!\n", __func__);
 		return;
 	}
 
-	size_left = udc_req->trb.param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
+	size_left = udc_ep->trb->param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
 	udc_req->req.actual = udc_req->req.length - size_left;
 
 	if (udc_req->req.actual < udc_req->req.length) {
@@ -1357,12 +1358,12 @@ static void exynos_ss_udc_handle_outdone(struct exynos_ss_udc *udc,
 		return;
 	}
 
-	if (udc_req->trb.param2 & EXYNOS_USB3_TRB_HWO) {
+	if (udc_ep->trb->param2 & EXYNOS_USB3_TRB_HWO) {
 		dev_dbg(udc->dev, "%s: HWO bit set!\n", __func__);
 		return;
 	}
 
-	size_left = udc_req->trb.param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
+	size_left = udc_ep->trb->param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
 	udc_req->req.actual = udc_req->req.length - size_left;
 
 	if (req->actual < req->length) {
@@ -1647,7 +1648,7 @@ static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
  * creation) to give to the gadget driver. Setup the endpoint name, any
  * direction information and other state that may be required.
  */
-static void __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
+static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 				       struct exynos_ss_udc_ep *udc_ep,
 				       int epnum)
 {
@@ -1679,7 +1680,16 @@ static void __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 	udc_ep->ep.name = udc_ep->name;
 	udc_ep->ep.maxpacket = epnum ? 1024 : EP0_MPS_LIMIT;
 	udc_ep->ep.ops = &exynos_ss_udc_ep_ops;
+	udc_ep->trb = dma_alloc_coherent(NULL,
+					 sizeof(struct exynos_ss_udc_trb),
+					 &udc_ep->trb_dma,
+					 GFP_KERNEL | GFP_DMA32);
+	if (!udc_ep->trb)
+		return -ENOMEM;
 
+	memset(udc_ep->trb, 0, sizeof (struct exynos_ss_udc_trb));
+
+	return 0;
 }
 
 /**
@@ -2114,6 +2124,21 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 }
 EXPORT_SYMBOL(usb_gadget_unregister_driver);
 
+static void exynos_ss_udc_free_all_trb(struct exynos_ss_udc *udc)
+{
+	int epnum;
+
+	for (epnum = 0; epnum < EXYNOS_USB3_EPS; epnum++) {
+		struct exynos_ss_udc_ep *udc_ep = &udc->eps[epnum];
+
+		if (udc_ep->trb_dma)
+			dma_free_coherent(NULL,
+					  sizeof (struct exynos_ss_udc_trb),
+					  udc_ep->trb,
+					  udc_ep->trb_dma);
+	}
+}
+
 /* TODO: define platform data structure */
 static struct exynos_ss_udc_plat exynos_ss_udc_default_pdata;
 
@@ -2236,12 +2261,19 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	
 
 	/* initialise the endpoints now the core has been initialised */
-	for (epnum = 0; epnum < EXYNOS_USB3_EPS; epnum++)
-		exynos_ss_udc_initep(udc, &udc->eps[epnum], epnum);
+	for (epnum = 0; epnum < EXYNOS_USB3_EPS; epnum++) {
+		ret = exynos_ss_udc_initep(udc, &udc->eps[epnum], epnum);
+		if (ret < 0) {
+			dev_err(dev, "cannot get memory for TRB\n");
+			goto err_ep;
+		}
+	}
 
 	our_udc = udc;
 	return 0;
 
+err_ep:
+	exynos_ss_udc_free_all_trb(udc);
 err_regs:
 	iounmap(udc->regs);
 
@@ -2278,6 +2310,7 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 	clk_disable(udc->clk);
 	clk_put(udc->clk);
 
+	exynos_ss_udc_free_all_trb(udc);
 	kfree(udc->ep0_buff);
 	kfree(udc->event_buff);
 	kfree(udc);
