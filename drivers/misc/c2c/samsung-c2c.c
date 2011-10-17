@@ -391,7 +391,7 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 
 	c2c_dbg("[C2C] Get C2C Clock rate : %ld\n", clk_get_rate(clk_get(&pdev->dev, "sclk_c2c")));
 	if (pdata->setup_gpio)
-		pdata->setup_gpio();
+		pdata->setup_gpio(pdata->rx_width, pdata->tx_width);
 
 	set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
 
