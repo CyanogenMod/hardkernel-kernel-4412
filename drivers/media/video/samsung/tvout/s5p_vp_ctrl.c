@@ -19,7 +19,7 @@
 #include "hw_if/hw_if.h"
 #include "s5p_tvout_ctrl.h"
 
-#if defined(CONFIG_CPU_FREQ)
+#if defined(CONFIG_BUSFREQ)
 #include <mach/cpufreq.h>
 #endif
 
@@ -524,7 +524,7 @@ void s5p_vp_ctrl_stop(void)
 
 		s5p_vp_ctrl_private.running = false;
 
-#if defined(CONFIG_CPU_FREQ)
+#if defined(CONFIG_BUSFREQ)
 	exynos4_cpufreq_lock_free(DVFS_LOCK_ID_TV);
 	exynos4_busfreq_lock_free(DVFS_LOCK_ID_TV);
 #endif
@@ -638,7 +638,7 @@ int s5p_vp_ctrl_start(void)
 		} else
 #endif
 		{
-#if defined(CONFIG_CPU_FREQ)
+#if defined(CONFIG_BUSFREQ)
 			if ((disp == TVOUT_1080P_60) || (disp == TVOUT_1080P_59) || (disp == TVOUT_1080P_50)) {
 				if (exynos4_busfreq_lock(DVFS_LOCK_ID_TV, BUS_L0))
 					printk(KERN_ERR "%s: error : failed lock DVFS\n", __func__);
