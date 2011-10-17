@@ -47,7 +47,7 @@ static void c2c_timer_func(unsigned long data)
 {
 	/* Check C2C state */
 	static int current_state = 0xff;
-	struct exynos_c2c_platdata *pdata = (struct exynos4_c2c_platdata*)data;
+	struct exynos_c2c_platdata *pdata = (struct exynos_c2c_platdata*)data;
 	if (current_state != pdata->get_c2c_state()) {
 		printk("[C2C]C2C state is chaged (0x%x --> 0x%x)\n",current_state, pdata->get_c2c_state());
 		current_state = pdata->get_c2c_state();

@@ -13,7 +13,7 @@
 #define SAMSUNG_C2C_H
 
 /* This timer will be only used for debugging
-#defien ENABLE_C2CSTATE_TIMER
+#define ENABLE_C2CSTATE_TIMER
 */
 #define C2C_DEV_NAME "c2c_dev"
 
