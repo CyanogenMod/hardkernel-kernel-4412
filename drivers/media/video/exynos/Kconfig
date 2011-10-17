@@ -21,6 +21,7 @@ if VIDEO_EXYNOS
 	source "drivers/media/video/exynos/tv/Kconfig"
 if ARCH_EXYNOS5
 	source "drivers/media/video/exynos/mdev/Kconfig"
+	source "drivers/media/video/exynos/gsc/Kconfig"
 endif
 endif
 

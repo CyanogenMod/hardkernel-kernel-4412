@@ -1203,7 +1203,7 @@ enum v4l2_colorfx {
  * This is custom CID
  */
 /* for rgb alpha function */
-#define V4L2_CID_RGB_ALPHA			(V4L2_CID_BASE+39)
+#define V4L2_CID_GLOBAL_ALPHA			(V4L2_CID_BASE+39)
 
 /* cacheable configuration */
 #define V4L2_CID_CACHEABLE			(V4L2_CID_BASE+40)
