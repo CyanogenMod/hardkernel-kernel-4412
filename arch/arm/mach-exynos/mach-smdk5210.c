@@ -43,6 +43,9 @@
 
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+#include <mach/dwmci.h>
+#endif
 
 #include <video/platform_lcd.h>
 
@@ -370,6 +373,53 @@ static struct s3c_fb_platdata smdk5210_lcd1_pdata __initdata = {
 };
 #endif
 
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+static void exynos4_dwmci_cfg_gpio(int width)
+{
+	unsigned int gpio;
+
+	for (gpio = EXYNOS5_GPC0(0); gpio < EXYNOS5_GPC0(2); gpio++) {
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	}
+
+	switch (width) {
+	case 8:
+	for (gpio = EXYNOS5_GPC1(3); gpio <= EXYNOS5_GPC1(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(4));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+		}
+	case 4:
+	for (gpio = EXYNOS5_GPC0(3); gpio <= EXYNOS5_GPC0(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+		}
+		break;
+	case 1:
+		gpio = EXYNOS5_GPC0(3);
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	default:
+		break;
+	}
+}
+
+static struct dw_mci_board exynos4_dwmci_pdata __initdata = {
+	.num_slots = 1,
+	.quirks = DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
+	.bus_hz = 66 * 1000 * 1000,
+	.caps = MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR | MMC_CAP_8_BIT_DATA,
+	.detect_delay_ms = 200,
+	.hclk_name = "dwmci",
+	.cclk_name = "sclk_dwmci",
+	.cfg_gpio = exynos4_dwmci_cfg_gpio,
+};
+#endif
+
 #ifdef CONFIG_S3C_DEV_HSMMC
 static struct s3c_sdhci_platdata smdk5210_hsmmc0_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
@@ -432,6 +482,9 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	&s3c_device_hsmmc3,
+#endif
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+	&exynos4_device_dwmci,
 #endif
 };
 
@@ -643,6 +696,10 @@ static void __init smdk5210_machine_init(void)
 #endif
 #ifdef CONFIG_ION_EXYNOS
 	exynos_ion_set_platdata();
+#endif
+
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+	exynos4_dwmci_set_platdata(&exynos4_dwmci_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC
 	s3c_sdhci0_set_platdata(&smdk5210_hsmmc0_pdata);
