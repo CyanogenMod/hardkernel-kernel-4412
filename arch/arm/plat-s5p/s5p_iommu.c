@@ -93,8 +93,8 @@ static int s5p_iommu_domain_init(struct iommu_domain *domain)
 	if (!priv)
 		return -ENOMEM;
 
-	priv->pgtable = (unsigned long *)__get_free_pages(S5P_LV1TABLE_ORDER,
-							  GFP_KERNEL);
+	priv->pgtable = (unsigned long *)__get_free_pages(GFP_KERNEL,
+							S5P_LV1TABLE_ORDER);
 	if (!priv->pgtable) {
 		kfree(priv);
 		return -ENOMEM;
