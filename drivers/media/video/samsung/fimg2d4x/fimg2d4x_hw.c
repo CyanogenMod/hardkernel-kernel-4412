@@ -23,7 +23,8 @@ static int blend_round = (int)DEFAULT_BLEND_ROUND_MODE;
 
 void fimg2d4x_reset(struct fimg2d_control *info)
 {
-	writel(FIMG2D_SOFT_RESET, info->regs + FIMG2D_SOFT_RESET_REG);
+	/* do not use FIMG2D_SOFT_RESET */
+	writel(FIMG2D_SFR_CLEAR, info->regs + FIMG2D_SOFT_RESET_REG);
 
 	/* remove wince option */
 	writel(0x0, info->regs + FIMG2D_BLEND_FUNCTION_REG);
