@@ -1504,7 +1504,7 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 */
 static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 {
-	int index = (event & 0xfe) >> 1;
+	int index = (event & EXYNOS_USB3_DEPEVT_EPNUM_MASK) >> 1;
 	int dir_in = index & 1;
 	int epnum = get_usb_epnum(index);
 	/* We will need it in future */
