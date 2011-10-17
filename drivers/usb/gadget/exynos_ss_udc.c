@@ -1461,20 +1461,10 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 
 	dev_info(udc->dev, "%s: USB reset\n", __func__);
 
-	ep = &udc->eps[0];
-
-	exynos_ss_udc_kill_all_requests(udc, ep, -ECONNRESET, true);
-
-	exynos_ss_udc_enqueue_setup(udc);
-
-	/* Clear STALL if EP0 is halted */
-	if (ep->halted)
-		exynos_ss_udc_ep_sethalt(&ep->ep, 0);
-
 	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
 
 	/* End transfer, kill all requests and clear STALL on the
-	   rest of endpoints */
+	   non-EP0 endpoints */
 	for (epnum = 1; epnum < EXYNOS_USB3_EPS; epnum++) {
 
 		ep = &udc->eps[epnum];
@@ -1502,8 +1492,6 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 
 	/* Set device address to 0 */
 	__bic32(udc->regs + EXYNOS_USB3_DCFG, EXYNOS_USB3_DCFG_DevAddr_MASK);
-
-	exynos_ss_udc_enqueue_setup(udc);
 }
 
 /**
@@ -2082,6 +2070,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 
 	exynos_ss_udc_init(udc);
 
+	exynos_ss_udc_enqueue_setup(udc);
 	/* report to the user, and return */
 
 	dev_info(udc->dev, "bound driver %s\n", driver->driver.name);
