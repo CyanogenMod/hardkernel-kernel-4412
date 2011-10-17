@@ -618,19 +618,19 @@ struct ion_handle *ion_import_uva(struct ion_client *client, unsigned long uva)
 
 	vma = find_vma(current->mm, uva);
 	if (!vma) {
-		pr_err("%s: imported address is not vaild.\n", __func__);
+		pr_err("%s: invalid importing address 0x%lx.\n", __func__, uva);
 		return ERR_PTR(-EINVAL);
 	}
 
 	if (!vma->vm_file) {
 		pr_err("%s: imported address is not file-mapped.\n", __func__);
-		return ERR_PTR(-EINVAL);
+		return ERR_PTR(-ENXIO);
 	}
 
 	if (vma->vm_file->f_op != &ion_share_fops) {
 		pr_err("%s: imported file is not a shared ion file.\n",
 		__func__);
-		return ERR_PTR(-EINVAL);
+		return ERR_PTR(-ENXIO);
 	}
 
 	return ion_import(client, vma->vm_file->private_data);
