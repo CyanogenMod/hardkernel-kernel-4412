@@ -2068,7 +2068,7 @@ static struct fimg2d_platdata fimg2d_data __initdata = {
 	.parent_clkname = "mout_g2d0",
 	.clkname = "sclk_fimg2d",
 	.gate_clkname = "fimg2d",
-	.clkrate = 199 * 1000000,	/* 160 Mhz */
+	.clkrate = 201 * 1000000,	/* 200 Mhz */
 };
 #endif
 
@@ -2082,7 +2082,7 @@ struct exynos_c2c_platdata smdk4212_c2c_pdata = {
 	.rx_width	= C2C_BUSWIDTH_16,
 	.tx_width	= C2C_BUSWIDTH_16,
 	.max_clk	= 400,
-	.default_clk 	= 200,
+	.default_clk	= 200,
 	.default_opp_mode	= C2C_OPP50,
 	.get_c2c_state	= NULL,
 };
