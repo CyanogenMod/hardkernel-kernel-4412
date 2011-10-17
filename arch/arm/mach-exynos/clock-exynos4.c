@@ -1217,11 +1217,6 @@ static struct clk exynos4_init_clocks[] = {
 		.devname	= "s5pv210-uart.4",
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 4),
-	}, {
-		.name		= "uart",
-		.devname	= "s5pv210-uart.5",
-		.enable		= exynos4_clk_ip_peril_ctrl,
-		.ctrlbit	= (1 << 5),
 	}
 };
 
