@@ -171,7 +171,7 @@ static int default_fault_handler(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
 		itype = SYSMMU_FAULT_UNKNOWN;
 
 	pr_err("%s occured at 0x%lx(Page table base: 0x%lx)\n",
-			sysmmu_fault_name[itype], pgtable_base, fault_addr);
+			sysmmu_fault_name[itype], fault_addr, pgtable_base);
 	pr_err("\t\tGenerating Kernel OOPS... because it is unrecoverable.\n");
 
 	BUG();
