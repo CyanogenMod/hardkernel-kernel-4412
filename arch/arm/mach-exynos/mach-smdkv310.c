@@ -2140,6 +2140,9 @@ static void __init exynos4_cma_region_reserve(
 	phys_addr_t paddr = 0;
 
 	for (reg = regions_normal; reg->size != 0; reg++) {
+		if (WARN_ON(cma_early_region_register(reg)))
+			continue;
+
 		if ((reg->alignment & (reg->alignment - 1)) || reg->reserved)
 			continue;
 
@@ -2174,6 +2177,9 @@ static void __init exynos4_cma_region_reserve(
 				reg->start = paddr;
 				reg->reserved = 1;
 				paddr += reg->size;
+
+				if (WARN_ON(cma_early_region_register(reg)))
+					memblock_free(reg->start, reg->size);
 			} while (reg-- != regions_secure);
 		}
 	}
@@ -2245,10 +2251,28 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
+	defined(CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1)
+		{
+			.name = "fimc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1
 		{
 			.name = "mfc1",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1 * SZ_1K,
+			{
+				.alignment = 1 << 17,
+			},
+			.start = 0,
+		},
+#endif
+#if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
+	defined(CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0)
+		{
+			.name = "mfc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
 			{
 				.alignment = 1 << 17,
 			},
@@ -2286,6 +2310,7 @@ static void __init exynos4_reserve_mem(void)
 			.size = 0
 		},
 	};
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	static struct cma_region regions_secure[] = {
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
 		{
@@ -2298,11 +2323,7 @@ static void __init exynos4_reserve_mem(void)
 			.name = "mfc0",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
 			{
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 				.alignment = SZ_64M,
-#else
-				.alignment = 1 << 17,
-#endif
 			},
 		},
 #endif
@@ -2310,6 +2331,9 @@ static void __init exynos4_reserve_mem(void)
 			.size = 0
 		},
 	};
+#else /* !CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION */
+	struct cma_region *regions_secure = NULL;
+#endif
 	static const char map[] __initconst =
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0=fimd;exynos4-fb.0=fimd;"
@@ -2329,13 +2353,8 @@ static void __init exynos4_reserve_mem(void)
 		"s5p-smem/mfc=mfc0;"
 		"s5p-smem/fimc=fimc1;"
 		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;";
-	struct cma_region *reg;
 
-	cma_set_defaults(regions, map);
-
-	reg = regions_secure;
-	for (; reg->size; ++reg)
-		BUG_ON(cma_early_region_register(reg));
+	cma_set_defaults(NULL, map);
 
 	exynos4_cma_region_reserve(regions, regions_secure);
 }
