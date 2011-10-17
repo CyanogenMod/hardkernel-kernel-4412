@@ -41,7 +41,7 @@ enum c2c_shrdmem_size {
 };
 
 struct exynos_c2c_platdata {
-	void (*setup_gpio)(void);
+	void (*setup_gpio)(enum c2c_buswidth rx_width, enum c2c_buswidth tx_width);
 	void (*set_cprst)(void);
 	void (*clear_cprst)(void);
 	u32 (*get_c2c_state)(void);
@@ -63,7 +63,7 @@ struct exynos_c2c_platdata {
 
 void exynos4_c2c_set_platdata(struct exynos_c2c_platdata *pd);
 extern struct exynos_c2c_platdata smdk4212_c2c_pdata;
-extern void exynos4_c2c_cfg_gpio(void);
+extern void exynos4_c2c_cfg_gpio(enum c2c_buswidth rx_width, enum c2c_buswidth tx_width);
 extern void exynos4_c2c_set_cprst(void);
 extern void exynos4_c2c_clear_cprst(void);
 extern u32 exynos4_get_c2c_state(void);

@@ -18,6 +18,7 @@
 #include <mach/gpio.h>
 #include <mach/map.h>
 #include <mach/regs-clock.h>
+#include <mach/c2c.h>
 #include <plat/gpio-cfg.h>
 
 #define ETC8DRV (S5P_VA_GPIO4 + 0xAC)
@@ -41,28 +42,43 @@ void exynos4_c2c_clear_cprst(void)
 	/* TODO */
 }
 
-void exynos4_c2c_cfg_gpio(void)
+void exynos4_c2c_cfg_gpio(enum c2c_buswidth rx_width, enum c2c_buswidth tx_width)
 {
 	int i;
+	printk("C2C Rx Width %d, Tx Width %d\n", rx_width, tx_width);
 
-	/* Set Rx GPIO */
+	/* Set GPIO for C2C Rx */
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV0(0), 8, S3C_GPIO_SFN(2));
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV1(0), 8, S3C_GPIO_SFN(2));
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV2(0), 8, S3C_GPIO_SFN(2));
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV3(0), 8, S3C_GPIO_SFN(2));
-	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV4(0), 2, S3C_GPIO_SFN(2));
-
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < 8; i++)
 		s5p_gpio_set_drvstr(EXYNOS4212_GPV0(i), S5P_GPIO_DRVSTR_LV1);
-		s5p_gpio_set_drvstr(EXYNOS4212_GPV1(i), S5P_GPIO_DRVSTR_LV1);
-		s5p_gpio_set_drvstr(EXYNOS4212_GPV2(i), S5P_GPIO_DRVSTR_LV3);
-		s5p_gpio_set_drvstr(EXYNOS4212_GPV3(i), S5P_GPIO_DRVSTR_LV3);
+
+	if (rx_width == C2C_BUSWIDTH_16) {
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV1(0), 8, S3C_GPIO_SFN(2));
+		for (i = 0; i < 8; i++)
+			s5p_gpio_set_drvstr(EXYNOS4212_GPV1(i), S5P_GPIO_DRVSTR_LV1);
+	} else if (rx_width == C2C_BUSWIDTH_10) {
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV1(0), 2, S3C_GPIO_SFN(2));
+		for (i = 0; i < 2; i++)
+			s5p_gpio_set_drvstr(EXYNOS4212_GPV1(i), S5P_GPIO_DRVSTR_LV1);
 	}
 
-	//s3c_gpio_cfgrange_nopull(EXYNOS4_GPX3(2), 1, S3C_GPIO_SFN(1));
-	s3c_gpio_cfgpin(EXYNOS4_GPX3(2), S3C_GPIO_OUTPUT);
-	s3c_gpio_cfgpin(EXYNOS4_GPY4(6), S3C_GPIO_OUTPUT);
-	s3c_gpio_cfgpin(EXYNOS4_GPL2(5), S3C_GPIO_OUTPUT);
+	/* Set GPIO for C2C Tx */
+	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV2(0), 8, S3C_GPIO_SFN(2));
+	for (i = 0; i < 8; i++)
+		s5p_gpio_set_drvstr(EXYNOS4212_GPV2(i), S5P_GPIO_DRVSTR_LV3);
+
+	if (tx_width == C2C_BUSWIDTH_16) {
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV3(0), 8, S3C_GPIO_SFN(2));
+		for (i = 0; i < 8; i++)
+			s5p_gpio_set_drvstr(EXYNOS4212_GPV3(i), S5P_GPIO_DRVSTR_LV3);
+	} else if (tx_width == C2C_BUSWIDTH_10) {
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV3(0), 2, S3C_GPIO_SFN(2));
+		for (i = 0; i < 2; i++)
+			s5p_gpio_set_drvstr(EXYNOS4212_GPV3(i), S5P_GPIO_DRVSTR_LV3);
+	}
+
+	/* Set GPIO for WakeReqOut/In */
+	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV4(0), 2, S3C_GPIO_SFN(2));
 
 	writel(0x5, ETC8DRV);
 }
