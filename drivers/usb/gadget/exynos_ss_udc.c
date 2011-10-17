@@ -244,6 +244,7 @@ struct exynos_ss_udc {
 	bool			eps_enabled;
 	bool			ep0_setup;
 	u8			*ep0_buff;
+	u8			ctrl_buff[8];
 	struct usb_request	*ep0_reply;
 	struct usb_request	*ctrl_req;
 
@@ -1126,7 +1127,7 @@ static void exynos_ss_udc_enqueue_setup(struct exynos_ss_udc *udc)
 
 	req->zero = 0;
 	req->length = 8;
-	req->buf = &udc_req->trb;
+	req->buf = udc->ctrl_buff;
 	req->complete = exynos_ss_udc_complete_setup;
 
 	if (!list_empty(&udc_req->queue)) {
