@@ -52,7 +52,7 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 {
 	struct opp *opp;
 	unsigned long lockfreq;
-	unsigned long newfreq = 0;
+	unsigned long newfreq = 160000;
 	unsigned long long cpu_load = 0;
 	unsigned long long dmc_load = 0;
 	unsigned long long bus_load = 0;
@@ -63,12 +63,8 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	dmc_load = (ppmu_load[PPMU_DMC0] + ppmu_load[PPMU_DMC1]) / 2;
 	bus_load = (ppmu_load[PPMU_RIGHT] + ppmu_load[PPMU_LEFT]) / 2;
 
-	if (cpu_load != 0 && dmc_load != 0 && bus_load != 0)
+	if (dmc_load != 0 && bus_load != 0)
 		newfreq = 400000;
-	else if (cpu_load == 0 && dmc_load == 0 && bus_load == 0)
-		newfreq = 0;
-	else if (cpu_load == 0)
-		newfreq = 160000;
 
 	lockfreq = dev_max_freq(data->dev);
 
