@@ -132,6 +132,18 @@ static struct platform_device smdk5210_smsc911x = {
 	},
 };
 
+#ifdef CONFIG_EXYNOS_MEDIA_DEVICE
+struct platform_device exynos5_device_md0 = {
+	.name = "exynos5-mdev",
+	.id = 0,
+};
+
+struct platform_device exynos5_device_md1 = {
+	.name = "exynos5-mdev",
+	.id = 1,
+};
+#endif
+
 #ifdef CONFIG_FB_S3C
 #if defined(CONFIG_LCD_LMS501KF03)
 static int lcd_power_on(struct lcd_device *ld, int enable)
@@ -618,6 +630,10 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 };
 
 static struct platform_device *smdk5210_devices[] __initdata = {
+#ifdef CONFIG_EXYNOS_MEDIA_DEVICE
+	&exynos5_device_md0,
+	&exynos5_device_md1,
+#endif
 #ifdef CONFIG_FB_S3C
 	&s5p_device_fimd1,
 #if defined(CONFIG_LCD_LMS501KF03)
