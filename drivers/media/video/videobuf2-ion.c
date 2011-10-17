@@ -397,7 +397,7 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 	if (IS_ERR(buf->handle)) {
 		int flags = ION_HEAP_EXYNOS_USER_MASK;
 
-		if (conf->use_mmu) {
+		if ((PTR_ERR(buf->handle) == -ENXIO) && conf->use_mmu) {
 			if (write)
 				flags |= ION_EXYNOS_WRITE_MASK;
 
