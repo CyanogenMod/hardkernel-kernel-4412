@@ -60,11 +60,6 @@ enum max_burst_len {
 #define DEFAULT_MAX_BURST_LEN		MAX_BURST_8
 
 /**
- * RGB_888 color for A8 color format
- */
-#define DEFAULT_A8_RGB_888	(0x0)
-
-/**
  * mask operation type for 16-bpp, 32-bpp mask image
  * @MSK_ALPHA: use mask alpha for src argb
  * @MSK_ARGB: use mask argb for src argb
@@ -76,7 +71,7 @@ enum mask_opr {
 	MSK_MIXED,
 };
 
-#define DEFAULT_MSK_OPR		MSK_ARGB
+#define DEFAULT_MSK_OPR		MSK_ALPHA
 
 /**
  * @ALPHA_PERPIXEL: perpixel alpha
@@ -91,7 +86,7 @@ enum alpha_opr {
 	ALPHA_PERPIXEL_MUL_GLOBAL,
 };
 
-#define DEFAULT_ALPHA_OPR	ALPHA_PERPIXEL_MUL_GLOBAL
+#define DEFAULT_ALPHA_OPR	ALPHA_PERPIXEL
 
 /**
  * @COEFF_ONE: 1
@@ -139,7 +134,7 @@ enum premult_round {
 	PREMULT_ROUND_3,	/* initial value */
 };
 
-#define DEFAULT_PREMULT_ROUND_MODE	PREMULT_ROUND_1
+#define DEFAULT_PREMULT_ROUND_MODE	PREMULT_ROUND_3
 
 /**
  * @BLEND_ROUND_0: (A+1)*B) >> 8
@@ -156,7 +151,7 @@ enum blend_round {
 	BLEND_ROUND_3,	/* initial value */
 };
 
-#define DEFAULT_BLEND_ROUND_MODE	BLEND_ROUND_0
+#define DEFAULT_BLEND_ROUND_MODE	BLEND_ROUND_3
 
 struct fimg2d_blend_coeff {
 	bool s_coeff_inv;

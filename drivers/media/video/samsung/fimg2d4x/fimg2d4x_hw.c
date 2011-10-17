@@ -15,11 +15,11 @@
 #include "fimg2d.h"
 #include "fimg2d4x.h"
 
-static int a8_rgb_888 = (int)DEFAULT_A8_RGB_888;
-static int msk_opr = (int)DEFAULT_MSK_OPR;
-static int alpha_opr = (int)DEFAULT_ALPHA_OPR;
-static int premult_round = (int)DEFAULT_PREMULT_ROUND_MODE;
-static int blend_round = (int)DEFAULT_BLEND_ROUND_MODE;
+static const int a8_rgbcolor		= (int)0x0;
+static const int msk_oprmode		= (int)MSK_ARGB;
+static const int alpha_oprmode		= (int)ALPHA_PERPIXEL_MUL_GLOBAL;
+static const int premult_round_mode	= (int)PREMULT_ROUND_1;	/* (A+1)*B) >> 8 */
+static const int blend_round_mode	= (int)BLEND_ROUND_0;	/* (A+1)*B) >> 8 */
 
 void fimg2d4x_reset(struct fimg2d_control *info)
 {
@@ -70,9 +70,6 @@ void fimg2d4x_set_max_burst_length(struct fimg2d_control *info, enum max_burst_l
 {
 	unsigned long cfg;
 
-	if (len == MAX_BURST_8)	/* initial value */
-		return;
-
 	cfg = readl(info->regs + FIMG2D_AXI_MODE_REG);
 
 	cfg &= ~FIMG2D_MAX_BURST_LEN_MASK;
@@ -83,13 +80,10 @@ void fimg2d4x_set_src_type(struct fimg2d_control *info, enum image_sel type)
 {
 	unsigned long cfg;
 
-	if (type == IMG_FGCOLOR)
-		return;
-
 	if (type == IMG_MEMORY)
 		cfg = FIMG2D_IMAGE_TYPE_MEMORY;
-	else if (type == IMG_FGCOLOR)	/* initial value */
-		return;
+	else if (type == IMG_FGCOLOR)
+		cfg = FIMG2D_IMAGE_TYPE_FGCOLOR;
 	else
 		cfg = FIMG2D_IMAGE_TYPE_BGCOLOR;
 
@@ -105,8 +99,8 @@ void fimg2d4x_set_src_image(struct fimg2d_control *info, struct fimg2d_image *s)
 
 	if (s->order < ARGB_ORDER_END) {	/* argb */
 		cfg = s->order << FIMG2D_RGB_ORDER_SHIFT;
-		if (s->fmt == CF_A8 && a8_rgb_888)
-			writel(a8_rgb_888, info->regs + FIMG2D_SRC_A8_RGB_EXT_REG);
+		if (s->fmt == CF_A8)
+			writel(a8_rgbcolor, info->regs + FIMG2D_SRC_A8_RGB_EXT_REG);
 	} else if (s->order < P1_ORDER_END) {	/* YCbC1 1plane */
 		cfg = (s->order - P1_CRY1CBY0) << FIMG2D_YCBCR_ORDER_SHIFT;
 	} else {	/* YCbCr 2plane */
@@ -132,11 +126,10 @@ void fimg2d4x_set_dst_type(struct fimg2d_control *info, enum image_sel type)
 {
 	unsigned long cfg;
 
-	if (type == IMG_FGCOLOR)	/* initial value */
-		return;
-
 	if (type == IMG_MEMORY)
 		cfg = FIMG2D_IMAGE_TYPE_MEMORY;
+	else if (type == IMG_FGCOLOR)
+		cfg = FIMG2D_IMAGE_TYPE_FGCOLOR;
 	else
 		cfg = FIMG2D_IMAGE_TYPE_BGCOLOR;
 
@@ -155,8 +148,8 @@ void fimg2d4x_set_dst_image(struct fimg2d_control *info, struct fimg2d_image *d)
 
 	if (d->order < ARGB_ORDER_END) {
 		cfg = d->order << FIMG2D_RGB_ORDER_SHIFT;
-		if (d->fmt == CF_A8 && a8_rgb_888)
-			writel(a8_rgb_888, info->regs + FIMG2D_DST_A8_RGB_EXT_REG);
+		if (d->fmt == CF_A8)
+			writel(a8_rgbcolor, info->regs + FIMG2D_DST_A8_RGB_EXT_REG);
 	} else if (d->order < P1_ORDER_END) {
 		cfg = (d->order - P1_CRY1CBY0) << FIMG2D_YCBCR_ORDER_SHIFT;
 	} else {
@@ -200,9 +193,9 @@ void fimg2d4x_set_msk_image(struct fimg2d_control *info, struct fimg2d_image *m)
 
 	/* 16, 32bit mask only */
 	if (m->fmt >= CF_MSK_16BIT_565) {
-		if (msk_opr == MSK_ALPHA)
+		if (msk_oprmode == MSK_ALPHA)
 			cfg |= FIMG2D_MSK_TYPE_ALPHA;
-		else if (msk_opr == MSK_ARGB)
+		else if (msk_oprmode == MSK_ARGB)
 			cfg |= FIMG2D_MSK_TYPE_ARGB;
 		else
 			cfg |= FIMG2D_MSK_TYPE_MIXED;
@@ -228,13 +221,12 @@ void fimg2d4x_set_color_fill(struct fimg2d_control *info, unsigned long color)
 	writel(FIMG2D_SOLID_FILL, info->regs + FIMG2D_BITBLT_COMMAND_REG);
 
 	/* sf color */
-	if (color)
-		writel(color, info->regs + FIMG2D_SF_COLOR_REG);
+	writel(color, info->regs + FIMG2D_SF_COLOR_REG);
 }
 
 /**
- * premultiply src, dst, pat for read
- * depremultiply dst for write
+ * set alpha-multiply mode for src, dst, pat read (pre-bitblt)
+ * set alpha-demultiply for dst write (post-bitblt)
  */
 void fimg2d4x_set_premultiplied(struct fimg2d_control *info)
 {
@@ -454,9 +446,6 @@ void fimg2d4x_set_src_repeat(struct fimg2d_control *info, struct fimg2d_repeat *
 {
 	unsigned long cfg;
 
-	if (r->mode == REPEAT_NORMAL)	/* initial value */
-		return;
-
 	if (r->mode == NO_REPEAT)
 		cfg = FIMG2D_SRC_REPEAT_NONE;
 	else
@@ -473,7 +462,7 @@ void fimg2d4x_set_msk_repeat(struct fimg2d_control *info, struct fimg2d_repeat *
 {
 	unsigned long cfg;
 
-	/* initial value is normal, no sfr exist for norepeat */
+	if (r->mode == NO_REPEAT)
 	if (r->mode == REPEAT_NORMAL || r->mode == NO_REPEAT)
 		return;
 
@@ -541,13 +530,13 @@ void fimg2d4x_set_rotation(struct fimg2d_control *info, enum rotation rot)
 
 void fimg2d4x_set_fgcolor(struct fimg2d_control *info, unsigned long fg)
 {
-	if (fg)
+	writel(fg, info->regs + FIMG2D_FG_COLOR_REG);
 		writel(fg, info->regs + FIMG2D_FG_COLOR_REG);
 }
 
 void fimg2d4x_set_bgcolor(struct fimg2d_control *info, unsigned long bg)
 {
-	if (bg)
+	writel(bg, info->regs + FIMG2D_BG_COLOR_REG);
 		writel(bg, info->regs + FIMG2D_BG_COLOR_REG);
 }
 
@@ -717,10 +706,8 @@ void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 	switch (op) {
 	case BLIT_OP_SOLID_FILL:
 	case BLIT_OP_CLR:
-	case BLIT_OP_SRC:
-	case BLIT_OP_DST:
 		/* nop */
-		break;
+		return;
 	case BLIT_OP_DARKEN:
 		cfg |= FIMG2D_DARKEN;
 		break;
@@ -739,8 +726,8 @@ void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 		/* src coefficient */
 		cfg |= tbl->s_coeff << FIMG2D_SRC_COEFF_SHIFT;
 
-		cfg |= alpha_opr << FIMG2D_SRC_COEFF_SA_SHIFT;
-		cfg |= alpha_opr << FIMG2D_SRC_COEFF_DA_SHIFT;
+		cfg |= alpha_oprmode << FIMG2D_SRC_COEFF_SA_SHIFT;
+		cfg |= alpha_oprmode << FIMG2D_SRC_COEFF_DA_SHIFT;
 
 		if (tbl->s_coeff_inv)
 			cfg |= FIMG2D_INV_SRC_COEFF;
@@ -748,8 +735,8 @@ void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 		/* dst coefficient */
 		cfg |= tbl->d_coeff << FIMG2D_DST_COEFF_SHIFT;
 
-		cfg |= alpha_opr << FIMG2D_DST_COEFF_DA_SHIFT;
-		cfg |= alpha_opr << FIMG2D_DST_COEFF_SA_SHIFT;
+		cfg |= alpha_oprmode << FIMG2D_DST_COEFF_DA_SHIFT;
+		cfg |= alpha_oprmode << FIMG2D_DST_COEFF_SA_SHIFT;
 
 		if (tbl->d_coeff_inv)
 			cfg |= FIMG2D_INV_DST_COEFF;
@@ -764,11 +751,11 @@ void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 
 	/* premult */
 	cfg &= ~FIMG2D_PREMULT_ROUND_MASK;
-	cfg |= premult_round << FIMG2D_PREMULT_ROUND_SHIFT;
+	cfg |= premult_round_mode << FIMG2D_PREMULT_ROUND_SHIFT;
 
 	/* blend */
 	cfg &= ~FIMG2D_BLEND_ROUND_MASK;
-	cfg |= blend_round << FIMG2D_BLEND_ROUND_SHIFT;
+	cfg |= blend_round_mode << FIMG2D_BLEND_ROUND_SHIFT;
 
 	writel(cfg, info->regs + FIMG2D_ROUND_MODE_REG);
 }
