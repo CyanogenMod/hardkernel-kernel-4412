@@ -1054,8 +1054,10 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 	first = list_empty(&udc_ep->queue);
 	list_add_tail(&udc_req->queue, &udc_ep->queue);
 
-	if (first)
+	if (first) {
+		udc_ep->req = udc_req;
 		exynos_ss_udc_start_req(udc, udc_ep, udc_req, false);
+	}
 
 	spin_unlock_irqrestore(&udc_ep->lock, irqflags);
 
