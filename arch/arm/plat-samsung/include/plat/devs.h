@@ -138,6 +138,10 @@ extern struct platform_device exynos4_device_dwmci;
 extern struct platform_device exynos_device_flite0;
 extern struct platform_device exynos_device_flite1;
 extern struct platform_device exynos4_device_fimc_is;
+extern struct platform_device exynos5_device_gsc0;
+extern struct platform_device exynos5_device_gsc1;
+extern struct platform_device exynos5_device_gsc2;
+extern struct platform_device exynos5_device_gsc3;
 extern struct platform_device exynos_device_c2c;
 
 extern struct platform_device s5p6440_device_pcm;
