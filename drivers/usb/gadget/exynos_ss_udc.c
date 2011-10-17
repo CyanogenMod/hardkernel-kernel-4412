@@ -239,10 +239,7 @@ struct exynos_ss_udc {
 	int			irq;
 	struct clk		*clk;
 
-	/* According to documentation the address must be EVNTSIZ-aligned */
-	u32			event_buff[EXYNOS_USB3_EVENT_BUFF_WSIZE]
-			__attribute__ ((aligned(EXYNOS_USB3_EVENT_BUFF_BSIZE)));
-	dma_addr_t		event_buff_dma;	
+	u32			*event_buff;
 
 	bool			eps_enabled;
 	bool			ep0_setup;
@@ -2000,7 +1997,8 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 
 	/* Event buffer */
 	writel(0, udc->regs + EXYNOS_USB3_GEVNTADR_63_32(0));
-	writel(udc->event_buff_dma, udc->regs + EXYNOS_USB3_GEVNTADR_31_0(0));
+	writel((u32) virt_to_phys(udc->event_buff),
+		udc->regs + EXYNOS_USB3_GEVNTADR_31_0(0));
 	/* Set Event Buffer size */
 	writel(EXYNOS_USB3_EVENT_BUFF_BSIZE, udc->regs + EXYNOS_USB3_GEVNTSIZ(0));
 
@@ -2146,7 +2144,16 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 			GFP_KERNEL);
 	if (!udc) {
 		dev_err(dev, "cannot get memory\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err_mem;
+	}
+
+	udc->event_buff = kzalloc(EXYNOS_USB3_EVENT_BUFF_BSIZE,
+				  GFP_KERNEL | GFP_DMA);
+	if (!udc->event_buff) {
+		dev_err(dev, "cannot get memory for event buffer\n");
+		ret = -ENOMEM;
+		goto err_mem;
 	}
 
 	udc->ep0_buff = kzalloc(512, GFP_KERNEL);
@@ -2188,18 +2195,6 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 		dev_err(dev, "cannot map registers\n");
 		ret = -ENXIO;
 		goto err_regs_res;
-	}
-
-	/* According to documentation GEVNTADR register holds the
-	   "Event Buffer DMA Address" */
-	udc->event_buff_dma = dma_map_single(udc->dev,
-					     udc->event_buff,
-					     sizeof udc->event_buff,
-					     DMA_FROM_DEVICE);
-	if (unlikely(dma_mapping_error(udc->dev, udc->event_buff_dma))) {
-		dev_err(dev, "cannot map event buffer\n");
-		ret = -EIO;
-		goto err_regs;
 	}
 
 	ret = platform_get_irq(pdev, 0);
@@ -2266,8 +2261,12 @@ err_regs_res:
 err_clk:
 	clk_put(udc->clk);
 err_mem:
-	kfree(udc->ep0_buff);
-	kfree(udc);
+	if (udc->ep0_buff)
+		kfree(udc->ep0_buff);
+	if (udc->event_buff)
+		kfree(udc->event_buff);
+	if (udc)
+		kfree(udc);
 	return ret;
 
 }
@@ -2289,6 +2288,8 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 	clk_disable(udc->clk);
 	clk_put(udc->clk);
 
+	kfree(udc->ep0_buff);
+	kfree(udc->event_buff);
 	kfree(udc);
 
 	return 0;
