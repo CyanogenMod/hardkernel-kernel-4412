@@ -15,7 +15,7 @@
 
 #include <linux/kernel.h>
 #include <linux/slab.h>
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_BUSFREQ
 #include <mach/cpufreq.h>
 #endif
 
@@ -1433,7 +1433,7 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 		mfc_dbg("cache invalidate\n");
 	}
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_BUSFREQ
 	/* Fix MFC & Bus Frequency for High resolution for better performance */
 	if (ctx->width >= 1920 || ctx->height >= 1080){
 		if (atomic_read(&ctx->dev->busfreq_lock_cnt) == 0){

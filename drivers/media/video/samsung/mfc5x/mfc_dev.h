@@ -109,7 +109,7 @@ struct mfc_dev {
 	struct s5p_vcm_mmu	*_vcm_mmu;
 
 	struct device		*device;
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_BUSFREQ
 	atomic_t		busfreq_lock_cnt; /* Bus frequency Lock count */
 #endif
 };

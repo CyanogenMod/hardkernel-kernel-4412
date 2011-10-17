@@ -51,7 +51,7 @@ struct mfc_inst_ctx *mfc_create_inst(void)
 	ctx->state = INST_STATE_CREATE;
 
 	ctx->resolution_status = RES_NO_CHANGE;
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_BUSFREQ
 	ctx->busfreq_flag = false;
 #endif
 

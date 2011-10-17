@@ -28,7 +28,7 @@
 
 #include <linux/sched.h>
 #include <linux/firmware.h>
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_BUSFREQ
 #include <mach/cpufreq.h>
 #endif
 #include <mach/regs-pmu.h>
@@ -263,7 +263,7 @@ static int mfc_release(struct inode *inode, struct file *file)
 
 	mutex_lock(&dev->lock);
 
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_BUSFREQ
 	/* Release MFC & Bus Frequency lock for High resolution */
 	if (mfc_ctx->busfreq_flag == true){
 		atomic_dec(&dev->busfreq_lock_cnt);
@@ -959,7 +959,7 @@ static int __devinit mfc_probe(struct platform_device *pdev)
 	init_waitqueue_head(&mfcdev->wait_codec[0]);
 	init_waitqueue_head(&mfcdev->wait_codec[1]);
 	atomic_set(&mfcdev->inst_cnt, 0);
-#ifdef CONFIG_CPU_FREQ
+#ifdef CONFIG_BUSFREQ
 	atomic_set(&mfcdev->busfreq_lock_cnt, 0);
 #endif
 	mfcdev->device = &pdev->dev;
