@@ -21,24 +21,17 @@
 #include <mach/map.h>
 #include <mach/regs-pmu.h>
 
-#define SS_LID		0X197EA7
 #define VA_LID		(S5P_VA_CHIPID + 0x14)
+#define NR_SS_CASE	3
 
 unsigned int rev_lid;
 
-static int exynos4x12_get_ids(struct samsung_asv *asv_info)
-{
-	unsigned int lid;
-
-	lid = (rev_lid >> 11) & 0x1FFFFF;
-
-	if (lid == SS_LID)
-		asv_info->ids_result = 0;
-	else
-		asv_info->ids_result = 1;
-
-	return 0;
-}
+unsigned int not_ss_lid[NR_SS_CASE][2] = {
+	/* lid, wno */
+	{0X00197EA7, 0x6},
+	{0X00197EA7, 0x7},
+	{0x00197EF9, 0xFFFFFFFF},
+};
 
 static int exynos4x12_get_hpm(struct samsung_asv *asv_info)
 {
@@ -46,20 +39,38 @@ static int exynos4x12_get_hpm(struct samsung_asv *asv_info)
 
 	wno = (rev_lid >> 6) & 0x1F;
 
-	if ((wno == 6) || (wno == 7))
-		asv_info->hpm_result = 1;
-	else
-		asv_info->hpm_result = 0;
+	asv_info->hpm_result = wno;
+
+	return 0;
+}
+
+static int exynos4x12_get_ids(struct samsung_asv *asv_info)
+{
+	unsigned int lid;
+
+	lid = (rev_lid >> 11) & 0x1FFFFF;
+
+	asv_info->ids_result = lid;
 
 	return 0;
 }
 
 static int exynos4x12_asv_store_result(struct samsung_asv *asv_info)
 {
-	if ((asv_info->hpm_result) || (asv_info->ids_result))
-		__raw_writel(0x1, S5P_INFORM2);
-	else
-		__raw_writel(0x0, S5P_INFORM2);
+	unsigned int i;
+
+	for (i = 0; i < NR_SS_CASE; i++) {
+		if (asv_info->ids_result == not_ss_lid[i][0]) {
+			if (asv_info->hpm_result == not_ss_lid[i][1])
+				__raw_writel(0x1, S5P_INFORM2);
+			else
+				__raw_writel(0x0, S5P_INFORM2);
+
+			return 0;
+		}
+	}
+
+	__raw_writel(0x1, S5P_INFORM2);
 
 	return 0;
 }
