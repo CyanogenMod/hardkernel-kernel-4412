@@ -39,11 +39,11 @@ struct exynos4_usb_phy {
 	u8 phy0_usage;
 	u8 phy1_usage;
 	u8 phy2_usage;
-	spinlock_t phy_lock;
 };
 
 static struct exynos4_usb_phy usb_phy_control;
 static atomic_t host_usage;
+static DEFINE_SPINLOCK(phy_lock);
 
 static void exynos4_usb_mux_change(int val)
 {
@@ -122,7 +122,7 @@ static u32 exynos4_usb_phy_set_clock(struct platform_device *pdev)
 
 static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
 {
-	spin_lock(&usb_phy_control.phy_lock);
+	spin_lock(&phy_lock);
 
 	if (soc_is_exynos4210()) {
 		if (phy_type & USB_PHY0) {
@@ -162,7 +162,7 @@ static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
 #endif
 	}
 
-	spin_unlock(&usb_phy_control.phy_lock);
+	spin_unlock(&phy_lock);
 }
 
 static int exynos4_usb_phy0_init(struct platform_device *pdev)
