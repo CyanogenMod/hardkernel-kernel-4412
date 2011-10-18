@@ -52,7 +52,9 @@ static long get_blit_perf(struct timeval *start, struct timeval *end)
 
 static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
+#ifdef CONFIG_OUTER_CACHE
 	struct mm_struct *mm;
+#endif
 	struct fimg2d_cache *csrc, *cdst, *cmsk;
 
 	csrc = &cmd->src_cache;
@@ -108,7 +110,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 {
 	struct fimg2d_context *ctx;
 	struct fimg2d_bltcmd *cmd;
-	unsigned long pgd;
+	unsigned long pa_pgd, va_pgd;
 	unsigned long saddr, daddr, maddr;
 	size_t ssize, dsize, msize;
 #ifdef PERF
@@ -126,7 +128,8 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 	while ((cmd = fimg2d_get_first_command(info))) {
 		ctx = cmd->ctx;
-		pgd = virt_to_phys(ctx->mm->pgd);
+		va_pgd = (unsigned long)ctx->mm->pgd;
+		pa_pgd = (unsigned long)virt_to_phys((unsigned long *)va_pgd);
 
 		if (info->err) {
 			printk(KERN_ERR "%s: unrecoverable hardware error\n", __func__);
@@ -141,10 +144,10 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		/* set sysmmu */
 		if (cmd->dst.addr.type == ADDR_USER) {
 #ifdef CONFIG_S5P_SYSTEM_MMU
-			s5p_sysmmu_set_tablebase_pgd(info->dev,
-						virt_to_phys(ctx->mm->pgd));
-			fimg2d_debug("set sysmmu table base: ctx %p pgd %p seq_no(%u)\n",
-					ctx, (void *)pgd, cmd->seq_no);
+			s5p_sysmmu_set_tablebase_pgd(info->dev, pa_pgd);
+			fimg2d_debug("set sysmmu table base: ctx %p "
+					"pgd (va:0x%lx,pa:0x%lx) seq_no(%u)\n",
+					ctx, va_pgd, pa_pgd, cmd->seq_no);
 #endif
 		}
 
@@ -173,11 +176,12 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 					maddr = cmd->msk.addr.start;
 					msize = cmd->msk.addr.size;
 				}
-				printk(KERN_ERR "[%s] fatal error, ctx %p pgd %p seq_no(%u)\n"
+				printk(KERN_ERR "[%s] fatal error, ctx %p "
+						"pgd (va:0x%lx,pa:0x%lx) seq_no(%u)\n"
 						"\t src addr %p end %p size %d\n"
 						"\t dst addr %p end %p size %d\n"
 						"\t msk addr %p end %p size %d\n",
-						__func__, ctx, (void *)pgd, cmd->seq_no,
+						__func__, ctx, va_pgd, pa_pgd, cmd->seq_no,
 						(void *)saddr, (void *)saddr+ssize, ssize,
 						(void *)daddr, (void *)daddr+dsize, dsize,
 						(void *)maddr, (void *)maddr+msize, msize);
@@ -185,8 +189,9 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 				/* fatal h/w error */
 				info->err = true;
 			} else {
-				printk(KERN_ERR "[%s] ctx %p pgd %p seq_no(%u) wait timeout\n",
-						__func__, ctx, (void *)pgd, cmd->seq_no);
+				printk(KERN_ERR "[%s] ctx %p pgd (va:0x%lx,pa:0x%lx) "
+						"seq_no(%u) wait timeout\n",
+						__func__, ctx, va_pgd, pa_pgd, cmd->seq_no);
 			}
 		} else {
 			fimg2d_debug("blitter wake up\n");
