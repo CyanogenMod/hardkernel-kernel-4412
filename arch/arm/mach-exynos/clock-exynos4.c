@@ -1991,15 +1991,15 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				clk_fout_epll.name, exynos4_clk_mout_audss.clk.name);
 
-#ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
-	if (clk_set_parent(&exynos4_clk_sclk_audio0.clk, &exynos4_clk_mout_epll.clk))
-		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
-				exynos4_clk_mout_epll.clk.name, exynos4_clk_sclk_audio0.clk.name);
-#else /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+#if defined(CONFIG_SND_SAMSUNG_PCM) && !defined(CONFIG_SND_SAMSUNG_PCM_USE_EPLL)
 	if (clk_set_parent(&exynos4_clk_sclk_audio0.clk, &exynos4_clk_audiocdclk0.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				exynos4_clk_audiocdclk0.clk.name, exynos4_clk_sclk_audio0.clk.name);
-#endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+#else
+	if (clk_set_parent(&exynos4_clk_sclk_audio0.clk, &exynos4_clk_mout_epll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos4_clk_mout_epll.clk.name, exynos4_clk_sclk_audio0.clk.name);
+#endif
 
 	if (clk_set_parent(&exynos4_clk_sclk_audio1.clk, &exynos4_clk_mout_epll.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
