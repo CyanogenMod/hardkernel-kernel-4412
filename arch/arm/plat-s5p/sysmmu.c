@@ -259,7 +259,7 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 	 */
 	while ((mmudata = get_sysmmu_data(owner, mmudata))) {
 		ret = pm_runtime_get_sync(mmudata->dev);
-		if (ret)
+		if (ret < 0)
 			break;
 
 		write_lock_irqsave(&mmudata->lock, flags);
@@ -279,8 +279,8 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 		write_unlock_irqrestore(&mmudata->lock, flags);
 	}
 
-	if (ret) {
-		do {
+	if (ret < 0) {
+		while ((mmudata = get_sysmmu_data_rollback(owner, mmudata))) {
 			write_lock_irqsave(&mmudata->lock, flags);
 			set_sysmmu_inactive(mmudata);
 			/* deinitialization is not required actually. */
@@ -289,7 +289,7 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 			pm_runtime_put_sync(mmudata->dev);
 
 			dev_dbg(mmudata->dev, "Failed to enable.\n");
-		} while ((mmudata = get_sysmmu_data_rollback(owner, mmudata)));
+		}
 	}
 
 	return ret;
