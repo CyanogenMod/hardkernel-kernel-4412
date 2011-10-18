@@ -148,11 +148,10 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
 
-#ifdef CONFIG_ARM_TRUSTZONE
-		exynos_smc(SMC_CMD_CPU1BOOT, 0, 0, 0);
-#endif
-
 		if (soc_is_exynos4412()) {
+#ifdef CONFIG_ARM_TRUSTZONE
+			exynos_smc(SMC_CMD_CPU1BOOT, cpu, 0, 0);
+#endif
 			if (cpu == 1)
 				__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
 						CPU1_BOOT_REG + 0x4);
@@ -163,6 +162,9 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 				__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
 						CPU1_BOOT_REG + 0xc);
 		} else {
+#ifdef CONFIG_ARM_TRUSTZONE
+			exynos_smc(SMC_CMD_CPU1BOOT, 0, 0, 0);
+#endif
 			__raw_writel(BSYM(virt_to_phys(exynos4_secondary_startup)),
 					CPU1_BOOT_REG);
 		}
