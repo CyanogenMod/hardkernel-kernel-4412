@@ -28,8 +28,8 @@ static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 	fimg2d_debug("rotate: %d\n", u->rotate);
 
 	if (u->scaling) {
-		fimg2d_debug("scaling mode: %d, factor: %d, percent(w:%d, h:%d)"
-				" pixel(s:%d,%d d:%d,%d)\n",
+		fimg2d_debug("scaling mode: %d, factor: %d, percent(w:%d, h:%d) "
+				"pixel(s:%d,%d d:%d,%d)\n",
 				u->scaling->mode, u->scaling->factor,
 				u->scaling->scale_w, u->scaling->scale_h,
 				u->scaling->src_w, u->scaling->src_h,
@@ -98,6 +98,94 @@ static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 	}
 }
 #endif
+
+void fimg2d_print_current_command(struct fimg2d_control *info,
+		unsigned long pgtable_base)
+{
+	struct fimg2d_context *ctx;
+	struct fimg2d_bltcmd *cmd;
+
+	cmd = fimg2d_get_first_command(info);
+	if (!cmd)
+		return;
+
+	ctx = cmd->ctx;
+	if (ctx->mm->pgd != phys_to_virt(pgtable_base))
+		return;
+
+	printk(KERN_INFO " op: %d\n", cmd->op);
+	printk(KERN_INFO " solid color: 0x%lx\n", cmd->solid_color);
+	printk(KERN_INFO " g_alpha: 0x%x\n", cmd->g_alpha);
+	printk(KERN_INFO " premultiplied: %d\n", cmd->premult);
+	printk(KERN_INFO " dither: %d\n", cmd->dither);
+	printk(KERN_INFO " rotate: %d\n", cmd->rotate);
+	printk(KERN_INFO " repeat mode: %d, pad color: 0x%lx\n",
+			cmd->repeat.mode, cmd->repeat.pad_color);
+	printk(KERN_INFO " bluescreen mode: %d, bs_color: 0x%lx bg_color: 0x%lx\n",
+			cmd->bluscr.mode, cmd->bluscr.bs_color, cmd->bluscr.bg_color);
+
+	if (cmd->scaling.mode != NO_SCALING) {
+		printk(KERN_INFO " scaling mode: %d, factor: %d, percent(w:%d, h:%d) "
+				" pixel(s:%d,%d d:%d,%d)\n",
+				cmd->scaling.mode, cmd->scaling.factor,
+				cmd->scaling.scale_w, cmd->scaling.scale_h,
+				cmd->scaling.src_w, cmd->scaling.src_h,
+				cmd->scaling.dst_w, cmd->scaling.dst_h);
+	}
+
+	if (cmd->clipping.enable) {
+		printk(KERN_INFO " clip rect LT(%d,%d) RB(%d,%d)\n",
+				cmd->clipping.x1, cmd->clipping.y1,
+				cmd->clipping.x2, cmd->clipping.y2);
+	}
+
+	if (cmd->srcen) {
+		printk(KERN_INFO " src type: %d addr: 0x%lx size: %d cacheable: %d\n",
+				cmd->src.addr.type, cmd->src.addr.start, cmd->src.addr.size,
+				cmd->src.addr.cacheable);
+		printk(KERN_INFO " src width: %d height: %d stride: %d order: %d format: %d\n",
+				cmd->src.width, cmd->src.height, cmd->src.stride,
+				cmd->src.order, cmd->src.fmt);
+		printk(KERN_INFO " src rect LT(%d,%d) RB(%d,%d)\n",
+				cmd->src_rect.x1, cmd->src_rect.y1,
+				cmd->src_rect.x2, cmd->src_rect.y2);
+		printk(KERN_INFO " src cache addr: 0x%lx size: %d\n",
+				cmd->src_cache.addr, cmd->src_cache.size);
+	}
+
+	if (cmd->dsten) {
+		printk(KERN_INFO " dst type: %d addr: 0x%lx size: %d cacheable: %d\n",
+				cmd->dst.addr.type, cmd->dst.addr.start, cmd->dst.addr.size,
+				cmd->dst.addr.cacheable);
+		printk(KERN_INFO " dst width: %d height: %d stride: %d order: %d format: %d\n",
+				cmd->dst.width, cmd->dst.height, cmd->dst.stride,
+				cmd->dst.order, cmd->dst.fmt);
+		printk(KERN_INFO " dst rect LT(%d,%d) RB(%d,%d)\n",
+				cmd->dst_rect.x1, cmd->dst_rect.y1,
+				cmd->dst_rect.x2, cmd->dst_rect.y2);
+		printk(KERN_INFO " dst cache addr: 0x%lx size: %d\n",
+				cmd->dst_cache.addr, cmd->dst_cache.size);
+	}
+
+	if (cmd->msken) {
+		printk(KERN_INFO " msk type: %d addr: 0x%lx size: %d cacheable: %d\n",
+				cmd->msk.addr.type, cmd->msk.addr.start, cmd->msk.addr.size,
+				cmd->msk.addr.cacheable);
+		printk(KERN_INFO " msk width: %d height: %d stride: %d order: %d format: %d\n",
+				cmd->msk.width, cmd->msk.height, cmd->msk.stride,
+				cmd->msk.order, cmd->msk.fmt);
+		printk(KERN_INFO " msk rect LT(%d,%d) RB(%d,%d)\n",
+				cmd->msk_rect.x1, cmd->msk_rect.y1,
+				cmd->msk_rect.x2, cmd->msk_rect.y2);
+		printk(KERN_INFO " msk cache addr: 0x%lx size: %d\n",
+				cmd->msk_cache.addr, cmd->msk_cache.size);
+	}
+
+	printk(KERN_INFO " cache size all: %d bytes\n", cmd->size_all);
+	printk(KERN_INFO " seq_no: %u\n", cmd->seq_no);
+	printk(KERN_INFO " ctx: 0x%lx pgd (ka:0x%lx pa:0x%lx)\n",
+			(unsigned long)ctx, (unsigned long)ctx->mm->pgd, pgtable_base);
+}
 
 static int fimg2d_check_params(struct fimg2d_blit __user *u)
 {
@@ -407,8 +495,10 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 	spin_lock(&info->bltlock);
 	atomic_inc(&ctx->ncmd);
 	fimg2d_enqueue(&cmd->node, &info->cmd_q);
-	fimg2d_debug("ctx %p pgd %p ncmd(%d) seq_no(%u)\n",
-			cmd->ctx, (void *)virt_to_phys(cmd->ctx->mm->pgd),
+	fimg2d_debug("ctx %p pgd (ka:0x%lx,pa:0x%lx) ncmd(%d) seq_no(%u)\n",
+			cmd->ctx,
+			(unsigned long)cmd->ctx->mm->pgd,
+			(unsigned long)virt_to_phys((unsigned long *)cmd->ctx->mm->pgd),
 			atomic_read(&ctx->ncmd), cmd->seq_no);
 	spin_unlock(&info->bltlock);
 

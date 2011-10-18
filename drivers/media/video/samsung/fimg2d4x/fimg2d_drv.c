@@ -93,6 +93,25 @@ static irqreturn_t fimg2d_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_S5P_SYSTEM_MMU
+static int fimg2d_sysmmu_fault_handler(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
+		unsigned long pgtable_base, unsigned long fault_addr)
+{
+	if (itype == SYSMMU_PAGEFAULT) {
+		printk(KERN_ERR "fimg2d page fault occurred at 0x%lx pgd (pa:0x%lx)\n",
+				fault_addr, pgtable_base);
+		fimg2d_print_current_command(info, pgtable_base);
+	} else {
+		printk(KERN_ERR "fimg2d sysmmu interrupt "
+				"itype(%d) pgd(0x%lx) addr(0x%lx)\n",
+				itype, pgtable_base, fault_addr);
+	}
+
+	BUG();
+	return 0;
+}
+#endif
+
 /**
  * waits until blit commands are done for this context
  */
@@ -143,9 +162,12 @@ static int fimg2d_open(struct inode *inode, struct file *file)
 	file->private_data = (void *)ctx;
 
 	ctx->mm = current->mm;
-	fimg2d_debug("ctx %p pgd %p init_mm pgd %p\n",
-			ctx, (void *)virt_to_phys(ctx->mm->pgd),
-			(void *)virt_to_phys(init_mm.pgd));
+	fimg2d_debug("ctx %p pgd (va:0x%lx,pa:0x%lx) init_mm (va:0x%lx,pa:0x%lx)\n",
+			ctx,
+			(unsigned long)ctx->mm->pgd,
+			(unsigned long)virt_to_phys((unsigned long *)ctx->mm->pgd),
+			(unsigned long)init_mm.pgd,
+			(unsigned long)virt_to_phys((unsigned long *)init_mm.pgd));
 
 	fimg2d_add_context(info, ctx);
 
@@ -371,6 +393,11 @@ static int fimg2d_probe(struct platform_device *pdev)
 	fimg2d_debug("enable runtime pm\n");
 #endif
 
+#ifdef CONFIG_S5P_SYSTEM_MMU
+	s5p_sysmmu_set_fault_handler(&pdev->dev, fimg2d_sysmmu_fault_handler);
+	fimg2d_debug("register sysmmu page fault handler\n");
+#endif
+
 	/* misc register */
 	ret = misc_register(&fimg2d_dev);
 	if (ret) {
@@ -380,7 +407,6 @@ static int fimg2d_probe(struct platform_device *pdev)
 
 	info->dev = &pdev->dev;
 	printk(KERN_INFO "Samsung Graphics 2D driver, (c) 2011 Samsung Electronics\n");
-
 	return 0;
 
 err_reg:
