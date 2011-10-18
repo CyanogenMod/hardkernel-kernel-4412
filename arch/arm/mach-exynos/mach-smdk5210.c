@@ -634,6 +634,12 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 	&exynos5_device_md0,
 	&exynos5_device_md1,
 #endif
+#ifdef CONFIG_VIDEO_EXYNOS_GSCALER
+	&exynos5_device_gsc0,
+	&exynos5_device_gsc1,
+	&exynos5_device_gsc2,
+	&exynos5_device_gsc3,
+#endif
 #ifdef CONFIG_FB_S3C
 	&s5p_device_fimd1,
 #if defined(CONFIG_LCD_LMS501KF03)
