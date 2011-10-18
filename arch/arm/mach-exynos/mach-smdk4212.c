@@ -2045,6 +2045,21 @@ static struct platform_device smdk4212_input_device = {
 	},
 };
 
+static void __init smdk4212_gpio_power_init(void)
+{
+	int err = 0;
+
+	err = gpio_request_one(EXYNOS4_GPX0(0), 0, "GPX0");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX0 for "
+				"suspend/resume control\n");
+		return;
+	}
+	s3c_gpio_setpull(EXYNOS4_GPX0(0), S3C_GPIO_PULL_NONE);
+
+	gpio_free(EXYNOS4_GPX0(0));
+}
+
 static uint32_t smdk4212_keymap[] __initdata = {
 	/* KEY(row, col, keycode) */
 	KEY(1, 0, KEY_D), KEY(1, 1, KEY_A), KEY(1, 2, KEY_B),
@@ -2804,6 +2819,8 @@ static void __init smdk4212_machine_init(void)
 #endif
 
 	exynos_sysmmu_init();
+
+	smdk4212_gpio_power_init();
 
 	platform_add_devices(smdk4212_devices, ARRAY_SIZE(smdk4212_devices));
 
