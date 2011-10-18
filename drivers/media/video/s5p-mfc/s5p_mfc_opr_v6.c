@@ -227,6 +227,10 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 	case S5P_FIMV_CODEC_VC1_DEC:
 	case S5P_FIMV_CODEC_MPEG2_DEC:
 	case S5P_FIMV_CODEC_VP8_DEC:
+	case S5P_FIMV_CODEC_FIMV1_DEC:
+	case S5P_FIMV_CODEC_FIMV2_DEC:
+	case S5P_FIMV_CODEC_FIMV3_DEC:
+	case S5P_FIMV_CODEC_FIMV4_DEC:
 		ctx->ctx_buf_size = buf_size->other_dec_ctx;
 		break;
 	case S5P_FIMV_CODEC_H264_ENC:

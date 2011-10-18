@@ -187,6 +187,15 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
+		.id = V4L2_CID_CODEC_PACKED_PB,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "Packed PB Enable",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
 		.id = V4L2_CID_CODEC_FRAME_TAG,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "Frame Tag",
@@ -1326,6 +1335,9 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 	case V4L2_CID_CODEC_SLICE_INTERFACE:
 		ctrl->value = ctx->slice_interface;
 		break;
+	case V4L2_CID_CODEC_PACKED_PB:
+		ctrl->value = ctx->is_packedpb;
+		break;
 	case V4L2_CID_CODEC_CRC_ENABLE:
 		ctrl->value = ctx->crc_enable;
 		break;
@@ -1395,6 +1407,17 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 		if (stream_on)
 			return -EBUSY;
 		ctx->slice_interface = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_PACKED_PB:
+		if (stream_on)
+			return -EBUSY;
+		if (ctx->codec_mode != S5P_FIMV_CODEC_MPEG4_DEC &&
+			ctx->codec_mode != S5P_FIMV_CODEC_FIMV1_DEC &&
+			ctx->codec_mode != S5P_FIMV_CODEC_FIMV2_DEC &&
+			ctx->codec_mode != S5P_FIMV_CODEC_FIMV3_DEC &&
+			ctx->codec_mode != S5P_FIMV_CODEC_FIMV4_DEC)
+			return -EINVAL;
+		ctx->is_packedpb = ctrl->value;
 		break;
 	case V4L2_CID_CODEC_CRC_ENABLE:
 		if (ctrl->value == 1 || ctrl->value == 0)
@@ -1883,6 +1906,8 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 
 	INIT_LIST_HEAD(&ctx->dpb_queue);
 	ctx->dpb_queue_cnt = 0;
+
+	ctx->is_packedpb = 0;
 
 	/* Init videobuf2 queue for OUTPUT */
 	ctx->vq_src.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;

@@ -284,6 +284,18 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 	}
 }
 
+static int s5p_mfc_find_start_code(unsigned char *src_mem, unsigned int remainSize)
+{
+	unsigned int index = 0;
+
+	for (index = 0; index < remainSize - 3; index++) {
+		if ((src_mem[index] == 0x00) && (src_mem[index+1] == 0x00) &&
+				(src_mem[index+2] == 0x01))
+			return index;
+	}
+
+	return -1;
+}
 /* Handle frame decoding interrupt */
 static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 					unsigned int reason, unsigned int err)
@@ -293,7 +305,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 	struct s5p_mfc_buf *src_buf;
 	unsigned long flags;
 	unsigned int res_change;
-	unsigned int index;
+	unsigned int index, remained;
 
 	dst_frame_status = s5p_mfc_get_dspl_status()
 				& S5P_FIMV_DEC_STATUS_DECODING_STATUS_MASK;
@@ -353,16 +365,26 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			" %d\n", src_buf->vb.v4l2_planes[0].bytesused,
 			ctx->consumed_stream, s5p_mfc_get_consumed_stream());
 		ctx->consumed_stream += s5p_mfc_get_consumed_stream();
-		/* FIXME: codec mode check for VP8 is need to ignore consumed bytes
-		 *
-		 * Known Issue : consumed bytes mismatch in VP8 */
-		if (ctx->codec_mode != S5P_FIMV_CODEC_H264_DEC &&
-			ctx->codec_mode != S5P_FIMV_CODEC_VP8_DEC &&
-			s5p_mfc_get_dec_frame_type() == S5P_FIMV_DECODE_FRAME_P_FRAME
-					&& ctx->consumed_stream + STUFF_BYTE <
-					src_buf->vb.v4l2_planes[0].bytesused) {
+		remained = src_buf->vb.v4l2_planes[0].bytesused - ctx->consumed_stream;
+
+		if (ctx->is_packedpb && remained > STUFF_BYTE &&
+			s5p_mfc_get_dec_frame_type() == S5P_FIMV_DECODE_FRAME_P_FRAME) {
+			unsigned char *stream_vir;
+			int offset = 0;
+
 			/* Run MFC again on the same buffer */
 			mfc_debug(2, "Running again the same buffer.\n");
+
+			stream_vir = vb2_plane_vaddr(&src_buf->vb, 0);
+			s5p_mfc_cache_inv((void *)stream_vir,
+					src_buf->vb.v4l2_planes[0].bytesused);
+
+			offset = s5p_mfc_find_start_code(
+					stream_vir + ctx->consumed_stream, remained);
+
+			if (offset > STUFF_BYTE)
+				ctx->consumed_stream += offset;
+
 			s5p_mfc_set_dec_stream_buffer(ctx,
 				src_buf->cookie.stream, ctx->consumed_stream,
 				src_buf->vb.v4l2_planes[0].bytesused -

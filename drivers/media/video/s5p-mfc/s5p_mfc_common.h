@@ -510,6 +510,7 @@ struct s5p_mfc_ctx {
 	__u32 pix_format;
 	int loop_filter_mpeg4;
 	int display_delay;
+	int is_packedpb;
 	int cacheable;
 	int crc_enable;
 
