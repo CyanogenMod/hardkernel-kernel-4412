@@ -100,6 +100,20 @@ void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx);
 		s5p_mfc_write_reg(0, S5P_FIMV_RISC2HOST_INT);	\
 	} while (0)
 
+/* Definition */
+#define ENC_MULTI_SLICE_MB_MAX		(1 << 30) - 1
+#define ENC_MULTI_SLICE_BIT_MIN		2800
+#define ENC_INTRA_REFRESH_MB_MAX	(1 << 18) - 1
+#define ENC_VBV_BUF_SIZE_MAX		(1 << 30) - 1
+#define ENC_H264_LOOP_FILTER_AB_MIN	-12
+#define ENC_H264_LOOP_FILTER_AB_MAX	12
+#define ENC_H264_RC_FRAME_RATE_MAX	(1 << 16) - 1
+#define ENC_H263_RC_FRAME_RATE_MAX	(1 << 16) - 1
+#define ENC_H264_PROFILE_MAX		3
+#define ENC_H264_LEVEL_MAX		42
+#define ENC_MPEG4_VOP_TIME_RES_MAX	(1 << 16) - 1
+#define FRAME_DELTA_H264_H263		1000
+
 /* Definitions for shared memory compatibility */
 #define PIC_TIME_TOP		S5P_FIMV_D_RET_PICTURE_TAG_TOP
 #define PIC_TIME_BOT		S5P_FIMV_D_RET_PICTURE_TAG_BOT

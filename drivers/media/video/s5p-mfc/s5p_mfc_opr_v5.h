@@ -114,6 +114,19 @@ void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx);
 		s5p_mfc_write_reg(0xffff, S5P_FIMV_SI_RTN_CHID);\
 	} while (0)
 
+/* Definition */
+#define ENC_MULTI_SLICE_MB_MAX 		(1 << 16) - 1
+#define ENC_MULTI_SLICE_BIT_MIN		1900
+#define ENC_INTRA_REFRESH_MB_MAX	(1 << 16) - 1
+#define ENC_VBV_BUF_SIZE_MAX		(1 << 16) - 1
+#define ENC_H264_LOOP_FILTER_AB_MIN	-6
+#define ENC_H264_LOOP_FILTER_AB_MAX	6
+#define ENC_H264_RC_FRAME_RATE_MAX	(1 << 30) -1
+#define ENC_H263_RC_FRAME_RATE_MAX	(1 << 30) -1
+#define ENC_H264_PROFILE_MAX		2
+#define ENC_H264_LEVEL_MAX		40
+#define ENC_MPEG4_VOP_TIME_RES_MAX	(1 << 15) - 1
+
 void s5p_mfc_try_run(struct s5p_mfc_dev *dev);
 
 void s5p_mfc_cleanup_queue(struct list_head *lh, struct vb2_queue *vq);
