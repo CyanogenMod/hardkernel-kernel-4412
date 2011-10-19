@@ -35,9 +35,11 @@
 #include <linux/uaccess.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/clk.h>
 
 #ifdef CONFIG_VITHAR
 #include <mach/map.h>
+#include <linux/fb.h>
 #endif
 
 #ifdef CONFIG_ARM
@@ -662,7 +664,105 @@ static ssize_t set_policy(struct device *dev, struct device_attribute *attr, con
 	kbase_pm_set_policy(kbdev, new_policy);
 	return count;
 }
+static ssize_t show_clock(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+	struct clk *mout_aclk_400;
+	unsigned int clkrate;
 
+	kbdev = to_kbase_device(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	mout_aclk_400 = clk_get(dev, "mout_aclk_400");
+	if(IS_ERR(mout_aclk_400)) {
+	    return -ENOENT;
+	}
+
+	clkrate = clk_get_rate(mout_aclk_400);
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current aclk_400[G3D_BLK] = %dMhz", clkrate/1000000);
+
+	/* To be revised  */
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 400, 266, 200, 100, 50Mhz");
+
+	if (ret < PAGE_SIZE - 1)
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	else
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+
+static ssize_t set_clock(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct kbase_device *kbdev;
+	struct clk *mout_aclk_400;
+	kbdev = to_kbase_device(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	mout_aclk_400 = clk_get(dev, "mout_aclk_400");
+	if(IS_ERR(mout_aclk_400)) {
+	    return -ENOENT;
+	}
+
+	if (sysfs_streq("400", buf)) {
+	    clk_set_rate(mout_aclk_400, 400000000);
+	} else if (sysfs_streq("266", buf)) {
+	    clk_set_rate(mout_aclk_400, 267000000);
+	} else if (sysfs_streq("200", buf)) {
+	    clk_set_rate(mout_aclk_400, 200000000);
+	} else if (sysfs_streq("100", buf)) {
+	    clk_set_rate(mout_aclk_400, 100000000);
+	} else if (sysfs_streq("50", buf)) {
+	    clk_set_rate(mout_aclk_400, 50000000);
+	} else {
+	    dev_err(dev, "set_clock: invalid clock\n");
+	    return -ENOENT;
+	}
+
+	return count;
+}
+
+static ssize_t show_fbdev(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+	int i;
+
+	kbdev = to_kbase_device(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	for(i = 0 ; i < num_registered_fb ; i++) {
+	    ret += snprintf(buf+ret, PAGE_SIZE-ret, "fb[%d] xres=%d, yres=%d, addr=0x%lx\n", i, registered_fb[i]->var.xres, registered_fb[i]->var.yres, registered_fb[i]->fix.smem_start);
+	}
+
+	if (ret < PAGE_SIZE - 1)
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	else
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+/*
+static ssize_t set_fbdev(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	return count;
+}
+*/
 /** The sysfs file @c power_policy.
  *
  * This is used for obtaining information about the available policies,
@@ -670,6 +770,8 @@ static ssize_t set_policy(struct device *dev, struct device_attribute *attr, con
  * policy.
  */
 DEVICE_ATTR(power_policy, S_IRUGO|S_IWUSR, show_policy, set_policy);
+DEVICE_ATTR(clock, S_IRUGO|S_IWUSR, show_clock, set_clock);
+DEVICE_ATTR(fbdev, S_IRUGO, show_fbdev, NULL);
 
 static int kbase_common_device_init(kbase_device *kbdev)
 {
@@ -724,6 +826,18 @@ static int kbase_common_device_init(kbase_device *kbdev)
 		goto out_register;
 	}
 
+	if (device_create_file(osdev->dev, &dev_attr_clock))
+	{
+		dev_err(osdev->dev, "Couldn't create sysfs file\n");
+		goto out_register;
+	}
+
+	if (device_create_file(osdev->dev, &dev_attr_fbdev))
+	{
+		dev_err(osdev->dev, "Couldn't create sysfs file\n");
+		goto out_register;
+	}
+
 	down(&kbase_dev_list_lock);
 	list_add(&osdev->entry, &kbase_dev_list);
 	up(&kbase_dev_list_lock);
@@ -755,6 +869,8 @@ out_job_slot:
 	kbase_job_slot_exit(kbdev);
 out_create_file:
 	device_remove_file(kbdev->osdev.dev, &dev_attr_power_policy);
+	device_remove_file(kbdev->osdev.dev, &dev_attr_clock);
+	device_remove_file(kbdev->osdev.dev, &dev_attr_fbdev);
 out_register:
 	misc_deregister(&kbdev->osdev.mdev);
 out_interrupts:
@@ -884,6 +1000,8 @@ static int kbase_common_device_remove(struct kbase_device *kbdev)
 {
 	/* Remove the sys power policy file */
 	device_remove_file(kbdev->osdev.dev, &dev_attr_power_policy);
+	device_remove_file(kbdev->osdev.dev, &dev_attr_clock);
+	device_remove_file(kbdev->osdev.dev, &dev_attr_fbdev);
 	kbasep_js_devdata_term(kbdev);
 	kbase_pm_term(kbdev);
 	kbase_job_slot_exit(kbdev);
