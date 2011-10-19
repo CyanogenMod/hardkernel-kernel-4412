@@ -1725,6 +1725,7 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 		list_del(&precfg->list);
 		kfree(precfg);
 	}
+	INIT_LIST_HEAD(&ctx->presetcfgs);
 
 	/*
 	 * allocate context buffer
