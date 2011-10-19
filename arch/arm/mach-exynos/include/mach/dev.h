@@ -36,5 +36,6 @@ void dev_put(const char *name);
 int dev_lock(struct device *device, struct device *dev, unsigned long freq);
 int dev_unlock(struct device *device, struct device *dev);
 unsigned long dev_max_freq(struct device *device);
+int dev_lock_list(struct device *dev, char *buf);
 
 #endif /* __ASM_ARCH_DEV_H */

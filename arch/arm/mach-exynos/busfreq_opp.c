@@ -48,6 +48,13 @@
 #include <plat/cputype.h>
 #include <plat/clock.h>
 
+struct busfreq_control {
+	struct opp *opp_lock;
+	struct device *dev;
+};
+
+static struct busfreq_control bus_ctrl;
+
 static struct opp *busfreq_monitor(struct busfreq_data *data)
 {
 	struct opp *opp;
@@ -72,6 +79,9 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 		newfreq = lockfreq;
 
 	opp = opp_find_freq_ceil(data->dev, &newfreq);
+
+	if (bus_ctrl.opp_lock)
+		opp = bus_ctrl.opp_lock;
 
 	return opp;
 }
@@ -186,6 +196,48 @@ void exynos4_busfreq_lock_free(unsigned int nId)
 {
 }
 
+static ssize_t show_level_lock(struct device *device,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "Current Freq : %lu\n", opp_get_freq(bus_ctrl.opp_lock));
+}
+
+static ssize_t store_level_lock(struct device *device, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct opp *opp;
+	unsigned long freq;
+	sscanf(buf, "%lu", &freq);
+	if (freq == 0) {
+		pr_info("Release bus level lock.\n");
+		bus_ctrl.opp_lock = NULL;
+		return count;
+	}
+
+	if (freq > 400000)
+		freq = 400000;
+
+	opp = opp_find_freq_ceil(bus_ctrl.dev, &freq);
+	bus_ctrl.opp_lock = opp;
+	pr_info("Lock Freq : %lu\n", opp_get_freq(opp));
+	return count;
+}
+
+static ssize_t show_locklist(struct device *device,
+		struct device_attribute *attr, char *buf)
+{
+	return dev_lock_list(bus_ctrl.dev, buf);
+}
+
+static DEVICE_ATTR(curr_freq, 0666, show_level_lock, store_level_lock);
+static DEVICE_ATTR(lock_list, 0666, show_locklist, NULL);
+
+static struct attribute *busfreq_attributes[] = {
+	&dev_attr_curr_freq.attr,
+	&dev_attr_lock_list.attr,
+	NULL
+};
+
 static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
@@ -212,6 +264,7 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		exynos4_buspm_notifier_event;
 	data->exynos4_reboot_notifier.notifier_call =
 		exynos4_busfreq_reboot_event;
+	data->busfreq_attr_group.attrs = busfreq_attributes;
 
 	if (soc_is_exynos4210()) {
 		data->init = exynos4210_init;
@@ -223,7 +276,10 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		data->get_int_volt = exynos4212_get_int_volt;
 	}
 
+	data->dev = &pdev->dev;
 	data->sampling_rate = usecs_to_jiffies(100000);
+	bus_ctrl.opp_lock =  NULL;
+	bus_ctrl.dev =  data->dev;
 
 	INIT_DELAYED_WORK_DEFERRABLE(&data->worker, exynos4_busfreq_timer);
 
@@ -243,6 +299,9 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 	}
 
 	data->curr_opp = opp_find_freq_ceil(&pdev->dev, &freq);
+
+	if (sysfs_create_group(cpufreq_global_kobject, &data->busfreq_attr_group))
+		pr_err("Failed to create attributes group.!\n");
 
 	if (register_pm_notifier(&data->exynos4_buspm_notifier)) {
 		pr_err("Failed to setup buspm notifier\n");

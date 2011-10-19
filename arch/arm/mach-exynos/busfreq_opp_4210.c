@@ -291,7 +291,6 @@ int exynos4210_init(struct device *dev, struct busfreq_data *data)
 	}
 
 	data->min_cpufreq = min_cpufreq;
-	data->dev = dev;
 
 	/* Find max frequency */
 	data->max_opp = opp_find_freq_floor(dev, &maxfreq);

@@ -34,6 +34,7 @@ struct busfreq_data {
 
 	struct notifier_block exynos4_buspm_notifier;
 	struct notifier_block exynos4_reboot_notifier;
+	struct attribute_group busfreq_attr_group;
 	int (*init)	(struct device *dev, struct busfreq_data *data);
 	void (*target)	(struct opp *opp);
 	unsigned int (*get_int_volt) (unsigned long freq);

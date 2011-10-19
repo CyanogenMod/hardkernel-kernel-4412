@@ -157,3 +157,25 @@ unsigned long dev_max_freq(struct device *device)
 
 	return freq;
 }
+
+int dev_lock_list(struct device *device, char *buf)
+{
+	struct device_domain *domain;
+	struct domain_lock *lock;
+	int count = 0;
+
+	domain = find_device_domain(device);
+	if (IS_ERR(domain)) {
+		dev_dbg(device, "Can't find device domain.\n");
+		return 0;
+	}
+
+	mutex_lock(&domains_mutex);
+	count = sprintf(buf, "Lock List\n");
+	list_for_each_entry(lock, &domain->domain_list, node)
+		count += sprintf(buf + count, "%s : %lu\n", dev_name(lock->device), lock->freq);
+
+	mutex_unlock(&domains_mutex);
+
+	return count;
+}
