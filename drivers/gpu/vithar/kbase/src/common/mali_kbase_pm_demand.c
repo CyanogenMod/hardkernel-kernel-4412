@@ -129,10 +129,10 @@ static void demand_power_down(kbase_device *kbdev)
 	/* Turn the cores off */
 	kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_L3, &lo, &hi);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_L3, lo, hi);
-
-	kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_L2, &lo, &hi);
+	/* Remove below two lines. ARM report L2 cache problem on Beta RTL */
+/*	kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_L2, &lo, &hi);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_L2, lo, hi);
-
+*/
 	kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_SHADER, &lo, &hi);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_SHADER, lo, hi);
 
