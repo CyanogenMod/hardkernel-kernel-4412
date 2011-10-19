@@ -157,7 +157,7 @@ int mfc_set_inst_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 
 		list_add_tail(&precfg->list, &ctx->presetcfgs);
 
-		mfc_dbg("precfg enties...");
+		mfc_dbg("precfg entries...");
 		precfg = NULL;
 
 		list_for_each_safe(pos, nxt, &ctx->presetcfgs) {
