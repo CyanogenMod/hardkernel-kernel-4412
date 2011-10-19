@@ -290,12 +290,13 @@ struct s5p_mfc_mpeg4_enc_params {
 	u8 num_b_frame;
 	enum v4l2_codec_mfc5x_enc_mpeg4_profile profile;
 	u8 level;
-	enum v4l2_codec_mfc5x_enc_switch quarter_pixel;
+	enum v4l2_codec_mfc5x_enc_switch quarter_pixel; /* MFC5.x */
 	u16 vop_time_res;
 	u16 vop_frm_delta;
 	u8 rc_b_frame_qp;
 	/* Common for MPEG4, H263 */
 	u32 rc_framerate;
+	enum v4l2_codec_mfc5x_enc_switch rc_mb; /* MFC6.1 Only */
 	u8 rc_frame_qp;
 	u8 rc_min_qp;
 	u8 rc_max_qp;
@@ -327,6 +328,8 @@ struct s5p_mfc_enc_params {
 	enum v4l2_codec_mfc5x_enc_seq_hdr_mode seq_hdr_mode;
 	enum v4l2_codec_mfc5x_enc_frame_skip_mode frame_skip_mode;
 	enum v4l2_codec_mfc5x_enc_switch fixed_target_bit;
+
+	u16 rc_frame_delta;   /* MFC6.1 Only */
 
 	union {
 		struct s5p_mfc_h264_enc_params h264;
@@ -535,6 +538,10 @@ struct s5p_mfc_ctx {
 
 	/* For 6.x */
 	size_t scratch_buf_size;
+	size_t enc_luma_dpb_size;
+	size_t enc_chroma_dpb_size;
+	size_t enc_me_buffer_size;
+	size_t enc_tmv_buffer_size;
 	int remained_flag;
 
 	/* ION file descriptor */

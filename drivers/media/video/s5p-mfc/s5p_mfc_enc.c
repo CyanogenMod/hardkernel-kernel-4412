@@ -811,6 +811,9 @@ static int s5p_mfc_ctx_ready(struct s5p_mfc_ctx *ctx)
 	/* context is ready to make header */
 	if (ctx->state == MFCINST_GOT_INST && ctx->dst_queue_cnt >= 1)
 		return 1;
+	/* context is ready to allocate DPB */
+	if (ctx->dst_queue_cnt >= 1 && ctx->state == MFCINST_HEAD_PARSED)
+		return 1;
 	/* context is ready to encode a frame */
 	if (ctx->state == MFCINST_RUNNING &&
 		ctx->src_queue_cnt >= 1 && ctx->dst_queue_cnt >= 1)
@@ -1167,15 +1170,20 @@ static int enc_post_seq_start(struct s5p_mfc_ctx *ctx)
 		spin_unlock_irqrestore(&dev->irqlock, flags);
 	}
 
-	ctx->state = MFCINST_RUNNING;
+	if (IS_MFCV6(dev))
+		ctx->state = MFCINST_HEAD_PARSED; /* for INIT_BUFFER cmd */
+	else {
+		ctx->state = MFCINST_RUNNING;
 
-	if (s5p_mfc_ctx_ready(ctx)) {
-		spin_lock_irqsave(&dev->condlock, flags);
-		set_bit(ctx->num, &dev->ctx_work_bits);
-		spin_unlock_irqrestore(&dev->condlock, flags);
+		if (s5p_mfc_ctx_ready(ctx)) {
+			spin_lock_irqsave(&dev->condlock, flags);
+			set_bit(ctx->num, &dev->ctx_work_bits);
+			spin_unlock_irqrestore(&dev->condlock, flags);
+		}
+		s5p_mfc_try_run(dev);
 	}
-
-	s5p_mfc_try_run(dev);
+	if (IS_MFCV6(dev))
+		ctx->dpb_count = s5p_mfc_get_enc_dpb_count();
 
 	return 0;
 }
@@ -1645,27 +1653,7 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 			pix_fmt_mp->width, pix_fmt_mp->height,
 			ctx->img_width, ctx->img_height);
 
-		if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M) {
-			ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN);
-
-			ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN)
-				* ALIGN(ctx->img_height, S5P_FIMV_NV12M_LVALIGN);
-			ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN)
-				* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12M_CVALIGN);
-
-			ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12M_SALIGN);
-			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12M_SALIGN);
-		} else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12MT) {
-			ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN);
-
-			ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
-				* ALIGN(ctx->img_height, S5P_FIMV_NV12MT_VALIGN);
-			ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
-				* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12MT_VALIGN);
-
-			ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12MT_SALIGN);
-			ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12MT_SALIGN);
-		}
+		s5p_mfc_enc_calc_src_size(ctx);
 
 		ctx->output_state = QUEUE_FREE;
 
@@ -1685,6 +1673,7 @@ out:
 static int vidioc_reqbufs(struct file *file, void *priv,
 					  struct v4l2_requestbuffers *reqbufs)
 {
+	struct s5p_mfc_dev *dev = video_drvdata(file);
 	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
 	int ret = 0;
 
@@ -1718,12 +1707,14 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		}
 		ctx->capture_state = QUEUE_BUFS_REQUESTED;
 
+		if (!IS_MFCV6(dev)) {
 		ret = s5p_mfc_alloc_codec_buffers(ctx);
-		if (ret) {
-			mfc_err("Failed to allocate encoding buffers.\n");
-			reqbufs->count = 0;
-			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
-			return -ENOMEM;
+			if (ret) {
+				mfc_err("Failed to allocate encoding buffers.\n");
+				reqbufs->count = 0;
+				ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
+				return -ENOMEM;
+			}
 		}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		/* cacheable setting */
@@ -1924,6 +1915,7 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	case V4L2_CID_CODEC_MFC5X_ENC_FRAME_COUNT:
 		ctrl->value = ctx->frame_count;
 		break;
+	/* FIXME: it doesn't need to return using GetConfig */
 	case V4L2_CID_CODEC_MFC5X_ENC_FRAME_TYPE:
 		ctrl->value = ctx->frame_type;
 		break;
@@ -2013,6 +2005,7 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	case V4L2_CID_CODEC_MFC5X_ENC_RC_REACTION_COEFF:
 		p->rc_reaction_coeff = ctrl->value;
 		break;
+	/* FIXME: why is it used ? */
 	case V4L2_CID_CODEC_MFC5X_ENC_FORCE_FRAME_TYPE:
 		ctx->force_frame_type = ctrl->value;
 		break;
@@ -2025,7 +2018,7 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	case V4L2_CID_CODEC_MFC5X_ENC_FRAME_SKIP_MODE:
 		p->frame_skip_mode = ctrl->value;
 		break;
-	case V4L2_CID_CODEC_MFC5X_ENC_RC_FIXED_TARGET_BIT:
+	case V4L2_CID_CODEC_MFC5X_ENC_RC_FIXED_TARGET_BIT: /* MFC5.x Only */
 		p->fixed_target_bit = ctrl->value;
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_H264_B_FRAMES:
@@ -2052,7 +2045,7 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	case V4L2_CID_CODEC_MFC5X_ENC_H264_ENTROPY_MODE:
 		p->codec.h264.entropy_mode = ctrl->value;
 		break;
-	case V4L2_CID_CODEC_MFC5X_ENC_H264_MAX_REF_PIC:
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_MAX_REF_PIC: /* reserved */
 		p->codec.h264.max_ref_pic = ctrl->value;
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_H264_NUM_REF_PIC_4P:
@@ -2145,6 +2138,9 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_VOP_FRM_DELTA:
 		p->codec.mpeg4.vop_frm_delta = ctrl->value;
 		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_RC_MB_ENABLE:
+		p->codec.mpeg4.rc_mb = ctrl->value;
+		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_H263_RC_FRAME_RATE:
 		p->codec.mpeg4.rc_framerate = ctrl->value;
 		break;
@@ -2159,6 +2155,9 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_H263_RC_P_FRAME_QP:
 		p->codec.mpeg4.rc_p_frame_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H263_RC_MB_ENABLE:
+		p->codec.mpeg4.rc_mb = ctrl->value;
 		break;
 	default:
 		v4l2_err(&dev->v4l2_dev, "Invalid control\n");
@@ -2411,6 +2410,7 @@ static int s5p_mfc_queue_setup(struct vb2_queue *vq,
 			       unsigned long psize[], void *allocators[])
 {
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	struct s5p_mfc_dev *dev = ctx->dev;
 	int i;
 
 	mfc_debug_enter();
@@ -2453,10 +2453,17 @@ static int s5p_mfc_queue_setup(struct vb2_queue *vq,
 		psize[0] = ctx->luma_size;
 		psize[1] = ctx->chroma_size;
 		allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX];
-		allocators[1] = ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX];
+		if (IS_MFCV6(dev)) {
+			allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
+			allocators[1] = ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
+		}
+		else {
+			allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX];
+			allocators[1] = ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX];
+		}
 
 	} else {
-		mfc_err("inavlid queue type: %d\n", vq->type);
+		mfc_err("invalid queue type: %d\n", vq->type);
 		return -EINVAL;
 	}
 
