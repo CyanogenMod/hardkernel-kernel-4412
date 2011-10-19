@@ -291,10 +291,11 @@ static int mfc_release(struct inode *inode, struct file *file)
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	mfcdev->drm_playback = 0;
 #endif
+	mfc_info("MFC instance [%d:%d] released\n", mfc_ctx->id,
+		atomic_read(&mfcdev->inst_cnt));
 
 	file->private_data = NULL;
 
-	printk(KERN_INFO "MFC instance [%d] released\n", mfc_ctx->id);
 	dev->inst_ctx[mfc_ctx->id] = NULL;
 	atomic_dec(&dev->inst_cnt);
 
