@@ -201,9 +201,9 @@ static int mfc_open(struct inode *inode, struct file *file)
 	else {
 		if (check_magic(mfcdev->drm_info.addr)) {
 			clear_magic(mfcdev->drm_info.addr);
-			printk(KERN_ERR "MFC instances are not cleared before DRM playback!\n");
+			mfc_err("MFC instances are not cleared before DRM playback!\n");
 			ret = -EINVAL;
-			goto err_drm_playback;
+			goto err_drm_start;
 		}
 	}
 #endif
@@ -245,6 +245,9 @@ static int mfc_open(struct inode *inode, struct file *file)
 err_inst_ctx:
 err_inst_id:
 err_inst_cnt:
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+err_drm_start:
+#endif
 err_start_hw:
 	if (atomic_read(&mfcdev->inst_cnt) == 0) {
 		if (mfc_power_off() < 0)
