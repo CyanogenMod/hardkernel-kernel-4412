@@ -31,8 +31,8 @@ obj-$(CONFIG_EXYNOS_MCT)	+= mct.o
 
 obj-$(CONFIG_HOTPLUG_CPU)	+= hotplug.o
 
-obj-$(CONFIG_STAND_ALONE_POLICY)       += stand-hotplug.o
-obj-$(CONFIG_WITH_DVFS_POLICY)       += dvfs-hotplug.o
+obj-$(CONFIG_STAND_ALONE_POLICY)	+= stand-hotplug.o
+obj-$(CONFIG_WITH_DVFS_POLICY)		+= dvfs-hotplug.o
 
 # machine support
 

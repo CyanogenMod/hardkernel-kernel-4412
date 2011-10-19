@@ -307,7 +307,7 @@ config EXYNOS4212_1200MHZ_SUPPORT
 endchoice
 
 menu "Support dynamic CPU Hotplug"
-	depends on (CPU_EXYNOS4210 || CPU_EXYNOS4212 || CPU_EXYNOS4412) && HOTPLUG_CPU && SMP 
+	depends on (CPU_EXYNOS4210 || CPU_EXYNOS4212 || CPU_EXYNOS4412) && HOTPLUG_CPU && SMP
 
 config EXYNOS4_PM_HOTPLUG
 	bool "EXYNOS4 Dynamic Hotplug"
@@ -328,7 +328,6 @@ config WITH_DVFS_POLICY
 
 endchoice
 endmenu
-
 
 choice
 	prompt "Busfreq Model"
