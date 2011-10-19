@@ -1,0 +1,234 @@
+/* linux/arch/arm/mm/cache-perf.c
+ *
+ * Copyright 2011 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com/
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+#include <linux/init.h>
+#include <linux/kthread.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/moduleparam.h>
+#include <linux/wait.h>
+#include <linux/slab.h>
+#include <linux/errno.h>
+#include <linux/time.h>
+#include <linux/dma-mapping.h>
+#include <linux/types.h>
+#include <linux/math64.h>
+
+#include <asm/outercache.h>
+#include <asm/cacheflush.h>
+
+static unsigned int try_cnt = 256;
+module_param(try_cnt, uint, S_IRUGO);
+MODULE_PARM_DESC(try_cnt, "Try count to test");
+
+static bool l1 = 1;
+module_param(l1, bool, S_IRUGO);
+MODULE_PARM_DESC(l1, "Set for L1 check");
+
+static bool l2 = 1;
+module_param(l2, bool, S_IRUGO);
+MODULE_PARM_DESC(l2, "Set for L2 check");
+
+static bool mset = 1;
+module_param(mset, bool, S_IRUGO);
+MODULE_PARM_DESC(mset, "Set for Memset");
+
+static bool cops = 1;
+module_param(cops, bool, S_IRUGO);
+MODULE_PARM_DESC(cops, "Set for Clean");
+
+static bool iops = 1;
+module_param(iops, bool, S_IRUGO);
+MODULE_PARM_DESC(iops, "Set for Invalidate");
+
+static bool fops = 1;
+module_param(fops, bool, S_IRUGO);
+MODULE_PARM_DESC(fops, "Set for Flush");
+
+struct task_struct *cacheperf_task;
+static bool thread_running;
+
+#define START_SIZE (32)
+#define END_SIZE (SZ_2M)
+
+static inline long unsigned int timespec_to_usec(struct timespec lhs,
+			struct timespec rhs)
+{
+	return ((rhs.tv_sec - lhs.tv_sec)*NSEC_PER_SEC
+			+ (rhs.tv_nsec - lhs.tv_nsec))/NSEC_PER_USEC;
+}
+
+static void print_result(char *ops, u32 xfer_size, struct timespec lhs,
+			 struct timespec rhs)
+{
+	u32 ns;
+	struct timespec ts;
+
+	ts = timespec_sub(rhs, lhs);
+	ns = (u32) timespec_to_ns(&ts);
+
+	if (!strcmp(ops, "memset"))
+		printk(KERN_INFO "%u: %lu\n", xfer_size,
+				timespec_to_usec(lhs, rhs));
+	else
+		printk(KERN_INFO "%lu\n", timespec_to_usec(lhs, rhs));
+}
+
+bool buf_compare(u32 src[], u32 dst[], unsigned int bytes)
+{
+	unsigned int i;
+
+	for (i = 0; i < bytes / 4; i++) {
+		if (src[i] != dst[i]) {
+			printk(KERN_ERR "Failed to compare: %d, %x:%x-%x:%x\n",
+			       i, (u32) src, src[i], (u32) dst, dst[i]);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+static int cacheperf(void)
+{
+	u32 xfer_size;
+	int i = 0;
+	void *vbuf;
+	phys_addr_t pbuf;
+	u32 bufend;
+	struct timespec beforets;
+	struct timespec afterts;
+
+	vbuf = kmalloc(END_SIZE, GFP_KERNEL);
+	pbuf = virt_to_phys(vbuf);
+
+	if (mset) {
+		printk(KERN_INFO "## Memset perf (us)\n");
+
+		xfer_size = START_SIZE;
+		while (xfer_size < END_SIZE) {
+			xfer_size *= 2;
+			bufend = pbuf + xfer_size;
+
+			getnstimeofday(&beforets);
+			for (i = 0; i < try_cnt; i++)
+				memset(vbuf, i, xfer_size);
+			getnstimeofday(&afterts);
+			print_result("memset", xfer_size, beforets, afterts);
+		}
+	}
+
+	if (cops) {
+		printk(KERN_INFO "## Clean perf (us)\n");
+
+		xfer_size = START_SIZE;
+		while (xfer_size < END_SIZE) {
+			xfer_size *= 2;
+			bufend = pbuf + xfer_size;
+
+			getnstimeofday(&beforets);
+			for (i = 0; i < try_cnt; i++) {
+				memset(vbuf, i, xfer_size);
+				if (l1)
+					dmac_map_area(vbuf, xfer_size,
+							DMA_TO_DEVICE);
+				if (l2)
+					outer_clean_range(pbuf, bufend);
+			}
+			getnstimeofday(&afterts);
+			print_result("clean", xfer_size, beforets, afterts);
+		}
+	}
+
+	if (iops) {
+		printk(KERN_INFO "## Invalidate perf (us)\n");
+
+		xfer_size = START_SIZE;
+		while (xfer_size < END_SIZE) {
+			xfer_size *= 2;
+			bufend = pbuf + xfer_size;
+
+			getnstimeofday(&beforets);
+			for (i = 0; i < try_cnt; i++) {
+				memset(vbuf, i, xfer_size);
+				if (l2)
+					outer_inv_range(pbuf, bufend);
+				if (l1)
+					dmac_unmap_area(vbuf, xfer_size,
+							DMA_FROM_DEVICE);
+			}
+			getnstimeofday(&afterts);
+			print_result("inval", xfer_size, beforets, afterts);
+		}
+	}
+
+	if (fops) {
+		printk(KERN_INFO "## Flush perf (us)\n");
+
+		xfer_size = START_SIZE;
+		while (xfer_size < END_SIZE) {
+			xfer_size *= 2;
+			bufend = pbuf + xfer_size;
+
+			getnstimeofday(&beforets);
+			for (i = 0; i < try_cnt; i++) {
+				memset(vbuf, i, xfer_size);
+				if (l1)
+					dmac_flush_range(vbuf,
+					(void *)((u32) vbuf + xfer_size));
+				if (l2)
+					outer_flush_range(pbuf, bufend);
+			}
+			getnstimeofday(&afterts);
+			print_result("flush", xfer_size, beforets, afterts);
+		}
+	}
+
+	kfree(vbuf);
+
+	return 0;
+}
+
+static int thread_func(void *data)
+{
+	thread_running = 1;
+	cacheperf();
+	thread_running = 0;
+
+	return 0;
+}
+
+int __init cacheperf_init(void)
+{
+#ifndef CONFIG_OUTER_CACHE
+	l2 = 0;
+#endif
+
+	printk(KERN_ERR "Test condition: l1: %d, l2: %d, try_cnt:%d\n",
+				l1, l2, try_cnt);
+
+	cacheperf_task = kzalloc(sizeof(struct task_struct), GFP_KERNEL);
+	cacheperf_task = kthread_run(thread_func, NULL, "cacheperf_thread");
+	if (IS_ERR(cacheperf_task))
+			printk(KERN_INFO "Failed to create module\n");
+
+	return 0;
+}
+module_init(cacheperf_init)
+
+void cacheperf_exit(void)
+{
+	if (thread_running)
+		kthread_stop(cacheperf_task);
+
+	kfree(cacheperf_task);
+}
+module_exit(cacheperf_exit);
+MODULE_LICENSE("GPL");
