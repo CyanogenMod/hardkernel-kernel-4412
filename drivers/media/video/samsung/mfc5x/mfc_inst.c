@@ -72,9 +72,38 @@ void mfc_destroy_inst(struct mfc_inst_ctx* ctx)
 	int ret = 0;
 	struct mfc_dec_ctx *dec_ctx;
 	struct mfc_enc_ctx *enc_ctx;
+	struct mfc_pre_cfg *precfg;
 
 	if (ctx) {
-		if (ctx->state > INST_STATE_CREATE) {
+		if (ctx->state < INST_STATE_SETUP) {
+			while (!list_empty(&ctx->presetcfgs)) {
+				precfg = list_entry((&ctx->presetcfgs)->next,
+						struct mfc_pre_cfg, list);
+
+				mfc_dbg("remove unused preset config [0x%08x]\n",
+					precfg->type);
+
+				list_del(&precfg->list);
+				kfree(precfg);
+			}
+		} else {
+			/* Free Decoder/Encoder context private memory */
+			if (ctx->type == DECODER) {
+				dec_ctx = ctx->c_priv;
+				if (dec_ctx)
+					kfree(dec_ctx->d_priv);
+			} else if (ctx->type == ENCODER) {
+				enc_ctx = ctx->c_priv;
+				if (enc_ctx)
+					kfree(enc_ctx->e_priv);
+			}
+
+			/* Free Decoder/Encoder Context */
+			if (ctx->c_priv)
+				kfree(ctx->c_priv);
+		}
+
+		if (ctx->state >= INST_STATE_OPEN) {
 			mfc_clock_on();
 			/* FIXME: meaningless return value */
 			ret = mfc_cmd_inst_close(ctx);
@@ -82,23 +111,6 @@ void mfc_destroy_inst(struct mfc_inst_ctx* ctx)
 		}
 
 		mfc_free_buf_inst(ctx->id);
-
-		/* Free Decoder/Encoder context private memory */
-		if (ctx->type == DECODER) {
-			dec_ctx = ctx->c_priv;
-			if (dec_ctx)
-				kfree(dec_ctx->d_priv);
-		} else if (ctx->type == ENCODER) {
-			enc_ctx = ctx->c_priv;
-			if (enc_ctx)
-				kfree(enc_ctx->e_priv);
-		} else {
-			mfc_err("mfc_destroy_inst(): wrong codec type");
-		}
-
-		/* Free Decoder/Encoder Context */
-		if (ctx->c_priv)
-			kfree(ctx->c_priv);
 
 		/* Free instance context memory */
 		kfree(ctx);
