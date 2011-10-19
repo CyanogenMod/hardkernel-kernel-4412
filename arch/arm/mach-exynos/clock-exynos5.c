@@ -147,6 +147,11 @@ static int exynos5_clk_audss_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_CLKGATE_AUDSS, clk, enable);
 }
 
+static int exynos5_clk_ip_gscl_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GSCL, clk, enable);
+}
+
 /* BPLL clock output
  * No need .ctrlbit, this is always on
 */
@@ -595,6 +600,26 @@ static struct clk exynos5_init_clocks_off[] = {
 		.devname	= "s3c-mfc",
 		.enable		= exynos5_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 0),
+	}, {
+		.name		= "gscl",
+		.devname	= "exynos-gsc.0",
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 0),
+	}, {
+		.name		= "gscl",
+		.devname	= "exynos-gsc.1",
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 1),
+	}, {
+		.name		= "gscl",
+		.devname	= "exynos-gsc.2",
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 2),
+	}, {
+		.name		= "gscl",
+		.devname	= "exynos-gsc.3",
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 3),
 	},
 };
 
@@ -872,6 +897,18 @@ struct clksrc_sources exynos5_clkset_group = {
 	.nr_sources	= ARRAY_SIZE(exynos5_clkset_group_list),
 };
 
+/* Possible clock sources for aclk_266_gscl_sub Mux */
+static struct clk *clk_src_gscl_list[] = {
+	[0] = &clk_ext_xtal_mux,
+	[1] = &exynos5_clk_aclk_266,
+};
+
+static struct clksrc_sources clk_src_gscl = {
+	.sources	= clk_src_gscl_list,
+	.nr_sources	= ARRAY_SIZE(clk_src_gscl_list),
+};
+
+
 static struct clksrc_clk exynos5_clk_dout_mmc0 = {
 	.clk		= {
 		.name		= "dout_mmc0",
@@ -1022,6 +1059,13 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 		.sources = &exynos5_clkset_group,
 		.reg_src = { .reg = EXYNOS5_CLKSRC_DISP1_0, .shift = 0, .size = 4 },
 		.reg_div = { .reg = EXYNOS5_CLKDIV_DISP1_0, .shift = 0, .size = 4 },
+	}, {
+		.clk	= {
+			.name		= "sclk_gscl",
+			.parent		= &exynos5_clk_aclk_266,
+		},
+		.sources = &clk_src_gscl,
+		.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 8, .size = 1 },
 	},
 };
 
