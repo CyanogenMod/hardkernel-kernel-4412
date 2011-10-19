@@ -1307,6 +1307,8 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	}
 	INIT_LIST_HEAD(&ctx->presetcfgs);
 
+	mfc_set_inst_state(ctx, INST_STATE_SETUP);
+
 	/*
 	 * allocate context buffer
 	 */

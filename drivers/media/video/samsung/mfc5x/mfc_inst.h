@@ -28,6 +28,9 @@ enum instance_state {
 	INST_STATE_CREATE	= 0x0001,
 
 	/* ioctl - *_INIT */
+	INST_STATE_SETUP	= 0x0004,
+
+	/* ioctl - *_INIT */
 	INST_STATE_OPEN		= 0x0010,
 	INST_STATE_INIT,
 
