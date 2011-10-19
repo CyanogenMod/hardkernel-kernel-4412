@@ -195,6 +195,79 @@ static int exynos4210_find_group(struct samsung_asv *asv_info,
 	return ret;
 }
 
+static int exynos4210_get_hpm(struct samsung_asv *asv_info)
+{
+	unsigned int i;
+	unsigned int tmp;
+	unsigned int hpm_delay = 0;
+	void __iomem *iem_base;
+
+	iem_base = ioremap(EXYNOS4_PA_IEM, (128 * 1024));
+
+	if (!iem_base) {
+		pr_info("EXYNOS: ioremap fail\n");
+		return -EPERM;
+	}
+
+	/* Clock setting to get asv value */
+	if (!asv_info->pre_clock_init) {
+		pr_info("EXYNOS: No Pre-setup function\n");
+		goto err;
+	} else {
+		if (asv_info->pre_clock_init()) {
+			pr_info("EXYNOS: pre_clock_init function fail");
+			goto err;
+		} else {
+			/* HPM enable  */
+			tmp = __raw_readl(iem_base + EXYNOS4_APC_CONTROL);
+			tmp |= APC_HPM_EN;
+			__raw_writel(tmp, (iem_base + EXYNOS4_APC_CONTROL));
+
+			asv_info->pre_clock_setup();
+
+			/* IEM enable */
+			tmp = __raw_readl(iem_base + EXYNOS4_IECDPCCR);
+			tmp |= IEC_EN;
+			__raw_writel(tmp, (iem_base + EXYNOS4_IECDPCCR));
+		}
+	}
+
+	/* Get HPM Delay value */
+	for (i = 0; i < LOOP_CNT; i++) {
+		tmp = __raw_readb(iem_base + EXYNOS4_APC_DBG_DLYCODE);
+		hpm_delay += tmp;
+	}
+
+	hpm_delay /= LOOP_CNT;
+
+	/* Store result of hpm value */
+	asv_info->hpm_result = hpm_delay;
+
+	return 0;
+
+err:
+	iounmap(iem_base);
+
+	return -EPERM;
+}
+
+static int exynos4210_get_ids(struct samsung_asv *asv_info)
+{
+	unsigned int pkg_id_val;
+
+	if (!asv_info->ids_offset || !asv_info->ids_mask) {
+		pr_info("EXYNOS4: No ids_offset or No ids_mask\n");
+		return -EPERM;
+	}
+
+	pkg_id_val = __raw_readl(S5P_VA_CHIPID + 0x4);
+	asv_info->pkg_id = pkg_id_val;
+	asv_info->ids_result = ((pkg_id_val >> asv_info->ids_offset) &
+							asv_info->ids_mask);
+
+	return 0;
+}
+
 #define PACK_ID				8
 #define PACK_MASK			0x3
 
@@ -251,6 +324,8 @@ int exynos4210_asv_init(struct samsung_asv *asv_info)
 	asv_info->ids_offset = 24;
 	asv_info->ids_mask = 0xFF;
 
+	asv_info->get_ids = exynos4210_get_ids;
+	asv_info->get_hpm = exynos4210_get_hpm;
 	asv_info->check_vdd_arm = exynos4210_check_vdd_arm;
 	asv_info->pre_clock_init = exynos4210_asv_pre_clock_init;
 	asv_info->pre_clock_setup = exynos4210_asv_pre_clock_setup;
