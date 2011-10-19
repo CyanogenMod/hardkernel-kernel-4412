@@ -1958,7 +1958,7 @@ static void srp_sbuf_fill_ibuf(void)
 
 	if (rp_read < srp.sbuf_fill_size) {	/* SBUF */
 		s5pdbg("Backup SBUF\n");
-		srp.sbuf_fill_size -= srp.ibuf_size - rp_frac;
+		srp.sbuf_fill_size = srp.ibuf_size - rp_frac;
 		memcpy(srp.sbuf, &srp.sbuf[rp_frac], srp.sbuf_fill_size);
 
 		if (srp.ibuf_fill_size[0] < srp.ibuf_fill_size[1]) {
