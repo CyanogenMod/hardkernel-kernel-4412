@@ -61,6 +61,7 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 	cdst = &cmd->dst_cache;
 	cmsk = &cmd->msk_cache;
 
+	/* FIXME: L1 cache size = (num_possible_cpus()*SZ_32K) */
 	if (cmd->size_all >= L2_CACHE_SIZE) {
 		flush_all_cpu_caches();	/* innercache all */
 #ifdef CONFIG_OUTER_CACHE

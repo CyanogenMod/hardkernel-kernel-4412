@@ -338,19 +338,11 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 	cdst = &cmd->dst_cache;
 	cmsk = &cmd->msk_cache;
 
-	/* caculate horizontally clipped region */
 	if (cmd->srcen) {
 		csrc->addr = cmd->src.addr.start +
 				(cmd->src.stride * cmd->src_rect.y1);
 		csrc->size = cmd->src.stride *
 				(cmd->src_rect.y2 - cmd->src_rect.y1);
-	}
-
-	if (cmd->dsten) {
-		cdst->addr = cmd->dst.addr.start +
-				(cmd->dst.stride * cmd->dst_rect.y1);
-		cdst->size = cmd->dst.stride *
-				(cmd->dst_rect.y2 - cmd->dst_rect.y1);
 	}
 
 	if (cmd->msken) {
@@ -360,17 +352,32 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 				(cmd->msk_rect.y2 - cmd->msk_rect.y1);
 	}
 
+	/* caculate horizontally clipped region */
+	if (cmd->dsten) {
+		if (cmd->clipping.enable) {
+			cdst->addr = cmd->dst.addr.start +
+					(cmd->dst.stride * cmd->clipping.y1);
+			cdst->size = cmd->dst.stride *
+					(cmd->clipping.y2 - cmd->clipping.y1);
+		} else {
+			cdst->addr = cmd->dst.addr.start +
+					(cmd->dst.stride * cmd->dst_rect.y1);
+			cdst->size = cmd->dst.stride *
+					(cmd->dst_rect.y2 - cmd->dst_rect.y1);
+		}
+	}
+
 #ifdef CONFIG_OUTER_CACHE
 	if (cmd->srcen && fimg2d_check_pagetable(cmd->ctx->mm,
 				csrc->addr, csrc->size) == PT_FAULT)
 		return -1;
 
-	if (cmd->dsten && fimg2d_check_pagetable(cmd->ctx->mm,
-				cdst->addr, cdst->size) == PT_FAULT)
-		return -1;
-
 	if (cmd->msken && fimg2d_check_pagetable(cmd->ctx->mm,
 				cmsk->addr, cmsk->size) == PT_FAULT)
+		return -1;
+
+	if (cmd->dsten && fimg2d_check_pagetable(cmd->ctx->mm,
+				cdst->addr, cdst->size) == PT_FAULT)
 		return -1;
 #endif
 
@@ -385,6 +392,7 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 
 	fimg2d_debug("cached size all = %d\n", cmd->size_all);
 
+	/* FIXME: L1 cache size = (num_possible_cpus()*SZ_32K) */
 	if (cmd->size_all < L1_CACHE_SIZE) {
 		fimg2d_debug("innercache range\n");
 		if (cmd->srcen && cmd->src.addr.cacheable)
