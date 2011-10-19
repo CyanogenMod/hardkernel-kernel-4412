@@ -104,6 +104,7 @@ static int mfc_open(struct inode *inode, struct file *file)
 	struct mfc_inst_ctx *mfc_ctx;
 	int ret;
 	enum mfc_ret_code retcode;
+	int inst_id;
 
 	/* prevent invalid reference */
 	file->private_data = NULL;
@@ -206,6 +207,18 @@ static int mfc_open(struct inode *inode, struct file *file)
 		}
 	}
 #endif
+	if (atomic_read(&mfcdev->inst_cnt) >= MFC_MAX_INSTANCE_NUM) {
+		mfc_err("exceed max instance number, too many instance opened already\n");
+		ret = -EINVAL;
+		goto err_inst_cnt;
+	}
+
+	inst_id = get_free_inst_id(mfcdev);
+	if (inst_id < 0) {
+		mfc_err("failed to get instance ID\n");
+		ret = -EINVAL;
+		goto err_inst_id;
+	}
 
 	mfc_ctx = mfc_create_inst();
 	if (!mfc_ctx) {
@@ -214,25 +227,24 @@ static int mfc_open(struct inode *inode, struct file *file)
 		goto err_inst_ctx;
 	}
 
-	mfc_ctx->id = get_free_inst_id(mfcdev);
-	if (mfc_ctx->id < 0) {
-		ret = -EINVAL;
-		goto err_inst_ctx;
-	}
+	atomic_inc(&mfcdev->inst_cnt);
+	mfcdev->inst_ctx[inst_id] = mfc_ctx;
 
-	printk(KERN_INFO "MFC instance [%d] opened", mfc_ctx->id);
+	mfc_ctx->id = inst_id;
 	mfc_ctx->dev = mfcdev;
 
-	atomic_inc(&mfcdev->inst_cnt);
-	mfcdev->inst_ctx[mfc_ctx->id] = mfc_ctx;
-
 	file->private_data = (struct mfc_inst_ctx *)mfc_ctx;
+
+	mfc_info("MFC instance [%d:%d] opened", mfc_ctx->id,
+		atomic_read(&mfcdev->inst_cnt));
 
 	mutex_unlock(&mfcdev->lock);
 
 	return 0;
 
 err_inst_ctx:
+err_inst_id:
+err_inst_cnt:
 err_start_hw:
 	if (atomic_read(&mfcdev->inst_cnt) == 0) {
 		if (mfc_power_off() < 0)
