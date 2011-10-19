@@ -476,10 +476,11 @@ int h264_get_init_arg(struct mfc_inst_ctx *ctx, void *arg)
  */
 static int pre_seq_start(struct mfc_inst_ctx *ctx)
 {
-	/*
 	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
-	unsigned int reg;
-	*/
+
+	/* Set stream buffer addr */
+	write_reg(mfc_mem_base_ofs(enc_ctx->streamaddr) >> 11, MFC_ENC_SI_CH1_SB_ADR);
+	write_reg(enc_ctx->streamsize, MFC_ENC_SI_CH1_SB_SIZE);
 
 	return 0;
 }
@@ -489,6 +490,8 @@ static int h264_pre_seq_start(struct mfc_inst_ctx *ctx)
 	struct mfc_enc_ctx *enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
 	struct mfc_enc_h264 *h264 = (struct mfc_enc_h264 *)enc_ctx->e_priv;
 	unsigned int shm;
+
+	pre_seq_start(ctx);
 
 	/*
 	unsigned int reg;
@@ -535,10 +538,6 @@ static int h264_pre_seq_start(struct mfc_inst_ctx *ctx)
 				  mfc_ctx->shared_mem_vir_addr + 0x9c);
 	}
 	#endif
-
-	/* Set stream buffer addr */
-	write_reg(mfc_mem_base_ofs(enc_ctx->streamaddr) >> 11, MFC_ENC_SI_CH1_SB_ADR);
-	write_reg(enc_ctx->streamsize, MFC_ENC_SI_CH1_SB_SIZE);
 
 	write_shm(ctx, h264->sei_gen << 1, SEI_ENABLE);
 
@@ -1094,7 +1093,7 @@ static struct mfc_enc_info mpeg4_enc = {
 		.alloc_ctx_buf		= alloc_ctx_buf,
 		.alloc_desc_buf		= NULL,
 		.get_init_arg		= mpeg4_get_init_arg,
-		.pre_seq_start		= h264_pre_seq_start,
+		.pre_seq_start		= pre_seq_start,
 		.post_seq_start		= post_seq_start,
 		.set_init_arg		= set_init_arg,
 		.set_codec_bufs		= h264_set_codec_bufs,
@@ -1118,7 +1117,7 @@ static struct mfc_enc_info h263_enc = {
 		.alloc_ctx_buf		= alloc_ctx_buf,
 		.alloc_desc_buf		= NULL,
 		.get_init_arg		= h263_get_init_arg,
-		.pre_seq_start		= h264_pre_seq_start,
+		.pre_seq_start		= pre_seq_start,
 		.post_seq_start		= post_seq_start,
 		.set_init_arg		= set_init_arg,
 		.set_codec_bufs		= h264_set_codec_bufs,
