@@ -791,7 +791,7 @@ int mfc_free_buf(struct mfc_inst_ctx *ctx, unsigned int key)
 	return MFC_OK;
 }
 
-void mfc_free_buf_dpb(int owner)
+void mfc_free_buf_type(int owner, int type)
 {
 	int port;
 	struct list_head *pos, *nxt;
@@ -801,10 +801,17 @@ void mfc_free_buf_dpb(int owner)
 		list_for_each_safe(pos, nxt, &mfc_alloc_head[port]) {
 			alloc = list_entry(pos, struct mfc_alloc_buffer, list);
 
-			if ((alloc->owner == owner) && (alloc->type == MBT_DPB)) {
-				_mfc_free_buf(alloc->real);
-					}
+			if ((alloc->owner == owner) && (alloc->type == type)) {
+				if (mfc_put_free_buf(alloc->real,
+					alloc->size, port) < 0) {
+
+					mfc_err("failed to add free buffer\n");
+				} else {
+					list_del(&alloc->list);
+					kfree(alloc);
 				}
+			}
+		}
 	}
 }
 

@@ -171,7 +171,7 @@ int mfc_alloc_buf(
 	struct mfc_inst_ctx *ctx, struct mfc_buf_alloc_arg* args, int flag);
 int _mfc_free_buf(unsigned long real);
 int mfc_free_buf(struct mfc_inst_ctx *ctx, unsigned int key);
-void mfc_free_buf_dpb(int owner);
+void mfc_free_buf_type(int owner, int type);
 void mfc_free_buf_inst(int owner);
 unsigned long mfc_get_buf_real(int owner, unsigned int key);
 /*

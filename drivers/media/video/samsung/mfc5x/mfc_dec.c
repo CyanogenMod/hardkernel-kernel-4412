@@ -1890,7 +1890,7 @@ int mfc_change_resolution(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *exe_
 {
 	int ret;
 
-	mfc_free_buf_dpb(ctx->id);
+	mfc_free_buf_type(ctx->id, MBT_DPB);
 
 	ret = mfc_cmd_seq_start(ctx);
 	if (ret < 0)
