@@ -63,8 +63,6 @@ void s5p_dp_reset_aux(struct s5p_dp_device *dp);
 void s5p_dp_init_aux(struct s5p_dp_device *dp);
 int s5p_dp_get_plug_in_status(struct s5p_dp_device *dp);
 void s5p_dp_enable_sw_function(struct s5p_dp_device *dp);
-void s5p_dp_enable_interrupt_hpd_change(struct s5p_dp_device *dp);
-void s5p_dp_enable_interrupt_hpd_detect(struct s5p_dp_device *dp);
 int s5p_dp_start_aux_transaction(struct s5p_dp_device *dp);
 int s5p_dp_write_byte_to_dpcd(struct s5p_dp_device *dp,
 				unsigned int reg_addr,

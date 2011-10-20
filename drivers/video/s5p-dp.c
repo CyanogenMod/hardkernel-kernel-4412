@@ -49,20 +49,18 @@ static int s5p_dp_detect_hpd(struct s5p_dp_device *dp)
 {
 #ifndef CONFIG_MACH_FPGA5210
 	int timeout_loop = 0;
-#endif
 
 	s5p_dp_init_hpd(dp);
 
-	s5p_dp_enable_interrupt_hpd_change(dp);
-	s5p_dp_enable_interrupt_hpd_detect(dp);
+	udelay(200);
 
-#ifndef CONFIG_MACH_FPGA5210
 	while (s5p_dp_get_plug_in_status(dp) != 0) {
 		timeout_loop++;
 		if (DP_TIMEOUT_LOOP_COUNT < timeout_loop) {
 			dev_err(dp->dev, "failed to get hpd plug status\n");
 			return -ETIMEDOUT;
 		}
+		udelay(10);
 	}
 #endif
 

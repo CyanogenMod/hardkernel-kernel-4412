@@ -444,24 +444,6 @@ void s5p_dp_enable_sw_function(struct s5p_dp_device *dp)
 	writel(reg, dp->reg_base + S5P_DP_FUNC_EN_1);
 }
 
-void s5p_dp_enable_interrupt_hpd_change(struct s5p_dp_device *dp)
-{
-	u32 reg;
-
-	reg = readl(dp->reg_base + S5P_DP_COMMON_INT_MASK_4);
-	reg |= HOTPLUG_CHG;
-	writel(reg, dp->reg_base + S5P_DP_COMMON_INT_MASK_4);
-}
-
-void s5p_dp_enable_interrupt_hpd_detect(struct s5p_dp_device *dp)
-{
-	u32 reg;
-
-	reg = readl(dp->reg_base + S5P_DP_INT_STA_MASK);
-	reg |= INT_HPD;
-	writel(reg, dp->reg_base + S5P_DP_INT_STA_MASK);
-}
-
 int s5p_dp_start_aux_transaction(struct s5p_dp_device *dp)
 {
 	int reg;
