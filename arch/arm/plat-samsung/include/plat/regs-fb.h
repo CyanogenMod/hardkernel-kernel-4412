@@ -401,7 +401,7 @@
 #define BLENDCON_NEW_4BIT_ALPHA_VALUE		(0 << 0)
 
 /* DP clock control */
-#define DPCLKCON				(0x272)
+#define DPCLKCON				(0x27c)
 #define DPCLKCON_ENABLE				(1 << 1)
 
 /* Window alpha control */
