@@ -121,7 +121,7 @@ void s5p_dp_init_interrupt(struct s5p_dp_device *dp)
 	 * correctly according to ICU setting.
 	 * 1 = assert high, 0 = assert low
 	 */
-	writel(0x00, dp->reg_base + S5P_DP_INT_CTL);
+	writel(INT_POL, dp->reg_base + S5P_DP_INT_CTL);
 
 	/* Clear pending regisers */
 	writel(0xff, dp->reg_base + S5P_DP_COMMON_INT_STA_1);
@@ -141,12 +141,6 @@ void s5p_dp_init_interrupt(struct s5p_dp_device *dp)
 #ifdef CONFIG_MACH_FPGA5210
 	writel(AUX_ERR, dp->reg_base + S5P_DP_INT_STA);
 	writel(0x00, dp->reg_base + S5P_DP_INT_STA_MASK);
-#endif
-
-	writel(INT_POL, dp->reg_base + S5P_DP_INT_CTL);
-
-#ifdef CONFIG_MACH_FPGA5210
-	writel(INT_POL, dp->reg_base + S5P_DP_INT_CTL);
 #endif
 }
 
