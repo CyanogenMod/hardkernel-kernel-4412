@@ -346,7 +346,6 @@ static int s5p_iommu_unmap(struct iommu_domain *domain, unsigned long iova,
 	entry = s5p_domain->pgtable + (iova >> S5P_SECTION_SHIFT);
 
 	if (gfp_order >= S5P_SECTION_ORDER) {
-		gfp_order -= S5P_SECTION_ORDER;
 		num_entry = 1 << (gfp_order - S5P_SECTION_ORDER);
 		while (num_entry--) {
 			if (S5P_SECTION_LV1_ENTRY(*entry)) {
