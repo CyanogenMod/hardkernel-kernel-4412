@@ -1820,8 +1820,7 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	if (ctx->width >= 1920 || ctx->height >= 1080) {
 		if (atomic_read(&ctx->dev->busfreq_lock_cnt) == 0) {
 			/* For fixed MFC & Bus Freq to 160 & 266 MHz for 1080p Contents */
-			/* only H264_DEC */
-			if (ctx->codecid == 0) {
+			if (ctx->codecid == H264_DEC) {
 				exynos4_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L0);
 				mfc_dbg("[%s] Bus Freq Locked L0!\n", __func__);
 			} else {
