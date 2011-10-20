@@ -20,10 +20,16 @@
 #define S3C_GPIO_END		EXYNOS4_GPIO_END
 #define ARCH_NR_GPIOS		(EXYNOS4XXX_GPIO_END +	\
 				CONFIG_SAMSUNG_GPIO_EXTRA)
+#define EXYNOS_GPZ(_nr)		EXYNOS4_GPZ(_nr)
+#define EXYNOS_GPC0(_nr)	EXYNOS4_GPC0(_nr)
+#define EXYNOS_GPC1(_nr)	EXYNOS4_GPC1(_nr)
 #elif defined(CONFIG_ARCH_EXYNOS5)
 #define S3C_GPIO_END		EXYNOS5_GPIO_END
 #define ARCH_NR_GPIOS		(EXYNOS5_GPIO_END +	\
 				CONFIG_SAMSUNG_GPIO_EXTRA)
+#define EXYNOS_GPZ(_nr)		EXYNOS5_GPZ(_nr)
+#define EXYNOS_GPC0(_nr)	EXYNOS5_GPC0(_nr)
+#define EXYNOS_GPC1(_nr)	EXYNOS5_GPC1(_nr)
 #else
 #error "ARCH_EXYNOS* is not defined"
 #endif
