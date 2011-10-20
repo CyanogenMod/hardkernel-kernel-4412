@@ -596,6 +596,11 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_disp1_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
+		.name		= "dp",
+		.devname	= "s5p-dp",
+		.enable		= exynos5_clk_ip_disp1_ctrl,
+		.ctrlbit	= (1 << 4),
+	}, {
 		.name		= "mfc",
 		.devname	= "s3c-mfc",
 		.enable		= exynos5_clk_ip_mfc_ctrl,
