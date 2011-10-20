@@ -19,6 +19,12 @@
 
 #include "s5p-dp.h"
 
+#define COMMON_INT_MASK_1 (0)
+#define COMMON_INT_MASK_2 (0)
+#define COMMON_INT_MASK_3 (0)
+#define COMMON_INT_MASK_4 (0)
+#define INT_STA_MASK (0)
+
 void s5p_dp_enable_video_bist(struct s5p_dp_device *dp, bool enable)
 {
 	u32 reg;
@@ -208,21 +214,19 @@ void s5p_dp_config_interrupt(struct s5p_dp_device *dp)
 	u32 reg;
 
 	/* 0: mask, 1: unmask */
-	reg = VSYNC_DET | PLL_LOCK_CHG | VID_FORMAT_CHG |
-		AUD_CLK_CHG | SW_INT;
+	reg = COMMON_INT_MASK_1;
 	writel(reg, dp->reg_base + S5P_DP_COMMON_INT_MASK_1);
 
-	reg = ENC_EN_CHG | HW_BKSV_RDY | HW_SHA_DONE |
-		HW_AUTH_STATE_CHG | HW_AUTH_DONE;
+	reg = COMMON_INT_MASK_2;
 	writel(reg, dp->reg_base + S5P_DP_COMMON_INT_MASK_2);
 
-	reg = R0_CHK_FLAG;
+	reg = COMMON_INT_MASK_3;
 	writel(reg, dp->reg_base + S5P_DP_COMMON_INT_MASK_3);
 
-	reg = SPDIF_BI_PHASE_ERR | HOTPLUG_CHG | HPD_LOST | PLUG;
+	reg = COMMON_INT_MASK_4;
 	writel(reg, dp->reg_base + S5P_DP_COMMON_INT_MASK_4);
 
-	reg = INT_HPD | HW_TRAINING_FINISH;
+	reg = INT_STA_MASK;
 	writel(reg, dp->reg_base + S5P_DP_INT_STA_MASK);
 }
 
