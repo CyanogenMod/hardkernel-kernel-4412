@@ -105,7 +105,7 @@ extern struct ion_device *ion_exynos;
 struct s3c_fb_variant {
 	unsigned int	is_2443:1;
 	unsigned short	nr_windows;
-	unsigned int		vidtcon;
+	unsigned int	vidtcon;
 	unsigned short	wincon;
 	unsigned short	winmap;
 	unsigned short	keycon;
@@ -276,7 +276,8 @@ static int s3cfb_ump_wrapper(struct fb_fix_screeninfo *fix)
 	ump_memory_description.size = fix->smem_len;
 	block_num = 1;
 
-	ump_wrapped_buffer = ump_dd_create_from_phys_blocks(&ump_memory_description, block_num,
+	ump_wrapped_buffer = ump_dd_create_from_phys_blocks(
+		&ump_memory_description, block_num,
 		UMP_PROT_CPU_RD | UMP_PROT_CPU_WR | /* CPU access */
 		UMP_PROT_W_RD | UMP_PROT_W_WR | /* Device W access */
 		UMP_PROT_X_RD | UMP_PROT_X_WR | /* Device X access */
@@ -574,6 +575,7 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 	if (win_no == sfb->pdata->default_win) {
 		clkdiv = s3c_fb_calc_pixclk(sfb, var->pixclock);
+
 		data = sfb->pdata->vidcon0;
 		data &= ~(VIDCON0_CLKVAL_F_MASK | VIDCON0_CLKDIR);
 
@@ -588,7 +590,6 @@ static int s3c_fb_set_par(struct fb_info *info)
 			data |= (1 << 5);
 
 		data |= VIDCON0_ENVID | VIDCON0_ENVID_F;
-
 		writel(data, regs + VIDCON0);
 
 		data = VIDTCON0_VBPD(var->upper_margin - 1) |
@@ -1223,11 +1224,13 @@ int s3c_fb_set_chroma_key(struct fb_info *info,
 }
 
 #ifdef CONFIG_ION_EXYNOS
-static int s3c_fb_get_user_ion_handle(struct s3c_fb *sfb, struct s3c_fb_win *win,
+static int s3c_fb_get_user_ion_handle(struct s3c_fb *sfb,
+				struct s3c_fb_win *win,
 				struct s3c_fb_user_ion_client *user_ion_client)
 {
 	/* Create fd for ion_buffer */
-	user_ion_client->fd = ion_share_fd(sfb->fb_ion_client, win->fb_ion_handle);
+	user_ion_client->fd = ion_share_fd(sfb->fb_ion_client,
+					win->fb_ion_handle);
 	if (user_ion_client->fd < 0) {
 		pr_err("ion_share_fd failed\n");
 		return user_ion_client->fd;
@@ -1318,8 +1321,9 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			break;
 		}
 
-		if (copy_to_user((struct s3c_fb_user_ion_client __user *)arg, &p.user_ion_client,
-					sizeof(p.user_ion_client))) {
+		if (copy_to_user((struct s3c_fb_user_ion_client __user *)arg,
+				&p.user_ion_client,
+				sizeof(p.user_ion_client))) {
 			ret = -EFAULT;
 			break;
 		}
@@ -1473,19 +1477,22 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 	map_dma = (dma_addr_t)cma_alloc(sfb->dev, "fimd", (size_t)size, 0);
 	fbi->screen_base = cma_get_virt(map_dma, size, 1);
 #elif defined(CONFIG_ION_EXYNOS)
-	win->fb_ion_handle = ion_alloc(sfb->fb_ion_client, (size_t)size, 0, ION_HEAP_SYSTEM_CONTIG_MASK);
+	win->fb_ion_handle = ion_alloc(sfb->fb_ion_client, (size_t)size, 0,
+					ION_HEAP_SYSTEM_CONTIG_MASK);
 	if (IS_ERR(win->fb_ion_handle)) {
 		dev_err(sfb->dev, "failed to ion_alloc\n");
 		return -ENOMEM;
 	}
 
-	fbi->screen_base = (unsigned char __iomem *)ion_map_kernel(sfb->fb_ion_client, win->fb_ion_handle);
+	fbi->screen_base = ion_map_kernel(sfb->fb_ion_client,
+					win->fb_ion_handle);
 	if (IS_ERR(fbi->screen_base)) {
 		dev_err(sfb->dev, "failed to ion_map_kernel handle\n");
 		goto err_map_kernel;
 	}
 
-	ion_phys(sfb->fb_ion_client, win->fb_ion_handle, (ion_phys_addr_t *)&map_dma, (size_t *)&size);
+	ion_phys(sfb->fb_ion_client, win->fb_ion_handle,
+		(ion_phys_addr_t *)&map_dma, (size_t *)&size);
 #else
 	fbi->screen_base = dma_alloc_writecombine(sfb->dev, size,
 						  &map_dma, GFP_KERNEL);
@@ -1915,6 +1922,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	pm_runtime_get_sync(sfb->dev);
 
 	/* setup gpio and output polarity controls */
+
 	pd->setup_gpio();
 
 	writel(pd->vidcon1, sfb->regs + VIDCON1);
@@ -1941,7 +1949,9 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 		writel(0xffffff, regs + WKEYCON1);
 	}
 #ifdef CONFIG_ION_EXYNOS
-	sfb->fb_ion_client = ion_client_create(ion_exynos, (ION_HEAP_SYSTEM_MASK|ION_HEAP_SYSTEM_CONTIG_MASK), "fimd");
+	sfb->fb_ion_client = ion_client_create(ion_exynos,
+			ION_HEAP_SYSTEM_MASK | ION_HEAP_SYSTEM_CONTIG_MASK,
+			"fimd");
 	if (IS_ERR(sfb->fb_ion_client)) {
 		dev_err(sfb->dev, "failed to ion_client_create\n");
 		goto err_ioremap;
