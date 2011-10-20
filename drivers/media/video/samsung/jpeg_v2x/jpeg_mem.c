@@ -24,7 +24,7 @@
 
 void *jpeg_cma_init(struct jpeg_dev *dev)
 {
-	return vb2_cma_phys_init(&dev->plat_dev->dev, NULL, 0, false);
+	return vb2_cma_phys_init(&dev->plat_dev->dev, NULL, SZ_8K, false);
 }
 
 void jpeg_cma_resume(void *alloc_ctx) {}
