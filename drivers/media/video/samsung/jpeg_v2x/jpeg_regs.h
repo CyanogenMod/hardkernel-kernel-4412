@@ -39,6 +39,7 @@ void jpeg_set_frame_buf_address(void __iomem *base,
 void jpeg_set_encode_tbl_select(void __iomem *base,
 		enum jpeg_img_quality_level level);
 void jpeg_set_encode_hoff_cnt(void __iomem *base, enum jpeg_stream_format fmt);
+void jpeg_set_dec_bitstream_size(void __iomem *base, unsigned int size);
 unsigned int jpeg_get_stream_size(void __iomem *base);
 void jpeg_get_frame_size(void __iomem *base,
 			unsigned int *width, unsigned int *height);

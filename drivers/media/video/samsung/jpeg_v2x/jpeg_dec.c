@@ -393,6 +393,7 @@ static int jpeg_dec_vidioc_s_fmt_out(struct file *file, void *priv,
 	ctx->param.dec_param.in_plane = fmt->memplanes;
 	ctx->param.dec_param.in_depth = fmt->depth;
 	ctx->param.dec_param.in_fmt = fmt->color;
+	ctx->param.dec_param.size = (pix->plane_fmt[0].sizeimage / 32) + 0xf;
 
 	return 0;
 }

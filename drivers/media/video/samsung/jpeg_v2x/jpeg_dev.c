@@ -480,7 +480,7 @@ static void jpeg_device_dec_run(void *priv)
 	}
 
 	jpeg_set_dec_out_fmt(dev->reg_base, dec_param.out_fmt);
-
+	jpeg_set_dec_bitstream_size(dev->reg_base, dec_param.size);
 	jpeg_set_enc_dec_mode(dev->reg_base, DECODING);
 
 	spin_unlock_irqrestore(&ctx->slock, flags);

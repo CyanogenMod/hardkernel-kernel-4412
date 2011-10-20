@@ -512,6 +512,11 @@ unsigned int jpeg_get_stream_size(void __iomem *base)
 	return size;
 }
 
+void jpeg_set_dec_bitstream_size(void __iomem *base, unsigned int size)
+{
+	writel(size, base + S5P_JPEG_BITSTREAM_SIZE_REG);
+}
+
 void jpeg_get_frame_size(void __iomem *base,
 			unsigned int *width, unsigned int *height)
 {
