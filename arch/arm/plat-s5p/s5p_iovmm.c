@@ -190,6 +190,7 @@ void iovmm_deactivate(struct device *dev)
 dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg)
 {
 	size_t size = 0;
+	off_t start_off = offset_in_page(sg_phys(sg));
 	dma_addr_t addr, start = 0;
 	struct s5p_vm_region *region;
 	struct s5p_iovmm *vmm;
@@ -203,12 +204,12 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg)
 		goto err_map_nomem;
 
 	tmpsg = sg;
+	size = start_off;
 	do {
 		size += sg_dma_len(tmpsg);
 	} while ((tmpsg = sg_next(tmpsg)));
 
-	if (WARN_ON(size & ~PAGE_MASK))
-		size = PAGE_ALIGN(size);
+	size = PAGE_ALIGN(size);
 
 	spin_lock(&vmm->lock);
 
@@ -223,10 +224,8 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg)
 		size_t len;
 
 		phys = sg_phys(sg);
-		phys = phys & PAGE_MASK;
-
-		len = sg_dma_len(sg);
-		len = len & PAGE_MASK;
+		len = PAGE_ALIGN(sg_dma_len(sg) + offset_in_page(phys));
+		phys = round_down(phys, PAGE_SIZE);
 
 		while (len > 0) {
 			order = min3(__ffs(phys), __ffs(addr), __fls(len));
@@ -244,7 +243,7 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg)
 	if (!region)
 		goto err_map_map;
 
-	region->start = start;
+	region->start = start + start_off;
 	region->size = size;
 	INIT_LIST_HEAD(&region->node);
 
@@ -252,7 +251,7 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg)
 
 	spin_unlock(&vmm->lock);
 
-	return start;
+	return region->start;
 err_map_map:
 	while (addr >= start) {
 		int order;
@@ -290,6 +289,8 @@ void iovmm_unmap(struct device *dev, dma_addr_t iova)
 	if (WARN_ON(!region))
 		goto err_region_not_found;
 
+	region->start = round_down(region->start, PAGE_SIZE);
+
 	gen_pool_free(vmm->vmm_pool, region->start, region->size);
 	list_del(&region->node);
 
@@ -304,10 +305,10 @@ void iovmm_unmap(struct device *dev, dma_addr_t iova)
 		region->size -= 1 << order;
 	}
 
+	kfree(region);
+
 err_region_not_found:
 	spin_unlock_irqrestore(&vmm->lock, flags);
-
-	kfree(region);
 }
 
 static int __init s5p_iovmm_init(void)
