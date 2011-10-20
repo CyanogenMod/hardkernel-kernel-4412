@@ -60,6 +60,11 @@ static int exynos4_usb_device_phy_is_on(void)
 	return (readl(EXYNOS4_PHYPWR) & PHY0_ANALOG_POWERDOWN) ? 0 : 1;
 }
 
+static int exynos5_usb_host_phy20_is_on(void)
+{
+	return (readl(EXYNOS5_PHY_HOST_CTRL0) & HOST_CTRL0_PHYSWRSTALL) ? 0 : 1;
+}
+
 static u32 exynos4_usb_phy_set_clock(struct platform_device *pdev)
 {
 	struct clk *xusbxti_clk;
@@ -584,6 +589,74 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 	return 0;
 }
 
+static int exynos5_usb_phy20_init(struct platform_device *pdev)
+{
+	struct clk *xusbxti_clk;
+	u32 hostphy_ctrl0;
+
+	hostphy_ctrl0 = readl(EXYNOS5_PHY_HOST_CTRL0);
+
+	exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
+
+	if (exynos5_usb_host_phy20_is_on()) {
+		dev_err(&pdev->dev, "Already power on PHY\n");
+		return 0;
+	}
+
+	hostphy_ctrl0 &= ~(HOST_CTRL0_FSEL_MASK);
+
+	xusbxti_clk = clk_get(&pdev->dev, "xusbxti");
+	switch (clk_get_rate(xusbxti_clk)) {
+	case 96 * 100000:
+		hostphy_ctrl0 |= EXYNOS5_CLKSEL_9600K;
+		break;
+	case 10 * MHZ:
+		hostphy_ctrl0 |= EXYNOS5_CLKSEL_10M;
+		break;
+	case 12 * MHZ:
+		hostphy_ctrl0 |= EXYNOS5_CLKSEL_12M;
+		break;
+	case 192 * 100000:
+		hostphy_ctrl0 |= EXYNOS5_CLKSEL_19200K;
+		break;
+	case 20 * MHZ:
+		hostphy_ctrl0 |= EXYNOS5_CLKSEL_20M;
+		break;
+	case 24 * MHZ:
+		/* default reference clock */
+		hostphy_ctrl0 |= EXYNOS5_CLKSEL_24M;
+		break;
+	default:
+	case 50 * MHZ:
+		/* default reference clock */
+		hostphy_ctrl0 |= EXYNOS5_CLKSEL_50M;
+		break;
+	}
+
+	hostphy_ctrl0 &= ~(HOST_CTRL0_COMMONONN);
+
+	hostphy_ctrl0 &= ~(HOST_CTRL0_PHYSWRST | HOST_CTRL0_PHYSWRSTALL);
+	hostphy_ctrl0 &= ~(HOST_CTRL0_FORCESUSPEND | HOST_CTRL0_FORCESLEEP);
+	hostphy_ctrl0 |= (HOST_CTRL0_LINKSWRST | HOST_CTRL0_UTMISWRST);
+	writel(hostphy_ctrl0, EXYNOS5_PHY_HOST_CTRL0);
+	udelay(1000);
+	hostphy_ctrl0 &= ~(HOST_CTRL0_LINKSWRST | HOST_CTRL0_UTMISWRST);
+	writel(hostphy_ctrl0, EXYNOS5_PHY_HOST_CTRL0);
+
+	return 0;
+}
+
+static int exynos5_usb_phy20_exit(struct platform_device *pdev)
+{
+	u32 hostphy_ctrl0;
+	hostphy_ctrl0 = readl(EXYNOS5_PHY_HOST_CTRL0);
+	hostphy_ctrl0 |= (HOST_CTRL0_FORCESUSPEND | HOST_CTRL0_FORCESLEEP);
+	hostphy_ctrl0 |= (HOST_CTRL0_PHYSWRST | HOST_CTRL0_PHYSWRSTALL);
+	writel(hostphy_ctrl0, EXYNOS5_PHY_HOST_CTRL0);
+
+	return 0;
+}
+
 int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 {
 	if (type == S5P_USB_PHY_HOST)
@@ -604,6 +677,8 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 {
 	if (type == S5P_USB_PHY_HOST)
 		return exynos4_usb_phy1_init(pdev);
+	else if (type == S5P_USB_PHY20_HOST)
+		return exynos5_usb_phy20_init(pdev);
 	else if (type == S5P_USB_PHY_DEVICE)
 		return exynos4_usb_phy0_init(pdev);
 
@@ -614,6 +689,8 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 {
 	if (type == S5P_USB_PHY_HOST)
 		return exynos4_usb_phy1_exit(pdev);
+	else if (type == S5P_USB_PHY20_HOST)
+		return exynos5_usb_phy20_exit(pdev);
 	else if (type == S5P_USB_PHY_DEVICE)
 		return exynos4_usb_phy0_exit(pdev);
 
