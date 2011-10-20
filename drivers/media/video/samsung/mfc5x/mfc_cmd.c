@@ -14,11 +14,7 @@
 #include <linux/jiffies.h>
 #include <linux/sched.h>
 
-#if defined(CONFIG_ARCH_EXYNOS4)
 #include <mach/regs-mfc.h>
-#elif defined(CONFIG_ARCH_S5PV210)
-#include <plat/regs-mfc.h>
-#endif
 
 #include "mfc_cmd.h"
 #include "mfc_reg.h"

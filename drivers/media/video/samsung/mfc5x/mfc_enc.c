@@ -15,16 +15,11 @@
 
 #include <linux/kernel.h>
 #include <linux/slab.h>
+
 #ifdef CONFIG_BUSFREQ
 #include <mach/cpufreq.h>
 #endif
-
-
-#if defined(CONFIG_ARCH_EXYNOS4)
 #include <mach/regs-mfc.h>
-#elif defined(CONFIG_ARCH_S5PV210)
-#include <plat/regs-mfc.h>
-#endif
 
 #include "mfc_enc.h"
 #include "mfc_cmd.h"

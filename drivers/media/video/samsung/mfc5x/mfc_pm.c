@@ -19,57 +19,7 @@
 
 #include <plat/clock.h>
 #include <plat/s5p-mfc.h>
-#if defined(CONFIG_ARCH_S5PV210)
-#include <mach/pd.h>
 
-#define MFC_CLK_NAME	"mfc"
-#define MFC_PD_NAME	"mfc_pd"
-
-static struct mfc_pm *pm;
-
-int mfc_init_pm(struct mfc_dev *mfcdev)
-{
-	int ret = 0;
-
-	pm = &mfcdev->pm;
-
-	sprintf(pm->clk_name, "%s", MFC_CLK_NAME);
-	sprintf(pm->pd_name, "%s", MFC_PD_NAME);
-
-	pm->clock = clk_get(mfcdev->device, pm->clk_name);
-
-	if (IS_ERR(pm->clock))
-		ret = -ENOENT;
-
-	return ret;
-}
-
-void mfc_final_pm(struct mfc_dev *mfcdev)
-{
-	clk_put(pmpm->clock);
-}
-
-int mfc_clock_on(void)
-{
-	return clk_enable(pm->clock);
-}
-
-void mfc_clock_off(void)
-{
-	clk_disable(pm->clock);
-}
-
-int mfc_power_on(void)
-{
-	return s5pv210_pd_enable(pm->pd_name);
-}
-
-int mfc_power_off(void)
-{
-	return s5pv210_pd_disable(pm->pd_name);
-}
-
-#elif defined(CONFIG_ARCH_EXYNOS4)
 #ifdef CONFIG_PM_RUNTIME
 #include <linux/pm_runtime.h>
 #endif
@@ -325,37 +275,4 @@ bool mfc_power_chk(void)
 
 	return atomic_read(&pm->power) ? true : false;
 }
-
-#else
-
-int mfc_init_pm(struct mfc_dev *mfcdev)
-{
-	return -1;
-}
-
-void mfc_final_pm(struct mfc_dev *mfcdev)
-{
-	/* NOP */
-}
-
-int mfc_clock_on(void)
-{
-	return -1;
-}
-
-void mfc_clock_off(void)
-{
-	/* NOP */
-}
-
-int mfc_power_on(void)
-{
-	return -1;
-}
-
-int mfc_power_off(void)
-{
-	return -1;
-}
-#endif
 
