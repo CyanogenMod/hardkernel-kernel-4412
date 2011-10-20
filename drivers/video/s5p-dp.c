@@ -1573,7 +1573,7 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 		goto err_ioremap;
 	}
 
-	ret = request_irq(dp->irq, s5p_dp_irq_handler, IRQF_SHARED,
+	ret = request_irq(dp->irq, s5p_dp_irq_handler, 0,
 			"s5p-dp", dp);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to request irq\n");
