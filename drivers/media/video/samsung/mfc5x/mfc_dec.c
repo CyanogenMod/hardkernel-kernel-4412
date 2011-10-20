@@ -1699,7 +1699,7 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	dec_ctx->streamaddr = init_arg->in_strm_buf;
 	dec_ctx->streamsize = init_arg->in_strm_size;
 
-	mfc_info("init stream size: %d", init_arg->in_strm_size);
+	mfc_dbg("stream size: %d", init_arg->in_strm_size);
 
 	dec_ctx->crc = init_arg->in_crc;
 	dec_ctx->pixelcache = init_arg->in_pixelcache;
