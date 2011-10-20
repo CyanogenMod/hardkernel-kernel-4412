@@ -46,12 +46,12 @@ static struct resource exynos4_dwmci_resource[] = {
 };
 
 static struct dw_mci_board exynos4_dwci_pdata = {
-	.num_slots			= 1,
-	.quirks				= DW_MCI_QUIRK_BROKEN_CARD_DETECTION,
-	.bus_hz				= 80 * 1000 * 1000,
+	.num_slots		= 1,
+	.quirks			= DW_MCI_QUIRK_BROKEN_CARD_DETECTION,
+	.bus_hz			= 80 * 1000 * 1000,
 	.detect_delay_ms	= 200,
-	.init				= exynos4_dwmci_init,
-	.get_bus_wd			= exynos4_dwmci_get_bus_wd,
+	.init			= exynos4_dwmci_init,
+	.get_bus_wd		= exynos4_dwmci_get_bus_wd,
 };
 
 static u64 exynos4_dwmci_dmamask = DMA_BIT_MASK(32);
@@ -64,7 +64,7 @@ struct platform_device exynos4_device_dwmci = {
 	.dev		= {
 		.dma_mask		= &exynos4_dwmci_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
-		.platform_data	= &exynos4_dwci_pdata,
+		.platform_data		= &exynos4_dwci_pdata,
 	},
 };
 
