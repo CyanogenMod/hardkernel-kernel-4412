@@ -46,8 +46,8 @@
 #define I2SSIZE_TRNMSK		(0xffff)
 #define I2SSIZE_SHIFT		(16)
 
-#ifdef CONFIG_ARCH_EXYNOS4
-#define LP_TXBUFF_ADDR		(0x02030000)
+#ifdef CONFIG_ARCH_EXYNOS
+#define LP_TXBUFF_ADDR		(0x03000000)
 #else
 #define LP_TXBUFF_ADDR		(0xC0000000)
 #endif
