@@ -16,6 +16,7 @@
 #include "mfc_inst.h"
 #include "mfc_mem.h"
 #include "mfc_buf.h"
+#include "mfc_log.h"
 
 int init_shm(struct mfc_inst_ctx *ctx)
 {
@@ -62,6 +63,8 @@ int init_shm(struct mfc_inst_ctx *ctx)
 		return 0;
 	}
 #endif
+
+	mfc_err("failed alloc shared memory buffer\n");
 
 	ctx->shm = NULL;
 	ctx->shmofs = 0;
