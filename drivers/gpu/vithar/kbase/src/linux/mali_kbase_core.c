@@ -1096,7 +1096,17 @@ static int kbase_device_resume(struct device *dev)
  */
 static int kbase_device_runtime_suspend(struct device *dev)
 {
-    /* TBI */
+	struct kbase_device *kbdev = to_kbase_device(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	/* Send the event to the power policy */
+	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_SUSPEND);
+
+	/* Wait for the policy to suspend the device */
+	kbase_pm_wait_for_power_down(kbdev);
+
     return 0;
 }
 
@@ -1110,7 +1120,17 @@ static int kbase_device_runtime_suspend(struct device *dev)
  */
 static int kbase_device_runtime_resume(struct device *dev)
 {
-    /* TBI */
+	struct kbase_device *kbdev = to_kbase_device(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	/* Send the event to the power policy */
+	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_RESUME);
+
+	/* Wait for the policy to resume the device */
+	kbase_pm_wait_for_power_up(kbdev);
+
     return 0;
 }
 
