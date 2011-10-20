@@ -1614,8 +1614,9 @@ static int mfc_set_decoder(struct mfc_inst_ctx *ctx, SSBSIP_MFC_CODEC_TYPE codec
 {
 	struct list_head *pos;
 	struct mfc_dec_info *decoder;
-	int codecid = -1;
 	struct mfc_dec_ctx *dec_ctx;
+
+	ctx->codecid = -1;
 
 	/* find and set codec private */
 	list_for_each(pos, &mfc_decoders) {
@@ -1624,9 +1625,6 @@ static int mfc_set_decoder(struct mfc_inst_ctx *ctx, SSBSIP_MFC_CODEC_TYPE codec
 		if (decoder->codectype == codectype) {
 			if (decoder->codecid < 0)
 				break;
-
-			ctx->type = DECODER;
-			ctx->c_ops = (struct codec_operations *)&decoder->c_ops;
 
 			/* Allocate Decoder context memory */
 			dec_ctx = kzalloc(sizeof(struct mfc_dec_ctx), GFP_KERNEL);
@@ -1645,13 +1643,18 @@ static int mfc_set_decoder(struct mfc_inst_ctx *ctx, SSBSIP_MFC_CODEC_TYPE codec
 				return -ENOMEM;
 			}
 
-			codecid = decoder->codecid;
+			ctx->codecid = decoder->codecid;
+			ctx->type = DECODER;
+			ctx->c_ops = (struct codec_operations *)&decoder->c_ops;
 
 			break;
 		}
 	}
 
-	return codecid;
+	if (ctx->codecid < 0)
+		mfc_err("couldn't find proper decoder codec type: %d\n", codectype);
+
+	return ctx->codecid;
 }
 
 static void mfc_set_stream_info(
@@ -1687,9 +1690,9 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	struct list_head *pos, *nxt;
 	int ret;
 
-	ctx->codecid = mfc_set_decoder(ctx, init_arg->in_codec_type);
-	if (ctx->codecid < 0) {
-		mfc_err("unsupported decoding codec: %d", init_arg->in_codec_type);
+	ret = mfc_set_decoder(ctx, init_arg->in_codec_type);
+	if (ret < 0) {
+		mfc_err("failed to setup decoder codec\n");
 		ret = MFC_DEC_INIT_FAIL;
 		goto err_handling;
 	}
