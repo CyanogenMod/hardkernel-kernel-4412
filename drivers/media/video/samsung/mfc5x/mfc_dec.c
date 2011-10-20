@@ -1689,7 +1689,7 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	if (ret < 0) {
 		mfc_err("failed to setup decoder codec\n");
 		ret = MFC_DEC_INIT_FAIL;
-		goto err_handling;
+		goto err_codec_setup;
 	}
 
 	dec_ctx = (struct mfc_dec_ctx *)ctx->c_priv;
@@ -1719,11 +1719,7 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 				mfc_warn("cannot set preset config type: 0x%08x: %d",
 					precfg->type, ret);
 		}
-
-		list_del(&precfg->list);
-		kfree(precfg);
 	}
-	INIT_LIST_HEAD(&ctx->presetcfgs);
 
 	mfc_set_inst_state(ctx, INST_STATE_SETUP);
 
@@ -1732,25 +1728,21 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	 */
 	if (ctx->c_ops->alloc_ctx_buf) {
 		if (ctx->c_ops->alloc_ctx_buf(ctx) < 0) {
-			mfc_err("Context buffer allocation Failed");
 			ret = MFC_DEC_INIT_FAIL;
-			goto err_handling;
+			goto err_ctx_buf;
 		}
 	}
 
 	/* [crc, pixelcache] */
 	ret = mfc_cmd_inst_open(ctx);
-	if (ret < 0) {
-		mfc_err("Open Instance Failed");
-		goto err_handling;
-	}
+	if (ret < 0)
+		goto err_inst_open;
 
 	mfc_set_inst_state(ctx, INST_STATE_OPEN);
 
 	if (init_shm(ctx) < 0) {
-		mfc_err("Shared Memory Initialization Failed");
 		ret = MFC_DEC_INIT_FAIL;
-		goto err_handling;
+		goto err_shm_init;
 	}
 
 	/*
@@ -1758,9 +1750,8 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	 */
 	if (ctx->c_ops->alloc_desc_buf) {
 		if (ctx->c_ops->alloc_desc_buf(ctx) < 0) {
-			mfc_err("Description buffer allocation Failed");
 			ret = MFC_DEC_INIT_FAIL;
-			goto err_handling;
+			goto err_desc_buf;
 		}
 	}
 
@@ -1770,9 +1761,8 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	 */
 	if (ctx->c_ops->pre_seq_start) {
 		if (ctx->c_ops->pre_seq_start(ctx) < 0) {
-			mfc_err("Pre-Sequence Start Faild");
 			ret = MFC_DEC_INIT_FAIL;
-			goto err_handling;
+			goto err_pre_seq;
 		}
 	}
 
@@ -1781,29 +1771,21 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 		dec_ctx->streamsize, 0);
 
 	ret = mfc_cmd_seq_start(ctx);
-	if (ret < 0) {
-#ifdef DUMP_STREAM
-		mfc_fw_debug();
-		dump_stream(dec_ctx->streamaddr, dec_ctx->streamsize);
-#endif
-		mfc_err("Sequence Start Failed");
-		goto err_handling;
-	}
+	if (ret < 0)
+		goto err_seq_start;
 
 	/* [numextradpb] */
 	if (ctx->c_ops->post_seq_start) {
 		if (ctx->c_ops->post_seq_start(ctx) < 0) {
-			mfc_err("Post Sequence Start Failed");
 			ret = MFC_DEC_INIT_FAIL;
-			goto err_handling;
+			goto err_post_seq;
 		}
 	}
 
 	if (ctx->c_ops->set_init_arg) {
 		if (ctx->c_ops->set_init_arg(ctx, (void *)init_arg) < 0) {
-			mfc_err("Setting Initialized Arguments Failed");
 			ret = MFC_DEC_INIT_FAIL;
-			goto err_handling;
+			goto err_set_arg;
 		}
 	}
 
@@ -1811,16 +1793,15 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 		dec_ctx->numtotaldpb);
 
 #ifdef CONFIG_BUSFREQ
-	/* Fix MFC & Bus Frequency for High resolution for better performance */
+	/* Lock MFC & Bus FREQ for high resolution */
 	if (ctx->width >= 1920 || ctx->height >= 1080) {
 		if (atomic_read(&ctx->dev->busfreq_lock_cnt) == 0) {
-			/* For fixed MFC & Bus Freq to 160 & 266 MHz for 1080p Contents */
 			if (ctx->codecid == H264_DEC) {
 				exynos4_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L0);
-				mfc_dbg("[%s] Bus Freq Locked L0!\n", __func__);
+				mfc_dbg("Bus FREQ locked to L0\n");
 			} else {
 				exynos4_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L1);
-				mfc_dbg("[%s] Bus Freq Locked L1!\n", __func__);
+				mfc_dbg("Bus FREQ locked to L1\n");
 			}
 		}
 
@@ -1834,9 +1815,8 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	 */
 	if (ctx->c_ops->set_codec_bufs) {
 		if (ctx->c_ops->set_codec_bufs(ctx) < 0) {
-			mfc_err("Set Codec Buffers Failed");
 			ret = MFC_DEC_INIT_FAIL;
-			goto err_handling;
+			goto err_codec_bufs;
 		}
 	}
 
@@ -1845,41 +1825,92 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	 */
 	if (ctx->c_ops->set_dpbs) {
 		if (ctx->c_ops->set_dpbs(ctx) < 0) {
-			mfc_err("Set DPB Buffers Failed");
 			ret = MFC_DEC_INIT_FAIL;
-			goto err_handling;
+			goto err_dpbs_set;
 		}
 	}
 
 	ret = mfc_cmd_init_buffers(ctx);
-	if (ret < 0) {
-		mfc_err("Initialize Buffers Failed");
-		goto err_handling;
-	}
+	if (ret < 0)
+		goto err_buf_init;
 
 	mfc_set_inst_state(ctx, INST_STATE_INIT);
+
+	while (!list_empty(&ctx->presetcfgs)) {
+		precfg = list_entry((&ctx->presetcfgs)->next,
+				struct mfc_pre_cfg, list);
+
+		mfc_dbg("remove used preset config [0x%08x]\n",
+				precfg->type);
+
+		list_del(&precfg->list);
+		kfree(precfg);
+	}
+	INIT_LIST_HEAD(&ctx->presetcfgs);
 
 	mfc_print_buf();
 
 	return MFC_OK;
-err_handling:
-	if (ctx->state > INST_STATE_CREATE) {
-		mfc_cmd_inst_close(ctx);
-		ctx->state = INST_STATE_CREATE;
+
+err_buf_init:
+	mfc_free_buf_type(ctx->id, MBT_DPB);
+
+err_dpbs_set:
+	mfc_free_buf_type(ctx->id, MBT_CODEC);
+
+err_codec_bufs:
+#ifdef CONFIG_BUSFREQ
+	/* Release MFC & Bus Frequency lock for High resolution */
+	if (ctx->busfreq_flag == true) {
+		atomic_dec(&ctx->dev->busfreq_lock_cnt);
+		ctx->busfreq_flag = false;
+
+		if (atomic_read(&ctx->dev->busfreq_lock_cnt) == 0) {
+			exynos4_busfreq_lock_free(DVFS_LOCK_ID_MFC);
+			mfc_dbg("Bus FREQ released\n");
+		}
 	}
+#endif
 
-	mfc_free_buf_inst(ctx->id);
+err_set_arg:
+err_post_seq:
+err_seq_start:
+#ifdef DUMP_STREAM
+	mfc_fw_debug();
+	dump_stream(dec_ctx->streamaddr, dec_ctx->streamsize);
+#endif
 
-	if (dec_ctx) {
+err_pre_seq:
+	mfc_free_buf_type(ctx->id, MBT_DESC);
+
+err_desc_buf:
+	mfc_free_buf_type(ctx->id, MBT_SHM);
+
+	ctx->shm = NULL;
+	ctx->shmofs = 0;
+
+err_shm_init:
+	mfc_cmd_inst_close(ctx);
+
+	ctx->state = INST_STATE_SETUP;
+
+err_inst_open:
+	mfc_free_buf_type(ctx->id, MBT_CTX);
+
+err_ctx_buf:
+	if (dec_ctx->d_priv)
 		kfree(dec_ctx->d_priv);
-		dec_ctx->d_priv = NULL;
-	}
 
-	if (ctx->c_priv) {
-		kfree(ctx->c_priv);
-		ctx->c_priv = NULL;
-	}
+	kfree(dec_ctx);
+	ctx->c_priv = NULL;
 
+	ctx->codecid = -1;
+	ctx->type = 0;
+	ctx->c_ops = NULL;
+
+	ctx->state = INST_STATE_CREATE;
+
+err_codec_setup:
 	return ret;
 }
 
