@@ -26,15 +26,6 @@
 void exynos4_c2c_set_cprst(void)
 {
 	/* TODO */
-	gpio_set_value(EXYNOS4_GPY4(6), 0);
-	gpio_set_value(EXYNOS4_GPL2(5), 0);
-	gpio_set_value(EXYNOS4_GPX3(2), 0);
-	mdelay(100);
-	gpio_set_value(EXYNOS4_GPX3(2), 1);
-	mdelay(50);
-	/* delay for 50ms */
-	gpio_set_value(EXYNOS4_GPY4(6), 1);
-	gpio_set_value(EXYNOS4_GPL2(5), 1);
 }
 
 void exynos4_c2c_clear_cprst(void)
