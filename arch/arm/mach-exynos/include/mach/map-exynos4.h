@@ -192,6 +192,8 @@
 
 /* Compatibiltiy Defines */
 
+#define EXYNOS_PA_DWMCI			EXYNOS4_PA_DWMCI
+
 #define S3C_PA_HSMMC0			EXYNOS4_PA_HSMMC(0)
 #define S3C_PA_HSMMC1			EXYNOS4_PA_HSMMC(1)
 #define S3C_PA_HSMMC2			EXYNOS4_PA_HSMMC(2)

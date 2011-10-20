@@ -34,8 +34,8 @@ static int exynos4_dwmci_init(u32 slot_id, irq_handler_t handler, void *data)
 
 static struct resource exynos4_dwmci_resource[] = {
 	[0] = {
-		.start	= EXYNOS4_PA_DWMCI,
-		.end	= EXYNOS4_PA_DWMCI + SZ_4K - 1,
+		.start	= EXYNOS_PA_DWMCI,
+		.end	= EXYNOS_PA_DWMCI + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {

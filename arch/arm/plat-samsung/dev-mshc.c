@@ -27,8 +27,8 @@
 
 static struct resource s3c_mshci_resource[] = {
 	[0] = {
-		.start = EXYNOS4_PA_DWMCI,
-		.end   = EXYNOS4_PA_DWMCI + S5P_SZ_MSHC - 1,
+		.start = EXYNOS_PA_DWMCI,
+		.end   = EXYNOS_PA_DWMCI + S5P_SZ_MSHC - 1,
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
