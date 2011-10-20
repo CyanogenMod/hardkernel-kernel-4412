@@ -252,7 +252,7 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 {
 	unsigned long flags;
 	struct sysmmu_drvdata *mmudata = NULL;
-	int ret = 0;
+	int ret = -ENODEV;
 
 	/* There are some devices that control more System MMUs than one such
 	 * as MFC.
@@ -290,6 +290,8 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 
 			dev_dbg(mmudata->dev, "Failed to enable.\n");
 		}
+	} else {
+		ret = 0;
 	}
 
 	return ret;
