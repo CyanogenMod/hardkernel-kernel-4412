@@ -86,20 +86,20 @@ void mfc_destroy_inst(struct mfc_inst_ctx* ctx)
 				kfree(precfg);
 			}
 		} else {
-			/* Free Decoder/Encoder context private memory */
+			/* free (decoder/encoder & context) private memory */
 			if (ctx->type == DECODER) {
 				dec_ctx = ctx->c_priv;
-				if (dec_ctx)
+				if (dec_ctx->d_priv)
 					kfree(dec_ctx->d_priv);
+
+				kfree(dec_ctx);
 			} else if (ctx->type == ENCODER) {
 				enc_ctx = ctx->c_priv;
-				if (enc_ctx)
+				if (enc_ctx->e_priv)
 					kfree(enc_ctx->e_priv);
-			}
 
-			/* Free Decoder/Encoder Context */
-			if (ctx->c_priv)
-				kfree(ctx->c_priv);
+				kfree(enc_ctx);
+			}
 		}
 
 		if (ctx->state >= INST_STATE_OPEN) {
@@ -110,7 +110,7 @@ void mfc_destroy_inst(struct mfc_inst_ctx* ctx)
 
 		mfc_free_buf_inst(ctx->id);
 
-		/* Free instance context memory */
+		/* free instance context memory */
 		kfree(ctx);
 	}
 }
