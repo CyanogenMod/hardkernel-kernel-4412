@@ -2051,7 +2051,7 @@ config FB_S3C
 
 config FB_EXYNOS_FIMD_V8
 	bool "regiter extensions for FIMD version 8"
-	depends on ARCH_EXYNOS5
+	depends on FB_S3C && ARCH_EXYNOS5
 	---help---
 
 config FB_S3C_DEBUG_REGWRITE
