@@ -181,7 +181,7 @@ void audss_clk_enable(bool enable)
 		}
 
 		clk_enable(audss.rclk);
-#ifdef CONFIG_SND_SAMSUNG_RP
+#if defined(CONFIG_SND_SAMSUNG_RP) || defined(CONFIG_SND_SOC_SAMSUNG_I2S_IDMA)
 		clk_enable(audss.srp_clk);
 #endif
 		audss_reg_save_restore(AUDSS_REG_RESTORE);
@@ -204,7 +204,7 @@ void audss_clk_enable(bool enable)
 		audss_reg_save_restore(AUDSS_REG_SAVE);
 
 		clk_disable(audss.rclk);
-#ifdef CONFIG_SND_SAMSUNG_RP
+#if defined(CONFIG_SND_SAMSUNG_RP) || defined(CONFIG_SND_SOC_SAMSUNG_I2S_IDMA)
 		clk_disable(audss.srp_clk);
 #endif
 		audss.clk_enabled = false;
