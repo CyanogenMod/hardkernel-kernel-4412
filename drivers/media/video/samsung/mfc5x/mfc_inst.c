@@ -50,6 +50,7 @@ struct mfc_inst_ctx *mfc_create_inst(void)
 	/* FIXME: set default values */
 	ctx->state = INST_STATE_CREATE;
 
+	ctx->codecid = -1;
 	ctx->resolution_status = RES_NO_CHANGE;
 #ifdef CONFIG_BUSFREQ
 	ctx->busfreq_flag = false;
