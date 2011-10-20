@@ -419,13 +419,13 @@ static void exynos4_dwmci_cfg_gpio(int width)
 
 	switch (width) {
 	case 8:
-	for (gpio = EXYNOS5_GPC1(3); gpio <= EXYNOS5_GPC1(6); gpio++) {
+		for (gpio = EXYNOS5_GPC1(3); gpio <= EXYNOS5_GPC1(6); gpio++) {
 			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(4));
 			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
 			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
 		}
 	case 4:
-	for (gpio = EXYNOS5_GPC0(3); gpio <= EXYNOS5_GPC0(6); gpio++) {
+		for (gpio = EXYNOS5_GPC0(3); gpio <= EXYNOS5_GPC0(6); gpio++) {
 			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
 			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
 			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
@@ -442,14 +442,14 @@ static void exynos4_dwmci_cfg_gpio(int width)
 }
 
 static struct dw_mci_board exynos4_dwmci_pdata __initdata = {
-	.num_slots = 1,
-	.quirks = DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
-	.bus_hz = 66 * 1000 * 1000,
-	.caps = MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR | MMC_CAP_8_BIT_DATA,
-	.detect_delay_ms = 200,
-	.hclk_name = "dwmci",
-	.cclk_name = "sclk_dwmci",
-	.cfg_gpio = exynos4_dwmci_cfg_gpio,
+	.num_slots		= 1,
+	.quirks			= DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
+	.bus_hz			= 66 * 1000 * 1000,
+	.caps			= MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR | MMC_CAP_8_BIT_DATA,
+	.detect_delay_ms	= 200,
+	.hclk_name		= "dwmci",
+	.cclk_name		= "sclk_dwmci",
+	.cfg_gpio		= exynos4_dwmci_cfg_gpio,
 };
 #endif
 
