@@ -311,7 +311,7 @@ static void *ion_exynos_heap_map_kernel(struct ion_heap *heap,
 
 	vfree(pages);
 
-	return vaddr;
+	return vaddr + offset_in_page(sg_phys(sgt->sgl));
 }
 
 static void ion_exynos_heap_unmap_kernel(struct ion_heap *heap,
@@ -358,6 +358,8 @@ static int ion_exynos_heap_map_user(struct ion_heap *heap,
 				page++;
 				map_pages--;
 			}
+
+			pgoff = 0;
 
 			if (map_pages == 0)
 				break;
@@ -501,17 +503,23 @@ static int ion_exynos_user_heap_allocate(struct ion_heap *heap,
 					   unsigned long flags)
 {
 	unsigned long start = align;
+	size_t last_size = 0;
 	struct page **pages;
 	int nr_pages;
 	int ret = 0, i;
+	off_t start_off;
 	struct sg_table *sgtable;
 	struct scatterlist *sgl;
 
-	len += offset_in_page(start);
-	len = PAGE_ALIGN(len);
+	last_size = (start + len) & ~PAGE_MASK;
+	if (last_size == 0)
+		last_size = PAGE_SIZE;
+
+	start_off = offset_in_page(start);
+
 	start = round_down(start, PAGE_SIZE);
 
-	nr_pages = PFN_DOWN(len);
+	nr_pages = PFN_DOWN(PAGE_ALIGN(len + start_off));
 
 	pages = kzalloc(nr_pages * sizeof(*pages), GFP_KERNEL);
 	if (!pages)
@@ -540,10 +548,21 @@ static int ion_exynos_user_heap_allocate(struct ion_heap *heap,
 		goto err_alloc_sglist;
 
 	sgl = sgtable->sgl;
-	for (i = 0; i < nr_pages; i++) {
+
+	sg_set_page(sgl, pages[0],
+			(nr_pages == 1) ? len : PAGE_SIZE - start_off,
+			start_off);
+
+	sgl = sg_next(sgl);
+
+	/* nr_pages == 1 if sgl == NULL here */
+	for (i = 1; i < (nr_pages - 1); i++) {
 		sg_set_page(sgl, pages[i], PAGE_SIZE, 0);
 		sgl = sg_next(sgl);
 	}
+
+	if (sgl)
+		sg_set_page(sgl, pages[i], last_size, 0);
 
 	buffer->priv_virt = sgtable;
 	buffer->flags = flags;
@@ -557,7 +576,7 @@ err_alloc_sglist:
 err_alloc_sgtable:
 err_smaller_pages:
 	for (i = 0; i < nr_pages; i++)
-		page_cache_release(pages[i]);
+		put_page(pages[i]);
 err_get_pages:
 	kfree(pages);
 
@@ -577,7 +596,7 @@ static void ion_exynos_user_heap_free(struct ion_buffer *buffer)
 		}
 	} else {
 		for_each_sg(sgtable->sgl, sg, sgtable->orig_nents, i)
-			page_cache_release(sg_page(sg));
+			put_page(sg_page(sg));
 	}
 
 	sg_free_table(sgtable);
@@ -591,7 +610,6 @@ static struct ion_heap_ops user_heap_ops = {
 	.unmap_dma = ion_exynos_heap_unmap_dma,
 	.map_kernel = ion_exynos_heap_map_kernel,
 	.unmap_kernel = ion_exynos_heap_unmap_kernel,
-	.map_user = ion_exynos_heap_map_user,
 };
 
 static struct ion_heap *ion_exynos_user_heap_create(
