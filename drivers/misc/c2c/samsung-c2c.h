@@ -61,6 +61,9 @@ struct c2c_state_control {
 	u32 max_clk;
 	u32 default_clk;
 
+	struct clk* c2c_sclk;
+	struct clk* c2c_aclk;
+
 	enum c2c_opp_mode opp_mode;
 	/* Below variables are needed in reset for retention */
 	u32 rtt_enableset;

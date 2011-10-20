@@ -60,7 +60,7 @@ static void c2c_timer_func(unsigned long data)
 void c2c_reset_ops(void)
 {
 	printk("[C2C] c2c_reset_ops()\n");
-	clk_set_rate(clk_get(c2c_con.c2c_dev, "sclk_c2c"), c2c_con.default_clk * 1000000);
+	clk_set_rate(c2c_con.c2c_sclk, c2c_con.default_clk * 1000000);
 	c2c_set_func_clk(c2c_con.default_clk);
 	c2c_con.opp_mode = C2C_OPP50;
 
@@ -161,13 +161,13 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 			printk(KERN_ERR "[C2C] 00[29:28] is not reserved in OPP mode.\n");
 		} else {
 			if (c2c_con.opp_mode > opp_val) { /* increase case */
-				clk_set_rate(clk_get(c2c_con.c2c_dev, "sclk_c2c"), req_clk * 1000000);
+				clk_set_rate(c2c_con.c2c_sclk, req_clk * 1000000);
 				c2c_writel(req_clk, EXYNOS4_C2C_FCLK_FREQ);
 				c2c_writel(req_clk, EXYNOS4_C2C_RX_MAX_FREQ);
 				c2c_set_func_clk(req_clk);
 			} else if (c2c_con.opp_mode < opp_val) { /* decrease case */
 				c2c_writel(req_clk, EXYNOS4_C2C_RX_MAX_FREQ);
-				clk_set_rate(clk_get(c2c_con.c2c_dev, "sclk_c2c"), req_clk * 1000000);
+				clk_set_rate(c2c_con.c2c_sclk, req_clk * 1000000);
 				c2c_writel(req_clk, EXYNOS4_C2C_FCLK_FREQ);
 				c2c_set_func_clk(req_clk);
 			} else{
@@ -383,13 +383,15 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 	c2c_con.hd.data = NULL;
 	c2c_con.hd.handler = NULL;
 #endif
+	c2c_con.c2c_sclk = clk_get(&pdev->dev, "sclk_c2c");
+	c2c_con.c2c_aclk = clk_get(&pdev->dev, "aclk_c2c");
 
 	/* Set clock to OPP50 mode */
-	clk_set_rate(clk_get(&pdev->dev, "sclk_c2c"), c2c_con.default_clk * 1000000);
-	clk_set_rate(clk_get(&pdev->dev, "aclk_c2c"), (c2c_con.default_clk / 2) * 1000000);
+	clk_set_rate(c2c_con.c2c_sclk, c2c_con.default_clk * 1000000);
+	clk_set_rate(c2c_con.c2c_aclk, (c2c_con.default_clk / 2) * 1000000);
 	c2c_con.opp_mode = pdata->default_opp_mode;
 
-	c2c_dbg("[C2C] Get C2C Clock rate : %ld\n", clk_get_rate(clk_get(&pdev->dev, "sclk_c2c")));
+	c2c_dbg("[C2C] Get C2C Clock rate : %ld\n", clk_get_rate(c2c_con.c2c_sclk));
 	if (pdata->setup_gpio)
 		pdata->setup_gpio(pdata->rx_width, pdata->tx_width);
 
@@ -405,7 +407,7 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 	c2c_set_func_clk(c2c_con.default_clk);
 
 	/* Set C2C buswidth */
-	c2c_writel(((pdata->tx_width << 4) |(pdata->rx_width)), EXYNOS4_C2C_PORTCONFIG);
+	c2c_writel(((pdata->rx_width << 4) |(pdata->tx_width)), EXYNOS4_C2C_PORTCONFIG);
 	c2c_set_tx_buswidth(pdata->tx_width);
 	c2c_set_rx_buswidth(pdata->rx_width);
 
