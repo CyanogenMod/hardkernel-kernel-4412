@@ -142,12 +142,6 @@ void s5p_dp_init_interrupt(struct s5p_dp_device *dp)
 	writel(0x00, dp->reg_base + S5P_DP_COMMON_INT_MASK_3);
 	writel(0x00, dp->reg_base + S5P_DP_COMMON_INT_MASK_4);
 	writel(0x00, dp->reg_base + S5P_DP_INT_STA_MASK);
-
-	/* AUX channel */
-#ifdef CONFIG_MACH_FPGA5210
-	writel(AUX_ERR, dp->reg_base + S5P_DP_INT_STA);
-	writel(0x00, dp->reg_base + S5P_DP_INT_STA_MASK);
-#endif
 }
 
 void s5p_dp_reset(struct s5p_dp_device *dp)
@@ -202,11 +196,6 @@ void s5p_dp_reset(struct s5p_dp_device *dp)
 
 	s5p_dp_init_analog_param(dp);
 	s5p_dp_init_interrupt(dp);
-
-#ifdef CONFIG_MACH_FPGA5210
-	/* for debug */
-	writel(0x0, dp->reg_base + S5P_DP_TRAINIG_DEBUG);
-#endif
 }
 
 void s5p_dp_config_interrupt(struct s5p_dp_device *dp)
@@ -337,15 +326,9 @@ void s5p_dp_init_analog_func(struct s5p_dp_device *dp)
 	reg = PLL_LOCK_CHG;
 	writel(reg, dp->reg_base + S5P_DP_COMMON_INT_STA_1);
 
-#ifdef CONFIG_MACH_FPGA5210
-	reg = readl(dp->reg_base + S5P_DP_DEBUG_CTL);
-	reg |= F_PLL_LOCK | PLL_LOCK_CTRL;
-	writel(reg, dp->reg_base + S5P_DP_DEBUG_CTL);
-#else
 	reg = readl(dp->reg_base + S5P_DP_DEBUG_CTL);
 	reg &= ~(F_PLL_LOCK | PLL_LOCK_CTRL);
 	writel(reg, dp->reg_base + S5P_DP_DEBUG_CTL);
-#endif
 
 	/* Power up PLL */
 	if (s5p_dp_get_pll_lock_status(dp) == PLL_UNLOCKED)
@@ -356,13 +339,6 @@ void s5p_dp_init_analog_func(struct s5p_dp_device *dp)
 	reg &= ~(SERDES_FIFO_FUNC_EN_N | LS_CLK_DOMAIN_FUNC_EN_N
 		| AUX_FUNC_EN_N);
 	writel(reg, dp->reg_base + S5P_DP_FUNC_EN_2);
-
-#ifdef CONFIG_MACH_FPGA5210
-	reg &= ~(SERDES_FIFO_FUNC_EN_N | LS_CLK_DOMAIN_FUNC_EN_N
-		| AUX_FUNC_EN_N);
-	writel(reg, dp->reg_base + S5P_DP_FUNC_EN_2);
-	writel(0, dp->reg_base + S5P_DP_PHY_PD);
-#endif
 }
 
 void s5p_dp_init_hpd(struct s5p_dp_device *dp)
@@ -376,15 +352,9 @@ void s5p_dp_init_hpd(struct s5p_dp_device *dp)
 	reg = INT_HPD;
 	writel(reg, dp->reg_base + S5P_DP_INT_STA);
 
-#ifdef CONFIG_MACH_FPGA5210
-	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_3);
-	reg |= (F_HPD | HPD_CTRL);
-	writel(reg, dp->reg_base + S5P_DP_SYS_CTL_3);
-#else
 	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_3);
 	reg &= ~(F_HPD | HPD_CTRL);
 	writel(reg, dp->reg_base + S5P_DP_SYS_CTL_3);
-#endif
 }
 
 void s5p_dp_reset_aux(struct s5p_dp_device *dp)
@@ -975,16 +945,6 @@ u32 s5p_dp_get_lane1_link_training(struct s5p_dp_device *dp)
 	reg = readl(dp->reg_base + S5P_DP_LN1_LINK_TRAINING_CTL);
 	return reg;
 }
-
-#ifdef CONFIG_MACH_FPGA5210
-void s5p_dp_set_training_debug(struct s5p_dp_device *dp, u32 train_debug)
-{
-	u32 reg;
-
-	reg = train_debug;
-	writel(reg, dp->reg_base + S5P_DP_TRAINIG_DEBUG);
-}
-#endif
 
 void s5p_dp_reset_macro(struct s5p_dp_device *dp)
 {

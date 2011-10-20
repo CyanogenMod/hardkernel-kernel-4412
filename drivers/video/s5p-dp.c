@@ -47,7 +47,6 @@ static int s5p_dp_init_dp(struct s5p_dp_device *dp)
 
 static int s5p_dp_detect_hpd(struct s5p_dp_device *dp)
 {
-#ifndef CONFIG_MACH_FPGA5210
 	int timeout_loop = 0;
 
 	s5p_dp_init_hpd(dp);
@@ -62,7 +61,6 @@ static int s5p_dp_detect_hpd(struct s5p_dp_device *dp)
 		}
 		udelay(10);
 	}
-#endif
 
 	return 0;
 }
@@ -273,10 +271,6 @@ static void s5p_dp_link_start(struct s5p_dp_device *dp)
 	/* Set training pattern 1 */
 	s5p_dp_set_training_pattern(dp, TRAINING_PTN1);
 
-#ifdef CONFIG_MACH_FPGA5210
-	s5p_dp_set_training_debug(dp, 0x1);
-#endif
-
 	/* Set RX training pattern */
 	buf[0] = DPCD_SCRAMBLING_DISABLED |
 		DPCD_TRAINING_PATTERN_1;
@@ -333,9 +327,6 @@ static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 			dev_dbg(dp->dev, "Clock Recovery training succeed\n");
 
 			/* set training pattern 2 for EQ */
-#ifdef CONFIG_MACH_FPGA5210
-			s5p_dp_set_training_debug(dp, 0x2);
-#endif
 			s5p_dp_set_training_pattern(dp, TRAINING_PTN2);
 
 			/* Lane 0 setting */
@@ -540,9 +531,6 @@ static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 			dev_dbg(dp->dev, "Clock Recovery training succeed\n");
 
 			/* set training pattern 2 for EQ */
-#ifdef CONFIG_MACH_FPGA5210
-			s5p_dp_set_training_debug(dp, 0x2);
-#endif
 			s5p_dp_set_training_pattern(dp, TRAINING_PTN2);
 
 			/* Lane 0 setting */
@@ -776,10 +764,6 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 				s5p_dp_set_enhanced_mode(dp);
 
 				dp->link_train.lt_state = FINISHED;
-
-#ifdef CONFIG_MACH_FPGA5210
-				s5p_dp_set_training_debug(dp, 0x3);
-#endif
 			} else {
 				/* not all locked */
 				dp->link_train.eq_loop++;
@@ -914,10 +898,6 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 				s5p_dp_set_enhanced_mode(dp);
 
 				dp->link_train.lt_state = FINISHED;
-
-#ifdef CONFIG_MACH_FPGA5210
-				s5p_dp_set_training_debug(dp, 0x3);
-#endif
 			} else {
 				/* not all locked */
 				dp->link_train.eq_loop++;
@@ -1444,7 +1424,6 @@ static void s5p_dp_show_video_format(struct s5p_dp_device *dp,
 	dev_dbg(dp->dev, "lane_count = %.2d\n", video_info->lane_count);
 }
 
-#ifndef CONFIG_MACH_FPGA5210
 static irqreturn_t s5p_dp_irq_handler(int irq, void *arg)
 {
 	struct s5p_dp_device *dp = arg;
@@ -1452,7 +1431,6 @@ static irqreturn_t s5p_dp_irq_handler(int irq, void *arg)
 	dev_err(dp->dev, "s5p_dp_irq_handler\n");
 	return IRQ_HANDLED;
 }
-#endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void s5p_dp_early_suspend(struct early_suspend *handler)
@@ -1527,7 +1505,7 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 	}
 
 	dp->dev = &pdev->dev;
-#ifndef CONFIG_MACH_FPGA5210
+
 	dp->clock = clk_get(&pdev->dev, "dp");
 	if (IS_ERR(dp->clock)) {
 		dev_err(&pdev->dev, "failed to get clock\n");
@@ -1536,7 +1514,6 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 	}
 
 	clk_enable(dp->clock);
-#endif
 
 	pm_runtime_enable(dp->dev);
 
@@ -1565,7 +1542,7 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 	}
 
 	pm_runtime_get_sync(dp->dev);
-#ifndef CONFIG_MACH_FPGA5210
+
 	dp->irq = platform_get_irq(pdev, 0);
 	if (!dp->irq) {
 		dev_err(&pdev->dev, "failed to get irq\n");
@@ -1579,7 +1556,6 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to request irq\n");
 		goto err_ioremap;
 	}
-#endif
 
 	dp->video_info = pdata->video_info;
 	if (pdata->phy_init)
@@ -1628,17 +1604,13 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 
 err_irq:
 	free_irq(dp->irq, dp);
-#ifndef CONFIG_MACH_FPGA5210
 err_ioremap:
-#endif
 	iounmap(dp->reg_base);
 err_req_region:
 	release_mem_region(res->start, resource_size(res));
 err_clock:
 	clk_put(dp->clock);
-#ifndef CONFIG_MACH_FPGA5210
 err_dp:
-#endif
 	kfree(dp);
 
 	return ret;

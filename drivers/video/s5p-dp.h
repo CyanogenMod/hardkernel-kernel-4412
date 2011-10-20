@@ -109,9 +109,6 @@ void s5p_dp_set_lane1_link_training(struct s5p_dp_device *dp,
 				u32 training_lane);
 u32 s5p_dp_get_lane0_link_training(struct s5p_dp_device *dp);
 u32 s5p_dp_get_lane1_link_training(struct s5p_dp_device *dp);
-#ifdef CONFIG_MACH_FPGA5210
-void s5p_dp_set_training_debug(struct s5p_dp_device *dp, u32 train_debug);
-#endif
 void s5p_dp_reset_macro(struct s5p_dp_device *dp);
 int s5p_dp_init_video(struct s5p_dp_device *dp);
 void s5p_dp_set_video_master_data_mn(struct s5p_dp_device *dp,
