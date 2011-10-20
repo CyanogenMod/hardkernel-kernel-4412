@@ -69,7 +69,6 @@ struct mfc_inst_ctx *mfc_create_inst(void)
 
 void mfc_destroy_inst(struct mfc_inst_ctx* ctx)
 {
-	int ret = 0;
 	struct mfc_dec_ctx *dec_ctx;
 	struct mfc_enc_ctx *enc_ctx;
 	struct mfc_pre_cfg *precfg;
@@ -105,8 +104,7 @@ void mfc_destroy_inst(struct mfc_inst_ctx* ctx)
 
 		if (ctx->state >= INST_STATE_OPEN) {
 			mfc_clock_on();
-			/* FIXME: meaningless return value */
-			ret = mfc_cmd_inst_close(ctx);
+			mfc_cmd_inst_close(ctx);
 			mfc_clock_off();
 		}
 
