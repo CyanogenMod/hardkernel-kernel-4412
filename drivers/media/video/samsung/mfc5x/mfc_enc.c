@@ -1146,8 +1146,9 @@ static int mfc_set_encoder(struct mfc_inst_ctx *ctx, SSBSIP_MFC_CODEC_TYPE codec
 {
 	struct list_head *pos;
 	struct mfc_enc_info *encoder;
-	int codecid = -1;
 	struct mfc_enc_ctx *enc_ctx;
+
+	ctx->codecid = -1;
 
 	/* find and set codec private */
 	list_for_each(pos, &mfc_encoders) {
@@ -1156,9 +1157,6 @@ static int mfc_set_encoder(struct mfc_inst_ctx *ctx, SSBSIP_MFC_CODEC_TYPE codec
 		if (encoder->codectype == codectype) {
 			if (encoder->codecid < 0)
 				break;
-
-			ctx->type = ENCODER;
-			ctx->c_ops = (struct codec_operations *)&encoder->c_ops;
 
 			/* Allocate Encoder Context memory */
 			enc_ctx = kzalloc(sizeof(struct mfc_enc_ctx), GFP_KERNEL);
@@ -1177,13 +1175,18 @@ static int mfc_set_encoder(struct mfc_inst_ctx *ctx, SSBSIP_MFC_CODEC_TYPE codec
 				return -ENOMEM;
 			}
 
-			codecid = encoder->codecid;
+			ctx->codecid = encoder->codecid;
+			ctx->type = ENCODER;
+			ctx->c_ops = (struct codec_operations *)&encoder->c_ops;
 
 			break;
 		}
 	}
 
-	return codecid;
+	if (ctx->codecid < 0)
+		mfc_err("couldn't find proper encoder codec type: %d\n", codectype);
+
+	return ctx->codecid;
 }
 
 int set_strm_ref_buf(struct mfc_inst_ctx *ctx)
@@ -1274,10 +1277,9 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	int ret;
 	unsigned char *in_vir;
 
-
-	ctx->codecid = mfc_set_encoder(ctx, init_arg->cmn.in_codec_type);
-	if (ctx->codecid < 0) {
-		mfc_err("unsupported encoding codec: %d", init_arg->cmn.in_codec_type);
+	ret = mfc_set_encoder(ctx, init_arg->cmn.in_codec_type);
+	if (ret < 0) {
+		mfc_err("failed to setup encoder codec\n");
 		ret = MFC_ENC_INIT_FAIL;
 		goto err_handling;
 	}
