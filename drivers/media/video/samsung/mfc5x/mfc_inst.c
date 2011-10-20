@@ -120,8 +120,15 @@ int mfc_set_inst_state(struct mfc_inst_ctx *ctx, enum instance_state state)
 {
 	mfc_dbg("state: 0x%08x", state);
 
-	if (ctx->state > state)
+	/* only allow EXE_DONE to EXE transition */
+	if (ctx->state == INST_STATE_EXE_DONE && state == INST_STATE_EXE)
+		ctx->state = state;
+
+	if (ctx->state > state) {
+		mfc_err("failed to change state of instance [0x%08x:0x%08x]\n",
+			ctx->state, state);
 		return -1;
+	}
 
 	ctx->state = state;
 
