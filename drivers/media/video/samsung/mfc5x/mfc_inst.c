@@ -154,7 +154,7 @@ int mfc_set_inst_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 		if (unlikely(precfg == NULL)) {
 			mfc_err("no more kernel memory");
 
-			return MFC_GET_CONF_FAIL;
+			return MFC_SET_CONF_FAIL;
 		}
 
 		memset(precfg, 0x00, sizeof(precfg));
