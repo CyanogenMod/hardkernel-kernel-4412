@@ -1845,12 +1845,12 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #endif
 	&s3c_device_rtc,
 	&s3c_device_wdt,
-	&exynos4_device_ac97,
-	&exynos4_device_i2s0,
-	&exynos4_device_pcm0,
-	&exynos4_device_spdif,
+	&exynos_device_ac97,
+	&exynos_device_i2s0,
+	&exynos_device_pcm0,
+	&exynos_device_spdif,
 #ifdef CONFIG_SND_SAMSUNG_RP
-	&exynos4_device_srp,
+	&exynos_device_srp,
 #endif
 	&samsung_device_keypad,
 #ifdef CONFIG_BATTERY_SAMSUNG

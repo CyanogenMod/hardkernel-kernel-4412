@@ -2222,19 +2222,19 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&exynos4_device_dwmci,
 #endif
 #ifdef CONFIG_SND_SAMSUNG_AC97
-	&exynos4_device_ac97,
+	&exynos_device_ac97,
 #endif
 #ifdef CONFIG_SND_SAMSUNG_I2S
-	&exynos4_device_i2s0,
+	&exynos_device_i2s0,
 #endif
 #ifdef CONFIG_SND_SAMSUNG_PCM
-	&exynos4_device_pcm0,
+	&exynos_device_pcm0,
 #endif
 #ifdef CONFIG_SND_SAMSUNG_SPDIF
-	&exynos4_device_spdif,
+	&exynos_device_spdif,
 #endif
 #ifdef CONFIG_SND_SAMSUNG_RP
-	&exynos4_device_srp,
+	&exynos_device_srp,
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 	&exynos4_device_fimc_is,
