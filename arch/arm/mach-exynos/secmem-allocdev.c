@@ -32,8 +32,9 @@
 struct miscdevice secmem;
 
 static char *secmem_info[] = {
-	"mfc",	/* 0 */
-	"fimc",	/* 1 */
+	"mfc",		/* 0 */
+	"fimc",		/* 1 */
+	"mfc-shm",	/* 2 */
 	NULL
 };
 
