@@ -41,6 +41,7 @@
 #include <plat/fb-core.h>
 #include <plat/regs-fb-v4.h>
 #include <plat/backlight.h>
+#include <plat/dp.h>
 #include <plat/iic.h>
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 #include <plat/s5p-mfc.h>
@@ -367,6 +368,60 @@ static struct s3c_fb_pd_win smdk5210_fb_win2 = {
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
+#elif defined(CONFIG_S5P_DP)
+static struct s3c_fb_pd_win smdk5210_fb_win0 = {
+	.win_mode = {
+		.refresh	= 39,
+		.left_margin	= 172,
+		.right_margin	= 60,
+		.upper_margin	= 25,
+		.lower_margin	= 10,
+		.hsync_len	= 80,
+		.vsync_len	= 10,
+		.xres		= 1920,
+		.yres		= 1080,
+	},
+	.virtual_x		= 1920,
+	.virtual_y		= 1080 * 2,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk5210_fb_win1 = {
+	.win_mode = {
+		.refresh	= 39,
+		.left_margin	= 172,
+		.right_margin	= 60,
+		.upper_margin	= 25,
+		.lower_margin	= 10,
+		.hsync_len	= 80,
+		.vsync_len	= 10,
+		.xres		= 1920,
+		.yres		= 1080,
+	},
+	.virtual_x		= 1920,
+	.virtual_y		= 1080 * 2,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk5210_fb_win2 = {
+	.win_mode = {
+		.refresh	= 39,
+		.left_margin	= 172,
+		.right_margin	= 60,
+		.upper_margin	= 25,
+		.lower_margin	= 10,
+		.hsync_len	= 80,
+		.vsync_len	= 10,
+		.xres		= 1920,
+		.yres		= 1080,
+	},
+	.virtual_x		= 1920,
+	.virtual_y		= 1080 * 2,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
 #endif
 
 static void exynos_fimd_gpio_setup_24bpp(void)
@@ -385,6 +440,11 @@ static void exynos_fimd_gpio_setup_24bpp(void)
 	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ3(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ4(0), 2, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+#endif
+
+#if defined(CONFIG_S5P_DP)
+	/* Set Hotplug detect for DP */
+	s3c_gpio_cfgpin(EXYNOS5_GPX0(7), S3C_GPIO_SFN(3));
 #endif
 
 	/*
@@ -406,7 +466,8 @@ static void exynos_fimd_gpio_setup_24bpp(void)
 }
 
 static struct s3c_fb_platdata smdk5210_lcd1_pdata __initdata = {
-#if defined(CONFIG_LCD_WA101S) || defined(CONFIG_LCD_LMS501KF03)
+#if defined(CONFIG_LCD_WA101S) || defined(CONFIG_LCD_LMS501KF03) || \
+	defined(CONFIG_S5P_DP)
 	.win[0]		= &smdk5210_fb_win0,
 	.win[1]		= &smdk5210_fb_win1,
 	.win[2]		= &smdk5210_fb_win2,
@@ -418,8 +479,62 @@ static struct s3c_fb_platdata smdk5210_lcd1_pdata __initdata = {
 #elif defined(CONFIG_LCD_WA101S)
 	.vidcon1	= VIDCON1_INV_VCLK | VIDCON1_INV_HSYNC |
 			  VIDCON1_INV_VSYNC,
+#elif defined(CONFIG_S5P_DP)
+	.vidcon1	= 0,
 #endif
 	.setup_gpio	= exynos_fimd_gpio_setup_24bpp,
+};
+#endif
+
+#ifdef CONFIG_S5P_DP
+static struct video_info smdk5210_dp_config = {
+	.name			= "DELL U2410, for SMDK TEST",
+
+	.h_total		= 2222,
+	.h_active		= 1920,
+	.h_sync_width		= 80,
+	.h_back_porch		= 172,
+	.h_front_porch		= 60,
+
+	.v_total		= 1125,
+	.v_active		= 1080,
+	.v_sync_width		= 10,
+	.v_back_porch		= 25,
+	.v_front_porch		= 10,
+
+	.v_sync_rate		= 60,
+
+	.mvid			= 0,
+	.nvid			= 0,
+
+	.h_sync_polarity	= 0,
+	.v_sync_polarity	= 0,
+	.interlaced		= 0,
+
+	.color_space		= COLOR_RGB,
+	.dynamic_range		= VESA,
+	.ycbcr_coeff		= COLOR_YCBCR601,
+	.color_depth		= COLOR_8,
+
+	.sync_clock		= 0,
+	.even_field		= 0,
+
+	.refresh_denominator	= REFRESH_DENOMINATOR_1,
+
+	.test_pattern		= COLORBAR_32,
+	.link_rate		= LINK_RATE_1_62GBPS,
+	.lane_count		= LANE_COUNT2,
+
+	.video_mute_on		= 0,
+
+	.master_mode		= 0,
+	.bist_mode		= 0,
+};
+
+static struct s5p_dp_platdata smdk5210_dp_data __initdata = {
+	.video_info	= &smdk5210_dp_config,
+	.phy_init	= s5p_dp_phy_init,
+	.phy_exit	= s5p_dp_phy_exit,
 };
 #endif
 
@@ -639,6 +754,9 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 	&exynos5_device_gsc1,
 	&exynos5_device_gsc2,
 	&exynos5_device_gsc3,
+#endif
+#ifdef CONFIG_S5P_DP
+	&s5p_device_dp,
 #endif
 #ifdef CONFIG_FB_S3C
 	&s5p_device_fimd1,
@@ -914,6 +1032,10 @@ static void __init smdk5210_machine_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 #endif
 	s5p_fimd1_set_platdata(&smdk5210_lcd1_pdata);
+#endif
+
+#ifdef CONFIG_S5P_DP
+	s5p_dp_set_platdata(&smdk5210_dp_data);
 #endif
 
 #ifdef CONFIG_SAMSUNG_DEV_BACKLIGHT
