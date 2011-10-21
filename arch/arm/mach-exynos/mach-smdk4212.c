@@ -1779,7 +1779,7 @@ static struct max8997_platform_data __initdata exynos4_max8997_info = {
 	.num_regulators = ARRAY_SIZE(max8997_regulators),
 	.regulators     = max8997_regulators,
 
-	.buck1_voltage[0] = 1100000, /* 1.1V */
+	.buck1_voltage[0] = 1250000, /* 1.25V */
 	.buck1_voltage[1] = 1100000, /* 1.1V */
 	.buck1_voltage[2] = 1100000, /* 1.1V */
 	.buck1_voltage[3] = 1100000, /* 1.1V */
