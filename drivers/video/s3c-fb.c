@@ -1478,7 +1478,7 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 	fbi->screen_base = cma_get_virt(map_dma, size, 1);
 #elif defined(CONFIG_ION_EXYNOS)
 	win->fb_ion_handle = ion_alloc(sfb->fb_ion_client, (size_t)size, 0,
-					ION_HEAP_SYSTEM_CONTIG_MASK);
+					ION_HEAP_EXYNOS_CONTIG_MASK);
 	if (IS_ERR(win->fb_ion_handle)) {
 		dev_err(sfb->dev, "failed to ion_alloc\n");
 		return -ENOMEM;
@@ -1950,7 +1950,7 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	}
 #ifdef CONFIG_ION_EXYNOS
 	sfb->fb_ion_client = ion_client_create(ion_exynos,
-			ION_HEAP_SYSTEM_MASK | ION_HEAP_SYSTEM_CONTIG_MASK,
+			ION_HEAP_EXYNOS_CONTIG_MASK,
 			"fimd");
 	if (IS_ERR(sfb->fb_ion_client)) {
 		dev_err(sfb->dev, "failed to ion_client_create\n");
