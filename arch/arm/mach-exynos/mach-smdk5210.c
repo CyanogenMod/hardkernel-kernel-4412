@@ -780,24 +780,31 @@ static void __init exynos5_reserve_mem(void)
 			.start = 0
 		},
 #endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_GSC0
 		{
-			.name = "fimc0",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC0 * SZ_1K,
+			.name = "gsc0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_GSC0 * SZ_1K,
 			.start = 0
 		},
 #endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_GSC1
 		{
-			.name = "fimc2",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2 * SZ_1K,
+			.name = "gsc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_GSC1 * SZ_1K,
 			.start = 0
 		},
 #endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_GSC2
 		{
-			.name = "fimc3",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3 * SZ_1K,
+			.name = "gsc2",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_GSC2 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_GSC3
+		{
+			.name = "gsc3",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_GSC3 * SZ_1K,
 			.start = 0
 		},
 #endif
@@ -819,12 +826,6 @@ static void __init exynos5_reserve_mem(void)
 		},
 	};
 	static struct cma_region regions_secure[] = {
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
-		{
-			.name = "fimc1",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
-		},
-#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
 		{
 			.name = "mfc0",
@@ -844,9 +845,9 @@ static void __init exynos5_reserve_mem(void)
 	};
 	static const char map[] __initconst =
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
-		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
 		"s3cfb.0=fimd;"
-		"ion-exynos=fimd,fimc0,fimc2,fimc3;"
+		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
+		"ion-exynos=fimd;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;";
 	struct cma_region *reg;
