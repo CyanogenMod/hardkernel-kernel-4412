@@ -14,7 +14,6 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/poll.h>
-#include <linux/clk.h>
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
 #include <linux/irq.h>
@@ -29,49 +28,14 @@
 #include <asm/cacheflush.h>
 #include <plat/cpu.h>
 #include <plat/fimg2d.h>
-
+#include <plat/sysmmu.h>
 #ifdef CONFIG_PM_RUNTIME
 #include <linux/pm_runtime.h>
 #endif
-
-#include <plat/sysmmu.h>
-
 #include "fimg2d.h"
-
-#define to_fimg2d_plat(d)	(to_platform_device(d)->dev.platform_data)
+#include "fimg2d_clk.h"
 
 static struct fimg2d_control *info;
-
-static inline void fimg2d_clk_on(void)
-{
-	spin_lock(&info->bltlock);
-
-	clk_enable(info->clock);
-	fimg2d_debug("clock enable\n");
-#ifdef CONFIG_S5P_SYSTEM_MMU
-	s5p_sysmmu_enable(info->dev, (unsigned long)init_mm.pgd);
-	fimg2d_debug("sysmmu enable\n");
-#endif
-	atomic_set(&info->clkon, 1);
-
-	spin_unlock(&info->bltlock);
-}
-
-static inline void fimg2d_clk_off(void)
-{
-	spin_lock(&info->bltlock);
-
-	atomic_set(&info->clkon, 0);
-
-#ifdef CONFIG_S5P_SYSTEM_MMU
-	s5p_sysmmu_disable(info->dev);
-	fimg2d_debug("sysmmu disable\n");
-#endif
-	clk_disable(info->clock);
-	fimg2d_debug("clock disable\n");
-
-	spin_unlock(&info->bltlock);
-}
 
 static void fimg2d_worker(struct work_struct *work)
 {
@@ -173,7 +137,7 @@ static int fimg2d_open(struct inode *inode, struct file *file)
 
 #ifndef CONFIG_PM_RUNTIME
 	if (atomic_read(&info->nctx) == 1)
-		fimg2d_clk_on();
+		fimg2d_clk_on(info);
 #endif
 
 	return 0;
@@ -191,7 +155,7 @@ static int fimg2d_release(struct inode *inode, struct file *file)
 
 #ifndef CONFIG_PM_RUNTIME
 	if (atomic_read(&info->nctx) == 0)
-		fimg2d_clk_off();
+		fimg2d_clk_off(info);
 #endif
 	return 0;
 }
@@ -289,7 +253,6 @@ static int fimg2d_setup_controller(struct fimg2d_control *info)
 static int fimg2d_probe(struct platform_device *pdev)
 {
 	struct resource *res;
-	struct clk *parent, *sclk;
 	struct fimg2d_platdata *pdata;
 	int ret;
 
@@ -314,6 +277,7 @@ static int fimg2d_probe(struct platform_device *pdev)
 		printk(KERN_ERR "FIMG2D failed to setup controller\n");
 		goto err_setup;
 	}
+	info->dev = &pdev->dev;
 
 	/* memory region */
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -355,46 +319,20 @@ static int fimg2d_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
-	/* clock for setting parent and rate */
-	parent = clk_get(&pdev->dev, pdata->parent_clkname);
-	if (IS_ERR(parent)) {
-		printk(KERN_ERR "FIMG2D failed to get parent clk\n");
+	ret = fimg2d_clk_setup(info);
+	if (ret) {
+		printk(KERN_ERR "FIMG2D failed to setup clk\n");
 		ret = -ENOENT;
-		goto err_clk1;
+		goto err_clk;
 	}
-	fimg2d_debug("parent clk: %s\n", pdata->parent_clkname);
-
-	sclk = clk_get(&pdev->dev, pdata->clkname);
-	if (IS_ERR(sclk)) {
-		printk(KERN_ERR "FIMG2D failed to get sclk\n");
-		ret = -ENOENT;
-		goto err_clk2;
-	}
-	fimg2d_debug("sclk: %s\n", pdata->clkname);
-
-	if (clk_set_parent(sclk, parent))
-		printk(KERN_ERR "FIMG2D failed to set parent\n");
-
-	clk_set_rate(sclk, pdata->clkrate);
-	fimg2d_debug("clkrate: %ld parent clkrate: %ld\n",
-			clk_get_rate(sclk), clk_get_rate(parent));
-
-	/* clock for gating */
-	info->clock = clk_get(&pdev->dev, pdata->gate_clkname);
-	if (IS_ERR(info->clock)) {
-		printk(KERN_ERR "FIMG2D failed to get gate clk\n");
-		ret = -ENOENT;
-		goto err_clk3;
-	}
-	fimg2d_debug("gate clk: %s\n", pdata->gate_clkname);
 
 #ifdef CONFIG_PM_RUNTIME
-	pm_runtime_enable(&pdev->dev);
+	pm_runtime_enable(info->dev);
 	fimg2d_debug("enable runtime pm\n");
 #endif
 
 #ifdef CONFIG_S5P_SYSTEM_MMU
-	s5p_sysmmu_set_fault_handler(&pdev->dev, fimg2d_sysmmu_fault_handler);
+	s5p_sysmmu_set_fault_handler(info->dev, fimg2d_sysmmu_fault_handler);
 	fimg2d_debug("register sysmmu page fault handler\n");
 #endif
 
@@ -405,20 +343,13 @@ static int fimg2d_probe(struct platform_device *pdev)
 		goto err_reg;
 	}
 
-	info->dev = &pdev->dev;
 	printk(KERN_INFO "Samsung Graphics 2D driver, (c) 2011 Samsung Electronics\n");
 	return 0;
 
 err_reg:
-	clk_put(info->clock);
+	fimg2d_clk_release(info);
 
-err_clk3:
-	clk_put(sclk);
-
-err_clk2:
-	clk_put(parent);
-
-err_clk1:
+err_clk:
 	free_irq(info->irq, NULL);
 
 err_irq:
@@ -477,7 +408,7 @@ static int fimg2d_suspend(struct platform_device *pdev, pm_message_t state)
 
 #ifndef CONFIG_PM_RUNTIME
 	if (atomic_read(&info->clkon) && fimg2d_queue_is_empty(&info->cmd_q))
-		fimg2d_clk_off();
+		fimg2d_clk_off(info);
 #endif
 	fimg2d_debug("suspend... done\n");
 
@@ -489,7 +420,7 @@ static int fimg2d_resume(struct platform_device *pdev)
 	fimg2d_debug("resume... start\n");
 #ifndef CONFIG_PM_RUNTIME
 	if (!atomic_read(&info->clkon) && atomic_read(&info->nctx))
-		fimg2d_clk_on();
+		fimg2d_clk_on(info);
 #endif
 	atomic_set(&info->suspended, 0);
 	fimg2d_debug("resume... done\n");
@@ -500,7 +431,7 @@ static int fimg2d_resume(struct platform_device *pdev)
 static int fimg2d_runtime_suspend(struct device *dev)
 {
 	fimg2d_debug("runtime suspend... start\n");
-	fimg2d_clk_off();
+	fimg2d_clk_off(info);
 	fimg2d_debug("runtime suspend... done\n");
 	return 0;
 }
@@ -508,7 +439,7 @@ static int fimg2d_runtime_suspend(struct device *dev)
 static int fimg2d_runtime_resume(struct device *dev)
 {
 	fimg2d_debug("runtime resume... start\n");
-	fimg2d_clk_on();
+	fimg2d_clk_on(info);
 	fimg2d_debug("runtime resume... done\n");
 	return 0;
 }

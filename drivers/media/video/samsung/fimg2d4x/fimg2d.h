@@ -24,13 +24,14 @@
 #include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
 
+#define FIMG2D_MINOR			(240)
+#define to_fimg2d_plat(d)		(to_platform_device(d)->dev.platform_data)
+
 #ifdef CONFIG_VIDEO_FIMG2D_DEBUG
 #define fimg2d_debug(fmt, arg...)	printk(KERN_INFO "[%s] " fmt, __func__, ## arg)
 #else
 #define fimg2d_debug(fmt, arg...)	do { } while (0)
 #endif
-
-#define FIMG2D_MINOR		(240)
 
 #endif /* __KERNEL__ */
 
