@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos/pm.c
+/* linux/arch/arm/mach-exynos/pm-exynos4.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com

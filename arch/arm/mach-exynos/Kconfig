@@ -78,6 +78,20 @@ config EXYNOS4_CONTENT_PATH_PROTECTION
 	help
 	  Enable content path protection of EXYNOS4.
 
+config EXYNOS4_PM
+	bool "Exynos4 Power Management"
+	depends on (PM && ARCH_EXYNOS4)
+	default y
+	help
+	  Enable suspend and resume for Exynos4 series.
+
+config EXYNOS5_PM
+	bool "Exynos5 Power Management"
+	depends on (PM && ARCH_EXYNOS5)
+	default y
+	help
+	  Enable suspend and resume for Exynos5 series.
+
 config EXYNOS_MCT
 	bool
 	default y
