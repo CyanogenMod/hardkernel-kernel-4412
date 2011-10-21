@@ -15,6 +15,10 @@
 #include <linux/irq.h>
 #include <linux/poll.h>
 
+#if defined(CONFIG_BUSFREQ_OPP)
+#include <mach/dev.h>
+#endif
+
 #include <plat/tvout.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
@@ -40,6 +44,10 @@
 
 #define RETRY_COUNT	50
 
+#if defined(CONFIG_BUSFREQ_OPP)
+#define BUSFREQ_400MHZ	400000
+#endif
+
 struct hpd_struct {
 	spinlock_t lock;
 	wait_queue_head_t waitq;
@@ -48,6 +56,10 @@ struct hpd_struct {
 	void (*int_src_ext_hpd)(void);
 	int (*read_gpio)(void);
 	int irq_n;
+#if defined(CONFIG_BUSFREQ_OPP)
+	struct device *bus_dev; /* for BusFreq with Opp */
+#endif
+	struct device *dev; /* hpd device pointer */
 };
 
 static struct hpd_struct hpd_struct;
@@ -194,6 +206,12 @@ static long s5p_hpd_ioctl(struct file *file,
 			on_stop_process = false;
 		}
 
+#if defined(CONFIG_BUSFREQ_OPP)
+		/* lock dynamic bus frequency as 400Mhz */
+		if (*status)
+			dev_lock(hpd_struct.bus_dev, hpd_struct.dev,
+					BUSFREQ_400MHZ);
+#endif
 		HPDIFPRINTK("HPD status is %s\n",
 				(*status) ? "plugged" : "unplugged");
 		return 0;
@@ -283,6 +301,11 @@ static int s5p_hdp_irq_eint(int irq)
 		atomic_set(&poll_state, 1);
 
 		last_hpd_state = HPD_LO;
+
+#if defined(CONFIG_BUSFREQ_OPP)
+		/* unlock fixed bus frequency */
+		dev_unlock(hpd_struct.bus_dev, hpd_struct.dev);
+#endif
 		wake_up_interruptible(&hpd_struct.waitq);
 	}
 	schedule_work(&hpd_work);
@@ -350,6 +373,11 @@ static int s5p_hpd_irq_hdmi(int irq)
 		atomic_set(&poll_state, 1);
 
 		last_hpd_state = HPD_LO;
+
+#if defined(CONFIG_BUSFREQ_OPP)
+		/* unlock fixed bus frequency */
+		dev_unlock(hpd_struct.bus_dev, hpd_struct.dev);
+#endif
 		wake_up_interruptible(&hpd_struct.waitq);
 
 		HPDIFPRINTK("HPD_LO\n");
@@ -428,6 +456,13 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 		atomic_set(&hpd_struct.state, HPD_LO);
 		last_hpd_state = HPD_LO;
 	}
+
+#if defined(CONFIG_BUSFREQ_OPP)
+	/* add bus device ptr for using bus frequency with opp */
+	hpd_struct.bus_dev = dev_get("exynos4-busfreq");
+#endif
+
+	hpd_struct.dev = &pdev->dev;
 
 	irq_set_irq_type(hpd_struct.irq_n, IRQ_TYPE_EDGE_BOTH);
 
