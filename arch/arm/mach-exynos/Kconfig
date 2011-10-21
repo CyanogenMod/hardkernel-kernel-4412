@@ -71,6 +71,12 @@ config CPU_EXYNOS5210_A5_IOP
 	  A5 single core CPU support
 endchoice
 
+config CPU_EXYNOS5250
+	bool
+	select S3C_PL330_DMA
+	help
+	  Enable EXYNOS5250 CPU support
+
 config EXYNOS4_CONTENT_PATH_PROTECTION
 	bool "Exynos4 Content Path Protection"
 	depends on ARM_TRUSTZONE
