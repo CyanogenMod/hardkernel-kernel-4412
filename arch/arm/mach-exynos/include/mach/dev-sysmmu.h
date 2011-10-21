@@ -20,7 +20,7 @@
 
 #ifdef CONFIG_EXYNOS4_DEV_PD
 #define ASSIGN_SYSMMU_POWERDOMAIN(ipname, powerdomain) \
-		SYSMMU_PLATDEV(mfc_l).dev.parent = powerdomain
+		SYSMMU_PLATDEV(ipname).dev.parent = powerdomain
 #else
 #define ASSIGN_SYSTEM_POWERDOMAIN(ipname, powerdomain) do { } while (0)
 #endif
