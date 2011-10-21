@@ -25,6 +25,7 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/atomic.h>
+#include <linux/delay.h>
 #include <asm/cacheflush.h>
 #include <plat/cpu.h>
 #include <plat/fimg2d.h>
@@ -76,34 +77,28 @@ static int fimg2d_sysmmu_fault_handler(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
 }
 #endif
 
-/**
- * waits until blit commands are done for this context
- */
 static void fimg2d_context_wait(struct fimg2d_context *ctx)
 {
 	int ret;
 
-	if (atomic_read(&ctx->ncmd)) {
-wait:
-		fimg2d_debug("ctx %p is waiting for bitblt complete\n", ctx);
+	fimg2d_debug("ctx %p is waiting for bitblt complete\n", ctx);
+
+	while (atomic_read(&ctx->ncmd)) {
 		ret = wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd),
-					msecs_to_jiffies(5000));
-		if (!ret) {
-			if (!info->err && atomic_read(&ctx->ncmd)) {
-				fimg2d_debug("ctx %p bitblt is not finished\n", ctx);
-				goto wait;
-			}
-			printk(KERN_ERR "[%s] ctx %p wait timeout\n", __func__, ctx);
-		} else {
+				msecs_to_jiffies(1000));
+		if (ret) {
 			fimg2d_debug("ctx %p wake up\n", ctx);
+		} else {
+			if (info->err) {
+				printk(KERN_ERR "[%s] ctx %p wait timeout\n", __func__, ctx);
+				break;
+			} else {
+				fimg2d_debug("ctx %p bitblt is not finished\n", ctx);
+			}
 		}
 	}
 }
 
-/**
- * requests starting blit if blitter is not working
- * and waits until blit commands are done for this context
- */
 static void fimg2d_request_bitblt(struct fimg2d_context *ctx)
 {
 	if (!atomic_read(&info->active)) {
@@ -148,7 +143,11 @@ static int fimg2d_release(struct inode *inode, struct file *file)
 	struct fimg2d_context *ctx = file->private_data;
 
 	fimg2d_debug("ctx %p\n", ctx);
-	fimg2d_context_wait(ctx);
+	while (1) {
+		if (!atomic_read(&ctx->ncmd))
+			break;
+		mdelay(2);
+	}
 	fimg2d_del_context(info, ctx);
 
 	kfree(ctx);
@@ -395,33 +394,24 @@ static int fimg2d_remove(struct platform_device *pdev)
 
 static int fimg2d_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	int ret;
-
 	fimg2d_debug("suspend... start\n");
 	atomic_set(&info->suspended, 1);
 
-	ret = wait_event_timeout(info->wait_q,
-				fimg2d_queue_is_empty(&info->cmd_q),
-				msecs_to_jiffies(5000));
-	if (!ret)
-		printk(KERN_INFO "[%s] blit cmd queue wait timeout\n", __func__);
+	while (1) {
+		if (!atomic_read(&info->busy))
+			break;
+		mdelay(2);
+	}
 
-#ifndef CONFIG_PM_RUNTIME
-	if (atomic_read(&info->clkon) && fimg2d_queue_is_empty(&info->cmd_q))
-		fimg2d_clk_off(info);
-#endif
+	fimg2d_clk_off(info);
 	fimg2d_debug("suspend... done\n");
-
 	return 0;
 }
 
 static int fimg2d_resume(struct platform_device *pdev)
 {
 	fimg2d_debug("resume... start\n");
-#ifndef CONFIG_PM_RUNTIME
-	if (!atomic_read(&info->clkon) && atomic_read(&info->nctx))
-		fimg2d_clk_on(info);
-#endif
+	fimg2d_clk_on(info);
 	atomic_set(&info->suspended, 0);
 	fimg2d_debug("resume... done\n");
 	return 0;

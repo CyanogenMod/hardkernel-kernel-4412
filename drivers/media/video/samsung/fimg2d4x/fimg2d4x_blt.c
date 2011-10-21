@@ -17,16 +17,15 @@
 #include <linux/atomic.h>
 #include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
-
-#include "fimg2d.h"
-#include "fimg2d4x.h"
-
 #include <plat/sysmmu.h>
-
 #ifdef CONFIG_PM_RUNTIME
 #include <plat/devs.h>
 #include <linux/pm_runtime.h>
 #endif
+
+#include "fimg2d.h"
+#include "fimg2d_clk.h"
+#include "fimg2d4x.h"
 
 #undef PERF
 #undef POST_BLIT
@@ -121,10 +120,8 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 	fimg2d_debug("enter blitter\n");
 
 #ifdef CONFIG_PM_RUNTIME
-	if (!atomic_read(&info->clkon)) {
-		fimg2d_debug("pm_runtime_get_sync\n");
-		pm_runtime_get_sync(&(s5p_device_fimg2d.dev));
-	}
+	pm_runtime_get_sync(&(s5p_device_fimg2d.dev));
+	fimg2d_debug("pm_runtime_get_sync\n");
 #endif
 
 	while ((cmd = fimg2d_get_first_command(info))) {
@@ -220,10 +217,8 @@ blitend:
 	atomic_set(&info->active, 0);
 
 #ifdef CONFIG_PM_RUNTIME
-	if (atomic_read(&info->clkon)) {
-		pm_runtime_put_sync(&(s5p_device_fimg2d.dev));
-		fimg2d_debug("pm_runtime_put_sync\n");
-	}
+	pm_runtime_put_sync(&(s5p_device_fimg2d.dev));
+	fimg2d_debug("pm_runtime_put_sync\n");
 #endif
 
 	fimg2d_debug("exit blitter\n");
