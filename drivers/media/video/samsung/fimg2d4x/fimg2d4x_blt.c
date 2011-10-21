@@ -139,18 +139,16 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		/* set sfr */
 		info->configure(info, cmd);
 
+#ifdef CONFIG_S5P_SYSTEM_MMU
 		/* set sysmmu */
 		if (cmd->dst.addr.type == ADDR_USER) {
-#ifdef CONFIG_S5P_SYSTEM_MMU
 			s5p_sysmmu_set_tablebase_pgd(info->dev, pa_pgd);
 			fimg2d_debug("set sysmmu table base: ctx %p "
 					"pgd (va:0x%lx,pa:0x%lx) seq_no(%u)\n",
 					ctx, va_pgd, pa_pgd, cmd->seq_no);
-#endif
 		}
-
+#endif
 		fimg2d4x_pre_bitblt(info, cmd);
-
 #ifdef PERF
 		do_gettimeofday(&start);
 #endif
@@ -350,11 +348,17 @@ static void fimg2d4x_stop(struct fimg2d_control *info)
 	}
 }
 
+static void fimg2d4x_dump(struct fimg2d_control *info)
+{
+	fimg2d4x_dump_regs(info);
+}
+
 int fimg2d_register_ops(struct fimg2d_control *info)
 {
 	info->blit = fimg2d4x_bitblt;
 	info->configure = fimg2d4x_configure;
 	info->run = fimg2d4x_run;
+	info->dump = fimg2d4x_dump;
 	info->stop = fimg2d4x_stop;
 
 	return 0;

@@ -486,6 +486,7 @@ struct fimg2d_control {
 	void (*configure)(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd);
 	void (*run)(struct fimg2d_control *info);
 	void (*stop)(struct fimg2d_control *info);
+	void (*dump)(struct fimg2d_control *info);
 	void (*finalize)(struct fimg2d_control *info);
 };
 
@@ -533,7 +534,7 @@ int fimg2d_register_ops(struct fimg2d_control *info);
 void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long addr, size_t size);
 void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long addr, size_t size, enum cache_opr opr);
 enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long addr, size_t size);
-void fimg2d_print_current_command(struct fimg2d_control *info, unsigned long pgtable_base);
+void fimg2d_dump_command(struct fimg2d_bltcmd *cmd);
 
 #endif /* __KERNEL__ */
 

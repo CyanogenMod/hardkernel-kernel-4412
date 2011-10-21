@@ -196,5 +196,6 @@ void fimg2d4x_set_bgcolor(struct fimg2d_control *info, unsigned long bg);
 void fimg2d4x_enable_alpha(struct fimg2d_control *info, unsigned char g_alpha);
 void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 		enum blit_op op, unsigned char g_alpha);
+void fimg2d4x_dump_regs(struct fimg2d_control *info);
 
 #endif /* __FIMG2D4X_H__ */

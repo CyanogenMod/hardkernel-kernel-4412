@@ -17,7 +17,6 @@
 
 #include "fimg2d.h"
 
-#ifdef CONFIG_VIDEO_FIMG2D_DEBUG
 static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 {
 	fimg2d_debug("op: %d\n", u->op);
@@ -97,22 +96,9 @@ static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 				u->msk_rect->x2, u->msk_rect->y2);
 	}
 }
-#endif
 
-void fimg2d_print_current_command(struct fimg2d_control *info,
-		unsigned long pgtable_base)
+void fimg2d_dump_command(struct fimg2d_bltcmd *cmd)
 {
-	struct fimg2d_context *ctx;
-	struct fimg2d_bltcmd *cmd;
-
-	cmd = fimg2d_get_first_command(info);
-	if (!cmd)
-		return;
-
-	ctx = cmd->ctx;
-	if (ctx->mm->pgd != phys_to_virt(pgtable_base))
-		return;
-
 	printk(KERN_INFO " op: %d\n", cmd->op);
 	printk(KERN_INFO " solid color: 0x%lx\n", cmd->solid_color);
 	printk(KERN_INFO " g_alpha: 0x%x\n", cmd->g_alpha);
@@ -133,14 +119,8 @@ void fimg2d_print_current_command(struct fimg2d_control *info,
 				cmd->scaling.dst_w, cmd->scaling.dst_h);
 	}
 
-	if (cmd->clipping.enable) {
-		printk(KERN_INFO " clip rect LT(%d,%d) RB(%d,%d)\n",
-				cmd->clipping.x1, cmd->clipping.y1,
-				cmd->clipping.x2, cmd->clipping.y2);
-	}
-
 	if (cmd->srcen) {
-		printk(KERN_INFO " src type: %d addr: 0x%lx size: %d cacheable: %d\n",
+		printk(KERN_INFO " src type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
 				cmd->src.addr.type, cmd->src.addr.start, cmd->src.addr.size,
 				cmd->src.addr.cacheable);
 		printk(KERN_INFO " src width: %d height: %d stride: %d order: %d format: %d\n",
@@ -149,26 +129,12 @@ void fimg2d_print_current_command(struct fimg2d_control *info,
 		printk(KERN_INFO " src rect LT(%d,%d) RB(%d,%d)\n",
 				cmd->src_rect.x1, cmd->src_rect.y1,
 				cmd->src_rect.x2, cmd->src_rect.y2);
-		printk(KERN_INFO " src cache addr: 0x%lx size: %d\n",
+		printk(KERN_INFO " src cache addr: 0x%lx size: 0x%x\n",
 				cmd->src_cache.addr, cmd->src_cache.size);
 	}
 
-	if (cmd->dsten) {
-		printk(KERN_INFO " dst type: %d addr: 0x%lx size: %d cacheable: %d\n",
-				cmd->dst.addr.type, cmd->dst.addr.start, cmd->dst.addr.size,
-				cmd->dst.addr.cacheable);
-		printk(KERN_INFO " dst width: %d height: %d stride: %d order: %d format: %d\n",
-				cmd->dst.width, cmd->dst.height, cmd->dst.stride,
-				cmd->dst.order, cmd->dst.fmt);
-		printk(KERN_INFO " dst rect LT(%d,%d) RB(%d,%d)\n",
-				cmd->dst_rect.x1, cmd->dst_rect.y1,
-				cmd->dst_rect.x2, cmd->dst_rect.y2);
-		printk(KERN_INFO " dst cache addr: 0x%lx size: %d\n",
-				cmd->dst_cache.addr, cmd->dst_cache.size);
-	}
-
 	if (cmd->msken) {
-		printk(KERN_INFO " msk type: %d addr: 0x%lx size: %d cacheable: %d\n",
+		printk(KERN_INFO " msk type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
 				cmd->msk.addr.type, cmd->msk.addr.start, cmd->msk.addr.size,
 				cmd->msk.addr.cacheable);
 		printk(KERN_INFO " msk width: %d height: %d stride: %d order: %d format: %d\n",
@@ -177,14 +143,34 @@ void fimg2d_print_current_command(struct fimg2d_control *info,
 		printk(KERN_INFO " msk rect LT(%d,%d) RB(%d,%d)\n",
 				cmd->msk_rect.x1, cmd->msk_rect.y1,
 				cmd->msk_rect.x2, cmd->msk_rect.y2);
-		printk(KERN_INFO " msk cache addr: 0x%lx size: %d\n",
+		printk(KERN_INFO " msk cache addr: 0x%lx size: 0x%x\n",
 				cmd->msk_cache.addr, cmd->msk_cache.size);
 	}
 
-	printk(KERN_INFO " cache size all: %d bytes\n", cmd->size_all);
-	printk(KERN_INFO " seq_no: %u\n", cmd->seq_no);
-	printk(KERN_INFO " ctx: 0x%lx pgd (ka:0x%lx pa:0x%lx)\n",
-			(unsigned long)ctx, (unsigned long)ctx->mm->pgd, pgtable_base);
+
+	if (cmd->dsten) {
+		printk(KERN_INFO " dst type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
+				cmd->dst.addr.type, cmd->dst.addr.start, cmd->dst.addr.size,
+				cmd->dst.addr.cacheable);
+		printk(KERN_INFO " dst width: %d height: %d stride: %d order: %d format: %d\n",
+				cmd->dst.width, cmd->dst.height, cmd->dst.stride,
+				cmd->dst.order, cmd->dst.fmt);
+		printk(KERN_INFO " dst rect LT(%d,%d) RB(%d,%d)\n",
+				cmd->dst_rect.x1, cmd->dst_rect.y1,
+				cmd->dst_rect.x2, cmd->dst_rect.y2);
+		printk(KERN_INFO " dst cache addr: 0x%lx size: 0x%x\n",
+				cmd->dst_cache.addr, cmd->dst_cache.size);
+	}
+
+	if (cmd->clipping.enable) {
+		printk(KERN_INFO " clip rect LT(%d,%d) RB(%d,%d)\n",
+				cmd->clipping.x1, cmd->clipping.y1,
+				cmd->clipping.x2, cmd->clipping.y2);
+	}
+
+	printk(KERN_INFO " cache size all: 0x%x bytes (L1/L2 All:0x%x L1 All:0x%x)\n",
+			cmd->size_all, L2_CACHE_SIZE, L1_CACHE_SIZE);
+	printk(KERN_INFO " ctx: 0x%lx seq_no: %u\n", (unsigned long)cmd->ctx, cmd->seq_no);
 }
 
 static int fimg2d_check_params(struct fimg2d_blit __user *u)

@@ -62,15 +62,34 @@ static irqreturn_t fimg2d_irq(int irq, void *dev_id)
 static int fimg2d_sysmmu_fault_handler(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
 		unsigned long pgtable_base, unsigned long fault_addr)
 {
+	struct fimg2d_bltcmd *cmd;
+
 	if (itype == SYSMMU_PAGEFAULT) {
-		printk(KERN_ERR "fimg2d page fault occurred at 0x%lx pgd (pa:0x%lx)\n",
-				fault_addr, pgtable_base);
-		fimg2d_print_current_command(info, pgtable_base);
+		printk(KERN_ERR "[%s] sysmmu page fault(0x%lx), pgd(0x%lx)\n",
+				__func__, fault_addr, pgtable_base);
 	} else {
-		printk(KERN_ERR "fimg2d sysmmu interrupt "
-				"itype(%d) pgd(0x%lx) addr(0x%lx)\n",
-				itype, pgtable_base, fault_addr);
+		printk(KERN_ERR "[%s] sysmmu interrupt "
+				"type(%d) pgd(0x%lx) addr(0x%lx)\n",
+				__func__, itype, pgtable_base, fault_addr);
 	}
+
+	cmd = fimg2d_get_first_command(info);
+	if (!cmd) {
+		printk(KERN_ERR "[%s] null command\n", __func__);
+		goto next;
+	}
+
+	if (cmd->ctx->mm->pgd != phys_to_virt(pgtable_base)) {
+		printk(KERN_ERR "[%s] pgtable base is different from current command\n",
+				__func__);
+		goto next;
+	}
+
+	fimg2d_dump_command(cmd);
+
+next:
+	fimg2d_clk_dump(info);
+	info->dump(info);
 
 	BUG();
 	return 0;

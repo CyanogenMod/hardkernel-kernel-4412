@@ -760,4 +760,31 @@ void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 	writel(cfg, info->regs + FIMG2D_ROUND_MODE_REG);
 }
 
+void fimg2d4x_dump_regs(struct fimg2d_control *info)
+{
+	int i, offset;
+	unsigned long table[][2] = {
+		/* start, end */
+		{0x0000, 0x0030},	/* general */
+		{0x0080, 0x00a0},	/* host dma */
+		{0x0100, 0x0110},	/* commands */
+		{0x0200, 0x0210},	/* rotation & direction */
+		{0x0300, 0x0340},	/* source */
+		{0x0400, 0x0420},	/* dest */
+		{0x0500, 0x0550},	/* pattern & mask */
+		{0x0600, 0x0710},	/* clip, rop, alpha and color */
+		{0x0, 0x0}
+	};
 
+	for (i = 0; table[i][1] != 0x0; i++) {
+		offset = table[i][0];
+		do {
+			printk(KERN_INFO "[0x%04x] 0x%08x 0x%08x 0x%08x 0x%08x\n", offset,
+				readl(info->regs + offset),
+				readl(info->regs + offset+0x4),
+				readl(info->regs + offset+0x8),
+				readl(info->regs + offset+0xc));
+			offset += 0x10;
+		} while (offset < table[i][1]);
+	}
+}
