@@ -135,11 +135,6 @@ static void dump_stream(unsigned long address, unsigned int size)
 #endif
 
 /*
- * FIXME: when _mfc_alloc_buf() fail, all allocation functions must be care
- * already allocated buffers or caller funtion takes care of that
- */
-
-/*
  * [1] alloc_ctx_buf() implementations
  */
  static int alloc_ctx_buf(struct mfc_inst_ctx *ctx)
@@ -505,6 +500,7 @@ static int h264_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_NBIP_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -528,6 +524,7 @@ static int vc1_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_UPNBMV_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -536,6 +533,7 @@ static int vc1_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_SAMV_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -544,6 +542,7 @@ static int vc1_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_OTLINE_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -552,6 +551,7 @@ static int vc1_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_BITPLANE_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -560,6 +560,7 @@ static int vc1_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_BITPLANE_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -568,6 +569,7 @@ static int vc1_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_BITPLANE_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -591,6 +593,7 @@ static int mpeg4_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_UPNBMV_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -599,6 +602,7 @@ static int mpeg4_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_SAMV_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -607,6 +611,7 @@ static int mpeg4_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_OTLINE_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -615,6 +620,7 @@ static int mpeg4_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_SYNPAR_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -638,6 +644,7 @@ static int h263_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_UPNBMV_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -646,6 +653,7 @@ static int h263_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_SAMV_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -654,6 +662,7 @@ static int h263_set_codec_bufs(struct mfc_inst_ctx *ctx)
 
 	alloc = _mfc_alloc_buf(ctx, MFC_DEC_OTLINE_SIZE, ALIGN_2KB, MBT_CODEC | PORT_A);
 	if (alloc == NULL) {
+		mfc_free_buf_type(ctx->id, MBT_CODEC);
 		mfc_err("failed alloc codec buffer\n");
 
 		return -1;
@@ -686,6 +695,7 @@ static int set_dpbs(struct mfc_inst_ctx *ctx)
 		 */
 		alloc = _mfc_alloc_buf(ctx, dec_ctx->chromasize, ALIGN_2KB, MBT_DPB | PORT_A);
 		if (alloc == NULL) {
+			mfc_free_buf_type(ctx->id, MBT_DPB);
 			mfc_err("failed alloc chroma buffer\n");
 
 			return -1;
@@ -708,6 +718,7 @@ static int set_dpbs(struct mfc_inst_ctx *ctx)
 		 */
 		alloc = _mfc_alloc_buf(ctx, dec_ctx->lumasize, ALIGN_2KB, MBT_DPB | PORT_B);
 		if (alloc == NULL) {
+			mfc_free_buf_type(ctx->id, MBT_DPB);
 			mfc_err("failed alloc luma buffer\n");
 
 			return -1;
@@ -762,6 +773,7 @@ static int h264_set_dpbs(struct mfc_inst_ctx *ctx)
 		 */
 		alloc = _mfc_alloc_buf(ctx, dec_ctx->chromasize, ALIGN_2KB, MBT_DPB | PORT_A);
 		if (alloc == NULL) {
+			mfc_free_buf_type(ctx->id, MBT_DPB);
 			mfc_err("failed alloc chroma buffer\n");
 
 			return -1;
@@ -784,6 +796,7 @@ static int h264_set_dpbs(struct mfc_inst_ctx *ctx)
 		 */
 		alloc = _mfc_alloc_buf(ctx, dec_ctx->lumasize, ALIGN_2KB, MBT_DPB | PORT_B);
 		if (alloc == NULL) {
+			mfc_free_buf_type(ctx->id, MBT_DPB);
 			mfc_err("failed alloc luma buffer\n");
 
 			return -1;
@@ -806,6 +819,7 @@ static int h264_set_dpbs(struct mfc_inst_ctx *ctx)
 		 */
 		alloc = _mfc_alloc_buf(ctx, h264->mvsize, ALIGN_2KB, MBT_DPB | PORT_B);
 		if (alloc == NULL) {
+			mfc_free_buf_type(ctx->id, MBT_DPB);
 			mfc_err("failed alloc mv buffer\n");
 
 			return -1;
