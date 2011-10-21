@@ -13,16 +13,20 @@
 
 #include <linux/err.h>
 #include <linux/clk.h>
-
-#include "mfc_dev.h"
-#include "mfc_log.h"
+#include <linux/delay.h>
+#ifdef CONFIG_PM_RUNTIME
+#include <linux/pm_runtime.h>
+#endif
 
 #include <plat/clock.h>
 #include <plat/s5p-mfc.h>
 
-#ifdef CONFIG_PM_RUNTIME
-#include <linux/pm_runtime.h>
-#endif
+#include <mach/regs-pmu.h>
+
+#include <asm/io.h>
+
+#include "mfc_dev.h"
+#include "mfc_log.h"
 
 #define MFC_PARENT_CLK_NAME	"mout_mfc0"
 #define MFC_CLKNAME		"sclk_mfc"
@@ -276,3 +280,23 @@ bool mfc_power_chk(void)
 	return atomic_read(&pm->power) ? true : false;
 }
 
+void mfc_pd_enable(void)
+{
+	u32 timeout;
+
+	__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_MFC_CONF);
+
+	/* Wait max 1ms */
+	timeout = 10;
+	while ((__raw_readl(S5P_PMU_MFC_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN)
+		!= S5P_INT_LOCAL_PWR_EN) {
+		if (timeout == 0) {
+			printk(KERN_ERR "Power domain MFC enable failed.\n");
+			break;
+		}
+
+		timeout--;
+
+		udelay(100);
+	}
+}

@@ -25,15 +25,19 @@
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
-
 #include <linux/sched.h>
 #include <linux/firmware.h>
+#ifdef CONFIG_PM_RUNTIME
+#include <linux/clk.h>
+#endif
+
+#include <plat/cputype.h>
+
 #ifdef CONFIG_BUSFREQ
 #include <mach/cpufreq.h>
 #endif
 #include <mach/regs-pmu.h>
 
-#include <asm/io.h>
 #include <asm/uaccess.h>
 
 #include "mfc_dev.h"
@@ -51,10 +55,6 @@
 
 #ifdef SYSMMU_MFC_ON
 #include <plat/sysmmu.h>
-#endif
-
-#ifdef CONFIG_PM_RUNTIME
-#include <linux/clk.h>
 #endif
 
 #define MFC_MINOR	252
@@ -1202,7 +1202,6 @@ static int mfc_resume(struct device *dev)
 {
 	struct mfc_dev *m_dev = platform_get_drvdata(to_platform_device(dev));
 	int ret;
-	u32 timeout;
 
 	if (atomic_read(&m_dev->inst_cnt) == 0)
 		return 0;
@@ -1223,19 +1222,8 @@ static int mfc_resume(struct device *dev)
 
 	mutex_lock(&m_dev->lock);
 
-	__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_MFC_CONF);
-
-	/* Wait max 1ms */
-	timeout = 10;
-	while ((__raw_readl(S5P_PMU_MFC_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN)
-		!= S5P_INT_LOCAL_PWR_EN) {
-		if (timeout == 0) {
-			printk(KERN_ERR "Power domain MFC enable failed.\n");
-			break;
-		}
-		timeout--;
-		udelay(100);
-	}
+	if (soc_is_exynos4210())
+		mfc_pd_enable();
 
 	ret = mfc_wakeup(m_dev);
 
