@@ -203,7 +203,13 @@ struct jpeg_dev {
 	wait_queue_head_t	 wq;
 	void __iomem		*reg_base;	/* register i/o */
 	enum jpeg_mode		mode;
-	const struct jpeg_vb2		*vb2;
+	const struct jpeg_vb2	*vb2;
+
+	unsigned long		hw_run;
+	atomic_t		watchdog_cnt;
+	struct timer_list	watchdog_timer;
+	struct workqueue_struct	*watchdog_workqueue;
+	struct work_struct	watchdog_work;
 };
 
 enum jpeg_log {

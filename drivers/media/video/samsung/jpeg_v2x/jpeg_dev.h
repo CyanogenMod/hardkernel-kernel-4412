@@ -17,4 +17,6 @@
 #define JPEG_ENC_NAME		"video12"
 #define JPEG_DEC_NAME		"video11"
 
+#define JPEG_WATCHDOG_CNT 10
+#define JPEG_WATCHDOG_INTERVAL   1000
 #endif /*__JPEG_DEV_H__*/
