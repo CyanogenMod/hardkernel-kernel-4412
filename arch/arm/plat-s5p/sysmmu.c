@@ -248,6 +248,26 @@ void s5p_sysmmu_set_tablebase_pgd(struct device *owner, unsigned long pgd)
 	}
 }
 
+static bool __sysmmu_disable(struct sysmmu_drvdata *data)
+{
+	unsigned long flags;
+	bool disabled = false;
+
+	write_lock_irqsave(&data->lock, flags);
+
+	if (set_sysmmu_inactive(data)) {
+		__raw_writel(CTRL_DISABLE, data->sfrbase + S5P_MMU_CTRL);
+		clk_disable(data->clk);
+		disabled = true;
+	}
+
+	write_unlock_irqrestore(&data->lock, flags);
+
+	pm_runtime_put_sync(data->dev);
+
+	return disabled;
+}
+
 int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 {
 	unsigned long flags;
@@ -266,6 +286,8 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 
 		if (set_sysmmu_active(mmudata)) {
 
+			clk_enable(mmudata->clk);
+
 			__sysmmu_set_ptbase(mmudata->sfrbase, pgd);
 
 			__raw_writel(CTRL_ENABLE,
@@ -281,12 +303,7 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 
 	if (ret < 0) {
 		while ((mmudata = get_sysmmu_data_rollback(owner, mmudata))) {
-			write_lock_irqsave(&mmudata->lock, flags);
-			set_sysmmu_inactive(mmudata);
-			/* deinitialization is not required actually. */
-			write_unlock_irqrestore(&mmudata->lock, flags);
-
-			pm_runtime_put_sync(mmudata->dev);
+			__sysmmu_disable(mmudata);
 
 			dev_dbg(mmudata->dev, "Failed to enable.\n");
 		}
@@ -302,23 +319,11 @@ void s5p_sysmmu_disable(struct device *owner)
 	struct sysmmu_drvdata *mmudata = NULL;
 
 	while ((mmudata = get_sysmmu_data(owner, mmudata))) {
-		unsigned long flags;
-
-		write_lock_irqsave(&mmudata->lock, flags);
-
-		if (set_sysmmu_inactive(mmudata)) {
-			__raw_writel(CTRL_DISABLE,
-					mmudata->sfrbase + S5P_MMU_CTRL);
-
+		if (__sysmmu_disable(mmudata))
 			dev_dbg(mmudata->dev, "Disabled.\n");
-		} else {
+		else
 			dev_dbg(mmudata->dev,
 					"Inactivation request ignorred\n");
-		}
-
-		write_unlock_irqrestore(&mmudata->lock, flags);
-
-		pm_runtime_put_sync(mmudata->dev);
 	}
 }
 
@@ -450,33 +455,11 @@ err_init:
 	return ret;
 }
 
-int s5p_sysmmu_runtime_suspend(struct device *dev)
-{
-	struct sysmmu_drvdata *data = dev_get_drvdata(dev);
-
-	clk_disable(data->clk);
-
-	return 0;
-}
-
-int s5p_sysmmu_runtime_resume(struct device *dev)
-{
-	struct sysmmu_drvdata *data = dev_get_drvdata(dev);
-
-	return clk_enable(data->clk);
-}
-
-const struct dev_pm_ops s5p_sysmmu_pm_ops = {
-	.runtime_suspend	= s5p_sysmmu_runtime_suspend,
-	.runtime_resume		= s5p_sysmmu_runtime_resume,
-};
-
 static struct platform_driver s5p_sysmmu_driver = {
 	.probe		= s5p_sysmmu_probe,
 	.driver		= {
 		.owner		= THIS_MODULE,
 		.name		= "s5p-sysmmu",
-		.pm		= &s5p_sysmmu_pm_ops,
 	}
 };
 
