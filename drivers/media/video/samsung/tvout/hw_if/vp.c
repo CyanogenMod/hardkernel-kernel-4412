@@ -720,13 +720,15 @@ int s5p_vp_start(void)
 
 int s5p_vp_stop(void)
 {
-	writel((readl(vp_base + S5P_VP_ENABLE) & ~S5P_VP_ENABLE_ON),
-		vp_base + S5P_VP_ENABLE);
+	u32 val;
 
-	s5p_vp_update();
+	val = readl(vp_base + S5P_VP_ENABLE);
+	val &= ~S5P_VP_ENABLE_ON;
+	writel(val, vp_base + S5P_VP_ENABLE);
 
-	while (!(readl(vp_base + S5P_VP_ENABLE) & S5P_VP_ENABLE_OPERATING))
-		msleep(1);
+	do {
+		val = readl(vp_base + S5P_VP_ENABLE);
+	} while (!(val & S5P_VP_ENABLE_OPERATING));
 
 	return 0;
 }

@@ -2572,8 +2572,6 @@ static void s5p_hdmi_ctrl_internal_stop(void)
 	if (ctrl->hdcp_en)
 		s5p_hdcp_stop();
 
-	mdelay(10);
-
 	s5p_hdmi_reg_enable(false);
 
 	s5p_hdmi_reg_tg_cmd(tg->correction_en, tg->bt656_en, false);
@@ -2632,8 +2630,6 @@ void s5p_hdmi_ctrl_clock(bool on)
 
 		clk_disable(clk[HDMI_MUX].ptr);
 	}
-
-	mdelay(50);
 }
 
 bool s5p_hdmi_ctrl_status(void)

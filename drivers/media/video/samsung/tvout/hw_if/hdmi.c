@@ -1827,7 +1827,7 @@ void s5p_hdmi_reg_enable(bool en)
 {
 	u8 reg;
 
-	reg = readl(hdmi_base + S5P_HDMI_CON_0);
+	reg = readb(hdmi_base + S5P_HDMI_CON_0);
 
 	if (en)
 		reg |= S5P_HDMI_EN;
@@ -1835,6 +1835,12 @@ void s5p_hdmi_reg_enable(bool en)
 		reg &= ~(S5P_HDMI_EN | S5P_HDMI_ASP_EN);
 
 	writeb(reg, hdmi_base + S5P_HDMI_CON_0);
+
+	if (!en) {
+		do {
+			reg = readb(hdmi_base + S5P_HDMI_CON_0);
+		} while (reg & S5P_HDMI_EN);
+	}
 }
 
 u8 s5p_hdmi_reg_intc_status(void)

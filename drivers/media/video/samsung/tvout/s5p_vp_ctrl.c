@@ -370,8 +370,6 @@ static void s5p_vp_ctrl_clock(bool on)
 		s5p_tvout_pm_runtime_put();
 #endif
 	}
-
-	mdelay(50);
 }
 
 
