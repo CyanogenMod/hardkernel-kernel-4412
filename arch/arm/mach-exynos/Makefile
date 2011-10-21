@@ -14,11 +14,12 @@ obj-				:=
 
 obj-y				+= init.o irq-combiner.o dma.o irq-eint.o
 obj-$(CONFIG_ARCH_EXYNOS4)	+= cpu-exynos4.o clock-exynos4.o pmu-exynos4.o ppc.o ppmu.o clock-domain.o dev.o
-obj-$(CONFIG_ARCH_EXYNOS5)	+= cpu-exynos5.o clock-exynos5.o clock-domain.o
+obj-$(CONFIG_ARCH_EXYNOS5)	+= cpu-exynos5.o clock-exynos5.o clock-domain.o pmu-exynos5.o
 
 obj-$(CONFIG_CPU_EXYNOS4210)	+= clock-exynos4210.o
 obj-$(CONFIG_CPU_EXYNOS4212)	+= clock-exynos4212.o
 obj-$(CONFIG_EXYNOS4_PM)	+= pm-exynos4.o sleep-exynos4.o
+obj-$(CONFIG_EXYNOS5_PM)	+= pm-exynos5.o sleep-exynos5.o
 obj-$(CONFIG_CPU_FREQ)		+= cpufreq.o asv.o asv-4210.o asv-4x12.o
 obj-$(CONFIG_CPU_FREQ)		+= cpufreq-4210.o cpufreq-4212.o
 obj-$(CONFIG_CPU_IDLE)		+= cpuidle.o idle.o
