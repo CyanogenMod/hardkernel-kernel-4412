@@ -44,6 +44,8 @@
 #define EXYNOS_USB3_EVENT_BUFF_WSIZE	256
 #define EXYNOS_USB3_EVENT_BUFF_BSIZE	(EXYNOS_USB3_EVENT_BUFF_WSIZE << 2)
 
+#define EXYNOS_USB3_CTRL_BUFF_SIZE	8
+
 #define call_gadget(_udc, _entry) \
 	if ((_udc)->gadget.speed != USB_SPEED_UNKNOWN &&	\
 	    (_udc)->driver && (_udc)->driver->_entry)	\
@@ -241,11 +243,13 @@ struct exynos_ss_udc {
 	struct clk		*clk;
 
 	u32			*event_buff;
+	dma_addr_t		event_buff_dma;
 
 	bool			eps_enabled;
 	bool			ep0_setup;
 	u8			*ep0_buff;
-	u8			ctrl_buff[8];
+	u8			*ctrl_buff;
+	dma_addr_t		ctrl_buff_dma;
 	struct usb_request	*ep0_reply;
 	struct usb_request	*ctrl_req;
 
@@ -1045,9 +1049,13 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 	req->status = -EINPROGRESS;
 
 	/* Sync the buffers as necessary */
-	ret = exynos_ss_udc_map_dma(udc, udc_ep, req);
-	if (ret)
-		return ret;
+	if (udc_ep->epnum == 0 && udc->ep0_setup)
+		req->dma = udc->ctrl_buff_dma;
+	else {
+		ret = exynos_ss_udc_map_dma(udc, udc_ep, req);
+		if (ret)
+			return ret;
+	}
 
 	spin_lock_irqsave(&udc_ep->lock, irqflags);
 
@@ -1129,7 +1137,7 @@ static void exynos_ss_udc_enqueue_setup(struct exynos_ss_udc *udc)
 	udc->ep0_setup = true;
 
 	req->zero = 0;
-	req->length = 8;
+	req->length = EXYNOS_USB3_CTRL_BUFF_SIZE;
 	req->buf = udc->ctrl_buff;
 	req->complete = exynos_ss_udc_complete_setup;
 
@@ -1185,7 +1193,8 @@ static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
 	udc_ep->req = NULL;
 	list_del_init(&udc_req->queue);
 
-	exynos_ss_udc_unmap_dma(udc, udc_ep, udc_req);
+	if (!(udc_ep->epnum == 0 && udc->ep0_setup))
+		exynos_ss_udc_unmap_dma(udc, udc_ep, udc_req);
 
 	/* call the complete request with the locks off, just in case the
 	 * request tries to queue more work for this endpoint. */
@@ -1998,7 +2007,7 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 
 	/* Event buffer */
 	writel(0, udc->regs + EXYNOS_USB3_GEVNTADR_63_32(0));
-	writel((u32) virt_to_phys(udc->event_buff),
+	writel(udc->event_buff_dma,
 		udc->regs + EXYNOS_USB3_GEVNTADR_31_0(0));
 	/* Set Event Buffer size */
 	writel(EXYNOS_USB3_EVENT_BUFF_BSIZE, udc->regs + EXYNOS_USB3_GEVNTSIZ(0));
@@ -2165,13 +2174,27 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 		goto err_mem;
 	}
 
-	udc->event_buff = kzalloc(EXYNOS_USB3_EVENT_BUFF_BSIZE,
-				  GFP_KERNEL | GFP_DMA);
+	udc->event_buff = dma_alloc_coherent(NULL,
+					     EXYNOS_USB3_EVENT_BUFF_BSIZE,
+					     &udc->event_buff_dma,
+					     GFP_KERNEL | GFP_DMA32);
 	if (!udc->event_buff) {
 		dev_err(dev, "cannot get memory for event buffer\n");
 		ret = -ENOMEM;
 		goto err_mem;
 	}
+	memset(udc->event_buff, 0, EXYNOS_USB3_EVENT_BUFF_BSIZE);
+
+	udc->ctrl_buff = dma_alloc_coherent(NULL,
+					    EXYNOS_USB3_CTRL_BUFF_SIZE,
+					    &udc->ctrl_buff_dma,
+					    GFP_KERNEL | GFP_DMA32);
+	if (!udc->ctrl_buff) {
+		dev_err(dev, "cannot get memory for control buffer\n");
+		ret = -ENOMEM;
+		goto err_mem;
+	}
+	memset(udc->ctrl_buff, 0, EXYNOS_USB3_CTRL_BUFF_SIZE);
 
 	udc->ep0_buff = kzalloc(512, GFP_KERNEL);
 	if (!udc->ep0_buff) {
@@ -2287,8 +2310,12 @@ err_clk:
 err_mem:
 	if (udc->ep0_buff)
 		kfree(udc->ep0_buff);
+	if (udc->ctrl_buff)
+		dma_free_coherent(NULL, EXYNOS_USB3_CTRL_BUFF_SIZE,
+				  udc->ctrl_buff, udc->ctrl_buff_dma);
 	if (udc->event_buff)
-		kfree(udc->event_buff);
+		dma_free_coherent(NULL, EXYNOS_USB3_EVENT_BUFF_BSIZE,
+				  udc->event_buff, udc->event_buff_dma);
 	if (udc)
 		kfree(udc);
 	return ret;
@@ -2314,7 +2341,10 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 
 	exynos_ss_udc_free_all_trb(udc);
 	kfree(udc->ep0_buff);
-	kfree(udc->event_buff);
+	dma_free_coherent(NULL, EXYNOS_USB3_CTRL_BUFF_SIZE,
+			  udc->ctrl_buff, udc->ctrl_buff_dma);
+	dma_free_coherent(NULL, EXYNOS_USB3_EVENT_BUFF_BSIZE,
+			  udc->event_buff, udc->event_buff_dma);
 	kfree(udc);
 
 	return 0;
