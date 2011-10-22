@@ -37,7 +37,7 @@
 
 
 #define DMA_ADDR_INVALID (~((dma_addr_t)0))
-#define EP0_MPS_LIMIT	512
+#define EP0_MPS_LIMIT	64
 #define EXYNOS_USB3_EPS	(9)
 
 /* Has to be multiple of four */
@@ -1680,7 +1680,7 @@ static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 
 	udc_ep->parent = udc;
 	udc_ep->ep.name = udc_ep->name;
-	udc_ep->ep.maxpacket = epnum ? 1024 : EP0_MPS_LIMIT;
+	udc_ep->ep.maxpacket = epnum ? 512 : EP0_MPS_LIMIT;
 	udc_ep->ep.ops = &exynos_ss_udc_ep_ops;
 	udc_ep->trb = dma_alloc_coherent(NULL,
 					 sizeof(struct exynos_ss_udc_trb),
