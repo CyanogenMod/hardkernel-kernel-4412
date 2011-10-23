@@ -419,6 +419,10 @@ static int jpeg_m2m_release(struct file *file)
 
 	v4l2_m2m_ctx_release(ctx->m2m_ctx);
 	spin_unlock_irqrestore(&ctx->slock, flags);
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_put_sync(&ctx->dev->plat_dev->dev);
+#endif
+	clk_disable(ctx->dev->clk);
 	kfree(ctx);
 
 	return 0;
