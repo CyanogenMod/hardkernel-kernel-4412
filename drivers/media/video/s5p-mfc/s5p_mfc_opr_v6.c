@@ -373,28 +373,15 @@ void s5p_mfc_dec_calc_dpb_size(struct s5p_mfc_ctx *ctx)
 
 void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx)
 {
-	/* FIXME: Need to check the alignment value */
-	if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12M) {
-		ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN);
+	unsigned int mb_width, mb_height;
 
-		ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN)
-			* ALIGN(ctx->img_height, S5P_FIMV_NV12M_LVALIGN);
-		ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN)
-			* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12M_CVALIGN);
+	mb_width = mb_width(ctx->img_width);
+	mb_height = mb_height(ctx->img_height);
 
-		ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12M_SALIGN);
-		ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12M_SALIGN);
-	} else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12MT) {
-		ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN);
-
-		ctx->luma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
-			* ALIGN(ctx->img_height, S5P_FIMV_NV12MT_VALIGN);
-		ctx->chroma_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
-			* ALIGN((ctx->img_height >> 1), S5P_FIMV_NV12MT_VALIGN);
-
-		ctx->luma_size = ALIGN(ctx->luma_size, S5P_FIMV_NV12MT_SALIGN);
-		ctx->chroma_size = ALIGN(ctx->chroma_size, S5P_FIMV_NV12MT_SALIGN);
-	}
+	/* FIXME: why buf_width is needed ? */
+	ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN);
+	ctx->luma_size = (mb_width * mb_height)	* 256;
+	ctx->chroma_size = (mb_width * mb_height) * 128;
 }
 
 /* Set registers for decoding stream buffer */
