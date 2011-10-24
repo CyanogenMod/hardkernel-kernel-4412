@@ -712,9 +712,13 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	else
 		WRITEL(0, S5P_FIMV_E_RC_BIT_RATE);
 
-	/* reaction coefficient */
-	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE)
-		WRITEL(p->rc_reaction_coeff, S5P_FIMV_E_RC_RPARAM);
+	/* reaction coefficient, fixed value set from FW_111021*/
+	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
+		if (p->rc_reaction_coeff < TIGHT_CBR_MAX) /* tight CBR */
+			WRITEL(1, S5P_FIMV_E_RC_RPARAM);
+		else				/* loose CBR */
+			WRITEL(2, S5P_FIMV_E_RC_RPARAM);
+	}
 
 	/* extended encoder ctrl */
 	/** vbv buffer size */
