@@ -61,17 +61,17 @@ void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long vaddr,
 	unsigned long paddr, cur_addr, end_addr;
 
 	cur_addr = vaddr & PAGE_MASK;
-	end_addr = cur_addr + PAGE_ALIGN(size);
+	end_addr = PAGE_ALIGN(vaddr + size);
 
 	if (opr == CACHE_CLEAN) {
-		while (cur_addr <= end_addr) {
+		while (cur_addr < end_addr) {
 			paddr = virt2phys(mm, cur_addr);
 			if (paddr)
 				outer_clean_range(paddr, paddr + PAGE_SIZE);
 			cur_addr += PAGE_SIZE;
 		}
 	} else if (opr == CACHE_FLUSH) {
-		while (cur_addr <= end_addr) {
+		while (cur_addr < end_addr) {
 			paddr = virt2phys(mm, cur_addr);
 			if (paddr)
 				outer_flush_range(paddr, paddr + PAGE_SIZE);
@@ -111,7 +111,10 @@ enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long vaddr,
 
 	pgd = (unsigned long)mm->pgd;
 
-	do {
+	size += offset_in_page(vaddr);
+	size = PAGE_ALIGN(size);
+
+	while ((long)size > 0) {
 		lv1d = (unsigned long *)pgd + (vaddr >> LV1_SHIFT);
 
 		/*
@@ -146,7 +149,7 @@ enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long vaddr,
 
 		vaddr += PAGE_SIZE;
 		size -= PAGE_SIZE;
-	} while ((long)size > 0);
+	}
 
 	return PT_NORMAL;
 }
