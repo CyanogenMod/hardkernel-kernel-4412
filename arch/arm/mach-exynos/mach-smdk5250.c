@@ -10,6 +10,7 @@
 
 #include <linux/platform_device.h>
 #include <linux/serial_core.h>
+#include <linux/mmc/host.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -18,6 +19,8 @@
 #include <plat/exynos5.h>
 #include <plat/cpu.h>
 #include <plat/clock.h>
+#include <plat/devs.h>
+#include <plat/sdhci.h>
 
 #include <mach/map.h>
 
@@ -66,7 +69,55 @@ static struct s3c2410_uartcfg smdk5250_uartcfgs[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_S3C_DEV_HSMMC
+static struct s3c_sdhci_platdata smdk5250_hsmmc0_pdata __initdata = {
+	.cd_type		= S3C_SDHCI_CD_INTERNAL,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+#ifdef CONFIG_EXYNOS4_SDHCI_CH0_8BIT
+	.max_width		= 8,
+	.host_caps		= MMC_CAP_8_BIT_DATA,
+#endif
+};
+#endif
+
+#ifdef CONFIG_S3C_DEV_HSMMC1
+static struct s3c_sdhci_platdata smdk5250_hsmmc1_pdata __initdata = {
+	.cd_type		= S3C_SDHCI_CD_INTERNAL,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+};
+#endif
+
+#ifdef CONFIG_S3C_DEV_HSMMC2
+static struct s3c_sdhci_platdata smdk5250_hsmmc2_pdata __initdata = {
+	.cd_type		= S3C_SDHCI_CD_INTERNAL,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+#ifdef CONFIG_EXYNOS4_SDHCI_CH2_8BIT
+	.max_width		= 8,
+	.host_caps		= MMC_CAP_8_BIT_DATA,
+#endif
+};
+#endif
+
+#ifdef CONFIG_S3C_DEV_HSMMC3
+static struct s3c_sdhci_platdata smdk5250_hsmmc3_pdata __initdata = {
+	.cd_type		= S3C_SDHCI_CD_INTERNAL,
+	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+};
+#endif
+
 static struct platform_device *smdk5250_devices[] __initdata = {
+#ifdef CONFIG_S3C_DEV_HSMMC
+	&s3c_device_hsmmc0,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
+	&s3c_device_hsmmc1,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC2
+	&s3c_device_hsmmc2,
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC3
+	&s3c_device_hsmmc3,
+#endif
 };
 
 static void __init smdk5250_map_io(void)
@@ -79,6 +130,19 @@ static void __init smdk5250_map_io(void)
 
 static void __init smdk5250_machine_init(void)
 {
+#ifdef CONFIG_S3C_DEV_HSMMC
+	s3c_sdhci0_set_platdata(&smdk5250_hsmmc0_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC1
+	s3c_sdhci1_set_platdata(&smdk5250_hsmmc1_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC2
+	s3c_sdhci2_set_platdata(&smdk5250_hsmmc2_pdata);
+#endif
+#ifdef CONFIG_S3C_DEV_HSMMC3
+	s3c_sdhci3_set_platdata(&smdk5250_hsmmc3_pdata);
+#endif
+
 	platform_add_devices(smdk5250_devices, ARRAY_SIZE(smdk5250_devices));
 }
 
