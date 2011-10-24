@@ -213,6 +213,11 @@ static int fimc_init_camera(struct fimc_control *ctrl)
 	if (ctrl->cam->initialized)
 		return 0;
 
+#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+	if (ctrl->power_status == FIMC_POWER_OFF) {
+		pm_runtime_get_sync(&pdev->dev);
+	}
+#endif
 	/*
 	 * WriteBack mode doesn't need to set clock and power,
 	 * but it needs to set source width, height depend on LCD resolution.
@@ -245,11 +250,6 @@ retry:
 			fimc_err("\nfail to power on\n");
 	}
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-	if (ctrl->power_status == FIMC_POWER_OFF) {
-		pm_runtime_get_sync(&pdev->dev);
-	}
-#endif
 	/* "0" argument means preview init for s5k4ea */
 	ret = v4l2_subdev_call(cam->sd, core, init, 0);
 
@@ -759,16 +759,21 @@ static int fimc_is_init_cam(struct fimc_control *ctrl)
 {
 	struct fimc_global *fimc = get_fimc_dev();
 	struct s3c_platform_camera *cam;
+	int ret = 0;
+
 #if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	struct platform_device *pdev = to_platform_device(ctrl->dev);
 #endif
-	int ret = 0;
 
 	cam = ctrl->cam;
 	/* Do noting if already initialized */
 	if (ctrl->cam->initialized)
 		return 0;
 
+#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+	if (ctrl->power_status == FIMC_POWER_OFF)
+		pm_runtime_get_sync(&pdev->dev);
+#endif
 	/* set rate for mclk */
 	if ((clk_get_rate(cam->clk)) && (fimc->mclk_status == CAM_MCLK_OFF)) {
 		clk_set_rate(cam->clk, cam->clk_rate);
@@ -783,10 +788,7 @@ static int fimc_is_init_cam(struct fimc_control *ctrl)
 		if (unlikely(ret < 0))
 			fimc_err("\nfail to power on\n");
 	}
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-	if (ctrl->power_status == FIMC_POWER_OFF)
-		pm_runtime_get_sync(&pdev->dev);
-#endif
+
 	cam->initialized = 1;
 	return ret;
 }
@@ -1033,7 +1035,7 @@ int fimc_s_fmt_vid_private(struct file *file, void *fh, struct v4l2_format *f)
 		if (fimc_cam_use)
 			ret = v4l2_subdev_call(ctrl->is.sd, video,
 					s_mbus_fmt, mbus_fmt);
-
+		kfree(mbus_fmt);
 		return ret;
 	}
 	return -EINVAL;
@@ -1956,6 +1958,7 @@ int fimc_streamon_capture(void *fh)
 		clk_put(pxl_async);
 		fimc_hwset_sysreg_camblk_isp_wb(ctrl);
 	}
+
 	if (ctrl->flite_sd && fimc_cam_use)
 		v4l2_subdev_call(ctrl->flite_sd, video, s_stream, 1);
 
@@ -2028,7 +2031,7 @@ int fimc_streamon_capture(void *fh)
 	fimc_start_capture(ctrl);
 	ctrl->status = FIMC_STREAMON;
 
-	if (ctrl->is.sd)
+	if (ctrl->is.sd && fimc_cam_use)
 		ret = v4l2_subdev_call(ctrl->is.sd, video, s_stream, 1);
 	fimc_info1("%s-- fimc%d\n", __func__, ctrl->id);
 

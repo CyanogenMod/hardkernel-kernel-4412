@@ -501,7 +501,7 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 			return;
 		}
 		buf_index = pp - 1;
-		if (ctrl->cam->use_isp) {
+		if (ctrl->cam->use_isp && fimc_cam_use) {
 			is_ctrl.id = V4L2_CID_IS_GET_FRAME_NUMBER;
 			v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
 			is_fn = is_ctrl.value;
