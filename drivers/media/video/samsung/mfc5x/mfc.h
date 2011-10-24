@@ -14,6 +14,10 @@
 #ifndef __MFC_H_
 #define __MFC_H_ __FILE__
 
+#if defined(CONFIG_PM_RUNTIME) && (defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412))
+#define MFC_NO_POWER_GATING
+#endif
+
 #ifdef CONFIG_VIDEO_MFC_MAX_INSTANCE
 #define MFC_MAX_INSTANCE_NUM	(CONFIG_VIDEO_MFC_MAX_INSTANCE)
 #else

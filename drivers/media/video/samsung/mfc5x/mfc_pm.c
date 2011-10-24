@@ -20,6 +20,7 @@
 
 #include <plat/clock.h>
 #include <plat/s5p-mfc.h>
+#include <plat/cputype.h>
 
 #include <mach/regs-pmu.h>
 
@@ -254,7 +255,11 @@ void mfc_clock_off(void)
 int mfc_power_on(void)
 {
 #ifdef CONFIG_PM_RUNTIME
-	return pm_runtime_get_sync(pm->device);
+	/* MFC_NO_POWER_GATING */
+	if (soc_is_exynos4212() || soc_is_exynos4412())
+		return 0;
+	else
+		return pm_runtime_get_sync(pm->device);
 #else
 	atomic_set(&pm->power, 1);
 
@@ -265,7 +270,11 @@ int mfc_power_on(void)
 int mfc_power_off(void)
 {
 #ifdef CONFIG_PM_RUNTIME
-	return pm_runtime_put_sync(pm->device);
+	/* MFC_NO_POWER_GATING */
+	if (soc_is_exynos4212() || soc_is_exynos4412())
+		return 0;
+	else
+		return pm_runtime_put_sync(pm->device);
 #else
 	atomic_set(&pm->power, 0);
 
@@ -300,3 +309,4 @@ void mfc_pd_enable(void)
 		udelay(100);
 	}
 }
+

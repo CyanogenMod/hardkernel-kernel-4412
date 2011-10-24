@@ -1086,6 +1086,10 @@ static int __devinit mfc_probe(struct platform_device *pdev)
 		goto err_misc_reg;
 	}
 
+#ifdef MFC_NO_POWER_GATING
+	mfc_pd_enable();
+#endif
+
 	mfc_info("MFC(Multi Function Codec - FIMV v5.x) registered successfully\n");
 
 	return 0;
