@@ -2088,7 +2088,7 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 	}
 
 	/* handle ImmeidatelyDisplay for Seek, I frame only */
-	if (dec_ctx->immediatelydisplay){
+	if (dec_ctx->immediatelydisplay) {
 		mfc_dbg("Immediately display\n");
 		dec_ctx->dispstatus = dec_ctx->decstatus;
 		/* update frame tag information with current ID */
@@ -2101,6 +2101,9 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 			display_luma_addr = read_reg(MFC_SI_DECODE_Y_ADR);
 			display_chroma_addr = read_reg(MFC_SI_DECODE_C_ADR);
 		}
+
+		display_frame_type = dec_ctx->decframetype;
+
 		/* clear Immediately Display in decode context */
 		dec_ctx->immediatelydisplay = 0;
 	} else {
