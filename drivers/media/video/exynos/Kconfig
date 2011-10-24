@@ -16,7 +16,11 @@ config VIDEO_EXYNOS_MEMSIZE_FIMC_IS
 	  This is to assign memory used in FIMC-IS.
 
 if VIDEO_EXYNOS
+	source "drivers/media/video/exynos/fimc-is/Kconfig"
+	source "drivers/media/video/exynos/fimc-lite/Kconfig"
+if ARCH_EXYNOS5
 	source "drivers/media/video/exynos/mdev/Kconfig"
+endif
 endif
 
 config MEDIA_EXYNOS
