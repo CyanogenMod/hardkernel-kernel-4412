@@ -800,7 +800,7 @@ static int get_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 	switch (type) {
 
 	default:
-		mfc_err("invalid get config type: 0x%08x\n", type);
+		mfc_dbg("not common cfg, try to codec specific: 0x%08x\n", type);
 		ret = 1;
 
 		break;
@@ -963,7 +963,7 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 			break;
 
 		default:
-			mfc_dbg("invalid set cfg type: 0x%08x\n", type);
+			mfc_dbg("not common cfg, try to codec specific: 0x%08x\n", type);
 			ret = 1;
 
 			break;

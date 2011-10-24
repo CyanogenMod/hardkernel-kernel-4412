@@ -962,7 +962,7 @@ static int get_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 		break;
 
 	default:
-		mfc_err("invalid get config type: 0x%08x\n", type);
+		mfc_dbg("not common cfg, try to codec specific: 0x%08x\n", type);
 		ret = 1;
 
 		break;
@@ -996,7 +996,7 @@ static int h264_get_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 
 	default:
 		mfc_err("invalid get config type: 0x%08x\n", type);
-		ret = 1;
+		ret = -2;
 
 		break;
 	}
@@ -1040,7 +1040,7 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 
 		if (ctx->state < INST_STATE_EXE) {
 			mfc_dbg("invalid instance state: 0x%08x\n", type);
-			return -1;
+			return MFC_STATE_INVALID;
 		}
 
 		if (usercfg->basic.values[0] > 0)
@@ -1085,7 +1085,7 @@ static int set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 		break;
 
 	default:
-		mfc_dbg("invalid set cfg type: 0x%08x\n", type);
+		mfc_dbg("not common cfg, try to codec specific: 0x%08x\n", type);
 		ret = 1;
 
 		break;
@@ -1113,7 +1113,7 @@ static int h264_set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 	case MFC_DEC_SETCONF_DISPLAY_DELAY:
 		if (ctx->state >= INST_STATE_INIT) {
 			mfc_dbg("invalid instance state: 0x%08x\n", type);
-			return -1;
+			return MFC_STATE_INVALID;
 		}
 
 		h264->dispdelay_en = 1;
@@ -1132,7 +1132,7 @@ static int h264_set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 
 		if (ctx->state >= INST_STATE_INIT) {
 			mfc_dbg("invalid instance state: 0x%08x\n", type);
-			return -1;
+			return MFC_STATE_INVALID;
 		}
 
 		if (usercfg->basic.values[0] > 0)
@@ -1143,7 +1143,7 @@ static int h264_set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 		break;
 
 	default:
-		mfc_dbg("invalid set cfg type: 0x%08x\n", type);
+		mfc_err("invalid set cfg type: 0x%08x\n", type);
 		ret = -2;
 
 		break;
@@ -1170,7 +1170,7 @@ static int mpeg4_set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 	switch (type) {
 	case MFC_DEC_SETCONF_POST_ENABLE:
 		if (ctx->state >= INST_STATE_INIT)
-			return -1;
+			return MFC_STATE_INVALID;
 
 		if (usercfg->basic.values[0] > 0)
 			mpeg4->postfilter = 1;
@@ -1191,7 +1191,7 @@ static int mpeg4_set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 		break;
 */
 	default:
-		mfc_dbg("invalid set cfg type: 0x%08x\n", type);
+		mfc_err("invalid set cfg type: 0x%08x\n", type);
 		ret = -2;
 
 		break;
@@ -1218,7 +1218,7 @@ static int fimv1_set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 	switch (type) {
 	case MFC_DEC_SETCONF_FIMV1_WIDTH_HEIGHT:
 		if (ctx->state >= INST_STATE_INIT)
-			return -1;
+			return MFC_STATE_INVALID;
 
 		fimv1->width = usercfg->basic.values[0];
 		fimv1->height = usercfg->basic.values[1];
@@ -1237,7 +1237,7 @@ static int fimv1_set_codec_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 		break;
 */
 	default:
-		mfc_dbg("invalid set cfg type: 0x%08x\n", type);
+		mfc_err("invalid set cfg type: 0x%08x\n", type);
 		ret = -2;
 
 		break;
