@@ -13,16 +13,7 @@
 #include <linux/cma.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
-#ifdef CONFIG_PM_RUNTIME
 #include <linux/pm_runtime.h>
-#else
-#define pm_runtime_enable(x)		(void)NULL
-#define pm_runtime_get_sync(x)		(void)NULL
-#define pm_runtime_put_sync(x)		(void)NULL
-#define pm_runtime_forbid(x)		(void)NULL
-#define pm_runtime_allow(x)		(void)NULL
-#define __pm_runtime_disable(x, y)	(void)NULL
-#endif
 
 #include <plat/devs.h>
 #include <plat/pd.h>
