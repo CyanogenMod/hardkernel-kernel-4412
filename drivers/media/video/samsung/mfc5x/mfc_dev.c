@@ -130,29 +130,10 @@ static int mfc_open(struct inode *inode, struct file *file)
 
 		if (ret < 0) {
 			printk(KERN_INFO "failed to copy MFC F/W during open\n");
+			ret = -ENODEV;
 			goto err_fw_state;
 		}
-	}
 
-	if (atomic_read(&mfcdev->inst_cnt) == 0) {
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
-		if (!check_magic(mfcdev->drm_info.addr)) {
-			/* reload F/W for first instance again */
-			mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data, mfcdev->fw.info->size);
-			if (!mfcdev->fw.state) {
-				printk(KERN_ERR "failed to load MFC F/W, MFC will not working\n");
-				ret = -ENODEV;
-				goto err_fw_state;
-			} else {
-				printk(KERN_INFO "MFC F/W reloaded successfully (size: %d)\n", mfcdev->fw.info->size);
-			}
-		} else {
-			clear_magic(mfcdev->drm_info.addr);
-
-			mfcdev->drm_playback = 1;
-		}
-#else
-		/* reload F/W for first instance again */
 		mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data, mfcdev->fw.info->size);
 		if (!mfcdev->fw.state) {
 			printk(KERN_ERR "failed to load MFC F/W, MFC will not working\n");
@@ -160,6 +141,17 @@ static int mfc_open(struct inode *inode, struct file *file)
 			goto err_fw_state;
 		} else {
 			printk(KERN_INFO "MFC F/W reloaded successfully (size: %d)\n", mfcdev->fw.info->size);
+		}
+	}
+
+	if (atomic_read(&mfcdev->inst_cnt) == 0) {
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+		if (check_magic(mfcdev->drm_info.addr)) {
+			mfc_dbg("DRM playback starting\n");
+
+			clear_magic(mfcdev->drm_info.addr);
+
+			mfcdev->drm_playback = 1;
 		}
 #endif
 		ret = mfc_power_on();
