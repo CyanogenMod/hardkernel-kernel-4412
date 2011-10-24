@@ -575,7 +575,7 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_enc_params *p = &ctx->enc_params;
-	unsigned int reg;
+	unsigned int reg = 0;
 
 	mfc_debug_enter();
 
@@ -583,13 +583,18 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	WRITEL(ctx->img_width, S5P_FIMV_E_FRAME_WIDTH); /* 16 align */
 	/* height */
 	WRITEL(ctx->img_height, S5P_FIMV_E_FRAME_HEIGHT); /* 16 align */
-	/* cropped width */
-	WRITEL(ctx->img_width, S5P_FIMV_E_CROPPED_FRAME_WIDTH);
-	/* cropped height */
-	WRITEL(ctx->img_height, S5P_FIMV_E_CROPPED_FRAME_HEIGHT);
 
-	/* pictype : IDR period, Also NAL_START cmd */
-	reg = READL(S5P_FIMV_E_GOP_CONFIG);
+	/* crop information FIXME: Is it really needed */
+	/** cropped width */
+	WRITEL(ctx->img_width, S5P_FIMV_E_CROPPED_FRAME_WIDTH);
+	/** cropped height */
+	WRITEL(ctx->img_height, S5P_FIMV_E_CROPPED_FRAME_HEIGHT);
+	/** cropped offset */
+	WRITEL(0x0, S5P_FIMV_E_FRAME_CROP_OFFSET);
+
+	/* pictype : IDR period */
+	/* FIXME: it should be applied at NAL_start */
+	WRITEL(0x0, S5P_FIMV_E_GOP_CONFIG);
 	reg &= ~(0xffff);
 	reg |= p->gop_size;
 	WRITEL(reg, S5P_FIMV_E_GOP_CONFIG);
@@ -597,21 +602,24 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	/* multi-slice control */
 	/* multi-slice MB number or bit size */
 	if (p->slice_mode == V4L2_CODEC_MFC5X_ENC_MULTI_SLICE_MODE_BIT_COUNT)
+		/* FIXME: it should be applied at NAL_start, ctx var is needed */
 		WRITEL(p->slice_mode-1, S5P_FIMV_E_MSLICE_MODE);
 	else
 		WRITEL(p->slice_mode, S5P_FIMV_E_MSLICE_MODE);
 	if (p->slice_mode == V4L2_CODEC_MFC5X_ENC_MULTI_SLICE_MODE_MACROBLOCK_COUNT) {
-		reg = READL(S5P_FIMV_E_ENC_OPTIONS);
+		WRITEL(0x0, S5P_FIMV_E_ENC_OPTIONS);
 		reg |= (0x1 << 3);
 		WRITEL(reg, S5P_FIMV_E_ENC_OPTIONS);
+		/* FIXME: it should be applied at NAL_start, ctx var is needed */
 		WRITEL(p->slice_mb, S5P_FIMV_E_MSLICE_SIZE_MB);
 	} else if (p->slice_mode == V4L2_CODEC_MFC5X_ENC_MULTI_SLICE_MODE_BIT_COUNT) {
-		reg = READL(S5P_FIMV_E_ENC_OPTIONS);
+		WRITEL(0, S5P_FIMV_E_ENC_OPTIONS);
 		reg |= (0x1 << 3);
 		WRITEL(reg, S5P_FIMV_E_ENC_OPTIONS);
+		/* FIXME: it should be applied at NAL_start, ctx var is needed */
 		WRITEL(p->slice_bit, S5P_FIMV_E_MSLICE_SIZE_BITS);
 	} else {
-		reg = READL(S5P_FIMV_E_ENC_OPTIONS);
+		WRITEL(0, S5P_FIMV_E_ENC_OPTIONS);
 		reg &= ~(0x1 << 3);
 		WRITEL(reg, S5P_FIMV_E_ENC_OPTIONS);
 		WRITEL(0, S5P_FIMV_E_MSLICE_SIZE_MB);
@@ -619,7 +627,7 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	}
 
 	/* cyclic intra refresh */
-	/* FIXME: it should be applied at NAL start */
+	/* FIXME: it should be applied at NAL_start */
 	WRITEL(p->intra_refresh_mb, S5P_FIMV_E_IR_SIZE);
 	reg = READL(S5P_FIMV_E_ENC_OPTIONS);
 	if (p->intra_refresh_mb == 0)
@@ -660,13 +668,13 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	}
 
 	/* memory structure recon. frame */
-	/* 0: Linear, 1: 2D tiled*/
+	/* 0: Linear, 1: 2D tiled */
 	reg = READL(S5P_FIMV_E_ENC_OPTIONS);
 	reg |= (0x1 << 8);
 	WRITEL(reg, S5P_FIMV_E_ENC_OPTIONS);
 
 	/* padding control & value */
-	reg = READL(S5P_FIMV_E_PADDING_CTRL);
+	WRITEL(0, S5P_FIMV_E_PADDING_CTRL);
 	if (p->pad == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
 		/** enable */
 		reg |= (1 << 31);
@@ -686,13 +694,14 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_PADDING_CTRL);
 
 	/* rate control config. */
-	reg = READL(S5P_FIMV_E_RC_CONFIG);
+	WRITEL(0, S5P_FIMV_E_RC_CONFIG);
 	/** frame-level rate control */
 	reg &= ~(0x1 << 9);
 	reg |= (p->rc_frame << 9);
 	WRITEL(reg, S5P_FIMV_E_RC_CONFIG);
 
 	/* bit rate */
+	/* FIXME: it should be applied at NAL_start */
 	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE)
 		WRITEL(p->rc_bitrate,
 			S5P_FIMV_E_RC_BIT_RATE);
@@ -730,42 +739,31 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_RC_CONFIG);
 
 	/* setting for MV range [16, 256] */
-	reg = READL(S5P_FIMV_E_MV_HOR_RANGE);
+	WRITEL(0, S5P_FIMV_E_MV_HOR_RANGE);
 	reg &= ~(0x3fff);
 	reg = 256;
 	WRITEL(reg, S5P_FIMV_E_MV_HOR_RANGE);
 
-	reg = READL(S5P_FIMV_E_MV_VER_RANGE);
+	WRITEL(0, S5P_FIMV_E_MV_VER_RANGE);
 	reg &= ~(0x3fff);
 	reg = 256;
 	WRITEL(reg, S5P_FIMV_E_MV_VER_RANGE);
 
-	/* 'WEIGHTED_BI_PREDICTION' for B is disable */
-	reg = READL(S5P_FIMV_E_H264_OPTIONS);
-	reg &= ~(0x3 << 9);
-	WRITEL(reg, S5P_FIMV_E_H264_OPTIONS);
+	WRITEL(0x0, S5P_FIMV_E_VBV_INIT_DELAY); /* SEQ_start Only */
 
-	/* 'CONSTRAINED_INTRA_PRED_ENABLE' is disable */
-	reg = READL(S5P_FIMV_E_H264_OPTIONS);
-	reg &= ~(0x1 << 14);
-	WRITEL(reg, S5P_FIMV_E_H264_OPTIONS);
+	/* initialize for '0' only setting */
+	WRITEL(0x0, S5P_FIMV_E_FRAME_INSERTION); /* NAL_start Only */
+	WRITEL(0x0, S5P_FIMV_E_ROI_BUFFER_ADDR); /* NAL_start Only */
+	WRITEL(0x0, S5P_FIMV_E_PARAM_CHANGE); /* NAL_start Only */
+	WRITEL(0x0, S5P_FIMV_E_RC_ROI_CTRL); /* NAL_start Only */
+	WRITEL(0x0, S5P_FIMV_E_PICTURE_TAG); /* NAL_start Only */
 
-	/* Fix value for H.264, H.263 in the driver */
-	p->rc_frame_delta = FRAME_DELTA_H264_H263;
+	WRITEL(0x0, S5P_FIMV_E_BIT_COUNT_ENABLE); /* NAL_start Only */
+	WRITEL(0x0, S5P_FIMV_E_MAX_BIT_COUNT); /* NAL_start Only */
+	WRITEL(0x0, S5P_FIMV_E_MIN_BIT_COUNT); /* NAL_start Only */
 
-	/* initialize for '0' only setting*/
-	WRITEL(0x0, S5P_FIMV_E_FRAME_INSERTION);
-	WRITEL(0x0, S5P_FIMV_E_FRAME_CROP_OFFSET);
-	WRITEL(0x0, S5P_FIMV_E_VBV_INIT_DELAY);
-	WRITEL(0x0, S5P_FIMV_E_ROI_BUFFER_ADDR);
-	WRITEL(0x0, S5P_FIMV_E_PARAM_CHANGE);
-	WRITEL(0x0, S5P_FIMV_E_RC_ROI_CTRL);
-	WRITEL(0x0, S5P_FIMV_E_PICTURE_TAG);
-	WRITEL(0x0, S5P_FIMV_E_BIT_COUNT_ENABLE);
-	WRITEL(0x0, S5P_FIMV_E_MAX_BIT_COUNT);
-	WRITEL(0x0, S5P_FIMV_E_MIN_BIT_COUNT);
-	WRITEL(0x0, S5P_FIMV_E_METADATA_BUFFER_ADDR);
-	WRITEL(0x0, S5P_FIMV_E_METADATA_BUFFER_SIZE);
+	WRITEL(0x0, S5P_FIMV_E_METADATA_BUFFER_ADDR); /* NAL_start Only */
+	WRITEL(0x0, S5P_FIMV_E_METADATA_BUFFER_SIZE); /* NAL_start Only */
 
 	mfc_debug_leave();
 
@@ -777,7 +775,7 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_enc_params *p = &ctx->enc_params;
 	struct s5p_mfc_h264_enc_params *p_264 = &p->codec.h264;
-	unsigned int reg;
+	unsigned int reg = 0;
 
 	mfc_debug_enter();
 
@@ -791,7 +789,7 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_GOP_CONFIG);
 
 	/* profile & level */
-	reg = READL(S5P_FIMV_E_PICTURE_PROFILE);
+	WRITEL(0x0, S5P_FIMV_E_PICTURE_PROFILE);
 	/** level */
 	reg &= ~(0xFF << 8);
 	reg |= (p_264->level << 8);
@@ -801,7 +799,7 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_PICTURE_PROFILE);
 
 	/* interlace */
-	reg = READL(S5P_FIMV_E_H264_OPTIONS);
+	WRITEL(0x0, S5P_FIMV_E_H264_OPTIONS);
 	reg &= ~(0x1 << 3);
 	reg |= (p_264->interlace << 3);
 	WRITEL(reg, S5P_FIMV_E_H264_OPTIONS);
@@ -866,20 +864,21 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_RC_CONFIG);
 
 	/* frame rate */
+	/* Fix value for H.264, H.263 in the driver */
+	/* FIXME: it should be applied at NAL_start */
+	p->rc_frame_delta = FRAME_DELTA_H264_H263;
+	WRITEL(0x0, S5P_FIMV_E_RC_FRAME_RATE);
 	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
 		/* FIXME: user set 1000x scale value */
-		reg = READL(S5P_FIMV_E_RC_FRAME_RATE);
 		reg &= ~(0xffff << 16);
 		reg |= ((p_264->rc_framerate * 1000) << 16);
 		reg &= ~(0xffff);
 		reg |= p->rc_frame_delta;
 		WRITEL(reg, S5P_FIMV_E_RC_FRAME_RATE);
 	}
-	else
-		WRITEL(0, S5P_FIMV_ENC_RC_FRAME_RATE);
 
 	/* max & min value of QP */
-	reg = READL(S5P_FIMV_E_RC_QP_BOUND);
+	WRITEL(0x0, S5P_FIMV_E_RC_QP_BOUND);
 	/** max QP */
 	reg &= ~(0x3F << 8);
 	reg |= (p_264->rc_max_qp << 8);
@@ -889,8 +888,8 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_RC_QP_BOUND);
 
 	/* macroblock adaptive scaling features */
+	WRITEL(0x0, S5P_FIMV_E_MB_RC_CONFIG);
 	if (p_264->rc_mb == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
-		reg = READL(S5P_FIMV_E_MB_RC_CONFIG);
 		/** dark region */
 		reg &= ~(0x1 << 3);
 		reg |= (p_264->rc_mb_dark << 3);
@@ -906,9 +905,9 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 		WRITEL(reg, S5P_FIMV_E_MB_RC_CONFIG);
 	}
 
+	WRITEL(0x0, S5P_FIMV_E_FIXED_PICTURE_QP);
 	if ((p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_DISABLE) &&
 	    (p_264->rc_mb == V4L2_CODEC_MFC5X_ENC_SW_DISABLE)) {
-		reg = READL(S5P_FIMV_E_FIXED_PICTURE_QP);
 		reg &= ~(0x3f << 16);
 		reg |= (p_264->rc_b_frame_qp << 16);
 		reg &= ~(0x3f << 8);
@@ -924,16 +923,15 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	reg |= (p_264->ar_vui << 5);
 	WRITEL(reg, S5P_FIMV_E_H264_OPTIONS);
 
+	WRITEL(0x0, S5P_FIMV_E_ASPECT_RATIO);
+	WRITEL(0x0, S5P_FIMV_E_EXTENDED_SAR);
 	if (p_264->ar_vui == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
 		/* aspect ration IDC */
-		reg = READL(S5P_FIMV_E_ASPECT_RATIO);
 		reg &= ~(0xff);
 		reg |= p_264->ar_vui_idc;
 		WRITEL(reg, S5P_FIMV_E_ASPECT_RATIO);
-
 		if (p_264->ar_vui_idc == 0xFF) {
 			/* sample  AR info. */
-			reg = READL(S5P_FIMV_E_EXTENDED_SAR);
 			reg &= ~(0xffffffff);
 			reg |= p_264->ext_sar_width << 16;
 			reg |= p_264->ext_sar_height;
@@ -948,12 +946,22 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	reg |= (p_264->open_gop << 4);
 	WRITEL(reg, S5P_FIMV_E_H264_OPTIONS);
 	/** value */
+	WRITEL(0x0, S5P_FIMV_E_H264_I_PERIOD);
 	if (p_264->open_gop == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
-		reg = READL(S5P_FIMV_E_H264_I_PERIOD);
 		reg &= ~(0xffff);
 		reg |= p_264->open_gop_size;
 		WRITEL(reg, S5P_FIMV_E_H264_I_PERIOD);
 	}
+
+	/* 'WEIGHTED_BI_PREDICTION' for B is disable */
+	reg = READL(S5P_FIMV_E_H264_OPTIONS);
+	reg &= ~(0x3 << 9);
+	WRITEL(reg, S5P_FIMV_E_H264_OPTIONS);
+
+	/* 'CONSTRAINED_INTRA_PRED_ENABLE' is disable */
+	reg = READL(S5P_FIMV_E_H264_OPTIONS);
+	reg &= ~(0x1 << 14);
+	WRITEL(reg, S5P_FIMV_E_H264_OPTIONS);
 
 	/* initialize for '0' only setting*/
 	reg = READL(S5P_FIMV_E_H264_OPTIONS);
@@ -973,7 +981,7 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_enc_params *p = &ctx->enc_params;
 	struct s5p_mfc_mpeg4_enc_params *p_mpeg4 = &p->codec.mpeg4;
-	unsigned int reg;
+	unsigned int reg = 0;
 
 	mfc_debug_enter();
 
@@ -987,7 +995,7 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_GOP_CONFIG);
 
 	/* profile & level */
-	reg = READL(S5P_FIMV_E_PICTURE_PROFILE);
+	WRITEL(0x0, S5P_FIMV_E_PICTURE_PROFILE);
 	/** level */
 	reg &= ~(0xFF << 8);
 	reg |= (p_mpeg4->level << 8);
@@ -1000,9 +1008,9 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 	//WRITEL(p_mpeg4->quarter_pixel, S5P_FIMV_ENC_MPEG4_QUART_PXL);
 
 	/* qp */
+	WRITEL(0x0, S5P_FIMV_E_FIXED_PICTURE_QP);
 	if ((p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_DISABLE) &&
 	    (p_mpeg4->rc_mb == V4L2_CODEC_MFC5X_ENC_SW_DISABLE)) {
-		reg = READL(S5P_FIMV_E_FIXED_PICTURE_QP);
 		reg &= ~(0x3f << 16);
 		reg |= (p_mpeg4->rc_b_frame_qp << 16);
 		reg &= ~(0x3f << 8);
@@ -1013,17 +1021,16 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 	}
 
 	/* frame rate */
+	/* FIXME: it should be applied at NAL_start */
+	WRITEL(0x0, S5P_FIMV_E_RC_FRAME_RATE);
 	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
 		/* FIXME: user set 1000x scale value */
-		reg = READL(S5P_FIMV_E_RC_FRAME_RATE);
 		reg &= ~(0xffff << 16);
 		reg |= ((p_mpeg4->vop_time_res * 1000) << 16);
 		reg &= ~(0xffff);
 		reg |= p_mpeg4->vop_frm_delta;
 		WRITEL(reg, S5P_FIMV_E_RC_FRAME_RATE);
 	}
-	else
-		WRITEL(0, S5P_FIMV_ENC_RC_FRAME_RATE);
 
 	/* rate control config. */
 	reg = READL(S5P_FIMV_E_RC_CONFIG);
@@ -1037,7 +1044,7 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_RC_CONFIG);
 
 	/* max & min value of QP */
-	reg = READL(S5P_FIMV_E_RC_QP_BOUND);
+	WRITEL(0x0, S5P_FIMV_E_RC_QP_BOUND);
 	/** max QP */
 	reg &= ~(0x3F << 8);
 	reg |= (p_mpeg4->rc_max_qp << 8);
@@ -1047,8 +1054,8 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_RC_QP_BOUND);
 
 	/* initialize for '0' only setting*/
-	WRITEL(0x0, S5P_FIMV_E_MPEG4_OPTIONS);
-	WRITEL(0x0, S5P_FIMV_E_MPEG4_HEC_PERIOD);
+	WRITEL(0x0, S5P_FIMV_E_MPEG4_OPTIONS); /* SEQ_start only */
+	WRITEL(0x0, S5P_FIMV_E_MPEG4_HEC_PERIOD); /* SEQ_start only */
 
 	mfc_debug_leave();
 
@@ -1060,22 +1067,22 @@ static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_enc_params *p = &ctx->enc_params;
 	struct s5p_mfc_mpeg4_enc_params *p_mpeg4 = &p->codec.mpeg4;
-	unsigned int reg;
+	unsigned int reg = 0;
 
 	mfc_debug_enter();
 
 	s5p_mfc_set_enc_params(ctx);
 
 	/* profile & level */
-	reg = READL(S5P_FIMV_E_PICTURE_PROFILE);
+	WRITEL(0x0, S5P_FIMV_E_PICTURE_PROFILE);
 	/** profile */
 	reg |= (0x1 << 4);
 	WRITEL(reg, S5P_FIMV_E_PICTURE_PROFILE);
 
 	/* qp */
+	WRITEL(0x0, S5P_FIMV_E_FIXED_PICTURE_QP);
 	if ((p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_DISABLE) &&
 	    (p_mpeg4->rc_mb == V4L2_CODEC_MFC5X_ENC_SW_DISABLE)) {
-		reg = READL(S5P_FIMV_E_FIXED_PICTURE_QP);
 		reg &= ~(0x3f << 8);
 		reg |= (p_mpeg4->rc_p_frame_qp << 8);
 		reg &= ~(0x3f);
@@ -1084,17 +1091,18 @@ static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 	}
 
 	/* frame rate */
+	/* Fix value for H.264, H.263 in the driver */
+	/* FIXME: it should be applied at NAL_start */
+	p->rc_frame_delta = FRAME_DELTA_H264_H263;
+	WRITEL(0x0, S5P_FIMV_E_RC_FRAME_RATE);
 	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
 		/* FIXME: user set 1000x scale value */
-		reg = READL(S5P_FIMV_E_RC_FRAME_RATE);
 		reg &= ~(0xffff << 16);
 		reg |= ((p_mpeg4->rc_framerate * 1000) << 16);
 		reg &= ~(0xffff);
 		reg |= p->rc_frame_delta;
 		WRITEL(reg, S5P_FIMV_E_RC_FRAME_RATE);
 	}
-	else
-		WRITEL(0, S5P_FIMV_ENC_RC_FRAME_RATE);
 
 	/* rate control config. */
 	reg = READL(S5P_FIMV_E_RC_CONFIG);
@@ -1108,7 +1116,7 @@ static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 	WRITEL(reg, S5P_FIMV_E_RC_CONFIG);
 
 	/* max & min value of QP */
-	reg = READL(S5P_FIMV_E_RC_QP_BOUND);
+	WRITEL(0x0, S5P_FIMV_E_RC_QP_BOUND);
 	/** max QP */
 	reg &= ~(0x3F << 8);
 	reg |= (p_mpeg4->rc_max_qp << 8);
