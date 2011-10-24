@@ -27,6 +27,8 @@
 
 #include <mach/regs-irq.h>
 
+unsigned int gic_bank_offset __read_mostly;
+
 extern int combiner_init(unsigned int combiner_nr, void __iomem *base,
 			 unsigned int irq_start);
 extern void combiner_cascade_irq(unsigned int combiner_nr, unsigned int irq);
