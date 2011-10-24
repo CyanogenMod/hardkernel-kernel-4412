@@ -1551,14 +1551,13 @@ static int mfc_encoding_frame(struct mfc_inst_ctx *ctx, struct mfc_enc_exe_arg *
 	#endif
 
 	/* Set current frame buffer addr */
-	#if 1
-	/* RainAde : to access FIMC CMA region for zero copy solution */
-	write_reg((exe_arg->in_Y_addr - mfc_mem_base(1))>> 11, MFC_ENC_SI_CH1_CUR_Y_ADR);
+#if (MFC_MAX_MEM_PORT_NUM == 2)
+	write_reg((exe_arg->in_Y_addr - mfc_mem_base(1)) >> 11, MFC_ENC_SI_CH1_CUR_Y_ADR);
 	write_reg((exe_arg->in_CbCr_addr - mfc_mem_base(1)) >> 11, MFC_ENC_SI_CH1_CUR_C_ADR);
-	#else
-	write_reg(mfc_mem_base_ofs(exe_arg->in_Y_addr) >> 11, MFC_ENC_SI_CH1_CUR_Y_ADR);
-	write_reg(mfc_mem_base_ofs(exe_arg->in_CbCr_addr) >> 11, MFC_ENC_SI_CH1_CUR_C_ADR);
-	#endif
+#else
+	write_reg((exe_arg->in_Y_addr - mfc_mem_base(0)) >> 11, MFC_ENC_SI_CH1_CUR_Y_ADR);
+	write_reg((exe_arg->in_CbCr_addr - mfc_mem_base(0)) >> 11, MFC_ENC_SI_CH1_CUR_C_ADR);
+#endif
 
 	#if 0
 	write_reg(1, MFC_ENC_STR_BF_U_EMPTY);
