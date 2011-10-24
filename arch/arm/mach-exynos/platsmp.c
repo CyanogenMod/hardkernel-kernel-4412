@@ -36,6 +36,7 @@
 
 extern void exynos4_secondary_startup(void);
 
+#ifdef CONFIG_ARCH_EXYNOS4
 #ifdef CONFIG_ARM_TRUSTZONE
 #define CPU1_BOOT_REG (S5P_VA_SYSRAM_NS + 0x1C)
 #else
@@ -43,6 +44,10 @@ extern void exynos4_secondary_startup(void);
 #endif
 
 extern unsigned int gic_bank_offset;
+#else
+#define CPU1_BOOT_REG (S5P_VA_SYSRAM + 0x14)
+#define gic_bank_offset 0
+#endif
 
 /*
  * control for which core is the next to come out of the secondary
@@ -64,10 +69,12 @@ static void write_pen_release(int val)
 	outer_clean_range(__pa(&pen_release), __pa(&pen_release + 1));
 }
 
+#ifdef CONFIG_ARCH_EXYNOS4
 static void __iomem *scu_base_addr(void)
 {
 	return (void __iomem *)(S5P_VA_SCU);
 }
+#endif
 
 static DEFINE_SPINLOCK(boot_lock);
 
@@ -193,10 +200,15 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 
 void __init smp_init_cpus(void)
 {
-	void __iomem *scu_base = scu_base_addr();
 	unsigned int i, ncores;
 
+#ifdef CONFIG_ARCH_EXYNOS4
+	void __iomem *scu_base = scu_base_addr();
+
 	ncores = scu_base ? scu_get_core_count(scu_base) : 1;
+#else
+	ncores = NR_CPUS;
+#endif
 
 	/* sanity check */
 	if (ncores > NR_CPUS) {
@@ -224,7 +236,11 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	for (i = 0; i < max_cpus; i++)
 		set_cpu_present(i, true);
 
+#ifdef CONFIG_ARCH_EXYNOS4
 	scu_enable(scu_base_addr());
+#else
+	flush_cache_all();
+#endif
 
 	/*
 	 * Write the address of secondary startup into the
