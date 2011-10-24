@@ -104,29 +104,6 @@ int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
 	return 0;
 }
 
-int fimc_is_fd_handler(struct fimc_is_dev *dev, u32 count, u32 index)
-{
-	u32 i, buffer_index;
-
-	for (i = 0; i < count; i++) {
-		buffer_index = index + i;
-		if (buffer_index > 10) {
-			index = 0;
-			buffer_index = index + i;
-		}
-		printk(KERN_INFO "%d face conf = %d\n", i,
-			dev->is_p_region->face[buffer_index].confidence);
-		printk(KERN_INFO "%d face x , y = %d, %d\n", i,
-			dev->is_p_region->face[buffer_index].face.offset_x,
-			dev->is_p_region->face[buffer_index].face.offset_y);
-		printk(KERN_INFO "   size = %d, %d\n",
-			dev->is_p_region->face[buffer_index].face.width,
-			dev->is_p_region->face[buffer_index].face.height);
-	}
-
-	return 0;
-}
-
 static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 {
 	struct fimc_is_dev *dev = dev_id;
@@ -184,6 +161,9 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	case IHC_LOCK_DONE:
 		if (dev->af.state == FIMC_IS_AF_RUNNING)
 			dev->af.state = FIMC_IS_AF_LOCK;
+		break;
+	case IHC_NOT_READY:
+		err("Init Sequnce Error- IS will be turned off!!");
 		break;
 	case ISR_DONE:
 		dbg("ISR_DONE - %d\n", dev->i2h_cmd.arg[0]);
@@ -246,8 +226,8 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		}
 		break;
 	case ISR_NDONE:
-		printk(KERN_ERR "ISR_NDONE - %d: %d\n",
-			dev->i2h_cmd.arg[0], dev->i2h_cmd.arg[1]);
+		err("ISR_NDONE - %d: %d\n", dev->i2h_cmd.arg[0],
+			dev->i2h_cmd.arg[1]);
 		switch (dev->i2h_cmd.arg[1]) {
 		case IS_ERROR_SET_PARAMETER:
 			printk(KERN_ERR "SET_PARAMETER ERR : %d\n",
@@ -382,19 +362,19 @@ static int fimc_is_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, &dev->sd);
 
 	pm_runtime_enable(&pdev->dev);
-	set_bit(FIMC_IS_PWR_ST_SUSPENDED, &dev->power);
 
 	/* To lock bus frequency in OPP mode */
 	dev->bus_dev = dev_get("exynos4-busfreq");
 
+	dev->power = 0;
 	dev->state = 0;
 	dev->sensor_num = FIMC_IS_SENSOR_NUM;
 	dev->sensor.id = 0;
 	dev->p_region_index1 = 0;
 	dev->p_region_index2 = 0;
 	atomic_set(&dev->p_region_num, 0);
-
 	set_bit(IS_ST_IDLE, &dev->state);
+	set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
 	dev->af.state = FIMC_IS_AF_IDLE;
 	dbg("FIMC-IS probe completed\n");
 	return 0;
@@ -424,6 +404,7 @@ static int fimc_is_suspend(struct device *dev)
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
 	mutex_lock(&is_dev->lock);
+	clear_bit(FIMC_IS_PWR_ST_RESUMED, &is_dev->power);
 	set_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
 	mutex_unlock(&is_dev->lock);
 	return 0;
@@ -437,6 +418,7 @@ static int fimc_is_resume(struct device *dev)
 
 	mutex_lock(&is_dev->lock);
 	clear_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
+	set_bit(FIMC_IS_PWR_ST_RESUMED, &is_dev->power);
 	mutex_unlock(&is_dev->lock);
 	return 0;
 }
@@ -449,6 +431,7 @@ static int fimc_is_runtime_suspend(struct device *dev)
 
 	dbg("fimc_is_runtime_suspend\n");
 	mutex_lock(&is_dev->lock);
+	clear_bit(FIMC_IS_PWR_ST_RESUMED, &is_dev->power);
 	set_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
 	if (is_dev->pdata->clk_off) {
 		is_dev->pdata->clk_off(pdev);
@@ -471,6 +454,7 @@ static int fimc_is_runtime_resume(struct device *dev)
 	dbg("fimc_is_runtime_resume\n");
 	mutex_lock(&is_dev->lock);
 	clear_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
+	set_bit(FIMC_IS_PWR_ST_RESUMED, &is_dev->power);
 	if (is_dev->pdata->clk_cfg) {
 		is_dev->pdata->clk_cfg(pdev);
 	} else {

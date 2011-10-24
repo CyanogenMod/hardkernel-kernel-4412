@@ -807,16 +807,6 @@ enum dma_output_error {
 };
 
 /* ----------------------  Global  ----------------------------------- */
-enum global_shotmode_smile {
-	GLOBAL_SHOTMODE_SMILE_DISABLE	= 0,
-	GLOBAL_SHOTMODE_SMILE_ENABLE	= 1
-};
-
-enum global_shotmode_eyeblink {
-	GLOBAL_SHOTMODE_EYEBLINK_DISABLE	= 0,
-	GLOBAL_SHOTMODE_EYEBLINK_ENABLE		= 1
-};
-
 enum global_shotmode_error {
 	GLOBAL_SHOTMODE_ERROR_NO	= 0 /* shot-mode setting is done */
 };
@@ -1101,6 +1091,8 @@ enum error {
 	/* ISP Error (200~299) */
 	ERROR_ISP_AF_NO			= ERROR_COMMON_NO,
 	ERROR_ISP_AF_BUSY		= 201,
+	ERROR_ISP_AF_INVALID_COMMAND	= 202,
+	ERROR_ISP_AF_INVALID_MODE	= 203,
 	ERROR_ISP_FLASH_NO		= ERROR_COMMON_NO,
 	ERROR_ISP_AWB_NO		= ERROR_COMMON_NO,
 	ERROR_ISP_IMAGE_EFFECT_NO	= ERROR_COMMON_NO,

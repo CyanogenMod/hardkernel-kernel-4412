@@ -59,7 +59,7 @@ static void fimc_is_firmware_request_complete_handler(const struct firmware *fw,
 		dbg("FIMC_IS F/W loaded successfully - size:%d\n", fw->size);
 		dev->fw.info = fw;
 	} else {
-		dbg("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
+		err("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
 	}
 }
 
@@ -94,7 +94,7 @@ static void fimc_is_setfile_request_complete_handler(const struct firmware *fw,
 		dbg("FIMC_IS setfile loaded successfully-size:%d\n", fw->size);
 		dev->setfile.info = fw;
 	} else {
-		dbg("failed to load setfile, FIMC-IS will not working\n");
+		err("failed to load setfile, FIMC-IS will not working\n");
 	}
 }
 
@@ -214,10 +214,11 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 	if (test_bit(IS_ST_FW_DOWNLOADED, &dev->state)) {
 		/* Init sequence 1: Open sensor */
 		dbg("v4l2 : open sensor : %d\n", val);
+		clear_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
 		fimc_is_hw_open_sensor(dev, dev->sensor.id, val);
 		ret = wait_event_timeout(dev->irq_queue1,
 			test_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
+			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
 		if (!ret) {
 			dev_err(&dev->pdev->dev,
 				"wait timeout:%s\n", __func__);
@@ -237,7 +238,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		fimc_is_hw_set_load_setfile(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
-
+		dbg("v4l2 : Load set file end\n");
 		/* Debug only */
 		dbg("Parameter region addr = 0x%08x\n",
 			virt_to_phys(dev->is_p_region));
@@ -256,6 +257,20 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 			virt_to_phys(&dev->is_p_region->header[3]
 							.frame_number));
 		dev->frame_count = 0;
+
+		dbg("Stream Off\n");
+		clear_bit(IS_ST_STREAM_OFF, &dev->state);
+		fimc_is_hw_set_stream(dev, 0); /*stream off */
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_STREAM_OFF, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&dev->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
+		clear_bit(IS_ST_RUN, &dev->state);
+
 		/* 1. */
 		dbg("Default setting : preview_still\n");
 		dev->scenario_id = ISS_PREVIEW_STILL;
@@ -317,20 +332,9 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 				"wait timeout : %s\n", __func__);
 			return -EBUSY;
 		}
-
-		dbg("Stream Off\n");
-		clear_bit(IS_ST_RUN, &dev->state); /* FIX ME */
-		clear_bit(IS_ST_STREAM_OFF, &dev->state); /* FIX ME */
-		fimc_is_hw_set_stream(dev, 0); /*stream off */
-		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_STREAM_OFF, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
 		clear_bit(IS_ST_STREAM_OFF, &dev->state);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
+		set_bit(IS_ST_RUN, &dev->state);
+		dbg("Init sequence completed!! Ready to use\n");
 	}
 
 	return 0;
@@ -509,15 +513,8 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	/* AF result */
 	case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT:
-		ctrl->value = dev->af.state;
-		if (dev->af.state == FIMC_IS_AF_LOCK) {
-			IS_ISP_SET_PARAM_AF_CMD(dev, ISP_AF_COMMAND_ABORT);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ctrl->value = 0x02;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -657,13 +654,6 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				ISP_AF_CONTINUOUS_DISABLE);
 			break;
 		}
-		if (ctrl->value >= 0 && ctrl->value < IS_FOCUS_MODE_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
 		break;
 	case V4L2_CID_CAMERA_SET_AUTO_FOCUS:
 		switch (ctrl->value) {
@@ -674,20 +664,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				ret = 0;
 			} else {
 				/* Abort or lock AF */
-				IS_ISP_SET_PARAM_AF_CMD(dev,
-					ISP_AF_COMMAND_ABORT);
-				IS_ISP_SET_PARAM_AF_MODE(dev,
-					ISP_AF_MODE_AUTO);
-				IS_ISP_SET_PARAM_AF_FACE(dev,
-					ISP_AF_FACE_DISABLE);
-				IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
-					ISP_AF_CONTINUOUS_DISABLE);
-				IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
-				IS_INC_PARAM_NUM(dev);
-				fimc_is_mem_cache_clean(
-					(void *)dev->is_p_region,
-					IS_PARAM_SIZE);
-				fimc_is_hw_set_param(dev);
+				ret = 0;
 			}
 			dev->af.state = FIMC_IS_AF_ABORT;
 			break;
@@ -698,20 +675,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				ret = 0;
 			} else {
 				/* Abort or lock AF */
-				IS_ISP_SET_PARAM_AF_CMD(dev,
-					ISP_AF_COMMAND_HALFSHUTTER);
-				IS_ISP_SET_PARAM_AF_MODE(dev,
-					ISP_AF_MODE_AUTO);
-				IS_ISP_SET_PARAM_AF_FACE(dev,
-					ISP_AF_FACE_DISABLE);
-				IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
-					ISP_AF_CONTINUOUS_DISABLE);
-				IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
-				IS_INC_PARAM_NUM(dev);
-				fimc_is_mem_cache_clean(
-					(void *)dev->is_p_region,
-					IS_PARAM_SIZE);
-				fimc_is_hw_set_param(dev);
+				ret = 0;
 			}
 			dev->af.state = FIMC_IS_AF_RUNNING;
 			break;
@@ -726,14 +690,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				ret = 0;
 			} else {
 				/* Abort or lock AF */
-				IS_ISP_SET_PARAM_AF_CMD(dev,
-					ISP_AF_COMMAND_ABORT);
-				IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
-				IS_INC_PARAM_NUM(dev);
-				fimc_is_mem_cache_clean(
-					(void *)dev->is_p_region,
-					IS_PARAM_SIZE);
-				fimc_is_hw_set_param(dev);
+				ret = 0;
 			}
 			dev->af.state = FIMC_IS_AF_ABORT;
 			break;
@@ -744,14 +701,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				ret = 0;
 			} else {
 				/* Abort or lock AF */
-				IS_ISP_SET_PARAM_AF_CMD(dev,
-					ISP_AF_COMMAND_HALFSHUTTER);
-				IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
-				IS_INC_PARAM_NUM(dev);
-				fimc_is_mem_cache_clean(
-					(void *)dev->is_p_region,
-					IS_PARAM_SIZE);
-				fimc_is_hw_set_param(dev);
+				ret = 0;
 			}
 			dev->af.state = FIMC_IS_AF_RUNNING;
 			break;
@@ -759,6 +709,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	/* FLASH */
 	case V4L2_CID_IS_CAMERA_FLASH_MODE:
+	case V4L2_CID_CAMERA_FLASH_MODE:
 		switch (ctrl->value) {
 		case IS_FLASH_MODE_OFF:
 			IS_ISP_SET_PARAM_FLASH_CMD(dev,
@@ -800,6 +751,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_AWB_MODE:
+	case V4L2_CID_CAMERA_WHITE_BALANCE:
 		switch (ctrl->value) {
 		case IS_AWB_AUTO:
 			IS_ISP_SET_PARAM_AWB_CMD(dev,
@@ -840,6 +792,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_IMAGE_EFFECT:
+	case V4L2_CID_CAMERA_EFFECT:
 		switch (ctrl->value) {
 		case IS_IMAGE_EFFECT_DISABLE:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
@@ -872,6 +825,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_ISO:
+	case V4L2_CID_CAMERA_ISO:
 		switch (ctrl->value) {
 		case IS_ISO_AUTO:
 			IS_ISP_SET_PARAM_ISO_CMD(dev,
@@ -918,6 +872,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_CONTRAST:
+	case V4L2_CID_CAMERA_CONTRAST:
 		switch (ctrl->value) {
 		case IS_CONTRAST_AUTO:
 			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
@@ -958,6 +913,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_SATURATION:
+	case V4L2_CID_CAMERA_SATURATION:
 		switch (ctrl->value) {
 		case IS_SATURATION_MINUS_2:
 			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
@@ -994,6 +950,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_SHARPNESS:
+	case V4L2_CID_CAMERA_SHARPNESS:
 		switch (ctrl->value) {
 		case IS_SHARPNESS_MINUS_2:
 			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
@@ -1090,6 +1047,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_METERING:
+	case V4L2_CID_CAMERA_METERING:
 		switch (ctrl->value) {
 		case IS_METERING_AVERAGE:
 			IS_ISP_SET_PARAM_METERING_CMD(dev,
@@ -1125,6 +1083,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_AFC_MODE:
+	case V4L2_CID_CAMERA_ANTI_BANDING:
 		switch (ctrl->value) {
 		case IS_AFC_DISABLE:
 			IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_DISABLE);
@@ -2295,6 +2254,10 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		default:
 			break;
 		}
+		break;
+	case V4L2_CID_CAMERA_VT_MODE:
+		break;
+	case V4L2_CID_CAMERA_VGA_BLUR:
 		break;
 	default:
 		dbg("Invalid control\n");

@@ -40,6 +40,7 @@
 /*
 Default setting values
 */
+#ifndef CONFIG_VIDEO_S5K6A3
 #ifdef CONFIG_VIDEO_S5K3H1
 #define PREVIEW_WIDTH		640
 #define PREVIEW_HEIGHT		480
@@ -51,6 +52,8 @@ Default setting values
 #define CAPTURE_FRAMERATE	15
 #define CAMCORDING_FRAMERATE	15
 #endif
+#endif
+#ifndef CONFIG_VIDEO_S5K6A3
 #ifdef CONFIG_VIDEO_S5K3H2
 #define PREVIEW_WIDTH		640
 #define PREVIEW_HEIGHT		480
@@ -61,6 +64,7 @@ Default setting values
 #define PREVIEW_FRAMERATE	15
 #define CAPTURE_FRAMERATE	15
 #define CAMCORDING_FRAMERATE	15
+#endif
 #endif
 #ifdef CONFIG_VIDEO_S5K6A3
 #define PREVIEW_WIDTH		640
