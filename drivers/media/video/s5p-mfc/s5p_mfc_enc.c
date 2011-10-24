@@ -1231,16 +1231,17 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 	unsigned long mb_y_addr, mb_c_addr;
 	int slice_type;
 	unsigned int strm_size;
+	unsigned int pic_count;
 	unsigned long flags;
 	unsigned int index;
 
 	slice_type = s5p_mfc_get_enc_slice_type();
 	strm_size = s5p_mfc_get_enc_strm_size();
+	pic_count = s5p_mfc_get_enc_pic_count();
 
 	mfc_debug(2, "encoded slice type: %d", slice_type);
 	mfc_debug(2, "encoded stream size: %d", strm_size);
-	mfc_debug(2, "display order: %d",
-		  s5p_mfc_read_reg(S5P_FIMV_ENC_SI_PIC_CNT));
+	mfc_debug(2, "display order: %d", pic_count);
 
 	/* FIXME: set it to dest buffer not context */
 	/* set encoded frame type */

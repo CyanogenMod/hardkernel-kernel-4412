@@ -107,6 +107,8 @@ void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx);
 						S5P_FIMV_ENC_SI_STRM_SIZE)
 #define s5p_mfc_get_enc_slice_type()	readl(dev->regs_base + \
 						S5P_FIMV_ENC_SI_SLICE_TYPE)
+#define s5p_mfc_get_enc_pic_count()	readl(dev->regs_base + \
+						S5P_FIMV_ENC_SI_PIC_CNT)
 
 #define s5p_mfc_clear_int_flags()				\
 	do {							\
