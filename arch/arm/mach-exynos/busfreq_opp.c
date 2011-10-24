@@ -95,7 +95,7 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 
 	currfreq = opp_get_freq(data->curr_opp);
 
-	if (opp == data->curr_opp) {
+	if (opp == data->curr_opp || data->use == false) {
 		schedule_delayed_work(&data->worker, data->sampling_rate);
 		return;
 	}
