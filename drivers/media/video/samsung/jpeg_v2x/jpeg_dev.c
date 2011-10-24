@@ -814,8 +814,11 @@ static int jpeg_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, dev);
 
+#ifdef CONFIG_VIDEOBUF2_CMA_PHYS
 	dev->vb2 = &jpeg_vb2_cma;
-
+#elif defined(CONFIG_VIDEOBUF2_ION)
+	dev->vb2 = &jpeg_vb2_ion;
+#endif
 	dev->alloc_ctx = dev->vb2->init(dev);
 
 	if (IS_ERR(dev->alloc_ctx)) {
@@ -943,11 +946,19 @@ int jpeg_resume_pd(struct device *dev)
 #ifdef CONFIG_PM_RUNTIME
 static int jpeg_runtime_suspend(struct device *dev)
 {
+	struct platform_device *pdev = to_platform_device(dev);
+	struct jpeg_dev *jpeg_drv = platform_get_drvdata(pdev);
+
+	jpeg_drv->vb2->suspend(jpeg_drv->alloc_ctx);
 	return 0;
 }
 
 static int jpeg_runtime_resume(struct device *dev)
 {
+	struct platform_device *pdev = to_platform_device(dev);
+	struct jpeg_dev *jpeg_drv = platform_get_drvdata(pdev);
+
+	jpeg_drv->vb2->resume(jpeg_drv->alloc_ctx);
 	return 0;
 }
 #endif

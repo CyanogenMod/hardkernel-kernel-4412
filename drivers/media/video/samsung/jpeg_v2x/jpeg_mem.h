@@ -27,7 +27,11 @@
 
 #include <asm/cacheflush.h>
 
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 extern const struct jpeg_vb2 jpeg_vb2_cma;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+extern const struct jpeg_vb2 jpeg_vb2_ion;
+#endif
 
 #define MAX_JPEG_WIDTH	3264
 #define MAX_JPEG_HEIGHT	2448

@@ -14,6 +14,7 @@
 #include <linux/vmalloc.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
+#include <linux/io.h>
 
 #include <asm/page.h>
 
@@ -22,6 +23,11 @@
 #include "jpeg_mem.h"
 #include "jpeg_core.h"
 
+#if defined(CONFIG_VIDEOBUF2_ION)
+#define	JPEG_ION_NAME	"s5p-jpeg"
+#endif
+
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 void *jpeg_cma_init(struct jpeg_dev *dev)
 {
 	return vb2_cma_phys_init(&dev->plat_dev->dev, NULL, SZ_8K, false);
@@ -40,3 +46,29 @@ const struct jpeg_vb2 jpeg_vb2_cma = {
 	.cache_flush	= vb2_cma_phys_cache_flush,
 	.set_cacheable	= vb2_cma_phys_set_cacheable,
 };
+#elif defined(CONFIG_VIDEOBUF2_ION)
+void *jpeg_ion_init(struct jpeg_dev *dev)
+{
+	struct vb2_ion vb2_ion;
+	struct vb2_drv vb2_drv = {0, };
+	vb2_ion.dev = &dev->plat_dev->dev;
+	vb2_ion.name = JPEG_ION_NAME;
+	vb2_ion.contig = false;
+	vb2_ion.cacheable = false;
+	vb2_ion.align = SZ_8K;
+
+	vb2_drv.use_mmu = true;
+	return vb2_ion_init(&vb2_ion, &vb2_drv);
+}
+
+const struct jpeg_vb2 jpeg_vb2_ion = {
+	.ops		= &vb2_ion_memops,
+	.init		= jpeg_ion_init,
+	.cleanup	= vb2_ion_cleanup,
+	.plane_addr	= vb2_ion_plane_dvaddr,
+	.resume		= vb2_ion_resume,
+	.suspend	= vb2_ion_suspend,
+	.cache_flush	= vb2_ion_cache_flush,
+	.set_cacheable	= vb2_ion_set_cacheable,
+};
+#endif
