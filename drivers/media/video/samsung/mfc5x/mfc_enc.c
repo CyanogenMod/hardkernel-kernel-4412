@@ -104,6 +104,11 @@ int get_init_arg(struct mfc_inst_ctx *ctx, void *arg)
 	/* memory structure of the current frame - 0 -> Linear  or 3 -> Tile mode */
 	write_reg(enc_ctx->framemap, MFC_ENC_MAP_FOR_CUR);
 
+#if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
+	if (init_arg->cmn.in_frame_map == NV21_LINEAR)
+		 write_reg(1, MFC_ENC_NV21_SEL);
+#endif
+
 	/* padding control & value */
 	reg = read_reg(MFC_ENC_PADDING_CTRL);
 	if (init_arg->cmn.in_pad_ctrl_on > 0) {

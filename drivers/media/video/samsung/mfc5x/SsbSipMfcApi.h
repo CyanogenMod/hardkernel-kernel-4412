@@ -71,7 +71,8 @@ typedef enum {
 
 typedef enum {
     NV12_LINEAR = 0,
-    NV12_TILE
+    NV12_TILE,
+    NV21_LINEAR,
 } SSBSIP_MFC_INSTRM_MODE_TYPE;
 
 typedef enum {
