@@ -70,7 +70,7 @@
 	#define _IRAM_SIZE_		(128 * 1024)	/* Total size in IRAM */
 
 	#define _IMEM_OFFSET_		(0x00400)	/* 1KB offset ok */
-	#define _OBUF_SIZE_AB_		(0x8000)	/* 9Frames */
+	#define _OBUF_SIZE_AB_		(0x4000)	/* 9Frames */
 	#define _OBUF0_OFFSET_AB_	(0x0A000)
 	#define _OBUF1_OFFSET_AB_	(_OBUF_SIZE_AB_ + _OBUF0_OFFSET_AB_)
 	#define _OBUF_SIZE_C_		(4608 * 2)	/* 2Frames */
