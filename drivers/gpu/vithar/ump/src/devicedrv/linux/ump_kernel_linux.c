@@ -47,10 +47,10 @@ module_param(ump_debug_level, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IRO
 MODULE_PARM_DESC(ump_debug_level, "Higher number, more dmesg output");
 
 /* By default the module uses any available major, but it's possible to set it at load time to a specific number */
-#ifdef CONFIG_VITHAR
-int ump_major = 240;
-#else
+#ifdef CONFIG_VITHAR_DEVICE_NODE_CREATION_IN_RUNTIME
 int ump_major = 0;
+#else
+int ump_major = 240;
 #endif
 
 module_param(ump_major, int, S_IRUGO); /* r--r--r-- */

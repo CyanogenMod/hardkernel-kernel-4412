@@ -28,6 +28,10 @@ SRC=\
 	linux/mali_kbase_mem_linux.c		\
 	linux/mali_kbase_core.c	
 
+obj-$(CONFIG_VITHAR) += $(KBASE_PATH)/platform/mali_kbase_platform.o
+obj-$(CONFIG_VITHAR_RT_PM) += $(KBASE_PATH)/platform/mali_kbase_runtime_pm.o
+obj-$(CONFIG_VITHAR_RT_DVFS) += $(KBASE_PATH)/platform/mali_kbase_dvfs.o
+
 SRC+=common/mali_kbase_js_policy_$(MALI_KBASE_SCHEDULING_POLICY).c
 
 ifeq ($(MALI_BASE_TRACK_MEMLEAK), 1)

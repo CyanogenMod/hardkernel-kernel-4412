@@ -35,11 +35,11 @@
 #include <linux/uaccess.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
-#include <linux/clk.h>
 
 #ifdef CONFIG_VITHAR
 #include <mach/map.h>
-#include <linux/fb.h>
+#include <kbase/src/platform/mali_kbase_platform.h>
+#include <kbase/src/platform/mali_kbase_runtime_pm.h>
 #endif
 
 #ifdef CONFIG_ARM
@@ -53,7 +53,6 @@
 #else
 #define FAKE_PLATFORM_TYPE "mali-t6xm"
 #endif
-
 #endif
 #endif
 
@@ -664,105 +663,7 @@ static ssize_t set_policy(struct device *dev, struct device_attribute *attr, con
 	kbase_pm_set_policy(kbdev, new_policy);
 	return count;
 }
-static ssize_t show_clock(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	struct kbase_device *kbdev;
-	ssize_t ret = 0;
-	struct clk *mout_aclk_400;
-	unsigned int clkrate;
 
-	kbdev = to_kbase_device(dev);
-
-	if (!kbdev)
-		return -ENODEV;
-
-	mout_aclk_400 = clk_get(dev, "mout_aclk_400");
-	if(IS_ERR(mout_aclk_400)) {
-	    return -ENOENT;
-	}
-
-	clkrate = clk_get_rate(mout_aclk_400);
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current aclk_400[G3D_BLK] = %dMhz", clkrate/1000000);
-
-	/* To be revised  */
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 400, 266, 200, 100, 50Mhz");
-
-	if (ret < PAGE_SIZE - 1)
-		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
-	else
-	{
-		buf[PAGE_SIZE-2] = '\n';
-		buf[PAGE_SIZE-1] = '\0';
-		ret = PAGE_SIZE-1;
-	}
-
-	return ret;
-}
-
-static ssize_t set_clock(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct kbase_device *kbdev;
-	struct clk *mout_aclk_400;
-	kbdev = to_kbase_device(dev);
-
-	if (!kbdev)
-		return -ENODEV;
-
-	mout_aclk_400 = clk_get(dev, "mout_aclk_400");
-	if(IS_ERR(mout_aclk_400)) {
-	    return -ENOENT;
-	}
-
-	if (sysfs_streq("400", buf)) {
-	    clk_set_rate(mout_aclk_400, 400000000);
-	} else if (sysfs_streq("266", buf)) {
-	    clk_set_rate(mout_aclk_400, 267000000);
-	} else if (sysfs_streq("200", buf)) {
-	    clk_set_rate(mout_aclk_400, 200000000);
-	} else if (sysfs_streq("100", buf)) {
-	    clk_set_rate(mout_aclk_400, 100000000);
-	} else if (sysfs_streq("50", buf)) {
-	    clk_set_rate(mout_aclk_400, 50000000);
-	} else {
-	    dev_err(dev, "set_clock: invalid clock\n");
-	    return -ENOENT;
-	}
-
-	return count;
-}
-
-static ssize_t show_fbdev(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	struct kbase_device *kbdev;
-	ssize_t ret = 0;
-	int i;
-
-	kbdev = to_kbase_device(dev);
-
-	if (!kbdev)
-		return -ENODEV;
-
-	for(i = 0 ; i < num_registered_fb ; i++) {
-	    ret += snprintf(buf+ret, PAGE_SIZE-ret, "fb[%d] xres=%d, yres=%d, addr=0x%lx\n", i, registered_fb[i]->var.xres, registered_fb[i]->var.yres, registered_fb[i]->fix.smem_start);
-	}
-
-	if (ret < PAGE_SIZE - 1)
-		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
-	else
-	{
-		buf[PAGE_SIZE-2] = '\n';
-		buf[PAGE_SIZE-1] = '\0';
-		ret = PAGE_SIZE-1;
-	}
-
-	return ret;
-}
-/*
-static ssize_t set_fbdev(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	return count;
-}
-*/
 /** The sysfs file @c power_policy.
  *
  * This is used for obtaining information about the available policies,
@@ -770,8 +671,6 @@ static ssize_t set_fbdev(struct device *dev, struct device_attribute *attr, cons
  * policy.
  */
 DEVICE_ATTR(power_policy, S_IRUGO|S_IWUSR, show_policy, set_policy);
-DEVICE_ATTR(clock, S_IRUGO|S_IWUSR, show_clock, set_clock);
-DEVICE_ATTR(fbdev, S_IRUGO, show_fbdev, NULL);
 
 static int kbase_common_device_init(kbase_device *kbdev)
 {
@@ -802,11 +701,11 @@ static int kbase_common_device_init(kbase_device *kbdev)
 		goto out_unmap;
 
 	dev_set_drvdata(osdev->dev, kbdev);
-#ifdef CONFIG_VITHAR
+#ifdef CONFIG_VITHAR_DEVICE_NODE_CREATION_IN_RUNTIME
+	osdev->mdev.minor	= MISC_DYNAMIC_MINOR;
+#else
 	/* FPGA use ROM filesystem, so we cannot MISC device node */
 	osdev->mdev.minor	= 77;
-#else
-	osdev->mdev.minor	= MISC_DYNAMIC_MINOR;
 #endif
 	osdev->mdev.name	= osdev->devname;
 	osdev->mdev.fops	= &kbase_fops;
@@ -826,17 +725,10 @@ static int kbase_common_device_init(kbase_device *kbdev)
 		goto out_register;
 	}
 
-	if (device_create_file(osdev->dev, &dev_attr_clock))
-	{
-		dev_err(osdev->dev, "Couldn't create sysfs file\n");
+#ifdef CONFIG_VITHAR
+	if(kbase_platform_create_sysfs_file(osdev->dev))
 		goto out_register;
-	}
-
-	if (device_create_file(osdev->dev, &dev_attr_fbdev))
-	{
-		dev_err(osdev->dev, "Couldn't create sysfs file\n");
-		goto out_register;
-	}
+#endif
 
 	down(&kbase_dev_list_lock);
 	list_add(&osdev->entry, &kbase_dev_list);
@@ -869,8 +761,9 @@ out_job_slot:
 	kbase_job_slot_exit(kbdev);
 out_create_file:
 	device_remove_file(kbdev->osdev.dev, &dev_attr_power_policy);
-	device_remove_file(kbdev->osdev.dev, &dev_attr_clock);
-	device_remove_file(kbdev->osdev.dev, &dev_attr_fbdev);
+#ifdef CONFIG_VITHAR
+	kbase_platform_remove_sysfs_file(kbdev->osdev.dev);
+#endif
 out_register:
 	misc_deregister(&kbdev->osdev.mdev);
 out_interrupts:
@@ -988,6 +881,11 @@ static int kbase_platform_device_probe(struct platform_device *pdev)
 	if (err)
 		goto out_free_dev;
 
+#ifdef CONFIG_VITHAR
+	if(!kbase_platform_init_clock(osdev->dev))
+	    goto out_free_dev;
+#endif
+
 	return 0;
 
 out_free_dev:
@@ -1000,8 +898,9 @@ static int kbase_common_device_remove(struct kbase_device *kbdev)
 {
 	/* Remove the sys power policy file */
 	device_remove_file(kbdev->osdev.dev, &dev_attr_power_policy);
-	device_remove_file(kbdev->osdev.dev, &dev_attr_clock);
-	device_remove_file(kbdev->osdev.dev, &dev_attr_fbdev);
+#ifdef CONFIG_VITHAR
+	kbase_platform_remove_sysfs_file(kbdev->osdev.dev);
+#endif
 	kbasep_js_devdata_term(kbdev);
 	kbase_pm_term(kbdev);
 	kbase_job_slot_exit(kbdev);
@@ -1059,6 +958,11 @@ static int kbase_device_suspend(struct device *dev)
 	/* Wait for the policy to suspend the device */
 	kbase_pm_wait_for_power_down(kbdev);
 
+#ifdef CONFIG_VITHAR
+	/* Turn off sclk_g3d */
+	kbase_platform_clock_off();
+#endif
+
 	return 0;
 }
 
@@ -1077,53 +981,8 @@ static int kbase_device_resume(struct device *dev)
 	if (!kbdev)
 		return -ENODEV;
 
-	/* Send the event to the power policy */
-	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_RESUME);
-
-	/* Wait for the policy to resume the device */
-	kbase_pm_wait_for_power_up(kbdev);
-
-	return 0;
-}
-
-/** Suspend callback from the OS.
- *
- * This is called by Linux runtime PM when the device should suspend.
- *
- * @param dev	The device to suspend
- *
- * @return A standard Linux error code
- */
-static int kbase_device_runtime_suspend(struct device *dev)
-{
-	struct kbase_device *kbdev = to_kbase_device(dev);
-
-	if (!kbdev)
-		return -ENODEV;
-
-	/* Send the event to the power policy */
-	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_SUSPEND);
-
-	/* Wait for the policy to suspend the device */
-	kbase_pm_wait_for_power_down(kbdev);
-
-    return 0;
-}
-
-/** Resume callback from the OS.
- *
- * This is called by Linux runtime PM when the device should resume from suspension.
- *
- * @param dev	The device to resume
- *
- * @return A standard Linux error code
- */
-static int kbase_device_runtime_resume(struct device *dev)
-{
-	struct kbase_device *kbdev = to_kbase_device(dev);
-
-	if (!kbdev)
-		return -ENODEV;
+	/* Turn on sclk_g3d */
+	kbase_platform_clock_on();
 
 	/* Send the event to the power policy */
 	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_RESUME);
@@ -1175,8 +1034,10 @@ static struct dev_pm_ops kbase_pm_ops =
 {
 	.suspend	= kbase_device_suspend,
 	.resume		= kbase_device_resume,
+#ifdef CONFIG_VITHAR_RT_PM
 	.runtime_suspend	= kbase_device_runtime_suspend,
 	.runtime_resume		= kbase_device_runtime_resume,
+#endif
 };
 
 static struct platform_driver kbase_platform_driver =
