@@ -52,7 +52,7 @@ static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 	}
 
 	if (u->src) {
-		fimg2d_debug("src type: %d addr: 0x%lx size: %d cacheable: %d\n",
+		fimg2d_debug("src type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
 				u->src->addr.type, u->src->addr.start, u->src->addr.size,
 				u->src->addr.cacheable);
 		fimg2d_debug("src width: %d height: %d stride: %d order: %d format: %d\n",
@@ -61,7 +61,7 @@ static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 	}
 
 	if (u->dst) {
-		fimg2d_debug("dst type: %d addr: 0x%lx size: %d cacheable: %d\n",
+		fimg2d_debug("dst type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
 				u->dst->addr.type, u->dst->addr.start, u->dst->addr.size,
 				u->dst->addr.cacheable);
 		fimg2d_debug("dst width: %d height: %d stride: %d order: %d format: %d\n",
@@ -70,7 +70,7 @@ static inline void fimg2d_print_params(struct fimg2d_blit __user *u)
 	}
 
 	if (u->msk) {
-		fimg2d_debug("msk type: %d addr: 0x%lx size: %d cacheable: %d\n",
+		fimg2d_debug("msk type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
 				u->msk->addr.type, u->msk->addr.start, u->msk->addr.size,
 				u->msk->addr.cacheable);
 		fimg2d_debug("msk width: %d height: %d stride: %d order: %d format: %d\n",
@@ -170,7 +170,7 @@ void fimg2d_dump_command(struct fimg2d_bltcmd *cmd)
 
 	printk(KERN_INFO " cache size all: 0x%x bytes (L1/L2 All:0x%x L1 All:0x%x)\n",
 			cmd->size_all, L2_CACHE_SIZE, L1_CACHE_SIZE);
-	printk(KERN_INFO " ctx: 0x%lx seq_no: %u\n", (unsigned long)cmd->ctx, cmd->seq_no);
+	printk(KERN_INFO " ctx: %p seq_no(%u)\n", cmd->ctx, cmd->seq_no);
 }
 
 static int fimg2d_check_params(struct fimg2d_blit __user *u)
@@ -318,7 +318,9 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 
 static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 {
+	struct mm_struct *mm = cmd->ctx->mm;
 	struct fimg2d_cache *csrc, *cdst, *cmsk;
+	enum pt_status pt;
 
 	csrc = &cmd->src_cache;
 	cdst = &cmd->dst_cache;
@@ -329,6 +331,17 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 				(cmd->src.stride * cmd->src_rect.y1);
 		csrc->size = cmd->src.stride *
 				(cmd->src_rect.y2 - cmd->src_rect.y1);
+
+		if (cmd->src.addr.cacheable)
+			cmd->size_all += csrc->size;
+
+#ifdef CONFIG_OUTER_CACHE
+		if (cmd->src.addr.type == ADDR_USER) {
+			pt = fimg2d_check_pagetable(mm, csrc->addr, csrc->size);
+			if (pt == PT_FAULT)
+				return -1;
+		}
+#endif
 	}
 
 	if (cmd->msken) {
@@ -336,6 +349,17 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 				(cmd->msk.stride * cmd->msk_rect.y1);
 		cmsk->size = cmd->msk.stride *
 				(cmd->msk_rect.y2 - cmd->msk_rect.y1);
+
+		if (cmd->msk.addr.cacheable)
+			cmd->size_all += cmsk->size;
+
+#ifdef CONFIG_OUTER_CACHE
+		if (cmd->msk.addr.type == ADDR_USER) {
+			pt = fimg2d_check_pagetable(mm, cmsk->addr, cmsk->size);
+			if (pt == PT_FAULT)
+				return -1;
+		}
+#endif
 	}
 
 	/* caculate horizontally clipped region */
@@ -351,35 +375,23 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 			cdst->size = cmd->dst.stride *
 					(cmd->dst_rect.y2 - cmd->dst_rect.y1);
 		}
-	}
+
+		if (cmd->dst.addr.cacheable)
+			cmd->size_all += cdst->size;
 
 #ifdef CONFIG_OUTER_CACHE
-	if (cmd->srcen && fimg2d_check_pagetable(cmd->ctx->mm,
-				csrc->addr, csrc->size) == PT_FAULT)
-		return -1;
-
-	if (cmd->msken && fimg2d_check_pagetable(cmd->ctx->mm,
-				cmsk->addr, cmsk->size) == PT_FAULT)
-		return -1;
-
-	if (cmd->dsten && fimg2d_check_pagetable(cmd->ctx->mm,
-				cdst->addr, cdst->size) == PT_FAULT)
-		return -1;
+		if (cmd->dst.addr.type == ADDR_USER) {
+			pt = fimg2d_check_pagetable(mm, cdst->addr, cdst->size);
+			if (pt == PT_FAULT)
+				return -1;
+		}
 #endif
-
-	cmd->size_all = 0;
-
-	if (cmd->srcen && cmd->src.addr.cacheable)
-		cmd->size_all += csrc->size;
-	if (cmd->msken && cmd->msk.addr.cacheable)
-		cmd->size_all += cmsk->size;
-	if (cmd->dsten && cmd->dst.addr.cacheable)
-		cmd->size_all += cdst->size;
+	}
 
 	fimg2d_debug("cached size all = %d\n", cmd->size_all);
 
 	/* FIXME: L1 cache size = (num_possible_cpus()*SZ_32K) */
-	if (cmd->size_all < L1_CACHE_SIZE) {
+	if (cmd->size_all > 0 && cmd->size_all < L1_CACHE_SIZE) {
 		fimg2d_debug("innercache range\n");
 		if (cmd->srcen && cmd->src.addr.cacheable)
 			fimg2d_dma_sync_inner(csrc->addr, csrc->size, DMA_TO_DEVICE);
@@ -489,10 +501,9 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 	spin_lock(&info->bltlock);
 	atomic_inc(&ctx->ncmd);
 	fimg2d_enqueue(&cmd->node, &info->cmd_q);
-	fimg2d_debug("ctx %p pgd (ka:0x%lx,pa:0x%lx) ncmd(%d) seq_no(%u)\n",
+	fimg2d_debug("ctx %p pgd %p ncmd(%d) seq_no(%u)\n",
 			cmd->ctx,
-			(unsigned long)cmd->ctx->mm->pgd,
-			(unsigned long)virt_to_phys((unsigned long *)cmd->ctx->mm->pgd),
+			(unsigned long *)cmd->ctx->mm->pgd,
 			atomic_read(&ctx->ncmd), cmd->seq_no);
 	spin_unlock(&info->bltlock);
 

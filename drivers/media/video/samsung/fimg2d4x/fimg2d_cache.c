@@ -27,16 +27,16 @@
 
 static inline unsigned long virt2phys(struct mm_struct *mm, unsigned long vaddr)
 {
+	unsigned long *pgd;
 	unsigned long *lv1d, *lv2d;
-	unsigned long pgd;
 
-	pgd = (unsigned long)mm->pgd;
+	pgd = (unsigned long *)mm->pgd;
 
-	lv1d = (unsigned long *)pgd + (vaddr >> LV1_SHIFT);
+	lv1d = pgd + (vaddr >> LV1_SHIFT);
 
 	if ((*lv1d & LV1_DESC_MASK) != 0x1) {
 		fimg2d_debug("invalid LV1 descriptor, "
-				"pgd 0x%lx lv1d 0x%lx vaddr 0x%lx\n",
+				"pgd %p lv1d 0x%lx vaddr 0x%lx\n",
 				pgd, *lv1d, vaddr);
 		return 0;
 	}
@@ -46,7 +46,7 @@ static inline unsigned long virt2phys(struct mm_struct *mm, unsigned long vaddr)
 
 	if ((*lv2d & LV2_DESC_MASK) != 0x2) {
 		fimg2d_debug("invalid LV2 descriptor, "
-				"pgd 0x%lx lv2d 0x%lx vaddr 0x%lx\n",
+				"pgd %p lv2d 0x%lx vaddr 0x%lx\n",
 				pgd, *lv2d, vaddr);
 		return 0;
 	}
@@ -83,14 +83,14 @@ void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long vaddr,
 void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long vaddr,
 					size_t size)
 {
+	unsigned long *pgd;
 	unsigned long *lv1, *lv1end;
 	unsigned long lv2pa;
-	unsigned long pgd;
 
-	pgd = (unsigned long)mm->pgd;
+	pgd = (unsigned long *)mm->pgd;
 
-	lv1 = (unsigned long *)pgd + (vaddr >> LV1_SHIFT);
-	lv1end = (unsigned long *)pgd + ((vaddr + size + LV1_PT_SIZE-1) >> LV1_SHIFT);
+	lv1 = pgd + (vaddr >> LV1_SHIFT);
+	lv1end = pgd + ((vaddr + size + LV1_PT_SIZE-1) >> LV1_SHIFT);
 
 	/* clean level1 page table */
 	outer_clean_range(virt_to_phys(lv1), virt_to_phys(lv1end));
@@ -106,16 +106,16 @@ void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long vaddr,
 enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long vaddr,
 					size_t size)
 {
+	unsigned long *pgd;
 	unsigned long *lv1d, *lv2d;
-	unsigned long pgd;
 
-	pgd = (unsigned long)mm->pgd;
+	pgd = (unsigned long *)mm->pgd;
 
 	size += offset_in_page(vaddr);
 	size = PAGE_ALIGN(size);
 
 	while ((long)size > 0) {
-		lv1d = (unsigned long *)pgd + (vaddr >> LV1_SHIFT);
+		lv1d = pgd + (vaddr >> LV1_SHIFT);
 
 		/*
 		 * check level 1 descriptor
@@ -126,7 +126,7 @@ enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long vaddr,
 		 */
 		if ((*lv1d & LV1_DESC_MASK) != 0x1) {
 			fimg2d_debug("invalid LV1 descriptor, "
-					"pgd 0x%lx lv1d 0x%lx vaddr 0x%lx\n",
+					"pgd %p lv1d 0x%lx vaddr 0x%lx\n",
 					pgd, *lv1d, vaddr);
 			return PT_FAULT;
 		}
@@ -142,7 +142,7 @@ enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long vaddr,
 		 */
 		if ((*lv2d & LV2_DESC_MASK) != 0x2) {
 			fimg2d_debug("invalid LV2 descriptor, "
-					"pgd 0x%lx lv2d 0x%lx vaddr 0x%lx\n",
+					"pgd %p lv2d 0x%lx vaddr 0x%lx\n",
 					pgd, *lv2d, vaddr);
 			return PT_FAULT;
 		}

@@ -52,7 +52,7 @@ static long get_blit_perf(struct timeval *start, struct timeval *end)
 static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
 #ifdef CONFIG_OUTER_CACHE
-	struct mm_struct *mm;
+	struct mm_struct *mm = cmd->ctx->mm;
 #endif
 	struct fimg2d_cache *csrc, *cdst, *cmsk;
 
@@ -74,21 +74,23 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 #ifdef CONFIG_OUTER_CACHE
 	/* innercache range is done at fimg2d_check_dma_sync() */
 	fimg2d_debug("outercache range\n");
-	mm = cmd->ctx->mm;
 	if (cmd->srcen) {
-		fimg2d_clean_outer_pagetable(mm, csrc->addr, csrc->size);
+		if (cmd->src.addr.type == ADDR_USER)
+			fimg2d_clean_outer_pagetable(mm, csrc->addr, csrc->size);
 		if (cmd->src.addr.cacheable)
 			fimg2d_dma_sync_outer(mm, csrc->addr, csrc->size, CACHE_CLEAN);
 	}
 
 	if (cmd->msken) {
-		fimg2d_clean_outer_pagetable(mm, cmsk->addr, cmsk->size);
+		if (cmd->msk.addr.type == ADDR_USER)
+			fimg2d_clean_outer_pagetable(mm, cmsk->addr, cmsk->size);
 		if (cmd->msk.addr.cacheable)
 			fimg2d_dma_sync_outer(mm, cmsk->addr, cmsk->size, CACHE_CLEAN);
 	}
 
 	if (cmd->dsten) {
-		fimg2d_clean_outer_pagetable(mm, cdst->addr, cdst->size);
+		if (cmd->dst.addr.type == ADDR_USER)
+			fimg2d_clean_outer_pagetable(mm, cdst->addr, cdst->size);
 		if (cmd->dst.addr.cacheable)
 			fimg2d_dma_sync_outer(mm, cdst->addr, cdst->size, CACHE_FLUSH);
 	}
@@ -110,9 +112,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 {
 	struct fimg2d_context *ctx;
 	struct fimg2d_bltcmd *cmd;
-	unsigned long pa_pgd, va_pgd;
-	unsigned long saddr, daddr, maddr;
-	size_t ssize, dsize, msize;
+	unsigned long *pgd;
 #ifdef PERF
 	struct timeval start, end;
 #endif
@@ -126,8 +126,6 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 	while ((cmd = fimg2d_get_first_command(info))) {
 		ctx = cmd->ctx;
-		va_pgd = (unsigned long)ctx->mm->pgd;
-		pa_pgd = (unsigned long)virt_to_phys((unsigned long *)va_pgd);
 
 		if (info->err) {
 			printk(KERN_ERR "%s: unrecoverable hardware error\n", __func__);
@@ -136,18 +134,15 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 		atomic_set(&info->busy, 1);
 
-		/* set sfr */
 		info->configure(info, cmd);
 
-#ifdef CONFIG_S5P_SYSTEM_MMU
-		/* set sysmmu */
-		if (cmd->dst.addr.type == ADDR_USER) {
-			s5p_sysmmu_set_tablebase_pgd(info->dev, pa_pgd);
-			fimg2d_debug("set sysmmu table base: ctx %p "
-					"pgd (va:0x%lx,pa:0x%lx) seq_no(%u)\n",
-					ctx, va_pgd, pa_pgd, cmd->seq_no);
+		if (cmd->dst.addr.type != ADDR_PHYS) {
+			pgd = (unsigned long *)ctx->mm->pgd;
+			s5p_sysmmu_enable(info->dev, (unsigned long)virt_to_phys(pgd));
+			fimg2d_debug("sysmmu enable: pgd %p ctx %p seq_no(%u)\n",
+					pgd, ctx, cmd->seq_no);
 		}
-#endif
+
 		fimg2d4x_pre_bitblt(info, cmd);
 #ifdef PERF
 		do_gettimeofday(&start);
@@ -155,48 +150,25 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		/* start bitblt */
 		info->run(info);
 
-		if (!wait_event_timeout(info->wait_q, !atomic_read(&info->busy),
+		if (wait_event_timeout(info->wait_q, !atomic_read(&info->busy),
 				msecs_to_jiffies(1000))) {
-			if (!fimg2d4x_blit_done_status(info)) {
-				saddr = daddr = maddr = 0;
-				ssize = dsize = msize = 0;
-				if (cmd->srcen) {
-					saddr = cmd->src.addr.start;
-					ssize = cmd->src.addr.size;
-				}
-				if (cmd->dsten) {
-					daddr = cmd->dst.addr.start;
-					dsize = cmd->dst.addr.size;
-				}
-				if (cmd->msken) {
-					maddr = cmd->msk.addr.start;
-					msize = cmd->msk.addr.size;
-				}
-				printk(KERN_ERR "[%s] fatal error, ctx %p "
-						"pgd (va:0x%lx,pa:0x%lx) seq_no(%u)\n"
-						"\t src addr %p end %p size %d\n"
-						"\t dst addr %p end %p size %d\n"
-						"\t msk addr %p end %p size %d\n",
-						__func__, ctx, va_pgd, pa_pgd, cmd->seq_no,
-						(void *)saddr, (void *)saddr+ssize, ssize,
-						(void *)daddr, (void *)daddr+dsize, dsize,
-						(void *)maddr, (void *)maddr+msize, msize);
-
-				/* fatal h/w error */
-				info->err = true;
-			} else {
-				printk(KERN_ERR "[%s] ctx %p pgd (va:0x%lx,pa:0x%lx) "
-						"seq_no(%u) wait timeout\n",
-						__func__, ctx, va_pgd, pa_pgd, cmd->seq_no);
-			}
-		} else {
 			fimg2d_debug("blitter wake up\n");
-		}
+		} else {
+			printk(KERN_ERR "[%s] bitblt wait timeout\n", __func__);
+			fimg2d_dump_command(cmd);
 
+			if (!fimg2d4x_blit_done_status(info))
+				info->err = true; /* fatal h/w error */
+		}
 #ifdef PERF
 		do_gettimeofday(&end);
 		get_blit_perf(&start, &end);
 #endif
+
+		if (cmd->dst.addr.type != ADDR_PHYS) {
+			s5p_sysmmu_disable(info->dev);
+			fimg2d_debug("sysmmu disable\n");
+		}
 
 blitend:
 		spin_lock(&info->bltlock);

@@ -58,7 +58,6 @@ static irqreturn_t fimg2d_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_S5P_SYSTEM_MMU
 static int fimg2d_sysmmu_fault_handler(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
 		unsigned long pgtable_base, unsigned long fault_addr)
 {
@@ -94,7 +93,6 @@ next:
 	BUG();
 	return 0;
 }
-#endif
 
 static void fimg2d_context_wait(struct fimg2d_context *ctx)
 {
@@ -140,12 +138,9 @@ static int fimg2d_open(struct inode *inode, struct file *file)
 	file->private_data = (void *)ctx;
 
 	ctx->mm = current->mm;
-	fimg2d_debug("ctx %p pgd (va:0x%lx,pa:0x%lx) init_mm (va:0x%lx,pa:0x%lx)\n",
-			ctx,
-			(unsigned long)ctx->mm->pgd,
-			(unsigned long)virt_to_phys((unsigned long *)ctx->mm->pgd),
-			(unsigned long)init_mm.pgd,
-			(unsigned long)virt_to_phys((unsigned long *)init_mm.pgd));
+	fimg2d_debug("ctx %p current pgd %p init_mm pgd %p\n",
+			ctx, (unsigned long *)ctx->mm->pgd,
+			(unsigned long *)init_mm.pgd);
 
 	fimg2d_add_context(info, ctx);
 
@@ -349,10 +344,8 @@ static int fimg2d_probe(struct platform_device *pdev)
 	fimg2d_debug("enable runtime pm\n");
 #endif
 
-#ifdef CONFIG_S5P_SYSTEM_MMU
 	s5p_sysmmu_set_fault_handler(info->dev, fimg2d_sysmmu_fault_handler);
 	fimg2d_debug("register sysmmu page fault handler\n");
-#endif
 
 	/* misc register */
 	ret = misc_register(&fimg2d_dev);

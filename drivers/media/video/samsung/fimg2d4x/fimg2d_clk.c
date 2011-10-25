@@ -15,7 +15,6 @@
 #include <linux/sched.h>
 #include <plat/cpu.h>
 #include <plat/fimg2d.h>
-#include <plat/sysmmu.h>
 #include "fimg2d.h"
 #include "fimg2d_clk.h"
 
@@ -24,17 +23,11 @@ void fimg2d_clk_on(struct fimg2d_control *info)
 	spin_lock(&info->bltlock);
 	if (!atomic_read(&info->clkon)) {
 		clk_enable(info->clock);
-#ifdef CONFIG_S5P_SYSTEM_MMU
-		s5p_sysmmu_enable(info->dev, (unsigned long)init_mm.pgd);
-#endif
 		atomic_set(&info->clkon, 1);
 	}
 	spin_unlock(&info->bltlock);
 
 	fimg2d_debug("clock enable\n");
-#ifdef CONFIG_S5P_SYSTEM_MMU
-	fimg2d_debug("sysmmu enable\n");
-#endif
 }
 
 void fimg2d_clk_off(struct fimg2d_control *info)
@@ -42,16 +35,10 @@ void fimg2d_clk_off(struct fimg2d_control *info)
 	spin_lock(&info->bltlock);
 	if (atomic_read(&info->clkon)) {
 		atomic_set(&info->clkon, 0);
-#ifdef CONFIG_S5P_SYSTEM_MMU
-		s5p_sysmmu_disable(info->dev);
-#endif
 		clk_disable(info->clock);
 	}
 	spin_unlock(&info->bltlock);
 
-#ifdef CONFIG_S5P_SYSTEM_MMU
-	fimg2d_debug("sysmmu disable\n");
-#endif
 	fimg2d_debug("clock disable\n");
 }
 
