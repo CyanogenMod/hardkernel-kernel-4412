@@ -351,6 +351,9 @@ config DVFS_NR_RUNNING_POLICY
 	depends on CPU_FREQ
 	bool "DVFS-nr_running CPU hotplug"
 
+config NR_RUNNING_POLICY
+	bool "nr_running CPU hotplug"
+
 endchoice
 endmenu
 
