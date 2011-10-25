@@ -10,6 +10,7 @@
 
 #include <linux/platform_device.h>
 #include <linux/serial_core.h>
+#include <linux/gpio.h>
 #include <linux/mmc/host.h>
 #include <linux/cma.h>
 #include <linux/memblock.h>
@@ -18,6 +19,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 
+#include <plat/gpio-cfg.h>
 #include <plat/regs-serial.h>
 #include <plat/exynos5.h>
 #include <plat/cpu.h>
@@ -32,6 +34,9 @@
 
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+#include <mach/dwmci.h>
+#endif
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK5250_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -165,6 +170,53 @@ static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
 };
 #endif
 
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+static void exynos4_dwmci_cfg_gpio(int width)
+{
+	unsigned int gpio;
+
+	for (gpio = EXYNOS5_GPC0(0); gpio < EXYNOS5_GPC0(2); gpio++) {
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_NONE);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	}
+
+	switch (width) {
+	case 8:
+		for (gpio = EXYNOS5_GPC1(3); gpio <= EXYNOS5_GPC1(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(4));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+		}
+	case 4:
+		for (gpio = EXYNOS5_GPC0(3); gpio <= EXYNOS5_GPC0(6); gpio++) {
+			s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+			s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+			s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+		}
+		break;
+	case 1:
+		gpio = EXYNOS5_GPC0(3);
+		s3c_gpio_cfgpin(gpio, S3C_GPIO_SFN(3));
+		s3c_gpio_setpull(gpio, S3C_GPIO_PULL_UP);
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV2);
+	default:
+		break;
+	}
+}
+
+static struct dw_mci_board exynos4_dwmci_pdata __initdata = {
+	.num_slots		= 1,
+	.quirks			= DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
+	.bus_hz			= 66 * 1000 * 1000,
+	.caps			= MMC_CAP_UHS_DDR50 | MMC_CAP_1_8V_DDR | MMC_CAP_8_BIT_DATA,
+	.detect_delay_ms	= 200,
+	.hclk_name		= "dwmci",
+	.cclk_name		= "sclk_dwmci",
+	.cfg_gpio		= exynos4_dwmci_cfg_gpio,
+};
+#endif
+
 #ifdef CONFIG_S3C_DEV_HSMMC
 static struct s3c_sdhci_platdata smdk5250_hsmmc0_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
@@ -216,6 +268,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	&s3c_device_hsmmc3,
+#endif
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+	&exynos4_device_dwmci,
 #endif
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
@@ -367,6 +422,9 @@ static void __init smdk5250_map_io(void)
 
 static void __init smdk5250_machine_init(void)
 {
+#ifdef CONFIG_EXYNOS4_DEV_DWMCI
+	exynos4_dwmci_set_platdata(&exynos4_dwmci_pdata);
+#endif
 #ifdef CONFIG_S3C_DEV_HSMMC
 	s3c_sdhci0_set_platdata(&smdk5250_hsmmc0_pdata);
 #endif
