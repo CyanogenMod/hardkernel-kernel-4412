@@ -943,40 +943,18 @@ static void __init exynos5_reserve_mem(void)
 			.size = 0
 		},
 	};
-	static struct cma_region regions_secure[] = {
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
-		{
-			.name = "mfc0",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
-			{
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
-				.alignment = SZ_64M,
-#else
-				.alignment = 1 << 17,
-#endif
-			},
-		},
-#endif
-		{
-			.size = 0
-		},
-	};
 	static const char map[] __initconst =
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0=fimd;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
-		"ion-exynos=fimd;"
+		"ion-exynos=fimd,gsc0,gsc1,gsc2,gsc3;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;";
 	struct cma_region *reg;
 
 	cma_set_defaults(regions, map);
 
-	reg = regions_secure;
-	for (; reg->size; ++reg)
-		BUG_ON(cma_early_region_register(reg));
-
-	exynos5_cma_region_reserve(regions, regions_secure);
+	exynos5_cma_region_reserve(regions, NULL);
 }
 #else /* !CONFIG_S5P_MEM_CMA */
 static inline void exynos5_reserve_mem(void)
