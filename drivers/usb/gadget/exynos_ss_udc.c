@@ -126,6 +126,19 @@ static struct bos_desc bos = {
 };
 
 /**
+ * States of EP0
+ */
+enum ctrl_ep_state {
+	EP0_UNCONNECTED,
+	EP0_SETUP_PHASE,
+	EP0_DATA_PHASE,
+	EP0_WAIT_NRDY,
+	EP0_STATUS_PHASE_2,
+	EP0_STATUS_PHASE_3,
+	EP0_STALL,
+};
+
+/**
  * struct exynos_ss_udc_trb - transfer request block (TRB)
  * @buff_ptr_low: Buffer pointer low.
  * @buff_ptr_high: Buffer pointer high.
@@ -246,7 +259,8 @@ struct exynos_ss_udc {
 	dma_addr_t		event_buff_dma;
 
 	bool			eps_enabled;
-	bool			ep0_setup;
+	enum ctrl_ep_state	ep0_state;
+	int			ep0_three_stage;
 	u8			*ep0_buff;
 	u8			*ctrl_buff;
 	dma_addr_t		ctrl_buff_dma;
@@ -629,6 +643,8 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 			dev_err(udc->dev, "Failed to set/clear stall\n");
 			return -EINVAL;
 		}
+
+		udc->ep0_state = EP0_STALL;
 	}
 
 	/* If everything is Ok, we mark endpoint as halted */
@@ -734,11 +750,12 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 {
 	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
 	struct usb_request *ureq = &udc_req->req;
+	int trb_type = 1;
 	int epnum = udc_ep->epnum;
+	int xfer_length;
 	bool res;
 
-	/* TODO: below is just very minimal code to start transfer,
-	 * we need to complete it!!! */
+	udc_ep->req = udc_req;
 
 	/* If endpoint is stalled, we will restart request later */
 	if (udc_ep->halted) {
@@ -746,15 +763,47 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 		return;
 	}
 
-	udc_ep->trb->buff_ptr_low = (u32) ureq->dma + ureq->actual;
+	/* Get type of TRB */
+	if (epnum == 0 && !continuing)
+		switch (udc->ep0_state) {
+		case EP0_SETUP_PHASE:
+			trb_type = 2;
+			break;
+
+		case EP0_DATA_PHASE:
+			trb_type = 5;
+			break;
+
+		case EP0_STATUS_PHASE_2:
+			trb_type = 3;
+			break;
+
+		case EP0_STATUS_PHASE_3:
+			trb_type = 4;
+			break;
+		default:
+			dev_warn(udc->dev, "%s: Erroneous EP0 state (%d)",
+					   __func__, udc->ep0_state);
+			return;
+			break;
+		}
+	else
+		trb_type = 1;
+
+	/* Get transfer length */
+	if (udc_ep->dir_in)
+		xfer_length = ureq->length;
+	else
+		xfer_length = (ureq->length + udc_ep->ep.maxpacket - 1) &
+			~(udc_ep->ep.maxpacket - 1);
+
+	/* Fill TRB */
+	udc_ep->trb->buff_ptr_low = (u32) ureq->dma;
 	udc_ep->trb->buff_ptr_high = 0;
-	/* According to Buffer Size Rules for OUT endpoints the total size
-	   of a buffer must be a multiple of MaxPacketSize. But if not what
-	   can we do? */
 	udc_ep->trb->param1 =
-			EXYNOS_USB3_TRB_BUFSIZ(ureq->length - ureq->actual);
+			EXYNOS_USB3_TRB_BUFSIZ(xfer_length);
 	udc_ep->trb->param2 = EXYNOS_USB3_TRB_IOC | EXYNOS_USB3_TRB_LST |
-			EXYNOS_USB3_TRB_HWO;
+			EXYNOS_USB3_TRB_HWO | EXYNOS_USB3_TRB_TRBCTL(trb_type);
 
 	/* Start Transfer */
 	epcmd->ep = get_phys_epnum(udc_ep);
@@ -780,12 +829,10 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 static int exynos_ss_udc_process_req_feature(struct exynos_ss_udc *udc,
 					 struct usb_ctrlrequest *ctrl)
 {
-	struct exynos_ss_udc_ep *ep0 = &udc->eps[0];
 	struct exynos_ss_udc_req *udc_req;
 	bool restart;
 	bool set = (ctrl->bRequest == USB_REQ_SET_FEATURE);
 	struct exynos_ss_udc_ep *ep;
-	int ret;
 
 	dev_dbg(udc->dev, "%s: %s_FEATURE\n",
 		__func__, set ? "SET" : "CLEAR");
@@ -802,24 +849,7 @@ static int exynos_ss_udc_process_req_feature(struct exynos_ss_udc *udc,
 		case USB_ENDPOINT_HALT:
 			exynos_ss_udc_ep_sethalt(&ep->ep, set);
 
-			ret = exynos_ss_udc_send_reply(udc, ep0, NULL, 0);
-			if (ret) {
-				dev_err(udc->dev,
-					"%s: failed to send reply\n", __func__);
-				return ret;
-			}
-
 			if (!set) {
-				/* If we have request in progress, then
-				 * complete it */
-				if (ep->req) {
-					udc_req = ep->req;
-					ep->req = NULL;
-					list_del_init(&udc_req->queue);
-					udc_req->req.complete(&ep->ep,
-								 &udc_req->req);
-				}
-
 				/* If we have pending request, then start it */
 				restart = !list_empty(&ep->queue);
 				if (restart) {
@@ -828,7 +858,6 @@ static int exynos_ss_udc_process_req_feature(struct exynos_ss_udc *udc,
 								udc_req, false);
 				}
 			}
-
 			break;
 
 		default:
@@ -912,10 +941,6 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 	u8 *buf = udc->ep0_buff;
 	int len;
 
-	udc->ep0_setup = false;
-
-	ep0->sent_zlp = 0;
-
 	dev_dbg(udc->dev, "ctrl Req=%02x, Type=%02x, V=%04x, L=%04x\n",
 		 ctrl->bRequest, ctrl->bRequestType,
 		 ctrl->wValue, ctrl->wLength);
@@ -928,8 +953,14 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 
 	/* if we've no data with this request, then the last part of the
 	 * transaction is going to implicitly be IN. */
-	if (ctrl->wLength == 0)
+	ep0->sent_zlp = 0;
+
+	if (ctrl->wLength == 0) {
 		ep0->dir_in = 1;
+		udc->ep0_three_stage = 0;
+		udc->ep0_state = EP0_STATUS_PHASE_2;
+	} else
+		udc->ep0_three_stage = 1;
 
 	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD) {
 		switch (ctrl->bRequest) {
@@ -941,7 +972,7 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 
 			dev_info(udc->dev, "new address %d\n", ctrl->wValue);
 
-			ret = exynos_ss_udc_send_reply(udc, ep0, NULL, 0);
+			udc->ep0_state = EP0_WAIT_NRDY;
 			return;
 
 		case USB_REQ_GET_STATUS:
@@ -951,6 +982,8 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 		case USB_REQ_CLEAR_FEATURE:
 		case USB_REQ_SET_FEATURE:
 			ret = exynos_ss_udc_process_req_feature(udc, ctrl);
+
+			udc->ep0_state = EP0_WAIT_NRDY;
 			break;
 
 		case USB_REQ_GET_DESCRIPTOR:
@@ -999,6 +1032,7 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 		if (!res)
 			dev_err(udc->dev, "Failed to set/clear stall\n");
 		
+		udc->ep0_state = EP0_SETUP_PHASE;
 		exynos_ss_udc_enqueue_setup(udc);
 	}
 }
@@ -1022,10 +1056,7 @@ static void exynos_ss_udc_complete_setup(struct usb_ep *ep,
 		return;
 	}
 
-	if (req->actual == 0)
-		exynos_ss_udc_enqueue_setup(udc);
-	else
-		exynos_ss_udc_process_control(udc, req->buf);
+	exynos_ss_udc_process_control(udc, req->buf);
 }
 
 static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
@@ -1049,7 +1080,9 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 	req->status = -EINPROGRESS;
 
 	/* Sync the buffers as necessary */
-	if (udc_ep->epnum == 0 && udc->ep0_setup)
+	if (udc_ep->epnum == 0 && (udc->ep0_state == EP0_SETUP_PHASE ||
+				   udc->ep0_state == EP0_STATUS_PHASE_2 ||
+				   udc->ep0_state == EP0_STATUS_PHASE_3))
 		req->dma = udc->ctrl_buff_dma;
 	else {
 		ret = exynos_ss_udc_map_dma(udc, udc_ep, req);
@@ -1062,10 +1095,8 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 	first = list_empty(&udc_ep->queue);
 	list_add_tail(&udc_req->queue, &udc_ep->queue);
 
-	if (first) {
-		udc_ep->req = udc_req;
+	if (first)
 		exynos_ss_udc_start_req(udc, udc_ep, udc_req, false);
-	}
 
 	spin_unlock_irqrestore(&udc_ep->lock, irqflags);
 
@@ -1119,6 +1150,32 @@ static int exynos_ss_udc_ep_dequeue(struct usb_ep *ep, struct usb_request *req)
 	return 0;
 }
 
+static void exynos_ss_udc_enqueue_status(struct exynos_ss_udc *udc)
+{
+	struct usb_request *req = udc->ctrl_req;
+	struct exynos_ss_udc_req *udc_req = our_req(req);
+	int ret;
+
+	dev_dbg(udc->dev, "%s: queueing status request\n", __func__);
+
+	req->zero = 0;
+	req->length = 0;
+	req->buf = udc->ctrl_buff;
+	req->complete = NULL;
+
+	if (!list_empty(&udc_req->queue)) {
+		dev_info(udc->dev, "%s already queued???\n", __func__);
+		return;
+	}
+
+	ret = exynos_ss_udc_ep_queue(&udc->eps[0].ep, req, GFP_ATOMIC);
+	if (ret < 0) {
+		dev_err(udc->dev, "%s: failed queue (%d)\n", __func__, ret);
+		/* Don't think there's much we can do other than watch the
+		 * driver fail. */
+	}
+}
+
 /**:;
  * exynos_ss_udc_enqueue_setup - start a request for EP0 packets
  * @udc: The device state.
@@ -1133,8 +1190,6 @@ static void exynos_ss_udc_enqueue_setup(struct exynos_ss_udc *udc)
 	int ret;
 
 	dev_dbg(udc->dev, "%s: queueing setup request\n", __func__);
-
-	udc->ep0_setup = true;
 
 	req->zero = 0;
 	req->length = EXYNOS_USB3_CTRL_BUFF_SIZE;
@@ -1193,8 +1248,32 @@ static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
 	udc_ep->req = NULL;
 	list_del_init(&udc_req->queue);
 
-	if (!(udc_ep->epnum == 0 && udc->ep0_setup))
+	if (!(udc_ep->epnum == 0 && (udc->ep0_state == EP0_SETUP_PHASE ||
+				   udc->ep0_state == EP0_STATUS_PHASE_2 ||
+				   udc->ep0_state == EP0_STATUS_PHASE_3)))
 		exynos_ss_udc_unmap_dma(udc, udc_ep, udc_req);
+
+	if (udc_ep->epnum == 0) {
+		switch (udc->ep0_state) {
+		case EP0_SETUP_PHASE:
+			udc->ep0_state = EP0_DATA_PHASE;
+			break;
+		case EP0_DATA_PHASE:
+			udc->ep0_state = EP0_WAIT_NRDY;
+			break;
+		case EP0_STATUS_PHASE_2:
+		case EP0_STATUS_PHASE_3:
+			udc->ep0_state = EP0_SETUP_PHASE;
+			break;
+		default:
+			dev_err(udc->dev, "%s: Erroneous EP0 state (%d)",
+					   __func__, udc->ep0_state);
+			/* Will try to repair from it */
+			udc->ep0_state = EP0_SETUP_PHASE;
+			return;
+			break;
+		}
+	}
 
 	/* call the complete request with the locks off, just in case the
 	 * request tries to queue more work for this endpoint. */
@@ -1295,72 +1374,26 @@ static void exynos_ss_udc_complete_in(struct exynos_ss_udc *udc,
 	size_left = udc_ep->trb->param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
 	udc_req->req.actual = udc_req->req.length - size_left;
 
-	if (udc_req->req.actual < udc_req->req.length) {
-		dev_dbg(udc->dev, "%s trying more for req...\n", __func__);
-		exynos_ss_udc_start_req(udc, udc_ep, udc_req, true);
-	} else
-		exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, 0);
+	if (size_left)
+		dev_dbg(udc->dev, "%s: BUFSIZ is not zero (%d)",
+			 __func__, size_left);
+
+	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, 0);
 }
 
-/**
- * exynos_ss_udc_send_zlp - send zero-length packet on control endpoint
- * @udc: The device instance
- * @req: The request currently on this endpoint
- */
-static void exynos_ss_udc_send_zlp(struct exynos_ss_udc *udc,
-			       struct exynos_ss_udc_req *req)
-{
-	static struct exynos_ss_udc_trb zlp_trb;
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
-	bool res;
-
-	if (!req) {
-		dev_warn(udc->dev, "%s: no request?\n", __func__);
-		return;
-	}
-
-	if (req->req.length == 0) {
-		udc->eps[0].sent_zlp = 1;
-		exynos_ss_udc_enqueue_setup(udc);
-		return;
-	}
-
-	udc->eps[0].sent_zlp = 1;
-
-	dev_dbg(udc->dev, "sending zero-length packet\n");
-
-	/* issue a zero-sized packet */
-
-	/* We don't care about buff address since transfer size is 0 */
-	zlp_trb.param1 = EXYNOS_USB3_TRB_BUFSIZ(0);
-	zlp_trb.param2 = EXYNOS_USB3_TRB_IOC | EXYNOS_USB3_TRB_LST |
-					EXYNOS_USB3_TRB_HWO;
-
-	/* Start Transfer */
-	epcmd->ep = 1;
-	epcmd->param0 = (u32) virt_to_phys(&zlp_trb);
-	epcmd->param1 = 0;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTRTXFER;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
-
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
-	if (!res)
-		dev_err(udc->dev, "Failed to start transfer\n");
-}
 
 /**
  * exynos_ss_udc_handle_outdone - handle receiving OutDone/SetupDone from RXFIFO
  * @udc: The device instance
  * @epnum: The endpoint received from
- * @was_setup: Set if processing a SetupDone event.
 */
 static void exynos_ss_udc_handle_outdone(struct exynos_ss_udc *udc,
-				     int epnum, bool was_setup)
+				     int epnum)
 {
 	struct exynos_ss_udc_ep *udc_ep = &udc->eps[epnum];
 	struct exynos_ss_udc_req *udc_req = udc_ep->req;
 	struct usb_request *req = &udc_req->req;
-	int size_left;
+	int len, size_left;
 	int result = 0;
 
 
@@ -1375,17 +1408,13 @@ static void exynos_ss_udc_handle_outdone(struct exynos_ss_udc *udc,
 	}
 
 	size_left = udc_ep->trb->param1 & EXYNOS_USB3_TRB_BUFSIZ_MASK;
-	udc_req->req.actual = udc_req->req.length - size_left;
+	len = (req->length + udc_ep->ep.maxpacket - 1) &
+		~(udc_ep->ep.maxpacket - 1);
+	udc_req->req.actual = len - size_left;
 
-	if (req->actual < req->length) {
-		exynos_ss_udc_start_req(udc, udc_ep, udc_req, true);
-		return;
-	}
-
-	if (epnum == 0) {
-		if (!was_setup && req->complete != exynos_ss_udc_complete_setup)
-			exynos_ss_udc_send_zlp(udc, udc_req);
-	}
+	if (size_left)
+		dev_dbg(udc->dev, "%s: BUFSIZ is not zero (%d)",
+			 __func__, size_left);
 
 	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, result);
 }
@@ -1523,8 +1552,16 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 	
 	switch (event & EXYNOS_USB3_DEPEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEPEVT_EVENT_XferNotReady:
-		/* TODO: If an XferNotReady is received before the
-		 * XferComplete we should issue Set Stall */
+		if (epnum == 0 && udc->ep0_state == EP0_WAIT_NRDY) {
+			udc_ep->dir_in = dir_in;
+
+			if (udc->ep0_three_stage)
+				udc->ep0_state = EP0_STATUS_PHASE_3;
+			else
+				udc->ep0_state = EP0_STATUS_PHASE_2;
+
+			exynos_ss_udc_enqueue_status(udc);
+		}
 		break;
 
 	case EXYNOS_USB3_DEPEVT_EVENT_XferComplete:
@@ -1532,20 +1569,13 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 		if (dir_in) {
 			/* Handle "transfer complete" for IN EPs */
 			exynos_ss_udc_complete_in(udc, udc_ep);
-
-			if (epnum == 0 && !udc_ep->req)
-				exynos_ss_udc_enqueue_setup(udc);
 		} else {
 			/* Handle "transfer complete" for OUT EPs */
-
-			/* TODO: We need to distinguish Setup packets from other
-			 * OUT packets. We will use EP0 states for it. */
-
-			if (epnum == 0 && udc->ep0_setup)
-				exynos_ss_udc_handle_outdone(udc, epnum, true);
-			else
-				exynos_ss_udc_handle_outdone(udc, epnum, false);
+			exynos_ss_udc_handle_outdone(udc, epnum);
 		}
+
+		if (epnum == 0 && udc->ep0_state == EP0_SETUP_PHASE)
+			exynos_ss_udc_enqueue_setup(udc);
 
 		break;
 	}
@@ -1699,6 +1729,9 @@ static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 		return -ENOMEM;
 
 	memset(udc_ep->trb, 0, sizeof (struct exynos_ss_udc_trb));
+
+	if (epnum == 0)
+		udc->ep0_state = EP0_UNCONNECTED;
 
 	return 0;
 }
@@ -2092,6 +2125,7 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 
 	exynos_ss_udc_init(udc);
 
+	udc->ep0_state = EP0_SETUP_PHASE;
 	exynos_ss_udc_enqueue_setup(udc);
 	/* report to the user, and return */
 
