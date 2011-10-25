@@ -62,15 +62,13 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	unsigned long newfreq = 160000;
 	unsigned long long cpu_load = 0;
 	unsigned long long dmc_load = 0;
-	unsigned long long bus_load = 0;
 
 	ppmu_update(data->dev);
 
 	cpu_load = ppmu_load[PPMU_CPU];
 	dmc_load = (ppmu_load[PPMU_DMC0] + ppmu_load[PPMU_DMC1]) / 2;
-	bus_load = (ppmu_load[PPMU_RIGHT] + ppmu_load[PPMU_LEFT]) / 2;
 
-	if (dmc_load != 0 && bus_load != 0)
+	if (dmc_load)
 		newfreq = 400000;
 
 	lockfreq = dev_max_freq(data->dev);

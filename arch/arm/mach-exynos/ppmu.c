@@ -164,32 +164,4 @@ struct exynos4_ppmu_hw exynos_ppmu[] = {
 		.event[1] = WR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
-	[PPMU_RIGHT] = {
-		.id = PPMU_RIGHT,
-		.hw_base = S5P_VA_PPMU_RIGHT,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
-		.weight = DEFAULT_WEIGHT,
-	},
-	[PPMU_LEFT] = {
-		.id = PPMU_LEFT,
-		.hw_base = S5P_VA_PPMU_LEFT,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
-		.weight = DEFAULT_WEIGHT,
-	},
-	[PPMU_MFC_L] = {
-		.id = PPMU_MFC_L,
-		.hw_base = S5P_VA_PPMU_MFC_L,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
-		.weight = DEFAULT_WEIGHT,
-	},
-	[PPMU_MFC_R] = {
-		.id = PPMU_MFC_R,
-		.hw_base = S5P_VA_PPMU_MFC_R,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
-		.weight = DEFAULT_WEIGHT,
-	},
 };

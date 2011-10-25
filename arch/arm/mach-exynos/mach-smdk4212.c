@@ -2899,8 +2899,6 @@ static void __init smdk4212_machine_init(void)
 	ppmu_init(&exynos_ppmu[PPMU_DMC0], &exynos4_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_DMC1], &exynos4_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_CPU], &exynos4_busfreq.dev);
-	ppmu_init(&exynos_ppmu[PPMU_RIGHT], &exynos4_busfreq.dev);
-	ppmu_init(&exynos_ppmu[PPMU_LEFT], &exynos4_busfreq.dev);
 }
 
 #ifdef CONFIG_EXYNOS4_C2C
