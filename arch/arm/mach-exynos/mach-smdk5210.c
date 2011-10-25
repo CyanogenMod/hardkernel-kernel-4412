@@ -230,8 +230,8 @@ static struct s3c_fb_pd_win smdk5210_fb_win0 = {
 	},
 	.virtual_x		= 480,
 	.virtual_y		= 1600,
-	.width			= 48,
-	.height			= 80,
+	.width			= 66,
+	.height			= 109,
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
@@ -249,8 +249,8 @@ static struct s3c_fb_pd_win smdk5210_fb_win1 = {
 	},
 	.virtual_x		= 480,
 	.virtual_y		= 1600,
-	.width			= 48,
-	.height			= 80,
+	.width			= 66,
+	.height			= 109,
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
@@ -268,8 +268,8 @@ static struct s3c_fb_pd_win smdk5210_fb_win2 = {
 	},
 	.virtual_x		= 480,
 	.virtual_y		= 1600,
-	.width			= 48,
-	.height			= 80,
+	.width			= 66,
+	.height			= 109,
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
