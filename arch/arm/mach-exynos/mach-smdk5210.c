@@ -950,7 +950,6 @@ static void __init exynos5_reserve_mem(void)
 		"ion-exynos=fimd,gsc0,gsc1,gsc2,gsc3;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;";
-	struct cma_region *reg;
 
 	cma_set_defaults(regions, map);
 
