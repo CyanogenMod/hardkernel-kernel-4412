@@ -429,17 +429,17 @@ static void exynos_fimd_gpio_setup_24bpp(void)
 	unsigned int reg = 0;
 
 #if defined(CONFIG_LCD_WA101S)
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ0(0), 5, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ3(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ4(0), 2, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ0(0), 5, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ3(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ4(0), 2, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
 #elif defined(CONFIG_LCD_LMS501KF03)
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ0(0), 5, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ3(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
-	exynos4_fimd_cfg_gpios(EXYNOS5_GPJ4(0), 2, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ0(0), 5, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ3(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
+	exynos4_fimd_cfg_gpios(EXYNOS5210_GPJ4(0), 2, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 #endif
 
 #if defined(CONFIG_S5P_DP)
