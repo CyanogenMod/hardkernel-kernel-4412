@@ -363,8 +363,8 @@ static struct s3c_fb_pd_win smdk5210_fb_win2 = {
 	},
 	.virtual_x		= 1360, /* real size : 1366 */
 	.virtual_y		= 768 * 2,
-	.width			= 1360,
-	.height			= 768,
+	.width			= 223,
+	.height			= 125,
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
