@@ -574,7 +574,9 @@ config MACH_SMDK5250
 	select CPU_EXYNOS5250
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
+	select S5P_DEV_FIMD1
 	select EXYNOS4_SETUP_SDHCI
+	select EXYNOS4_SETUP_FIMD
 	help
 	  Machine support for Samsung SMDK5250
 endmenu

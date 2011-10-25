@@ -13,6 +13,7 @@
 #include <linux/mmc/host.h>
 #include <linux/cma.h>
 #include <linux/memblock.h>
+#include <linux/fb.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -23,6 +24,11 @@
 #include <plat/clock.h>
 #include <plat/devs.h>
 #include <plat/sdhci.h>
+
+#include <plat/fb.h>
+#include <plat/fb-s5p.h>
+#include <plat/fb-core.h>
+#include <plat/regs-fb-v4.h>
 
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
@@ -72,6 +78,93 @@ static struct s3c2410_uartcfg smdk5250_uartcfgs[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_FB_S3C
+static struct s3c_fb_pd_win smdk5250_fb_win0 = {
+	.win_mode = {
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 14,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 5,
+		.xres		= 1360, /* real size : 1366 */
+		.yres		= 768,
+	},
+	.virtual_x		= 1360, /* real size : 1366 */
+	.virtual_y		= 768 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk5250_fb_win1 = {
+	.win_mode = {
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 14,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 5,
+		.xres		= 1360, /* real size : 1366 */
+		.yres		= 768,
+	},
+	.virtual_x		= 1360, /* real size : 1366 */
+	.virtual_y		= 768 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk5250_fb_win2 = {
+	.win_mode = {
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 14,
+		.lower_margin	= 3,
+		.hsync_len	= 32,
+		.vsync_len	= 5,
+		.xres		= 1360, /* real size : 1366 */
+		.yres		= 768,
+	},
+	.virtual_x		= 1360, /* real size : 1366 */
+	.virtual_y		= 768 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static void exynos_fimd_gpio_setup_24bpp(void)
+{
+	unsigned int reg = 0;
+
+	/*
+	 * Set DISP1BLK_CFG register for Display path selection
+	 *
+	 * FIMD of DISP1_BLK Bypass selection : DISP1BLK_CFG[15]
+	 * ---------------------
+	 *  0 | MIE/MDNIE
+	 *  1 | FIMD : selected
+	 */
+	reg = __raw_readl(S3C_VA_SYS + 0x0214);
+	reg &= ~(1 << 15);	/* To save other reset values */
+	reg |= (1 << 15);
+	__raw_writel(reg, S3C_VA_SYS + 0x0214);
+}
+
+static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
+	.win[0]		= &smdk5250_fb_win0,
+	.win[1]		= &smdk5250_fb_win1,
+	.win[2]		= &smdk5250_fb_win2,
+	.default_win	= 2,
+	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
+	.vidcon1	= 0,
+	.setup_gpio	= exynos_fimd_gpio_setup_24bpp,
+};
+#endif
+
 #ifdef CONFIG_S3C_DEV_HSMMC
 static struct s3c_sdhci_platdata smdk5250_hsmmc0_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
@@ -109,6 +202,9 @@ static struct s3c_sdhci_platdata smdk5250_hsmmc3_pdata __initdata = {
 #endif
 
 static struct platform_device *smdk5250_devices[] __initdata = {
+#ifdef CONFIG_FB_S3C
+	&s5p_device_fimd1,
+#endif
 #ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
 #endif
@@ -287,7 +383,22 @@ static void __init smdk5250_machine_init(void)
 	exynos_ion_set_platdata();
 #endif
 
+#ifdef CONFIG_FB_S3C
+	dev_set_name(&s5p_device_fimd1.dev, "s3cfb.1");
+	clk_add_alias("lcd", "exynos5-fb.1", "lcd", &s5p_device_fimd1.dev);
+	clk_add_alias("sclk_fimd", "exynos5-fb.1", "sclk_fimd",
+			&s5p_device_fimd1.dev);
+	s5p_fb_setname(1, "exynos5-fb");
+
+	s5p_fimd1_set_platdata(&smdk5250_lcd1_pdata);
+#endif
+
 	platform_add_devices(smdk5250_devices, ARRAY_SIZE(smdk5250_devices));
+
+#ifdef CONFIG_FB_S3C
+	exynos4_fimd_setup_clock(&s5p_device_fimd1.dev, "sclk_fimd", "mout_mpll_user",
+				800 * MHZ);
+#endif
 }
 
 MACHINE_START(SMDK5250, "SMDK5250")
