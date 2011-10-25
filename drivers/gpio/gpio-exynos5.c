@@ -56,7 +56,7 @@ static struct s3c_gpio_cfg gpio_cfg_noint = {
 };
 
 /*
- * Following are the gpio banks in exynos5210.
+ * Following are the gpio banks in exynos5.
  *
  * The 'config' member when left to NULL, is initialized to the default
  * structure gpio_cfg in the init function below.
@@ -361,87 +361,6 @@ static struct s3c_gpio_chip exynos5_gpio_common_4bit[] = {
 			.label	= "GPH1",
 		},
 	}, {
-		.base   = (S5P_VA_GPIO2 + 0x120),
-		.eint_offset = 0x24,
-		.group	= 22,
-		.chip	= {
-			.base	= EXYNOS5_GPJ0(0),
-			.ngpio	= EXYNOS5_GPIO_J0_NR,
-			.label	= "GPJ0",
-		},
-	}, {
-		.base   = (S5P_VA_GPIO2 + 0x140),
-		.eint_offset = 0x28,
-		.group	= 23,
-		.chip	= {
-			.base	= EXYNOS5_GPJ1(0),
-			.ngpio	= EXYNOS5_GPIO_J1_NR,
-			.label	= "GPJ1",
-		},
-	}, {
-		.base   = (S5P_VA_GPIO2 + 0x160),
-		.eint_offset = 0x2C,
-		.group	= 24,
-		.chip	= {
-			.base	= EXYNOS5_GPJ2(0),
-			.ngpio	= EXYNOS5_GPIO_J2_NR,
-			.label	= "GPJ2",
-		},
-	}, {
-		.base   = (S5P_VA_GPIO2 + 0x180),
-		.eint_offset = 0x30,
-		.group	= 25,
-		.chip	= {
-			.base	= EXYNOS5_GPJ3(0),
-			.ngpio	= EXYNOS5_GPIO_J3_NR,
-			.label	= "GPJ3",
-		},
-	}, {
-		.base   = (S5P_VA_GPIO2 + 0x1A0),
-		.eint_offset = 0x34,
-		.group	= 26,
-		.chip	= {
-			.base	= EXYNOS5_GPJ4(0),
-			.ngpio	= EXYNOS5_GPIO_J4_NR,
-			.label	= "GPJ4",
-		},
-	}, {
-		.base   = (S5P_VA_GPIO2 + 0x1C0),
-		.eint_offset = 0x38,
-		.group	= 27,
-		.chip	= {
-			.base	= EXYNOS5_GPK0(0),
-			.ngpio	= EXYNOS5_GPIO_K0_NR,
-			.label	= "GPK0",
-		},
-	}, {
-		.base   = (S5P_VA_GPIO2 + 0x1E0),
-		.eint_offset = 0x3C,
-		.group	= 28,
-		.chip	= {
-			.base	= EXYNOS5_GPK1(0),
-			.ngpio	= EXYNOS5_GPIO_K1_NR,
-			.label	= "GPK1",
-		},
-	}, {
-		.base   = (S5P_VA_GPIO2 + 0x200),
-		.eint_offset = 0x40,
-		.group	= 29,
-		.chip	= {
-			.base	= EXYNOS5_GPK2(0),
-			.ngpio	= EXYNOS5_GPIO_K2_NR,
-			.label	= "GPK2",
-		},
-	}, {
-		.base   = (S5P_VA_GPIO2 + 0x220),
-		.eint_offset = 0x44,
-		.group	= 30,
-		.chip	= {
-			.base	= EXYNOS5_GPK3(0),
-			.ngpio	= EXYNOS5_GPIO_K3_NR,
-			.label	= "GPK3",
-		},
-	}, {
 		.base   = S5P_VA_GPIO3,
 		.chip	= {
 			.base	= EXYNOS5_GPV0(0),
@@ -486,6 +405,91 @@ static struct s3c_gpio_chip exynos5_gpio_common_4bit[] = {
 	},
 };
 
+static struct s3c_gpio_chip exynos5210_gpio_4bit[] = {
+	{
+		.base   = (S5P_VA_GPIO2 + 0x120),
+		.eint_offset = 0x24,
+		.group	= 22,
+		.chip	= {
+			.base	= EXYNOS5210_GPJ0(0),
+			.ngpio	= EXYNOS5210_GPIO_J0_NR,
+			.label	= "GPJ0",
+		},
+	}, {
+		.base   = (S5P_VA_GPIO2 + 0x140),
+		.eint_offset = 0x28,
+		.group	= 23,
+		.chip	= {
+			.base	= EXYNOS5210_GPJ1(0),
+			.ngpio	= EXYNOS5210_GPIO_J1_NR,
+			.label	= "GPJ1",
+		},
+	}, {
+		.base   = (S5P_VA_GPIO2 + 0x160),
+		.eint_offset = 0x2C,
+		.group	= 24,
+		.chip	= {
+			.base	= EXYNOS5210_GPJ2(0),
+			.ngpio	= EXYNOS5210_GPIO_J2_NR,
+			.label	= "GPJ2",
+		},
+	}, {
+		.base   = (S5P_VA_GPIO2 + 0x180),
+		.eint_offset = 0x30,
+		.group	= 25,
+		.chip	= {
+			.base	= EXYNOS5210_GPJ3(0),
+			.ngpio	= EXYNOS5210_GPIO_J3_NR,
+			.label	= "GPJ3",
+		},
+	}, {
+		.base   = (S5P_VA_GPIO2 + 0x1A0),
+		.eint_offset = 0x34,
+		.group	= 26,
+		.chip	= {
+			.base	= EXYNOS5210_GPJ4(0),
+			.ngpio	= EXYNOS5210_GPIO_J4_NR,
+			.label	= "GPJ4",
+		},
+	}, {
+		.base   = (S5P_VA_GPIO2 + 0x1C0),
+		.eint_offset = 0x38,
+		.group	= 27,
+		.chip	= {
+			.base	= EXYNOS5210_GPK0(0),
+			.ngpio	= EXYNOS5210_GPIO_K0_NR,
+			.label	= "GPK0",
+		},
+	}, {
+		.base   = (S5P_VA_GPIO2 + 0x1E0),
+		.eint_offset = 0x3C,
+		.group	= 28,
+		.chip	= {
+			.base	= EXYNOS5210_GPK1(0),
+			.ngpio	= EXYNOS5210_GPIO_K1_NR,
+			.label	= "GPK1",
+		},
+	}, {
+		.base   = (S5P_VA_GPIO2 + 0x200),
+		.eint_offset = 0x40,
+		.group	= 29,
+		.chip	= {
+			.base	= EXYNOS5210_GPK2(0),
+			.ngpio	= EXYNOS5210_GPIO_K2_NR,
+			.label	= "GPK2",
+		},
+	}, {
+		.base   = (S5P_VA_GPIO2 + 0x220),
+		.eint_offset = 0x44,
+		.group	= 30,
+		.chip	= {
+			.base	= EXYNOS5210_GPK3(0),
+			.ngpio	= EXYNOS5210_GPIO_K3_NR,
+			.label	= "GPK3",
+		},
+	},
+};
+
 static __init int exynos5_gpiolib_init(void)
 {
 	struct s3c_gpio_chip *chip;
@@ -505,6 +509,22 @@ static __init int exynos5_gpiolib_init(void)
 	}
 
 	samsung_gpiolib_add_4bit_chips(exynos5_gpio_common_4bit, nr_chips);
+
+	/* Only 5210 GPIO part */
+	if (soc_is_exynos5210()) {
+		chip = exynos5210_gpio_4bit;
+		nr_chips = ARRAY_SIZE(exynos5210_gpio_4bit);
+
+		for (i = 0; i < nr_chips; i++, chip++) {
+			if (chip->config == NULL)
+				chip->config = &gpio_cfg;
+			if (chip->base == NULL)
+				pr_err("No allocation of base address for [common gpio]");
+		}
+
+		samsung_gpiolib_add_4bit_chips(exynos5210_gpio_4bit, nr_chips);
+	}
+
 	s5p_register_gpioint_bank(IRQ_GPIO_XA, 0, IRQ_GPIO1_NR_GROUPS);
 	s5p_register_gpioint_bank(IRQ_GPIO_XB, IRQ_GPIO1_NR_GROUPS, IRQ_GPIO2_NR_GROUPS);
 
