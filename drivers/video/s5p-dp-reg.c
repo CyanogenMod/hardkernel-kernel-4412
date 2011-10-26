@@ -1243,13 +1243,13 @@ int s5p_dp_config_video_bist(struct s5p_dp_device *dp,
 	/* BIST color bar width set--set to each bar is 32 pixel width */
 	switch (video_info->test_pattern) {
 	case COLOR_RAMP:
-		pattern_value |= 0x01;
+		pattern_value |= TEST_PATTERN_MODE_COLOR_RAMP;
 		break;
 	case COLOR_SQUARE:
-		pattern_value |= 0x03;
+		pattern_value |= TEST_PATTERN_MODE_COLOR_SQUARE;
 		break;
 	case BALCK_WHITE_V_LINES:
-		pattern_value |= 0x02;
+		pattern_value |= TEST_PATTERN_MODE_BALCK_WHITE_V_LINES;
 		break;
 	case COLORBAR_32:
 		bist_type = BIST_WIDTH_BAR_32_PIXEL |
@@ -1281,10 +1281,14 @@ int s5p_dp_config_video_bist(struct s5p_dp_device *dp,
 
 	reg = pattern_value;
 	writel(reg, dp->reg_base + S5P_DP_TEST_PATTERN_GEN_CTRL);
-	if (pattern_value & 0x3)
-		writel(1, dp->reg_base + S5P_DP_TEST_PATTERN_GEN_EN);
-	else
-		writel(0, dp->reg_base + S5P_DP_TEST_PATTERN_GEN_EN);
+
+	if (pattern_value & 0x3) {
+		reg = TEST_PATTERN_GEN_EN;
+		writel(reg, dp->reg_base + S5P_DP_TEST_PATTERN_GEN_EN);
+	} else {
+		reg = TEST_PATTERN_GEN_DIS;
+		writel(reg, dp->reg_base + S5P_DP_TEST_PATTERN_GEN_EN);
+	}
 
 	reg = bist_type;
 	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_4);
