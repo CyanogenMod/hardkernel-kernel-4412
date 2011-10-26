@@ -585,7 +585,9 @@ config MACH_SMDK5250
 	select S3C_DEV_RTC
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
+	select S3C_DEV_I2C1
 	select S5P_DEV_FIMD1
+	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FIMD
 	help
