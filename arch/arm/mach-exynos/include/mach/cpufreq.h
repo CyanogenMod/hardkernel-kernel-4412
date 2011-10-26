@@ -44,6 +44,7 @@ enum cpufreq_lock_ID {
 	DVFS_LOCK_ID_PM,	/* PM */
 	DVFS_LOCK_ID_USER,	/* USER */
 	DVFS_LOCK_ID_TMU,	/* TMU */
+	DVFS_LOCK_ID_LPA,	/* LPA */
 	DVFS_LOCK_ID_END,
 };
 
