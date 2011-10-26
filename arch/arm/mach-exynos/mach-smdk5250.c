@@ -275,6 +275,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
 #endif
+	&s3c_device_rtc,
 };
 
 #if defined(CONFIG_S5P_MEM_CMA)

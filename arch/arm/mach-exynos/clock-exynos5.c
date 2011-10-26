@@ -87,6 +87,11 @@ static int exynos5_clk_ip_peric_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_PERIC, clk, enable);
 }
 
+static int exynos5_clk_ip_peris_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_PERIS, clk, enable);
+}
+
 static int exynos5_clksrc_mask_peric0_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_PERIC0, clk, enable);
@@ -556,6 +561,11 @@ static struct clk exynos5_init_clocks_off[] = {
 		.parent		= &exynos5_clk_aclk_66.clk,
 		.enable		= exynos5_clk_ip_peric_ctrl,
 		.ctrlbit	= (1<<24),
+	}, {
+		.name		= "rtc",
+		.parent		= &exynos5_clk_aclk_66.clk,
+		.enable		= exynos5_clk_ip_peris_ctrl,
+		.ctrlbit	= (1<<20),
 	}, {
 		.name		= "hsmmc",
 		.devname	= "s3c-sdhci.0",

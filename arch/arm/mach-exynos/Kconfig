@@ -572,6 +572,7 @@ config MACH_SMDK5210
 config MACH_SMDK5250
 	bool "SMDK5250 board"
 	select CPU_EXYNOS5250
+	select S3C_DEV_RTC
 	select S3C_DEV_HSMMC2
 	select S3C_DEV_HSMMC3
 	select S5P_DEV_FIMD1
