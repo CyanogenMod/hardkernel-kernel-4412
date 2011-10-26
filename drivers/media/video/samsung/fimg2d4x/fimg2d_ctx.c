@@ -335,13 +335,11 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 		if (cmd->src.addr.cacheable)
 			cmd->size_all += csrc->size;
 
-#ifdef CONFIG_OUTER_CACHE
 		if (cmd->src.addr.type == ADDR_USER) {
 			pt = fimg2d_check_pagetable(mm, csrc->addr, csrc->size);
 			if (pt == PT_FAULT)
 				return -1;
 		}
-#endif
 	}
 
 	if (cmd->msken) {
@@ -353,13 +351,11 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 		if (cmd->msk.addr.cacheable)
 			cmd->size_all += cmsk->size;
 
-#ifdef CONFIG_OUTER_CACHE
 		if (cmd->msk.addr.type == ADDR_USER) {
 			pt = fimg2d_check_pagetable(mm, cmsk->addr, cmsk->size);
 			if (pt == PT_FAULT)
 				return -1;
 		}
-#endif
 	}
 
 	/* caculate horizontally clipped region */
@@ -379,13 +375,11 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 		if (cmd->dst.addr.cacheable)
 			cmd->size_all += cdst->size;
 
-#ifdef CONFIG_OUTER_CACHE
 		if (cmd->dst.addr.type == ADDR_USER) {
 			pt = fimg2d_check_pagetable(mm, cdst->addr, cdst->size);
 			if (pt == PT_FAULT)
 				return -1;
 		}
-#endif
 	}
 
 	fimg2d_debug("cached size all = %d\n", cmd->size_all);

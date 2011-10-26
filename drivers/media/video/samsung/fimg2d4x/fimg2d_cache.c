@@ -102,6 +102,7 @@ void fimg2d_clean_outer_pagetable(struct mm_struct *mm, unsigned long vaddr,
 		lv1++;
 	} while (lv1 != lv1end);
 }
+#endif /* CONFIG_OUTER_CACHE */
 
 enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long vaddr,
 					size_t size)
@@ -153,4 +154,3 @@ enum pt_status fimg2d_check_pagetable(struct mm_struct *mm, unsigned long vaddr,
 
 	return PT_NORMAL;
 }
-#endif /* CONFIG_OUTER_CACHE */
