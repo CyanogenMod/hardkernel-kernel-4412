@@ -26,6 +26,7 @@
 #include <mach/gpio.h>
 #include <mach/smc.h>
 #include <mach/clock-domain.h>
+#include <mach/regs-audss.h>
 
 #include <plat/regs-otg.h>
 #include <plat/exynos4.h>
@@ -282,6 +283,12 @@ static struct sleep_save exynos4_lpa_save[] = {
 	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_DMC),
 };
 
+static struct sleep_save exynos4_aftr_save[] = {
+	/* CMU side */
+	SAVE_ITEM(S5P_CLKSRC_AUDSS),
+	SAVE_ITEM(S5P_CLKDIV_AUDSS),
+};
+
 static struct sleep_save exynos4_set_clksrc[] = {
 	{ .reg = EXYNOS4_CLKSRC_MASK_TOP			, .val = 0x00000001, },
 	{ .reg = EXYNOS4_CLKSRC_MASK_CAM			, .val = 0x11111111, },
@@ -346,6 +353,15 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	int idle_time;
 	unsigned long tmp;
 
+	/*
+	 * Defence code to avoid start up code latency after wakeup from aftr mode
+	 */
+	s3c_pm_do_save(exynos4_aftr_save, ARRAY_SIZE(exynos4_aftr_save));
+
+	tmp = __raw_readl(S5P_CLKDIV_AUDSS);
+	tmp &= ~(S5P_AUDSS_CLKDIV_RP_MASK | S5P_AUDSS_CLKDIV_BUSCLK_MASK);
+	__raw_writel(tmp, S5P_CLKDIV_AUDSS);
+
 	local_irq_disable();
 	do_gettimeofday(&before);
 
@@ -374,6 +390,8 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 
 	vfp_enable(NULL);
 
+	s3c_pm_do_restore_core(exynos4_aftr_save,
+			       ARRAY_SIZE(exynos4_aftr_save));
 early_wakeup:
 
 	/* Clear wakeup state register */
@@ -615,11 +633,7 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 
 	enter_mode = exynos4_check_entermode();
 	if (enter_mode == S5P_CHECK_DIDLE) {
-		if (soc_is_exynos4210())
-			return exynos4_enter_core0_aftr(dev, new_state);
-		else
-			/* In this time, Exynos4x12 is not support aftr mode */
-			return exynos4_enter_idle(dev, new_state);
+		return exynos4_enter_core0_aftr(dev, new_state);
 	} else
 		return exynos4_enter_core0_lpa(dev, new_state);
 }
