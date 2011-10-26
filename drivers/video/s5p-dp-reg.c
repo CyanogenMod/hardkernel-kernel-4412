@@ -918,7 +918,7 @@ void s5p_dp_set_training_pattern(struct s5p_dp_device *dp,
 
 	switch (pattern) {
 	case PRBS7:
-		reg = SCRAMBLING_ENABLE | LINK_QUAL_PATTERN_SET;
+		reg = SCRAMBLING_ENABLE | LINK_QUAL_PATTERN_SET_PRBS7;
 		writel(reg, dp->reg_base + S5P_DP_TRAINING_PTN_SET);
 		break;
 	case D10_2:
@@ -936,7 +936,9 @@ void s5p_dp_set_training_pattern(struct s5p_dp_device *dp,
 		writel(reg, dp->reg_base + S5P_DP_TRAINING_PTN_SET);
 		break;
 	case DP_NONE:
-		reg = 0;
+		reg = SCRAMBLING_ENABLE |
+			LINK_QUAL_PATTERN_SET_DISABLE |
+			SW_TRAINING_PATTERN_SET_NORMAL;
 		writel(reg, dp->reg_base + S5P_DP_TRAINING_PTN_SET);
 		break;
 	default:
