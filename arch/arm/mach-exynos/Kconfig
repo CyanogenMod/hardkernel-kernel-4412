@@ -294,6 +294,13 @@ config EXYNOS4_SETUP_MIPI_DSI
 	help
 	  Common setup code for MIPI_DSIM.
 
+config EXYNOS4_SETUP_MIPI_DSIM
+	bool
+	depends on FB_MIPI_DSIM
+	default y
+	help
+	  Common setup code for MIPI_DSIM to support mainline style fimd.
+
 config EXYNOS4_SETUP_JPEG
 	bool
 	depends on VIDEO_JPEG_V2X
