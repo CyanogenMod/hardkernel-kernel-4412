@@ -254,13 +254,13 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 #ifdef CONFIG_ARM_TRUSTZONE
 		cpu_boot_info[i].boot_base = S5P_VA_SYSRAM_NS + 0x1C;
 #else
-		if (soc_is_exynos4412())
-			cpu_boot_info[i].boot_base = S5P_VA_SYSRAM + (0x4 * i);
-		else if (exynos4_subrev())
+		if (exynos4_subrev())
 			cpu_boot_info[i].boot_base = S5P_INFORM5;
 		else
 			cpu_boot_info[i].boot_base = S5P_VA_SYSRAM;
 #endif
+		if (soc_is_exynos4412())
+			cpu_boot_info[i].boot_base += (0x4 * i);
 		cpu_boot_info[i].power_base = S5P_ARM_CORE_CONFIGURATION(i);
 	}
 }
