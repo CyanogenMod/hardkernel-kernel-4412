@@ -27,6 +27,9 @@
 #define MDEV_MODULE_NAME "exynos5-mdev"
 #define MAX_GSC_SUBDEV		4
 
+#define GSC_OUT_PAD_SINK	0
+#define GSC_OUT_PAD_SOURCE	1
+
 enum mdev_node {
 	MDEV_OUTPUT,
 	MDEV_CAPTURE,
