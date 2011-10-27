@@ -1080,9 +1080,7 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 	req->status = -EINPROGRESS;
 
 	/* Sync the buffers as necessary */
-	if (udc_ep->epnum == 0 && (udc->ep0_state == EP0_SETUP_PHASE ||
-				   udc->ep0_state == EP0_STATUS_PHASE_2 ||
-				   udc->ep0_state == EP0_STATUS_PHASE_3))
+	if (req->buf == udc->ctrl_buff)
 		req->dma = udc->ctrl_buff_dma;
 	else {
 		ret = exynos_ss_udc_map_dma(udc, udc_ep, req);
@@ -1248,9 +1246,7 @@ static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
 	udc_ep->req = NULL;
 	list_del_init(&udc_req->queue);
 
-	if (!(udc_ep->epnum == 0 && (udc->ep0_state == EP0_SETUP_PHASE ||
-				   udc->ep0_state == EP0_STATUS_PHASE_2 ||
-				   udc->ep0_state == EP0_STATUS_PHASE_3)))
+	if (udc_req->req.buf != udc->ctrl_buff)
 		exynos_ss_udc_unmap_dma(udc, udc_ep, udc_req);
 
 	if (udc_ep->epnum == 0) {
@@ -1601,6 +1597,10 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 
 	case EXYNOS_USB3_DEVT_EVENT_USBRst:
 		exynos_ss_udc_irq_usbrst(udc);
+		break;
+
+	case EXYNOS_USB3_DEVT_EVENT_DisconnEvt:
+		call_gadget(udc, disconnect);
 		break;
 
 	default:
@@ -2060,7 +2060,8 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 
 	/* Enable events */
 	writel(EXYNOS_USB3_DEVTEN_ULStCngEn | EXYNOS_USB3_DEVTEN_ConnectDoneEn |
-		EXYNOS_USB3_DEVTEN_USBRstEn, udc->regs + EXYNOS_USB3_DEVTEN);
+		EXYNOS_USB3_DEVTEN_USBRstEn | EXYNOS_USB3_DEVTEN_DisconnEvtEn,
+		udc->regs + EXYNOS_USB3_DEVTEN);
 
 	exynos_ss_udc_ep0_activate(udc);
 
