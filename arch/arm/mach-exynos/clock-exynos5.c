@@ -614,6 +614,15 @@ static struct clksrc_clk exynos5_clk_aclk_66 = {
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 0, .size = 3 },
 };
 
+/* SCLK_JPEG */
+struct clksrc_clk exynos5_clk_dout_jpeg = {
+	.clk	= {
+		.name		= "dout_jpeg",
+		.parent		= &exynos5_clk_mout_cpll.clk,
+	},
+	.reg_div = { .reg = EXYNOS5_CLKDIV_GEN, .shift = 4, .size = 3 },
+};
+
 static struct clk exynos5_init_clocks[] = {
 	{
 		.name		= "uart",
@@ -1244,6 +1253,7 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_sclk_audio1,
 	&exynos5_clk_sclk_audio2,
 	&exynos5_clk_sclk_spdif,
+	&exynos5_clk_dout_jpeg,
 };
 
 static unsigned long exynos5_epll_get_rate(struct clk *clk)
