@@ -115,7 +115,7 @@ static int exynos_power_up_cpu(unsigned int cpu)
 		while (timeout) {
 			val = __raw_readl(power_base + 0x4);
 
-			if ((val & S5P_CORE_LOCAL_PWR_EN) != S5P_CORE_LOCAL_PWR_EN)
+			if ((val & S5P_CORE_LOCAL_PWR_EN) == S5P_CORE_LOCAL_PWR_EN)
 				break;
 
 			mdelay(1);
