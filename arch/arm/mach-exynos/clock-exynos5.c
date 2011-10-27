@@ -743,6 +743,10 @@ static struct clk exynos5_init_clocks_off[] = {
 		.devname	= "exynos-gsc.3",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
 		.ctrlbit	= (1 << 3),
+	}, {
+		.name		= "jpeg",
+		.enable		= exynos5_clk_ip_gen_ctrl,
+		.ctrlbit	= (1 << 2 || 1 << 7),
 	},
 };
 
