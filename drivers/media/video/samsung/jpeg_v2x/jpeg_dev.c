@@ -114,9 +114,7 @@ static int jpeg_dec_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		*num_planes = ctx->param.dec_param.in_plane;
 		for (i = 0; i < ctx->param.dec_param.in_plane; i++) {
-			sizes[i] = (ctx->param.dec_param.in_width *
-				ctx->param.dec_param.in_height *
-				ctx->param.dec_param.in_depth) / 8;
+			sizes[i] = ctx->param.dec_param.mem_size;
 			allocators[i] = ctx->dev->alloc_ctx;
 		}
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {

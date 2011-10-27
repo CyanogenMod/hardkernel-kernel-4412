@@ -128,6 +128,7 @@ struct jpeg_dec_param {
 	unsigned int out_width;
 	unsigned int out_height;
 	unsigned int size;
+	unsigned int mem_size;
 	unsigned int in_plane;
 	unsigned int out_plane;
 	unsigned int in_depth;
