@@ -1872,191 +1872,26 @@ int fimc_suspend_pd(struct device *dev)
 	return 0;
 }
 
-static inline void fimc_resume_out_ctx(struct fimc_control *ctrl,
-				       struct fimc_ctx *ctx)
-{
-	int index = -1, ret = -1;
-
-	switch (ctx->overlay.mode) {
-	case FIMC_OVLY_FIFO:
-		if (ctx->status == FIMC_ON_SLEEP) {
-			ctx->status = FIMC_READY_ON;
-
-			ret = fimc_outdev_set_ctx_param(ctrl, ctx);
-			if (ret < 0)
-				fimc_err("Fail: fimc_outdev_set_ctx_param\n");
-
-#if defined(CONFIG_VIDEO_IPC)
-			if (ctx->pix.field == V4L2_FIELD_INTERLACED_TB)
-				ipc_start();
-#endif
-			index = ctrl->out->idxs.active.idx;
-			fimc_outdev_set_src_addr(ctrl, ctx->src[index].base);
-
-			ret = fimc_start_fifo(ctrl, ctx);
-			if (ret < 0)
-				fimc_err("Fail: fimc_start_fifo\n");
-
-			ctx->status = FIMC_STREAMON;
-		} else if (ctx->status == FIMC_OFF_SLEEP) {
-			ctx->status = FIMC_STREAMOFF;
-		} else {
-			fimc_err("%s: Abnormal (%d)\n", __func__, ctx->status);
-		}
-
-		break;
-	case FIMC_OVLY_DMA_AUTO:
-		if (ctx->status == FIMC_ON_IDLE_SLEEP) {
-			fimc_outdev_resume_dma(ctrl, ctx);
-			ret = fimc_outdev_set_ctx_param(ctrl, ctx);
-			if (ret < 0)
-				fimc_err("Fail: fimc_outdev_set_ctx_param\n");
-
-			ctx->status = FIMC_STREAMON_IDLE;
-		} else if (ctx->status == FIMC_OFF_SLEEP) {
-			ctx->status = FIMC_STREAMOFF;
-		} else {
-			fimc_err("%s: Abnormal (%d)\n", __func__, ctx->status);
-		}
-
-		break;
-	case FIMC_OVLY_DMA_MANUAL:
-		if (ctx->status == FIMC_ON_IDLE_SLEEP) {
-			ret = fimc_outdev_set_ctx_param(ctrl, ctx);
-			if (ret < 0)
-				fimc_err("Fail: fimc_outdev_set_ctx_param\n");
-
-			ctx->status = FIMC_STREAMON_IDLE;
-
-		} else if (ctx->status == FIMC_OFF_SLEEP) {
-			ctx->status = FIMC_STREAMOFF;
-		} else {
-			fimc_err("%s: Abnormal (%d)\n", __func__, ctx->status);
-		}
-
-		break;
-	case FIMC_OVLY_NONE_SINGLE_BUF:		/* fall through */
-	case FIMC_OVLY_NONE_MULTI_BUF:
-		if (ctx->status == FIMC_ON_IDLE_SLEEP) {
-			ret = fimc_outdev_set_ctx_param(ctrl, ctx);
-			if (ret < 0)
-				fimc_err("Fail: fimc_outdev_set_ctx_param\n");
-
-			ctx->status = FIMC_STREAMON_IDLE;
-		} else if (ctx->status == FIMC_OFF_SLEEP) {
-			ctx->status = FIMC_STREAMOFF;
-		} else {
-			fimc_err("%s: Abnormal (%d)\n", __func__, ctx->status);
-		}
-
-		break;
-	default:
-		ctx->status = FIMC_STREAMOFF;
-		break;
-	}
-}
-
 static inline int fimc_resume_out(struct fimc_control *ctrl)
 {
 	struct fimc_ctx *ctx;
 	int i;
 	u32 state = 0;
-	u32 timeout;
-	struct s3c_platform_fimc *pdata;
-
-	pdata = to_fimc_plat(ctrl->dev);
-
-	__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_CAM_CONF);
-
-	/* Wait max 1ms */
-	timeout = 1000;
-	while ((__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN)
-		!= S5P_INT_LOCAL_PWR_EN) {
-		if (timeout == 0) {
-			printk(KERN_ERR "Power domain CAM enable failed.\n");
-			break;
-		}
-		timeout--;
-		udelay(1);
-	}
-
-	if (timeout == 0) {
-		timeout = 1000;
-		__raw_writel(0x1, S5P_PMU_CAM_CONF + 0x8);
-		__raw_writel(S5P_INT_LOCAL_PWR_EN, S5P_PMU_CAM_CONF);
-		while ((__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN)
-			!= S5P_INT_LOCAL_PWR_EN) {
-			if (timeout == 0) {
-				printk(KERN_ERR "Power domain CAM enable failed 2nd.\n");
-				BUG();
-			}
-			timeout--;
-			udelay(1);
-		}
-		__raw_writel(0x2, S5P_PMU_CAM_CONF + 0x8);
-	}
 
 	for (i = 0; i < FIMC_MAX_CTXS; i++) {
 		ctx = &ctrl->out->ctx[i];
-
-		if (pdata->clk_on) {
-			pdata->clk_on(to_platform_device(ctrl->dev),
-					&ctrl->clk);
-		}
-
-		fimc_resume_out_ctx(ctrl, ctx);
-
-		if (pdata->clk_off) {
-			pdata->clk_off(to_platform_device(ctrl->dev),
-					&ctrl->clk);
-		}
-
-		switch (ctx->status) {
-		case FIMC_STREAMON:
-			state |= FIMC_STREAMON;
-			break;
-		case FIMC_STREAMON_IDLE:
+		if (ctx->status == FIMC_ON_IDLE_SLEEP) {
+			ctx->status = FIMC_STREAMON_IDLE;
 			state |= FIMC_STREAMON_IDLE;
-			break;
-		case FIMC_STREAMOFF:
+		} else if (ctx->status == FIMC_OFF_SLEEP) {
+			ctx->status = FIMC_STREAMOFF;
 			state |= FIMC_STREAMOFF;
-			break;
-		default:
-			break;
+		} else {
+			fimc_err("%s: Abnormal (%d)\n", __func__, ctx->status);
 		}
 	}
 
-	__raw_writel(0, S5P_PMU_CAM_CONF);
-
-	/* Wait max 1ms */
-	timeout = 1000;
-	while (__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN) {
-		if (timeout == 0) {
-			printk(KERN_ERR "Power domain CAM disable failed.\n");
-			break;
-		}
-		timeout--;
-		udelay(1);
-	}
-
-	if (timeout == 0) {
-		timeout = 1000;
-		__raw_writel(0x1, S5P_PMU_CAM_CONF + 0x8);
-		__raw_writel(0, S5P_PMU_CAM_CONF);
-		while (__raw_readl(S5P_PMU_CAM_CONF + 0x4) & S5P_INT_LOCAL_PWR_EN) {
-			if (timeout == 0) {
-				printk(KERN_ERR "Power domain CAM disable failed 2nd.\n");
-				BUG();
-			}
-			timeout--;
-			udelay(1);
-		}
-		__raw_writel(0x2, S5P_PMU_CAM_CONF + 0x8);
-	}
-
-	if ((state & FIMC_STREAMON) == FIMC_STREAMON)
-		ctrl->status = FIMC_STREAMON;
-	else if ((state & FIMC_STREAMON_IDLE) == FIMC_STREAMON_IDLE)
+	if ((state & FIMC_STREAMON_IDLE) == FIMC_STREAMON_IDLE)
 		ctrl->status = FIMC_STREAMON_IDLE;
 	else
 		ctrl->status = FIMC_STREAMOFF;
