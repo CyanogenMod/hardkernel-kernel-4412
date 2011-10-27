@@ -26,6 +26,5 @@ endif
 
 config MEDIA_EXYNOS
 	bool
-	default y
 	help
 	  Compile mdev to use exynos5 media device driver.

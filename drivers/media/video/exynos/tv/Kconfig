@@ -10,6 +10,7 @@ config VIDEO_EXYNOS_TV
 	bool "Samsung TV driver for S5P platform (experimental)"
 	depends on PLAT_S5P
 	depends on EXPERIMENTAL
+	select MEDIA_EXYNOS
 	default n
 	---help---
 	  Say Y here to enable selecting the TV output devices for
