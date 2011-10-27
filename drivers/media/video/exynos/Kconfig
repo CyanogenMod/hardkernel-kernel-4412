@@ -18,6 +18,7 @@ config VIDEO_EXYNOS_MEMSIZE_FIMC_IS
 if VIDEO_EXYNOS
 	source "drivers/media/video/exynos/fimc-is/Kconfig"
 	source "drivers/media/video/exynos/fimc-lite/Kconfig"
+	source "drivers/media/video/exynos/tv/Kconfig"
 if ARCH_EXYNOS5
 	source "drivers/media/video/exynos/mdev/Kconfig"
 endif
@@ -25,5 +26,6 @@ endif
 
 config MEDIA_EXYNOS
 	bool
+	default y
 	help
 	  Compile mdev to use exynos5 media device driver.
