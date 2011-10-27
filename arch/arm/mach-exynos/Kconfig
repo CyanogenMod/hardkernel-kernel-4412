@@ -574,6 +574,8 @@ config MACH_SMDK5210
 	select EXYNOS4_SETUP_SDHCI
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_PWM
+	select S5P_DEV_I2C_HDMIPHY
+	select S5P_DEV_TV
 	help
 	  Machine support for Samsung SMDK5210
 
