@@ -127,6 +127,11 @@ static int exynos5_clk_ip_mfc_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_MFC, clk, enable);
 }
 
+static int exynos5_clk_hdmiphy_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_HDMI_PHY_CONTROL, clk, enable);
+}
+
 static int exynos5_clksrc_ip_gen_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GEN, clk, enable);
@@ -281,6 +286,39 @@ static struct clksrc_clk exynos5_clk_sclk_vpll = {
 	},
 	.sources = &exynos5_clkset_sclk_vpll,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 16, .size = 1 },
+};
+
+static struct clksrc_clk exynos5_clk_sclk_pixel = {
+	.clk	= {
+		.name		= "sclk_pixel",
+		.parent		= &exynos5_clk_sclk_vpll.clk,
+	},
+	.reg_div = { .reg = EXYNOS5_CLKDIV_DISP1_0, .shift = 28, .size = 4 },
+};
+
+static struct clk *exynos5_clkset_sclk_hdmi_list[] = {
+	[0] = &exynos5_clk_sclk_pixel.clk,
+	[1] = &exynos5_clk_sclk_hdmiphy,
+};
+
+static struct clksrc_sources exynos5_clkset_sclk_hdmi = {
+	.sources	= exynos5_clkset_sclk_hdmi_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_sclk_hdmi_list),
+};
+
+static struct clksrc_clk exynos5_clk_sclk_hdmi = {
+	.clk	= {
+		.name           = "sclk_hdmi",
+		.enable		= exynos5_clksrc_mask_disp1_0_ctrl,
+		.ctrlbit	= (1 << 20),
+	},
+	.sources = &exynos5_clkset_sclk_hdmi,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_DISP1_0, .shift = 20, .size = 1 },
+};
+
+static struct clksrc_clk *exynos5_sclk_tv[] = {
+	&exynos5_clk_sclk_pixel,
+	&exynos5_clk_sclk_hdmi,
 };
 
 /* BPLL USER */
@@ -674,6 +712,21 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
+		.name		= "hdmi",
+		.devname	= "exynos5-hdmi",
+		.enable		= exynos5_clk_ip_disp1_ctrl,
+		.ctrlbit	= (1 << 6),
+	}, {
+		.name		= "mixer",
+		.devname	= "s5p-mixer",
+		.enable		= exynos5_clk_ip_disp1_ctrl,
+		.ctrlbit	= (1 << 5),
+	}, {
+		.name           = "hdmiphy",
+		.devname	= "exynos5-hdmi",
+		.enable         = exynos5_clk_hdmiphy_ctrl,
+		.ctrlbit        = (1 << 0),
+	}, {
 		.name		= "gscl",
 		.devname	= "exynos-gsc.0",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
@@ -745,6 +798,12 @@ static struct clk exynos5_i2cs_clocks[] = {
 		.parent		= &exynos5_clk_aclk_66.clk,
 		.enable		= exynos5_clk_ip_peric_ctrl,
 		.ctrlbit	= (1 << 13),
+	}, {
+		.name		= "i2c",
+		.devname	= "s3c2440-hdmiphy-i2c",
+		.parent		= &exynos5_clk_aclk_66.clk,
+		.enable		= exynos5_clk_ip_peric_ctrl,
+		.ctrlbit	= (1 << 14),
 	}
 };
 
@@ -1398,6 +1457,9 @@ void __init exynos5_register_clocks(void)
 
 	for (ptr = 0; ptr < ARRAY_SIZE(exynos5_sysclks); ptr++)
 		s3c_register_clksrc(exynos5_sysclks[ptr], 1);
+
+	for (ptr = 0; ptr < ARRAY_SIZE(exynos5_sclk_tv); ptr++)
+		s3c_register_clksrc(exynos5_sclk_tv[ptr], 1);
 
 	s3c_register_clksrc(exynos5_clksrcs, ARRAY_SIZE(exynos5_clksrcs));
 	s3c_register_clocks(exynos5_init_clocks, ARRAY_SIZE(exynos5_init_clocks));

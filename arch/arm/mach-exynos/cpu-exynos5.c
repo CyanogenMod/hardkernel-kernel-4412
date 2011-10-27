@@ -24,6 +24,7 @@
 #include <plat/sdhci.h>
 #include <plat/pm.h>
 #include <plat/iic-core.h>
+#include <plat/tv-core.h>
 
 #include <mach/regs-irq.h>
 
@@ -139,6 +140,8 @@ void __init exynos5_map_io(void)
 #endif
 
 	s5p_fb_setname(1, "exynos5-fb");        /* FIMD1 */
+
+	s5p_hdmi_setname("exynos5-hdmi");
 
 	/* The I2C bus controllers are directly compatible with s3c2440 */
 	s3c_i2c0_setname("s3c2440-i2c");

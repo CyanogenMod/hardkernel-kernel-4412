@@ -90,6 +90,16 @@ config S5P_DEV_FIMC3
 	help
 	  Compile in platform device definitions for FIMC controller 3
 
+config S5P_DEV_I2C_HDMIPHY
+	bool
+	help
+	  Compile in platform device definitions for I2C HDMIPHY controller
+
+config S5P_DEV_TV
+	bool
+	help
+	  Compile in platform device definition for TV interface
+
 config S5P_DEV_MFC
 	bool
 	help
