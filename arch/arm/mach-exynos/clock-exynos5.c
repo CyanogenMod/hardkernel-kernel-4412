@@ -129,7 +129,7 @@ static int exynos5_clk_hdmiphy_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(S5P_HDMI_PHY_CONTROL, clk, enable);
 }
 
-static int exynos5_clksrc_ip_gen_ctrl(struct clk *clk, int enable)
+static int exynos5_clk_ip_gen_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GEN, clk, enable);
 }
@@ -808,7 +808,7 @@ struct clk exynos5_init_dmaclocks[] = {
 	{
 		.name		= "pdma",
 		.devname	= "s3c-pl330.0",
-		.enable		= exynos5_clksrc_ip_gen_ctrl,
+		.enable		= exynos5_clk_ip_gen_ctrl,
 		.ctrlbit	= (1 << 4),
 	}, {
 		.name		= "pdma",
