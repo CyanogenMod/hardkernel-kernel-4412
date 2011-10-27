@@ -17,17 +17,19 @@
 #include <linux/notifier.h>
 #include <linux/reboot.h>
 #include <linux/suspend.h>
+#include <linux/io.h>
+
 #include <plat/cputype.h>
 
 static unsigned int total_num_target_freq;
 static unsigned int consecutv_highestlevel_cnt;
 static unsigned int consecutv_lowestlevel_cnt;
-static unsigned int num_hotplug_in;
-static unsigned int num_hotplug_out;
 
 static unsigned int freq_max;
 static unsigned int freq_in_trg;
 static unsigned int freq_min = -1UL;
+
+static unsigned int can_hotplug;
 
 static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 					unsigned int freq_new)
@@ -38,30 +40,26 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 	if ((freq_old >= freq_in_trg) && (freq_new >= freq_in_trg)) {
 		if (soc_is_exynos4412()) {
 			if (cpu_online(3) == 0) {
-				if (consecutv_highestlevel_cnt >= 2) {
+				if (consecutv_highestlevel_cnt >= 5) {
 					cpu_up(3);
-					num_hotplug_in++;
 					consecutv_highestlevel_cnt = 0;
 				}
 			} else if (cpu_online(2) == 0) {
-				if (consecutv_highestlevel_cnt >= 2) {
+				if (consecutv_highestlevel_cnt >= 5) {
 					cpu_up(2);
-					num_hotplug_in++;
 					consecutv_highestlevel_cnt = 0;
 				}
 			} else if (cpu_online(1) == 0) {
-				if (consecutv_highestlevel_cnt >= 2) {
+				if (consecutv_highestlevel_cnt >= 5) {
 					cpu_up(1);
-					num_hotplug_in++;
 					consecutv_highestlevel_cnt = 0;
 				}
 			}
 			consecutv_highestlevel_cnt++;
 		} else {
 			if (cpu_online(1) == 0) {
-				if (consecutv_highestlevel_cnt >= 2) {
+				if (consecutv_highestlevel_cnt >= 5) {
 					cpu_up(1);
-					num_hotplug_in++;
 					consecutv_highestlevel_cnt = 0;
 				}
 			}
@@ -70,33 +68,29 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 	} else if ((freq_old <= freq_min) && (freq_new <= freq_min)) {
 		if (soc_is_exynos4412()) {
 			if (cpu_online(1) == 1) {
-				if (consecutv_lowestlevel_cnt >= 2) {
+				if (consecutv_lowestlevel_cnt >= 5) {
 					cpu_down(1);
-					num_hotplug_out++;
-					consecutv_lowestlevel_cnt = 1;
+					consecutv_lowestlevel_cnt = 0;
 				} else
 					consecutv_lowestlevel_cnt++;
 			} else if (cpu_online(2) == 1) {
-				if (consecutv_lowestlevel_cnt >= 2) {
+				if (consecutv_lowestlevel_cnt >= 5) {
 					cpu_down(2);
-					num_hotplug_out++;
 					consecutv_lowestlevel_cnt = 0;
 				} else
 					consecutv_lowestlevel_cnt++;
 			} else if (cpu_online(3) == 1) {
-				if (consecutv_lowestlevel_cnt >= 2) {
+				if (consecutv_lowestlevel_cnt >= 5) {
 					cpu_down(3);
-					num_hotplug_out++;
 					consecutv_lowestlevel_cnt = 0;
 				} else
 					consecutv_lowestlevel_cnt++;
 			}
 		} else {
 			if (cpu_online(1) == 1) {
-				if (consecutv_lowestlevel_cnt >= 2) {
+				if (consecutv_lowestlevel_cnt >= 5) {
 					cpu_down(1);
-					num_hotplug_out++;
-					consecutv_lowestlevel_cnt = 1;
+					consecutv_lowestlevel_cnt = 0;
 				} else
 					consecutv_lowestlevel_cnt++;
 			}
@@ -112,7 +106,7 @@ static int hotplug_cpufreq_transition(struct notifier_block *nb,
 {
 	struct cpufreq_freqs *freqs = (struct cpufreq_freqs *)data;
 
-	if (val == CPUFREQ_POSTCHANGE)
+	if ((val == CPUFREQ_POSTCHANGE) && can_hotplug)
 		exynos4_integrated_dvfs_hotplug(freqs->old, freqs->new);
 
 	return 0;
@@ -120,6 +114,28 @@ static int hotplug_cpufreq_transition(struct notifier_block *nb,
 
 static struct notifier_block dvfs_hotplug = {
 	.notifier_call = hotplug_cpufreq_transition,
+};
+
+static int hotplug_pm_transition(struct notifier_block *nb,
+					unsigned long val, void *data)
+{
+	switch (val) {
+	case PM_SUSPEND_PREPARE:
+		can_hotplug = 0;
+		consecutv_highestlevel_cnt = 0;
+		consecutv_lowestlevel_cnt = 0;
+		break;
+	case PM_POST_RESTORE:
+	case PM_POST_SUSPEND:
+		can_hotplug = 1;
+		break;
+	}
+
+	return 0;
+}
+
+static struct notifier_block pm_hotplug = {
+	.notifier_call = hotplug_pm_transition,
 };
 
 /*
@@ -136,8 +152,7 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 	total_num_target_freq = 0;
 	consecutv_highestlevel_cnt = 0;
 	consecutv_lowestlevel_cnt = 0;
-	num_hotplug_in = 0;
-	num_hotplug_out = 0;
+	can_hotplug = 1;
 
 	table = cpufreq_frequency_get_table(0);
 	if (IS_ERR(table)) {
@@ -155,6 +170,8 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 	}
 
 	printk(KERN_INFO "%s, max(%d),min(%d)\n", __func__, freq_max, freq_min);
+
+	register_pm_notifier(&pm_hotplug);
 
 	return cpufreq_register_notifier(&dvfs_hotplug,
 					 CPUFREQ_TRANSITION_NOTIFIER);

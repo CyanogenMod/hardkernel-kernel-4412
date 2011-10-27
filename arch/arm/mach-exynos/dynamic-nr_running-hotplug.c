@@ -28,11 +28,10 @@ static unsigned int ctn_nr_running_over4;
 static unsigned int ctn_nr_running_under2;
 static unsigned int ctn_nr_running_under3;
 static unsigned int ctn_nr_running_under4;
-static unsigned int num_hotplug_in;
-static unsigned int num_hotplug_out;
 static unsigned int freq_max;
 static unsigned int freq_in_trg;
 static unsigned int freq_min;
+static unsigned int can_hotplug;
 
 static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 					unsigned int freq_new)
@@ -74,24 +73,20 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 		if ((cpu_online(3) == 0) && (nr_running() >= 2)) {
 			if (ctn_nr_running_over2 >= 4) {		/* over 400ms, tunnable */
 				cpu_up(3);
-				num_hotplug_in++;
 			}
 		} else if ((cpu_online(2) == 0) && (nr_running() >= 3)) {
 			if (ctn_nr_running_over3 >= 4) {		/* over 400ms, tunnable */
 				cpu_up(2);
-				num_hotplug_in++;
 			}
 		} else if ((cpu_online(1) == 0) && (nr_running() >= 4)) {
 			if (ctn_nr_running_over4 >= 8) {		/* over 800ms, tunnable */
 				cpu_up(1);
-				num_hotplug_in++;
 			}
 		}
 	} else {
 		if (cpu_online(1) == 0) {
 			if (ctn_nr_running_over2 >= 8) {		/* over 800ms, tunnable */
 				cpu_up(1);
-				num_hotplug_in++;
 				ctn_nr_running_over2 = 0;
 			}
 		}
@@ -100,24 +95,20 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 		if ((cpu_online(1) == 1) && (nr_running() < 4)) {
 			if (ctn_nr_running_under4 >= 8) {		/* over 800ms, tunnable */
 				cpu_down(1);
-				num_hotplug_out++;
 			}
 		} else if ((cpu_online(2) == 1) && (nr_running() < 3)) {
 			if (ctn_nr_running_under3 >= 8) {		/* over 800ms, tunnable */
 				cpu_down(2);
-				num_hotplug_out++;
 			}
 		} else if ((cpu_online(3) == 1) && (nr_running() < 2)) {
 			if (ctn_nr_running_under2 >= 8) {		/* over 800ms, tunnable */
 				cpu_down(3);
-				num_hotplug_out++;
 			}
 		}
 	} else {
 		if (cpu_online(1) == 1) {
 			if (ctn_nr_running_under2 >= 8) {		/* over 800ms, tunnable */
 				cpu_down(1);
-				num_hotplug_out++;
 				ctn_nr_running_under2 = 0;
 			}
 		}
@@ -129,7 +120,7 @@ static int hotplug_cpufreq_transition(struct notifier_block *nb,
 {
 	struct cpufreq_freqs *freqs = (struct cpufreq_freqs *)data;
 
-	if (val == CPUFREQ_POSTCHANGE)
+	if ((val == CPUFREQ_POSTCHANGE) && can_hotplug)
 		exynos4_integrated_dvfs_hotplug(freqs->old, freqs->new);
 
 	return 0;
@@ -137,6 +128,28 @@ static int hotplug_cpufreq_transition(struct notifier_block *nb,
 
 static struct notifier_block dvfs_hotplug = {
 	.notifier_call = hotplug_cpufreq_transition,
+};
+
+static int hotplug_pm_transition(struct notifier_block *nb,
+					unsigned long val, void *data)
+{
+	switch (val) {
+	case PM_SUSPEND_PREPARE:
+		can_hotplug = 0;
+		ctn_highestlevel_cnt = 0;
+		ctn_lowestlevel_cnt = 0;
+		break;
+	case PM_POST_RESTORE:
+	case PM_POST_SUSPEND:
+		can_hotplug = 1;
+		break;
+	}
+
+	return 0;
+}
+
+static struct notifier_block pm_hotplug = {
+	.notifier_call = hotplug_pm_transition,
 };
 
 /*
@@ -159,8 +172,8 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 	ctn_nr_running_under2 = 0;
 	ctn_nr_running_under3 = 0;
 	ctn_nr_running_under4 = 0;
-	num_hotplug_in = 0;
-	num_hotplug_out = 0;
+
+	can_hotplug = 1;
 
 	table = cpufreq_frequency_get_table(0);
 	if (IS_ERR(table)) {
@@ -176,6 +189,8 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 		else if (freq != CPUFREQ_ENTRY_INVALID && freq_min > freq)
 			freq_min = freq;
 	}
+
+	register_pm_notifier(&pm_hotplug);
 
 	return cpufreq_register_notifier(&dvfs_hotplug,
 					 CPUFREQ_TRANSITION_NOTIFIER);

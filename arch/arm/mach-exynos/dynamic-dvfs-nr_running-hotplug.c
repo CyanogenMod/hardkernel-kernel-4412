@@ -17,6 +17,8 @@
 #include <linux/notifier.h>
 #include <linux/reboot.h>
 #include <linux/suspend.h>
+#include <linux/io.h>
+
 #include <plat/cputype.h>
 
 static unsigned int total_num_target_freq;
@@ -28,12 +30,11 @@ static unsigned int ctn_nr_running_over4;
 static unsigned int ctn_nr_running_under2;
 static unsigned int ctn_nr_running_under3;
 static unsigned int ctn_nr_running_under4;
-static unsigned int num_hotplug_in;
-static unsigned int num_hotplug_out;
 static unsigned int freq_max;			/* max frequency of the dedicated dvfs table */
 static unsigned int freq_min = -1UL;		/* min frequency of the dedicated dvfs table */
 static unsigned int freq_in_trg;		/* frequency hotplug in trigger */
 static unsigned int freq_out_trg;		/* frequency hotplug out trigger */
+static unsigned int can_hotplug;
 
 static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 					unsigned int freq_new)
@@ -89,7 +90,6 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 			   (ctn_freq_in_trg_cnt >= 5)) {
 				/* over 400ms for nr_running(), over 500ms for frequency, tunnable */
 				cpu_up(3);
-				num_hotplug_in++;
 				ctn_freq_in_trg_cnt = 0;
 			}
 		} else if ((cpu_online(2) == 0) && (nr_running() >= 3) &&
@@ -98,7 +98,6 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 			   (ctn_freq_in_trg_cnt >= 5)) {
 				/* over 400ms for nr_running(), over 500ms for frequency, tunnable */
 				cpu_up(2);
-				num_hotplug_in++;
 				ctn_freq_in_trg_cnt = 0;
 			}
 		} else if ((cpu_online(1) == 0) && (nr_running() >= 4) &&
@@ -107,7 +106,6 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 			   (ctn_freq_in_trg_cnt >= 5)) {
 				/* over 800ms for nr_running(), over 500ms for frequency, tunnable */
 				cpu_up(1);
-				num_hotplug_in++;
 				ctn_freq_in_trg_cnt = 0;
 			}
 		}
@@ -118,7 +116,6 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 			   (ctn_freq_in_trg_cnt >= 5)) {
 				/* over 800ms  for nr_running(), over 500ms for frequency, tunnable */
 				cpu_up(1);
-				num_hotplug_in++;
 				ctn_nr_running_over2 = 0;
 				ctn_freq_in_trg_cnt = 0;
 			}
@@ -132,7 +129,6 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 			   (ctn_freq_out_trg_cnt >= 5)) {
 				/* over 800ms for nr_running(), over 500ms for frequency, tunnable */
 				cpu_down(1);
-				num_hotplug_out++;
 				ctn_freq_out_trg_cnt = 0;
 			}
 		} else if ((cpu_online(2) == 1) && (nr_running() < 3) &&
@@ -141,7 +137,6 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 			   (ctn_freq_out_trg_cnt >= 5)) {
 				/* over 800ms for nr_running(), over 500ms for frequency, tunnable */
 				cpu_down(2);
-				num_hotplug_out++;
 				ctn_freq_out_trg_cnt = 0;
 			}
 		} else if ((cpu_online(3) == 1) && (nr_running() < 2) &&
@@ -150,7 +145,6 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 			   (ctn_freq_out_trg_cnt >= 5)) {
 				/* over 800ms for nr_running(), over 500ms for frequency, tunnable */
 				cpu_down(3);
-				num_hotplug_out++;
 				ctn_freq_out_trg_cnt = 0;
 			}
 		}
@@ -161,7 +155,6 @@ static void exynos4_integrated_dvfs_hotplug(unsigned int freq_old,
 			   (ctn_freq_out_trg_cnt >= 5)) {
 				/* over 800ms for nr_running(), over 500ms for frequency, tunnable */
 				cpu_down(1);
-				num_hotplug_out++;
 				ctn_nr_running_under2 = 0;
 				ctn_freq_out_trg_cnt = 0;
 			}
@@ -174,7 +167,7 @@ static int hotplug_cpufreq_transition(struct notifier_block *nb,
 {
 	struct cpufreq_freqs *freqs = (struct cpufreq_freqs *)data;
 
-	if (val == CPUFREQ_POSTCHANGE)
+	if ((val == CPUFREQ_POSTCHANGE) && can_hotplug)
 		exynos4_integrated_dvfs_hotplug(freqs->old, freqs->new);
 
 	return 0;
@@ -182,6 +175,28 @@ static int hotplug_cpufreq_transition(struct notifier_block *nb,
 
 static struct notifier_block dvfs_hotplug = {
 	.notifier_call = hotplug_cpufreq_transition,
+};
+
+static int hotplug_pm_transition(struct notifier_block *nb,
+					unsigned long val, void *data)
+{
+	switch (val) {
+	case PM_SUSPEND_PREPARE:
+		can_hotplug = 0;
+		ctn_freq_in_trg_cnt = 0;
+		ctn_freq_out_trg_cnt = 0;
+		break;
+	case PM_POST_RESTORE:
+	case PM_POST_SUSPEND:
+		can_hotplug = 1;
+		break;
+	}
+
+	return 0;
+}
+
+static struct notifier_block pm_hotplug = {
+	.notifier_call = hotplug_pm_transition,
 };
 
 /*
@@ -204,8 +219,8 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 	ctn_nr_running_under2 = 0;
 	ctn_nr_running_under3 = 0;
 	ctn_nr_running_under4 = 0;
-	num_hotplug_in = 0;
-	num_hotplug_out = 0;
+
+	can_hotplug = 1;
 
 	table = cpufreq_frequency_get_table(0);
 	if (IS_ERR(table)) {
@@ -223,6 +238,8 @@ static int __init exynos4_integrated_dvfs_hotplug_init(void)
 	}
 
 	printk(KERN_INFO "%s, max(%d),min(%d)\n", __func__, freq_max, freq_min);
+
+	register_pm_notifier(&pm_hotplug);
 
 	return cpufreq_register_notifier(&dvfs_hotplug,
 					 CPUFREQ_TRANSITION_NOTIFIER);
