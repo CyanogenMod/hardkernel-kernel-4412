@@ -57,7 +57,7 @@
 #define IRQ_HSMMC1		IRQ_SPI(76)
 #define IRQ_HSMMC2		IRQ_SPI(77)
 #define IRQ_HSMMC3		IRQ_SPI(78)
-
+#define IRQ_MIPIDSI0		IRQ_SPI(82)
 #define IRQ_ROTATOR		IRQ_SPI(84)
 
 #define IRQ_GSC0		IRQ_SPI(85)
