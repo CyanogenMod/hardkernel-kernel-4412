@@ -31,12 +31,17 @@ struct busfreq_data {
 	struct regulator *vdd_int;
 	struct regulator *vdd_mif;
 	unsigned int sampling_rate;
+	struct kobject *busfreq_kobject;
+	int table_size;
+	struct busfreq_table *table;
+	cputime64_t *time_in_state;
+	unsigned long long last_time;
 
 	struct notifier_block exynos4_buspm_notifier;
 	struct notifier_block exynos4_reboot_notifier;
 	struct attribute_group busfreq_attr_group;
 	int (*init)	(struct device *dev, struct busfreq_data *data);
-	void (*target)	(struct opp *opp);
+	unsigned int (*target)	(struct opp *opp);
 	unsigned int (*get_int_volt) (unsigned long freq);
 };
 
@@ -50,8 +55,8 @@ struct busfreq_table {
 };
 
 int exynos4210_init(struct device *dev, struct busfreq_data *data);
-void exynos4210_target(struct opp *opp);
+unsigned int exynos4210_target(struct opp *opp);
 int exynos4212_init(struct device *dev, struct busfreq_data *data);
-void exynos4212_target(struct opp *opp);
+unsigned int exynos4212_target(struct opp *opp);
 unsigned int exynos4212_get_int_volt(unsigned long freq);
 #endif /* __ASM_ARCH_BUSFREQ_H */

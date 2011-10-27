@@ -208,7 +208,7 @@ static void exynos4212_set_bus_volt(void)
 	return;
 }
 
-void exynos4212_target(struct opp *opp)
+unsigned int exynos4212_target(struct opp *opp)
 {
 	unsigned int div_index;
 	unsigned int tmp;
@@ -216,9 +216,6 @@ void exynos4212_target(struct opp *opp)
 	for (div_index = LV_0; div_index < LV_END; div_index++)
 		if (opp_get_freq(opp) == exynos4_busfreq_table[div_index].mem_clk)
 			break;
-
-	if (div_index == LV_END)
-		return;
 
 	/* Change Divider - DMC0 */
 	tmp = exynos4_busfreq_table[div_index].clk_dmc0div;
@@ -337,6 +334,8 @@ void exynos4212_target(struct opp *opp)
 	do {
 		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_CAM1);
 	} while (tmp & 0x1111);
+
+	return div_index;
 }
 
 unsigned int exynos4212_get_int_volt(unsigned long freq)
@@ -408,6 +407,8 @@ int exynos4212_init(struct device *dev, struct busfreq_data *data)
 			min_cpufreq = freq;
 	}
 
+	data->table = exynos4_busfreq_table;
+	data->table_size = LV_END;
 	data->min_cpufreq = min_cpufreq;
 
 	/* Find max frequency */
