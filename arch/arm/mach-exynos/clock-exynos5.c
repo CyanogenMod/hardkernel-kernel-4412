@@ -756,6 +756,10 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "jpeg",
 		.enable		= exynos5_clk_ip_gen_ctrl,
 		.ctrlbit	= (1 << 2 || 1 << 7),
+	}, {
+		.name		= "dsim0",
+		.enable		= exynos5_clk_ip_disp1_ctrl,
+		.ctrlbit	= (1 << 3),
 	},
 };
 
