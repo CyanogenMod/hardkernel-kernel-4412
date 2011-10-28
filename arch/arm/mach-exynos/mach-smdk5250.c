@@ -19,6 +19,7 @@
 #include <linux/cma.h>
 #include <linux/memblock.h>
 #include <linux/fb.h>
+#include <linux/smsc911x.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -30,7 +31,7 @@
 #include <plat/clock.h>
 #include <plat/devs.h>
 #include <plat/sdhci.h>
-
+#include <plat/regs-srom.h>
 #include <plat/fb.h>
 #include <plat/fb-s5p.h>
 #include <plat/fb-core.h>
@@ -85,6 +86,37 @@ static struct s3c2410_uartcfg smdk5250_uartcfgs[] __initdata = {
 		.ucon		= SMDK5250_UCON_DEFAULT,
 		.ulcon		= SMDK5250_ULCON_DEFAULT,
 		.ufcon		= SMDK5250_UFCON_DEFAULT,
+	},
+};
+
+static struct resource smdk5250_smsc911x_resources[] = {
+	[0] = {
+		.start	= EXYNOS4_PA_SROM_BANK(1),
+		.end	= EXYNOS4_PA_SROM_BANK(1) + SZ_64K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IRQ_EINT(5),
+		.end	= IRQ_EINT(5),
+		.flags	= IORESOURCE_IRQ | IRQF_TRIGGER_LOW,
+	},
+};
+
+static struct smsc911x_platform_config smsc9215_config = {
+	.irq_polarity	= SMSC911X_IRQ_POLARITY_ACTIVE_LOW,
+	.irq_type	= SMSC911X_IRQ_TYPE_PUSH_PULL,
+	.flags		= SMSC911X_USE_16BIT | SMSC911X_FORCE_INTERNAL_PHY,
+	.phy_interface	= PHY_INTERFACE_MODE_MII,
+	.mac		= {0x00, 0x80, 0x00, 0x23, 0x45, 0x67},
+};
+
+static struct platform_device smdk5250_smsc911x = {
+	.name		= "smsc911x",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(smdk5250_smsc911x_resources),
+	.resource	= smdk5250_smsc911x_resources,
+	.dev		= {
+		.platform_data	= &smsc9215_config,
 	},
 };
 
@@ -424,6 +456,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&exynos_device_ion,
 #endif
 	&s3c_device_rtc,
+	&smdk5250_smsc911x,
 };
 
 #if defined(CONFIG_S5P_MEM_CMA)
@@ -560,6 +593,29 @@ static inline void exynos_reserve_mem(void)
 }
 #endif
 
+static void __init smdk5250_smsc911x_init(void)
+{
+	u32 cs1;
+
+	/* configure nCS1 width to 16 bits */
+	cs1 = __raw_readl(S5P_SROM_BW) &
+		~(S5P_SROM_BW__CS_MASK << S5P_SROM_BW__NCS1__SHIFT);
+	cs1 |= ((1 << S5P_SROM_BW__DATAWIDTH__SHIFT) |
+		(1 << S5P_SROM_BW__WAITENABLE__SHIFT) |
+		(1 << S5P_SROM_BW__BYTEENABLE__SHIFT)) <<
+		S5P_SROM_BW__NCS1__SHIFT;
+	__raw_writel(cs1, S5P_SROM_BW);
+
+	/* set timing for nCS1 suitable for ethernet chip */
+	__raw_writel((0x1 << S5P_SROM_BCX__PMC__SHIFT) |
+		     (0x9 << S5P_SROM_BCX__TACP__SHIFT) |
+		     (0xc << S5P_SROM_BCX__TCAH__SHIFT) |
+		     (0x1 << S5P_SROM_BCX__TCOH__SHIFT) |
+		     (0x6 << S5P_SROM_BCX__TACC__SHIFT) |
+		     (0x1 << S5P_SROM_BCX__TCOS__SHIFT) |
+		     (0x1 << S5P_SROM_BCX__TACS__SHIFT), S5P_SROM_BC1);
+}
+
 static void __init smdk5250_map_io(void)
 {
 	clk_xusbxti.rate = 24000000;
@@ -608,6 +664,7 @@ static void __init smdk5250_machine_init(void)
 	exynos4_fimd_setup_clock(&s5p_device_fimd1.dev, "sclk_fimd", "mout_mpll_user",
 				800 * MHZ);
 #endif
+	smdk5250_smsc911x_init();
 }
 
 MACHINE_START(SMDK5250, "SMDK5250")
