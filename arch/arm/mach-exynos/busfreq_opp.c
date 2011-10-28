@@ -44,7 +44,6 @@
 #include <mach/busfreq.h>
 
 #include <plat/map-s5p.h>
-#include <plat/gpio-cfg.h>
 #include <plat/cputype.h>
 #include <plat/clock.h>
 
@@ -101,7 +100,7 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 	unsigned int voltage;
 	unsigned long currfreq;
 	unsigned long newfreq;
-	unsigned int index;
+	unsigned int index = 0;
 
 	opp = busfreq_monitor(data);
 
@@ -111,36 +110,37 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 
 	currfreq = opp_get_freq(data->curr_opp);
 
-	if (opp == data->curr_opp || newfreq == 0 || data->use == false) {
-		schedule_delayed_work(&data->worker, data->sampling_rate);
-		return;
-	}
+	index = data->get_table_index(opp);
+
+	if (opp == data->curr_opp || newfreq == 0 || data->use == false)
+		goto out;
 
 	voltage = opp_get_voltage(opp);
 	if (newfreq > currfreq) {
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
 					voltage);
-			voltage = data->get_int_volt(newfreq);
+			voltage = data->get_int_volt(index);
 		}
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage);
 	}
 
-	index = data->target(opp);
-	update_busfreq_stat(data, index);
+	data->target(index);
 
 	if (newfreq < currfreq) {
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
 					voltage);
-			voltage = data->get_int_volt(newfreq);
+			voltage = data->get_int_volt(index);
 		}
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage);
 	}
 	data->curr_opp = opp;
 
+out:
+	update_busfreq_stat(data, index);
 	schedule_delayed_work(&data->worker, data->sampling_rate);
 }
 
@@ -304,10 +304,12 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		data->init = exynos4210_init;
 		data->target = exynos4210_target;
 		data->get_int_volt = NULL;
+		data->get_table_index = exynos4210_get_table_index;
 	} else {
 		data->init = exynos4212_init;
 		data->target = exynos4212_target;
 		data->get_int_volt = exynos4212_get_int_volt;
+		data->get_table_index = exynos4212_get_table_index;
 	}
 
 	data->dev = &pdev->dev;

@@ -208,14 +208,9 @@ static void exynos4212_set_bus_volt(void)
 	return;
 }
 
-unsigned int exynos4212_target(struct opp *opp)
+unsigned int exynos4212_target(unsigned int div_index)
 {
-	unsigned int div_index;
 	unsigned int tmp;
-
-	for (div_index = LV_0; div_index < LV_END; div_index++)
-		if (opp_get_freq(opp) == exynos4_busfreq_table[div_index].mem_clk)
-			break;
 
 	/* Change Divider - DMC0 */
 	tmp = exynos4_busfreq_table[div_index].clk_dmc0div;
@@ -338,18 +333,21 @@ unsigned int exynos4212_target(struct opp *opp)
 	return div_index;
 }
 
-unsigned int exynos4212_get_int_volt(unsigned long freq)
+unsigned int exynos4212_get_table_index(struct opp *opp)
 {
-	unsigned int div_index;
+	unsigned int index;
 
-	for (div_index = LV_0; div_index < LV_END; div_index++)
-		if (exynos4_busfreq_table[div_index].mem_clk == freq)
+	for (index = LV_0; index < LV_END; index++)
+		if (opp_get_freq(opp) == exynos4_busfreq_table[index].mem_clk)
 			break;
 
-	if (div_index != LV_END)
-		return	exynos4212_int_volt[div_index];
+	return index;
+}
 
-	return -EINVAL;
+
+unsigned int exynos4212_get_int_volt(unsigned long index)
+{
+	return exynos4212_int_volt[index];
 }
 
 int exynos4212_init(struct device *dev, struct busfreq_data *data)

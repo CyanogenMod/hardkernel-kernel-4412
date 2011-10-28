@@ -155,14 +155,9 @@ static void exynos4210_set_bus_volt(void)
 	return;
 }
 
-unsigned int exynos4210_target(struct opp *opp)
+unsigned int exynos4210_target(unsigned int div_index)
 {
-	unsigned int div_index;
 	unsigned int tmp;
-
-	for (div_index = LV_0; div_index < LV_END; div_index++)
-		if (opp_get_freq(opp) == exynos4_busfreq_table[div_index].mem_clk)
-			break;
 
 	/* Change Divider - DMC0 */
 	tmp = exynos4_busfreq_table[div_index].clk_dmc0div;
@@ -211,6 +206,17 @@ unsigned int exynos4210_target(struct opp *opp)
 	} while (tmp & 0x11);
 
 	return div_index;
+}
+
+unsigned int exynos4210_get_table_index(struct opp *opp)
+{
+	unsigned int index;
+
+	for (index = LV_0; index < LV_END; index++)
+		if (opp_get_freq(opp) == exynos4_busfreq_table[index].mem_clk)
+			break;
+
+	return index;
 }
 
 int exynos4210_init(struct device *dev, struct busfreq_data *data)
