@@ -37,42 +37,6 @@
 #include "exynos_ss_udc.h"
 
 
-static struct usb20_ext_cap_desc cap1 = {
-	.bLength = sizeof(struct usb20_ext_cap_desc),
-	.bDescriptorType = USB_DT_DEVICE_CAPABILITY,
-	.bDevCapabilityType = USB_CAP_20_EXT,
-	.bmAttributes = 0x2,
-};
-
-static struct superspeed_cap_desc cap2 = {
-	.bLength = sizeof(struct superspeed_cap_desc),
-	.bDescriptorType = USB_DT_DEVICE_CAPABILITY,
-	.bDevCapabilityType = USB_CAP_SS,
-	.bmAttributes = 0x0,
-	.wSpeedsSupported = 0xc,
-	.bFunctionalitySupport = 2,
-	/* @todo set these to correct value */
-	.bU1DevExitLat = 0x4,
-	.wU2DevExitLat = 0x4,
-};
-
-static struct container_id_cap_desc cap3 = {
-	.bLength = sizeof(struct container_id_cap_desc),
-	.bDescriptorType = USB_DT_DEVICE_CAPABILITY,
-	.bDevCapabilityType = USB_CAP_CID,
-	.bReserved = 0x0,
-	/* @todo Create UUID */
-	.containerID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-};
-
-static struct bos_desc bos = {
-	.bLength = sizeof(struct bos_desc),
-	.bDescriptorType = USB_DT_BOS,
-	.wTotalLength = sizeof(struct bos_desc) +
-			sizeof(cap1) + sizeof(cap2) + sizeof(cap3),
-	.bNumDeviceCaps = 3,
-};
-
 static void exynos_ss_udc_enqueue_setup(struct exynos_ss_udc *udc);
 static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 			      gfp_t gfp_flags);
@@ -707,8 +671,6 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 {
 	struct exynos_ss_udc_ep *ep0 = &udc->eps[0];
 	int ret = 0;
-	u8 *buf = udc->ep0_buff;
-	int len;
 
 	dev_dbg(udc->dev, "ctrl Req=%02x, Type=%02x, V=%04x, L=%04x\n",
 		 ctrl->bRequest, ctrl->bRequestType,
@@ -753,24 +715,6 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 			ret = exynos_ss_udc_process_req_feature(udc, ctrl);
 
 			udc->ep0_state = EP0_WAIT_NRDY;
-			break;
-
-		case USB_REQ_GET_DESCRIPTOR:
-			if ((ctrl->wValue >> 8) == 0x0f) {
-				/* Get BOS descriptor */
-				memcpy(buf, &bos, sizeof(bos));
-				buf += sizeof(bos);
-				memcpy(buf, &cap1, sizeof(cap1));
-				buf += sizeof(cap1);
-				memcpy(buf, &cap2, sizeof(cap2));
-				buf += sizeof(cap2);
-				memcpy(buf, &cap3, sizeof(cap3));
-				len = bos.wTotalLength < ctrl->wLength ?
-				      bos.wTotalLength : ctrl->wLength;
-
-				ret = exynos_ss_udc_send_reply(udc, ep0,
-					udc->ep0_buff, len);
-			}
 			break;
 		}
 	}

@@ -28,44 +28,6 @@
 	    (_udc)->driver && (_udc)->driver->_entry)		\
 		(_udc)->driver->_entry(&(_udc)->gadget);
 
-/* BOS Descriptor (Binary Object Store) */
-#define USB_CAP_20_EXT	0x2
-#define USB_CAP_SS	0x3
-#define USB_CAP_CID	0x4
-
-struct bos_desc {
-	uint8_t bLength;
-	uint8_t bDescriptorType;
-	uint16_t wTotalLength;
-	uint8_t bNumDeviceCaps;
-} __attribute__((__packed__));
-
-struct usb20_ext_cap_desc {
-	uint8_t bLength;
-	uint8_t bDescriptorType;
-	uint8_t bDevCapabilityType;
-	uint32_t bmAttributes;
-} __attribute__((__packed__));
-
-struct superspeed_cap_desc {
-	uint8_t bLength;
-	uint8_t bDescriptorType;
-	uint8_t bDevCapabilityType;
-	uint8_t bmAttributes;
-	uint16_t wSpeedsSupported;
-	uint8_t bFunctionalitySupport;
-	uint8_t bU1DevExitLat;
-	uint16_t wU2DevExitLat;
-} __attribute__((__packed__));
-
-struct container_id_cap_desc {
-	uint8_t bLength;
-	uint8_t bDescriptorType;
-	uint8_t bDevCapabilityType;
-	uint8_t bReserved;
-	uint8_t containerID[16];
-} __attribute__((__packed__));
-
 /**
  * States of EP0
  */
