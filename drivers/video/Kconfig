@@ -2061,6 +2061,12 @@ config FB_EXYNOS_FIMD_V8
 	depends on FB_S3C && ARCH_EXYNOS5
 	---help---
 
+config FB_EXYNOS_FIMD_MC
+	bool "Support of media controller on FIMD for local path"
+	depends on FB_S3C && ARCH_EXYNOS5 && MEDIA_CONTROLLER
+	default y
+	---help---
+
 config FB_S3C_DEBUG_REGWRITE
        bool "Debug register writes"
        depends on FB_S3C
