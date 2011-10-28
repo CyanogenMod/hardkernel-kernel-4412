@@ -347,6 +347,7 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 }
 
 /**
+ * exynos_ss_udc_ep_alloc_request - allocate a request object
  * @ep: USB endpoint to allocate request for.
  * @flags: Allocation flags
  *
@@ -791,7 +792,7 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 		bool res;
 
 		dev_dbg(udc->dev, "ep0 stall (dir=%d)\n", ep0->dir_in);
-
+		/* FIXME */
 		epcmd->ep = (ep0->dir_in) ? 1 : 0;
 		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSSTALL;
 		epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
@@ -942,10 +943,10 @@ static void exynos_ss_udc_enqueue_status(struct exynos_ss_udc *udc)
 	}
 }
 
-/**:;
+/**
  * exynos_ss_udc_enqueue_setup - start a request for EP0 packets
  * @udc: The device state.
- *s
+ *
  * Enqueue a request on EP0 if necessary to received any SETUP packets
  * received from the host.
  */
@@ -1147,7 +1148,7 @@ static void exynos_ss_udc_complete_in(struct exynos_ss_udc *udc,
 
 
 /**
- * exynos_ss_udc_handle_outdone - handle receiving OutDone/SetupDone from RXFIFO
+ * exynos_ss_udc_handle_outdone - complete OUT transfer
  * @udc: The device instance
  * @epnum: The endpoint received from
 */
@@ -1729,9 +1730,6 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 			EXYNOS_USB3_DEPCMDPAR0x_MPS(udc_ep->ep.maxpacket) |
 			EXYNOS_USB3_DEPCMDPAR0x_BrstSiz(maxburst);
 	if (udc_ep->dir_in)
-		/* FIXME: Assigne FIFO Number by simply using
-		 * the endpoint number
-		 */
 		epcmd->param0 |= EXYNOS_USB3_DEPCMDPAR0x_FIFONum(epnum);
 	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_EpNum(epnum) |
 			(udc_ep->dir_in ? EXYNOS_USB3_DEPCMDPAR1x_EpDir : 0) |
@@ -2055,12 +2053,12 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	}
 
 	dev_info(dev, "regs %p, irq %d\n", udc->regs, udc->irq);
-	/* FIXME */
+
 	device_initialize(&udc->gadget.dev);
 
 	dev_set_name(&udc->gadget.dev, "gadget");
 
-	udc->gadget.is_dualspeed = 1; /* FIXME */
+	udc->gadget.is_dualspeed = 1;
 	udc->gadget.ops = &exynos_ss_udc_gadget_ops;
 	udc->gadget.name = dev_name(dev);
 

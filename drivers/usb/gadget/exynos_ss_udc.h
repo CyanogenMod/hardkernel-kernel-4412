@@ -103,6 +103,7 @@ struct exynos_ss_udc_trb {
  *       and has yet to be completed (maybe due to data move, or simply
  *	 awaiting an ack from the core all the data has been completed).
  * @lock: State lock to protect contents of endpoint.
+ * @trb: Transfer Request Block.
  * @tri: Transfer resource index.
  * @epnum: The USB endpoint number.
  * @type: The endpoint type.
@@ -143,7 +144,6 @@ struct exynos_ss_udc_ep {
  * struct exynos_ss_udc_req - data transfer request
  * @req: The USB gadget request.
  * @queue: The list of requests for the endpoint this is queued for.
- * @trb: Transfer Request Block.
  * @mapped: DMA buffer for this request has been mapped via dma_map_single().
  */
 struct exynos_ss_udc_req {
