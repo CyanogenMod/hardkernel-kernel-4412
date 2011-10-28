@@ -14,7 +14,19 @@
 
 #define DMA_ADDR_INVALID (~((dma_addr_t)0))
 
-#define EP0_MPS_LIMIT	64
+/* Maximum packet size for different speeds */
+#define EP0_LS_MPS	8
+#define EP_LS_MPS	8
+
+#define EP0_FS_MPS	64
+#define EP_FS_MPS	64
+
+#define EP0_HS_MPS	64
+#define EP_HS_MPS	512
+
+#define EP0_SS_MPS	512
+#define EP_SS_MPS	1024
+
 #define EXYNOS_USB3_EPS	(9)
 
 /* Has to be multiple of four */

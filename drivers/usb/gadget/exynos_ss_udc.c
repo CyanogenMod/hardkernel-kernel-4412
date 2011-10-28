@@ -1153,27 +1153,27 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 	/* High-speed */
 	case 0:
 		udc->gadget.speed = USB_SPEED_HIGH;
-		mps0 = 64;
-		mps = 512;
+		mps0 = EP0_HS_MPS;
+		mps = EP_HS_MPS;
 		break;
 	/* Full-speed */
 	case 1:
 	case 3:
 		udc->gadget.speed = USB_SPEED_FULL;
-		mps0 = 64;
-		mps = 64;
+		mps0 = EP0_FS_MPS;
+		mps = EP_FS_MPS;
 		break;
 	/* Low-speed */
 	case 2:
 		udc->gadget.speed = USB_SPEED_LOW;
-		mps0 = 8;
-		mps = 8;
+		mps0 = EP0_LS_MPS;
+		mps = EP_LS_MPS;
 		break;
 	/* SuperSpeed */
 	case 4:
 		udc->gadget.speed = USB_SPEED_SUPER;
-		mps0 = 512;
-		mps = 1024;
+		mps0 = EP0_SS_MPS;
+		mps = EP_SS_MPS;
 		break;
 	}
 
@@ -1432,7 +1432,7 @@ static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 
 	udc_ep->parent = udc;
 	udc_ep->ep.name = udc_ep->name;
-	udc_ep->ep.maxpacket = epnum ? 512 : EP0_MPS_LIMIT;
+	udc_ep->ep.maxpacket = epnum ? EP_HS_MPS : EP0_HS_MPS;
 	udc_ep->ep.ops = &exynos_ss_udc_ep_ops;
 	udc_ep->trb = dma_alloc_coherent(NULL,
 					 sizeof(struct exynos_ss_udc_trb),
