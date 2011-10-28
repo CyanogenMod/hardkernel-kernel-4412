@@ -338,7 +338,7 @@ choice
 	prompt "Dynamic CPU HOTPLUG Policy"
 	depends on EXYNOS4_PM_HOTPLUG
 	default STAND_ALONE_POLICY if CPU_EXYNOS4210
-	default WITH_DVFS_POLICY if (CPU_EXYNOS4212 || CPU_EXYNOS4412)
+	default DVFS_NR_RUNNING_POLICY if (CPU_EXYNOS4212 || CPU_EXYNOS4412)
 
 config STAND_ALONE_POLICY
 	bool "Stand alone policy CPU hotplug"
