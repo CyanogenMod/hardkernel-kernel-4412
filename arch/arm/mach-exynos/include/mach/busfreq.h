@@ -17,6 +17,7 @@
 #define DIVIDING_FACTOR		10000
 #define PPC_THRESHOLD		23
 #define PPMU_THRESHOLD		5
+#define IDLE_THRESHOLD		4
 
 struct opp;
 struct device;

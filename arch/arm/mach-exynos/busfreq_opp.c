@@ -75,7 +75,7 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	cpu_load = ppmu_load[PPMU_CPU];
 	dmc_load = (ppmu_load[PPMU_DMC0] + ppmu_load[PPMU_DMC1]) / 2;
 
-	if (dmc_load)
+	if (dmc_load > IDLE_THRESHOLD)
 		newfreq = 400000;
 
 	lockfreq = dev_max_freq(data->dev);
