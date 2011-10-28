@@ -185,11 +185,13 @@
 
 /* WINCONx */
 
-
 #define WINCONx_BITSWP				(1 << 18)
 #define WINCONx_BYTSWP				(1 << 17)
 #define WINCONx_HAWSWP				(1 << 16)
 #define WINCONx_WSWP				(1 << 15)
+#define WINCONx_ENLOCAL_MASK			(0xf << 15)
+#define WINCONx_INRGB_RGB			(0 << 13)
+#define WINCONx_INRGB_YCBCR			(1 << 13)
 #define WINCONx_BURSTLEN_MASK			(0x3 << 9)
 #define WINCONx_BURSTLEN_SHIFT			(9)
 #define WINCONx_BURSTLEN_16WORD			(0x0 << 9)

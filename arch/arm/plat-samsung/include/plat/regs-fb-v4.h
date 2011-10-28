@@ -55,6 +55,8 @@
 
 /* WINCONx */
 
+#define WINCONx_CSC_CON_EQ709			(1 << 28)
+#define WINCONx_CSC_CON_EQ601			(0 << 28)
 #define WINCONx_CSCWIDTH_MASK			(0x3 << 26)
 #define WINCONx_CSCWIDTH_SHIFT			(26)
 #define WINCONx_CSCWIDTH_WIDE			(0x0 << 26)
