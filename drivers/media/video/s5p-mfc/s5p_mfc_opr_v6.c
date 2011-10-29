@@ -1134,6 +1134,8 @@ static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	unsigned int reg = 0;
+	int fmo_aso_ctrl = 0;
 
 	mfc_debug_enter();
 	mfc_debug(2, "InstNo: %d/%d\n", ctx->inst_no, S5P_FIMV_CH_SEQ_HEADER);
@@ -1142,42 +1144,41 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 		  READL(S5P_FIMV_D_CPB_BUFFER_ADDR),
 		  READL(S5P_FIMV_D_CPB_BUFFER_ADDR));
 
-	/* FIXME: Update later */
-#if 0
-	/* Setup loop filter, for decoding this is only valid for MPEG4 */
-	if (ctx->codec_mode == S5P_FIMV_CODEC_MPEG4_DEC) {
-		mfc_debug(2, "Set loop filter to: %d\n", ctx->loop_filter_mpeg4);
-		WRITEL(ctx->loop_filter_mpeg4, S5P_FIMV_ENC_LF_CTRL);
-	} else {
-		WRITEL(0, S5P_FIMV_ENC_LF_CTRL);
-	}
+	/* FIXME: Change fmo_aso_ctrl to be able to select */
+	/* FMO_ASO_CTRL - 0: Enable, 1: Disable */
+	reg |= (fmo_aso_ctrl << S5P_FIMV_D_OPT_FMO_ASO_CTRL_MASK);
+
 	/* When user sets desplay_delay to 0,
 	 * It works as "display_delay enable" and delay set to 0.
 	 * If user wants display_delay disable, It should be
 	 * set to negative value. */
-	WRITEL(((ctx->slice_interface & S5P_FIMV_SLICE_INT_MASK) <<
-				S5P_FIMV_SLICE_INT_SHIFT) |
-			((ctx->display_delay < 0 ? 0 : 1) <<
-			S5P_FIMV_DDELAY_ENA_SHIFT) |
-			(((ctx->display_delay >= 0 ? ctx->display_delay : 0) &
-			S5P_FIMV_DDELAY_VAL_MASK) << S5P_FIMV_DDELAY_VAL_SHIFT),
-			S5P_FIMV_SI_CH0_DPB_CONF_CTRL);
+	if (ctx->display_delay >= 0) {
+		reg |= (0x1 << S5P_FIMV_D_OPT_DDELAY_EN_SHIFT);
+		WRITEL(ctx->display_delay, S5P_FIMV_D_DISPLAY_DELAY);
+	}
+	/* Setup loop filter, for decoding this is only valid for MPEG4 */
+	if (ctx->codec_mode == S5P_FIMV_CODEC_MPEG4_DEC) {
+		mfc_debug(2, "Set loop filter to: %d\n", ctx->loop_filter_mpeg4);
+		reg |= (ctx->loop_filter_mpeg4 << S5P_FIMV_D_OPT_LF_CTRL_SHIFT);
+	}
+	if (ctx->dst_fmt->fourcc == V4L2_PIX_FMT_NV12MT)
+		reg |= (0x1 << S5P_FIMV_D_OPT_TILE_MODE_SHIFT);
+
+	WRITEL(reg, S5P_FIMV_D_DEC_OPTIONS);
+
 	if (ctx->codec_mode == S5P_FIMV_CODEC_FIMV1_DEC) {
 		mfc_debug(2, "Setting FIMV1 resolution to %dx%d\n",
 					ctx->img_width, ctx->img_height);
-		WRITEL(ctx->img_width, S5P_FIMV_SI_FIMV1_HRESOL);
-		WRITEL(ctx->img_height, S5P_FIMV_SI_FIMV1_VRESOL);
+		WRITEL(ctx->img_width, S5P_FIMV_D_SET_FRAME_WIDTH);
+		WRITEL(ctx->img_height, S5P_FIMV_D_SET_FRAME_HEIGHT);
 	}
 
-	mfc_debug(2, "DELAY : %x\n", READL(S5P_FIMV_SI_CH0_DPB_CONF_CTRL));
-#else
-	/* To test basic decoder, just initialize that registers.
-	 * It should be set for actual values later */
-	WRITEL(0x0, S5P_FIMV_D_DEC_OPTIONS);
-
 	/* 0: NV12(CbCr), 1: NV21(CrCb) */
-	WRITEL(0x0, S5P_FIMV_PIXEL_FORMAT);
-#endif
+	if (ctx->dst_fmt->fourcc == V4L2_PIX_FMT_NV21M)
+		WRITEL(0x1, S5P_FIMV_PIXEL_FORMAT);
+	else
+		WRITEL(0x0, S5P_FIMV_PIXEL_FORMAT);
+
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
 	s5p_mfc_cmd_host2risc(S5P_FIMV_CH_SEQ_HEADER, NULL);
 
@@ -1211,7 +1212,7 @@ int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 #else
 	WRITEL(0xffffffff, S5P_FIMV_D_AVAILABLE_DPB_FLAG_LOWER);
 	WRITEL(0xffffffff, S5P_FIMV_D_AVAILABLE_DPB_FLAG_UPPER);
-	WRITEL(0x0, S5P_FIMV_D_SLICE_IF_ENABLE);
+	WRITEL(ctx->slice_interface, S5P_FIMV_D_SLICE_IF_ENABLE);
 #endif
 
 	/* FIXME: Is it needed for 6.x? */
