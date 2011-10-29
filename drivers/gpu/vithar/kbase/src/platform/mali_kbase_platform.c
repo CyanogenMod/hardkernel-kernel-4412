@@ -319,7 +319,3 @@ int kbase_platform_init(struct device *dev)
 out:
 	return -ENOENT;
 }
-
-int s3c_cpu_save(unsigned long *saveblk, long a)
-{
-}

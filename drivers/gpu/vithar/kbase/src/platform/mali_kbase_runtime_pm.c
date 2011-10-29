@@ -108,3 +108,13 @@ void kbase_device_runtime_init(struct device *dev)
     pm_runtime_enable(dev);
 }
 
+#ifdef CONFIG_VITHAR_RT_PM
+/* To be removed */
+void cpu_suspend(void)
+{}
+
+/* To be removed */
+void cpu_resume(void)
+{}
+#endif
+
