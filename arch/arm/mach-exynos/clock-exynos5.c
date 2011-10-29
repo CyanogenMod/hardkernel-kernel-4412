@@ -159,6 +159,11 @@ static int exynos5_clk_ip_gscl_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GSCL, clk, enable);
 }
 
+static int exynos5_clk_gate_block(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_BLOCK, clk, enable);
+}
+
 /* BPLL clock output
  * No need .ctrlbit, this is always on
 */
@@ -1212,6 +1217,16 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 		},
 		.sources = &clk_src_gscl,
 		.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 8, .size = 1 },
+	}, {
+		.clk	= {
+			.name		= "sclk_g3d",
+			.devname	= "mali-t604.0",
+			.enable		= exynos5_clk_gate_block,
+			.ctrlbit	= (1 << 1),
+		},
+		.sources = &exynos5_clkset_aclk,
+		.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 20, .size = 1 },
+		.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 24, .size = 3 },
 	},
 };
 

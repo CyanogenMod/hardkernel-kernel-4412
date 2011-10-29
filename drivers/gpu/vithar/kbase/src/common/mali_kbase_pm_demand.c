@@ -16,7 +16,10 @@
 #include <osk/mali_osk.h>
 #include <kbase/src/common/mali_kbase.h>
 #include <kbase/src/common/mali_kbase_pm.h>
-
+#ifdef CONFIG_VITHAR_RT_PM
+#include <linux/pm_runtime.h>
+#include <kbase/src/platform/mali_kbase_runtime_pm.h>
+#endif
 /* Forward declaration */
 static void demand_state_changed(kbase_device *kbdev);
 
@@ -157,6 +160,16 @@ static void demand_prepare_power_down(kbase_device *kbdev)
 	kbdev->pm.policy_data->state = STATE_PREPARE_TO_POWER_DOWN;
 
 	demand_state_changed(kbdev);
+
+#ifdef CONFIG_VITHAR_RT_PM
+	{
+	    int result;
+
+	    result = pm_schedule_suspend(kbdev->osdev.dev, RUNTIME_PM_RUNTIME_DELAY_TIME);
+	    if(result < 0)
+		printk(KERN_ERR "pm_schedule_suspend failed (%d)\n", result);
+	}
+#endif
 }
 
 /** Prepare to turn the cores on.
@@ -165,6 +178,16 @@ static void demand_prepare_power_down(kbase_device *kbdev)
  */
 static void demand_prepare_power_up(kbase_device *kbdev)
 {
+#ifdef CONFIG_VITHAR_RT_PM
+	{
+	    int result;
+
+	    result = pm_runtime_resume(kbdev->osdev.dev);
+	    if(result < 0)
+		printk(KERN_ERR "pm_runtime_resume failed (%d)\n", result);
+	}
+#endif
+ 
 	/* Inform the system that the transition has started */
 	kbase_pm_power_transitioning(kbdev);
 

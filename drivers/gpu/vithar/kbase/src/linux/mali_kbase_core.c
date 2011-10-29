@@ -877,14 +877,17 @@ static int kbase_platform_device_probe(struct platform_device *pdev)
 	osdev->reg_start = reg_res->start;
 	osdev->reg_size = resource_size(reg_res);
 
+#ifdef CONFIG_VITHAR
+	if(kbase_platform_init(osdev->dev))
+	{
+	    err = -ENOENT;
+	    goto out_free_dev;
+	}
+#endif
+
 	err = kbase_common_device_init(kbdev);
 	if (err)
 		goto out_free_dev;
-
-#ifdef CONFIG_VITHAR
-	if(!kbase_platform_init_clock(osdev->dev))
-	    goto out_free_dev;
-#endif
 
 	return 0;
 
@@ -959,8 +962,9 @@ static int kbase_device_suspend(struct device *dev)
 	kbase_pm_wait_for_power_down(kbdev);
 
 #ifdef CONFIG_VITHAR
-	/* Turn off sclk_g3d */
-	kbase_platform_clock_off();
+	/* Turn off Host clock & power to Vithar */
+	kbase_platform_clock_off(dev);
+	kbase_platform_power_off(dev);
 #endif
 
 	return 0;
@@ -981,8 +985,11 @@ static int kbase_device_resume(struct device *dev)
 	if (!kbdev)
 		return -ENODEV;
 
-	/* Turn on sclk_g3d */
-	kbase_platform_clock_on();
+#ifdef CONFIG_VITHAR
+	/* Turn on Host clock & power to Vithar */
+	kbase_platform_power_on(dev);
+	kbase_platform_clock_on(dev);
+#endif
 
 	/* Send the event to the power policy */
 	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_RESUME);
