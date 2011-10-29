@@ -24,7 +24,6 @@
 #include <linux/wait.h>
 #include <media/v4l2-device.h>
 #include <media/videobuf2-core.h>
-#include <media/exynos_mc.h>
 
 #include "regs-mixer.h"
 
@@ -447,8 +446,5 @@ void mxr_reg_vp_format(struct mxr_device *mdev,
 	const struct mxr_format *fmt, const struct mxr_geometry *geo);
 #endif
 void mxr_reg_dump(struct mxr_device *mdev);
-
-/** returns driver's private data */
-void *module_name_to_driver_data(char *module_name);
 
 #endif /* SAMSUNG_MIXER_H */

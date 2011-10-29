@@ -21,6 +21,8 @@
 #include <linux/clk.h>
 #include <linux/kernel.h>
 
+#include <media/exynos_mc.h>
+
 #include "mixer.h"
 
 MODULE_AUTHOR("Tomasz Stanislawski, <t.stanislaws@samsung.com>");
@@ -866,28 +868,6 @@ static const struct media_entity_operations mxr_entity_ops = {
 };
 
 /* ---------- MEDIA CONTROLLER MANAGEMENT ----------- */
-
-static int dummy_callback(struct device *dev, void *md)
-{
-	/* non-zero return stops iteration */
-	return -1;
-}
-
-void *module_name_to_driver_data(char *module_name)
-{
-	struct device_driver *drv;
-	struct device *dev;
-	void *driver_data;
-
-	drv = driver_find(module_name, &platform_bus_type);
-	if (drv) {
-		dev = driver_find_device(drv, NULL, NULL, dummy_callback);
-		driver_data = dev_get_drvdata(dev);
-		put_driver(drv);
-		return driver_data;
-	} else
-		return NULL;
-}
 
 static int mxr_register_entity(struct mxr_device *mdev, int mxr_num)
 {

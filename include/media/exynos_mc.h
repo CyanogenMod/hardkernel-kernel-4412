@@ -53,4 +53,26 @@ struct exynos_md {
 	spinlock_t slock;
 };
 
+static int dummy_callback(struct device *dev, void *md)
+{
+	/* non-zero return stops iteration */
+	return -1;
+}
+
+static inline void *module_name_to_driver_data(char *module_name)
+{
+	struct device_driver *drv;
+	struct device *dev;
+	void *driver_data;
+
+	drv = driver_find(module_name, &platform_bus_type);
+	if (drv) {
+		dev = driver_find_device(drv, NULL, NULL, dummy_callback);
+		driver_data = dev_get_drvdata(dev);
+		put_driver(drv);
+		return driver_data;
+	} else
+		return NULL;
+}
+
 #endif

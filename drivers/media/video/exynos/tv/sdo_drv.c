@@ -73,7 +73,6 @@ struct sdo_device {
 };
 
 extern void entity_info_print(struct media_entity *me, struct device *dev);
-extern void *module_name_to_driver_data(char *module_name);
 
 static inline struct sdo_device *sd_to_sdev(struct v4l2_subdev *sd)
 {
