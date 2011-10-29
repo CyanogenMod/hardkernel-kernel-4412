@@ -764,7 +764,7 @@ config ARCH_S5PV210
 config ARCH_EXYNOS
 	bool "Samsung EXYNOS"
 	select CPU_V7
-	select ARCH_SPARSEMEM_ENABLE
+	select ARCH_FLATMEM_ENABLE
 	select GENERIC_GPIO
 	select HAVE_CLK
 	select CLKDEV_LOOKUP
