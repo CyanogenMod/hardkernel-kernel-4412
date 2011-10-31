@@ -120,15 +120,16 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 	fimg2d_debug("enter blitter\n");
 
 #ifdef CONFIG_PM_RUNTIME
-	pm_runtime_get_sync(&(s5p_device_fimg2d.dev));
+	pm_runtime_get_sync(info->dev);
 	fimg2d_debug("pm_runtime_get_sync\n");
 #endif
+	fimg2d_clk_on(info);
 
 	while ((cmd = fimg2d_get_first_command(info))) {
 		ctx = cmd->ctx;
 
 		if (info->err) {
-			printk(KERN_ERR "%s: unrecoverable hardware error\n", __func__);
+			printk(KERN_ERR "[%s] device error\n", __func__);
 			goto blitend;
 		}
 
@@ -158,7 +159,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 			fimg2d_dump_command(cmd);
 
 			if (!fimg2d4x_blit_done_status(info))
-				info->err = true; /* fatal h/w error */
+				info->err = true; /* device error */
 		}
 #ifdef PERF
 		do_gettimeofday(&end);
@@ -186,8 +187,9 @@ blitend:
 
 	atomic_set(&info->active, 0);
 
+	fimg2d_clk_off(info);
 #ifdef CONFIG_PM_RUNTIME
-	pm_runtime_put_sync(&(s5p_device_fimg2d.dev));
+	pm_runtime_put_sync(info->dev);
 	fimg2d_debug("pm_runtime_put_sync\n");
 #endif
 

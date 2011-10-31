@@ -107,7 +107,8 @@ static void fimg2d_context_wait(struct fimg2d_context *ctx)
 			fimg2d_debug("ctx %p wake up\n", ctx);
 		} else {
 			if (info->err) {
-				printk(KERN_ERR "[%s] ctx %p wait timeout\n", __func__, ctx);
+				printk(KERN_ERR "[%s] ctx %p wait timeout, device error\n",
+						__func__, ctx);
 				break;
 			} else {
 				fimg2d_debug("ctx %p bitblt is not finished\n", ctx);
@@ -143,12 +144,6 @@ static int fimg2d_open(struct inode *inode, struct file *file)
 			(unsigned long *)init_mm.pgd);
 
 	fimg2d_add_context(info, ctx);
-
-#ifndef CONFIG_PM_RUNTIME
-	if (atomic_read(&info->nctx) == 1)
-		fimg2d_clk_on(info);
-#endif
-
 	return 0;
 }
 
@@ -160,16 +155,12 @@ static int fimg2d_release(struct inode *inode, struct file *file)
 	while (1) {
 		if (!atomic_read(&ctx->ncmd))
 			break;
+
 		mdelay(2);
 	}
 	fimg2d_del_context(info, ctx);
 
 	kfree(ctx);
-
-#ifndef CONFIG_PM_RUNTIME
-	if (atomic_read(&info->nctx) == 0)
-		fimg2d_clk_off(info);
-#endif
 	return 0;
 }
 
@@ -404,26 +395,23 @@ static int fimg2d_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int fimg2d_suspend(struct platform_device *pdev, pm_message_t state)
+static int fimg2d_suspend(struct device *dev)
 {
 	fimg2d_debug("suspend... start\n");
 	atomic_set(&info->suspended, 1);
-
 	while (1) {
-		if (!atomic_read(&info->busy))
+		if (fimg2d_queue_is_empty(&info->cmd_q))
 			break;
+
 		mdelay(2);
 	}
-
-	fimg2d_clk_off(info);
 	fimg2d_debug("suspend... done\n");
 	return 0;
 }
 
-static int fimg2d_resume(struct platform_device *pdev)
+static int fimg2d_resume(struct device *dev)
 {
 	fimg2d_debug("resume... start\n");
-	fimg2d_clk_on(info);
 	atomic_set(&info->suspended, 0);
 	fimg2d_debug("resume... done\n");
 	return 0;
@@ -432,37 +420,33 @@ static int fimg2d_resume(struct platform_device *pdev)
 #ifdef CONFIG_PM_RUNTIME
 static int fimg2d_runtime_suspend(struct device *dev)
 {
-	fimg2d_debug("runtime suspend... start\n");
-	fimg2d_clk_off(info);
 	fimg2d_debug("runtime suspend... done\n");
 	return 0;
 }
 
 static int fimg2d_runtime_resume(struct device *dev)
 {
-	fimg2d_debug("runtime resume... start\n");
-	fimg2d_clk_on(info);
 	fimg2d_debug("runtime resume... done\n");
 	return 0;
 }
+#endif
 
 static const struct dev_pm_ops fimg2d_pm_ops = {
-	.runtime_suspend = fimg2d_runtime_suspend,
-	.runtime_resume = fimg2d_runtime_resume,
-};
+	.suspend		= fimg2d_suspend,
+	.resume			= fimg2d_resume,
+#ifdef CONFIG_PM_RUNTIME
+	.runtime_suspend	= fimg2d_runtime_suspend,
+	.runtime_resume		= fimg2d_runtime_resume,
 #endif
+};
 
 static struct platform_driver fimg2d_driver = {
 	.probe		= fimg2d_probe,
 	.remove		= fimg2d_remove,
-	.suspend	= fimg2d_suspend,
-	.resume		= fimg2d_resume,
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= "s5p-fimg2d",
-#ifdef CONFIG_PM_RUNTIME
 		.pm     = &fimg2d_pm_ops,
-#endif
 	},
 };
 

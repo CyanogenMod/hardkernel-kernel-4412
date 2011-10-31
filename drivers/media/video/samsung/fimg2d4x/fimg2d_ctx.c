@@ -409,19 +409,19 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 	fimg2d_print_params(u);
 #endif
 
-	cmd = kzalloc(sizeof(*cmd), GFP_KERNEL);
-	if (!cmd) {
-		printk(KERN_ERR "failed to create bitblt command header\n");
-		return -ENOMEM;
-	}
-
 	if (info->err) {
-		printk(KERN_ERR "%s: previous unrecoverable hardware error\n", __func__);
-		goto err_user;
+		printk(KERN_ERR "[%s] device error, do sw fallback\n", __func__);
+		return -EFAULT;
 	}
 
 	if (fimg2d_check_params(u))
-		goto err_user;
+		return -EINVAL;
+
+	cmd = kzalloc(sizeof(*cmd), GFP_KERNEL);
+	if (!cmd) {
+		printk(KERN_ERR "[%s] failed to create bitblt command\n", __func__);
+		return -ENOMEM;
+	}
 
 	cmd->ctx = ctx;
 	cmd->seq_no = u->seq_no;
@@ -493,6 +493,11 @@ int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx,
 
 	/* add command node and increase ncmd */
 	spin_lock(&info->bltlock);
+	if (atomic_read(&info->suspended)) {
+		fimg2d_debug("fimg2d suspended, do sw fallback\n");
+		spin_unlock(&info->bltlock);
+		goto err_user;
+	}
 	atomic_inc(&ctx->ncmd);
 	fimg2d_enqueue(&cmd->node, &info->cmd_q);
 	fimg2d_debug("ctx %p pgd %p ncmd(%d) seq_no(%u)\n",
