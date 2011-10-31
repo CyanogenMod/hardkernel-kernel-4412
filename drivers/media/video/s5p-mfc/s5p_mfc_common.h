@@ -106,6 +106,15 @@ enum s5p_mfc_queue_state {
 	QUEUE_BUFS_MMAPED,
 };
 
+/**
+ * enum s5p_mfc_check_state - The state for user notification
+ */
+enum s5p_mfc_check_state {
+	MFCSTATE_PROCESSING = 0,
+	MFCSTATE_DEC_RES_DETECT,
+	MFCSTATE_DEC_TERMINATING,
+};
+
 struct s5p_mfc_ctx;
 struct s5p_mfc_extra_buf;
 

@@ -187,6 +187,7 @@ static inline enum s5p_mfc_node_type s5p_mfc_get_node_type(struct file *file)
 static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_buf *dst_buf;
+	int index;
 
 	ctx->state = MFCINST_FINISHED;
 	mfc_debug(2, "Decided to finish\n");
@@ -210,7 +211,12 @@ static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 			dst_buf->vb.v4l2_buf.field = V4L2_FIELD_INTERLACED;
 
 		ctx->dec_dst_flag &= ~(1 << dst_buf->vb.v4l2_buf.index);
+
 		vb2_buffer_done(&dst_buf->vb, VB2_BUF_STATE_DONE);
+		index = dst_buf->vb.v4l2_buf.index;
+		if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->dst_ctrls[index]) < 0)
+			mfc_err("failed in get_buf_ctrls_val\n");
+
 		mfc_debug(2, "Cleaned up buffer: %d\n",
 			  dst_buf->vb.v4l2_buf.index);
 	}

@@ -1230,13 +1230,6 @@ int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 	case 1:
 		s5p_mfc_cmd_host2risc(S5P_FIMV_CH_LAST_FRAME, NULL);
 		break;
-	/* FIXME: Is it neede for 6.x? */
-#if 0
-	case 2:
-		WRITEL(((S5P_FIMV_CH_FRAME_START_REALLOC & S5P_FIMV_CH_MASK) <<
-		S5P_FIMV_CH_SHIFT) | (ctx->inst_no), S5P_FIMV_SI_CH0_INST_ID);
-		break;
-#endif
 	}
 
 	mfc_debug(2, "Decoding a usual frame.\n");
@@ -1322,8 +1315,7 @@ static inline void s5p_mfc_run_res_change(struct s5p_mfc_ctx *ctx)
 	s5p_mfc_set_dec_stream_buffer(ctx, 0, 0, 0);
 	dev->curr_ctx = ctx->num;
 	s5p_mfc_clean_ctx_int_flags(ctx);
-	/* FIXME: in MFC 6.x, parameter 2 is not exist */
-	s5p_mfc_decode_one_frame(ctx, 2);
+	s5p_mfc_decode_one_frame(ctx, 1);
 }
 
 static inline void s5p_mfc_run_dec_last_frames(struct s5p_mfc_ctx *ctx)
@@ -1626,7 +1618,7 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev)
 			s5p_mfc_run_res_change(ctx);
 			break;
 		case MFCINST_RES_CHANGE_FLUSH:
-			s5p_mfc_run_dec_frame(ctx);
+			s5p_mfc_run_res_change(ctx);
 			break;
 		case MFCINST_RES_CHANGE_END:
 			mfc_debug(2, "Finished remaining frames after resolution change.\n");

@@ -248,6 +248,15 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
+		.id = V4L2_CID_CODEC_DISPLAY_STATUS,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Display status",
+		.minimum = 0,
+		.maximum = 3,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
 		.id = V4L2_CID_CODEC_FRAME_TYPE,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "Frame type",
@@ -324,7 +333,19 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.flag_addr = 0,
 		.flag_shft = 0,
 	},
-	/* CRC related definitinos are based on non-H.264 type */
+	{
+		.type = MFC_CTRL_TYPE_GET_DST,
+		.id = V4L2_CID_CODEC_DISPLAY_STATUS,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_SI_DISPLAY_STATUS,
+		.mask = 0x7,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	/* CRC related definitions are based on non-H.264 type */
 	{
 		.type = MFC_CTRL_TYPE_GET_SRC,
 		.id = V4L2_CID_CODEC_CRC_DATA_LUMA,
@@ -1145,6 +1166,7 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		if (reqbufs->count == 0) {
 			mfc_debug(2, "Freeing buffers.\n");
 			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
+			ctx->dpb_queue_cnt = 0;
 			return ret;
 		}
 
@@ -1381,6 +1403,16 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 		break;
 	case V4L2_CID_CODEC_CRC_ENABLE:
 		ctrl->value = ctx->crc_enable;
+		break;
+	case V4L2_CID_CODEC_CHECK_STATE:
+		if (ctx->state == MFCINST_RES_CHANGE_FLUSH
+				|| ctx->state == MFCINST_RES_CHANGE_END
+				|| ctx->state == MFCINST_HEAD_PARSED)
+			ctrl->value = MFCSTATE_DEC_RES_DETECT;
+		else if (ctx->state == MFCINST_FINISHING)
+			ctrl->value = MFCSTATE_DEC_TERMINATING;
+		else
+			ctrl->value = MFCSTATE_PROCESSING;
 		break;
 #if defined(CONFIG_S5P_MFC_VB2_ION)
 	case V4L2_CID_SET_SHAREABLE:

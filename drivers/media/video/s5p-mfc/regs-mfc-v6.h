@@ -376,6 +376,7 @@
 #define S5P_FIMV_CRC_DISP_CHROMA0		S5P_FIMV_D_DISPLAY_CHROMA_CRC_TOP
 
 #define S5P_FIMV_SI_DECODED_STATUS		S5P_FIMV_D_DECODED_STATUS
+#define S5P_FIMV_SI_DISPLAY_STATUS		S5P_FIMV_D_DISPLAY_STATUS
 #define S5P_FIMV_SHARED_SET_FRAME_TAG		S5P_FIMV_D_PICTURE_TAG
 #define S5P_FIMV_SHARED_GET_FRAME_TAG_TOP	S5P_FIMV_D_RET_PICTURE_TAG_TOP
 #define S5P_FIMV_CRC_DISP_STATUS		S5P_FIMV_D_DISPLAY_STATUS
@@ -496,7 +497,6 @@
 #define S5P_FIMV_SI_BUF_NUMBER		0x200c /* number of frames in the decoded pic */
 #define S5P_FIMV_SI_CONSUMED_BYTES	0x2018 /* Consumed number of bytes to decode
 								a frame */
-#define S5P_FIMV_SI_DISPLAY_STATUS	0x201c /* status of decoded picture */
 #define S5P_FIMV_SI_FRAME_TYPE		0x2020 /* frame type such as skip/I/P/B */
 
 #define S5P_FIMV_SI_CH0_SB_ST_ADR	0x2044 /* start addr of stream buf */
