@@ -634,6 +634,13 @@ config S3C_MEM
 
 	  If unsure, say Y.
 
+config EXYNOS_MEM
+	bool "Support for /dev/exynos-mem"
+	default y
+	help
+	  If you do say Y here, you can mmap using physically linear memories.
+	  And you can flush it using ioctl.
+
 config MSM_SMD_PKT
 	bool "Enable device interface for some SMD packet ports"
 	default n

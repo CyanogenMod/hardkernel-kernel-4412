@@ -835,6 +835,20 @@ static const struct file_operations s3c_mem_fops = {
 };
 #endif
 
+#ifdef CONFIG_EXYNOS_MEM
+extern int exynos_mem_open(struct inode * inode, struct file *filp);
+extern int exynos_mem_release(struct inode * inode, struct file *filp);
+extern long exynos_mem_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
+extern int exynos_mem_mmap(struct file* filp, struct vm_area_struct *vma);
+
+static const struct file_operations exynos_mem_fops = {
+	.open		= exynos_mem_open,
+	.release	= exynos_mem_release,
+	.unlocked_ioctl	= exynos_mem_ioctl,
+	.mmap		= exynos_mem_mmap,
+};
+#endif
+
 static ssize_t kmsg_writev(struct kiocb *iocb, const struct iovec *iv,
 			   unsigned long count, loff_t pos)
 {
@@ -900,6 +914,10 @@ static const struct memdev {
 #ifdef CONFIG_S3C_MEM
 	[13] = {"s3c-mem", S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH
 			| S_IWOTH, &s3c_mem_fops},
+#endif
+#ifdef CONFIG_EXYNOS_MEM
+	[14] = {"exynos-mem", S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH
+			| S_IWOTH, &exynos_mem_fops},
 #endif
 };
 
