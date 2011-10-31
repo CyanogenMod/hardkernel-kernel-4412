@@ -2360,9 +2360,8 @@ static int fimc_runtime_resume(struct device *dev)
 	} else if (ctrl->cap) {
 		fimc_info1("%s: fimc cap\n", __func__);
 		fimc_runtime_resume_cap(ctrl);
-	} else {
-		fimc_err("%s: runtime resume error\n", __func__);
 	}
+
 	return 0;
 }
 static const struct dev_pm_ops fimc_pm_ops = {
