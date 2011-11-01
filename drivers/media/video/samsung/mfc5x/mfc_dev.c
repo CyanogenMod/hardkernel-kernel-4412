@@ -125,7 +125,7 @@ static int mfc_open(struct inode *inode, struct file *file)
 			goto err_fw_state;
 		}
 
-		printk(KERN_INFO "MFC F/W is not exist, requesting...\n");
+		printk(KERN_INFO "MFC F/W is not existing, requesting...\n");
 		ret = request_firmware(&mfcdev->fw.info, MFC_FW_NAME, mfcdev->device);
 
 		if (ret < 0) {
@@ -134,13 +134,15 @@ static int mfc_open(struct inode *inode, struct file *file)
 			goto err_fw_state;
 		}
 
-		mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data, mfcdev->fw.info->size);
-		if (!mfcdev->fw.state) {
-			printk(KERN_ERR "failed to load MFC F/W, MFC will not working\n");
-			ret = -ENODEV;
-			goto err_fw_state;
-		} else {
-			printk(KERN_INFO "MFC F/W reloaded successfully (size: %d)\n", mfcdev->fw.info->size);
+		if (soc_is_exynos4212() || soc_is_exynos4412()) {
+			mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data, mfcdev->fw.info->size);
+			if (!mfcdev->fw.state) {
+				printk(KERN_ERR "failed to load MFC F/W, MFC will not working\n");
+				ret = -ENODEV;
+				goto err_fw_state;
+			} else {
+				printk(KERN_INFO "MFC F/W loaded successfully (size: %d)\n", mfcdev->fw.info->size);
+			}
 		}
 	}
 
@@ -152,6 +154,30 @@ static int mfc_open(struct inode *inode, struct file *file)
 			clear_magic(mfcdev->drm_info.addr);
 
 			mfcdev->drm_playback = 1;
+		} else {
+			/* reload F/W for first instance again */
+			if (soc_is_exynos4210()) {
+				mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data, mfcdev->fw.info->size);
+				if (!mfcdev->fw.state) {
+					printk(KERN_ERR "failed to reload MFC F/W, MFC will not working\n");
+					ret = -ENODEV;
+					goto err_fw_state;
+				} else {
+					printk(KERN_INFO "MFC F/W reloaded successfully (size: %d)\n", mfcdev->fw.info->size);
+				}
+			}
+		}
+#else
+		/* reload F/W for first instance again */
+		if (soc_is_exynos4210()) {
+			mfcdev->fw.state = mfc_load_firmware(mfcdev->fw.info->data, mfcdev->fw.info->size);
+			if (!mfcdev->fw.state) {
+				printk(KERN_ERR "failed to reload MFC F/W, MFC will not working\n");
+				ret = -ENODEV;
+				goto err_fw_state;
+			} else {
+				printk(KERN_INFO "MFC F/W reloaded successfully (size: %d)\n", mfcdev->fw.info->size);
+			}
 		}
 #endif
 		ret = mfc_power_on();
