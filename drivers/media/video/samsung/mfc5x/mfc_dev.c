@@ -394,6 +394,7 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			in_param.ret_code = MFC_STATE_INVALID;
 			ret = -EINVAL;
 
+			mutex_unlock(&dev->lock);
 			break;
 		}
 
@@ -414,6 +415,7 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			in_param.ret_code = MFC_STATE_INVALID;
 			ret = -EINVAL;
 
+			mutex_unlock(&dev->lock);
 			break;
 		}
 
@@ -428,6 +430,16 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case IOCTL_MFC_DEC_EXE:
 		mutex_lock(&dev->lock);
 
+		if (mfc_ctx->state < INST_STATE_INIT) {
+			mfc_err("IOCTL_MFC_DEC_EXE invalid state: 0x%08x\n",
+					mfc_ctx->state);
+			in_param.ret_code = MFC_STATE_INVALID;
+			ret = -EINVAL;
+
+			mutex_unlock(&dev->lock);
+			break;
+		}
+
 		mfc_clock_on();
 		in_param.ret_code = mfc_exec_decoding(mfc_ctx, &(in_param.args));
 		ret = in_param.ret_code;
@@ -438,6 +450,16 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case IOCTL_MFC_ENC_EXE:
 		mutex_lock(&dev->lock);
+
+		if (mfc_ctx->state < INST_STATE_INIT) {
+			mfc_err("IOCTL_MFC_DEC_EXE invalid state: 0x%08x\n",
+					mfc_ctx->state);
+			in_param.ret_code = MFC_STATE_INVALID;
+			ret = -EINVAL;
+
+			mutex_unlock(&dev->lock);
+			break;
+		}
 
 		mfc_clock_on();
 		in_param.ret_code = mfc_exec_encoding(mfc_ctx, &(in_param.args));
