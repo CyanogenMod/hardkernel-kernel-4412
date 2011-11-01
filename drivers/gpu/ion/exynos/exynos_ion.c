@@ -561,7 +561,6 @@ err_smaller_pages:
 err_get_pages:
 	kfree(pages);
 
-	BUG();
 	return ret;
 }
 
