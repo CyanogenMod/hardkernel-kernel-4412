@@ -30,6 +30,7 @@
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/exynos-clock.h>
+#include <mach/dev-sysmmu.h>
 
 static struct clksrc_clk *sysclks[] = {
 	/* nothing here yet */
@@ -68,6 +69,21 @@ static struct clk init_clocks_off[] = {
 		.name		= "ppmulcd1",
 		.enable		= exynos4_clk_ip_lcd1_ctrl,
 		.ctrlbit	= (1 << 5),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(fimd1, 7),
+		.enable		= exynos4_clk_ip_lcd1_ctrl,
+		.ctrlbit	= (1 << 4),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(pcie, 8),
+		.enable		= exynos4_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 18),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(g2d, 9),
+		.enable		= exynos4_clk_ip_image_ctrl,
+		.ctrlbit	= (1 << 3),
 	},
 };
 

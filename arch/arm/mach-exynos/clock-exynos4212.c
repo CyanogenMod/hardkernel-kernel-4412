@@ -30,6 +30,7 @@
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/exynos-clock.h>
+#include <mach/dev-sysmmu.h>
 
 #ifdef CONFIG_PM
 static struct sleep_save exynos4212_clock_save[] = {
@@ -314,6 +315,11 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.name		= "ppmutv",
 		.enable		= exynos4_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 20 || 1 << 21),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(g2d_acp, 15),
+		.enable		= exynos4_clk_ip_dmc_ctrl,
+		.ctrlbit	= (1 << 24),
 	},
 };
 
