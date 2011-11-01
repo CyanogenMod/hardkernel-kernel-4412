@@ -15,6 +15,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/mm.h>
 
 #include <asm/pgtable.h>
 
@@ -133,7 +134,7 @@ static void __sysmmu_set_ptbase(void __iomem *sfrbase,
 				       unsigned long pgd)
 {
 	if (unlikely(pgd == 0)) {
-		pgd = (unsigned long)ZERO_PAGE(0);
+		pgd = page_to_phys(ZERO_PAGE(0));
 		__raw_writel(0x20, sfrbase + S5P_MMU_CFG); /* 4KB LV1 */
 	} else {
 		__raw_writel(0x0, sfrbase + S5P_MMU_CFG); /* 16KB LV1 */
