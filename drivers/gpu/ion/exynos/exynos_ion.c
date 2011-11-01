@@ -24,6 +24,7 @@
 #include <linux/vmalloc.h>
 #include <linux/bitops.h>
 #include <linux/pagemap.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/pgtable.h>
 
@@ -630,6 +631,109 @@ static void ion_exynos_user_heap_destroy(struct ion_heap *heap)
 	kfree(heap);
 }
 
+enum ION_MSYNC_TYPE {
+	IMSYNC_DEV_TO_READ = 0,
+	IMSYNC_DEV_TO_WRITE = 1,
+	IMSYNC_DEV_TO_RW = 2,
+	IMSYNC_BUF_TYPES_MASK = 3,
+	IMSYNC_BUF_TYPES_NUM = 4,
+	IMSYNC_SYNC_FOR_DEV = 0x10000,
+	IMSYNC_SYNC_FOR_CPU = 0x20000,
+};
+
+static enum dma_data_direction ion_msync_dir_table[IMSYNC_BUF_TYPES_NUM] = {
+	DMA_TO_DEVICE,
+	DMA_FROM_DEVICE,
+	DMA_BIDIRECTIONAL,
+};
+
+struct ion_msync_data {
+	enum ION_MSYNC_TYPE dir;
+	int fd_buffer;
+	size_t size;
+	off_t offset;
+};
+
+enum ION_EXYNOS_CUSTOM_CMD {
+	ION_EXYNOS_CUSTOM_MSYNC
+};
+
+static long exynos_heap_ioctl(struct ion_client *client, unsigned int cmd,
+				unsigned long arg)
+{
+	struct ion_msync_data data;
+	struct ion_handle *handle;
+	struct ion_buffer *buffer;
+	struct scatterlist *sg, *tsg;
+	int nents = 0;
+	int ret = -EINVAL;
+
+	if (cmd != ION_EXYNOS_CUSTOM_MSYNC)
+		return -ENOTTY;
+
+	if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+		return -EFAULT;
+
+	if ((data.offset + data.size) < data.offset)
+		return -EINVAL;
+
+	handle = ion_import_fd(client, data.fd_buffer);
+	if (IS_ERR(handle))
+		return PTR_ERR(handle);
+
+	buffer = ion_share(client, handle);
+	if (IS_ERR(buffer)) {
+		ret = PTR_ERR(buffer);
+		goto err_map_dma;
+	}
+
+	if ((data.offset + data.size) > buffer->size)
+		goto err_map_dma;
+
+	sg = ion_map_dma(client, handle);
+	if (IS_ERR(sg)) {
+		ret = PTR_ERR(sg);
+		goto err_map_dma;
+	}
+
+	while (sg && (data.offset >= sg_dma_len(sg))) {
+		data.offset -= sg_dma_len(sg);
+		sg = sg_next(sg);
+	}
+
+	data.size += data.offset;
+
+	if (!sg)
+		goto err_buf_sync;
+
+	tsg = sg;
+	while (tsg && (data.size > sg_dma_len(tsg))) {
+		data.size -= sg_dma_len(tsg);
+		nents++;
+		tsg = sg_next(tsg);
+	}
+
+	if (tsg && data.size)
+		nents++;
+
+	/* TODO: exclude offset in the first entry and remainder of the
+	   last entry. */
+	if (data.dir & IMSYNC_SYNC_FOR_CPU)
+		dma_sync_sg_for_cpu(NULL, sg, nents,
+			ion_msync_dir_table[data.dir & IMSYNC_BUF_TYPES_MASK]);
+	else if (data.dir & IMSYNC_SYNC_FOR_DEV)
+		dma_sync_sg_for_device(NULL, sg, nents,
+			ion_msync_dir_table[data.dir & IMSYNC_BUF_TYPES_MASK]);
+
+	ret = 0;
+err_buf_sync:
+	ion_unmap_dma(client, handle);
+err_map_dma:
+	ion_free(client, handle);
+
+	return ret;
+}
+
 static struct ion_heap *__ion_heap_create(struct ion_platform_heap *heap_data)
 {
 	struct ion_heap *heap = NULL;
@@ -693,7 +797,7 @@ static int exynos_ion_probe(struct platform_device *pdev)
 	if (!heaps)
 		return -ENOMEM;
 
-	ion_exynos = ion_device_create(NULL);
+	ion_exynos = ion_device_create(&exynos_heap_ioctl);
 	if (IS_ERR_OR_NULL(ion_exynos)) {
 		kfree(heaps);
 		return PTR_ERR(ion_exynos);
