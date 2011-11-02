@@ -623,6 +623,8 @@ config MACH_SMDK5250
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FIMD
+	select EXYNOS4_SETUP_USB_PHY
+	select EXYNOS_DEV_SS_UDC
 	help
 	  Machine support for Samsung SMDK5250
 endmenu
