@@ -18,8 +18,8 @@
 
 static struct resource exynos_flite0_resource[] = {
 	[0] = {
-		.start	= EXYNOS4_PA_FIMC_LITE0,
-		.end	= EXYNOS4_PA_FIMC_LITE0 + SZ_4K - 1,
+		.start	= EXYNOS_PA_FIMC_LITE0,
+		.end	= EXYNOS_PA_FIMC_LITE0 + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
@@ -50,8 +50,8 @@ void __init exynos_flite0_set_platdata(struct exynos_platform_flite *pd)
 
 static struct resource exynos_flite1_resource[] = {
 	[0] = {
-		.start	= EXYNOS4_PA_FIMC_LITE1,
-		.end	= EXYNOS4_PA_FIMC_LITE1 + SZ_4K - 1,
+		.start	= EXYNOS_PA_FIMC_LITE1,
+		.end	= EXYNOS_PA_FIMC_LITE1 + SZ_4K - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
