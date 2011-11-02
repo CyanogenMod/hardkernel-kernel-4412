@@ -98,6 +98,13 @@ config EXYNOS5_PM
 	help
 	  Enable suspend and resume for Exynos5 series.
 
+config EXYNOS4_CPUIDLE
+	bool "Exynos4 CPUIDLE Feature"
+	depends on (CPU_IDLE && ARCH_EXYNOS4)
+	default y
+	help
+	  Enable suspend and resume for Exynos4 series.
+
 config EXYNOS_MCT
 	bool
 	default y

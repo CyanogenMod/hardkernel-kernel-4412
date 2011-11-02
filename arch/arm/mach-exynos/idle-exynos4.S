@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos/idle.S
+/* linux/arch/arm/mach-exynos/idle-exynos4.S
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
