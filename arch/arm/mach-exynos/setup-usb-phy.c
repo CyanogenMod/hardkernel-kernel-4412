@@ -20,6 +20,7 @@
 #include <plat/cpu.h>
 #include <plat/usb-phy.h>
 #include <plat/cputype.h>
+#include <plat/regs-usb3-exynos-drd-phy.h>
 
 #define ETC6PUD		(S5P_VA_GPIO2 + 0x228)
 #define USB_CFG		(S3C_VA_SYS + 0x21C)
@@ -142,7 +143,7 @@ static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
 			else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
 				writel(PHY_DISABLE, S5P_USBHOST_PHY_CONTROL);
 		}
-	} else {
+	} else if (soc_is_exynos4212() | soc_is_exynos4412()){
 		if (phy_type & USB_PHY) {
 			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
 				writel(PHY_ENABLE, S5P_USB_PHY_CONTROL);
@@ -165,6 +166,13 @@ static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
 				writel(PHY_DISABLE, S5P_HSIC_2_PHY_CONTROL);
 		}
 #endif
+	} else {
+		if (phy_type & USB_PHY) {
+			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
+				writel(PHY_ENABLE, S5P_USBDRD_PHY_CONTROL);
+			else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
+				writel(PHY_DISABLE, S5P_USBDRD_PHY_CONTROL);
+		}
 	}
 
 	spin_unlock(&phy_lock);
@@ -654,6 +662,55 @@ static int exynos5_usb_phy20_exit(struct platform_device *pdev)
 	hostphy_ctrl0 |= (HOST_CTRL0_PHYSWRST | HOST_CTRL0_PHYSWRSTALL);
 	writel(hostphy_ctrl0, EXYNOS5_PHY_HOST_CTRL0);
 
+	exynos4_usb_phy_control(USB_PHY1, PHY_DISABLE);
+	return 0;
+}
+
+static int exynos5_usb_phy30_init(struct platform_device *pdev)
+{
+	u32 reg;
+
+	exynos4_usb_phy_control(USB_PHY0, PHY_ENABLE);
+
+	writel(EXYNOS_USB3_PHYUTMI_OTGDISABLE, EXYNOS_USB3_PHYUTMI);
+
+	/* Set 100MHz external clock */
+	reg = EXYNOS_USB3_PHYCLKRST_PORTRESET |
+		/* HS PLL uses ref_pad_clk{p,m} or ref_alt_clk_{p,m}
+		* as reference */
+		EXYNOS_USB3_PHYCLKRST_REFCLKSEL(2) |
+		/* Digital power supply in normal operating mode */
+		EXYNOS_USB3_PHYCLKRST_RETENABLEN |
+		/* 0x27-100MHz, 0x2a-24MHz, 0x31-20MHz, 0x38-19.2MHz */
+		EXYNOS_USB3_PHYCLKRST_FSEL(0x27) |
+		/* 0x19-100MHz, 0x68-24MHz, 0x7d-20Mhz */
+		EXYNOS_USB3_PHYCLKRST_MPLL_MULTIPLIER(0x19) |
+		/* Enable ref clock for SS function */
+		EXYNOS_USB3_PHYCLKRST_REF_SSP_EN |
+		/* Enable spread spectrum */
+		EXYNOS_USB3_PHYCLKRST_SSC_EN;
+
+	writel(reg, EXYNOS_USB3_PHYCLKRST);
+
+	udelay(10);
+
+	reg &= ~(EXYNOS_USB3_PHYCLKRST_PORTRESET);
+	writel(reg, EXYNOS_USB3_PHYCLKRST);
+
+	return 0;
+}
+
+static int exynos5_usb_phy30_exit(struct platform_device *pdev)
+{
+	u32 reg;
+
+	reg = EXYNOS_USB3_PHYUTMI_OTGDISABLE |
+		EXYNOS_USB3_PHYUTMI_FORCESUSPEND |
+		EXYNOS_USB3_PHYUTMI_FORCESLEEP;
+	writel(reg, EXYNOS_USB3_PHYUTMI);
+
+	exynos4_usb_phy_control(USB_PHY0, PHY_DISABLE);
+
 	return 0;
 }
 
@@ -675,24 +732,32 @@ int s5p_usb_phy_resume(struct platform_device *pdev, int type)
 
 int s5p_usb_phy_init(struct platform_device *pdev, int type)
 {
-	if (type == S5P_USB_PHY_HOST)
-		return exynos4_usb_phy1_init(pdev);
-	else if (type == S5P_USB_PHY20_HOST)
-		return exynos5_usb_phy20_init(pdev);
-	else if (type == S5P_USB_PHY_DEVICE)
+	if (type == S5P_USB_PHY_HOST) {
+		if (soc_is_exynos4210() || soc_is_exynos4210() || soc_is_exynos4210())
+			return exynos4_usb_phy1_init(pdev);
+		else
+			return exynos5_usb_phy20_init(pdev);
+	} else if (type == S5P_USB_PHY_DEVICE) {
 		return exynos4_usb_phy0_init(pdev);
+	} else if (type == S5P_USB_PHY_DRD) {
+		return exynos5_usb_phy30_init(pdev);
+	}
 
 	return -EINVAL;
 }
 
 int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 {
-	if (type == S5P_USB_PHY_HOST)
-		return exynos4_usb_phy1_exit(pdev);
-	else if (type == S5P_USB_PHY20_HOST)
-		return exynos5_usb_phy20_exit(pdev);
-	else if (type == S5P_USB_PHY_DEVICE)
+	if (type == S5P_USB_PHY_HOST) {
+		if (soc_is_exynos4210() || soc_is_exynos4210() || soc_is_exynos4210())
+			return exynos4_usb_phy1_exit(pdev);
+		else
+			return exynos5_usb_phy20_exit(pdev);
+	} else if (type == S5P_USB_PHY_DEVICE) {
 		return exynos4_usb_phy0_exit(pdev);
+	} else if (type == S5P_USB_PHY_DRD) {
+		return exynos5_usb_phy30_exit(pdev);
+	}
 
 	return -EINVAL;
 }
