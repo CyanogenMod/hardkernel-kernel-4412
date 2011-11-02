@@ -32,6 +32,7 @@
 #include <plat/regs-usb3-exynos-drd.h>
 #include <mach/regs-pmu.h>
 #include <plat/udc-ss.h>
+#include <plat/usb-phy.h>
 #include <plat/cpu.h>
 
 #include "exynos_ss_udc.h"
@@ -1453,65 +1454,10 @@ static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 	return 0;
 }
 
-/**
- * exynos_ss_udc_gate - set the hardware gate for the block
- * @pdev: The device we bound to
- * @on: On or off.
- *
- * Set the hardware gate setting into the block.
- */
-static void exynos_ss_udc_gate(struct platform_device *pdev, bool on)
+static void exynos_ss_udc_phy_set(struct platform_device *pdev)
 {
-	unsigned long flags;
-	u32 reg;
-
-	local_irq_save(flags);
-
-	reg = __raw_readl(S5P_USBDRD_PHY_CONTROL);
-	if (on)
-		reg |= S5P_USBDRD_PHY_ENABLE;
-	else
-		reg &= ~S5P_USBDRD_PHY_ENABLE;
-	__raw_writel(reg, S5P_USBDRD_PHY_CONTROL);
-
-	local_irq_restore(flags);
-}
-
-/**
- * exynos_ss_udc_phy_init - initialize the EXYNOS phy block
- * @udc: The host state.
- */
-static void exynos_ss_udc_phy_init(struct exynos_ss_udc *udc)
-{
-	u32 reg;
-
-	writel(0, EXYNOS_USB3_PHYUTMI);
-
-	/* Set 100MHz external clock */
-	reg = EXYNOS_USB3_PHYCLKRST_PORTRESET |
-	      /* HS PLL uses ref_pad_clk{p,m} or ref_alt_clk_{p,m}
-	       * as reference */
-	      EXYNOS_USB3_PHYCLKRST_REFCLKSEL(2) |
-	      /* Digital power supply in normal operating mode */
-	      EXYNOS_USB3_PHYCLKRST_RETENABLEN |
-	      /* 0x27-100MHz, 0x2a-24MHz, 0x31-20MHz, 0x38-19.2MHz */
-	      EXYNOS_USB3_PHYCLKRST_FSEL(0x27) |
-	      /* 0x19-100MHz, 0x68-24MHz, 0x7d-20Mhz */
-	      EXYNOS_USB3_PHYCLKRST_MPLL_MULTIPLIER(0x19) |
-	      /* Enable ref clock for SS function */
-	      EXYNOS_USB3_PHYCLKRST_REF_SSP_EN |
-	      /* Enable spread spectrum */
-	      EXYNOS_USB3_PHYCLKRST_SSC_EN;
-
-	writel(reg, EXYNOS_USB3_PHYCLKRST);
-
-	udelay(10);
-
-	__bic32(EXYNOS_USB3_PHYCLKRST, EXYNOS_USB3_PHYCLKRST_PORTRESET);
-}
-
-static void exynos_ss_udc_phy_set(struct exynos_ss_udc *udc)
-{
+	struct exynos_ss_udc_plat *plat = pdev->dev.platform_data;
+	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
 	/* The reset values:
 	 *	GUSB2PHYCFG(0) 	= 0x00002400
 	 *	GUSB3PIPECTL(0)	= 0x00260002
@@ -1524,7 +1470,8 @@ static void exynos_ss_udc_phy_set(struct exynos_ss_udc *udc)
 			    EXYNOS_USB3_GUSB3PIPECTLx_PHYSoftRst);
 
 	/* PHY initialization */
-	exynos_ss_udc_phy_init(udc);
+	if (plat && plat->phy_init)
+		plat->phy_init(pdev, S5P_USB_PHY_DRD);
 
 	__bic32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
 			    EXYNOS_USB3_GUSB2PHYCFGx_PHYSoftRst);
@@ -2028,11 +1975,8 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	}
 
 	/* reset the system */
-
 	clk_enable(udc->clk);
-	exynos_ss_udc_gate(pdev, true);
-	exynos_ss_udc_phy_set(udc);
-	
+	exynos_ss_udc_phy_set(pdev);
 
 	/* initialise the endpoints now the core has been initialised */
 	for (epnum = 0; epnum < EXYNOS_USB3_EPS; epnum++) {
@@ -2074,6 +2018,7 @@ err_mem:
 static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 {
 	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
+	struct exynos_ss_udc_plat *plat = pdev->dev.platform_data;
 
 	usb_gadget_unregister_driver(udc->driver);
 
@@ -2083,7 +2028,8 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 	release_resource(udc->regs_res);
 	kfree(udc->regs_res);
 
-	exynos_ss_udc_gate(pdev, false);
+	if (plat && plat->phy_exit)
+		plat->phy_exit(pdev, S5P_USB_PHY_DRD);
 
 	clk_disable(udc->clk);
 	clk_put(udc->clk);
