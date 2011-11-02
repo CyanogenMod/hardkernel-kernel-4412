@@ -18,12 +18,18 @@
 #include <mach/dev-sysmmu.h>
 #include <plat/s5p-clock.h>
 
+#if defined(CONFIG_ARCH_EXYNOS4)
+#define EXYNOS_PA_SYSMMU(ipbase) EXYNOS4_PA_SYSMMU_##ipbase
+#elif defined(CONFIG_ARCH_EXYNOS5)
+#define EXYNOS_PA_SYSMMU(ipbase) EXYNOS5_PA_SYSMMU_##ipbase
+#endif
+
 #define SYSMMU_RESOURCE(ipname, base, irq) \
 static struct resource sysmmu_resource_##ipname[] =\
 {\
 	{\
-		.start	= EXYNOS4_PA_SYSMMU_##base,\
-		.end	= EXYNOS4_PA_SYSMMU_##base + SZ_4K - 1,\
+		.start	= EXYNOS_PA_SYSMMU(base),\
+		.end	= EXYNOS_PA_SYSMMU(base) + SZ_4K - 1,\
 		.flags	= IORESOURCE_MEM,\
 	}, {\
 		.start	= IRQ_SYSMMU_##irq##_0,\
