@@ -1113,10 +1113,12 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 		*/
 		cap->fmt.colorspace = V4L2_COLORSPACE_JPEG;
 		mbus_fmt->code = V4L2_MBUS_FMT_JPEG_1X8;
+		cap->fmt.priv = V4L2_PIX_FMT_MODE_CAPTURE;
 	} else {
 		cap->fmt.bytesperline = (cap->fmt.width * depth) >> 3;
 		cap->fmt.sizeimage = (cap->fmt.bytesperline * cap->fmt.height);
 		mbus_fmt->code = V4L2_MBUS_FMT_VYUY8_2X8;
+		cap->fmt.priv = V4L2_PIX_FMT_MODE_PREVIEW;
 	}
 	mbus_fmt->colorspace = cap->fmt.colorspace;
 
@@ -1884,11 +1886,13 @@ int fimc_streamon_capture(void *fh)
 				}
 			}
 
-			ret = v4l2_subdev_call(ctrl->cam->sd, video, s_stream, 1);
-			if (ret < 0) {
-				dev_err(ctrl->dev, "%s: s_stream failed\n",
-						__func__);
-				return ret;
+			if (cap->fmt.priv == V4L2_PIX_FMT_MODE_CAPTURE) {
+				ret = v4l2_subdev_call(ctrl->cam->sd, video, s_stream, 1);
+				if (ret < 0) {
+					dev_err(ctrl->dev, "%s: s_stream failed\n",
+							__func__);
+					return ret;
+				}
 			}
 
 			if (cam->type == CAM_TYPE_MIPI) {
@@ -1902,6 +1906,19 @@ int fimc_streamon_capture(void *fh)
 					cam->mipi_settle, cam->mipi_align,
 					cam->width, cam->height,
 					cap->fmt.pixelformat);
+			}
+			if (cap->fmt.priv != V4L2_PIX_FMT_MODE_CAPTURE) {
+				ret = v4l2_subdev_call(ctrl->cam->sd, video, s_stream, 1);
+				if (ret < 0) {
+					dev_err(ctrl->dev, "%s: s_stream failed\n",
+							__func__);
+					if (cam->id == CAMERA_CSI_C)
+						s3c_csis_stop(CSI_CH_0);
+					else
+						s3c_csis_stop(CSI_CH_1);
+
+					return ret;
+				}
 			}
 		}
 	}

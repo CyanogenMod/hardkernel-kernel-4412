@@ -28,10 +28,7 @@
 #include <plat/csis.h>
 
 #include "csis.h"
-
-#ifdef CONFIG_VIDEO_FIMC_MIPI_IRQ_DEBUG
 static s32 err_print_cnt;
-#endif
 
 static struct s3c_csis_info *s3c_csis[S3C_CSIS_CH_NUM];
 
@@ -253,11 +250,8 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 	s3c_csis_system_on(pdev);
 	s3c_csis_phy_on(pdev);
 
-#ifdef CONFIG_VIDEO_FIMC_MIPI_IRQ_DEBUG
 	err_print_cnt = 0;
-
 	info("Samsung MIPI-CSIS%d operation started\n", pdev->id);
-#endif
 }
 
 void s3c_csis_stop(int csis_id)
@@ -290,18 +284,12 @@ static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
 	cfg = readl(s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 	/* receiving non-image data is not error */
-	cfg &= 0x0FFFFFFF;
-	if (unlikely(cfg))
-		err("csis error interrupt: 0x%x\n", cfg);
-
-#ifdef CONFIG_VIDEO_FIMC_MIPI_IRQ_DEBUG
 	if (unlikely(cfg & S3C_CSIS_INTSRC_ERR)) {
 		if (err_print_cnt < 30) {
 			err("csis error interrupt[%d]: %#x\n", err_print_cnt, cfg);
 			err_print_cnt++;
 		}
 	}
-#endif
 
 	return IRQ_HANDLED;
 }

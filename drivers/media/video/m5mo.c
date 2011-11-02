@@ -2368,8 +2368,7 @@ static int m5mo_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *ffmt)
 	}
 
 	cam_dbg("%dx%d\n", (*frmsize)->width, (*frmsize)->height);
-	if (old_index != (*frmsize)->index)
-		m5mo_set_frmsize(sd);
+	m5mo_set_frmsize(sd);
 
 	cam_trace("X\n");
 	return 0;
