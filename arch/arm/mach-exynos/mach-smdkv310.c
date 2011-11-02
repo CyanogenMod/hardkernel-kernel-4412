@@ -2444,25 +2444,25 @@ static void __init smdkv310_machine_init(void)
 #endif
 
 #if defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME)
-	exynos4_pd_disable(&exynos4_device_pd[PD_MFC].dev);
-	exynos4_pd_disable(&exynos4_device_pd[PD_G3D].dev);
-	exynos4_pd_disable(&exynos4_device_pd[PD_LCD0].dev);
-	exynos4_pd_disable(&exynos4_device_pd[PD_LCD1].dev);
-	exynos4_pd_disable(&exynos4_device_pd[PD_CAM].dev);
-	exynos4_pd_disable(&exynos4_device_pd[PD_TV].dev);
-	exynos4_pd_disable(&exynos4_device_pd[PD_GPS].dev);
+	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
+	exynos_pd_disable(&exynos4_device_pd[PD_G3D].dev);
+	exynos_pd_disable(&exynos4_device_pd[PD_LCD0].dev);
+	exynos_pd_disable(&exynos4_device_pd[PD_LCD1].dev);
+	exynos_pd_disable(&exynos4_device_pd[PD_CAM].dev);
+	exynos_pd_disable(&exynos4_device_pd[PD_TV].dev);
+	exynos_pd_disable(&exynos4_device_pd[PD_GPS].dev);
 #elif defined(CONFIG_EXYNOS4_DEV_PD)
 	/*
 	 * These power domains should be always on
 	 * without runtime pm support.
 	 */
-	exynos4_pd_enable(&exynos4_device_pd[PD_MFC].dev);
-	exynos4_pd_enable(&exynos4_device_pd[PD_G3D].dev);
-	exynos4_pd_enable(&exynos4_device_pd[PD_LCD0].dev);
-	exynos4_pd_enable(&exynos4_device_pd[PD_LCD1].dev);
-	exynos4_pd_enable(&exynos4_device_pd[PD_CAM].dev);
-	exynos4_pd_enable(&exynos4_device_pd[PD_TV].dev);
-	exynos4_pd_enable(&exynos4_device_pd[PD_GPS].dev);
+	exynos_pd_enable(&exynos4_device_pd[PD_MFC].dev);
+	exynos_pd_enable(&exynos4_device_pd[PD_G3D].dev);
+	exynos_pd_enable(&exynos4_device_pd[PD_LCD0].dev);
+	exynos_pd_enable(&exynos4_device_pd[PD_LCD1].dev);
+	exynos_pd_enable(&exynos4_device_pd[PD_CAM].dev);
+	exynos_pd_enable(&exynos4_device_pd[PD_TV].dev);
+	exynos_pd_enable(&exynos4_device_pd[PD_GPS].dev);
 #endif
 	s3c_i2c0_set_platdata(NULL);
 	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));

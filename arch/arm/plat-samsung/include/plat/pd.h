@@ -30,12 +30,12 @@ enum exynos4_pd_block {
 	PD_ISP,
 };
 
-struct exynos4_pd_data {
+struct exynos_pd_data {
 	void __iomem *clk_base;
 	void __iomem *read_base;
 	unsigned long read_phy_addr;
 };
 
-int exynos4_pd_enable(struct device *dev);
-int exynos4_pd_disable(struct device *dev);
+int exynos_pd_enable(struct device *dev);
+int exynos_pd_disable(struct device *dev);
 #endif /* __ASM_PLAT_SAMSUNG_PD_H */
