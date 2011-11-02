@@ -44,6 +44,10 @@ extern struct platform_device SYSMMU_PLATDEV(tv);
 extern struct platform_device SYSMMU_PLATDEV(mfc_l);
 extern struct platform_device SYSMMU_PLATDEV(mfc_r);
 extern struct platform_device SYSMMU_PLATDEV(g2d_acp);
+extern struct platform_device SYSMMU_PLATDEV(fimc_isp);
+extern struct platform_device SYSMMU_PLATDEV(fimc_drc);
+extern struct platform_device SYSMMU_PLATDEV(fimc_fd);
+extern struct platform_device SYSMMU_PLATDEV(ispcpu);
 
 static inline void sysmmu_set_owner(struct device *sysmmu, struct device *owner)
 {
