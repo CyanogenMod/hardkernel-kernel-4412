@@ -1578,6 +1578,7 @@ static struct clk *exynos5_clks[] __initdata = {
 	&exynos5_clk_sclk_hdmiphy,
 	&clk_fout_bpll,
 	&clk_fout_cpll,
+	&exynos5_clk_armclk,
 };
 
 static u32 epll_div[][6] = {

@@ -393,8 +393,10 @@ static int __init exynos_cpufreq_init(void)
 		ret = exynos4210_cpufreq_init(exynos_info);
 	else if (soc_is_exynos4212() || soc_is_exynos4412())
 		ret = exynos4212_cpufreq_init(exynos_info);
+	else if (soc_is_exynos5250())
+		ret = exynos5250_cpufreq_init(exynos_info);
 	else
-		printk(KERN_ERR "%s: no cpu type defined\n", __func__);
+		pr_err("%s: CPU type not found\n", __func__);
 
 	if (ret)
 		goto err_vdd_arm;

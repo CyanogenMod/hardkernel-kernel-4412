@@ -15,7 +15,10 @@
 */
 
 enum cpufreq_level_index {
-	L0, L1, L2, L3, L4, L5, L6, L7, L8, L9, L10, L11, L12, L13,
+	L0, L1, L2, L3, L4,
+	L5, L6, L7, L8, L9,
+	L10, L11, L12, L13, L14,
+	L15, L16, L17, L18, L19
 };
 
 enum cpufreq_level_request {
@@ -81,5 +84,26 @@ struct exynos_dvfs_info {
 #define SUPPORT_FREQ_SHIFT	29
 #define SUPPORT_FREQ_MASK	7
 
+#if defined(CONFIG_ARCH_EXYNOS4)
 extern int exynos4210_cpufreq_init(struct exynos_dvfs_info *);
 extern int exynos4212_cpufreq_init(struct exynos_dvfs_info *);
+static inline int exynos5250_cpufreq_init(struct exynos_dvfs_info *info)
+{
+	return 0;
+}
+
+#elif defined(CONFIG_ARCH_EXYNOS5)
+static inline int exynos4210_cpufreq_init(struct exynos_dvfs_info *info)
+{
+	return 0;
+}
+
+static inline int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
+{
+	return 0;
+}
+
+extern int exynos5250_cpufreq_init(struct exynos_dvfs_info *);
+#else
+	#warning "Should define CONFIG_ARCH_EXYNOS4(5)\n"
+#endif

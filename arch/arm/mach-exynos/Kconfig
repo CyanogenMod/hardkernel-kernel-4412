@@ -340,19 +340,31 @@ config EXYNOS4_ENBLE_CLOCK_DOWN
 	help
 	  ARM core clock down in idle time.
 
+config EXYNOS4_CPUFREQ
+	def_bool y
+	depends on CPU_FREQ && ARCH_EXYNOS4
+	help
+	  Exynos4 cpufreq support
+
+config EXYNOS5_CPUFREQ
+	def_bool y
+	depends on CPU_FREQ && ARCH_EXYNOS5
+	help
+	  Exynos5 cpufreq support
+
 choice
 	prompt "Max CPU frequency"
 	default EXYNOS4212_1200MHZ_SUPPORT
 
 config EXYNOS4212_1500MHZ_SUPPORT
 	bool "Max 1500MHz CPUFREQ LEVEL"
-	depends on CPU_FREQ && CPU_EXYNOS4212
+	depends on EXYNOS4_CPUFREQ && CPU_EXYNOS4212
 	help
 	  Max 1.5Ghz support
 
 config EXYNOS4212_1200MHZ_SUPPORT
 	bool "Max 1200MHz CPUFREQ LEVEL"
-	depends on CPU_FREQ && CPU_EXYNOS4212
+	depends on EXYNOS4_CPUFREQ && CPU_EXYNOS4212
 	help
 	  Max 1.2Ghz support
 
@@ -376,11 +388,11 @@ config STAND_ALONE_POLICY
 	bool "Stand alone policy CPU hotplug"
 
 config WITH_DVFS_POLICY
-	depends on CPU_FREQ
+	depends on EXYNOS4_CPUFREQ
 	bool "Intergrated DVFS CPU hotplug"
 
 config DVFS_NR_RUNNING_POLICY
-	depends on CPU_FREQ
+	depends on EXYNOS4_CPUFREQ
 	bool "DVFS-nr_running CPU hotplug"
 
 config NR_RUNNING_POLICY
@@ -395,11 +407,11 @@ choice
 
 config BUSFREQ
 	bool "Busfreq with PPC/PPMU"
-	depends on CPU_FREQ
+	depends on EXYNOS4_CPUFREQ
 
 config BUSFREQ_OPP
 	bool "Busfreq with OPP"
-	depends on CPU_FREQ
+	depends on EXYNOS4_CPUFREQ
 
 endchoice
 
