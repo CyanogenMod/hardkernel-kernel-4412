@@ -19,6 +19,8 @@
 #include <mach/map.h>
 
 #include <plat/devs.h>
+#include <plat/udc-ss.h>
+#include <plat/usb-phy.h>
 
 static struct resource exynos_ss_drd_resources[] = {
 	[0] = {
@@ -46,3 +48,15 @@ struct platform_device exynos_device_ss_udc = {
 	},
 };
 
+void __init exynos_ss_udc_set_platdata(struct exynos_ss_udc_plat *pd)
+{
+	struct exynos_ss_udc_plat *npd;
+
+	npd = s3c_set_platdata(pd, sizeof(struct exynos_ss_udc_plat),
+			&exynos_device_ss_udc);
+
+	if (!npd->phy_init)
+		npd->phy_init = s5p_usb_phy_init;
+	if (!npd->phy_exit)
+		npd->phy_exit = s5p_usb_phy_exit;
+}
