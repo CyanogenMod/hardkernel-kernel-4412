@@ -42,6 +42,8 @@ struct i2c_board_info;
 struct exynos_gscaler_isp_info {
 	struct i2c_board_info *board_info;
 	unsigned long clk_frequency;
+	const char *cam_srclk_name;
+	const char *cam_clk_name;
 	enum gsc_cam_bus_type bus_type;
 	u16 csi_data_align;
 	u16 i2c_bus_num;
@@ -58,6 +60,7 @@ struct exynos_gscaler_isp_info {
  */
 struct exynos_platform_gscaler {
 	struct exynos_gscaler_isp_info *isp_info[GSC_MAX_CAMIF_CLIENTS];
+	unsigned int active_cam_index;
 	unsigned int num_clients;
 	unsigned int cam_preview:1;
 	unsigned int cam_camcording:1;
