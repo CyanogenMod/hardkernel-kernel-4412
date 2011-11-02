@@ -27,7 +27,7 @@ static atomic_t		s5p_tvout_vcm_usage = ATOMIC_INIT(0);
 
 static void tvout_tlb_invalidator(enum vcm_dev_id id)
 {
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	if (atomic_read(&s5p_tvout_vcm_usage) == 0) {
 		return (void)0;
 	}
@@ -37,7 +37,7 @@ static void tvout_tlb_invalidator(enum vcm_dev_id id)
 static void tvout_pgd_base_specifier(enum vcm_dev_id id, unsigned long base)
 {
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	if (atomic_read(&s5p_tvout_vcm_usage) == 0) {
 		return (void)0;
 	}

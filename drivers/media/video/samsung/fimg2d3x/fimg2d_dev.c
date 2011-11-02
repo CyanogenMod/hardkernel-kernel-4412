@@ -45,7 +45,7 @@
 #include <plat/cpu.h>
 #include <plat/fimg2d.h>
 
-#if defined(CONFIG_EXYNOS4_DEV_PD)
+#if defined(CONFIG_EXYNOS_DEV_PD)
 #include <linux/pm_runtime.h>
 #endif 
 
@@ -273,7 +273,7 @@ static int g2d_probe(struct platform_device *pdev)
 		goto probe_out;
 	}
 
-#if defined(CONFIG_EXYNOS4_DEV_PD)
+#if defined(CONFIG_EXYNOS_DEV_PD)
 	/* to use the runtime PM helper functions */
 	pm_runtime_enable(&pdev->dev);
 	/* enable the power domain */
@@ -450,7 +450,7 @@ static int g2d_remove(struct platform_device *dev)
 
 	kfree(g2d_dev);
 
-#if defined(CONFIG_EXYNOS4_DEV_PD)
+#if defined(CONFIG_EXYNOS_DEV_PD)
 	/* disable the power domain */
 	pm_runtime_put(&dev->dev);
 	pm_runtime_disable(&dev->dev);
@@ -476,7 +476,7 @@ void g2d_early_suspend(struct early_suspend *h)
 	
 	g2d_sysmmu_off(g2d_dev);
 
-#if defined(CONFIG_EXYNOS4_DEV_PD)
+#if defined(CONFIG_EXYNOS_DEV_PD)
 	/* disable the power domain */
 	pm_runtime_put(g2d_dev->dev);
 #endif
@@ -485,7 +485,7 @@ void g2d_early_suspend(struct early_suspend *h)
 void g2d_late_resume(struct early_suspend *h)
 {
 
-#if defined(CONFIG_EXYNOS4_DEV_PD)
+#if defined(CONFIG_EXYNOS_DEV_PD)
 	/* enable the power domain */
 	pm_runtime_get_sync(g2d_dev->dev);
 #endif
@@ -512,7 +512,7 @@ static int g2d_suspend(struct platform_device *dev, pm_message_t state)
 	
 	g2d_sysmmu_off(g2d_dev);
 	
-#if defined(CONFIG_EXYNOS4_DEV_PD)
+#if defined(CONFIG_EXYNOS_DEV_PD)
 	/* disable the power domain */
 	pm_runtime_put(g2d_dev->dev);
 #endif	
@@ -522,7 +522,7 @@ static int g2d_suspend(struct platform_device *dev, pm_message_t state)
 static int g2d_resume(struct platform_device *pdev)
 {
 
-#if defined(CONFIG_EXYNOS4_DEV_PD)
+#if defined(CONFIG_EXYNOS_DEV_PD)
 	/* enable the power domain */
 	pm_runtime_get_sync(g2d_dev->dev);
 #endif
@@ -535,7 +535,7 @@ static int g2d_resume(struct platform_device *pdev)
 }
 #endif
 
-#if defined(CONFIG_EXYNOS4_DEV_PD)
+#if defined(CONFIG_EXYNOS_DEV_PD)
 static int g2d_runtime_suspend(struct device *dev)
 {
 	return 0;
@@ -563,7 +563,7 @@ static struct platform_driver fimg2d_driver = {
 	.driver		= {
 				.owner	= THIS_MODULE,
 				.name	= "s5p-fimg2d",
-#if defined(CONFIG_EXYNOS4_DEV_PD)
+#if defined(CONFIG_EXYNOS_DEV_PD)
 				.pm	= &g2d_pm_ops,
 #endif
 			},

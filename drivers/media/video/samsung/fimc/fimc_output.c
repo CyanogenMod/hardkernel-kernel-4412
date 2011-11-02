@@ -1326,7 +1326,7 @@ int fimc_outdev_set_ctx_param(struct fimc_control *ctrl, struct fimc_ctx *ctx)
 			(ctrl->status == FIMC_STREAMON_IDLE))
 		fimc_hwset_enable_irq(ctrl, 0, 1);
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	fimc_hwset_output_buf_sequence_all(ctrl, FRAME_SEQ);
 #endif
 
@@ -1557,7 +1557,7 @@ int fimc_reqbufs_output(void *fh, struct v4l2_requestbuffers *b)
 		b->count = FIMC_OUTBUFS;
 	}
 
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
+#if (!defined(CONFIG_EXYNOS_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
 	fimc_hwset_output_buf_sequence_all(ctrl, FRAME_SEQ);
 #endif
 
@@ -2101,7 +2101,7 @@ int fimc_streamoff_output(void *fh)
 			off_cnt++;
 	}
 
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
+#if (!defined(CONFIG_EXYNOS_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
 	if (off_cnt == FIMC_MAX_CTXS) {
 		ctrl->status = FIMC_STREAMOFF;
 		fimc_outdev_init_idxs(ctrl);
@@ -2507,7 +2507,7 @@ int fimc_qbuf_output(void *fh, struct v4l2_buffer *b)
 		if (ctx->cacheable)
 			fimc_output_cache_flush(ctx, b->index);
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		pm_runtime_get_sync(ctrl->dev);
 #endif
 	}

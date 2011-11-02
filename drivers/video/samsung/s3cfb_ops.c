@@ -458,7 +458,7 @@ int s3cfb_set_par(struct fb_info *fb)
 	struct s3cfb_window *win = fb->par;
 	struct s3cfb_global *fbdev = get_fimd_global(win->id);
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	if (fbdev->system_state == POWER_OFF) {
 		dev_err(fbdev->dev, "system_state is POWER_OFF\n");
 		return 0;
@@ -702,7 +702,7 @@ int s3cfb_blank(int blank_mode, struct fb_info *fb)
 
 	dev_dbg(fbdev->dev, "change blank mode\n");
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	if (fbdev->system_state == POWER_OFF) {
 		dev_err(fbdev->dev, "system_state is POWER_OFF\n");
 		win->power_state = blank_mode;
@@ -848,7 +848,7 @@ int s3cfb_pan_display(struct fb_var_screeninfo *var, struct fb_info *fb)
 	struct s3cfb_window *win = fb->par;
 	struct s3cfb_global *fbdev = get_fimd_global(win->id);
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	if (fbdev->system_state == POWER_OFF)
 		return 0;
 #endif
@@ -903,7 +903,7 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 		int vsync;
 	} p;
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	if (fbdev->system_state == POWER_OFF)
 		return 0;
 #endif
@@ -1094,13 +1094,13 @@ int s3cfb_direct_ioctl(int id, unsigned int cmd, unsigned long arg)
 	struct s3cfb_window *win = fb->par;
 	struct s3cfb_lcd *lcd = fbdev->lcd;
 	struct s3cfb_user_window user_win;
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	struct platform_device *pdev = to_platform_device(fbdev->dev);
 #endif
 	void *argp = (void *)arg;
 	int ret = 0;
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* enable the power domain */
 	if (fbdev->system_state == POWER_OFF) {
 		/* This IOCTLs are came from fimc irq.
@@ -1241,17 +1241,17 @@ int s3cfb_direct_ioctl(int id, unsigned int cmd, unsigned long arg)
 		break;
 
 	default:
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 		fbdev->system_state = POWER_ON;
 #endif
 		ret = s3cfb_ioctl(fb, cmd, arg);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 		fbdev->system_state = POWER_OFF;
 #endif
 		break;
 	}
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* disable the power domain */
 	if (fbdev->system_state == POWER_OFF)
 		pm_runtime_put(&pdev->dev);

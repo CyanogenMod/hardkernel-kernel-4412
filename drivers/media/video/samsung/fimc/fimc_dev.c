@@ -161,7 +161,7 @@ static inline u32 fimc_irq_out_single_buf(struct fimc_control *ctrl,
 		ctrl->out->idxs.active.idx = -1;
 		ctx->status = FIMC_STREAMON_IDLE;
 		ctrl->status = FIMC_STREAMON_IDLE;
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		ctrl->out->last_ctx = -1;
 #endif
 	}
@@ -252,7 +252,7 @@ static inline u32 fimc_irq_out_multi_buf(struct fimc_control *ctrl,
 		ctrl->out->idxs.active.idx = -1;
 		ctx->status = FIMC_STREAMON_IDLE;
 		ctrl->status = FIMC_STREAMON_IDLE;
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		ctrl->out->last_ctx = -1;
 #endif
 	}
@@ -335,7 +335,7 @@ static inline u32 fimc_irq_out_dma(struct fimc_control *ctrl,
 
 		ctx->status = FIMC_STREAMON_IDLE;
 		ctrl->status = FIMC_STREAMON_IDLE;
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		ctrl->out->last_ctx = -1;
 #endif
 	}
@@ -418,7 +418,7 @@ static inline void fimc_irq_out(struct fimc_control *ctrl)
 		break;
 	}
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	atomic_inc((atomic_t *)&ctrl->irq_cnt);
 	queue_work(ctrl->fimc_irq_wq, &ctrl->work_struct);
 #endif
@@ -721,7 +721,7 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 	clk_put(sclk_fimc_lclk);
 	clk_put(fimc_src_clk);
 
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
+#if (!defined(CONFIG_EXYNOS_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
 	fimc_hwset_reset(ctrl);
 #endif
 
@@ -1193,7 +1193,7 @@ static int fimc_open(struct file *filp)
 	}
 
 	if (in_use == 1) {
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
+#if (!defined(CONFIG_EXYNOS_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
 		if (pdata->clk_on)
 			pdata->clk_on(to_platform_device(ctrl->dev),
 					&ctrl->clk);
@@ -1280,7 +1280,7 @@ static int fimc_release(struct file *filp)
 	}
 
 	if (atomic_read(&ctrl->in_use) == 0) {
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
+#if (!defined(CONFIG_EXYNOS_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
 		if (pdata->clk_off) {
 			pdata->clk_off(to_platform_device(ctrl->dev),
 					&ctrl->clk);
@@ -1288,7 +1288,7 @@ static int fimc_release(struct file *filp)
 		}
 #endif
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		if (ctrl->power_status == FIMC_POWER_ON) {
 			pm_runtime_put_sync(ctrl->dev);
 		}
@@ -1381,7 +1381,7 @@ static int fimc_release(struct file *filp)
 		ctrl->cap = NULL;
 	}
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	flush_workqueue(ctrl->fimc_irq_wq);
 #endif
 
@@ -1750,7 +1750,7 @@ static int __devinit fimc_probe(struct platform_device *pdev)
 		goto err_global;
 	}
 	printk(KERN_INFO "FIMC%d registered successfully\n", ctrl->id);
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	ctrl->power_status = FIMC_POWER_OFF;
 	pm_runtime_enable(&pdev->dev);
 
@@ -1790,7 +1790,7 @@ static int fimc_remove(struct platform_device *pdev)
 	kfree(fimc_dev);
 	fimc_dev = NULL;
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	pm_runtime_disable(&pdev->dev);
 #endif
 	return 0;
@@ -1914,7 +1914,7 @@ int fimc_suspend(struct platform_device *pdev, pm_message_t state)
 	else
 		ctrl->status = FIMC_OFF_SLEEP;
 
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
+#if (!defined(CONFIG_EXYNOS_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
 	if (atomic_read(&ctrl->in_use) && pdata->clk_off)
 		pdata->clk_off(pdev, &ctrl->clk);
 #endif
@@ -2374,14 +2374,14 @@ static const struct dev_pm_ops fimc_pm_ops = {
 static struct platform_driver fimc_driver = {
 	.probe		= fimc_probe,
 	.remove		= fimc_remove,
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
+#if (!defined(CONFIG_EXYNOS_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
 	.suspend	= fimc_suspend,
 	.resume		= fimc_resume,
 #endif
 	.driver		= {
 		.name	= FIMC_NAME,
 		.owner	= THIS_MODULE,
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		.pm = &fimc_pm_ops,
 #else
 		.pm = NULL,

@@ -17,7 +17,7 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/err.h>
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 #include <linux/pm_runtime.h>
 #endif
 
@@ -761,7 +761,7 @@ int s3c2410_dma_request(enum dma_ch id,
 
 	dmac = ch->dmac;
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	/* enable the power domain */
 	spin_unlock_irqrestore(&res_lock, flags);
 	pm_runtime_get_sync(dmac->pi->dev);
@@ -773,7 +773,7 @@ int s3c2410_dma_request(enum dma_ch id,
 	if (!ch->pl330_chan_id) {
 		chan_release(ch);
 		clk_disable(dmac->clk);
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		/* disable the power domain */
 		spin_unlock_irqrestore(&res_lock, flags);
 		pm_runtime_put(dmac->pi->dev);
@@ -891,7 +891,7 @@ int s3c2410_dma_free(enum dma_ch id, struct s3c2410_dma_client *client)
 	ch->pl330_chan_id = NULL;
 	clk_disable(ch->dmac->clk);
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	/* disable the power domain */
 	spin_unlock_irqrestore(&res_lock, flags);
 	pm_runtime_put(ch->dmac->pi->dev);
@@ -1105,7 +1105,7 @@ static int pl330_probe(struct platform_device *pdev)
 		goto probe_err1;
 	}
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	/* to use the runtime PM helper functions */
 	pm_runtime_enable(&pdev->dev);
 	/* enable the power domain */
@@ -1190,7 +1190,7 @@ static int pl330_probe(struct platform_device *pdev)
 		pl330_info->pcfg.num_peri, pl330_info->pcfg.num_events);
 
 	clk_disable(s3c_pl330_dmac->clk);
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	/* disable the power domain */
 	pm_runtime_put(&pdev->dev);
 #endif
@@ -1210,7 +1210,7 @@ probe_err3:
 	iounmap(pl330_info->base);
 probe_err2:
 	release_mem_region(res->start, resource_size(res));
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	/* disable the power domain */
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
@@ -1279,7 +1279,7 @@ static int pl330_remove(struct platform_device *pdev)
 	list_del(&dmac->node);
 	kfree(dmac);
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	/* disable the power domain */
 	spin_unlock_irqrestore(&res_lock, flags);
 	pm_runtime_put(&pdev->dev);

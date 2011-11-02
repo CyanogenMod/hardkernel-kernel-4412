@@ -2743,7 +2743,7 @@ static void __init smdk4212_machine_init(void)
 #endif
 	struct device *spi2_dev = &exynos4_device_spi2.dev;
 #endif
-#if defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_G3D].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_LCD0].dev);
@@ -2751,7 +2751,7 @@ static void __init smdk4212_machine_init(void)
 	exynos_pd_disable(&exynos4_device_pd[PD_TV].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_GPS].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_ISP].dev);
-#elif defined(CONFIG_EXYNOS4_DEV_PD)
+#elif defined(CONFIG_EXYNOS_DEV_PD)
 	/*
 	 * These power domains should be always on
 	 * without runtime pm support.
@@ -2800,7 +2800,7 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_FB_MIPI_DSIM
 	s5p_device_mipi_dsim.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_fimd0.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
@@ -2814,7 +2814,7 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_FB_S5P_MIPI_DSIM
 	s5p_device_dsim.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s3c_device_fb.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
@@ -2839,7 +2839,7 @@ static void __init smdk4212_machine_init(void)
 
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 	exynos4_fimc_is_set_platdata(NULL);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	exynos4_device_fimc_is.dev.parent = &exynos4_device_pd[PD_ISP].dev;
 #endif
 #endif
@@ -2864,7 +2864,7 @@ static void __init smdk4212_machine_init(void)
 	s3c_fimc1_set_platdata(&fimc_plat);
 	s3c_fimc2_set_platdata(NULL);
 	s3c_fimc3_set_platdata(NULL);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s3c_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
@@ -2876,7 +2876,7 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_VIDEO_FIMC_MIPI
 	s3c_csis0_set_platdata(NULL);
 	s3c_csis1_set_platdata(NULL);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s3c_device_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_csis1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 #endif
@@ -2900,14 +2900,14 @@ static void __init smdk4212_machine_init(void)
 #if defined(CONFIG_VIDEO_TVOUT)
 	s5p_hdmi_hpd_set_platdata(&hdmi_hpd_data);
 	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_tvout.dev.parent = &exynos4_device_pd[PD_TV].dev;
 	exynos4_device_pd[PD_TV].dev.parent= &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
 
 #ifdef CONFIG_VIDEO_JPEG_V2X
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	exynos4_jpeg_setup_clock(&s5p_device_jpeg.dev, 160000000);
 #endif
@@ -2918,7 +2918,7 @@ static void __init smdk4212_machine_init(void)
 #endif
 
 #ifdef CONFIG_VIDEO_MFC5X
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 #endif
 	exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 267 * MHZ);

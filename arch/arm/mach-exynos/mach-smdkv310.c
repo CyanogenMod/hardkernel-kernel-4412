@@ -2446,7 +2446,7 @@ static void __init smdkv310_machine_init(void)
 	mipi_fb_init();
 #endif
 
-#if defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_G3D].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_LCD0].dev);
@@ -2454,7 +2454,7 @@ static void __init smdkv310_machine_init(void)
 	exynos_pd_disable(&exynos4_device_pd[PD_CAM].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_TV].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_GPS].dev);
-#elif defined(CONFIG_EXYNOS4_DEV_PD)
+#elif defined(CONFIG_EXYNOS_DEV_PD)
 	/*
 	 * These power domains should be always on
 	 * without runtime pm support.
@@ -2509,7 +2509,7 @@ static void __init smdkv310_machine_init(void)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 #endif
 	s5p_fimd0_set_platdata(&smdkv310_lcd0_pdata);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_fimd0.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
@@ -2523,12 +2523,12 @@ static void __init smdkv310_machine_init(void)
 #else
 	s3cfb_set_platdata(NULL);
 #endif
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s3c_device_fb.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 #ifdef CONFIG_VIDEO_JPEG
 	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 #endif
@@ -2539,7 +2539,7 @@ static void __init smdkv310_machine_init(void)
 #if defined(CONFIG_VIDEO_TVOUT)
 	s5p_hdmi_hpd_set_platdata(&hdmi_hpd_data);
 	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_tvout.dev.parent = &exynos4_device_pd[PD_TV].dev;
 #endif
 #endif
@@ -2563,7 +2563,7 @@ static void __init smdkv310_machine_init(void)
 	s3c_fimc1_set_platdata(NULL);
 	s3c_fimc2_set_platdata(&fimc_plat);
 	s3c_fimc3_set_platdata(NULL);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s3c_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
@@ -2575,7 +2575,7 @@ static void __init smdkv310_machine_init(void)
 #ifdef CONFIG_VIDEO_FIMC_MIPI
 	s3c_csis0_set_platdata(NULL);
 	s3c_csis1_set_platdata(NULL);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s3c_device_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s3c_device_csis1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 #endif
@@ -2623,7 +2623,7 @@ static void __init smdkv310_machine_init(void)
 			 sizeof(s3c_fimc2_default_data), &s5p_device_fimc2);
 	s3c_set_platdata(&s3c_fimc3_default_data,
 			 sizeof(s3c_fimc3_default_data), &s5p_device_fimc3);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s5p_device_fimc1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s5p_device_fimc2.dev.parent = &exynos4_device_pd[PD_CAM].dev;
@@ -2634,7 +2634,7 @@ static void __init smdkv310_machine_init(void)
 			sizeof(s5p_mipi_csis0_default_data), &s5p_device_mipi_csis0);
 	s3c_set_platdata(&s5p_mipi_csis1_default_data,
 			sizeof(s5p_mipi_csis1_default_data), &s5p_device_mipi_csis1);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_mipi_csis0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 	s5p_device_mipi_csis1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 #endif
@@ -2656,7 +2656,7 @@ static void __init smdkv310_machine_init(void)
 #endif
 
 #if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 #endif
 #endif
@@ -2672,7 +2672,7 @@ static void __init smdkv310_machine_init(void)
 
 #ifdef CONFIG_VIDEO_FIMG2D
 	s5p_fimg2d_set_platdata(&fimg2d_data);
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_fimg2d.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif

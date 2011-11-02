@@ -18,7 +18,7 @@
 
 #define SYSMMU_PLATDEV(ipname) exynos_device_sysmmu_##ipname
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 #define ASSIGN_SYSMMU_POWERDOMAIN(ipname, powerdomain) \
 		SYSMMU_PLATDEV(ipname).dev.parent = powerdomain
 #else

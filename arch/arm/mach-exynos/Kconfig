@@ -138,7 +138,7 @@ config EXYNOS4_SETUP_DP
 	help
 	  Common setup code for DP.
 
-config EXYNOS4_DEV_PD
+config EXYNOS_DEV_PD
 	bool
 	help
 	  Compile in platform device definitions for Power Domain
@@ -424,7 +424,7 @@ config MACH_SMDKC210
 	select S5P_DEV_THERMAL
 	select S5P_DEV_USB_EHCI
 	select S5P_SYSTEM_MMU
-	select EXYNOS4_DEV_PD
+	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
@@ -461,7 +461,7 @@ config MACH_SMDKV310
 	select S5P_DEV_THERMAL
 	select S5P_DEV_USB_EHCI
 	select S5P_SYSTEM_MMU
-	select EXYNOS4_DEV_PD
+	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
@@ -551,6 +551,7 @@ config MACH_SMDK4212
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_USB_SWITCH
 	select S5P_SYSTEM_MMU
+	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_FIMD0
@@ -563,7 +564,6 @@ config MACH_SMDK4212
 	select EXYNOS4_SETUP_USB_PHY
 	select EXYNOS4_SETUP_KEYPAD
 	select EXYNOS4_SETUP_MFC
-	select EXYNOS4_DEV_PD
 	select EXYNOS4_DEV_FIMC_LITE
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_PWM
@@ -615,6 +615,7 @@ config MACH_SMDK5250
 	select S3C_DEV_HSMMC3
 	select S3C_DEV_I2C1
 	select S5P_DEV_FIMD1
+	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FIMD

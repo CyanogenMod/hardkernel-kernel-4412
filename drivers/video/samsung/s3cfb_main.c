@@ -173,7 +173,7 @@ static int s3cfb_probe(struct platform_device *pdev)
 	int ret = 0;
 	int i = 0;
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* to use the runtime PM helper functions */
 	pm_runtime_enable(&pdev->dev);
 	/* enable the power domain */
@@ -354,7 +354,7 @@ static int s3cfb_remove(struct platform_device *pdev)
 		kfree(fbdev[i]->fb);
 		kfree(fbdev[i]);
 	}
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* disable the power domain */
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
@@ -401,7 +401,7 @@ void s3cfb_early_suspend(struct early_suspend *h)
 		if (pdata->clk_off)
 			pdata->clk_off(pdev, &fbdev[i]->clock);
 	}
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* disable the power domain */
 	printk(KERN_DEBUG "s3cfb - disable power domain\n");
 	pm_runtime_put_sync(&pdev->dev);
@@ -423,7 +423,7 @@ void s3cfb_late_resume(struct early_suspend *h)
 
 	dev_dbg(info->dev, "wake up from suspend\n");
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* enable the power domain */
 	printk(KERN_DEBUG "s3cfb - enable power domain\n");
 	pm_runtime_get_sync(&pdev->dev);
@@ -577,7 +577,7 @@ int s3cfb_resume(struct platform_device *pdev)
 #define s3cfb_resume NULL
 #endif
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 static int s3cfb_runtime_suspend(struct device *dev)
 {
 	return 0;
@@ -604,7 +604,7 @@ static struct platform_driver s3cfb_driver = {
 	.driver		= {
 		.name	= S3CFB_NAME,
 		.owner	= THIS_MODULE,
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 		.pm	= &s3cfb_pm_ops,
 #endif
 	},

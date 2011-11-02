@@ -202,7 +202,7 @@ static int fimc_init_camera(struct fimc_control *ctrl)
 	struct s3c_platform_camera *cam;
 	int ret = 0, retry_cnt = 0;
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	struct platform_device *pdev = to_platform_device(ctrl->dev);
 #endif
 	pdata = to_fimc_plat(ctrl->dev);
@@ -213,7 +213,7 @@ static int fimc_init_camera(struct fimc_control *ctrl)
 	if (ctrl->cam->initialized)
 		return 0;
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	if (ctrl->power_status == FIMC_POWER_OFF) {
 		pm_runtime_get_sync(&pdev->dev);
 	}
@@ -761,7 +761,7 @@ static int fimc_is_init_cam(struct fimc_control *ctrl)
 	struct s3c_platform_camera *cam;
 	int ret = 0;
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	struct platform_device *pdev = to_platform_device(ctrl->dev);
 #endif
 
@@ -770,7 +770,7 @@ static int fimc_is_init_cam(struct fimc_control *ctrl)
 	if (ctrl->cam->initialized)
 		return 0;
 
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	if (ctrl->power_status == FIMC_POWER_OFF)
 		pm_runtime_get_sync(&pdev->dev);
 #endif
@@ -1046,7 +1046,7 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	struct fimc_capinfo *cap = ctrl->cap;
 	struct v4l2_mbus_framefmt *mbus_fmt;
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	struct platform_device *pdev = to_platform_device(ctrl->dev);
 #endif
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
@@ -1072,7 +1072,7 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 
 		/* assign to ctrl */
 		ctrl->cap = cap;
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		if (ctrl->power_status == FIMC_POWER_OFF)
 			pm_runtime_get_sync(&pdev->dev);
 #endif
@@ -1294,7 +1294,7 @@ int fimc_reqbufs_capture(void *fh, struct v4l2_requestbuffers *b)
 	struct fimc_control *ctrl = fh;
 	struct fimc_capinfo *cap = ctrl->cap;
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	struct platform_device *pdev = to_platform_device(ctrl->dev);
 #endif
 	int ret = 0, i;
@@ -1336,7 +1336,7 @@ int fimc_reqbufs_capture(void *fh, struct v4l2_requestbuffers *b)
 
 	cap->nr_bufs = b->count;
 	if (pdata->hw_ver >= 0x51) {
-#if (defined(CONFIG_EXYNOS4_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		if (ctrl->power_status == FIMC_POWER_OFF) {
 			pm_runtime_get_sync(&pdev->dev);
 		}
@@ -1851,7 +1851,7 @@ int fimc_streamon_capture(void *fh)
 
 	if (pdata->hw_ver < 0x51)
 		fimc_hw_reset_camera(ctrl);
-#if (!defined(CONFIG_EXYNOS4_DEV_PD) && !defined(CONFIG_PM_RUNTIME))
+#if (!defined(CONFIG_EXYNOS_DEV_PD) && !defined(CONFIG_PM_RUNTIME))
 	ctrl->status = FIMC_READY_ON;
 #endif
 	cap->irq = 0;

@@ -771,7 +771,7 @@ void s5p_dsim_early_suspend(struct early_suspend *h)
 
 	msleep(100);
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* disable the power domain */
 	pm_runtime_put(dsim.dev);
 #endif
@@ -808,7 +808,7 @@ void s5p_dsim_late_resume(struct early_suspend *h)
 {
 	pr_err("[DSIM][%s] \n", __func__);
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* enable the power domain */
 	pm_runtime_get_sync(dsim.dev);
 #endif
@@ -914,7 +914,7 @@ static int s5p_dsim_probe(struct platform_device *pdev)
 
 	dsim.pd = to_dsim_plat(&pdev->dev);
 	dsim.dev = &pdev->dev;
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* to use the runtime PM helper functions */
 	pm_runtime_enable(&pdev->dev);
 	/* enable the power domain */
@@ -1026,7 +1026,7 @@ err_clk_disable:
 
 static int s5p_dsim_remove(struct platform_device *pdev)
 {
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 	/* disable the power domain */
 	pm_runtime_put(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
@@ -1034,7 +1034,7 @@ static int s5p_dsim_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 static int s5p_dsim_runtime_suspend(struct device *dev)
 {
 	return 0;
@@ -1061,7 +1061,7 @@ static struct platform_driver s5p_dsim_driver = {
 	.driver = {
 		   .name = "s5p-dsim",
 		   .owner = THIS_MODULE,
-#ifdef CONFIG_EXYNOS4_DEV_PD
+#ifdef CONFIG_EXYNOS_DEV_PD
 		   .pm	= &s5p_dsim_pm_ops,
 #endif
 		   },
