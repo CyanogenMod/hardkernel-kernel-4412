@@ -58,27 +58,19 @@ static bool thread_running;
 #define START_SIZE (32)
 #define END_SIZE (SZ_2M)
 
-static inline long unsigned int timespec_to_usec(struct timespec lhs,
-			struct timespec rhs)
-{
-	return ((rhs.tv_sec - lhs.tv_sec)*NSEC_PER_SEC
-			+ (rhs.tv_nsec - lhs.tv_nsec))/NSEC_PER_USEC;
-}
-
 static void print_result(char *ops, u32 xfer_size, struct timespec lhs,
 			 struct timespec rhs)
 {
-	u32 ns;
+	long us;
 	struct timespec ts;
 
 	ts = timespec_sub(rhs, lhs);
-	ns = (u32) timespec_to_ns(&ts);
+	us = ts.tv_sec*USEC_PER_SEC + ts.tv_nsec/NSEC_PER_USEC;
 
 	if (!strcmp(ops, "memset"))
-		printk(KERN_INFO "%u: %lu\n", xfer_size,
-				timespec_to_usec(lhs, rhs));
+		printk(KERN_INFO "%u: %lu\n", xfer_size, us);
 	else
-		printk(KERN_INFO "%lu\n", timespec_to_usec(lhs, rhs));
+		printk(KERN_INFO "%lu\n", us);
 }
 
 bool buf_compare(u32 src[], u32 dst[], unsigned int bytes)
