@@ -675,6 +675,30 @@ config USB_S3C_OTGD
 	  dynamically linked module called "s3c-udc-otg-hs" and force all
 	  gadget drivers to also be dynamically linked.
 
+choice
+	prompt "EXYNOS SS UDC speed mode (temporarily)"
+	depends on USB_GADGET_EXYNOS_SS_UDC
+	default USB_GADGET_EXYNOS_SS_UDC_HSMODE
+	help
+	   For the present moment gadget layer doesn't support SuperSpeed.
+	   This option allows to select speed mode for EXYNOS SS UDC driver.
+
+	   NOTE: this is temporarily and will be removed once SuperSpeed support
+	   has been added to gadget layer.
+
+config USB_GADGET_EXYNOS_SS_UDC_HSMODE
+	boolean "HighSpeed"
+	help
+	   Use HighSpeed mode to work with USB2.0 host and gadgets _without_
+	   SuperSpeed support.
+
+config USB_GADGET_EXYNOS_SS_UDC_SSMODE
+	boolean "SuperSpeed"
+	help
+	   Use SuperSpeed mode to debug/test gadget's SuperSpeed support.
+
+endchoice
+
 config USB_GADGET_DUALSPEED
 	bool
 	depends on USB_GADGET

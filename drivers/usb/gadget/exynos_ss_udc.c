@@ -1432,7 +1432,11 @@ static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 
 	udc_ep->parent = udc;
 	udc_ep->ep.name = udc_ep->name;
+#if defined(CONFIG_USB_GADGET_EXYNOS_SS_UDC_SSMODE)
+	udc_ep->ep.maxpacket = epnum ? EP_SS_MPS : EP0_SS_MPS;
+#else
 	udc_ep->ep.maxpacket = epnum ? EP_HS_MPS : EP0_HS_MPS;
+#endif
 	udc_ep->ep.ops = &exynos_ss_udc_ep_ops;
 	udc_ep->trb = dma_alloc_coherent(NULL,
 					 sizeof(struct exynos_ss_udc_trb),
