@@ -2662,7 +2662,7 @@ static void __init smdkv310_machine_init(void)
 #endif
 
 #if defined(CONFIG_VIDEO_MFC5X)
-	exynos4_mfc_setup_clock(&s5p_device_fimd0.dev, 200 * MHZ);
+	exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 200 * MHZ);
 #endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
