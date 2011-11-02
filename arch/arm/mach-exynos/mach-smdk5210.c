@@ -50,6 +50,7 @@
 #endif
 #include <plat/sdhci.h>
 #include <plat/regs-srom.h>
+#include <plat/udc-ss.h>
 
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
@@ -746,6 +747,17 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_EXYNOS_DEV_SS_UDC
+static struct exynos_ss_udc_plat smdk5210_ss_udc_pdata;
+
+static void __init smdk5210_ss_udc_init(void)
+{
+	struct exynos_ss_udc_plat *pdata = &smdk5210_ss_udc_pdata;
+
+	exynos_ss_udc_set_platdata(pdata);
+}
+#endif
+
 static struct platform_device *smdk5210_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS_MEDIA_DEVICE
 	&exynos5_device_md0,
@@ -822,7 +834,7 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 	&s5p_device_mixer,
 #endif
 #endif
-#if defined(CONFIG_EXYNOS_DEV_SS_UDC)
+#ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	&exynos_device_ss_udc,
 #endif
 };
@@ -1088,7 +1100,9 @@ static void __init smdk5210_machine_init(void)
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdk5210_hsmmc3_pdata);
 #endif
-
+#ifdef CONFIG_EXYNOS_DEV_SS_UDC
+	smdk5210_ss_udc_init();
+#endif
 	smdk5210_smsc911x_init();
 	platform_add_devices(smdk5210_devices, ARRAY_SIZE(smdk5210_devices));
 
