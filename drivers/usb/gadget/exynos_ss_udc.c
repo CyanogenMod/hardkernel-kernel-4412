@@ -321,7 +321,11 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 static struct usb_request *exynos_ss_udc_ep_alloc_request(struct usb_ep *ep,
 						      gfp_t flags)
 {
+	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
+	struct exynos_ss_udc *udc = udc_ep->parent;
 	struct exynos_ss_udc_req *req;
+
+	dev_dbg(udc->dev, "%s: ep%d\n", __func__, udc_ep->epnum);
 
 	req = kzalloc(sizeof(struct exynos_ss_udc_req), flags);
 	if (!req)
@@ -336,7 +340,11 @@ static struct usb_request *exynos_ss_udc_ep_alloc_request(struct usb_ep *ep,
 static void exynos_ss_udc_ep_free_request(struct usb_ep *ep,
 				      struct usb_request *req)
 {
+	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
+	struct exynos_ss_udc *udc = udc_ep->parent;
 	struct exynos_ss_udc_req *udc_req = our_req(req);
+
+	dev_dbg(udc->dev, "%s: ep%d, req %p\n", __func__, udc_ep->epnum, req);
 
 	kfree(udc_req);
 }
@@ -488,6 +496,9 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 	int epnum = udc_ep->epnum;
 	int xfer_length;
 	bool res;
+
+	dev_dbg(udc->dev, "%s: ep%d%s, req %p\n", __func__, epnum,
+			   udc_ep->dir_in ? "in" : "out", ureq);
 
 	udc_ep->req = udc_req;
 
@@ -1024,6 +1035,8 @@ static void exynos_ss_udc_kill_all_requests(struct exynos_ss_udc *udc,
 	struct exynos_ss_udc_req *req, *treq;
 	unsigned long flags;
 
+	dev_dbg(udc->dev, "%s: ep%d\n", __func__, ep->epnum);
+
 	spin_lock_irqsave(&ep->lock, flags);
 
 	list_for_each_entry_safe(req, treq, &ep->queue, queue) {
@@ -1069,7 +1082,10 @@ static void exynos_ss_udc_complete_in(struct exynos_ss_udc *udc,
 				  struct exynos_ss_udc_ep *udc_ep)
 {
 	struct exynos_ss_udc_req *udc_req = udc_ep->req;
+	struct usb_request *req = &udc_req->req;
 	int size_left;
+
+	dev_dbg(udc->dev, "%s: ep%d, req %p\n", __func__, udc_ep->epnum, req);
 
 	if (!udc_req) {
 		dev_dbg(udc->dev, "XferCompl but no req\n");
@@ -1106,6 +1122,7 @@ static void exynos_ss_udc_handle_outdone(struct exynos_ss_udc *udc,
 	int len, size_left;
 	int result = 0;
 
+	dev_dbg(udc->dev, "%s: ep%d, req %p\n", __func__, epnum, req);
 
 	if (!udc_req) {
 		dev_dbg(udc->dev, "%s: no request active\n", __func__);
@@ -1137,7 +1154,7 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 	int i;
 	bool res;
 
-	dev_dbg(udc->dev, "%s: connect done\n", __func__);
+	dev_dbg(udc->dev, "%s\n", __func__);
 
 	reg = readl(udc->regs + EXYNOS_USB3_DSTS);
 	speed = reg & EXYNOS_USB3_DSTS_ConnectSpd_MASK;
@@ -1211,7 +1228,7 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 	bool res;
 	int epnum;
 
-	dev_info(udc->dev, "%s: USB reset\n", __func__);
+	dev_dbg(udc->dev, "%s\n", __func__);
 
 	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
 
@@ -1262,6 +1279,8 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 	
 	switch (event & EXYNOS_USB3_DEPEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEPEVT_EVENT_XferNotReady:
+		dev_dbg(udc->dev, "Xfer Not Ready: ep%d%s\n",
+				  epnum, dir_in ? "in" : "out");
 		if (epnum == 0 && udc->ep0_state == EP0_WAIT_NRDY) {
 			udc_ep->dir_in = dir_in;
 
@@ -1275,7 +1294,8 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 		break;
 
 	case EXYNOS_USB3_DEPEVT_EVENT_XferComplete:
-
+		dev_dbg(udc->dev, "Xfer Complete: ep%d%s\n",
+				  epnum, dir_in ? "in" : "out");
 		if (dir_in) {
 			/* Handle "transfer complete" for IN EPs */
 			exynos_ss_udc_complete_in(udc, udc_ep);
@@ -1303,17 +1323,21 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 
 	switch (event & EXYNOS_USB3_DEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEVT_EVENT_ULStChng:
+		dev_dbg(udc->dev, "USB-Link State Change");
 		break;	
 
 	case EXYNOS_USB3_DEVT_EVENT_ConnectDone:
+		dev_dbg(udc->dev, "Connection Done");
 		exynos_ss_udc_irq_connectdone(udc);
 		break;
 
 	case EXYNOS_USB3_DEVT_EVENT_USBRst:
+		dev_info(udc->dev, "USB Reset");
 		exynos_ss_udc_irq_usbrst(udc);
 		break;
 
 	case EXYNOS_USB3_DEVT_EVENT_DisconnEvt:
+		dev_dbg(udc->dev, "Disconnect Detected");
 		call_gadget(udc, disconnect);
 		break;
 
@@ -1345,8 +1369,12 @@ static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
 			EXYNOS_USB3_GEVNTCOUNTx_EVNTCount_MASK;
 	/* TODO: what if number of events more then buffer size? */
 
+	dev_dbg(udc->dev, "INTERRUPT (%d)\n", gevntcount);
+
 	while (gevntcount) {
 		event = udc->event_buff[indx++];
+
+		dev_dbg(udc->dev, "event = %d\n", event);
 
 		ecode1 = event & 0x01;
 
