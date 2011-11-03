@@ -1718,7 +1718,12 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 	writel(EXYNOS_USB3_EVENT_BUFF_BSIZE, udc->regs + EXYNOS_USB3_GEVNTSIZ(0));
 
 	writel(EXYNOS_USB3_DCFG_NumP(1) | EXYNOS_USB3_DCFG_PerFrInt(2) |
-	       EXYNOS_USB3_DCFG_DevSpd(4), udc->regs + EXYNOS_USB3_DCFG);
+#if defined(CONFIG_USB_GADGET_EXYNOS_SS_UDC_SSMODE)
+	       EXYNOS_USB3_DCFG_DevSpd(4),
+#else
+	       EXYNOS_USB3_DCFG_DevSpd(0),
+#endif
+	       udc->regs + EXYNOS_USB3_DCFG);
 
 	/* Flush any pending events */
 	__orr32(udc->regs + EXYNOS_USB3_GEVNTSIZ(0),
