@@ -2187,8 +2187,9 @@ struct exynos_c2c_platdata smdk4212_c2c_pdata = {
 	.cp_sscm_addr	= NULL,
 	.rx_width	= C2C_BUSWIDTH_16,
 	.tx_width	= C2C_BUSWIDTH_16,
-	.max_clk	= 400,
-	.default_clk	= 200,
+	.clk_opp100	= 400,
+	.clk_opp50	= 266,
+	.clk_opp25	= 0,
 	.default_opp_mode	= C2C_OPP50,
 	.get_c2c_state	= NULL,
 };
