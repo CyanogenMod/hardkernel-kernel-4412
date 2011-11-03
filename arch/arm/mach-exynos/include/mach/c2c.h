@@ -54,8 +54,9 @@ struct exynos_c2c_platdata {
 
 	enum c2c_buswidth rx_width;
 	enum c2c_buswidth tx_width;
-	u32 max_clk; /* Maximum clk */
-	u32 default_clk; /* Default(init) clk */
+	u32 clk_opp100;	/* clock of OPP100 mode */
+	u32 clk_opp50;	/* clock of OPP50 mode */
+	u32 clk_opp25;	/* clock of OPP25 */
 	enum c2c_opp_mode default_opp_mode;
 
 	char *c2c_clk;
