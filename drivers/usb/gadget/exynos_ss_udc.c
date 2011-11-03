@@ -1862,9 +1862,6 @@ static void exynos_ss_udc_free_all_trb(struct exynos_ss_udc *udc)
 	}
 }
 
-/* TODO: define platform data structure */
-static struct exynos_ss_udc_plat exynos_ss_udc_default_pdata;
-
 static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 {
 	struct exynos_ss_udc_plat *plat = pdev->dev.platform_data;
@@ -1874,8 +1871,10 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	int epnum;
 	int ret;
 
-	if (!plat)
-		plat = &exynos_ss_udc_default_pdata;
+	if (!plat) {
+		dev_err(dev, "cannot get platform data\n");
+		return -ENODEV;
+	}
 
 	udc = kzalloc(sizeof(struct exynos_ss_udc) +
 			sizeof(struct exynos_ss_udc_ep) * EXYNOS_USB3_EPS,
