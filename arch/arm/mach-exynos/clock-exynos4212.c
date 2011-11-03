@@ -47,6 +47,7 @@ static struct sleep_save exynos4212_clock_save[] = {
 	SAVE_ITEM(EXYNOS4_CLKGATE_IP_PERIR_4212),
 	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_PERIL),
 	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_PERIR),
+	SAVE_ITEM(EXYNOS4_DMC_PAUSE_CTRL),
 };
 
 static int exynos4212_clk_bus_dmc0_ctrl(struct clk *clk, int enable)

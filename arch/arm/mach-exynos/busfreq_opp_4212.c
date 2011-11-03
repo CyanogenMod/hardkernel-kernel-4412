@@ -360,6 +360,11 @@ int exynos4212_init(struct device *dev, struct busfreq_data *data)
 	unsigned long maxfreq = UINT_MAX;
 	int ret;
 
+	/* Enable pause function for DREX2 DVFS */
+	tmp = __raw_readl(EXYNOS4_DMC_PAUSE_CTRL);
+	tmp |= DMC_PAUSE_ENABLE;
+	__raw_writel(tmp, EXYNOS4_DMC_PAUSE_CTRL);
+
 	tmp = __raw_readl(EXYNOS4_CLKDIV_DMC0);
 
 	for (i = 0; i <  LV_END; i++) {
