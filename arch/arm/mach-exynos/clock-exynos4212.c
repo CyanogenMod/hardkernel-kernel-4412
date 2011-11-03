@@ -50,7 +50,7 @@ static struct sleep_save exynos4212_clock_save[] = {
 	SAVE_ITEM(EXYNOS4_DMC_PAUSE_CTRL),
 };
 
-static int exynos4212_clk_bus_dmc0_ctrl(struct clk *clk, int enable)
+static int __maybe_unused exynos4212_clk_bus_dmc0_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS4_CLKGATE_BUS_DMC0, clk, enable);
 }
@@ -87,6 +87,11 @@ static int exynos4212_clk_ip_isp0_ctrl(struct clk *clk, int enable)
 static int exynos4212_clk_ip_isp1_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_ISP1, clk, enable);
+}
+
+static int exynos4212_clk_ip_dmc0_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_DMC0, clk, enable);
 }
 
 static struct clk *exynos4212_clk_src_mpll_user_list[] = {
@@ -518,8 +523,8 @@ void __init exynos4212_register_clocks(void)
 	exynos4_clk_aclk_200.reg_src.shift = 20;
 	exynos4_clk_aclk_200.reg_src.size = 1;
 
-	exynos4_clk_fimg2d.enable = exynos4212_clk_bus_dmc0_ctrl;
-	exynos4_clk_fimg2d.ctrlbit = (1 << 10);
+	exynos4_clk_fimg2d.enable = exynos4212_clk_ip_dmc0_ctrl;
+	exynos4_clk_fimg2d.ctrlbit = (1 << 23);
 
 	exynos4_clk_mout_g2d0.reg_src.reg = EXYNOS4_CLKSRC_DMC;
 	exynos4_clk_mout_g2d0.reg_src.shift = 20;
