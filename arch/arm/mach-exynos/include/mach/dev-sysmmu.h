@@ -13,6 +13,8 @@
 #ifndef _ARM_MACH_EXYNOS_SYSMMU_H_
 #define _ARM_MACH_EXYNOS_SYSMMU_H_
 
+#define SYSMMU_DEVNAME_BASE "s5p-sysmmu"
+
 #ifdef CONFIG_S5P_SYSTEM_MMU
 #include <linux/device.h>
 
@@ -25,29 +27,36 @@
 #define ASSIGN_SYSTEM_POWERDOMAIN(ipname, powerdomain) do { } while (0)
 #endif
 
-#define SYSMMU_DEVNAME_BASE "s5p-sysmmu"
-#define SYSMMU_CLOCK_NAME(ipname, id) SYSMMU_DEVNAME_BASE "." #id
-
 extern struct platform_device SYSMMU_PLATDEV(sss);
-extern struct platform_device SYSMMU_PLATDEV(fimc0);
-extern struct platform_device SYSMMU_PLATDEV(fimc1);
-extern struct platform_device SYSMMU_PLATDEV(fimc2);
-extern struct platform_device SYSMMU_PLATDEV(fimc3);
 extern struct platform_device SYSMMU_PLATDEV(jpeg);
-extern struct platform_device SYSMMU_PLATDEV(fimd0);
 extern struct platform_device SYSMMU_PLATDEV(fimd1);
 extern struct platform_device SYSMMU_PLATDEV(pcie);
-extern struct platform_device SYSMMU_PLATDEV(g2d);
+extern struct platform_device SYSMMU_PLATDEV(2d);
 extern struct platform_device SYSMMU_PLATDEV(rot);
 extern struct platform_device SYSMMU_PLATDEV(mdma);
 extern struct platform_device SYSMMU_PLATDEV(tv);
 extern struct platform_device SYSMMU_PLATDEV(mfc_l);
 extern struct platform_device SYSMMU_PLATDEV(mfc_r);
+extern struct platform_device SYSMMU_PLATDEV(is_isp);
+extern struct platform_device SYSMMU_PLATDEV(is_drc);
+extern struct platform_device SYSMMU_PLATDEV(is_fd);
+extern struct platform_device SYSMMU_PLATDEV(is_cpu);
+
+#ifdef CONFIG_ARCH_EXYNOS4
+extern struct platform_device SYSMMU_PLATDEV(fimc0);
+extern struct platform_device SYSMMU_PLATDEV(fimc1);
+extern struct platform_device SYSMMU_PLATDEV(fimc2);
+extern struct platform_device SYSMMU_PLATDEV(fimc3);
 extern struct platform_device SYSMMU_PLATDEV(g2d_acp);
-extern struct platform_device SYSMMU_PLATDEV(fimc_isp);
-extern struct platform_device SYSMMU_PLATDEV(fimc_drc);
-extern struct platform_device SYSMMU_PLATDEV(fimc_fd);
-extern struct platform_device SYSMMU_PLATDEV(ispcpu);
+extern struct platform_device SYSMMU_PLATDEV(fimd0);
+#endif
+
+#ifdef CONFIG_ARCH_EXYNOS5
+extern struct platform_device SYSMMU_PLATDEV(gsc0);
+extern struct platform_device SYSMMU_PLATDEV(gsc1);
+extern struct platform_device SYSMMU_PLATDEV(gsc2);
+extern struct platform_device SYSMMU_PLATDEV(gsc3);
+#endif
 
 static inline void sysmmu_set_owner(struct device *sysmmu, struct device *owner)
 {
@@ -58,5 +67,7 @@ static inline void sysmmu_set_owner(struct device *sysmmu, struct device *owner)
 #define sysmmu_set_owner(sysmmu, owner) do { } while (0)
 #define ASSIGN_SYSMMU_POWERDOMAIN(ipname, powerdomain) do { } while (0)
 #endif
+
+#define SYSMMU_CLOCK_NAME(ipname, id) SYSMMU_DEVNAME_BASE "." #id
 
 #endif /* _ARM_MACH_EXYNOS_SYSMMU_H_ */

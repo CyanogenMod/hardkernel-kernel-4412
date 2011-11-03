@@ -40,6 +40,7 @@
 
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
+#include <mach/dev-sysmmu.h>
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
@@ -455,6 +456,16 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
 #endif
+#ifdef CONFIG_S5P_SYSTEM_MMU
+	&SYSMMU_PLATDEV(mfc_l),
+	&SYSMMU_PLATDEV(mfc_r),
+	&SYSMMU_PLATDEV(2d),
+	&SYSMMU_PLATDEV(jpeg),
+	&SYSMMU_PLATDEV(gsc0),
+	&SYSMMU_PLATDEV(gsc1),
+	&SYSMMU_PLATDEV(gsc2),
+	&SYSMMU_PLATDEV(gsc3),
+#endif
 	&s3c_device_rtc,
 	&smdk5250_smsc911x,
 };
@@ -625,6 +636,16 @@ static void __init smdk5250_map_io(void)
 	exynos_reserve_mem();
 }
 
+#ifdef CONFIG_S5P_SYSTEM_MMU
+static void __init exynos_sysmmu_init(void)
+{
+}
+#else /* !CONFIG_S5P_SYSTEM_MMU */
+static inline void exynos_sysmmu_init(void)
+{
+}
+#endif
+
 static void __init smdk5250_machine_init(void)
 {
 	s3c_i2c1_set_platdata(NULL);
@@ -657,6 +678,8 @@ static void __init smdk5250_machine_init(void)
 
 	s5p_fimd1_set_platdata(&smdk5250_lcd1_pdata);
 #endif
+
+	exynos_sysmmu_init();
 
 	platform_add_devices(smdk5250_devices, ARRAY_SIZE(smdk5250_devices));
 

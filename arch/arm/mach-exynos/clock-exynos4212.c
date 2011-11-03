@@ -322,22 +322,22 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.ctrlbit	= (1 << 24),
 	}, {
 		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(fimc_isp, 16),
+		.devname	= SYSMMU_CLOCK_NAME(is_isp, 16),
 		.enable		= exynos4_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 8),
 	}, {
 		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(fimc_drc, 17),
+		.devname	= SYSMMU_CLOCK_NAME(is_drc, 17),
 		.enable		= exynos4_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 9),
 	}, {
 		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(fimc_fd, 18),
+		.devname	= SYSMMU_CLOCK_NAME(is_fd, 18),
 		.enable		= exynos4_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 10),
 	}, {
 		.name		= "sysmmu",
-		.devname	= SYSMMU_CLOCK_NAME(ispcpu, 19),
+		.devname	= SYSMMU_CLOCK_NAME(is_cpu, 19),
 		.enable		= exynos4_clk_ip_isp1_ctrl,
 		.ctrlbit	= (1 << 4),
 	},

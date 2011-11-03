@@ -2365,10 +2365,10 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 	&SYSMMU_PLATDEV(mfc_r),
 	&SYSMMU_PLATDEV(tv),
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
-	&SYSMMU_PLATDEV(fimc_isp),
-	&SYSMMU_PLATDEV(fimc_drc),
-	&SYSMMU_PLATDEV(fimc_fd),
-	&SYSMMU_PLATDEV(ispcpu),
+	&SYSMMU_PLATDEV(is_isp),
+	&SYSMMU_PLATDEV(is_drc),
+	&SYSMMU_PLATDEV(is_fd),
+	&SYSMMU_PLATDEV(is_cpu),
 #endif
 #endif /* CONFIG_S5P_SYSTEM_MMU */
 #ifdef CONFIG_ION_EXYNOS
@@ -2717,18 +2717,18 @@ static void __init exynos_sysmmu_init(void)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(jpeg).dev, &s5p_device_jpeg.dev);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
-	ASSIGN_SYSMMU_POWERDOMAIN(fimc_isp, &exynos4_device_pd[PD_ISP].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(fimc_drc, &exynos4_device_pd[PD_ISP].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(fimc_fd, &exynos4_device_pd[PD_ISP].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(ispcpu, &exynos4_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_isp, &exynos4_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_drc, &exynos4_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_fd, &exynos4_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_cpu, &exynos4_device_pd[PD_ISP].dev);
 
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc_isp).dev,
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_isp).dev,
 						&exynos4_device_fimc_is.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc_drc).dev,
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_drc).dev,
 						&exynos4_device_fimc_is.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(fimc_fd).dev,
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_fd).dev,
 						&exynos4_device_fimc_is.dev);
-	sysmmu_set_owner(&SYSMMU_PLATDEV(ispcpu).dev,
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_cpu).dev,
 						&exynos4_device_fimc_is.dev);
 #endif
 }

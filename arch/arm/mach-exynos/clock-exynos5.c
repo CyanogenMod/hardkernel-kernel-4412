@@ -164,6 +164,11 @@ static int exynos5_clk_gate_block(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_BLOCK, clk, enable);
 }
 
+static int exynos5_clk_ip_acp_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_ACP, clk, enable);
+}
+
 /* BPLL clock output
  * No need .ctrlbit, this is always on
 */
@@ -760,11 +765,52 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "jpeg",
 		.enable		= exynos5_clk_ip_gen_ctrl,
-		.ctrlbit	= (1 << 2 || 1 << 7),
+		.ctrlbit	= (1 << 2),
 	}, {
 		.name		= "dsim0",
 		.enable		= exynos5_clk_ip_disp1_ctrl,
 		.ctrlbit	= (1 << 3),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(mfc_l, 13),
+		.enable		= exynos5_clk_ip_mfc_ctrl,
+		.ctrlbit	= (1 << 1),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(mfc_r, 14),
+		.enable		= exynos5_clk_ip_mfc_ctrl,
+		.ctrlbit	= (1 << 2),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(2d, 9),
+		.enable		= exynos5_clk_ip_acp_ctrl,
+		.ctrlbit	= (1 << 7),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(jpeg, 5),
+		.enable		= exynos5_clk_ip_gen_ctrl,
+		.ctrlbit	= (1 << 7),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(gsc0, 20),
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 7),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(gsc1, 21),
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 8),
+	}, {
+
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(gsc2, 22),
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 9),
+	}, {
+		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(gsc3, 23),
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 10),
 	},
 };
 

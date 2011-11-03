@@ -1873,7 +1873,7 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&SYSMMU_PLATDEV(fimd0),
 	&SYSMMU_PLATDEV(fimd1),
 	&SYSMMU_PLATDEV(pcie),
-	&SYSMMU_PLATDEV(g2d),
+	&SYSMMU_PLATDEV(2d),
 	&SYSMMU_PLATDEV(rot),
 	&SYSMMU_PLATDEV(mdma),
 	&SYSMMU_PLATDEV(tv),
@@ -2400,7 +2400,7 @@ static void __init exynos_sysmmu_init(void)
 	ASSIGN_SYSMMU_POWERDOMAIN(fimc3, &exynos4_device_pd[PD_CAM].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(jpeg, &exynos4_device_pd[PD_CAM].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(fimd0, &exynos4_device_pd[PD_LCD0].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(g2d, &exynos4_device_pd[PD_LCD0].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(2d, &exynos4_device_pd[PD_LCD0].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(rot, &exynos4_device_pd[PD_LCD0].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(tv, &exynos4_device_pd[PD_TV].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(mfc_l, &exynos4_device_pd[PD_MFC].dev);
@@ -2423,7 +2423,7 @@ static void __init exynos_sysmmu_init(void)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(fimd0).dev, &s5p_device_fimd0.dev);
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
-	sysmmu_set_owner(&SYSMMU_PLATDEV(g2d).dev, &s5p_device_fimg2d.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(2d).dev, &s5p_device_fimg2d.dev);
 #endif
 #ifdef CONFIG_VIDEO_TVOUT
 	sysmmu_set_owner(&SYSMMU_PLATDEV(tv).dev, &s5p_device_tvout.dev);
