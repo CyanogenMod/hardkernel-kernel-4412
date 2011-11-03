@@ -21,7 +21,7 @@
 #include <plat/pd.h>
 
 struct platform_device exynos5_device_pd[] = {
-	{
+	[PD_MFC] = {
 		.name		= "samsung-pd",
 		.id		= PD_MFC,
 		.dev = {
@@ -35,7 +35,8 @@ struct platform_device exynos5_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_G3D] = {
 		.name		= "samsung-pd",
 		.id		= PD_G3D,
 		.dev = {
@@ -49,7 +50,8 @@ struct platform_device exynos5_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_GPS] = {
 		.name		= "samsung-pd",
 		.id		= PD_GPS,
 		.dev = {
@@ -63,7 +65,8 @@ struct platform_device exynos5_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_ISP] = {
 		.name		= "samsung-pd",
 		.id		= PD_ISP,
 		.dev = {
@@ -77,7 +80,8 @@ struct platform_device exynos5_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_GSCL] = {
 		.name		= "samsung-pd",
 		.id		= PD_GSCL,
 		.dev = {
@@ -91,7 +95,8 @@ struct platform_device exynos5_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_DISP1] = {
 		.name		= "samsung-pd",
 		.id		= PD_DISP1,
 		.dev = {

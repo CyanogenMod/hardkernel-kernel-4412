@@ -40,6 +40,7 @@
 #include <plat/fb-core.h>
 #include <plat/regs-fb-v4.h>
 #include <plat/iic.h>
+#include <plat/pd.h>
 
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
@@ -479,6 +480,13 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 };
 
 static struct platform_device *smdk5250_devices[] __initdata = {
+	/* Samsung Power Domain */
+	&exynos5_device_pd[PD_MFC],
+	&exynos5_device_pd[PD_G3D],
+	&exynos5_device_pd[PD_GPS],
+	&exynos5_device_pd[PD_ISP],
+	&exynos5_device_pd[PD_GSCL],
+	&exynos5_device_pd[PD_DISP1],
 #ifdef CONFIG_FB_S3C
 #ifdef CONFIG_FB_MIPI_DSIM
 	&s5p_device_mipi_dsim,
@@ -726,6 +734,25 @@ static void __init smdk5250_machine_init(void)
 {
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
+#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+	exynos_pd_enable(&exynos5_device_pd[PD_MFC].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_G3D].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_GPS].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_ISP].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_GSCL].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_DISP1].dev);
+#elif defined(CONFIG_EXYNOS_DEV_PD)
+	/*
+	 * These power domains should be always on
+	 * without runtime pm support.
+	 */
+	exynos_pd_enable(&exynos5_device_pd[PD_MFC].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_G3D].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_GPS].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_ISP].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_GSCL].dev);
+	exynos_pd_enable(&exynos5_device_pd[PD_DISP1].dev);
+#endif
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	exynos_dwmci_set_platdata(&exynos_dwmci_pdata);
 #endif
