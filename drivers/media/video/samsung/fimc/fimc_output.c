@@ -25,8 +25,6 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 
-#include <asm/cacheflush.h>
-
 #include "fimc.h"
 #include "fimc-ipc.h"
 
@@ -1804,12 +1802,6 @@ int fimc_s_ctrl_output(struct file *filp, void *fh, struct v4l2_control *c)
 	case V4L2_CID_GET_PHY_SRC_CADDR:
 		c->value = ctx->src[c->value].base[FIMC_ADDR_CB];
 		break;
-	case V4L2_CID_CACHEABLE:
-		ctx->cacheable = c->value;
-		break;
-	case V4L2_CID_SET_PURPOSE:
-		ctx->purpose = c->value;
-		break;
 	default:
 		fimc_err("Invalid control id: %d\n", c->id);
 		ret = -EINVAL;
@@ -2414,48 +2406,6 @@ static int fimc_update_in_queue_addr(struct fimc_control *ctrl,
 	return 0;
 }
 
-void fimc_output_cache_flush(struct fimc_ctx *ctx, u32 idx)
-{
-	int i;
-	size_t length = 0;
-
-	length += ctx->src[idx].length[FIMC_ADDR_Y];
-	length += ctx->src[idx].length[FIMC_ADDR_CB];
-	length += ctx->src[idx].length[FIMC_ADDR_CR];
-
-	if (length > (unsigned long) L2_FLUSH_ALL) {
-		flush_cache_all();      /* L1 */
-		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
-		outer_flush_all();      /* L2 */
-	} else if (length > (unsigned long) L1_FLUSH_ALL) {
-		flush_cache_all();      /* L1 */
-		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
-
-		for (i = 0; i < 3; i++) {
-			phys_addr_t start = ctx->src[idx].base[i];
-			phys_addr_t end   = ctx->src[idx].base[i] +
-					    ctx->src[idx].length[i] - 1;
-
-			if (!start)
-				break;
-
-			outer_flush_range(start, end);  /* L2 */
-		}
-	} else {
-		for (i = 0; i < 3; i++) {
-			phys_addr_t start = ctx->src[idx].base[i];
-			phys_addr_t end   = ctx->src[idx].base[i] +
-					    ctx->src[idx].length[i] - 1;
-
-			if (!start)
-				break;
-
-			dmac_flush_range(phys_to_virt(start), phys_to_virt(end));
-			outer_flush_range(start, end);  /* L2 */
-		}
-	}
-}
-
 int fimc_qbuf_output(void *fh, struct v4l2_buffer *b)
 {
 	struct fimc_buf *buf = (struct fimc_buf *)b->m.userptr;
@@ -2503,9 +2453,6 @@ int fimc_qbuf_output(void *fh, struct v4l2_buffer *b)
 			fimc_err("Fail: fimc_push_inq\n");
 			return -EINVAL;
 		}
-
-		if (ctx->cacheable)
-			fimc_output_cache_flush(ctx, b->index);
 
 #if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 		pm_runtime_get_sync(ctrl->dev);

@@ -750,62 +750,6 @@ static int fimc_unregister_controller(struct platform_device *pdev)
 	return 0;
 }
 
-static void fimc_mmap_full_open(struct vm_area_struct *vma)
-{
-	printk(KERN_DEBUG "[%s] addr(0x%08x)\n", __func__, (u32)vma->vm_start);
-}
-
-static void fimc_mmap_full_close(struct vm_area_struct *vma)
-{
-	printk(KERN_DEBUG "[%s] addr(0x%08x)\n", __func__, (u32)vma->vm_start);
-}
-
-static struct vm_operations_struct fimc_mmap_full_ops = {
-	.open	= fimc_mmap_full_open,
-	.close	= fimc_mmap_full_close,
-};
-
-static inline
-int fimc_mmap_out_full(struct file *filp, struct vm_area_struct *vma)
-{
-	struct fimc_prv_data *prv_data =
-				(struct fimc_prv_data *)filp->private_data;
-	struct fimc_control *ctrl = prv_data->ctrl;
-	int ctx_id = prv_data->ctx_id;
-	struct fimc_ctx *ctx = &ctrl->out->ctx[ctx_id];
-	u32 size = vma->vm_end - vma->vm_start;
-	u32 pfn;
-
-	fimc_dbg("[%s] mmap.size(0x%08x), mem.base(0x%08x), mem.size(0x%08x)\n",
-		__func__, size, ctrl->mem.base, ctrl->mem.size);
-
-	if (size > PAGE_ALIGN(ctrl->mem.size)) {
-		fimc_err("Requested mmap size is too big\n");
-		return -EINVAL;
-	}
-
-	if (!ctx->cacheable)
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-
-	vma->vm_flags |= VM_RESERVED;
-	vma->vm_ops = &fimc_mmap_full_ops;
-
-	if ((vma->vm_flags & VM_WRITE) && !(vma->vm_flags & VM_SHARED)) {
-		fimc_err("writable mapping must be shared\n");
-		return -EINVAL;
-	}
-
-	pfn = __phys_to_pfn(ctrl->mem.base);
-	if (remap_pfn_range(vma, vma->vm_start, pfn, size, vma->vm_page_prot)) {
-		fimc_err("mmap fail\n");
-		return -EINVAL;
-	}
-
-	vma->vm_ops->open(vma);
-
-	return 0;
-}
-
 static void fimc_mmap_open(struct vm_area_struct *vma)
 {
 	struct fimc_global *dev = fimc_dev;
@@ -921,21 +865,14 @@ static inline int fimc_mmap_out(struct file *filp, struct vm_area_struct *vma)
 	struct fimc_prv_data *prv_data =
 				(struct fimc_prv_data *)filp->private_data;
 	struct fimc_control *ctrl = prv_data->ctrl;
-	struct fimc_ctx *ctx;
 	int ctx_id = prv_data->ctx_id;
-	int idx, ret = -1;
+	int idx = ctrl->out->ctx[ctx_id].overlay.req_idx;
+	int ret = -1;
 
-	ctx = &ctrl->out->ctx[ctx_id];
-	idx = ctx->overlay.req_idx;
-
-	if (ctx->purpose == FIMC_RESERVE_ALLOCATOR) {
-		ret = fimc_mmap_out_full(filp, vma);
-	} else {
-		if (idx >= 0)
-			ret = fimc_mmap_out_dst(filp, vma, idx);
-		else if (idx == FIMC_MMAP_IDX)
-			ret = fimc_mmap_out_src(filp, vma);
-	}
+	if (idx >= 0)
+		ret = fimc_mmap_out_dst(filp, vma, idx);
+	else if (idx == FIMC_MMAP_IDX)
+		ret = fimc_mmap_out_src(filp, vma);
 
 	return ret;
 }
