@@ -102,6 +102,7 @@ static struct s3c64xx_spi_info exynos4_spi0_pdata = {
 	.rx_lvl_offset = 15,
 	.high_speed = 1,
 	.clk_from_cmu = true,
+	.tx_st_done = 25,
 };
 
 static u64 spi_dmamask = DMA_BIT_MASK(32);
@@ -147,6 +148,7 @@ static struct s3c64xx_spi_info exynos4_spi1_pdata = {
 	.rx_lvl_offset = 15,
 	.high_speed = 1,
 	.clk_from_cmu = true,
+	.tx_st_done = 25,
 };
 
 struct platform_device exynos4_device_spi1 = {
@@ -190,6 +192,7 @@ static struct s3c64xx_spi_info exynos4_spi2_pdata = {
 	.rx_lvl_offset = 15,
 	.high_speed = 1,
 	.clk_from_cmu = true,
+	.tx_st_done = 25,
 };
 
 struct platform_device exynos4_device_spi2 = {
