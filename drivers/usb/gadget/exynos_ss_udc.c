@@ -1689,10 +1689,21 @@ static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
 static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 {
 	u32 reg;
+	u16 release;
 
 	reg = readl(udc->regs + EXYNOS_USB3_GSNPSID);
+	release = reg & 0xffff;
 	dev_info(udc->dev, "Core ID Number: 0x%04x\n", reg >> 16);
-	dev_info(udc->dev, "Release Number: 0x%04x\n", reg & 0xffff);
+	dev_info(udc->dev, "Release Number: 0x%04x\n", release);
+
+	/*
+	 * WORKAROUND: DWC3 revisions <1.90a have a bug
+	 * when The device fails to connect at SuperSpeed
+	 * and falls back to high-speed mode which causes
+	 * the device to enter in a Connect/Disconnect loop
+	 */
+	if (release < 0x190a )
+		__orr32(udc->regs + EXYNOS_USB3_GCTL, EXYNOS_USB3_GCTL_U2RSTECN);
 
 	writel(EXYNOS_USB3_GSBUSCFG0_INCR16BrstEna,
 	       udc->regs + EXYNOS_USB3_GSBUSCFG0);
