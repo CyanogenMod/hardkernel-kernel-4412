@@ -58,8 +58,9 @@ struct c2c_state_control {
 	u32 rx_width;
 	u32 tx_width;
 
-	u32 max_clk;
-	u32 default_clk;
+	u32 clk_opp100;
+	u32 clk_opp50;
+	u32 clk_opp25;
 
 	struct clk* c2c_sclk;
 	struct clk* c2c_aclk;
