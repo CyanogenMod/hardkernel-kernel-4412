@@ -30,25 +30,6 @@
 #undef PERF
 #undef POST_BLIT
 
-#ifdef PERF
-static long get_blit_perf(struct timeval *start, struct timeval *end)
-{
-	long sec, usec, time;
-
-	sec = end->tv_sec - start->tv_sec;
-	if (end->tv_usec >= start->tv_usec) {
-		usec = end->tv_usec - start->tv_usec;
-	} else {
-		usec = end->tv_usec + 1000000 - start->tv_usec;
-		sec--;
-	}
-	time = sec * 1000000 + usec;
-	printk(KERN_INFO "[%s] bitblt perf: %ld usec elapsed\n", __func__, time);
-
-	return time; /* microseconds */
-}
-#endif
-
 static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
 #ifdef CONFIG_OUTER_CACHE
@@ -163,7 +144,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		}
 #ifdef PERF
 		do_gettimeofday(&end);
-		get_blit_perf(&start, &end);
+		elapsed_microsec(&start, &end, "BitBLT PERF");
 #endif
 
 		if (cmd->dst.addr.type != ADDR_PHYS) {

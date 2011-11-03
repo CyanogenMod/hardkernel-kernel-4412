@@ -527,6 +527,33 @@ static inline void fimg2d_dma_unsync_inner(unsigned long addr, size_t size, int 
 		dmac_unmap_area((void *)addr, size, dir);
 }
 
+/* do_gettimeofday() */
+static inline long elapsed_microsec(struct timeval *start, struct timeval *end, char *msg)
+{
+	long sec, usec, time;
+
+	sec = end->tv_sec - start->tv_sec;
+	if (end->tv_usec >= start->tv_usec) {
+		usec = end->tv_usec - start->tv_usec;
+	} else {
+		usec = end->tv_usec + 1000000 - start->tv_usec;
+		sec--;
+	}
+	time = sec * 1000000 + usec;
+	printk(KERN_INFO "[%s] %ld microseconds elapsed\n", msg, time);
+
+	return time; /* microseconds */
+}
+
+/* sechd_clock() */
+static inline unsigned long long elapsed_nanosec(unsigned long long start, unsigned long long end, char *msg)
+{
+	unsigned long long time;
+	time = end - start;
+	printk(KERN_INFO "[%s] %llu nanoseconds elapsed\n", msg, time);
+	return time; /* nanoseconds */
+}
+
 inline void fimg2d_add_context(struct fimg2d_control *info, struct fimg2d_context *ctx);
 inline void fimg2d_del_context(struct fimg2d_control *info, struct fimg2d_context *ctx);
 int fimg2d_add_command(struct fimg2d_control *info, struct fimg2d_context *ctx, struct fimg2d_blit __user *u);
