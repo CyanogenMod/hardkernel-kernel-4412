@@ -103,7 +103,14 @@ config EXYNOS4_CPUIDLE
 	depends on (CPU_IDLE && ARCH_EXYNOS4)
 	default y
 	help
-	  Enable suspend and resume for Exynos4 series.
+	  Enable CPUIDLE for Exynos4 series.
+
+config EXYNOS5_CPUIDLE
+	bool "Exynos5 CPUIDLE Feature"
+	depends on (CPU_IDLE && ARCH_EXYNOS5)
+	default y
+	help
+	  Enable CPUIDLE for Exynos5 series.
 
 config EXYNOS_MCT
 	bool
