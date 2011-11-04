@@ -596,6 +596,7 @@ config MACH_SMDK5210
 	select S5P_DEV_DP
 	select S5P_DEV_FIMD1
 	select S5P_DEV_MFC
+	select S5P_DEV_USB_EHCI
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_DP
 	select EXYNOS4_SETUP_FIMD

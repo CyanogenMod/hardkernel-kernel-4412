@@ -50,6 +50,7 @@
 #endif
 #include <plat/sdhci.h>
 #include <plat/regs-srom.h>
+#include <plat/ehci.h>
 #include <plat/udc-ss.h>
 
 #include <mach/map.h>
@@ -747,6 +748,28 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_USB_EHCI_S5P
+static struct s5p_ehci_platdata smdk5210_ehci_pdata;
+
+static void __init smdk5210_ehci_init(void)
+{
+	struct s5p_ehci_platdata *pdata = &smdk5210_ehci_pdata;
+
+	s5p_ehci_set_platdata(pdata);
+}
+#endif
+
+#ifdef CONFIG_USB_OHCI_S5P
+static struct s5p_ohci_platdata smdk5210_ohci_pdata;
+
+static void __init smdk5210_ohci_init(void)
+{
+	struct s5p_ohci_platdata *pdata = &smdk5210_ohci_pdata;
+
+	s5p_ohci_set_platdata(pdata);
+}
+#endif
+
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 static struct exynos_ss_udc_plat smdk5210_ss_udc_pdata;
 
@@ -833,6 +856,12 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_EXYNOS_MIXER
 	&s5p_device_mixer,
 #endif
+#endif
+#ifdef CONFIG_USB_EHCI_S5P
+	&s5p_device_ehci,
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
+	&s5p_device_ohci,
 #endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	&exynos_device_ss_udc,
@@ -1099,6 +1128,12 @@ static void __init smdk5210_machine_init(void)
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
 	s3c_sdhci3_set_platdata(&smdk5210_hsmmc3_pdata);
+#endif
+#ifdef CONFIG_USB_EHCI_S5P
+	smdk5210_ehci_init();
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
+	smdk5210_ohci_init();
 #endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	smdk5210_ss_udc_init();
