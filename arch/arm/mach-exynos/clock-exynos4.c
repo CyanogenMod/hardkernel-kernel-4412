@@ -119,14 +119,6 @@ struct clk exynos4_clk_sclk_usbphy1 = {
 	.name		= "sclk_usbphy1",
 };
 
-static struct clk exynos4_clk_sclk_xxti = {
-	.name           = "sclk_usbphy1",
-};
-
-static struct clk exynos4_clk_sclk_xusbxti = {
-	.name           = "sclk_usbphy1",
-};
-
 static struct clk exynos4_clk_audiocdclk1 = {
 	.name           = "audiocdclk",
 };
@@ -953,8 +945,8 @@ static struct clk *clkset_sclk_audio0_list[] = {
 	[1] = NULL,
 	[2] = &exynos4_clk_sclk_hdmi27m,
 	[3] = &exynos4_clk_sclk_usbphy0,
-	[4] = &exynos4_clk_sclk_xxti,
-	[5] = &exynos4_clk_sclk_xusbxti,
+	[4] = &clk_ext_xtal_mux,
+	[5] = &clk_xusbxti,
 	[6] = &exynos4_clk_mout_mpll.clk,
 	[7] = &exynos4_clk_mout_epll.clk,
 	[8] = &exynos4_clk_sclk_vpll.clk,
@@ -1059,8 +1051,8 @@ static struct clk *exynos4_clkset_sclk_audio1_list[] = {
 	[1] = NULL,
 	[2] = &exynos4_clk_sclk_hdmi27m,
 	[3] = &exynos4_clk_sclk_usbphy0,
-	[4] = &exynos4_clk_sclk_xxti,
-	[5] = &exynos4_clk_sclk_xusbxti,
+	[4] = &clk_ext_xtal_mux,
+	[5] = &clk_xusbxti,
 	[6] = &exynos4_clk_mout_mpll.clk,
 	[7] = &exynos4_clk_mout_epll.clk,
 	[8] = &exynos4_clk_sclk_vpll.clk,
@@ -1087,8 +1079,8 @@ static struct clk *exynos4_clkset_sclk_audio2_list[] = {
 	[1] = NULL,
 	[2] = &exynos4_clk_sclk_hdmi27m,
 	[3] = &exynos4_clk_sclk_usbphy0,
-	[4] = &exynos4_clk_sclk_xxti,
-	[5] = &exynos4_clk_sclk_xusbxti,
+	[4] = &clk_ext_xtal_mux,
+	[5] = &clk_xusbxti,
 	[6] = &exynos4_clk_mout_mpll.clk,
 	[7] = &exynos4_clk_mout_epll.clk,
 	[8] = &exynos4_clk_sclk_vpll.clk,
