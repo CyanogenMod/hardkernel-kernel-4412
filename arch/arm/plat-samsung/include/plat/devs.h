@@ -135,7 +135,7 @@ extern struct platform_device exynos4_device_ahci;
 extern struct platform_device exynos4_device_pdma0;
 extern struct platform_device exynos4_device_pdma1;
 extern struct platform_device exynos4_device_mdma;
-extern struct platform_device exynos4_device_dwmci;
+extern struct platform_device exynos_device_dwmci;
 extern struct platform_device exynos_device_flite0;
 extern struct platform_device exynos_device_flite1;
 extern struct platform_device exynos4_device_fimc_is;

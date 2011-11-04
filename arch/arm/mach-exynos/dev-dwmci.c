@@ -22,17 +22,17 @@
 
 #include <mach/map.h>
 
-static int exynos4_dwmci_get_bus_wd(u32 slot_id)
+static int exynos_dwmci_get_bus_wd(u32 slot_id)
 {
 	return 4;
 }
 
-static int exynos4_dwmci_init(u32 slot_id, irq_handler_t handler, void *data)
+static int exynos_dwmci_init(u32 slot_id, irq_handler_t handler, void *data)
 {
 	return 0;
 }
 
-static struct resource exynos4_dwmci_resource[] = {
+static struct resource exynos_dwmci_resource[] = {
 	[0] = {
 		.start	= EXYNOS_PA_DWMCI,
 		.end	= EXYNOS_PA_DWMCI + SZ_4K - 1,
@@ -45,38 +45,38 @@ static struct resource exynos4_dwmci_resource[] = {
 	}
 };
 
-static struct dw_mci_board exynos4_dwci_pdata = {
+static struct dw_mci_board exynos_dwmci_def_platdata = {
 	.num_slots		= 1,
 	.quirks			= DW_MCI_QUIRK_BROKEN_CARD_DETECTION,
 	.bus_hz			= 80 * 1000 * 1000,
 	.detect_delay_ms	= 200,
-	.init			= exynos4_dwmci_init,
-	.get_bus_wd		= exynos4_dwmci_get_bus_wd,
+	.init			= exynos_dwmci_init,
+	.get_bus_wd		= exynos_dwmci_get_bus_wd,
 };
 
-static u64 exynos4_dwmci_dmamask = DMA_BIT_MASK(32);
+static u64 exynos_dwmci_dmamask = DMA_BIT_MASK(32);
 
-struct platform_device exynos4_device_dwmci = {
+struct platform_device exynos_device_dwmci = {
 	.name		= "dw_mmc",
 	.id		= -1,
-	.num_resources	= ARRAY_SIZE(exynos4_dwmci_resource),
-	.resource	= exynos4_dwmci_resource,
+	.num_resources	= ARRAY_SIZE(exynos_dwmci_resource),
+	.resource	= exynos_dwmci_resource,
 	.dev		= {
-		.dma_mask		= &exynos4_dwmci_dmamask,
+		.dma_mask		= &exynos_dwmci_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
-		.platform_data		= &exynos4_dwci_pdata,
+		.platform_data		= &exynos_dwmci_def_platdata,
 	},
 };
 
-void __init exynos4_dwmci_set_platdata(struct dw_mci_board *pd)
+void __init exynos_dwmci_set_platdata(struct dw_mci_board *pd)
 {
 	struct dw_mci_board *npd;
 
 	npd = s3c_set_platdata(pd, sizeof(struct dw_mci_board),
-			&exynos4_device_dwmci);
+			&exynos_device_dwmci);
 
 	if (!npd->init)
-		npd->init = exynos4_dwmci_init;
+		npd->init = exynos_dwmci_init;
 	if (!npd->get_bus_wd)
-		npd->get_bus_wd = exynos4_dwmci_get_bus_wd;
+		npd->get_bus_wd = exynos_dwmci_get_bus_wd;
 }

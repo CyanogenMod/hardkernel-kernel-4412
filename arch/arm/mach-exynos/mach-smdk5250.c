@@ -208,7 +208,7 @@ static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
 #endif
 
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
-static void exynos4_dwmci_cfg_gpio(int width)
+static void exynos_dwmci_cfg_gpio(int width)
 {
 	unsigned int gpio;
 
@@ -242,7 +242,7 @@ static void exynos4_dwmci_cfg_gpio(int width)
 	}
 }
 
-static struct dw_mci_board exynos4_dwmci_pdata __initdata = {
+static struct dw_mci_board exynos_dwmci_pdata __initdata = {
 	.num_slots		= 1,
 	.quirks			= DW_MCI_QUIRK_BROKEN_CARD_DETECTION | DW_MCI_QUIRK_HIGHSPEED,
 	.bus_hz			= 66 * 1000 * 1000,
@@ -250,7 +250,7 @@ static struct dw_mci_board exynos4_dwmci_pdata __initdata = {
 	.detect_delay_ms	= 200,
 	.hclk_name		= "dwmci",
 	.cclk_name		= "sclk_dwmci",
-	.cfg_gpio		= exynos4_dwmci_cfg_gpio,
+	.cfg_gpio		= exynos_dwmci_cfg_gpio,
 };
 #endif
 
@@ -450,7 +450,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
-	&exynos4_device_dwmci,
+	&exynos_device_dwmci,
 #endif
 #ifdef CONFIG_ION_EXYNOS
 	&exynos_device_ion,
@@ -630,7 +630,7 @@ static void __init smdk5250_machine_init(void)
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
-	exynos4_dwmci_set_platdata(&exynos4_dwmci_pdata);
+	exynos_dwmci_set_platdata(&exynos_dwmci_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC
 	s3c_sdhci0_set_platdata(&smdk5250_hsmmc0_pdata);
