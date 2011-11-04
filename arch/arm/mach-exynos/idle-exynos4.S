@@ -89,6 +89,7 @@ ENTRY(exynos4_enter_lp)
 	b	early_wakeup
 
 resume_with_mmu:
+#ifdef CONFIG_CACHE_L2X0
 	/* Enable L2 cache */
 #ifdef CONFIG_ARM_TRUSTZONE
 	ldr	r0, =SMC_CMD_L2X0CTRL
@@ -100,6 +101,7 @@ resume_with_mmu:
 	mov	r0, #1
 	ldr	r1, =0xF8600000
 	str	r0, [r1, #0x100]
+#endif
 #endif
 	adr	r0, sleep_save_misc
 
@@ -160,6 +162,7 @@ ENTRY(exynos4_idle_resume)
 
 	ldr	r1, =0x10000000
 
+#ifdef CONFIG_CACHE_L2X0
 	/* Read CHIP ID */
 	ldr	r0, [r1]
 	mov	r0, r0, lsr #12
@@ -218,6 +221,7 @@ pwr_ctrl_regster:
 	and	r0, r0, r3
 	orr	r0, r0, r2
 	str	r0, [r1, #0x104]
+#endif
 #endif
 
 	b	cpu_resume
