@@ -42,6 +42,7 @@
 #include <plat/regs-fb-v4.h>
 #include <plat/iic.h>
 #include <plat/pd.h>
+#include <plat/ehci.h>
 #include <plat/udc-ss.h>
 
 #include <mach/map.h>
@@ -822,6 +823,28 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_USB_EHCI_S5P
+static struct s5p_ehci_platdata smdk5250_ehci_pdata;
+
+static void __init smdk5250_ehci_init(void)
+{
+	struct s5p_ehci_platdata *pdata = &smdk5250_ehci_pdata;
+
+	s5p_ehci_set_platdata(pdata);
+}
+#endif
+
+#ifdef CONFIG_USB_OHCI_S5P
+static struct s5p_ohci_platdata smdk5250_ohci_pdata;
+
+static void __init smdk5250_ohci_init(void)
+{
+	struct s5p_ohci_platdata *pdata = &smdk5250_ohci_pdata;
+
+	s5p_ohci_set_platdata(pdata);
+}
+#endif
+
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 static struct exynos_ss_udc_plat smdk5250_ss_udc_pdata;
 
@@ -901,6 +924,12 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 	&s3c_device_rtc,
 	&smdk5250_smsc911x,
+#ifdef CONFIG_USB_EHCI_S5P
+	&s5p_device_ehci,
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
+	&s5p_device_ohci,
+#endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	&exynos_device_ss_udc,
 #endif
@@ -1141,6 +1170,12 @@ static void __init smdk5250_machine_init(void)
 	s5p_fb_setname(1, "exynos5-fb");
 
 	s5p_fimd1_set_platdata(&smdk5250_lcd1_pdata);
+#endif
+#ifdef CONFIG_USB_EHCI_S5P
+	smdk5250_ehci_init();
+#endif
+#ifdef CONFIG_USB_OHCI_S5P
+	smdk5250_ohci_init();
 #endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	smdk5250_ss_udc_init();
