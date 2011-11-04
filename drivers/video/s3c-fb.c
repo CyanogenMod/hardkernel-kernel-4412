@@ -266,7 +266,7 @@ static ump_dd_handle ump_wrapped_buffer = UMP_DD_INVALID_MEMORY_HANDLE;
  */
 static int s3cfb_ump_wrapper(struct fb_fix_screeninfo *fix)
 {
-	ump_dd_physical_block ump_memory_description;
+	ump_dd_physical_block_64 ump_memory_description;
 	u64 block_num;
 
 	if (ump_wrapped_buffer != UMP_DD_INVALID_MEMORY_HANDLE)
@@ -276,7 +276,7 @@ static int s3cfb_ump_wrapper(struct fb_fix_screeninfo *fix)
 	ump_memory_description.size = fix->smem_len;
 	block_num = 1;
 
-	ump_wrapped_buffer = ump_dd_create_from_phys_blocks(
+	ump_wrapped_buffer = ump_dd_create_from_phys_blocks_64(
 		&ump_memory_description, block_num,
 		UMP_PROT_CPU_RD | UMP_PROT_CPU_WR | /* CPU access */
 		UMP_PROT_W_RD | UMP_PROT_W_WR | /* Device W access */
@@ -284,7 +284,6 @@ static int s3cfb_ump_wrapper(struct fb_fix_screeninfo *fix)
 		UMP_PROT_Y_RD | UMP_PROT_Y_WR | /* Device Y access */
 		UMP_PROT_Z_RD | UMP_PROT_Z_WR | /* Device Z access */
 		UMP_CONSTRAINT_PHYSICALLY_LINEAR | /* A single chunk */
-		UMP_ALLOCATE_AS_SIZE_PINNED | /* Not resizeable*/
 		UMP_PROT_SHAREABLE, /* Free for all */
 		NULL, NULL, NULL);
 
