@@ -295,6 +295,9 @@ struct mxr_device {
 
 	/** mutex for protection of fields below */
 	struct mutex mutex;
+	/** mutex for protection of streamer */
+	struct mutex s_mutex;
+
 	/** number of entities depndant on output configuration */
 	int n_output;
 	/** number of users that do streaming */
@@ -303,6 +306,9 @@ struct mxr_device {
 	int current_output;
 	/** auxiliary resources used my mixer */
 	struct mxr_resources res;
+
+	/** start pipeline from graphic layer */
+	int from_graph_layer;
 
 	/** count of sub-mixers */
 	struct sub_mxr_device sub_mxr[MXR_MAX_SUB_MIXERS];
@@ -387,6 +393,8 @@ const struct mxr_format *find_format_by_fourcc(
 
 void mxr_base_layer_release(struct mxr_layer *layer);
 void mxr_layer_release(struct mxr_layer *layer);
+void mxr_layer_geo_fix(struct mxr_layer *layer);
+void mxr_layer_default_geo(struct mxr_layer *layer);
 
 int mxr_base_layer_register(struct mxr_layer *layer);
 void mxr_base_layer_unregister(struct mxr_layer *layer);
@@ -429,12 +437,14 @@ void mxr_reg_streamoff(struct mxr_device *mdev);
 int mxr_reg_wait4vsync(struct mxr_device *mdev);
 void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	struct v4l2_mbus_framefmt *fmt);
-void mxr_reg_local_path_set(struct mxr_device *mdev);
+void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr_num, int gsc_num,
+		u32 flags);
 void mxr_reg_graph_layer_stream(struct mxr_device *mdev, int idx, int en);
-void mxr_reg_graph_buffer(struct mxr_device *mdev, int cur_mxr, int idx,
-	dma_addr_t addr);
-void mxr_reg_graph_format(struct mxr_device *mdev, int cur_mxr, int idx,
+void mxr_reg_graph_buffer(struct mxr_device *mdev, int idx, dma_addr_t addr);
+void mxr_reg_graph_format(struct mxr_device *mdev, int idx,
 	const struct mxr_format *fmt, const struct mxr_geometry *geo);
+
+void mxr_reg_video_layer_stream(struct mxr_device *mdev, int idx, int en);
 void mxr_reg_video_geo(struct mxr_device *mdev, int cur_mxr, int idx,
 		const struct mxr_geometry *geo);
 

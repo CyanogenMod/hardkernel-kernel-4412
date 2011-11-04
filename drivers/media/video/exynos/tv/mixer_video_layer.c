@@ -22,6 +22,10 @@ static void mxr_video_layer_release(struct mxr_layer *layer)
 	mxr_base_layer_release(layer);
 }
 
+static void mxr_video_stream_set(struct mxr_layer *layer, int en) {
+	mxr_reg_video_layer_stream(layer->mdev, layer->idx, en);
+}
+
 static void mxr_video_format_set(struct mxr_layer *layer)
 {
 	mxr_reg_video_geo(layer->mdev, layer->cur_mxr, layer->idx, &layer->geo);
@@ -31,6 +35,7 @@ static void mxr_video_fix_geometry(struct mxr_layer *layer)
 {
 	struct mxr_geometry *geo = &layer->geo;
 
+	mxr_dbg(layer->mdev, "%s start\n", __func__);
 	geo->dst.x_offset = clamp_val(geo->dst.x_offset, 0,
 			geo->dst.full_width - 1);
 	geo->dst.y_offset = clamp_val(geo->dst.y_offset, 0,
@@ -51,6 +56,7 @@ struct mxr_layer *mxr_video_layer_create(struct mxr_device *mdev, int cur_mxr,
 	struct mxr_layer *layer;
 	struct mxr_layer_ops ops = {
 		.release = mxr_video_layer_release,
+		.stream_set = mxr_video_stream_set,
 		.format_set = mxr_video_format_set,
 		.fix_geometry = mxr_video_fix_geometry,
 	};
@@ -66,6 +72,9 @@ struct mxr_layer *mxr_video_layer_create(struct mxr_device *mdev, int cur_mxr,
 	layer->ops = ops;
 
 	layer->cur_mxr = cur_mxr;
+
+	mxr_layer_default_geo(layer);
+
 	return layer;
 
 fail:

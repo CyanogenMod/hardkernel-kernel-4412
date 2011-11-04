@@ -11,6 +11,17 @@
 #ifndef SAMSUNG_REGS_MIXER_H
 #define SAMSUNG_REGS_MIXER_H
 
+#include <plat/map-base.h>
+
+/* SYSREG for local path between Gscaler and Mixer */
+#define SYSREG_DISP1BLK_CFG		(S3C_VA_SYS + 0x0214)
+
+#define DISP1BLK_CFG_FIFORST_DISP1	(1 << 23)
+#define DISP1BLK_CFG_MIXER0_VALID	(1 << 7)
+#define DISP1BLK_CFG_MIXER0_SRC_GSC(x)	(x << 5)
+#define DISP1BLK_CFG_MIXER1_VALID	(1 << 4)
+#define DISP1BLK_CFG_MIXER1_SRC_GSC(x)	(x << 2)
+
 /*
  * Register part
  */
@@ -126,7 +137,7 @@
 #define MXR_CFG_SCAN_HD_1080		(1 << 6)
 #define MXR_CFG_GRP1_ENABLE		(1 << 5)
 #define MXR_CFG_GRP0_ENABLE		(1 << 4)
-#define MXR_CFG_VP_ENABLE		(1 << 3)
+#define MXR_CFG_VIDEO_ENABLE		(1 << 3)
 #define MXR_CFG_SCAN_INTERLACE		(0 << 2)
 #define MXR_CFG_SCAN_PROGRASSIVE	(1 << 2)
 #define MXR_CFG_SCAN_NTSC		(0 << 1)
@@ -158,7 +169,7 @@
 
 /* bits for MXR_INT_EN */
 #define MXR_INT_EN_VSYNC		(1 << 11)
-#define MXR_INT_EN_ALL			(0x0f << 8)
+#define MXR_INT_EN_ALL			(0x38b80)
 
 /* bit for MXR_INT_STATUS */
 #define MXR_INT_CLEAR_VSYNC		(1 << 11)

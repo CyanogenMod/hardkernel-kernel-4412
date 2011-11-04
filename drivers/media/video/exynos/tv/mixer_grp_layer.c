@@ -87,7 +87,7 @@ static void mxr_graph_buffer_set(struct mxr_layer *layer,
 
 	if (buf)
 		addr = vb2_cma_phys_plane_paddr(&buf->vb, 0);
-	mxr_reg_graph_buffer(layer->mdev, layer->cur_mxr, layer->idx, addr);
+	mxr_reg_graph_buffer(layer->mdev, layer->idx, addr);
 }
 
 static void mxr_graph_stream_set(struct mxr_layer *layer, int en)
@@ -97,7 +97,7 @@ static void mxr_graph_stream_set(struct mxr_layer *layer, int en)
 
 static void mxr_graph_format_set(struct mxr_layer *layer)
 {
-	mxr_reg_graph_format(layer->mdev, layer->cur_mxr, layer->idx,
+	mxr_reg_graph_format(layer->mdev, layer->idx,
 			layer->fmt, &layer->geo);
 }
 
@@ -105,6 +105,7 @@ static void mxr_graph_fix_geometry(struct mxr_layer *layer)
 {
 	struct mxr_geometry *geo = &layer->geo;
 
+	mxr_dbg(layer->mdev, "%s start\n", __func__);
 	/* limit to boundary size */
 	geo->src.full_width = clamp_val(geo->src.full_width, 1, 32767);
 	geo->src.full_height = clamp_val(geo->src.full_height, 1, 2047);

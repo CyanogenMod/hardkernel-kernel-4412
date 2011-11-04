@@ -175,7 +175,7 @@ void mxr_reg_reset(struct mxr_device *mdev)
 	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
-void mxr_reg_graph_format(struct mxr_device *mdev, int cur_mxr, int idx,
+void mxr_reg_graph_format(struct mxr_device *mdev, int idx,
 	const struct mxr_format *fmt, const struct mxr_geometry *geo)
 {
 	u32 wh, sxy, dxy;
@@ -201,24 +201,38 @@ void mxr_reg_graph_format(struct mxr_device *mdev, int cur_mxr, int idx,
 	dxy  = MXR_GRP_DXY_DX(geo->dst.x_offset);
 	dxy |= MXR_GRP_DXY_DY(geo->dst.y_offset);
 
-	if (cur_mxr == MXR_SUB_MIXER0) {
-		/* setup format */
-		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(idx),
+	if (idx == 0) {
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0),
 				MXR_GRP_CFG_FORMAT_VAL(fmt->cookie),
 				MXR_GRP_CFG_FORMAT_MASK);
-		/* setup geometry */
-		mxr_write(mdev, MXR_GRAPHIC_SPAN(idx), geo->src.full_width);
-		mxr_write(mdev, MXR_GRAPHIC_WH(idx), wh);
-		mxr_write(mdev, MXR_GRAPHIC_SXY(idx), sxy);
-		mxr_write(mdev, MXR_GRAPHIC_DXY(idx), dxy);
-	} else if (cur_mxr == MXR_SUB_MIXER1) {
-		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(idx),
+		mxr_write(mdev, MXR_GRAPHIC_SPAN(0), geo->src.full_width);
+		mxr_write(mdev, MXR_GRAPHIC_WH(0), wh);
+		mxr_write(mdev, MXR_GRAPHIC_SXY(0), sxy);
+		mxr_write(mdev, MXR_GRAPHIC_DXY(0), dxy);
+	} else if (idx == 1) {
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(1),
 				MXR_GRP_CFG_FORMAT_VAL(fmt->cookie),
 				MXR_GRP_CFG_FORMAT_MASK);
-		mxr_write(mdev, MXR1_GRAPHIC_SPAN(idx), geo->src.full_width);
-		mxr_write(mdev, MXR1_GRAPHIC_WH(idx), wh);
-		mxr_write(mdev, MXR1_GRAPHIC_SXY(idx), sxy);
-		mxr_write(mdev, MXR1_GRAPHIC_DXY(idx), dxy);
+		mxr_write(mdev, MXR_GRAPHIC_SPAN(1), geo->src.full_width);
+		mxr_write(mdev, MXR_GRAPHIC_WH(1), wh);
+		mxr_write(mdev, MXR_GRAPHIC_SXY(1), sxy);
+		mxr_write(mdev, MXR_GRAPHIC_DXY(1), dxy);
+	} else if (idx == 2) {
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(0),
+				MXR_GRP_CFG_FORMAT_VAL(fmt->cookie),
+				MXR_GRP_CFG_FORMAT_MASK);
+		mxr_write(mdev, MXR1_GRAPHIC_SPAN(0), geo->src.full_width);
+		mxr_write(mdev, MXR1_GRAPHIC_WH(0), wh);
+		mxr_write(mdev, MXR1_GRAPHIC_SXY(0), sxy);
+		mxr_write(mdev, MXR1_GRAPHIC_DXY(0), dxy);
+	} else if (idx == 3) {
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1),
+				MXR_GRP_CFG_FORMAT_VAL(fmt->cookie),
+				MXR_GRP_CFG_FORMAT_MASK);
+		mxr_write(mdev, MXR1_GRAPHIC_SPAN(1), geo->src.full_width);
+		mxr_write(mdev, MXR1_GRAPHIC_WH(1), wh);
+		mxr_write(mdev, MXR1_GRAPHIC_SXY(1), sxy);
+		mxr_write(mdev, MXR1_GRAPHIC_DXY(1), dxy);
 	}
 
 	mxr_vsync_set_update(mdev, MXR_ENABLE);
@@ -230,6 +244,8 @@ void mxr_reg_video_geo(struct mxr_device *mdev, int cur_mxr, int idx,
 {
 	u32 lt, rb;
 	unsigned long flags;
+
+	mxr_dbg(mdev, "%s\n", __func__);
 
 	spin_lock_irqsave(&mdev->reg_slock, flags);
 	mxr_vsync_set_update(mdev, MXR_DISABLE);
@@ -249,6 +265,10 @@ void mxr_reg_video_geo(struct mxr_device *mdev, int cur_mxr, int idx,
 
 	mxr_vsync_set_update(mdev, MXR_ENABLE);
 	spin_unlock_irqrestore(&mdev->reg_slock, flags);
+
+	mxr_dbg(mdev, "destination x = %d, y = %d, width = %d, height = %d\n",
+			geo->dst.x_offset, geo->dst.y_offset,
+			geo->dst.width, geo->dst.height);
 }
 
 void mxr_reg_vp_format(struct mxr_device *mdev,
@@ -295,8 +315,7 @@ void mxr_reg_vp_format(struct mxr_device *mdev,
 #endif
 }
 
-void mxr_reg_graph_buffer(struct mxr_device *mdev, int cur_mxr, int idx,
-		dma_addr_t addr)
+void mxr_reg_graph_buffer(struct mxr_device *mdev, int idx, dma_addr_t addr)
 {
 	u32 val = addr ? ~0 : 0;
 	unsigned long flags;
@@ -304,18 +323,18 @@ void mxr_reg_graph_buffer(struct mxr_device *mdev, int cur_mxr, int idx,
 	spin_lock_irqsave(&mdev->reg_slock, flags);
 	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
-	if (cur_mxr == MXR_SUB_MIXER0 && idx == 0) {
+	if (idx == 0) {
 		mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_GRP0_ENABLE);
-		mxr_write(mdev, MXR_GRAPHIC_BASE(idx), addr);
-	} else if (cur_mxr == MXR_SUB_MIXER0 && idx == 1) {
+		mxr_write(mdev, MXR_GRAPHIC_BASE(0), addr);
+	} else if (idx == 1) {
 		mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_GRP1_ENABLE);
-		mxr_write(mdev, MXR_GRAPHIC_BASE(idx), addr);
-	} else if (cur_mxr == MXR_SUB_MIXER1 && idx == 0) {
+		mxr_write(mdev, MXR_GRAPHIC_BASE(1), addr);
+	} else if (idx == 2) {
 		mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_MX1_GRP0_ENABLE);
-		mxr_write(mdev, MXR1_GRAPHIC_BASE(idx), addr);
-	} else if (cur_mxr == MXR_SUB_MIXER1 && idx == 1) {
+		mxr_write(mdev, MXR1_GRAPHIC_BASE(0), addr);
+	} else if (idx == 3) {
 		mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_MX1_GRP1_ENABLE);
-		mxr_write(mdev, MXR1_GRAPHIC_BASE(idx), addr);
+		mxr_write(mdev, MXR1_GRAPHIC_BASE(1), addr);
 	}
 
 	mxr_vsync_set_update(mdev, MXR_ENABLE);
@@ -332,7 +351,7 @@ void mxr_reg_vp_buffer(struct mxr_device *mdev,
 	spin_lock_irqsave(&mdev->reg_slock, flags);
 	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
-	mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_VP_ENABLE);
+	mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_VIDEO_ENABLE);
 	vp_write_mask(mdev, VP_ENABLE, val, VP_ENABLE_ON);
 	/* TODO: fix tiled mode */
 	vp_write(mdev, VP_TOP_Y_PTR, luma_addr[0]);
@@ -504,7 +523,8 @@ void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
-void mxr_reg_local_path_set(struct mxr_device *mdev)
+void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr_num, int gsc_num,
+		u32 flags)
 {
 	u32 val = 0;
 	int mxr0_use = mdev->sub_mxr[MXR_SUB_MIXER0].use;
@@ -521,7 +541,19 @@ void mxr_reg_local_path_set(struct mxr_device *mdev)
 
 	mxr_write_mask(mdev, MXR_TVOUT_CFG, val, MXR_TVOUT_CFG_PATH_MASK);
 
-	/* set local path gscaler to mixer in the future */
+	/* set local path gscaler to mixer */
+	val = DISP1BLK_CFG_FIFORST_DISP1;
+	if (flags & MEDIA_LNK_FL_ENABLED) {
+		if (mxr_num == MXR_SUB_MIXER0) {
+			val |= DISP1BLK_CFG_MIXER0_VALID;
+			val |= DISP1BLK_CFG_MIXER0_SRC_GSC(gsc_num);
+		} else if (mxr_num == MXR_SUB_MIXER1) {
+			val |= DISP1BLK_CFG_MIXER1_VALID;
+			val |= DISP1BLK_CFG_MIXER1_SRC_GSC(gsc_num);
+		}
+	}
+	mxr_dbg(mdev, "%s: SYSREG value = 0x%x\n", __func__, val);
+	writel(val, SYSREG_DISP1BLK_CFG);
 }
 
 void mxr_reg_graph_layer_stream(struct mxr_device *mdev, int idx, int en)
@@ -532,6 +564,16 @@ void mxr_reg_graph_layer_stream(struct mxr_device *mdev, int idx, int en)
 void mxr_reg_vp_layer_stream(struct mxr_device *mdev, int en)
 {
 	/* no extra actions need to be done */
+}
+
+void mxr_reg_video_layer_stream(struct mxr_device *mdev, int idx, int en)
+{
+	u32 val = en ? ~0 : 0;
+
+	if (idx == 0)
+		mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_VIDEO_ENABLE);
+	else if (idx == 1)
+		mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_MX1_VIDEO_ENABLE);
 }
 
 static const u8 filter_y_horiz_tap8[] = {

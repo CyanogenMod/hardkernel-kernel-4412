@@ -10,6 +10,8 @@
  * by the Free Software Foundiation. either version 2 of the License,
  * or (at your option) any later version
  */
+#include "mixer.h"
+
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
@@ -22,8 +24,6 @@
 #include <linux/kernel.h>
 
 #include <media/exynos_mc.h>
-
-#include "mixer.h"
 
 MODULE_AUTHOR("Tomasz Stanislawski, <t.stanislaws@samsung.com>");
 MODULE_DESCRIPTION("Samsung MIXER");
@@ -59,7 +59,7 @@ void mxr_get_mbus_fmt(struct mxr_device *mdev,
 
 static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 {
-	mutex_lock(&mdev->mutex);
+	mutex_lock(&mdev->s_mutex);
 	++mdev->n_streamer;
 	mxr_dbg(mdev, "%s(%d)\n", __func__, mdev->n_streamer);
 	if (mdev->n_streamer == 1) {
@@ -71,6 +71,24 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 #endif
 		struct sub_mxr_device *sub_mxr;
 		struct mxr_layer *layer;
+
+		/* If pipeline is started from Gscaler input video device,
+		 * TV basic configuration must be set before running mixer */
+		if (!mdev->from_graph_layer) {
+			mxr_dbg(mdev, "%s: from graphic layer\n", __func__);
+			/* turn on connected output device through link
+			 * with mixer */
+			mxr_output_get(mdev);
+			for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
+				sub_mxr = &mdev->sub_mxr[i];
+				if (sub_mxr->local) {
+					layer = sub_mxr->layer[MXR_LAYER_VIDEO];
+					mxr_layer_geo_fix(layer);
+					layer->ops.format_set(layer);
+					layer->ops.stream_set(layer, 1);
+				}
+			}
+		}
 
 		pad = &sd->entity.pads[MXR_PAD_SINK_GSCALER];
 		pad = media_entity_remote_source(pad);
@@ -134,7 +152,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 			return ret;
 		}
 	}
-	mutex_unlock(&mdev->mutex);
+	mutex_unlock(&mdev->s_mutex);
 	mxr_reg_dump(mdev);
 
 	return 0;
@@ -142,12 +160,14 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 
 static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 {
-	mutex_lock(&mdev->mutex);
+	mutex_lock(&mdev->s_mutex);
 	--mdev->n_streamer;
 	mxr_dbg(mdev, "%s(%d)\n", __func__, mdev->n_streamer);
 	if (mdev->n_streamer == 0) {
 		struct media_pad *pad;
 		int ret, i;
+		struct sub_mxr_device *sub_mxr;
+		struct mxr_layer *layer;
 
 		for (i = MXR_PAD_SOURCE_GSCALER; i < MXR_PADS_NUM; ++i) {
 			pad = &sd->entity.pads[i];
@@ -180,10 +200,23 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 					sd->name);
 			return ret;
 		}
+
+		/* turn off connected output device through link
+		 * with mixer */
+		if (!mdev->from_graph_layer) {
+			for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
+				sub_mxr = &mdev->sub_mxr[i];
+				if (sub_mxr->local) {
+					layer = sub_mxr->layer[MXR_LAYER_VIDEO];
+					layer->ops.stream_set(layer, 0);
+				}
+			}
+			mxr_output_put(mdev);
+		}
 	}
 	WARN(mdev->n_streamer < 0, "negative number of streamers (%d)\n",
 		mdev->n_streamer);
-	mutex_unlock(&mdev->mutex);
+	mutex_unlock(&mdev->s_mutex);
 	mxr_reg_dump(mdev);
 
 	return 0;
@@ -423,12 +456,13 @@ static int __devinit mxr_acquire_layers(struct mxr_device *mdev,
 	struct mxr_platform_data *pdata)
 {
 	int i;
+	struct sub_mxr_device *sub_mxr;
 
 	for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
-		mdev->sub_mxr[i].layer[0] = mxr_video_layer_create(mdev, i, 0);
-		mdev->sub_mxr[i].layer[1] = mxr_graph_layer_create(mdev, i, 0);
-		mdev->sub_mxr[i].layer[2] = mxr_graph_layer_create(mdev, i, 1);
-
+		sub_mxr = &mdev->sub_mxr[i];
+		sub_mxr->layer[0] = mxr_video_layer_create(mdev, i, i);
+		sub_mxr->layer[1] = mxr_graph_layer_create(mdev, i, i * 2);
+		sub_mxr->layer[2] = mxr_graph_layer_create(mdev, i, i * 2 + 1);
 		if (!mdev->sub_mxr[i].layer[0] || !mdev->sub_mxr[i].layer[1]
 				|| !mdev->sub_mxr[i].layer[2]) {
 			mxr_err(mdev, "failed to acquire layers\n");
@@ -633,7 +667,6 @@ static void mxr_apply_format(struct v4l2_subdev *sd,
 				|| pad == MXR_PAD_SOURCE_GRP0) {
 			for (i = 0; i < MXR_MAX_LAYERS; ++i) {
 				struct mxr_layer *layer = sub_mxr->layer[i];
-
 				layer->geo.dst.full_width = fmt->width;
 				layer->geo.dst.full_height = fmt->height;
 				layer->ops.fix_geometry(layer);
@@ -831,6 +864,8 @@ static int mxr_link_setup(struct media_entity *entity,
 	struct sub_mxr_device *sub_mxr = entity_to_sub_mxr(entity);
 	struct mxr_device *mdev = sub_mxr_to_mdev(sub_mxr);
 	int i;
+	int mxr_num = 0;
+	int gsc_num = 0;
 
 	/* difficult to get dev ptr */
 	printk(KERN_INFO "%s start\n", __func__);
@@ -858,7 +893,21 @@ static int mxr_link_setup(struct media_entity *entity,
 				sub_mxr->use = 1;
 	}
 
-	mxr_reg_local_path_set(mdev);
+	if (!strcmp(local->entity->name, "s5p-mixer0"))
+		mxr_num = MXR_SUB_MIXER0;
+	else if (!strcmp(local->entity->name, "s5p-mixer1"))
+		mxr_num = MXR_SUB_MIXER1;
+
+	if (!strcmp(remote->entity->name, "GSC.0"))
+		gsc_num = 0;
+	else if (!strcmp(remote->entity->name, "GSC.1"))
+		gsc_num = 1;
+	else if (!strcmp(remote->entity->name, "GSC.2"))
+		gsc_num = 2;
+	else if (!strcmp(remote->entity->name, "GSC.3"))
+		gsc_num = 3;
+
+	mxr_reg_local_path_set(mdev, mxr_num, gsc_num, flags);
 	return 0;
 }
 
@@ -1144,6 +1193,7 @@ static int __devinit mxr_probe(struct platform_device *pdev)
 	mdev->sub_mxr[MXR_SUB_MIXER0].use = 1;
 
 	mutex_init(&mdev->mutex);
+	mutex_init(&mdev->s_mutex);
 	spin_lock_init(&mdev->reg_slock);
 	init_waitqueue_head(&mdev->event_queue);
 

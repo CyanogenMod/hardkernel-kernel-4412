@@ -10,6 +10,8 @@
  * by the Free Software Foundation. either version 2 of the License,
  * or (at your option) any later version
  */
+#include "mixer.h"
+
 #include <linux/videodev2.h>
 #include <linux/mm.h>
 #include <linux/version.h>
@@ -18,8 +20,6 @@
 #include <media/exynos_mc.h>
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf2-cma-phys.h>
-
-#include "mixer.h"
 
 int __devinit mxr_acquire_video(struct mxr_device *mdev,
 	struct mxr_output_conf *output_conf, int output_count)
@@ -139,7 +139,7 @@ static int mxr_querycap(struct file *file, void *priv,
 }
 
 /* Geometry handling */
-static void mxr_layer_geo_fix(struct mxr_layer *layer)
+void mxr_layer_geo_fix(struct mxr_layer *layer)
 {
 	struct mxr_device *mdev = layer->mdev;
 	struct v4l2_mbus_framefmt mbus_fmt;
@@ -152,11 +152,12 @@ static void mxr_layer_geo_fix(struct mxr_layer *layer)
 	layer->ops.fix_geometry(layer);
 }
 
-static void mxr_layer_default_geo(struct mxr_layer *layer)
+void mxr_layer_default_geo(struct mxr_layer *layer)
 {
 	struct mxr_device *mdev = layer->mdev;
 	struct v4l2_mbus_framefmt mbus_fmt;
 
+	mxr_dbg(layer->mdev, "%s start\n", __func__);
 	memset(&layer->geo, 0, sizeof layer->geo);
 
 	mxr_get_mbus_fmt(mdev, &mbus_fmt);
@@ -823,6 +824,9 @@ static int start_streaming(struct vb2_queue *vq)
 	unsigned long flags;
 
 	mxr_dbg(mdev, "%s\n", __func__);
+
+	/* start streaming from graphic layer */
+	mdev->from_graph_layer = 1;
 	/* block any changes in output configuration */
 	mxr_output_get(mdev);
 
@@ -914,6 +918,9 @@ static int stop_streaming(struct vb2_queue *vq)
 	pipe->layer = layer;
 	/* stop streaming all entities on the pipeline */
 	tv_graph_pipeline_stream(pipe, 0);
+
+	/* stop streaming from graphic layer */
+	mdev->from_graph_layer = 0;
 
 	/* allow changes in output configuration */
 	mxr_output_put(mdev);

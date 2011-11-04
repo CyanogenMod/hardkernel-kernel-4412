@@ -132,6 +132,7 @@ static void mxr_vp_fix_geometry(struct mxr_layer *layer)
 {
 	struct mxr_geometry *geo = &layer->geo;
 
+	mxr_dbg(layer->mdev, "%s start\n", __func__);
 	/* align horizontal size to 8 pixels */
 	geo->src.full_width = ALIGN(geo->src.full_width, 8);
 	/* limit to boundary size */
