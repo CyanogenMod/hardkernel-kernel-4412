@@ -996,9 +996,10 @@ static void __cma_chunk_free(struct cma_chunk *chunk)
 {
 	rb_erase(&chunk->by_start, &cma_chunks_by_start);
 
-	chunk->reg->alloc->free(chunk);
-	--chunk->reg->users;
 	chunk->reg->free_space += chunk->size;
+	--chunk->reg->users;
+
+	chunk->reg->alloc->free(chunk);
 }
 
 
