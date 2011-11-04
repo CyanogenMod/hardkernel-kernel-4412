@@ -16,6 +16,7 @@
 #include <linux/io.h>
 #include <linux/platform_device.h>
 #include <mach/regs-pmu.h>
+#include <mach/regs-pmu5.h>
 #include <mach/regs-usb-phy.h>
 #include <plat/cpu.h>
 #include <plat/usb-phy.h>
@@ -167,11 +168,18 @@ static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
 		}
 #endif
 	} else {
-		if (phy_type & USB_PHY) {
+		if (phy_type & USB_PHY0) {
 			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
-				writel(PHY_ENABLE, S5P_USBDRD_PHY_CONTROL);
+				writel(PHY_ENABLE, EXYNOS5_USBDEV_PHY_CONTROL);
 			else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
-				writel(PHY_DISABLE, S5P_USBDRD_PHY_CONTROL);
+				writel(PHY_DISABLE, EXYNOS5_USBDEV_PHY_CONTROL);
+		}
+
+		if (phy_type & USB_PHY1) {
+			if (on == PHY_ENABLE && (usb_phy_control.phy1_usage++) == 0)
+				writel(PHY_ENABLE, EXYNOS5_USBHOST_PHY_CONTROL);
+			else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
+				writel(PHY_DISABLE, EXYNOS5_USBHOST_PHY_CONTROL);
 		}
 	}
 
@@ -601,6 +609,8 @@ static int exynos5_usb_phy20_init(struct platform_device *pdev)
 {
 	struct clk *xusbxti_clk;
 	u32 hostphy_ctrl0;
+	u32 hsic_ctrl;
+	u32 ehcictrl;
 
 	hostphy_ctrl0 = readl(EXYNOS5_PHY_HOST_CTRL0);
 
@@ -643,13 +653,26 @@ static int exynos5_usb_phy20_init(struct platform_device *pdev)
 
 	hostphy_ctrl0 &= ~(HOST_CTRL0_COMMONONN);
 
-	hostphy_ctrl0 &= ~(HOST_CTRL0_PHYSWRST | HOST_CTRL0_PHYSWRSTALL);
+	hostphy_ctrl0 &= ~(HOST_CTRL0_PHYSWRST | HOST_CTRL0_PHYSWRSTALL | HOST_CTRL0_SIDDQ);
 	hostphy_ctrl0 &= ~(HOST_CTRL0_FORCESUSPEND | HOST_CTRL0_FORCESLEEP);
 	hostphy_ctrl0 |= (HOST_CTRL0_LINKSWRST | HOST_CTRL0_UTMISWRST);
 	writel(hostphy_ctrl0, EXYNOS5_PHY_HOST_CTRL0);
+	hsic_ctrl = (HSIC_CTRL_REFCLKDIV(0x24) | HSIC_CTRL_REFCLKSEL(0x2) |
+		HSIC_CTRL_PHYSWRST);
+	writel(hsic_ctrl, EXYNOS5_PHY_HSIC_CTRL1);
+	writel(hsic_ctrl, EXYNOS5_PHY_HSIC_CTRL2);
 	udelay(1000);
+
+	hsic_ctrl = (HSIC_CTRL_REFCLKDIV(0x24) | HSIC_CTRL_REFCLKSEL(0x2));
+	writel(hsic_ctrl, EXYNOS5_PHY_HSIC_CTRL1);
+	writel(hsic_ctrl, EXYNOS5_PHY_HSIC_CTRL2);
 	hostphy_ctrl0 &= ~(HOST_CTRL0_LINKSWRST | HOST_CTRL0_UTMISWRST);
 	writel(hostphy_ctrl0, EXYNOS5_PHY_HOST_CTRL0);
+
+	ehcictrl = readl(EXYNOS5_PHY_HOST_EHCICTRL);
+	ehcictrl |= (EHCICTRL_ENAINCRXALIGN | EHCICTRL_ENAINCR4 |
+			EHCICTRL_ENAINCR8 | EHCICTRL_ENAINCR16);
+	writel(ehcictrl, EXYNOS5_PHY_HOST_EHCICTRL);
 
 	return 0;
 }
@@ -657,7 +680,15 @@ static int exynos5_usb_phy20_init(struct platform_device *pdev)
 static int exynos5_usb_phy20_exit(struct platform_device *pdev)
 {
 	u32 hostphy_ctrl0;
+	u32 hsic_ctrl;
+
+	hsic_ctrl = (HSIC_CTRL_REFCLKDIV(0x24) | HSIC_CTRL_REFCLKSEL(0x2) |
+			HSIC_CTRL_SIDDQ | HSIC_CTRL_FORCESLEEP | HSIC_CTRL_FORCESUSPEND);
+	writel(hsic_ctrl, EXYNOS5_PHY_HSIC_CTRL1);
+	writel(hsic_ctrl, EXYNOS5_PHY_HSIC_CTRL2);
+
 	hostphy_ctrl0 = readl(EXYNOS5_PHY_HOST_CTRL0);
+	hostphy_ctrl0 |= (HOST_CTRL0_SIDDQ);
 	hostphy_ctrl0 |= (HOST_CTRL0_FORCESUSPEND | HOST_CTRL0_FORCESLEEP);
 	hostphy_ctrl0 |= (HOST_CTRL0_PHYSWRST | HOST_CTRL0_PHYSWRSTALL);
 	writel(hostphy_ctrl0, EXYNOS5_PHY_HOST_CTRL0);
