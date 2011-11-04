@@ -419,7 +419,7 @@ int exynos4212_init(struct device *dev, struct busfreq_data *data)
 	}
 
 	data->vdd_mif = regulator_get(NULL, "vdd_mif");
-	if (IS_ERR(data->vdd_int)) {
+	if (IS_ERR(data->vdd_mif)) {
 		pr_err("failed to get resource %s\n", "vdd_mif");
 		regulator_put(data->vdd_int);
 		return -ENODEV;
