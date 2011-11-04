@@ -46,7 +46,7 @@ obj-$(CONFIG_MACH_ARMLEX4210)		+= mach-armlex4210.o
 obj-$(CONFIG_MACH_UNIVERSAL_C210)	+= mach-universal_c210.o
 obj-$(CONFIG_MACH_NURI)			+= mach-nuri.o
 obj-$(CONFIG_MACH_FPGA5210)		+= mach-fpga5210.o
-obj-$(CONFIG_MACH_SMDK4212)		+= mach-smdk4212.o
+obj-$(CONFIG_MACH_SMDK4X12)		+= mach-smdk4x12.o
 obj-$(CONFIG_MACH_SMDK5210)		+= mach-smdk5210.o
 obj-$(CONFIG_MACH_SMDK5250)		+= mach-smdk5250.o
 

@@ -421,7 +421,7 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 	gpio_set_value(EXYNOS4_GPX0(6), 1);
 
 	gpio_free(EXYNOS4_GPX0(6));
-#elif defined (CONFIG_MACH_SMDK4212)
+#elif defined (CONFIG_MACH_SMDK4X12)
 	err = gpio_request_one(EXYNOS4_GPX1(5), GPIOF_OUT_INIT_HIGH, "GPX0");
 	if (err) {
 		printk(KERN_ERR "failed to request GPX0 for "

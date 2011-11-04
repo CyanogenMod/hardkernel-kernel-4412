@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos/mach-smdk4212.c
+/* linux/arch/arm/mach-exynos/mach-smdk4x12.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
@@ -101,51 +101,51 @@
 #endif
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
-#define SMDK4212_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
+#define SMDK4X12_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
 				 S3C2410_UCON_TXIRQMODE |	\
 				 S3C2410_UCON_RXIRQMODE |	\
 				 S3C2410_UCON_RXFIFO_TOI |	\
 				 S3C2443_UCON_RXERR_IRQEN)
 
-#define SMDK4212_ULCON_DEFAULT	S3C2410_LCON_CS8
+#define SMDK4X12_ULCON_DEFAULT	S3C2410_LCON_CS8
 
-#define SMDK4212_UFCON_DEFAULT	(S3C2410_UFCON_FIFOMODE |	\
+#define SMDK4X12_UFCON_DEFAULT	(S3C2410_UFCON_FIFOMODE |	\
 				 S5PV210_UFCON_TXTRIG4 |	\
 				 S5PV210_UFCON_RXTRIG4)
 
-static struct s3c2410_uartcfg smdk4212_uartcfgs[] __initdata = {
+static struct s3c2410_uartcfg smdk4x12_uartcfgs[] __initdata = {
 	[0] = {
 		.hwport		= 0,
 		.flags		= 0,
-		.ucon		= SMDK4212_UCON_DEFAULT,
-		.ulcon		= SMDK4212_ULCON_DEFAULT,
-		.ufcon		= SMDK4212_UFCON_DEFAULT,
+		.ucon		= SMDK4X12_UCON_DEFAULT,
+		.ulcon		= SMDK4X12_ULCON_DEFAULT,
+		.ufcon		= SMDK4X12_UFCON_DEFAULT,
 	},
 	[1] = {
 		.hwport		= 1,
 		.flags		= 0,
-		.ucon		= SMDK4212_UCON_DEFAULT,
-		.ulcon		= SMDK4212_ULCON_DEFAULT,
-		.ufcon		= SMDK4212_UFCON_DEFAULT,
+		.ucon		= SMDK4X12_UCON_DEFAULT,
+		.ulcon		= SMDK4X12_ULCON_DEFAULT,
+		.ufcon		= SMDK4X12_UFCON_DEFAULT,
 	},
 	[2] = {
 		.hwport		= 2,
 		.flags		= 0,
-		.ucon		= SMDK4212_UCON_DEFAULT,
-		.ulcon		= SMDK4212_ULCON_DEFAULT,
-		.ufcon		= SMDK4212_UFCON_DEFAULT,
+		.ucon		= SMDK4X12_UCON_DEFAULT,
+		.ulcon		= SMDK4X12_ULCON_DEFAULT,
+		.ufcon		= SMDK4X12_UFCON_DEFAULT,
 	},
 	[3] = {
 		.hwport		= 3,
 		.flags		= 0,
-		.ucon		= SMDK4212_UCON_DEFAULT,
-		.ulcon		= SMDK4212_ULCON_DEFAULT,
-		.ufcon		= SMDK4212_UFCON_DEFAULT,
+		.ucon		= SMDK4X12_UCON_DEFAULT,
+		.ulcon		= SMDK4X12_ULCON_DEFAULT,
+		.ufcon		= SMDK4X12_UFCON_DEFAULT,
 	},
 };
 
-static struct resource smdk4212_smsc911x_resources[] = {
+static struct resource smdk4x12_smsc911x_resources[] = {
 	[0] = {
 		.start	= EXYNOS4_PA_SROM_BANK(1),
 		.end	= EXYNOS4_PA_SROM_BANK(1) + SZ_64K - 1,
@@ -166,11 +166,11 @@ static struct smsc911x_platform_config smsc9215_config = {
 	.mac		= {0x00, 0x80, 0x00, 0x23, 0x45, 0x67},
 };
 
-static struct platform_device smdk4212_smsc911x = {
+static struct platform_device smdk4x12_smsc911x = {
 	.name		= "smsc911x",
 	.id		= -1,
-	.num_resources	= ARRAY_SIZE(smdk4212_smsc911x_resources),
-	.resource	= smdk4212_smsc911x_resources,
+	.num_resources	= ARRAY_SIZE(smdk4x12_smsc911x_resources),
+	.resource	= smdk4x12_smsc911x_resources,
 	.dev		= {
 		.platform_data	= &smsc9215_config,
 	},
@@ -189,7 +189,7 @@ static struct platform_device smdk4212_smsc911x = {
 #if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C) \
 	|| defined(CONFIG_S5K3H1_CSI_C) || defined(CONFIG_S5K3H2_CSI_C) \
 	|| defined(CONFIG_S5K6A3_CSI_C)
-static int smdk4212_cam0_reset(int dummy)
+static int smdk4x12_cam0_reset(int dummy)
 {
 	int err;
 	/* Camera A */
@@ -208,7 +208,7 @@ static int smdk4212_cam0_reset(int dummy)
 #if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D) \
 	|| defined(CONFIG_S5K3H1_CSI_D) || defined(CONFIG_S5K3H2_CSI_D) \
 	|| defined(CONFIG_S5K6A3_CSI_D)
-static int smdk4212_cam1_reset(int dummy)
+static int smdk4x12_cam1_reset(int dummy)
 {
 	int err;
 
@@ -244,13 +244,13 @@ static struct s3c_platform_camera s5k4ba = {
 	.id		= CAMERA_PAR_A,
 	.clk_name	= "sclk_cam0",
 	.i2c_busnum	= 4,
-	.cam_power	= smdk4212_cam0_reset,
+	.cam_power	= smdk4x12_cam0_reset,
 #endif
 #ifdef CONFIG_ITU_B
 	.id		= CAMERA_PAR_B,
 	.clk_name	= "sclk_cam1",
 	.i2c_busnum	= 5,
-	.cam_power	= smdk4212_cam1_reset,
+	.cam_power	= smdk4x12_cam1_reset,
 #endif
 	.type		= CAM_TYPE_ITU,
 	.fmt		= ITU_601_YCBCR422_8BIT,
@@ -299,13 +299,13 @@ static struct s3c_platform_camera s5k4ea = {
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
 	.i2c_busnum	= 4,
-	.cam_power	= smdk4212_cam0_reset,
+	.cam_power	= smdk4x12_cam0_reset,
 #endif
 #ifdef CONFIG_CSI_D
 	.id		= CAMERA_CSI_D,
 	.clk_name	= "sclk_cam1",
 	.i2c_busnum	= 5,
-	.cam_power	= smdk4212_cam1_reset,
+	.cam_power	= smdk4x12_cam1_reset,
 #endif
 	.type		= CAM_TYPE_MIPI,
 	.fmt		= MIPI_CSI_YCBCR422_8BIT,
@@ -370,12 +370,12 @@ static struct s3c_platform_camera s5k3h1 = {
 #ifdef CONFIG_S5K3H1_CSI_C
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
-	.cam_power	= smdk4212_cam0_reset,
+	.cam_power	= smdk4x12_cam0_reset,
 #endif
 #ifdef CONFIG_S5K3H1_CSI_D
 	.id		= CAMERA_CSI_D,
 	.clk_name	= "sclk_cam1",
-	.cam_power	= smdk4212_cam1_reset,
+	.cam_power	= smdk4x12_cam1_reset,
 #endif
 	.type		= CAM_TYPE_MIPI,
 	.fmt		= MIPI_CSI_RAW10,
@@ -418,12 +418,12 @@ static struct s3c_platform_camera s5k3h2 = {
 #ifdef CONFIG_S5K3H2_CSI_C
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
-	.cam_power	= smdk4212_cam0_reset,
+	.cam_power	= smdk4x12_cam0_reset,
 #endif
 #ifdef CONFIG_S5K3H2_CSI_D
 	.id		= CAMERA_CSI_D,
 	.clk_name	= "sclk_cam1",
-	.cam_power	= smdk4212_cam1_reset,
+	.cam_power	= smdk4x12_cam1_reset,
 #endif
 	.type		= CAM_TYPE_MIPI,
 	.fmt		= MIPI_CSI_RAW10,
@@ -466,12 +466,12 @@ static struct s3c_platform_camera s5k6a3 = {
 #ifdef CONFIG_S5K6A3_CSI_C
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
-	.cam_power	= smdk4212_cam0_reset,
+	.cam_power	= smdk4x12_cam0_reset,
 #endif
 #ifdef CONFIG_S5K6A3_CSI_D
 	.id		= CAMERA_CSI_D,
 	.clk_name	= "sclk_cam1",
-	.cam_power	= smdk4212_cam1_reset,
+	.cam_power	= smdk4x12_cam1_reset,
 #endif
 	.type		= CAM_TYPE_MIPI,
 	.fmt		= MIPI_CSI_RAW10,
@@ -565,13 +565,13 @@ static struct s3c_platform_camera m5mo = {
 	.id		= CAMERA_CSI_C,
 	.clk_name	= "sclk_cam0",
 	.i2c_busnum	= 4,
-	.cam_power	= smdk4212_cam0_reset,
+	.cam_power	= smdk4x12_cam0_reset,
 #endif
 #ifdef CONFIG_CSI_D
 	.id		= CAMERA_CSI_D,
 	.clk_name	= "sclk_cam1",
 	.i2c_busnum	= 5,
-	.cam_power	= smdk4212_cam1_reset,
+	.cam_power	= smdk4x12_cam1_reset,
 #endif
 	.type		= CAM_TYPE_MIPI,
 	.fmt		= MIPI_CSI_YCBCR422_8BIT,
@@ -776,7 +776,7 @@ static struct platform_device s3c_device_spi_gpio = {
 	},
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win0 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win0 = {
 	.win_mode = {
 		.left_margin	= 9,
 		.right_margin	= 9,
@@ -795,7 +795,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win0 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win1 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win1 = {
 	.win_mode = {
 		.left_margin	= 9,
 		.right_margin	= 9,
@@ -814,7 +814,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win1 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win2 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win2 = {
 	.win_mode = {
 		.left_margin	= 9,
 		.right_margin	= 9,
@@ -898,7 +898,7 @@ static struct platform_device s3c_device_spi_gpio = {
 	},
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win0 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win0 = {
 	.win_mode = {
 		.left_margin	= 8,		/* HBPD */
 		.right_margin	= 8,		/* HFPD */
@@ -917,7 +917,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win0 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win1 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win1 = {
 	.win_mode = {
 		.left_margin	= 8,		/* HBPD */
 		.right_margin	= 8,		/* HFPD */
@@ -936,7 +936,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win1 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win2 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win2 = {
 	.win_mode = {
 		.left_margin	= 8,		/* HBPD */
 		.right_margin	= 8,		/* HFPD */
@@ -971,17 +971,17 @@ static void lcd_wa101s_set_power(struct plat_lcd_data *pd,
 	}
 }
 
-static struct plat_lcd_data smdk4212_lcd_wa101s_data = {
+static struct plat_lcd_data smdk4x12_lcd_wa101s_data = {
 	.set_power		= lcd_wa101s_set_power,
 };
 
-static struct platform_device smdk4212_lcd_wa101s = {
+static struct platform_device smdk4x12_lcd_wa101s = {
 	.name			= "platform-lcd",
 	.dev.parent		= &s5p_device_fimd0.dev,
-	.dev.platform_data      = &smdk4212_lcd_wa101s_data,
+	.dev.platform_data      = &smdk4x12_lcd_wa101s_data,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win0 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win0 = {
 	.win_mode = {
 		.left_margin	= 80,
 		.right_margin	= 48,
@@ -1000,7 +1000,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win0 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win1 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win1 = {
 	.win_mode = {
 		.left_margin	= 80,
 		.right_margin	= 48,
@@ -1019,7 +1019,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win1 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win2 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win2 = {
 	.win_mode = {
 		.left_margin	= 80,
 		.right_margin	= 48,
@@ -1066,17 +1066,17 @@ static void lcd_lte480wv_set_power(struct plat_lcd_data *pd,
 	}
 }
 
-static struct plat_lcd_data smdk4212_lcd_lte480wv_data = {
+static struct plat_lcd_data smdk4x12_lcd_lte480wv_data = {
 	.set_power		= lcd_lte480wv_set_power,
 };
 
-static struct platform_device smdk4212_lcd_lte480wv = {
+static struct platform_device smdk4x12_lcd_lte480wv = {
 	.name			= "platform-lcd",
 	.dev.parent		= &s5p_device_fimd0.dev,
-	.dev.platform_data      = &smdk4212_lcd_lte480wv_data,
+	.dev.platform_data      = &smdk4x12_lcd_lte480wv_data,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win0 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win0 = {
 	.win_mode = {
 		.left_margin	= 13,
 		.right_margin	= 8,
@@ -1095,7 +1095,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win0 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win1 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win1 = {
 	.win_mode = {
 		.left_margin	= 13,
 		.right_margin	= 8,
@@ -1114,7 +1114,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win1 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win2 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win2 = {
 	.win_mode = {
 		.left_margin	= 13,
 		.right_margin	= 8,
@@ -1156,17 +1156,17 @@ static void mipi_lcd_set_power(struct plat_lcd_data *pd,
 	}
 }
 
-static struct plat_lcd_data smdk4212_mipi_lcd_data = {
+static struct plat_lcd_data smdk4x12_mipi_lcd_data = {
 	.set_power	= mipi_lcd_set_power,
 };
 
-static struct platform_device smdk4212_mipi_lcd = {
+static struct platform_device smdk4x12_mipi_lcd = {
 	.name			= "platform-lcd",
 	.dev.parent		= &s5p_device_fimd0.dev,
-	.dev.platform_data	= &smdk4212_mipi_lcd_data,
+	.dev.platform_data	= &smdk4x12_mipi_lcd_data,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win0 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win0 = {
 	.win_mode = {
 		.left_margin	= 0x16,
 		.right_margin	= 0x16,
@@ -1185,7 +1185,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win0 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win1 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win1 = {
 	.win_mode = {
 		.left_margin	= 0x16,
 		.right_margin	= 0x16,
@@ -1204,7 +1204,7 @@ static struct s3c_fb_pd_win smdk4212_fb_win1 = {
 	.default_bpp		= 24,
 };
 
-static struct s3c_fb_pd_win smdk4212_fb_win2 = {
+static struct s3c_fb_pd_win smdk4x12_fb_win2 = {
 	.win_mode = {
 		.left_margin	= 0x16,
 		.right_margin	= 0x16,
@@ -1224,13 +1224,13 @@ static struct s3c_fb_pd_win smdk4212_fb_win2 = {
 };
 #endif
 
-static struct s3c_fb_platdata smdk4212_lcd0_pdata __initdata = {
+static struct s3c_fb_platdata smdk4x12_lcd0_pdata __initdata = {
 #if defined(CONFIG_LCD_AMS369FG06) || defined(CONFIG_LCD_WA101S) || \
 	defined(CONFIG_LCD_LTE480WV) || defined(CONFIG_LCD_LMS501KF03) || \
 	defined(CONFIG_LCD_MIPI_S6E63M0)
-	.win[0]		= &smdk4212_fb_win0,
-	.win[1]		= &smdk4212_fb_win1,
-	.win[2]		= &smdk4212_fb_win2,
+	.win[0]		= &smdk4x12_fb_win0,
+	.win[1]		= &smdk4x12_fb_win1,
+	.win[2]		= &smdk4x12_fb_win2,
 #endif
 	.default_win	= 2,
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
@@ -1457,7 +1457,7 @@ static struct dw_mci_board exynos_dwmci_pdata __initdata = {
 #endif
 
 #ifdef CONFIG_S3C_DEV_HSMMC
-static struct s3c_sdhci_platdata smdk4212_hsmmc0_pdata __initdata = {
+static struct s3c_sdhci_platdata smdk4x12_hsmmc0_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 #ifdef CONFIG_EXYNOS4_SDHCI_CH0_8BIT
@@ -1468,14 +1468,14 @@ static struct s3c_sdhci_platdata smdk4212_hsmmc0_pdata __initdata = {
 #endif
 
 #ifdef CONFIG_S3C_DEV_HSMMC1
-static struct s3c_sdhci_platdata smdk4212_hsmmc1_pdata __initdata = {
+static struct s3c_sdhci_platdata smdk4x12_hsmmc1_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 };
 #endif
 
 #ifdef CONFIG_S3C_DEV_HSMMC2
-static struct s3c_sdhci_platdata smdk4212_hsmmc2_pdata __initdata = {
+static struct s3c_sdhci_platdata smdk4x12_hsmmc2_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 #ifdef CONFIG_EXYNOS4_SDHCI_CH2_8BIT
@@ -1486,7 +1486,7 @@ static struct s3c_sdhci_platdata smdk4212_hsmmc2_pdata __initdata = {
 #endif
 
 #ifdef CONFIG_S3C_DEV_HSMMC3
-static struct s3c_sdhci_platdata smdk4212_hsmmc3_pdata __initdata = {
+static struct s3c_sdhci_platdata smdk4x12_hsmmc3_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
 };
@@ -1512,22 +1512,22 @@ static struct s3c_mshci_platdata exynos4_mshc_pdata __initdata = {
 #endif
 
 #ifdef CONFIG_USB_EHCI_S5P
-static struct s5p_ehci_platdata smdk4212_ehci_pdata;
+static struct s5p_ehci_platdata smdk4x12_ehci_pdata;
 
-static void __init smdk4212_ehci_init(void)
+static void __init smdk4x12_ehci_init(void)
 {
-	struct s5p_ehci_platdata *pdata = &smdk4212_ehci_pdata;
+	struct s5p_ehci_platdata *pdata = &smdk4x12_ehci_pdata;
 
 	s5p_ehci_set_platdata(pdata);
 }
 #endif
 
 #ifdef CONFIG_USB_OHCI_S5P
-static struct s5p_ohci_platdata smdk4212_ohci_pdata;
+static struct s5p_ohci_platdata smdk4x12_ohci_pdata;
 
-static void __init smdk4212_ohci_init(void)
+static void __init smdk4x12_ohci_init(void)
 {
-	struct s5p_ohci_platdata *pdata = &smdk4212_ohci_pdata;
+	struct s5p_ohci_platdata *pdata = &smdk4x12_ohci_pdata;
 
 	s5p_ohci_set_platdata(pdata);
 }
@@ -1535,11 +1535,11 @@ static void __init smdk4212_ohci_init(void)
 
 /* USB GADGET */
 #ifdef CONFIG_USB_GADGET
-static struct s5p_usbgadget_platdata smdk4212_usbgadget_pdata;
+static struct s5p_usbgadget_platdata smdk4x12_usbgadget_pdata;
 
-static void __init smdk4212_usbgadget_init(void)
+static void __init smdk4x12_usbgadget_init(void)
 {
-	struct s5p_usbgadget_platdata *pdata = &smdk4212_usbgadget_pdata;
+	struct s5p_usbgadget_platdata *pdata = &smdk4x12_usbgadget_pdata;
 
 	s5p_usbgadget_set_platdata(pdata);
 }
@@ -2099,44 +2099,44 @@ static struct platform_device samsung_device_battery = {
 };
 #endif
 
-static struct gpio_event_direct_entry smdk4212_keypad_key_map[] = {
+static struct gpio_event_direct_entry smdk4x12_keypad_key_map[] = {
 	{
 		.gpio   = EXYNOS4_GPX0(0),
 		.code   = KEY_POWER,
 	}
 };
 
-static struct gpio_event_input_info smdk4212_keypad_key_info = {
+static struct gpio_event_input_info smdk4x12_keypad_key_info = {
 	.info.func              = gpio_event_input_func,
 	.info.no_suspend        = true,
 	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
 	.type                   = EV_KEY,
-	.keymap                 = smdk4212_keypad_key_map,
-	.keymap_size            = ARRAY_SIZE(smdk4212_keypad_key_map)
+	.keymap                 = smdk4x12_keypad_key_map,
+	.keymap_size            = ARRAY_SIZE(smdk4x12_keypad_key_map)
 };
 
-static struct gpio_event_info *smdk4212_input_info[] = {
-	&smdk4212_keypad_key_info.info,
+static struct gpio_event_info *smdk4x12_input_info[] = {
+	&smdk4x12_keypad_key_info.info,
 };
 
-static struct gpio_event_platform_data smdk4212_input_data = {
+static struct gpio_event_platform_data smdk4x12_input_data = {
 	.names  = {
-		"smdk4212-keypad",
+		"smdk4x12-keypad",
 		NULL,
 	},
-	.info           = smdk4212_input_info,
-	.info_count     = ARRAY_SIZE(smdk4212_input_info),
+	.info           = smdk4x12_input_info,
+	.info_count     = ARRAY_SIZE(smdk4x12_input_info),
 };
 
-static struct platform_device smdk4212_input_device = {
+static struct platform_device smdk4x12_input_device = {
 	.name   = GPIO_EVENT_DEV_NAME,
 	.id     = 0,
 	.dev    = {
-		.platform_data = &smdk4212_input_data,
+		.platform_data = &smdk4x12_input_data,
 	},
 };
 
-static void __init smdk4212_gpio_power_init(void)
+static void __init smdk4x12_gpio_power_init(void)
 {
 	int err = 0;
 
@@ -2151,19 +2151,19 @@ static void __init smdk4212_gpio_power_init(void)
 	gpio_free(EXYNOS4_GPX0(0));
 }
 
-static uint32_t smdk4212_keymap[] __initdata = {
+static uint32_t smdk4x12_keymap[] __initdata = {
 	/* KEY(row, col, keycode) */
 	KEY(1, 0, KEY_D), KEY(1, 1, KEY_A), KEY(1, 2, KEY_B),
 	KEY(1, 3, KEY_E), KEY(1, 4, KEY_C)
 };
 
-static struct matrix_keymap_data smdk4212_keymap_data __initdata = {
-	.keymap		= smdk4212_keymap,
-	.keymap_size	= ARRAY_SIZE(smdk4212_keymap),
+static struct matrix_keymap_data smdk4x12_keymap_data __initdata = {
+	.keymap		= smdk4x12_keymap,
+	.keymap_size	= ARRAY_SIZE(smdk4x12_keymap),
 };
 
-static struct samsung_keypad_platdata smdk4212_keypad_data __initdata = {
-	.keymap_data	= &smdk4212_keymap_data,
+static struct samsung_keypad_platdata smdk4x12_keypad_data __initdata = {
+	.keymap_data	= &smdk4x12_keymap_data,
 	.rows		= 2,
 	.cols		= 5,
 };
@@ -2179,7 +2179,7 @@ static struct fimg2d_platdata fimg2d_data __initdata = {
 #endif
 
 #ifdef CONFIG_EXYNOS4_C2C
-struct exynos_c2c_platdata smdk4212_c2c_pdata = {
+struct exynos_c2c_platdata smdk4x12_c2c_pdata = {
 	.setup_gpio	= NULL,
 	.shdmem_addr	= C2C_SHAREDMEM_BASE,
 	.shdmem_size	= C2C_MEMSIZE_64,
@@ -2196,11 +2196,11 @@ struct exynos_c2c_platdata smdk4212_c2c_pdata = {
 #endif
 
 #ifdef CONFIG_USB_EXYNOS_SWITCH
-static struct s5p_usbswitch_platdata smdk4212_usbswitch_pdata;
+static struct s5p_usbswitch_platdata smdk4x12_usbswitch_pdata;
 
-static void __init smdk4212_usbswitch_init(void)
+static void __init smdk4x12_usbswitch_init(void)
 {
-	struct s5p_usbswitch_platdata *pdata = &smdk4212_usbswitch_pdata;
+	struct s5p_usbswitch_platdata *pdata = &smdk4x12_usbswitch_pdata;
 	int err;
 
 	pdata->gpio_host_detect = EXYNOS4_GPX3(5); /* low active */
@@ -2237,7 +2237,7 @@ static struct platform_device exynos4_busfreq = {
 	.name = "exynos4-busfreq",
 };
 
-static struct platform_device *smdk4212_devices[] __initdata = {
+static struct platform_device *smdk4x12_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
 	&pmem_gpu1_device,
@@ -2261,11 +2261,11 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #if defined(CONFIG_LCD_AMS369FG06) || defined(CONFIG_LCD_LMS501KF03)
 	&s3c_device_spi_gpio,
 #elif defined(CONFIG_LCD_WA101S)
-	&smdk4212_lcd_wa101s,
+	&smdk4x12_lcd_wa101s,
 #elif defined(CONFIG_LCD_LTE480WV)
-	&smdk4212_lcd_lte480wv,
+	&smdk4x12_lcd_lte480wv,
 #elif defined(CONFIG_LCD_MIPI_S6E63M0)
-	&smdk4212_mipi_lcd,
+	&smdk4x12_mipi_lcd,
 #endif
 #endif
 	/* legacy fimd */
@@ -2395,8 +2395,8 @@ static struct platform_device *smdk4212_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS4_C2C
 	&exynos_device_c2c,
 #endif
-	&smdk4212_input_device,
-	&smdk4212_smsc911x,
+	&smdk4x12_input_device,
+	&smdk4x12_smsc911x,
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	&exynos4_device_spi0,
 #ifndef CONFIG_FB_S5P_LMS501KF03
@@ -2640,31 +2640,31 @@ static void __init exynos4_reserve_mem(void)
 #endif
 
 /* LCD Backlight data */
-static struct samsung_bl_gpio_info smdk4212_bl_gpio_info = {
+static struct samsung_bl_gpio_info smdk4x12_bl_gpio_info = {
 	.no = EXYNOS4_GPD0(1),
 	.func = S3C_GPIO_SFN(2),
 };
 
-static struct platform_pwm_backlight_data smdk4212_bl_data = {
+static struct platform_pwm_backlight_data smdk4x12_bl_data = {
 	.pwm_id = 1,
 #ifdef CONFIG_FB_S5P_LMS501KF03
 	.pwm_period_ns  = 1000,
 #endif
 };
 
-static void __init smdk4212_map_io(void)
+static void __init smdk4x12_map_io(void)
 {
 	clk_xusbxti.rate = 24000000;
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(24000000);
-	s3c24xx_init_uarts(smdk4212_uartcfgs, ARRAY_SIZE(smdk4212_uartcfgs));
+	s3c24xx_init_uarts(smdk4x12_uartcfgs, ARRAY_SIZE(smdk4x12_uartcfgs));
 
 #if defined(CONFIG_S5P_MEM_CMA)
 	exynos4_reserve_mem();
 #endif
 }
 
-static void __init smdk4212_smsc911x_init(void)
+static void __init smdk4x12_smsc911x_init(void)
 {
 	u32 cs1;
 
@@ -2733,7 +2733,7 @@ static void __init exynos_sysmmu_init(void)
 #endif
 }
 
-static void __init smdk4212_machine_init(void)
+static void __init smdk4x12_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	struct clk *sclk = NULL;
@@ -2797,7 +2797,7 @@ static void __init smdk4212_machine_init(void)
 #if defined(CONFIG_LCD_AMS369FG06) || defined(CONFIG_LCD_LMS501KF03)
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 #endif
-	s5p_fimd0_set_platdata(&smdk4212_lcd0_pdata);
+	s5p_fimd0_set_platdata(&smdk4x12_lcd0_pdata);
 #ifdef CONFIG_FB_MIPI_DSIM
 	s5p_device_mipi_dsim.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
@@ -2820,19 +2820,19 @@ static void __init smdk4212_machine_init(void)
 #endif
 #endif
 #ifdef CONFIG_USB_EHCI_S5P
-	smdk4212_ehci_init();
+	smdk4x12_ehci_init();
 #endif
 #ifdef CONFIG_USB_OHCI_S5P
-	smdk4212_ohci_init();
+	smdk4x12_ohci_init();
 #endif
 #ifdef CONFIG_USB_GADGET
-	smdk4212_usbgadget_init();
+	smdk4x12_usbgadget_init();
 #endif
 #ifdef CONFIG_USB_EXYNOS_SWITCH
-	smdk4212_usbswitch_init();
+	smdk4x12_usbswitch_init();
 #endif
 
-	samsung_bl_set(&smdk4212_bl_gpio_info, &smdk4212_bl_data);
+	samsung_bl_set(&smdk4x12_bl_gpio_info, &smdk4x12_bl_data);
 
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	exynos_dwmci_set_platdata(&exynos_dwmci_pdata);
@@ -2845,16 +2845,16 @@ static void __init smdk4212_machine_init(void)
 #endif
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC
-	s3c_sdhci0_set_platdata(&smdk4212_hsmmc0_pdata);
+	s3c_sdhci0_set_platdata(&smdk4x12_hsmmc0_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC1
-	s3c_sdhci1_set_platdata(&smdk4212_hsmmc1_pdata);
+	s3c_sdhci1_set_platdata(&smdk4x12_hsmmc1_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC2
-	s3c_sdhci2_set_platdata(&smdk4212_hsmmc2_pdata);
+	s3c_sdhci2_set_platdata(&smdk4x12_hsmmc2_pdata);
 #endif
 #ifdef CONFIG_S3C_DEV_HSMMC3
-	s3c_sdhci3_set_platdata(&smdk4212_hsmmc3_pdata);
+	s3c_sdhci3_set_platdata(&smdk4x12_hsmmc3_pdata);
 #endif
 #ifdef CONFIG_S5P_DEV_MSHC
 	s3c_mshci_set_platdata(&exynos4_mshc_pdata);
@@ -2889,12 +2889,12 @@ static void __init smdk4212_machine_init(void)
 #if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C) \
 	|| defined(CONFIG_S5K3H1_CSI_C) || defined(CONFIG_S5K3H2_CSI_C) \
 	|| defined(CONFIG_S5K6A3_CSI_C)
-	smdk4212_cam0_reset(1);
+	smdk4x12_cam0_reset(1);
 #endif
 #if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D) \
 	|| defined(CONFIG_S5K3H1_CSI_D) || defined(CONFIG_S5K3H2_CSI_D) \
 	|| defined(CONFIG_S5K6A3_CSI_D)
-	smdk4212_cam1_reset(1);
+	smdk4x12_cam1_reset(1);
 #endif
 #endif /* CONFIG_VIDEO_FIMC */
 
@@ -2934,17 +2934,17 @@ static void __init smdk4212_machine_init(void)
 #ifdef CONFIG_VIDEO_FIMG2D
 	s5p_fimg2d_set_platdata(&fimg2d_data);
 #endif
-	samsung_keypad_set_platdata(&smdk4212_keypad_data);
-	smdk4212_smsc911x_init();
+	samsung_keypad_set_platdata(&smdk4x12_keypad_data);
+	smdk4x12_smsc911x_init();
 #ifdef CONFIG_EXYNOS4_C2C
-	exynos4_c2c_set_platdata(&smdk4212_c2c_pdata);
+	exynos4_c2c_set_platdata(&smdk4x12_c2c_pdata);
 #endif
 
 	exynos_sysmmu_init();
 
-	smdk4212_gpio_power_init();
+	smdk4x12_gpio_power_init();
 
-	platform_add_devices(smdk4212_devices, ARRAY_SIZE(smdk4212_devices));
+	platform_add_devices(smdk4x12_devices, ARRAY_SIZE(smdk4x12_devices));
 
 #ifdef CONFIG_FB_S3C
 	exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev, "mout_mpll_user",
@@ -3037,11 +3037,22 @@ static void __init exynos_c2c_reserve(void)
 }
 #endif
 
-MACHINE_START(SMDK4212, "SMDK4212")
+MACHINE_START(SMDK4212, "SMDK4X12")
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos4_init_irq,
-	.map_io		= smdk4212_map_io,
-	.init_machine	= smdk4212_machine_init,
+	.map_io		= smdk4x12_map_io,
+	.init_machine	= smdk4x12_machine_init,
+	.timer		= &exynos4_timer,
+#ifdef CONFIG_EXYNOS4_C2C
+	.reserve	= &exynos_c2c_reserve,
+#endif
+MACHINE_END
+
+MACHINE_START(SMDK4412, "SMDK4X12")
+	.boot_params	= S5P_PA_SDRAM + 0x100,
+	.init_irq	= exynos4_init_irq,
+	.map_io		= smdk4x12_map_io,
+	.init_machine	= smdk4x12_machine_init,
 	.timer		= &exynos4_timer,
 #ifdef CONFIG_EXYNOS4_C2C
 	.reserve	= &exynos_c2c_reserve,

@@ -25,14 +25,14 @@
 /* Touch Configuration */
 
 /* Touch Interrupt define */
-#ifdef CONFIG_MACH_SMDK4212
+#ifdef CONFIG_MACH_SMDK4X12
 
 #define	S5PV310_TS_IRQ          gpio_to_irq(EXYNOS4_GPX1(6))
 #define	TS_ATTB			(EXYNOS4_GPX1(6))
 
 /* Touch should be reset before using. In order to reset it, the reset pin
    should be set OUTPUT HIGH. The Reset pin is EXYNOS4_GPX1(5) (XEINT 13).
-   However, the SMDK4212 uses this pin for resetting both LCD and touchscreen.
+   However, the SMDK4X12 uses this pin for resetting both LCD and touchscreen.
    Therefore, it assumes that LCD driver will reset them by this pin. */
 
 #elif defined (CONFIG_MACH_SMDKV310)

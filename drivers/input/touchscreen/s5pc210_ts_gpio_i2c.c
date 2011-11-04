@@ -48,7 +48,7 @@
 #define	TOUCH_RD_ADDR 0xB9
 
 /* Touch I2C Port define */
-#ifdef CONFIG_MACH_SMDK4212
+#ifdef CONFIG_MACH_SMDK4X12
 
 #define GPD0CON (S5P_VA_GPIO + 0xA0)
 #define GPD0DAT (S5P_VA_GPIO + 0xA4)

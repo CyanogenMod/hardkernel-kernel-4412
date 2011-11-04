@@ -528,8 +528,8 @@ config MACH_NURI
 	help
 	  Machine support for Samsung Mobile NURI Board.
 
-config MACH_SMDK4212
-	bool "SMDK4212 board"
+config MACH_SMDK4X12
+	bool "SMDK4X12 board"
 	select CPU_EXYNOS4212
 	select CPU_EXYNOS4412
 	select S3C_DEV_WDT
@@ -569,7 +569,7 @@ config MACH_SMDK4212
 	select SAMSUNG_DEV_PWM
 	select SAMSUNG_DEV_KEYPAD
 	help
-	  Machine support for Samsung SMDK4212
+	  Machine support for Samsung SMDK4X12
 endmenu
 
 menu "EXYNOS5 Machines"
