@@ -212,12 +212,12 @@ static inline void __bic32(void __iomem *ptr, u32 val)
 
 static inline int get_phys_epnum(struct exynos_ss_udc_ep *udc_ep)
 {
-	return (udc_ep->epnum * 2 + udc_ep->dir_in);
+	return udc_ep->epnum * 2 + udc_ep->dir_in;
 }
 
 static inline int get_usb_epnum(int index)
 {
-	return (index >> 1);
+	return index >> 1;
 }
 
 #endif /* __EXYNOS_SS_UDC_H__ */
