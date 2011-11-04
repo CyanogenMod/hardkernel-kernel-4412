@@ -629,7 +629,6 @@ static void __init smdk5250_smsc911x_init(void)
 
 static void __init smdk5250_map_io(void)
 {
-	clk_xusbxti.rate = 24000000;
 	s5p_init_io(NULL, 0, S5P_VA_CHIPID);
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(smdk5250_uartcfgs, ARRAY_SIZE(smdk5250_uartcfgs));

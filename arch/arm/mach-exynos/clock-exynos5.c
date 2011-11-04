@@ -54,10 +54,6 @@ static struct clk exynos5_clk_sclk_usbphy = {
 	.rate		= 48000000,
 };
 
-static struct clk exynos5_clk_sclk_xxti = {
-	.name           = "sclk_usbphy1",
-};
-
 static struct clk exynos5_clk_audiocdclk0 = {
 	.name           = "audiocdclk",
 };
@@ -893,7 +889,7 @@ struct clk exynos5_init_dmaclocks[] = {
 
 static struct clk *clkset_sclk_audio0_list[] = {
 	[0] = &exynos5_clk_audiocdclk0,
-	[1] = &exynos5_clk_sclk_xxti,
+	[1] = &clk_ext_xtal_mux,
 	[2] = &exynos5_clk_sclk_hdmi27m,
 	[3] = &exynos5_clk_sclk_dptxphy,
 	[4] = &exynos5_clk_sclk_usbphy,
@@ -999,7 +995,7 @@ static struct clk exynos5_init_audss_clocks[] = {
 
 static struct clk *exynos5_clkset_sclk_audio1_list[] = {
 	[0] = &exynos5_clk_audiocdclk1,
-	[1] = &exynos5_clk_sclk_xxti,
+	[1] = &clk_ext_xtal_mux,
 	[2] = &exynos5_clk_sclk_hdmi27m,
 	[3] = &exynos5_clk_sclk_dptxphy,
 	[4] = &exynos5_clk_sclk_usbphy,
@@ -1027,7 +1023,7 @@ static struct clksrc_clk exynos5_clk_sclk_audio1 = {
 
 static struct clk *exynos5_clkset_sclk_audio2_list[] = {
 	[0] = &exynos5_clk_audiocdclk2,
-	[1] = &exynos5_clk_sclk_xxti,
+	[1] = &clk_ext_xtal_mux,
 	[2] = &exynos5_clk_sclk_hdmi27m,
 	[3] = &exynos5_clk_sclk_dptxphy,
 	[4] = &exynos5_clk_sclk_usbphy,
