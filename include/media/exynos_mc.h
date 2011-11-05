@@ -16,6 +16,7 @@
 #include <linux/clk.h>
 #include <linux/platform_device.h>
 #include <linux/mutex.h>
+#include <linux/device.h>
 #include <media/media-device.h>
 #include <media/media-entity.h>
 #include <media/v4l2-device.h>
@@ -73,6 +74,34 @@ static inline void *module_name_to_driver_data(char *module_name)
 		return driver_data;
 	} else
 		return NULL;
+}
+
+/* print entity information for debug*/
+static inline void entity_info_print(struct media_entity *me, struct device *dev)
+{
+	u16 num_pads = me->num_pads;
+	u16 num_links = me->num_links;
+	int i;
+
+	dev_dbg(dev, "entity name : %s\n", me->name);
+	dev_dbg(dev, "number of pads = %d\n", num_pads);
+	for (i = 0; i < num_pads; ++i) {
+		dev_dbg(dev, "pad[%d] flag : %s\n", i,
+			(me->pads[i].flags == 1) ? "SINK" : "SOURCE");
+	}
+
+	dev_dbg(dev, "number of links = %d\n", num_links);
+
+	for (i = 0; i < num_links; ++i) {
+		dev_dbg(dev, "link[%d] info  =  ", i);
+		dev_dbg(dev, "%s : %s[%d]  --->  %s : %s[%d]\n",
+			me->links[i].source->entity->name,
+			me->links[i].source->flags == 1 ? "SINK" : "SOURCE",
+			me->links[i].source->index,
+			me->links[i].sink->entity->name,
+			me->links[i].sink->flags == 1 ? "SINK" : "SOURCE",
+			me->links[i].sink->index);
+	}
 }
 
 #endif

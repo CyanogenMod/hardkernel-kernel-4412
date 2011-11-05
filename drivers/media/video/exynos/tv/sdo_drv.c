@@ -72,8 +72,6 @@ struct sdo_device {
 	const struct sdo_format *fmt;
 };
 
-extern void entity_info_print(struct media_entity *me, struct device *dev);
-
 static inline struct sdo_device *sd_to_sdev(struct v4l2_subdev *sd)
 {
 	return container_of(sd, struct sdo_device, sd);

@@ -1012,34 +1012,6 @@ static void mxr_unregister_entities(struct mxr_device *mdev)
 		mxr_unregister_entity(mdev, i);
 }
 
-/* print entity information for debug*/
-void entity_info_print(struct media_entity *me, struct device *dev)
-{
-	u16 num_pads = me->num_pads;
-	u16 num_links = me->num_links;
-	int i;
-
-	dev_dbg(dev, "entity name : %s\n", me->name);
-	dev_dbg(dev, "number of pads = %d\n", num_pads);
-	for (i = 0; i < num_pads; ++i) {
-		dev_dbg(dev, "pad[%d] flag : %s\n", i,
-			(me->pads[i].flags == 1) ? "SINK" : "SOURCE");
-	}
-
-	dev_dbg(dev, "number of links = %d\n", num_links);
-
-	for (i = 0; i < num_links; ++i) {
-		dev_dbg(dev, "link[%d] info  =  ", i);
-		dev_dbg(dev, "%s : %s[%d]  --->  %s : %s[%d]\n",
-			me->links[i].source->entity->name,
-			me->links[i].source->flags == 1 ? "SINK" : "SOURCE",
-			me->links[i].source->index,
-			me->links[i].sink->entity->name,
-			me->links[i].sink->flags == 1 ? "SINK" : "SOURCE",
-			me->links[i].sink->index);
-	}
-}
-
 static void mxr_entities_info_print(struct mxr_device *mdev)
 {
 	struct v4l2_subdev *sd;

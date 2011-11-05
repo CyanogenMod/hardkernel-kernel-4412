@@ -274,6 +274,4 @@ static inline u32 hdmi_read(struct hdmi_device *hdev, u32 reg_id)
 	return readl(hdev->regs + reg_id);
 }
 
-extern void entity_info_print(struct media_entity *me, struct device *dev);
-
 #endif /* SAMSUNG_HDMI_H */
