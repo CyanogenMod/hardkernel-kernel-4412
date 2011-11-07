@@ -2249,6 +2249,7 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&exynos4_device_pd[PD_CAM],
 	&exynos4_device_pd[PD_TV],
 	&exynos4_device_pd[PD_GPS],
+	&exynos4_device_pd[PD_GPS_ALIVE],
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 	&exynos4_device_pd[PD_ISP],
 #endif
@@ -2756,6 +2757,7 @@ static void __init smdk4x12_machine_init(void)
 	exynos_pd_disable(&exynos4_device_pd[PD_CAM].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_TV].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_GPS].dev);
+	exynos_pd_disable(&exynos4_device_pd[PD_GPS_ALIVE].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_ISP].dev);
 #elif defined(CONFIG_EXYNOS_DEV_PD)
 	/*
@@ -2768,6 +2770,7 @@ static void __init smdk4x12_machine_init(void)
 	exynos_pd_enable(&exynos4_device_pd[PD_CAM].dev);
 	exynos_pd_enable(&exynos4_device_pd[PD_TV].dev);
 	exynos_pd_enable(&exynos4_device_pd[PD_GPS].dev);
+	exynos_pd_enable(&exynos4_device_pd[PD_GPS_ALIVE].dev);
 	exynos_pd_enable(&exynos4_device_pd[PD_ISP].dev);
 #endif
 	s3c_i2c0_set_platdata(NULL);

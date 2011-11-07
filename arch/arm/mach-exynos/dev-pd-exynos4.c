@@ -128,6 +128,20 @@ struct platform_device exynos4_device_pd[] = {
 		},
 	}, {
 		.name		= "samsung-pd",
+		.id		= PD_GPS_ALIVE,
+		.dev = {
+			.platform_data = &(struct samsung_pd_info) {
+				.init		= exynos_pd_init,
+				.enable		= exynos_pd_enable,
+				.disable	= exynos_pd_disable,
+				.base		= S5P_PMU_GPS_ALIVE_CONF,
+				.data		= &(struct exynos_pd_data) {
+					.clk_base	= NULL,
+				},
+			},
+		},
+	}, {
+		.name		= "samsung-pd",
 		.id		= PD_ISP,
 		.dev = {
 			.platform_data = &(struct samsung_pd_info) {

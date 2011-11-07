@@ -27,6 +27,7 @@ enum exynos_pd_block {
 	PD_TV,
 	PD_CAM,
 	PD_GPS,
+	PD_GPS_ALIVE,
 	PD_ISP,
 	PD_GSCL,
 	PD_DISP1,
