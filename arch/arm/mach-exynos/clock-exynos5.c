@@ -255,6 +255,23 @@ struct clksrc_clk exynos5_clk_mout_mpll = {
 	.reg_src = { .reg = EXYNOS5_CLKSRC_CORE1, .shift = 8, .size = 1 },
 };
 
+/* CMU_ACP */
+static struct clksrc_clk exynos5_clk_aclk_acp = {
+	.clk    = {
+		.name		= "aclk_acp",
+		.parent		= &exynos5_clk_mout_mpll.clk,
+	},
+	.reg_div = { .reg = EXYNOS5_CLKDIV_ACP, .shift = 0, .size = 3 },
+};
+
+static struct clksrc_clk exynos5_clk_pclk_acp = {
+	.clk    = {
+		.name		= "pclk_acp",
+		.parent		= &exynos5_clk_aclk_acp.clk,
+	},
+	.reg_div = { .reg = EXYNOS5_CLKDIV_ACP, .shift = 4, .size = 3 },
+};
+
 /* For VPLL */
 static struct clk *exynos5_clkset_mout_vpllsrc_list[] = {
 	[0] = &clk_fin_vpll,
@@ -866,6 +883,11 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "usbotg",
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 7),
+	}, {
+		.name		= "fimg2d",
+		.devname	= "s5p-fimg2d",
+		.enable		= exynos5_clk_ip_acp_ctrl,
+		.ctrlbit	= (1 << 3),
 	},
 };
 
@@ -1397,6 +1419,8 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_sclk_audio2,
 	&exynos5_clk_sclk_spdif,
 	&exynos5_clk_dout_jpeg,
+	&exynos5_clk_aclk_acp,
+	&exynos5_clk_pclk_acp,
 };
 
 static unsigned long exynos5_epll_get_rate(struct clk *clk)
@@ -1604,6 +1628,9 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 				clk_fout_epll.name, exynos5_clk_mout_epll.clk.name);
 
 	clk_set_rate(&exynos5_clk_sclk_apll.clk, 100000000);
+
+	clk_set_rate(&exynos5_clk_aclk_acp.clk, 267000000);
+	clk_set_rate(&exynos5_clk_pclk_acp.clk, 134000000);
 
 	for (ptr = 0; ptr < ARRAY_SIZE(exynos5_clksrcs); ptr++)
 		s3c_set_clksrc(&exynos5_clksrcs[ptr], true);
