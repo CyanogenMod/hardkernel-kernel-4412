@@ -59,6 +59,19 @@ static struct exynos_ss_udc *our_udc;
 static struct usb_gadget_ops exynos_ss_udc_gadget_ops = {
 };
 
+#ifdef CONFIG_BATTERY_SAMSUNG
+extern void samsung_cable_check_status(int flag);
+void exynos_ss_udc_cable_connect(struct exynos_ss_udc *udc)
+{
+	samsung_cable_check_status(1);
+}
+
+void exynos_ss_udc_cable_disconnect(struct exynos_ss_udc *udc)
+{
+	samsung_cable_check_status(0);
+}
+#endif
+
 static bool exynos_ss_udc_poll_bit_clear(void __iomem *ptr, u32 val, int timeout)
 {
 	u32 reg;
@@ -1328,6 +1341,9 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 
 	case EXYNOS_USB3_DEVT_EVENT_ConnectDone:
 		dev_dbg(udc->dev, "Connection Done");
+#ifdef CONFIG_BATTERY_SAMSUNG
+		exynos_ss_udc_cable_connect(udc);
+#endif
 		exynos_ss_udc_irq_connectdone(udc);
 		break;
 
@@ -1339,6 +1355,9 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 	case EXYNOS_USB3_DEVT_EVENT_DisconnEvt:
 		dev_dbg(udc->dev, "Disconnect Detected");
 		call_gadget(udc, disconnect);
+#ifdef CONFIG_BATTERY_SAMSUNG
+		exynos_ss_udc_cable_disconnect(udc);
+#endif
 		break;
 
 	default:
