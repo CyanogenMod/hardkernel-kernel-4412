@@ -559,6 +559,42 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_HIER_P_ENABLE,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "Hierarchical P flag",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_LAYER0_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "QP value for hier P layer0",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_LAYER1_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "QP value for hier P layer1",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{	/* FIXME: maximum value */
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_LAYER2_QP,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "QP value for hier P layer2",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
 		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "The number of B frames",
@@ -2181,6 +2217,18 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_H264_I_PERIOD:
 		p->codec.h264.open_gop_size = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_HIER_P_ENABLE:
+		p->codec.h264.hier_p_enable = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_LAYER0_QP:
+		p->codec.h264.hier_layer0_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_LAYER1_QP:
+		p->codec.h264.hier_layer1_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_LAYER2_QP:
+		p->codec.h264.hier_layer2_qp = ctrl->value;
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES:
 		p->codec.mpeg4.num_b_frame = ctrl->value;
