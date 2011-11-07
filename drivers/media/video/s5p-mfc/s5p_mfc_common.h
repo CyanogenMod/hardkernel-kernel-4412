@@ -289,6 +289,10 @@ struct s5p_mfc_h264_enc_params {
 	u16 ext_sar_height;
 	enum v4l2_codec_mfc5x_enc_switch open_gop;
 	u16 open_gop_size;
+	enum v4l2_codec_mfc5x_enc_switch hier_p_enable;
+	u32 hier_layer0_qp;
+	u32 hier_layer1_qp;
+	u32 hier_layer2_qp;
 };
 
 /**
@@ -552,6 +556,12 @@ struct s5p_mfc_ctx {
 	size_t enc_me_buffer_size;
 	size_t enc_tmv_buffer_size;
 	int remained_flag;
+
+	unsigned int slice_mode;
+	union {
+		unsigned int mb;
+		unsigned int bits;
+	} slice_size;
 
 	/* ION file descriptor */
 	int fd_ion;
