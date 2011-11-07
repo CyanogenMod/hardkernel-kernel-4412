@@ -869,6 +869,42 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.flag_addr = 0,
 		.flag_shft = 0,
 	},
+	{	/* I period change */
+		.type = MFC_CTRL_TYPE_SET,
+		.id = V4L2_CID_CODEC_ENCODED_I_PERIOD_CH,
+		.is_volatile = 1,
+		.mode = MFC_CTRL_MODE_CUSTOM,
+		.addr = S5P_FIMV_NEW_I_PERIOD,
+		.mask = 0xFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_CUSTOM,
+		.flag_addr = S5P_FIMV_PARAM_CHANGE_FLAG,
+		.flag_shft = 0,
+	},
+	{	/* frame rate change */
+		.type = MFC_CTRL_TYPE_SET,
+		.id = V4L2_CID_CODEC_ENCODED_FRAME_RATE_CH,
+		.is_volatile = 1,
+		.mode = MFC_CTRL_MODE_CUSTOM,
+		.addr = S5P_FIMV_NEW_RC_FRAME_RATE,
+		.mask = 0xFFFF,
+		.shft = 16,
+		.flag_mode = MFC_CTRL_MODE_CUSTOM,
+		.flag_addr = S5P_FIMV_PARAM_CHANGE_FLAG,
+		.flag_shft = 1,
+	},
+	{	/* bit rate change */
+		.type = MFC_CTRL_TYPE_SET,
+		.id = V4L2_CID_CODEC_ENCODED_BIT_RATE_CH,
+		.is_volatile = 1,
+		.mode = MFC_CTRL_MODE_CUSTOM,
+		.addr = S5P_FIMV_NEW_RC_BIT_RATE,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_CUSTOM,
+		.flag_addr = S5P_FIMV_PARAM_CHANGE_FLAG,
+		.flag_shft = 2,
+	},
 };
 
 #define NUM_CTRL_CFGS ARRAY_SIZE(mfc_ctrl_list)
@@ -2311,12 +2347,17 @@ static int set_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CODEC_FRAME_TAG:
 	case V4L2_CID_CODEC_FRAME_INSERTION:
+	case V4L2_CID_CODEC_ENCODED_I_PERIOD_CH:
+	case V4L2_CID_CODEC_ENCODED_FRAME_RATE_CH:
+	case V4L2_CID_CODEC_ENCODED_BIT_RATE_CH:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			if (ctx_ctrl->type != MFC_CTRL_TYPE_SET)
 				continue;
 			if (ctx_ctrl->id == ctrl->id) {
 				ctx_ctrl->has_new = 1;
 				ctx_ctrl->val = ctrl->value;
+				if (ctx_ctrl->id == V4L2_CID_CODEC_ENCODED_FRAME_RATE_CH)
+					ctx_ctrl->val *= 1000;
 				check = 1;
 				break;
 			}
