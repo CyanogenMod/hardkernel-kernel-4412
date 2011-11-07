@@ -346,6 +346,11 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.devname	= SYSMMU_CLOCK_NAME(is_cpu, 19),
 		.enable		= exynos4212_clk_ip_isp1_ctrl,
 		.ctrlbit	= (1 << 4),
+	}, {
+		.name		= "c2c",
+		.devname	= "samsung-c2c",
+		.enable		= exynos4212_clk_ip_dmc0_ctrl,
+		.ctrlbit	= (1 << 26),
 	},
 };
 
