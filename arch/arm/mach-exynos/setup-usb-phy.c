@@ -703,6 +703,15 @@ static int exynos5_usb_phy30_init(struct platform_device *pdev)
 
 	exynos4_usb_phy_control(USB_PHY0, PHY_ENABLE);
 
+	/* Reset USB 3.0 PHY */
+	writel(0x087fffc0, EXYNOS_USB3_LINKSYSTEM);
+	writel(0x00000000, EXYNOS_USB3_PHYREG0);
+	writel(0x24d4e6e4, EXYNOS_USB3_PHYPARAM0);
+	writel(0x03fff815, EXYNOS_USB3_PHYPARAM1);
+	writel(0x00000000, EXYNOS_USB3_PHYBATCHG);
+	writel(0x00000000, EXYNOS_USB3_PHYRESUME);
+
+	/* UTMI Power Control */
 	writel(EXYNOS_USB3_PHYUTMI_OTGDISABLE, EXYNOS_USB3_PHYUTMI);
 
 	/* Set 100MHz external clock */
