@@ -647,6 +647,59 @@ static enum dma_data_direction ion_msync_dir_table[IMSYNC_BUF_TYPES_NUM] = {
 	DMA_BIDIRECTIONAL,
 };
 
+static long ion_exynos_heap_msync(struct ion_client *client,
+		struct ion_handle *handle, off_t offset, size_t size, long dir)
+{
+	struct ion_buffer *buffer;
+	struct scatterlist *sg, *tsg;
+	int nents = 0;
+	int ret = 0;
+
+	buffer = ion_share(client, handle);
+	if (IS_ERR(buffer))
+		return PTR_ERR(buffer);
+
+	if ((offset + size) > buffer->size)
+		return -EINVAL;
+
+	sg = ion_map_dma(client, handle);
+	if (IS_ERR(sg))
+		return PTR_ERR(sg);
+
+	while (sg && (offset >= sg_dma_len(sg))) {
+		offset -= sg_dma_len(sg);
+		sg = sg_next(sg);
+	}
+
+	size += offset;
+
+	if (!sg)
+		goto err_buf_sync;
+
+	tsg = sg;
+	while (tsg && (size > sg_dma_len(tsg))) {
+		size -= sg_dma_len(tsg);
+		nents++;
+		tsg = sg_next(tsg);
+	}
+
+	if (tsg && size)
+		nents++;
+
+	/* TODO: exclude offset in the first entry and remainder of the
+	   last entry. */
+	if (dir & IMSYNC_SYNC_FOR_CPU)
+		dma_sync_sg_for_cpu(NULL, sg, nents,
+			ion_msync_dir_table[dir & IMSYNC_BUF_TYPES_MASK]);
+	else if (dir & IMSYNC_SYNC_FOR_DEV)
+		dma_sync_sg_for_device(NULL, sg, nents,
+			ion_msync_dir_table[dir & IMSYNC_BUF_TYPES_MASK]);
+
+err_buf_sync:
+	ion_unmap_dma(client, handle);
+	return ret;
+}
+
 struct ion_msync_data {
 	enum ION_MSYNC_TYPE dir;
 	int fd_buffer;
@@ -661,75 +714,32 @@ enum ION_EXYNOS_CUSTOM_CMD {
 static long exynos_heap_ioctl(struct ion_client *client, unsigned int cmd,
 				unsigned long arg)
 {
-	struct ion_msync_data data;
-	struct ion_handle *handle;
-	struct ion_buffer *buffer;
-	struct scatterlist *sg, *tsg;
-	int nents = 0;
-	int ret = -EINVAL;
+	int ret = 0;
 
-	if (cmd != ION_EXYNOS_CUSTOM_MSYNC)
+	switch (cmd) {
+	case ION_EXYNOS_CUSTOM_MSYNC:
+	{
+		struct ion_msync_data data;
+		struct ion_handle *handle;
+
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+
+		if ((data.offset + data.size) < data.offset)
+			return -EINVAL;
+
+		handle = ion_import_fd(client, data.fd_buffer);
+		if (IS_ERR(handle))
+			return PTR_ERR(handle);
+
+		ret = ion_exynos_heap_msync(client, handle, data.offset,
+						data.size, data.dir);
+		ion_free(client, handle);
+		break;
+	}
+	default:
 		return -ENOTTY;
-
-	if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
-		return -EFAULT;
-
-	if ((data.offset + data.size) < data.offset)
-		return -EINVAL;
-
-	handle = ion_import_fd(client, data.fd_buffer);
-	if (IS_ERR(handle))
-		return PTR_ERR(handle);
-
-	buffer = ion_share(client, handle);
-	if (IS_ERR(buffer)) {
-		ret = PTR_ERR(buffer);
-		goto err_map_dma;
 	}
-
-	if ((data.offset + data.size) > buffer->size)
-		goto err_map_dma;
-
-	sg = ion_map_dma(client, handle);
-	if (IS_ERR(sg)) {
-		ret = PTR_ERR(sg);
-		goto err_map_dma;
-	}
-
-	while (sg && (data.offset >= sg_dma_len(sg))) {
-		data.offset -= sg_dma_len(sg);
-		sg = sg_next(sg);
-	}
-
-	data.size += data.offset;
-
-	if (!sg)
-		goto err_buf_sync;
-
-	tsg = sg;
-	while (tsg && (data.size > sg_dma_len(tsg))) {
-		data.size -= sg_dma_len(tsg);
-		nents++;
-		tsg = sg_next(tsg);
-	}
-
-	if (tsg && data.size)
-		nents++;
-
-	/* TODO: exclude offset in the first entry and remainder of the
-	   last entry. */
-	if (data.dir & IMSYNC_SYNC_FOR_CPU)
-		dma_sync_sg_for_cpu(NULL, sg, nents,
-			ion_msync_dir_table[data.dir & IMSYNC_BUF_TYPES_MASK]);
-	else if (data.dir & IMSYNC_SYNC_FOR_DEV)
-		dma_sync_sg_for_device(NULL, sg, nents,
-			ion_msync_dir_table[data.dir & IMSYNC_BUF_TYPES_MASK]);
-
-	ret = 0;
-err_buf_sync:
-	ion_unmap_dma(client, handle);
-err_map_dma:
-	ion_free(client, handle);
 
 	return ret;
 }
