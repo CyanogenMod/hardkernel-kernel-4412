@@ -785,6 +785,30 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.flag_addr = 0,
 		.flag_shft = 0,
 	},
+	{	/* encoded y physical addr */
+		.type = MFC_CTRL_TYPE_GET_DST,
+		.id = V4L2_CID_CODEC_ENCODED_LUMA_ADDR,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_ENCODED_LUMA_ADDR,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{	/* encoded c physical addr */
+		.type = MFC_CTRL_TYPE_GET_DST,
+		.id = V4L2_CID_CODEC_ENCODED_CHROMA_ADDR,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_SFR,
+		.addr = S5P_FIMV_ENCODED_CHROMA_ADDR,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
 	{
 		.type = MFC_CTRL_TYPE_SET,
 		.id = V4L2_CID_CODEC_FRAME_INSERTION,
@@ -826,6 +850,10 @@ static int s5p_mfc_ctx_ready(struct s5p_mfc_ctx *ctx)
 		return 1;
 	/* context is ready to encode a frame */
 	if (ctx->state == MFCINST_RUNNING &&
+		ctx->src_queue_cnt >= 1 && ctx->dst_queue_cnt >= 1)
+		return 1;
+	/* context is ready to encode a frame in case of B frame */
+	if (ctx->state == MFCINST_RUNNING_NO_OUTPUT &&
 		ctx->src_queue_cnt >= 1 && ctx->dst_queue_cnt >= 1)
 		return 1;
 	/* context is ready to encode remain frames */
@@ -1049,7 +1077,7 @@ static int enc_set_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 		else if (buf_ctrl->mode == MFC_CTRL_MODE_SHM)
 			value = s5p_mfc_read_info(ctx, buf_ctrl->addr);
 
-		/* save old vlaue for recovery */
+		/* save old value for recovery */
 		if (buf_ctrl->is_volatile)
 			buf_ctrl->old_val = (value >> buf_ctrl->shft) & buf_ctrl->mask;
 
@@ -1260,6 +1288,9 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 	spin_lock_irqsave(&dev->irqlock, flags);
 
 	if (slice_type >= 0) {
+		if (ctx->state == MFCINST_RUNNING_NO_OUTPUT)
+			ctx->state = MFCINST_RUNNING;
+
 		s5p_mfc_get_enc_frame_buffer(ctx, &enc_y_addr, &enc_c_addr);
 
 		mfc_debug(2, "encoded y addr: 0x%08lx", enc_y_addr);
@@ -1271,6 +1302,11 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 
 			mfc_debug(2, "enc src y addr: 0x%08lx", mb_y_addr);
 			mfc_debug(2, "enc src c addr: 0x%08lx", mb_c_addr);
+
+			mb_entry = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
+			index = mb_entry->vb.v4l2_buf.index;
+			if (call_cop(ctx, recover_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
+				mfc_err("failed in recover_buf_ctrls_val\n");
 
 			if ((enc_y_addr == mb_y_addr) && (enc_c_addr == mb_c_addr)) {
 				list_del(&mb_entry->list);
@@ -1298,7 +1334,9 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 		}
 	}
 
-	if ((ctx->src_queue_cnt > 0) && (ctx->state == MFCINST_RUNNING)) {
+	if ((ctx->src_queue_cnt > 0) &&
+		((ctx->state == MFCINST_RUNNING) ||
+		 (ctx->state == MFCINST_RUNNING_NO_OUTPUT))) {
 		mb_entry = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
 
 		if (mb_entry->used) {
@@ -1308,7 +1346,12 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 			list_add_tail(&mb_entry->list, &ctx->ref_queue);
 			ctx->ref_queue_cnt++;
 		}
+		/* FIXME: slice_type = 4 && strm_size = 0, skipped enable
+		   should be considered */
+		if ((slice_type == -1) && (strm_size == 0))
+			ctx->state = MFCINST_RUNNING_NO_OUTPUT;
 
+		mfc_debug(2, "slice_type: %d, ctx->state: %d \n", slice_type, ctx->state);
 		mfc_debug(2, "enc src count: %d, enc ref count: %d\n",
 			  ctx->src_queue_cnt, ctx->ref_queue_cnt);
 	}
@@ -1940,8 +1983,16 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 	case V4L2_CID_CODEC_MFC5X_ENC_FRAME_TYPE:
 		ctrl->value = ctx->frame_type;
 		break;
+	case V4L2_CID_CODEC_CHECK_STATE:
+		if (ctx->state == MFCINST_RUNNING_NO_OUTPUT)
+			ctrl->value = MFCSTATE_ENC_NO_OUTPUT;
+		else
+			ctrl->value = MFCSTATE_PROCESSING;
+		break;
 	case V4L2_CID_CODEC_FRAME_TAG:
 	case V4L2_CID_CODEC_FRAME_INSERTION:
+	case V4L2_CID_CODEC_ENCODED_LUMA_ADDR:
+	case V4L2_CID_CODEC_ENCODED_CHROMA_ADDR:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			if (ctx_ctrl->type != MFC_CTRL_TYPE_GET_DST)
 				continue;
@@ -2626,6 +2677,8 @@ static int s5p_mfc_buf_finish(struct vb2_buffer *vb)
 		if (call_cop(ctx, to_ctx_ctrls, ctx, &ctx->dst_ctrls[index]) < 0)
 			mfc_err("failed in to_ctx_ctrls\n");
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		if (call_cop(ctx, to_ctx_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
+			mfc_err("failed in to_buf_ctrls\n");
 		#if 0
 		/* if there are not-handled mfc_ctrl, remove all */
 		while (!list_empty(&ctx->src_ctrls[index])) {

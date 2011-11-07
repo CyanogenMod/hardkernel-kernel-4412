@@ -1674,6 +1674,7 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev)
 		switch (ctx->state) {
 		case MFCINST_FINISHING:
 		case MFCINST_RUNNING:
+		case MFCINST_RUNNING_NO_OUTPUT:
 			ret = s5p_mfc_run_enc_frame(ctx);
 			break;
 		case MFCINST_INIT:
