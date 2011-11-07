@@ -797,24 +797,24 @@ static int check_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 }
 
 static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
-	{
+	{	/* set frame tag */
 		.type = MFC_CTRL_TYPE_SET,
 		.id = V4L2_CID_CODEC_FRAME_TAG,
 		.is_volatile = 1,
 		.mode = MFC_CTRL_MODE_CUSTOM,
-		.addr = S5P_FIMV_SHARED_SET_FRAME_TAG,
+		.addr = S5P_FIMV_SHARED_SET_E_FRAME_TAG,
 		.mask = 0xFFFFFFFF,
 		.shft = 0,
 		.flag_mode = MFC_CTRL_MODE_NONE,
 		.flag_addr = 0,
 		.flag_shft = 0,
 	},
-	{
+	{	/* get frame tag */
 		.type = MFC_CTRL_TYPE_GET_DST,
 		.id = V4L2_CID_CODEC_FRAME_TAG,
 		.is_volatile = 0,
 		.mode = MFC_CTRL_MODE_CUSTOM,
-		.addr = S5P_FIMV_SHARED_GET_FRAME_TAG_TOP,
+		.addr = S5P_FIMV_SHARED_GET_E_FRAME_TAG,
 		.mask = 0xFFFFFFFF,
 		.shft = 0,
 		.flag_mode = MFC_CTRL_MODE_NONE,
