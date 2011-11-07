@@ -845,25 +845,13 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.flag_addr = 0,
 		.flag_shft = 0,
 	},
-	{
+	{	/* I, not coded frame insertion */
 		.type = MFC_CTRL_TYPE_SET,
 		.id = V4L2_CID_CODEC_FRAME_INSERTION,
 		.is_volatile = 1,
 		.mode = MFC_CTRL_MODE_SFR,
-		.addr = S5P_FIMV_ENC_SI_CH0_FRAME_INS,
-		.mask = 0xFFFFFFFF,
-		.shft = 0,
-		.flag_mode = MFC_CTRL_MODE_NONE,
-		.flag_addr = 0,
-		.flag_shft = 0,
-	},
-	{
-		.type = MFC_CTRL_TYPE_GET_DST,
-		.id = V4L2_CID_CODEC_FRAME_INSERTION,
-		.is_volatile = 0,
-		.mode = MFC_CTRL_MODE_SFR,
-		.addr = S5P_FIMV_ENC_SI_CH0_FRAME_INS,
-		.mask = 0xFFFFFFFF,
+		.addr = S5P_FIMV_FRAME_INSERTION,
+		.mask = 0x3,
 		.shft = 0,
 		.flag_mode = MFC_CTRL_MODE_NONE,
 		.flag_addr = 0,
@@ -2062,7 +2050,6 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 			ctrl->value = MFCSTATE_PROCESSING;
 		break;
 	case V4L2_CID_CODEC_FRAME_TAG:
-	case V4L2_CID_CODEC_FRAME_INSERTION:
 	case V4L2_CID_CODEC_ENCODED_LUMA_ADDR:
 	case V4L2_CID_CODEC_ENCODED_CHROMA_ADDR:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
