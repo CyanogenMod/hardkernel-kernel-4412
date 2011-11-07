@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 110  /* IS REGION VERSION 1.10 */
+#define IS_REGION_VER 111  /* IS REGION VERSION 1.11 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -33,6 +33,8 @@
 /* Global control */
 #define IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, x) \
 		(dev->is_p_region->parameter.global.shotmode.cmd = x)
+#define IS_SET_PARAM_GLOBAL_SHOTMODE_SKIPFRAMES(dev, x) \
+		(dev->is_p_region->parameter.global.shotmode.skip_frames = x)
 
 /* Sensor control */
 #define IS_SENSOR_SET_FRAME_RATE(dev, x) \
@@ -103,24 +105,26 @@
 #define IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.dma2_input.err = x)
 
-#define IS_ISP_SET_PARAM_AF_CMD(dev, x) \
-		(dev->is_p_region->parameter.isp.af.cmd = x)
-#define IS_ISP_SET_PARAM_AF_MODE(dev, x) \
-		(dev->is_p_region->parameter.isp.af.mode = x)
-#define IS_ISP_SET_PARAM_AF_FACE(dev, x) \
-		(dev->is_p_region->parameter.isp.af.face = x)
-#define IS_ISP_SET_PARAM_AF_CONTINUOUS(dev, x) \
-		(dev->is_p_region->parameter.isp.af.continuous = x)
-#define IS_ISP_SET_PARAM_AF_WIN_POS_X(dev, x) \
-		(dev->is_p_region->parameter.isp.af.win_pos_x = x)
-#define IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev, x) \
-		(dev->is_p_region->parameter.isp.af.win_pos_y = x)
-#define IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev, x) \
-		(dev->is_p_region->parameter.isp.af.win_width = x)
-#define IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev, x) \
-		(dev->is_p_region->parameter.isp.af.win_height = x)
-#define IS_ISP_SET_PARAM_AF_ERR(dev, x) \
-		(dev->is_p_region->parameter.isp.af.err = x)
+#define IS_ISP_SET_PARAM_AA_CMD(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.cmd = x)
+#define IS_ISP_SET_PARAM_AA_TARGET(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.target = x)
+#define IS_ISP_SET_PARAM_AA_MODE(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.mode = x)
+#define IS_ISP_SET_PARAM_AA_FACE(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.face = x)
+#define IS_ISP_SET_PARAM_AA_CONTINUOUS(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.continuous = x)
+#define IS_ISP_SET_PARAM_AA_WIN_POS_X(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.win_pos_x = x)
+#define IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.win_pos_y = x)
+#define IS_ISP_SET_PARAM_AA_WIN_WIDTH(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.win_width = x)
+#define IS_ISP_SET_PARAM_AA_WIN_HEIGHT(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.win_height = x)
+#define IS_ISP_SET_PARAM_AA_ERR(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.err = x)
 
 #define IS_ISP_SET_PARAM_FLASH_CMD(dev, x) \
 		(dev->is_p_region->parameter.isp.flash.cmd = x)
@@ -459,7 +463,7 @@ enum is_param_set_bit {
 	PARAM_ISP_OTF_INPUT,
 	PARAM_ISP_DMA1_INPUT,
 	PARAM_ISP_DMA2_INPUT = 10,
-	PARAM_ISP_AF,
+	PARAM_ISP_AA,
 	PARAM_ISP_FLASH,
 	PARAM_ISP_AWB,
 	PARAM_ISP_IMAGE_EFFECT,
@@ -531,8 +535,8 @@ enum is_param_set_bit {
 #define PARAM_ISP_OTF_INPUT		INC_NUM(PARAM_ISP_CONTROL)
 #define PARAM_ISP_DMA1_INPUT		INC_NUM(PARAM_ISP_OTF_INPUT)
 #define PARAM_ISP_DMA2_INPUT		INC_NUM(PARAM_ISP_DMA1_INPUT)
-#define PARAM_ISP_AF			INC_NUM(PARAM_ISP_DMA2_INPUT)
-#define PARAM_ISP_FLASH			INC_NUM(PARAM_ISP_AF)
+#define PARAM_ISP_AA			INC_NUM(PARAM_ISP_DMA2_INPUT)
+#define PARAM_ISP_FLASH			INC_NUM(PARAM_ISP_AA)
 #define PARAM_ISP_AWB			INC_NUM(PARAM_ISP_FLASH)
 #define PARAM_ISP_IMAGE_EFFECT		INC_NUM(PARAM_ISP_AWB)
 #define PARAM_ISP_ISO			INC_NUM(PARAM_ISP_IMAGE_EFFECT)
@@ -812,17 +816,23 @@ enum global_shotmode_error {
 };
 
 /* -------------------------  AF  ------------------------------------ */
-enum isp_af_command {
-	ISP_AF_COMMAND_ABORT		= 0,
-	ISP_AF_COMMAND_SET_FOCUSMODE	= 1,
-	ISP_AF_COMMAND_TOUCH		= 2,
-	ISP_AF_COMMAND_HALFSHUTTER	= 3
+enum isp_lock_command {
+	ISP_AA_COMMAND_START	= 0,
+	ISP_AA_COMMAND_STOP	= 1
+};
+
+enum isp_lock_target {
+	ISP_AA_TARGET_AF	= 1,
+	ISP_AA_TARGET_AE	= 2,
+	ISP_AA_TARGET_AWB	= 4
 };
 
 enum isp_af_mode {
-	ISP_AF_MODE_AUTO		= 0,
-	ISP_AF_MODE_MACRO		= 1,
-	ISP_AF_MODE_INFINITY		= 2
+	ISP_AF_MODE_TOUCH		= 0,
+	ISP_AF_MODE_AUTO		= 1,
+	ISP_AF_MODE_MACRO		= 2,
+	ISP_AF_MODE_CENTER		= 3,
+	ISP_AF_MODE_INFINITY		= 4
 };
 
 enum isp_af_face {
@@ -1082,11 +1092,13 @@ enum error {
 	ERROR_SENSOR_NO			= ERROR_COMMON_NO,
 	ERROR_SENSOR_I2C_FAIL		= 101,
 	ERROR_SENSOR_INVALID_FRAMERATE,
+	ERROR_SENSOR_INVALID_EXPOSURETIME,
 	ERROR_SENSOR_INVALID_SIZE,
 	ERROR_SENSOR_ACTURATOR_INIT_FAIL,
 	ERROR_SENSOR_INVALID_AF_POS,
 	ERROR_SENSOR_UNSUPPORT_FUNC,
 	ERROR_SENSOR_UNSUPPORT_PERI,
+	ERROR_SENSOR_UNSUPPORT_AF,
 
 	/* ISP Error (200~299) */
 	ERROR_ISP_AF_NO			= ERROR_COMMON_NO,
@@ -1107,6 +1119,12 @@ enum error {
 	ERROR_FD_NO			= ERROR_COMMON_NO,
 	ERROR_FD_SMILE_MODE		= 402,  /* not valid smile mode */
 	ERROR_FD_BLINK_MODE		= 403,  /* not valid smile mode */
+	ERROR_FD_RESULT			= 404,	/* PARAM_FdResultStr can
+						be only applied in ready-state
+						or stream off */
+	ERROR_FD_MODE			= 405	/* PARAM_FdModeStr can be only
+						applied in ready-state or
+						stream off */
 };
 
 struct param_control {
@@ -1168,7 +1186,8 @@ struct param_dma_output {
 
 struct param_global_shotmode {
 	u32	cmd;
-	u32	reserved[PARAMETER_MAX_MEMBER-2];
+	u32	skip_frames;
+	u32	reserved[PARAMETER_MAX_MEMBER-3];
 	u32	err;
 };
 
@@ -1178,8 +1197,9 @@ struct param_sensor_framerate {
 	u32	err;
 };
 
-struct param_isp_af {
+struct param_isp_aa {
 	u32	cmd;
+	u32	target;
 	u32	mode;
 	u32	face;
 	u32	continuous;
@@ -1187,7 +1207,7 @@ struct param_isp_af {
 	u32	win_pos_y;
 	u32	win_width;
 	u32	win_height;
-	u32	reserved[PARAMETER_MAX_MEMBER-9];
+	u32	reserved[PARAMETER_MAX_MEMBER-10];
 	u32	err;
 };
 
@@ -1321,7 +1341,7 @@ struct isp_param {
 	struct param_otf_input		otf_input;
 	struct param_dma_input		dma1_input;
 	struct param_dma_input		dma2_input;
-	struct param_isp_af		af;
+	struct param_isp_aa		aa;
 	struct param_isp_flash		flash;
 	struct param_isp_awb		awb;
 	struct param_isp_imageeffect	effect;
@@ -1442,9 +1462,33 @@ struct rational_t {
 };
 
 struct srational_t {
-	u32 num;
-	u32 den;
+	s32 num;
+	s32 den;
 };
+
+#define FLASH_FIRED_SHIFT	0
+#define FLASH_NOT_FIRED		0
+#define FLASH_FIRED		1
+
+#define FLASH_STROBE_SHIFT				1
+#define FLASH_STROBE_NO_DETECTION			0
+#define FLASH_STROBE_RESERVED				1
+#define FLASH_STROBE_RETURN_LIGHT_NOT_DETECTED		2
+#define FLASH_STROBE_RETURN_LIGHT_DETECTED		3
+
+#define FLASH_MODE_SHIFT			3
+#define FLASH_MODE_UNKNOWN			0
+#define FLASH_MODE_COMPULSORY_FLASH_FIRING	1
+#define FLASH_MODE_COMPULSORY_FLASH_SUPPRESSION	2
+#define FLASH_MODE_AUTO_MODE			3
+
+#define FLASH_FUNCTION_SHIFT		5
+#define FLASH_FUNCTION_PRESENT		0
+#define FLASH_FUNCTION_NONE		1
+
+#define FLASH_RED_EYE_SHIFT		6
+#define FLASH_RED_EYE_DISABLED		0
+#define FLASH_RED_EYE_SUPPORTED		1
 
 struct exif_attribute {
 	struct rational_t exposure_time;
@@ -1492,4 +1536,11 @@ struct is_region {
 	struct is_face_marker	face[MAX_FACE_COUNT];
 	u32			shared[500];
 };
+
+struct is_share_region {
+	u32	frame_time;
+	u32	exposure_time;
+	s32	analog_gain;
+};
+
 #endif

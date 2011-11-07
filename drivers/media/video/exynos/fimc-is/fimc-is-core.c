@@ -130,6 +130,9 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		break;
 	case IHC_NOT_READY:
 		break;
+	case IHC_AA_DONE:
+		fimc_is_hw_get_param(dev, 3);
+		break;
 	case ISR_DONE:
 		fimc_is_hw_get_param(dev, 3);
 		break;
@@ -158,9 +161,14 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		break;
 	case IHC_FRAME_DONE:
 		break;
-	case IHC_LOCK_DONE:
-		if (dev->af.state == FIMC_IS_AF_RUNNING)
-			dev->af.state = FIMC_IS_AF_LOCK;
+	case IHC_AA_DONE:
+		dbg("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
+			dev->i2h_cmd.arg[1], dev->i2h_cmd.arg[2]);
+		if (dev->af.af_state == FIMC_IS_AF_RUNNING)
+			dev->af.af_state = FIMC_IS_AF_LOCK;
+		dev->af.af_lock_state = dev->i2h_cmd.arg[0];
+		dev->af.ae_lock_state = dev->i2h_cmd.arg[1];
+		dev->af.awb_lock_state = dev->i2h_cmd.arg[2];
 		break;
 	case IHC_NOT_READY:
 		err("Init Sequnce Error- IS will be turned off!!");
@@ -206,12 +214,17 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 				clear_bit(IS_ST_SET_PARAM, &dev->state);
 				set_bit(IS_ST_RUN, &dev->state);
 			}
+
+			if (dev->af.af_state == FIMC_IS_AF_SETCONFIG)
+				dev->af.af_state = FIMC_IS_AF_RUNNING;
+			else if (dev->af.af_state == FIMC_IS_AF_ABORT)
+				dev->af.af_state = FIMC_IS_AF_IDLE;
 			break;
 		case HIC_GET_PARAMETER:
 			break;
 		case HIC_SET_TUNE:
 			break;
-		case HIC_GET_STATE:
+		case HIC_GET_STATUS:
 			break;
 		case HIC_OPEN_SENSOR:
 			set_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
@@ -243,9 +256,9 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 			if (dev->is_p_region->parameter.isp.otf_output.err)
 				printk(KERN_ERR "ISP - OTF Out error : %d\n",
 			dev->is_p_region->parameter.isp.otf_output.err);
-			if (dev->is_p_region->parameter.isp.af.err)
+			if (dev->is_p_region->parameter.isp.aa.err)
 				printk(KERN_ERR "ISP - AF error : %d\n",
-				dev->is_p_region->parameter.isp.af.err);
+				dev->is_p_region->parameter.isp.aa.err);
 			if (dev->is_p_region->parameter.isp.flash.err)
 				printk(KERN_ERR "ISP - FLASH error : %d\n",
 				dev->is_p_region->parameter.isp.flash.err);
@@ -375,7 +388,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	atomic_set(&dev->p_region_num, 0);
 	set_bit(IS_ST_IDLE, &dev->state);
 	set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
-	dev->af.state = FIMC_IS_AF_IDLE;
+	dev->af.af_state = FIMC_IS_AF_IDLE;
 	dbg("FIMC-IS probe completed\n");
 	return 0;
 

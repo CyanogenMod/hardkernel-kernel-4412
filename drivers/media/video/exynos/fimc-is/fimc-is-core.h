@@ -67,6 +67,8 @@
 #define dbg(fmt, args...)
 #endif
 
+#define is_af_use(dev)		((dev->af.use_af) ? 1 : 0)
+
 enum fimc_is_state_flag {
 	IS_ST_IDLE,
 	IS_ST_PWR_ON,
@@ -123,9 +125,25 @@ enum sensor_channel {
 
 enum af_state {
 	FIMC_IS_AF_IDLE		= 0,
-	FIMC_IS_AF_RUNNING	= 1,
-	FIMC_IS_AF_LOCK		= 2,
+	FIMC_IS_AF_SETCONFIG	= 1,
+	FIMC_IS_AF_RUNNING	= 2,
+	FIMC_IS_AF_LOCK		= 3,
 	FIMC_IS_AF_ABORT	= 4,
+};
+
+enum af_lock_state {
+	FIMC_IS_AF_UNLOCKED	= 0,
+	FIMC_IS_AF_LOCKED	= 0x02
+};
+
+enum ae_lock_state {
+	FIMC_IS_AE_UNLOCKED	= 0,
+	FIMC_IS_AE_LOCKED	= 1
+};
+
+enum awb_lock_state {
+	FIMC_IS_AWB_UNLOCKED	= 0,
+	FIMC_IS_AWB_LOCKED	= 1
 };
 
 struct is_meminfo {
@@ -178,12 +196,18 @@ struct is_fd_result_header {
 	u32 target_addr;
 };
 
-struct is_af_state {
+struct is_af_info {
 	u16 mode;
-	u32 state;
+	u32 af_state;
+	u32 af_lock_state;
+	u32 ae_lock_state;
+	u32 awb_lock_state;
 	u16 lock;
 	u16 pos_x;
 	u16 pos_y;
+	u16 width;
+	u16 height;
+	u16 use_af;
 };
 
 struct fimc_is_dev {
@@ -197,7 +221,7 @@ struct fimc_is_dev {
 
 	struct is_sensor		sensor;
 	u32				sensor_num;
-	struct is_af_state		af;
+	struct is_af_info		af;
 
 	u16				num_clocks;
 	struct clk			*clock[NUM_FIMC_IS_CLOCKS];

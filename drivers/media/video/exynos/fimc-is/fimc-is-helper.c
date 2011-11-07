@@ -61,9 +61,9 @@ Default setting values
 #define CAPTURE_HEIGHT		2424
 #define CAMCORDING_WIDTH	1920
 #define CAMCORDING_HEIGHT	1080
-#define PREVIEW_FRAMERATE	15
+#define PREVIEW_FRAMERATE	30
 #define CAPTURE_FRAMERATE	15
-#define CAMCORDING_FRAMERATE	15
+#define CAMCORDING_FRAMERATE	30
 #endif
 #endif
 #ifdef CONFIG_VIDEO_S5K6A3
@@ -116,11 +116,13 @@ static const struct isp_param init_val_isp_preview = {
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
 		.err = 0,
 	},
-	.af = {
-		.cmd = ISP_AF_COMMAND_SET_FOCUSMODE,
-		.mode = ISP_AF_MODE_AUTO,
-		.face = ISP_AF_FACE_DISABLE,
-		.continuous = ISP_AF_CONTINUOUS_DISABLE,
+	.aa = {
+		.cmd = ISP_AA_COMMAND_STOP,
+		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
+						ISP_AA_TARGET_AWB,
+		.mode = ISP_AF_MODE_CENTER,
+		.face = 0,
+		.continuous = 0,
 		.win_pos_x = 0, .win_pos_y = 0,
 		.win_width = 0, .win_height = 0,
 		.err = ISP_AF_ERROR_NO,
@@ -305,11 +307,13 @@ static const struct isp_param init_val_isp_capture = {
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
 		.err = 0,
 	},
-	.af = {
-		.cmd = ISP_AF_COMMAND_SET_FOCUSMODE,
-		.mode = ISP_AF_MODE_AUTO,
-		.face = ISP_AF_FACE_DISABLE,
-		.continuous = ISP_AF_CONTINUOUS_DISABLE,
+	.aa = {
+		.cmd = ISP_AA_COMMAND_STOP,
+		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
+						ISP_AA_TARGET_AWB,
+		.mode = ISP_AF_MODE_CENTER,
+		.face = 0,
+		.continuous = 0,
 		.win_pos_x = 0, .win_pos_y = 0,
 		.win_width = 0, .win_height = 0,
 		.err = ISP_AF_ERROR_NO,
@@ -479,11 +483,13 @@ static const struct isp_param init_val_isp_camcording = {
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
 		.err = 0,
 	},
-	.af = {
-		.cmd = ISP_AF_COMMAND_SET_FOCUSMODE,
-		.mode = ISP_AF_MODE_AUTO,
-		.face = ISP_AF_FACE_DISABLE,
-		.continuous = ISP_AF_CONTINUOUS_DISABLE,
+	.aa = {
+		.cmd = ISP_AA_COMMAND_STOP,
+		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
+						ISP_AA_TARGET_AWB,
+		.mode = ISP_AF_MODE_CENTER,
+		.face = 0,
+		.continuous = 0,
 		.win_pos_x = 0, .win_pos_y = 0,
 		.win_width = 0, .win_height = 0,
 		.err = ISP_AF_ERROR_NO,
@@ -685,28 +691,34 @@ void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 	writel(id, dev->regs + ISSR1);
 	switch (sensor_index) {
 	case SENSOR_S5K3H1_CSI_A:
+		dev->af.use_af = 1;
 		/* Parameter1 : Sensor Name(IS_Sensor.h) */
 		writel(SENSOR_NAME_S5K3H1, dev->regs + ISSR2);
 		/* Parameter2 : I2c channel used by parameter1 sensor */
 		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
 		break;
 	case SENSOR_S5K3H1_CSI_B:
+		dev->af.use_af = 1;
 		writel(SENSOR_NAME_S5K3H1, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
 		break;
 	case SENSOR_S5K3H2_CSI_A:
+		dev->af.use_af = 1;
 		writel(SENSOR_NAME_S5K3H2, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
 		break;
 	case SENSOR_S5K3H2_CSI_B:
+		dev->af.use_af = 1;
 		writel(SENSOR_NAME_S5K3H2, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
 		break;
 	case SENSOR_S5K6A3_CSI_A:
+		dev->af.use_af = 0;
 		writel(SENSOR_NAME_S5K6A3, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
 		break;
 	case SENSOR_S5K6A3_CSI_B:
+		dev->af.use_af = 0;
 		writel(SENSOR_NAME_S5K6A3, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
 		break;
@@ -1007,21 +1019,22 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AF_CMD(dev, init_val_isp_preview.af.cmd);
-		IS_ISP_SET_PARAM_AF_MODE(dev, init_val_isp_preview.af.mode);
-		IS_ISP_SET_PARAM_AF_FACE(dev, init_val_isp_preview.af.face);
-		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
-			init_val_isp_preview.af.continuous);
-		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev,
-			init_val_isp_preview.af.win_pos_x);
-		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev,
-			init_val_isp_preview.af.win_pos_y);
-		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev,
-			init_val_isp_preview.af.win_width);
-		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev,
-			init_val_isp_preview.af.win_height);
-		IS_ISP_SET_PARAM_AF_ERR(dev, init_val_isp_preview.af.err);
-		IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+		IS_ISP_SET_PARAM_AA_CMD(dev, init_val_isp_preview.aa.cmd);
+		IS_ISP_SET_PARAM_AA_TARGET(dev, init_val_isp_preview.aa.target);
+		IS_ISP_SET_PARAM_AA_MODE(dev, init_val_isp_preview.aa.mode);
+		IS_ISP_SET_PARAM_AA_FACE(dev, init_val_isp_preview.aa.face);
+		IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
+			init_val_isp_preview.aa.continuous);
+		IS_ISP_SET_PARAM_AA_WIN_POS_X(dev,
+			init_val_isp_preview.aa.win_pos_x);
+		IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev,
+			init_val_isp_preview.aa.win_pos_y);
+		IS_ISP_SET_PARAM_AA_WIN_WIDTH(dev,
+			init_val_isp_preview.aa.win_width);
+		IS_ISP_SET_PARAM_AA_WIN_HEIGHT(dev,
+			init_val_isp_preview.aa.win_height);
+		IS_ISP_SET_PARAM_AA_ERR(dev, init_val_isp_preview.aa.err);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
 			init_val_isp_preview.flash.cmd);
@@ -1358,21 +1371,22 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AF_CMD(dev, init_val_isp_preview.af.cmd);
-		IS_ISP_SET_PARAM_AF_MODE(dev, init_val_isp_preview.af.mode);
-		IS_ISP_SET_PARAM_AF_FACE(dev, init_val_isp_preview.af.face);
-		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
-			init_val_isp_preview.af.continuous);
-		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev,
-			init_val_isp_preview.af.win_pos_x);
-		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev,
-			init_val_isp_preview.af.win_pos_y);
-		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev,
-			init_val_isp_preview.af.win_width);
-		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev,
-			init_val_isp_preview.af.win_height);
-		IS_ISP_SET_PARAM_AF_ERR(dev, init_val_isp_preview.af.err);
-		IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+		IS_ISP_SET_PARAM_AA_CMD(dev, init_val_isp_preview.aa.cmd);
+		IS_ISP_SET_PARAM_AA_TARGET(dev, init_val_isp_preview.aa.target);
+		IS_ISP_SET_PARAM_AA_MODE(dev, init_val_isp_preview.aa.mode);
+		IS_ISP_SET_PARAM_AA_FACE(dev, init_val_isp_preview.aa.face);
+		IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
+			init_val_isp_preview.aa.continuous);
+		IS_ISP_SET_PARAM_AA_WIN_POS_X(dev,
+			init_val_isp_preview.aa.win_pos_x);
+		IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev,
+			init_val_isp_preview.aa.win_pos_y);
+		IS_ISP_SET_PARAM_AA_WIN_WIDTH(dev,
+			init_val_isp_preview.aa.win_width);
+		IS_ISP_SET_PARAM_AA_WIN_HEIGHT(dev,
+			init_val_isp_preview.aa.win_height);
+		IS_ISP_SET_PARAM_AA_ERR(dev, init_val_isp_preview.aa.err);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
 			init_val_isp_preview.flash.cmd);
@@ -1710,21 +1724,22 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_capture.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AF_CMD(dev, init_val_isp_capture.af.cmd);
-		IS_ISP_SET_PARAM_AF_MODE(dev, init_val_isp_capture.af.mode);
-		IS_ISP_SET_PARAM_AF_FACE(dev, init_val_isp_capture.af.face);
-		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
-			init_val_isp_capture.af.continuous);
-		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev,
-			init_val_isp_capture.af.win_pos_x);
-		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev,
-			init_val_isp_capture.af.win_pos_y);
-		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev,
-			init_val_isp_capture.af.win_width);
-		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev,
-			init_val_isp_capture.af.win_height);
-		IS_ISP_SET_PARAM_AF_ERR(dev, init_val_isp_capture.af.err);
-		IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+		IS_ISP_SET_PARAM_AA_CMD(dev, init_val_isp_capture.aa.cmd);
+		IS_ISP_SET_PARAM_AA_TARGET(dev, init_val_isp_capture.aa.target);
+		IS_ISP_SET_PARAM_AA_MODE(dev, init_val_isp_capture.aa.mode);
+		IS_ISP_SET_PARAM_AA_FACE(dev, init_val_isp_capture.aa.face);
+		IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
+			init_val_isp_capture.aa.continuous);
+		IS_ISP_SET_PARAM_AA_WIN_POS_X(dev,
+			init_val_isp_capture.aa.win_pos_x);
+		IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev,
+			init_val_isp_capture.aa.win_pos_y);
+		IS_ISP_SET_PARAM_AA_WIN_WIDTH(dev,
+			init_val_isp_capture.aa.win_width);
+		IS_ISP_SET_PARAM_AA_WIN_HEIGHT(dev,
+			init_val_isp_capture.aa.win_height);
+		IS_ISP_SET_PARAM_AA_ERR(dev, init_val_isp_capture.aa.err);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
 			init_val_isp_capture.flash.cmd);
@@ -2057,21 +2072,23 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_camcording.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AF_CMD(dev, init_val_isp_camcording.af.cmd);
-		IS_ISP_SET_PARAM_AF_MODE(dev, init_val_isp_camcording.af.mode);
-		IS_ISP_SET_PARAM_AF_FACE(dev, init_val_isp_camcording.af.face);
-		IS_ISP_SET_PARAM_AF_CONTINUOUS(dev,
-			init_val_isp_camcording.af.continuous);
-		IS_ISP_SET_PARAM_AF_WIN_POS_X(dev,
-			init_val_isp_camcording.af.win_pos_x);
-		IS_ISP_SET_PARAM_AF_WIN_POS_Y(dev,
-			init_val_isp_camcording.af.win_pos_y);
-		IS_ISP_SET_PARAM_AF_WIN_WIDTH(dev,
-			init_val_isp_camcording.af.win_width);
-		IS_ISP_SET_PARAM_AF_WIN_HEIGHT(dev,
-			init_val_isp_camcording.af.win_height);
-		IS_ISP_SET_PARAM_AF_ERR(dev, init_val_isp_camcording.af.err);
-		IS_SET_PARAM_BIT(dev, PARAM_ISP_AF);
+		IS_ISP_SET_PARAM_AA_CMD(dev, init_val_isp_camcording.aa.cmd);
+		IS_ISP_SET_PARAM_AA_TARGET(dev,
+			init_val_isp_camcording.aa.target);
+		IS_ISP_SET_PARAM_AA_MODE(dev, init_val_isp_camcording.aa.mode);
+		IS_ISP_SET_PARAM_AA_FACE(dev, init_val_isp_camcording.aa.face);
+		IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
+			init_val_isp_camcording.aa.continuous);
+		IS_ISP_SET_PARAM_AA_WIN_POS_X(dev,
+			init_val_isp_camcording.aa.win_pos_x);
+		IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev,
+			init_val_isp_camcording.aa.win_pos_y);
+		IS_ISP_SET_PARAM_AA_WIN_WIDTH(dev,
+			init_val_isp_camcording.aa.win_width);
+		IS_ISP_SET_PARAM_AA_WIN_HEIGHT(dev,
+			init_val_isp_camcording.aa.win_height);
+		IS_ISP_SET_PARAM_AA_ERR(dev, init_val_isp_camcording.aa.err);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
 			init_val_isp_camcording.flash.cmd);
