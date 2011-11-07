@@ -54,8 +54,11 @@ static struct clk exynos5_clk_sclk_usbphy = {
 	.rate		= 48000000,
 };
 
-static struct clk exynos5_clk_audiocdclk0 = {
-	.name           = "audiocdclk",
+struct clksrc_clk exynos5_clk_audiocdclk0 = {
+	.clk	= {
+		.name		= "audiocdclk",
+		.rate		= 16934400,
+	},
 };
 
 static struct clk exynos5_clk_audiocdclk1 = {
@@ -918,7 +921,7 @@ struct clk exynos5_init_dmaclocks[] = {
 };
 
 static struct clk *clkset_sclk_audio0_list[] = {
-	[0] = &exynos5_clk_audiocdclk0,
+	[0] = &exynos5_clk_audiocdclk0.clk,
 	[1] = &clk_ext_xtal_mux,
 	[2] = &exynos5_clk_sclk_hdmi27m,
 	[3] = &exynos5_clk_sclk_dptxphy,
@@ -965,7 +968,7 @@ static struct clksrc_clk exynos5_clk_mout_audss = {
 
 static struct clk *exynos5_clkset_sclk_audss_list[] = {
 	&exynos5_clk_mout_audss.clk,
-	&exynos5_clk_audiocdclk0,
+	&exynos5_clk_audiocdclk0.clk,
 	&exynos5_clk_sclk_audio0.clk,
 };
 
@@ -1304,6 +1307,7 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 
 /* Clock initialization code */
 static struct clksrc_clk *exynos5_sysclks[] = {
+	&exynos5_clk_audiocdclk0,
 	&exynos5_clk_mout_apll,
 	&exynos5_clk_sclk_apll,
 	&exynos5_clk_mout_bpll,
@@ -1532,9 +1536,15 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	if (clk_set_parent(&exynos5_clk_mout_audss.clk, &clk_fout_epll))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				clk_fout_epll.name, exynos5_clk_mout_audss.clk.name);
+#if defined(CONFIG_SND_SAMSUNG_PCM) && !defined(CONFIG_SND_SAMSUNG_PCM_USE_EPLL)
+	if (clk_set_parent(&exynos5_clk_sclk_audio0.clk, &exynos5_clk_audiocdclk0.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				exynos5_clk_audiocdclk0.clk.name, exynos5_clk_sclk_audio0.clk.name);
+#else
 	if (clk_set_parent(&exynos5_clk_sclk_audio0.clk, &exynos5_clk_mout_epll.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				exynos5_clk_mout_epll.clk.name, exynos5_clk_sclk_audio0.clk.name);
+#endif
 	if (clk_set_parent(&exynos5_clk_sclk_audio1.clk, &exynos5_clk_mout_epll.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				exynos5_clk_mout_epll.clk.name, exynos5_clk_sclk_audio1.clk.name);
