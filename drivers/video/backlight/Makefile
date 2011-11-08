@@ -13,6 +13,7 @@ obj-$(CONFIG_LCD_TDO24M)	   += tdo24m.o
 obj-$(CONFIG_LCD_TOSA)		   += tosa_lcd.o
 obj-$(CONFIG_LCD_S6E63M0)	+= s6e63m0.o
 obj-$(CONFIG_LCD_MIPI_S6E63M0)	+= s6e63m0_mipi_lcd.o
+obj-$(CONFIG_LCD_MIPI_S6E8AB0)	+= s6e8ab0_mipi_lcd.o
 obj-$(CONFIG_LCD_LD9040)	+= ld9040.o
 obj-$(CONFIG_LCD_AMS369FG06)	   += ams369fg06.o
 obj-$(CONFIG_LCD_LMS501KF03)	   += lms501kf03.o
