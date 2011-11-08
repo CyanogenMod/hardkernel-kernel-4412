@@ -1425,8 +1425,11 @@ static void __devinit s3c_fb_missing_pixclock(struct fb_videomode *mode)
 	       mode->xres;
 	div *= mode->upper_margin + mode->vsync_len + mode->lower_margin +
 	       mode->yres;
+#if defined(CONFIG_LCD_MIPI_S6E8AB0) /* this define will be delete after mipi lcd supports 60Hz */
+	div *= mode->refresh ? : 40;
+#else
 	div *= mode->refresh ? : 60;
-
+#endif
 	do_div(pixclk, div);
 
 	mode->pixclock = pixclk;
