@@ -20,6 +20,9 @@
 #include <linux/memblock.h>
 #include <linux/fb.h>
 #include <linux/smsc911x.h>
+#include <linux/delay.h>
+
+#include <video/platform_lcd.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -122,19 +125,77 @@ static struct platform_device smdk5250_smsc911x = {
 };
 
 #ifdef CONFIG_FB_S3C
+#if defined(CONFIG_LCD_MIPI_S6E8AB0)
+static void mipi_lcd_set_power(struct plat_lcd_data *pd,
+				unsigned int power)
+{
+	/* reset */
+	gpio_request_one(EXYNOS5_GPX1(5), GPIOF_OUT_INIT_HIGH, "GPX1");
+
+	mdelay(5);
+	if (power) {
+		/* fire nRESET on power up */
+		gpio_set_value(EXYNOS5_GPX1(5), 0);
+		mdelay(5);
+		gpio_set_value(EXYNOS5_GPX1(5), 1);
+		mdelay(5);
+		gpio_free(EXYNOS5_GPX1(5));
+	} else {
+		/* fire nRESET on power off */
+		gpio_set_value(EXYNOS5_GPX1(5), 0);
+		mdelay(5);
+		gpio_set_value(EXYNOS5_GPX1(5), 1);
+		mdelay(5);
+		gpio_free(EXYNOS5_GPX1(5));
+	}
+	/* power */
+	gpio_request_one(EXYNOS5_GPX3(0), GPIOF_OUT_INIT_LOW, "GPX3");
+	if (power) {
+		/* fire nRESET on power up */
+		gpio_set_value(EXYNOS5_GPX3(0), 1);
+		gpio_free(EXYNOS5_GPX3(0));
+	} else {
+		/* fire nRESET on power off */
+		gpio_set_value(EXYNOS5_GPX3(0), 0);
+		gpio_free(EXYNOS5_GPX3(0));
+	}
+
+	/* backlight */
+	gpio_request_one(EXYNOS5_GPB2(0), GPIOF_OUT_INIT_LOW, "GPB2");
+	if (power) {
+		/* fire nRESET on power up */
+		gpio_set_value(EXYNOS5_GPB2(0), 1);
+		gpio_free(EXYNOS5_GPB2(0));
+	} else {
+		/* fire nRESET on power off */
+		gpio_set_value(EXYNOS5_GPB2(0), 0);
+		gpio_free(EXYNOS5_GPB2(0));
+	}
+}
+
+static struct plat_lcd_data smdk5250_mipi_lcd_data = {
+	.set_power	= mipi_lcd_set_power,
+};
+
+static struct platform_device smdk5250_mipi_lcd = {
+	.name			= "platform-lcd",
+	.dev.parent		= &s5p_device_fimd1.dev,
+	.dev.platform_data	= &smdk5250_mipi_lcd_data,
+};
+
 static struct s3c_fb_pd_win smdk5250_fb_win0 = {
 	.win_mode = {
-		.left_margin	= 80,
-		.right_margin	= 48,
-		.upper_margin	= 14,
-		.lower_margin	= 3,
+		.left_margin	= 0xa,
+		.right_margin	= 0xa,
+		.upper_margin	= 80,
+		.lower_margin	= 48,
 		.hsync_len	= 32,
 		.vsync_len	= 5,
-		.xres		= 1360, /* real size : 1366 */
-		.yres		= 768,
+		.xres		= 1280,
+		.yres		= 800,
 	},
-	.virtual_x		= 1360, /* real size : 1366 */
-	.virtual_y		= 768 * 2,
+	.virtual_x		= 1280,
+	.virtual_y		= 800 * 2,
 	.width			= 223,
 	.height			= 125,
 	.max_bpp		= 32,
@@ -143,17 +204,17 @@ static struct s3c_fb_pd_win smdk5250_fb_win0 = {
 
 static struct s3c_fb_pd_win smdk5250_fb_win1 = {
 	.win_mode = {
-		.left_margin	= 80,
-		.right_margin	= 48,
-		.upper_margin	= 14,
-		.lower_margin	= 3,
+		.left_margin	= 0xa,
+		.right_margin	= 0xa,
+		.upper_margin	= 80,
+		.lower_margin	= 48,
 		.hsync_len	= 32,
 		.vsync_len	= 5,
-		.xres		= 1360, /* real size : 1366 */
-		.yres		= 768,
+		.xres		= 1280,
+		.yres		= 800,
 	},
-	.virtual_x		= 1360, /* real size : 1366 */
-	.virtual_y		= 768 * 2,
+	.virtual_x		= 1280,
+	.virtual_y		= 800 * 2,
 	.width			= 223,
 	.height			= 125,
 	.max_bpp		= 32,
@@ -162,22 +223,23 @@ static struct s3c_fb_pd_win smdk5250_fb_win1 = {
 
 static struct s3c_fb_pd_win smdk5250_fb_win2 = {
 	.win_mode = {
-		.left_margin	= 80,
-		.right_margin	= 48,
-		.upper_margin	= 14,
-		.lower_margin	= 3,
+		.left_margin	= 0xa,
+		.right_margin	= 0xa,
+		.upper_margin	= 80,
+		.lower_margin	= 48,
 		.hsync_len	= 32,
 		.vsync_len	= 5,
-		.xres		= 1360, /* real size : 1366 */
-		.yres		= 768,
+		.xres		= 1280,
+		.yres		= 800,
 	},
-	.virtual_x		= 1360, /* real size : 1366 */
-	.virtual_y		= 768 * 2,
+	.virtual_x		= 1280,
+	.virtual_y		= 800 * 2,
 	.width			= 223,
 	.height			= 125,
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
+#endif
 
 static void exynos_fimd_gpio_setup_24bpp(void)
 {
@@ -203,7 +265,9 @@ static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
 	.win[2]		= &smdk5250_fb_win2,
 	.default_win	= 2,
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
-	.vidcon1	= 0,
+#if defined(CONFIG_LCD_MIPI_S6E8AB0)
+	.vidcon1	= VIDCON1_INV_VCLK,
+#endif
 	.setup_gpio	= exynos_fimd_gpio_setup_24bpp,
 };
 #endif
@@ -416,7 +480,13 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 
 static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_FB_S3C
+#ifdef CONFIG_FB_MIPI_DSIM
+	&s5p_device_mipi_dsim,
+#endif
 	&s5p_device_fimd1,
+#ifdef CONFIG_LCD_MIPI_S6E8AB0
+	&smdk5250_mipi_lcd,
+#endif
 #endif
 	&s3c_device_i2c1,
 #ifdef CONFIG_S3C_DEV_HSMMC
@@ -566,6 +636,13 @@ static void __init exynos_reserve_mem(void)
 		{
 			.name = "gsc3",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_GSC3 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD
+		{
+			.name = "fimd",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD * SZ_1K,
 			.start = 0
 		},
 #endif
