@@ -25,6 +25,55 @@
 #include <plat/dsim.h>
 #include <plat/mipi_dsi.h>
 
+#if defined(CONFIG_LCD_MIPI_S6E8AB0)
+static struct mipi_dsim_config dsim_info = {
+	.e_interface			= DSIM_VIDEO,
+	.e_pixel_format	= DSIM_24BPP_888,
+	/* main frame fifo auto flush at VSYNC pulse */
+	.auto_flush = false,
+	.eot_disable = false,
+	.auto_vertical_cnt = true,
+	.hse = false,
+	.hfp = false,
+	.hbp = false,
+	.hsa = false,
+
+	.e_no_data_lane = DSIM_DATA_LANE_4,
+	.e_byte_clk = DSIM_PLL_OUT_DIV8,
+	.e_burst_mode = DSIM_BURST,
+
+	.p = 2,
+	.m =80,
+	.s = 1,
+
+	/* D-PHY PLL stable time spec :min = 200usec ~ max 400usec */
+	.pll_stable_time = 500,
+
+	.esc_clk = 20 * 1000000,	/* escape clk : 10MHz */
+
+	/* stop state holding counter after bta change count 0 ~ 0xfff */
+	.stop_holding_cnt = 0x0fff,
+	.bta_timeout = 0xff,		/* bta timeout 0 ~ 0xff */
+	.rx_timeout = 0xffff,		/* lp rx timeout 0 ~ 0xffff */
+
+	.dsim_ddi_pd = &s6e8ab0_mipi_lcd_driver,
+};
+
+static struct mipi_dsim_lcd_config dsim_lcd_info = {
+	.rgb_timing.left_margin = 0xa,
+	.rgb_timing.right_margin = 0xa,
+	.rgb_timing.upper_margin = 80,
+	.rgb_timing.lower_margin =  48,
+	.rgb_timing.hsync_len = 5,
+	.rgb_timing.vsync_len = 32,
+	.cpu_timing.cs_setup = 0,
+	.cpu_timing.wr_setup = 1,
+	.cpu_timing.wr_act = 0,
+	.cpu_timing.wr_hold = 0,
+	.lcd_size.width = 1280,
+	.lcd_size.height = 800,
+};
+#elif defined (CONFIG_LCD_MIPI_S6E63M0)
 static struct mipi_dsim_config dsim_info = {
 	.e_interface			= DSIM_VIDEO,
 	.e_pixel_format	= DSIM_24BPP_888,
@@ -72,6 +121,7 @@ static struct mipi_dsim_lcd_config dsim_lcd_info = {
 	.lcd_size.width = 480,
 	.lcd_size.height = 800,
 };
+#endif
 
 static struct resource s5p_dsim_resource[] = {
 	[0] = {

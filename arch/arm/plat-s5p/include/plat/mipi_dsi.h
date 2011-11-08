@@ -12,7 +12,11 @@
 #ifndef _MIPI_DSI_H
 #define _MIPI_DSI_H
 
+#if defined(CONFIG_LCD_MIPI_S6E8AB0)
+extern struct mipi_dsim_lcd_driver s6e8ab0_mipi_lcd_driver;
+#elif defined (CONFIG_LCD_MIPI_S6E63M0)
 extern struct mipi_dsim_lcd_driver s6e63m0_mipi_lcd_driver;
+#endif
 
 extern int s5p_mipi_dsi_wr_data(struct mipi_dsim_device *dsim,
 	unsigned int data_id, unsigned int data0, unsigned int data1);
