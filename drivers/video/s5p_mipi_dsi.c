@@ -108,7 +108,6 @@ static void s5p_mipi_dsi_long_data_wr(struct mipi_dsim_device *dsim,
 int s5p_mipi_dsi_wr_data(struct mipi_dsim_device *dsim, unsigned int data_id,
 	unsigned int data0, unsigned int data1)
 {
-	unsigned int timeout = TRY_GET_FIFO_TIMEOUT;
 	unsigned long delay_val, udelay;
 	unsigned int check_rx_ack = 0;
 
@@ -122,20 +121,6 @@ int s5p_mipi_dsi_wr_data(struct mipi_dsim_device *dsim, unsigned int data_id,
 	udelay = 10 * delay_val;
 
 	mdelay(udelay);
-
-	/* only if transfer mode is LPDT, wait SFR becomes empty. */
-	if (dsim->state == DSIM_STATE_STOP) {
-		while (!(s5p_mipi_dsi_get_fifo_state(dsim) &
-				SFR_HEADER_EMPTY)) {
-			if ((timeout--) > 0)
-				mdelay(1);
-			else {
-				dev_err(dsim->dev,
-					"SRF header fifo is not empty.\n");
-				return -EINVAL;
-			}
-		}
-	}
 
 	switch (data_id) {
 	/* short packet types of packet types for command. */
@@ -736,7 +721,6 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 	struct s5p_platform_mipi_dsim *dsim_pd;
 	int ret = -1;
 
-
 	if (!dsim)
 		dsim = kzalloc(sizeof(struct mipi_dsim_device),
 			GFP_KERNEL);
@@ -763,7 +747,6 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to get dsim clock source\n");
 		goto err_clock_get;
 	}
-
 	clk_enable(dsim->clock);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -807,25 +790,21 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "dsim_config is NULL.\n");
 		goto err_dsim_config;
 	}
-	/* set dsim to master of mipi_dsim_lcd_device. */
+
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
-	s5p_mipi_dsi_set_hs_enable(dsim);
-	/* set cpu command transfer mode to hs. */
+
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 
 	/* initialize mipi-dsi client(lcd panel). */
 	dsim->dsim_lcd_drv->probe(dsim);
 
-	/* it needs delay for stabilization */
-	mdelay(dsim->pd->delay_for_stabilization);
-
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-	/* set lcdc data transfer mode to hs. */
-	s5p_mipi_dsi_set_data_transfer_mode(dsim, 1);
 
 	/* lcd init */
 	dsim->dsim_lcd_drv->displayon(dsim);
+
+	s5p_mipi_dsi_set_hs_enable(dsim);
 
 	dev_info(&pdev->dev, "mipi-dsi driver(%s mode) has been probed.\n",
 		(dsim_config->e_interface == DSIM_COMMAND) ?
