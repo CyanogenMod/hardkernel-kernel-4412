@@ -36,21 +36,30 @@ void exynos4_c2c_clear_cprst(void)
 void exynos4_c2c_cfg_gpio(enum c2c_buswidth rx_width, enum c2c_buswidth tx_width)
 {
 	int i;
-	printk("C2C Rx Width %d, Tx Width %d\n", rx_width, tx_width);
+	printk("[C2C] Set GPIO Rx Width %d, Tx Width %d\n", rx_width, tx_width);
 
 	/* Set GPIO for C2C Rx */
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV0(0), 8, S3C_GPIO_SFN(2));
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < 8; i++) {
 		s5p_gpio_set_drvstr(EXYNOS4212_GPV0(i), S5P_GPIO_DRVSTR_LV1);
+		s5p_gpio_set_pd_cfg(EXYNOS4212_GPV0(i), S5P_GPIO_PD_INPUT);
+		s5p_gpio_set_pd_pull(EXYNOS4212_GPV0(i), S5P_GPIO_PD_DOWN_ENABLE);
+	}
 
 	if (rx_width == C2C_BUSWIDTH_16) {
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV1(0), 8, S3C_GPIO_SFN(2));
-		for (i = 0; i < 8; i++)
+		for (i = 0; i < 8; i++) {
 			s5p_gpio_set_drvstr(EXYNOS4212_GPV1(i), S5P_GPIO_DRVSTR_LV1);
+			s5p_gpio_set_pd_cfg(EXYNOS4212_GPV1(i), S5P_GPIO_PD_INPUT);
+			s5p_gpio_set_pd_pull(EXYNOS4212_GPV1(i), S5P_GPIO_PD_DOWN_ENABLE);
+		}
 	} else if (rx_width == C2C_BUSWIDTH_10) {
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV1(0), 2, S3C_GPIO_SFN(2));
-		for (i = 0; i < 2; i++)
+		for (i = 0; i < 2; i++) {
 			s5p_gpio_set_drvstr(EXYNOS4212_GPV1(i), S5P_GPIO_DRVSTR_LV1);
+			s5p_gpio_set_pd_cfg(EXYNOS4212_GPV1(i), S5P_GPIO_PD_INPUT);
+			s5p_gpio_set_pd_pull(EXYNOS4212_GPV1(i), S5P_GPIO_PD_DOWN_ENABLE);
+		}
 	}
 
 	/* Set GPIO for C2C Tx */
@@ -70,6 +79,8 @@ void exynos4_c2c_cfg_gpio(enum c2c_buswidth rx_width, enum c2c_buswidth tx_width
 
 	/* Set GPIO for WakeReqOut/In */
 	s3c_gpio_cfgrange_nopull(EXYNOS4212_GPV4(0), 2, S3C_GPIO_SFN(2));
+	s5p_gpio_set_pd_cfg(EXYNOS4212_GPV4(0), S5P_GPIO_PD_INPUT);
+	s5p_gpio_set_pd_pull(EXYNOS4212_GPV4(0), S5P_GPIO_PD_DOWN_ENABLE);
 
 	writel(0x5, ETC8DRV);
 }
