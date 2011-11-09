@@ -291,7 +291,7 @@ static struct clksrc_clk exynos5_clk_sclk_vpll = {
 		.name		= "sclk_vpll",
 	},
 	.sources = &exynos5_clkset_sclk_vpll,
-	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 16, .size = 1 },
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP2, .shift = 16, .size = 1 },
 };
 
 static struct clksrc_clk exynos5_clk_sclk_pixel = {
