@@ -2739,6 +2739,142 @@ void hdmi_reg_infoframe(struct hdmi_device *hdev,
 	}
 }
 
+void hdmi_reg_set_acr(struct hdmi_device *hdev)
+{
+	u32 n, cts;
+	int sample_rate = hdev->sample_rate;
+
+	if (sample_rate == 32000) {
+		n = 4096;
+		cts = 27000;
+	} else if (sample_rate == 44100) {
+		n = 6272;
+		cts = 30000;
+	} else if (sample_rate == 48000) {
+		n = 6144;
+		cts = 27000;
+	} else if (sample_rate == 88200) {
+		n = 12544;
+		cts = 30000;
+	} else if (sample_rate == 96000) {
+		n = 12288;
+		cts = 27000;
+	} else if (sample_rate == 176400) {
+		n = 25088;
+		cts = 30000;
+	} else if (sample_rate == 192000) {
+		n = 24576;
+		cts = 27000;
+	} else {
+		n = 0;
+		cts = 0;
+	}
+
+	hdmi_write(hdev, HDMI_ACR_N0, HDMI_ACR_N0_VAL(n));
+	hdmi_write(hdev, HDMI_ACR_N1, HDMI_ACR_N1_VAL(n));
+	hdmi_write(hdev, HDMI_ACR_N2, HDMI_ACR_N2_VAL(n));
+
+	/* transfer ACR packet */
+	hdmi_write(hdev, HDMI_ACR_CON, HDMI_ACR_CON_TX_MODE_MESURED_CTS);
+}
+
+void hdmi_reg_i2s_audio_init(struct hdmi_device *hdev)
+{
+	u32 data_num, bit_ch, sample_frq, val;
+	int sample_rate = hdev->sample_rate;
+	int bits_per_sample = hdev->bits_per_sample;
+
+	if (bits_per_sample == 16) {
+		data_num = 1;
+		bit_ch = 0;
+	} else if (bits_per_sample == 20) {
+		data_num = 2;
+		bit_ch  = 1;
+	} else if (bits_per_sample == 24) {
+		data_num = 3;
+		bit_ch  = 1;
+	} else if (bits_per_sample == 32) {
+		data_num = 1;
+		bit_ch  = 2;
+	} else {
+		data_num = 1;
+		bit_ch = 0;
+	}
+
+	/* reset I2S */
+	hdmi_write(hdev, HDMI_I2S_CLK_CON, HDMI_I2S_CLK_DISABLE);
+	hdmi_write(hdev, HDMI_I2S_CLK_CON, HDMI_I2S_CLK_ENABLE);
+
+	hdmi_write_mask(hdev, HDMI_I2S_DSD_CON, 0, HDMI_I2S_DSD_ENABLE);
+
+	/* Configuration I2S input ports. Configure I2S_PIN_SEL_0~4 */
+	val = HDMI_I2S_SEL_SCLK(5) | HDMI_I2S_SEL_LRCK(6);
+	hdmi_write(hdev, HDMI_I2S_PIN_SEL_0, val);
+	val = HDMI_I2S_SEL_SDATA1(3) | HDMI_I2S_SEL_SDATA0(4);
+	hdmi_write(hdev, HDMI_I2S_PIN_SEL_1, val);
+	val = HDMI_I2S_SEL_SDATA3(1) | HDMI_I2S_SEL_SDATA2(2);
+	hdmi_write(hdev, HDMI_I2S_PIN_SEL_2, val);
+	hdmi_write(hdev, HDMI_I2S_PIN_SEL_3, HDMI_I2S_SEL_DSD(0));
+
+	/* I2S_CON_1 & 2 */
+	val = HDMI_I2S_SCLK_FALLING_EDGE | HDMI_I2S_L_CH_LOW_POL;
+	hdmi_write(hdev, HDMI_I2S_CON_1, val);
+	val = HDMI_I2S_MSB_FIRST_MODE | HDMI_I2S_SET_BIT_CH(bit_ch) |
+		HDMI_I2S_SET_SDATA_BIT(data_num) | HDMI_I2S_BASIC_FORMAT;
+	hdmi_write(hdev, HDMI_I2S_CON_2, val);
+
+	if (sample_rate == 32000)
+		sample_frq = 0x3;
+	else if (sample_rate == 44100)
+		sample_frq = 0x0;
+	else if (sample_rate == 48000)
+		sample_frq = 0x2;
+	else if (sample_rate == 96000)
+		sample_frq = 0xa;
+	else
+		sample_frq = 0;
+
+	/* Configure register related to CUV information */
+	val = HDMI_I2S_CH_STATUS_MODE_0 | HDMI_I2S_2AUD_CH_WITHOUT_PREEMPH |
+		HDMI_I2S_COPYRIGHT | HDMI_I2S_LINEAR_PCM |
+		HDMI_I2S_CONSUMER_FORMAT;
+	hdmi_write(hdev, HDMI_I2S_CH_ST_0, val);
+	hdmi_write(hdev, HDMI_I2S_CH_ST_1, HDMI_I2S_CD_PLAYER);
+	hdmi_write(hdev, HDMI_I2S_CH_ST_2, HDMI_I2S_SET_SOURCE_NUM(0));
+	val = HDMI_I2S_CLK_ACCUR_LEVEL_1 |
+		HDMI_I2S_SET_SAMPLING_FREQ(sample_frq);
+	hdmi_write(hdev, HDMI_I2S_CH_ST_3, val);
+	val = HDMI_I2S_ORG_SAMPLING_FREQ_44_1 |
+		HDMI_I2S_WORD_LENGTH_MAX24_20BITS |
+		HDMI_I2S_WORD_LENGTH_MAX_20BITS;
+	hdmi_write(hdev, HDMI_I2S_CH_ST_4, val);
+
+	hdmi_write(hdev, HDMI_I2S_CH_ST_CON, HDMI_I2S_CH_STATUS_RELOAD);
+
+	val = HDMI_I2S_IN_ENABLE | HDMI_I2S_AUD_I2S | HDMI_I2S_CUV_I2S_ENABLE
+		| HDMI_I2S_MUX_ENABLE;
+	hdmi_write(hdev, HDMI_I2S_IN_MUX_CON, val);
+
+	val = HDMI_I2S_CH0_L_EN | HDMI_I2S_CH0_R_EN | HDMI_I2S_CH1_L_EN |
+		HDMI_I2S_CH1_R_EN | HDMI_I2S_CH2_L_EN | HDMI_I2S_CH2_R_EN |
+		HDMI_I2S_CH3_L_EN | HDMI_I2S_CH3_R_EN;
+	hdmi_write(hdev, HDMI_I2S_MUX_CH, val);
+
+	val = HDMI_I2S_CUV_L_EN | HDMI_I2S_CUV_R_EN;
+	hdmi_write(hdev, HDMI_I2S_MUX_CUV, val);
+}
+
+void hdmi_audio_enable(struct hdmi_device *hdev, int on)
+{
+	if (on) {
+		hdmi_write(hdev, HDMI_AUI_CON, HDMI_AUI_CON_TRANS_EVERY_VSYNC);
+		hdmi_write_mask(hdev, HDMI_CON_0, ~0, HDMI_ASP_ENABLE);
+	} else {
+		hdmi_write(hdev, HDMI_AUI_CON, HDMI_AUI_CON_NO_TRAN);
+		hdmi_write_mask(hdev, HDMI_CON_0, 0, HDMI_ASP_ENABLE);
+	}
+}
+
 void hdmi_dumpregs(struct hdmi_device *hdev, char *prefix)
 {
 #define DUMPREG(reg_id) \

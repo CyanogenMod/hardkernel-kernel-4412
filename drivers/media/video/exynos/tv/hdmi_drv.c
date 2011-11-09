@@ -110,6 +110,12 @@ static int hdmi_set_infoframe(struct hdmi_device *hdev)
 	return 0;
 }
 
+static int hdmi_set_packets(struct hdmi_device *hdev)
+{
+	hdmi_reg_set_acr(hdev);
+	return 0;
+}
+
 static int hdmi_streamon(struct hdmi_device *hdev)
 {
 	struct device *dev = hdev->dev;
@@ -145,6 +151,16 @@ static int hdmi_streamon(struct hdmi_device *hdev)
 	/* 3D test */
 	hdmi_set_infoframe(hdev);
 
+	/* set packets for audio */
+	hdmi_set_packets(hdev);
+
+	/* init audio as I2S */
+	hdmi_reg_i2s_audio_init(hdev);
+
+	/* enbale HDMI audio */
+	if (hdev->audio_enable)
+		hdmi_audio_enable(hdev, 1);
+
 	/* enable HDMI and timing generator */
 	hdmi_enable(hdev, 1);
 	hdmi_tg_enable(hdev, 1);
@@ -159,6 +175,7 @@ static int hdmi_streamoff(struct hdmi_device *hdev)
 
 	dev_dbg(dev, "%s\n", __func__);
 
+	hdmi_audio_enable(hdev, 0);
 	hdmi_enable(hdev, 0);
 	hdmi_tg_enable(hdev, 0);
 
@@ -558,6 +575,11 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 	hdmi_dev->cur_preset = HDMI_DEFAULT_PRESET;
 	/* FIXME: missing fail preset is not supported */
 	hdmi_dev->cur_conf = hdmi_preset2conf(hdmi_dev->cur_preset);
+
+	/* default audio configuration : enable audio */
+	hdmi_dev->audio_enable = 1;
+	hdmi_dev->sample_rate = DEFAULT_SAMPLE_RATE;
+	hdmi_dev->bits_per_sample = DEFAULT_BITS_PER_SAMPLE;
 
 	/* register hdmi subdev as entity */
 	ret = hdmi_register_entity(hdmi_dev);

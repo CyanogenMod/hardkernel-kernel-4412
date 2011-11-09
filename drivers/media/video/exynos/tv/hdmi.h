@@ -33,6 +33,10 @@
 #define HDMI_VSI_LENGTH                0x05;
 #define HDMI_AVI_LENGTH                0x0d;
 
+/* HDMI audio configuration value */
+#define DEFAULT_SAMPLE_RATE	44100
+#define DEFAULT_BITS_PER_SAMPLE	16
+
 /* HDMI pad definitions */
 #define HDMI_PAD_SINK		0
 #define HDMI_PADS_NUM		1
@@ -220,6 +224,12 @@ struct hdmi_device {
 	struct hdmi_resources res;
 	/** supported HDMI InfoFrame */
 	struct hdmi_infoframe infoframe[INFOFRAME_CNT];
+	/** audio on/off control flag */
+	int audio_enable;
+	/** audio sample rate */
+	int sample_rate;
+	/** audio bits per sample */
+	int bits_per_sample;
 };
 
 struct hdmi_conf {
@@ -246,6 +256,9 @@ void hdmi_enable(struct hdmi_device *hdev, int on);
 void hdmi_tg_enable(struct hdmi_device *hdev, int on);
 void hdmi_reg_infoframe(struct hdmi_device *hdev,
 		struct hdmi_infoframe *infoframe);
+void hdmi_reg_set_acr(struct hdmi_device *hdev);
+void hdmi_reg_i2s_audio_init(struct hdmi_device *hdev);
+void hdmi_audio_enable(struct hdmi_device *hdev, int on);
 void hdmi_dumpregs(struct hdmi_device *hdev, char *prefix);
 void hdmi_set_3d_info(struct hdmi_device *hdev);
 
