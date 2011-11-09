@@ -21,7 +21,7 @@
 #include <plat/pd.h>
 
 struct platform_device exynos4_device_pd[] = {
-	{
+	[PD_MFC] = {
 		.name		= "samsung-pd",
 		.id		= PD_MFC,
 		.dev = {
@@ -36,7 +36,8 @@ struct platform_device exynos4_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_G3D] = {
 		.name		= "samsung-pd",
 		.id		= PD_G3D,
 		.dev = {
@@ -51,7 +52,8 @@ struct platform_device exynos4_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_LCD0] = {
 		.name		= "samsung-pd",
 		.id		= PD_LCD0,
 		.dev = {
@@ -66,7 +68,8 @@ struct platform_device exynos4_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_LCD1] = {
 		.name		= "samsung-pd",
 		.id		= PD_LCD1,
 		.dev = {
@@ -81,7 +84,8 @@ struct platform_device exynos4_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_TV] = {
 		.name		= "samsung-pd",
 		.id		= PD_TV,
 		.dev = {
@@ -96,7 +100,8 @@ struct platform_device exynos4_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_CAM] = {
 		.name		= "samsung-pd",
 		.id		= PD_CAM,
 		.dev = {
@@ -111,7 +116,8 @@ struct platform_device exynos4_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_GPS] = {
 		.name		= "samsung-pd",
 		.id		= PD_GPS,
 		.dev = {
@@ -126,7 +132,8 @@ struct platform_device exynos4_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_GPS_ALIVE] = {
 		.name		= "samsung-pd",
 		.id		= PD_GPS_ALIVE,
 		.dev = {
@@ -140,7 +147,8 @@ struct platform_device exynos4_device_pd[] = {
 				},
 			},
 		},
-	}, {
+	},
+	[PD_ISP] = {
 		.name		= "samsung-pd",
 		.id		= PD_ISP,
 		.dev = {
