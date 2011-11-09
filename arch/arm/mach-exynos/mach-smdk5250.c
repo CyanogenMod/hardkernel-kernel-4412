@@ -15,6 +15,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/wm8994/pdata.h>
+#include <linux/mfd/max8997.h>
 #include <linux/mmc/host.h>
 #include <linux/cma.h>
 #include <linux/memblock.h>
@@ -356,6 +357,340 @@ static struct s3c_sdhci_platdata smdk5250_hsmmc3_pdata __initdata = {
 };
 #endif
 
+/* max8997 */
+static struct regulator_consumer_supply max8997_buck1 =
+	REGULATOR_SUPPLY("vdd_arm", NULL);
+
+static struct regulator_consumer_supply max8997_buck2 =
+	REGULATOR_SUPPLY("vdd_int", NULL);
+
+static struct regulator_consumer_supply max8997_buck3 =
+	REGULATOR_SUPPLY("vdd_g3d", NULL);
+
+static struct regulator_consumer_supply max8997_buck4 =
+	REGULATOR_SUPPLY("vdd_mif", NULL);
+
+static struct regulator_consumer_supply __initdata ldo2_consumer =
+	REGULATOR_SUPPLY("vdd_ldo2", NULL);
+
+static struct regulator_consumer_supply __initdata ldo3_consumer =
+	REGULATOR_SUPPLY("vdd_ldo3", NULL);
+
+static struct regulator_consumer_supply __initdata ldo4_consumer =
+	REGULATOR_SUPPLY("vdd_ldo4", NULL);
+
+static struct regulator_consumer_supply __initdata ldo5_consumer =
+	REGULATOR_SUPPLY("vdd_ldo5", NULL);
+
+static struct regulator_consumer_supply __initdata ldo6_consumer =
+	REGULATOR_SUPPLY("vdd_ldo6", NULL);
+
+static struct regulator_consumer_supply __initdata ldo7_consumer =
+	REGULATOR_SUPPLY("vdd_ldo7", NULL);
+
+static struct regulator_consumer_supply __initdata ldo8_consumer =
+	REGULATOR_SUPPLY("vdd_ldo8", NULL);
+
+static struct regulator_consumer_supply __initdata ldo9_consumer =
+	REGULATOR_SUPPLY("vdd_ldo9", NULL);
+
+static struct regulator_consumer_supply __initdata ldo10_consumer =
+	REGULATOR_SUPPLY("vdd_ldo10", NULL);
+
+static struct regulator_consumer_supply __initdata ldo11_consumer =
+	REGULATOR_SUPPLY("vdd_ldo11", NULL);
+
+static struct regulator_consumer_supply __initdata ldo14_consumer =
+	REGULATOR_SUPPLY("vdd_ldo14", NULL);
+
+static struct regulator_consumer_supply __initdata ldo21_consumer =
+	REGULATOR_SUPPLY("vdd_ldo21", NULL);
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo2_data = {
+	.constraints	= {
+		.name		= "vdd_ldo2 range",
+		.min_uV		= 1000000,
+		.max_uV		= 1000000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo2_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo3_data = {
+	.constraints	= {
+		.name		= "vdd_ldo3 range",
+		.min_uV		= 1000000,
+		.max_uV		= 1000000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo3_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo4_data = {
+	.constraints	= {
+		.name		= "vdd_ldo4 range",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo4_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo5_data = {
+	.constraints	= {
+		.name		= "vdd_ldo5 range",
+		.min_uV		= 1000000,
+		.max_uV		= 1000000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo5_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo6_data = {
+	.constraints	= {
+		.name		= "vdd_ldo6 range",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo6_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo7_data = {
+	.constraints	= {
+		.name		= "vdd_ldo7 range",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo7_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo8_data = {
+	.constraints	= {
+		.name		= "vdd_ldo8 range",
+		.min_uV		= 3300000,
+		.max_uV		= 3300000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo8_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo9_data = {
+	.constraints	= {
+		.name		= "vdd_ldo9 range",
+		.min_uV		= 2800000,
+		.max_uV		= 2800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo9_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo10_data = {
+	.constraints	= {
+		.name		= "vdd_ldo10 range",
+		.min_uV		= 1000000,
+		.max_uV		= 1000000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo10_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo11_data = {
+	.constraints	= {
+		.name		= "vdd_ldo11 range",
+		.min_uV		= 2800000,
+		.max_uV		= 2800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo11_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo14_data = {
+	.constraints	= {
+		.name		= "vdd_ldo14 range",
+		.min_uV		= 1800000,
+		.max_uV		= 1800000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo14_consumer,
+};
+
+static struct regulator_init_data __initdata __maybe_unused max8997_ldo21_data = {
+	.constraints	= {
+		.name		= "vdd_ldo21 range",
+		.min_uV		= 1200000,
+		.max_uV		= 1200000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &ldo21_consumer,
+};
+
+static struct regulator_init_data __initdata max8997_buck1_data = {
+	.constraints	= {
+		.name		= "vdd_arm range",
+		.min_uV		= 900000,
+		.max_uV		= 1500000,
+		.always_on	= 1,
+		.boot_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8997_buck1,
+};
+
+static struct regulator_init_data __initdata max8997_buck2_data = {
+	.constraints	= {
+		.name		= "vdd_int range",
+		.min_uV		= 950000,
+		.max_uV		= 1000000,
+		.always_on	= 1,
+		.boot_on	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8997_buck2,
+};
+
+static struct regulator_init_data __initdata max8997_buck3_data = {
+	.constraints	= {
+		.name		= "vdd_g3d range",
+		.min_uV		= 950000,
+		.max_uV		= 1150000,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				  REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8997_buck3,
+};
+
+static struct regulator_init_data __initdata max8997_buck4_data = {
+	.constraints	= {
+		.name		= "vdd_mif range",
+		.min_uV		= 950000,
+		.max_uV		= 1200000,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				  REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8997_buck4,
+};
+
+static struct max8997_regulator_data __initdata max8997_regulators[] = {
+	{ MAX8997_BUCK1, &max8997_buck1_data, },
+	{ MAX8997_BUCK2, &max8997_buck2_data, },
+	{ MAX8997_BUCK3, &max8997_buck3_data, },
+	{ MAX8997_BUCK4, &max8997_buck4_data, },
+};
+
+static struct max8997_platform_data __initdata exynos5_max8997_info = {
+	.num_regulators = ARRAY_SIZE(max8997_regulators),
+	.regulators     = max8997_regulators,
+
+	.buck1_voltage[0] = 1250000, /* 1.25V */
+	.buck1_voltage[1] = 1100000, /* 1.1V */
+	.buck1_voltage[2] = 1100000, /* 1.1V */
+	.buck1_voltage[3] = 1100000, /* 1.1V */
+	.buck1_voltage[4] = 1100000, /* 1.1V */
+	.buck1_voltage[5] = 1100000, /* 1.1V */
+	.buck1_voltage[6] = 1000000, /* 1.0V */
+	.buck1_voltage[7] = 950000, /* 0.95V */
+
+	.buck2_voltage[0] = 1100000, /* 1.1V */
+	.buck2_voltage[1] = 1000000, /* 1.0V */
+	.buck2_voltage[2] = 950000, /* 0.95V */
+	.buck2_voltage[3] = 900000, /* 0.9V */
+	.buck2_voltage[4] = 1000000, /* 1.0V */
+	.buck2_voltage[5] = 1000000, /* 1.0V */
+	.buck2_voltage[6] = 950000, /* 0.95V */
+	.buck2_voltage[7] = 900000, /* 0.9V */
+
+	.buck5_voltage[0] = 1100000, /* 1.2V */
+	.buck5_voltage[1] = 1100000, /* 1.1V */
+	.buck5_voltage[2] = 1100000, /* 1.1V */
+	.buck5_voltage[3] = 1100000, /* 1.1V */
+	.buck5_voltage[4] = 1100000, /* 1.1V */
+	.buck5_voltage[5] = 1100000, /* 1.1V */
+	.buck5_voltage[6] = 1100000, /* 1.1V */
+	.buck5_voltage[7] = 1100000, /* 1.1V */
+};
+
 static struct regulator_consumer_supply wm8994_fixed_voltage0_supplies[] = {
 	REGULATOR_SUPPLY("AVDD2", "1-001a"),
 	REGULATOR_SUPPLY("CPVDD", "1-001a"),
@@ -472,6 +807,13 @@ static struct wm8994_pdata wm8994_platform_data = {
 	.ldo[1] = { 0, NULL, &wm8994_ldo2_data },
 };
 
+static struct i2c_board_info i2c_devs0[] __initdata = {
+	{
+		I2C_BOARD_INFO("max8997", 0x66),
+		.platform_data	= &exynos5_max8997_info,
+	}
+};
+
 static struct i2c_board_info i2c_devs1[] __initdata = {
 	{
 		I2C_BOARD_INFO("wm8994", 0x1a),
@@ -496,6 +838,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&smdk5250_mipi_lcd,
 #endif
 #endif
+	&s3c_device_i2c0,
 	&s3c_device_i2c1,
 #ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
@@ -732,6 +1075,9 @@ static inline void exynos_sysmmu_init(void)
 
 static void __init smdk5250_machine_init(void)
 {
+	s3c_i2c0_set_platdata(NULL);
+	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
+
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
