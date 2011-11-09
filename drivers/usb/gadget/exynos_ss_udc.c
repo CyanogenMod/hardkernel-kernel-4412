@@ -1582,7 +1582,7 @@ static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 	udc_ep->trb = dma_alloc_coherent(NULL,
 					 sizeof(struct exynos_ss_udc_trb),
 					 &udc_ep->trb_dma,
-					 GFP_KERNEL | GFP_DMA32);
+					 GFP_KERNEL);
 	if (!udc_ep->trb)
 		return -ENOMEM;
 
@@ -2059,7 +2059,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	udc->event_buff = dma_alloc_coherent(NULL,
 					     EXYNOS_USB3_EVENT_BUFF_BSIZE,
 					     &udc->event_buff_dma,
-					     GFP_KERNEL | GFP_DMA32);
+					     GFP_KERNEL);
 	if (!udc->event_buff) {
 		dev_err(dev, "cannot get memory for event buffer\n");
 		ret = -ENOMEM;
@@ -2070,7 +2070,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	udc->ctrl_buff = dma_alloc_coherent(NULL,
 					    EXYNOS_USB3_CTRL_BUFF_SIZE,
 					    &udc->ctrl_buff_dma,
-					    GFP_KERNEL | GFP_DMA32);
+					    GFP_KERNEL);
 	if (!udc->ctrl_buff) {
 		dev_err(dev, "cannot get memory for control buffer\n");
 		ret = -ENOMEM;
