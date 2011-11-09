@@ -53,10 +53,12 @@ static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
 				       struct exynos_ss_udc_ep *udc_ep,
 				       struct exynos_ss_udc_req *udc_req,
 				       int result);
+static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on);
 
 static struct exynos_ss_udc *our_udc;
 
 static struct usb_gadget_ops exynos_ss_udc_gadget_ops = {
+	.pullup = exynos_ss_udc_pullup,
 };
 
 #ifdef CONFIG_BATTERY_SAMSUNG
@@ -72,6 +74,20 @@ void exynos_ss_udc_cable_disconnect(struct exynos_ss_udc *udc)
 }
 #endif
 
+static bool exynos_ss_udc_poll_bit_set(void __iomem *ptr, u32 val, int timeout)
+{
+	u32 reg;
+
+	do {
+		reg = readl(ptr);
+	} while (!(reg & val) && timeout-- > 0);
+
+	if (reg & val)
+		return true;
+
+	return false;
+}
+
 static bool exynos_ss_udc_poll_bit_clear(void __iomem *ptr, u32 val, int timeout)
 {
 	u32 reg;
@@ -84,6 +100,38 @@ static bool exynos_ss_udc_poll_bit_clear(void __iomem *ptr, u32 val, int timeout
 		return false;
 
 	return true;
+}
+
+static void exynos_ss_udc_run_stop(struct exynos_ss_udc *udc, int is_on)
+{
+	bool res;
+
+	if (is_on) {
+		__orr32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_Run_Stop);
+		res = exynos_ss_udc_poll_bit_clear(udc->regs + EXYNOS_USB3_DSTS,
+						   EXYNOS_USB3_DSTS_DevCtrlHlt,
+						   1000);
+	}
+	else {
+		__bic32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_Run_Stop);
+		res = exynos_ss_udc_poll_bit_set(udc->regs + EXYNOS_USB3_DSTS,
+						   EXYNOS_USB3_DSTS_DevCtrlHlt,
+						   1000);
+	}
+
+	if (!res)
+		dev_err(udc->dev, "Failed %sConnect by software\n", is_on ? "":"dis-");
+}
+
+static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on)
+{
+	struct exynos_ss_udc *udc = container_of(gadget, struct exynos_ss_udc, gadget);
+
+	if (is_on)
+		exynos_ss_udc_run_stop(udc, is_on);
+	else
+		exynos_ss_udc_run_stop(udc, is_on);
+	return 0;
 }
 
 static bool exynos_ss_udc_issue_cmd(struct exynos_ss_udc *udc,
