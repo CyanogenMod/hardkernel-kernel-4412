@@ -46,6 +46,7 @@ config CPU_EXYNOS4212
 config CPU_EXYNOS4412
 	bool
 	select S3C_PL330_DMA
+	select ARM_ERRATA_761320
 	help
 	  Enable EXYNOS4412 CPU support
 
