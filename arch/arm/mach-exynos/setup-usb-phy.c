@@ -710,6 +710,10 @@ static int exynos5_usb_phy30_init(struct platform_device *pdev)
 	writel(0x03fff815, EXYNOS_USB3_PHYPARAM1);
 	writel(0x00000000, EXYNOS_USB3_PHYBATCHG);
 	writel(0x00000000, EXYNOS_USB3_PHYRESUME);
+	/* REVISIT : Over-current pin is inactive on SMDK5250 */
+	if (soc_is_exynos5250())
+		writel((readl(EXYNOS_USB3_LINKPORT) & ~(0x3<<4)) |
+			(0x3<<2), EXYNOS_USB3_LINKPORT);
 
 	/* UTMI Power Control */
 	writel(EXYNOS_USB3_PHYUTMI_OTGDISABLE, EXYNOS_USB3_PHYUTMI);
