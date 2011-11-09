@@ -56,6 +56,7 @@ static struct mfc_mem mem_infos[MFC_MAX_MEM_PORT_NUM];
 static struct mfc_vcm vcm_info;
 #endif
 
+#ifndef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 static int mfc_mem_addr_port(unsigned int addr)
 {
 	int i;
@@ -71,6 +72,7 @@ static int mfc_mem_addr_port(unsigned int addr)
 
 	return port;
 }
+#endif
 
 int mfc_mem_count(void)
 {
@@ -101,7 +103,6 @@ unsigned int mfc_mem_data_base(int port)
 	if ((port < 0) || (port >= mem_ports))
 		return 0;
 #endif
-
 	if (port == 0)
 		addr = mem_infos[port].base + MFC_FW_SYSTEM_SIZE;
 	else
@@ -126,14 +127,25 @@ unsigned int mfc_mem_data_size(int port)
 	return size;
 }
 
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+unsigned int mfc_mem_hole_size(void)
+{
+	return mfc_mem_data_base(1) -
+		(mfc_mem_data_base(0) + mfc_mem_data_size(0));
+}
+#endif
+
 unsigned int mfc_mem_data_ofs(unsigned int addr, int contig)
 {
 	unsigned int offset;
 	int i;
 	int port;
 
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	port = 0;
+#else
 	port = mfc_mem_addr_port(addr);
-
+#endif
 	if (port < 0)
 		return 0;
 
@@ -150,12 +162,12 @@ unsigned int mfc_mem_data_ofs(unsigned int addr, int contig)
 unsigned int mfc_mem_base_ofs(unsigned int addr)
 {
 	int port;
+
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	port = 0;
 #else
 	port = mfc_mem_addr_port(addr);
 #endif
-
 	if (port < 0)
 		return 0;
 

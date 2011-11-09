@@ -544,12 +544,15 @@ static long mfc_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		in_param.ret_code = MFC_OK;
 		ret = 0;
-#ifdef	CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 		for (i = 0; i < MFC_MAX_MEM_CHUNK_NUM; i++)
+			ret += mfc_mem_data_size(i);
+
+		ret += mfc_mem_hole_size();
 #else
 		for (i = 0; i < dev->mem_ports; i++)
-#endif
 			ret += mfc_mem_data_size(i);
+#endif
 
 		break;
 
@@ -723,6 +726,10 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 		mfc_mem_data_size(1),
 		real_size);
 
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	real_size += mfc_mem_hole_size();
+#endif
+
 	/*
 	 * if memory size required from appl. mmap() is bigger than max data memory
 	 * size allocated in the driver.
@@ -836,46 +843,52 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 	/* early allocator */
 	/* CMA or bootmem(memblock) */
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	vma->vm_flags |= VM_RESERVED | VM_IO;
+	if (mfc_ctx->buf_cache_type == NO_CACHE)
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
+	mfc_info("MFC buffers are %scacheable\n",
+			mfc_ctx->buf_cache_type ? "" : "non-");
+
 	remap_offset = 0;
 	remap_size = min((unsigned long)mfc_mem_data_size(0), user_size);
-
-	vma->vm_flags |= VM_RESERVED | VM_IO;
-
-	if (mfc_ctx->buf_cache_type == NO_CACHE) {
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-		mfc_info("CONFIG_VIDEO_MFC_CACHE is not enabled\n");
-	} else {
-		mfc_info("CONFIG_VIDEO_MFC_CACHE is enabled\n");
+	/*
+	 * Chunk 0 mapping
+	 */
+	if (remap_size <= 0) {
+		mfc_err("invalid remap size of chunk 0\n");
+		return -EINVAL;
 	}
 
-	/*
-	 * Port 0 mapping for stream buf & frame buf (chroma + MV)
-	 */
 	pfn = __phys_to_pfn(mfc_mem_data_base(0));
 	if (remap_pfn_range(vma, vma->vm_start + remap_offset, pfn,
 				remap_size, vma->vm_page_prot)) {
 
-		mfc_err("failed to remap port 0\n");
+		mfc_err("failed to remap chunk 0\n");
 		return -EINVAL;
 	}
 
-	remap_offset = remap_size;
-	remap_size = min((unsigned long)mfc_mem_data_size(1),
+	/* skip the hole between the chunk */
+	remap_offset += remap_size;
+	remap_size = min((unsigned long)mfc_mem_hole_size(),
 			user_size - remap_offset);
 
-	vma->vm_flags |= VM_RESERVED | VM_IO;
-
-	if (mfc_ctx->buf_cache_type == NO_CACHE)
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-
+	remap_offset += remap_size;
+	remap_size = min((unsigned long)mfc_mem_data_size(1),
+			user_size - remap_offset);
 	/*
-	 * Port 1 mapping for frame buf (luma)
+	 * Chunk 1 mapping
 	 */
+	if (remap_size <= 0) {
+		mfc_err("invalid remap size of chunk 1\n");
+		return -EINVAL;
+	}
+
 	pfn = __phys_to_pfn(mfc_mem_data_base(1));
 	if (remap_pfn_range(vma, vma->vm_start + remap_offset, pfn,
 				remap_size, vma->vm_page_prot)) {
 
-		mfc_err("failed to remap port 1\n");
+		mfc_err("failed to remap chunk 1\n");
 		return -EINVAL;
 	}
 #else
