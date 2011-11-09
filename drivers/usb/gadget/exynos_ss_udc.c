@@ -278,12 +278,15 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 		return -EINVAL;
 
 	case USB_ENDPOINT_XFER_BULK:
+		dev_dbg(udc->dev, "Bulk endpoint\n");
 		break;
 
 	case USB_ENDPOINT_XFER_INT:
+		dev_dbg(udc->dev, "Interrupt endpoint\n");
 		break;
 
 	case USB_ENDPOINT_XFER_CONTROL:
+		dev_dbg(udc->dev, "Control endpoint\n");
 		break;
 	}
 
@@ -307,7 +310,8 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 	struct exynos_ss_udc *udc = udc_ep->parent;
 	unsigned long flags;
 
-	dev_dbg(udc->dev, "%s(ep %p)\n", __func__, ep);
+	dev_dbg(udc->dev, "%s: ep%d%s\n", __func__,
+			  udc_ep->epnum, udc_ep->dir_in ? "in" : "out");
 
 	if (ep == &udc->eps[0].ep) {
 		dev_err(udc->dev, "%s: called for ep0\n", __func__);
@@ -807,9 +811,11 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 	bool first;
 	int ret;
 
-	dev_dbg(udc->dev, "%s: req %p: %d@%p, noi=%d, zero=%d, snok=%d\n",
-		ep->name, req, req->length, req->buf, req->no_interrupt,
-		req->zero, req->short_not_ok);
+	dev_dbg(udc->dev, "%s: ep%d%s (%p): %d@%p, noi=%d, zero=%d, snok=%d\n",
+			  __func__, udc_ep->epnum,
+			  udc_ep->dir_in ? "in" : "out", req,
+			  req->length, req->buf, req->no_interrupt,
+			  req->zero, req->short_not_ok);
 
 	/* initialise status of the request */
 	INIT_LIST_HEAD(&udc_req->queue);
@@ -871,7 +877,8 @@ static int exynos_ss_udc_ep_dequeue(struct usb_ep *ep, struct usb_request *req)
 	struct exynos_ss_udc *udc = udc_ep->parent;
 	unsigned long flags;
 
-	dev_info(udc->dev, "ep_dequeue(%p,%p)\n", ep, req);
+	dev_dbg(udc->dev, "%s: ep%d%s (%p)\n", __func__,
+			  udc_ep->epnum, udc_ep->dir_in ? "in" : "out", req);
 
 	spin_lock_irqsave(&udc_ep->lock, flags);
 
@@ -1339,6 +1346,10 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 		list_for_each_entry_safe(epcmd, tepcmd,
 					 &udc_ep->cmd_queue, queue) {
 
+			dev_dbg(udc->dev, "Pending command %02xh for ep%d%s\n",
+					 epcmd->cmdtyp, epnum,
+					 dir_in ? "in" : "out");
+
 			res = exynos_ss_udc_issue_cmd(udc, epcmd);
 			if (!res)
 				dev_err(udc->dev, "Failed to issue command\n");
@@ -1388,7 +1399,7 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 		break;
 
 	case EXYNOS_USB3_DEVT_EVENT_DisconnEvt:
-		dev_dbg(udc->dev, "Disconnect Detected");
+		dev_info(udc->dev, "Disconnection Detected");
 		call_gadget(udc, disconnect);
 #ifdef CONFIG_BATTERY_SAMSUNG
 		exynos_ss_udc_cable_disconnect(udc);
@@ -1423,12 +1434,12 @@ static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
 			EXYNOS_USB3_GEVNTCOUNTx_EVNTCount_MASK;
 	/* TODO: what if number of events more then buffer size? */
 
-	dev_dbg(udc->dev, "INTERRUPT (%d)\n", gevntcount);
+	dev_dbg(udc->dev, "INTERRUPT (%d)\n", gevntcount >> 2);
 
 	while (gevntcount) {
 		event = udc->event_buff[indx++];
 
-		dev_dbg(udc->dev, "event = %d\n", event);
+		dev_dbg(udc->dev, "event = 0x%08x\n", event);
 
 		ecode1 = event & 0x01;
 
