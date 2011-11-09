@@ -151,14 +151,14 @@ static struct jpeg_fmt formats[] = {
 		.fourcc		= V4L2_PIX_FMT_NV16,
 		.depth		= 16,
 		.color		= YCBCR_422_2P,
-		.memplanes	= 2,
+		.memplanes	= 1,
 		.types		= M2M_OUTPUT,
 	}, {
 		.name		= "YUV 4:2:0 planar, Y/CbCr",
 		.fourcc		= V4L2_PIX_FMT_NV12,
 		.depth		= 12,
 		.color		= YCBCR_420_2P,
-		.memplanes	= 2,
+		.memplanes	= 1,
 		.types		= M2M_OUTPUT,
 	}, {
 		.name		= "YUV 4:2:0 planar, Y/CrCb",
