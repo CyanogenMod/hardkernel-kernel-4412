@@ -71,6 +71,7 @@ struct exynos_ss_udc_trb {
  * struct exynos_ss_udc_ep - driver endpoint definition.
  * @ep: The gadget layer representation of the endpoint.
  * @queue: Queue of requests for this endpoint.
+ * @cmd_queue: Queue of commands for this endpoint.
  * @parent: Reference back to the parent device structure.
  * @req: The current request that the endpoint is processing. This is
  *       used to indicate an request has been loaded onto the endpoint
@@ -85,6 +86,8 @@ struct exynos_ss_udc_trb {
  *	    means that it is sending data to the Host.
  * @halted: Set if the endpoint has been halted.
  * @sent_zlp: Set if we've sent a zero-length packet.
+ * @not_ready: Set to true if a command for the endpoint hasn't completed
+ *	       during timeout interval.
  * @name: The driver generated name for the endpoint.
  *
  * This is the driver's state for each registered enpoint, allowing it
@@ -95,6 +98,7 @@ struct exynos_ss_udc_trb {
 struct exynos_ss_udc_ep {
 	struct usb_ep		ep;
 	struct list_head	queue;
+	struct list_head	cmd_queue;
 	struct exynos_ss_udc	*parent;
 	struct exynos_ss_udc_req	*req;
 	spinlock_t		lock;
@@ -110,6 +114,8 @@ struct exynos_ss_udc_ep {
 
 	unsigned int		halted:1;
 	unsigned int		sent_zlp:1;
+
+	bool			not_ready;
 
 	char			name[10];
 };
@@ -128,6 +134,7 @@ struct exynos_ss_udc_req {
 
 /**
  * struct exynos_ss_udc_ep_command - endpoint command.
+ * @queue: The list of commands for the endpoint.
  * @ep: physical endpoint number.
  * @param0: Command parameter 0.
  * @param1: Command parameter 1.
@@ -136,6 +143,7 @@ struct exynos_ss_udc_req {
  * @cmdflags: Command flags.
  */
 struct exynos_ss_udc_ep_command {
+	struct list_head	queue;
 	int ep;
 	u32 param0;
 	u32 param1;
