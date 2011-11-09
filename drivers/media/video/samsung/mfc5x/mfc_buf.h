@@ -98,6 +98,11 @@
 #define MBT_CPB		(MBT_KERNEL | MBT_USER | (0x10 << 16))	/* D: S, [K], U E: */
 #define MBT_DPB		(MBT_KERNEL | MBT_USER | (0x20 << 16))	/* D: S, [K], U E: */
 
+enum MFC_BUF_ALLOC_SCHEME {
+	MBS_BEST_FIT	= 0,
+	MBS_FIRST_FIT	= 1,
+};
+
 /* Remove before Release */
 #if 0
 #define CPB_BUF_SIZE	(0x400000)       /* 3MB   : 3x1024x1024 for decoder    */
@@ -164,6 +169,7 @@ void mfc_print_buf(void);
 
 int mfc_init_buf(void);
 void mfc_final_buf(void);
+void mfc_set_buf_alloc_scheme(enum MFC_BUF_ALLOC_SCHEME scheme);
 void mfc_merge_buf(void);
 struct mfc_alloc_buffer *_mfc_alloc_buf(
 	struct mfc_inst_ctx *ctx, int size, int align, int flag);

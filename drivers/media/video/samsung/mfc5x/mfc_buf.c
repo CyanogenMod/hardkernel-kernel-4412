@@ -37,10 +37,13 @@ static struct list_head mfc_alloc_head[MFC_MAX_MEM_PORT_NUM];
 /* The free node list sorted by real address */
 static struct list_head mfc_free_head[MFC_MAX_MEM_PORT_NUM];
 
+static enum MFC_BUF_ALLOC_SCHEME buf_alloc_scheme = MBS_BEST_FIT;
+
 /* FIXME: test locking, add locking mechanisim */
 /*
 static spinlock_t lock;
 */
+
 
 void mfc_print_buf(void)
 {
@@ -220,11 +223,16 @@ static unsigned int mfc_get_free_buf(int size, int align, int port)
 		align_size = ALIGN(free->real, align) - free->real;
 #endif
 		if (free->size >= (size + align_size)) {
-			if (match != NULL) {
-				if (free->size < match->size)
+			if (buf_alloc_scheme == MBS_BEST_FIT) {
+				if (match != NULL) {
+					if (free->size < match->size)
+						match = free;
+				} else {
 					match = free;
-			} else {
+				}
+			} else if (buf_alloc_scheme == MBS_FIRST_FIT) {
 				match = free;
+				break;
 			}
 		}
 	}
@@ -380,6 +388,11 @@ void mfc_final_buf(void)
 	*/
 
 	mfc_print_buf();
+}
+
+void mfc_set_buf_alloc_scheme(enum MFC_BUF_ALLOC_SCHEME scheme)
+{
+	buf_alloc_scheme = scheme;
 }
 
 void mfc_merge_buf(void)
