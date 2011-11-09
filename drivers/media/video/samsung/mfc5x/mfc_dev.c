@@ -154,6 +154,8 @@ static int mfc_open(struct inode *inode, struct file *file)
 			clear_magic(mfcdev->drm_info.addr);
 
 			mfcdev->drm_playback = 1;
+
+			mfc_set_buf_alloc_scheme(MBS_FIRST_FIT);
 		} else {
 			/* reload F/W for first instance again */
 			if (soc_is_exynos4210()) {
@@ -311,6 +313,8 @@ static int mfc_release(struct inode *inode, struct file *file)
 
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	mfcdev->drm_playback = 0;
+
+	mfc_set_buf_alloc_scheme(MBS_BEST_FIT);
 #endif
 	mfc_info("MFC instance [%d:%d] released\n", mfc_ctx->id,
 		atomic_read(&mfcdev->inst_cnt));
