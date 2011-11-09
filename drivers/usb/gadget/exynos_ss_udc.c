@@ -1130,20 +1130,18 @@ static void exynos_ss_udc_complete_in(struct exynos_ss_udc *udc,
 
 
 /**
- * exynos_ss_udc_handle_outdone - complete OUT transfer
- * @udc: The device instance
- * @epnum: The endpoint received from
+ * exynos_ss_udc_complete_out - complete OUT transfer
+ * @udc: The device instance.
+ * @epnum: The endpoint that has just completed.
 */
-static void exynos_ss_udc_handle_outdone(struct exynos_ss_udc *udc,
-				     int epnum)
+static void exynos_ss_udc_complete_out(struct exynos_ss_udc *udc,
+				       struct exynos_ss_udc_ep *udc_ep)
 {
-	struct exynos_ss_udc_ep *udc_ep = &udc->eps[epnum];
 	struct exynos_ss_udc_req *udc_req = udc_ep->req;
 	struct usb_request *req = &udc_req->req;
 	int len, size_left;
-	int result = 0;
 
-	dev_dbg(udc->dev, "%s: ep%d, req %p\n", __func__, epnum, req);
+	dev_dbg(udc->dev, "%s: ep%d, req %p\n", __func__, udc_ep->epnum, req);
 
 	if (!udc_req) {
 		dev_dbg(udc->dev, "%s: no request active\n", __func__);
@@ -1164,7 +1162,7 @@ static void exynos_ss_udc_handle_outdone(struct exynos_ss_udc *udc,
 		dev_dbg(udc->dev, "%s: BUFSIZ is not zero (%d)",
 			 __func__, size_left);
 
-	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, result);
+	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, 0);
 }
 
 static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
@@ -1328,7 +1326,7 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 			exynos_ss_udc_complete_in(udc, udc_ep);
 		} else {
 			/* Handle "transfer complete" for OUT EPs */
-			exynos_ss_udc_handle_outdone(udc, epnum);
+			exynos_ss_udc_complete_out(udc, udc_ep);
 		}
 
 		if (epnum == 0 && udc->ep0_state == EP0_SETUP_PHASE)
