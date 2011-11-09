@@ -707,6 +707,19 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 16),
 	}, {
+		.name		= "sata",
+		.devname	= "ahci",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 6),
+	}, {
+		.name		= "sata_phy",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 24),
+	}, {
+		.name		= "sata_phy_i2c",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 25),
+	}, {
 		.name		= "lcd",
 		.devname	= "s3cfb.0",
 		.enable		= exynos5_clk_ip_disp0_ctrl,
