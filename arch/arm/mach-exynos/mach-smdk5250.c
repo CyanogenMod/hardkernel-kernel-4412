@@ -856,6 +856,13 @@ static void __init smdk5250_ss_udc_init(void)
 }
 #endif
 
+#ifdef CONFIG_BATTERY_SAMSUNG
+static struct platform_device samsung_device_battery = {
+	.name	= "samsung-fake-battery",
+	.id	= -1,
+};
+#endif
+
 static struct platform_device *smdk5250_devices[] __initdata = {
 	/* Samsung Power Domain */
 	&exynos5_device_pd[PD_MFC],
@@ -932,6 +939,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	&exynos_device_ss_udc,
+#endif
+#ifdef CONFIG_BATTERY_SAMSUNG
+	&samsung_device_battery,
 #endif
 };
 
