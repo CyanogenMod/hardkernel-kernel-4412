@@ -1205,6 +1205,13 @@ static void __init smdk5250_machine_init(void)
 	s5p_mfc_setname(&s5p_device_mfc, "s5p-mfc-v6");
 #endif
 
+#ifdef CONFIG_FB_S3C
+#ifdef CONFIG_FB_MIPI_DSIM
+	s5p_device_mipi_dsim.dev.parent = &exynos5_device_pd[PD_DISP1].dev;
+#endif
+
+	s5p_device_fimd1.dev.parent = &exynos5_device_pd[PD_DISP1].dev;
+#endif
 	exynos_sysmmu_init();
 
 	platform_add_devices(smdk5250_devices, ARRAY_SIZE(smdk5250_devices));
