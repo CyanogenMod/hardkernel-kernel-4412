@@ -561,11 +561,11 @@ static __devinit int max77686_pmic_probe(struct platform_device *pdev)
 		if (desc) {
 			regulators[id].n_voltages =
 				(desc->max - desc->min) / desc->step + 1;
-		}
 
-		printk(PMIC_DEBUG "%s: desc=%p, id=%d, n_vol=%d, max=%d, min=%d, step=%d\n",
-			__func__, desc, id, regulators[id].n_voltages,
-			desc->max, desc->min, desc->step);
+			printk(PMIC_DEBUG "%s: desc=%p, id=%d, n_vol=%d, max=%d, min=%d, step=%d\n",
+					__func__, desc, id, regulators[id].n_voltages,
+					desc->max, desc->min, desc->step);
+		}
 
 		rdev[i] = regulator_register(&regulators[id], max77686->dev,
 				pdata->regulators[i].initdata, max77686);
