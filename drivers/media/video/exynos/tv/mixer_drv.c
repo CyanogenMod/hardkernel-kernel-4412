@@ -168,6 +168,7 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 		int ret, i;
 		struct sub_mxr_device *sub_mxr;
 		struct mxr_layer *layer;
+		struct exynos_md *md;
 
 		for (i = MXR_PAD_SOURCE_GSCALER; i < MXR_PADS_NUM; ++i) {
 			pad = &sd->entity.pads[i];
@@ -192,6 +193,21 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 			mxr_err(mdev, "failed to get vsync (%d) from output\n",
 					ret);
 			return ret;
+		}
+
+		if (mdev->sub_mxr[MXR_SUB_MIXER0].local ||
+				mdev->sub_mxr[MXR_SUB_MIXER1].local) {
+			md = (struct exynos_md *)module_name_to_driver_data(
+					MDEV_MODULE_NAME);
+
+			/* stopping between mixer and hdmi, gscaler must
+			 * be stopped */
+			ret = v4l2_subdev_call(md->gsc_sd[0], video, s_stream, 0);
+			if (ret) {
+				mxr_err(mdev, "stop stream fail for output %s\n",
+						md->gsc_sd[0]->name);
+				return ret;
+			}
 		}
 
 		ret = v4l2_subdev_call(sd, video, s_stream, 0);
