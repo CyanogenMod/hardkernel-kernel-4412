@@ -1410,6 +1410,33 @@ static struct clksrc_clk exynos4_clk_dout_copy = {
 	.reg_div = { .reg = EXYNOS4_CLKDIV_CPU1, .shift = 0, .size = 3 },
 };
 
+static struct clksrc_clk exynos4_clk_dout_spi0 = {
+	.clk		= {
+		.name		= "dout_spi0",
+	},
+	.sources = &exynos4_clkset_group,
+	.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 16, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL1, .shift = 0, .size = 4 },
+};
+
+static struct clksrc_clk exynos4_clk_dout_spi1 = {
+	.clk		= {
+		.name		= "dout_spi1",
+	},
+	.sources = &exynos4_clkset_group,
+	.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 20, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL1, .shift = 16, .size = 4 },
+};
+
+static struct clksrc_clk exynos4_clk_dout_spi2 = {
+	.clk		= {
+		.name		= "dout_spi2",
+	},
+	.sources = &exynos4_clkset_group,
+	.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 24, .size = 4 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL2, .shift = 0, .size = 4 },
+};
+
 static struct clksrc_clk exynos4_clksrcs[] = {
 	{
 		.clk	= {
@@ -1561,31 +1588,28 @@ static struct clksrc_clk exynos4_clksrcs[] = {
 		.clk	= {
 			.name		= "sclk_spi",
 			.devname	= "s3c64xx-spi.0",
+			.parent		= &exynos4_clk_dout_spi0.clk,
 			.enable		= exynos4_clksrc_mask_peril1_ctrl,
 			.ctrlbit	= (1 << 16),
 		},
-		.sources = &exynos4_clkset_group,
-		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 16, .size = 4 },
 		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL1, .shift = 8, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_spi",
 			.devname	= "s3c64xx-spi.1",
+			.parent		= &exynos4_clk_dout_spi1.clk,
 			.enable		= exynos4_clksrc_mask_peril1_ctrl,
 			.ctrlbit	= (1 << 20),
 		},
-		.sources = &exynos4_clkset_group,
-		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 20, .size = 4 },
 		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL1, .shift = 24, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_spi",
 			.devname	= "s3c64xx-spi.2",
+			.parent		= &exynos4_clk_dout_spi2.clk,
 			.enable		= exynos4_clksrc_mask_peril1_ctrl,
 			.ctrlbit	= (1 << 24),
 		},
-		.sources = &exynos4_clkset_group,
-		.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 24, .size = 4 },
 		.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL2, .shift = 8, .size = 8 },
 	}, {
 		.clk	= {
@@ -1745,6 +1769,9 @@ static struct clksrc_clk *exynos4_sysclks[] = {
 	&exynos4_clk_mout_g3d0,
 	&exynos4_clk_mout_g3d1,
 	&exynos4_clk_sclk_fimg2d,
+	&exynos4_clk_dout_spi0,
+	&exynos4_clk_dout_spi1,
+	&exynos4_clk_dout_spi2,
 };
 
 static unsigned long exynos4_epll_get_rate(struct clk *clk)

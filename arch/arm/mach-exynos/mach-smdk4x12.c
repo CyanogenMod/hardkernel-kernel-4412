@@ -653,6 +653,7 @@ static struct s3c64xx_spi_csinfo spi0_csi[] = {
 	[0] = {
 		.line = EXYNOS4_GPB(1),
 		.set_level = gpio_set_value,
+		.fb_delay = 0x0,
 	},
 };
 
@@ -673,6 +674,7 @@ static struct s3c64xx_spi_csinfo spi1_csi[] = {
 	[0] = {
 		.line = EXYNOS4_GPB(5),
 		.set_level = gpio_set_value,
+		.fb_delay = 0x2,
 	},
 };
 
@@ -693,6 +695,7 @@ static struct s3c64xx_spi_csinfo spi2_csi[] = {
 	[0] = {
 		.line = EXYNOS4_GPC1(2),
 		.set_level = gpio_set_value,
+		.fb_delay = 0x0,
 	},
 };
 
@@ -2742,6 +2745,7 @@ static void __init exynos_sysmmu_init(void)
 static void __init smdk4x12_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
+	unsigned int gpio;
 	struct clk *sclk = NULL;
 	struct clk *prnt = NULL;
 	struct device *spi0_dev = &exynos4_device_spi0.dev;
@@ -2959,7 +2963,7 @@ static void __init smdk4x12_machine_init(void)
 				800 * MHZ);
 #endif
 #ifdef CONFIG_S3C64XX_DEV_SPI
-	sclk = clk_get(spi0_dev, "sclk_spi");
+	sclk = clk_get(spi0_dev, "dout_spi0");
 	if (IS_ERR(sclk))
 		dev_err(spi0_dev, "failed to get sclk for SPI-0\n");
 	prnt = clk_get(spi0_dev, "mout_mpll_user");
@@ -2968,6 +2972,8 @@ static void __init smdk4x12_machine_init(void)
 	if (clk_set_parent(sclk, prnt))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				prnt->name, sclk->name);
+
+	clk_set_rate(sclk, 800 * 1000 * 1000);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -2978,10 +2984,14 @@ static void __init smdk4x12_machine_init(void)
 		exynos4_spi_set_info(0, EXYNOS4_SPI_SRCCLK_SCLK,
 			ARRAY_SIZE(spi0_csi));
 	}
+
+	for (gpio = EXYNOS4_GPB(0); gpio < EXYNOS4_GPB(4); gpio++)
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV3);
+
 	spi_register_board_info(spi0_board_info, ARRAY_SIZE(spi0_board_info));
 
 #ifndef CONFIG_FB_S5P_LMS501KF03
-	sclk = clk_get(spi1_dev, "sclk_spi");
+	sclk = clk_get(spi1_dev, "dout_spi1");
 	if (IS_ERR(sclk))
 		dev_err(spi1_dev, "failed to get sclk for SPI-1\n");
 	prnt = clk_get(spi1_dev, "mout_mpll_user");
@@ -2990,6 +3000,8 @@ static void __init smdk4x12_machine_init(void)
 	if (clk_set_parent(sclk, prnt))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				prnt->name, sclk->name);
+
+	clk_set_rate(sclk, 800 * 1000 * 1000);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -3000,10 +3012,14 @@ static void __init smdk4x12_machine_init(void)
 		exynos4_spi_set_info(1, EXYNOS4_SPI_SRCCLK_SCLK,
 			ARRAY_SIZE(spi1_csi));
 	}
+
+	for (gpio = EXYNOS4_GPB(4); gpio < EXYNOS4_GPB(8); gpio++)
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV3);
+
 	spi_register_board_info(spi1_board_info, ARRAY_SIZE(spi1_board_info));
 #endif
 
-	sclk = clk_get(spi2_dev, "sclk_spi");
+	sclk = clk_get(spi2_dev, "dout_spi2");
 	if (IS_ERR(sclk))
 		dev_err(spi2_dev, "failed to get sclk for SPI-2\n");
 	prnt = clk_get(spi2_dev, "mout_mpll_user");
@@ -3012,6 +3028,8 @@ static void __init smdk4x12_machine_init(void)
 	if (clk_set_parent(sclk, prnt))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				prnt->name, sclk->name);
+
+	clk_set_rate(sclk, 800 * 1000 * 1000);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -3022,6 +3040,10 @@ static void __init smdk4x12_machine_init(void)
 		exynos4_spi_set_info(2, EXYNOS4_SPI_SRCCLK_SCLK,
 			ARRAY_SIZE(spi2_csi));
 	}
+
+	for (gpio = EXYNOS4_GPC1(1); gpio < EXYNOS4_GPC1(5); gpio++)
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV3);
+
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
 	dev_add(&busfreq, &exynos4_busfreq.dev);
