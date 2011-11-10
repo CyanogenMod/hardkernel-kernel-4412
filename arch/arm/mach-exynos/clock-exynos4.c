@@ -1064,13 +1064,13 @@ static struct clksrc_sources exynos4_clkset_sclk_audio1 = {
 
 static struct clksrc_clk exynos4_clk_sclk_audio1 = {
 	.clk	= {
-		.name		= "audio-bus",
+		.name		= "audio-bus1",
 		.enable		= exynos4_clksrc_mask_peril1_ctrl,
 		.ctrlbit	= (1 << 0),
 	},
 	.sources = &exynos4_clkset_sclk_audio1,
 	.reg_src = { .reg = EXYNOS4_CLKSRC_PERIL1, .shift = 0, .size = 4 },
-	.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 4, .size = 8 },
+	.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 0, .size = 8 },
 };
 
 static struct clk *exynos4_clkset_sclk_audio2_list[] = {
@@ -1092,7 +1092,7 @@ static struct clksrc_sources exynos4_clkset_sclk_audio2 = {
 
 static struct clksrc_clk exynos4_clk_sclk_audio2 = {
 	.clk	= {
-		.name		= "audio-bus",
+		.name		= "audio-bus2",
 		.enable		= exynos4_clksrc_mask_peril1_ctrl,
 		.ctrlbit	= (1 << 4),
 	},
