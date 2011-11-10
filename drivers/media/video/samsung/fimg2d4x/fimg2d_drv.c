@@ -306,6 +306,8 @@ static int fimg2d_probe(struct platform_device *pdev)
 		ret = -ENOENT;
 		goto err_map;
 	}
+	fimg2d_debug("device name: %s base address: 0x%lx\n",
+			pdev->name, (unsigned long)res->start);
 
 	/* irq */
 	info->irq = platform_get_irq(pdev, 0);
