@@ -1441,6 +1441,9 @@ static void __init exynos_sysmmu_init(void)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc2).dev, &exynos5_device_gsc2.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc3).dev, &exynos5_device_gsc3.dev);
 #endif
+#ifdef CONFIG_VIDEO_FIMG2D
+	sysmmu_set_owner(&SYSMMU_PLATDEV(2d).dev, &s5p_device_fimg2d.dev);
+#endif
 }
 #else /* !CONFIG_S5P_SYSTEM_MMU */
 static inline void exynos_sysmmu_init(void)
