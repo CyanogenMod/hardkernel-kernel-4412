@@ -50,11 +50,6 @@ static struct sleep_save exynos4212_clock_save[] = {
 	SAVE_ITEM(EXYNOS4_DMC_PAUSE_CTRL),
 };
 
-static int __maybe_unused exynos4212_clk_bus_dmc0_ctrl(struct clk *clk, int enable)
-{
-	return s5p_gatectrl(EXYNOS4_CLKGATE_BUS_DMC0, clk, enable);
-}
-
 static struct sleep_save exynos4212_epll_save[] = {
 	SAVE_ITEM(EXYNOS4_EPLL_CON2),
 };
@@ -63,6 +58,21 @@ static struct sleep_save exynos4212_vpll_save[] = {
 	SAVE_ITEM(EXYNOS4_VPLL_CON2),
 };
 #endif
+
+static int exynos4212_clk_bus_dmc0_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS4_CLKGATE_BUS_DMC0, clk, enable);
+}
+
+static int exynos4212_clk_bus_dmc1_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS4_CLKGATE_BUS_DMC1, clk, enable);
+}
+
+static int exynos4212_clk_sclk_dmc_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS4_CLKGATE_SCLK_DMC, clk, enable);
+}
 
 static int __maybe_unused exynos4212_clk_bus_peril_ctrl(struct clk *clk, int enable)
 {
@@ -346,12 +356,27 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.devname	= SYSMMU_CLOCK_NAME(is_cpu, 19),
 		.enable		= exynos4212_clk_ip_isp1_ctrl,
 		.ctrlbit	= (1 << 4),
-	}, {
+	},
+#ifndef CONFIG_SAMSUNG_C2C
+	{
 		.name		= "c2c",
 		.devname	= "samsung-c2c",
 		.enable		= exynos4212_clk_ip_dmc0_ctrl,
-		.ctrlbit	= (1 << 26),
+		.ctrlbit	= (1 << 26 | 1 << 27 | 1 << 30 | 1 << 31),
+	}, {
+		.name		= "sclk_c2c_off",
+		.enable		= exynos4212_clk_sclk_dmc_ctrl,
+		.ctrlbit	= (1 << 8),
+	}, {
+		.name		= "pclk_c2c_off",
+		.enable		= exynos4212_clk_bus_dmc1_ctrl,
+		.ctrlbit	= (1 << 27 | 1 << 30 | 1 << 31),
+	}, {
+		.name		= "aclk_c2c_off",
+		.enable		= exynos4212_clk_bus_dmc0_ctrl,
+		.ctrlbit	= (1 << 21 | 1 << 22 | 1 << 24),
 	},
+#endif
 };
 
 static struct clksrc_clk exynos4212_clksrcs[] = {
