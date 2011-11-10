@@ -14,6 +14,13 @@
 #define __S5P_MFC_MEM_H_ __FILE__
 
 #include <linux/platform_device.h>
+
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
+#define CONFIG_S5P_MFC_VB2_CMA	1
+#elif defined(CONFIG_VIDEOBUF2_ION)
+#define CONFIG_S5P_MFC_VB2_ION	1
+#endif
+
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 #include <media/videobuf2-cma-phys.h>
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
