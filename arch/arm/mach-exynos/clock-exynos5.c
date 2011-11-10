@@ -952,10 +952,11 @@ static struct clk *clkset_sclk_audio0_list[] = {
 	[2] = &exynos5_clk_sclk_hdmi27m,
 	[3] = &exynos5_clk_sclk_dptxphy,
 	[4] = &exynos5_clk_sclk_usbphy,
-	[5] = &exynos5_clk_mout_mpll.clk,
-	[6] = &exynos5_clk_mout_epll.clk,
-	[7] = &exynos5_clk_sclk_vpll.clk,
-	[8] = &exynos5_clk_mout_cpll.clk,
+	[5] = &exynos5_clk_sclk_hdmiphy,
+	[6] = &exynos5_clk_mout_mpll.clk,
+	[7] = &exynos5_clk_mout_epll.clk,
+	[8] = &exynos5_clk_sclk_vpll.clk,
+	[9] = &exynos5_clk_mout_cpll.clk,
 };
 
 static struct clksrc_sources exynos5_clkset_sclk_audio0 = {
@@ -1058,10 +1059,11 @@ static struct clk *exynos5_clkset_sclk_audio1_list[] = {
 	[2] = &exynos5_clk_sclk_hdmi27m,
 	[3] = &exynos5_clk_sclk_dptxphy,
 	[4] = &exynos5_clk_sclk_usbphy,
-	[5] = &exynos5_clk_mout_mpll.clk,
-	[6] = &exynos5_clk_mout_epll.clk,
-	[7] = &exynos5_clk_sclk_vpll.clk,
-	[8] = &exynos5_clk_mout_cpll.clk,
+	[5] = &exynos5_clk_sclk_hdmiphy,
+	[6] = &exynos5_clk_mout_mpll.clk,
+	[7] = &exynos5_clk_mout_epll.clk,
+	[8] = &exynos5_clk_sclk_vpll.clk,
+	[9] = &exynos5_clk_mout_cpll.clk,
 };
 
 static struct clksrc_sources exynos5_clkset_sclk_audio1 = {
@@ -1086,10 +1088,11 @@ static struct clk *exynos5_clkset_sclk_audio2_list[] = {
 	[2] = &exynos5_clk_sclk_hdmi27m,
 	[3] = &exynos5_clk_sclk_dptxphy,
 	[4] = &exynos5_clk_sclk_usbphy,
-	[5] = &exynos5_clk_mout_mpll.clk,
-	[6] = &exynos5_clk_mout_epll.clk,
-	[7] = &exynos5_clk_sclk_vpll.clk,
-	[8] = &exynos5_clk_mout_cpll.clk,
+	[5] = &exynos5_clk_sclk_hdmiphy,
+	[6] = &exynos5_clk_mout_mpll.clk,
+	[7] = &exynos5_clk_mout_epll.clk,
+	[8] = &exynos5_clk_sclk_vpll.clk,
+	[9] = &exynos5_clk_mout_cpll.clk,
 };
 
 static struct clksrc_sources exynos5_clkset_sclk_audio2 = {
