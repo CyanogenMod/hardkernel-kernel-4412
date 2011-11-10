@@ -33,6 +33,11 @@
 #include "ump_ukk_wrappers.h"
 #include "ump_ukk_ref_wrappers.h"
 
+#ifdef CONFIG_ION_EXYNOS
+#include <linux/ion.h>
+extern struct ion_device *ion_exynos;
+struct ion_client *ion_client_ump = NULL;
+#endif
 
 /* Module parameter to control log level */
 int ump_debug_level = 3;
@@ -129,6 +134,11 @@ static int ump_initialize_module(void)
  */
 static void ump_cleanup_module(void)
 {
+#ifdef CONFIG_ION_EXYNOS
+	if (ion_client_ump)
+	    ion_client_destroy(ion_client_ump);
+#endif
+
 	DBG_MSG(2, ("Unloading UMP device driver\n"));
 	ump_kernel_destructor();
 	DBG_MSG(2, ("Module unloaded\n"));
@@ -306,6 +316,11 @@ static int ump_file_ioctl(struct inode *inode, struct file *filp, unsigned int c
 		case UMP_IOC_ALLOCATE :
 			err = ump_allocate_wrapper((u32 __user *)argument, session_data);
 			break;
+#ifdef CONFIG_ION_EXYNOS
+		case UMP_IOC_ION_IMPORT:
+			err = ump_ion_import_wrapper((u32 __user *)argument, session_data);
+			break;
+#endif
 
 		case UMP_IOC_RELEASE:
 			err = ump_release_wrapper((u32 __user *)argument, session_data);
