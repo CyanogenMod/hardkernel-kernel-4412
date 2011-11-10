@@ -868,7 +868,6 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	/* Samsung Power Domain */
 	&exynos5_device_pd[PD_MFC],
 	&exynos5_device_pd[PD_G3D],
-	&exynos5_device_pd[PD_GPS],
 	&exynos5_device_pd[PD_ISP],
 	&exynos5_device_pd[PD_GSCL],
 	&exynos5_device_pd[PD_DISP1],
@@ -1141,7 +1140,6 @@ static void __init smdk5250_machine_init(void)
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_enable(&exynos5_device_pd[PD_MFC].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_G3D].dev);
-	exynos_pd_enable(&exynos5_device_pd[PD_GPS].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_ISP].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_GSCL].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_DISP1].dev);
@@ -1152,7 +1150,6 @@ static void __init smdk5250_machine_init(void)
 	 */
 	exynos_pd_enable(&exynos5_device_pd[PD_MFC].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_G3D].dev);
-	exynos_pd_enable(&exynos5_device_pd[PD_GPS].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_ISP].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_GSCL].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_DISP1].dev);
