@@ -24,7 +24,7 @@
 #define ASSIGN_SYSMMU_POWERDOMAIN(ipname, powerdomain) \
 		SYSMMU_PLATDEV(ipname).dev.parent = powerdomain
 #else
-#define ASSIGN_SYSTEM_POWERDOMAIN(ipname, powerdomain) do { } while (0)
+#define ASSIGN_SYSMMU_POWERDOMAIN(ipname, powerdomain) do { } while (0)
 #endif
 
 extern struct platform_device SYSMMU_PLATDEV(sss);
