@@ -621,11 +621,13 @@ config MACH_SMDK5250
 	select S3C_DEV_I2C1
 	select S5P_DEV_FIMD1
 	select S5P_DEV_USB_EHCI
+	select S5P_DEV_MFC
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FIMD
 	select EXYNOS4_SETUP_USB_PHY
+	select EXYNOS4_SETUP_MFC
 	select EXYNOS_DEV_SS_UDC
 	help
 	  Machine support for Samsung SMDK5250

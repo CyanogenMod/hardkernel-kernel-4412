@@ -44,6 +44,7 @@
 #include <plat/pd.h>
 #include <plat/ehci.h>
 #include <plat/udc-ss.h>
+#include <plat/s5p-mfc.h>
 
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
@@ -909,6 +910,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_SND_SAMSUNG_RP
 	&exynos_device_srp,
 #endif
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	&s5p_device_mfc,
+#endif
 	&wm8994_fixed_voltage0,
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
@@ -1060,7 +1064,7 @@ static void __init exynos_reserve_mem(void)
 		},
 		{
 			.name		= "b1",
-			.size		= 32 << 20,
+			.size		= 64 << 20,
 			.start		= 0x45000000,
 		},
 #endif
@@ -1189,6 +1193,16 @@ static void __init smdk5250_machine_init(void)
 #endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	smdk5250_ss_udc_init();
+#endif
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+#if defined(CONFIG_EXYNOS_DEV_PD)
+	s5p_device_mfc.dev.parent = &exynos5_device_pd[PD_MFC].dev;
+#endif
+	exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 300 * MHZ);
+
+	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
+	clk_add_alias("mfc", "s5p-mfc-v6", "mfc", &s5p_device_mfc.dev);
+	s5p_mfc_setname(&s5p_device_mfc, "s5p-mfc-v6");
 #endif
 
 	exynos_sysmmu_init();
