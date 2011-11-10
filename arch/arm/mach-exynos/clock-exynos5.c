@@ -1337,6 +1337,36 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 		.reg_div = { .reg = EXYNOS5_CLKDIV_FSYS3, .shift = 8, .size = 8 },
 	}, {
 		.clk	= {
+			.name		= "sclk_pcm",
+			.parent		= &exynos5_clk_sclk_audio0.clk,
+		},
+			.reg_div = { .reg = EXYNOS5_CLKDIV_MAUDIO, .shift = 4, .size = 8 },
+	}, {
+		.clk	= {
+			.name		= "sclk_pcm",
+			.parent		= &exynos5_clk_sclk_audio1.clk,
+		},
+			.reg_div = { .reg = EXYNOS5_CLKDIV_PERIC4, .shift = 4, .size = 8 },
+	}, {
+		.clk	= {
+			.name		= "sclk_pcm",
+			.parent		= &exynos5_clk_sclk_audio2.clk,
+		},
+			.reg_div = { .reg = EXYNOS5_CLKDIV_PERIC4, .shift = 20, .size = 8 },
+	}, {
+		.clk	= {
+			.name		= "sclk_i2s",
+			.parent		= &exynos5_clk_sclk_audio1.clk,
+		},
+			.reg_div = { .reg = EXYNOS5_CLKDIV_PERIC5, .shift = 0, .size = 6 },
+	}, {
+		.clk	= {
+			.name		= "sclk_i2s",
+			.parent		= &exynos5_clk_sclk_audio2.clk,
+		},
+			.reg_div = { .reg = EXYNOS5_CLKDIV_PERIC5, .shift = 8, .size = 6 },
+	}, {
+		.clk	= {
 			.name		= "sclk_fimd",
 			.devname	= "s3cfb.0",
 			.enable		= exynos5_clksrc_mask_disp0_0_ctrl,
