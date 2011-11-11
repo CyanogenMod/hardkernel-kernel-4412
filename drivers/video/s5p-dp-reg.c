@@ -1013,6 +1013,22 @@ u32 s5p_dp_get_lane1_link_training(struct s5p_dp_device *dp)
 	return reg;
 }
 
+u32 s5p_dp_get_lane2_link_training(struct s5p_dp_device *dp)
+{
+	u32 reg;
+
+	reg = readl(dp->reg_base + S5P_DP_LN2_LINK_TRAINING_CTL);
+	return reg;
+}
+
+u32 s5p_dp_get_lane3_link_training(struct s5p_dp_device *dp)
+{
+	u32 reg;
+
+	reg = readl(dp->reg_base + S5P_DP_LN3_LINK_TRAINING_CTL);
+	return reg;
+}
+
 void s5p_dp_reset_macro(struct s5p_dp_device *dp)
 {
 	u32 reg;

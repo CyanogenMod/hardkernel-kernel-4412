@@ -20,7 +20,7 @@
 
 struct link_train {
 	int eq_loop;
-	int cr_loop[2];
+	int cr_loop[4];
 
 	u8 link_rate;
 	u8 lane_count;
@@ -118,6 +118,8 @@ void s5p_dp_set_lane3_link_training(struct s5p_dp_device *dp,
 				u32 training_lane);
 u32 s5p_dp_get_lane0_link_training(struct s5p_dp_device *dp);
 u32 s5p_dp_get_lane1_link_training(struct s5p_dp_device *dp);
+u32 s5p_dp_get_lane2_link_training(struct s5p_dp_device *dp);
+u32 s5p_dp_get_lane3_link_training(struct s5p_dp_device *dp);
 void s5p_dp_reset_macro(struct s5p_dp_device *dp);
 int s5p_dp_init_video(struct s5p_dp_device *dp);
 void s5p_dp_set_video_master_data_mn(struct s5p_dp_device *dp,
@@ -166,6 +168,7 @@ void s5p_dp_disable_scrambling(struct s5p_dp_device *dp);
 #define DPCD_ADDR_LANE0_1_STATUS			0x0202
 #define DPCD_ADDR_LANE_ALIGN__STATUS_UPDATED		0x0204
 #define DPCD_ADDR_ADJUST_REQUEST_LANE0_1		0x0206
+#define DPCD_ADDR_ADJUST_REQUEST_LANE2_3		0x0207
 #define DPCD_ADDR_TEST_REQUEST				0x0218
 #define DPCD_ADDR_TEST_RESPONSE				0x0260
 #define DPCD_ADDR_TEST_EDID_CHECKSUM			0x0261
