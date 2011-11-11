@@ -19,7 +19,7 @@
 #include <linux/suspend.h>
 #include <linux/io.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 static unsigned int total_num_target_freq;
 static unsigned int ctn_freq_in_trg_cnt;	/* continuous frequency hotplug in trigger count */

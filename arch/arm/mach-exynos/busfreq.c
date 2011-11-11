@@ -39,7 +39,7 @@
 
 #include <plat/map-s5p.h>
 #include <plat/gpio-cfg.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #define MAX_LOAD		100
 #define DIVIDING_FACTOR		10000

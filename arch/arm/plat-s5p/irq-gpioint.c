@@ -22,7 +22,7 @@
 #include <mach/map.h>
 #include <plat/gpio-core.h>
 #include <plat/gpio-cfg.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #include <asm/mach/irq.h>
 

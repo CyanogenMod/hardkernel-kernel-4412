@@ -31,7 +31,7 @@
 #include <linux/clk.h>
 #endif
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #ifdef CONFIG_BUSFREQ
 #include <mach/cpufreq.h>

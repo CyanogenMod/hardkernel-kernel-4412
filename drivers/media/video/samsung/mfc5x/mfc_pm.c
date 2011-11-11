@@ -20,7 +20,7 @@
 
 #include <plat/clock.h>
 #include <plat/s5p-mfc.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #include <mach/regs-pmu.h>
 

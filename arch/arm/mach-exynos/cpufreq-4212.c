@@ -22,7 +22,7 @@
 #include <mach/cpufreq.h>
 
 #include <plat/clock.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #define CPUFREQ_LEVEL_END	(L13 + 1)
 

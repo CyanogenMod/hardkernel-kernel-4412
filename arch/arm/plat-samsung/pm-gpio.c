@@ -21,7 +21,7 @@
 
 #include <plat/gpio-core.h>
 #include <plat/pm.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 /* PM GPIO helpers */
 

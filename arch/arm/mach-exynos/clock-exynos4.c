@@ -23,7 +23,6 @@
 #include <plat/clock-clksrc.h>
 #include <plat/devs.h>
 #include <plat/pm.h>
-#include <plat/cputype.h>
 
 #include <mach/map.h>
 #include <mach/regs-clock.h>

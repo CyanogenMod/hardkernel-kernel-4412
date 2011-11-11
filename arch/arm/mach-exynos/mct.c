@@ -20,7 +20,7 @@
 #include <linux/delay.h>
 #include <linux/percpu.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #include <mach/map.h>
 #include <mach/regs-mct.h>

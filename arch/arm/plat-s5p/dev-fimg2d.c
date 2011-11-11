@@ -15,7 +15,7 @@
 #include <linux/interrupt.h>
 #include <linux/ioport.h>
 #include <plat/fimg2d.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 #include <mach/map.h>
 
 #define S5P_PA_FIMG2D_OFFSET	0x02000000

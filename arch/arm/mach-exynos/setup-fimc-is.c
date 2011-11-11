@@ -21,7 +21,7 @@
 #include <plat/gpio-cfg.h>
 #include <mach/regs-gpio.h>
 #include <plat/map-s5p.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 #include <mach/map.h>
 
 struct platform_device; /* don't need the contents */

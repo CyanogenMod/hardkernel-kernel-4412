@@ -15,7 +15,7 @@
 #include <asm/cacheflush.h>
 #include <asm/cputype.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #define SCU_CTRL		0x00
 #define SCU_CONFIG		0x04

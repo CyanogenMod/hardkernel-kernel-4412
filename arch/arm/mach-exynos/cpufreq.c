@@ -28,7 +28,7 @@
 
 #include <plat/clock.h>
 #include <plat/pm.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 static struct exynos_dvfs_info *exynos_info;
 

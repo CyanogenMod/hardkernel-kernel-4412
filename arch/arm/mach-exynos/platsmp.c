@@ -31,7 +31,7 @@
 #include <mach/regs-pmu.h>
 #include <mach/smc.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 #include <plat/exynos4.h>
 
 extern void exynos_secondary_startup(void);

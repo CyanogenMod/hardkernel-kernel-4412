@@ -17,7 +17,7 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #include <mach/map.h>
 #include <mach/regs-iem.h>

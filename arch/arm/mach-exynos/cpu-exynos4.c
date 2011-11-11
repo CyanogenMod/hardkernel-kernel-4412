@@ -30,7 +30,6 @@
 #include <plat/adc-core.h>
 #include <plat/pm.h>
 #include <plat/iic-core.h>
-#include <plat/cputype.h>
 #include <plat/ace-core.h>
 #include <plat/reset.h>
 #include <plat/audio.h>

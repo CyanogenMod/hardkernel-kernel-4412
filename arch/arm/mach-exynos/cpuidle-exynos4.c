@@ -32,7 +32,7 @@
 #include <plat/exynos4.h>
 #include <plat/pm.h>
 #include <plat/devs.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #ifdef CONFIG_ARM_TRUSTZONE
 #define REG_DIRECTGO_ADDR	(S5P_VA_SYSRAM_NS + 0x24)

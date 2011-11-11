@@ -43,7 +43,7 @@
 
 #include <mach/hardware.h>
 #include <mach/irqs.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #include "../audss.h"
 #include "../idma.h"

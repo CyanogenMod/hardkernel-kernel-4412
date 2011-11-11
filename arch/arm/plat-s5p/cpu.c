@@ -20,7 +20,6 @@
 #include <mach/regs-clock.h>
 
 #include <plat/cpu.h>
-#include <plat/cputype.h>
 #include <plat/s5p6440.h>
 #include <plat/s5p6450.h>
 #include <plat/s5pc100.h>
@@ -75,14 +74,14 @@ static struct cpu_table cpu_ids[] __initdata = {
 		.name		= name_s5pv210,
 	}, {
 		.idcode		= EXYNOS4210_CPU_ID,
-		.idmask		= EXYNOS4_CPU_MASK,
+		.idmask		= EXYNOS_CPU_MASK,
 		.map_io		= exynos4_map_io,
 		.init_clocks	= exynos4_init_clocks,
 		.init_uarts	= exynos4_init_uarts,
 		.init		= exynos4_init,
 		.name		= name_exynos4210,
 	}, {
-		.idcode		= EXYNOS_CPU_ID_4212,
+		.idcode		= EXYNOS4212_CPU_ID,
 		.idmask		= EXYNOS_CPU_MASK,
 		.map_io		= exynos4_map_io,
 		.init_clocks	= exynos4_init_clocks,
@@ -90,7 +89,7 @@ static struct cpu_table cpu_ids[] __initdata = {
 		.init		= exynos4_init,
 		.name		= name_exynos4212,
 	}, {
-		.idcode		= EXYNOS_CPU_ID_4412,
+		.idcode		= EXYNOS4412_CPU_ID,
 		.idmask		= EXYNOS_CPU_MASK,
 		.map_io		= exynos4_map_io,
 		.init_clocks	= exynos4_init_clocks,
@@ -99,7 +98,7 @@ static struct cpu_table cpu_ids[] __initdata = {
 		.name		= name_exynos4412,
 
 	}, {
-		.idcode         = EXYNOS_CPU_ID_5210,
+		.idcode         = EXYNOS5210_CPU_ID,
 		.idmask         = EXYNOS_CPU_MASK,
 		.map_io         = exynos5_map_io,
 		.init_clocks    = exynos5_init_clocks,
@@ -107,7 +106,7 @@ static struct cpu_table cpu_ids[] __initdata = {
 		.init           = exynos5_init,
 		.name           = name_exynos5210,
 	}, {
-		.idcode         = EXYNOS_CPU_ID_5250,
+		.idcode         = EXYNOS5250_CPU_ID,
 		.idmask         = EXYNOS_CPU_MASK,
 		.map_io         = exynos5_map_io,
 		.init_clocks    = exynos5_init_clocks,
@@ -154,6 +153,7 @@ static struct map_desc s5p_iodesc[] __initdata = {
 };
 
 /* read cpu identification code */
+
 unsigned long cpu_idcode;
 void __init s5p_init_io(struct map_desc *mach_desc,
 			int size, void __iomem *cpuid_addr)

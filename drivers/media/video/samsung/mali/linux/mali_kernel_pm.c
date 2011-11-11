@@ -25,7 +25,7 @@
 #include <asm/current.h>
 #include <linux/suspend.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #include "mali_platform.h"
 #include "mali_osk.h"

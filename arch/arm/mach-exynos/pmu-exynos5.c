@@ -17,7 +17,7 @@
 #include <mach/pmu.h>
 #include <mach/regs-pmu5.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 static struct exynos4_pmu_conf *exynos5_pmu_config;
 

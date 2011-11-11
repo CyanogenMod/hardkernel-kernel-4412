@@ -18,7 +18,7 @@
 #include <mach/regs-pmu.h>
 #include <mach/regs-clock.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 #include <plat/pd.h>
 
 int exynos_pd_init(struct device *dev)

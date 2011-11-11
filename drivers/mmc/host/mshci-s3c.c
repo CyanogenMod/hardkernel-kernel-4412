@@ -27,7 +27,7 @@
 #include <plat/gpio-cfg.h>
 #include <plat/mshci.h>
 #include <plat/clock.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #include "mshci.h"
 

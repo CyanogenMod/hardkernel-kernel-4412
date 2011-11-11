@@ -44,7 +44,7 @@
 #include <mach/busfreq.h>
 
 #include <plat/map-s5p.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 #include <plat/clock.h>
 
 struct busfreq_control {

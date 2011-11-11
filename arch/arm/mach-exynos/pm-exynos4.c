@@ -24,7 +24,6 @@
 
 #include <plat/cpu.h>
 #include <plat/pm.h>
-#include <plat/cputype.h>
 
 #include <mach/regs-irq.h>
 #include <mach/regs-gpio.h>

@@ -17,7 +17,7 @@
 #include <linux/clk.h>
 #include <linux/io.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 #include <plat/clock.h>
 
 #include <mach/regs-iem.h>
@@ -277,7 +277,7 @@ static int exynos4210_asv_store_result(struct samsung_asv *asv_info)
 	char *support_freq;
 
 	/* Single chip is only support 1.2GHz */
-	if (!((cpu_idcode >> PACK_ID) & PACK_MASK)) {
+	if (!((samsung_cpu_id >> PACK_ID) & PACK_MASK)) {
 		result_grp = exynos4210_find_group(asv_info, EXYNOS4210_SINGLE_1200);
 		result_grp |= SUPPORT_1200MHZ;
 		support_freq = "1.2GHz";

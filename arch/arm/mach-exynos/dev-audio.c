@@ -17,7 +17,7 @@
 
 #include <plat/gpio-cfg.h>
 #include <plat/audio.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #include <mach/map.h>
 #include <mach/dma.h>

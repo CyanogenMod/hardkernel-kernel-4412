@@ -20,7 +20,7 @@
 #include <plat/gpio-core.h>
 #include <plat/gpio-cfg.h>
 #include <plat/gpio-cfg-helpers.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 int s3c_gpio_setpull_exynos5(struct s3c_gpio_chip *chip,
 				unsigned int off, s3c_gpio_pull_t pull)

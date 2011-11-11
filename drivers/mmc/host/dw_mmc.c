@@ -34,7 +34,7 @@
 #include <linux/bitops.h>
 #include <linux/regulator/consumer.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 #include "dw_mmc.h"
 

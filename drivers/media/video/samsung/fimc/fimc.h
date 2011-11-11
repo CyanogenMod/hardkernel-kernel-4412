@@ -28,7 +28,7 @@
 #include <media/v4l2-mediabus.h>
 #include <plat/media.h>
 #include <plat/fimc.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 #endif
 
 #ifdef CONFIG_PM_RUNTIME

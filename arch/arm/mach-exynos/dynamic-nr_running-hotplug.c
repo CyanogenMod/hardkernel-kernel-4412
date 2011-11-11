@@ -17,7 +17,7 @@
 #include <linux/notifier.h>
 #include <linux/reboot.h>
 #include <linux/suspend.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 static unsigned int total_num_target_freq;
 static unsigned int ctn_highestlevel_cnt;		/* continuous the highest level count */

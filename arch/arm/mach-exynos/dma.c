@@ -33,7 +33,7 @@
 #include <mach/map.h>
 #include <mach/irqs.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 #include <plat/s3c-pl330-pdata.h>
 
 static u64 dma_dmamask = DMA_BIT_MASK(32);

@@ -20,7 +20,7 @@
 #include <mach/map.h>
 #include <plat/mshci.h>
 #include <plat/devs.h>
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 #include <plat/exynos4.h>
 
 #define S5P_SZ_MSHC	(0x1000)

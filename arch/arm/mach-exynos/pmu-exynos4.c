@@ -16,7 +16,7 @@
 #include <mach/regs-clock.h>
 #include <mach/pmu.h>
 
-#include <plat/cputype.h>
+#include <plat/cpu.h>
 
 static struct exynos4_pmu_conf *exynos4_pmu_config;
 
