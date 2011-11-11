@@ -1295,7 +1295,7 @@ static void fimc_free_buffers(struct fimc_control *ctrl)
 	ctrl->mem.curr = ctrl->mem.base;
 }
 
-int fimc_reqbufs_capture(void *fh, struct v4l2_requestbuffers *b)
+int fimc_reqbufs_capture_mmap(void *fh, struct v4l2_requestbuffers *b)
 {
 	struct fimc_control *ctrl = fh;
 	struct fimc_capinfo *cap = ctrl->cap;
@@ -1435,6 +1435,78 @@ int fimc_reqbufs_capture(void *fh, struct v4l2_requestbuffers *b)
 	mutex_unlock(&ctrl->v4l2_lock);
 
 	return 0;
+}
+
+int fimc_reqbufs_capture_userptr(void *fh, struct v4l2_requestbuffers *b)
+{
+	struct fimc_control *ctrl = fh;
+	struct fimc_capinfo *cap = ctrl->cap;
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+	struct platform_device *pdev = to_platform_device(ctrl->dev);
+#endif
+	int i;
+
+	if (!cap) {
+		fimc_err("%s: no capture device info\n", __func__);
+		return -ENODEV;
+	}
+
+	mutex_lock(&ctrl->v4l2_lock);
+
+	/*  A count value of zero frees all buffers */
+	if ((b->count == 0) || (b->count >= FIMC_CAPBUFS)) {
+		/* aborting or finishing any DMA in progress */
+		if (ctrl->status == FIMC_STREAMON)
+			fimc_streamoff_capture(fh);
+
+		fimc_free_buffers(ctrl);
+
+		mutex_unlock(&ctrl->v4l2_lock);
+		return 0;
+	}
+
+	/* free previous buffers */
+	if ((cap->nr_bufs >= 0) && (cap->nr_bufs < FIMC_CAPBUFS)) {
+		fimc_info1("%s: prev buf cnt(%d)\n", __func__, cap->nr_bufs);
+		fimc_free_buffers(ctrl);
+	}
+
+	cap->nr_bufs = b->count;
+
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+	if (ctrl->power_status == FIMC_POWER_OFF) {
+		pm_runtime_get_sync(&pdev->dev);
+	}
+#endif
+	fimc_hw_reset_output_buf_sequence(ctrl);
+	for (i = 0; i < cap->nr_bufs; i++) {
+		fimc_hwset_output_buf_sequence(ctrl, i, 1);
+		cap->bufs[i].id = i;
+		cap->bufs[i].state = VIDEOBUF_IDLE;
+
+		/* initialize list */
+		INIT_LIST_HEAD(&cap->bufs[i].list);
+	}
+	fimc_info1("%s: requested %d buffers\n", __func__, b->count);
+	fimc_info1("%s: sequence[%d]\n", __func__,
+			fimc_hwget_output_buf_sequence(ctrl));
+	INIT_LIST_HEAD(&cap->outgoing_q);
+
+	mutex_unlock(&ctrl->v4l2_lock);
+
+	return 0;
+}
+
+int fimc_reqbufs_capture(void *fh, struct v4l2_requestbuffers *b)
+{
+	int ret = 0;
+
+	if (b->memory == V4L2_MEMORY_MMAP)
+		ret = fimc_reqbufs_capture_mmap(fh, b);
+	else
+		ret = fimc_reqbufs_capture_userptr(fh, b);
+
+	return ret;
 }
 
 int fimc_querybuf_capture(void *fh, struct v4l2_buffer *b)
@@ -1807,6 +1879,19 @@ int fimc_stop_capture(struct fimc_control *ctrl)
 	return 0;
 }
 
+static int fimc_check_capture_source(struct fimc_control *ctrl)
+{
+	if(!ctrl->cam)
+		return -ENODEV;
+
+	if (ctrl->cam->sd || ctrl->is.sd || !ctrl->flite_sd)
+		return 0;
+
+	if (ctrl->cam->id == CAMERA_WB || ctrl->cam->id == CAMERA_WB_B)
+		return 0;
+
+	return -ENODEV;
+}
 
 int fimc_streamon_capture(void *fh)
 {
@@ -1824,7 +1909,8 @@ int fimc_streamon_capture(void *fh)
 	fimc_dbg("%s\n", __func__);
 	cam_frmsize.discrete.width = 0;
 	cam_frmsize.discrete.height = 0;
-	if (!ctrl->cam || (!ctrl->cam->sd && !ctrl->is.sd && !ctrl->flite_sd)) {
+
+	if (fimc_check_capture_source(ctrl)) {
 		fimc_err("%s: No capture device.\n", __func__);
 		return -ENODEV;
 	}
@@ -2096,35 +2182,45 @@ int fimc_streamoff_capture(void *fh)
 	return 0;
 }
 
+static void fimc_buf2bs(struct fimc_buf_set *bs, struct fimc_buf *buf)
+{
+	bs->base[FIMC_ADDR_Y]	=  buf->base[FIMC_ADDR_Y];
+	bs->length[FIMC_ADDR_Y]	=  buf->length[FIMC_ADDR_Y];
+
+	bs->base[FIMC_ADDR_CB]	 =  buf->base[FIMC_ADDR_CB];
+	bs->length[FIMC_ADDR_CB] =  buf->length[FIMC_ADDR_CB];
+
+	bs->base[FIMC_ADDR_CR]	 =  buf->base[FIMC_ADDR_CR];
+	bs->length[FIMC_ADDR_CR] =  buf->length[FIMC_ADDR_CR];
+}
+
 int fimc_qbuf_capture(void *fh, struct v4l2_buffer *b)
 {
 	struct fimc_control *ctrl = fh;
+	struct fimc_buf *buf = (struct fimc_buf *)b->m.userptr;
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 	struct fimc_capinfo *cap = ctrl->cap;
+	int idx = b->index;
 
 	if (!cap || !ctrl->cam) {
 		fimc_err("%s: No capture device.\n", __func__);
 		return -ENODEV;
 	}
 
-	if (b->memory != V4L2_MEMORY_MMAP) {
-		fimc_err("%s: invalid memory type\n", __func__);
-		return -EINVAL;
-	}
-
 	mutex_lock(&ctrl->v4l2_lock);
 	if (pdata->hw_ver >= 0x51) {
-		if (cap->bufs[b->index].state != VIDEOBUF_IDLE) {
-			fimc_err("%s: invalid state b->index : %d\n", __func__,
-					b->index);
+		if (cap->bufs[idx].state != VIDEOBUF_IDLE) {
+			fimc_err("%s: invalid state idx : %d\n", __func__, idx);
 			mutex_unlock(&ctrl->v4l2_lock);
 			return -EINVAL;
 		} else {
-			fimc_info2("%s[%d] : b->index : %d\n", __func__, ctrl->id,
-					b->index);
-			fimc_hwset_output_buf_sequence(ctrl, b->index,
-					FIMC_FRAMECNT_SEQ_ENABLE);
-			cap->bufs[b->index].state = VIDEOBUF_QUEUED;
+			if (b->memory == V4L2_MEMORY_USERPTR) {
+				fimc_buf2bs(&cap->bufs[idx], buf);
+				fimc_hwset_output_address(ctrl,	&cap->bufs[idx], idx);
+			}
+
+			fimc_hwset_output_buf_sequence(ctrl, idx, FIMC_FRAMECNT_SEQ_ENABLE);
+			cap->bufs[idx].state = VIDEOBUF_QUEUED;
 			if (ctrl->status == FIMC_BUFFER_STOP) {
 				fimc_start_capture(ctrl);
 				ctrl->status = FIMC_STREAMON;
@@ -2139,12 +2235,25 @@ int fimc_qbuf_capture(void *fh, struct v4l2_buffer *b)
 	return 0;
 }
 
+static void fimc_bs2buf(struct fimc_buf *buf, struct fimc_buf_set *bs)
+{
+	buf->base[FIMC_ADDR_Y]		=  bs->base[FIMC_ADDR_Y];
+	buf->length[FIMC_ADDR_Y]	=  bs->length[FIMC_ADDR_Y];
+
+	buf->base[FIMC_ADDR_CB]		=  bs->base[FIMC_ADDR_CB];
+	buf->length[FIMC_ADDR_CB]	=  bs->length[FIMC_ADDR_CB];
+
+	buf->base[FIMC_ADDR_CR]		=  bs->base[FIMC_ADDR_CR];
+	buf->length[FIMC_ADDR_CR]	=  bs->length[FIMC_ADDR_CR];
+}
+
 int fimc_dqbuf_capture(void *fh, struct v4l2_buffer *b)
 {
 	unsigned long spin_flags;
 	struct fimc_control *ctrl = fh;
 	struct fimc_capinfo *cap = ctrl->cap;
-	struct fimc_buf_set *buf;
+	struct fimc_buf_set *bs;
+	struct fimc_buf *buf = (struct fimc_buf *)b->m.userptr;
 	size_t length = 0;
 	int i, pp, ret = 0;
 
@@ -2155,11 +2264,6 @@ int fimc_dqbuf_capture(void *fh, struct v4l2_buffer *b)
 		return -ENODEV;
 	}
 
-	if (b->memory != V4L2_MEMORY_MMAP) {
-		fimc_err("%s: invalid memory type\n", __func__);
-		return -EINVAL;
-	}
-
 	if (pdata->hw_ver >= 0x51) {
 		spin_lock_irqsave(&ctrl->outq_lock, spin_flags);
 
@@ -2168,18 +2272,19 @@ int fimc_dqbuf_capture(void *fh, struct v4l2_buffer *b)
 			spin_unlock_irqrestore(&ctrl->outq_lock, spin_flags);
 			return -EAGAIN;
 		} else {
-			buf = list_first_entry(&cap->outgoing_q, struct fimc_buf_set,
+			bs = list_first_entry(&cap->outgoing_q, struct fimc_buf_set,
 					list);
-			fimc_info2("%s[%d]: buf->id : %d\n", __func__, ctrl->id,
-					buf->id);
-			b->index = buf->id;
-			buf->state = VIDEOBUF_IDLE;
+			fimc_info2("%s[%d]: bs->id : %d\n", __func__, ctrl->id, bs->id);
+			b->index = bs->id;
+			bs->state = VIDEOBUF_IDLE;
 
-			list_del(&buf->list);
+			if (b->memory == V4L2_MEMORY_USERPTR)
+				fimc_bs2buf(buf, bs);
+
+			list_del(&bs->list);
 		}
 
 		spin_unlock_irqrestore(&ctrl->outq_lock, spin_flags);
-
 	} else {
 		pp = ((fimc_hwget_frame_count(ctrl) + 2) % 4);
 		if (cap->fmt.field == V4L2_FIELD_INTERLACED_TB)
