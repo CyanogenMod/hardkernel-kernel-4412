@@ -44,6 +44,11 @@ struct s5p_dp_device {
 };
 
  /* s5p_dp_reg.c */
+ #ifdef CONFIG_CPU_EXYNOS5250
+void s5p_dp_do_hw_link_training(struct s5p_dp_device *dp);
+void s5p_dp_wait_hw_link_training_done(struct s5p_dp_device *dp);
+void s5p_dp_get_hw_link_training_status(struct s5p_dp_device *dp);
+#endif
 void s5p_dp_enable_video_bist(struct s5p_dp_device *dp, bool enable);
 void s5p_dp_enable_video_mute(struct s5p_dp_device *dp, bool enable);
 void s5p_dp_stop_video(struct s5p_dp_device *dp);
@@ -106,6 +111,10 @@ void s5p_dp_set_lane1_pre_emphasis(struct s5p_dp_device *dp, u32 level);
 void s5p_dp_set_lane0_link_training(struct s5p_dp_device *dp,
 				u32 training_lane);
 void s5p_dp_set_lane1_link_training(struct s5p_dp_device *dp,
+				u32 training_lane);
+void s5p_dp_set_lane2_link_training(struct s5p_dp_device *dp,
+				u32 training_lane);
+void s5p_dp_set_lane3_link_training(struct s5p_dp_device *dp,
 				u32 training_lane);
 u32 s5p_dp_get_lane0_link_training(struct s5p_dp_device *dp);
 u32 s5p_dp_get_lane1_link_training(struct s5p_dp_device *dp);

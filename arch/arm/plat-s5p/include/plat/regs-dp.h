@@ -74,6 +74,11 @@
 #define S5P_DP_TRAINING_PTN_SET			0x688
 #define S5P_DP_LN0_LINK_TRAINING_CTL		0x68C
 #define S5P_DP_LN1_LINK_TRAINING_CTL		0x690
+#define S5P_DP_LN2_LINK_TRAINING_CTL		0x694
+#define S5P_DP_LN3_LINK_TRAINING_CTL		0x698
+#ifdef CONFIG_CPU_EXYNOS5250
+#define S5P_DP_HW_LINK_TRAINING_CTL		0x6A0
+#endif
 
 #define S5P_DP_DEBUG_CTL			0x6C0
 #define S5P_DP_HPD_DEGLITCH_L			0x6C4
@@ -204,10 +209,22 @@
 #define HSYNC_POLARITY_CFG			(0x1 << 0)
 
 /* S5P_DP_LANE_MAP */
+#define LANE3_MAP_LOGIC_LANE_0			(0x0 << 6)
+#define LANE3_MAP_LOGIC_LANE_1			(0x1 << 6)
+#define LANE3_MAP_LOGIC_LANE_2			(0x2 << 6)
+#define LANE3_MAP_LOGIC_LANE_3			(0x3 << 6)
+#define LANE2_MAP_LOGIC_LANE_0			(0x0 << 4)
+#define LANE2_MAP_LOGIC_LANE_1			(0x1 << 4)
+#define LANE2_MAP_LOGIC_LANE_2			(0x2 << 4)
+#define LANE2_MAP_LOGIC_LANE_3			(0x3 << 4)
 #define LANE1_MAP_LOGIC_LANE_0			(0x0 << 2)
 #define LANE1_MAP_LOGIC_LANE_1			(0x1 << 2)
+#define LANE1_MAP_LOGIC_LANE_2			(0x2 << 2)
+#define LANE1_MAP_LOGIC_LANE_3			(0x3 << 2)
 #define LANE0_MAP_LOGIC_LANE_0			(0x0 << 0)
 #define LANE0_MAP_LOGIC_LANE_1			(0x1 << 0)
+#define LANE0_MAP_LOGIC_LANE_2			(0x2 << 0)
+#define LANE0_MAP_LOGIC_LANE_3			(0x3 << 0)
 
 /* S5P_DP_AUX_HW_RETRY_CTL */
 #define AUX_BIT_PERIOD_EXPECTED_DELAY(x)	(((x) & 0x7) << 8)
@@ -334,6 +351,12 @@
 #define DRIVE_CURRENT_SET_1_LEVEL_1		(0x1 << 0)
 #define DRIVE_CURRENT_SET_1_LEVEL_0		(0x0 << 0)
 
+#ifdef CONFIG_CPU_EXYNOS5250
+/* S5P_DP_HW_LINK_TRAINING_CTL */
+#define DP_BF_S_TRAINING_ERROR_CODE		(0x7<<4)
+#define DP_BF_C_HW_TRAINING_EN			(0x1<<0)
+#endif
+
 /* S5P_DP_DEBUG_CTL */
 #define PLL_LOCK				(0x1 << 4)
 #define F_PLL_LOCK				(0x1 << 3)
@@ -347,6 +370,8 @@
 /* S5P_DP_PHY_PD */
 #define DP_PHY_PD				(0x1 << 5)
 #define AUX_PD					(0x1 << 4)
+#define CH3_PD					(0x1 << 3)
+#define CH2_PD					(0x1 << 2)
 #define CH1_PD					(0x1 << 1)
 #define CH0_PD					(0x1 << 0)
 

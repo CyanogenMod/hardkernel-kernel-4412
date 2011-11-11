@@ -26,6 +26,7 @@
 
 #include <plat/dp.h>
 #include <plat/regs-dp.h>
+#include <plat/cpu.h>
 
 #include "s5p-dp.h"
 
@@ -36,7 +37,9 @@ static int s5p_dp_init_dp(struct s5p_dp_device *dp)
 	/* SW defined function Normal operation */
 	s5p_dp_enable_sw_function(dp);
 
-	s5p_dp_config_interrupt(dp);
+	if (!soc_is_exynos5250())
+		s5p_dp_config_interrupt(dp);
+
 	s5p_dp_init_analog_func(dp);
 
 	s5p_dp_init_hpd(dp);
@@ -212,6 +215,7 @@ static void s5p_dp_enable_rx_to_enhanced_mode(struct s5p_dp_device *dp,
 			DPCD_LANE_COUNT_SET(data));
 }
 
+#ifndef CONFIG_CPU_EXYNOS5250
 static int s5p_dp_is_enhanced_mode_available(struct s5p_dp_device *dp)
 {
 	u8 data;
@@ -963,6 +967,7 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 
 	return 0;
 }
+#endif
 
 static void s5p_dp_get_max_rx_bandwidth(struct s5p_dp_device *dp,
 			u8 *bandwidth)
@@ -990,6 +995,7 @@ static void s5p_dp_get_max_rx_lane_count(struct s5p_dp_device *dp,
 	*lane_count = DPCD_MAX_LANE_COUNT(data);
 }
 
+#ifndef CONFIG_CPU_EXYNOS5250
 static void s5p_dp_init_training(struct s5p_dp_device *dp,
 			enum link_lane_count_type max_lane,
 			enum link_rate_type max_rate)
@@ -1026,7 +1032,103 @@ static void s5p_dp_init_training(struct s5p_dp_device *dp,
 	/* All DP analog module power up */
 	s5p_dp_set_analog_power_down(dp, POWER_ALL, 0);
 }
+#endif
 
+#ifdef CONFIG_CPU_EXYNOS5250
+static int s5p_dp_hw_link_training(struct s5p_dp_device *dp,
+				u32 max_lane,
+				u32 max_rate)
+{
+	u32 data;
+
+	s5p_dp_stop_video(dp);
+
+	if (s5p_dp_get_pll_lock_status(dp) == PLL_UNLOCKED) {
+		dev_err(dp->dev, "PLL is not locked yet.\n");
+		return -EINVAL;
+	}
+
+	s5p_dp_reset_macro(dp);
+
+	/* set minimum PRE-EMPHASIS to TX */
+	s5p_dp_set_lane0_link_training(dp, 0);
+	s5p_dp_set_lane1_link_training(dp, 0);
+	s5p_dp_set_lane2_link_training(dp, 0);
+	s5p_dp_set_lane3_link_training(dp, 0);
+
+	/* All DP analog module power up */
+	s5p_dp_set_analog_power_down(dp, POWER_ALL, 0);
+
+	/* Initialize by reading RX's DPCD */
+	s5p_dp_get_max_rx_bandwidth(dp, &dp->link_train.link_rate);
+	s5p_dp_get_max_rx_lane_count(dp, &dp->link_train.lane_count);
+
+	if ((dp->link_train.link_rate != LINK_RATE_1_62GBPS) &&
+	   (dp->link_train.link_rate != LINK_RATE_2_70GBPS)) {
+		dev_err(dp->dev, "Rx Max Link Rate is abnormal :%x !\n",
+			dp->link_train.link_rate);
+		dp->link_train.link_rate = LINK_RATE_1_62GBPS;
+	}
+
+	if (dp->link_train.lane_count == 0) {
+		dev_err(dp->dev, "Rx Max Lane count is abnormal :%x !\n",
+			dp->link_train.lane_count);
+		dp->link_train.lane_count = (u8)LANE_COUNT1;
+	}
+
+	/* Setup TX lane count & rate */
+	if (dp->link_train.lane_count > max_lane)
+		dp->link_train.lane_count = max_lane;
+	if (dp->link_train.link_rate > max_rate)
+		dp->link_train.link_rate = max_rate;
+
+	/* Set link rate and count as you want to establish*/
+	s5p_dp_set_lane_count(dp, dp->video_info->lane_count);
+	s5p_dp_set_link_bandwidth(dp, dp->video_info->link_rate);
+
+	/* Set sink to D0 (Sink Not Ready) mode. */
+	s5p_dp_write_byte_to_dpcd(dp, DPCD_ADDR_SINK_POWER_STATE,
+				DPCD_SET_POWER_STATE_D0);
+
+	/* Do HW link training */
+	s5p_dp_do_hw_link_training(dp);
+
+	/* Wait unitl HW link training done */
+	s5p_dp_wait_hw_link_training_done(dp);
+
+	/* Get hardware link training status */
+	s5p_dp_get_hw_link_training_status(dp);
+
+	s5p_dp_get_link_bandwidth(dp, &data);
+	dp->link_train.link_rate = data;
+	dev_dbg(dp->dev, "final bandwidth = %.2x\n",
+		dp->link_train.link_rate);
+
+	s5p_dp_get_lane_count(dp, &data);
+	dp->link_train.lane_count = data;
+	dev_dbg(dp->dev, "final lane count = %.2x\n",
+		dp->link_train.lane_count);
+
+	return 0;
+}
+
+static int s5p_dp_set_link_train(struct s5p_dp_device *dp,
+				u32 count,
+				u32 bwtype)
+{
+	int i;
+	int retval;
+
+	for (i = 0; i < DP_TIMEOUT_LOOP_COUNT; i++) {
+		retval = s5p_dp_hw_link_training(dp, count, bwtype);
+		if (retval == 0)
+			break;
+
+		udelay(100);	/* need for H/W link retraining */
+	}
+	return retval;
+}
+#else
 static int s5p_dp_sw_link_training(struct s5p_dp_device *dp)
 {
 	int retval = 0;
@@ -1081,6 +1183,7 @@ static int s5p_dp_set_link_train(struct s5p_dp_device *dp,
 
 	return retval;
 }
+#endif
 
 static int s5p_dp_get_bpc_component(enum color_depth color_depth)
 {
@@ -1564,13 +1667,17 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 	s5p_dp_show_video_format(dp, dp->video_info);
 
 	s5p_dp_init_dp(dp);
-	ret = s5p_dp_detect_hpd(dp);
-	if (ret) {
-		dev_err(&pdev->dev, "unable to detect hpd\n");
-		goto err_irq;
+
+	if (!soc_is_exynos5250()) {
+		ret = s5p_dp_detect_hpd(dp);
+		if (ret) {
+			dev_err(&pdev->dev, "unable to detect hpd\n");
+			goto err_irq;
+		}
+
+		s5p_dp_handle_edid(dp);
 	}
 
-	s5p_dp_handle_edid(dp);
 	ret = s5p_dp_set_link_train(dp, dp->video_info->lane_count,
 				dp->video_info->link_rate);
 	if (ret) {
@@ -1578,9 +1685,15 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
-	s5p_dp_enable_scramble(dp, 0);
-	s5p_dp_enable_rx_to_enhanced_mode(dp, 0);
-	s5p_dp_enable_enhanced_mode(dp, 0);
+	if (soc_is_exynos5250()) {
+		s5p_dp_enable_scramble(dp, 1);
+		s5p_dp_enable_rx_to_enhanced_mode(dp, 1);
+		s5p_dp_enable_enhanced_mode(dp, 1);
+	} else {
+		s5p_dp_enable_scramble(dp, 0);
+		s5p_dp_enable_rx_to_enhanced_mode(dp, 0);
+		s5p_dp_enable_enhanced_mode(dp, 0);
+	}
 
 	s5p_dp_set_lane_count(dp, dp->video_info->lane_count);
 	s5p_dp_set_link_bandwidth(dp, dp->video_info->link_rate);

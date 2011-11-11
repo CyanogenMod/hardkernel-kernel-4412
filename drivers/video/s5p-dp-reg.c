@@ -16,6 +16,7 @@
 
 #include <plat/dp.h>
 #include <plat/regs-dp.h>
+#include <plat/cpu.h>
 
 #include "s5p-dp.h"
 
@@ -24,6 +25,34 @@
 #define COMMON_INT_MASK_3 (0)
 #define COMMON_INT_MASK_4 (0)
 #define INT_STA_MASK (0)
+
+#ifdef CONFIG_CPU_EXYNOS5250
+void s5p_dp_do_hw_link_training(struct s5p_dp_device *dp)
+{
+	u32 reg;
+
+	reg = DP_BF_C_HW_TRAINING_EN;
+	writel(reg, dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
+}
+
+void s5p_dp_wait_hw_link_training_done(struct s5p_dp_device *dp)
+{
+	u32 reg;
+
+	reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
+	while (reg & DP_BF_C_HW_TRAINING_EN)
+		reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
+}
+
+void s5p_dp_get_hw_link_training_status(struct s5p_dp_device *dp)
+{
+	u32 reg;
+
+	reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
+	if (reg != 0)
+		dev_err(dp->dev, " H/W link training failure: 0x%x\n", reg);
+}
+#endif
 
 void s5p_dp_enable_video_bist(struct s5p_dp_device *dp, bool enable)
 {
@@ -73,13 +102,21 @@ void s5p_dp_lane_swap(struct s5p_dp_device *dp, bool enable)
 {
 	u32 reg;
 
-	if (enable) {
-		reg = LANE1_MAP_LOGIC_LANE_0 | LANE0_MAP_LOGIC_LANE_1;
-		writel(reg, dp->reg_base + S5P_DP_LANE_MAP);
+	if (soc_is_exynos5250()) {
+		if (enable)
+			reg = LANE3_MAP_LOGIC_LANE_0 | LANE2_MAP_LOGIC_LANE_1 |
+				LANE1_MAP_LOGIC_LANE_2 | LANE0_MAP_LOGIC_LANE_3;
+		else
+			reg = LANE3_MAP_LOGIC_LANE_3 | LANE2_MAP_LOGIC_LANE_2 |
+				LANE1_MAP_LOGIC_LANE_1 | LANE0_MAP_LOGIC_LANE_0;
 	} else {
-		reg = LANE1_MAP_LOGIC_LANE_1 | LANE0_MAP_LOGIC_LANE_0;
-		writel(reg, dp->reg_base + S5P_DP_LANE_MAP);
+		if (enable)
+			reg = LANE1_MAP_LOGIC_LANE_0 | LANE0_MAP_LOGIC_LANE_1;
+		else
+			reg = LANE1_MAP_LOGIC_LANE_1 | LANE0_MAP_LOGIC_LANE_0;
 	}
+
+	writel(reg, dp->reg_base + S5P_DP_LANE_MAP);
 }
 
 void s5p_dp_init_analog_param(struct s5p_dp_device *dp)
@@ -107,14 +144,25 @@ void s5p_dp_init_analog_param(struct s5p_dp_device *dp)
 	*/
 	writel(0x57, dp->reg_base + S5P_DP_AUX_ANALOG_CTL);
 
-	/* Output amplitude fine setting */
-	writel(0x33, dp->reg_base + S5P_DP_TX_AMP_TUNING_CTL);
+	if (soc_is_exynos5250()) {
+		/* Output amplitude fine setting */
+		writel(0x3333, dp->reg_base + S5P_DP_TX_AMP_TUNING_CTL);
 
-	/*
-	 * PLL digital power select
-	 * 0x15: 1.125V
-	 */
-	writel(0x15, dp->reg_base + S5P_DP_PLL_CTL);
+		/*
+		 * PLL digital power select
+		 * 0x17: 1.250V
+		 */
+		writel(0x17, dp->reg_base + S5P_DP_PLL_CTL);
+	} else {
+		/* Output amplitude fine setting */
+		writel(0x33, dp->reg_base + S5P_DP_TX_AMP_TUNING_CTL);
+
+		/*
+		 * PLL digital power select
+		 * 0x15: 1.125V
+		 */
+		writel(0x15, dp->reg_base + S5P_DP_PLL_CTL);
+	}
 }
 
 void s5p_dp_init_interrupt(struct s5p_dp_device *dp)
@@ -133,7 +181,10 @@ void s5p_dp_init_interrupt(struct s5p_dp_device *dp)
 	writel(0xff, dp->reg_base + S5P_DP_COMMON_INT_STA_1);
 	writel(0x4f, dp->reg_base + S5P_DP_COMMON_INT_STA_2);
 	writel(0xe0, dp->reg_base + S5P_DP_COMMON_INT_STA_3);
-	writel(0x27, dp->reg_base + S5P_DP_COMMON_INT_STA_4);
+	if (soc_is_exynos5250())
+		writel(0xe7, dp->reg_base + S5P_DP_COMMON_INT_STA_4);
+	else
+		writel(0x27, dp->reg_base + S5P_DP_COMMON_INT_STA_4);
 	writel(0x63, dp->reg_base + S5P_DP_INT_STA);
 
 	/* 0:mask,1: unmask */
@@ -928,6 +979,22 @@ void s5p_dp_set_lane1_link_training(struct s5p_dp_device *dp, u32 training_lane)
 
 	reg = training_lane;
 	writel(reg, dp->reg_base + S5P_DP_LN1_LINK_TRAINING_CTL);
+}
+
+void s5p_dp_set_lane2_link_training(struct s5p_dp_device *dp, u32 training_lane)
+{
+	u32 reg;
+
+	reg = training_lane;
+	writel(reg, dp->reg_base + S5P_DP_LN2_LINK_TRAINING_CTL);
+}
+
+void s5p_dp_set_lane3_link_training(struct s5p_dp_device *dp, u32 training_lane)
+{
+	u32 reg;
+
+	reg = training_lane;
+	writel(reg, dp->reg_base + S5P_DP_LN3_LINK_TRAINING_CTL);
 }
 
 u32 s5p_dp_get_lane0_link_training(struct s5p_dp_device *dp)

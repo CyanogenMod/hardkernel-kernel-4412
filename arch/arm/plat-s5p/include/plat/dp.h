@@ -118,6 +118,8 @@ enum analog_power_block {
 	AUX_BLOCK,
 	CH0_BLOCK,
 	CH1_BLOCK,
+	CH2_BLOCK,
+	CH3_BLOCK,
 	ANALOG_TOTAL,
 	POWER_ALL
 };
