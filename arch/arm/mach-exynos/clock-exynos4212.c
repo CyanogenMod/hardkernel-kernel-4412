@@ -330,7 +330,7 @@ static struct clk exynos4212_init_clocks_off[] = {
 	}, {
 		.name		= "ppmutv",
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
-		.ctrlbit	= (1 << 20 || 1 << 21),
+		.ctrlbit	= (1 << 20 | 1 << 21),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(g2d_acp, 15),
