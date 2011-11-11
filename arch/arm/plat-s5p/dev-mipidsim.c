@@ -43,7 +43,7 @@ static struct mipi_dsim_config dsim_info = {
 	.e_burst_mode = DSIM_BURST,
 
 	.p = 2,
-	.m =80,
+	.m =57,
 	.s = 1,
 
 	/* D-PHY PLL stable time spec :min = 200usec ~ max 400usec */
