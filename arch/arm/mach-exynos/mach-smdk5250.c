@@ -137,22 +137,23 @@ static void mipi_lcd_set_power(struct plat_lcd_data *pd,
 	/* reset */
 	gpio_request_one(EXYNOS5_GPX1(5), GPIOF_OUT_INIT_HIGH, "GPX1");
 
-	mdelay(5);
+	mdelay(20);
 	if (power) {
 		/* fire nRESET on power up */
 		gpio_set_value(EXYNOS5_GPX1(5), 0);
-		mdelay(5);
+		mdelay(20);
 		gpio_set_value(EXYNOS5_GPX1(5), 1);
-		mdelay(5);
+		mdelay(20);
 		gpio_free(EXYNOS5_GPX1(5));
 	} else {
 		/* fire nRESET on power off */
 		gpio_set_value(EXYNOS5_GPX1(5), 0);
-		mdelay(5);
+		mdelay(20);
 		gpio_set_value(EXYNOS5_GPX1(5), 1);
-		mdelay(5);
+		mdelay(20);
 		gpio_free(EXYNOS5_GPX1(5));
 	}
+	mdelay(20);
 	/* power */
 	gpio_request_one(EXYNOS5_GPX3(0), GPIOF_OUT_INIT_LOW, "GPX3");
 	if (power) {
