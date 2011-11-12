@@ -76,7 +76,7 @@ void s3c_mshci_set_platdata(struct s3c_mshci_platdata *pd)
 	if (pd->host_caps)
 		set->host_caps |= pd->host_caps;
 	if (soc_is_exynos4210()) {
-		if (pd->host_caps && exynos4_subrev() == 0) {
+		if (pd->host_caps && samsung_rev() != EXYNOS4210_REV_1_1) {
 			printk(KERN_INFO "MSHC: This exynos4 is EVT1.0. "
 				"Disable DDR R/W for eMMC.\n");
 			set->host_caps &= ~MMC_CAP_1_8V_DDR;

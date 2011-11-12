@@ -112,6 +112,10 @@ IS_SAMSUNG_CPU(exynos5250, EXYNOS5250_CPU_ID, EXYNOS_CPU_MASK)
 # define soc_is_exynos4210()	0
 #endif
 
+#define EXYNOS4210_REV_0       (0x0)
+#define EXYNOS4210_REV_1_0     (0x10)
+#define EXYNOS4210_REV_1_1     (0x11)
+
 #if defined(CONFIG_CPU_EXYNOS4212)
 # define soc_is_exynos4212()	is_samsung_exynos4212()
 #else
@@ -179,6 +183,8 @@ extern void s5p_init_io(struct map_desc *mach_desc,
 extern void s3c24xx_init_cpu(void);
 extern void s3c64xx_init_cpu(void);
 extern void s5p_init_cpu(void __iomem *cpuid_addr);
+
+extern unsigned int samsung_rev(void);
 
 extern void s3c24xx_init_uarts(struct s3c2410_uartcfg *cfg, int no);
 

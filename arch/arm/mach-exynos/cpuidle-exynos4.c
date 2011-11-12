@@ -38,9 +38,9 @@
 #define REG_DIRECTGO_ADDR	(S5P_VA_SYSRAM_NS + 0x24)
 #define REG_DIRECTGO_FLAG	(S5P_VA_SYSRAM_NS + 0x20)
 #else
-#define REG_DIRECTGO_ADDR	(exynos4_subrev() == 0 ?\
+#define REG_DIRECTGO_ADDR	(samsung_rev() != EXYNOS4210_REV_1_1 ?\
 				(S5P_VA_SYSRAM + 0x24) : S5P_INFORM7)
-#define REG_DIRECTGO_FLAG	(exynos4_subrev() == 0 ?\
+#define REG_DIRECTGO_FLAG	(samsung_rev() != EXYNOS4210_REV_1_1 ?\
 				(S5P_VA_SYSRAM + 0x20) : S5P_INFORM6)
 #endif
 

@@ -52,11 +52,6 @@ static struct map_desc exynos4_iodesc[] __initdata = {
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
 	}, {
-		.virtual	= (unsigned long)S5P_VA_SYSRAM,
-		.pfn		= __phys_to_pfn(EXYNOS4_PA_SYSRAM),
-		.length		= SZ_4K,
-		.type		= MT_DEVICE,
-	}, {
 		.virtual	= (unsigned long)S5P_VA_CMU,
 		.pfn		= __phys_to_pfn(EXYNOS4_PA_CMU),
 		.length		= SZ_128K,
@@ -149,7 +144,7 @@ static struct map_desc exynos4_iodesc[] __initdata = {
 	},
 };
 
-static struct map_desc exynos4_iodesc_4210[] __initdata = {
+static struct map_desc exynos4210_iodesc[] __initdata = {
 	{
 		.virtual	= (unsigned long)S5P_VA_DMC0,
 		.pfn		= __phys_to_pfn(EXYNOS4_PA_DMC0),
@@ -168,7 +163,25 @@ static struct map_desc exynos4_iodesc_4210[] __initdata = {
 	},
 };
 
-static struct map_desc exynos4_iodesc_4212[] __initdata = {
+static struct map_desc exynos4210_iodesc_rev_0[] __initdata = {
+	{
+		.virtual	= (unsigned long)S5P_VA_SYSRAM,
+		.pfn		= __phys_to_pfn(EXYNOS4_PA_SYSRAM0),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
+	},
+};
+
+static struct map_desc exynos4210_iodesc_rev_1[] __initdata = {
+	{
+		.virtual	= (unsigned long)S5P_VA_SYSRAM,
+		.pfn		= __phys_to_pfn(EXYNOS4_PA_SYSRAM1),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
+	},
+};
+
+static struct map_desc exynos4212_iodesc[] __initdata = {
 	{
 		.virtual	= (unsigned long)S5P_VA_DMC0,
 		.pfn		= __phys_to_pfn(EXYNOS4_PA_DMC0_4212),
@@ -204,10 +217,17 @@ void __init exynos4_map_io(void)
 {
 	iotable_init(exynos4_iodesc, ARRAY_SIZE(exynos4_iodesc));
 
-	if (soc_is_exynos4210())
-		iotable_init(exynos4_iodesc_4210, ARRAY_SIZE(exynos4_iodesc_4210));
-	else
-		iotable_init(exynos4_iodesc_4212, ARRAY_SIZE(exynos4_iodesc_4212));
+	if (soc_is_exynos4210()) {
+		iotable_init(exynos4210_iodesc, ARRAY_SIZE(exynos4210_iodesc));
+		if (samsung_rev() == EXYNOS4210_REV_0)
+			iotable_init(exynos4210_iodesc_rev_0,
+				ARRAY_SIZE(exynos4210_iodesc_rev_0));
+		else
+			iotable_init(exynos4210_iodesc_rev_1,
+				ARRAY_SIZE(exynos4210_iodesc_rev_1));
+	} else {
+		iotable_init(exynos4212_iodesc, ARRAY_SIZE(exynos4212_iodesc));
+	}
 
 #ifdef CONFIG_S3C_DEV_HSMMC
 	exynos4_default_sdhci0();
@@ -345,16 +365,6 @@ static int __init exynos4_l2x0_cache_init(void)
 
 early_initcall(exynos4_l2x0_cache_init);
 #endif
-
-int exynos4_subrev(void)
-{
-	static int subrev = -1;
-
-	if (unlikely(subrev < 0))
-		subrev = readl(S5P_VA_CHIPID) & 0xf;
-
-	return subrev;
-}
 
 static void exynos4_sw_reset(void)
 {
