@@ -806,6 +806,11 @@ enum dma_output_order {
 	/* (only valid at DMA_OUTPUT_FORMAT_BAYER) */
 };
 
+enum dma_output_notify_dma_done {
+	DMA_OUTPUT_NOTIFY_DMA_DONE_DISABLE	= 0,
+	DMA_OUTPUT_NOTIFY_DMA_DONE_ENBABLE	= 1,
+};
+
 enum dma_output_error {
 	DMA_OUTPUT_ERROR_NO		= 0 /* DMA output setting is done */
 };
@@ -815,7 +820,7 @@ enum global_shotmode_error {
 	GLOBAL_SHOTMODE_ERROR_NO	= 0 /* shot-mode setting is done */
 };
 
-/* -------------------------  AF  ------------------------------------ */
+/* -------------------------  AA  ------------------------------------ */
 enum isp_lock_command {
 	ISP_AA_COMMAND_START	= 0,
 	ISP_AA_COMMAND_STOP	= 1
@@ -1180,7 +1185,8 @@ struct param_dma_output {
 	u32	order;
 	u32	buffer_number;
 	u32	buffer_address;
-	u32	reserved[PARAMETER_MAX_MEMBER-10];
+	u32	notify_dma_done;
+	u32	reserved[PARAMETER_MAX_MEMBER-11];
 	u32	err;
 };
 

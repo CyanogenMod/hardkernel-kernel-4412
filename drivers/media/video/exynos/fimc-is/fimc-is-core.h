@@ -51,11 +51,11 @@
 #define FIMC_IS_SHUTDOWN_TIMEOUT	(400*HZ)
 #define FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR	(3*HZ)
 
-#define FIMC_IS_A5_MEM_SIZE	0x02000000
+#define FIMC_IS_A5_MEM_SIZE	0x00A00000
 #define FIMC_IS_REGION_SIZE	0x5000
-#define ISP_SETFILE_SIZE	(0x1000/4)
+#define ISP_SETFILE_SIZE	0xa140
 #define DRC_SETFILE_SIZE	0x140
-#define FD_SETFILE_SIZE		0x88
+#define FD_SETFILE_SIZE		(0x88*2)
 
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)

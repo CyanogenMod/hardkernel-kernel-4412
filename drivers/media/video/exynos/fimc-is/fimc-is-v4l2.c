@@ -2823,7 +2823,7 @@ static int fimc_is_g_ext_ctrls_handler(struct fimc_is_dev *dev,
 		ctrl->value = dev->fd_header.ref_end;
 		break;
 	case V4L2_CID_IS_FD_GET_FACE_FRAME_NUMBER:
-		if (index > 6) {
+		if (index > 19) {
 			dev->fd_header.offset++;
 			if ((dev->fd_header.ref + dev->fd_header.offset)
 				> MAX_FACE_COUNT) {
@@ -2918,6 +2918,9 @@ static int fimc_is_g_ext_ctrls_handler(struct fimc_is_dev *dev,
 	case V4L2_CID_IS_FD_GET_MOUTH_SIZE_Y:
 		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
 				+ dev->fd_header.offset].mouth.height;
+		break;
+	case V4L2_CID_IS_FD_GET_ANGLE:
+		ctrl->value = 0; /* FIXME */
 		break;
 	default:
 		return 255;

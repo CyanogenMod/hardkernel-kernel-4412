@@ -114,6 +114,9 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	switch (dev->i2h_cmd.cmd) {
 	case IHC_GET_SENSOR_NUMBER:
 		dbg("IHC_GET_SENSOR_NUMBER\n");
+		fimc_is_hw_get_param(dev, 1);
+		dbg("ISP - FW version - %d\n", dev->i2h_cmd.arg[0]);
+		dev->fw.ver = dev->i2h_cmd.arg[0];
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		fimc_is_hw_set_sensor_num(dev);
 		break;
