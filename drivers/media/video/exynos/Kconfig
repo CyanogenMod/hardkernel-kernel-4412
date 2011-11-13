@@ -11,7 +11,7 @@ config VIDEO_EXYNOS
 config VIDEO_EXYNOS_MEMSIZE_FIMC_IS
 	int "Memory size in Mega bytes for FIMC-IS"
 	depends on VIDEO_EXYNOS
-	default "32"
+	default "10"
 	help
 	  This is to assign memory used in FIMC-IS.
 
