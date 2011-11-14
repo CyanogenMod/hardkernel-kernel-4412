@@ -218,7 +218,7 @@ static struct v4l2_queryctrl fimc_ctrls[] = {
 		.step		= 90,
 		.default_value	= 0,
 	}, {
-		.id		= V4L2_CID_RGB_ALPHA,
+		.id		= V4L2_CID_GLOBAL_ALPHA,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Set RGB alpha",
 		.minimum	= 0,
@@ -1325,7 +1325,7 @@ int fimc_s_ctrl(struct fimc_ctx *ctx, struct v4l2_control *ctrl)
 			ctx->rotation = ctrl->value;
 		break;
 
-	case V4L2_CID_RGB_ALPHA:
+	case V4L2_CID_GLOBAL_ALPHA:
 		ctx->d_frame.alpha = ctrl->value;
 		break;
 
