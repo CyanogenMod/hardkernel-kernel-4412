@@ -2447,16 +2447,19 @@ int fimc_qbuf_output(void *fh, struct v4l2_buffer *b)
 				return ret;
 		}
 
+#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+		pm_runtime_get_sync(ctrl->dev);
+#endif
+
 		/* Attach the buffer to the incoming queue. */
 		ret = fimc_push_inq(ctrl, ctx, b->index);
 		if (ret < 0) {
 			fimc_err("Fail: fimc_push_inq\n");
+#if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
+			pm_runtime_put_sync(ctrl->dev);
+#endif
 			return -EINVAL;
 		}
-
-#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-		pm_runtime_get_sync(ctrl->dev);
-#endif
 	}
 
 	if ((ctrl->status == FIMC_READY_ON) ||
