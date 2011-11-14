@@ -1300,6 +1300,7 @@ static inline void exynos_reserve_mem(void)
 }
 #endif
 
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 static void __init smdk5250_camera_gpio_cfg(void)
 {
 	/* CAM A port(b0010) : PCLK, VSYNC, HREF, CLK_OUT */
@@ -1312,6 +1313,7 @@ static void __init smdk5250_camera_gpio_cfg(void)
 	s3c_gpio_setpull(EXYNOS5_GPX2(6), S3C_GPIO_PULL_NONE);
 #endif
 }
+#endif
 
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
 static struct exynos_gscaler_isp_info isp_info[] = {
