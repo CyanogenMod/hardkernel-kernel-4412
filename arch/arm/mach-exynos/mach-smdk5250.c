@@ -12,6 +12,7 @@
 #include <linux/serial_core.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
+#include <linux/input.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/wm8994/pdata.h>
@@ -1004,6 +1005,16 @@ static struct i2c_board_info i2c_devs0[] __initdata = {
 	}
 };
 
+struct egalax_i2c_platform_data {
+	unsigned int gpio_int;
+	unsigned int gpio_en;
+	unsigned int gpio_rst;
+};
+
+static struct egalax_i2c_platform_data exynos5_egalax_data = {
+	.gpio_int	= EXYNOS5_GPX3(1),
+};
+
 static struct i2c_board_info i2c_devs1[] __initdata = {
 	{
 		I2C_BOARD_INFO("wm8994", 0x1a),
@@ -1051,6 +1062,14 @@ static struct platform_device samsung_device_battery = {
 };
 #endif
 
+static struct i2c_board_info i2c_devs7[] __initdata = {
+	{
+		I2C_BOARD_INFO("egalax_i2c", 0x04),
+		.irq		= IRQ_EINT(25),
+		.platform_data	= &exynos5_egalax_data,
+	},
+};
+
 static struct platform_device *smdk5250_devices[] __initdata = {
 	/* Samsung Power Domain */
 	&exynos5_device_pd[PD_MFC],
@@ -1071,6 +1090,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&s3c_device_i2c1,
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
+	&s3c_device_i2c7,
 #ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
 #endif
@@ -1446,7 +1466,8 @@ static void __init smdk5250_machine_init(void)
 
 	s3c_i2c4_set_platdata(NULL);
 	s3c_i2c5_set_platdata(NULL);
-
+	s3c_i2c7_set_platdata(NULL);
+	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	exynos_dwmci_set_platdata(&exynos_dwmci_pdata);
 #endif
