@@ -31,6 +31,64 @@
 #include <mach/dev-sysmmu.h>
 #include <mach/exynos-clock.h>
 
+#ifdef CONFIG_PM
+static struct sleep_save exynos5_clock_save[] = {
+	/* CMU side */
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_TOP),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_GSCL),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_DISP1_0),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_FSYS),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_PERIC0),
+	SAVE_ITEM(EXYNOS5_CLKSRC_MASK_PERIC1),
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_GSCL),
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_DISP1),
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_MFC),
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_G3D),
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_GEN),
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_FSYS),
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_GPS),
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_PERIC),
+	SAVE_ITEM(EXYNOS5_CLKGATE_IP_PERIS),
+	SAVE_ITEM(EXYNOS5_CLKGATE_BLOCK),
+	SAVE_ITEM(EXYNOS5_CLKDIV_TOP0),
+	SAVE_ITEM(EXYNOS5_CLKDIV_TOP1),
+	SAVE_ITEM(EXYNOS5_CLKDIV_GSCL),
+	SAVE_ITEM(EXYNOS5_CLKDIV_DISP1_0),
+	SAVE_ITEM(EXYNOS5_CLKDIV_GEN),
+	SAVE_ITEM(EXYNOS5_CLKDIV_FSYS0),
+	SAVE_ITEM(EXYNOS5_CLKDIV_FSYS1),
+	SAVE_ITEM(EXYNOS5_CLKDIV_FSYS2),
+	SAVE_ITEM(EXYNOS5_CLKDIV_FSYS3),
+	SAVE_ITEM(EXYNOS5_CLKDIV_PERIC0),
+	SAVE_ITEM(EXYNOS5_CLKDIV_PERIC1),
+	SAVE_ITEM(EXYNOS5_CLKDIV_PERIC2),
+	SAVE_ITEM(EXYNOS5_CLKDIV_PERIC3),
+	SAVE_ITEM(EXYNOS5_CLKDIV_PERIC4),
+	SAVE_ITEM(EXYNOS5_CLKDIV_PERIC5),
+	SAVE_ITEM(EXYNOS5_SCLK_DIV_ISP),
+	SAVE_ITEM(EXYNOS5_CLKSRC_TOP0),
+	SAVE_ITEM(EXYNOS5_CLKSRC_TOP1),
+	SAVE_ITEM(EXYNOS5_CLKSRC_TOP2),
+	SAVE_ITEM(EXYNOS5_CLKSRC_TOP3),
+	SAVE_ITEM(EXYNOS5_CLKSRC_GSCL),
+	SAVE_ITEM(EXYNOS5_CLKSRC_DISP1_0),
+	SAVE_ITEM(EXYNOS5_CLKSRC_FSYS),
+	SAVE_ITEM(EXYNOS5_CLKSRC_PERIC0),
+	SAVE_ITEM(EXYNOS5_CLKSRC_PERIC1),
+	SAVE_ITEM(EXYNOS5_SCLK_SRC_ISP),
+	SAVE_ITEM(EXYNOS5_BPLL_CON0),
+	SAVE_ITEM(EXYNOS5_BPLL_CON1),
+	SAVE_ITEM(EXYNOS5_CPLL_CON0),
+	SAVE_ITEM(EXYNOS5_CPLL_CON1),
+	SAVE_ITEM(EXYNOS5_EPLL_CON0),
+	SAVE_ITEM(EXYNOS5_EPLL_CON1),
+	SAVE_ITEM(EXYNOS5_EPLL_CON2),
+	SAVE_ITEM(EXYNOS5_VPLL_CON0),
+	SAVE_ITEM(EXYNOS5_VPLL_CON1),
+	SAVE_ITEM(EXYNOS5_VPLL_CON2),
+};
+#endif
+
 static struct clk exynos5_clk_sclk_hdmi24m = {
 	.name		= "sclk_hdmi24m",
 	.rate		= 24000000,
@@ -108,11 +166,6 @@ static int exynos5_clk_ip_fsys_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_FSYS, clk, enable);
 }
 
-static int exynos5_clk_ip_disp0_ctrl(struct clk *clk, int enable)
-{
-	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_DISP0, clk, enable);
-}
-
 static int exynos5_clk_ip_disp1_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_DISP1, clk, enable);
@@ -131,11 +184,6 @@ static int exynos5_clk_hdmiphy_ctrl(struct clk *clk, int enable)
 static int exynos5_clk_ip_gen_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GEN, clk, enable);
-}
-
-static int exynos5_clksrc_mask_disp0_0_ctrl(struct clk *clk, int enable)
-{
-	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_DISP0_0, clk, enable);
 }
 
 static int exynos5_clksrc_mask_disp1_0_ctrl(struct clk *clk, int enable)
@@ -760,11 +808,6 @@ static struct clk exynos5_init_clocks_off[] = {
 		.parent		= &exynos5_clk_mout_aclk_200.clk,
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 19),
-	}, {
-		.name		= "lcd",
-		.devname	= "s3cfb.0",
-		.enable		= exynos5_clk_ip_disp0_ctrl,
-		.ctrlbit	= (1 << 0),
 	}, {
 		.name		= "lcd",
 		.devname	= "s3cfb.1",
@@ -1407,16 +1450,6 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_fimd",
-			.devname	= "s3cfb.0",
-			.enable		= exynos5_clksrc_mask_disp0_0_ctrl,
-			.ctrlbit	= (1 << 0),
-		},
-		.sources = &exynos5_clkset_group,
-		.reg_src = { .reg = EXYNOS5_CLKSRC_DISP0_0, .shift = 0, .size = 4 },
-		.reg_div = { .reg = EXYNOS5_CLKDIV_DISP0_0, .shift = 0, .size = 4 },
-	}, {
-		.clk	= {
-			.name		= "sclk_fimd",
 			.devname	= "s3cfb.1",
 			.enable		= exynos5_clksrc_mask_disp1_0_ctrl,
 			.ctrlbit	= (1 << 0),
@@ -1642,6 +1675,28 @@ static struct clk_ops exynos5_fout_apll_ops = {
 	.get_rate = exynos5_fout_apll_get_rate,
 };
 
+#ifdef CONFIG_PM
+static int exynos5_clock_suspend(void)
+{
+	s3c_pm_do_save(exynos5_clock_save, ARRAY_SIZE(exynos5_clock_save));
+
+	return 0;
+}
+
+static void exynos5_clock_resume(void)
+{
+	s3c_pm_do_restore_core(exynos5_clock_save, ARRAY_SIZE(exynos5_clock_save));
+}
+#else
+#define exynos5_clock_suspend NULL
+#define exynos5_clock_resume NULL
+#endif
+
+struct syscore_ops exynos5_clock_syscore_ops = {
+	.suspend        = exynos5_clock_suspend,
+	.resume         = exynos5_clock_resume,
+};
+
 void __init_or_cpufreq exynos5_setup_clocks(void)
 {
 	struct clk *xtal_clk;
@@ -1780,5 +1835,6 @@ void __init exynos5_register_clocks(void)
 	s3c_register_clocks(exynos5_i2cs_clocks, ARRAY_SIZE(exynos5_i2cs_clocks));
 	s3c_disable_clocks(exynos5_i2cs_clocks, ARRAY_SIZE(exynos5_i2cs_clocks));
 
+	register_syscore_ops(&exynos5_clock_syscore_ops);
 	s3c_pwmclk_init();
 }
