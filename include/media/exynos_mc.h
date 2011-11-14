@@ -36,6 +36,14 @@ enum mdev_node {
 	MDEV_CAPTURE,
 };
 
+struct exynos_media_ops {
+	int (*power_off)(struct v4l2_subdev *sd);
+};
+
+struct exynos_entity_data {
+	const struct exynos_media_ops *media_ops;
+};
+
 /**
  * struct exynos_md - Exynos media device information
  * @media_dev: top level media device
