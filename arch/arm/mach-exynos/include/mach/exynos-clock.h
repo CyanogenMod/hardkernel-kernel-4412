@@ -47,9 +47,8 @@ extern struct clksrc_sources exynos4_clkset_group;
 
 extern struct clk *exynos4_clkset_mout_mfc0_list[];
 
-#ifndef CONFIG_MACH_FPGA5210
 extern struct clk exynos4_init_dmaclocks[];
-#endif
+
 /* For vpll  */
 struct vpll_div_data {
 	u32 rate;
