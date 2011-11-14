@@ -35,19 +35,25 @@
 #ifdef CONFIG_PM
 static struct sleep_save exynos4212_clock_save[] = {
 	/* CMU side */
-	SAVE_ITEM(EXYNOS4_CLKSRC_CAM1),
-	SAVE_ITEM(EXYNOS4_CLKSRC_ISP),
-	SAVE_ITEM(EXYNOS4_CLKDIV_CAM1),
-	SAVE_ITEM(EXYNOS4_CLKDIV_ISP),
-	SAVE_ITEM(EXYNOS4_CLKDIV_IMAGE),
-	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_ISP),
+	SAVE_ITEM(EXYNOS4_DMC_PAUSE_CTRL),
 	SAVE_ITEM(EXYNOS4_CLKGATE_IP_ISP),
 	SAVE_ITEM(EXYNOS4_CLKGATE_IP_DMC1),
 	SAVE_ITEM(EXYNOS4_CLKGATE_IP_IMAGE_4212),
 	SAVE_ITEM(EXYNOS4_CLKGATE_IP_PERIR_4212),
-	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_PERIL),
+	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_LEFTBUS),
+	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_IMAGE),
+	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_RIGHTBUS),
 	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_PERIR),
-	SAVE_ITEM(EXYNOS4_DMC_PAUSE_CTRL),
+	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_PERIL),
+	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_DMC0),
+	SAVE_ITEM(EXYNOS4_CLKGATE_BUS_DMC1),
+	SAVE_ITEM(EXYNOS4_CLKGATE_SCLK_DMC),
+	SAVE_ITEM(EXYNOS4_CLKDIV_CAM1),
+	SAVE_ITEM(EXYNOS4_CLKDIV_ISP),
+	SAVE_ITEM(EXYNOS4_CLKDIV_IMAGE),
+	SAVE_ITEM(EXYNOS4_CLKSRC_MASK_ISP),
+	SAVE_ITEM(EXYNOS4_CLKSRC_ISP),
+	SAVE_ITEM(EXYNOS4_CLKSRC_CAM1),
 };
 
 static struct sleep_save exynos4212_epll_save[] = {
@@ -97,11 +103,6 @@ static int exynos4212_clk_ip_isp0_ctrl(struct clk *clk, int enable)
 static int exynos4212_clk_ip_isp1_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_ISP1, clk, enable);
-}
-
-static int exynos4212_clk_ip_dmc0_ctrl(struct clk *clk, int enable)
-{
-	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_DMC0, clk, enable);
 }
 
 static struct clk *exynos4212_clk_src_mpll_user_list[] = {
@@ -361,7 +362,7 @@ static struct clk exynos4212_init_clocks_off[] = {
 	{
 		.name		= "c2c",
 		.devname	= "samsung-c2c",
-		.enable		= exynos4212_clk_ip_dmc0_ctrl,
+		.enable		= exynos4_clk_ip_dmc_ctrl,
 		.ctrlbit	= (1 << 26 | 1 << 27 | 1 << 30 | 1 << 31),
 	}, {
 		.name		= "sclk_c2c_off",
@@ -553,7 +554,7 @@ void __init exynos4212_register_clocks(void)
 	exynos4_clk_aclk_200.reg_src.shift = 20;
 	exynos4_clk_aclk_200.reg_src.size = 1;
 
-	exynos4_clk_fimg2d.enable = exynos4212_clk_ip_dmc0_ctrl;
+	exynos4_clk_fimg2d.enable = exynos4_clk_ip_dmc_ctrl;
 	exynos4_clk_fimg2d.ctrlbit = (1 << 23);
 
 	exynos4_clk_mout_g2d0.reg_src.reg = EXYNOS4_CLKSRC_DMC;
