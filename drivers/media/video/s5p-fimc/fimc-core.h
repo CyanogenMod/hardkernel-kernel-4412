@@ -65,7 +65,6 @@
 /*#define DEFAULT_ISP_PIXCODE	V4L2_MBUS_FMT_YUYV8_2X8*/
 #define DEFAULT_ISP_PIXCODE	V4L2_MBUS_FMT_VYUY8_2X8
 
-#define FIMC_SRC_CLOCK		"mout_mpll"
 #define CAM_SRC_CLOCK		"xusbxti"
 #define FIMC_CMA_NAME		"fimc"
 #define FIMC_CMA_NAME_SIZE	6

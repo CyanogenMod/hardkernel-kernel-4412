@@ -26,13 +26,13 @@
 #include <linux/videodev2.h>
 #include <media/v4l2-subdev.h>
 #include <plat/mipi_csis.h>
+#include <plat/cpu.h>
 
 static int debug;
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Enable module debug trace. Set to 1 to enable.");
 
 #define MODULE_NAME		"s5p-mipi-csis"
-#define MIPI_CSIS_SRC_CLOCK		"mout_mpll"
 
 /* Register map definition */
 
@@ -511,7 +511,11 @@ static int s5p_csis_probe(struct platform_device *pdev)
 
 	if (pdata->clk_rate) {
 		struct clk *srclk;
-		srclk = clk_get(&state->pdev->dev, MIPI_CSIS_SRC_CLOCK);
+		if (soc_is_exynos4212() || soc_is_exynos4412())
+			srclk = clk_get(&state->pdev->dev, "mout_mpll_user");
+		else
+			srclk = clk_get(&state->pdev->dev, "mout_mpll");
+
 		if (IS_ERR_OR_NULL(srclk)) {
 			dev_err(&state->pdev->dev, "failed to get mipi-csis source clock\n");
 			return -ENXIO;

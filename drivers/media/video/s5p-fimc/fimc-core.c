@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <media/v4l2-ioctl.h>
+#include <plat/cpu.h>
 
 #include "fimc-core.h"
 
@@ -1775,7 +1776,10 @@ int fimc_clk_setrate(struct fimc_dev *fimc, int clk_num, void *pdata)
 	if (clk_num == CLK_BUS) {
 		struct samsung_fimc_driverdata *drv_data =
 			(struct samsung_fimc_driverdata *)pdata;
-		srclk = clk_get(&fimc->pdev->dev, FIMC_SRC_CLOCK);
+		if (soc_is_exynos4212() || soc_is_exynos4412())
+			srclk = clk_get(&fimc->pdev->dev, "mout_mpll_user");
+		else
+			srclk = clk_get(&fimc->pdev->dev, "mout_mpll");
 		if (IS_ERR_OR_NULL(srclk)) {
 			dev_err(&fimc->pdev->dev, "failed to get fimc source clock\n");
 			return -ENXIO;
