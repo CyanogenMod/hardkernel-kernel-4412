@@ -173,15 +173,17 @@
 
 /* VIDTCON2 */
 
+#define VIDTCON2_LINEVAL_E(_x)			(((_x) & 0x800) << 12)
 #define VIDTCON2_LINEVAL_MASK			(0x7ff << 11)
 #define VIDTCON2_LINEVAL_SHIFT			(11)
 #define VIDTCON2_LINEVAL_LIMIT			(0x7ff)
-#define VIDTCON2_LINEVAL(_x)			((_x) << 11)
+#define VIDTCON2_LINEVAL(_x)			(((_x) & 0x7ff) << 11)
 
+#define VIDTCON2_HOZVAL_E(_x)			(((_x) & 0x800) << 11)
 #define VIDTCON2_HOZVAL_MASK			(0x7ff << 0)
 #define VIDTCON2_HOZVAL_SHIFT			(0)
 #define VIDTCON2_HOZVAL_LIMIT			(0x7ff)
-#define VIDTCON2_HOZVAL(_x)			((_x) << 0)
+#define VIDTCON2_HOZVAL(_x)			(((_x) & 0x7ff) << 0)
 
 /* WINCONx */
 

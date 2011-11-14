@@ -635,7 +635,9 @@ static int s3c_fb_set_par(struct fb_info *info)
 		writel(data, regs + sfb->variant.vidtcon + 4);
 
 		data = VIDTCON2_LINEVAL(windata->win_mode.yres - 1) |
-		       VIDTCON2_HOZVAL(windata->win_mode.xres - 1);
+		       VIDTCON2_HOZVAL(windata->win_mode.xres - 1) |
+		       VIDTCON2_LINEVAL_E(windata->win_mode.yres - 1) |
+		       VIDTCON2_HOZVAL_E(windata->win_mode.xres - 1);
 
 		/* VIDTCON2 */
 		writel(data, regs + sfb->variant.vidtcon + 8);
