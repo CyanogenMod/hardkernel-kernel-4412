@@ -1252,6 +1252,12 @@ config ARM_ERRATA_761320
 	depends on CPU_V7 && SMP
 	help
 	  This option enables the workaround for the 761320 Cortex-A9 erratum.
+
+config ARM_ERRATA_763722
+	bool "ARM errata: disable store streaming of mode 2 and mode 3"
+	depends on CPU_V7 && SMP
+	help
+	  This option enables the workaround for the 763722 Cortex-A15 erratum.
 endmenu
 
 source "arch/arm/common/Kconfig"
