@@ -154,9 +154,12 @@ static int hdmi_streamon(struct hdmi_device *hdev)
 	/* set packets for audio */
 	hdmi_set_packets(hdev);
 
-	/* init audio as I2S */
+	/* init audio */
+#if defined(CONFIG_VIDEO_EXYNOS_HDMI_AUDIO_I2S)
 	hdmi_reg_i2s_audio_init(hdev);
-
+#elif defined(CONFIG_VIDEO_EXYNOS_HDMI_AUDIO_SPDIF)
+	hdmi_reg_spdif_audio_init(hdev);
+#endif
 	/* enbale HDMI audio */
 	if (hdev->audio_enable)
 		hdmi_audio_enable(hdev, 1);
@@ -580,6 +583,7 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 	hdmi_dev->audio_enable = 1;
 	hdmi_dev->sample_rate = DEFAULT_SAMPLE_RATE;
 	hdmi_dev->bits_per_sample = DEFAULT_BITS_PER_SAMPLE;
+	hdmi_dev->audio_codec = DEFAULT_AUDIO_CODEC;
 
 	/* register hdmi subdev as entity */
 	ret = hdmi_register_entity(hdmi_dev);

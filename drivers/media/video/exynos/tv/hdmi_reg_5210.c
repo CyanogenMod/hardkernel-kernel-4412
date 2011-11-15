@@ -2495,7 +2495,7 @@ void hdmi_reg_init(struct hdmi_device *hdev)
 	/* enable AVI packet every vsync, fixes purple line problem */
 	hdmi_writeb(hdev, HDMI_AVI_CON, 0x02);
 	/* force YUV444, look to CEA-861-D, table 7 for more detail */
-	hdmi_writeb(hdev, HDMI_AVI_BYTE(0), 2 << 5);
+	hdmi_writeb(hdev, HDMI_AVI_BYTE(1), 2 << 5);
 	hdmi_write_mask(hdev, HDMI_CON_1, 2, 3 << 5);
 }
 
@@ -2776,6 +2776,46 @@ void hdmi_reg_set_acr(struct hdmi_device *hdev)
 
 	/* transfer ACR packet */
 	hdmi_write(hdev, HDMI_ACR_CON, HDMI_ACR_CON_TX_MODE_MESURED_CTS);
+}
+
+void hdmi_reg_spdif_audio_init(struct hdmi_device *hdev)
+{
+	u32 val;
+	int bps, rep_time;
+
+	hdmi_write(hdev, HDMI_I2S_CLK_CON, HDMI_I2S_CLK_ENABLE);
+
+	val = HDMI_SPDIFIN_CFG_NOISE_FILTER_2_SAMPLE |
+		HDMI_SPDIFIN_CFG_PCPD_MANUAL |
+		HDMI_SPDIFIN_CFG_WORD_LENGTH_MANUAL |
+		HDMI_SPDIFIN_CFG_UVCP_REPORT |
+		HDMI_SPDIFIN_CFG_HDMI_2_BURST |
+		HDMI_SPDIFIN_CFG_DATA_ALIGN_32;
+	hdmi_write(hdev, HDMI_SPDIFIN_CONFIG_1, val);
+	hdmi_write(hdev, HDMI_SPDIFIN_CONFIG_2, 0);
+
+	bps = hdev->audio_codec == HDMI_AUDIO_PCM ? hdev->bits_per_sample : 16;
+	rep_time = hdev->audio_codec == HDMI_AUDIO_AC3 ? 1536 * 2 - 1 : 0;
+	val = HDMI_SPDIFIN_USER_VAL_REPETITION_TIME_LOW(rep_time) |
+		HDMI_SPDIFIN_USER_VAL_WORD_LENGTH_24;
+	hdmi_write(hdev, HDMI_SPDIFIN_USER_VALUE_1, val);
+	val = HDMI_SPDIFIN_USER_VAL_REPETITION_TIME_HIGH(rep_time);
+	hdmi_write(hdev, HDMI_SPDIFIN_USER_VALUE_2, val);
+	hdmi_write(hdev, HDMI_SPDIFIN_USER_VALUE_3, 0);
+	hdmi_write(hdev, HDMI_SPDIFIN_USER_VALUE_4, 0);
+
+	val = HDMI_I2S_IN_ENABLE | HDMI_I2S_AUD_SPDIF | HDMI_I2S_MUX_ENABLE;
+	hdmi_write(hdev, HDMI_I2S_IN_MUX_CON, val);
+
+	hdmi_write(hdev, HDMI_I2S_MUX_CH, HDMI_I2S_CH_ALL_EN);
+	hdmi_write(hdev, HDMI_I2S_MUX_CUV, HDMI_I2S_CUV_RL_EN);
+
+	hdmi_write_mask(hdev, HDMI_SPDIFIN_CLK_CTRL, 0, HDMI_SPDIFIN_CLK_ON);
+	hdmi_write_mask(hdev, HDMI_SPDIFIN_CLK_CTRL, ~0, HDMI_SPDIFIN_CLK_ON);
+
+	hdmi_write(hdev, HDMI_SPDIFIN_OP_CTRL, HDMI_SPDIFIN_STATUS_CHECK_MODE);
+	hdmi_write(hdev, HDMI_SPDIFIN_OP_CTRL,
+			HDMI_SPDIFIN_STATUS_CHECK_MODE_HDMI);
 }
 
 void hdmi_reg_i2s_audio_init(struct hdmi_device *hdev)

@@ -77,6 +77,14 @@ enum HDMI_PACKET_TYPE {
 	HDMI_PACKET_TYPE_AVI = HDMI_PACKET_TYPE_INFOFRAME + 2
 };
 
+enum HDMI_AUDIO_CODEC {
+	HDMI_AUDIO_PCM,
+	HDMI_AUDIO_AC3,
+	HDMI_AUDIO_MP3
+};
+
+#define DEFAULT_AUDIO_CODEC	HDMI_AUDIO_PCM
+
 struct hdmi_resources {
 	struct clk *hdmi;
 	struct clk *sclk_hdmi;
@@ -230,6 +238,8 @@ struct hdmi_device {
 	int sample_rate;
 	/** audio bits per sample */
 	int bits_per_sample;
+	/** current audio codec type */
+	enum HDMI_AUDIO_CODEC audio_codec;
 };
 
 struct hdmi_conf {
@@ -257,6 +267,7 @@ void hdmi_tg_enable(struct hdmi_device *hdev, int on);
 void hdmi_reg_infoframe(struct hdmi_device *hdev,
 		struct hdmi_infoframe *infoframe);
 void hdmi_reg_set_acr(struct hdmi_device *hdev);
+void hdmi_reg_spdif_audio_init(struct hdmi_device *hdev);
 void hdmi_reg_i2s_audio_init(struct hdmi_device *hdev);
 void hdmi_audio_enable(struct hdmi_device *hdev, int on);
 void hdmi_dumpregs(struct hdmi_device *hdev, char *prefix);
