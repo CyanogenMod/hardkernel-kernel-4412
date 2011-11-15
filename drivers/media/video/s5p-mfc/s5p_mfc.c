@@ -226,7 +226,6 @@ static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 {
 	struct s5p_mfc_buf  *dst_buf;
-	struct s5p_mfc_dev *dev = ctx->dev;
 	size_t dspl_y_addr = MFC_GET_ADR(DEC_DISPLAY_Y);
 	unsigned int index;
 	unsigned int frame_type = s5p_mfc_get_disp_frame_type();

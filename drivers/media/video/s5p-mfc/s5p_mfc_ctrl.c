@@ -43,7 +43,6 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 	size_t b_base_phys;
 #endif
 	unsigned int firmware_size = dev->variant->buf_size->firmware_code;
-	unsigned int base_align = dev->variant->buf_align->mfc_base_align;
 
 	mfc_debug_enter();
 
