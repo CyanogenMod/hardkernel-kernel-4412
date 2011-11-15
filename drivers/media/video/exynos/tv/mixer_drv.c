@@ -626,7 +626,7 @@ static int mxr_try_format(struct mxr_device *mdev,
 
 	switch (pad) {
 	case MXR_PAD_SINK_GSCALER:
-		fmt->code = V4L2_MBUS_FMT_YUV8_1X32;
+		fmt->code = V4L2_MBUS_FMT_YUV8_1X24;
 		break;
 	case MXR_PAD_SINK_GRP0:
 	case MXR_PAD_SINK_GRP1:
@@ -635,7 +635,7 @@ static int mxr_try_format(struct mxr_device *mdev,
 	case MXR_PAD_SOURCE_GSCALER:
 	case MXR_PAD_SOURCE_GRP0:
 	case MXR_PAD_SOURCE_GRP1:
-		fmt->code = V4L2_MBUS_FMT_YUV8_1X32;
+		fmt->code = V4L2_MBUS_FMT_YUV8_1X24;
 		mxr_get_mbus_fmt(mdev, &mbus_fmt);
 		fmt->width = mbus_fmt.width;
 		fmt->height = mbus_fmt.height;
