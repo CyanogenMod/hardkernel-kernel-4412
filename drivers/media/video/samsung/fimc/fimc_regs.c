@@ -624,6 +624,7 @@ int fimc_hwset_output_colorspace(struct fimc_control *ctrl, u32 pixelformat)
 		break;
 
 	case V4L2_PIX_FMT_YUV420:	/* fall through */
+	case V4L2_PIX_FMT_YVU420:	/* fall through */
 	case V4L2_PIX_FMT_NV12:		/* fall through */
 	case V4L2_PIX_FMT_NV12T:	/* fall through */
 	case V4L2_PIX_FMT_NV21:
@@ -740,8 +741,14 @@ int fimc_hwset_output_address(struct fimc_control *ctrl,
 			      struct fimc_buf_set *bs, int id)
 {
 	writel(bs->base[FIMC_ADDR_Y], ctrl->regs + S3C_CIOYSA(id));
-	writel(bs->base[FIMC_ADDR_CB], ctrl->regs + S3C_CIOCBSA(id));
-	writel(bs->base[FIMC_ADDR_CR], ctrl->regs + S3C_CIOCRSA(id));
+
+	if (ctrl->cap && ctrl->cap->fmt.pixelformat == V4L2_PIX_FMT_YVU420) {
+		writel(bs->base[FIMC_ADDR_CR], ctrl->regs + S3C_CIOCBSA(id));
+		writel(bs->base[FIMC_ADDR_CB], ctrl->regs + S3C_CIOCRSA(id));
+	} else {
+		writel(bs->base[FIMC_ADDR_CB], ctrl->regs + S3C_CIOCBSA(id));
+		writel(bs->base[FIMC_ADDR_CR], ctrl->regs + S3C_CIOCRSA(id));
+	}
 
 	return 0;
 }
@@ -789,6 +796,7 @@ int fimc_hwset_output_yuv(struct fimc_control *ctrl, u32 pixelformat)
 	/* 3 plane formats */
 	case V4L2_PIX_FMT_YUV422P:	/* fall through */
 	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_YVU420:
 		cfg |= S3C_CIOCTRL_YCBCR_3PLANE;
 		break;
 	}
@@ -1281,6 +1289,7 @@ int fimc_hwset_input_colorspace(struct fimc_control *ctrl, u32 pixelformat)
 	/* Color format setting */
 	switch (pixelformat) {
 	case V4L2_PIX_FMT_YUV420:	/* fall through */
+	case V4L2_PIX_FMT_YVU420:	/* fall through */
 	case V4L2_PIX_FMT_NV12:		/* fall through */
 	case V4L2_PIX_FMT_NV21:		/* fall through */
 	case V4L2_PIX_FMT_NV12T:
@@ -1318,7 +1327,8 @@ int fimc_hwset_input_yuv(struct fimc_control *ctrl, u32 pixelformat)
 						S3C_MSCTRL_ORDER422_YCBYCR);
 
 	switch (pixelformat) {
-	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_YUV420:	/* fall through */
+	case V4L2_PIX_FMT_YVU420:
 		cfg |= S3C_MSCTRL_C_INT_IN_3PLANE;
 		break;
 	case V4L2_PIX_FMT_YUYV:		/* fall through */
@@ -1492,6 +1502,7 @@ int fimc40_hwset_output_offset(struct fimc_control *ctrl, u32 pixelformat,
 
 	/* 3 planes, 12 bits per pixel */
 	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_YVU420:
 		cfg_y |= S3C_CIOYOFF_HORIZONTAL(crop->left);
 		cfg_y |= S3C_CIOYOFF_VERTICAL(crop->top);
 		cfg_cb |= S3C_CIOCBOFF_HORIZONTAL(crop->left / 4);
@@ -1572,6 +1583,7 @@ int fimc50_hwset_output_offset(struct fimc_control *ctrl, u32 pixelformat,
 
 	/* 3 planes, 12 bits per pixel */
 	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_YVU420:
 		cfg_y |= S3C_CIOYOFF_HORIZONTAL(crop->left);
 		cfg_y |= S3C_CIOYOFF_VERTICAL(crop->top);
 		cfg_cb |= S3C_CIOCBOFF_HORIZONTAL(crop->left);
@@ -1683,6 +1695,7 @@ int fimc50_hwset_input_offset(struct fimc_control *ctrl, u32 pixelformat,
 			cfg_cb |= S3C_CIICBOFF_VERTICAL(crop->top);
 			break;
 		case V4L2_PIX_FMT_YUV420:
+		case V4L2_PIX_FMT_YVU420:
 			cfg_y |= S3C_CIIYOFF_HORIZONTAL(crop->left);
 			cfg_y |= S3C_CIIYOFF_VERTICAL(crop->top);
 			cfg_cb |= S3C_CIICBOFF_HORIZONTAL(crop->left);

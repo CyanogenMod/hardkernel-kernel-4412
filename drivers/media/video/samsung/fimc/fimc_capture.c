@@ -112,6 +112,12 @@ static const struct v4l2_fmtdesc capture_fmts[] = {
 	}, {
 		.index		= 13,
 		.type		= V4L2_BUF_TYPE_VIDEO_CAPTURE,
+		.flags		= FORMAT_FLAGS_PLANAR,
+		.description	= "YUV 4:2:0 planar, Y/Cr/Cb",
+		.pixelformat	= V4L2_PIX_FMT_YVU420,
+	}, {
+		.index		= 14,
+		.type		= V4L2_BUF_TYPE_VIDEO_CAPTURE,
 		.description	= "JPEG encoded data",
 		.pixelformat	= V4L2_PIX_FMT_JPEG,
 	},
@@ -993,6 +999,7 @@ static int fimc_fmt_depth(struct fimc_control *ctrl, struct v4l2_pix_format *f)
 	case V4L2_PIX_FMT_NV12T:
 	case V4L2_PIX_FMT_NV21:
 	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_YVU420:
 		depth = 12;
 		fimc_dbg("12bpp\n");
 		break;
@@ -1404,6 +1411,7 @@ int fimc_reqbufs_capture(void *fh, struct v4l2_requestbuffers *b)
 
 	case V4L2_PIX_FMT_YUV422P:	/* fall through */
 	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_YVU420:
 		fimc_info1("%s : 3plane\n", __func__);
 		ret = fimc_alloc_buffers(ctrl, 3,
 			cap->fmt.width * cap->fmt.height, 0, bpp, 0);
