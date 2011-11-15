@@ -25,9 +25,6 @@
 #include <linux/delay.h>
 
 #include <video/platform_lcd.h>
-#include <linux/regulator/machine.h>
-#include <linux/regulator/fixed.h>
-#include <linux/i2c.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -55,7 +52,6 @@
 #include <plat/s5p-mfc.h>
 
 #include <plat/mipi_csis.h>
-#include <plat/iic.h>
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
 #include <mach/dev-sysmmu.h>
