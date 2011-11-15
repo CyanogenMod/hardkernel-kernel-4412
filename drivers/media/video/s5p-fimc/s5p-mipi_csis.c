@@ -472,7 +472,6 @@ static int s5p_csis_probe(struct platform_device *pdev)
 	struct s5p_csis_state *state;
 	int ret = -ENODEV;
 
-	printk("++%s\n", __func__);
 	state = kzalloc(sizeof(*state), GFP_KERNEL);
 	if (!state)
 		return -ENOMEM;
@@ -558,7 +557,7 @@ static int s5p_csis_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(&pdev->dev);
 
-	printk("--%s\n", __func__);
+	v4l2_info(&state->sd, "mipi-csis%d probed\n", pdev->id);
 
 	return 0;
 
