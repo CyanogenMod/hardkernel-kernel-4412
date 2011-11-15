@@ -396,14 +396,14 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 	/* Getting handle, client from DVA */
 	buf->handle = ion_import_uva(conf->client, vaddr);
 	if (IS_ERR(buf->handle)) {
-		int flags = ION_HEAP_EXYNOS_USER_MASK;
-
 		if ((PTR_ERR(buf->handle) == -ENXIO) && conf->use_mmu) {
+			int flags = ION_HEAP_EXYNOS_USER_MASK;
+
 			if (write)
 				flags |= ION_EXYNOS_WRITE_MASK;
 
-			buf->handle = ion_alloc(conf->client, size, vaddr,
-									flags);
+			buf->handle = ion_exynos_get_user_pages(conf->client,
+							vaddr, size, flags);
 			if (IS_ERR(buf->handle))
 				ret = PTR_ERR(buf->handle);
 		} else {
@@ -411,8 +411,10 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 		}
 
 		if (ret) {
-			pr_err("ion_import_uva: conf->dev(%x), %ld\n",
-					(u32)conf->dev, PTR_ERR(buf->handle));
+			pr_err("%s: Failed to retrieving non-ion user buffer @ "
+				"0x%lx (size:0x%lx, dev:%s, errno %ld)\n",
+				__func__, vaddr, size, dev_name(conf->dev),
+					PTR_ERR(buf->handle));
 			goto err_import_uva;
 		}
 
