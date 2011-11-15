@@ -169,6 +169,8 @@ enum gsc_yuv_fmt {
 
 #define ctrl_to_ctx(__ctrl) \
 	container_of((__ctrl)->handler, struct gsc_ctx, ctrl_handler)
+#define entity_data_to_gsc(data) \
+	container_of(data, struct gsc_dev, md_data)
 
 /**
  * struct gsc_fmt - the driver's internal color format data
@@ -331,7 +333,6 @@ struct gsc_output_device {
 	int			refcnt;
 	bool			s_stream;
 };
-
 
 /**
  * struct gsc_m2m_device - v4l2 memory-to-memory device data
@@ -496,7 +497,7 @@ struct gsc_dev {
 	const struct gsc_vb2		*vb2;
 	struct exynos_md		*mdev[2];
 	struct gsc_pipeline		pipeline;
-
+	struct exynos_entity_data	md_data;
 };
 
 /**
@@ -694,7 +695,7 @@ static inline struct gsc_dev *entity_to_gsc(struct media_entity *me)
 	struct v4l2_subdev *sd;
 
 	sd = container_of(me, struct v4l2_subdev, entity);
-	return v4l2_get_subdevdata(sd);
+	return entity_data_to_gsc(v4l2_get_subdevdata(sd));
 }
 
 void gsc_hw_set_sw_reset(struct gsc_dev *dev);

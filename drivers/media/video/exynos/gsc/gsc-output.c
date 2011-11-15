@@ -154,7 +154,7 @@ static int gsc_subdev_get_fmt(struct v4l2_subdev *sd,
 			      struct v4l2_subdev_fh *fh,
 			      struct v4l2_subdev_format *fmt)
 {
-	struct gsc_dev *gsc = v4l2_get_subdevdata(sd);
+	struct gsc_dev *gsc = entity_data_to_gsc(v4l2_get_subdevdata(sd));
 	struct gsc_ctx *ctx = gsc->out.ctx;
 	struct v4l2_mbus_framefmt *mf = &fmt->format;
 	struct gsc_frame *f;
@@ -182,7 +182,7 @@ static int gsc_subdev_set_fmt(struct v4l2_subdev *sd,
 			       struct v4l2_subdev_fh *fh,
 			       struct v4l2_subdev_format *fmt)
 {
-	struct gsc_dev *gsc = v4l2_get_subdevdata(sd);
+	struct gsc_dev *gsc = entity_data_to_gsc(v4l2_get_subdevdata(sd));
 	struct v4l2_mbus_framefmt *mf;
 	struct gsc_ctx *ctx = gsc->out.ctx;
 	struct gsc_frame *f;
@@ -217,7 +217,7 @@ static int gsc_subdev_get_crop(struct v4l2_subdev *sd,
 				struct v4l2_subdev_fh *fh,
 				struct v4l2_subdev_crop *crop)
 {
-	struct gsc_dev *gsc = v4l2_get_subdevdata(sd);
+	struct gsc_dev *gsc = entity_data_to_gsc(v4l2_get_subdevdata(sd));
 	struct gsc_ctx *ctx = gsc->out.ctx;
 	struct v4l2_rect *r = &crop->rect;
 	struct gsc_frame *f;
@@ -249,7 +249,7 @@ static int gsc_subdev_set_crop(struct v4l2_subdev *sd,
 				struct v4l2_subdev_fh *fh,
 				struct v4l2_subdev_crop *crop)
 {
-	struct gsc_dev *gsc = v4l2_get_subdevdata(sd);
+	struct gsc_dev *gsc = entity_data_to_gsc(v4l2_get_subdevdata(sd));
 	struct gsc_ctx *ctx = gsc->out.ctx;
 	struct v4l2_rect *r;
 	struct gsc_frame *f;
@@ -285,7 +285,7 @@ static int gsc_subdev_set_crop(struct v4l2_subdev *sd,
 
 static int gsc_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	struct gsc_dev *gsc = v4l2_get_subdevdata(sd);
+	struct gsc_dev *gsc = entity_data_to_gsc(v4l2_get_subdevdata(sd));
 	int ret;
 
 	if (enable) {
@@ -323,7 +323,7 @@ static struct v4l2_subdev_ops gsc_subdev_ops = {
 
 static int gsc_out_power_off(struct v4l2_subdev *sd)
 {
-	struct gsc_dev *gsc = v4l2_get_subdevdata(sd);
+	struct gsc_dev *gsc = entity_data_to_gsc(v4l2_get_subdevdata(sd));
 	int ret;
 
 	ret = gsc_out_hw_reset_off(gsc);
@@ -335,10 +335,6 @@ static int gsc_out_power_off(struct v4l2_subdev *sd)
 
 static struct exynos_media_ops gsc_out_link_callback = {
 	.power_off = gsc_out_power_off,
-};
-
-static struct exynos_entity_data gsc_out_entity_data = {
-	.media_ops = &gsc_out_link_callback,
 };
 
 /*
@@ -954,7 +950,6 @@ static int gsc_create_subdev(struct gsc_dev *gsc)
 		goto error;
 	}
 
-	sd->dev_priv = &gsc_out_entity_data;
 	sd->entity.ops = &gsc_media_ops;
 	ret = v4l2_device_register_subdev(&gsc->mdev[MDEV_OUTPUT]->v4l2_dev, sd);
 	if (ret) {
@@ -965,7 +960,8 @@ static int gsc_create_subdev(struct gsc_dev *gsc)
 	gsc_info("gsc_sd[%d] = 0x%08x\n", gsc->id,
 			(u32)gsc->mdev[MDEV_OUTPUT]->gsc_sd[gsc->id]);
 	gsc->out.sd = sd;
-	v4l2_set_subdevdata(sd, gsc);
+	gsc->md_data.media_ops = &gsc_out_link_callback;
+	v4l2_set_subdevdata(sd, &gsc->md_data);
 
 	return 0;
 error:

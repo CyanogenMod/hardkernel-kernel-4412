@@ -543,7 +543,7 @@ int gsc_out_link_validate(const struct media_pad *source,
 	}
 
 	sd = media_entity_to_v4l2_subdev(source->entity);
-	gsc = v4l2_get_subdevdata(sd);
+	gsc = entity_data_to_gsc(v4l2_get_subdevdata(sd));
 	f = &gsc->out.ctx->d_frame;
 
 	src_fmt.format.width = f->crop.width;
