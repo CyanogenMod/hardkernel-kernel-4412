@@ -98,7 +98,7 @@ static struct gsc_fmt gsc_formats[] = {
 		.corder		= GSC_CBCR,
 		.num_planes	= 1,
 		.nr_comp	= 1,
-		.mbus_code	= V4L2_MBUS_FMT_YUV8_1X32,
+		.mbus_code	= V4L2_MBUS_FMT_YUV8_1X24,
 	}, {
 		.name		= "YUV 4:2:2 planar, Y/Cb/Cr",
 		.pixelformat	= V4L2_PIX_FMT_YUV422P,
