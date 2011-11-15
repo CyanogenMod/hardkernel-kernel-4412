@@ -5,7 +5,6 @@
 #############################################################################################
 
 MALI_KBASE_SCHEDULING_POLICY=cfs
-#MALI_KBASE_SCHEDULING_POLICY=fcfs
 MALI_DEBUG=0
 MALI_HW_TYPE=2
 MALI_USE_UMP=1

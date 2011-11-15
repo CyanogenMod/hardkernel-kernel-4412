@@ -11,20 +11,20 @@
 
 
 # Defaults
-export MALI_KBASE_SCHEDULING_POLICY?=cfs
-export PLATFORM?=dummy
-export MALI_HW_TYPE?=2
-export MALI_USE_UMP?=1
-export MALI_DEBUG?=0
-export MALI_ANDROID?=0
-export MALI_BASE_TRACK_MEMLEAK?=0
-export MALI_KERNEL_TEST_API?=0
-export MALI_UNIT_TEST?=0
-export MALI_INFINITE_CACHE?=0
-export MALI_LICENSE_IS_GPL?=1
-export MALI_FAKE_PLATFORM_DEVICE?=0
-export MALI_MOCK_TEST?=0
-export MALI_HW_VERSION?=r0p0
+#export MALI_KBASE_SCHEDULING_POLICY?=cfs
+#export PLATFORM?=dummy
+#export MALI_HW_TYPE?=2
+#export MALI_USE_UMP?=1
+#export MALI_DEBUG?=0
+#export MALI_ANDROID?=0
+#export MALI_BASE_TRACK_MEMLEAK?=0
+#export MALI_KERNEL_TEST_API?=0
+#export MALI_UNIT_TEST?=0
+#export MALI_INFINITE_CACHE?=0
+#export MALI_LICENSE_IS_GPL?=1
+#export MALI_FAKE_PLATFORM_DEVICE?=0
+#export MALI_MOCK_TEST?=0
+#export MALI_HW_VERSION?=r0p0
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
 
