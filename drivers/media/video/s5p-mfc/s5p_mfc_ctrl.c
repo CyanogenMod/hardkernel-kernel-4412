@@ -38,6 +38,7 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 	int err;
 	struct cma_info mem_info_f, mem_info_a, mem_info_b;
+	unsigned int base_align = dev->variant->buf_align->mfc_base_align;
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	void *b_base;
 	size_t b_base_phys;
