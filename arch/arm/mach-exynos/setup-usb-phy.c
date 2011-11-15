@@ -607,7 +607,7 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 
 static int exynos5_usb_phy20_init(struct platform_device *pdev)
 {
-	struct clk *xusbxti_clk;
+	struct clk *ext_xtal;
 	u32 hostphy_ctrl0;
 	u32 hsic_ctrl;
 	u32 ehcictrl;
@@ -623,8 +623,8 @@ static int exynos5_usb_phy20_init(struct platform_device *pdev)
 
 	hostphy_ctrl0 &= ~(HOST_CTRL0_FSEL_MASK);
 
-	xusbxti_clk = clk_get(&pdev->dev, "xusbxti");
-	switch (clk_get_rate(xusbxti_clk)) {
+	ext_xtal = clk_get(&pdev->dev, "ext_xtal");
+	switch (clk_get_rate(ext_xtal)) {
 	case 96 * 100000:
 		hostphy_ctrl0 |= EXYNOS5_CLKSEL_9600K;
 		break;
