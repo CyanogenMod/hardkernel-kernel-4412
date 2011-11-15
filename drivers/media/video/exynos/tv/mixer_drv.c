@@ -976,26 +976,6 @@ static int mxr_register_entities(struct mxr_device *mdev)
 			return ret;
 	}
 
-	/* This function is for exposing sub-devices nodes to user space
-	 * in case of marking with V4L2_SUBDEV_FL_HAS_DEVNODE flag.
-	 *
-	 * And it depends on probe sequence
-	 * because v4l2_dev ptr is shared all of output devices below
-	 *
-	 * probe sequence of output devices
-	 * output media device -> gscaler -> hdmi -> mixer
-	 */
-	md = (struct exynos_md *)module_name_to_driver_data(MDEV_MODULE_NAME);
-	if (!md) {
-		mxr_err(mdev, "failed to get output media device\n");
-		return -ENODEV;
-	}
-	ret = v4l2_device_register_subdev_nodes(&md->v4l2_dev);
-	if (ret) {
-		mxr_err(mdev, "failed to make nodes for subdev\n");
-		return ret;
-	}
-
 	return 0;
 }
 
