@@ -292,15 +292,17 @@
 #define VIDW_BUF_END1(_buff)			(0xD4 + ((_buff) * 8))
 #define VIDW_BUF_SIZE(_buff)			(0x100 + ((_buff) * 4))
 
+#define VIDW_BUF_SIZE_OFFSET_E(_x)		(((_x) & 0x2000) << 14)
 #define VIDW_BUF_SIZE_OFFSET_MASK		(0x1fff << 13)
 #define VIDW_BUF_SIZE_OFFSET_SHIFT		(13)
 #define VIDW_BUF_SIZE_OFFSET_LIMIT		(0x1fff)
-#define VIDW_BUF_SIZE_OFFSET(_x)		((_x) << 13)
+#define VIDW_BUF_SIZE_OFFSET(_x)		(((_x) & 0x1fff) << 13)
 
+#define VIDW_BUF_SIZE_PAGEWIDTH_E(_x)		(((_x) & 0x2000) << 13)
 #define VIDW_BUF_SIZE_PAGEWIDTH_MASK		(0x1fff << 0)
 #define VIDW_BUF_SIZE_PAGEWIDTH_SHIFT		(0)
 #define VIDW_BUF_SIZE_PAGEWIDTH_LIMIT		(0x1fff)
-#define VIDW_BUF_SIZE_PAGEWIDTH(_x)		((_x) << 0)
+#define VIDW_BUF_SIZE_PAGEWIDTH(_x)		(((_x) & 0x1fff) << 0)
 
 /* Interrupt controls and status */
 
