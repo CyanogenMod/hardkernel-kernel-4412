@@ -713,7 +713,7 @@ static struct max8997_platform_data __initdata exynos5_max8997_info = {
 	.buck5_voltage[7] = 1100000, /* 1.1V */
 };
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
-#if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C)
+#if defined(CONFIG_ITU_A)
 static int smdk5250_cam0_reset(int dummy)
 {
 	int err;
