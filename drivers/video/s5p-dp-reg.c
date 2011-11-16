@@ -1273,15 +1273,20 @@ int s5p_dp_is_slave_video_stream_clock_on(struct s5p_dp_device *dp)
 	/* To check whether input stream clock is stable. */
 	/* To do that clear it first. */
 	/* Update Video stream clk change status */
-	reg = CHA_STA;
-	writel(reg, dp->reg_base + S5P_DP_SYS_CTL_2);
+	if (soc_is_exynos5250()) {
+		reg = CHA_CTRL;
+		writel(reg, dp->reg_base + S5P_DP_SYS_CTL_2);
+	} else {
+		reg = CHA_STA;
+		writel(reg, dp->reg_base + S5P_DP_SYS_CTL_2);
 
-	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_2);
-	dev_dbg(dp->dev, "wait SYS_CTL_2.\n");
+		reg = readl(dp->reg_base + S5P_DP_SYS_CTL_2);
+		dev_dbg(dp->dev, "wait SYS_CTL_2.\n");
 
-	if (reg & CHA_STA) {
-		dev_dbg(dp->dev, "Input stream clk is changing\n");
-		return -EINVAL;
+		if (reg & CHA_STA) {
+			dev_dbg(dp->dev, "Input stream clk is changing\n");
+			return -EINVAL;
+		}
 	}
 
 	return 0;
