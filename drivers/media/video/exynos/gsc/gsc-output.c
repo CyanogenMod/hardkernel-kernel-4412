@@ -93,6 +93,7 @@ int gsc_out_set_scaler_info(struct gsc_ctx *ctx)
 
 int gsc_out_hw_set(struct gsc_ctx *ctx)
 {
+	struct gsc_dev *gsc = ctx->gsc_dev;
 	int ret = 0;
 
 	ret = gsc_out_set_scaler_info(ctx);
@@ -100,6 +101,9 @@ int gsc_out_hw_set(struct gsc_ctx *ctx)
 		gsc_err("Scaler setup error");
 		return ret;
 	}
+
+	gsc_hw_set_frm_done_irq_mask(gsc, false);
+	gsc_hw_set_gsc_irq_enable(gsc, true);
 
 	gsc_hw_set_input_path(ctx);
 	gsc_hw_set_in_size(ctx);

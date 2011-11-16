@@ -221,7 +221,10 @@ static void gsc_dma_run(void *priv)
 	}
 
 	/* Add the function to enable the clock */
-	test_and_set_bit(ST_PWR_ON, &gsc->state);
+	if (!test_and_set_bit(ST_PWR_ON, &gsc->state)) {
+		gsc_hw_set_frm_done_irq_mask(gsc, false);
+		gsc_hw_set_gsc_irq_enable(gsc, true);
+	}
 
 	gsc_hw_set_input_addr(gsc, &ctx->s_frame.addr, GSC_M2M_BUF_NUM);
 	gsc_hw_set_output_addr(gsc, &ctx->d_frame.addr, GSC_M2M_BUF_NUM);
