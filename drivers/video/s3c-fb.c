@@ -668,7 +668,10 @@ static int s3c_fb_set_par(struct fb_info *info)
 
 	data = VIDOSDxB_BOTRIGHT_X(s3c_fb_align_word(var->bits_per_pixel,
 						     var->xres - 1)) |
-	       VIDOSDxB_BOTRIGHT_Y(var->yres - 1);
+	       VIDOSDxB_BOTRIGHT_Y(var->yres - 1) |
+	       VIDOSDxB_BOTRIGHT_X_E(s3c_fb_align_word(var->bits_per_pixel,
+						     var->xres - 1)) |
+	       VIDOSDxB_BOTRIGHT_Y_E(var->yres - 1);
 
 	writel(data, regs + VIDOSD_B(win_no, sfb->variant));
 
@@ -1174,12 +1177,17 @@ int s3c_fb_set_window_position(struct fb_info *info,
 
 	/* write 'OSD' registers to control position of framebuffer */
 	data = VIDOSDxA_TOPLEFT_X(user_window.x) |
-		VIDOSDxA_TOPLEFT_Y(user_window.y);
+		VIDOSDxA_TOPLEFT_Y(user_window.y) |
+		VIDOSDxA_TOPLEFT_X_E(user_window.x) |
+		VIDOSDxA_TOPLEFT_Y_E(user_window.y);
 	writel(data, regs + VIDOSD_A(win_no, sfb->variant));
 
 	data = VIDOSDxB_BOTRIGHT_X(s3c_fb_align_word(var->bits_per_pixel,
 					user_window.x + var->xres - 1)) |
-	       VIDOSDxB_BOTRIGHT_Y(user_window.y + var->yres - 1);
+	       VIDOSDxB_BOTRIGHT_Y(user_window.y + var->yres - 1) |
+	       VIDOSDxB_BOTRIGHT_X_E(s3c_fb_align_word(var->bits_per_pixel,
+					user_window.x + var->xres - 1)) |
+	       VIDOSDxB_BOTRIGHT_Y_E(user_window.y + var->yres - 1);
 	writel(data, regs + VIDOSD_B(win_no, sfb->variant));
 
 	shadow_protect_win(win, 0);

@@ -242,25 +242,29 @@
 /* Local input channels (windows 0-2) */
 #define SHADOWCON_CHx_LOCAL_ENABLE(_win)	(1 << (5 + (_win)))
 
+#define VIDOSDxA_TOPLEFT_X_E(_x)		(((_x) & 0x800) << 12)
 #define VIDOSDxA_TOPLEFT_X_MASK			(0x7ff << 11)
 #define VIDOSDxA_TOPLEFT_X_SHIFT		(11)
 #define VIDOSDxA_TOPLEFT_X_LIMIT		(0x7ff)
-#define VIDOSDxA_TOPLEFT_X(_x)			((_x) << 11)
+#define VIDOSDxA_TOPLEFT_X(_x)			(((_x) & 0x7ff) << 11)
 
+#define VIDOSDxA_TOPLEFT_Y_E(_x)		(((_x) & 0x800) << 11)
 #define VIDOSDxA_TOPLEFT_Y_MASK			(0x7ff << 0)
 #define VIDOSDxA_TOPLEFT_Y_SHIFT		(0)
 #define VIDOSDxA_TOPLEFT_Y_LIMIT		(0x7ff)
-#define VIDOSDxA_TOPLEFT_Y(_x)			((_x) << 0)
+#define VIDOSDxA_TOPLEFT_Y(_x)			(((_x) & 0x7ff) << 0)
 
+#define VIDOSDxB_BOTRIGHT_X_E(_x)		(((_x) & 0x800) << 12)
 #define VIDOSDxB_BOTRIGHT_X_MASK		(0x7ff << 11)
 #define VIDOSDxB_BOTRIGHT_X_SHIFT		(11)
 #define VIDOSDxB_BOTRIGHT_X_LIMIT		(0x7ff)
-#define VIDOSDxB_BOTRIGHT_X(_x)			((_x) << 11)
+#define VIDOSDxB_BOTRIGHT_X(_x)			(((_x) & 0x7ff) << 11)
 
+#define VIDOSDxB_BOTRIGHT_Y_E(_x)		(((_x) & 0x800) << 11)
 #define VIDOSDxB_BOTRIGHT_Y_MASK		(0x7ff << 0)
 #define VIDOSDxB_BOTRIGHT_Y_SHIFT		(0)
 #define VIDOSDxB_BOTRIGHT_Y_LIMIT		(0x7ff)
-#define VIDOSDxB_BOTRIGHT_Y(_x)			((_x) << 0)
+#define VIDOSDxB_BOTRIGHT_Y(_x)			(((_x) & 0x7ff) << 0)
 
 /* For VIDOSD[1..4]C */
 #define VIDISD14C_ALPHA0_R(_x)			((_x) << 20)
