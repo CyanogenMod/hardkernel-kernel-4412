@@ -38,6 +38,12 @@ enum m5mols_mode {
 	MODE_UNKNOWN,
 };
 
+enum m5mols_restype {
+	M5MOLS_RESTYPE_MONITOR,
+	M5MOLS_RESTYPE_CAPTURE,
+	M5MOLS_RESTYPE_MAX,
+};
+
 enum m5mols_status {
 	STATUS_SYSINIT,
 	STATUS_PARMSET,
@@ -85,8 +91,6 @@ enum m5mols_fps {
 enum m5mols_res_type {
 	M5MOLS_RES_MON,
 	/* It's not supported below yet. */
-	M5MOLS_RES_PREVIEW,
-	M5MOLS_RES_THUMB,
 	M5MOLS_RES_CAPTURE,
 	M5MOLS_RES_MAX,
 };
@@ -141,6 +145,9 @@ struct m5mols_version {
 
 struct m5mols_info {
 	struct v4l2_subdev		sd;
+	struct media_pad pad;
+	int res_type;
+	u8 resolution;
 	struct v4l2_mbus_framefmt	fmt[M5MOLS_RES_MAX];
 	struct v4l2_fract		tpf;
 

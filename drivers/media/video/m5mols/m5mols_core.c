@@ -36,6 +36,8 @@ module_param(m5mols_debug, int, 0644);
 #define MOD_NAME		"M5MOLS"
 #define M5MOLS_I2C_CHECK_RETRY 50
 #define DEBUG
+#define DEFAULT_SENSOR_WIDTH	800
+#define DEFAULT_SENSOR_HEIGHT	480
 
 #define m5_err	\
 	do { printk("%s : %d : ret : %d\n", __func__, __LINE__, ret);\
@@ -84,9 +86,9 @@ static struct regulator_bulk_data supplies[] = {
 /* M5MOLS default format (codes, sizes, preset values) */
 static const struct v4l2_mbus_framefmt default_fmt[M5MOLS_RES_MAX] = {
 	[M5MOLS_RES_MON] = {
-		.width		= 1920,
-		.height		= 1080,
-		.code		= V4L2_MBUS_FMT_VYUY8_2X8,
+		.width		= DEFAULT_SENSOR_WIDTH,
+		.height		= DEFAULT_SENSOR_HEIGHT,
+		.code		= V4L2_MBUS_FMT_YUYV8_2X8,
 		.field		= V4L2_FIELD_NONE,
 		.colorspace	= V4L2_COLORSPACE_JPEG,
 	},
@@ -99,9 +101,11 @@ static const struct v4l2_mbus_framefmt default_fmt[M5MOLS_RES_MAX] = {
 	},
 };
 
+#define SIZE_DEFAULT_FFMT	ARRAY_SIZE(default_fmt)
+
 static const struct m5mols_format m5mols_formats[] = {
 	[M5MOLS_RES_MON] = {
-		.code		= V4L2_MBUS_FMT_VYUY8_2X8,
+		.code		= V4L2_MBUS_FMT_YUYV8_2X8,
 		.colorspace	= V4L2_COLORSPACE_JPEG,
 	},
 	[M5MOLS_RES_CAPTURE] = {
@@ -152,7 +156,7 @@ static const struct m5mols_resolution m5mols_resolutions[] = {
 	{ 0x21, M5MOLS_RES_CAPTURE, 3264, 1836 },	/* 6M */
 	{ 0x22, M5MOLS_RES_CAPTURE, 3264, 1960 },	/* 6M */
 	{ 0x25, M5MOLS_RES_CAPTURE, 3264, 2448 },	/* 8M */
-
+#ifdef M5MO_THUMB_SUPPORT
 	/* capture thumb(JPEG) size */
 	{ 0x00, M5MOLS_RES_THUMB, 160, 90 },	/* 160 x 90 */
 	{ 0x02, M5MOLS_RES_THUMB, 160, 120 },	/* QQVGA */
@@ -162,6 +166,7 @@ static const struct m5mols_resolution m5mols_resolutions[] = {
 	{ 0x0a, M5MOLS_RES_THUMB, 640, 360 },	/* qHD */
 	{ 0x0b, M5MOLS_RES_THUMB, 640, 480 },	/* VGA */
 	{ 0x0c, M5MOLS_RES_THUMB, 800, 480 },	/* WVGA */
+#endif
 };
 
 /* M5MOLS default FPS */
@@ -387,7 +392,7 @@ enum m5mols_status m5mols_get_status(struct v4l2_subdev *sd)
 		"Face Detection",
 		"Multi/Dual Capture",
 		"Single Capture",
-		"Preview (Data transfer)",	/* It means recording, not preview. */
+		"Preview (Data transfer)", /* It means recording, not preview. */
 		"Unknown",
 	};
 	u32 reg;
@@ -780,18 +785,18 @@ static int m5mols_get_info_capture(struct v4l2_subdev *sd)
 
 	info->cap.total = info->cap.main + info->cap.thumb;
 
-	printk("%s: capture total size %d\n", __func__, info->cap.total);
-	printk("%s: capture main size %d\n", __func__, info->cap.main);
-	printk("%s: capture thumb size %d\n", __func__, info->cap.thumb);
-	printk("%s: exposure_time %d\n", __func__, exif->exposure_time);
-	printk("%s: shutter_speed %d\n", __func__, exif->shutter_speed);
-	printk("%s: aperture %d\n", __func__, exif->aperture);
-	printk("%s: brightness %d\n", __func__, exif->brightness);
-	printk("%s: exposure_bias %d\n", __func__, exif->exposure_bias);
-	printk("%s: iso_speed %d\n", __func__, exif->iso_speed);
-	printk("%s: flash %d\n", __func__, exif->flash);
-	printk("%s: sdr %d\n", __func__, exif->sdr);
-	printk("%s: qval %d\n", __func__, exif->qval);
+	v4l2_info(sd, "%s: capture total size %d\n", __func__, info->cap.total);
+	v4l2_info(sd, "%s: capture main size %d\n", __func__, info->cap.main);
+	v4l2_info(sd, "%s: capture thumb size %d\n", __func__, info->cap.thumb);
+	v4l2_info(sd, "%s: exposure_time %d\n", __func__, exif->exposure_time);
+	v4l2_info(sd, "%s: shutter_speed %d\n", __func__, exif->shutter_speed);
+	v4l2_info(sd, "%s: aperture %d\n", __func__, exif->aperture);
+	v4l2_info(sd, "%s: brightness %d\n", __func__, exif->brightness);
+	v4l2_info(sd, "%s: exposure_bias %d\n", __func__, exif->exposure_bias);
+	v4l2_info(sd, "%s: iso_speed %d\n", __func__, exif->iso_speed);
+	v4l2_info(sd, "%s: flash %d\n", __func__, exif->flash);
+	v4l2_info(sd, "%s: sdr %d\n", __func__, exif->sdr);
+	v4l2_info(sd, "%s: qval %d\n", __func__, exif->qval);
 
 	return ret;
 }
@@ -882,11 +887,11 @@ static int m5mols_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (enable) {
 		if (info->code == to_code(M5MOLS_RES_MON)) {
-			printk("%s : monitor mode\n", __func__);
+			v4l2_info(sd, "%s : monitor mode\n", __func__);
 			return m5mols_start_monitor(sd);
 		}
 		if (info->code == to_code(M5MOLS_RES_CAPTURE)) {
-			printk("%s : capture mode\n", __func__);
+			v4l2_info(sd, "%s : capture mode\n", __func__);
 			return  m5mols_start_capture(sd);
 		}
 		return -EINVAL;
@@ -1074,6 +1079,8 @@ static irqreturn_t m5mols_irq_handler(int irq, void *data)
 {
 	struct v4l2_subdev *sd = data;
 	struct m5mols_info *info = to_m5mols(sd);
+
+	v4l2_info(sd, "%s\n", __func__);
 
 	schedule_work(&info->work);
 
@@ -1263,9 +1270,202 @@ static const struct v4l2_subdev_core_ops m5mols_core_ops = {
 	.log_status		= m5mols_log_status,
 };
 
+/**
+ * __find_restype - Lookup M-5MOLS resolution type according to pixel code
+ * @code: pixel code
+ */
+static enum m5mols_restype __find_restype(enum v4l2_mbus_pixelcode code)
+{
+	enum m5mols_restype type = M5MOLS_RESTYPE_MONITOR;
+
+	do {
+		if (code == default_fmt[type].code)
+			return type;
+	} while (type++ != SIZE_DEFAULT_FFMT);
+
+	return 0;
+}
+
+/**
+ * __find_resolution - Lookup preset and type of M-5MOLS's resolution
+ * @mf: pixel format to find/negotiate the resolution preset for
+ * @type: M-5MOLS resolution type
+ * @resolution:	M-5MOLS resolution preset register value
+ *
+ * Find nearest resolution matching resolution preset and adjust mf
+ * to supported values.
+ */
+static int __find_resolution(struct v4l2_subdev *sd,
+			     struct v4l2_mbus_framefmt *mf,
+			     enum m5mols_restype *type,
+			     u32 *resolution)
+{
+	const struct m5mols_resolution *fsize = &m5mols_resolutions[0];
+	const struct m5mols_resolution *match = NULL;
+	enum m5mols_restype stype = __find_restype(mf->code);
+	int i = ARRAY_SIZE(m5mols_resolutions);
+	unsigned int min_err = ~0;
+
+	while (i--) {
+		int err;
+		if (stype == fsize->type) {
+			err = abs(fsize->width - mf->width)
+				+ abs(fsize->height - mf->height);
+
+			if (err < min_err) {
+				min_err = err;
+				match = fsize;
+			}
+		}
+		fsize++;
+	}
+	if (match) {
+		mf->width  = match->width;
+		mf->height = match->height;
+		*resolution = match->value;
+		*type = stype;
+		return 0;
+	}
+
+	return -EINVAL;
+}
+
+static struct v4l2_mbus_framefmt *__find_format(struct m5mols_info *info,
+				struct v4l2_subdev_fh *fh,
+				enum v4l2_subdev_format_whence which,
+				enum m5mols_restype type)
+{
+	if (which == V4L2_SUBDEV_FORMAT_TRY)
+		return fh ? v4l2_subdev_get_try_format(fh, 0) : NULL;
+
+	return &info->fmt[type];
+}
+
+static int m5mols_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
+			  struct v4l2_subdev_format *fmt)
+{
+	struct m5mols_info *info = to_m5mols(sd);
+	struct v4l2_mbus_framefmt *format;
+
+	if (fmt->pad != 0)
+		return -EINVAL;
+
+	format = __find_format(info, fh, fmt->which, info->res_type);
+	if (!format)
+		return -EINVAL;
+
+	fmt->format = *format;
+	return 0;
+}
+
+static int m5mols_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
+			  struct v4l2_subdev_format *fmt)
+{
+	struct m5mols_info *info = to_m5mols(sd);
+	struct v4l2_mbus_framefmt *format = &fmt->format;
+	struct v4l2_mbus_framefmt *sfmt;
+	enum m5mols_restype type;
+	u32 resolution = 0;
+	int ret;
+
+	if (fmt->pad != 0)
+		return -EINVAL;
+
+	ret = __find_resolution(sd, format, &type, &resolution);
+	if (ret < 0)
+		return ret;
+
+	sfmt = __find_format(info, fh, fmt->which, type);
+	if (!sfmt)
+		return 0;
+
+	*sfmt		= default_fmt[type];
+	sfmt->width	= format->width;
+	sfmt->height	= format->height;
+
+	if (fmt->which == V4L2_SUBDEV_FORMAT_ACTIVE) {
+		info->resolution = resolution;
+		info->code = format->code;
+		info->res_type = type;
+	}
+
+	return 0;
+}
+
+static int m5mols_enum_mbus_code(struct v4l2_subdev *sd,
+				 struct v4l2_subdev_fh *fh,
+				 struct v4l2_subdev_mbus_code_enum *code)
+{
+	if (!code || code->index >= SIZE_DEFAULT_FFMT)
+		return -EINVAL;
+
+	code->code = default_fmt[code->index].code;
+
+	return 0;
+}
+
+static struct v4l2_subdev_pad_ops m5mols_pad_ops = {
+	.enum_mbus_code	= m5mols_enum_mbus_code,
+	.get_fmt	= m5mols_get_fmt,
+	.set_fmt	= m5mols_set_fmt,
+};
+
 static const struct v4l2_subdev_ops m5mols_ops = {
 	.core	= &m5mols_core_ops,
+	.pad	= &m5mols_pad_ops,
 	.video	= &m5mols_video_ops,
+};
+
+static int m5mols_link_setup(struct media_entity *entity,
+			    const struct media_pad *local,
+			    const struct media_pad *remote, u32 flags)
+{
+	printk("%s\n", __func__);
+	return 0;
+}
+static const struct media_entity_operations m5mols_media_ops = {
+	.link_setup = m5mols_link_setup,
+};
+
+static int m5mols_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
+{
+	struct v4l2_subdev_format format;
+
+	memset(&format, 0, sizeof(format));
+	format.pad = 0;
+	format.which = fh ? V4L2_SUBDEV_FORMAT_TRY : V4L2_SUBDEV_FORMAT_ACTIVE;
+	format.format.code = V4L2_MBUS_FMT_YUYV8_2X8;
+	format.format.width = DEFAULT_SENSOR_WIDTH;
+	format.format.height = DEFAULT_SENSOR_HEIGHT;
+
+	m5mols_set_fmt(sd, fh, &format);
+
+	return 0;
+}
+
+static int m5mols_subdev_close(struct v4l2_subdev *sd,
+			      struct v4l2_subdev_fh *fh)
+{
+	v4l2_dbg(1, m5mols_debug, sd, "%s", __func__);
+	return 0;
+}
+
+static int m5mols_subdev_registered(struct v4l2_subdev *sd)
+{
+	v4l2_dbg(1, m5mols_debug, sd, "%s", __func__);
+	return 0;
+}
+
+static void m5mols_subdev_unregistered(struct v4l2_subdev *sd)
+{
+	v4l2_dbg(1, m5mols_debug, sd, "%s", __func__);
+}
+
+static const struct v4l2_subdev_internal_ops m5mols_v4l2_internal_ops = {
+	.open = m5mols_init_formats,
+	.close = m5mols_subdev_close,
+	.registered = m5mols_subdev_registered,
+	.unregistered = m5mols_subdev_unregistered,
 };
 
 static int m5mols_probe(struct i2c_client *client,
@@ -1322,7 +1522,21 @@ static int m5mols_probe(struct i2c_client *client,
 	init_waitqueue_head(&info->cap_wait);
 
 	v4l2_i2c_subdev_init(sd, client, &m5mols_ops);
-	v4l2msg("probed m5mols driver.\n");
+	info->pad.flags = MEDIA_PAD_FL_SOURCE;
+	ret = media_entity_init(&sd->entity, 1, &info->pad, 0);
+	if (ret < 0)
+		goto out_reg;
+
+	m5mols_init_formats(sd, NULL);
+
+	sd->entity.type = MEDIA_ENT_T_V4L2_SUBDEV_SENSOR;
+	sd->flags = V4L2_SUBDEV_FL_HAS_DEVNODE;
+	sd->internal_ops = &m5mols_v4l2_internal_ops;
+	sd->entity.ops = &m5mols_media_ops;
+
+	info->res_type = M5MOLS_RESTYPE_MONITOR;
+
+	v4l2_info(sd, "%s : m5mols driver probed success\n", __func__);
 
 	return 0;
 
@@ -1345,6 +1559,7 @@ static int m5mols_remove(struct i2c_client *client)
 	free_irq(info->pdata->irq, sd);
 	regulator_bulk_free(ARRAY_SIZE(supplies), supplies);
 	gpio_free(info->pdata->gpio_rst);
+	media_entity_cleanup(&sd->entity);
 	kfree(info);
 
 	return 0;
