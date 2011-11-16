@@ -341,6 +341,30 @@ void s5p_dp_set_analog_power_down(struct s5p_dp_device *dp,
 			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
 		}
 		break;
+	case CH2_BLOCK:
+		if (enable) {
+			/* Channel 0 serdes power down */
+			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
+			reg |= CH2_PD;
+			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
+		} else {
+			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
+			reg &= ~CH2_PD;
+			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
+		}
+		break;
+	case CH3_BLOCK:
+		if (enable) {
+			/* Channel 1 serdes power down */
+			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
+			reg |= CH3_PD;
+			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
+		} else {
+			reg = readl(dp->reg_base + S5P_DP_PHY_PD);
+			reg &= ~CH3_PD;
+			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
+		}
+		break;
 	case ANALOG_TOTAL:
 		if (enable) {
 			/* Analog total power down */
@@ -355,7 +379,8 @@ void s5p_dp_set_analog_power_down(struct s5p_dp_device *dp,
 		break;
 	case POWER_ALL:
 		if (enable) {
-			reg = DP_PHY_PD | AUX_PD | CH1_PD | CH0_PD;
+			reg = DP_PHY_PD | AUX_PD | CH3_PD | CH2_PD |
+				CH1_PD | CH0_PD;
 			writel(reg, dp->reg_base + S5P_DP_PHY_PD);
 		} else {
 			writel(0x00, dp->reg_base + S5P_DP_PHY_PD);
