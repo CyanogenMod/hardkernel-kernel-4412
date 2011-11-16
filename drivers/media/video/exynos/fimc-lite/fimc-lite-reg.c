@@ -58,7 +58,7 @@ void flite_hw_reset(struct flite_dev *dev)
 		usleep_range(1000, 5000);
 	} while(time_before(jiffies, timeo));
 
-	v4l2_dbg(1, reg_debug, &dev->sd, "wait time : %d ms\n",
+	flite_dbg("wait time : %d ms",
 		jiffies_to_msecs(jiffies - timeo + FLITE_MAX_RESET_READY_TIME));
 
 	cfg |= FLITE_REG_CIGCTRL_SWRST;
@@ -92,12 +92,12 @@ void flite_hw_set_capture_stop(struct flite_dev *dev)
 
 int flite_hw_set_source_format(struct flite_dev *dev)
 {
-	struct v4l2_mbus_framefmt *mbus_fmt = &dev->mbus_fmt;
+	struct v4l2_mbus_framefmt *mbus_fmt = &dev->mbus_fmt[0];
 	struct flite_fmt const *f_fmt = find_flite_format(mbus_fmt);
 	u32 cfg = 0;
 
 	if (!f_fmt) {
-		v4l2_err(&dev->sd, "f_fmt is null\n");
+		flite_err("f_fmt is null");
 		return -EINVAL;
 	}
 
@@ -118,10 +118,10 @@ int flite_hw_set_source_format(struct flite_dev *dev)
 			cfg |= FLITE_REG_CISRCSIZE_ORDER422_IN_CBYCRY;
 			break;
 		case V4L2_MBUS_FMT_VYUY8_2X8:
-			cfg |= FLITE_REG_CISRCSIZE_ORDER422_IN_YCBYCR;
+			cfg |= FLITE_REG_CISRCSIZE_ORDER422_IN_CRYCBY;
 			break;
 		default:
-			v4l2_err(&dev->sd, "not supported mbus code\n");
+			flite_err("not supported mbus code");
 			return -EINVAL;
 		}
 		writel(cfg, dev->regs + FLITE_REG_CISRCSIZE);

@@ -10,6 +10,7 @@
 #ifndef FLITE_CORE_H_
 #define FLITE_CORE_H_
 
+/* #define DEBUG */
 #include <linux/sched.h>
 #include <linux/spinlock.h>
 #include <linux/types.h>
@@ -22,20 +23,38 @@
 #include <media/v4l2-mediabus.h>
 #include <media/exynos_flite.h>
 #include <media/v4l2-ioctl.h>
+#include <media/exynos_mc.h>
 
 #include "fimc-lite-reg.h"
 
-#define FLITE_MAX_RESET_READY_TIME	20 /* 100ms */
-
-#define err(fmt, args...) \
-	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
+#define flite_info(fmt, args...) \
+	printk(KERN_INFO "[INFO]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
+#define flite_err(fmt, args...) \
+	printk(KERN_ERR "[ERROR]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
+#define flite_warn(fmt, args...) \
+	printk(KERN_WARNING "[WARNNING]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
 
 #ifdef DEBUG
-#define dbg(fmt, args...) \
-	printk(KERN_DEBUG "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
+#define flite_dbg(fmt, args...) \
+	printk(KERN_DEBUG "[DEBUG]%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 #else
-#define dbg(fmt, args...)
+#define flite_dbg(fmt, args...)
 #endif
+
+#define FLITE_MAX_RESET_READY_TIME	20 /* 100ms */
+#define FLITE_MAX_WIDTH_SIZE		8192
+#define FLITE_MAX_HEIGHT_SIZE		8192
+
+enum flite_input_entity {
+	FLITE_INPUT_NONE,
+	FLITE_INPUT_SENSOR,
+	FLITE_INPUT_CSIS,
+};
+
+enum flite_output_entity {
+	FLITE_OUTPUT_NONE,
+	FLITE_OUTPUT_GSC,
+};
 
 enum flite_out_path {
 	FLITE_ISP,
@@ -102,8 +121,10 @@ struct flite_dev {
 	struct platform_device		*pdev;
 	struct exynos_platform_flite	*pdata; /* depended on isp */
 	spinlock_t			slock;
+	struct exynos_md		*mdev;
 	struct v4l2_subdev		sd;
-	struct v4l2_mbus_framefmt	mbus_fmt;
+	struct media_pad		pads[FLITE_PADS_NUM];
+	struct v4l2_mbus_framefmt	mbus_fmt[FLITE_PADS_NUM];
 	struct flite_frame		source_frame;
 	struct resource			*regs_res;
 	void __iomem			*regs;
@@ -112,6 +133,8 @@ struct flite_dev {
 	u32				out_path;
 	wait_queue_head_t		irq_queue;
 	u32				id;
+	enum flite_input_entity		input;
+	enum flite_output_entity	output;
 };
 
 /* inline function for performance-sensitive region */
