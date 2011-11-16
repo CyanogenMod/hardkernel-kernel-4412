@@ -27,9 +27,19 @@
 
 #define MDEV_MODULE_NAME "exynos5-mdev"
 #define MAX_GSC_SUBDEV		4
+#define MDEV_MAX_NUM	2
 
 #define GSC_OUT_PAD_SINK	0
 #define GSC_OUT_PAD_SOURCE	1
+
+#define FLITE_PAD_SINK		0
+#define FLITE_PAD_SOURCE_PREVIEW	1
+#define FLITE_PAD_SOURCE_CAMCORDING	2
+#define FLITE_PADS_NUM		3
+
+#define CSIS_PAD_SINK		0
+#define CSIS_PAD_SOURCE		1
+#define CSIS_PADS_NUM		2
 
 enum mdev_node {
 	MDEV_OUTPUT,
