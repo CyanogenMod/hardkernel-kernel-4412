@@ -40,105 +40,158 @@
 #include <linux/firmware.h>
 #include <linux/dma-mapping.h>
 
+#include <linux/vmalloc.h>
+
 #include "fimc-is-core.h"
 #include "fimc-is-regs.h"
 #include "fimc-is-param.h"
 #include "fimc-is-cmd.h"
 
 /* Binary load functions */
-static void fimc_is_firmware_request_complete_handler(const struct firmware *fw,
-						  void *context)
-{
-	struct fimc_is_dev *dev = context;
-	volatile unsigned char *fw_base;
-	if (fw != NULL) {
-		fw_base = phys_to_virt(dev->mem.base);
-		memcpy((void *)fw_base, fw->data, fw->size);
-		fimc_is_mem_cache_clean((void *)fw_base, fw->size);
-		dev->fw.state = 1;
-		dbg("FIMC_IS F/W loaded successfully - size:%d\n", fw->size);
-		dev->fw.info = fw;
-	} else {
-		err("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
-	}
-}
-
 static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 {
 	int ret;
-	ret = request_firmware_nowait(THIS_MODULE,
-		FW_ACTION_HOTPLUG,
-		"fimc_is_fw.bin",
-		&dev->pdev->dev,
-		GFP_KERNEL,
-		dev,
-		fimc_is_firmware_request_complete_handler);
-	if (ret) {
-		dev_err(&dev->pdev->dev,
-			"could not load firmware (err=%d)\n", ret);
-		return -EINVAL;
-	}
-	return 0;
-}
+	struct firmware *fw_blob;
+	u8 *buf = NULL;
+#ifdef SDCARD_FW
+	struct file *fp;
+	mm_segment_t old_fs;
+	long fsize, nread;
+	int fw_requested = 1;
 
-static void fimc_is_setfile_request_complete_handler(const struct firmware *fw,
-						  void *context)
-{
-	struct fimc_is_dev *dev = context;
-	volatile unsigned char *fw_base;
-	if (fw != NULL) {
-		fw_base = phys_to_virt(dev->mem.base + dev->setfile.base);
-		memcpy((void *)fw_base, fw->data, fw->size);
-		fimc_is_mem_cache_clean((void *)fw_base, fw->size);
-		dev->setfile.state = 1;
-		dbg("FIMC_IS setfile loaded successfully-size:%d\n", fw->size);
-		dev->setfile.info = fw;
-	} else {
-		err("failed to load setfile, FIMC-IS will not working\n");
+	ret = 0;
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+	fp = filp_open(FIMC_IS_FW_SDCARD, O_RDONLY, 0);
+	if (IS_ERR(fp)) {
+		err("failed to open %s\n", FIMC_IS_FW_SDCARD);
+		goto request_fw;
 	}
-}
+	fw_requested = 0;
+	fsize = fp->f_path.dentry->d_inode->i_size;
+	dbg("start, file path %s, size %ld Bytes\n", FIMC_IS_FW_SDCARD, fsize);
+	buf = vmalloc(fsize);
+	if (!buf) {
+		err("failed to allocate memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+	nread = vfs_read(fp, (char __user *)buf, fsize, &fp->f_pos);
+	if (nread != fsize) {
+		err("failed to read firmware file, %ld Bytes\n", nread);
+		ret = -EIO;
+		goto out;
+	}
 
-static int fimc_is_request_setfile(struct fimc_is_dev *dev)
-{
-	int ret;
-	ret = request_firmware_nowait(THIS_MODULE,
-		FW_ACTION_HOTPLUG,
-		"setfile.bin",
-		&dev->pdev->dev,
-		GFP_KERNEL,
-		dev,
-		fimc_is_setfile_request_complete_handler);
-	if (ret) {
-		dev_err(&dev->pdev->dev,
-			"could not load firmware (err=%d)\n", ret);
-		return -EINVAL;
+	memcpy((void *)phys_to_virt(dev->mem.base), (void *)buf, fsize);
+	fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base), fsize);
+	dev->fw.state = 1;
+request_fw:
+	if (fw_requested) {
+		set_fs(old_fs);
+#endif
+		ret = request_firmware((const struct firmware **)&fw_blob,
+					FIMC_IS_FW, &dev->pdev->dev);
+		if (ret) {
+			dev_err(&dev->pdev->dev,
+				"could not load firmware (err=%d)\n", ret);
+			return -EINVAL;
+		}
+		memcpy((void *)phys_to_virt(dev->mem.base),
+				fw_blob->data, fw_blob->size);
+		fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
+								fw_blob->size);
+		dev->fw.state = 1;
+		dbg("FIMC_IS F/W loaded successfully - size:%d\n",
+							fw_blob->size);
+		release_firmware(fw_blob);
+#ifdef SDCARD_FW
 	}
-	return 0;
+#endif
+
+out:
+#ifdef SDCARD_FW
+	if (!fw_requested) {
+		vfree(buf);
+		filp_close(fp, current->files);
+		set_fs(old_fs);
+	}
+#endif
+	return ret;
 }
 
 static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 {
 	int ret;
-	u32 timeout;
+	struct firmware *fw_blob;
+	u8 *buf = NULL;
+#ifdef SDCARD_FW
+	struct file *fp;
+	mm_segment_t old_fs;
+	long fsize, nread;
+	int fw_requested = 1;
 
-	dev->setfile.state = 0;
-	ret = fimc_is_request_setfile(dev);
-	if (ret) {
-		dev_err(&dev->pdev->dev,
-		"failed to fimc_is_request_setfile (%d)\n", ret);
-		return -EINVAL;
+	ret = 0;
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+	fp = filp_open(FIMC_IS_SETFILE_SDCARD, O_RDONLY, 0);
+	if (IS_ERR(fp)) {
+		err("failed to open %s\n", FIMC_IS_SETFILE_SDCARD);
+		goto request_fw;
 	}
-	timeout = 30;
-	while (!dev->setfile.state) {
-		if (timeout == 0) {
+	fw_requested = 0;
+	fsize = fp->f_path.dentry->d_inode->i_size;
+	dbg("start, file path %s, size %ld Bytes\n",
+		FIMC_IS_SETFILE_SDCARD, fsize);
+	buf = vmalloc(fsize);
+	if (!buf) {
+		err("failed to allocate memory\n");
+		ret = -ENOMEM;
+		goto out;
+	}
+	nread = vfs_read(fp, (char __user *)buf, fsize, &fp->f_pos);
+	if (nread != fsize) {
+		err("failed to read firmware file, %ld Bytes\n", nread);
+		ret = -EIO;
+		goto out;
+	}
+
+	memcpy((void *)phys_to_virt(dev->mem.base + dev->setfile.base),
+							(void *)buf, fsize);
+	fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base), fsize);
+	dev->fw.state = 1;
+request_fw:
+	if (fw_requested) {
+		set_fs(old_fs);
+#endif
+		ret = request_firmware((const struct firmware **)&fw_blob,
+					FIMC_IS_SETFILE, &dev->pdev->dev);
+		if (ret) {
 			dev_err(&dev->pdev->dev,
-			"Load setfile failed : %s\n", __func__);
+				"could not load firmware (err=%d)\n", ret);
+			return -EINVAL;
 		}
-		timeout--;
-		mdelay(1);
+		memcpy((void *)phys_to_virt(dev->mem.base + dev->setfile.base),
+			fw_blob->data, fw_blob->size);
+		fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
+			fw_blob->size);
+		dev->setfile.state = 1;
+		dbg("FIMC_IS setfile loaded successfully - size:%d\n",
+								fw_blob->size);
+		release_firmware(fw_blob);
+#ifdef SDCARD_FW
 	}
+#endif
 
-	return 0;
+out:
+#ifdef SDCARD_FW
+	if (!fw_requested) {
+		vfree(buf);
+		filp_close(fp, current->files);
+		set_fs(old_fs);
+	}
+#endif
+	return ret;
 }
 
 /* v4l2 subdev core operations

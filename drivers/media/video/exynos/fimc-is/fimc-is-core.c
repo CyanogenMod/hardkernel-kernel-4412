@@ -33,9 +33,7 @@
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-mem2mem.h>
 
-#ifdef CONFIG_CMA
 #include <linux/cma.h>
-#endif
 #include <asm/cacheflush.h>
 #include <asm/pgtable.h>
 #include <linux/firmware.h>
@@ -74,7 +72,6 @@ void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size)
 
 int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
 {
-#ifdef CONFIG_CMA
 	struct cma_info mem_info;
 	int err;
 
@@ -100,7 +97,7 @@ int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
 
 	printk(KERN_INFO "ctrl->mem.size = 0x%x\n", dev->mem.size);
 	printk(KERN_INFO "ctrl->mem.base = 0x%x\n", dev->mem.base);
-#endif
+
 	return 0;
 }
 

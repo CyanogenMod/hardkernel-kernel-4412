@@ -57,6 +57,17 @@
 #define DRC_SETFILE_SIZE	0x140
 #define FD_SETFILE_SIZE		(0x88*2)
 
+#define SDCARD_FW
+
+#ifdef SDCARD_FW
+#define FIMC_IS_FW_SDCARD	"/sdcard/fimc_is_fw.bin"
+#define FIMC_IS_SETFILE_SDCARD	"/sdcard/setfile.bin"
+#endif
+#define FIMC_IS_FW		"fimc_is_fw.bin"
+#define FIMC_IS_SETFILE		"setfile.bin"
+
+#define DEBUG
+
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 
