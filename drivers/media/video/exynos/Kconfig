@@ -5,6 +5,7 @@ config VIDEO_EXYNOS
 	bool "Exynos Multimedia Devices"
 	depends on ARCH_EXYNOS4 || ARCH_EXYNOS5
 	default n
+	select VIDEO_FIXED_MINOR_RANGES
 	help
 	  This is a representative exynos multimedia device.
 
@@ -18,6 +19,7 @@ config VIDEO_EXYNOS_MEMSIZE_FIMC_IS
 if VIDEO_EXYNOS
 	source "drivers/media/video/exynos/fimc-is/Kconfig"
 	source "drivers/media/video/exynos/fimc-lite/Kconfig"
+	source "drivers/media/video/exynos/mipi-csis/Kconfig"
 	source "drivers/media/video/exynos/tv/Kconfig"
 if ARCH_EXYNOS5
 	source "drivers/media/video/exynos/mdev/Kconfig"

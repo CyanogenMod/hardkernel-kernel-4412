@@ -527,12 +527,14 @@ config ITU_B
 	  This enables support for ITU B port
 config CSI_C
 	bool "CSI Camera A port"
-	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS ||\
+			VIDEO_EXYNOS_MIPI_CSIS)
 	help
 	  This enables support for CSI A port
 config CSI_D
 	bool "CSI Camera B port"
-	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS ||\
+			VIDEO_EXYNOS_MIPI_CSIS)
 	help
 	  This enables support for CSI B port
 endchoice
