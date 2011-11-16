@@ -591,9 +591,15 @@ void fimc_hw_set_output_addr(struct fimc_dev *dev,
 {
 	int i = (index == -1) ? 0 : index;
 	do {
+		struct fimc_fmt *fmt = dev->vid_cap.ctx->d_frame.fmt;
 		writel(paddr->y, dev->regs + S5P_CIOYSA(i));
-		writel(paddr->cb, dev->regs + S5P_CIOCBSA(i));
-		writel(paddr->cr, dev->regs + S5P_CIOCRSA(i));
+		if (fmt->fourcc != V4L2_PIX_FMT_YVU420) {
+			writel(paddr->cb, dev->regs + S5P_CIOCBSA(i));
+			writel(paddr->cr, dev->regs + S5P_CIOCRSA(i));
+		} else {
+			writel(paddr->cr, dev->regs + S5P_CIOCBSA(i));
+			writel(paddr->cb, dev->regs + S5P_CIOCRSA(i));
+		}
 		dbg("dst_buf[%d]: 0x%X, cb: 0x%X, cr: 0x%X",
 		    i, paddr->y, paddr->cb, paddr->cr);
 	} while (index == -1 && ++i < FIMC_MAX_OUT_BUFS);
