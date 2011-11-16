@@ -75,17 +75,17 @@ int audss_set_clk_div(u32 mode)
 		switch (audss.clk_src_rate) {
 		case 192000000:
 		case 180000000:
-			rclk_shift = 2;
+			rclk_shift = 0;
 			srp_shift = 0;
 			break;
 		case 96000000:
-			rclk_shift = 1;
+			rclk_shift = 0;
 			srp_shift = 0;
 			break;
 		case 73728000:
 		case 67737600:
-			rclk_shift = 1;
-			srp_shift = 1;
+			rclk_shift = 0;
+			srp_shift = 0;
 			break;
 		case 49152000:
 		case 45158000:
@@ -98,22 +98,22 @@ int audss_set_clk_div(u32 mode)
 		switch (audss.clk_src_rate) {
 		case 192000000:
 		case 180000000:
-			rclk_shift = 4;
-			srp_shift = 4;
+			rclk_shift = 0;
+			srp_shift = 0;
 			break;
 		case 96000000:
-			rclk_shift = 4;
-			srp_shift = 4;
+			rclk_shift = 0;
+			srp_shift = 0;
 			break;
 		case 73728000:
 		case 67737600:
-			rclk_shift = 2;
-			srp_shift = 2;
+			rclk_shift = 0;
+			srp_shift = 0;
 			break;
 		case 49152000:
 		case 45158000:
-			rclk_shift = 1;
-			srp_shift = 1;
+			rclk_shift = 0;
+			srp_shift = 0;
 			break;
 		}
 		break;
