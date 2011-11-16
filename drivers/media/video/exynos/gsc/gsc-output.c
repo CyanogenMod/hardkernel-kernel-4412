@@ -491,12 +491,8 @@ static int gsc_output_streamoff(struct file *file, void *priv,
 			    enum v4l2_buf_type type)
 {
 	struct gsc_dev *gsc = video_drvdata(file);
-	int ret;
 
-	ret = vb2_streamoff(&gsc->out.vbq, type);
-	if (ret == 0)
-		media_entity_pipeline_stop(&gsc->out.vfd->entity);
-	return ret;
+	return vb2_streamoff(&gsc->out.vbq, type);
 }
 
 static int gsc_output_qbuf(struct file *file, void *priv,
@@ -658,7 +654,14 @@ static int gsc_out_stop_streaming(struct vb2_queue *q)
 	gsc_hw_set_input_buf_mask_all(gsc);
 
 	/* TODO: Add gscaler clock off function */
-	return gsc_out_video_s_stream(gsc, 0);
+	ret = gsc_out_video_s_stream(gsc, 0);
+	if (ret) {
+		gsc_err("G-Scaler video s_stream off failed");
+		return ret;
+	}
+	media_entity_pipeline_stop(&gsc->out.vfd->entity);
+
+	return ret;
 }
 
 static int gsc_out_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
