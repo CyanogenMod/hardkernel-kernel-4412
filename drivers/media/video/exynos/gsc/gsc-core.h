@@ -21,6 +21,7 @@
 #include <linux/videodev2.h>
 #include <linux/io.h>
 #include <linux/pm_runtime.h>
+#include <mach/videonode.h>
 #include <media/videobuf2-core.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
@@ -37,7 +38,7 @@
 #define gsc_err(fmt, args...) \
 	printk(KERN_ERR "[ERROR]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
 #define gsc_warn(fmt, args...) \
-	printk(KERN_ERR "[WARNNING]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
+	printk(KERN_WARNING "[WARNNING]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
 #ifdef DEBUG
 #define gsc_dbg(fmt, args...) \
 	printk(KERN_DEBUG "[DEBUG]%s:%d: " fmt "\n", __func__, __LINE__, ##args)
@@ -45,56 +46,51 @@
 #define gsc_dbg(fmt, args...)
 #endif
 
-#define GSC_SHUTDOWN_TIMEOUT	((100*HZ)/1000)
-#define GSC_MODULE_NAME		"exynos-gsc"
-#define GSC_SUBDEV_NAME		"exynos-gsc-sd"
-#define FLITE_MODULE_NAME	"exynos-fimc-lite"
-#define CSIS_MODULE_NAME	"s5p-mipi-csis"
-#define FIMD_MODULE_NAME	"s3c-fb-window"
-#define GSC_MAX_DEVS		4
-#define WORKQUEUE_NAME_SIZE	32
-#define FIMD_NAME_SIZE		32
-#define GSC_M2M_BUF_NUM		0
-#define GSC_OUT_BUF_MAX		2
-#define GSC_MAX_CTRL_NUM	5
-#define GSC_OUT_MAX_MASK_NUM	7
-#define GSC_SC_ALIGN_4		4
-#define GSC_SC_ALIGN_2		2
-#define GSC_OUT_DEF_SRC		15
-#define GSC_OUT_DEF_DST		7
-#define DEFAULT_GSC_SINK_WIDTH	1920
-#define DEFAULT_GSC_SINK_HEIGHT	1080
+#define GSC_MAX_CLOCKS			3
+#define GSC_SHUTDOWN_TIMEOUT		((100*HZ)/1000)
+#define GSC_MODULE_NAME			"exynos-gsc"
+#define GSC_SUBDEV_NAME			"exynos-gsc-sd"
+#define FLITE_MODULE_NAME		"exynos-fimc-lite"
+#define CSIS_MODULE_NAME		"s5p-mipi-csis"
+#define FIMD_MODULE_NAME		"s3c-fb-window"
+#define GSC_MAX_DEVS			4
+#define WORKQUEUE_NAME_SIZE		32
+#define FIMD_NAME_SIZE			32
+#define GSC_M2M_BUF_NUM			0
+#define GSC_OUT_BUF_MAX			2
+#define GSC_MAX_CTRL_NUM		5
+#define GSC_OUT_MAX_MASK_NUM		7
+#define GSC_SC_ALIGN_4			4
+#define GSC_SC_ALIGN_2			2
+#define GSC_OUT_DEF_SRC			15
+#define GSC_OUT_DEF_DST			7
+#define DEFAULT_GSC_SINK_WIDTH		800
+#define DEFAULT_GSC_SINK_HEIGHT		480
+#define DEFAULT_GSC_SOURCE_WIDTH	800
+#define DEFAULT_GSC_SOURCE_HEIGHT	480
 
-#define GSC_PAD_SINK		0
-#define GSC_PAD_SOURCE		1
-#define GSC_PADS_NUM		2
+#define GSC_LAST_DEV_ID			3
+#define GSC_PAD_SINK			0
+#define GSC_PAD_SOURCE			1
+#define GSC_PADS_NUM			2
 
-#define GSC_CAP_GRP_ID		(1 << 0)
-#define FLITE_GRP_ID		(1 << 1)
-#define CSIS_GRP_ID		(1 << 2)
-#define SENSOR_GRP_ID		(1 << 3)
+#define GSC_CAP_GRP_ID			(1 << 0)
+#define FLITE_GRP_ID			(1 << 1)
+#define CSIS_GRP_ID			(1 << 2)
+#define SENSOR_GRP_ID			(1 << 3)
 
-#define SENSOR_MAX_ENTITIES	2
+#define SENSOR_MAX_ENTITIES		GSC_MAX_CAMIF_CLIENTS
+#define FLITE_MAX_ENTITIES		2
+#define CSIS_MAX_ENTITIES		2
 
-#define FLITE_MAX_ENTITIES	2
-#define FLITE_PAD_SINK		0
-#define FLITE_PAD_SOURCE_PREVIEW	1
-#define FLITE_PAD_SOURCE_CAMCORDING	2
-#define FLITE_PADS_NUM		3
-
-#define CSIS_MAX_ENTITIES	2
-#define CSIS_PAD_SINK		0
-#define CSIS_PAD_SOURCE		1
-#define CSIS_PADS_NUM		2
-
-#define	GSC_PARAMS		(1 << 0)
-#define	GSC_SRC_FMT		(1 << 1)
-#define	GSC_DST_FMT		(1 << 2)
-#define	GSC_CTX_M2M		(1 << 3)
-#define	GSC_CTX_OUTPUT		(1 << 4)
-#define	GSC_CTX_START		(1 << 5)
-#define	GSC_CTX_STOP_REQ	(1 << 6)
-#define	GSC_CTX_CAP		(1 << 10)
+#define	GSC_PARAMS			(1 << 0)
+#define	GSC_SRC_FMT			(1 << 1)
+#define	GSC_DST_FMT			(1 << 2)
+#define	GSC_CTX_M2M			(1 << 3)
+#define	GSC_CTX_OUTPUT			(1 << 4)
+#define	GSC_CTX_START			(1 << 5)
+#define	GSC_CTX_STOP_REQ		(1 << 6)
+#define	GSC_CTX_CAP			(1 << 10)
 
 #define FMT_FLAGS_CAM	(1 << 0)
 
@@ -281,13 +277,19 @@ struct gsc_frame {
 	u8	alpha;
 };
 
+struct gsc_sensor_info {
+	struct exynos_gscaler_isp_info *pdata;
+	struct v4l2_subdev *sd;
+	struct clk *camclk;
+};
+
 struct gsc_capture_device {
 	struct gsc_ctx			*ctx;
 	struct video_device		*vfd;
 	struct v4l2_subdev		*sd_cap;
 	struct v4l2_subdev		*sd_flite[FLITE_MAX_ENTITIES];
 	struct v4l2_subdev		*sd_csis[CSIS_MAX_ENTITIES];
-	struct v4l2_subdev		*sd_sensor[SENSOR_MAX_ENTITIES];
+	struct gsc_sensor_info		sensor[SENSOR_MAX_ENTITIES];
 	struct media_pad		vd_pad;
 	struct media_pad		sd_pads[GSC_PADS_NUM];
 	struct v4l2_mbus_framefmt	mbus_fmt[GSC_PADS_NUM];
@@ -446,6 +448,7 @@ struct gsc_vb2 {
 
 struct gsc_pipeline {
 	struct media_pipeline *pipe;
+	struct v4l2_subdev *sd_gsc;
 	struct v4l2_subdev *disp;
 	struct v4l2_subdev *flite;
 	struct v4l2_subdev *csis;
@@ -599,10 +602,12 @@ static inline int is_output(enum v4l2_buf_type type)
 static inline void gsc_hw_enable_control(struct gsc_dev *dev, bool on)
 {
 	u32 cfg = readl(dev->regs + GSC_ENABLE);
+
 	if (on)
 		cfg |= GSC_ENABLE_ON;
 	else
 		cfg &= ~GSC_ENABLE_ON;
+
 	writel(cfg, dev->regs + GSC_ENABLE);
 }
 

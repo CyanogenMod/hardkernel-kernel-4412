@@ -141,24 +141,25 @@ int gsc_hw_get_done_input_buf_index(struct gsc_dev *dev)
 
 int gsc_hw_get_done_output_buf_index(struct gsc_dev *dev)
 {
-	u32 cfg, curr_index, prev_index, done_buf_index;
+	u32 cfg, curr_index, done_buf_index;
 	unsigned long state_mask;
 	u32 reqbufs_cnt = dev->cap.reqbufs_cnt;
 
 	cfg = readl(dev->regs + GSC_OUT_BASE_ADDR_Y_MASK);
 	curr_index = GSC_OUT_CURR_GET_INDEX(cfg);
+	gsc_dbg("curr_index : %d", curr_index);
 	state_mask = cfg & GSC_OUT_BASE_ADDR_MASK;
 
-	prev_index = (curr_index == 1) ? reqbufs_cnt : curr_index - 1;
-	done_buf_index = prev_index - 1;
+	done_buf_index = (curr_index == 0) ? reqbufs_cnt - 1: curr_index - 1;
 
 	do {
+		/* Test done_buf_index whether masking or not */
 		if (test_bit(done_buf_index, &state_mask))
 			done_buf_index = (done_buf_index == 0) ?
 				reqbufs_cnt - 1 : done_buf_index - 1;
 		else
 			return done_buf_index;
-	} while (done_buf_index != prev_index);
+	} while (done_buf_index != curr_index);
 
 	return -EBUSY;
 }
@@ -387,7 +388,10 @@ void gsc_hw_set_in_image_format(struct gsc_ctx *ctx)
 			cfg |= GSC_IN_CHROMA_ORDER_CRCB;
 		break;
 	case 3:
-		cfg |= GSC_IN_YUV420_3P;
+		if (depth == 12)
+			cfg |= GSC_IN_YUV420_3P;
+		else
+			cfg |= GSC_IN_YUV422_3P;
 		break;
 	};
 

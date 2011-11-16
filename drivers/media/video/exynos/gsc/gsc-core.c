@@ -28,6 +28,7 @@
 #include <media/v4l2-ioctl.h>
 
 #include "gsc-core.h"
+#define GSC_CLOCK_GATE_NAME		"gscl"
 
 static struct gsc_fmt gsc_formats[] = {
 	{
@@ -292,10 +293,9 @@ int gsc_enum_fmt_mplane(struct v4l2_fmtdesc *f)
 	struct gsc_fmt *fmt;
 
 	fmt = find_format(NULL, NULL, f->index);
-	if (!fmt) {
-		gsc_err("Not supported format");
+	if (!fmt)
 		return -EINVAL;
-	}
+
 	strncpy(f->description, fmt->name, sizeof(f->description) - 1);
 	f->pixelformat = fmt->pixelformat;
 
@@ -321,7 +321,7 @@ int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f)
 	u32 min_w, min_h, tmp_w, tmp_h;
 	int i;
 
-	gsc_dbg("user put w: %d, h: %d", pix_mp->width, pix_mp->height);
+	gsc_info("user put w: %d, h: %d", pix_mp->width, pix_mp->height);
 
 	fmt = find_format(&pix_mp->pixelformat, NULL, 0);
 	if (!fmt) {
@@ -355,7 +355,7 @@ int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f)
 		min_w = variant->pix_min->target_w;
 		min_h = variant->pix_min->target_h;
 	}
-	gsc_dbg("mod_x: %d, mod_y: %d, max_w: %d, max_h = %d",
+	gsc_info("mod_x: %d, mod_y: %d, max_w: %d, max_h = %d",
 	     mod_x, mod_y, max_w, max_h);
 	/* To check if image size is modified to adjust parameter against
 	   hardware abilities */
@@ -752,6 +752,7 @@ void gsc_cap_irq_handler(struct gsc_dev *gsc)
 	int done_index;
 
 	done_index = gsc_hw_get_done_output_buf_index(gsc);
+	gsc_info("done_index : %d", done_index);
 	if (done_index < 0)
 		gsc_err("All buffers are masked\n");
 	vb2_buffer_done(gsc->cap.vbq.bufs[done_index], VB2_BUF_STATE_DONE);
@@ -887,7 +888,7 @@ static int gsc_probe(struct platform_device *pdev)
 	}
 
 	/* Get Gscaler clock */
-	gsc->clock = clk_get(&gsc->pdev->dev, "gscl");
+	gsc->clock = clk_get(&gsc->pdev->dev, GSC_CLOCK_GATE_NAME);
 	if (IS_ERR(gsc->clock)) {
 		gsc_err("failed to get gscaler.%d clock", gsc->id);
 		goto err_regs_unmap;
@@ -937,11 +938,11 @@ static int gsc_probe(struct platform_device *pdev)
 	ret = gsc_register_output_device(gsc);
 	if (ret)
 		goto err_irq;
-#if 0
+
 	ret = gsc_register_capture_device(gsc);
 	if (ret)
 		goto err_irq;
-#endif
+
 	sprintf(workqueue_name, "gsc%d_irq_wq_name", gsc->id);
 	gsc->irq_workqueue = create_singlethread_workqueue(workqueue_name);
 	if (gsc->irq_workqueue == NULL) {
@@ -955,15 +956,6 @@ static int gsc_probe(struct platform_device *pdev)
 		ret = PTR_ERR(gsc->alloc_ctx);
 		goto err_wq;
 	}
-
-	gsc_hw_set_sw_reset(gsc);
-	ret = gsc_wait_reset(gsc);
-	if (ret)
-		goto err_wq;
-	gsc_hw_set_frm_done_irq_mask(gsc, false);
-	gsc_hw_set_overflow_irq_mask(gsc, false);
-	gsc_hw_set_one_frm_mode(gsc, false);
-	gsc_hw_set_gsc_irq_enable(gsc, true);
 
 	gsc_info("gsc-%d registered successfully", gsc->id);
 
@@ -1001,6 +993,8 @@ static int __devexit gsc_remove(struct platform_device *pdev)
 
 	gsc->vb2->cleanup(gsc->alloc_ctx);
 
+	clk_disable(gsc->clock);
+	clk_put(gsc->clock);
 	iounmap(gsc->regs);
 	release_resource(gsc->regs_res);
 	kfree(gsc->regs_res);
