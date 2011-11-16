@@ -11,7 +11,23 @@
 #ifndef EXYNOS_FLITE_H_
 #define EXYNOS_FLITE_H_
 
+#ifdef CONFIG_ARCH_EXYNOS4
 #include <plat/fimc.h>
+#else
+enum flite_cam_type {
+	CAM_TYPE_ITU,
+	CAM_TYPE_MIPI,
+};
+
+struct s3c_platform_camera {
+	enum flite_cam_type type;
+	bool use_isp;
+	int inv_pclk;
+	int inv_vsync;
+	int inv_href;
+	int inv_hsync;
+};
+#endif
 
 /**
  * struct exynos_platform_flite - camera host interface platform data
