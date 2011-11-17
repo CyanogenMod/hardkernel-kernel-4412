@@ -32,7 +32,7 @@ extern "C" {
 *****************************************************************/
 #if defined(CONFIG_ARCH_S5PV210)
 #define ACE_SFR_BASE		(0xEA000000)
-#elif defined(CONFIG_ARCH_EXYNOS4)
+#elif defined(CONFIG_ARCH_EXYNOS4) || defined(CONFIG_ARCH_EXYNOS5)
 #define ACE_SFR_BASE		(0x10830000)
 #else
 #error No ARCH is defined.
@@ -44,7 +44,7 @@ extern "C" {
 #define ACE_TDES_OFFSET		(0x5000)
 #define ACE_HASH_OFFSET		(0x6000)
 #define ACE_PKA_OFFSET		(0x7000)
-#elif defined(CONFIG_ARCH_EXYNOS4)
+#elif defined(CONFIG_ARCH_EXYNOS4) || defined(CONFIG_ARCH_EXYNOS5)
 #define ACE_FC_OFFSET		(0x0)
 #define ACE_AES_OFFSET		(0x200)
 #define ACE_TDES_OFFSET		(0x300)
@@ -172,7 +172,7 @@ extern "C" {
 
 #define ACE_HASH_PRELEN_HIGH	(ACE_HASH_OFFSET + 0xC0)
 #define ACE_HASH_PRELEN_LOW	(ACE_HASH_OFFSET + 0xC4)
-#elif defined(CONFIG_ARCH_EXYNOS4)
+#elif defined(CONFIG_ARCH_EXYNOS4) || defined(CONFIG_ARCH_EXYNOS5)
 #define ACE_HASH_CONTROL	(ACE_HASH_OFFSET + 0x00)
 #define ACE_HASH_CONTROL2	(ACE_HASH_OFFSET + 0x04)
 #define ACE_HASH_FIFO_MODE	(ACE_HASH_OFFSET + 0x08)
@@ -431,7 +431,7 @@ extern "C" {
 #define ACE_HASH_ENGSEL_SHA256HMAC	(0x5 << 0)
 #if defined(CONFIG_ARCH_S5PV210)
 #define ACE_HASH_ENGSEL_PRNG		(0x4 << 0)
-#elif defined(CONFIG_ARCH_EXYNOS4)
+#elif defined(CONFIG_ARCH_EXYNOS4) || defined(CONFIG_ARCH_EXYNOS5)
 #define ACE_HASH_ENGSEL_PRNG		(0x8 << 0)
 #endif
 #define ACE_HASH_STARTBIT_ON		(1 << 4)
@@ -440,7 +440,7 @@ extern "C" {
 /* Hash control 2 */
 #if defined(CONFIG_ARCH_S5PV210)
 #define ACE_HASH_PAUSE_ON		(1 << 3)
-#elif defined(CONFIG_ARCH_EXYNOS4)
+#elif defined(CONFIG_ARCH_EXYNOS4) || defined(CONFIG_ARCH_EXYNOS5)
 #define ACE_HASH_PAUSE_ON		(1 << 0)
 #endif
 
@@ -452,7 +452,7 @@ extern "C" {
 /* Hash control - byte swap */
 #if defined(CONFIG_ARCH_S5PV210)
 #define ACE_HASH_SWAP_MASK		(0x7 << 1)
-#elif defined(CONFIG_ARCH_EXYNOS4)
+#elif defined(CONFIG_ARCH_EXYNOS4) || defined(CONFIG_ARCH_EXYNOS5)
 #define ACE_HASH_SWAP_MASK		(0xF << 0)
 #endif
 #define ACE_HASH_SWAPKEY_OFF		(0 << 0)
