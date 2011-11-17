@@ -890,9 +890,10 @@ static void s3c_fb_enable(struct s3c_fb *sfb, int enable)
 {
 	u32 vidcon0 = readl(sfb->regs + VIDCON0);
 
-	if (enable)
+	if (enable) {
 		vidcon0 |= VIDCON0_ENVID | VIDCON0_ENVID_F;
-	else {
+		dev_dbg(sfb->dev, "fimd gets enabled");
+	} else {
 		/* see the note in the framebuffer datasheet about
 		 * why you cannot take both of these bits down at the
 		 * same time. */
@@ -902,6 +903,7 @@ static void s3c_fb_enable(struct s3c_fb *sfb, int enable)
 
 		vidcon0 |= VIDCON0_ENVID;
 		vidcon0 &= ~VIDCON0_ENVID_F;
+		dev_dbg(sfb->dev, "fimd gets disabled");
 	}
 
 	writel(vidcon0, sfb->regs + VIDCON0);
@@ -921,7 +923,7 @@ static int s3c_fb_blank(int blank_mode, struct fb_info *info)
 	unsigned int index = win->index;
 	u32 wincon;
 
-	dev_dbg(sfb->dev, "blank mode %d\n", blank_mode);
+	dev_dbg(sfb->dev, "Window[%d] : blank mode %d\n", index, blank_mode);
 
 	wincon = readl(sfb->regs + sfb->variant.wincon + (index * 4));
 
@@ -1500,7 +1502,7 @@ static int __devinit s3c_fb_alloc_memory(struct s3c_fb *sfb,
 	fbi->fix.smem_len = size;
 	size = PAGE_ALIGN(size);
 
-	dev_dbg(sfb->dev, "want %u bytes for window\n", size);
+	dev_dbg(sfb->dev, "want %u bytes for window[%d]\n", size, win->index);
 
 #if defined(CONFIG_S5P_MEM_CMA) && !defined(CONFIG_ION_EXYNOS)
 	err = cma_info(&mem_info, sfb->dev, 0);
@@ -1764,6 +1766,7 @@ static void s3c_fb_early_suspend(struct early_suspend *handler)
 		if (!win)
 			continue;
 
+		dev_dbg(dev, "early_suspending window %d\n", win_no);
 		/* use the blank function to push into power-down */
 		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
 	}
@@ -1841,7 +1844,7 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 		if (!win)
 			continue;
 
-		dev_dbg(dev, "resuming window %d\n", win_no);
+		dev_dbg(dev, "late_resuming window %d\n", win_no);
 		s3c_fb_set_par(win->fbinfo);
 	}
 
@@ -2577,6 +2580,7 @@ static int s3c_fb_runtime_suspend(struct device *dev)
 		if (!win)
 			continue;
 
+		dev_dbg(&pdev->dev, "rpm : suspending window %d\n", win_no);
 		/* use the blank function to push into power-down */
 		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
 	}
@@ -2643,7 +2647,7 @@ static int s3c_fb_runtime_resume(struct device *dev)
 		if (!win)
 			continue;
 
-		dev_dbg(&pdev->dev, "resuming window %d\n", win_no);
+		dev_dbg(&pdev->dev, "rpm : resuming window %d\n", win_no);
 		s3c_fb_set_par(win->fbinfo);
 	}
 
