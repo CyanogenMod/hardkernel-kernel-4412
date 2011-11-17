@@ -92,7 +92,6 @@ int ump_allocate_wrapper(u32 __user * argument, struct ump_session_data  * sessi
 int ump_ion_import_wrapper(u32 __user * argument, struct ump_session_data  * session_data)
 {
 	_ump_uk_ion_import_s user_interaction;
-	_mali_osk_errcode_t err;
 	ump_dd_handle *ump_handle;
 	ump_dd_physical_block * blocks;
 	unsigned long num_blocks;
@@ -128,15 +127,16 @@ int ump_ion_import_wrapper(u32 __user * argument, struct ump_session_data  * ses
 	blocks = (ump_dd_physical_block*)_mali_osk_malloc(sizeof(ump_dd_physical_block)*1024);
 	sg = sg_ion;
 	do {
-	    blocks[i].addr = sg_phys(sg);
-	    blocks[i].size = sg_dma_len(sg);
-	    i++;
-	    if (i>=1024) {
-		_mali_osk_free(blocks);
-		MSG_ERR(("ion_import fail() in ump_ioctl_allocate()\n"));
-		return -EFAULT;
-	    }
-	} while(sg=sg_next(sg));
+		blocks[i].addr = sg_phys(sg);
+		blocks[i].size = sg_dma_len(sg);
+		i++;
+		if (i>=1024) {
+			_mali_osk_free(blocks);
+			MSG_ERR(("ion_import fail() in ump_ioctl_allocate()\n"));
+			return -EFAULT;
+		}
+		sg = sg_next(sg);
+	} while(sg);
 
 	num_blocks = i;
 
@@ -162,12 +162,6 @@ int ump_ion_import_wrapper(u32 __user * argument, struct ump_session_data  * ses
 
 	user_interaction.secure_id = ump_dd_secure_id_get(ump_handle);
 	user_interaction.size = ump_dd_size_get(ump_handle);
-
-	if( _MALI_OSK_ERR_OK != err )
-	{
-		DBG_MSG(1, ("_ump_ukk_allocate() failed in ump_ioctl_allocate()\n"));
-		return map_errcode(err);
-	}
 	user_interaction.ctx = NULL;
 
 	if (0 != copy_to_user(argument, &user_interaction, sizeof(user_interaction)))
