@@ -1173,6 +1173,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_BATTERY_SAMSUNG
 	&samsung_device_battery,
 #endif
+#ifdef CONFIG_S5P_DEV_ACE
+	&s5p_device_ace,
+#endif
 };
 
 #if defined(CONFIG_S5P_MEM_CMA)
