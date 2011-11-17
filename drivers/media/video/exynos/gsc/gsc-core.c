@@ -183,7 +183,7 @@ static struct gsc_fmt gsc_formats[] = {
 		.nr_comp	= 3,
 	}, {
 		.name		= "YUV 4:2:0 non-contiguous 2-planar, Y/CbCr, tiled",
-		.pixelformat	= V4L2_PIX_FMT_NV12MT,
+		.pixelformat	= V4L2_PIX_FMT_NV12MT_16X16,
 		.depth		= { 8, 4 },
 		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
