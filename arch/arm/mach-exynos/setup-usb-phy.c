@@ -20,7 +20,6 @@
 #include <mach/regs-usb-phy.h>
 #include <plat/cpu.h>
 #include <plat/usb-phy.h>
-#include <plat/cpu.h>
 #include <plat/regs-usb3-exynos-drd-phy.h>
 
 #define ETC6PUD		(S5P_VA_GPIO2 + 0x228)
