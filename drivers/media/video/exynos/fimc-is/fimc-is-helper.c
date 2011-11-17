@@ -792,6 +792,8 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 			timeout--;
 			udelay(1);
 		}
+		/* 4. ISP Power down mode (LOWPWR) */
+		writel(0x0, PMUREG_CMU_RESET_ISP_SYS_PWR_REG);
 	}
 }
 
