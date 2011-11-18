@@ -27,6 +27,7 @@
 #include <plat/regs-otg.h>
 #include <plat/usb-phy.h>
 #include <plat/usbgadget.h>
+#include <plat/cpu.h>
 
 #if 1
 #undef DEBUG_S3C_UDC_SETUP
@@ -569,20 +570,24 @@ static void reconfig_usbd(void)
 {
 	struct s3c_udc *dev = the_controller;
 	unsigned int utemp;
-	/* 2. Soft-reset OTG Core and then unreset again. */
 
+	/* 2. Soft-reset OTG Core and then unreset again. */
 	__raw_writel(CORE_SOFT_RESET, dev->regs + S3C_UDC_OTG_GRSTCTL);
 
-	__raw_writel(0<<15		/* PHY Low Power Clock sel*/
-		|1<<14		/* Non-Periodic TxFIFO Rewind Enable*/
-		|0x5<<10	/* Turnaround time*/
-		|0<<9|0<<8	/* [0:HNP disable, 1:HNP enable][ 0:SRP disable, 1:SRP enable] H1= 1,1*/
-		|0<<7		/* Ulpi DDR sel*/
-		|0<<6		/* 0: high speed utmi+, 1: full speed serial*/
-		|0<<4		/* 0: utmi+, 1:ulpi*/
-		|1<<3		/* phy i/f  0:8bit, 1:16bit*/
-		|0x7<<0,	/* HS/FS Timeout**/
-		dev->regs + S3C_UDC_OTG_GUSBCFG);
+	utemp = (0<<15		/* PHY Low Power Clock sel */
+		|1<<14		/* Non-Periodic TxFIFO Rewind Enable */
+		|0<<9|0<<8	/* [0:HNP disable, 1:HNP enable][ 0:SRP disable, 1:SRP enable] H1= 1,1 */
+		|0<<7		/* Ulpi DDR sel */
+		|0<<6		/* 0: high speed utmi+, 1: full speed serial */
+		|0<<4		/* 0: utmi+, 1:ulpi */
+		|0x7<<0);	/* HS/FS Timeout */
+	/* [13:10] Turnaround time 0x5:16-bit 0x9:8-bit UTMI+ */
+	/* [3] phy i/f 0:8bit, 1:16bit */
+	if (soc_is_exynos4210())
+		utemp |= (0x5<<10 | 1<<3);
+	else
+		utemp |= (0x9<<10 | 0<<3);
+	__raw_writel(utemp, dev->regs + S3C_UDC_OTG_GUSBCFG);
 
 	/* 3. Put the OTG device core in the disconnected state.*/
 	utemp = __raw_readl(dev->regs + S3C_UDC_OTG_DCTL);
