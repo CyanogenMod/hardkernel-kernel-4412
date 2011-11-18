@@ -26,34 +26,6 @@
 #define COMMON_INT_MASK_4 (0)
 #define INT_STA_MASK (0)
 
-#ifdef CONFIG_CPU_EXYNOS5250
-void s5p_dp_do_hw_link_training(struct s5p_dp_device *dp)
-{
-	u32 reg;
-
-	reg = HW_TRAINING_EN;
-	writel(reg, dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
-}
-
-void s5p_dp_wait_hw_link_training_done(struct s5p_dp_device *dp)
-{
-	u32 reg;
-
-	reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
-	while (reg & HW_TRAINING_EN)
-		reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
-}
-
-void s5p_dp_get_hw_link_training_status(struct s5p_dp_device *dp)
-{
-	u32 reg;
-
-	reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
-	if (reg != 0)
-		dev_err(dp->dev, " H/W link training failure: 0x%x\n", reg);
-}
-#endif
-
 void s5p_dp_enable_video_bist(struct s5p_dp_device *dp, bool enable)
 {
 	u32 reg;
@@ -1068,6 +1040,33 @@ u32 s5p_dp_get_lane3_link_training(struct s5p_dp_device *dp)
 	reg = readl(dp->reg_base + S5P_DP_LN3_LINK_TRAINING_CTL);
 	return reg;
 }
+
+#ifdef CONFIG_CPU_EXYNOS5250
+void s5p_dp_start_hw_link_training(struct s5p_dp_device *dp)
+{
+	u32 reg;
+
+	reg = HW_TRAINING_EN;
+	writel(reg, dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
+}
+
+void s5p_dp_wait_hw_link_training_done(struct s5p_dp_device *dp)
+{
+	u32 reg;
+
+	reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
+	while (reg & HW_TRAINING_EN)
+		reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
+}
+
+u32 s5p_dp_get_hw_link_training_status(struct s5p_dp_device *dp)
+{
+	u32 reg;
+
+	reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
+	return reg;
+}
+#endif
 
 void s5p_dp_reset_macro(struct s5p_dp_device *dp)
 {

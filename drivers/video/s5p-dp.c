@@ -1677,14 +1677,17 @@ static int s5p_dp_hw_link_training(struct s5p_dp_device *dp,
 	s5p_dp_write_byte_to_dpcd(dp, DPCD_ADDR_SINK_POWER_STATE,
 				DPCD_SET_POWER_STATE_D0);
 
-	/* Do HW link training */
-	s5p_dp_do_hw_link_training(dp);
+	/* Start HW link training */
+	s5p_dp_start_hw_link_training(dp);
 
 	/* Wait unitl HW link training done */
 	s5p_dp_wait_hw_link_training_done(dp);
 
 	/* Get hardware link training status */
-	s5p_dp_get_hw_link_training_status(dp);
+	data = s5p_dp_get_hw_link_training_status(dp);
+
+	if (data != 0)
+		dev_err(dp->dev, " H/W link training failure: 0x%x\n", data);
 
 	s5p_dp_get_link_bandwidth(dp, &data);
 	dp->link_train.link_rate = data;
