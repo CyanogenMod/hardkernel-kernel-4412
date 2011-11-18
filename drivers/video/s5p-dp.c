@@ -273,6 +273,8 @@ static void s5p_dp_link_start(struct s5p_dp_device *dp)
 	/* Set TX pre-emphasis to minimum */
 	s5p_dp_set_lane0_pre_emphasis(dp, PRE_EMPHASIS_LEVEL_0);
 	s5p_dp_set_lane1_pre_emphasis(dp, PRE_EMPHASIS_LEVEL_0);
+	s5p_dp_set_lane2_pre_emphasis(dp, PRE_EMPHASIS_LEVEL_0);
+	s5p_dp_set_lane3_pre_emphasis(dp, PRE_EMPHASIS_LEVEL_0);
 
 	/* Set training pattern 1 */
 	s5p_dp_set_training_pattern(dp, TRAINING_PTN1);
@@ -394,42 +396,42 @@ static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 
 			/* Lane 2 setting */
 			voltage_swing_lane2 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane2_3);
+				DPCD_VOLTAGE_SWING_LANE2(adjust_requst_lane2_3);
 			pre_emphasis_lane2 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane2_3);
+				DPCD_PRE_EMPHASIS_LANE2(adjust_requst_lane2_3);
 
 			training_lane2_set =
-				DRIVE_CURRENT_SET_0_SET(voltage_swing_lane2) |
-				PRE_EMPHASIS_SET_0_SET(pre_emphasis_lane2);
+				DRIVE_CURRENT_SET_2_SET(voltage_swing_lane2) |
+				PRE_EMPHASIS_SET_2_SET(pre_emphasis_lane2);
 
 			/* max swing reached or max pre-emphasis */
 			if (voltage_swing_lane2 == VOLTAGE_LEVEL_3 ||
 			   pre_emphasis_lane2 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane2_set |= MAX_DRIVE_CURRENT_REACH_0;
-				training_lane2_set |= MAX_PRE_EMPHASIS_REACH_0;
+				training_lane2_set |= MAX_DRIVE_CURRENT_REACH_2;
+				training_lane2_set |= MAX_PRE_EMPHASIS_REACH_2;
 			}
 
 			/* Lane 3 setting */
 			voltage_swing_lane3 =
-				DPCD_VOLTAGE_SWING_LANE1(adjust_requst_lane0_1);
+				DPCD_VOLTAGE_SWING_LANE3(adjust_requst_lane2_3);
 			pre_emphasis_lane3 =
-				DPCD_PRE_EMPHASIS_LANE1(adjust_requst_lane0_1);
+				DPCD_PRE_EMPHASIS_LANE3(adjust_requst_lane2_3);
 
 			training_lane3_set =
-				DRIVE_CURRENT_SET_1_SET(voltage_swing_lane3) |
-				PRE_EMPHASIS_SET_1_SET(pre_emphasis_lane3);
+				DRIVE_CURRENT_SET_3_SET(voltage_swing_lane3) |
+				PRE_EMPHASIS_SET_3_SET(pre_emphasis_lane3);
 
 			/* max swing reached or max pre-emphasis */
 			if (voltage_swing_lane3 == VOLTAGE_LEVEL_3 ||
 			   pre_emphasis_lane3 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane3_set |= MAX_DRIVE_CURRENT_REACH_1;
-				training_lane3_set |= MAX_PRE_EMPHASIS_REACH_1;
+				training_lane3_set |= MAX_DRIVE_CURRENT_REACH_3;
+				training_lane3_set |= MAX_PRE_EMPHASIS_REACH_3;
 			}
 
 			s5p_dp_set_lane0_link_training(dp, training_lane0_set);
 			s5p_dp_set_lane1_link_training(dp, training_lane1_set);
-			s5p_dp_set_lane0_link_training(dp, training_lane2_set);
-			s5p_dp_set_lane1_link_training(dp, training_lane3_set);
+			s5p_dp_set_lane2_link_training(dp, training_lane2_set);
+			s5p_dp_set_lane3_link_training(dp, training_lane3_set);
 
 			/* Write TRAINING_PATTERN_SET */
 			buf[0] = DPCD_SCRAMBLING_DISABLED |
@@ -489,27 +491,27 @@ static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 
 			/* lane 2 same voltage count */
 			voltage_swing_lane2 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane2_3);
+				DPCD_VOLTAGE_SWING_LANE2(adjust_requst_lane2_3);
 			pre_emphasis_lane2 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane2_3);
+				DPCD_PRE_EMPHASIS_LANE2(adjust_requst_lane2_3);
 
-			if ((DRIVE_CURRENT_SET_0_GET(training_lane2_set) ==
+			if ((DRIVE_CURRENT_SET_2_GET(training_lane2_set) ==
 			   voltage_swing_lane2) &&
-			   (PRE_EMPHASIS_SET_0_GET(training_lane2_set) ==
+			   (PRE_EMPHASIS_SET_2_GET(training_lane2_set) ==
 			   pre_emphasis_lane2))
 				dp->link_train.cr_loop[2]++;
 
 			/* lane 3 same voltage count */
 			voltage_swing_lane3 =
-				DPCD_VOLTAGE_SWING_LANE1(adjust_requst_lane2_3);
+				DPCD_VOLTAGE_SWING_LANE3(adjust_requst_lane2_3);
 			pre_emphasis_lane3 =
-				DPCD_PRE_EMPHASIS_LANE1(adjust_requst_lane2_3);
+				DPCD_PRE_EMPHASIS_LANE3(adjust_requst_lane2_3);
 
-			if ((DRIVE_CURRENT_SET_1_GET(training_lane3_set) ==
+			if ((DRIVE_CURRENT_SET_3_GET(training_lane3_set) ==
 			   voltage_swing_lane3) &&
-			   (PRE_EMPHASIS_SET_1_GET(training_lane3_set) ==
+			   (PRE_EMPHASIS_SET_3_GET(training_lane3_set) ==
 			   pre_emphasis_lane3))
-				dp->link_train.cr_loop[1]++;
+				dp->link_train.cr_loop[3]++;
 
 			/*
 			 * if max swing reached or same voltage 5 times,
@@ -599,16 +601,16 @@ static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 
 				/* Lane 2 setting */
 				voltage_swing_lane2 =
-					DPCD_VOLTAGE_SWING_LANE0(
+					DPCD_VOLTAGE_SWING_LANE2(
 						adjust_requst_lane2_3);
 				pre_emphasis_lane2 =
-					DPCD_PRE_EMPHASIS_LANE0(
+					DPCD_PRE_EMPHASIS_LANE2(
 						adjust_requst_lane2_3);
 
 				training_lane2_set =
-					DRIVE_CURRENT_SET_0_SET(
+					DRIVE_CURRENT_SET_2_SET(
 						voltage_swing_lane2) |
-					PRE_EMPHASIS_SET_0_SET(
+					PRE_EMPHASIS_SET_2_SET(
 						pre_emphasis_lane2);
 
 				/* max swing reached or max pre-emphasis */
@@ -622,25 +624,25 @@ static int s5p_dp_process_clock_recovery(struct s5p_dp_device *dp)
 
 				/* Lane 3 setting */
 				voltage_swing_lane3 =
-					DPCD_VOLTAGE_SWING_LANE1(
+					DPCD_VOLTAGE_SWING_LANE3(
 						adjust_requst_lane2_3);
 				pre_emphasis_lane3 =
-					DPCD_PRE_EMPHASIS_LANE1(
+					DPCD_PRE_EMPHASIS_LANE3(
 						adjust_requst_lane2_3);
 
 				training_lane3_set =
-					DRIVE_CURRENT_SET_1_SET(
+					DRIVE_CURRENT_SET_3_SET(
 						voltage_swing_lane3) |
-					PRE_EMPHASIS_SET_1_SET(
+					PRE_EMPHASIS_SET_3_SET(
 						pre_emphasis_lane3);
 
 				/* max swing reached or max pre-emphasis */
 				if (voltage_swing_lane3 == VOLTAGE_LEVEL_3 ||
 				   pre_emphasis_lane3 == PRE_EMPHASIS_LEVEL_3) {
 					training_lane3_set |=
-						MAX_DRIVE_CURRENT_REACH_1;
+						MAX_DRIVE_CURRENT_REACH_3;
 					training_lane3_set |=
-						MAX_PRE_EMPHASIS_REACH_1;
+						MAX_PRE_EMPHASIS_REACH_3;
 				}
 
 				s5p_dp_set_lane0_link_training(dp,
@@ -1046,7 +1048,7 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 
 	udelay(400);
 
-	if (dp->link_train.lane_count == 3) {
+	if (dp->link_train.lane_count == 4) {
 		/* lane 0,1,2,3 status */
 		s5p_dp_read_bytes_from_dpcd(dp, DPCD_ADDR_LANE0_1_STATUS,
 					6, buf);
@@ -1117,13 +1119,13 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 
 			/* Lane 2 setting */
 			voltage_swing_lane2 =
-				DPCD_VOLTAGE_SWING_LANE0(adjust_requst_lane2_3);
+				DPCD_VOLTAGE_SWING_LANE2(adjust_requst_lane2_3);
 			pre_emphasis_lane2 =
-				DPCD_PRE_EMPHASIS_LANE0(adjust_requst_lane2_3);
+				DPCD_PRE_EMPHASIS_LANE2(adjust_requst_lane2_3);
 
 			training_lane2_set =
-				DRIVE_CURRENT_SET_0_SET(voltage_swing_lane2) |
-				PRE_EMPHASIS_SET_0_SET(pre_emphasis_lane2);
+				DRIVE_CURRENT_SET_2_SET(voltage_swing_lane2) |
+				PRE_EMPHASIS_SET_2_SET(pre_emphasis_lane2);
 
 			/* max swing reached or max pre-emphasis */
 			if (voltage_swing_lane2 == VOLTAGE_LEVEL_3 ||
@@ -1134,19 +1136,19 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 
 			/* Lane 3 setting */
 			voltage_swing_lane3 =
-				DPCD_VOLTAGE_SWING_LANE1(adjust_requst_lane2_3);
+				DPCD_VOLTAGE_SWING_LANE3(adjust_requst_lane2_3);
 			pre_emphasis_lane3 =
-				DPCD_PRE_EMPHASIS_LANE1(adjust_requst_lane2_3);
+				DPCD_PRE_EMPHASIS_LANE3(adjust_requst_lane2_3);
 
 			training_lane3_set =
-				DRIVE_CURRENT_SET_1_SET(voltage_swing_lane3) |
-				PRE_EMPHASIS_SET_1_SET(pre_emphasis_lane3);
+				DRIVE_CURRENT_SET_3_SET(voltage_swing_lane3) |
+				PRE_EMPHASIS_SET_3_SET(pre_emphasis_lane3);
 
 			/* max swing reached or max pre-emphasis */
 			if (voltage_swing_lane3 == VOLTAGE_LEVEL_3 ||
 			   pre_emphasis_lane3 == PRE_EMPHASIS_LEVEL_3) {
-				training_lane3_set |= MAX_DRIVE_CURRENT_REACH_1;
-				training_lane3_set |= MAX_PRE_EMPHASIS_REACH_1;
+				training_lane3_set |= MAX_DRIVE_CURRENT_REACH_3;
+				training_lane3_set |= MAX_PRE_EMPHASIS_REACH_3;
 			}
 
 			channel_eq_done0_1 = lane0_1_status;

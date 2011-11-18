@@ -108,6 +108,8 @@ void s5p_dp_set_training_pattern(struct s5p_dp_device *dp,
 				 enum pattern_set pattern);
 void s5p_dp_set_lane0_pre_emphasis(struct s5p_dp_device *dp, u32 level);
 void s5p_dp_set_lane1_pre_emphasis(struct s5p_dp_device *dp, u32 level);
+void s5p_dp_set_lane2_pre_emphasis(struct s5p_dp_device *dp, u32 level);
+void s5p_dp_set_lane3_pre_emphasis(struct s5p_dp_device *dp, u32 level);
 void s5p_dp_set_lane0_link_training(struct s5p_dp_device *dp,
 				u32 training_lane);
 void s5p_dp_set_lane1_link_training(struct s5p_dp_device *dp,
@@ -237,6 +239,32 @@ void s5p_dp_disable_scrambling(struct s5p_dp_device *dp);
 #define DPCD_VOLTAGE_SWING_LANE0_LEVEL_2		(0x2 << 0)
 #define DPCD_VOLTAGE_SWING_LANE0_LEVEL_1		(0x1 << 0)
 #define DPCD_VOLTAGE_SWING_LANE0_LEVEL_0		(0x0 << 0)
+
+/* DPCD_ADDR_ADJUST_REQUEST_LANE2_3 */
+#define DPCD_PRE_EMPHASIS_LANE2_MASK			(0x3 << 6)
+#define DPCD_PRE_EMPHASIS_LANE2(x)			(((x) >> 6) & 0x3)
+#define DPCD_PRE_EMPHASIS_LANE2_LEVEL_3			(0x3 << 6)
+#define DPCD_PRE_EMPHASIS_LANE2_LEVEL_2			(0x2 << 6)
+#define DPCD_PRE_EMPHASIS_LANE2_LEVEL_1			(0x1 << 6)
+#define DPCD_PRE_EMPHASIS_LANE2_LEVEL_0			(0x0 << 6)
+#define DPCD_VOLTAGE_SWING_LANE2_MASK			(0x3 << 4)
+#define DPCD_VOLTAGE_SWING_LANE2(x)			(((x) >> 4) & 0x3)
+#define DPCD_VOLTAGE_SWING_LANE2_LEVEL_3		(0x3 << 4)
+#define DPCD_VOLTAGE_SWING_LANE2_LEVEL_2		(0x2 << 4)
+#define DPCD_VOLTAGE_SWING_LANE2_LEVEL_1		(0x1 << 4)
+#define DPCD_VOLTAGE_SWING_LANE2_LEVEL_0		(0x0 << 4)
+#define DPCD_PRE_EMPHASIS_LANE3_MASK			(0x3 << 2)
+#define DPCD_PRE_EMPHASIS_LANE3(x)			(((x) >> 2) & 0x3)
+#define DPCD_PRE_EMPHASIS_LANE3_LEVEL_3			(0x3 << 2)
+#define DPCD_PRE_EMPHASIS_LANE3_LEVEL_2			(0x2 << 2)
+#define DPCD_PRE_EMPHASIS_LANE3_LEVEL_1			(0x1 << 2)
+#define DPCD_PRE_EMPHASIS_LANE3_LEVEL_0			(0x0 << 2)
+#define DPCD_VOLTAGE_SWING_LANE3_MASK			(0x3 << 0)
+#define DPCD_VOLTAGE_SWING_LANE3(x)			(((x) >> 0) & 0x3)
+#define DPCD_VOLTAGE_SWING_LANE3_LEVEL_3		(0x3 << 0)
+#define DPCD_VOLTAGE_SWING_LANE3_LEVEL_2		(0x2 << 0)
+#define DPCD_VOLTAGE_SWING_LANE3_LEVEL_1		(0x1 << 0)
+#define DPCD_VOLTAGE_SWING_LANE3_LEVEL_0		(0x0 << 0)
 
 /* DPCD_ADDR_TEST_REQUEST */
 #define DPCD_TEST_EDID_READ				(0x1 << 2)

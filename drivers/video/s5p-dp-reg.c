@@ -988,6 +988,21 @@ void s5p_dp_set_lane1_pre_emphasis(struct s5p_dp_device *dp, u32 level)
 	writel(reg, dp->reg_base + S5P_DP_LN1_LINK_TRAINING_CTL);
 }
 
+void s5p_dp_set_lane2_pre_emphasis(struct s5p_dp_device *dp, u32 level)
+{
+	u32 reg;
+
+	reg = level << PRE_EMPHASIS_SET_2_SHIFT;
+	writel(reg, dp->reg_base + S5P_DP_LN2_LINK_TRAINING_CTL);
+}
+
+void s5p_dp_set_lane3_pre_emphasis(struct s5p_dp_device *dp, u32 level)
+{
+	u32 reg;
+
+	reg = level << PRE_EMPHASIS_SET_3_SHIFT;
+	writel(reg, dp->reg_base + S5P_DP_LN3_LINK_TRAINING_CTL);
+}
 
 void s5p_dp_set_lane0_link_training(struct s5p_dp_device *dp, u32 training_lane)
 {
