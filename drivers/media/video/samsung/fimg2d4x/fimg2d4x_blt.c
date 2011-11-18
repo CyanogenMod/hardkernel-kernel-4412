@@ -205,11 +205,17 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 		dstsel = IMG_FGCOLOR;
 		if (!cmd->srcen) {
 			srcsel = IMG_FGCOLOR;
-			fimg2d4x_set_color_fill(info, cmd->solid_color);
+			fimg2d4x_set_fgcolor(info, cmd->solid_color);
+		}
+		if (cmd->g_alpha < 0xff) {
+			fimg2d4x_enable_alpha(info, cmd->g_alpha);
+			fimg2d4x_set_alpha_composite(info, cmd->op, cmd->g_alpha);
+			if (cmd->premult == NON_PREMULTIPLIED)
+				fimg2d4x_set_premultiplied(info);
 		}
 		break;
 	case BLIT_OP_DST:
-		srcsel = dstsel = IMG_FGCOLOR;
+		srcsel = IMG_FGCOLOR;
 		break;
 	default:	/* alpha blending */
 		if (!cmd->srcen) {

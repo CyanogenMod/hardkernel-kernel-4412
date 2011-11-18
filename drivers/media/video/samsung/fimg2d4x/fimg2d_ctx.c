@@ -179,7 +179,8 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 	struct fimg2d_rect *sr, *dr, *mr;
 	struct fimg2d_clip *ur;
 
-	if (u->op < 0 || u->op >= BLIT_OP_END)
+	/* DST op makes no effect */
+	if (u->op < 0 || u->op == BLIT_OP_DST || u->op >= BLIT_OP_END)
 		goto err_op;
 
 	if (u->src) {
