@@ -909,8 +909,12 @@ static int gsc_probe(struct platform_device *pdev)
 		goto err_clk;
 	}
 
-	/* Need to modify */
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	gsc->vb2 = &gsc_vb2_cma;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+	gsc->vb2 = &gsc_vb2_ion;
+#endif
+
 	platform_set_drvdata(pdev, gsc);
 
 	ret = gsc_register_m2m_device(gsc);
@@ -956,6 +960,8 @@ static int gsc_probe(struct platform_device *pdev)
 		ret = PTR_ERR(gsc->alloc_ctx);
 		goto err_wq;
 	}
+	/* FIXME: Move sysmmu resume function to runtime PM resume function */
+	gsc->vb2->resume(gsc->alloc_ctx);
 
 	gsc_info("gsc-%d registered successfully", gsc->id);
 

@@ -31,7 +31,11 @@
 #include <media/exynos_gscaler.h>
 #include "regs-gsc.h"
 
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 #include <media/videobuf2-cma-phys.h>
+#elif defined(CONFIG_VIDEOBUF2_ION)
+#include <media/videobuf2-ion.h>
+#endif
 
 #define gsc_info(fmt, args...) \
 	printk(KERN_INFO "[INFO]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
@@ -445,6 +449,7 @@ struct gsc_vb2 {
 
 	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
 	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
+	void (*set_sharable)(void *alloc_ctx, bool sharable);
 };
 
 struct gsc_pipeline {
@@ -545,7 +550,11 @@ struct gsc_ctx {
 	bool			ctrls_rdy;
 };
 
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 extern const struct gsc_vb2 gsc_vb2_cma;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+extern const struct gsc_vb2 gsc_vb2_ion;
+#endif
 
 void gsc_clk_release(struct gsc_dev *gsc);
 int gsc_register_m2m_device(struct gsc_dev *gsc);
