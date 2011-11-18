@@ -23,7 +23,8 @@
 #include <plat/regs-usb3-exynos-drd-phy.h>
 
 #define ETC6PUD		(S5P_VA_GPIO2 + 0x228)
-#define USB_CFG		(S3C_VA_SYS + 0x21C)
+#define EXYNOS4_USB_CFG		(S3C_VA_SYS + 0x21C)
+#define EXYNOS5_USB_CFG		(S3C_VA_SYS + 0x230)
 
 #define PHY_ENABLE	(1 << 0)
 #define PHY_DISABLE	(0)
@@ -46,9 +47,21 @@ static struct exynos4_usb_phy usb_phy_control;
 static atomic_t host_usage;
 static DEFINE_SPINLOCK(phy_lock);
 
-static void exynos4_usb_mux_change(int val)
+static void exynos_usb_mux_change(struct platform_device *pdev, int val)
 {
-	writel(val, USB_CFG);
+	u32 is_host;
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+		is_host = readl(EXYNOS4_USB_CFG);
+		writel(val, EXYNOS4_USB_CFG);
+	} else {
+		is_host = readl(EXYNOS5_USB_CFG);
+		writel(val, EXYNOS5_USB_CFG);
+	}
+
+	if (is_host != val)
+		dev_dbg(&pdev->dev, "Change USB MUX from %s to %s",
+			is_host ? "Host":"Device",
+			val ? "Host":"Device");
 }
 
 static int exynos4_usb_host_phy_is_on(void)
@@ -213,7 +226,7 @@ static int exynos4_usb_phy0_init(struct platform_device *pdev)
 
 	/* USB MUX change from Host to Device */
 	if (soc_is_exynos4212() || soc_is_exynos4412())
-		exynos4_usb_mux_change(0);
+		exynos_usb_mux_change(pdev, 0);
 
 	/* set to normal of PHY0 */
 	phypwr = readl(EXYNOS4_PHYPWR) & ~PHY0_NORMAL_MASK;
@@ -248,7 +261,7 @@ static int exynos4_usb_phy0_exit(struct platform_device *pdev)
 
 	/* USB MUX change from Device to Host */
 	if (soc_is_exynos4212() || soc_is_exynos4412())
-		exynos4_usb_mux_change(1);
+		exynos_usb_mux_change(pdev, 1);
 	clk_disable(otg_clk);
 	clk_put(otg_clk);
 
@@ -386,7 +399,8 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| EXYNOS4210_HSIC1_FORCE_SUSPEND);
 		} else {
 			/* USB MUX change from Device to Host */
-			exynos4_usb_mux_change(1);
+			if (!exynos4_usb_device_phy_is_on())
+				exynos_usb_mux_change(pdev, 1);
 
 			phypwr = readl(EXYNOS4_PHYPWR);
 			phypwr &= ~(PHY1_STD_FORCE_SUSPEND
@@ -424,7 +438,7 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 
 			/* USB MUX change from Device to Host */
 			if (!exynos4_usb_device_phy_is_on())
-				exynos4_usb_mux_change(1);
+				exynos_usb_mux_change(pdev, 1);
 
 			phypwr &= ~(PHY1_STD_NORMAL_MASK
 				| EXYNOS4212_HSIC0_NORMAL_MASK
@@ -527,7 +541,7 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 		writel(rstcon, EXYNOS4_RSTCON);
 	} else {
 		/* USB MUX change from Device to Host */
-		exynos4_usb_mux_change(1);
+		exynos_usb_mux_change(pdev, 1);
 
 		phypwr &= ~(PHY1_STD_NORMAL_MASK
 			| EXYNOS4212_HSIC0_NORMAL_MASK
@@ -620,6 +634,8 @@ static int exynos5_usb_phy20_init(struct platform_device *pdev)
 		return 0;
 	}
 
+	exynos_usb_mux_change(pdev, 1);
+
 	hostphy_ctrl0 &= ~(HOST_CTRL0_FSEL_MASK);
 
 	ext_xtal = clk_get(&pdev->dev, "ext_xtal");
@@ -693,6 +709,7 @@ static int exynos5_usb_phy20_exit(struct platform_device *pdev)
 	writel(hostphy_ctrl0, EXYNOS5_PHY_HOST_CTRL0);
 
 	exynos4_usb_phy_control(USB_PHY1, PHY_DISABLE);
+
 	return 0;
 }
 
