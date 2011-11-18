@@ -591,7 +591,7 @@ static inline void gsc_ctx_state_lock_set(u32 state, struct gsc_ctx *ctx)
 
 static inline int is_tiled(struct gsc_fmt *fmt)
 {
-	return fmt->pixelformat == V4L2_PIX_FMT_NV12MT;
+	return fmt->pixelformat == V4L2_PIX_FMT_NV12MT_16X16;
 }
 
 static inline int is_output(enum v4l2_buf_type type)
