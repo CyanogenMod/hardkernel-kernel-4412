@@ -31,7 +31,7 @@ void s5p_dp_do_hw_link_training(struct s5p_dp_device *dp)
 {
 	u32 reg;
 
-	reg = DP_BF_C_HW_TRAINING_EN;
+	reg = HW_TRAINING_EN;
 	writel(reg, dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
 }
 
@@ -40,7 +40,7 @@ void s5p_dp_wait_hw_link_training_done(struct s5p_dp_device *dp)
 	u32 reg;
 
 	reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
-	while (reg & DP_BF_C_HW_TRAINING_EN)
+	while (reg & HW_TRAINING_EN)
 		reg = readl(dp->reg_base + S5P_DP_HW_LINK_TRAINING_CTL);
 }
 
