@@ -684,6 +684,7 @@ static struct regulator_init_data __initdata max8997_buck4_data = {
 };
 
 static struct max8997_regulator_data __initdata max8997_regulators[] = {
+	{ MAX8997_LDO14, &max8997_ldo14_data, },
 	{ MAX8997_BUCK1, &max8997_buck1_data, },
 	{ MAX8997_BUCK2, &max8997_buck2_data, },
 	{ MAX8997_BUCK3, &max8997_buck3_data, },
