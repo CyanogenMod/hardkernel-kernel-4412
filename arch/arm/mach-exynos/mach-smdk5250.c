@@ -1431,6 +1431,16 @@ static void __init smdk5250_map_io(void)
 #ifdef CONFIG_S5P_SYSTEM_MMU
 static void __init exynos_sysmmu_init(void)
 {
+#ifdef CONFIG_VIDEO_EXYNOS_GSCALER
+	ASSIGN_SYSMMU_POWERDOMAIN(gsc0, &exynos5_device_pd[PD_GSCL].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(gsc1, &exynos5_device_pd[PD_GSCL].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(gsc2, &exynos5_device_pd[PD_GSCL].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(gsc3, &exynos5_device_pd[PD_GSCL].dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc0).dev, &exynos5_device_gsc0.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc1).dev, &exynos5_device_gsc1.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc2).dev, &exynos5_device_gsc2.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc3).dev, &exynos5_device_gsc3.dev);
+#endif
 }
 #else /* !CONFIG_S5P_SYSTEM_MMU */
 static inline void exynos_sysmmu_init(void)
