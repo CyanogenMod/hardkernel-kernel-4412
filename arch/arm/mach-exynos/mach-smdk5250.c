@@ -50,6 +50,7 @@
 #include <plat/ehci.h>
 #include <plat/udc-ss.h>
 #include <plat/s5p-mfc.h>
+#include <plat/fimg2d.h>
 
 #include <plat/mipi_csis.h>
 #include <mach/map.h>
@@ -340,6 +341,13 @@ static struct dw_mci_board exynos_dwmci_pdata __initdata = {
 	.hclk_name		= "dwmci",
 	.cclk_name		= "sclk_dwmci",
 	.cfg_gpio		= exynos_dwmci_cfg_gpio,
+};
+#endif
+
+#ifdef CONFIG_VIDEO_FIMG2D
+static struct fimg2d_platdata fimg2d_data __initdata = {
+	.hw_ver		= 0x42,
+	.gate_clkname	= "fimg2d",
 };
 #endif
 
@@ -1137,6 +1145,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&SYSMMU_PLATDEV(gsc2),
 	&SYSMMU_PLATDEV(gsc3),
 #endif
+#ifdef CONFIG_VIDEO_FIMG2D
+	&s5p_device_fimg2d,
+#endif
 #ifdef CONFIG_EXYNOS_MEDIA_DEVICE
 	&exynos5_device_md0,
 	&exynos5_device_md1,
@@ -1534,6 +1545,9 @@ static void __init smdk5250_machine_init(void)
 #endif
 
 	s5p_device_fimd1.dev.parent = &exynos5_device_pd[PD_DISP1].dev;
+#endif
+#ifdef CONFIG_VIDEO_FIMG2D
+	s5p_fimg2d_set_platdata(&fimg2d_data);
 #endif
 	exynos_sysmmu_init();
 
