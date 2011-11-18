@@ -178,6 +178,8 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	int ret = 0;
 	struct fimg2d_context *ctx;
+	struct fimg2d_platdata *pdata;
+	struct fimg2d_version ver;
 	union {
 		struct fimg2d_blit *blit;
 	} u;
@@ -204,7 +206,12 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case FIMG2D_BITBLT_VERSION:
 		fimg2d_debug("FIMG2D_BITBLT_VERSION ctx: %p\n", ctx);
-		/* FIXME: */
+		pdata = to_fimg2d_plat(info->dev);
+		ver.hw = pdata->hw_ver;
+		ver.sw = 0;
+		fimg2d_debug("fimg2d version, hw: 0x%x sw: 0x%x\n", ver.hw, ver.sw);
+		if (copy_to_user((void *)arg, &ver, sizeof(ver)))
+			return -EFAULT;
 		break;
 
 	default:
