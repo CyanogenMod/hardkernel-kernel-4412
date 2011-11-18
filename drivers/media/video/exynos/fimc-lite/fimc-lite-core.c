@@ -15,9 +15,10 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#if defined(CONFIG_MEDIA_CONTROLLER)
 #include <mach/videonode.h>
 #include <media/exynos_mc.h>
-
+#endif
 #include "fimc-lite-core.h"
 
 #define MODULE_NAME			"exynos-fimc-lite"
@@ -297,6 +298,7 @@ static int flite_s_power(struct v4l2_subdev *sd, int on)
 	return ret;
 }
 
+#if defined(CONFIG_MEDIA_CONTROLLER)
 static int flite_subdev_enum_mbus_code(struct v4l2_subdev *sd,
 				       struct v4l2_subdev_fh *fh,
 				       struct v4l2_subdev_mbus_code_enum *code)
@@ -491,33 +493,6 @@ static int flite_subdev_set_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *
 	return 0;
 }
 
-static struct v4l2_subdev_core_ops flite_core_ops = {
-	.s_power = flite_s_power,
-};
-
-static struct v4l2_subdev_video_ops flite_video_ops = {
-	.g_mbus_fmt	= flite_g_mbus_fmt,
-	.s_mbus_fmt	= flite_s_mbus_fmt,
-	.s_stream	= flite_s_stream,
-	.cropcap	= flite_cropcap,
-	.g_crop		= flite_g_crop,
-	.s_crop		= flite_s_crop,
-};
-
-static struct v4l2_subdev_pad_ops flite_pad_ops = {
-	.enum_mbus_code = flite_subdev_enum_mbus_code,
-	.get_fmt	= flite_subdev_get_fmt,
-	.set_fmt	= flite_subdev_set_fmt,
-	.get_crop	= flite_subdev_get_crop,
-	.set_crop	= flite_subdev_set_crop,
-};
-
-static struct v4l2_subdev_ops flite_subdev_ops = {
-	.core	= &flite_core_ops,
-	.pad	= &flite_pad_ops,
-	.video	= &flite_video_ops,
-};
-
 static int flite_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct v4l2_subdev_format format;
@@ -603,27 +578,6 @@ static const struct media_entity_operations flite_media_ops = {
 	.link_setup = flite_link_setup,
 };
 
-static int flite_suspend(struct device *dev)
-{
-	struct platform_device *pdev = to_platform_device(dev);
-	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
-	struct flite_dev *flite = to_flite_dev(sd);
-	unsigned long flags;
-
-	spin_lock_irqsave(&flite->slock, flags);
-
-	if (test_bit(FLITE_ST_STREAMING, &flite->state))
-		flite_s_stream(sd, false);
-	if (test_bit(FLITE_ST_POWERED, &flite->state))
-		flite_s_power(sd, false);
-
-	set_bit(FLITE_ST_SUSPENDED, &flite->state);
-
-	spin_unlock_irqrestore(&flite->slock, flags);
-
-	return 0;
-}
-
 static int flite_get_md_callback(struct device *dev, void *p)
 {
 	struct exynos_md **md_list = p;
@@ -653,6 +607,36 @@ static struct exynos_md *flite_get_capture_md(enum mdev_node node)
 
 	return ret ? NULL : md[node];
 
+}
+
+static struct v4l2_subdev_pad_ops flite_pad_ops = {
+	.enum_mbus_code = flite_subdev_enum_mbus_code,
+	.get_fmt	= flite_subdev_get_fmt,
+	.set_fmt	= flite_subdev_set_fmt,
+	.get_crop	= flite_subdev_get_crop,
+	.set_crop	= flite_subdev_set_crop,
+};
+#endif
+
+static int flite_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
+	struct flite_dev *flite = to_flite_dev(sd);
+	unsigned long flags;
+
+	spin_lock_irqsave(&flite->slock, flags);
+
+	if (test_bit(FLITE_ST_STREAMING, &flite->state))
+		flite_s_stream(sd, false);
+	if (test_bit(FLITE_ST_POWERED, &flite->state))
+		flite_s_power(sd, false);
+
+	set_bit(FLITE_ST_SUSPENDED, &flite->state);
+
+	spin_unlock_irqrestore(&flite->slock, flags);
+
+	return 0;
 }
 
 static int flite_resume(struct device *dev)
@@ -708,6 +692,27 @@ static int flite_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static struct v4l2_subdev_core_ops flite_core_ops = {
+	.s_power = flite_s_power,
+};
+
+static struct v4l2_subdev_video_ops flite_video_ops = {
+	.g_mbus_fmt	= flite_g_mbus_fmt,
+	.s_mbus_fmt	= flite_s_mbus_fmt,
+	.s_stream	= flite_s_stream,
+	.cropcap	= flite_cropcap,
+	.g_crop		= flite_g_crop,
+	.s_crop		= flite_s_crop,
+};
+
+static struct v4l2_subdev_ops flite_subdev_ops = {
+	.core	= &flite_core_ops,
+#if defined(CONFIG_MEDIA_CONTROLLER)
+	.pad	= &flite_pad_ops,
+#endif
+	.video	= &flite_video_ops,
+};
+
 static int flite_probe(struct platform_device *pdev)
 {
 	struct resource *mem_res;
@@ -760,10 +765,10 @@ static int flite_probe(struct platform_device *pdev)
 
 	v4l2_subdev_init(&flite->sd, &flite_subdev_ops);
 	flite->sd.owner = THIS_MODULE;
-	flite->sd.flags = V4L2_SUBDEV_FL_HAS_DEVNODE;
-
 	snprintf(flite->sd.name, sizeof(flite->sd.name), "%s.%d\n",
 					MODULE_NAME, flite->id);
+#if defined(CONFIG_MEDIA_CONTROLLER)
+	flite->sd.flags = V4L2_SUBDEV_FL_HAS_DEVNODE;
 
 	flite->pads[FLITE_PAD_SINK].flags = MEDIA_PAD_FL_SINK;
 	flite->pads[FLITE_PAD_SOURCE_PREVIEW].flags = MEDIA_PAD_FL_SOURCE;
@@ -785,7 +790,7 @@ static int flite_probe(struct platform_device *pdev)
 	ret = v4l2_device_register_subdev(&flite->mdev->v4l2_dev, &flite->sd);
 	if (ret)
 		goto p_err3;
-
+#endif
 	/* This allows to retrieve the platform device id by the host driver */
 	v4l2_set_subdevdata(&flite->sd, pdev);
 
