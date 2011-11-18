@@ -48,6 +48,7 @@
 #include <plat/iic.h>
 #include <plat/pd.h>
 #include <plat/ehci.h>
+#include <plat/usbgadget.h>
 #include <plat/udc-ss.h>
 #include <plat/s5p-mfc.h>
 #include <plat/fimg2d.h>
@@ -1048,6 +1049,18 @@ static void __init smdk5250_ohci_init(void)
 }
 #endif
 
+/* USB GADGET */
+#ifdef CONFIG_USB_S3C_OTGD
+static struct s5p_usbgadget_platdata smdk5250_usbgadget_pdata;
+
+static void __init smdk5250_usbgadget_init(void)
+{
+	struct s5p_usbgadget_platdata *pdata = &smdk5250_usbgadget_pdata;
+
+	s5p_usbgadget_set_platdata(pdata);
+}
+#endif
+
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 static struct exynos_ss_udc_plat smdk5250_ss_udc_pdata;
 
@@ -1177,6 +1190,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 #ifdef CONFIG_USB_OHCI_S5P
 	&s5p_device_ohci,
+#endif
+#ifdef CONFIG_USB_S3C_OTGD
+	&s3c_device_usbgadget,
 #endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	&exynos_device_ss_udc,
@@ -1524,6 +1540,9 @@ static void __init smdk5250_machine_init(void)
 #endif
 #ifdef CONFIG_USB_OHCI_S5P
 	smdk5250_ohci_init();
+#endif
+#ifdef CONFIG_USB_S3C_OTGD
+	smdk5250_usbgadget_init();
 #endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	smdk5250_ss_udc_init();
