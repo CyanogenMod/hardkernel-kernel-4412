@@ -18,6 +18,8 @@
 #include <linux/earlysuspend.h>
 #endif
 
+#define HW_LINK_TRAINING
+
 struct link_train {
 	int eq_loop;
 	int cr_loop[4];
@@ -144,7 +146,7 @@ void s5p_dp_config_video_slave_mode(struct s5p_dp_device *dp,
 			struct video_info *video_info);
 void s5p_dp_enable_scrambling(struct s5p_dp_device *dp);
 void s5p_dp_disable_scrambling(struct s5p_dp_device *dp);
- #ifdef CONFIG_CPU_EXYNOS5250
+ #ifdef HW_LINK_TRAINING
 void s5p_dp_start_hw_link_training(struct s5p_dp_device *dp);
 void s5p_dp_wait_hw_link_training_done(struct s5p_dp_device *dp);
 u32 s5p_dp_get_hw_link_training_status(struct s5p_dp_device *dp);

@@ -215,7 +215,7 @@ static void s5p_dp_enable_rx_to_enhanced_mode(struct s5p_dp_device *dp,
 			DPCD_LANE_COUNT_SET(data));
 }
 
-#ifndef CONFIG_CPU_EXYNOS5250
+#ifndef HW_LINK_TRAINING
 static int s5p_dp_is_enhanced_mode_available(struct s5p_dp_device *dp)
 {
 	u8 data;
@@ -1582,46 +1582,7 @@ static void s5p_dp_get_max_rx_lane_count(struct s5p_dp_device *dp,
 	*lane_count = DPCD_MAX_LANE_COUNT(data);
 }
 
-#ifndef CONFIG_CPU_EXYNOS5250
-static void s5p_dp_init_training(struct s5p_dp_device *dp,
-			enum link_lane_count_type max_lane,
-			enum link_rate_type max_rate)
-{
-	/*
-	 * MACRO_RST must be applied after the PLL_LOCK to avoid
-	 * the DP inter pair skew issue for at least 10 us
-	 */
-	s5p_dp_reset_macro(dp);
-
-	/* Initialize by reading RX's DPCD */
-	s5p_dp_get_max_rx_bandwidth(dp, &dp->link_train.link_rate);
-	s5p_dp_get_max_rx_lane_count(dp, &dp->link_train.lane_count);
-
-	if ((dp->link_train.link_rate != LINK_RATE_1_62GBPS) &&
-	   (dp->link_train.link_rate != LINK_RATE_2_70GBPS)) {
-		dev_err(dp->dev, "Rx Max Link Rate is abnormal :%x !\n",
-			dp->link_train.link_rate);
-		dp->link_train.link_rate = LINK_RATE_1_62GBPS;
-	}
-
-	if (dp->link_train.lane_count == 0) {
-		dev_err(dp->dev, "Rx Max Lane count is abnormal :%x !\n",
-			dp->link_train.lane_count);
-		dp->link_train.lane_count = (u8)LANE_COUNT1;
-	}
-
-	/* Setup TX lane count & rate */
-	if (dp->link_train.lane_count > max_lane)
-		dp->link_train.lane_count = max_lane;
-	if (dp->link_train.link_rate > max_rate)
-		dp->link_train.link_rate = max_rate;
-
-	/* All DP analog module power up */
-	s5p_dp_set_analog_power_down(dp, POWER_ALL, 0);
-}
-#endif
-
-#ifdef CONFIG_CPU_EXYNOS5250
+#ifdef HW_LINK_TRAINING
 static int s5p_dp_hw_link_training(struct s5p_dp_device *dp,
 				u32 max_lane,
 				u32 max_rate)
@@ -1719,6 +1680,43 @@ static int s5p_dp_set_link_train(struct s5p_dp_device *dp,
 	return retval;
 }
 #else
+static void s5p_dp_init_training(struct s5p_dp_device *dp,
+			enum link_lane_count_type max_lane,
+			enum link_rate_type max_rate)
+{
+	/*
+	 * MACRO_RST must be applied after the PLL_LOCK to avoid
+	 * the DP inter pair skew issue for at least 10 us
+	 */
+	s5p_dp_reset_macro(dp);
+
+	/* Initialize by reading RX's DPCD */
+	s5p_dp_get_max_rx_bandwidth(dp, &dp->link_train.link_rate);
+	s5p_dp_get_max_rx_lane_count(dp, &dp->link_train.lane_count);
+
+	if ((dp->link_train.link_rate != LINK_RATE_1_62GBPS) &&
+	   (dp->link_train.link_rate != LINK_RATE_2_70GBPS)) {
+		dev_err(dp->dev, "Rx Max Link Rate is abnormal :%x !\n",
+			dp->link_train.link_rate);
+		dp->link_train.link_rate = LINK_RATE_1_62GBPS;
+	}
+
+	if (dp->link_train.lane_count == 0) {
+		dev_err(dp->dev, "Rx Max Lane count is abnormal :%x !\n",
+			dp->link_train.lane_count);
+		dp->link_train.lane_count = (u8)LANE_COUNT1;
+	}
+
+	/* Setup TX lane count & rate */
+	if (dp->link_train.lane_count > max_lane)
+		dp->link_train.lane_count = max_lane;
+	if (dp->link_train.link_rate > max_rate)
+		dp->link_train.link_rate = max_rate;
+
+	/* All DP analog module power up */
+	s5p_dp_set_analog_power_down(dp, POWER_ALL, 0);
+}
+
 static int s5p_dp_sw_link_training(struct s5p_dp_device *dp)
 {
 	int retval = 0;

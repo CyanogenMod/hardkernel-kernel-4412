@@ -1041,7 +1041,7 @@ u32 s5p_dp_get_lane3_link_training(struct s5p_dp_device *dp)
 	return reg;
 }
 
-#ifdef CONFIG_CPU_EXYNOS5250
+#ifdef HW_LINK_TRAINING
 void s5p_dp_start_hw_link_training(struct s5p_dp_device *dp)
 {
 	u32 reg;
