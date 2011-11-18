@@ -29,6 +29,7 @@
 #include <mach/regs-audss.h>
 #include <mach/dev-sysmmu.h>
 #include <mach/exynos-clock.h>
+#include <mach/clock-domain.h>
 
 #ifdef CONFIG_PM
 static struct sleep_save exynos5_clock_save[] = {
@@ -1842,3 +1843,19 @@ void __init exynos5_register_clocks(void)
 	register_syscore_ops(&exynos5_clock_syscore_ops);
 	s3c_pwmclk_init();
 }
+
+static int __init clock_domain_init(void)
+{
+	int index;
+
+	/* Add dma clock */
+	for (index = 0; index < ARRAY_SIZE(exynos5_init_dmaclocks); index++)
+		clock_add_domain(LPA_DOMAIN, &exynos5_init_dmaclocks[index]);
+
+	/* Add i2c clock */
+	for (index = 0; index < ARRAY_SIZE(exynos5_i2cs_clocks); index++)
+		clock_add_domain(LPA_DOMAIN, &exynos5_i2cs_clocks[index]);
+
+	return 0;
+}
+late_initcall(clock_domain_init);
