@@ -1264,7 +1264,7 @@ static int __init mxr_init(void)
 
 	return 0;
 }
-late_initcall(mxr_init);
+module_init(mxr_init);
 
 static void __exit mxr_exit(void)
 {
