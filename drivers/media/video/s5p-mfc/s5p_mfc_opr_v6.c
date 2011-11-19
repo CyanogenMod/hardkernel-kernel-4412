@@ -386,15 +386,17 @@ void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx)
 
 /* Set registers for decoding stream buffer */
 int s5p_mfc_set_dec_stream_buffer(struct s5p_mfc_ctx *ctx, int buf_addr,
-		  unsigned int start_num_byte, unsigned int buf_size)
+		  unsigned int start_num_byte, unsigned int strm_size)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_buf_size *buf_size = dev->variant->buf_size;
 
 	mfc_debug_enter();
 	mfc_debug(2, "inst_no: %d, buf_addr: 0x%08x, buf_size: 0x"
-		"%08x (%d)\n",  ctx->inst_no, buf_addr, buf_size, buf_size);
+		"%08x (%d)\n",  ctx->inst_no, buf_addr, strm_size, strm_size);
+	WRITEL(strm_size, S5P_FIMV_D_STREAM_DATA_SIZE);
 	WRITEL(buf_addr, S5P_FIMV_D_CPB_BUFFER_ADDR);
-	WRITEL(buf_size, S5P_FIMV_D_CPB_BUFFER_SIZE);
+	WRITEL(buf_size->cpb_buf, S5P_FIMV_D_CPB_BUFFER_SIZE);
 	WRITEL(start_num_byte, S5P_FIMV_D_CPB_BUFFER_OFFSET);
 
 	mfc_debug_leave();

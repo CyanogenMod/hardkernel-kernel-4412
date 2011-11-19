@@ -1312,8 +1312,8 @@ struct s5p_mfc_buf_size buf_size_v5 = {
 };
 
 struct s5p_mfc_buf_size buf_size_v6 = {
-	.firmware_code = 0x60000,
-	.cpb_buf = 0x400000,		/*   4MB */
+	.firmware_code = 0x100000,	/* 1MB */
+	.cpb_buf = 0x300000,		/* 3MB */
 	.buf = &mfc_buf_size_v6,
 };
 
