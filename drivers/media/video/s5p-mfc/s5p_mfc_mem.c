@@ -133,6 +133,8 @@ void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num)
 	ion.align = SZ_4K;
 	ion.contig = true;
 
+	vb2_drv.use_mmu = false;
+
 	s5p_mfc_power_on();
 	alloc_ctxes = (void **)vb2_ion_init_multi(ctx_num, &ion,
 							&vb2_drv);

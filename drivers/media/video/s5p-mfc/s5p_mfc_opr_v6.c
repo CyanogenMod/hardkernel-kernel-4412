@@ -1351,21 +1351,26 @@ static inline int s5p_mfc_get_new_ctx(struct s5p_mfc_dev *dev)
 	return new_ctx;
 }
 
-static inline void s5p_mfc_run_res_change(struct s5p_mfc_ctx *ctx)
-{
-	struct s5p_mfc_dev *dev = ctx->dev;
-
-	s5p_mfc_set_dec_stream_buffer(ctx, 0, 0, 0);
-	dev->curr_ctx = ctx->num;
-	s5p_mfc_clean_ctx_int_flags(ctx);
-	s5p_mfc_decode_one_frame(ctx, 1);
-}
-
 static inline void s5p_mfc_run_dec_last_frames(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_buf *temp_vb;
+	unsigned long flags;
 
-	s5p_mfc_set_dec_stream_buffer(ctx, 0, 0, 0);
+	spin_lock_irqsave(&dev->irqlock, flags);
+
+	/* Frames are being decoded */
+	if (list_empty(&ctx->src_queue)) {
+		mfc_debug(2, "No src buffers.\n");
+		spin_unlock_irqrestore(&dev->irqlock, flags);
+		return;
+	}
+	/* Get the next source buffer */
+	temp_vb = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
+	temp_vb->used = 1;
+	s5p_mfc_set_dec_stream_buffer(ctx, mfc_plane_cookie(&temp_vb->vb, 0), 0, 0);
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+
 	dev->curr_ctx = ctx->num;
 	s5p_mfc_clean_ctx_int_flags(ctx);
 	s5p_mfc_decode_one_frame(ctx, 1);
@@ -1658,10 +1663,10 @@ void s5p_mfc_try_run(struct s5p_mfc_dev *dev)
 			ret = s5p_mfc_run_init_dec_buffers(ctx);
 			break;
 		case MFCINST_RES_CHANGE_INIT:
-			s5p_mfc_run_res_change(ctx);
+			s5p_mfc_run_dec_last_frames(ctx);
 			break;
 		case MFCINST_RES_CHANGE_FLUSH:
-			s5p_mfc_run_res_change(ctx);
+			s5p_mfc_run_dec_last_frames(ctx);
 			break;
 		case MFCINST_RES_CHANGE_END:
 			mfc_debug(2, "Finished remaining frames after resolution change.\n");

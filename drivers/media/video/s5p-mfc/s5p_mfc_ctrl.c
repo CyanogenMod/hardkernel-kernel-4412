@@ -38,11 +38,11 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 	int err;
 	struct cma_info mem_info_f, mem_info_a, mem_info_b;
-	unsigned int base_align = dev->variant->buf_align->mfc_base_align;
 #elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
 	void *b_base;
 	size_t b_base_phys;
 #endif
+	unsigned int base_align = dev->variant->buf_align->mfc_base_align;
 	unsigned int firmware_size = dev->variant->buf_size->firmware_code;
 
 	mfc_debug_enter();
@@ -145,8 +145,9 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	if (s5p_mfc_bitproc_phys & MFC_BASE_MASK) {
-		mfc_err("The base memory is not aligned to 128KB.\n");
+	if (s5p_mfc_bitproc_phys & ((1 << base_align) - 1)) {
+		mfc_err("The base memory is not aligned to %dBytes.\n",
+				(1 << base_align));
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
 							s5p_mfc_bitproc_buf);
 		s5p_mfc_bitproc_phys = 0;
@@ -201,8 +202,9 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	if (s5p_mfc_bitproc_phys & (128 << 10)) {
-		mfc_err("The base memory is not aligned to 128KB.\n");
+	if (s5p_mfc_bitproc_phys & ((1 << base_align) - 1)) {
+		mfc_err("The base memory is not aligned to %dBytes.\n",
+				(1 << base_align));
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
 							s5p_mfc_bitproc_buf);
 		s5p_mfc_bitproc_phys = 0;
@@ -242,8 +244,9 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 
 	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
 		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	if (s5p_mfc_bitproc_phys & MFC_BASE_MASK) {
-		mfc_err("The base memory is not aligned to 128KB.\n");
+	if (s5p_mfc_bitproc_phys & ((1 << base_align) - 1)) {
+		mfc_err("The base memory is not aligned to %dBytes.\n",
+				(1 << base_align));
 		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
 							s5p_mfc_bitproc_buf);
 		s5p_mfc_bitproc_phys = 0;
