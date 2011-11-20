@@ -1314,7 +1314,7 @@ static void __init exynos_reserve_mem(void)
 #ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
 		{
 			.name		= "fw",
-			.size		= 1 << 20,
+			.size		= 2 << 20,
 			{ .alignment	= 128 << 10 },
 			.start		= 0x44000000,
 		},
@@ -1332,7 +1332,7 @@ static void __init exynos_reserve_mem(void)
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0=fimd;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
-		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,fimd;"
+		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,fimd,fw,b1;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;";
 
@@ -1460,6 +1460,12 @@ static void __init smdk5250_map_io(void)
 #ifdef CONFIG_S5P_SYSTEM_MMU
 static void __init exynos_sysmmu_init(void)
 {
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+	ASSIGN_SYSMMU_POWERDOMAIN(mfc_l, &exynos5_device_pd[PD_MFC].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(mfc_r, &exynos5_device_pd[PD_MFC].dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_l).dev, &s5p_device_mfc.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_r).dev, &s5p_device_mfc.dev);
+#endif
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
 	ASSIGN_SYSMMU_POWERDOMAIN(gsc0, &exynos5_device_pd[PD_GSCL].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(gsc1, &exynos5_device_pd[PD_GSCL].dev);
