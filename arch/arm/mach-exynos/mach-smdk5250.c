@@ -1361,7 +1361,7 @@ static void __init smdk5250_camera_gpio_cfg(void)
 }
 #endif
 
-#ifdef CONFIG_VIDEO_EXYNOS_GSCALER
+#if defined(CONFIG_VIDEO_EXYNOS_GSCALER) && defined(CONFIG_VIDEO_EXYNOS_FIMC_LITE)
 static struct exynos_gscaler_isp_info isp_info[] = {
 #if defined(CONFIG_VIDEO_S5K4BA)
 	{
@@ -1416,6 +1416,8 @@ static struct exynos_gscaler_isp_info isp_info[] = {
 static void __init smdk5250_set_gsc_platdata(void)
 {
 	exynos_gsc0_default_data.isp_info[0] = &isp_info[0];
+	if (exynos_gsc0_default_data.isp_info[0] == NULL)
+		return;
 	exynos_gsc0_default_data.active_cam_index = 0;
 	exynos_gsc0_default_data.cam_preview = 1;
 	exynos_gsc0_default_data.cam_camcording = 0;
@@ -1588,8 +1590,9 @@ static void __init smdk5250_machine_init(void)
 	exynos_flite1_set_platdata(&flite_plat);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 	smdk5250_set_gsc_platdata();
-
+#endif
 	s3c_set_platdata(&exynos_gsc0_default_data, sizeof(exynos_gsc0_default_data),
 			&exynos5_device_gsc0);
 	s3c_set_platdata(&exynos_gsc1_default_data, sizeof(exynos_gsc1_default_data),
