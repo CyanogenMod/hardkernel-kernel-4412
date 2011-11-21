@@ -742,6 +742,7 @@ int fimc_hw_set_camera_type(struct fimc_dev *fimc,
 		switch (vid_cap->fmt.code) {
 		case V4L2_MBUS_FMT_VYUY8_2X8:
 		case V4L2_MBUS_FMT_UYVY8_2X8:
+		case V4L2_MBUS_FMT_YUYV8_2X8:
 			tmp = S5P_CSIIMGFMT_YCBCR422_8BIT;
 			break;
 		case V4L2_MBUS_FMT_JPEG_1X8:

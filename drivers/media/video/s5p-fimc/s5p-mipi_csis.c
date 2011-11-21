@@ -111,8 +111,7 @@ struct s5p_csis_color_format {
 
 static const struct s5p_csis_color_format s5p_csis_formats[] = {
 	{
-		.code		= V4L2_MBUS_FMT_VYUY8_2X8,
-//		.code		= V4L2_MBUS_FMT_UYVY8_2X8,
+		.code		= V4L2_MBUS_FMT_YUYV8_2X8,
 		.fmt_reg	= S5P_CSIS_CFG_FMT_YCBCR422_8BIT,
 		.pix_hor_align	= 1,
 	}, {
