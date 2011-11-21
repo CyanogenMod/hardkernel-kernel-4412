@@ -73,7 +73,7 @@ static unsigned char s5p_dp_calc_edid_check_sum(unsigned char *edid_data)
 	int i;
 	unsigned char sum = 0;
 
-	for (i = 0; i < 128; i++)
+	for (i = 0; i < EDID_BLOCK_LENGTH; i++)
 		sum = sum + edid_data[i];
 
 	return sum;
@@ -81,7 +81,7 @@ static unsigned char s5p_dp_calc_edid_check_sum(unsigned char *edid_data)
 
 static int s5p_dp_read_edid(struct s5p_dp_device *dp)
 {
-	unsigned char edid[256];
+	unsigned char edid[EDID_BLOCK_LENGTH * 2];
 	unsigned int extend_block = 0;
 	unsigned char sum;
 	unsigned char test_vector;
