@@ -114,11 +114,11 @@ void s5p_dp_init_analog_param(struct s5p_dp_device *dp)
 	 * Set AUX TX terminal resistor to 102 ohm
 	 * Set AUX channel amplitude control
 	*/
-	writel(0x57, dp->reg_base + S5P_DP_AUX_ANALOG_CTL);
+	writel(0x57, dp->reg_base + S5P_DP_PLL_FILTER_CTL_1);
 
 	if (soc_is_exynos5250()) {
 		/* Output amplitude fine setting */
-		writel(0x3333, dp->reg_base + S5P_DP_TX_AMP_TUNING_CTL);
+		writel(0x3333, dp->reg_base + S5P_DP_PLL_FILTER_CTL_2);
 
 		/*
 		 * PLL digital power select
@@ -127,7 +127,7 @@ void s5p_dp_init_analog_param(struct s5p_dp_device *dp)
 		writel(0x17, dp->reg_base + S5P_DP_PLL_CTL);
 	} else {
 		/* Output amplitude fine setting */
-		writel(0x33, dp->reg_base + S5P_DP_TX_AMP_TUNING_CTL);
+		writel(0x33, dp->reg_base + S5P_DP_PLL_FILTER_CTL_2);
 
 		/*
 		 * PLL digital power select
