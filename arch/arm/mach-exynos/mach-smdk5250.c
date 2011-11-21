@@ -1597,6 +1597,12 @@ static void __init smdk5250_machine_init(void)
 	exynos_flite1_set_platdata(&flite_plat);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
+#if defined(CONFIG_EXYNOS_DEV_PD)
+	exynos5_device_gsc0.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+	exynos5_device_gsc1.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+	exynos5_device_gsc2.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+	exynos5_device_gsc3.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+#endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 	smdk5250_set_gsc_platdata();
 #endif
