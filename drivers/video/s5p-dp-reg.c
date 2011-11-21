@@ -93,47 +93,61 @@ void s5p_dp_lane_swap(struct s5p_dp_device *dp, bool enable)
 
 void s5p_dp_init_analog_param(struct s5p_dp_device *dp)
 {
-	/* Set analog control registers to initial states */
+	u32 reg;
 
 	/*
 	 * Set termination
 	 * Normal bandgap, Normal swing, Tx terminal registor 61 ohm
 	 * 24M Phy clock, TX digital logic power is 100:1.0625V
 	 */
-	writel(0x10, dp->reg_base + S5P_DP_ANALOG_CTL_1);
-	writel(0x0c, dp->reg_base + S5P_DP_ANALOG_CTL_2);
+	reg = SEL_BG_NEW_BANDGAP | TX_TERMINAL_CTRL_61_OHM |
+		SWING_A_30PER_G_NORMAL;
+	writel(reg, dp->reg_base + S5P_DP_ANALOG_CTL_1);
+	reg = SEL_24M | TX_DVDD_BIT_1_0625V;
+	writel(reg, dp->reg_base + S5P_DP_ANALOG_CTL_2);
 
 	/*
 	 * Set power source for internal clk driver to 1.0625v.
 	 * Select current reference of TX driver current to 00:Ipp/2+Ic/2.
 	 * Set VCO range of PLL +- 0uA
 	 */
-	writel(0x80, dp->reg_base + S5P_DP_ANALOG_CTL_3);
+	reg = DRIVE_DVDD_BIT_1_0625V | SEL_CURRENT_DEFAULT |
+		VCO_BIT_000_MICRO;
+	writel(reg, dp->reg_base + S5P_DP_ANALOG_CTL_3);
 
 	/*
 	 * Set AUX TX terminal resistor to 102 ohm
 	 * Set AUX channel amplitude control
 	*/
-	writel(0x57, dp->reg_base + S5P_DP_PLL_FILTER_CTL_1);
+	reg = PD_RING_OSC | AUX_TERMINAL_CTRL_102_OHM |
+		TX_CUR1_2X | TX_CUR_4_MA;
+	writel(reg, dp->reg_base + S5P_DP_PLL_FILTER_CTL_1);
 
 	if (soc_is_exynos5250()) {
 		/* Output amplitude fine setting */
-		writel(0x3333, dp->reg_base + S5P_DP_PLL_FILTER_CTL_2);
+		reg = CH3_AMP_0_MV | CH2_AMP_0_MV |
+			CH1_AMP_0_MV | CH0_AMP_0_MV;
+		writel(reg, dp->reg_base + S5P_DP_PLL_FILTER_CTL_2);
 
 		/*
-		 * PLL digital power select
-		 * 0x17: 1.250V
+		 * PLL loop filter bandwidth
+		 * For 2.7Gbps: 175KHz, For 1.62Gbps: 234KHz
+		 * PLL digital power select: 1.2500V
 		 */
-		writel(0x17, dp->reg_base + S5P_DP_PLL_CTL);
+		reg = DP_PLL_LOOP_BIT_DEFAULT | DP_PLL_REF_BIT_1_2500V;
+		writel(reg, dp->reg_base + S5P_DP_PLL_CTL);
 	} else {
 		/* Output amplitude fine setting */
-		writel(0x33, dp->reg_base + S5P_DP_PLL_FILTER_CTL_2);
+		reg = CH1_AMP_0_MV | CH0_AMP_0_MV;
+		writel(reg, dp->reg_base + S5P_DP_PLL_FILTER_CTL_2);
 
 		/*
-		 * PLL digital power select
-		 * 0x15: 1.125V
+		 * PLL loop filter bandwidth
+		 * For 2.7Gbps: 175KHz, For 1.62Gbps: 234KHz
+		 * PLL digital power select: 1.1250V
 		 */
-		writel(0x15, dp->reg_base + S5P_DP_PLL_CTL);
+		reg = DP_PLL_LOOP_BIT_DEFAULT | DP_PLL_REF_BIT_1_1250V;
+		writel(reg, dp->reg_base + S5P_DP_PLL_CTL);
 	}
 }
 
