@@ -144,11 +144,11 @@ static void s5p_iommu_detach_device(struct iommu_domain *domain,
 	spin_lock_irqsave(&s5p_domain->lock, flags);
 
 	if (s5p_domain->dev == dev) {
-		s5p_domain->dev = NULL;
-
 		spin_unlock_irqrestore(&s5p_domain->lock, flags);
 
 		s5p_sysmmu_disable(s5p_domain->dev);
+
+		s5p_domain->dev = NULL;
 	} else {
 		spin_unlock_irqrestore(&s5p_domain->lock, flags);
 	}
