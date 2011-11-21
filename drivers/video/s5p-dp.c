@@ -2170,6 +2170,7 @@ static void s5p_dp_late_resume(struct early_suspend *handler)
 	s5p_dp_set_link_bandwidth(dp, dp->video_info->link_rate);
 
 	s5p_dp_init_video(dp);
+	s5p_dp_config_video(dp, dp->video_info);
 
 	return;
 }
@@ -2385,6 +2386,7 @@ static int s5p_dp_resume(struct device *dev)
 	s5p_dp_set_link_bandwidth(dp, dp->video_info->link_rate);
 
 	s5p_dp_init_video(dp);
+	s5p_dp_config_video(dp, dp->video_info);
 
 	return 0;
 }
