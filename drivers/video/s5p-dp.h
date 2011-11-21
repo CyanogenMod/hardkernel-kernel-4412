@@ -18,8 +18,6 @@
 #include <linux/earlysuspend.h>
 #endif
 
-#define HW_LINK_TRAINING
-
 struct link_train {
 	int eq_loop;
 	int cr_loop[4];
