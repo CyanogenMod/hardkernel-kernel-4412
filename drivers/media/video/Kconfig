@@ -517,12 +517,14 @@ prompt "Select ITU / MIPI Camera port"
 default ITU_A
 config ITU_A
 	bool "ITU Camera A port"
-	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS ||\
+			VIDEO_EXYNOS_MIPI_CSIS)
 	help
 	  This enables support for ITU A port
 config ITU_B
 	bool "ITU Camera B port"
-	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	depends on !(VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS ||\
+			VIDEO_EXYNOS_MIPI_CSIS)
 	help
 	  This enables support for ITU B port
 config CSI_C

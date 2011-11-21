@@ -1,6 +1,7 @@
 config VIDEO_EXYNOS_MIPI_CSIS
 	bool "Exynos MIPI-CSIS driver"
-	depends on VIDEO_EXYNOS && (ARCH_EXYNOS4 || ARCH_EXYNOS5)
+	depends on VIDEO_EXYNOS && VIDEO_EXYNOS_FIMC_LITE &&\
+		(ARCH_EXYNOS4 || ARCH_EXYNOS5)
 	select MEDIA_EXYNOS
 	default n
 	help
