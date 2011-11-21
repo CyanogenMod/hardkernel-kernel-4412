@@ -214,6 +214,37 @@
 #define LANE0_MAP_LOGIC_LANE_2			(0x2 << 0)
 #define LANE0_MAP_LOGIC_LANE_3			(0x3 << 0)
 
+/* S5P_DP_ANALOG_CTL_1 */
+#define SEL_BG_NEW_BANDGAP			(0x0 << 6)
+#define SEL_BG_INTERNAL_RESISTOR		(0x1 << 6)
+#define TX_TERMINAL_CTRL_73_OHM			(0x0 << 4)
+#define TX_TERMINAL_CTRL_61_OHM			(0x1 << 4)
+#define TX_TERMINAL_CTRL_50_OHM			(0x2 << 4)
+#define TX_TERMINAL_CTRL_45_OHM			(0x3 << 4)
+#define SWING_A_30PER_G_INCREASE		(0x1 << 3)
+#define SWING_A_30PER_G_NORMAL			(0x0 << 3)
+
+/* S5P_DP_ANALOG_CTL_2 */
+#define CPREG_BLEED				(0x1 << 4)
+#define SEL_24M					(0x1 << 3)
+#define TX_DVDD_BIT_1_0000V			(0x3 << 0)
+#define TX_DVDD_BIT_1_0625V			(0x4 << 0)
+#define TX_DVDD_BIT_1_1250V			(0x5 << 0)
+
+/* S5P_DP_ANALOG_CTL_3 */
+#define DRIVE_DVDD_BIT_1_0000V			(0x3 << 5)
+#define DRIVE_DVDD_BIT_1_0625V			(0x4 << 5)
+#define DRIVE_DVDD_BIT_1_1250V			(0x5 << 5)
+#define SEL_CURRENT_DEFAULT			(0x0 << 3)
+#define VCO_BIT_000_MICRO			(0x0 << 0)
+#define VCO_BIT_200_MICRO			(0x1 << 0)
+#define VCO_BIT_300_MICRO			(0x2 << 0)
+#define VCO_BIT_400_MICRO			(0x3 << 0)
+#define VCO_BIT_500_MICRO			(0x4 << 0)
+#define VCO_BIT_600_MICRO			(0x5 << 0)
+#define VCO_BIT_700_MICRO			(0x6 << 0)
+#define VCO_BIT_900_MICRO			(0x7 << 0)
+
 /* S5P_DP_AUX_HW_RETRY_CTL */
 #define AUX_BIT_PERIOD_EXPECTED_DELAY(x)	(((x) & 0x7) << 8)
 #define AUX_HW_RETRY_INTERVAL_MASK		(0x3 << 3)
