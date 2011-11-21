@@ -922,12 +922,10 @@ void s5p_dp_set_training_pattern(struct s5p_dp_device *dp,
 		writel(reg, dp->reg_base + S5P_DP_TRAINING_PTN_SET);
 		break;
 	case D10_2:
+		reg = SCRAMBLING_ENABLE | LINK_QUAL_PATTERN_SET_D10_2;
+		writel(reg, dp->reg_base + S5P_DP_TRAINING_PTN_SET);
 		break;
 	case TRAINING_PTN1:
-		/*
-		 * not scramble, not encoding ,
-		 * D10.2 patern load into serdes FIFO
-		 */
 		reg = SCRAMBLING_DISABLE | SW_TRAINING_PATTERN_SET_PTN1;
 		writel(reg, dp->reg_base + S5P_DP_TRAINING_PTN_SET);
 		break;
