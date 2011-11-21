@@ -245,6 +245,26 @@
 #define VCO_BIT_700_MICRO			(0x6 << 0)
 #define VCO_BIT_900_MICRO			(0x7 << 0)
 
+/* S5P_DP_PLL_FILTER_CTL_1 */
+#define PD_RING_OSC				(0x1 << 6)
+#define AUX_TERMINAL_CTRL_52_OHM		(0x3 << 4)
+#define AUX_TERMINAL_CTRL_69_OHM		(0x2 << 4)
+#define AUX_TERMINAL_CTRL_102_OHM		(0x1 << 4)
+#define AUX_TERMINAL_CTRL_200_OHM		(0x0 << 4)
+#define TX_CUR1_1X				(0x0 << 2)
+#define TX_CUR1_2X				(0x1 << 2)
+#define TX_CUR1_3X				(0x2 << 2)
+#define TX_CUR_1_MA				(0x0 << 0)
+#define TX_CUR_2_MA				(0x1 << 0)
+#define TX_CUR_3_MA				(0x2 << 0)
+#define TX_CUR_4_MA				(0x3 << 0)
+
+/* S5P_DP_PLL_FILTER_CTL_2 */
+#define CH3_AMP_0_MV				(0x3 << 12)
+#define CH2_AMP_0_MV				(0x3 << 8)
+#define CH1_AMP_0_MV				(0x3 << 4)
+#define CH0_AMP_0_MV				(0x3 << 0)
+
 /* S5P_DP_AUX_HW_RETRY_CTL */
 #define AUX_BIT_PERIOD_EXPECTED_DELAY(x)	(((x) & 0x7) << 8)
 #define AUX_HW_RETRY_INTERVAL_MASK		(0x3 << 3)
@@ -423,6 +443,9 @@
 /* S5P_DP_PLL_CTL */
 #define DP_PLL_PD				(0x1 << 7)
 #define DP_PLL_RESET				(0x1 << 6)
+#define DP_PLL_LOOP_BIT_DEFAULT			(0x1 << 4)
+#define DP_PLL_REF_BIT_1_1250V			(0x5 << 0)
+#define DP_PLL_REF_BIT_1_2500V			(0x7 << 0)
 
 /* S5P_DP_PHY_PD */
 #define DP_PHY_PD				(0x1 << 5)
