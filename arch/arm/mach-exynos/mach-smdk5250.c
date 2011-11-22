@@ -13,6 +13,7 @@
 #include <linux/gpio.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
+#include <linux/pwm_backlight.h>
 #include <linux/regulator/machine.h>
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/wm8994/pdata.h>
@@ -48,6 +49,7 @@
 #include <plat/dp.h>
 #include <plat/iic.h>
 #include <plat/pd.h>
+#include <plat/backlight.h>
 #include <plat/ehci.h>
 #include <plat/usbgadget.h>
 #include <plat/udc-ss.h>
@@ -270,9 +272,10 @@ static struct s3c_fb_pd_win smdk5250_fb_win2 = {
 static void dp_lcd_set_power(struct plat_lcd_data *pd,
 				unsigned int power)
 {
+#ifndef CONFIG_BACKLIGHT_PWM
 	/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
 	gpio_request(EXYNOS5_GPB2(0), "GPB2");
-
+#endif
 	/* LCD_APS_EN_2.8V: GPD0_6 */
 	gpio_request(EXYNOS5_GPD0(6), "GPD0");
 
@@ -293,11 +296,12 @@ static void dp_lcd_set_power(struct plat_lcd_data *pd,
 	/* LCD_APS_EN_2.8V: GPD0_6 */
 	gpio_direction_output(EXYNOS5_GPD0(6), power);
 	mdelay(20);
-
+#ifndef CONFIG_BACKLIGHT_PWM
 	/* LCD_PWM_IN_2.8V: LCD_B_PWM, GPB2_0 */
 	gpio_direction_output(EXYNOS5_GPB2(0), power);
 
 	gpio_free(EXYNOS5_GPB2(0));
+#endif
 	gpio_free(EXYNOS5_GPD0(6));
 	gpio_free(EXYNOS5_GPD0(5));
 	gpio_free(EXYNOS5_GPX1(5));
@@ -1598,6 +1602,19 @@ static void __init smdk5250_smsc911x_init(void)
 		     (0x1 << S5P_SROM_BCX__TACS__SHIFT), S5P_SROM_BC1);
 }
 
+#ifdef CONFIG_SAMSUNG_DEV_BACKLIGHT
+/* LCD Backlight data */
+static struct samsung_bl_gpio_info smdk5250_bl_gpio_info = {
+	.no = EXYNOS5_GPB2(0),
+	.func = S3C_GPIO_SFN(2),
+};
+
+static struct platform_pwm_backlight_data smdk5250_bl_data = {
+	.pwm_id = 0,
+	.pwm_period_ns = 1000,
+};
+#endif
+
 static void __init smdk5250_map_io(void)
 {
 	clk_xxti.rate = 24000000;
@@ -1686,6 +1703,10 @@ static void __init smdk5250_machine_init(void)
 
 #ifdef CONFIG_S5P_DP
 	s5p_dp_set_platdata(&smdk5250_dp_data);
+#endif
+
+#ifdef CONFIG_SAMSUNG_DEV_BACKLIGHT
+	samsung_bl_set(&smdk5250_bl_gpio_info, &smdk5250_bl_data);
 #endif
 
 #ifdef CONFIG_FB_S3C
