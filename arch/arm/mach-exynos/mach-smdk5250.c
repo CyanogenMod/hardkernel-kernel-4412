@@ -890,7 +890,7 @@ static int smdk5250_cam0_reset(int dummy)
 	return 0;
 }
 #endif
-#if defined(CONFIG_ITU_B) || defined(CONFIG_CSI_D)
+#if defined(CONFIG_ITU_B)
 static int smdk5250_cam1_reset(int dummy)
 {
 	int err;
