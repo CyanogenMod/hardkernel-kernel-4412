@@ -193,6 +193,11 @@ static struct map_desc exynos4212_iodesc[] __initdata = {
 		.length		= SZ_64K,
 		.type		= MT_DEVICE,
 	}, {
+		.virtual	= (unsigned long)S5P_VA_SYSRAM,
+		.pfn		= __phys_to_pfn(EXYNOS4_PA_SYSRAM1),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE,
+	}, {
 		.virtual	= (unsigned long)S5P_VA_SYSRAM_NS,
 		.pfn		= __phys_to_pfn(EXYNOS4_PA_SYSRAM_NS_4212),
 		.length		= SZ_4K,
