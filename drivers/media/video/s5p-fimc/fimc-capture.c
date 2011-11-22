@@ -474,11 +474,19 @@ static void buffer_queue(struct vb2_buffer *vb)
 	struct fimc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 	struct fimc_dev *fimc = ctx->fimc_dev;
 	struct fimc_vid_cap *vid_cap = &fimc->vid_cap;
+	struct fimc_fmt *fmt = vid_cap->ctx->d_frame.fmt;
 	unsigned long flags;
 	int min_bufs;
 
 	spin_lock_irqsave(&fimc->slock, flags);
         fimc_prepare_addr(ctx, &buf->vb, &ctx->d_frame, &buf->paddr);
+
+	if (fmt->fourcc == V4L2_PIX_FMT_YVU420) {
+		u32 t_cb = buf->paddr.cb;
+		buf->paddr.cb = buf->paddr.cr;
+		buf->paddr.cr = t_cb;
+	}
+
 	if (!test_and_set_bit(ST_PWR_ON, &fimc->state))
 		pm_runtime_get_sync(&fimc->pdev->dev);
 
