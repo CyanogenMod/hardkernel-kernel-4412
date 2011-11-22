@@ -60,8 +60,13 @@ struct exynos4_c2c_pmu_conf {
 	unsigned long val;
 };
 
+/* external function for exynos4 series */
 extern void exynos4_sys_powerdown_conf(enum sys_powerdown mode);
 extern int exynos4_enter_lp(unsigned long *saveblk, long);
 extern void exynos4_idle_resume(void);
 extern void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode);
+
+/* external function for exynos5 series */
+extern void exynos5_sys_powerdown_conf(enum sys_powerdown mode);
+
 #endif /* __ASM_ARCH_PMU_H */
