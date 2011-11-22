@@ -21,6 +21,10 @@
 
 #if defined(CONFIG_BUSFREQ)
 #include <mach/cpufreq.h>
+#elif defined(CONFIG_BUSFREQ_OPP)
+#include <mach/dev.h>
+
+#define BUSFREQ_400MHZ	400000
 #endif
 
 #define INTERLACED	0
@@ -103,6 +107,11 @@ struct s5p_vp_ctrl_private_data {
 
 	struct s5p_tvout_clk_info	clk;
 	char				*pow_name;
+
+#if defined(CONFIG_BUSFREQ_OPP)
+	struct device *bus_dev; /* for BusFreq with Opp */
+#endif
+	struct device *dev;
 };
 
 static struct s5p_vp_ctrl_private_data s5p_vp_ctrl_private = {
@@ -525,6 +534,9 @@ void s5p_vp_ctrl_stop(void)
 #if defined(CONFIG_BUSFREQ)
 	exynos4_cpufreq_lock_free(DVFS_LOCK_ID_TV);
 	exynos4_busfreq_lock_free(DVFS_LOCK_ID_TV);
+#elif defined(CONFIG_BUSFREQ_OPP)
+	/* unlock fixed bus frequency */
+	dev_unlock(s5p_vp_ctrl_private.bus_dev, s5p_vp_ctrl_private.dev);
 #endif
 
 	}
@@ -637,9 +649,17 @@ int s5p_vp_ctrl_start(void)
 #endif
 		{
 #if defined(CONFIG_BUSFREQ)
-			if ((disp == TVOUT_1080P_60) || (disp == TVOUT_1080P_59) || (disp == TVOUT_1080P_50)) {
+			if ((disp == TVOUT_1080P_60) || (disp == TVOUT_1080P_59)
+					|| (disp == TVOUT_1080P_50)) {
 				if (exynos4_busfreq_lock(DVFS_LOCK_ID_TV, BUS_L0))
-					printk(KERN_ERR "%s: error : failed lock DVFS\n", __func__);
+					printk(KERN_ERR "%s: failed lock DVFS\n", __func__);
+			}
+#elif defined(CONFIG_BUSFREQ_OPP)
+			if ((disp == TVOUT_1080P_60) || (disp == TVOUT_1080P_59)
+					|| (disp == TVOUT_1080P_50)) {
+				dev_lock(s5p_vp_ctrl_private.bus_dev,
+						s5p_vp_ctrl_private.dev,
+						BUSFREQ_400MHZ);
 			}
 #endif
 			s5p_vp_ctrl_clock(1);
@@ -676,6 +696,13 @@ int s5p_vp_ctrl_constructor(struct platform_device *pdev)
 
 	s5p_vp_init(s5p_vp_ctrl_private.reg_mem.base);
 	s5p_vp_ctrl_init_private();
+
+#if defined(CONFIG_BUSFREQ_OPP)
+	/* add bus device ptr for using bus frequency with opp */
+	s5p_vp_ctrl_private.bus_dev = dev_get("exynos4-busfreq");
+#endif
+
+	s5p_vp_ctrl_private.dev = &pdev->dev;
 
 	return 0;
 
