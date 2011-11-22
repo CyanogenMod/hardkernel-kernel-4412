@@ -125,15 +125,16 @@ void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num)
 	struct vb2_ion ion;
 	void **alloc_ctxes;
 	struct vb2_drv vb2_drv;
+	struct s5p_mfc_dev *m_dev = platform_get_drvdata(to_platform_device(dev));
 
 	/* TODO */
 	ion.name = MFC_ION_NAME;
 	ion.dev = dev;
 	ion.cacheable = true;
-	ion.align = SZ_4K;
+	ion.align = IS_MFCV6(m_dev) ? SZ_4K : SZ_128K;
 	ion.contig = true;
 
-	vb2_drv.use_mmu = false;
+	vb2_drv.use_mmu = true;
 
 	s5p_mfc_power_on();
 	alloc_ctxes = (void **)vb2_ion_init_multi(ctx_num, &ion,
