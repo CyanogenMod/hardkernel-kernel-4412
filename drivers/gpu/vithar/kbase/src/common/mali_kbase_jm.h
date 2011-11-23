@@ -64,7 +64,7 @@ static INLINE mali_bool kbasep_jm_is_submit_slots_free(kbase_device *kbdev, int 
 	OSK_ASSERT( kbdev != NULL );
 	OSK_ASSERT( 0 <= js && js < kbdev->nr_job_slots  );
 	
-	if (osk_atomic_get(&kbdev->reset_gpu) != 0)
+	if (osk_atomic_get(&kbdev->reset_gpu) != KBASE_RESET_GPU_NOT_PENDING)
 	{
 		/* The GPU is being reset - so prevent submission */
 		return MALI_FALSE;
@@ -182,6 +182,41 @@ void kbase_job_submit_nolock(kbase_device *kbdev, kbase_jd_atom *katom, int js);
  * @brief Complete the head job on a particular job-slot
  */
 void kbase_job_done_slot(kbase_device *kbdev, int s, u32 completion_code, u64 job_tail, kbasep_js_tick *end_timestamp);
+
+/**
+ * @brief Obtain the lock for a job slot.
+ *
+ * This function also returns the structure for the specified job slot to simplify the code
+ *
+ * @param kbdev     Kbase device pointer
+ * @param js        The job slot number to lock
+ *
+ * @return  The job slot structure
+ */
+static INLINE kbase_jm_slot *kbase_job_slot_lock(kbase_device *kbdev, int js)
+{
+#if BASE_HW_ISSUE_7347
+	osk_spinlock_irq_lock(&kbdev->jm_slot_lock);
+#else
+	osk_spinlock_irq_lock(&kbdev->jm_slots[js].lock);
+#endif
+	return &kbdev->jm_slots[js];
+}
+
+/**
+ * @brief Release the lock for a job slot
+ *
+ * @param kbdev     Kbase device pointer
+ * @param js        The job slot number to unlock
+ */
+static INLINE void kbase_job_slot_unlock(kbase_device *kbdev, int js)
+{
+#if BASE_HW_ISSUE_7347
+	osk_spinlock_irq_unlock(&kbdev->jm_slot_lock);
+#else
+	osk_spinlock_irq_unlock(&kbdev->jm_slots[js].lock);
+#endif
+}
 
 /** @} */ /* end group kbase_jm */
 /** @} */ /* end group base_kbase_api */

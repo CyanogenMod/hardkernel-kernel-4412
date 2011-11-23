@@ -25,6 +25,8 @@
 
 #define beenthere(f, a...)  OSK_PRINT_INFO(OSK_BASE_JM, "%s:" f, __func__, ##a)
 
+static void kbasep_try_reset_gpu_early(kbase_device *kbdev);
+
 static void kbase_job_hw_submit(kbase_device *kbdev, kbase_jd_atom *katom, int js)
 {
 	kbase_context *kctx = katom->kctx;
@@ -178,8 +180,7 @@ void kbase_job_done(kbase_device *kbdev, u32 done)
 		i = osk_find_first_set_bit(finished);
 		OSK_ASSERT(i >= 0);
 
-		slot = &kbdev->jm_slots[i];
-		osk_spinlock_irq_lock(&slot->lock);
+		slot = kbase_job_slot_lock(kbdev, i);
 
 		do {
 			int nr_done;
@@ -362,8 +363,15 @@ spurious:
 
 		kbasep_job_slot_update_head_start_timestamp( slot, end_timestamp );
 
+		kbase_job_slot_unlock(kbdev, i);
+	}
 
-		osk_spinlock_irq_unlock(&slot->lock);
+	if (osk_atomic_get(&kbdev->reset_gpu) != 0)
+	{
+		/* If we're trying to reset the GPU then we might be able to do it early
+		 * (without waiting for a timeout) because some jobs have completed
+		 */
+		kbasep_try_reset_gpu_early(kbdev);
 	}
 
 	beenthere("irq efficiency = %d", count);
@@ -416,6 +424,10 @@ static void kbase_zap_context_slot(kbase_context *kctx, kbase_jm_slot *slot, int
 					OSK_ASSERT(dequeued_katom == katom);
 					jobs_submitted --;
 
+					/* Set the next registers to NULL */
+					kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_LO), 0, NULL);
+					kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_HI), 0, NULL);
+
 					dequeued_katom->event.event_code = BASE_JD_EVENT_REMOVED_FROM_NEXT;
 					kbase_jd_done(dequeued_katom);
 				}
@@ -442,6 +454,10 @@ static void kbase_zap_context_slot(kbase_context *kctx, kbase_jm_slot *slot, int
 					/* We did remove a job from the next registers, requeue it */
 					kbase_jd_atom *dequeued_katom = kbasep_jm_dequeue_tail_submit_slot( slot );
 					jobs_submitted --;
+
+					/* Set the next registers to NULL */
+					kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_LO), 0, NULL);
+					kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_HI), 0, NULL);
 
 					dequeued_katom->event.event_code = BASE_JD_EVENT_REMOVED_FROM_NEXT;
 					kbase_jd_done(dequeued_katom);
@@ -476,10 +492,9 @@ void kbase_job_kill_jobs_from_context(kbase_context *kctx)
 	/* Cancel any remaining running jobs for this kctx  */
 	for (i = 0; i < kbdev->nr_job_slots; i++)
 	{
-		kbase_jm_slot *slot = &kbdev->jm_slots[i];
-		osk_spinlock_irq_lock(&slot->lock);
+		kbase_jm_slot *slot = kbase_job_slot_lock(kbdev, i);
 		kbase_zap_context_slot(kctx, slot, i);
-		osk_spinlock_irq_unlock(&slot->lock);
+		kbase_job_slot_unlock(kbdev, i);
 	}
 }
 
@@ -609,10 +624,9 @@ void kbase_job_zap_context(kbase_context *kctx)
 		 * jobs will appear after we do this.  */
 		for (i = 0; i < kbdev->nr_job_slots; i++)
 		{
-			kbase_jm_slot *slot = &kbdev->jm_slots[i];
-			osk_spinlock_irq_lock(&slot->lock);
+			kbase_jm_slot *slot = kbase_job_slot_lock(kbdev, i);
 			kbase_zap_context_slot(kctx, slot, i);
-			osk_spinlock_irq_unlock(&slot->lock);
+			kbase_job_slot_unlock(kbdev, i);
 		}
 		osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
 
@@ -634,6 +648,7 @@ mali_error kbase_job_slot_init(kbase_device *kbdev)
 	osk_error osk_err;
 
 
+#if BASE_HW_ISSUE_7347 == 0
 	for (i = 0; i < kbdev->nr_job_slots; i++)
 	{
 		osk_err = osk_spinlock_irq_init(&kbdev->jm_slots[i].lock, OSK_LOCK_ORDER_JSLOT);
@@ -648,6 +663,17 @@ mali_error kbase_job_slot_init(kbase_device *kbdev)
 		}
 		kbasep_jm_init_submit_slot( &kbdev->jm_slots[i] );
 	}
+#else
+	osk_err = osk_spinlock_irq_init(&kbdev->jm_slot_lock, OSK_LOCK_ORDER_JSLOT);
+	if (OSK_ERR_NONE != osk_err)
+	{
+		return MALI_ERROR_FUNCTION_FAILED;
+	}
+	for(i = 0; i < kbdev->nr_job_slots; i++)
+	{
+		kbasep_jm_init_submit_slot( &kbdev->jm_slots[i] );
+	}
+#endif
 	return MALI_ERROR_NONE;
 }
 
@@ -658,12 +684,16 @@ void kbase_job_slot_halt(kbase_device *kbdev)
 
 void kbase_job_slot_term(kbase_device *kbdev)
 {
+#if BASE_HW_ISSUE_7347 == 0
 	int i;
 
 	for (i = 0; i < kbdev->nr_job_slots; i++)
 	{
 		osk_spinlock_irq_term(&kbdev->jm_slots[i].lock);
 	}
+#else
+	osk_spinlock_irq_term(&kbdev->jm_slot_lock);
+#endif
 }
 
 /*
@@ -694,6 +724,10 @@ void kbase_job_slot_softstop(kbase_device *kbdev, int js)
 		/* There was a job in the next registers, requeue it */
 		kbase_jd_atom *katom = kbasep_jm_dequeue_tail_submit_slot( slot );
 
+		/* Set the next registers to NULL */
+		kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_LO), 0, NULL);
+		kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_HI), 0, NULL);
+
 		katom->event.event_code = BASE_JD_EVENT_REMOVED_FROM_NEXT;
 		kbase_jd_done(katom);
 	}
@@ -721,3 +755,193 @@ void kbase_job_slot_hardstop(kbase_device *kbdev, int js)
 {
 	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND), JSn_COMMAND_HARD_STOP, NULL);
 }
+
+void kbasep_reset_timeout_worker(osk_workq_work *data)
+{
+	kbase_device *kbdev = CONTAINER_OF(data, kbase_device, reset_work);
+	int i;
+	kbasep_js_tick end_timestamp = kbasep_js_get_js_ticks();
+	kbasep_js_device_data *js_devdata;
+
+	js_devdata = &kbdev->js_data;
+
+	/* All slot have been soft-stopped and we've waited SOFT_STOP_RESET_TIMEOUT for the slots to clear, at this point
+	 * we assume that anything that is still left on the GPU is stuck there and we'll kill it when we reset the GPU */
+
+	OSK_PRINT_ERROR(OSK_BASE_JD, "Resetting GPU");
+
+	/* Make sure the timer has completed - this cannot be done from interrupt context,
+	 * so this cannot be done within kbasep_try_reset_gpu_early. */
+	osk_timer_stop(&kbdev->reset_timer);
+
+	/* Reset the GPU */
+	kbase_pm_power_transitioning(kbdev);
+	kbase_pm_init_hw(kbdev);
+
+	kbase_pm_power_transitioning(kbdev);
+
+	/* Pretend there is a context active - this is to satisify the precondition of KBASE_PM_EVENT_POLICY_INIT.
+	 * Note that we cannot use kbase_pm_context_active here because that waits for the power up which must happen
+	 * after the KBASE_PM_EVENT_POLICY_INIT message is sent
+	 */
+	osk_spinlock_irq_lock(&kbdev->pm.active_count_lock);
+	++kbdev->pm.active_count;
+	osk_spinlock_irq_unlock(&kbdev->pm.active_count_lock);
+
+	/* Re-init the power policy */
+	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_POLICY_INIT);
+
+	/* Wait for the policy to power up the GPU */
+	kbase_pm_wait_for_power_up(kbdev);
+
+	/* Idle the fake context */
+	kbase_pm_context_idle(kbdev);
+
+	/* Complete any jobs that were still on the GPU */
+	for (i = 0; i < kbdev->nr_job_slots; i++)
+	{
+		int nr_done;
+		kbase_jm_slot *slot = kbase_job_slot_lock(kbdev, i);
+
+		nr_done = kbasep_jm_nr_jobs_submitted( slot );
+		while (nr_done) {
+			kbase_job_done_slot(kbdev, i, BASE_JD_EVENT_JOB_CANCELLED, 0, &end_timestamp);
+			nr_done--;
+		}
+#if BASE_HW_ISSUE_5713
+		/* We've reset the GPU so the slot is no longer soft-stopped */
+		slot->submission_blocked_for_soft_stop = MALI_FALSE;
+#endif
+
+		kbase_job_slot_unlock(kbdev, i);
+	}
+
+	osk_mutex_lock( &js_devdata->runpool_mutex );
+
+	osk_atomic_set(&kbdev->reset_gpu, KBASE_RESET_GPU_NOT_PENDING);
+	osk_waitq_set(&kbdev->reset_waitq);
+	OSK_PRINT_ERROR(OSK_BASE_JD, "Reset complete");
+
+	/* Reprogram the GPU's MMU */
+	for(i = 0; i < BASE_MAX_NR_AS; i++)
+	{
+		if (js_devdata->runpool_irq.per_as_data[i].kctx) {
+			kbase_mmu_update(js_devdata->runpool_irq.per_as_data[i].kctx);
+		}
+	}
+
+	/* Try submitting some jobs to restart processing */
+	kbasep_js_try_run_next_job(kbdev);
+	osk_mutex_unlock( &js_devdata->runpool_mutex );
+}
+
+void kbasep_reset_timer_callback(void *data)
+{
+	kbase_device *kbdev = (kbase_device*)data;
+
+	if (osk_atomic_compare_and_swap(&kbdev->reset_gpu, KBASE_RESET_GPU_COMMITTED, KBASE_RESET_GPU_HAPPENING) !=
+	    KBASE_RESET_GPU_COMMITTED)
+	{
+		/* Reset has been cancelled or has already occurred */
+		return;
+	}
+
+	osk_workq_submit(&kbdev->reset_workq, kbasep_reset_timeout_worker, &kbdev->reset_work);
+}
+
+/*
+ * If all jobs are evicted from the GPU then we can reset the GPU
+ * immediately instead of waiting for the timeout to elapse
+ */
+static void kbasep_try_reset_gpu_early(kbase_device *kbdev)
+{
+	int i;
+	int pending_jobs = 0;
+	/* Count the number of jobs */
+	for (i = 0; i < kbdev->nr_job_slots; i++)
+	{
+		kbase_jm_slot *slot = kbase_job_slot_lock(kbdev, i);
+		pending_jobs += kbasep_jm_nr_jobs_submitted(slot);
+		kbase_job_slot_unlock(kbdev, i);
+	}
+	
+	if (pending_jobs > 0)
+	{
+		/* There are still jobs on the GPU - wait */
+		return;
+	}
+
+	/* Check that the reset has been committed to (i.e. kbase_reset_gpu has been called), and that no other
+	 * thread beat this thread to starting the reset */
+	if (osk_atomic_compare_and_swap(&kbdev->reset_gpu, KBASE_RESET_GPU_COMMITTED, KBASE_RESET_GPU_HAPPENING) != 
+	    KBASE_RESET_GPU_COMMITTED)
+	{
+		/* Reset has already occurred */
+		return;
+	}
+
+	osk_workq_submit(&kbdev->reset_workq, kbasep_reset_timeout_worker, &kbdev->reset_work);
+}
+
+/*
+ * Prepare for resetting the GPU.
+ * This function just soft-stops all the slots to ensure that as many jobs as possible are saved.
+ *
+ * The function returns a boolean which should be interpreted as follows:
+ * - MALI_TRUE - Prepared for reset, kbase_reset_gpu should be called.
+ * - MALI_FALSE - Another thread is performing a reset, kbase_reset_gpu should not be called.
+ *
+ * @return See description
+ */
+mali_bool kbase_prepare_to_reset_gpu(kbase_device *kbdev)
+{
+	int i;
+
+	if (osk_atomic_compare_and_swap(&kbdev->reset_gpu, KBASE_RESET_GPU_NOT_PENDING,
+	                                KBASE_RESET_GPU_PREPARED) != KBASE_RESET_GPU_NOT_PENDING)
+	{
+		/* Some other thread is already resetting the GPU */
+		return MALI_FALSE;
+	}
+
+	osk_waitq_clear(&kbdev->reset_waitq);
+
+	OSK_PRINT_ERROR(OSK_BASE_JD, "Preparing to soft-reset GPU: Soft-stopping all jobs");
+
+	for (i = 0; i < kbdev->nr_job_slots; i++)
+	{
+		kbase_job_slot_lock(kbdev, i);
+		kbase_job_slot_softstop(kbdev, i);
+		kbase_job_slot_unlock(kbdev, i);
+	}
+
+	return MALI_TRUE;
+}
+
+/*
+ * This function should be called after kbase_prepare_to_reset_gpu iff it returns MALI_TRUE.
+ * It should never be called without a corresponding call to kbase_prepare_to_reset_gpu.
+ *
+ * After this function is called (or not called if kbase_prepare_to_reset_gpu returned MALI_FALSE),
+ * the caller should wait for kbdev->reset_waitq to be signalled to know when the reset has completed.
+ */
+void kbase_reset_gpu(kbase_device *kbdev)
+{
+	osk_error ret;
+
+	/* Note this is an assert/atomic_set because it is a software bug for a race to be occuring here */
+	OSK_ASSERT(osk_atomic_get(&kbdev->reset_gpu) == KBASE_RESET_GPU_PREPARED);
+	osk_atomic_set(&kbdev->reset_gpu, KBASE_RESET_GPU_COMMITTED);
+
+	ret = osk_timer_start(&kbdev->reset_timer, SOFT_STOP_RESET_TIMEOUT);
+	if (ret != OSK_ERR_NONE)
+	{
+		OSK_PRINT_ERROR(OSK_BASE_JD, "Failed to start timer for soft-resetting GPU");
+		/* We can't rescue jobs from the GPU so immediately reset */
+		osk_workq_submit(&kbdev->reset_workq, kbasep_reset_timeout_worker, &kbdev->reset_work);
+	}
+
+	/* Try resetting early */
+	kbasep_try_reset_gpu_early(kbdev);
+}
+

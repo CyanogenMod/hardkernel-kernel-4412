@@ -142,14 +142,14 @@ static INLINE kbase_jd_atom *jd_validate_atom(struct kbase_context *kctx,
 	 * kind of slab allocator around */
 	katom = osk_calloc(sizeof(*katom));
 	if (!katom)
-		return NULL;	/* Ideally we should handle OOM more gracefully */
+		return NULL;    /* Ideally we should handle OOM more gracefully */
 
-	katom->atom		= atom;
-	katom->pre_dep		= atom->pre_dep;
-	katom->post_dep		= atom->post_dep;
-	katom->bag		= bag;
-	katom->kctx		= kctx;
-	katom->nr_syncsets	= nr_syncsets;
+	katom->atom         = atom;
+	katom->pre_dep      = atom->pre_dep;
+	katom->post_dep     = atom->post_dep;
+	katom->bag          = bag;
+	katom->kctx         = kctx;
+	katom->nr_syncsets  = nr_syncsets;
 
 	/* pre-fill the event */
 	katom->event.event_code	= BASE_JD_EVENT_DONE;
@@ -752,88 +752,22 @@ typedef struct zap_reset_data
 {
 	/* The stages are:
 	 * 1. The timer has never been called
-	 * 2. The zap has timed out, all slots are soft-stopped - the GPU reset will happen
-	 * 3. The GPU has been reset
+	 * 2. The zap has timed out, all slots are soft-stopped - the GPU reset will happen.
+	 *    The GPU has been reset when kbdev->reset_waitq is signalled
 	 *
 	 * (-1 - The timer has been cancelled)
 	 */
 	int             stage;
 	kbase_device    *kbdev;
 	osk_timer       *timer;
-	osk_waitq       waitq;
 	osk_spinlock    lock;
 } zap_reset_data;
-
-static void zap_timeout_worker(osk_workq_work *data)
-{
-	kbase_device *kbdev = CONTAINER_OF(data, kbase_device, reset_work);
-	int i;
-	kbasep_js_tick end_timestamp = kbasep_js_get_js_ticks();
-	kbasep_js_device_data *js_devdata;
-
-	js_devdata = &kbdev->js_data;
-
-
-	/* All slot have been soft-stopped and we've waited ZAP_TIMEOUT for the slots to clear, at this point we assume
-	 * that anything that is still left on the GPU is stuck there and we'll kill it when we reset the GPU */
-
-	OSK_PRINT_ERROR(OSK_BASE_JD, "Resetting GPU");
-
-	/* Reset the GPU */
-	kbase_pm_power_transitioning(kbdev);
-	kbase_pm_init_hw(kbdev);
-
-	/* Pretend there is a context active - this is to satisify the precondition of KBASE_PM_EVENT_POLICY_INIT */
-	kbase_pm_context_active(kbdev);
-
-	/* Re-init the power policy */
-	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_POLICY_INIT);
-
-	/* Idle the fake context */
-	kbase_pm_context_idle(kbdev);
-
-	/* Complete any jobs that were still on the GPU */
-	for (i = 0; i < kbdev->nr_job_slots; i++)
-	{
-		int nr_done;
-		kbase_jm_slot *slot = &kbdev->jm_slots[i];
-
-		osk_spinlock_irq_lock(&slot->lock);
-
-		nr_done = kbasep_jm_nr_jobs_submitted( slot );
-		while (nr_done) {
-			kbase_job_done_slot(kbdev, i, BASE_JD_EVENT_JOB_CANCELLED, 0, &end_timestamp);
-			nr_done--;
-		}
-#if BASE_HW_ISSUE_5713
-		/* We've reset the GPU so the slot is no longer soft-stopped */
-		slot->submission_blocked_for_soft_stop = MALI_FALSE;
-#endif
-
-		osk_spinlock_irq_unlock(&slot->lock);
-	}
-
-	osk_atomic_set(&kbdev->reset_gpu, 0);
-	
-	OSK_PRINT_ERROR(OSK_BASE_JD, "Reset complete");
-	
-	osk_mutex_lock( &js_devdata->runpool_mutex );
-	/* Try submitting some jobs to restart processing */
-	for (i = 0; i < kbdev->nr_job_slots; i++)
-	{
-		kbasep_js_try_run_next_job_on_slot(kbdev, i);
-	}
-	osk_mutex_unlock( &js_devdata->runpool_mutex );
-}
 
 static void zap_timeout_callback(void *data)
 {
 	zap_reset_data *reset_data = (zap_reset_data*)data;
 	kbase_device *kbdev = reset_data->kbdev;
-	int i;
-	osk_error ret;
-	osk_timer *timer = reset_data->timer;
-	
+
 	osk_spinlock_lock(&reset_data->lock);
 
 	if (reset_data->stage == -1)
@@ -841,40 +775,12 @@ static void zap_timeout_callback(void *data)
 		goto out;
 	}
 
-	if (reset_data->stage == 2)
+	if (kbase_prepare_to_reset_gpu(kbdev))
 	{
-		osk_workq_submit(&kbdev->reset_workq, zap_timeout_worker, &kbdev->reset_work);
-
-		reset_data->stage = 3;
-
-		osk_waitq_set(&reset_data->waitq);
-		goto out;
-	}
-
-	if (osk_atomic_compare_and_swap(&kbdev->reset_gpu, 0, 1) != 0)
-	{
-		/* Some other thread is already resetting the GPU */
-		osk_waitq_set(&reset_data->waitq);
-		goto out;
+		kbase_reset_gpu(kbdev);
 	}
 
 	reset_data->stage = 2;
-
-	OSK_PRINT_ERROR(OSK_BASE_JD, "Context failed to idle: preparing to soft-reset GPU");
-
-	for (i = 0; i < kbdev->nr_job_slots; i++)
-	{
-		kbase_jm_slot *slot = &kbdev->jm_slots[i];
-		osk_spinlock_irq_lock(&slot->lock);
-		kbase_job_slot_softstop(kbdev, i);
-		osk_spinlock_irq_unlock(&slot->lock);
-	}
-
-	ret = osk_timer_start(timer, ZAP_TIMEOUT);
-	if (ret != OSK_ERR_NONE)
-	{
-		OSK_PRINT_ERROR(OSK_BASE_JD, "Failed to start timer for soft-resetting GPU");
-	}
 
 out:
 	osk_spinlock_unlock(&reset_data->lock);
@@ -894,18 +800,11 @@ void kbase_jd_zap_context(kbase_context *kctx)
 	{
 		goto skip_timeout;
 	}
-	ret = osk_waitq_init(&reset_data.waitq);
-	if (ret != OSK_ERR_NONE)
-	{
-		osk_timer_on_stack_term(&zap_timeout);
-		goto skip_timeout;
-	}
 
 	ret = osk_spinlock_init(&reset_data.lock, OSK_LOCK_ORDER_JD_ZAP_CONTEXT);
 	if (ret != OSK_ERR_NONE)
 	{
 		osk_timer_on_stack_term(&zap_timeout);
-		osk_waitq_term(&reset_data.waitq);
 		goto skip_timeout;
 	}
 
@@ -919,7 +818,6 @@ void kbase_jd_zap_context(kbase_context *kctx)
 	{
 		osk_spinlock_term(&reset_data.lock);
 		osk_timer_on_stack_term(&zap_timeout);
-		osk_waitq_term(&reset_data.waitq);
 		goto skip_timeout;
 	}
 
@@ -949,23 +847,12 @@ skip_timeout:
 
 		if (reset_data.stage == 2)
 		{
-			/* Whoops - we stopped the timer in the middle of the GPU reset sequence, we restart the timer and
-			 * continue with the GPU reset. And this time wait for the reset to complete */
-			ret = osk_timer_start(&zap_timeout, ZAP_TIMEOUT);
-			if (ret != OSK_ERR_NONE)
-			{
-				/* We don't have enough resources to re-enable the timer. This shouldn't happen, the best we
-				 * can do is to re-enable submission and hope that everything turns out alright */
-				OSK_PRINT_WARN(OSK_BASE_JD, "Zap: Failed to restart timer for soft-resetting GPU");
-				osk_atomic_set(&kbdev->reset_gpu, 0);
-			}
-			else
-			{
-				osk_waitq_wait(&reset_data.waitq);
-			}
+			/* The reset has already started.
+			 * Wait for the reset to complete
+			 */
+			osk_waitq_wait(&kbdev->reset_waitq);
 		}
 		osk_timer_on_stack_term(&zap_timeout);
-		osk_waitq_term(&reset_data.waitq);
 		osk_spinlock_term(&reset_data.lock);
 	}
 

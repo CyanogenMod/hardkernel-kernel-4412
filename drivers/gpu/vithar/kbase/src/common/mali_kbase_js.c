@@ -267,25 +267,7 @@ STATIC void assign_and_activate_kctx_addr_space( kbase_device *kbdev, kbase_cont
 
 }
 
-
-/**
- * @brief Try to submit the next job for each slot in the system, outside of IRQ context
- *
- * This will internally call kbasep_js_try_run_next_job_on_slot(), so the same
- * locking conditions on the caller are required.
- *
- * The following locking conditions are made on the caller:
- * - it must hold kbasep_js_device_data::runpool_mutex
- * - it must \em not hold kbasep_js_device_data::runpool_irq::lock (as this will be
- * obtained internally)
- * - it must \em not hold kbdev->jm_slots[ \a js ].lock (as this will be
- * obtained internally)
- *
- * @note The caller \em might be holding one of the
- * kbasep_js_kctx_info::ctx::jsctx_mutex locks.
- *
- */
-STATIC void kbasep_js_try_run_next_job( kbase_device *kbdev )
+void kbasep_js_try_run_next_job( kbase_device *kbdev )
 {
 	int js;
 
@@ -876,6 +858,10 @@ mali_bool kbasep_js_try_run_next_job_on_slot_irq_nolock( kbase_device *kbdev, in
 
 	js_devdata = &kbdev->js_data;
 
+#if BASE_HW_ISSUE_7347
+	for(js=0;js<kbdev->nr_job_slots;js++) {
+#endif
+
 	/* The caller of this function may not be aware of NSS status changes so we
 	 * must recheck if the given slot is still valid. Otherwise do not try to run.
 	 */
@@ -924,6 +910,9 @@ mali_bool kbasep_js_try_run_next_job_on_slot_irq_nolock( kbase_device *kbdev, in
 			}
 		}
 	}
+#if BASE_HW_ISSUE_7347
+	}
+#endif
 	/* Indicate whether a retry in submission should be tried on a different
 	 * dequeue function. These are the reasons why it *must* happen:
 	 *
@@ -952,15 +941,17 @@ mali_bool kbasep_js_try_run_next_job_on_slot_irq_nolock( kbase_device *kbdev, in
 void kbasep_js_try_run_next_job_on_slot( kbase_device *kbdev, int js )
 {
 	kbasep_js_device_data *js_devdata;
-	kbase_jm_slot *jm_slots;
 	mali_bool has_job;
 
 	OSK_ASSERT( kbdev != NULL );
 
 	js_devdata = &kbdev->js_data;
-	jm_slots = kbdev->jm_slots;
 
-	osk_spinlock_irq_lock(&jm_slots[js].lock);
+#if BASE_HW_ISSUE_7347
+	for(js=0;js<kbdev->nr_job_slots;js++) {
+#endif
+
+	kbase_job_slot_lock(kbdev, js);
 
 	/* Keep submitting while there's space to run a job on this job-slot,
 	 * and there are jobs to get that match its requirements (see 'break'
@@ -1008,7 +999,10 @@ void kbasep_js_try_run_next_job_on_slot( kbase_device *kbdev, int js )
 		}
 		osk_spinlock_irq_unlock( &js_devdata->runpool_irq.lock );
 	}
-	osk_spinlock_irq_unlock(&jm_slots[js].lock);
+	kbase_job_slot_unlock(kbdev, js);
+#if BASE_HW_ISSUE_7347
+	}
+#endif
 }
 
 void kbasep_js_try_schedule_head_ctx( kbase_device *kbdev )

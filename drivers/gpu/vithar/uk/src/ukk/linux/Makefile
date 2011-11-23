@@ -15,8 +15,14 @@ ifneq ($(VITHAR_ROOT),)
 OS=linux
 RELATIVE_ROOT=../../../..
 ROOT = $(KBUILD_EXTMOD)/$(RELATIVE_ROOT)
+
+ifneq ($(KBUILD_EXTMOD),)
 OSK_PATH = $(ROOT)/osk
 include $(OSK_PATH)/src/$(OS)/Makefile.osk
+else
+OSK_PATH = osk/src/linux
+include $(VITHAR_ROOT)/$(OSK_PATH)/Makefile.osk
+endif
 
 SRC=\
 	../mali_ukk.c \

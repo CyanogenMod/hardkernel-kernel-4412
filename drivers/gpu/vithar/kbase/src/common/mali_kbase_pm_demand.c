@@ -60,8 +60,10 @@ static void demand_power_down(kbase_device *kbdev)
 	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_SHADER);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_SHADER, cores);
 
+	/* Avoid powering tiler cores down
 	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_TILER);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_TILER, cores);
+	*/
 
 	kbase_pm_check_transitions(kbdev);
 
@@ -107,8 +109,10 @@ static void demand_suspend(kbase_device *kbdev)
 	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_SHADER);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_SHADER, cores);
 
+	/* Avoid turning tiler cores off
 	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_TILER);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_TILER, cores);
+	*/
 
 	kbase_pm_check_transitions(kbdev);
 

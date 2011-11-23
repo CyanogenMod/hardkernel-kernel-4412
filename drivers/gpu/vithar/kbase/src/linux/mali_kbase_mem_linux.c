@@ -152,6 +152,12 @@ static int kbase_cpu_mmap(struct kbase_va_region *reg, struct vm_area_struct *vm
 		BUG_ON(kaddr);
 		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 	}
+#if 0
+   else
+	{
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+	}
+#endif
 
 	if (!kaddr)
 	{

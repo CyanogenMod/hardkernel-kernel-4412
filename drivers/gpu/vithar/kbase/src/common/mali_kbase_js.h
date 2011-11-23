@@ -331,6 +331,25 @@ mali_bool kbasep_js_try_run_next_job_on_slot_irq_nolock( kbase_device *kbdev, in
 void kbasep_js_try_run_next_job_on_slot( kbase_device *kbdev, int js );
 
 /**
+ * @brief Try to submit the next job for each slot in the system, outside of IRQ context
+ *
+ * This will internally call kbasep_js_try_run_next_job_on_slot(), so the same
+ * locking conditions on the caller are required.
+ *
+ * The following locking conditions are made on the caller:
+ * - it must hold kbasep_js_device_data::runpool_mutex
+ * - it must \em not hold kbasep_js_device_data::runpool_irq::lock (as this will be
+ * obtained internally)
+ * - it must \em not hold kbdev->jm_slots[ \a js ].lock (as this will be
+ * obtained internally)
+ *
+ * @note The caller \em might be holding one of the
+ * kbasep_js_kctx_info::ctx::jsctx_mutex locks.
+ *
+ */
+void kbasep_js_try_run_next_job( kbase_device *kbdev );
+
+/**
  * @brief Try to schedule the next context onto the Run Pool
  *
  * This checks whether there's space in the Run Pool to accommodate a new

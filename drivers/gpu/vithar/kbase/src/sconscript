@@ -15,7 +15,7 @@ import re
 import sys
 Import('env')
 
-scheduling_policy = 'fcfs'
+scheduling_policy = 'cfs'
 mock_test = 0
 
 if env['os'] == 'linux' or env['os'] == 'android':

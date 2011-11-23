@@ -23,6 +23,8 @@
 #define GPU_NUM_ADDRESS_SPACES 4
 #define GPU_NUM_JOB_SLOTS 3
 
+void kbasep_reset_timer_callback(void *data);
+void kbasep_reset_timeout_worker(osk_workq_work *data);
 
 /* This array is referenced at compile time, it cannot be made static... */
 const kbase_device_info kbase_dev_info[] = {
@@ -138,8 +140,25 @@ kbase_device *kbase_device_create(const kbase_device_info *dev_info)
 		goto free_hwcnt_waitq;
 	}
 
+	osk_err = osk_waitq_init(&kbdev->reset_waitq);
+	if (OSK_ERR_NONE != osk_err)
+	{
+		goto free_reset_workq;
+	}
+
+	osk_err = osk_timer_init(&kbdev->reset_timer);
+	if (OSK_ERR_NONE != osk_err)
+	{
+		goto free_reset_waitq;
+	}
+	osk_timer_callback_set(&kbdev->reset_timer, kbasep_reset_timer_callback, kbdev);
+
 	return kbdev;
 
+free_reset_waitq:
+	osk_waitq_term(&kbdev->reset_waitq);
+free_reset_workq:
+	osk_workq_term(&kbdev->reset_workq);
 free_hwcnt_waitq:
 	osk_waitq_term(&kbdev->hwcnt_waitqueue);
 free_hwcnt_lock:
@@ -161,7 +180,9 @@ fail:
 void kbase_device_destroy(kbase_device *kbdev)
 {
 	int i;
-	
+
+	osk_timer_term(&kbdev->reset_timer);
+	osk_waitq_term(&kbdev->reset_waitq);
 	osk_workq_term(&kbdev->reset_workq);
 
 	for (i = 0; i < kbdev->nr_address_spaces; i++)

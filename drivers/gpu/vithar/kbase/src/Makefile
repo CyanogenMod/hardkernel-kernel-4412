@@ -40,6 +40,7 @@ SRC=\
 obj-$(CONFIG_VITHAR) += $(KBASE_PATH)/platform/mali_kbase_platform.o
 obj-$(CONFIG_VITHAR_RT_PM) += $(KBASE_PATH)/platform/mali_kbase_runtime_pm.o
 obj-$(CONFIG_VITHAR_RT_DVFS) += $(KBASE_PATH)/platform/mali_kbase_dvfs.o
+
 RELATIVE_ROOT=../..
 ROOT=$(KBUILD_EXTMOD)/$(RELATIVE_ROOT)
 
@@ -70,9 +71,19 @@ ifeq ($(MALI_BASE_TRACK_MEMLEAK), 1)
 SRC += common/mali_kbase_mem_track.c
 endif
 
+ifneq ($(KBUILD_EXTMOD),)
 include $(KBUILD_EXTMOD)/Makefile.kbase
+else
+include $(VITHAR_ROOT)/$(KBASE_PATH)/Makefile.kbase
+endif
+
+ifneq ($(KBUILD_EXTMOD),)
 OSK_PATH = $(ROOT)/osk
 include $(OSK_PATH)/src/linux/Makefile.osk
+else
+OSK_PATH = $(VITHAR_ROOT)/osk
+include $(OSK_PATH)/src/linux/Makefile.osk
+endif
 
 EXTRA_CFLAGS += -DMALI_DEBUG=$(MALI_DEBUG) -DMALI_HW_TYPE=$(MALI_HW_TYPE) -DMALI_USE_UMP=$(MALI_USE_UMP) \
 				-DMALI_ANDROID=$(MALI_ANDROID) -DMALI_BASE_TRACK_MEMLEAK=$(MALI_BASE_TRACK_MEMLEAK) \

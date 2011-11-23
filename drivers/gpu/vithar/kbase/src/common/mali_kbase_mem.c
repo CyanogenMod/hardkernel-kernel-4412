@@ -221,7 +221,10 @@ void kbase_mem_usage_release_pages(kbasep_mem_usage * usage, u32 nr_pages)
 	osk_atomic_sub(&usage->cur_pages, nr_pages);
 }
 
-#if BASE_HW_ISSUE_6367
+#if BASE_HW_ISSUE_6367 
+#if MALI_DUMMY_MODEL
+static void kbase_wait_write_flush(struct kbase_context *kctx) { }
+#else
 /**
  * @brief Wait for GPU write flush.
  *
@@ -229,14 +232,28 @@ void kbase_mem_usage_release_pages(kbasep_mem_usage * usage, u32 nr_pages)
  */
 static void kbase_wait_write_flush(struct kbase_context *kctx)
 {
-	int i;
+	u32 base_count = 0;
+	kbase_reg_write(kctx->kbdev, GPU_CONTROL_REG(GPU_COMMAND), 5, NULL);
+	while( 1 )
+	{	
+		u32 new_count;
+		new_count = kbase_reg_read(kctx->kbdev, GPU_CONTROL_REG(CYCLE_COUNT_LO), NULL);
+		/* First time around, just store the count. */
+		if( base_count == 0 )
+		{
+			base_count = new_count;
+			continue;
+		}
 
-	for(i=0; i < 1000; i++)
-	{
-		/* GPU_ID register used as it has zero GPU overhead */
-		kbase_reg_read(kctx->kbdev, GPU_CONTROL_REG(GPU_ID), NULL);
+		/* No need to handle wrapping, unsigned maths works for this. */
+		if( (new_count - base_count) > 1000 )
+		{
+			break;
+		}
 	}
+
 }
+#endif
 #endif
 
 /**
@@ -812,6 +829,9 @@ static void kbase_do_syncset(struct kbase_context *kctx, base_syncset *set,
 	size_t size;
 	u64 i;
 	u32 offset_within_page;
+	osk_phy_addr base_phy_addr = 0;
+	osk_virt_addr base_virt_addr = 0;
+	size_t area_size = 0;
 
 	kbase_gpu_vm_lock(kctx);
 
@@ -848,10 +868,30 @@ static void kbase_do_syncset(struct kbase_context *kctx, base_syncset *set,
 		osk_phy_addr paddr = pa[page_off + i] + offset;
 		size_t sz = OSK_MIN(((size_t)OSK_PAGE_SIZE - offset), size);
 
-		sync_fn(paddr, start, sz);
+		if (paddr == base_phy_addr + area_size && start == base_virt_addr + area_size)
+		{
+			area_size += sz;
+		}
+		else if (area_size > 0)
+		{
+			sync_fn(base_phy_addr, base_virt_addr, area_size);
+			area_size = 0;
+		}
+
+		if (area_size == 0)
+		{
+			base_phy_addr = paddr;
+			base_virt_addr = start;
+			area_size = sz;
+		}
 
 		start = (void*)((uintptr_t)start + sz);
 		size -= sz;
+	}
+	
+	if (area_size > 0)
+	{
+		sync_fn(base_phy_addr, base_virt_addr, area_size);
 	}
 
 	OSK_ASSERT(size == 0);
@@ -1039,7 +1079,9 @@ KBASE_EXPORT_TEST_API(kbase_mem_free)
 
 void kbase_update_region_flags(struct kbase_va_region *reg, u32 flags)
 {
+#if 0
 	if ((flags & KBASE_CPU_CACHED_HINT) == KBASE_CPU_CACHED_HINT)
+#endif
 	{
 		reg->flags |= KBASE_REG_CPU_CACHED;
 	}

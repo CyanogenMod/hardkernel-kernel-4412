@@ -65,11 +65,20 @@
 /* There is no interrupt when a Performance Counters dump is completed */
 #define BASE_HW_ISSUE_7115  0
 
+/* Descriptor Cache usage-counter issue */
+#define BASE_HW_ISSUE_7347  0
+
 /* Nested page faults not visible to SW */
 #define BASE_HW_ISSUE_7660  1
 
 /* Write of PRFCNT_CONFIG_MODE_MANUAL to PRFCNT_CONFIG causes a instrumentation dump if
    PRFCNT_TILER_EN is enabled */
 #define BASE_HW_ISSUE_8186  1
+
+/* Livelock in L0 icache */
+#define BASE_HW_ISSUE_8280  1
+
+/* TIB: Reports faults from a vtile which has not yet been allocated */
+#define BASE_HW_ISSUE_8245  1
 
 #endif /* _BASE_HWCONFIG_H_ */

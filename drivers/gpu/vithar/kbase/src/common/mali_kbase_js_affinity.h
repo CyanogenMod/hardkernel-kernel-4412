@@ -78,6 +78,27 @@ void kbase_js_choose_affinity( u64 *affinity, kbase_device *kbdev, kbase_jd_atom
  */
 static INLINE mali_bool kbase_js_can_run_job_on_slot_no_lock( kbasep_js_device_data *js_devdata, int js )
 {
+#if BASE_HW_ISSUE_7347
+	kbase_device *kbdev = CONTAINER_OF(js_devdata, kbase_device, js_data);
+
+	if (js == 0)
+	{
+		/* Check there are no jobs running on job slots 1 or 2 */
+		if (kbdev->jm_slots[1].submitted_nr > 0 || kbdev->jm_slots[2].submitted_nr > 0)
+		{
+			return MALI_FALSE;
+		}
+	}
+	else
+	{
+		/* Check there are no jobs running on job slot 0 */
+		if (kbdev->jm_slots[0].submitted_nr > 0)
+		{
+			return MALI_FALSE;
+		}
+	}
+#endif
+
 	/* Submitting to job slot 2 while in soft-stopable state is not allowed. */
 	return ( !((js_devdata->runpool_irq.nr_nss_ctxs_running == 0) && (js == 2)));
 }

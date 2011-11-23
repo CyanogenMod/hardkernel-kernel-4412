@@ -17,7 +17,7 @@ ifneq ($(KBUILD_EXTMOD),)
 OS=linux
 include $(KBUILD_EXTMOD)/Makefile.common
 else
-include ./Makefile.common
+include $(VITHAR_ROOT)/$(UMP_PATH)/Makefile.common
 endif
 
 # default to building for the host

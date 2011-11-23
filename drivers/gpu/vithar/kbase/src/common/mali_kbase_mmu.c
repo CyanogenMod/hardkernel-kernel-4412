@@ -648,6 +648,9 @@ static void bus_fault_worker(osk_workq_work *data)
 	kbase_context * kctx;
 	kbase_device * kbdev;
 	u32 reg;
+#if BASE_HW_ISSUE_8245
+	mali_bool reset_status;
+#endif
 
 	faulting_as = CONTAINER_OF(data, kbase_as, work_busfault);
 	as_no = faulting_as->number;
@@ -663,6 +666,13 @@ static void bus_fault_worker(osk_workq_work *data)
 	/* switch to UNMAPPED mode, will abort all jobs and stop any hw counter dumping */
 	/* AS transaction begin */
 	osk_mutex_lock(&kbdev->as[as_no].transaction_mutex);
+#if BASE_HW_ISSUE_8245
+	/* Due to H/W issue 8245 we need to reset the GPU after using UNMAPPED mode.
+	 * We start the reset before switching to UNMAPPED to ensure that unrelated jobs
+	 * are evicted from the GPU before the switch.
+	 */
+	reset_status = kbase_prepare_to_reset_gpu(kbdev);
+#endif
 	reg = kbase_reg_read(kbdev, MMU_AS_REG(as_no, ASn_TRANSTAB_LO), kctx);
 	reg &= ~3;
 	kbase_reg_write(kbdev, MMU_AS_REG(as_no, ASn_TRANSTAB_LO), reg, kctx);
@@ -673,6 +683,13 @@ static void bus_fault_worker(osk_workq_work *data)
 	/* AS transaction end */
 
 	mmu_mask_reenable( kbdev, kctx, faulting_as );
+	
+#if BASE_HW_ISSUE_8245
+	if (reset_status)
+	{
+		kbase_reset_gpu(kbdev);
+	}
+#endif
 
 	/* By this point, the fault was handled in some way, so release the ctx refcount */
 	if ( kctx != NULL )
@@ -824,6 +841,9 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 	int as_no;
 	kbase_device * kbdev;
 	kbasep_js_device_data *js_devdata;
+#if BASE_HW_ISSUE_8245
+	mali_bool reset_status;
+#endif
 
 	OSK_ASSERT(as);
 	OSK_ASSERT(kctx);
@@ -869,6 +889,14 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 	/* AS transaction begin */
 	osk_mutex_lock(&as->transaction_mutex);
 
+#if BASE_HW_ISSUE_8245
+	/* Due to H/W issue 8245 we need to reset the GPU after using UNMAPPED mode.
+	 * We start the reset before switching to UNMAPPED to ensure that unrelated jobs
+	 * are evicted from the GPU before the switch.
+	 */
+	reset_status = kbase_prepare_to_reset_gpu(kbdev);
+#endif
+
 	{
 		u32 reg;
 		/* switch to UNMAPPED mode, will abort all jobs and stop any hw counter dumping */
@@ -884,5 +912,12 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 	/* AS transaction end */
 
 	mmu_mask_reenable(kbdev, kctx, as);
+	
+#if BASE_HW_ISSUE_8245
+	if (reset_status)
+	{
+		kbase_reset_gpu(kbdev);
+	}
+#endif
 }
 

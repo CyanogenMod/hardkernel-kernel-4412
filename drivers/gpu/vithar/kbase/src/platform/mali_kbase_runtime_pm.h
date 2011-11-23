@@ -29,7 +29,7 @@ void kbase_device_runtime_enable(struct device *dev);
 void kbase_device_runtime_disable(struct device *dev);
 void kbase_device_runtime_init(struct device *dev);
 
-/* Delayed time to suspend */
-#define RUNTIME_PM_RUNTIME_DELAY_TIME 100
+/* Delay time to enter into runtime-suspend */
+#define RUNTIME_PM_RUNTIME_DELAY_TIME 500
 
 #endif /* _KBASE_RUNTIME_PM_H_ */

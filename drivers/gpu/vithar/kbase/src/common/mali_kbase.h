@@ -149,4 +149,26 @@ void kbase_job_kill_jobs_from_context(kbase_context *kctx);
  */
 void kbase_gpu_interrupt(kbase_device * kbdev, u32 val);
 
+/**
+ * Prepare for resetting the GPU.
+ * This function just soft-stops all the slots to ensure that as many jobs as possible are saved.
+ *
+ * The function returns a boolean which should be interpreted as follows:
+ * - MALI_TRUE - Prepared for reset, kbase_reset_gpu should be called.
+ * - MALI_FALSE - Another thread is performing a reset, kbase_reset_gpu should not be called.
+ *
+ * @return See description
+ */
+mali_bool kbase_prepare_to_reset_gpu(kbase_device *kbdev);
+
+/** Reset the GPU
+ *
+ * This function should be called after kbase_prepare_to_reset_gpu iff it returns MALI_TRUE.
+ * It should never be called without a corresponding call to kbase_prepare_to_reset_gpu.
+ *
+ * After this function is called (or not called if kbase_prepare_to_reset_gpu returned MALI_FALSE),
+ * the caller should wait for kbdev->reset_waitq to be signalled to know when the reset has completed.
+ */
+void kbase_reset_gpu(kbase_device *kbdev);
+
 #endif

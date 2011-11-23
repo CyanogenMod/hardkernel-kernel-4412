@@ -29,10 +29,40 @@
 #include <kbase/mali_kbase_config.h>
 
 /* Number of milliseconds before resetting the GPU when a job cannot be "zapped" from the hardware.
- * Note that the time is actually 2*ZAP_TIMEOUT between the context zap starting and the GPU actually being reset to
- * give other contexts time for their jobs to be soft-stopped and removed from the hardware before resetting.
+ * Note that the time is actually ZAP_TIMEOUT+SOFT_STOP_RESET_TIMEOUT between the context zap starting and the GPU
+ * actually being reset to give other contexts time for their jobs to be soft-stopped and removed from the hardware
+ * before resetting.
  */
-#define ZAP_TIMEOUT 5000
+#define ZAP_TIMEOUT             1000
+
+/**
+ * Number of milliseconds given for other jobs on the GPU to be soft-stopped when the GPU needs to be reset.
+ */
+#define SOFT_STOP_RESET_TIMEOUT 500
+
+/**
+ * Prevent soft-stops from occuring in scheduling situations
+ *
+ * This is not due to HW issues, but when scheduling is desired to be more predictable.
+ *
+ * Therefore, soft stop may still be disabled due to HW issues.
+ *
+ * @note Soft stop will still be used for non-scheduling purposes e.g. when terminating a context.
+ *
+ * @note if not in use, define this value to 0 instead of #undef'ing it
+ */
+#define KBASE_DISABLE_SCHEDULING_SOFT_STOPS 1 /* Disabled for r0p0_beta_eco1 as soft-stops cause issues on this h/w */
+
+/**
+ * Prevent hard-stops from occuring in scheduling situations
+ *
+ * This is not due to HW issues, but when scheduling is desired to be more predictable.
+ *
+ * @note Hard stop will still be used for non-scheduling purposes e.g. when terminating a context.
+ *
+ * @note if not in use, define this value to 0 instead of #undef'ing it
+ */
+#define KBASE_DISABLE_SCHEDULING_HARD_STOPS 1 /* Disabled for r0p0_beta_eco1 as soft-stops are disabled */
 
 /* Forward declarations+defintions */
 typedef struct kbase_context kbase_context;
@@ -196,7 +226,9 @@ typedef struct kbase_jd_context {
 } kbase_jd_context;
 
 typedef struct kbase_jm_slot {
+#if BASE_HW_ISSUE_7347==0
 	osk_spinlock_irq lock;
+#endif
 
 	/* The number of slots must be a power of two */
 #define BASE_JM_SUBMIT_SLOTS        16
@@ -348,6 +380,9 @@ typedef struct kbasep_mem_device
 struct kbase_device {
 	const kbase_device_info *dev_info;
 	kbase_jm_slot           jm_slots[BASE_JM_MAX_NR_SLOTS];
+#if BASE_HW_ISSUE_7347
+	osk_spinlock_irq        jm_slot_lock;
+#endif
 	s8                      slot_submit_count_irq[BASE_JM_MAX_NR_SLOTS];
 	kbase_os_device         osdev;
 	kbase_pm_device_data    pm;
@@ -403,11 +438,21 @@ struct kbase_device {
 	/* Instrumentation state machine current state */
 	kbase_instr_state       hwcnt_state;
 
-	/* Set when we're about to reset the GPU */
+	/* Set when we're about to reset the GPU. */
 	osk_atomic              reset_gpu;
+#define KBASE_RESET_GPU_NOT_PENDING     0 /* The GPU reset isn't pending */
+#define KBASE_RESET_GPU_PREPARED        1 /* kbase_prepare_to_reset_gpu has been called */
+#define KBASE_RESET_GPU_COMMITTED       2 /* kbase_reset_gpu has been call - the reset will now definitely happen
+                                           * within the timeout period */
+#define KBASE_RESET_GPU_HAPPENING       3 /* The GPU reset process is currently occuring (timeout has expired or
+                                           * kbasep_try_reset_gpu_early */
+
 	/* Work queue and work item for performing the reset in */
 	osk_workq               reset_workq;
 	osk_workq_work          reset_work;
+	/* Signalled when reset_gpu==KBASE_RESET_GPU_NOT_PENDING */
+	osk_waitq               reset_waitq;
+	osk_timer               reset_timer;
 
 	/*value to be written to the irq_throttle register each time an irq is served */
 	osk_atomic irq_throttle_cycles;

@@ -39,6 +39,13 @@
 #define HARD_STOP_TICKS_SS  50   /* Soft-stoppable Jobs */
 #define HARD_STOP_TICKS_NSS 4000 /* Non stop-stoppable Jobs */
 
+/** The number of ticks that must pass before resetting the gpu to retrieve a job from the GPU
+ *
+ * Should be strictly greater than HARD_STOP_TICKS.
+ */
+#define RESET_GPU_TICKS_SS  350 /* Soft-stoppable Jobs */
+#define RESET_GPU_TICKS_NSS 650 /* Non stop-stoppable Jobs */
+
 /** The initial runtime of a context
  *
  * Number of ticks, relative to the runtime of the least-run context.
@@ -285,6 +292,7 @@ static void timer_callback(void *data)
 	kbasep_js_policy_cfs *policy_info;
 	int s;
 	osk_error osk_err;
+	mali_bool reset_needed = MALI_FALSE;
 
 	OSK_ASSERT(kbdev != NULL);
 
@@ -294,9 +302,7 @@ static void timer_callback(void *data)
 	/* Loop through the slots */
 	for(s=0; s<kbdev->nr_job_slots; s++)
 	{
-		kbase_jm_slot *slot = &kbdev->jm_slots[s];
-
-		osk_spinlock_irq_lock(&slot->lock);
+		kbase_jm_slot *slot = kbase_job_slot_lock(kbdev, s);
 
 		if (kbasep_jm_nr_jobs_submitted(slot) > 0)
 		{
@@ -313,15 +319,26 @@ static void timer_callback(void *data)
 					/* Job has been scheduled for at least SOFT_STOP_TICKS ticks.
 					 * Soft stop the slot so we can run other jobs.
 					 */
+#if KBASE_DISABLE_SCHEDULING_SOFT_STOPS == 0
 					kbase_job_slot_softstop(kbdev, s);
+#endif
 				}
 				else if (ticks == HARD_STOP_TICKS_SS)
 				{
 					/* Job has been scheduled for at least HARD_STOP_TICKS_SS ticks.
 					 * It should have been soft-stopped by now. Hard stop the slot.
 					 */
+#if KBASE_DISABLE_SCHEDULING_HARD_STOPS == 0
 					OSK_PRINT_WARN(OSK_BASE_JM, "JS: Job Hard-Stopped (took more than %lums)", ticks * TIME_SLICE_MS);
 					kbase_job_slot_hardstop(kbdev, s);
+#endif
+				}
+				else if (ticks == RESET_GPU_TICKS_SS)
+				{
+					/* Job has been running for at least RESET_GPU_TICKS_SS ticks.
+					 * It should have left the GPU by now. Reset the GPU to recover.
+					 */
+					reset_needed = MALI_TRUE;
 				}
 			}
 			else
@@ -332,21 +349,41 @@ static void timer_callback(void *data)
 					/* Job has been scheduled for at least SOFT_STOP_TICKS.
 					 * Let's try to soft-stop it even if it's supposed to be NSS.
 					 */
+#if KBASE_DISABLE_SCHEDULING_SOFT_STOPS == 0
 					kbase_job_slot_softstop(kbdev, s);
+#endif
 				}
 				else if (ticks == HARD_STOP_TICKS_NSS)
 				{
 					/* Job has been scheduled for at least HARD_STOP_TICKS_NSS ticks.
 					 * Hard stop the slot.
 					 */
+#if KBASE_DISABLE_SCHEDULING_HARD_STOPS == 0
 					OSK_PRINT_WARN(OSK_BASE_JM, "JS: Job Hard-Stopped (took more than %lums)", ticks * TIME_SLICE_MS);
 					kbase_job_slot_hardstop(kbdev, s);
+#endif
 				}
+				else if (ticks == RESET_GPU_TICKS_NSS)
+				{
+					/* Job has been running for at least RESET_GPU_TICKS_NSS ticks.
+					 * It should have left the GPU by now. Reset the GPU to recover.
+					 */
+					reset_needed = MALI_TRUE;
+				}
+				
 			}
 #endif
 		}
 
-		osk_spinlock_irq_unlock(&slot->lock);
+		kbase_job_slot_unlock(kbdev, s);
+	}
+
+	if (reset_needed)
+	{
+		OSK_PRINT_WARN(OSK_BASE_JM, "JS: Job has been on the GPU for too long");
+		if (kbase_prepare_to_reset_gpu(kbdev)) {
+			kbase_reset_gpu(kbdev);
+		}
 	}
 
 	/* the timer is re-issued if there is contexts in the run-pool */
