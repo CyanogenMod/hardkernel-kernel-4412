@@ -91,7 +91,7 @@
 #endif
 #include <mach/dev.h>
 #include <mach/ppmu.h>
-#ifdef CONFIG_EXYNOS4_C2C
+#ifdef CONFIG_EXYNOS_C2C
 #include <mach/c2c.h>
 #endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC) || defined(CONFIG_VIDEO_MFC5X)
@@ -2576,7 +2576,7 @@ static struct fimg2d_platdata fimg2d_data __initdata = {
 };
 #endif
 
-#ifdef CONFIG_EXYNOS4_C2C
+#ifdef CONFIG_EXYNOS_C2C
 struct exynos_c2c_platdata smdk4x12_c2c_pdata = {
 	.setup_gpio	= NULL,
 	.shdmem_addr	= C2C_SHAREDMEM_BASE,
@@ -2590,6 +2590,7 @@ struct exynos_c2c_platdata smdk4x12_c2c_pdata = {
 	.clk_opp25	= 0,
 	.default_opp_mode	= C2C_OPP50,
 	.get_c2c_state	= NULL,
+	.c2c_sysreg	= S3C_VA_SYS + 0x010C,
 };
 #endif
 
@@ -2811,7 +2812,7 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 #ifdef CONFIG_WAKEUP_ASSIST
 	&wakeup_assist_device,
 #endif
-#ifdef CONFIG_EXYNOS4_C2C
+#ifdef CONFIG_EXYNOS_C2C
 	&exynos_device_c2c,
 #endif
 	&smdk4x12_input_device,
@@ -3255,7 +3256,7 @@ static void __init exynos4_reserve_mem(void)
 	struct cma_region *regions_secure = NULL;
 #endif
 	static const char map[] __initconst =
-#ifdef CONFIG_EXYNOS4_C2C
+#ifdef CONFIG_EXYNOS_C2C
 		"samsung-c2c=c2c_shdmem;"
 #endif
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
@@ -3670,8 +3671,8 @@ static void __init smdk4x12_machine_init(void)
 #endif
 	samsung_keypad_set_platdata(&smdk4x12_keypad_data);
 	smdk4x12_smsc911x_init();
-#ifdef CONFIG_EXYNOS4_C2C
-	exynos4_c2c_set_platdata(&smdk4x12_c2c_pdata);
+#ifdef CONFIG_EXYNOS_C2C
+	exynos_c2c_set_platdata(&smdk4x12_c2c_pdata);
 #endif
 
 	exynos_sysmmu_init();
@@ -3774,7 +3775,7 @@ static void __init smdk4x12_machine_init(void)
 	ppmu_init(&exynos_ppmu[PPMU_CPU], &exynos4_busfreq.dev);
 }
 
-#ifdef CONFIG_EXYNOS4_C2C
+#ifdef CONFIG_EXYNOS_C2C
 static void __init exynos_c2c_reserve(void)
 {
 	static struct cma_region region = {
@@ -3795,7 +3796,7 @@ MACHINE_START(SMDK4212, "SMDK4X12")
 	.map_io		= smdk4x12_map_io,
 	.init_machine	= smdk4x12_machine_init,
 	.timer		= &exynos4_timer,
-#ifdef CONFIG_EXYNOS4_C2C
+#ifdef CONFIG_EXYNOS_C2C
 	.reserve	= &exynos_c2c_reserve,
 #endif
 MACHINE_END
@@ -3806,7 +3807,7 @@ MACHINE_START(SMDK4412, "SMDK4X12")
 	.map_io		= smdk4x12_map_io,
 	.init_machine	= smdk4x12_machine_init,
 	.timer		= &exynos4_timer,
-#ifdef CONFIG_EXYNOS4_C2C
+#ifdef CONFIG_EXYNOS_C2C
 	.reserve	= &exynos_c2c_reserve,
 #endif
 MACHINE_END
