@@ -117,16 +117,16 @@ static unsigned int clkdiv_top[LV_END][5] = {
 		DIVACLK133, DIVONENAND }
 	 */
 
-	/* ACLK160 L0: 160MHz */
+	/* ACLK_GDL/R L0: 200MHz */
 	{2, 7, 4, 5, 1},
 
-	/* ACLK160 L1: 133MHz */
+	/* ACLK_GDL/R L1: 160MHz */
 	{4, 7, 5, 7, 1},
 
-	/* ACLK160 L1: 133MHz */
+	/* ACLK_GDL/R L2: 160MHz */
 	{4, 7, 5, 7, 1},
 
-	/* ACLK160 L2: 100MHz */
+	/* ACLK_GDL/R L3: 100MHz */
 	{7, 7, 7, 7, 1},
 };
 
@@ -136,10 +136,10 @@ static unsigned int clkdiv_lr_bus[LV_END][2] = {
 	 * { DIVGDL/R, DIVGPL/R }
 	 */
 
-	/* ACLK_GDL/R L1: 200MHz */
+	/* ACLK_GDL/R L0: 200MHz */
 	{3, 1},
 
-	/* ACLK_GDL/R L2: 160MHz */
+	/* ACLK_GDL/R L1: 160MHz */
 	{4, 1},
 
 	/* ACLK_GDL/R L2: 160MHz */
