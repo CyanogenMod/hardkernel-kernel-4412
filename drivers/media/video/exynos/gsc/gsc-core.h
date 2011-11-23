@@ -598,6 +598,11 @@ static inline void gsc_ctx_state_lock_set(u32 state, struct gsc_ctx *ctx)
 	spin_unlock_irqrestore(&ctx->slock, flags);
 }
 
+static inline int get_win_num(struct gsc_dev *dev)
+{
+	return (dev->id == 3) ? 2 : dev->id;
+}
+
 static inline int is_tiled(struct gsc_fmt *fmt)
 {
 	return fmt->pixelformat == V4L2_PIX_FMT_NV12MT_16X16;
