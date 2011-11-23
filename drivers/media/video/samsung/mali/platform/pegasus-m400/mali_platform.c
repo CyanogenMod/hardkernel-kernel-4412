@@ -496,7 +496,7 @@ _mali_osk_errcode_t g3d_power_domain_control(int bpower_on)
 	MALI_SUCCESS;
 }
 
-_mali_osk_errcode_t mali_platform_init(_mali_osk_resource_t *resource)
+_mali_osk_errcode_t mali_platform_init()
 {
 	MALI_CHECK(init_mali_clock(), _MALI_OSK_ERR_FAULT);
 #if MALI_DVFS_ENABLED
@@ -508,7 +508,7 @@ _mali_osk_errcode_t mali_platform_init(_mali_osk_resource_t *resource)
 	MALI_SUCCESS;
 }
 
-_mali_osk_errcode_t mali_platform_deinit(_mali_osk_resource_type_t *type)
+_mali_osk_errcode_t mali_platform_deinit()
 {
 	deinit_mali_clock();
 

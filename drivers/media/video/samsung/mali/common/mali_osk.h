@@ -1029,11 +1029,17 @@ void _mali_osk_lock_term( _mali_osk_lock_t *lock );
 
 /** @brief Issue a memory barrier
  *
- * This defines an arbitrary memory barrier operation, which affects memory
- * mapped by _mali_osk_mem_mapregion. It will not be needed for memory
- * mapped through _mali_osk_mem_mapioregion.
+ * This defines an arbitrary memory barrier operation, which forces an ordering constraint
+ * on memory read and write operations.
  */
 void _mali_osk_mem_barrier( void );
+
+/** @brief Issue a write memory barrier
+ *
+ * This defines an write memory barrier operation which forces an ordering constraint
+ * on memory write operations.
+ */
+void _mali_osk_write_mem_barrier( void );
 
 /** @brief Map a physically contiguous region into kernel space
  *
@@ -1178,7 +1184,21 @@ void _mali_osk_mem_unreqregion( u32 phys, u32 size );
 u32 _mali_osk_mem_ioread32( volatile mali_io_address mapping, u32 offset );
 
 /** @brief Write to a location currently mapped in through
- * _mali_osk_mem_mapioregion
+ * _mali_osk_mem_mapioregion without memory barriers
+ *
+ * This write a 32-bit word to a 32-bit aligned location without using memory barrier.
+ * It is a programming error to provide unaligned locations, or to write to memory that is not
+ * mapped in, or not mapped through either _mali_osk_mem_mapioregion() or
+ * _mali_osk_mem_allocioregion().
+ *
+ * @param mapping Mali IO address to write to
+ * @param offset Byte offset from the given IO address to operate on, must be a multiple of 4
+ * @param val the 32-bit word to write.
+ */
+void _mali_osk_mem_iowrite32_relaxed( volatile mali_io_address addr, u32 offset, u32 val );
+
+/** @brief Write to a location currently mapped in through
+ * _mali_osk_mem_mapioregion with write memory barrier
  *
  * This write a 32-bit word to a 32-bit aligned location. It is a programming
  * error to provide unaligned locations, or to write to memory that is not

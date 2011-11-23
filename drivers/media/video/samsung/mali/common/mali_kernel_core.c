@@ -155,7 +155,7 @@ _mali_osk_errcode_t mali_kernel_constructor( void )
 {
     _mali_osk_errcode_t err;
 
-	err = mali_platform_init(NULL);
+	err = mali_platform_init();
 	if (_MALI_OSK_ERR_OK != err) goto error1;
 
     err = _mali_osk_init();
@@ -178,7 +178,7 @@ error3:
     _mali_osk_term();
 error2:
 	MALI_PRINT(("Mali device driver init failed\n"));
-	if (_MALI_OSK_ERR_OK != mali_platform_deinit(NULL))
+	if (_MALI_OSK_ERR_OK != mali_platform_deinit())
 	{
 		MALI_PRINT(("Failed to deinit platform\n"));
 	}
@@ -198,7 +198,7 @@ void mali_kernel_destructor( void )
 	terminate_subsystems(); /* subsystems are responsible for their registered resources */
     _mali_osk_term();
 
-	if (_MALI_OSK_ERR_OK != mali_platform_deinit(NULL))
+	if (_MALI_OSK_ERR_OK != mali_platform_deinit())
 	{
 		MALI_PRINT(("Failed to deinit platform\n"));
 	}

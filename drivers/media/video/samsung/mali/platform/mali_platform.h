@@ -42,7 +42,7 @@ typedef enum mali_power_mode_tag
  *
  * @return _MALI_OSK_ERR_OK on success otherwise, a suitable _mali_osk_errcode_t error.
  */
-_mali_osk_errcode_t mali_platform_init(_mali_osk_resource_t *resource);
+_mali_osk_errcode_t mali_platform_init(void);
 
 /** @brief Platform specific deinitialisation of MALI
  *
@@ -50,7 +50,7 @@ _mali_osk_errcode_t mali_platform_init(_mali_osk_resource_t *resource);
  *
  * @return _MALI_OSK_ERR_OK on success otherwise, a suitable _mali_osk_errcode_t error.
  */
-_mali_osk_errcode_t mali_platform_deinit(_mali_osk_resource_type_t *type);
+_mali_osk_errcode_t mali_platform_deinit(void);
 
 /** @brief Platform specific powerdown sequence of MALI
  *

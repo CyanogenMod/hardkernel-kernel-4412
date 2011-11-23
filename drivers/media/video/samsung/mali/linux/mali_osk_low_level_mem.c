@@ -280,6 +280,11 @@ void _mali_osk_mem_barrier( void )
 	mb();
 }
 
+void _mali_osk_write_mem_barrier( void )
+{
+	wmb();
+}
+
 mali_io_address _mali_osk_mem_mapioregion( u32 phys, u32 size, const char *description )
 {
 	return (mali_io_address)ioremap_nocache(phys, size);
@@ -334,6 +339,11 @@ void inline _mali_osk_mem_unreqregion( u32 phys, u32 size )
 	release_mem_region(phys, size);
 }
 
+void inline _mali_osk_mem_iowrite32_relaxed( volatile mali_io_address addr, u32 offset, u32 val )
+{
+	__raw_writel(cpu_to_le32(val),((u8*)addr) + offset);
+}
+
 u32 inline _mali_osk_mem_ioread32( volatile mali_io_address addr, u32 offset )
 {
 	return ioread32(((u8*)addr) + offset);
@@ -341,7 +351,7 @@ u32 inline _mali_osk_mem_ioread32( volatile mali_io_address addr, u32 offset )
 
 void inline _mali_osk_mem_iowrite32( volatile mali_io_address addr, u32 offset, u32 val )
 {
-    writel_relaxed(val, ((u8*)addr) + offset);
+	iowrite32(val, ((u8*)addr) + offset);
 }
 
 void _mali_osk_cache_flushall( void )
@@ -351,7 +361,7 @@ void _mali_osk_cache_flushall( void )
 
 void _mali_osk_cache_ensure_uncached_range_flushed( void *uncached_mapping, u32 offset, u32 size )
 {
-	wmb();
+	_mali_osk_write_mem_barrier();
 }
 
 _mali_osk_errcode_t _mali_osk_mem_mapregion_init( mali_memory_allocation * descriptor )

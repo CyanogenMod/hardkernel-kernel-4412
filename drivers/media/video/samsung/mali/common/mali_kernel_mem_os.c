@@ -44,6 +44,7 @@ static mali_physical_memory_allocation_result os_allocator_allocate_page_table_b
 static void os_allocator_release(void * ctx, void * handle);
 static void os_allocator_page_table_block_release( mali_page_table_block *page_table_block );
 static void os_allocator_destroy(mali_physical_memory_allocator * allocator);
+static u32 os_allocator_stat(mali_physical_memory_allocator * allocator);
 
 mali_physical_memory_allocator * mali_os_allocator_create(u32 max_allocation, u32 cpu_usage_adjust, const char *name)
 {
@@ -65,22 +66,30 @@ mali_physical_memory_allocator * mali_os_allocator_create(u32 max_allocation, u3
 			info->cpu_usage_adjust = cpu_usage_adjust;
 
 			info->mutex = _mali_osk_lock_init( _MALI_OSK_LOCKFLAG_NONINTERRUPTABLE | _MALI_OSK_LOCKFLAG_ORDERED, 0, 106);
-            if (NULL != info->mutex)
-            {
-			    allocator->allocate = os_allocator_allocate;
-			    allocator->allocate_page_table_block = os_allocator_allocate_page_table_block;
-			    allocator->destroy = os_allocator_destroy;
-			    allocator->ctx = info;
+			if (NULL != info->mutex)
+			{
+				allocator->allocate = os_allocator_allocate;
+				allocator->allocate_page_table_block = os_allocator_allocate_page_table_block;
+				allocator->destroy = os_allocator_destroy;
+				allocator->stat = os_allocator_stat;
+				allocator->ctx = info;
 				allocator->name = name;
 
-			    return allocator;
-            }
-            _mali_osk_free(info);
+				return allocator;
+			}
+			_mali_osk_free(info);
 		}
 		_mali_osk_free(allocator);
 	}
 
 	return NULL;
+}
+
+static u32 os_allocator_stat(mali_physical_memory_allocator * allocator)
+{
+	os_allocator * info;
+	info = (os_allocator*)allocator->ctx;
+	return info->num_pages_allocated * _MALI_OSK_MALI_PAGE_SIZE;
 }
 
 static void os_allocator_destroy(mali_physical_memory_allocator * allocator)

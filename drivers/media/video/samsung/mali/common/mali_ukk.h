@@ -709,6 +709,7 @@ _mali_osk_errcode_t _mali_ukk_vsync_event_report(_mali_uk_vsync_event_report_s *
 
 /** @} */ /* end group uddapi */
 
+u32 _mali_ukk_report_memory_usage(void);
 
 #ifdef __cplusplus
 }

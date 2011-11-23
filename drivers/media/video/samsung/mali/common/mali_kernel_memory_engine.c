@@ -346,3 +346,18 @@ void mali_allocation_engine_report_allocators( mali_physical_memory_allocator * 
 	}
 
 }
+
+u32 mali_allocation_engine_memory_usage(mali_physical_memory_allocator *allocator)
+{
+	u32 sum = 0;
+	while(NULL != allocator)
+	{
+		/* Only count allocators that have set up a stat function. */
+		if(allocator->stat)
+			sum += allocator->stat(allocator);
+
+		allocator = allocator->next;
+	}
+
+	return sum;
+}

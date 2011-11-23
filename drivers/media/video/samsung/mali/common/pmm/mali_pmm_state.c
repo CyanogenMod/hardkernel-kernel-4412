@@ -194,6 +194,7 @@ mali_pmm_core_mask pmm_cores_to_power_down( _mali_pmm_internal_state_t *pmm, mal
 				}
 				else
 				{
+					MALI_DEBUG_PRINT(1,("The error in PMM is ...%x...%x",err,*ppowered));
 					MALI_DEBUG_ASSERT( err == _MALI_OSK_ERR_BUSY ||
 										(err == _MALI_OSK_ERR_FAULT &&
 										(*ppowered & cores_list[n]) == 0) );
