@@ -748,6 +748,12 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 	},
 };
 
+static struct i2c_board_info i2c_devs2[] __initdata = {
+	{
+		I2C_BOARD_INFO("exynos_hdcp", (0x74 >> 1)),
+	},
+};
+
 #ifdef CONFIG_USB_EHCI_S5P
 static struct s5p_ehci_platdata smdk5210_ehci_pdata;
 
@@ -810,6 +816,7 @@ static struct platform_device *smdk5210_devices[] __initdata = {
 	&exynos_device_ion,
 #endif
 	&s3c_device_i2c1,
+	&s3c_device_i2c2,
 #ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
 #endif
@@ -1083,6 +1090,8 @@ static void __init smdk5210_machine_init(void)
 #endif
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
+	s3c_i2c2_set_platdata(NULL);
+	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
 
 #ifdef CONFIG_FB_S3C
 	dev_set_name(&s5p_device_fimd1.dev, "s3cfb.1");
