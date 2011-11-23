@@ -380,8 +380,8 @@ void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx)
 
 	/* FIXME: why buf_width is needed ? */
 	ctx->buf_width = ALIGN(ctx->img_width, S5P_FIMV_NV12M_HALIGN);
-	ctx->luma_size = (mb_width * mb_height)	* 256;
-	ctx->chroma_size = (mb_width * mb_height) * 128;
+	ctx->luma_size = ALIGN((mb_width * mb_height) * 256, 256);
+	ctx->chroma_size = ALIGN((mb_width * mb_height) * 128, 256);
 }
 
 /* Set registers for decoding stream buffer */
