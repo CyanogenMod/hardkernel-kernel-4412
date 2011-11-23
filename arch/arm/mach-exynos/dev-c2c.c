@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2011 Samsung Electronics
  *
- * Base EXYNOS4 C2C resource and device definitions
+ * Base EXYNOS C2C resource and device definitions
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,19 +16,20 @@
 #include <linux/dma-mapping.h>
 
 #include <mach/map.h>
-#include <mach/c2c.h>
 #include <mach/regs-pmu.h>
+#include <mach/regs-pmu5.h>
+#include <mach/c2c.h>
 #include <plat/irqs.h>
 
 static struct resource exynos_c2c_resource[] = {
 	[0] = {
-		.start  = EXYNOS4_PA_C2C,
-		.end    = EXYNOS4_PA_C2C + SZ_32K - 1,
+		.start  = EXYNOS_PA_C2C,
+		.end    = EXYNOS_PA_C2C + SZ_64K - 1,
 		.flags  = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start  = EXYNOS4_PA_C2C_CP,
-		.end    = EXYNOS4_PA_C2C_CP + SZ_32K - 1,
+		.start  = EXYNOS_PA_C2C_CP,
+		.end    = EXYNOS_PA_C2C_CP + SZ_64K - 1,
 		.flags  = IORESOURCE_MEM,
 	},
 	[2] = {
@@ -43,7 +44,7 @@ static struct resource exynos_c2c_resource[] = {
 	},
 };
 
-static u64 exynos4_c2c_dma_mask = DMA_BIT_MASK(32);
+static u64 exynos_c2c_dma_mask = DMA_BIT_MASK(32);
 
 struct platform_device exynos_device_c2c = {
 	.name		= "samsung-c2c",
@@ -51,21 +52,21 @@ struct platform_device exynos_device_c2c = {
 	.num_resources	= ARRAY_SIZE(exynos_c2c_resource),
 	.resource	= exynos_c2c_resource,
 	.dev		= {
-		.dma_mask		= &exynos4_c2c_dma_mask,
+		.dma_mask		= &exynos_c2c_dma_mask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	},
 };
 
-void __init exynos4_c2c_set_platdata(struct exynos_c2c_platdata *pd)
+void __init exynos_c2c_set_platdata(struct exynos_c2c_platdata *pd)
 {
 	struct exynos_c2c_platdata *npd = pd;
 
 	if (!npd->setup_gpio)
-		npd->setup_gpio = exynos4_c2c_cfg_gpio;
+		npd->setup_gpio = exynos_c2c_cfg_gpio;
 	if (!npd->set_cprst)
-		npd->set_cprst = exynos4_c2c_set_cprst;
+		npd->set_cprst = exynos_c2c_set_cprst;
 	if (!npd->clear_cprst)
-		npd->clear_cprst = exynos4_c2c_clear_cprst;
+		npd->clear_cprst = exynos_c2c_clear_cprst;
 
 	exynos_device_c2c.dev.platform_data = npd;
 

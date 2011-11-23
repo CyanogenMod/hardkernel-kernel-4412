@@ -12,8 +12,6 @@
 #ifndef __ASM_PLAT_C2C_H
 #define __ASM_PLAT_C2C_H __FILE__
 
-#include <linux/clk.h>
-
 #define C2C_SHAREDMEM_BASE 0x60000000
 
 enum c2c_opp_mode {
@@ -50,7 +48,7 @@ struct exynos_c2c_platdata {
 	enum c2c_shrdmem_size shdmem_size;
 
 	void __iomem *ap_sscm_addr;
-	void __iomem  *cp_sscm_addr;
+	void __iomem *cp_sscm_addr;
 
 	enum c2c_buswidth rx_width;
 	enum c2c_buswidth tx_width;
@@ -59,13 +57,12 @@ struct exynos_c2c_platdata {
 	u32 clk_opp25;	/* clock of OPP25 */
 	enum c2c_opp_mode default_opp_mode;
 
+	void __iomem *c2c_sysreg;	/* System Register address for C2C */
 	char *c2c_clk;
 };
 
-void exynos4_c2c_set_platdata(struct exynos_c2c_platdata *pd);
-extern struct exynos_c2c_platdata smdk4212_c2c_pdata;
-extern void exynos4_c2c_cfg_gpio(enum c2c_buswidth rx_width, enum c2c_buswidth tx_width);
-extern void exynos4_c2c_set_cprst(void);
-extern void exynos4_c2c_clear_cprst(void);
-extern u32 exynos4_get_c2c_state(void);
+void exynos_c2c_set_platdata(struct exynos_c2c_platdata *pd);
+extern void exynos_c2c_cfg_gpio(enum c2c_buswidth rx_width, enum c2c_buswidth tx_width);
+extern void exynos_c2c_set_cprst(void);
+extern void exynos_c2c_clear_cprst(void);
 #endif /*__ASM_PLAT_C2C_H */

@@ -1540,6 +1540,35 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 	},
 };
 
+static struct clk *exynos5_clkset_c2c_list[] = {
+	[0] = &exynos5_clk_mout_mpll.clk,
+	[1] = &exynos5_clk_mout_bpll.clk,
+};
+
+static struct clksrc_sources exynos5_clkset_sclk_c2c = {
+	.sources	= exynos5_clkset_c2c_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_c2c_list),
+};
+
+static struct clksrc_clk exynos5_clk_sclk_c2c = {
+	.clk	= {
+		.name		= "sclk_c2c",
+		.id		= -1,
+	},
+	.sources = &exynos5_clkset_sclk_c2c,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_CDREX, .shift = 12, .size = 1 },
+	.reg_div = { .reg = EXYNOS5_CLKDIV_CDREX, .shift = 8, .size = 3 },
+};
+
+static struct clksrc_clk exynos5_clk_aclk_c2c = {
+	.clk	= {
+		.name		= "aclk_c2c",
+		.id		= -1,
+		.parent		= &exynos5_clk_sclk_c2c.clk,
+	},
+	.reg_div = { .reg = EXYNOS5_CLKDIV_CDREX, .shift = 12, .size = 3 },
+};
+
 /* Clock initialization code */
 static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_audiocdclk0,
@@ -1586,6 +1615,8 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_sclk_spdif,
 	&exynos5_clk_aclk_acp,
 	&exynos5_clk_pclk_acp,
+	&exynos5_clk_sclk_c2c,
+	&exynos5_clk_aclk_c2c,
 };
 
 static unsigned long exynos5_epll_get_rate(struct clk *clk)
