@@ -36,9 +36,13 @@
 #include <mach/c2c.h>
 #include <mach/regs-c2c.h>
 #include <mach/regs-pmu.h>
+#include <mach/regs-pmu5.h>
 #include <mach/pmu.h>
+#include <plat/cpu.h>
 
 #include "samsung-c2c.h"
+
+void (*exynos_c2c_request_pwr_mode)(enum c2c_pwr_mode mode);
 
 #ifdef ENABLE_C2CSTATE_TIMER
 struct timer_list c2c_status_timer;
@@ -62,14 +66,14 @@ void c2c_reset_ops(void)
 	u32 set_clk = 0;
 
 	if (c2c_con.opp_mode == C2C_OPP100)
-		set_clk = c2c_con.clk_opp100 + 1;
+		set_clk = c2c_con.clk_opp100;
 	else if (c2c_con.opp_mode == C2C_OPP50)
-		set_clk = c2c_con.clk_opp50 + 1;
+		set_clk = c2c_con.clk_opp50;
 	else if (c2c_con.opp_mode == C2C_OPP25)
-		set_clk = c2c_con.clk_opp25 + 1;
+		set_clk = c2c_con.clk_opp25;
 
 	printk("[C2C] c2c_reset_ops()\n");
-	clk_set_rate(c2c_con.c2c_sclk, set_clk * 1000000);
+	clk_set_rate(c2c_con.c2c_sclk, (set_clk + 1) * 1000000);
 	c2c_set_func_clk(set_clk);
 
 	/* First phase - C2C block reset */
@@ -78,9 +82,9 @@ void c2c_reset_ops(void)
 	/* Second phase - Clear clock gating */
 	c2c_set_clock_gating(C2C_CLEAR);
 	/* Third phase - Retention reg */
-	c2c_writel(c2c_con.rtt_enableset, EXYNOS4_C2C_IRQ_EN_SET1);
-	c2c_writel(set_clk, EXYNOS4_C2C_FCLK_FREQ);
-	c2c_writel(set_clk, EXYNOS4_C2C_RX_MAX_FREQ);
+	c2c_writel(c2c_con.rtt_enableset, EXYNOS_C2C_IRQ_EN_SET1);
+	c2c_writel(set_clk, EXYNOS_C2C_FCLK_FREQ);
+	c2c_writel(set_clk, EXYNOS_C2C_RX_MAX_FREQ);
 	/* Last phase - Set clock gating */
 	c2c_set_clock_gating(C2C_SET);
 }
@@ -134,7 +138,7 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 {
 	/* TODO : It is just temporary code. It will be modified. */
 	u32 raw_irq, latency_val, opp_val, req_clk;
-	raw_irq = c2c_readl(EXYNOS4_C2C_IRQ_EN_STAT1);
+	raw_irq = c2c_readl(EXYNOS_C2C_IRQ_EN_STAT1);
 
 #ifdef CONFIG_C2C_IPC_ENABLE
 	if (raw_irq & 0x1) {
@@ -143,41 +147,40 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 			c2c_con.hd.handler(c2c_con.hd.handler);
 
 		/* Interrupt Clear */
-		c2c_writel(0x1, EXYNOS4_C2C_IRQ_EN_STAT1);
+		c2c_writel(0x1, EXYNOS_C2C_IRQ_EN_STAT1);
 	}
 #endif
 	if ((raw_irq >> 27) & 1) { /* OPP Change */
 		/*
-		    If OPP clock is different with below table,
-		    below codes should be changed.
-		    OPP Change : Mhz : [29:28]
-		    OPP(100) : 400 Mhz : 1 1
-		    OPP(50) : 200 Mhz : 1 0
-		    OPP(25) : 100 Mhz : 0 1
+		    OPP mode GENI/O bit definition[29:27]
+		    OPP100 GENI/O[29:28] : 1 1
+		    OPP50 GENI/O[29:28] : 1 0
+		    OPP25 GENI/O[29:28] : 0 1
+		    GENI[27] is only used for making interrupt.
 		*/
-		opp_val = (c2c_readl(EXYNOS4_C2C_GENO_STATUS) >> 28) & 3;
+		opp_val = (c2c_readl(EXYNOS_C2C_GENO_STATUS) >> 28) & 3;
 		req_clk = 0;
 		c2c_dbg("OPP interrupt occured (%d)\n", opp_val);
 
 		if (opp_val == C2C_OPP100)
-			req_clk = c2c_con.clk_opp100 + 1;
+			req_clk = c2c_con.clk_opp100;
 		else if (opp_val == C2C_OPP50)
-			req_clk = c2c_con.clk_opp50 + 1;
+			req_clk = c2c_con.clk_opp50;
 		else if (opp_val == C2C_OPP25)
-			req_clk = c2c_con.clk_opp25 + 1;
+			req_clk = c2c_con.clk_opp25;
 
 		if (opp_val == 0 || req_clk == 1) {
 			printk("[C2C] This mode is not reserved in OPP mode.\n");
 		} else {
 			if (c2c_con.opp_mode > opp_val) { /* increase case */
-				clk_set_rate(c2c_con.c2c_sclk, req_clk * 1000000);
-				c2c_writel(req_clk, EXYNOS4_C2C_FCLK_FREQ);
-				c2c_writel(req_clk, EXYNOS4_C2C_RX_MAX_FREQ);
+				clk_set_rate(c2c_con.c2c_sclk, (req_clk +1) * 1000000);
+				c2c_writel(req_clk, EXYNOS_C2C_FCLK_FREQ);
+				c2c_writel(req_clk, EXYNOS_C2C_RX_MAX_FREQ);
 				c2c_set_func_clk(req_clk);
 			} else if (c2c_con.opp_mode < opp_val) { /* decrease case */
-				c2c_writel(req_clk, EXYNOS4_C2C_RX_MAX_FREQ);
-				clk_set_rate(c2c_con.c2c_sclk, req_clk * 1000000);
-				c2c_writel(req_clk, EXYNOS4_C2C_FCLK_FREQ);
+				c2c_writel(req_clk, EXYNOS_C2C_RX_MAX_FREQ);
+				clk_set_rate(c2c_con.c2c_sclk, (req_clk +1) * 1000000);
+				c2c_writel(req_clk, EXYNOS_C2C_FCLK_FREQ);
 				c2c_set_func_clk(req_clk);
 			} else{
 				printk("Requested same OPP mode\n");
@@ -186,26 +189,29 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 		}
 
 		/* Interrupt Clear */
-		c2c_writel((0x1 << 27), EXYNOS4_C2C_IRQ_EN_STAT1);
+		c2c_writel((0x1 << 27), EXYNOS_C2C_IRQ_EN_STAT1);
 	}
 	if ((raw_irq >> 26) & 1) { /* Memory I/F latency change */
-		latency_val = (c2c_readl(EXYNOS4_C2C_GENO_STATUS) >> 30) & 3;
+		latency_val = (c2c_readl(EXYNOS_C2C_GENO_STATUS) >> 30) & 3;
 		switch(latency_val) {
 		case 3:
 			c2c_dbg("[C2C] Set Min latency\n");
-			exynos4_c2c_request_pwr_mode(MIN_LATENCY);
+			if (exynos_c2c_request_pwr_mode != NULL)
+				exynos_c2c_request_pwr_mode(MIN_LATENCY);
 			break;
 		case 1:
 			c2c_dbg("[C2C] Set Short latency\n");
-			exynos4_c2c_request_pwr_mode(SHORT_LATENCY);
+			if (exynos_c2c_request_pwr_mode != NULL)
+				exynos_c2c_request_pwr_mode(SHORT_LATENCY);
 			break;
 		case 0:
 			c2c_dbg("[C2C] Set Max latency\n");
-			exynos4_c2c_request_pwr_mode(MAX_LATENCY);
+			if (exynos_c2c_request_pwr_mode != NULL)
+				exynos_c2c_request_pwr_mode(MAX_LATENCY);
 			break;
 		}
 		/* Interrupt Clear */
-		c2c_writel((0x1 << 26), EXYNOS4_C2C_IRQ_EN_STAT1);
+		c2c_writel((0x1 << 26), EXYNOS_C2C_IRQ_EN_STAT1);
 	}
 
 	return IRQ_HANDLED;
@@ -216,6 +222,12 @@ void set_c2c_device(struct platform_device *pdev)
 	struct exynos_c2c_platdata *pdata = pdev->dev.platform_data;
 	u32 default_clk;
 
+	if (soc_is_exynos4212() || soc_is_exynos4412())
+		exynos_c2c_request_pwr_mode = exynos4_c2c_request_pwr_mode;
+	else if (soc_is_exynos5250())
+		exynos_c2c_request_pwr_mode = NULL;
+
+	c2c_con.c2c_sysreg = pdata->c2c_sysreg;
 	c2c_con.rx_width = pdata->rx_width;
 	c2c_con.tx_width = pdata->tx_width;
 	c2c_con.clk_opp100 = pdata->clk_opp100;
@@ -232,18 +244,18 @@ void set_c2c_device(struct platform_device *pdev)
 
 	/* Set clock to default mode */
 	if (c2c_con.opp_mode == C2C_OPP100)
-		default_clk = c2c_con.clk_opp100 + 1;
+		default_clk = c2c_con.clk_opp100;
 	else if (c2c_con.opp_mode == C2C_OPP50)
-		default_clk = c2c_con.clk_opp50 + 1;
+		default_clk = c2c_con.clk_opp50;
 	else if (c2c_con.opp_mode == C2C_OPP25)
-		default_clk = c2c_con.clk_opp25 + 1;
+		default_clk = c2c_con.clk_opp25;
 	else {
 		printk("[C2C] Default OPP mode is not selected.\n");
 		c2c_con.opp_mode = C2C_OPP50;
 		default_clk = c2c_con.clk_opp50;
 	}
 
-	clk_set_rate(c2c_con.c2c_sclk, default_clk  * 1000000);
+	clk_set_rate(c2c_con.c2c_sclk, (default_clk +1)  * 1000000);
 	clk_set_rate(c2c_con.c2c_aclk, ((default_clk / 2) + 1) * 1000000);
 
 	c2c_dbg("[C2C] Get C2C sclk rate : %ld\n", clk_get_rate(c2c_con.c2c_sclk));
@@ -258,28 +270,29 @@ void set_c2c_device(struct platform_device *pdev)
 	c2c_set_clock_gating(C2C_CLEAR);
 
 	/* Set C2C clock register to OPP50 */
-	c2c_writel(default_clk, EXYNOS4_C2C_FCLK_FREQ);
-	c2c_writel(default_clk, EXYNOS4_C2C_RX_MAX_FREQ);
+	c2c_writel(default_clk, EXYNOS_C2C_FCLK_FREQ);
+	c2c_writel(default_clk, EXYNOS_C2C_RX_MAX_FREQ);
 	c2c_set_func_clk(default_clk);
 
 	/* Set C2C buswidth */
-	c2c_writel(((pdata->rx_width << 4) |(pdata->tx_width)), EXYNOS4_C2C_PORTCONFIG);
+	c2c_writel(((pdata->rx_width << 4) |(pdata->tx_width)), EXYNOS_C2C_PORTCONFIG);
 	c2c_set_tx_buswidth(pdata->tx_width);
 	c2c_set_rx_buswidth(pdata->rx_width);
 
 	/* Enable all of GENI/O Interrupt */
-	c2c_writel(0x8000000, EXYNOS4_C2C_IRQ_EN_SET1);
+	c2c_writel(0x8000000, EXYNOS_C2C_IRQ_EN_SET1);
 	c2c_con.rtt_enableset = 0x8000000;
 
-	exynos4_c2c_request_pwr_mode(MAX_LATENCY);
+	if (exynos_c2c_request_pwr_mode != NULL)
+		exynos_c2c_request_pwr_mode(MAX_LATENCY);
 
-	c2c_writel(0x8000000, EXYNOS4_C2C_GENO_INT);
-	c2c_writel(0x8000000, EXYNOS4_C2C_GENO_LEVEL);
+	c2c_writel(0x8000000, EXYNOS_C2C_GENO_INT);
+	c2c_writel(0x8000000, EXYNOS_C2C_GENO_LEVEL);
 
-	c2c_dbg("[C2C] Port Config : 0x%x\n", c2c_readl(EXYNOS4_C2C_PORTCONFIG));
-	c2c_dbg("[C2C] FCLK_FREQ register : %d\n", c2c_readl(EXYNOS4_C2C_FCLK_FREQ));
-	c2c_dbg("[C2C] RX_MAX_FREQ register : %d\n", c2c_readl(EXYNOS4_C2C_RX_MAX_FREQ));
-	c2c_dbg("[C2C] IRQ_EN_SET1 register : 0x%x\n", c2c_readl(EXYNOS4_C2C_IRQ_EN_SET1));
+	c2c_dbg("[C2C] Port Config : 0x%x\n", c2c_readl(EXYNOS_C2C_PORTCONFIG));
+	c2c_dbg("[C2C] FCLK_FREQ register : %d\n", c2c_readl(EXYNOS_C2C_FCLK_FREQ));
+	c2c_dbg("[C2C] RX_MAX_FREQ register : %d\n", c2c_readl(EXYNOS_C2C_RX_MAX_FREQ));
+	c2c_dbg("[C2C] IRQ_EN_SET1 register : 0x%x\n", c2c_readl(EXYNOS_C2C_IRQ_EN_SET1));
 
 	c2c_set_clock_gating(C2C_SET);
 }
@@ -368,14 +381,14 @@ int c2c_unregister_handler(void (*handler)(void *))
 EXPORT_SYMBOL(c2c_unregister_handler);
 
 void c2c_send_interrupt(void) {
-	c2c_writel(c2c_readl(EXYNOS4_C2C_GENI_CONTROL) ^ 0x1,
-			EXYNOS4_C2C_GENI_CONTROL);
+	c2c_writel(c2c_readl(EXYNOS_C2C_GENI_CONTROL) ^ 0x1,
+			EXYNOS_C2C_GENI_CONTROL);
 }
 EXPORT_SYMBOL(c2c_send_interrupt);
 
 void c2c_reset_interrupt(void) {
-	c2c_writel(c2c_readl(EXYNOS4_C2C_IRQ_EN_SET1) | 0x1,
-			EXYNOS4_C2C_IRQ_EN_SET1);
+	c2c_writel(c2c_readl(EXYNOS_C2C_IRQ_EN_SET1) | 0x1,
+			EXYNOS_C2C_IRQ_EN_SET1);
 	c2c_con.rtt_enableset |= 0x1;
 }
 EXPORT_SYMBOL(c2c_reset_interrupt);
@@ -514,9 +527,17 @@ static int samsung_c2c_suspend(struct platform_device *dev, pm_message_t pm)
 static int samsung_c2c_resume(struct platform_device *dev)
 {
 	struct exynos_c2c_platdata *pdata = dev->dev.platform_data;
-	/* Set SYSREG */
-	set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
-	c2c_set_memdone(C2C_SET);
+
+	if ((soc_is_exynos4212() || soc_is_exynos4412())
+		&& samsung_rev() == EXYNOS4412_REV_0) {
+		/* Set SYSREG */
+		set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
+		c2c_set_memdone(C2C_SET);
+	} else if (soc_is_exynos5250()) {
+		/* Set SYSREG */
+		set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
+		c2c_set_memdone(C2C_SET);
+	}
 
 	return 0;
 }

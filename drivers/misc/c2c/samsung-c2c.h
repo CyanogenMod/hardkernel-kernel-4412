@@ -68,6 +68,7 @@ struct c2c_state_control {
 	enum c2c_opp_mode opp_mode;
 	/* Below variables are needed in reset for retention */
 	u32 rtt_enableset;
+	void __iomem *c2c_sysreg;
 };
 
 static struct c2c_state_control c2c_con;
@@ -134,7 +135,7 @@ static inline u8 c2c_readb_cp(int reg)
 
 static inline enum c2c_set_clear c2c_get_clock_gating(void)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 	if (sysreg & (1 << C2C_SYSREG_CG))
 		return C2C_SET;
 	else
@@ -143,19 +144,19 @@ static inline enum c2c_set_clear c2c_get_clock_gating(void)
 
 static inline void c2c_set_clock_gating(enum c2c_set_clear val)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	if (val == C2C_SET)
 		sysreg |= (1 << C2C_SYSREG_CG);
 	else
 		sysreg &= ~(1 << C2C_SYSREG_CG);
 
-	writel(sysreg, SYSREG_CTRL_C2C);
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 static inline enum c2c_set_clear c2c_get_memdone(void)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 	if (sysreg & (1 << C2C_SYSREG_MD))
 		return C2C_SET;
 	else
@@ -164,19 +165,19 @@ static inline enum c2c_set_clear c2c_get_memdone(void)
 
 static inline void c2c_set_memdone(enum c2c_set_clear val)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	if (val == C2C_SET)
 		sysreg |= (1 << C2C_SYSREG_MD);
 	else
 		sysreg &= ~(1 << C2C_SYSREG_MD);
 
-	writel(sysreg, SYSREG_CTRL_C2C);
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 static inline enum c2c_set_clear c2c_get_master_on(void)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 	if (sysreg & (1 << C2C_SYSREG_MO))
 		return C2C_SET;
 	else
@@ -185,19 +186,19 @@ static inline enum c2c_set_clear c2c_get_master_on(void)
 
 static inline void c2c_set_master_on(enum c2c_set_clear val)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	if (val == C2C_SET)
 		sysreg |= (1 << C2C_SYSREG_MO);
 	else
 		sysreg &= ~(1 << C2C_SYSREG_MO);
 
-	writel(sysreg, SYSREG_CTRL_C2C);
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 static inline u32 c2c_get_func_clk(void)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= (0x3ff << C2C_SYSREG_FCLK);
 
@@ -206,17 +207,17 @@ static inline u32 c2c_get_func_clk(void)
 
 static inline void c2c_set_func_clk(u32 val)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= ~(0x3ff << C2C_SYSREG_FCLK);
 	sysreg |= (val << C2C_SYSREG_FCLK);
 
-	writel(sysreg, SYSREG_CTRL_C2C);
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 static inline u32 c2c_get_tx_buswidth(void)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= (0x3 << C2C_SYSREG_TXW);
 
@@ -225,17 +226,17 @@ static inline u32 c2c_get_tx_buswidth(void)
 
 static inline void c2c_set_tx_buswidth(u32 val)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= ~(0x3 << C2C_SYSREG_TXW);
 	sysreg |= (val << C2C_SYSREG_TXW);
 
-	writel(sysreg, SYSREG_CTRL_C2C);
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 static inline u32 c2c_get_rx_buswidth(void)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= (0x3 << C2C_SYSREG_RXW);
 
@@ -244,17 +245,17 @@ static inline u32 c2c_get_rx_buswidth(void)
 
 static inline void c2c_set_rx_buswidth(u32 val)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= ~(0x3 << C2C_SYSREG_RXW);
 	sysreg |= (val << C2C_SYSREG_RXW);
 
-	writel(sysreg, SYSREG_CTRL_C2C);
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 static inline enum c2c_set_clear c2c_get_reset(void)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 	if (sysreg & (1 << C2C_SYSREG_RST))
 		return C2C_SET;
 	else
@@ -263,24 +264,24 @@ static inline enum c2c_set_clear c2c_get_reset(void)
 
 static inline void c2c_set_reset(enum c2c_set_clear val)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	if (val == C2C_SET)
 		sysreg |= (1 << C2C_SYSREG_RST);
 	else
 		sysreg &= ~(1 << C2C_SYSREG_RST);
 
-	writel(sysreg, SYSREG_CTRL_C2C);
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 static inline void reset_c2c_retreg(void)
 {
-	writel((0x1 << C2C_SYSREG_RTRST), SYSREG_CTRL_C2C);
+	writel((0x1 << C2C_SYSREG_RTRST), c2c_con.c2c_sysreg);
 }
 
 static inline u32 c2c_get_base_addr(void)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= (0x3ff << C2C_SYSREG_BASE_ADDR);
 
@@ -289,17 +290,17 @@ static inline u32 c2c_get_base_addr(void)
 
 static inline void c2c_set_base_addr(u32 val)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= ~(0x3ff << C2C_SYSREG_BASE_ADDR);
 	sysreg |= (val << C2C_SYSREG_BASE_ADDR);
 
-	writel(sysreg, SYSREG_CTRL_C2C);
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 static inline u32 c2c_get_shdmem_size(void)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= (0x7 << C2C_SYSREG_DRAM_SIZE);
 
@@ -308,12 +309,12 @@ static inline u32 c2c_get_shdmem_size(void)
 
 static inline void c2c_set_shdmem_size(u32 val)
 {
-	u32 sysreg = readl(SYSREG_CTRL_C2C);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
 
 	sysreg &= ~(0x7 << C2C_SYSREG_DRAM_SIZE);
 	sysreg |= (val << C2C_SYSREG_DRAM_SIZE);
 
-	writel(sysreg, SYSREG_CTRL_C2C);
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 #ifdef CONFIG_C2C_DEBUG
