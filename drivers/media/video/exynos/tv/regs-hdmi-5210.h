@@ -866,10 +866,10 @@
 #define HDMI_HDCP_ENABLE_1_1_FEATURE_DIS	(~(1))
 
 /* HDCP_CHECK_RESULT */
-#define HDMI_HDCP_Pi_MATCH_RESULT_Y		((0x1 << 3) | (0x1 << 2))
-#define HDMI_HDCP_Pi_MATCH_RESULT_N		((0x1 << 3) | (0x0 << 2))
-#define HDMI_HDCP_Ri_MATCH_RESULT_Y		((0x1 << 1) | (0x1 << 0))
-#define HDMI_HDCP_Ri_MATCH_RESULT_N		((0x1 << 1) | (0x0 << 0))
+#define HDMI_HDCP_PI_MATCH_RESULT_Y		((0x1 << 3) | (0x1 << 2))
+#define HDMI_HDCP_PI_MATCH_RESULT_N		((0x1 << 3) | (0x0 << 2))
+#define HDMI_HDCP_RI_MATCH_RESULT_Y		((0x1 << 1) | (0x1 << 0))
+#define HDMI_HDCP_RI_MATCH_RESULT_N		((0x1 << 1) | (0x0 << 0))
 #define HDMI_HDCP_CLR_ALL_RESULTS		(0)
 
 /* HDCP_BKSV0~4 */
@@ -1241,7 +1241,7 @@
 
 /* HDCP E-FUSE Control Register */
 /* HDCP_E_FUSE_CTRL */
-#define HDMI_EFUSE_CTRL_HDCP_KEY_READ		(1)
+#define HDMI_EFUSE_CTRL_HDCP_KEY_READ		(1 << 0)
 
 /* HDCP_E_FUSE_STATUS */
 #define HDMI_EFUSE_ECC_FAIL			(1 << 2)

@@ -83,6 +83,27 @@ enum HDMI_AUDIO_CODEC {
 	HDMI_AUDIO_MP3
 };
 
+enum HDCP_EVENT {
+	HDCP_EVENT_STOP			= 1 << 0,
+	HDCP_EVENT_START		= 1 << 1,
+	HDCP_EVENT_READ_BKSV_START	= 1 << 2,
+	HDCP_EVENT_WRITE_AKSV_START	= 1 << 4,
+	HDCP_EVENT_CHECK_RI_START	= 1 << 8,
+	HDCP_EVENT_SECOND_AUTH_START	= 1 << 16
+};
+
+enum HDCP_STATE {
+	NOT_AUTHENTICATED,
+	RECEIVER_READ_READY,
+	BCAPS_READ_DONE,
+	BKSV_READ_DONE,
+	AN_WRITE_DONE,
+	AKSV_WRITE_DONE,
+	FIRST_AUTHENTICATION_DONE,
+	SECOND_AUTHENTICATION_RDY,
+	SECOND_AUTHENTICATION_DONE,
+};
+
 #define DEFAULT_AUDIO_CODEC	HDMI_AUDIO_PCM
 
 struct hdmi_resources {
@@ -209,6 +230,16 @@ struct hdmi_infoframe {
 	u8 len;
 };
 
+struct hdcp_info {
+	u8 is_repeater;
+	u32 hdcp_start;
+	int hdcp_enable;
+	spinlock_t reset_lock;
+
+	enum HDCP_EVENT	event;
+	enum HDCP_STATE	auth_status;
+};
+
 struct hdmi_device {
 	/** base address of HDMI registers */
 	void __iomem *regs;
@@ -230,6 +261,8 @@ struct hdmi_device {
 	u32 cur_preset;
 	/** other resources */
 	struct hdmi_resources res;
+	/** HDMI is streaming or not */
+	int streaming;
 	/** supported HDMI InfoFrame */
 	struct hdmi_infoframe infoframe[INFOFRAME_CNT];
 	/** audio on/off control flag */
@@ -240,6 +273,10 @@ struct hdmi_device {
 	int bits_per_sample;
 	/** current audio codec type */
 	enum HDMI_AUDIO_CODEC audio_codec;
+	/** HDCP information */
+	struct hdcp_info hdcp_info;
+	struct work_struct work;
+	struct workqueue_struct	*hdcp_wq;
 };
 
 struct hdmi_conf {
@@ -270,8 +307,24 @@ void hdmi_reg_set_acr(struct hdmi_device *hdev);
 void hdmi_reg_spdif_audio_init(struct hdmi_device *hdev);
 void hdmi_reg_i2s_audio_init(struct hdmi_device *hdev);
 void hdmi_audio_enable(struct hdmi_device *hdev, int on);
+void hdmi_bluescreen_enable(struct hdmi_device *hdev, int on);
+void hdmi_reg_mute(struct hdmi_device *hdev, int on);
+int hdmi_hpd_status(struct hdmi_device *hdev);
+int is_hdmi_streaming(struct hdmi_device *hdev);
+u8 hdmi_get_int_mask(struct hdmi_device *hdev);
+void hdmi_set_int_mask(struct hdmi_device *hdev, u8 mask, int en);
+void hdmi_sw_hpd_enable(struct hdmi_device *hdev, int en);
+void hdmi_sw_hpd_plug(struct hdmi_device *hdev, int en);
 void hdmi_dumpregs(struct hdmi_device *hdev, char *prefix);
 void hdmi_set_3d_info(struct hdmi_device *hdev);
+
+/** HDCP functions */
+irqreturn_t hdcp_irq_handler(struct hdmi_device *hdev);
+int hdcp_stop(struct hdmi_device *hdev);
+int hdcp_start(struct hdmi_device *hdev);
+int hdcp_prepare(struct hdmi_device *hdev);
+int hdcp_i2c_read(struct hdmi_device *hdev, u8 offset, int bytes, u8 *buf);
+int hdcp_i2c_write(struct hdmi_device *hdev, u8 offset, int bytes, u8 *buf);
 
 static inline
 void hdmi_write(struct hdmi_device *hdev, u32 reg_id, u32 value)
@@ -293,9 +346,32 @@ void hdmi_writeb(struct hdmi_device *hdev, u32 reg_id, u8 value)
 	writeb(value, hdev->regs + reg_id);
 }
 
+static inline void hdmi_write_bytes(struct hdmi_device *hdev, u32 reg_id,
+		u8 *buf, int bytes)
+{
+	int i;
+
+	for (i = 0; i < bytes; ++i)
+		writeb(buf[i], hdev->regs + reg_id + i * 4);
+}
+
 static inline u32 hdmi_read(struct hdmi_device *hdev, u32 reg_id)
 {
 	return readl(hdev->regs + reg_id);
+}
+
+static inline u8 hdmi_readb(struct hdmi_device *hdev, u32 reg_id)
+{
+	return readb(hdev->regs + reg_id);
+}
+
+static inline void hdmi_read_bytes(struct hdmi_device *hdev, u32 reg_id,
+		u8 *buf, int bytes)
+{
+	int i;
+
+	for (i = 0; i < bytes; ++i)
+		buf[i] = readb(hdev->regs + reg_id + i * 4);
 }
 
 #endif /* SAMSUNG_HDMI_H */

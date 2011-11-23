@@ -11,6 +11,8 @@ config VIDEO_EXYNOS_TV
 	depends on PLAT_S5P
 	depends on EXPERIMENTAL
 	select MEDIA_EXYNOS
+	select VIDEO_EXYNOS_HDMI
+	select VIDEO_EXYNOS_MIXER
 	default n
 	---help---
 	  Say Y here to enable selecting the TV output devices for
@@ -34,7 +36,7 @@ config VIDEO_EXYNOS_HDMI_AUDIO_I2S
 	bool "Enable HDMI audio using I2S path"
 	depends on VIDEO_EXYNOS_HDMI
 	depends on SND_SOC_SAMSUNG_SMDK_WM8994
-	default n
+	default y
 	help
 	  Enables HDMI audio through I2S path.
 
@@ -45,6 +47,15 @@ config VIDEO_EXYNOS_HDMI_AUDIO_SPDIF
 	default n
 	help
 	  Enables HDMI audio through SPDIF path.
+
+config VIDEO_EXYNOS_HDCP
+	bool "Enable HDCP"
+	depends on VIDEO_EXYNOS_HDMI
+	depends on I2C
+	default n
+	help
+	  Enables HDCP feature. However if you want to use HDCP,
+	  device private key must be e-fused in SoC.
 
 config VIDEO_EXYNOS_HDMI_DEBUG
 	bool "Enable debug for HDMI Driver"

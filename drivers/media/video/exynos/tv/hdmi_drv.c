@@ -124,6 +124,7 @@ static int hdmi_streamon(struct hdmi_device *hdev)
 
 	dev_dbg(dev, "%s\n", __func__);
 
+	hdev->streaming = 1;
 	ret = v4l2_subdev_call(hdev->phy_sd, video, s_stream, 1);
 	if (ret)
 		return ret;
@@ -167,6 +168,14 @@ static int hdmi_streamon(struct hdmi_device *hdev)
 	/* enable HDMI and timing generator */
 	hdmi_enable(hdev, 1);
 	hdmi_tg_enable(hdev, 1);
+
+	/* start HDCP if enabled */
+	if (hdev->hdcp_info.hdcp_enable) {
+		ret = hdcp_start(hdev);
+		if (ret)
+			return ret;
+	}
+
 	hdmi_dumpregs(hdev, "streamon");
 	return 0;
 }
@@ -177,6 +186,9 @@ static int hdmi_streamoff(struct hdmi_device *hdev)
 	struct hdmi_resources *res = &hdev->res;
 
 	dev_dbg(dev, "%s\n", __func__);
+
+	if (hdev->hdcp_info.hdcp_enable)
+		hdcp_stop(hdev);
 
 	hdmi_audio_enable(hdev, 0);
 	hdmi_enable(hdev, 0);
@@ -189,6 +201,7 @@ static int hdmi_streamoff(struct hdmi_device *hdev)
 
 	v4l2_subdev_call(hdev->phy_sd, video, s_stream, 0);
 
+	hdev->streaming = 0;
 	hdmi_dumpregs(hdev, "streamoff");
 	return 0;
 }
@@ -592,6 +605,11 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 
 	hdmi_entity_info_print(hdmi_dev);
 
+	/* initialize hdcp resource */
+	ret = hdcp_prepare(hdmi_dev);
+	if (ret)
+		goto fail_vdev;
+
 	dev_info(dev, "probe sucessful\n");
 
 	return 0;
@@ -629,6 +647,8 @@ static int __devexit hdmi_remove(struct platform_device *pdev)
 	free_irq(hdmi_dev->irq, hdmi_dev);
 	iounmap(hdmi_dev->regs);
 	hdmi_resources_cleanup(hdmi_dev);
+	flush_workqueue(hdmi_dev->hdcp_wq);
+	destroy_workqueue(hdmi_dev->hdcp_wq);
 	kfree(hdmi_dev);
 	dev_info(dev, "remove sucessful\n");
 

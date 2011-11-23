@@ -2470,6 +2470,9 @@ irqreturn_t hdmi_irq_handler(int irq, void *dev_data)
 	/* clearing flags for HPD plug/unplug */
 	if (intc_flag & HDMI_INTC_FLAG_HPD_UNPLUG) {
 		printk(KERN_INFO "unplugged\n");
+		if (hdev->hdcp_info.hdcp_enable)
+			hdcp_stop(hdev);
+
 		hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
 			HDMI_INTC_FLAG_HPD_UNPLUG);
 	}
@@ -2478,7 +2481,12 @@ irqreturn_t hdmi_irq_handler(int irq, void *dev_data)
 		hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
 			HDMI_INTC_FLAG_HPD_PLUG);
 	}
-
+	if (intc_flag & HDMI_INTC_FLAG_HDCP) {
+		printk(KERN_INFO "hdcp interrupt occur\n");
+		hdcp_irq_handler(hdev);
+		hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
+			HDMI_INTC_FLAG_HDCP);
+	}
 	return IRQ_HANDLED;
 }
 
@@ -2913,6 +2921,63 @@ void hdmi_audio_enable(struct hdmi_device *hdev, int on)
 		hdmi_write(hdev, HDMI_AUI_CON, HDMI_AUI_CON_NO_TRAN);
 		hdmi_write_mask(hdev, HDMI_CON_0, 0, HDMI_ASP_ENABLE);
 	}
+}
+
+void hdmi_bluescreen_enable(struct hdmi_device *hdev, int on)
+{
+	if (on)
+		hdmi_write_mask(hdev, HDMI_CON_0, ~0, HDMI_BLUE_SCR_EN);
+	else
+		hdmi_write_mask(hdev, HDMI_CON_0, 0, HDMI_BLUE_SCR_EN);
+}
+
+void hdmi_reg_mute(struct hdmi_device *hdev, int on)
+{
+	hdmi_bluescreen_enable(hdev, on);
+	hdmi_audio_enable(hdev, !on);
+}
+
+int hdmi_hpd_status(struct hdmi_device *hdev)
+{
+	return hdmi_read(hdev, HDMI_HPD_STATUS);
+}
+
+int is_hdmi_streaming(struct hdmi_device *hdev)
+{
+	if (hdmi_hpd_status(hdev) && hdev->streaming)
+		return 1;
+	return 0;
+}
+
+u8 hdmi_get_int_mask(struct hdmi_device *hdev)
+{
+	return hdmi_readb(hdev, HDMI_INTC_CON_0);
+}
+
+void hdmi_set_int_mask(struct hdmi_device *hdev, u8 mask, int en)
+{
+	if (en) {
+		mask |= HDMI_INTC_EN_GLOBAL;
+		hdmi_write_mask(hdev, HDMI_INTC_CON_0, ~0, mask);
+	} else
+		hdmi_write_mask(hdev, HDMI_INTC_CON_0, 0,
+				HDMI_INTC_EN_GLOBAL);
+}
+
+void hdmi_sw_hpd_enable(struct hdmi_device *hdev, int en)
+{
+	if (en)
+		hdmi_write_mask(hdev, HDMI_HPD, ~0, HDMI_HPD_SEL_I_HPD);
+	else
+		hdmi_write_mask(hdev, HDMI_HPD, 0, HDMI_HPD_SEL_I_HPD);
+}
+
+void hdmi_sw_hpd_plug(struct hdmi_device *hdev, int en)
+{
+	if (en)
+		hdmi_write_mask(hdev, HDMI_HPD, ~0, HDMI_SW_HPD_PLUGGED);
+	else
+		hdmi_write_mask(hdev, HDMI_HPD, 0, HDMI_SW_HPD_PLUGGED);
 }
 
 void hdmi_dumpregs(struct hdmi_device *hdev, char *prefix)

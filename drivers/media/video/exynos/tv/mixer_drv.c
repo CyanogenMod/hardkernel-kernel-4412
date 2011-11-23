@@ -983,7 +983,6 @@ static int mxr_register_entity(struct mxr_device *mdev, int mxr_num)
 
 static int mxr_register_entities(struct mxr_device *mdev)
 {
-	struct exynos_md *md;
 	int ret, i;
 
 	for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
