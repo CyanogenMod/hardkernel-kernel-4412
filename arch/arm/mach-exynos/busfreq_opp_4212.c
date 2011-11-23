@@ -47,6 +47,7 @@ enum busfreq_level_idx {
 	LV_1,
 	LV_2,
 	LV_3,
+	LV_4,
 	LV_END
 };
 
@@ -54,21 +55,22 @@ static struct busfreq_table exynos4_busfreq_table[] = {
 	{LV_0, 400000, 1100000, 0, 0, 0},
 	{LV_1, 267000, 1000000, 0, 0, 0},
 	{LV_2, 160000, 950000, 0, 0, 0},
-	{LV_3, 100000, 950000, 0, 0, 0},
+	{LV_3, 133000, 950000, 0, 0, 0},
+	{LV_4, 100000, 950000, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0},
 };
 
 #define ASV_GROUP	5
 static unsigned int exynos4_asv_volt[ASV_GROUP][LV_END] = {
-	{1100000, 1000000, 950000, 950000},
-	{1100000, 1000000, 950000, 950000},
-	{1100000, 1000000, 950000, 950000},
-	{1100000, 1000000, 950000, 950000},
-	{1100000, 1000000, 950000, 950000},
+	{1100000, 1000000, 950000, 950000, 950000},
+	{1100000, 1000000, 950000, 950000, 950000},
+	{1100000, 1000000, 950000, 950000, 950000},
+	{1100000, 1000000, 950000, 950000, 950000},
+	{1100000, 1000000, 950000, 950000, 950000},
 };
 
 static unsigned int exynos4212_int_volt[LV_END] = {
-	1000000, 950000, 950000, 950000
+	1000000, 950000, 950000, 950000, 950000
 };
 
 static unsigned int clkdiv_dmc0[LV_END][6] = {
@@ -87,7 +89,10 @@ static unsigned int clkdiv_dmc0[LV_END][6] = {
 	/* DMC L2: 160MHz */
 	{5, 1, 1, 4, 1, 1},
 
-	/* DMC L3: 100MHz */
+	/* DMC L3: 133MHz */
+	{5, 1, 1, 5, 1, 1},
+
+	/* DMC L4: 100MHz */
 	{7, 1, 1, 7, 1, 1},
 };
 
@@ -106,7 +111,10 @@ static unsigned int clkdiv_dmc1[LV_END][6] = {
 	/* DMC L2: 160MHz */
 	{5, 4, 1},
 
-	/* DMC L3: 100MHz */
+	/* DMC L3: 133MHz */
+	{5, 5, 1},
+
+	/* DMC L4: 100MHz */
 	{7, 7, 1},
 };
 
@@ -126,7 +134,10 @@ static unsigned int clkdiv_top[LV_END][5] = {
 	/* ACLK_GDL/R L2: 160MHz */
 	{4, 7, 5, 7, 1},
 
-	/* ACLK_GDL/R L3: 100MHz */
+	/* ACLK_GDL/R L3: 133MHz */
+	{4, 7, 5, 7, 1},
+
+	/* ACLK_GDL/R L4: 100MHz */
 	{7, 7, 7, 7, 1},
 };
 
@@ -145,7 +156,10 @@ static unsigned int clkdiv_lr_bus[LV_END][2] = {
 	/* ACLK_GDL/R L2: 160MHz */
 	{4, 1},
 
-	/* ACLK_GDL/R L3: 100MHz */
+	/* ACLK_GDL/R L3: 133MHz */
+	{5, 1},
+
+	/* ACLK_GDL/R L4: 100MHz */
 	{7, 1},
 };
 
@@ -163,6 +177,9 @@ static unsigned int clkdiv_sclkip[LV_END][3] = {
 
 	/* SCLK_MFC: 160MHz */
 	{4, 4, 5},
+
+	/* SCLK_MFC: 133MHz */
+	{5, 5, 5},
 
 	/* SCLK_MFC: 100MHz */
 	{7, 7, 7},
