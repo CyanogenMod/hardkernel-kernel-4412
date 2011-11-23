@@ -1577,7 +1577,13 @@ static void __init smdk5250_camera_gpio_cfg(void)
 	s3c_gpio_cfgrange_nopull(EXYNOS5_GPH0(0), 4, S3C_GPIO_SFN(2));
 	/* CAM A port(b0010) : DATA[0-7] */
 	s3c_gpio_cfgrange_nopull(EXYNOS5_GPH1(0), 8, S3C_GPIO_SFN(2));
-/* This is externel interrupt for m5mo */
+	/* CAM B port(b0010) : PCLK, BAY_RGB[0-6] */
+	s3c_gpio_cfgrange_nopull(EXYNOS5_GPG0(0), 8, S3C_GPIO_SFN(2));
+	/* CAM B port(b0010) : BAY_Vsync, BAY_RGB[7-13] */
+	s3c_gpio_cfgrange_nopull(EXYNOS5_GPG1(0), 8, S3C_GPIO_SFN(2));
+	/* CAM B port(b0010) : BAY_Hsync, BAY_MCLK */
+	s3c_gpio_cfgrange_nopull(EXYNOS5_GPG2(0), 2, S3C_GPIO_SFN(2));
+	/* This is externel interrupt for m5mo */
 #ifdef CONFIG_VIDEO_M5MOLS
 	s3c_gpio_cfgpin(EXYNOS5_GPX2(6), S3C_GPIO_SFN(0xF));
 	s3c_gpio_setpull(EXYNOS5_GPX2(6), S3C_GPIO_PULL_NONE);
