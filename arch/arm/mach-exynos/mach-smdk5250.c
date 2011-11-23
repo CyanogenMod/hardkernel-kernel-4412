@@ -68,6 +68,9 @@
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #include <plat/jpeg.h>
 #endif
+#ifdef CONFIG_EXYNOS_C2C
+#include <mach/c2c.h>
+#endif
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK5250_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -586,6 +589,24 @@ static struct s5p_dp_platdata smdk5250_dp_data __initdata = {
 	.phy_exit	= s5p_dp_phy_exit,
 	.backlight_on	= s5p_dp_backlight_on,
 	.backlight_off	= s5p_dp_backlight_off,
+};
+#endif
+
+#ifdef CONFIG_EXYNOS_C2C
+struct exynos_c2c_platdata smdk5250_c2c_pdata = {
+	.setup_gpio	= NULL,
+	.shdmem_addr	= C2C_SHAREDMEM_BASE,
+	.shdmem_size	= C2C_MEMSIZE_64,
+	.ap_sscm_addr	= NULL,
+	.cp_sscm_addr	= NULL,
+	.rx_width	= C2C_BUSWIDTH_16,
+	.tx_width	= C2C_BUSWIDTH_16,
+	.clk_opp100	= 400,
+	.clk_opp50	= 200,
+	.clk_opp25	= 100,
+	.default_opp_mode	= C2C_OPP25,
+	.get_c2c_state	= NULL,
+	.c2c_sysreg	= S3C_VA_SYS + 0x0360,
 };
 #endif
 
@@ -1576,6 +1597,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
 #endif
+#ifdef CONFIG_EXYNOS_C2C
+	&exynos_device_c2c,
+#endif
 };
 
 #if defined(CONFIG_S5P_MEM_CMA)
@@ -1709,6 +1733,9 @@ static void __init exynos_reserve_mem(void)
 		},
 	};
 	static const char map[] __initconst =
+#ifdef CONFIG_EXYNOS_C2C
+		"samsung-c2c=c2c_shdmem;"
+#endif
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0=fimd;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
@@ -2075,6 +2102,9 @@ static void __init smdk5250_machine_init(void)
 	s3c_set_platdata(&exynos_gsc3_default_data, sizeof(exynos_gsc3_default_data),
 			&exynos5_device_gsc3);
 #endif
+#ifdef CONFIG_EXYNOS_C2C
+	exynos_c2c_set_platdata(&smdk5250_c2c_pdata);
+#endif
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_jpeg.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
@@ -2087,10 +2117,28 @@ static void __init smdk5250_machine_init(void)
 	s5p_i2c_hdmiphy_set_platdata(NULL);
 }
 
+#ifdef CONFIG_EXYNOS_C2C
+static void __init exynos_c2c_reserve(void)
+{
+	static struct cma_region region = {
+			.name = "c2c_shdmem",
+			.size = 64 * SZ_1M,
+			{ .alignment	= 64 * SZ_1M },
+			.start = C2C_SHAREDMEM_BASE
+	};
+
+	BUG_ON(cma_early_region_register(&region));
+	BUG_ON(cma_early_region_reserve(&region));
+}
+#endif
+
 MACHINE_START(SMDK5250, "SMDK5250")
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos5_init_irq,
 	.map_io		= smdk5250_map_io,
 	.init_machine	= smdk5250_machine_init,
 	.timer		= &exynos4_timer,
+#ifdef CONFIG_EXYNOS_C2C
+	.reserve	= &exynos_c2c_reserve,
+#endif
 MACHINE_END
