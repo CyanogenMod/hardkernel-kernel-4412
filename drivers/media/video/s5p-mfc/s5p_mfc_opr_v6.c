@@ -534,13 +534,7 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 	buf_addr1 = ctx->port_a_phys;
 	buf_size1 = ctx->port_a_size;
 
-	mfc_debug(2, "Buf1: %p (%d)\n", (void *)buf_addr1, buf_size1);
-
-	WRITEL(buf_addr1, S5P_FIMV_E_TMV_BUFFER0);
-	buf_addr1 += ctx->enc_tmv_buffer_size >> 1;
-	WRITEL(buf_addr1, S5P_FIMV_E_TMV_BUFFER1);
-	buf_addr1 += ctx->enc_tmv_buffer_size >> 1;
-	buf_size1 -= ctx->enc_tmv_buffer_size;
+	mfc_debug(2, "Buf1: %p (%d)\n", (void *)buf_addr1, buf_size1);	
 
 	for (i = 0; i < ctx->dpb_count; i++) {
 		WRITEL(buf_addr1, S5P_FIMV_E_LUMA_DPB + (4 * i));
@@ -557,6 +551,12 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 	WRITEL(ctx->scratch_buf_size, S5P_FIMV_E_SCRATCH_BUFFER_SIZE);
 	buf_addr1 += ctx->scratch_buf_size;
 	buf_size1 -= ctx->scratch_buf_size;
+
+	WRITEL(buf_addr1, S5P_FIMV_E_TMV_BUFFER0);
+	buf_addr1 += ctx->enc_tmv_buffer_size >> 1;
+	WRITEL(buf_addr1, S5P_FIMV_E_TMV_BUFFER1);
+	buf_addr1 += ctx->enc_tmv_buffer_size >> 1;
+	buf_size1 -= ctx->enc_tmv_buffer_size;
 
 	mfc_debug(2, "Buf1: %u, buf_size1: %d (ref frames %d)\n",
 			buf_addr1, buf_size1, ctx->dpb_count);
