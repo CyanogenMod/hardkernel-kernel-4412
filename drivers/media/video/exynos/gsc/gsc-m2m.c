@@ -755,7 +755,8 @@ int gsc_register_m2m_device(struct gsc_dev *gsc)
 		goto err_m2m_r1;
 	}
 
-	ret = video_register_device(vfd, VFL_TYPE_GRABBER, -1);
+	ret = video_register_device(vfd, VFL_TYPE_GRABBER,
+				    EXYNOS_VIDEONODE_GSC_M2M(gsc->id));
 	if (ret) {
 		dev_err(&pdev->dev,
 			 "%s(): failed to register video device\n", __func__);

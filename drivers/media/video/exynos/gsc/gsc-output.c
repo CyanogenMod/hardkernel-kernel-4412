@@ -1023,7 +1023,8 @@ int gsc_register_output_device(struct gsc_dev *gsc)
 
 	vb2_queue_init(q);
 
-	ret = video_register_device(vfd, VFL_TYPE_GRABBER, -1);
+	ret = video_register_device(vfd, VFL_TYPE_GRABBER,
+				    EXYNOS_VIDEONODE_GSC_OUT(gsc->id));
 	if (ret) {
 		gsc_err("Failed to register video device");
 		goto err_ent;

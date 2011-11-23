@@ -1602,7 +1602,7 @@ int gsc_register_capture_device(struct gsc_dev *gsc)
 	}
 
 	ret = video_register_device(vfd, VFL_TYPE_GRABBER,
-				    EXYNOS_VIDEO_NODE_GSC_CAP);
+				    EXYNOS_VIDEONODE_GSC_CAP(gsc->id));
 	if (ret) {
 		gsc_err("failed to register video device");
 		goto err_clk;
