@@ -45,9 +45,13 @@ static struct sleep_save exynos5_core_save[] = {
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x100),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x104),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x108),
+	SAVE_ITEM(S5P_VA_GIC_DIST + 0x10C),
+	SAVE_ITEM(S5P_VA_GIC_DIST + 0x110),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x300),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x304),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x308),
+	SAVE_ITEM(S5P_VA_GIC_DIST + 0x30C),
+	SAVE_ITEM(S5P_VA_GIC_DIST + 0x310),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x400),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x404),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x408),
@@ -145,27 +149,11 @@ static struct sleep_save exynos5_core_save[] = {
 	SAVE_ITEM(S5P_VA_COMBINER_BASE + 0x010),
 	SAVE_ITEM(S5P_VA_COMBINER_BASE + 0x020),
 	SAVE_ITEM(S5P_VA_COMBINER_BASE + 0x030),
+	SAVE_ITEM(S5P_VA_COMBINER_BASE + 0x040),
+	SAVE_ITEM(S5P_VA_COMBINER_BASE + 0x050),
+	SAVE_ITEM(S5P_VA_COMBINER_BASE + 0x060),
+	SAVE_ITEM(S5P_VA_COMBINER_BASE + 0x070),
 };
-
-/* This function copy from linux/arch/arm/kernel/smp_scu.c */
-void exynos5_scu_enable(void __iomem *scu_base)
-{
-	u32 scu_ctrl;
-
-	scu_ctrl = __raw_readl(scu_base);
-	/* already enabled? */
-	if (scu_ctrl & 1)
-		return;
-
-	scu_ctrl |= 1;
-	__raw_writel(scu_ctrl, scu_base);
-
-	/*
-	 * Ensure that the data accessed by CPU0 before the SCU was
-	 * initialised is visible to the other CPUs.
-	 */
-	flush_cache_all();
-}
 
 void exynos5_cpu_suspend(void)
 {
@@ -320,9 +308,16 @@ static void exynos5_pm_resume(void)
 
 	exynos4_reset_assert_ctrl(1);
 
-	s3c_pm_do_restore_core(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
+	/* For release retention */
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_MAU_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_GPIO_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_UART_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_MMCA_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_MMCB_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_EBIA_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_EBIB_OPTION);
 
-	exynos5_scu_enable(S5P_VA_SCU);
+	s3c_pm_do_restore_core(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
 
 early_wakeup:
 	__raw_writel(0x0, EXYNOS5_INFORM1);
@@ -337,7 +332,7 @@ static __init int exynos5_pm_syscore_init(void)
 {
 	exynos5_jpeg_base = ioremap(EXYNOS4_PA_JPEG, SZ_16K);
 
-	if (exynos5_jpeg_base)
+	if (!exynos5_jpeg_base)
 		pr_err("EXYNOS5 PMU :exynos5_jpeg_base get fail\n");
 
 	register_syscore_ops(&exynos5_pm_syscore_ops);
