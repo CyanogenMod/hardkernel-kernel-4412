@@ -222,7 +222,7 @@ void kbase_mem_usage_release_pages(kbasep_mem_usage * usage, u32 nr_pages)
 }
 
 #if BASE_HW_ISSUE_6367 
-#if MALI_DUMMY_MODEL
+#ifdef MALI_DUMMY_MODEL
 static void kbase_wait_write_flush(struct kbase_context *kctx) { }
 #else
 /**

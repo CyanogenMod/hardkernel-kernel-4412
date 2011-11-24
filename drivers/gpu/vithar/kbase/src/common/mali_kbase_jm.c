@@ -25,6 +25,19 @@
 
 #define beenthere(f, a...)  OSK_PRINT_INFO(OSK_BASE_JM, "%s:" f, __func__, ##a)
 
+#define VITHAR_LOG
+#ifdef VITHAR_LOG
+#include <linux/jiffies.h>
+#define _VITHAR_LOG(logs) {\
+	    static u64 last_time_log = 0;\
+	    u64 curr_time_log = get_jiffies_64();\
+	    if ((curr_time_log - last_time_log) > 1000)\
+		logs;\
+	    last_time_log = curr_time_log;\
+	}
+#else
+#endif
+
 static void kbasep_try_reset_gpu_early(kbase_device *kbdev);
 
 static void kbase_job_hw_submit(kbase_device *kbdev, kbase_jd_atom *katom, int js)
@@ -768,7 +781,12 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 	/* All slot have been soft-stopped and we've waited SOFT_STOP_RESET_TIMEOUT for the slots to clear, at this point
 	 * we assume that anything that is still left on the GPU is stuck there and we'll kill it when we reset the GPU */
 
+
+#ifdef VITHAR_LOG
+	_VITHAR_LOG(OSK_PRINT_ERROR(OSK_BASE_JD, "Resetting GPU"));
+#else
 	OSK_PRINT_ERROR(OSK_BASE_JD, "Resetting GPU");
+#endif
 
 	/* Make sure the timer has completed - this cannot be done from interrupt context,
 	 * so this cannot be done within kbasep_try_reset_gpu_early. */
@@ -820,8 +838,12 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 
 	osk_atomic_set(&kbdev->reset_gpu, KBASE_RESET_GPU_NOT_PENDING);
 	osk_waitq_set(&kbdev->reset_waitq);
-	OSK_PRINT_ERROR(OSK_BASE_JD, "Reset complete");
 
+#ifdef VITHAR_LOG
+	_VITHAR_LOG(OSK_PRINT_ERROR(OSK_BASE_JD, "Reset complete"));
+#else
+	OSK_PRINT_ERROR(OSK_BASE_JD, "Reset complete");
+#endif
 	/* Reprogram the GPU's MMU */
 	for(i = 0; i < BASE_MAX_NR_AS; i++)
 	{
@@ -906,7 +928,11 @@ mali_bool kbase_prepare_to_reset_gpu(kbase_device *kbdev)
 
 	osk_waitq_clear(&kbdev->reset_waitq);
 
+#ifdef VITHAR_LOG
+	_VITHAR_LOG(OSK_PRINT_ERROR(OSK_BASE_JD, "Preparing to soft-reset GPU: Soft-stopping all jobs"));
+#else
 	OSK_PRINT_ERROR(OSK_BASE_JD, "Preparing to soft-reset GPU: Soft-stopping all jobs");
+#endif
 
 	for (i = 0; i < kbdev->nr_job_slots; i++)
 	{
