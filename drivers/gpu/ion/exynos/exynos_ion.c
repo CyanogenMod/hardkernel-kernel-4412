@@ -126,11 +126,12 @@ static int ion_exynos_heap_allocate(struct ion_heap *heap,
 			continue;
 		}
 
-		page = alloc_pages(GFP_KERNEL | __GFP_COMP,
+		page = alloc_pages(GFP_KERNEL | __GFP_COMP | __GFP_NOWARN,
 						*cur_order - PAGE_SHIFT);
-
-		if (!page)
-			break;
+		if (!page) {
+			cur_order++;
+			continue;
+		}
 
 		if (alloc_chunks & IMBUFS_MASK) {
 			cur_bufs++;
@@ -246,7 +247,7 @@ alloc_error:
 
 				phys = cur_bufs[i];
 				gfp_order = (phys & ~PAGE_MASK) - PAGE_SHIFT;
-				phys = PAGE_MASK;
+				phys = phys & PAGE_MASK;
 				__free_pages(phys_to_page(phys), gfp_order);
 			}
 		}
