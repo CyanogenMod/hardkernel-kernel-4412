@@ -1971,6 +1971,7 @@ static int s3c_fb_sd_s_stream(struct v4l2_subdev *sd, int enable)
 	else
 		ret = s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
 
+	mdelay(30);
 	dev_dbg(sfb->dev, "Get the window via local path started : %d\n",
 			enable);
 	return 0;
@@ -2024,29 +2025,24 @@ static int s3c_fb_me_link_setup(struct media_entity *entity,
 			      const struct media_pad *local,
 			      const struct media_pad *remote, u32 flags)
 {
-	int i, ret;
+	int i;
 	struct v4l2_subdev *sd = media_entity_to_v4l2_subdev(entity);
 	struct s3c_fb_win *win = v4l2_subdev_to_s3c_fb_win(sd);
 	struct s3c_fb *sfb = win->parent;
 
 	if (flags & MEDIA_LNK_FL_ENABLED) {
-		win->local = 1;
+		win->use = 1;
 		if (local->index == FIMD_PAD_SINK_FROM_GSCALER_SRC)
 			win->local = 1;
-		ret = s3c_fb_open(win->fbinfo, 0);
 	} else {
 		if (local->index == FIMD_PAD_SINK_FROM_GSCALER_SRC)
 			win->local = 0;
 		win->use = 0;
-		ret = s3c_fb_release(win->fbinfo, 0);
 
 		for (i = 0; i < entity->num_links; ++i)
 			if (entity->links[i].flags & MEDIA_LNK_FL_ENABLED)
 				win->use = 1;
 	}
-
-	if (ret)
-		dev_err(sfb->dev, "mc link setup error\n");
 
 	s3c_fb_mc_local_path_setup(win);
 
