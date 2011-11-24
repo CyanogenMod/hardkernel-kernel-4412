@@ -2830,7 +2830,7 @@ static void __init exynos4_reserve_mem(void)
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 		{
 			.name = "fimc_is",
-			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS * SZ_1M,
+			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS * SZ_1K,
 			{
 				.alignment = 1 << 26,
 			},
