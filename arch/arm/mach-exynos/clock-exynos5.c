@@ -632,7 +632,7 @@ static struct clk exynos5_clk_aclk_300_gscl_sub = {
 static struct clksrc_clk exynos5_clk_dout_aclk_266 = {
 	.clk	= {
 		.name		= "dout_aclk_266",
-		.parent		= &exynos5_clk_mout_bpll_user.clk,
+		.parent		= &exynos5_clk_mout_mpll_user.clk,
 	},
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 16, .size = 3 },
 };
