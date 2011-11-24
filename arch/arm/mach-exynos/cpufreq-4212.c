@@ -114,53 +114,53 @@ static unsigned int clkdiv_cpu0_4212[CPUFREQ_LEVEL_END][7] = {
 	{ 0, 1, 3, 7, 0, 1, 0 },
 };
 
-static unsigned int clkdiv_cpu0_4412[CPUFREQ_LEVEL_END][7] = {
+static unsigned int clkdiv_cpu0_4412[CPUFREQ_LEVEL_END][8] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVCORE, DIVCOREM0, DIVCOREM1, DIVPERIPH,
-	 *		DIVATB, DIVPCLK_DBG, DIVAPLL }
+	 *		DIVATB, DIVPCLK_DBG, DIVAPLL, DIVCORE2 }
 	 */
 	/* ARM L0: 1500Mhz */
-	{ 0, 3, 7, 7, 6, 1, 2 },
+	{ 0, 3, 7, 0, 6, 1, 2, 0 },
 
 	/* ARM L1: 1400Mhz */
-	{ 0, 3, 7, 7, 6, 1, 2 },
+	{ 0, 3, 7, 0, 6, 1, 2, 0 },
 
 	/* ARM L2: 1300Mhz */
-	{ 0, 3, 7, 7, 5, 1, 2 },
+	{ 0, 3, 7, 0, 5, 1, 2, 0 },
 
 	/* ARM L3: 1200Mhz */
-	{ 0, 3, 7, 7, 5, 1, 2 },
+	{ 0, 3, 7, 0, 5, 1, 2, 0 },
 
 	/* ARM L4: 1100MHz */
-	{ 0, 3, 6, 7, 4, 1, 2 },
+	{ 0, 3, 6, 0, 4, 1, 2, 0 },
 
 	/* ARM L5: 1000MHz */
-	{ 0, 2, 5, 7, 4, 1, 1 },
+	{ 0, 2, 5, 0, 4, 1, 1, 0 },
 
 	/* ARM L6: 900MHz */
-	{ 0, 2, 5, 7, 3, 1, 1 },
+	{ 0, 2, 5, 0, 3, 1, 1, 0 },
 
 	/* ARM L7: 800MHz */
-	{ 0, 2, 5, 7, 3, 1, 1 },
+	{ 0, 2, 5, 0, 3, 1, 1, 0 },
 
 	/* ARM L8: 700MHz */
-	{ 0, 2, 4, 7, 3, 1, 1 },
+	{ 0, 2, 4, 0, 3, 1, 1, 0 },
 
 	/* ARM L9: 600MHz */
-	{ 0, 2, 4, 7, 3, 1, 1 },
+	{ 0, 2, 4, 0, 3, 1, 1, 0 },
 
 	/* ARM L10: 500MHz */
-	{ 0, 2, 4, 7, 3, 1, 1 },
+	{ 0, 2, 4, 0, 3, 1, 1, 0 },
 
 	/* ARM L11: 400MHz */
-	{ 0, 2, 4, 7, 3, 1, 1 },
+	{ 0, 2, 4, 0, 3, 1, 1, 0 },
 
 	/* ARM L12: 300MHz */
-	{ 0, 2, 4, 7, 2, 1, 1 },
+	{ 0, 2, 4, 0, 2, 1, 1, 0 },
 
 	/* ARM L13: 200MHz */
-	{ 0, 1, 3, 7, 1, 1, 1 },
+	{ 0, 1, 3, 0, 1, 1, 1, 0 },
 };
 
 static unsigned int clkdiv_cpu1_4212[CPUFREQ_LEVEL_END][2] = {
@@ -215,31 +215,31 @@ static unsigned int clkdiv_cpu1_4412[CPUFREQ_LEVEL_END][3] = {
 	 * { DIVCOPY, DIVHPM, DIVCORES }
 	 */
 	/* ARM L0: 1500MHz */
-	{ 6, 0, 5 },
+	{ 6, 0, 7 },
 
 	/* ARM L1: 1400MHz */
-	{ 6, 0, 5 },
+	{ 6, 0, 6 },
 
 	/* ARM L2: 1300MHz */
-	{ 5, 0, 5 },
+	{ 5, 0, 6 },
 
 	/* ARM L3: 1200MHz */
-	{ 5, 0, 4 },
+	{ 5, 0, 5 },
 
 	/* ARM L4: 1100MHz */
-	{ 4, 0, 4 },
+	{ 4, 0, 5 },
 
 	/* ARM L5: 1000MHz */
-	{ 4, 0, 3 },
+	{ 4, 0, 4 },
 
 	/* ARM L6: 900MHz */
-	{ 3, 0, 3 },
+	{ 3, 0, 4 },
 
 	/* ARM L7: 800MHz */
 	{ 3, 0, 3 },
 
 	/* ARM L8: 700MHz */
-	{ 3, 0, 2 },
+	{ 3, 0, 3 },
 
 	/* ARM L9: 600MHz */
 	{ 3, 0, 2 },
@@ -248,13 +248,13 @@ static unsigned int clkdiv_cpu1_4412[CPUFREQ_LEVEL_END][3] = {
 	{ 3, 0, 2 },
 
 	/* ARM L11: 400MHz */
-	{ 3, 0, 2 },
+	{ 3, 0, 1 },
 
 	/* ARM L12: 300MHz */
-	{ 3, 0, 2 },
+	{ 3, 0, 1 },
 
 	/* ARM L13: 200MHz */
-	{ 3, 0, 1 },
+	{ 3, 0, 0 },
 };
 
 static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
@@ -312,17 +312,17 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	{ 1500000, 1400000 },	/* L0 */
 	{ 1375000, 1350000 },	/* L1 */
 	{ 1350000, 1300000 },	/* L2 */
-	{ 1250000, 1200000 },	/* L3 */
-	{ 1200000, 1200000 },	/* L4 */
-	{ 1175000, 1100000 },	/* L5 */
-	{ 1100000, 1100000 },	/* L6 */
+	{ 1250000, 1225000 },	/* L3 */
+	{ 1200000, 1150000 },	/* L4 */
+	{ 1175000, 1075000 },	/* L5 */
+	{ 1100000, 1025000 },	/* L6 */
 	{ 1050000, 1000000 },	/* L7 */
-	{ 1025000, 1000000 },	/* L8 */
-	{ 1000000, 1000000 },	/* L9 */
-	{ 1000000, 950000 },	/* L10 */
-	{ 1000000, 950000 },	/* L11 */
-	{ 950000, 950000 },	/* L12 */
-	{ 950000, 950000 },	/* L13 */
+	{ 1025000, 975000 },	/* L8 */
+	{ 1000000, 925000 },	/* L9 */
+	{ 1000000, 875000 },	/* L10 */
+	{ 1000000, 850000 },	/* L11 */
+	{ 950000, 850000 },	/* L12 */
+	{ 950000, 850000 },	/* L13 */
 };
 
 static void set_clkdiv(unsigned int div_index)
@@ -338,7 +338,7 @@ static void set_clkdiv(unsigned int div_index)
 
 	do {
 		tmp = __raw_readl(EXYNOS4_CLKDIV_STATCPU);
-	} while (tmp & 0x1111111);
+	} while (tmp & 0x11111111);
 
 #ifdef PRINT_DIV_VAL
 	tmp = __raw_readl(EXYNOS4_CLKDIV_CPU);
@@ -580,14 +580,16 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 				(clkdiv_cpu0_4212[i][5] << EXYNOS4_CLKDIV_CPU0_PCLKDBG_SHIFT) |
 				(clkdiv_cpu0_4212[i][6] << EXYNOS4_CLKDIV_CPU0_APLL_SHIFT));
 		} else {
+			tmp &= ~EXYNOS4_CLKDIV_CPU0_CORE2_MASK;
+
 			tmp |= ((clkdiv_cpu0_4412[i][0] << EXYNOS4_CLKDIV_CPU0_CORE_SHIFT) |
 				(clkdiv_cpu0_4412[i][1] << EXYNOS4_CLKDIV_CPU0_COREM0_SHIFT) |
 				(clkdiv_cpu0_4412[i][2] << EXYNOS4_CLKDIV_CPU0_COREM1_SHIFT) |
 				(clkdiv_cpu0_4412[i][3] << EXYNOS4_CLKDIV_CPU0_PERIPH_SHIFT) |
 				(clkdiv_cpu0_4412[i][4] << EXYNOS4_CLKDIV_CPU0_ATB_SHIFT) |
 				(clkdiv_cpu0_4412[i][5] << EXYNOS4_CLKDIV_CPU0_PCLKDBG_SHIFT) |
-				(clkdiv_cpu0_4412[i][6] << EXYNOS4_CLKDIV_CPU0_APLL_SHIFT));
-
+				(clkdiv_cpu0_4412[i][6] << EXYNOS4_CLKDIV_CPU0_APLL_SHIFT) |
+				(clkdiv_cpu0_4412[i][7] << EXYNOS4_CLKDIV_CPU0_CORE2_SHIFT));
 		}
 
 		exynos4212_clkdiv_table[i].clkdiv = tmp;
