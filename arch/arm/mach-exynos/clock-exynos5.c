@@ -672,20 +672,6 @@ static struct clk exynos5_clk_aclk_166 = {
 	.parent		= &exynos5_clk_mout_aclk_166.clk,
 };
 
-/* For ACLK_133 */
-static struct clksrc_clk exynos5_clk_dout_aclk_133 = {
-	.clk	= {
-		.name		= "dout_aclk_133",
-		.parent = &exynos5_clk_mout_mpll_user.clk,
-	},
-	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 4, .size = 3 },
-};
-
-static struct clk exynos5_clk_aclk_133 = {
-	.name		= "aclk_133",
-	.parent		= &exynos5_clk_dout_aclk_133.clk,
-};
-
 /* For ACLK_66 */
 static struct clksrc_clk exynos5_clk_dout_aclk_66_pre = {
 	.clk	= {
@@ -1548,7 +1534,6 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_dout_aclk_266,
 	&exynos5_clk_mout_aclk_200,
 	&exynos5_clk_mout_aclk_166,
-	&exynos5_clk_dout_aclk_133,
 	&exynos5_clk_dout_aclk_66_pre,
 	&exynos5_clk_aclk_66,
 	&exynos5_clk_dout_mmc0,
@@ -1713,7 +1698,6 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	unsigned long aclk_266;
 	unsigned long aclk_200;
 	unsigned long aclk_166;
-	unsigned long aclk_133;
 	unsigned long aclk_66;
 	unsigned int ptr;
 
@@ -1760,15 +1744,14 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	aclk_266 = clk_get_rate(&exynos5_clk_aclk_266);
 	aclk_200 = clk_get_rate(&exynos5_clk_aclk_200);
 	aclk_166 = clk_get_rate(&exynos5_clk_aclk_166);
-	aclk_133 = clk_get_rate(&exynos5_clk_aclk_133);
 	aclk_66 = clk_get_rate(&exynos5_clk_aclk_66.clk);
 
 	printk(KERN_INFO "EXYNOS5: ARMCLK=%ld, CDREX=%ld, ACLK400=%ld\n"
 			"ACLK333=%ld, ACLK266=%ld, ACLK200=%ld\n"
-			"ACLK166=%ld, ACLK133=%ld, ACLK66=%ld\n",
+			"ACLK166=%ld, ACLK66=%ld\n",
 			armclk, mout_cdrex, aclk_400,
 			aclk_333, aclk_266, aclk_200,
-			aclk_166, aclk_133, aclk_66);
+			aclk_166, aclk_66);
 
 
 	clk_fout_epll.ops = &exynos5_epll_ops;
