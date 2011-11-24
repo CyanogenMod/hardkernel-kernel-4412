@@ -173,6 +173,8 @@ struct s5p_dp_platdata {
 
 	void (*phy_init)(void);
 	void (*phy_exit)(void);
+	void (*backlight_on)(void);
+	void (*backlight_off)(void);
 };
 
 extern void s5p_dp_set_platdata(struct s5p_dp_platdata *pd);

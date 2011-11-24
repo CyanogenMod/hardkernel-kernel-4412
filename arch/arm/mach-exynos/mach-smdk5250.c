@@ -283,15 +283,8 @@ static void dp_lcd_set_power(struct plat_lcd_data *pd,
 	/* LCD_EN: GPD0_5 */
 	gpio_request(EXYNOS5_GPD0(5), "GPD0");
 
-	/* LED_BACKLIGHT_RESET: GPX1_5 */
-	gpio_request(EXYNOS5_GPX1(5), "GPX1");
-
 	/* LCD_EN: GPD0_5 */
 	gpio_direction_output(EXYNOS5_GPD0(5), power);
-	mdelay(20);
-
-	/* LED_BACKLIGHT_RESET: GPX1_5 */
-	gpio_direction_output(EXYNOS5_GPX1(5), power);
 	mdelay(20);
 
 	/* LCD_APS_EN_2.8V: GPD0_6 */
@@ -305,7 +298,6 @@ static void dp_lcd_set_power(struct plat_lcd_data *pd,
 #endif
 	gpio_free(EXYNOS5_GPD0(6));
 	gpio_free(EXYNOS5_GPD0(5));
-	gpio_free(EXYNOS5_GPX1(5));
 }
 
 static struct plat_lcd_data smdk5250_dp_lcd_data = {
@@ -441,10 +433,34 @@ static struct video_info smdk5250_dp_config = {
 	.bist_mode		= 0,
 };
 
+static void s5p_dp_backlight_on(void)
+{
+	/* LED_BACKLIGHT_RESET: GPX1_5 */
+	gpio_request(EXYNOS5_GPX1(5), "GPX1");
+
+	gpio_direction_output(EXYNOS5_GPX1(5), 1);
+	mdelay(20);
+
+	gpio_free(EXYNOS5_GPX1(5));
+}
+
+static void s5p_dp_backlight_off(void)
+{
+	/* LED_BACKLIGHT_RESET: GPX1_5 */
+	gpio_request(EXYNOS5_GPX1(5), "GPX1");
+
+	gpio_direction_output(EXYNOS5_GPX1(5), 0);
+	mdelay(20);
+
+	gpio_free(EXYNOS5_GPX1(5));
+}
+
 static struct s5p_dp_platdata smdk5250_dp_data __initdata = {
 	.video_info	= &smdk5250_dp_config,
 	.phy_init	= s5p_dp_phy_init,
 	.phy_exit	= s5p_dp_phy_exit,
+	.backlight_on	= s5p_dp_backlight_on,
+	.backlight_off	= s5p_dp_backlight_off,
 };
 #endif
 
