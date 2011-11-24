@@ -11,6 +11,7 @@
 #include <linux/platform_device.h>
 #include <linux/serial_core.h>
 #include <linux/gpio.h>
+#include <linux/gpio_event.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
 #include <linux/pwm_backlight.h>
@@ -1229,6 +1230,58 @@ static struct platform_device samsung_device_battery = {
 };
 #endif
 
+static struct gpio_event_direct_entry smdk5250_keypad_key_map[] = {
+	{
+		.gpio   = EXYNOS5_GPX0(0),
+		.code   = KEY_POWER,
+	}
+};
+
+static struct gpio_event_input_info smdk5250_keypad_key_info = {
+	.info.func              = gpio_event_input_func,
+	.info.no_suspend        = true,
+	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
+	.type                   = EV_KEY,
+	.keymap                 = smdk5250_keypad_key_map,
+	.keymap_size            = ARRAY_SIZE(smdk5250_keypad_key_map)
+};
+
+static struct gpio_event_info *smdk5250_input_info[] = {
+	&smdk5250_keypad_key_info.info,
+};
+
+static struct gpio_event_platform_data smdk5250_input_data = {
+	.names  = {
+		"smdk5250-keypad",
+		NULL,
+	},
+	.info           = smdk5250_input_info,
+	.info_count     = ARRAY_SIZE(smdk5250_input_info),
+};
+
+static struct platform_device smdk5250_input_device = {
+	.name   = GPIO_EVENT_DEV_NAME,
+	.id     = 0,
+	.dev    = {
+		.platform_data = &smdk5250_input_data,
+	},
+};
+
+static void __init smdk5250_gpio_power_init(void)
+{
+	int err = 0;
+
+	err = gpio_request_one(EXYNOS5_GPX0(0), 0, "GPX0");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX0 for "
+				"suspend/resume control\n");
+		return;
+	}
+	s3c_gpio_setpull(EXYNOS5_GPX0(0), S3C_GPIO_PULL_NONE);
+
+	gpio_free(EXYNOS5_GPX0(0));
+}
+
 static struct i2c_board_info i2c_devs7[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_i2c", 0x04),
@@ -1354,6 +1407,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_BATTERY_SAMSUNG
 	&samsung_device_battery,
 #endif
+	&smdk5250_input_device,
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
 #endif
@@ -1752,6 +1806,8 @@ static void __init smdk5250_machine_init(void)
 	s5p_fimg2d_set_platdata(&fimg2d_data);
 #endif
 	exynos_sysmmu_init();
+
+	smdk5250_gpio_power_init();
 
 	platform_add_devices(smdk5250_devices, ARRAY_SIZE(smdk5250_devices));
 
