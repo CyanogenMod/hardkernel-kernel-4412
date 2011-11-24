@@ -385,6 +385,7 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 	size_t len;
 	int ret = 0;
 	bool malloced = false;
+	struct scatterlist *sg;
 
 	/* Create vb2_ion_buf */
 	buf = kzalloc(sizeof *buf, GFP_KERNEL);
@@ -429,6 +430,11 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 		goto err_map_dma;
 	}
 	dbg(6, "PA(0x%x) size(%x)\n", buf->sg->dma_address, buf->sg->length);
+
+	sg = buf->sg;
+	do {
+		buf->nents++;
+	} while ((sg = sg_next(sg)));
 
 	/* Map DVA */
 	if (conf->use_mmu) {
