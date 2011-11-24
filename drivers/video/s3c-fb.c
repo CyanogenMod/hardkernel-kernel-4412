@@ -1407,8 +1407,6 @@ static int s3c_fb_open(struct fb_info *info, int user)
 	int win_no;
 
 	if (!atomic_read(&sfb->fb_use)) {
-		pm_runtime_get_sync(sfb->dev);
-
 		/* disable all windows */
 		for (win_no = 0; win_no < S3C_FB_MAX_WIN; win_no++) {
 			void __iomem *regs = sfb->regs;
@@ -1433,9 +1431,6 @@ static int s3c_fb_release(struct fb_info *info, int user)
 	struct s3c_fb *sfb = win->parent;
 
 	atomic_dec(&sfb->fb_use);
-
-	if (!atomic_read(&sfb->fb_use))
-		pm_runtime_put_sync(sfb->dev);
 
 	return 0;
 }
@@ -1764,15 +1759,6 @@ static void s3c_fb_early_suspend(struct early_suspend *handler)
 	int win_no;
 
 	sfb = container_of(handler, struct s3c_fb, early_suspend);
-	dev = sfb->dev;
-
-	if (pm_runtime_suspended(dev))
-		return;
-
-	if (dev->bus && dev->bus->pm && dev->bus->pm->runtime_suspend) {
-		dev->bus->pm->runtime_suspend(dev);
-		return;
-	}
 
 	for (win_no = S3C_FB_MAX_WIN - 1; win_no >= 0; win_no--) {
 		win = sfb->windows[win_no];
@@ -1791,6 +1777,8 @@ static void s3c_fb_early_suspend(struct early_suspend *handler)
 		clk_disable(sfb->lcd_clk);
 
 	clk_disable(sfb->bus_clk);
+	pm_runtime_put_sync(sfb->dev);
+
 	return;
 }
 static void s3c_fb_late_resume(struct early_suspend *handler)
@@ -1805,17 +1793,9 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 	u32 reg;
 
 	sfb = container_of(handler, struct s3c_fb, early_suspend);
-	dev = sfb->dev;
 	pd = sfb->pdata;
 
-	if (pm_runtime_suspended(dev))
-		return;
-
-	if (dev->bus && dev->bus->pm && dev->bus->pm->runtime_resume) {
-		dev->bus->pm->runtime_resume(dev);
-		return;
-	}
-
+	pm_runtime_get_sync(sfb->dev);
 	clk_enable(sfb->bus_clk);
 
 	if (!sfb->variant.has_clksel)
@@ -2389,7 +2369,6 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 	writel(DPCLKCON_ENABLE, sfb->regs + DPCLKCON);
 #endif
 	platform_set_drvdata(pdev, sfb);
-	pm_runtime_put_sync(sfb->dev);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	sfb->early_suspend.suspend = s3c_fb_early_suspend;
@@ -2442,8 +2421,6 @@ static int __devexit s3c_fb_remove(struct platform_device *pdev)
 	struct s3c_fb *sfb = platform_get_drvdata(pdev);
 	int win;
 
-	pm_runtime_get_sync(sfb->dev);
-
 	for (win = 0; win < S3C_FB_MAX_WIN; win++)
 		if (sfb->windows[win])
 			s3c_fb_release_win(sfb, sfb->windows[win]);
@@ -2482,14 +2459,6 @@ static int s3c_fb_suspend(struct device *dev)
 	struct s3c_fb_win *win;
 	int win_no;
 
-	if (pm_runtime_suspended(dev))
-		return 0;
-
-	if (dev->bus && dev->bus->pm && dev->bus->pm->runtime_suspend) {
-		dev->bus->pm->runtime_suspend(dev);
-		return 0;
-	}
-
 	for (win_no = S3C_FB_MAX_WIN - 1; win_no >= 0; win_no--) {
 		win = sfb->windows[win_no];
 		if (!win)
@@ -2506,6 +2475,8 @@ static int s3c_fb_suspend(struct device *dev)
 		clk_disable(sfb->lcd_clk);
 
 	clk_disable(sfb->bus_clk);
+	pm_runtime_put_sync(sfb->dev);
+
 	return 0;
 }
 
@@ -2520,14 +2491,7 @@ static int s3c_fb_resume(struct device *dev)
 	int i;
 	u32 reg;
 
-	if (pm_runtime_suspended(dev))
-		return 0;
-
-	if (dev->bus && dev->bus->pm && dev->bus->pm->runtime_resume) {
-		dev->bus->pm->runtime_resume(dev);
-		return 0;
-	}
-
+	pm_runtime_get_sync(sfb->dev);
 	clk_enable(sfb->bus_clk);
 
 	if (!sfb->variant.has_clksel)
@@ -2579,87 +2543,11 @@ static int s3c_fb_resume(struct device *dev)
 
 static int s3c_fb_runtime_suspend(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct s3c_fb *sfb = platform_get_drvdata(pdev);
-	struct s3c_fb_win *win;
-	int win_no;
-
-	for (win_no = S3C_FB_MAX_WIN - 1; win_no >= 0; win_no--) {
-		win = sfb->windows[win_no];
-		if (!win)
-			continue;
-
-		dev_dbg(&pdev->dev, "rpm : suspending window %d\n", win_no);
-		/* use the blank function to push into power-down */
-		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
-	}
-
-	/* wait for next frame */
-	mdelay(20);
-
-	if (!sfb->variant.has_clksel)
-		clk_disable(sfb->lcd_clk);
-
-	clk_disable(sfb->bus_clk);
 	return 0;
 }
 
 static int s3c_fb_runtime_resume(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct s3c_fb *sfb = platform_get_drvdata(pdev);
-	struct s3c_fb_platdata *pd = sfb->pdata;
-	struct s3c_fb_win *win;
-	int win_no;
-	int default_win;
-	int i;
-	u32 reg;
-
-	clk_enable(sfb->bus_clk);
-
-	if (!sfb->variant.has_clksel)
-		clk_enable(sfb->lcd_clk);
-
-	/* setup gpio and output polarity controls */
-	pd->setup_gpio();
-	writel(pd->vidcon1, sfb->regs + VIDCON1);
-
-	/* set video clock running at under-run */
-	if (sfb->variant.has_fixvclk) {
-		reg = readl(sfb->regs + VIDCON1);
-		reg &= ~VIDCON1_VCLK_MASK;
-		reg |= VIDCON1_VCLK_RUN;
-		writel(reg, sfb->regs + VIDCON1);
-	}
-
-	/* zero all windows before we do anything */
-	for (win_no = 0; win_no < sfb->variant.nr_windows; win_no++)
-		s3c_fb_clear_win(sfb, win_no);
-
-	for (win_no = 0; win_no < sfb->variant.nr_windows - 1; win_no++) {
-		void __iomem *regs = sfb->regs + sfb->variant.keycon;
-
-		regs += (win_no * 8);
-		writel(0xffffff, regs + WKEYCON0);
-		writel(0xffffff, regs + WKEYCON1);
-	}
-
-	/* restore framebuffers */
-	default_win = sfb->pdata->default_win;
-	for (i = 0; i < S3C_FB_MAX_WIN; i++) {
-		win_no = i;
-		if (i == 0)
-			win_no = default_win;
-		if (i == default_win)
-			win_no = 0;
-		win = sfb->windows[win_no];
-		if (!win)
-			continue;
-
-		dev_dbg(&pdev->dev, "rpm : resuming window %d\n", win_no);
-		s3c_fb_set_par(win->fbinfo);
-	}
-
 	return 0;
 }
 
