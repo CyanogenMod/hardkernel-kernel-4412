@@ -589,7 +589,6 @@ static struct clksrc_clk exynos5_clk_mout_aclk_300_disp1 = {
 static struct clksrc_clk exynos5_clk_mout_aclk_300_gscl_mid = {
 	.clk	= {
 		.name		= "mout_aclk_300_gscl_mid",
-		.parent		= &exynos5_clk_mout_mpll_user.clk,
 	},
 	.sources = &exynos5_clkset_aclk,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 24, .size = 1 },
@@ -609,7 +608,6 @@ struct clksrc_sources exynos5_clkset_aclk_300_gscl = {
 static struct clksrc_clk exynos5_clk_mout_aclk_300_gscl = {
 	.clk	= {
 		.name		= "mout_aclk_300_gscl",
-		.parent		= &exynos5_clk_sclk_vpll.clk,
 	},
 	.sources = &exynos5_clkset_aclk_300_gscl,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 25, .size = 1 },
@@ -626,6 +624,25 @@ static struct clksrc_clk exynos5_clk_dout_aclk_300_gscl = {
 static struct clk exynos5_clk_aclk_300_gscl_sub = {
 	.name		= "aclk_300_gscl_sub",
 	.parent		= &exynos5_clk_dout_aclk_300_gscl.clk,
+};
+
+/* Possible clock sources for aclk_300_gscl_sub Mux */
+static struct clk *clk_src_gscl_300_list[] = {
+	[0] = &clk_ext_xtal_mux,
+	[1] = &exynos5_clk_aclk_300_gscl_sub,
+};
+
+static struct clksrc_sources clk_src_gscl_300 = {
+	.sources	= clk_src_gscl_300_list,
+	.nr_sources	= ARRAY_SIZE(clk_src_gscl_300_list),
+};
+
+static struct clksrc_clk exynos5_clk_aclk_300_gscl = {
+	.clk	= {
+		.name		= "aclk_300_gscl",
+	},
+	.sources = &clk_src_gscl_300,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 10, .size = 1 },
 };
 
 /* For ACLK_266 */
@@ -1245,17 +1262,6 @@ static struct clksrc_sources clk_src_gscl_266 = {
 	.nr_sources	= ARRAY_SIZE(clk_src_gscl_266_list),
 };
 
-/* Possible clock sources for aclk_300_gscl_sub Mux */
-static struct clk *clk_src_gscl_300_list[] = {
-	[0] = &clk_ext_xtal_mux,
-	[1] = &exynos5_clk_aclk_300_gscl_sub,
-};
-
-static struct clksrc_sources clk_src_gscl_300 = {
-	.sources	= clk_src_gscl_300_list,
-	.nr_sources	= ARRAY_SIZE(clk_src_gscl_300_list),
-};
-
 static struct clksrc_clk exynos5_clk_dout_mmc0 = {
 	.clk		= {
 		.name		= "dout_mmc0",
@@ -1444,13 +1450,6 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 		.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 8, .size = 1 },
 	}, {
 		.clk	= {
-			.name		= "aclk_300_gscl",
-			.parent		= &exynos5_clk_aclk_300_gscl_sub,
-		},
-		.sources = &clk_src_gscl_300,
-		.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 10, .size = 1 },
-	}, {
-		.clk	= {
 			.name		= "sclk_g3d",
 			.devname	= "mali-t604.0",
 			.enable		= exynos5_clk_gate_block,
@@ -1531,6 +1530,7 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_mout_aclk_300_gscl_mid,
 	&exynos5_clk_mout_aclk_300_gscl,
 	&exynos5_clk_dout_aclk_300_gscl,
+	&exynos5_clk_aclk_300_gscl,
 	&exynos5_clk_dout_aclk_266,
 	&exynos5_clk_mout_aclk_200,
 	&exynos5_clk_mout_aclk_166,
@@ -1777,9 +1777,18 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	if (clk_set_parent(&exynos5_clk_mout_epll.clk, &clk_fout_epll))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				clk_fout_epll.name, exynos5_clk_mout_epll.clk.name);
+	if (clk_set_parent(&exynos5_clk_mout_aclk_300_gscl_mid.clk, &exynos5_clk_mout_mpll_user.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+			exynos5_clk_mout_mpll_user.clk.name, exynos5_clk_mout_aclk_300_gscl_mid.clk.name);
+	if (clk_set_parent(&exynos5_clk_mout_aclk_300_gscl.clk, &exynos5_clk_sclk_vpll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+			exynos5_clk_sclk_vpll.clk.name, exynos5_clk_mout_aclk_300_gscl.clk.name);
+	if (clk_set_parent(&exynos5_clk_aclk_300_gscl.clk, &exynos5_clk_aclk_300_gscl_sub))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+			exynos5_clk_aclk_300_gscl_sub.name, exynos5_clk_aclk_300_gscl.clk.name);
 
 	clk_set_rate(&exynos5_clk_sclk_apll.clk, 100000000);
-	clk_set_rate(&exynos5_clk_dout_aclk_300_gscl.clk, 330000000);
+	clk_set_rate(&exynos5_clk_dout_aclk_300_gscl.clk, 310000000);
 	clk_set_rate(&exynos5_clk_dout_aclk_266.clk, 300000000);
 
 	clk_set_rate(&exynos5_clk_aclk_acp.clk, 267000000);
