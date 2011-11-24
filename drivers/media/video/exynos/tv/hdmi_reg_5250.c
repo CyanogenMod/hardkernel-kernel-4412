@@ -14,7 +14,7 @@
 #include <linux/delay.h>
 
 #include "hdmi.h"
-#include "regs-hdmi-5210.h"
+#include "regs-hdmi-5250.h"
 
 static const struct hdmi_preset_conf hdmi_conf_480p60 = {
 	.core = {

@@ -66,7 +66,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 		int ret, i;
 		struct media_pad *pad;
 		struct v4l2_mbus_framefmt mbus_fmt;
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210)
 		struct mxr_resources *res = &mdev->res;
 #endif
 		struct sub_mxr_device *sub_mxr;
@@ -120,7 +120,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 		mxr_dbg(mdev, "cookie of current output = (%d)\n",
 			to_output(mdev)->cookie);
 
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210)
 		if (to_output(mdev)->cookie == 0)
 			clk_set_parent(res->sclk_mixer, res->sclk_dac);
 		else
@@ -317,7 +317,8 @@ static int __devinit mxr_acquire_plat_resources(struct mxr_device *mdev,
 		goto fail;
 	}
 
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "vp");
 	if (res == NULL) {
 		mxr_err(mdev, "get memory resource failed.\n");
@@ -350,7 +351,8 @@ static int __devinit mxr_acquire_plat_resources(struct mxr_device *mdev,
 	return 0;
 
 fail_vp_regs:
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	iounmap(mdev->res.vp_regs);
 
 fail_mxr_regs:
@@ -364,7 +366,8 @@ fail:
 static void mxr_release_plat_resources(struct mxr_device *mdev)
 {
 	free_irq(mdev->res.irq, mdev);
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) ||  defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	iounmap(mdev->res.vp_regs);
 #endif
 	iounmap(mdev->res.mxr_regs);
@@ -374,9 +377,12 @@ static void mxr_release_clocks(struct mxr_device *mdev)
 {
 	struct mxr_resources *res = &mdev->res;
 
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	if (!IS_ERR_OR_NULL(res->vp))
 		clk_put(res->vp);
+#endif
+#if defined(CONFIG_CPU_EXYNOS4210)
 	if (!IS_ERR_OR_NULL(res->sclk_mixer))
 		clk_put(res->sclk_mixer);
 	if (!IS_ERR_OR_NULL(res->sclk_dac))
@@ -393,12 +399,15 @@ static int mxr_acquire_clocks(struct mxr_device *mdev)
 	struct mxr_resources *res = &mdev->res;
 	struct device *dev = mdev->dev;
 
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	res->vp = clk_get(dev, "vp");
 	if (IS_ERR_OR_NULL(res->vp)) {
 		mxr_err(mdev, "failed to get clock 'vp'\n");
 		goto fail;
 	}
+#endif
+#if defined(CONFIG_CPU_EXYNOS4210)
 	res->sclk_mixer = clk_get(dev, "sclk_mixer");
 	if (IS_ERR_OR_NULL(res->sclk_mixer)) {
 		mxr_err(mdev, "failed to get clock 'sclk_mixer'\n");
@@ -504,8 +513,11 @@ static int mxr_runtime_resume(struct device *dev)
 	mutex_lock(&mdev->mutex);
 	/* turn clocks on */
 	clk_enable(res->mixer);
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	clk_enable(res->vp);
+#endif
+#if defined(CONFIG_CPU_EXYNOS4210)
 	clk_enable(res->sclk_mixer);
 #endif
 	/* apply default configuration */
@@ -523,8 +535,11 @@ static int mxr_runtime_suspend(struct device *dev)
 	mxr_dbg(mdev, "suspend - start\n");
 	mutex_lock(&mdev->mutex);
 	/* turn clocks off */
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210)
 	clk_disable(res->sclk_mixer);
+#endif
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	clk_disable(res->vp);
 #endif
 	clk_disable(res->mixer);

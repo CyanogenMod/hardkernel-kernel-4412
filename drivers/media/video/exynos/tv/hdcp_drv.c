@@ -9,7 +9,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#define DEBUG
 #include <linux/i2c.h>
 #include <linux/io.h>
 #include <linux/delay.h>
@@ -17,7 +16,7 @@
 #include <linux/workqueue.h>
 
 #include "hdmi.h"
-#include "regs-hdmi-5210.h"
+#include "regs-hdmi-5250.h"
 
 #define AN_SIZE			8
 #define AKSV_SIZE		5

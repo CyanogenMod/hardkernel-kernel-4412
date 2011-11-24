@@ -21,7 +21,8 @@
 
 static inline u32 vp_read(struct mxr_device *mdev, u32 reg_id)
 {
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	return readl(mdev->res.vp_regs + reg_id);
 #else
 	return 0;
@@ -30,7 +31,8 @@ static inline u32 vp_read(struct mxr_device *mdev, u32 reg_id)
 
 static inline void vp_write(struct mxr_device *mdev, u32 reg_id, u32 val)
 {
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	writel(val, mdev->res.vp_regs + reg_id);
 #endif
 }
@@ -38,7 +40,8 @@ static inline void vp_write(struct mxr_device *mdev, u32 reg_id, u32 val)
 static inline void vp_write_mask(struct mxr_device *mdev, u32 reg_id,
 	u32 val, u32 mask)
 {
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	u32 old = vp_read(mdev, reg_id);
 
 	val = (val & mask) | (old & ~mask);
@@ -70,14 +73,16 @@ void mxr_vsync_set_update(struct mxr_device *mdev, int en)
 	/* block update on vsync */
 	mxr_write_mask(mdev, MXR_STATUS, en ? MXR_STATUS_SYNC_ENABLE : 0,
 		MXR_STATUS_SYNC_ENABLE);
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	vp_write(mdev, VP_SHADOW_UPDATE, en ? VP_SHADOW_UPDATE_ENABLE : 0);
 #endif
 }
 
 static void __mxr_reg_vp_reset(struct mxr_device *mdev)
 {
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	int tries = 100;
 
 	vp_write(mdev, VP_SRESET, VP_SRESET_PROCESSING);
@@ -274,7 +279,8 @@ void mxr_reg_video_geo(struct mxr_device *mdev, int cur_mxr, int idx,
 void mxr_reg_vp_format(struct mxr_device *mdev,
 	const struct mxr_format *fmt, const struct mxr_geometry *geo)
 {
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	unsigned long flags;
 
 	spin_lock_irqsave(&mdev->reg_slock, flags);
@@ -344,7 +350,8 @@ void mxr_reg_graph_buffer(struct mxr_device *mdev, int idx, dma_addr_t addr)
 void mxr_reg_vp_buffer(struct mxr_device *mdev,
 	dma_addr_t luma_addr[2], dma_addr_t chroma_addr[2])
 {
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	u32 val = luma_addr[0] ? ~0 : 0;
 	unsigned long flags;
 
@@ -619,7 +626,8 @@ static inline void mxr_reg_vp_filter_set(struct mxr_device *mdev,
 
 static void mxr_reg_vp_default_filter(struct mxr_device *mdev)
 {
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	mxr_reg_vp_filter_set(mdev, VP_POLY8_Y0_LL,
 		filter_y_horiz_tap8, sizeof filter_y_horiz_tap8);
 	mxr_reg_vp_filter_set(mdev, VP_POLY4_Y0_LL,
@@ -669,7 +677,8 @@ do { \
 		(u32) readl(mdev->res.vp_regs + reg_id)); \
 } while (0)
 
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	DUMPREG(VP_ENABLE);
 	DUMPREG(VP_SRESET);
 	DUMPREG(VP_SHADOW_UPDATE);

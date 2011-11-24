@@ -5,7 +5,6 @@
 # Tomasz Stanislawski <t.stanislaws@samsung.com>
 #
 # Licensed under GPL
-
 obj-$(CONFIG_VIDEO_EXYNOS_HDMIPHY) += s5p-hdmiphy.o
 s5p-hdmiphy-y += hdmiphy_drv.o
 obj-$(CONFIG_VIDEO_EXYNOS_HDMI) += s5p-hdmi.o
@@ -15,12 +14,16 @@ s5p-sdo-y += sdo_drv.o
 obj-$(CONFIG_VIDEO_EXYNOS_MIXER) += s5p-mixer.o
 s5p-mixer-y += mixer_drv.o mixer_video.o mixer_reg.o mixer_grp_layer.o
 
-ifeq ($(CONFIG_VIDEO_EXYNOS_HDMI),y)
-obj-$(CONFIG_CPU_EXYNOS4210) += mixer_vp_layer.o
-obj-$(CONFIG_CPU_EXYNOS5210) += mixer_video_layer.o
-obj-$(CONFIG_CPU_EXYNOS4210) += hdmi_reg_4210.o
-obj-$(CONFIG_CPU_EXYNOS5210) += hdmi_reg_5210.o
-obj-$(CONFIG_CPU_EXYNOS4210) += hdmiphy_conf_4210.o
-obj-$(CONFIG_CPU_EXYNOS5210) += hdmiphy_conf_5210.o
+ifeq ($(CONFIG_ARCH_EXYNOS4), y)
+	s5p-mixer-y += mixer_vp_layer.o
+else
+	s5p-mixer-y += mixer_video_layer.o
 endif
 
+ifeq ($(CONFIG_VIDEO_EXYNOS_HDMI),y)
+	ifeq ($(CONFIG_CPU_EXYNOS4210), y)
+		s5p-hdmi-y += hdmi_reg_4210.o hdmiphy_conf_4210.o
+	else
+		s5p-hdmi-y += hdmi_reg_5250.o hdmiphy_conf_5250.o
+	endif
+endif

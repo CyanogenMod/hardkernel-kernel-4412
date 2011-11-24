@@ -236,11 +236,14 @@ struct mxr_resources {
 	int irq;
 	/** pointer to Mixer registers */
 	void __iomem *mxr_regs;
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 	/** pointer to Video Processor registers */
 	void __iomem *vp_regs;
 	/** other resources, should used under mxr_device.mutex */
 	struct clk *vp;
+#endif
+#if defined(CONFIG_CPU_EXYNOS4210)
 	struct clk *sclk_mixer;
 	struct clk *sclk_dac;
 #endif
@@ -448,7 +451,8 @@ void mxr_reg_video_layer_stream(struct mxr_device *mdev, int idx, int en);
 void mxr_reg_video_geo(struct mxr_device *mdev, int cur_mxr, int idx,
 		const struct mxr_geometry *geo);
 
-#ifndef CONFIG_CPU_EXYNOS5210
+#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
+	defined(CONFIG_CPU_EXYNOS4412)
 void mxr_reg_vp_layer_stream(struct mxr_device *mdev, int en);
 void mxr_reg_vp_buffer(struct mxr_device *mdev,
 	dma_addr_t luma_addr[2], dma_addr_t chroma_addr[2]);
