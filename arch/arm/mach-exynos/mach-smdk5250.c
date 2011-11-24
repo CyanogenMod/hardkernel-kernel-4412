@@ -56,6 +56,7 @@
 #include <plat/udc-ss.h>
 #include <plat/s5p-mfc.h>
 #include <plat/fimg2d.h>
+#include <plat/tv-core.h>
 
 #include <plat/mipi_csis.h>
 #include <mach/map.h>
@@ -1408,6 +1409,17 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 	&s3c_device_rtc,
 	&smdk5250_smsc911x,
+#ifdef CONFIG_VIDEO_EXYNOS_TV
+#ifdef CONFIG_VIDEO_EXYNOS_HDMI
+	&s5p_device_hdmi,
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS_HDMIPHY
+	&s5p_device_i2c_hdmiphy,
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS_MIXER
+	&s5p_device_mixer,
+#endif
+#endif
 #ifdef CONFIG_USB_EHCI_S5P
 	&s5p_device_ehci,
 #endif
@@ -1548,6 +1560,13 @@ static void __init exynos_reserve_mem(void)
 			.start		= 0x45000000,
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_TV
+		{
+			.name = "tv",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_TV * SZ_1K,
+			.start = 0
+		},
+#endif
 		{
 			.size = 0
 		},
@@ -1558,7 +1577,8 @@ static void __init exynos_reserve_mem(void)
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
 		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,fimd,fw,b1;"
 		"s5p-mfc-v6/f=fw;"
-		"s5p-mfc-v6/a=b1;";
+		"s5p-mfc-v6/a=b1;"
+		"s5p-mixer=tv;";
 
 	cma_set_defaults(regions, map);
 
@@ -1750,8 +1770,28 @@ static void l2_control(unsigned int setup, unsigned int latency)
 	: : "r"(val));
 }
 
+static void s5p_tv_setup(void)
+{
+	/* direct HPD to HDMI chip */
+	gpio_request(EXYNOS5_GPX3(7), "hpd-plug");
+
+	gpio_direction_input(EXYNOS5_GPX3(7));
+	s3c_gpio_cfgpin(EXYNOS5_GPX3(7), S3C_GPIO_SFN(0x3));
+	s3c_gpio_setpull(EXYNOS5_GPX3(7), S3C_GPIO_PULL_NONE);
+
+	/* setup dependencies between TV devices */
+	/* This will be added after power domain for exynos5 is developed */
+	s5p_device_hdmi.dev.parent = &exynos5_device_pd[PD_DISP1].dev;
+	s5p_device_mixer.dev.parent = &exynos5_device_pd[PD_DISP1].dev;
+}
+
 static void __init smdk5250_machine_init(void)
 {
+#if defined(CONFIG_VIDEO_EXYNOS_TV) && defined(CONFIG_VIDEO_EXYNOS_HDMI)
+	dev_set_name(&s5p_device_hdmi.dev, "exynos5-hdmi");
+	clk_add_alias("hdmi", "s5p-hdmi", "hdmi", &s5p_device_hdmi.dev);
+	clk_add_alias("hdmiphy", "s5p-hdmi", "hdmiphy", &s5p_device_hdmi.dev);
+#endif
 	s3c_i2c0_set_platdata(NULL);
 	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
 
@@ -1890,6 +1930,10 @@ static void __init smdk5250_machine_init(void)
 			&exynos5_device_gsc3);
 #endif
 	smdk5250_smsc911x_init();
+#ifdef CONFIG_VIDEO_EXYNOS_TV
+	s5p_tv_setup();
+	s5p_i2c_hdmiphy_set_platdata(NULL);
+#endif
 }
 
 MACHINE_START(SMDK5250, "SMDK5250")
