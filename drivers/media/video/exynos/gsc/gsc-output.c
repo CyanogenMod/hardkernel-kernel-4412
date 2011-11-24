@@ -117,6 +117,7 @@ int gsc_out_hw_set(struct gsc_ctx *ctx)
 	gsc_hw_set_mainscaler(ctx);
 	gsc_hw_set_rotation(ctx);
 	gsc_hw_set_global_alpha(ctx);
+	gsc_hw_set_input_buf_mask_all(gsc);
 
 	return 0;
 }
@@ -290,7 +291,7 @@ static int gsc_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (enable) {
 		set_bit(ST_OUTPUT_STREAMON, &gsc->state);
-		set_bit(ST_PWR_ON, &gsc->state);
+		pm_runtime_get_sync(&gsc->pdev->dev);
 		ret = gsc_out_hw_set(gsc->out.ctx);
 		if (ret) {
 			gsc_err("GSC H/W setting is failed");
@@ -298,8 +299,8 @@ static int gsc_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 		}
 	} else {
 		INIT_LIST_HEAD(&gsc->out.active_buf_q);
-		clear_bit(ST_PWR_ON, &gsc->state);
 		clear_bit(ST_OUTPUT_STREAMON, &gsc->state);
+		pm_runtime_put_sync(&gsc->pdev->dev);
 	}
 
 	return 0;
@@ -482,7 +483,6 @@ static int gsc_output_streamon(struct file *file, void *priv,
 	}
 
 	media_entity_pipeline_start(&out->vfd->entity, gsc->pipeline.pipe);
-	gsc_hw_set_input_buf_mask_all(gsc);
 
 	return vb2_streamon(&gsc->out.vbq, type);
 }

@@ -743,8 +743,9 @@ int gsc_prepare_addr(struct gsc_ctx *ctx, struct vb2_buffer *vb,
 
 void gsc_wq_suspend(struct work_struct *work)
 {
-	/* TODO :Add clock gating function and clear ST_PWR_ON state */
-	gsc_err("G-Scaler wait queue suspend~!");
+	struct gsc_dev *gsc = container_of(work, struct gsc_dev,
+					     work_struct);
+	pm_runtime_put_sync(&gsc->pdev->dev);
 }
 
 void gsc_cap_irq_handler(struct gsc_dev *gsc)
@@ -799,10 +800,9 @@ static irqreturn_t gsc_irq_handler(int irq, void *priv)
 				wake_up(&gsc->irq_queue);
 			}
 			spin_unlock(&ctx->slock);
-			/* Must add the clock gating function to here */
-
-			goto isr_unlock;
 		}
+		/* schedule pm_runtime_put_sync */
+		queue_work(gsc->irq_workqueue, &gsc->work_struct);
 	} else if (test_bit(ST_OUTPUT_STREAMON, &gsc->state)) {
 		struct gsc_input_buf *done_buf;
 		done_buf = active_queue_pop(&gsc->out, gsc);
@@ -829,6 +829,32 @@ static int gsc_get_media_info(struct device *dev, void *p)
 	if (!mdev[pdev->id])
 		return -ENODEV;
 
+	return 0;
+}
+
+static int gsc_runtime_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gsc_dev *gsc = (struct gsc_dev *)platform_get_drvdata(pdev);
+
+	if (gsc_m2m_opened(gsc))
+		gsc->m2m.ctx = NULL;
+
+	gsc->vb2->suspend(gsc->alloc_ctx);
+	clk_disable(gsc->clock);
+	clear_bit(ST_PWR_ON, &gsc->state);
+
+	return 0;
+}
+
+static int gsc_runtime_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct gsc_dev *gsc = (struct gsc_dev *)platform_get_drvdata(pdev);
+
+	clk_enable(gsc->clock);
+	gsc->vb2->resume(gsc->alloc_ctx);
+	set_bit(ST_PWR_ON, &gsc->state);
 	return 0;
 }
 
@@ -893,20 +919,20 @@ static int gsc_probe(struct platform_device *pdev)
 		gsc_err("failed to get gscaler.%d clock", gsc->id);
 		goto err_regs_unmap;
 	}
-	clk_enable(gsc->clock);
+	clk_put(gsc->clock);
 
 	res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "failed to get IRQ resource\n");
 		ret = -ENXIO;
-		goto err_clk;
+		goto err_regs_unmap;
 	}
 	gsc->irq = res->start;
 
 	ret = request_irq(gsc->irq, gsc_irq_handler, 0, pdev->name, gsc);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to install irq (%d)\n", ret);
-		goto err_clk;
+		goto err_regs_unmap;
 	}
 
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
@@ -948,6 +974,7 @@ static int gsc_probe(struct platform_device *pdev)
 		if (ret)
 			goto err_irq;
 	}
+	pm_runtime_enable(&pdev->dev);
 
 	sprintf(workqueue_name, "gsc%d_irq_wq_name", gsc->id);
 	gsc->irq_workqueue = create_singlethread_workqueue(workqueue_name);
@@ -962,8 +989,6 @@ static int gsc_probe(struct platform_device *pdev)
 		ret = PTR_ERR(gsc->alloc_ctx);
 		goto err_wq;
 	}
-	/* FIXME: Move sysmmu resume function to runtime PM resume function */
-	gsc->vb2->resume(gsc->alloc_ctx);
 
 	gsc_info("gsc-%d registered successfully", gsc->id);
 
@@ -973,8 +998,6 @@ err_wq:
 	destroy_workqueue(gsc->irq_workqueue);
 err_irq:
 	free_irq(gsc->irq, gsc);
-err_clk:
-	clk_put(gsc->clock);
 err_regs_unmap:
 	iounmap(gsc->regs);
 err_req_region:
@@ -1091,6 +1114,10 @@ static int gsc_resume(struct device *dev)
 static const struct dev_pm_ops gsc_pm_ops = {
 	.suspend		= gsc_suspend,
 	.resume			= gsc_resume,
+#ifdef CONFIG_PM_RUNTIME
+	.runtime_suspend	= gsc_runtime_suspend,
+	.runtime_resume		= gsc_runtime_resume,
+#endif
 };
 
 struct gsc_pix_max gsc_max_exynos5210 = {

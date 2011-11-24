@@ -220,16 +220,17 @@ static void gsc_dma_run(void *priv)
 		goto dma_unlock;
 	}
 
-	/* Add the function to enable the clock */
-	if (!test_and_set_bit(ST_PWR_ON, &gsc->state)) {
-		gsc_hw_set_frm_done_irq_mask(gsc, false);
-		gsc_hw_set_gsc_irq_enable(gsc, true);
-	}
+	pm_runtime_get_sync(&gsc->pdev->dev);
 
 	gsc_hw_set_input_addr(gsc, &ctx->s_frame.addr, GSC_M2M_BUF_NUM);
 	gsc_hw_set_output_addr(gsc, &ctx->d_frame.addr, GSC_M2M_BUF_NUM);
 
 	if (ctx->state & GSC_PARAMS) {
+		gsc_hw_set_input_buf_masking(gsc, GSC_M2M_BUF_NUM, false);
+		gsc_hw_set_output_buf_masking(gsc, GSC_M2M_BUF_NUM, false);
+		gsc_hw_set_frm_done_irq_mask(gsc, false);
+		gsc_hw_set_gsc_irq_enable(gsc, true);
+
 		if (gsc_set_scaler_info(ctx)) {
 			gsc_err("Scaler setup error");
 			goto dma_unlock;
@@ -658,9 +659,6 @@ static int gsc_m2m_open(struct file *file)
 
 	if (gsc->m2m.refcnt++ == 0)
 		set_bit(ST_M2M_OPEN, &gsc->state);
-
-	gsc_hw_set_input_buf_masking(gsc, GSC_M2M_BUF_NUM, false);
-	gsc_hw_set_output_buf_masking(gsc, GSC_M2M_BUF_NUM, false);
 
 	gsc_dbg("gsc m2m driver is opened, ctx(0x%08x)", ctx);
 	return 0;
