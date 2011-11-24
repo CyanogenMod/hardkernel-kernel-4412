@@ -36,6 +36,7 @@
 #include "fimc-is-regs.h"
 #include "fimc-is-cmd.h"
 #include "fimc-is-param.h"
+#include "fimc-is-err.h"
 
 /*
 Default setting values
@@ -61,21 +62,27 @@ Default setting values
 #define CAPTURE_HEIGHT		2424
 #define CAMCORDING_WIDTH	1920
 #define CAMCORDING_HEIGHT	1080
-#define PREVIEW_FRAMERATE	30
+#define PREVIEW_FRAMERATE	15
 #define CAPTURE_FRAMERATE	15
-#define CAMCORDING_FRAMERATE	30
+#define CAMCORDING_FRAMERATE	15
 #endif
 #endif
 #ifdef CONFIG_VIDEO_S5K6A3
 #define PREVIEW_WIDTH		640
 #define PREVIEW_HEIGHT		480
-#define CAPTURE_WIDTH		1396
-#define CAPTURE_HEIGHT		1400
+#define CAPTURE_WIDTH		1392
+#define CAPTURE_HEIGHT		1392
 #define CAMCORDING_WIDTH	1280
 #define CAMCORDING_HEIGHT	720
+#ifndef FIX_FRAMERATE
+#define PREVIEW_FRAMERATE	30
+#define CAPTURE_FRAMERATE	15
+#define CAMCORDING_FRAMERATE	30
+#else
 #define PREVIEW_FRAMERATE	30
 #define CAPTURE_FRAMERATE	30
 #define CAMCORDING_FRAMERATE	30
+#endif
 #endif
 
 static const struct sensor_param init_val_sensor_preview = {
@@ -100,6 +107,10 @@ static const struct isp_param init_val_isp_preview = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+#ifdef FIX_FRAMERATE
+		.reserved[3] = 0,
+		.reserved[4] = 66666,
+#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -117,10 +128,10 @@ static const struct isp_param init_val_isp_preview = {
 		.err = 0,
 	},
 	.aa = {
-		.cmd = ISP_AA_COMMAND_STOP,
+		.cmd = ISP_AA_COMMAND_START,
 		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
 						ISP_AA_TARGET_AWB,
-		.mode = ISP_AF_MODE_CENTER,
+		.mode = 0,
 		.face = 0,
 		.continuous = 0,
 		.win_pos_x = 0, .win_pos_y = 0,
@@ -258,14 +269,26 @@ static const struct fd_param init_val_fd_preview = {
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
 		.err = 0,
 	},
-	.result = {
-		.max_number = 10,
-		.err = FD_ERROR_NO,
-	},
-	.mode = {
-		.smile = FD_MODE_SMILE_DISABLE,
-		.blink = FD_MODE_BLINK_DISABLE,
-		.err = FD_ERROR_NO,
+	.config = {
+		.cmd = FD_CONFIG_COMMAND_MAXIMUM_NUMBER |
+			FD_CONFIG_COMMAND_ROLL_ANGLE |
+			FD_CONFIG_COMMAND_YAW_ANGLE |
+			FD_CONFIG_COMMAND_SMILE_MODE |
+			FD_CONFIG_COMMAND_BLINK_MODE |
+			FD_CONFIG_COMMAND_EYES_DETECT |
+			FD_CONFIG_COMMAND_MOUTH_DETECT |
+			FD_CONFIG_COMMAND_ORIENTATION |
+			FD_CONFIG_COMMAND_ORIENTATION_VALUE,
+		.max_number = 5,
+		.roll_angle = FD_CONFIG_ROLL_ANGLE_FULL,
+		.yaw_angle = FD_CONFIG_YAW_ANGLE_45,
+		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
+		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
+		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
+		.mouth_detect = FD_CONFIG_MOUTH_DETECT_ENABLE,
+		.orientation = FD_CONFIG_ORIENTATION_DISABLE,
+		.orientation_value = 0,
+		.err = ERROR_FD_NO,
 	},
 };
 
@@ -291,6 +314,10 @@ static const struct isp_param init_val_isp_capture = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+#ifdef FIX_FRAMERATE
+		.reserved[3] = 0,
+		.reserved[4] = 66666,
+#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -308,10 +335,10 @@ static const struct isp_param init_val_isp_capture = {
 		.err = 0,
 	},
 	.aa = {
-		.cmd = ISP_AA_COMMAND_STOP,
+		.cmd = ISP_AA_COMMAND_START,
 		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
 						ISP_AA_TARGET_AWB,
-		.mode = ISP_AF_MODE_CENTER,
+		.mode = 0,
 		.face = 0,
 		.continuous = 0,
 		.win_pos_x = 0, .win_pos_y = 0,
@@ -434,14 +461,26 @@ static const struct fd_param init_val_fd_capture = {
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
 		.err = 0,
 	},
-	.result = {
-		.max_number = 10,
-		.err = FD_ERROR_NO,
-	},
-	.mode = {
-		.smile = FD_MODE_SMILE_DISABLE,
-		.blink = FD_MODE_BLINK_DISABLE,
-		.err = FD_ERROR_NO,
+	.config = {
+		.cmd = FD_CONFIG_COMMAND_MAXIMUM_NUMBER |
+			FD_CONFIG_COMMAND_ROLL_ANGLE |
+			FD_CONFIG_COMMAND_YAW_ANGLE |
+			FD_CONFIG_COMMAND_SMILE_MODE |
+			FD_CONFIG_COMMAND_BLINK_MODE |
+			FD_CONFIG_COMMAND_EYES_DETECT |
+			FD_CONFIG_COMMAND_MOUTH_DETECT |
+			FD_CONFIG_COMMAND_ORIENTATION |
+			FD_CONFIG_COMMAND_ORIENTATION_VALUE,
+		.max_number = 5,
+		.roll_angle = FD_CONFIG_ROLL_ANGLE_FULL,
+		.yaw_angle = FD_CONFIG_YAW_ANGLE_45,
+		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
+		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
+		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
+		.mouth_detect = FD_CONFIG_MOUTH_DETECT_ENABLE,
+		.orientation = FD_CONFIG_ORIENTATION_DISABLE,
+		.orientation_value = 0,
+		.err = ERROR_FD_NO,
 	},
 };
 
@@ -467,6 +506,10 @@ static const struct isp_param init_val_isp_camcording = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+#ifdef FIX_FRAMERATE
+		.reserved[3] = 0,
+		.reserved[4] = 66666,
+#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -484,10 +527,10 @@ static const struct isp_param init_val_isp_camcording = {
 		.err = 0,
 	},
 	.aa = {
-		.cmd = ISP_AA_COMMAND_STOP,
+		.cmd = ISP_AA_COMMAND_START,
 		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
 						ISP_AA_TARGET_AWB,
-		.mode = ISP_AF_MODE_CENTER,
+		.mode = 0,
 		.face = 0,
 		.continuous = 0,
 		.win_pos_x = 0, .win_pos_y = 0,
@@ -625,14 +668,26 @@ static const struct fd_param init_val_fd_camcording = {
 		.order = 0, .buffer_number = 0, .buffer_address = 0,
 		.err = 0,
 	},
-	.result = {
-		.max_number = 10,
-		.err = FD_ERROR_NO,
-	},
-	.mode = {
-		.smile = FD_MODE_SMILE_DISABLE,
-		.blink = FD_MODE_BLINK_DISABLE,
-		.err = FD_ERROR_NO,
+	.config = {
+		.cmd = FD_CONFIG_COMMAND_MAXIMUM_NUMBER |
+			FD_CONFIG_COMMAND_ROLL_ANGLE |
+			FD_CONFIG_COMMAND_YAW_ANGLE |
+			FD_CONFIG_COMMAND_SMILE_MODE |
+			FD_CONFIG_COMMAND_BLINK_MODE |
+			FD_CONFIG_COMMAND_EYES_DETECT |
+			FD_CONFIG_COMMAND_MOUTH_DETECT |
+			FD_CONFIG_COMMAND_ORIENTATION |
+			FD_CONFIG_COMMAND_ORIENTATION_VALUE,
+		.max_number = 5,
+		.roll_angle = FD_CONFIG_ROLL_ANGLE_FULL,
+		.yaw_angle = FD_CONFIG_YAW_ANGLE_45,
+		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
+		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
+		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
+		.mouth_detect = FD_CONFIG_MOUTH_DETECT_ENABLE,
+		.orientation = FD_CONFIG_ORIENTATION_DISABLE,
+		.orientation_value = 0,
+		.err = ERROR_FD_NO,
 	},
 };
 /*
@@ -690,18 +745,6 @@ void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 	writel(HIC_OPEN_SENSOR, dev->regs + ISSR0);
 	writel(id, dev->regs + ISSR1);
 	switch (sensor_index) {
-	case SENSOR_S5K3H1_CSI_A:
-		dev->af.use_af = 1;
-		/* Parameter1 : Sensor Name(IS_Sensor.h) */
-		writel(SENSOR_NAME_S5K3H1, dev->regs + ISSR2);
-		/* Parameter2 : I2c channel used by parameter1 sensor */
-		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
-		break;
-	case SENSOR_S5K3H1_CSI_B:
-		dev->af.use_af = 1;
-		writel(SENSOR_NAME_S5K3H1, dev->regs + ISSR2);
-		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
-		break;
 	case SENSOR_S5K3H2_CSI_A:
 		dev->af.use_af = 1;
 		writel(SENSOR_NAME_S5K3H2, dev->regs + ISSR2);
@@ -975,6 +1018,12 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_preview.otf_input.err);
+#ifdef FIX_FRAMERATE
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
+			init_val_isp_preview.otf_input.reserved[3]);
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
+			init_val_isp_preview.otf_input.reserved[4]);
+#endif
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -1276,19 +1325,29 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_fd_preview.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev,
-			init_val_fd_preview.result.max_number);
-		IS_FD_SET_PARAM_FD_RESULT_ERR(dev,
-			init_val_fd_preview.result.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
-		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FD_MODE_SMILE(dev,
-			init_val_fd_preview.mode.smile);
-		IS_FD_SET_PARAM_FD_MODE_BLINK(dev,
-			init_val_fd_preview.mode.blink);
-		IS_FD_SET_PARAM_FD_MODE_ERR(dev,
-			init_val_fd_preview.mode.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_MODE);
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			init_val_fd_preview.config.cmd);
+		IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev,
+			init_val_fd_preview.config.max_number);
+		IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev,
+			init_val_fd_preview.config.roll_angle);
+		IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev,
+			init_val_fd_preview.config.yaw_angle);
+		IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev,
+			init_val_fd_preview.config.smile_mode);
+		IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev,
+			init_val_fd_preview.config.blink_mode);
+		IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev,
+			init_val_fd_preview.config.eye_detect);
+		IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev,
+			init_val_fd_preview.config.mouth_detect);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev,
+			init_val_fd_preview.config.orientation);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev,
+			init_val_fd_preview.config.orientation_value);
+		IS_FD_SET_PARAM_FD_CONFIG_ERR(dev,
+			init_val_fd_preview.config.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
 		IS_INC_PARAM_NUM(dev);
 
 		dev->sensor.width_prev =
@@ -1327,6 +1386,12 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_preview.otf_input.err);
+#ifdef FIX_FRAMERATE
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
+			init_val_isp_preview.otf_input.reserved[3]);
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
+			init_val_isp_preview.otf_input.reserved[4]);
+#endif
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -1628,19 +1693,29 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_fd_preview.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev,
-			init_val_fd_preview.result.max_number);
-		IS_FD_SET_PARAM_FD_RESULT_ERR(dev,
-			init_val_fd_preview.result.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
-		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FD_MODE_SMILE(dev,
-			init_val_fd_preview.mode.smile);
-		IS_FD_SET_PARAM_FD_MODE_BLINK(dev,
-			init_val_fd_preview.mode.blink);
-		IS_FD_SET_PARAM_FD_MODE_ERR(dev,
-			init_val_fd_preview.mode.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_MODE);
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			init_val_fd_preview.config.cmd);
+		IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev,
+			init_val_fd_preview.config.max_number);
+		IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev,
+			init_val_fd_preview.config.roll_angle);
+		IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev,
+			init_val_fd_preview.config.yaw_angle);
+		IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev,
+			init_val_fd_preview.config.smile_mode);
+		IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev,
+			init_val_fd_preview.config.blink_mode);
+		IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev,
+			init_val_fd_preview.config.eye_detect);
+		IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev,
+			init_val_fd_preview.config.mouth_detect);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev,
+			init_val_fd_preview.config.orientation);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev,
+			init_val_fd_preview.config.orientation_value);
+		IS_FD_SET_PARAM_FD_CONFIG_ERR(dev,
+			init_val_fd_preview.config.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
 		IS_INC_PARAM_NUM(dev);
 
 		dev->sensor.width_prev_cam =
@@ -1680,6 +1755,12 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_capture.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_capture.otf_input.err);
+#ifdef FIX_FRAMERATE
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
+			init_val_isp_capture.otf_input.reserved[3]);
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
+			init_val_isp_capture.otf_input.reserved[4]);
+#endif
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -1981,19 +2062,29 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_fd_capture.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev,
-			init_val_fd_preview.result.max_number);
-		IS_FD_SET_PARAM_FD_RESULT_ERR(dev,
-			init_val_fd_preview.result.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
-		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FD_MODE_SMILE(dev,
-			init_val_fd_preview.mode.smile);
-		IS_FD_SET_PARAM_FD_MODE_BLINK(dev,
-			init_val_fd_preview.mode.blink);
-		IS_FD_SET_PARAM_FD_MODE_ERR(dev,
-			init_val_fd_preview.mode.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_MODE);
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			init_val_fd_capture.config.cmd);
+		IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev,
+			init_val_fd_capture.config.max_number);
+		IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev,
+			init_val_fd_capture.config.roll_angle);
+		IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev,
+			init_val_fd_capture.config.yaw_angle);
+		IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev,
+			init_val_fd_capture.config.smile_mode);
+		IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev,
+			init_val_fd_capture.config.blink_mode);
+		IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev,
+			init_val_fd_capture.config.eye_detect);
+		IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev,
+			init_val_fd_capture.config.mouth_detect);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev,
+			init_val_fd_capture.config.orientation);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev,
+			init_val_fd_capture.config.orientation_value);
+		IS_FD_SET_PARAM_FD_CONFIG_ERR(dev,
+			init_val_fd_capture.config.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
 		IS_INC_PARAM_NUM(dev);
 		break;
 
@@ -2028,6 +2119,12 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_camcording.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_camcording.otf_input.err);
+#ifdef FIX_FRAMERATE
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
+			init_val_isp_camcording.otf_input.reserved[3]);
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
+			init_val_isp_camcording.otf_input.reserved[4]);
+#endif
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -2330,19 +2427,29 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_fd_camcording.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev,
-			init_val_fd_preview.result.max_number);
-		IS_FD_SET_PARAM_FD_RESULT_ERR(dev,
-			init_val_fd_preview.result.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
-		IS_INC_PARAM_NUM(dev);
-		IS_FD_SET_PARAM_FD_MODE_SMILE(dev,
-			init_val_fd_preview.mode.smile);
-		IS_FD_SET_PARAM_FD_MODE_BLINK(dev,
-			init_val_fd_preview.mode.blink);
-		IS_FD_SET_PARAM_FD_MODE_ERR(dev,
-			init_val_fd_preview.mode.err);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_MODE);
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			init_val_fd_camcording.config.cmd);
+		IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev,
+			init_val_fd_camcording.config.max_number);
+		IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev,
+			init_val_fd_camcording.config.roll_angle);
+		IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev,
+			init_val_fd_camcording.config.yaw_angle);
+		IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev,
+			init_val_fd_camcording.config.smile_mode);
+		IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev,
+			init_val_fd_camcording.config.blink_mode);
+		IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev,
+			init_val_fd_camcording.config.eye_detect);
+		IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev,
+			init_val_fd_camcording.config.mouth_detect);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev,
+			init_val_fd_camcording.config.orientation);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev,
+			init_val_fd_camcording.config.orientation_value);
+		IS_FD_SET_PARAM_FD_CONFIG_ERR(dev,
+			init_val_fd_camcording.config.err);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
 		IS_INC_PARAM_NUM(dev);
 		break;
 	}

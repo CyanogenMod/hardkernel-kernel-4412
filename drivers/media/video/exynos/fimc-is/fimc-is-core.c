@@ -43,6 +43,7 @@
 #include "fimc-is-regs.h"
 #include "fimc-is-param.h"
 #include "fimc-is-cmd.h"
+#include "fimc-is-err.h"
 
 struct fimc_is_dev *to_fimc_is_dev(struct v4l2_subdev *sdev)
 {
@@ -241,45 +242,12 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	case ISR_NDONE:
 		err("ISR_NDONE - %d: %d\n", dev->i2h_cmd.arg[0],
 			dev->i2h_cmd.arg[1]);
+		fimc_is_print_err_number(dev->i2h_cmd.arg[1]);
 		switch (dev->i2h_cmd.arg[1]) {
 		case IS_ERROR_SET_PARAMETER:
-			printk(KERN_ERR "SET_PARAMETER ERR : %d\n",
-				dev->i2h_cmd.arg[2]);
-			printk(KERN_ERR "SET_PARAMETER ERR : %d\n",
-				dev->i2h_cmd.arg[3]);
-			if (dev->is_p_region->parameter.isp.control.err)
-				printk(KERN_ERR "ISP - Control error : %d\n",
-				dev->is_p_region->parameter.isp.control.err);
-			if (dev->is_p_region->parameter.isp.otf_input.err)
-				printk(KERN_ERR "ISP - OTF In error : %d\n",
-				dev->is_p_region->parameter.isp.otf_input.err);
-			if (dev->is_p_region->parameter.isp.otf_output.err)
-				printk(KERN_ERR "ISP - OTF Out error : %d\n",
-			dev->is_p_region->parameter.isp.otf_output.err);
-			if (dev->is_p_region->parameter.isp.aa.err)
-				printk(KERN_ERR "ISP - AF error : %d\n",
-				dev->is_p_region->parameter.isp.aa.err);
-			if (dev->is_p_region->parameter.isp.flash.err)
-				printk(KERN_ERR "ISP - FLASH error : %d\n",
-				dev->is_p_region->parameter.isp.flash.err);
-			if (dev->is_p_region->parameter.isp.awb.err)
-				printk(KERN_ERR "ISP - AWB error : %d\n",
-				dev->is_p_region->parameter.isp.awb.err);
-			if (dev->is_p_region->parameter.isp.effect.err)
-				printk(KERN_ERR "ISP - EFFECT error : %d\n",
-				dev->is_p_region->parameter.isp.effect.err);
-			if (dev->is_p_region->parameter.isp.iso.err)
-				printk(KERN_ERR "ISP - ISO error : %d\n",
-				dev->is_p_region->parameter.isp.iso.err);
-			if (dev->is_p_region->parameter.isp.adjust.err)
-				printk(KERN_ERR "ISP - ADJUST error : %d\n",
-				dev->is_p_region->parameter.isp.adjust.err);
-			if (dev->is_p_region->parameter.isp.metering.err)
-				printk(KERN_ERR "ISP - METERING error : %d\n",
-				dev->is_p_region->parameter.isp.metering.err);
-			if (dev->is_p_region->parameter.isp.afc.err)
-				printk(KERN_ERR "ISP - AFC error : %d\n",
-				dev->is_p_region->parameter.isp.afc.err);
+			fimc_is_mem_cache_inv((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_param_err_checker(dev);
 			break;
 		}
 		break;

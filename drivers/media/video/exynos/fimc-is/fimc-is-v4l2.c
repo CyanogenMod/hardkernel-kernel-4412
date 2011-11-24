@@ -46,6 +46,7 @@
 #include "fimc-is-regs.h"
 #include "fimc-is-param.h"
 #include "fimc-is-cmd.h"
+#include "fimc-is-err.h"
 
 /* Binary load functions */
 static int fimc_is_request_firmware(struct fimc_is_dev *dev)
@@ -84,7 +85,8 @@ static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 	}
 
 	memcpy((void *)phys_to_virt(dev->mem.base), (void *)buf, fsize);
-	fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base), fsize);
+	fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
+		fsize + 1);
 	dev->fw.state = 1;
 request_fw:
 	if (fw_requested) {
@@ -100,7 +102,7 @@ request_fw:
 		memcpy((void *)phys_to_virt(dev->mem.base),
 				fw_blob->data, fw_blob->size);
 		fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
-								fw_blob->size);
+							fw_blob->size + 1);
 		dev->fw.state = 1;
 		dbg("FIMC_IS F/W loaded successfully - size:%d\n",
 							fw_blob->size);
@@ -158,7 +160,9 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 
 	memcpy((void *)phys_to_virt(dev->mem.base + dev->setfile.base),
 							(void *)buf, fsize);
-	fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base), fsize);
+	fimc_is_mem_cache_clean(
+		(void *)phys_to_virt(dev->mem.base + dev->setfile.base),
+		fsize + 1);
 	dev->fw.state = 1;
 request_fw:
 	if (fw_requested) {
@@ -173,8 +177,9 @@ request_fw:
 		}
 		memcpy((void *)phys_to_virt(dev->mem.base + dev->setfile.base),
 			fw_blob->data, fw_blob->size);
-		fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
-			fw_blob->size);
+		fimc_is_mem_cache_clean(
+			(void *)phys_to_virt(dev->mem.base + dev->setfile.base),
+			fw_blob->size + 1);
 		dev->setfile.state = 1;
 		dbg("FIMC_IS setfile loaded successfully - size:%d\n",
 								fw_blob->size);
@@ -183,6 +188,8 @@ request_fw:
 	}
 #endif
 
+	dbg("A5 mem base  = 0x%08x\n", dev->mem.base);
+	dbg("Setfile base  = 0x%08x\n", dev->setfile.base);
 out:
 #ifdef SDCARD_FW
 	if (!fw_requested) {
@@ -491,20 +498,36 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	/* Get current sensor size  */
 	case V4L2_CID_IS_GET_SENSOR_WIDTH:
-		if (dev->scenario_id == ISS_PREVIEW_STILL)
+		switch (dev->scenario_id) {
+		case ISS_PREVIEW_STILL:
 			ctrl->value = dev->sensor.width_prev;
-		else if (dev->scenario_id == ISS_PREVIEW_VIDEO)
+			break;
+		case ISS_PREVIEW_VIDEO:
 			ctrl->value = dev->sensor.width_prev_cam;
-		else
+			break;
+		case ISS_CAPTURE_STILL:
 			ctrl->value = dev->sensor.width_cap;
+			break;
+		case ISS_CAPTURE_VIDEO:
+			ctrl->value = dev->sensor.width_cam;
+			break;
+		}
 		break;
 	case V4L2_CID_IS_GET_SENSOR_HEIGHT:
-		if (dev->scenario_id == ISS_PREVIEW_STILL)
+		switch (dev->scenario_id) {
+		case ISS_PREVIEW_STILL:
 			ctrl->value = dev->sensor.height_prev;
-		else if (dev->scenario_id == ISS_PREVIEW_VIDEO)
+			break;
+		case ISS_PREVIEW_VIDEO:
 			ctrl->value = dev->sensor.height_prev_cam;
-		else
+			break;
+		case ISS_CAPTURE_STILL:
 			ctrl->value = dev->sensor.height_cap;
+			break;
+		case ISS_CAPTURE_VIDEO:
+			ctrl->value = dev->sensor.height_cam;
+			break;
+		}
 		break;
 	/* Get information related to frame management  */
 	case V4L2_CID_IS_GET_FRAME_VALID:
@@ -658,15 +681,15 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_IS_CAMERA_WINDOW_SIZE_Y:
 		dev->af.height = ctrl->value;
 		break;
-	case V4L2_CID_IS_CAMERA_FOCUS_MODE:
+	case V4L2_CID_CAMERA_FOCUS_MODE:
 		switch (ctrl->value) {
-		case IS_FOCUS_MODE_AUTO:
+		case FOCUS_MODE_AUTO:
 			dev->af.mode = IS_FOCUS_MODE_AUTO;
 			break;
-		case IS_FOCUS_MODE_MACRO:
+		case FOCUS_MODE_MACRO:
 			dev->af.mode = IS_FOCUS_MODE_MACRO;
 			break;
-		case IS_FOCUS_MODE_INFINITY:
+		case FOCUS_MODE_INFINITY:
 			/* ABORT first */
 			if (dev->af.af_state != FIMC_IS_AF_IDLE) {
 				dev->af.af_state = FIMC_IS_AF_ABORT;
@@ -707,7 +730,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 			break;
-		case IS_FOCUS_MODE_CONTINUOUS:
+		case FOCUS_MODE_CONTINOUS:
 			dev->af.mode = IS_FOCUS_MODE_CONTINUOUS;
 			/* ABORT first */
 			if (dev->af.af_state != FIMC_IS_AF_IDLE) {
@@ -749,7 +772,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			dev->af.ae_lock_state = 0;
 			dev->af.awb_lock_state = 0;
 			break;
-		case IS_FOCUS_MODE_TOUCH:
+		case FOCUS_MODE_TOUCH:
 			dev->af.mode = IS_FOCUS_MODE_TOUCH;
 			/* ABORT first */
 			if (dev->af.af_state != FIMC_IS_AF_IDLE) {
@@ -795,7 +818,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			dev->af.ae_lock_state = 0;
 			dev->af.awb_lock_state = 0;
 			break;
-		case IS_FOCUS_MODE_FACEDETECT:
+		case FOCUS_MODE_FACEDETECT:
 			dev->af.mode = IS_FOCUS_MODE_FACEDETECT;
 			/* ABORT first */
 			if (dev->af.af_state != FIMC_IS_AF_IDLE) {
@@ -1394,9 +1417,45 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_IS_CAMERA_METERING_POSITION_X:
 		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, ctrl->value);
+		switch (dev->scenario_id) {
+		case ISS_PREVIEW_STILL:
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
+						dev->sensor.width_prev);
+			break;
+		case ISS_PREVIEW_VIDEO:
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
+						dev->sensor.width_prev_cam);
+			break;
+		case ISS_CAPTURE_STILL:
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
+						dev->sensor.width_cap);
+			break;
+		case ISS_CAPTURE_VIDEO:
+			IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
+						dev->sensor.width_cam);
+			break;
+		}
 		break;
 	case V4L2_CID_IS_CAMERA_METERING_POSITION_Y:
 		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, ctrl->value);
+		switch (dev->scenario_id) {
+		case ISS_PREVIEW_STILL:
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
+						dev->sensor.height_prev);
+			break;
+		case ISS_PREVIEW_VIDEO:
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
+						dev->sensor.height_prev_cam);
+			break;
+		case ISS_CAPTURE_STILL:
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
+						dev->sensor.height_cap);
+			break;
+		case ISS_CAPTURE_VIDEO:
+			IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
+						dev->sensor.height_cam);
+			break;
+		}
 		break;
 	case V4L2_CID_IS_CAMERA_METERING_WINDOW_X:
 		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, ctrl->value);
@@ -1432,15 +1491,107 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			fimc_is_hw_set_param(dev);
 		}
 		break;
-	case V4L2_CID_IS_FD_NUM_FACE:
+	case V4L2_CID_IS_FD_SET_MAX_FACE_NUMBER:
 		if (ctrl->value >= 0) {
-			IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
+			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+				FD_CONFIG_COMMAND_MAXIMUM_NUMBER);
+			IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev, ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
 			IS_INC_PARAM_NUM(dev);
 			fimc_is_mem_cache_clean((void *)dev->is_p_region,
 				IS_PARAM_SIZE);
 			fimc_is_hw_set_param(dev);
 		}
+		break;
+	case V4L2_CID_IS_FD_SET_ROLL_ANGLE:
+		switch (ctrl->value) {
+		case IS_FD_ROLL_ANGLE_BASIC:
+			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+				FD_CONFIG_COMMAND_ROLL_ANGLE);
+			IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev, ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case V4L2_CID_IS_FD_SET_YAW_ANGLE:
+			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+				FD_CONFIG_COMMAND_YAW_ANGLE);
+			IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev, ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case V4L2_CID_IS_FD_SET_SMILE_MODE:
+			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+				FD_CONFIG_COMMAND_SMILE_MODE);
+			IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev, ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case V4L2_CID_IS_FD_SET_BLINK_MODE:
+			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+				FD_CONFIG_COMMAND_BLINK_MODE);
+			IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev, ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case V4L2_CID_IS_FD_SET_EYE_DETECT_MODE:
+			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+				FD_CONFIG_COMMAND_EYES_DETECT);
+			IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev, ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case V4L2_CID_IS_FD_SET_MOUTH_DETECT_MODE:
+			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+				FD_CONFIG_COMMAND_MOUTH_DETECT);
+			IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev,
+							ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case V4L2_CID_IS_FD_SET_ORIENTATION_MODE:
+			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+				FD_CONFIG_COMMAND_ORIENTATION);
+			IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev,
+								ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		case V4L2_CID_IS_FD_SET_ORIENTATION:
+			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+				FD_CONFIG_COMMAND_ORIENTATION_VALUE);
+			IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev,
+								ctrl->value);
+			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+				IS_PARAM_SIZE);
+			fimc_is_hw_set_param(dev);
+			break;
+		}
+		break;
+	case V4L2_CID_IS_FD_SET_DATA_ADDRESS:
+		dev->fd_header.target_addr = ctrl->value;
 		break;
 	case V4L2_CID_IS_SET_ISP:
 		switch (ctrl->value) {
@@ -1617,9 +1768,6 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		dev->is_p_region->parameter.isp.dma1_output.buffer_address
 			= ctrl->value;
 		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
-		break;
-	case V4L2_CID_IS_FD_SET_DATA_ADDRESS:
-		dev->fd_header.target_addr = ctrl->value;
 		break;
 	case V4L2_CID_CAMERA_SCENE_MODE:
 		switch (ctrl->value) {
@@ -2869,111 +3017,159 @@ static int fimc_is_g_ext_ctrls_handler(struct fimc_is_dev *dev,
 	struct v4l2_ext_control *ctrl, int index)
 {
 	int ret = 0;
+	u32 tmp = 0;
 	switch (ctrl->id) {
 	/* Face Detection CID handler */
 	/* 1. Overall information */
 	case V4L2_CID_IS_FD_GET_FACE_COUNT:
-		ctrl->value = dev->fd_header.ref_end;
+		ctrl->value = dev->fd_header.count;
 		break;
 	case V4L2_CID_IS_FD_GET_FACE_FRAME_NUMBER:
-		if (index > 19) {
-			dev->fd_header.offset++;
-			if ((dev->fd_header.ref + dev->fd_header.offset)
-				> MAX_FACE_COUNT) {
-				dev->fd_header.ref = 0;
-				dev->fd_header.offset = 0;
-			}
-		}
-		if (dev->fd_header.offset < dev->fd_header.ref_end) {
+		if (dev->fd_header.offset < dev->fd_header.count) {
 			ctrl->value =
-				dev->is_p_region->face[dev->fd_header.ref
+				dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].frame_number;
 		} else {
+			ctrl->value = 0;
 			return -255;
 		}
 		break;
 	case V4L2_CID_IS_FD_GET_FACE_CONFIDENCE:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
 					+ dev->fd_header.offset].confidence;
 		break;
-	case V4L2_CID_IS_FD_GET_FACE_SMILELEVEL:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_FACE_SMILE_LEVEL:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
 					+ dev->fd_header.offset].smile_level;
 		break;
-	case V4L2_CID_IS_FD_GET_FACE_BLINKLEVEL:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_FACE_BLINK_LEVEL:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
 					+ dev->fd_header.offset].blink_level;
 		break;
 	/* 2. Face information */
-	case V4L2_CID_IS_FD_GET_FACE_OFFSET_X:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_FACE_TOPLEFT_X:
+		tmp = dev->is_p_region->face[dev->fd_header.index
 					+ dev->fd_header.offset].face.offset_x;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_FACE_OFFSET_Y:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_FACE_TOPLEFT_Y:
+		tmp = dev->is_p_region->face[dev->fd_header.index
 					+ dev->fd_header.offset].face.offset_y;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_FACE_SIZE_X:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_FACE_BOTTOMRIGHT_X:
+		tmp = dev->is_p_region->face[dev->fd_header.index
+					+ dev->fd_header.offset].face.offset_x
+			+ dev->is_p_region->face[dev->fd_header.index
 					+ dev->fd_header.offset].face.width;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_FACE_SIZE_Y:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_FACE_BOTTOMRIGHT_Y:
+		tmp = dev->is_p_region->face[dev->fd_header.index
+					+ dev->fd_header.offset].face.offset_y
+			+ dev->is_p_region->face[dev->fd_header.index
 					+ dev->fd_header.offset].face.height;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
 	/* 3. Left eye information */
-	case V4L2_CID_IS_FD_GET_LEFT_EYE_OFFSET_X:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_LEFT_EYE_TOPLEFT_X:
+		tmp = dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].left_eye.offset_x;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_LEFT_EYE_OFFSET_Y:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_LEFT_EYE_TOPLEFT_Y:
+		tmp = dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].left_eye.offset_y;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_LEFT_EYE_SIZE_X:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_LEFT_EYE_BOTTOMRIGHT_X:
+		tmp = dev->is_p_region->face[dev->fd_header.index
+				+ dev->fd_header.offset].left_eye.offset_x
+			+ dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].left_eye.width;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_LEFT_EYE_SIZE_Y:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_LEFT_EYE_BOTTOMRIGHT_Y:
+		tmp = dev->is_p_region->face[dev->fd_header.index
+				+ dev->fd_header.offset].left_eye.offset_y
+			+ dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].left_eye.height;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
 	/* 4. Right eye information */
-	case V4L2_CID_IS_FD_GET_RIGHT_EYE_OFFSET_X:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_RIGHT_EYE_TOPLEFT_X:
+		tmp = dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].right_eye.offset_x;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_RIGHT_EYE_OFFSET_Y:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_RIGHT_EYE_TOPLEFT_Y:
+		tmp = dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].right_eye.offset_y;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_RIGHT_EYE_SIZE_X:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_RIGHT_EYE_BOTTOMRIGHT_X:
+		tmp = dev->is_p_region->face[dev->fd_header.index
+				+ dev->fd_header.offset].right_eye.offset_x
+			+ dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].right_eye.width;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_RIGHT_EYE_SIZE_Y:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_RIGHT_EYE_BOTTOMRIGHT_Y:
+		tmp = dev->is_p_region->face[dev->fd_header.index
+				+ dev->fd_header.offset].right_eye.offset_y
+			+ dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].right_eye.height;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
 	/* 5. Mouth eye information */
-	case V4L2_CID_IS_FD_GET_MOUTH_OFFSET_X:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_MOUTH_TOPLEFT_X:
+		tmp = dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].mouth.offset_x;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_MOUTH_OFFSET_Y:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_MOUTH_TOPLEFT_Y:
+		tmp = dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].mouth.offset_y;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_MOUTH_SIZE_X:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_MOUTH_BOTTOMRIGHT_X:
+		tmp = dev->is_p_region->face[dev->fd_header.index
+				+ dev->fd_header.offset].mouth.offset_x
+			+ dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].mouth.width;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.width;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
-	case V4L2_CID_IS_FD_GET_MOUTH_SIZE_Y:
-		ctrl->value = dev->is_p_region->face[dev->fd_header.ref
+	case V4L2_CID_IS_FD_GET_MOUTH_BOTTOMRIGHT_Y:
+		tmp = dev->is_p_region->face[dev->fd_header.index
+				+ dev->fd_header.offset].mouth.offset_y
+			+ dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].mouth.height;
+		tmp = (tmp * 2 * GED_FD_RANGE) /  dev->fd_header.height;
+		ctrl->value = (s32)tmp - GED_FD_RANGE;
 		break;
+	/* 6. Angle information */
 	case V4L2_CID_IS_FD_GET_ANGLE:
-		ctrl->value = 0; /* FIXME */
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+				+ dev->fd_header.offset].roll_angle;
+		break;
+	/* 7. Update next face information */
+	case V4L2_CID_IS_FD_GET_NEXT:
+		dev->fd_header.offset++;
 		break;
 	default:
 		return 255;
@@ -2991,8 +3187,6 @@ static int fimc_is_g_ext_ctrls(struct v4l2_subdev *sd,
 	unsigned long flags;
 
 	spin_lock_irqsave(&dev->slock, flags);
-	dev->fd_header.ref = dev->fd_header.index;
-	dev->fd_header.ref_end = dev->fd_header.count;
 	ctrl = ctrls->controls;
 	if (!ctrls->ctrl_class == V4L2_CTRL_CLASS_CAMERA)
 		return -EINVAL;
@@ -3001,6 +3195,25 @@ static int fimc_is_g_ext_ctrls(struct v4l2_subdev *sd,
 		(unsigned long)(sizeof(struct is_face_marker)*MAX_FACE_COUNT));
 
 	dev->fd_header.offset = 0;
+	/* get width and height at the current scenario */
+	switch (dev->scenario_id) {
+	case ISS_PREVIEW_STILL:
+		dev->fd_header.width = (s32)dev->sensor.width_prev;
+		dev->fd_header.height = (s32)dev->sensor.height_prev;
+		break;
+	case ISS_PREVIEW_VIDEO:
+		dev->fd_header.width = (s32)dev->sensor.width_prev_cam;
+		dev->fd_header.height = (s32)dev->sensor.height_prev_cam;
+		break;
+	case ISS_CAPTURE_STILL:
+		dev->fd_header.width = (s32)dev->sensor.width_cap;
+		dev->fd_header.height = (s32)dev->sensor.height_cap;
+		break;
+	case ISS_CAPTURE_VIDEO:
+		dev->fd_header.width = (s32)dev->sensor.width_cam;
+		dev->fd_header.height = (s32)dev->sensor.height_cam;
+		break;
+	}
 	for (i = 0; i < ctrls->count; i++) {
 		ctrl = ctrls->controls + i;
 		ret = fimc_is_g_ext_ctrls_handler(dev, ctrl, i);
@@ -3013,8 +3226,6 @@ static int fimc_is_g_ext_ctrls(struct v4l2_subdev *sd,
 		}
 	}
 
-	dev->fd_header.ref = 0;
-	dev->fd_header.ref_end = 0;
 	dev->fd_header.index = 0;
 	dev->fd_header.count = 0;
 	spin_unlock_irqrestore(&dev->slock, flags);
@@ -3241,11 +3452,20 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_INIT_WIDTH:
-		if ((dev->scenario_id == ISS_PREVIEW_STILL) ||
-			(dev->scenario_id == ISS_PREVIEW_VIDEO))
+		switch (dev->scenario_id) {
+		case ISS_PREVIEW_STILL:
 			dev->sensor.width_prev = ctrl->value;
-		else
+			break;
+		case ISS_PREVIEW_VIDEO:
+			dev->sensor.width_prev_cam = ctrl->value;
+			break;
+		case ISS_CAPTURE_STILL:
 			dev->sensor.width_cap = ctrl->value;
+			break;
+		case ISS_CAPTURE_VIDEO:
+			dev->sensor.width_cam = ctrl->value;
+			break;
+		}
 		/* Setting init width of ISP */
 		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, ctrl->value);
 		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev, ctrl->value);
@@ -3262,11 +3482,20 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_INIT_HEIGHT:
-		if ((dev->scenario_id == ISS_PREVIEW_STILL) ||
-			(dev->scenario_id == ISS_PREVIEW_VIDEO))
+		switch (dev->scenario_id) {
+		case ISS_PREVIEW_STILL:
 			dev->sensor.height_prev = ctrl->value;
-		else
+			break;
+		case ISS_PREVIEW_VIDEO:
+			dev->sensor.height_prev_cam = ctrl->value;
+			break;
+		case ISS_CAPTURE_STILL:
 			dev->sensor.height_cap = ctrl->value;
+			break;
+		case ISS_CAPTURE_VIDEO:
+			dev->sensor.height_cam = ctrl->value;
+			break;
+		}
 		/* Setting init height and format of ISP */
 		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev, ctrl->value);
 		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev,
@@ -3664,10 +3893,12 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 		}
 		break;
 	/* FD  - Max face number */
-	case V4L2_CID_IS_FD_NUM_FACE:
-		IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev, ctrl->value);
-		IS_FD_SET_PARAM_FD_RESULT_ERR(dev, FD_ERROR_NO);
-		IS_SET_PARAM_BIT(dev, PARAM_FD_RESULT);
+	case V4L2_CID_IS_FD_SET_MAX_FACE_NUMBER:
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			FD_CONFIG_COMMAND_MAXIMUM_NUMBER);
+		IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev, ctrl->value);
+		IS_FD_SET_PARAM_FD_CONFIG_ERR(dev, ERROR_FD_NO);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
 		IS_INC_PARAM_NUM(dev);
 		break;
 	default:
@@ -3707,13 +3938,23 @@ struct v4l2_mbus_framefmt *mf)
 {
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 	dbg("fimc_is_try_mbus_fmt - %d, %d\n", mf->width, mf->height);
-	if ((dev->scenario_id == ISS_PREVIEW_STILL) ||
-		(dev->scenario_id == ISS_PREVIEW_VIDEO)) {
+	switch (dev->scenario_id) {
+	case ISS_PREVIEW_STILL:
 		dev->sensor.width_prev = mf->width;
 		dev->sensor.height_prev = mf->height;
-	} else {
+		break;
+	case ISS_PREVIEW_VIDEO:
+		dev->sensor.width_prev_cam = mf->width;
+		dev->sensor.height_prev_cam = mf->height;
+		break;
+	case ISS_CAPTURE_STILL:
 		dev->sensor.width_cap = mf->width;
 		dev->sensor.height_cap = mf->height;
+		break;
+	case ISS_CAPTURE_VIDEO:
+		dev->sensor.width_cam = mf->width;
+		dev->sensor.height_cam = mf->height;
+		break;
 	}
 	/* for otf, only one image format is available */
 	IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, mf->width);
@@ -3771,8 +4012,8 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 		break;
 	case 3:
 		dev->scenario_id = ISS_CAPTURE_VIDEO;
-		dev->sensor.width_cap = mf->width;
-		dev->sensor.height_cap = mf->height;
+		dev->sensor.width_cam = mf->width;
+		dev->sensor.height_cam = mf->height;
 		break;
 	}
 

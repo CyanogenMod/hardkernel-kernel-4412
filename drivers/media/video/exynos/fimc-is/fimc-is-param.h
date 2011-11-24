@@ -62,6 +62,18 @@
 		(dev->is_p_region->parameter.isp.otf_input.order = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.err = x)
+#ifdef FIX_FRAMERATE
+#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED0(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.reserved[0] = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED1(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.reserved[1] = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED2(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.reserved[2] = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.reserved[3] = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.reserved[4] = x)
+#endif
 
 #define IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev, x) \
 		(dev->is_p_region->parameter.isp.dma1_input.cmd = x)
@@ -352,18 +364,30 @@
 		(dev->is_p_region->parameter.fd.dma_input.buffer_address = x)
 #define IS_FD_SET_PARAM_DMA_INPUT_ERR(dev, x) \
 	(dev->is_p_region->parameter.fd.dma_input.err = x)
-
-#define IS_FD_SET_PARAM_FD_RESULT_MAX_NUMBER(dev, x) \
-	(dev->is_p_region->parameter.fd.result.max_number = x)
-#define IS_FD_SET_PARAM_FD_RESULT_ERR(dev, x) \
-	(dev->is_p_region->parameter.fd.result.err = x)
-#define IS_FD_SET_PARAM_FD_MODE_SMILE(dev, x) \
-	(dev->is_p_region->parameter.fd.mode.smile = x)
-#define IS_FD_SET_PARAM_FD_MODE_BLINK(dev, x) \
-	(dev->is_p_region->parameter.fd.mode.blink = x)
-	#define IS_FD_SET_PARAM_FD_MODE_ERR(dev, x) \
-	(dev->is_p_region->parameter.fd.mode.err = x)
-
+	
+#define IS_FD_SET_PARAM_FD_CONFIG_CMD(dev, x) \
+	(dev->is_p_region->parameter.fd.config.cmd = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev, x) \
+	(dev->is_p_region->parameter.fd.config.max_number = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev, x) \
+	(dev->is_p_region->parameter.fd.config.roll_angle = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev, x) \
+	(dev->is_p_region->parameter.fd.config.yaw_angle = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev, x) \
+	(dev->is_p_region->parameter.fd.config.smile_mode = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev, x) \
+	(dev->is_p_region->parameter.fd.config.blink_mode = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev, x) \
+	(dev->is_p_region->parameter.fd.config.eye_detect = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev, x) \
+	(dev->is_p_region->parameter.fd.config.mouth_detect = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev, x) \
+	(dev->is_p_region->parameter.fd.config.orientation = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev, x) \
+	(dev->is_p_region->parameter.fd.config.orientation_value = x)
+#define IS_FD_SET_PARAM_FD_CONFIG_ERR(dev, x) \
+	(dev->is_p_region->parameter.fd.config.err = x)
+	
 #ifndef BIT0
 #define  BIT0     0x00000001
 #define  BIT1     0x00000002
@@ -432,6 +456,8 @@
 #define  INC_BIT(bit) (bit<<1)
 #define  INC_NUM(bit) (bit + 1)
 #endif
+
+#define MAGIC_NUMBER 0x01020304
 
 #define PARAMETER_MAX_SIZE    64  /* in byte */
 #define PARAMETER_MAX_MEMBER  (PARAMETER_MAX_SIZE/4)
@@ -508,8 +534,7 @@ enum is_param_set_bit {
 	PARAM_FD_CONTROL,
 	PARAM_FD_OTF_INPUT,
 	PARAM_FD_DMA_INPUT,
-	PARAM_FD_RESULT,
-	PARAM_FD_MODE = 57,
+	PARAM_FD_CONFIG = 56,
 	PARAM_END,
 };
 
@@ -582,9 +607,8 @@ enum is_param_set_bit {
 #define PARAM_FD_CONTROL		INC_NUM(PARAM_SCALERP_DMA_OUTPUT)
 #define PARAM_FD_OTF_INPUT		INC_NUM(PARAM_FD_CONTROL)
 #define PARAM_FD_DMA_INPUT		INC_NUM(PARAM_FD_OTF_INPUT)
-#define PARAM_FD_RESULT			INC_NUM(PARAM_FD_DMA_INPUT)
-#define PARAM_FD_MODE			INC_NUM(PARAM_FD_RESULT)
-#define PARAM_END			INC_NUM(PARAM_FD_FD)
+#define PARAM_FD_CONFIG			INC_NUM(PARAM_FD_DMA_INPUT)
+#define PARAM_END			INC_NUM(PARAM_FD_CONFIG)
 
 #define PARAM_STRNUM_GLOBAL		(PARAM_GLOBAL_SHOTMODE)
 #define PARAM_RANGE_GLOBAL		1
@@ -607,7 +631,7 @@ enum is_param_set_bit {
 #define PARAM_STRNUM_SCALERP		(PARAM_SCALERP_BYPASS)
 #define PARAM_RANGE_SCALERP		9
 #define PARAM_STRNUM_LHFD		(PARAM_FD_BYPASS)
-#define PARAM_RANGE_LHFD		5
+#define PARAM_RANGE_LHFD		4
 
 /* Enumerations
 *
@@ -1016,120 +1040,57 @@ enum tdnr_1st_frame_error {
 };
 
 /* ----------------------------  FD  ------------------------------------- */
-enum fd_mode_smile {
-	FD_MODE_SMILE_DISABLE	= 0,
-	FD_MODE_SMILE_ENABLE	= 1
+enum fd_config_command {
+	FD_CONFIG_COMMAND_MAXIMUM_NUMBER	= 0x1,
+	FD_CONFIG_COMMAND_ROLL_ANGLE		= 0x2,
+	FD_CONFIG_COMMAND_YAW_ANGLE		= 0x4,
+	FD_CONFIG_COMMAND_SMILE_MODE		= 0x8,
+	FD_CONFIG_COMMAND_BLINK_MODE		= 0x10,
+	FD_CONFIG_COMMAND_EYES_DETECT		= 0x20,
+	FD_CONFIG_COMMAND_MOUTH_DETECT		= 0x40,
+	FD_CONFIG_COMMAND_ORIENTATION		= 0x80,
+	FD_CONFIG_COMMAND_ORIENTATION_VALUE	= 0x100
 };
 
-enum fd_mode_blink {
-	FD_MODE_BLINK_DISABLE	= 0,
-	FD_MODE_BLINK_ENABLE	= 1
+enum fd_config_roll_angle {
+	FD_CONFIG_ROLL_ANGLE_BASIC		= 0,
+	FD_CONFIG_ROLL_ANGLE_PRECISE_BASIC	= 1,
+	FD_CONFIG_ROLL_ANGLE_SIDES		= 2,
+	FD_CONFIG_ROLL_ANGLE_PRECISE_SIDES	= 3,
+	FD_CONFIG_ROLL_ANGLE_FULL		= 4,
+	FD_CONFIG_ROLL_ANGLE_PRECISE_FULL	= 5,
 };
 
-enum fd_error {
-	FD_ERROR_NO				= 0 /* fd setting is done */
+enum fd_config_yaw_angle {
+	FD_CONFIG_YAW_ANGLE_0			= 0,
+	FD_CONFIG_YAW_ANGLE_45			= 1,
+	FD_CONFIG_YAW_ANGLE_90			= 2,
+	FD_CONFIG_YAW_ANGLE_45_90		= 3,
 };
 
-enum error {
-	/* Common error (0~99) */
-	ERROR_COMMON_NO			= 0,
-	ERROR_COMMON_CMD		= 1,	/* Invalid command*/
-	ERROR_COMMON_PARAMETER		= 2,	/* Invalid parameter*/
-	/* setfile is not loaded before adjusting */
-	ERROR_COMMON_SETFILE_LOAD	= 3,
-	/* setfile is not Adjusted before runnng. */
-	ERROR_COMMON_SETFILE_ADJUST	= 4,
-	/* Input path can be changed in ready state(stop) */
-	ERROR_COMMON_INPUT_PATH		= 5,
-	/* IP can not start if input path is not set */
-	ERROR_COMMON_INPUT_INIT		= 6,
-	/* IP can not start if output path is not set */
-	ERROR_COMMON_OUTPUT_INIT	= 7,
+enum fd_config_smile_mode {
+	FD_CONFIG_SMILE_MODE_DISABLE		= 0,
+	FD_CONFIG_SMILE_MODE_ENABLE		= 1
+};
 
-	ERROR_CONTROL_NO		= ERROR_COMMON_NO,
-	ERROR_CONTROL_BYPASS		= 11,	/* Enable or Disable */
+enum fd_config_blink_mode {
+	FD_CONFIG_BLINK_MODE_DISABLE		= 0,
+	FD_CONFIG_BLINK_MODE_ENABLE		= 1
+};
 
-	ERROR_OTF_INPUT_NO		= ERROR_COMMON_NO,
-	/* invalid format  (DRC: YUV444, FD: YUV444, 422, 420) */
-	ERROR_OTF_INPUT_FORMAT		= 21,
-	/* invalid width (DRC: 128~8192, FD: 32~8190) */
-	ERROR_OTF_INPUT_WIDTH		= 22,
-	/* invalid height (DRC: 64~8192, FD: 16~8190) */
-	ERROR_OTF_INPUT_HEIGHT		= 23,
-	/* invalid bit-width (DRC: 8~12bits, FD: 8bit) */
-	ERROR_OTF_INPUT_BIT_WIDTH	= 24,
+enum fd_config_eye_result {
+	FD_CONFIG_EYES_DETECT_DISABLE		= 0,
+	FD_CONFIG_EYES_DETECT_ENABLE		= 1
+};
 
-	ERROR_DMA_INPUT_NO		= ERROR_COMMON_NO,
-	/* invalid width (DRC: 128~8192, FD: 32~8190) */
-	ERROR_DMA_INPUT_WIDTH		= 31,
-	/* invalid height (DRC: 64~8192, FD: 16~8190) */
-	ERROR_DMA_INPUT_HEIGHT		= 32,
-	/* invalid format (DRC: YUV444 or YUV422, FD: YUV444, 422, 420) */
-	ERROR_DMA_INPUT_FORMAT		= 33,
-	/* invalid bit-width (DRC: 8~12bit, FD: 8bit) */
-	ERROR_DMA_INPUT_BIT_WIDTH	= 34,
-	/* invalid order(DRC: YYCbCrorYCbYCr, FD:NO,YYCbCr,YCbYCr,CbCr,CrCb) */
-	ERROR_DMA_INPUT_ORDER		= 35,
-	/* invalid palne (DRC: 3, FD: 1, 2, 3) */
-	ERROR_DMA_INPUT_PLANE		= 36,
+enum fd_config_mouth_result {
+	FD_CONFIG_MOUTH_DETECT_DISABLE		= 0,
+	FD_CONFIG_MOUTH_DETECT_ENABLE		= 1
+};
 
-	ERROR_OTF_OUTPUT_NO		= ERROR_COMMON_NO,
-	/* invalid width (DRC: 128~8192) */
-	ERROR_OTF_OUTPUT_WIDTH		= 41,
-	/* invalid height (DRC: 64~8192) */
-	ERROR_OTF_OUTPUT_HEIGHT		= 42,
-	/* invalid format (DRC: YUV444) */
-	ERROR_OTF_OUTPUT_FORMAT		= 43,
-	/* invalid bit-width (DRC: 8~12bits) */
-	ERROR_OTF_OUTPUT_BIT_WIDTH	= 44,
-
-	ERROR_DMA_OUTPUT_NO		= ERROR_COMMON_NO,
-	ERROR_DMA_OUTPUT_WIDTH		= 51,	/* invalid width */
-	ERROR_DMA_OUTPUT_HEIGHT		= 52,	/* invalid height */
-	ERROR_DMA_OUTPUT_FORMAT		= 53,	/* invalid format */
-	ERROR_DMA_OUTPUT_BIT_WIDTH	= 54,	/* invalid bit-width */
-	ERROR_DMA_OUTPUT_PLANE		= 55,	/* invalid plane */
-	ERROR_DMA_OUTPUT_ORDER		= 56,	/* invalid order */
-
-	ERROR_GLOBAL_SHOTMODE_NO	= ERROR_COMMON_NO,
-
-	/* SENSOR Error(100~199) */
-	ERROR_SENSOR_NO			= ERROR_COMMON_NO,
-	ERROR_SENSOR_I2C_FAIL		= 101,
-	ERROR_SENSOR_INVALID_FRAMERATE,
-	ERROR_SENSOR_INVALID_EXPOSURETIME,
-	ERROR_SENSOR_INVALID_SIZE,
-	ERROR_SENSOR_ACTURATOR_INIT_FAIL,
-	ERROR_SENSOR_INVALID_AF_POS,
-	ERROR_SENSOR_UNSUPPORT_FUNC,
-	ERROR_SENSOR_UNSUPPORT_PERI,
-	ERROR_SENSOR_UNSUPPORT_AF,
-
-	/* ISP Error (200~299) */
-	ERROR_ISP_AF_NO			= ERROR_COMMON_NO,
-	ERROR_ISP_AF_BUSY		= 201,
-	ERROR_ISP_AF_INVALID_COMMAND	= 202,
-	ERROR_ISP_AF_INVALID_MODE	= 203,
-	ERROR_ISP_FLASH_NO		= ERROR_COMMON_NO,
-	ERROR_ISP_AWB_NO		= ERROR_COMMON_NO,
-	ERROR_ISP_IMAGE_EFFECT_NO	= ERROR_COMMON_NO,
-	ERROR_ISP_ISO_NO		= ERROR_COMMON_NO,
-	ERROR_ISP_ADJUST_NO		= ERROR_COMMON_NO,
-	ERROR_ISP_METERING_NO		= ERROR_COMMON_NO,
-	ERROR_ISP_AFC_NO		= ERROR_COMMON_NO,
-
-	/* DRC Error (300~399) */
-
-	/* FD Error  (400~499) */
-	ERROR_FD_NO			= ERROR_COMMON_NO,
-	ERROR_FD_SMILE_MODE		= 402,  /* not valid smile mode */
-	ERROR_FD_BLINK_MODE		= 403,  /* not valid smile mode */
-	ERROR_FD_RESULT			= 404,	/* PARAM_FdResultStr can
-						be only applied in ready-state
-						or stream off */
-	ERROR_FD_MODE			= 405	/* PARAM_FdModeStr can be only
-						applied in ready-state or
-						stream off */
+enum fd_config_orientation {
+	FD_CONFIG_ORIENTATION_DISABLE		= 0,
+	FD_CONFIG_ORIENTATION_ENABLE		= 1
 };
 
 struct param_control {
@@ -1312,16 +1273,18 @@ struct param_3dnr_1stframe {
 	u32	err;
 };
 
-struct param_fd_result {
+struct param_fd_config{
+	u32	cmd;
 	u32	max_number;
-	u32	reserved[PARAMETER_MAX_MEMBER-2];
-	u32	err;
-};
-
-struct param_fd_mode {
-	u32	smile;
-	u32	blink;
-	u32	reserved[PARAMETER_MAX_MEMBER-3];
+	u32	roll_angle;
+	u32	yaw_angle;
+	u32	smile_mode;
+	u32	blink_mode;
+	u32	eye_detect;
+	u32	mouth_detect;
+	u32	orientation;
+	u32	orientation_value;
+	u32	reserved[PARAMETER_MAX_MEMBER-11];
 	u32	err;
 };
 
@@ -1413,8 +1376,7 @@ struct fd_param {
 	struct param_control			control;
 	struct param_otf_input			otf_input;
 	struct param_dma_input			dma_input;
-	struct param_fd_result			result;
-	struct param_fd_mode			mode;
+	struct param_fd_config			config;
 };
 
 struct is_param_region {
@@ -1496,6 +1458,20 @@ struct srational_t {
 #define FLASH_RED_EYE_DISABLED		0
 #define FLASH_RED_EYE_SUPPORTED		1
 
+enum apex_aperture_value {
+	F1_0		= 0,
+	F1_4		= 1,
+	F2_0		= 2,
+	F2_8		= 3,
+	F4_0		= 4,
+	F5_6		= 5,
+	F8_9		= 6,
+	F11_0		= 7,
+	F16_0		= 8,
+	F22_0		= 9,
+	F32_0		= 10,
+};
+
 struct exif_attribute {
 	struct rational_t exposure_time;
 	struct srational_t shutter_speed;
@@ -1525,6 +1501,7 @@ struct is_face_marker {
 	struct is_fd_rect left_eye;
 	struct is_fd_rect right_eye;
 	struct is_fd_rect mouth;
+	u32	roll_angle;
 	u32	confidence;
 	u32	smile_level;
 	u32	blink_level;
@@ -1547,6 +1524,10 @@ struct is_share_region {
 	u32	frame_time;
 	u32	exposure_time;
 	s32	analog_gain;
+
+	u32	r_gain;
+	u32	g_gain;
+	u32	b_gain;
 };
 
 #endif

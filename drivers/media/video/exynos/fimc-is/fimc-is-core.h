@@ -53,9 +53,13 @@
 
 #define FIMC_IS_A5_MEM_SIZE	0x00A00000
 #define FIMC_IS_REGION_SIZE	0x5000
-#define ISP_SETFILE_SIZE	0xa140
+#define ISP_SETFILE_SIZE	0xc0d8
 #define DRC_SETFILE_SIZE	0x140
 #define FD_SETFILE_SIZE		(0x88*2)
+
+#define GED_FD_RANGE	1000
+
+#define FIX_FRAMERATE
 
 #define SDCARD_FW
 
@@ -113,19 +117,22 @@ enum fimc_is_clk {
 };
 
 enum sensor_list {
-	SENSOR_S5K3H1_CSI_A	= 0,
 	SENSOR_S5K3H2_CSI_A	= 1,
 	SENSOR_S5K6A3_CSI_A	= 2,
-	SENSOR_S5K3H1_CSI_B	= 100,
+	SENSOR_S5K4E5_CSI_A	= 3,
+	SENSOR_S5K3H7_CSI_A	= 4,
 	SENSOR_S5K3H2_CSI_B	= 101,
 	SENSOR_S5K6A3_CSI_B	= 102,
+	SENSOR_S5K4E5_CSI_B	= 103,
+	SENSOR_S5K3H7_CSI_B	= 104,
 };
 
 enum sensor_name {
-	SENSOR_NAME_S5K3H1	= 0,
 	SENSOR_NAME_S5K3H2	= 1,
 	SENSOR_NAME_S5K6A3	= 2,
-	SENSOR_NAME_CUSTOM	= 3,
+	SENSOR_NAME_S5K4E5	= 3,
+	SENSOR_NAME_S5K3H7	= 4,
+	SENSOR_NAME_CUSTOM	= 5,
 	SENSOR_NAME_END
 };
 
@@ -194,17 +201,19 @@ struct is_sensor {
 	u32 height_prev_cam;
 	u32 width_cap;
 	u32 height_cap;
+	u32 width_cam;
+	u32 height_cam;
 	u32 offset_x;
 	u32 offset_y;
 };
 
 struct is_fd_result_header {
-	u32 ref;
-	u32 ref_end;
 	u32 offset;
 	u32 count;
 	u32 index;
 	u32 target_addr;
+	s32 width;
+	s32 height;
 };
 
 struct is_af_info {
@@ -311,6 +320,9 @@ extern void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val);
 extern void fimc_is_hw_set_lite(struct fimc_is_dev *dev, u32 width, u32 height);
 extern void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev);
 extern void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev);
+
+extern void fimc_is_param_err_checker(struct fimc_is_dev *dev);
+extern void fimc_is_print_err_number(u32 num_err);
 
 void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size);
 void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size);
