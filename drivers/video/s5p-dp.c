@@ -2134,6 +2134,9 @@ static void s5p_dp_early_suspend(struct early_suspend *handler)
 	pdev = to_platform_device(dp->dev);
 	pdata = pdev->dev.platform_data;
 
+	if (pdata->backlight_off)
+		pdata->backlight_off();
+
 	if (pdata && pdata->phy_exit)
 		pdata->phy_exit();
 
@@ -2171,6 +2174,9 @@ static void s5p_dp_late_resume(struct early_suspend *handler)
 
 	s5p_dp_init_video(dp);
 	s5p_dp_config_video(dp, dp->video_info);
+
+	if (pdata->backlight_on)
+		pdata->backlight_on();
 
 	return;
 }
@@ -2294,6 +2300,9 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
+	if (pdata->backlight_on)
+		pdata->backlight_on();
+
 	platform_set_drvdata(pdev, dp);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -2327,6 +2336,9 @@ static int __devexit s5p_dp_remove(struct platform_device *pdev)
 	unregister_early_suspend(&dp->early_suspend);
 #endif
 
+	if (pdata->backlight_off)
+		pdata->backlight_off();
+
 	if (pdata && pdata->phy_exit)
 		pdata->phy_exit();
 
@@ -2353,6 +2365,9 @@ static int s5p_dp_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct s5p_dp_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_dp_device *dp = platform_get_drvdata(pdev);
+
+	if (pdata->backlight_off)
+		pdata->backlight_off();
 
 	if (pdata && pdata->phy_exit)
 		pdata->phy_exit();
@@ -2387,6 +2402,9 @@ static int s5p_dp_resume(struct device *dev)
 
 	s5p_dp_init_video(dp);
 	s5p_dp_config_video(dp, dp->video_info);
+
+	if (pdata->backlight_on)
+		pdata->backlight_on();
 
 	return 0;
 }
