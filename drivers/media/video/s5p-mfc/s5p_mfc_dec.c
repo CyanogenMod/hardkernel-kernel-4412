@@ -1763,8 +1763,11 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 		if (ctx->cacheable)
 			s5p_mfc_mem_cache_flush(vb, 2);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		/* FIXME: Cacheable option is not applied to source buffer */
+		/*
 		if (ctx->cacheable)
 			s5p_mfc_mem_cache_flush(vb, 1);
+		*/
 		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
 	}
