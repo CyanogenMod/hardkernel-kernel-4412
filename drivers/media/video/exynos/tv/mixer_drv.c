@@ -520,6 +520,9 @@ static int mxr_runtime_resume(struct device *dev)
 #if defined(CONFIG_CPU_EXYNOS4210)
 	clk_enable(res->sclk_mixer);
 #endif
+	/* enable system mmu for tv. It must be enabled after enabling
+	 * mixer's clock. Because of system mmu limitation. */
+	mdev->vb2->resume(mdev->alloc_ctx);
 	/* apply default configuration */
 	mxr_reg_reset(mdev);
 	mxr_dbg(mdev, "resume - finished\n");
@@ -534,6 +537,9 @@ static int mxr_runtime_suspend(struct device *dev)
 	struct mxr_resources *res = &mdev->res;
 	mxr_dbg(mdev, "suspend - start\n");
 	mutex_lock(&mdev->mutex);
+	/* disable system mmu for tv. It must be disabled before disabling
+	 * mixer's clock. Because of system mmu limitation. */
+	mdev->vb2->suspend(mdev->alloc_ctx);
 	/* turn clocks off */
 #if defined(CONFIG_CPU_EXYNOS4210)
 	clk_disable(res->sclk_mixer);
@@ -1173,6 +1179,12 @@ static int __devinit mxr_probe(struct platform_device *pdev)
 
 	/* use only sub mixer0 as default */
 	mdev->sub_mxr[MXR_SUB_MIXER0].use = 1;
+
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
+	mdev->vb2 = &mxr_vb2_cma;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+	mdev->vb2 = &mxr_vb2_ion;
+#endif
 
 	mutex_init(&mdev->mutex);
 	mutex_init(&mdev->s_mutex);

@@ -15,7 +15,11 @@
 
 #include "regs-vp.h"
 
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 #include <media/videobuf2-cma-phys.h>
+#elif defined(CONFIG_VIDEOBUF2_ION)
+#include <media/videobuf2-ion.h>
+#endif
 
 /* FORMAT DEFINITIONS */
 static const struct mxr_format mxr_fmt_nv12 = {
@@ -90,17 +94,18 @@ static void mxr_vp_layer_release(struct mxr_layer *layer)
 static void mxr_vp_buffer_set(struct mxr_layer *layer,
 	struct mxr_buffer *buf)
 {
+	struct mxr_device *mdev = layer->mdev;
 	dma_addr_t luma_addr[2] = {0, 0};
 	dma_addr_t chroma_addr[2] = {0, 0};
 
 	if (buf == NULL) {
-		mxr_reg_vp_buffer(layer->mdev, luma_addr, chroma_addr);
+		mxr_reg_vp_buffer(mdev, luma_addr, chroma_addr);
 		return;
 	}
 
-	luma_addr[0] = vb2_cma_phys_plane_paddr(&buf->vb, 0);
+	luma_addr[0] = mdev->vb2->plane_addr(&buf->vb, 0);
 	if (layer->fmt->num_subframes == 2) {
-		chroma_addr[0] = vb2_cma_phys_plane_paddr(&buf->vb, 1);
+		chroma_addr[0] = mdev->vb2->plane_addr(&buf->vb, 1);
 	} else {
 		/* FIXME: mxr_get_plane_size compute integer division,
 		 * which is slow and should not be performed in interrupt */

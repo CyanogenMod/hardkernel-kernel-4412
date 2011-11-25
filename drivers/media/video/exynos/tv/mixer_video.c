@@ -19,7 +19,11 @@
 
 #include <media/exynos_mc.h>
 #include <media/v4l2-ioctl.h>
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 #include <media/videobuf2-cma-phys.h>
+#elif defined(CONFIG_VIDEOBUF2_ION)
+#include <media/videobuf2-ion.h>
+#endif
 
 int __devinit mxr_acquire_video(struct mxr_device *mdev,
 	struct mxr_output_conf *output_conf, int output_count)
@@ -28,7 +32,7 @@ int __devinit mxr_acquire_video(struct mxr_device *mdev,
 	int ret = 0;
 	struct v4l2_subdev *sd;
 
-	mdev->alloc_ctx = vb2_cma_phys_init(mdev->dev, NULL, 0, false);
+	mdev->alloc_ctx = mdev->vb2->init(mdev);
 	if (IS_ERR_OR_NULL(mdev->alloc_ctx)) {
 		mxr_err(mdev, "could not acquire vb2 allocator\n");
 		ret = PTR_ERR(mdev->alloc_ctx);
@@ -83,7 +87,7 @@ fail_output:
 
 fail_vb2_allocator:
 	/* freeing allocator context */
-	vb2_cma_phys_cleanup(mdev->alloc_ctx);
+	mdev->vb2->cleanup(mdev->alloc_ctx);
 
 fail:
 	return ret;
@@ -97,7 +101,7 @@ void __devexit mxr_release_video(struct mxr_device *mdev)
 	for (i = 0; i < mdev->output_cnt; ++i)
 		kfree(mdev->output[i]);
 
-	vb2_cma_phys_cleanup(mdev->alloc_ctx);
+	mdev->vb2->cleanup(mdev->alloc_ctx);
 }
 
 static void tv_graph_pipeline_stream(struct tv_graph_pipeline *pipe, int on)
@@ -1031,7 +1035,7 @@ struct mxr_layer *mxr_base_layer_create(struct mxr_device *mdev,
 		.drv_priv = layer,
 		.buf_struct_size = sizeof(struct mxr_buffer),
 		.ops = &mxr_video_qops,
-		.mem_ops = &vb2_cma_phys_memops,
+		.mem_ops = mdev->vb2->ops,
 	};
 
 	return layer;

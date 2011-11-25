@@ -256,6 +256,22 @@ enum mxr_devide_flags {
 	MXR_EVENT_VSYNC = 0,
 };
 
+/** videobuf2 context of mixer */
+struct mxr_vb2 {
+	const struct vb2_mem_ops *ops;
+	void *(*init)(struct mxr_device *mdev);
+	void (*cleanup)(void *alloc_ctx);
+
+	unsigned long (*plane_addr)(struct vb2_buffer *vb, u32 plane_no);
+
+	void (*resume)(void *alloc_ctx);
+	void (*suspend)(void *alloc_ctx);
+
+	int (*cache_flush)(struct vb2_buffer *vb, u32 num_planes);
+	void (*set_cacheable)(void *alloc_ctx, bool cacheable);
+	void (*set_sharable)(void *alloc_ctx, bool sharable);
+};
+
 /** sub-mixer 0,1 drivers instance */
 struct sub_mxr_device {
 	/** state of each layer */
@@ -286,6 +302,8 @@ struct mxr_device {
 
 	/* video resources */
 
+	/** videbuf2 context */
+	const struct mxr_vb2 *vb2;
 	/** context of allocator */
 	void *alloc_ctx;
 	/** event wait queue */
@@ -316,6 +334,12 @@ struct mxr_device {
 	/** count of sub-mixers */
 	struct sub_mxr_device sub_mxr[MXR_MAX_SUB_MIXERS];
 };
+
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
+extern const struct mxr_vb2 mxr_vb2_cma;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+extern const struct mxr_vb2 mxr_vb2_ion;
+#endif
 
 /** transform device structure into mixer device */
 static inline struct mxr_device *to_mdev(struct device *dev)

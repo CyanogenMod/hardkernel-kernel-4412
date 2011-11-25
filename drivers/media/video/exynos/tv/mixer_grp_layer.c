@@ -13,7 +13,11 @@
 
 #include "mixer.h"
 
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 #include <media/videobuf2-cma-phys.h>
+#elif defined(CONFIG_VIDEOBUF2_ION)
+#include <media/videobuf2-ion.h>
+#endif
 
 /* FORMAT DEFINITIONS */
 
@@ -83,10 +87,11 @@ static void mxr_graph_layer_release(struct mxr_layer *layer)
 static void mxr_graph_buffer_set(struct mxr_layer *layer,
 	struct mxr_buffer *buf)
 {
+	struct mxr_device *mdev = layer->mdev;
 	dma_addr_t addr = 0;
 
 	if (buf)
-		addr = vb2_cma_phys_plane_paddr(&buf->vb, 0);
+		addr = mdev->vb2->plane_addr(&buf->vb, 0);
 	mxr_reg_graph_buffer(layer->mdev, layer->idx, addr);
 }
 
