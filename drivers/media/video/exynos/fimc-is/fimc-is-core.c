@@ -449,7 +449,7 @@ static int fimc_is_runtime_resume(struct device *dev)
 		return -EINVAL;
 	}
 	/* lock bus frequency */
-	dev_lock(is_dev->bus_dev, dev, 400000);
+	dev_lock(is_dev->bus_dev, dev, 400200);
 	is_dev->frame_count = 0;
 	mutex_unlock(&is_dev->lock);
 	return 0;
