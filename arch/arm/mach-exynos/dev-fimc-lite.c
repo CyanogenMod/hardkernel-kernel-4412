@@ -36,18 +36,6 @@ struct platform_device exynos_device_flite0 = {
 	.resource	= exynos_flite0_resource,
 };
 
-void __init exynos_flite0_set_platdata(struct exynos_platform_flite *pd)
-{
-	struct exynos_platform_flite *npd;
-
-	npd = kmemdup(pd, sizeof(struct exynos_platform_flite), GFP_KERNEL);
-
-	if (!npd)
-		printk(KERN_ERR "%s: no memory for platform data\n", __func__);
-	else
-		exynos_device_flite0.dev.platform_data = npd;
-}
-
 static struct resource exynos_flite1_resource[] = {
 	[0] = {
 		.start	= EXYNOS_PA_FIMC_LITE1,
@@ -68,14 +56,5 @@ struct platform_device exynos_device_flite1 = {
 	.resource	= exynos_flite1_resource,
 };
 
-void __init exynos_flite1_set_platdata(struct exynos_platform_flite *pd)
-{
-	struct exynos_platform_flite *npd;
-
-	npd = kmemdup(pd, sizeof(struct exynos_platform_flite), GFP_KERNEL);
-
-	if (!npd)
-		printk(KERN_ERR "%s: no memory for platform data\n", __func__);
-	else
-		exynos_device_flite1.dev.platform_data = npd;
-}
+struct exynos_platform_flite exynos_flite0_default_data __initdata;
+struct exynos_platform_flite exynos_flite1_default_data __initdata;
