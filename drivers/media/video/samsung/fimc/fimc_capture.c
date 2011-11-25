@@ -702,13 +702,12 @@ int fimc_subdev_attatch(struct fimc_control *ctrl)
 static int fimc_is_register_callback(struct device *dev, void *p)
 {
 	struct v4l2_subdev **sd = p;
-	struct platform_device *pdev;
 
 	*sd = dev_get_drvdata(dev);
 
-	if (*sd)
-		pdev = v4l2_get_subdevdata(*sd);
-
+	if (!*sd)
+		return -EINVAL;
+	
 	return 0; /* non-zero value stops iteration */
 }
 
@@ -1627,33 +1626,6 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		if (ctrl->is.sd)
 			ret = v4l2_subdev_call(ctrl->is.sd, video, s_stream, c->value);
 		break;
-	case V4L2_CID_IS_S_SCENARIO_MODE:
-	case V4L2_CID_IS_S_FORMAT_SCENARIO:
-	case V4L2_CID_IS_CAMERA_SHOT_MODE_NORMAL:
-	case V4L2_CID_IS_CAMERA_FOCUS_MODE:
-	case V4L2_CID_IS_CAMERA_FLASH_MODE:
-	case V4L2_CID_IS_CAMERA_AWB_MODE:
-	case V4L2_CID_IS_CAMERA_IMAGE_EFFECT:
-	case V4L2_CID_IS_CAMERA_ISO:
-	case V4L2_CID_IS_CAMERA_CONTRAST:
-	case V4L2_CID_IS_CAMERA_SATURATION:
-	case V4L2_CID_IS_CAMERA_SHARPNESS:
-	case V4L2_CID_IS_CAMERA_EXPOSURE:
-	case V4L2_CID_IS_CAMERA_BRIGHTNESS:
-	case V4L2_CID_IS_CAMERA_HUE:
-	case V4L2_CID_IS_CAMERA_METERING:
-	case V4L2_CID_IS_CAMERA_AFC_MODE:
-	case V4L2_CID_IS_FD_NUM_FACE:
-	case V4L2_CID_IS_SET_ISP:
-	case V4L2_CID_IS_SET_DRC:
-	case V4L2_CID_IS_SET_FD:
-	case V4L2_CID_IS_CMD_FD:
-	case V4L2_CID_IS_ISP_DMA_BUFFER_NUM:
-	case V4L2_CID_CAMERA_SCENE_MODE:
-		if (ctrl->is.sd)
-			ret = v4l2_subdev_call(ctrl->is.sd, core, s_ctrl, c);
-		break;
-
 	case V4L2_CID_CACHEABLE:
 		ctrl->cap->cacheable = c->value;
 		ret = 0;
@@ -1670,7 +1642,7 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 			if (ctrl->cam->sd)
 				ret = v4l2_subdev_call(ctrl->cam->sd,
 							core, s_ctrl, c);
-			if (ctrl->is.sd)
+			if (ctrl->is.sd && ctrl->cam->use_isp)
 				ret = v4l2_subdev_call(ctrl->is.sd,
 							core, s_ctrl, c);
 		else
