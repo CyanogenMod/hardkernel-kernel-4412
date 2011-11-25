@@ -48,17 +48,7 @@ void init_lcd(struct mipi_dsim_device *dsim)
 
 void s6e8ab0_mipi_lcd_off(struct mipi_dsim_device *dsim)
 {
-	/* softreset */
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_DCS_SHORT_WRITE,
-		0x1, 0);
-	/* Enter sleep */
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_DCS_SHORT_WRITE,
-		0x10, 0);
-	mdelay(60);
-
-	/* Set Display off */
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_DCS_SHORT_WRITE,
-		0x28, 0);
+	mdelay(1);
 }
 
 static int s6e8ab0_mipi_lcd_bl_update_status(struct backlight_device *bd)

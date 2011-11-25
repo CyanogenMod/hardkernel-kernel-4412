@@ -642,20 +642,14 @@ static void s5p_mipi_dsi_late_resume(struct early_suspend *handler)
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
 
-	s5p_mipi_dsi_set_hs_enable(dsim);
-	/* set cpu command transfer mode to hs. */
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 
-	/* it needs delay for stabilization */
-	mdelay(dsim->pd->delay_for_stabilization);
+	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
 
-	s5p_mipi_dsi_set_display_mode(dsim,
-		dsim->dsim_config);
-
-	/* set lcdc data transfer mode to hs. */
-	s5p_mipi_dsi_set_data_transfer_mode(dsim, 1);
-
+	/* lcd init */
 	dsim->dsim_lcd_drv->resume(dsim);
+
+	s5p_mipi_dsi_set_hs_enable(dsim);
 }
 #else
 static int s5p_mipi_dsi_suspend(struct platform_device *pdev,
@@ -680,19 +674,14 @@ static int s5p_mipi_dsi_resume(struct platform_device *pdev)
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
 
-	s5p_mipi_dsi_set_hs_enable(dsim);
-	/* set cpu command transfer mode to hs. */
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 
-	/* it needs delay for stabilization */
-	mdelay(dsim->pd->delay_for_stabilization);
+	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
 
-	s5p_mipi_dsi_set_display_mode(dsim,
-		dsim->dsim_config);
-
-	/* set lcdc data transfer mode to hs. */
-	s5p_mipi_dsi_set_data_transfer_mode(dsim, 1);
+	/* lcd init */
 	dsim->dsim_lcd_drv->resume(dsim);
+
+	s5p_mipi_dsi_set_hs_enable(dsim);
 	return 0;
 }
 #endif
