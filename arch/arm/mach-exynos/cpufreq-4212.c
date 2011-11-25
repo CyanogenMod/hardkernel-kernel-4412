@@ -72,28 +72,28 @@ static unsigned int clkdiv_cpu0_4212[CPUFREQ_LEVEL_END][7] = {
 	 *		DIVATB, DIVPCLK_DBG, DIVAPLL }
 	 */
 	/* ARM L0: 1500Mhz */
-	{ 0, 6, 7, 7, 6, 1, 2 },
+	{ 0, 6, 7, 0, 6, 1, 2 },
 
 	/* ARM L1: 1400Mhz */
-	{ 0, 6, 7, 7, 6, 1, 2 },
+	{ 0, 6, 7, 0, 6, 1, 2 },
 
 	/* ARM L2: 1300Mhz */
-	{ 0, 5, 7, 7, 5, 1, 2 },
+	{ 0, 5, 7, 0, 5, 1, 2 },
 
 	/* ARM L3: 1200Mhz */
-	{ 0, 5, 7, 7, 5, 1, 2 },
+	{ 0, 5, 7, 0, 5, 1, 2 },
 
 	/* ARM L4: 1100MHz */
-	{ 0, 4, 7, 7, 4, 1, 2 },
+	{ 0, 4, 7, 0, 4, 1, 2 },
 
 	/* ARM L5: 1000MHz */
-	{ 0, 4, 7, 7, 4, 1, 1 },
+	{ 0, 4, 7, 0, 4, 1, 1 },
 
 	/* ARM L6: 900MHz */
 	{ 0 },
 
 	/* ARM L7: 800MHz */
-	{ 0, 3, 7, 7, 3, 1, 1 },
+	{ 0, 3, 7, 0, 3, 1, 1 },
 
 	/* ARM L8: 700MHz */
 	{ 0 },
@@ -102,7 +102,7 @@ static unsigned int clkdiv_cpu0_4212[CPUFREQ_LEVEL_END][7] = {
 	{ 0 },
 
 	/* ARM L10: 500MHz */
-	{ 0, 2, 5, 7, 3, 1, 1 },
+	{ 0, 2, 5, 0, 3, 1, 1 },
 
 	/* ARM L11: 400MHz */
 	{ 0 },
@@ -111,7 +111,7 @@ static unsigned int clkdiv_cpu0_4212[CPUFREQ_LEVEL_END][7] = {
 	{ 0 },
 
 	/* ARM L13: 200MHz */
-	{ 0, 1, 3, 7, 0, 1, 0 },
+	{ 0, 1, 3, 0, 0, 1, 0 },
 };
 
 static unsigned int clkdiv_cpu0_4412[CPUFREQ_LEVEL_END][8] = {
