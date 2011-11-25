@@ -17,9 +17,13 @@
 #include <plat/map-base.h>
 #define SYSREG_DISP1BLK_CFG		(S3C_VA_SYS + 0x0214)
 #define FIFORST_DISP1			(1 << 23)
-#define SYSREG_GSCBLK_CFG		(S3C_VA_SYS + 0x0220)
+#define SYSREG_GSCBLK_CFG0		(S3C_VA_SYS + 0x0220)
 #define GSC_OUT_DST_SEL(x)		(1 << (8 + 2 *(x)))
 #define GSC_PXLASYNC_RST(x)		(1 << (x))
+#define SYSREG_GSCBLK_CFG1		(S3C_VA_SYS + 0x0224)
+#define GSC_BLK_DISP1WB_DEST(x)		(x << 10)
+#define GSC_BLK_SW_RESET_WB_DEST(x)	(1 << (18 + x))
+#define GSC_BLK_GSCL_WB_IN_SRC_SEL(x)	(1 << (2 * x))
 
 /* G-Scaler enable */
 #define GSC_ENABLE			0x00

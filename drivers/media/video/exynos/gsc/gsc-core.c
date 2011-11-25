@@ -56,7 +56,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.num_planes	= 1,
 		.nr_comp	= 1,
 		.mbus_code	= V4L2_MBUS_FMT_YUYV8_2X8,
-		.flags		= FMT_FLAGS_CAM,
 	}, {
 		.name		= "YUV 4:2:2 packed, CbYCrY",
 		.pixelformat	= V4L2_PIX_FMT_UYVY,
@@ -67,7 +66,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.num_planes	= 1,
 		.nr_comp	= 1,
 		.mbus_code	= V4L2_MBUS_FMT_UYVY8_2X8,
-		.flags		= FMT_FLAGS_CAM,
 	}, {
 		.name		= "YUV 4:2:2 packed, CrYCbY",
 		.pixelformat	= V4L2_PIX_FMT_VYUY,
@@ -78,7 +76,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.num_planes	= 1,
 		.nr_comp	= 1,
 		.mbus_code	= V4L2_MBUS_FMT_VYUY8_2X8,
-		.flags		= FMT_FLAGS_CAM,
 	}, {
 		.name		= "YUV 4:2:2 packed, YCrYCb",
 		.pixelformat	= V4L2_PIX_FMT_YVYU,
@@ -89,7 +86,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.num_planes	= 1,
 		.nr_comp	= 1,
 		.mbus_code	= V4L2_MBUS_FMT_YVYU8_2X8,
-		.flags		= FMT_FLAGS_CAM,
 	}, {
 		.name		= "YUV 4:4:4 planar, YCbYCr",
 		.pixelformat	= V4L2_PIX_FMT_YUV32,
@@ -756,6 +752,8 @@ void gsc_cap_irq_handler(struct gsc_dev *gsc)
 	gsc_info("done_index : %d", done_index);
 	if (done_index < 0)
 		gsc_err("All buffers are masked\n");
+	test_bit(ST_CAPT_RUN, &gsc->state) ? :
+		set_bit(ST_CAPT_RUN, &gsc->state);
 	vb2_buffer_done(gsc->cap.vbq.bufs[done_index], VB2_BUF_STATE_DONE);
 }
 

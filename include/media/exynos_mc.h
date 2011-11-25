@@ -33,6 +33,7 @@
 #define GSC_OUT_PAD_SOURCE	1
 
 #define GSC_CAP_PAD_SINK	0
+#define GSC_CAP_PAD_SOURCE	1
 
 #define FLITE_PAD_SINK		0
 #define FLITE_PAD_SOURCE_PREVIEW	1
@@ -42,6 +43,8 @@
 #define CSIS_PAD_SINK		0
 #define CSIS_PAD_SOURCE		1
 #define CSIS_PADS_NUM		2
+
+#define MAX_CAMIF_CLIENTS	2
 
 enum mdev_node {
 	MDEV_OUTPUT,
@@ -70,6 +73,7 @@ struct exynos_md {
 	struct v4l2_device	v4l2_dev;
 	struct platform_device	*pdev;
 	struct v4l2_subdev	*gsc_sd[MAX_GSC_SUBDEV];
+	struct v4l2_subdev	*gsc_cap_sd[MAX_GSC_SUBDEV];
 	u16			id;
 	spinlock_t slock;
 };

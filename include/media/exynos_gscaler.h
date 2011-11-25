@@ -13,10 +13,17 @@
 #ifndef EXYNOS_GSCALER_H_
 #define EXYNOS_GSCALER_H_
 
+#include <media/exynos_mc.h>
+
 enum gsc_cam_bus_type {
 	GSC_ITU_601 = 1,
 	GSC_MIPI_CSI2,
 	GSC_LCD_WB, /* FIFO link from FIMD*/
+};
+
+enum gsc_cam_port {
+	CAM_PORT_A,
+	CAM_PORT_B,
 };
 
 #define GSC_CLK_INV_PCLK	(1 << 0)
@@ -47,11 +54,9 @@ struct exynos_gscaler_isp_info {
 	enum gsc_cam_bus_type bus_type;
 	u16 csi_data_align;
 	u16 i2c_bus_num;
-	u16 mux_id;
+	enum gsc_cam_port cam_port;
 	u16 flags;
 };
-
-#define GSC_MAX_CAMIF_CLIENTS	2
 
 /**
  * struct exynos_platform_gscaler - camera host interface platform data
@@ -59,11 +64,11 @@ struct exynos_gscaler_isp_info {
  * @isp_info: properties of camera sensor required for host interface setup
  */
 struct exynos_platform_gscaler {
-	struct exynos_gscaler_isp_info *isp_info[GSC_MAX_CAMIF_CLIENTS];
-	unsigned int active_cam_index;
-	unsigned int num_clients;
-	unsigned int cam_preview:1;
-	unsigned int cam_camcording:1;
+	struct exynos_gscaler_isp_info *isp_info[MAX_CAMIF_CLIENTS];
+	u32 active_cam_index;
+	u32 num_clients;
+	u32 cam_preview:1;
+	u32 cam_camcording:1;
 };
 
 extern struct exynos_platform_gscaler exynos_gsc0_default_data;

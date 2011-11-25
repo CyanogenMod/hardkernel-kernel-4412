@@ -37,13 +37,13 @@ void gsc_disp_fifo_sw_reset(struct gsc_dev *dev)
 
 void gsc_pixelasync_sw_reset(struct gsc_dev *dev)
 {
-	u32 cfg = readl(SYSREG_GSCBLK_CFG);
+	u32 cfg = readl(SYSREG_GSCBLK_CFG0);
 	/* GSCBLK Pixel asyncy FIFO S/W reset sequence
 	   set PXLASYNC_SW_RESET as 0 then, set PXLASYNC_SW_RESET as 1 again */
 	cfg &= ~GSC_PXLASYNC_RST(dev->id);
-	writel(cfg, SYSREG_GSCBLK_CFG);
+	writel(cfg, SYSREG_GSCBLK_CFG0);
 	cfg |= GSC_PXLASYNC_RST(dev->id);
-	writel(cfg, SYSREG_GSCBLK_CFG);
+	writel(cfg, SYSREG_GSCBLK_CFG0);
 }
 
 int gsc_wait_reset(struct gsc_dev *dev)
@@ -293,14 +293,26 @@ void gsc_hw_set_output_addr(struct gsc_dev *dev,
 void gsc_hw_set_input_path(struct gsc_ctx *ctx)
 {
 	struct gsc_dev *dev = ctx->gsc_dev;
+	struct v4l2_subdev *sd = NULL;
 
 	u32 cfg = readl(dev->regs + GSC_IN_CON);
-	cfg &= ~GSC_IN_PATH_MASK;
+	cfg &= ~(GSC_IN_PATH_MASK | GSC_IN_LOCAL_SEL_MASK);
 
 	if (ctx->in_path == GSC_DMA) {
 		cfg |= GSC_IN_PATH_MEMORY;
 	} else {
 		cfg |= GSC_IN_PATH_LOCAL;
+		if (ctx->in_path == GSC_WRITEBACK) {
+			cfg |= GSC_IN_LOCAL_FIMD_WB;
+		} else {
+			struct v4l2_subdev *sd = dev->pipeline.sensor;
+			struct gsc_sensor_info *s_info =
+				v4l2_get_subdev_hostdata(sd);
+			if (s_info->pdata->cam_port == CAM_PORT_A)
+				cfg |= GSC_IN_LOCAL_CAM0;
+			else
+				cfg |= GSC_IN_LOCAL_CAM1;
+		}
 	}
 
 	writel(cfg, dev->regs + GSC_IN_CON);
@@ -602,11 +614,24 @@ void gsc_hw_set_sfr_update(struct gsc_ctx *ctx)
 
 void gsc_hw_set_local_dst(int id, bool on)
 {
-	u32 cfg = readl(SYSREG_GSCBLK_CFG);
+	u32 cfg = readl(SYSREG_GSCBLK_CFG0);
 
 	if (on)
 		cfg |= GSC_OUT_DST_SEL(id);
 	else
 		cfg &= ~(GSC_OUT_DST_SEL(id));
-	writel(cfg, SYSREG_GSCBLK_CFG);
+	writel(cfg, SYSREG_GSCBLK_CFG0);
+}
+
+void gsc_hw_set_sysreg_writeback(struct gsc_ctx *ctx)
+{
+	struct gsc_dev *dev = ctx->gsc_dev;
+
+	u32 cfg = readl(SYSREG_GSCBLK_CFG1);
+
+	cfg |= GSC_BLK_DISP1WB_DEST(dev->id);
+	cfg |= GSC_BLK_GSCL_WB_IN_SRC_SEL(dev->id);
+	cfg |= GSC_BLK_SW_RESET_WB_DEST(dev->id);
+
+	writel(cfg, SYSREG_GSCBLK_CFG1);
 }

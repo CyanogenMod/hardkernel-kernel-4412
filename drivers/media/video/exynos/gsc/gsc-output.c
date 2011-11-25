@@ -797,7 +797,7 @@ static int gsc_link_setup(struct media_entity *entity,
 				/* Gscaler 0 --> Winwow 0, Gscaler 1 --> Window 1,
 				   Gscaler 2 --> Window 2, Gscaler 3 --> Window 2 */
 				char name[FIMD_NAME_SIZE];
-				sprintf(name, "%s%d", FIMD_MODULE_NAME, get_win_num(gsc));
+				sprintf(name, "%s%d", FIMD_ENTITY_NAME, get_win_num(gsc));
 				gsc_hw_set_local_dst(gsc->id, true);
 				sd = media_entity_to_v4l2_subdev(remote->entity);
 				gsc->pipeline.disp = sd;

@@ -56,7 +56,8 @@
 #define GSC_SUBDEV_NAME			"exynos-gsc-sd"
 #define FLITE_MODULE_NAME		"exynos-fimc-lite"
 #define CSIS_MODULE_NAME		"s5p-mipi-csis"
-#define FIMD_MODULE_NAME		"s3c-fb-window"
+#define FIMD_MODULE_NAME		"s5p-fimd1"
+#define FIMD_ENTITY_NAME		"s3c-fb-window"
 #define GSC_MAX_DEVS			4
 #define WORKQUEUE_NAME_SIZE		32
 #define FIMD_NAME_SIZE			32
@@ -82,8 +83,9 @@
 #define FLITE_GRP_ID			(1 << 1)
 #define CSIS_GRP_ID			(1 << 2)
 #define SENSOR_GRP_ID			(1 << 3)
+#define FIMD_GRP_ID			(1 << 4)
 
-#define SENSOR_MAX_ENTITIES		GSC_MAX_CAMIF_CLIENTS
+#define SENSOR_MAX_ENTITIES		MAX_CAMIF_CLIENTS
 #define FLITE_MAX_ENTITIES		2
 #define CSIS_MAX_ENTITIES		2
 
@@ -124,6 +126,7 @@ enum gsc_cap_input_entity {
 	GSC_IN_NONE,
 	GSC_IN_FLITE_PREVIEW,
 	GSC_IN_FLITE_CAMCORDING,
+	GSC_IN_FIMD_WRITEBACK,
 };
 
 enum gsc_irq {
@@ -293,6 +296,7 @@ struct gsc_capture_device {
 	struct gsc_ctx			*ctx;
 	struct video_device		*vfd;
 	struct v4l2_subdev		*sd_cap;
+	struct v4l2_subdev		*sd_disp;
 	struct v4l2_subdev		*sd_flite[FLITE_MAX_ENTITIES];
 	struct v4l2_subdev		*sd_csis[CSIS_MAX_ENTITIES];
 	struct gsc_sensor_info		sensor[SENSOR_MAX_ENTITIES];
@@ -307,7 +311,7 @@ struct gsc_capture_device {
 	u32				frame_cnt;
 	u32				reqbufs_cnt;
 	enum gsc_cap_input_entity	input;
-	unsigned int			cam_index;
+	u32				cam_index;
 	bool				user_subdev_api;
 };
 
@@ -737,6 +741,7 @@ void gsc_hw_set_rotation(struct gsc_ctx *ctx);
 void gsc_hw_set_global_alpha(struct gsc_ctx *ctx);
 void gsc_hw_set_sfr_update(struct gsc_ctx *ctx);
 void gsc_hw_set_local_dst(int id, bool on);
+void gsc_hw_set_sysreg_writeback(struct gsc_ctx *ctx);
 
 int gsc_hw_get_input_buf_mask_status(struct gsc_dev *dev);
 int gsc_hw_get_done_input_buf_index(struct gsc_dev *dev);
