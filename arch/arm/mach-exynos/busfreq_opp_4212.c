@@ -48,29 +48,33 @@ enum busfreq_level_idx {
 	LV_2,
 	LV_3,
 	LV_4,
+	LV_5,
 	LV_END
 };
 
 static struct busfreq_table exynos4_busfreq_table[] = {
-	{LV_0, 400000, 1100000, 0, 0, 0},
-	{LV_1, 267000, 1000000, 0, 0, 0},
-	{LV_2, 160000, 950000, 0, 0, 0},
-	{LV_3, 133000, 950000, 0, 0, 0},
-	{LV_4, 100000, 950000, 0, 0, 0},
+	{LV_0, 400200, 1100000, 0, 0, 0}, /* MIF : 400MHz INT : 200MHz */
+	{LV_1, 267200, 1000000, 0, 0, 0}, /* MIF : 267MHz INT : 200MHz */
+	{LV_2, 267160, 1000000, 0, 0, 0}, /* MIF : 267MHz INT : 160MHz */
+	{LV_3, 160160, 950000, 0, 0, 0},  /* MIF : 160MHz INT : 160MHz */
+	{LV_4, 133133, 950000, 0, 0, 0},  /* MIF : 133MHz INT : 133MHz */
+	{LV_5, 100100, 950000, 0, 0, 0},  /* MIF : 100MHz INT : 100MHz */
 	{0, 0, 0, 0, 0, 0},
 };
 
 #define ASV_GROUP	5
 static unsigned int exynos4_asv_volt[ASV_GROUP][LV_END] = {
-	{1100000, 1000000, 950000, 950000, 950000},
-	{1100000, 1000000, 950000, 950000, 950000},
-	{1100000, 1000000, 950000, 950000, 950000},
-	{1100000, 1000000, 950000, 950000, 950000},
-	{1100000, 1000000, 950000, 950000, 950000},
+	/* 400      267      267      160     133     100 */
+	{1100000, 1000000, 1000000, 950000, 950000, 950000},
+	{1100000, 1000000, 1000000, 950000, 950000, 950000},
+	{1100000, 1000000, 1000000, 950000, 950000, 950000},
+	{1100000, 1000000, 1000000, 950000, 950000, 950000},
+	{1100000, 1000000, 1000000, 950000, 950000, 950000},
 };
 
 static unsigned int exynos4212_int_volt[LV_END] = {
-	1000000, 950000, 950000, 950000, 950000
+	/* 200      200     160    160      133     100 */
+	1000000, 1000000, 950000, 950000, 950000, 950000
 };
 
 static unsigned int clkdiv_dmc0[LV_END][6] = {
@@ -86,13 +90,16 @@ static unsigned int clkdiv_dmc0[LV_END][6] = {
 	/* DMC L1: 266.7MHz */
 	{4, 1, 1, 2, 1, 1},
 
-	/* DMC L2: 160MHz */
+	/* DMC L2: 266.7MHz */
+	{4, 1, 1, 2, 1, 1},
+
+	/* DMC L3: 160MHz */
 	{5, 1, 1, 4, 1, 1},
 
-	/* DMC L3: 133MHz */
+	/* DMC L4: 133MHz */
 	{5, 1, 1, 5, 1, 1},
 
-	/* DMC L4: 100MHz */
+	/* DMC L5: 100MHz */
 	{7, 1, 1, 7, 1, 1},
 };
 
@@ -108,13 +115,16 @@ static unsigned int clkdiv_dmc1[LV_END][6] = {
 	/* DMC L1: 266.7MHz */
 	{4, 2, 1},
 
-	/* DMC L2: 160MHz */
+	/* DMC L2: 266.7MHz */
+	{4, 2, 1},
+
+	/* DMC L3: 160MHz */
 	{5, 4, 1},
 
-	/* DMC L3: 133MHz */
+	/* DMC L4: 133MHz */
 	{5, 5, 1},
 
-	/* DMC L4: 100MHz */
+	/* DMC L5: 100MHz */
 	{7, 7, 1},
 };
 
@@ -128,16 +138,19 @@ static unsigned int clkdiv_top[LV_END][5] = {
 	/* ACLK_GDL/R L0: 200MHz */
 	{2, 7, 4, 5, 1},
 
-	/* ACLK_GDL/R L1: 160MHz */
-	{4, 7, 5, 7, 1},
+	/* ACLK_GDL/R L1: 200MHz */
+	{2, 7, 4, 5, 1},
 
 	/* ACLK_GDL/R L2: 160MHz */
 	{4, 7, 5, 7, 1},
 
-	/* ACLK_GDL/R L3: 133MHz */
+	/* ACLK_GDL/R L3: 160MHz */
 	{4, 7, 5, 7, 1},
 
-	/* ACLK_GDL/R L4: 100MHz */
+	/* ACLK_GDL/R L4: 133MHz */
+	{4, 7, 5, 7, 1},
+
+	/* ACLK_GDL/R L5: 100MHz */
 	{7, 7, 7, 7, 1},
 };
 
@@ -150,16 +163,19 @@ static unsigned int clkdiv_lr_bus[LV_END][2] = {
 	/* ACLK_GDL/R L0: 200MHz */
 	{3, 1},
 
-	/* ACLK_GDL/R L1: 160MHz */
-	{4, 1},
+	/* ACLK_GDL/R L1: 200MHz */
+	{3, 1},
 
 	/* ACLK_GDL/R L2: 160MHz */
 	{4, 1},
 
-	/* ACLK_GDL/R L3: 133MHz */
+	/* ACLK_GDL/R L3: 160MHz */
+	{4, 1},
+
+	/* ACLK_GDL/R L4: 133MHz */
 	{5, 1},
 
-	/* ACLK_GDL/R L4: 100MHz */
+	/* ACLK_GDL/R L5: 100MHz */
 	{7, 1},
 };
 
@@ -168,6 +184,9 @@ static unsigned int clkdiv_sclkip[LV_END][3] = {
 	 * Clock divider value for following
 	 * { DIVMFC, DIVJPEG, DIVFIMC0~3}
 	 */
+
+	/* SCLK_MFC: 200MHz */
+	{3, 3, 4},
 
 	/* SCLK_MFC: 200MHz */
 	{3, 3, 4},

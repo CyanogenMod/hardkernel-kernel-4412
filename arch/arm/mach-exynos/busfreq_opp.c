@@ -65,7 +65,7 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 {
 	struct opp *opp;
 	unsigned long lockfreq;
-	unsigned long newfreq = 160000;
+	unsigned long newfreq = 100100;
 	unsigned long long cpu_load = 0;
 	unsigned long long dmc_load = 0;
 
@@ -75,7 +75,7 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	dmc_load = (ppmu_load[PPMU_DMC0] + ppmu_load[PPMU_DMC1]) / 2;
 
 	if (dmc_load > IDLE_THRESHOLD)
-		newfreq = 400000;
+		newfreq = 400200;
 
 	lockfreq = dev_max_freq(data->dev);
 
@@ -213,8 +213,8 @@ static ssize_t show_level_lock(struct device *device,
 
 	freq = bus_ctrl.opp_lock == NULL ? 0 : opp_get_freq(bus_ctrl.opp_lock);
 
-	len = sprintf(buf, "Current Freq : %lu\n", opp_get_freq(data->curr_opp));
-	len += sprintf(buf + len, "Current Lock Freq : %lu\n", freq);
+	len = sprintf(buf, "Current Freq(MIN/INT) : %lu\n", opp_get_freq(data->curr_opp));
+	len += sprintf(buf + len, "Current Lock Freq(MIF/INT) : %lu\n", freq);
 
 	return len;
 }
@@ -231,8 +231,8 @@ static ssize_t store_level_lock(struct device *device, struct device_attribute *
 		return count;
 	}
 
-	if (freq > 400000)
-		freq = 400000;
+	if (freq > 400200)
+		freq = 400200;
 
 	opp = opp_find_freq_ceil(bus_ctrl.dev, &freq);
 	bus_ctrl.opp_lock = opp;
@@ -334,7 +334,7 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 
 	if (IS_ERR(sclk_dmc)) {
 		pr_err("Failed to get sclk_dmc.!\n");
-		freq = 400000;
+		freq = 400200;
 	} else {
 		freq = clk_get_rate(sclk_dmc) / 1000;
 		clk_put(sclk_dmc);
