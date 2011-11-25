@@ -40,6 +40,7 @@ static struct sleep_save exynos5_core_save[] = {
 	SAVE_ITEM(S5P_VA_GIC_CPU + 0x000),
 	SAVE_ITEM(S5P_VA_GIC_CPU + 0x004),
 	SAVE_ITEM(S5P_VA_GIC_CPU + 0x008),
+	SAVE_ITEM(S5P_VA_GIC_CPU + 0x00C),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x000),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x004),
 	SAVE_ITEM(S5P_VA_GIC_DIST + 0x100),
@@ -173,6 +174,11 @@ void exynos5_cpu_suspend(void)
 	tmp = __raw_readl(EXYNOS5_CLKGATE_IP_GEN);
 	tmp &= ~(1 << 2);
 	__raw_writel(tmp, EXYNOS5_CLKGATE_IP_GEN);
+
+	/* Disable wakeup by EXT_GIC */
+	tmp = __raw_readl(EXYNOS5_WAKEUP_MASK);
+	tmp |= EXYNOS5_DEFAULT_WAKEUP_MACK;
+	__raw_writel(tmp, EXYNOS5_WAKEUP_MASK);
 
 	/*
 	 * GPS LPI mask.
