@@ -50,10 +50,9 @@ static DEFINE_SPINLOCK(lock);
 
 int audss_set_clk_div(u32 mode)
 {
-	u32 rclk_rate = 0;
 	u32 srp_clk_rate = 0;
+	u32 rclk_rate = 0;
 	u32 rclk_shift = 0;
-	u32 srp_shift = 0;
 	u32 ret = -1;
 
 #ifdef CONFIG_SND_SAMSUNG_I2S_MASTER
@@ -61,73 +60,35 @@ int audss_set_clk_div(u32 mode)
 	return 0;
 #endif
 
-	audss.clk_src_rate = clk_get_rate(audss.mout_audss);
-	if (!audss.clk_src_rate) {
+	srp_clk_rate = clk_get_rate(audss.srp_clk);
+	if (!srp_clk_rate) {
 		pr_err("%s: Can't get current clk_rate %d\n",
-			__func__, audss.clk_src_rate);
+			__func__, srp_clk_rate);
 		return ret;
 	}
 
-	pr_debug("%s: Current src clock %d\n", __func__, audss.clk_src_rate);
+	pr_debug("%s: Current src clock %d\n", __func__, srp_clk_rate);
 
-	switch (mode) {
-	case AUDSS_ACTIVE:
-		switch (audss.clk_src_rate) {
-		case 192000000:
+	if (mode == AUDSS_ACTIVE) {
+		switch (srp_clk_rate) {
 		case 180000000:
-			rclk_shift = 0;
-			srp_shift = 0;
+			rclk_shift = 1;
 			break;
 		case 96000000:
 			rclk_shift = 0;
-			srp_shift = 0;
-			break;
-		case 73728000:
-		case 67737600:
-			rclk_shift = 0;
-			srp_shift = 0;
-			break;
-		case 49152000:
-		case 45158000:
-			rclk_shift = 0;
-			srp_shift = 0;
 			break;
 		}
-		break;
-	case AUDSS_INACTIVE:
-		switch (audss.clk_src_rate) {
-		case 192000000:
+	} else {
+		switch (srp_clk_rate) {
 		case 180000000:
-			rclk_shift = 0;
-			srp_shift = 0;
+			rclk_shift = 8;
 			break;
 		case 96000000:
-			rclk_shift = 0;
-			srp_shift = 0;
-			break;
-		case 73728000:
-		case 67737600:
-			rclk_shift = 0;
-			srp_shift = 0;
-			break;
-		case 49152000:
-		case 45158000:
-			rclk_shift = 0;
-			srp_shift = 0;
+			rclk_shift = 4;
 			break;
 		}
-		break;
 	}
-
-	pr_debug("%s: rclk shift [%d], srp shift[%d]\n",
-		__func__, rclk_shift, srp_shift);
-
-	srp_clk_rate = audss.clk_src_rate >> srp_shift;
-	if (srp_clk_rate != clk_get_rate(audss.srp_clk)) {
-		clk_set_rate(audss.dout_srp, srp_clk_rate);
-		pr_debug("%s: SRP_CLK[%ld]\n",
-			__func__, clk_get_rate(audss.srp_clk));
-	}
+	pr_debug("%s: rclk shift [%d]\n", __func__, rclk_shift);
 
 	rclk_rate = srp_clk_rate >> rclk_shift;
 	if (rclk_rate != clk_get_rate(audss.rclk)) {
@@ -181,9 +142,8 @@ void audss_clk_enable(bool enable)
 		}
 
 		clk_enable(audss.rclk);
-#if defined(CONFIG_SND_SAMSUNG_RP) || defined(CONFIG_SND_SOC_SAMSUNG_I2S_IDMA)
 		clk_enable(audss.srp_clk);
-#endif
+
 		audss_reg_save_restore(AUDSS_REG_RESTORE);
 		audss_set_clk_div(AUDSS_ACTIVE);
 		audss.clk_enabled = true;
@@ -204,9 +164,7 @@ void audss_clk_enable(bool enable)
 		audss_reg_save_restore(AUDSS_REG_SAVE);
 
 		clk_disable(audss.rclk);
-#if defined(CONFIG_SND_SAMSUNG_RP) || defined(CONFIG_SND_SOC_SAMSUNG_I2S_IDMA)
 		clk_disable(audss.srp_clk);
-#endif
 		audss.clk_enabled = false;
 
 		pr_debug("%s: CLKSRC[0x%x], CLKGATE[0x%x]\n", __func__,
@@ -266,6 +224,7 @@ static __devinit int audss_init(void)
 		goto err4;
 	}
 
+	audss.clk_enabled = false;
 	audss.reg_saved = false;
 
 	return ret;
