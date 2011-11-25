@@ -1381,6 +1381,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&SYSMMU_PLATDEV(gsc1),
 	&SYSMMU_PLATDEV(gsc2),
 	&SYSMMU_PLATDEV(gsc3),
+	&SYSMMU_PLATDEV(tv),
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
 	&s5p_device_fimg2d,
@@ -1728,6 +1729,11 @@ static void __init exynos_sysmmu_init(void)
 	ASSIGN_SYSMMU_POWERDOMAIN(mfc_r, &exynos5_device_pd[PD_MFC].dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_l).dev, &s5p_device_mfc.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_r).dev, &s5p_device_mfc.dev);
+#endif
+#if defined(CONFIG_VIDEO_EXYNOS_TV)
+	ASSIGN_SYSMMU_POWERDOMAIN(tv, &exynos5_device_pd[PD_DISP1].dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(tv).dev, &s5p_device_mixer.dev);
+
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
 	ASSIGN_SYSMMU_POWERDOMAIN(gsc0, &exynos5_device_pd[PD_GSCL].dev);
