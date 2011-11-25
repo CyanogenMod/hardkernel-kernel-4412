@@ -65,6 +65,9 @@
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
+#ifdef CONFIG_VIDEO_JPEG_V2X
+#include <plat/jpeg.h>
+#endif
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK5250_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -1366,6 +1369,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
+#ifdef CONFIG_VIDEO_JPEG_V2X
+	&s5p_device_jpeg,
+#endif
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 	&exynos_device_dwmci,
 #endif
@@ -1724,6 +1730,10 @@ static void __init smdk5250_map_io(void)
 #ifdef CONFIG_S5P_SYSTEM_MMU
 static void __init exynos_sysmmu_init(void)
 {
+#ifdef CONFIG_VIDEO_JPEG_V2X
+	ASSIGN_SYSMMU_POWERDOMAIN(jpeg, &exynos5_device_pd[PD_GSCL].dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(jpeg).dev, &s5p_device_jpeg.dev);
+#endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	ASSIGN_SYSMMU_POWERDOMAIN(mfc_l, &exynos5_device_pd[PD_MFC].dev);
 	ASSIGN_SYSMMU_POWERDOMAIN(mfc_r, &exynos5_device_pd[PD_MFC].dev);
@@ -1934,6 +1944,12 @@ static void __init smdk5250_machine_init(void)
 			&exynos5_device_gsc2);
 	s3c_set_platdata(&exynos_gsc3_default_data, sizeof(exynos_gsc3_default_data),
 			&exynos5_device_gsc3);
+#endif
+#ifdef CONFIG_VIDEO_JPEG_V2X
+#ifdef CONFIG_EXYNOS_DEV_PD
+	s5p_device_jpeg.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+#endif
+	exynos5_jpeg_setup_clock(&s5p_device_jpeg.dev, 150000000);
 #endif
 	smdk5250_smsc911x_init();
 #ifdef CONFIG_VIDEO_EXYNOS_TV

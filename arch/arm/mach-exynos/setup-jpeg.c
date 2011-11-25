@@ -87,3 +87,26 @@ err_clk1:
 
 	return -EINVAL;
 }
+
+int __init exynos5_jpeg_setup_clock(struct device *dev,
+					unsigned long clk_rate)
+{
+	struct clk *sclk;
+
+	sclk = clk_get(dev, "sclk_jpeg");
+	if (IS_ERR(sclk))
+		return PTR_ERR(sclk);
+
+	if (!clk_rate)
+		clk_rate = 150000000UL;
+
+	if (clk_set_rate(sclk, clk_rate)) {
+		pr_err("%s rate change failed: %lu\n", sclk->name, clk_rate);
+		clk_put(sclk);
+		return PTR_ERR(sclk);
+	}
+
+	clk_put(sclk);
+
+	return 0;
+}
