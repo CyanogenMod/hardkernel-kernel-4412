@@ -1123,16 +1123,6 @@ static int m5mols_sensor_armboot(struct v4l2_subdev *sd)
 
 	m5mols_show_version(sd);
 
-	if (info->pdata->irq) {
-		INIT_WORK(&info->work, m5mols_irq_work);
-		ret = request_irq(info->pdata->irq, m5mols_irq_handler,
-				  IRQF_TRIGGER_RISING, MOD_NAME, sd);
-		if (ret) {
-			dev_err(&client->dev, "Failed to request irq: %d\n", ret);
-			return ret;
-		}
-	}
-
 	return ret;
 }
 
@@ -1501,6 +1491,16 @@ static int m5mols_probe(struct i2c_client *client,
 	info->pdata	= pdata;
 	if (info->pdata->set_power)	/* for additional power if needed. */
 		info->set_power = pdata->set_power;
+
+	if (info->pdata->irq) {
+		INIT_WORK(&info->work, m5mols_irq_work);
+		ret = request_irq(info->pdata->irq, m5mols_irq_handler,
+				  IRQF_TRIGGER_RISING, MOD_NAME, &info->sd);
+		if (ret) {
+			dev_err(&client->dev, "Failed to request irq: %d\n", ret);
+			return ret;
+		}
+	}
 
 	ret = gpio_request(info->pdata->gpio_rst, "M5MOLS nRST");
 	if (ret) {
