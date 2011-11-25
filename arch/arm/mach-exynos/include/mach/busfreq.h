@@ -24,7 +24,6 @@ struct device;
 
 struct busfreq_data {
 	bool use;
-	unsigned long min_cpufreq;
 	struct device *dev;
 	struct delayed_work worker;
 	struct opp *curr_opp;

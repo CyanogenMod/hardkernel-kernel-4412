@@ -223,9 +223,6 @@ int exynos4210_init(struct device *dev, struct busfreq_data *data)
 {
 	unsigned int i;
 	unsigned int tmp;
-	struct cpufreq_frequency_table *table;
-	unsigned long freq;
-	unsigned long min_cpufreq = UINT_MAX;
 	unsigned long maxfreq = UINT_MAX;
 	int ret;
 
@@ -282,21 +279,8 @@ int exynos4210_init(struct device *dev, struct busfreq_data *data)
 		}
 	}
 
-	table = cpufreq_frequency_get_table(0);
-	if (IS_ERR(table)) {
-		dev_err(dev, "Fail to get cpufreq table.\n");
-		data->min_cpufreq = 2000000;
-	}
-
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
-		freq = table[i].frequency;
-		if (freq != CPUFREQ_ENTRY_INVALID && min_cpufreq > freq)
-			min_cpufreq = freq;
-	}
-
 	data->table = exynos4_busfreq_table;
 	data->table_size = LV_END;
-	data->min_cpufreq = min_cpufreq;
 
 	/* Find max frequency */
 	data->max_opp = opp_find_freq_floor(dev, &maxfreq);

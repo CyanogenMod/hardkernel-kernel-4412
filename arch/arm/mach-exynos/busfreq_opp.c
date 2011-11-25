@@ -24,7 +24,6 @@
 #include <linux/ktime.h>
 #include <linux/tick.h>
 #include <linux/kernel_stat.h>
-#include <linux/cpufreq.h>
 #include <linux/suspend.h>
 #include <linux/reboot.h>
 #include <linux/slab.h>
@@ -321,13 +320,13 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 
 	if (data->init(&pdev->dev, data)) {
 		pr_err("Failed to init busfreq.\n");
-		goto err_cpufreq;
+		goto err_busfreq;
 	}
 
 	data->time_in_state = kzalloc(sizeof(cputime64_t) * data->table_size, GFP_KERNEL);
 	if (!data->time_in_state) {
 		pr_err("Unable to create time_in_state.\n");
-		goto err_cpufreq;
+		goto err_busfreq;
 	}
 
 	sclk_dmc = clk_get(NULL, "sclk_dmc");
@@ -369,7 +368,7 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 err_pm_notifier:
 	kfree(data->time_in_state);
 
-err_cpufreq:
+err_busfreq:
 	if (!IS_ERR(data->vdd_int))
 		regulator_put(data->vdd_int);
 
