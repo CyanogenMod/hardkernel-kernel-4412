@@ -394,11 +394,12 @@ static int jpeg_m2m_open(struct file *file)
 		return err;
 	}
 
+	clk_enable(dev->clk);
+
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_get_sync(&dev->plat_dev->dev);
 #endif
 
-	clk_enable(dev->clk);
 	return 0;
 
 err_node_type:
@@ -900,11 +901,11 @@ static int jpeg_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct jpeg_dev *dev = platform_get_drvdata(pdev);
 
-	/* clock disable */
-	clk_disable(dev->clk);
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_put_sync(&pdev->dev);
 #endif
+	/* clock disable */
+	clk_disable(dev->clk);
 	return 0;
 }
 
