@@ -23,8 +23,9 @@
 #include <media/v4l2-mediabus.h>
 #include <media/exynos_flite.h>
 #include <media/v4l2-ioctl.h>
+#ifdef CONFIG_ARCH_EXYNOS5
 #include <media/exynos_mc.h>
-
+#endif
 #include "fimc-lite-reg.h"
 
 #define flite_info(fmt, args...) \
@@ -44,7 +45,9 @@
 #define FLITE_MAX_RESET_READY_TIME	20 /* 100ms */
 #define FLITE_MAX_WIDTH_SIZE		8192
 #define FLITE_MAX_HEIGHT_SIZE		8192
-
+#ifdef CONFIG_ARCH_EXYNOS4
+#define FLITE_MAX_MBUS_NUM		1
+#endif
 enum flite_input_entity {
 	FLITE_INPUT_NONE,
 	FLITE_INPUT_SENSOR,
@@ -123,8 +126,12 @@ struct flite_dev {
 	spinlock_t			slock;
 	struct exynos_md		*mdev;
 	struct v4l2_subdev		sd;
+#if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
 	struct media_pad		pads[FLITE_PADS_NUM];
 	struct v4l2_mbus_framefmt	mbus_fmt[FLITE_PADS_NUM];
+#else
+	struct v4l2_mbus_framefmt	mbus_fmt[FLITE_MAX_MBUS_NUM];
+#endif
 	struct flite_frame		source_frame;
 	struct resource			*regs_res;
 	void __iomem			*regs;

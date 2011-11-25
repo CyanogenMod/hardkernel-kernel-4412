@@ -15,7 +15,7 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#if defined(CONFIG_MEDIA_CONTROLLER)
+#if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
 #include <mach/videonode.h>
 #include <media/exynos_mc.h>
 #endif
@@ -186,7 +186,8 @@ static int flite_s_crop(struct v4l2_subdev *sd, struct v4l2_crop *crop)
 static int flite_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct flite_dev *flite = to_flite_dev(sd);
-	struct s3c_platform_camera *cam = flite->pdata->cam;
+	u32 index = flite->pdata->active_cam_index;
+	struct s3c_platform_camera *cam = flite->pdata->cam[index];
 	u32 int_src = FLITE_REG_CIGCTRL_IRQ_LASTEN0_ENABLE;
 	unsigned long flags;
 	int ret = 0;
@@ -298,7 +299,7 @@ static int flite_s_power(struct v4l2_subdev *sd, int on)
 	return ret;
 }
 
-#if defined(CONFIG_MEDIA_CONTROLLER)
+#if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
 static int flite_subdev_enum_mbus_code(struct v4l2_subdev *sd,
 				       struct v4l2_subdev_fh *fh,
 				       struct v4l2_subdev_mbus_code_enum *code)
@@ -707,7 +708,7 @@ static struct v4l2_subdev_video_ops flite_video_ops = {
 
 static struct v4l2_subdev_ops flite_subdev_ops = {
 	.core	= &flite_core_ops,
-#if defined(CONFIG_MEDIA_CONTROLLER)
+#if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
 	.pad	= &flite_pad_ops,
 #endif
 	.video	= &flite_video_ops,
@@ -767,7 +768,7 @@ static int flite_probe(struct platform_device *pdev)
 	flite->sd.owner = THIS_MODULE;
 	snprintf(flite->sd.name, sizeof(flite->sd.name), "%s.%d\n",
 					MODULE_NAME, flite->id);
-#if defined(CONFIG_MEDIA_CONTROLLER)
+#if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
 	flite->sd.flags = V4L2_SUBDEV_FL_HAS_DEVNODE;
 
 	flite->pads[FLITE_PAD_SINK].flags = MEDIA_PAD_FL_SINK;
@@ -856,7 +857,7 @@ static int __init flite_init(void)
 {
 	int ret = platform_driver_register(&flite_driver);
 	if (ret)
-		err("platform_driver_register failed: %d\n", ret);
+		flite_err("platform_driver_register failed: %d", ret);
 	return ret;
 }
 

@@ -12,8 +12,11 @@
 #define EXYNOS_FLITE_H_
 
 #if defined(CONFIG_ARCH_EXYNOS4) && defined(CONFIG_VIDEO_FIMC)
+#define MAX_CAMIF_CLIENTS	3
 #include <plat/fimc.h>
 #else
+#include <media/exynos_mc.h>
+
 enum flite_cam_type {
 	CAM_TYPE_ITU,
 	CAM_TYPE_MIPI,
@@ -35,9 +38,11 @@ struct s3c_platform_camera {
  * @cam: properties of camera sensor required for host interface setup
  */
 struct exynos_platform_flite {
-	struct s3c_platform_camera *cam;
+	struct s3c_platform_camera *cam[MAX_CAMIF_CLIENTS];
+	u32 active_cam_index;
+	u32 num_clients;
 };
 
-extern void exynos_flite0_set_platdata(struct exynos_platform_flite *pd);
-extern void exynos_flite1_set_platdata(struct exynos_platform_flite *pd);
+extern struct exynos_platform_flite exynos_flite0_default_data;
+extern struct exynos_platform_flite exynos_flite1_default_data;
 #endif /* EXYNOS_FLITE_H_*/
