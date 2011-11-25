@@ -1946,12 +1946,17 @@ static int s3c_fb_sd_s_stream(struct v4l2_subdev *sd, int enable)
 	struct s3c_fb_win *win = v4l2_subdev_to_s3c_fb_win(sd);
 	struct s3c_fb *sfb = win->parent;
 
-	if (enable)
-		ret = s3c_fb_blank(FB_BLANK_UNBLANK, win->fbinfo);
-	else
-		ret = s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
+	if (enable) {
+		s3c_fb_blank(FB_BLANK_UNBLANK, win->fbinfo);
+	} else {
+		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
+		ret = s3c_fb_wait_for_vsync(sfb, 0);
+		if (ret) {
+			dev_err(sfb->dev, "wait timeout : %s\n", __func__);
+			return ret;
+		}
+	}
 
-	mdelay(30);
 	dev_dbg(sfb->dev, "Get the window via local path started : %d\n",
 			enable);
 	return 0;
