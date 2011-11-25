@@ -319,7 +319,7 @@ static ssize_t store_ehci_power(struct device *dev,
 			usb_remove_hcd(hcd);
 		}
 
-		if (pdata->phy_init)
+		if (pdata && pdata->phy_init)
 			pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 		s5p_ehci_configurate(hcd);
 
