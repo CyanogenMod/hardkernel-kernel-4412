@@ -550,20 +550,6 @@ static struct s3c_platform_camera s5k6a3 = {
 
 #endif
 
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
-static struct exynos_platform_flite flite_plat = {
-#ifdef CONFIG_VIDEO_S5K3H1
-	.cam = &s5k3h1,
-#endif
-#ifdef CONFIG_VIDEO_S5K3H2
-	.cam = &s5k3h2,
-#endif
-#ifdef CONFIG_VIDEO_S5K6A3
-	.cam = &s5k6a3,
-#endif
-};
-#endif
-
 /* legacy M5MOLS Camera driver configuration */
 #ifdef CONFIG_VIDEO_M5MO
 #define CAM_CHECK_ERR_RET(x, msg)	\
@@ -3035,7 +3021,6 @@ static void __init smdk4x12_subdev_config(void)
 #endif
 #endif
 }
-
 static void __init smdk4x12_camera_config(void)
 {
 	/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
@@ -3054,6 +3039,47 @@ static void __init smdk4x12_camera_config(void)
 	s3c_gpio_cfgpin(EXYNOS4_GPX2(6), S3C_GPIO_SFN(0xF));
 	s3c_gpio_setpull(EXYNOS4_GPX2(6), S3C_GPIO_PULL_NONE);
 #endif
+}
+#endif /* CONFIG_VIDEO_SAMSUNG_S5P_FIMC */
+
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
+static void __set_flite_camera_config(struct exynos_platform_flite *data,
+					u32 active_index, u32 max_cam)
+{
+	data->active_cam_index = active_index;
+	data->num_clients = max_cam;
+}
+
+static void __init smdk4x12_set_camera_flite_platdata(void)
+{
+	int flite0_cam_index = 0;
+	int flite1_cam_index = 0;
+#ifdef CONFIG_VIDEO_S5K3H1
+#ifdef CONFIG_S5K3H1_CSI_C
+	exynos_flite0_default_data.cam[flite0_cam_index++] = &s5k3h1;
+#endif
+#ifdef CONFIG_S5K3H1_CSI_D
+	exynos_flite1_default_data.cam[flite1_cam_index++] = &s5k3h1;
+#endif
+#endif
+#ifdef CONFIG_VIDEO_S5K3H2
+#ifdef CONFIG_S5K3H2_CSI_C
+	exynos_flite0_default_data.cam[flite0_cam_index++] = &s5k3h2;
+#endif
+#ifdef CONFIG_S5K3H2_CSI_D
+	exynos_flite1_default_data.cam[flite1_cam_index++] = &s5k3h2;
+#endif
+#endif
+#ifdef CONFIG_VIDEO_S5K6A3
+#ifdef CONFIG_S5K6A3_CSI_C
+	exynos_flite0_default_data.cam[flite0_cam_index++] = &s5k6a3;
+#endif
+#ifdef CONFIG_S5K6A3_CSI_D
+	exynos_flite1_default_data.cam[flite1_cam_index++] = &s5k6a3;
+#endif
+#endif
+	__set_flite_camera_config(&exynos_flite0_default_data, 0, flite0_cam_index);
+	__set_flite_camera_config(&exynos_flite1_default_data, 0, flite1_cam_index);
 }
 #endif
 
@@ -3585,8 +3611,11 @@ static void __init smdk4x12_machine_init(void)
 #endif
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
-	exynos_flite0_set_platdata(&flite_plat);
-	exynos_flite1_set_platdata(&flite_plat);
+	smdk4x12_set_camera_flite_platdata();
+	s3c_set_platdata(&exynos_flite0_default_data,
+			sizeof(exynos_flite0_default_data), &exynos_device_flite0);
+	s3c_set_platdata(&exynos_flite1_default_data,
+			sizeof(exynos_flite1_default_data), &exynos_device_flite1);
 #endif
 #if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C) \
 	|| defined(CONFIG_S5K3H1_CSI_C) || defined(CONFIG_S5K3H2_CSI_C) \
