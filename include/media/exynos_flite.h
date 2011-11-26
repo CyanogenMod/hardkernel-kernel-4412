@@ -11,7 +11,7 @@
 #ifndef EXYNOS_FLITE_H_
 #define EXYNOS_FLITE_H_
 
-#ifdef CONFIG_ARCH_EXYNOS4
+#if defined(CONFIG_ARCH_EXYNOS4) && defined(CONFIG_VIDEO_FIMC)
 #include <plat/fimc.h>
 #else
 enum flite_cam_type {
