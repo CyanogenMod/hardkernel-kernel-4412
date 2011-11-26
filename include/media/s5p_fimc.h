@@ -12,11 +12,18 @@
 #ifndef S5P_FIMC_H_
 #define S5P_FIMC_H_
 
+#define FLITE_MAX_NUM		2
+
 enum cam_bus_type {
 	FIMC_ITU_601 = 1,
 	FIMC_ITU_656,
 	FIMC_MIPI_CSI2,
 	FIMC_LCD_WB, /* FIFO link from LCD mixer */
+};
+
+enum flite_index {
+	FLITE_IDX_A = 0,
+	FLITE_IDX_B = 1,
 };
 
 #define FIMC_CLK_INV_PCLK	(1 << 0)
@@ -48,6 +55,9 @@ struct s5p_fimc_isp_info {
 	u16 mux_id;
 	u16 flags;
 	bool use_cam;
+	bool use_isp;
+	enum flite_index flite_id;
+	int (*cam_power)(int onoff);
 };
 
 #define FIMC_MAX_CAMIF_CLIENTS	2
