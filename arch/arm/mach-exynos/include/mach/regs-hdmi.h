@@ -1578,7 +1578,7 @@
 /* I2S_CH_ST_2 / I2S_CH_ST_SH_2 */
 #define S5P_HDMI_I2S_CHANNEL_NUM_MASK		(0xF << 4)
 #define S5P_HDMI_I2S_SOURCE_NUM_MASK		(0xF)
-#define S5P_HDMI_I2S_SET_CHANNEL_NUM(x)		((x) & (0xF) << 4)
+#define S5P_HDMI_I2S_SET_CHANNEL_NUM(x)		(((x) & (0xF)) << 4)
 #define S5P_HDMI_I2S_SET_SOURCE_NUM(x)		((x) & (0xF))
 
 /* I2S_CH_ST_3 / I2S_CH_ST_SH_3 */

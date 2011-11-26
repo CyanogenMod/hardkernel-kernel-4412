@@ -1018,8 +1018,12 @@ static void s5p_hdmi_audio_i2s_config(
 		hdmi_base + S5P_HDMI_I2S_CH_ST_0);
 	writeb(S5P_HDMI_I2S_CD_PLAYER,
 		hdmi_base + S5P_HDMI_I2S_CH_ST_1);
-	writeb(S5P_HDMI_I2S_SET_SOURCE_NUM(0),
+
+	/* Audio channel to 5.1 */
+	writeb(S5P_HDMI_I2S_SET_SOURCE_NUM(6) |
+		S5P_HDMI_I2S_SET_CHANNEL_NUM(6),
 		hdmi_base + S5P_HDMI_I2S_CH_ST_2);
+
 	writeb(S5P_HDMI_I2S_CLK_ACCUR_LEVEL_2 |
 		S5P_HDMI_I2S_SET_SAMPLING_FREQ(sample_frq),
 		hdmi_base + S5P_HDMI_I2S_CH_ST_3);
@@ -1451,7 +1455,6 @@ void s5p_hdmi_reg_infoframe(struct s5p_hdmi_infoframe *info, u8 *data, u8 type_3
 		writeb((u8)0x84, hdmi_base + S5P_HDMI_AUI_HEADER0);
 		writeb((u8)0x01, hdmi_base + S5P_HDMI_AUI_HEADER1);
 		writeb((u8)0x0a, hdmi_base + S5P_HDMI_AUI_HEADER2);
-
 		sum_addr	= S5P_HDMI_AUI_CHECK_SUM;
 		start_addr	= S5P_HDMI_AUI_BYTE1;
 		break;

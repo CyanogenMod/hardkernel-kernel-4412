@@ -1865,6 +1865,8 @@ static struct s5p_hdmi_ctrl_private_data s5p_hdmi_ctrl_private = {
 		.type	= HDMI_60958_AUDIO,
 		.bit	= 16,
 		.freq	= 44100,
+		/* Support audio 5.1Ch */
+		.channel = 5,
 	},
 
 	.av_mute	= false,
@@ -2377,6 +2379,7 @@ static void s5p_hdmi_set_aui(struct s5p_hdmi_audio *audio, u8 *aui)
 	aui[0] = (0 << 4) | audio->channel;
 	aui[1] = ((audio->type == HDMI_60958_AUDIO) ? 0 : audio->freq << 2) | 0;
 	aui[2] = 0;
+	aui[3] = 0x0b;
 }
 
 static void s5p_hdmi_set_spd(u8 *spd)
