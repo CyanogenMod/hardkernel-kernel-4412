@@ -2067,6 +2067,12 @@ config FB_EXYNOS_FIMD_MC
 	default y
 	---help---
 
+config FB_EXYNOS_FIMD_MC_WB
+	bool "Support of media controller on FIMD for writeback to GScaler"
+	depends on FB_S3C && ARCH_EXYNOS5 && MEDIA_CONTROLLER
+	default y
+	---help---
+
 config FB_S3C_DEBUG_REGWRITE
        bool "Debug register writes"
        depends on FB_S3C
