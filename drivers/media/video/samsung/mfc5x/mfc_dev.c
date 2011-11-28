@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <linux/firmware.h>
+#include <linux/proc_fs.h>
 #ifdef CONFIG_PM_RUNTIME
 #include <linux/clk.h>
 #endif
@@ -61,6 +62,10 @@
 #define MFC_FW_NAME	"mfc_fw.bin"
 
 static struct mfc_dev *mfcdev;
+static struct proc_dir_entry *mfc_proc_entry;
+
+#define MFC_PROC_ROOT		"mfc"
+#define MFC_PROC_TOTAL_INSTANCE_NUMBER	"total_instance_number"
 
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 #define MFC_DRM_MAGIC_SIZE	0x10
@@ -1012,6 +1017,17 @@ static void mfc_firmware_request_complete_handler(const struct firmware *fw,
 	mfcdev->fw.requesting = 0;
 }
 
+static int proc_read_inst_number(char *buf, char **start,
+                             off_t off, int count,
+                             int *eof, void *data)
+{
+	int len = 0;
+
+	len += sprintf(buf + len, "%d\n", atomic_read(&mfcdev->inst_cnt));
+
+	return len;
+}
+
 /* FIXME: check every exception case (goto) */
 static int __devinit mfc_probe(struct platform_device *pdev)
 {
@@ -1022,6 +1038,23 @@ static int __devinit mfc_probe(struct platform_device *pdev)
 	if (unlikely(mfcdev == NULL)) {
 		dev_err(&pdev->dev, "failed to allocate control memory\n");
 		return -ENOMEM;
+	}
+
+	mfc_proc_entry = proc_mkdir(MFC_PROC_ROOT, NULL);
+
+	if (!mfc_proc_entry) {
+		dev_err(&pdev->dev, "unable to create /proc/%s\n",
+			MFC_PROC_ROOT);
+		kfree(mfcdev);
+		return -ENOMEM;
+	}
+
+	if (!create_proc_read_entry(MFC_PROC_TOTAL_INSTANCE_NUMBER, 0,
+				mfc_proc_entry, proc_read_inst_number, NULL)) {
+		dev_err(&pdev->dev, "unable to create /proc/%s/%s\n",
+			MFC_PROC_ROOT, MFC_PROC_TOTAL_INSTANCE_NUMBER);
+		ret = -ENOMEM;
+		goto err_proc;
 	}
 
 	/* init. control structure */
@@ -1198,6 +1231,9 @@ err_mem_req:
 err_mem_res:
 	platform_set_drvdata(pdev, NULL);
 	mutex_destroy(&mfcdev->lock);
+	remove_proc_entry(MFC_PROC_TOTAL_INSTANCE_NUMBER, mfc_proc_entry);
+err_proc:
+	remove_proc_entry(MFC_PROC_ROOT, NULL);
 	kfree(mfcdev);
 
 	return ret;
@@ -1233,6 +1269,8 @@ static int __devexit mfc_remove(struct platform_device *pdev)
 	release_mem_region(dev->reg.rsrc_start, dev->reg.rsrc_len);
 	platform_set_drvdata(pdev, NULL);
 	mutex_destroy(&dev->lock);
+	remove_proc_entry(MFC_PROC_TOTAL_INSTANCE_NUMBER, mfc_proc_entry);
+	remove_proc_entry(MFC_PROC_ROOT, NULL);
 	kfree(dev);
 
 	return 0;
