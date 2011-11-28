@@ -1584,6 +1584,13 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_USB_S3C_OTGD
 	&s3c_device_usbgadget,
 #endif
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	&s3c_device_rndis,
+#endif
+#ifdef CONFIG_USB_ANDROID
+	&s3c_device_android_usb,
+	&s3c_device_usb_mass_storage,
+#endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	&exynos_device_ss_udc,
 #endif
