@@ -64,5 +64,6 @@ obj-$(CONFIG_SND_SOC_GONI_AQUILA_WM8994) += snd-soc-goni-wm8994.o
 obj-$(CONFIG_SND_SOC_SMDK_WM8580_PCM) += snd-soc-smdk-wm8580pcm.o
 obj-$(CONFIG_SND_SOC_SPEYSIDE) += snd-soc-speyside.o
 
-obj-$(CONFIG_SND_SAMSUNG_RP)   += srp/
+obj-$(CONFIG_SND_SAMSUNG_RP)   += srp_ulp/
+obj-$(CONFIG_SND_SAMSUNG_ALP)   += srp_alp/
 

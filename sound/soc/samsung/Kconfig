@@ -34,6 +34,9 @@ config SND_SAMSUNG_SPDIF
 config SND_SAMSUNG_I2S
 	tristate
 
+config SND_SOC_SAMSUNG_I2S_IDMA
+	bool
+
 config SND_SOC_SAMSUNG_NEO1973_WM8753
 	tristate "Audio support for Openmoko Neo1973 Smartphones (GTA01/GTA02)"
 	depends on SND_SOC_SAMSUNG && (MACH_NEO1973_GTA01 || MACH_NEO1973_GTA02)
@@ -69,15 +72,39 @@ config SND_SOC_SAMSUNG_SMDK_WM8994
 	help
 		Say Y if you want to add support for SoC audio on the SMDKs.
 
-config SND_SOC_SAMSUNG_I2S_IDMA
-	bool "I2S operate with Internal DMA"
+choice
+	prompt "Samsung I2S Audio type"
 	depends on SND_SAMSUNG_I2S && (ARCH_EXYNOS4 || ARCH_S5PV210 || ARCH_EXYNOS5)
-	default n
+	default SND_SAMSUNG_NORMAL
+
+config SND_SAMSUNG_NORMAL
+	bool "Normal Audio support"
 	help
-	  Say Y for I2S to operate with Internal DMA(I2S's own DMA)
+	  Say Y if you want to support normal audio.
+
+config SND_SAMSUNG_LP
+	bool "LP Audio support"
+	select SND_SOC_SAMSUNG_I2S_IDMA
+	help
+	  Say Y if you want to support LP audio.
 
 # For support SRP audio
-source "sound/soc/samsung/srp/Kconfig"
+source "sound/soc/samsung/srp_alp/Kconfig"
+source "sound/soc/samsung/srp_ulp/Kconfig"
+
+endchoice
+
+config AUDIO_SAMSUNG_MEMSIZE_SRP
+	int "Memory size in kbytes for Low power Audio"
+	depends on SND_SAMSUNG_RP || SND_SAMSUNG_ALP
+	default "1024"
+
+config SND_SAMSUNG_RP_DEBUG
+	bool "Enable debug message for ULP & ALP Audio"
+	depends on SND_SAMSUNG_RP || SND_SAMSUNG_ALP
+	default n
+	help
+	  Say Y if you want to add debug message for ULP & ALP Audio.
 
 config SND_SAMSUNG_I2S_MASTER
 	bool "I2S Master Mode"
