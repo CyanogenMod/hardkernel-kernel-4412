@@ -206,8 +206,9 @@
 #define IRQ_GPIO_END		(S5P_GPIOINT_BASE + S5P_GPIOINT_COUNT)
 
 #define IRQ_BOARD_START         IRQ_GPIO_END
+#define IRQ_NR_BOARD            40
 
 /* Set the default NR_IRQS */
-#define NR_IRQS			(IRQ_GPIO_END)
+#define NR_IRQS			(IRQ_GPIO_END + IRQ_NR_BOARD)
 
 #endif /* __ASM_ARCH_IRQS_EXYNOS4_H */
