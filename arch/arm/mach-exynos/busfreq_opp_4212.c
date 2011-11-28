@@ -40,6 +40,7 @@
 
 #include <plat/map-s5p.h>
 #include <plat/gpio-cfg.h>
+#include <plat/cpu.h>
 
 enum busfreq_level_idx {
 	LV_0,
@@ -61,19 +62,33 @@ static struct busfreq_table exynos4_busfreq_table[] = {
 	{0, 0, 0, 0, 0, 0},
 };
 
-#define ASV_GROUP	5
+#define ASV_GROUP	9
+static unsigned int asv_group_index;
+
 static unsigned int exynos4_asv_volt[ASV_GROUP][LV_END] = {
 	/* 400      267      267      160     133     100 */
-	{1100000, 1000000, 1000000, 950000, 950000, 950000},
-	{1100000, 1000000, 1000000, 950000, 950000, 950000},
-	{1100000, 1000000, 1000000, 950000, 950000, 950000},
-	{1100000, 1000000, 1000000, 950000, 950000, 950000},
-	{1100000, 1000000, 1000000, 950000, 950000, 950000},
+	{1050000, 925000,  925000,  900000, 900000, 875000}, /* ASV0 */
+	{1050000, 925000,  925000,  900000, 900000, 875000}, /* ASV1 */
+	{1025000, 925000,  925000,  900000, 900000, 875000}, /* ASV2 */
+	{1025000, 900000,  900000,  875000, 875000, 875000}, /* ASV3 */
+	{1025000, 900000,  900000,  875000, 875000, 850000}, /* ASV4 */
+	{1025000, 900000,  900000,  875000, 850000, 850000}, /* ASV5 */
+	{1025000, 900000,  900000,  850000, 850000, 850000}, /* ASV6 */
+	{1025000, 900000,  900000,  850000, 850000, 850000}, /* ASV7 */
+	{1025000, 900000,  900000,  850000, 850000, 850000}, /* ASV8 */
 };
 
-static unsigned int exynos4212_int_volt[LV_END] = {
+static unsigned int exynos4212_int_volt[ASV_GROUP][LV_END] = {
 	/* 200      200     160    160      133     100 */
-	1000000, 1000000, 950000, 950000, 950000, 950000
+	{1000000, 1000000, 950000, 950000, 925000, 900000}, /* ASV0 */
+	{975000,  975000,  925000, 925000, 925000, 900000}, /* ASV1 */
+	{950000,  950000,  925000, 925000, 900000, 875000}, /* ASV2 */
+	{950000,  950000,  925000, 925000, 900000, 875000}, /* ASV3 */
+	{925000,  925000,  875000, 875000, 875000, 875000}, /* ASV4 */
+	{900000,  900000,  850000, 850000, 850000, 850000}, /* ASV5 */
+	{900000,  900000,  850000, 850000, 850000, 850000}, /* ASV6 */
+	{900000,  900000,  850000, 850000, 850000, 850000}, /* ASV7 */
+	{900000,  900000,  850000, 850000, 850000, 850000}, /* ASV8 */
 };
 
 static unsigned int clkdiv_dmc0[LV_END][6] = {
@@ -212,33 +227,14 @@ static void exynos4212_set_bus_volt(void)
 
 	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group);
 
-	for (i = 0 ; i < LV_END ; i++) {
-		switch (asv_group) {
-		case 0:
-			exynos4_busfreq_table[i].volt =
-				exynos4_asv_volt[0][i];
-			break;
-		case 1:
-		case 2:
-			exynos4_busfreq_table[i].volt =
-				exynos4_asv_volt[1][i];
-			break;
-		case 3:
-		case 4:
-			exynos4_busfreq_table[i].volt =
-				exynos4_asv_volt[2][i];
-			break;
-		case 5:
-		case 6:
-			exynos4_busfreq_table[i].volt =
-				exynos4_asv_volt[3][i];
-			break;
-		case 7:
-			exynos4_busfreq_table[i].volt =
-				exynos4_asv_volt[4][i];
-			break;
-		}
-	}
+	if ((asv_group > 8) || (samsung_rev() != EXYNOS4412_REV_0_1))
+		asv_group = 4;
+
+	asv_group_index = asv_group;
+
+	for (i = 0 ; i < LV_END ; i++)
+		exynos4_busfreq_table[i].volt =
+			exynos4_asv_volt[asv_group][i];
 
 	return;
 }
@@ -382,7 +378,7 @@ unsigned int exynos4212_get_table_index(struct opp *opp)
 
 unsigned int exynos4212_get_int_volt(unsigned long index)
 {
-	return exynos4212_int_volt[index];
+	return exynos4212_int_volt[asv_group_index][index];
 }
 
 int exynos4212_init(struct device *dev, struct busfreq_data *data)
