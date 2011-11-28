@@ -50,7 +50,7 @@ MODULE_PARM_DESC(debug, "Enable module debug trace. Set to 1 to enable.");
 #define S5P_CSIS_DPHYCTRL		0x04
 #define S5P_CSIS_DPHYCTRL_HSS_MASK	(0x1F << 27)
 /* 4-lanes #define S5P_CSIS_DPHYCTRL_ENABLE	(0x1F << 0) */
-#define S5P_CSIS_DPHYCTRL_ENABLE	(0xF << 0)
+#define S5P_CSIS_DPHYCTRL_ENABLE	(0x1F << 0)
 
 #define S5P_CSIS_CONFIG			0x08
 #define S5P_CSIS_CFG_FMT_YCBCR422_8BIT	(0x1E << 2)
@@ -64,8 +64,29 @@ MODULE_PARM_DESC(debug, "Enable module debug trace. Set to 1 to enable.");
 
 /* Interrupt mask. */
 #define S5P_CSIS_INTMSK			0x10
-#define S5P_CSIS_INTMSK_EN_ALL		0xF000003F
+#define S5P_CSIS_INTMSK_EN_ALL		0xF000103F
 #define S5P_CSIS_INTSRC			0x14
+
+/* Interrupt Source Register */
+#define S5P_CSIS_INTSRC_EVEN_BEFORE		(1 << 31)
+#define S5P_CSIS_INTSRC_EVEN_AFTER		(1 << 30)
+#define S5P_CSIS_INTSRC_ODD_BEFORE		(1 << 29)
+#define S5P_CSIS_INTSRC_ODD_AFTER		(1 << 28)
+
+#define S5P_CSIS_INTSRC_ERR_SOT_HS		(0xF << 12)
+#define S5P_CSIS_INTSRC_ERR_LOST_FS		(1 << 5)
+#define S5P_CSIS_INTSRC_ERR_LOST_FE		(1 << 4)
+#define S5P_CSIS_INTSRC_ERR_OVER		(1 << 3)
+#define S5P_CSIS_INTSRC_ERR_ECC			(1 << 2)
+#define S5P_CSIS_INTSRC_ERR_CRC			(1 << 1)
+#define S5P_CSIS_INTSRC_ERR_ID			(1 << 0)
+#define S5P_CSIS_INTSRC_ERR			(S5P_CSIS_INTSRC_ERR_SOT_HS | \
+						S5P_CSIS_INTSRC_ERR_LOST_FS | \
+						S5P_CSIS_INTSRC_ERR_LOST_FE | \
+						S5P_CSIS_INTSRC_ERR_OVER | \
+						S5P_CSIS_INTSRC_ERR_ECC | \
+						S5P_CSIS_INTSRC_ERR_CRC | \
+						S5P_CSIS_INTSRC_ERR_ID)
 
 /* Pixel resolution. */
 #define S5P_CSIS_RESOL			0x2C
@@ -109,6 +130,7 @@ struct s5p_csis_color_format {
 	u16 pix_hor_align;
 };
 
+static s32 err_print_cnt;
 static const struct s5p_csis_color_format s5p_csis_formats[] = {
 	{
 		.code		= V4L2_MBUS_FMT_YUYV8_2X8,
@@ -117,6 +139,10 @@ static const struct s5p_csis_color_format s5p_csis_formats[] = {
 	}, {
 		.code		= V4L2_MBUS_FMT_JPEG_1X8,
 		.fmt_reg	= S5P_CSIS_CFG_FMT_USER(1),
+		.pix_hor_align	= 1,
+	}, {
+		.code		= V4L2_MBUS_FMT_SGRBG10_1X10,
+		.fmt_reg	= S5P_CSIS_CFG_FMT_RAW10,
 		.pix_hor_align	= 1,
 	},
 };
@@ -228,7 +254,7 @@ static void s5p_csis_set_params(struct s5p_csis_state *state)
 		cfg &= ~S5P_CSIS_CTRL_ALIGN_32BIT;
 
 	/* Not using external clock. */
-	cfg &= ~S5P_CSIS_CTRL_WCLK_EXTCLK;
+	cfg |= S5P_CSIS_CTRL_WCLK_EXTCLK;
 
 	writel(cfg, state->regs + S5P_CSIS_CTRL);
 
@@ -297,7 +323,7 @@ static int mipi_csis_power(struct v4l2_subdev *sd, int on)
 	} else {
 		if (pdata->phy_enable) {
 			ret = pdata->phy_enable(state->pdev, false);
-			if(ret)
+			if (ret)
 				return ret;
 		}
 		ret = regulator_disable(state->supply);
@@ -379,13 +405,14 @@ static int s5p_csis_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	v4l2_dbg(1, debug, sd, "%s: w: %d, h: %d\n", __func__,
 		 mf->width, mf->height);
 
-	if(csis_fmt == NULL ||
+	if (csis_fmt == NULL ||
 	   mf->width > CSIS_MAX_PIX_WIDTH  ||
 	   mf->height > CSIS_MAX_PIX_WIDTH ||
 	   mf->width & (u32)(csis_fmt->pix_hor_align - 1))
 		return -EINVAL;
 
-	printk("%s: w: %d, h: %d\n", __func__, mf->width, mf->height);
+	printk(KERN_DEBUG "%s: w: %d, h: %d\n", __func__,
+					mf->width, mf->height);
 	state->fmt = *mf;
 
 	return 0;
@@ -460,6 +487,13 @@ static irqreturn_t s5p_csis_isr(int irq, void *dev_id)
 	cfg = readl(state->regs + S5P_CSIS_INTSRC);
 	writel(cfg, state->regs + S5P_CSIS_INTSRC);
 
+	if (unlikely(cfg & S5P_CSIS_INTSRC_ERR)) {
+		if (err_print_cnt < 30) {
+			printk(KERN_ERR "csis error interrupt[%d]: %#x\n",
+							err_print_cnt, cfg);
+			err_print_cnt++;
+		}
+	}
 	return IRQ_HANDLED;
 }
 
@@ -532,7 +566,8 @@ static int s5p_csis_probe(struct platform_device *pdev)
 		goto p_err4;
 	}
 
-	ret = request_irq(state->irq, s5p_csis_isr, 0, dev_name(&pdev->dev), state);
+	ret = request_irq(state->irq, s5p_csis_isr, 0,
+				dev_name(&pdev->dev), state);
 	if (ret) {
 		dev_err(&pdev->dev, "request_irq failed\n");
 		goto p_err4;
