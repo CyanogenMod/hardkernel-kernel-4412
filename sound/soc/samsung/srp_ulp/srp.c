@@ -1711,20 +1711,21 @@ static int __init srp_probe(struct platform_device *pdev)
 	srp.iram = ioremap(SRP_IRAM_BASE, iram_size);
 	if (srp.iram == NULL) {
 		printk(KERN_ERR "SRP: ioremap error for iram space\n");
-		return -ENXIO;
+		ret = -ENOMEM;
+		return ret;
 	}
 
 	srp.sram = ioremap(SRP_SRAM_BASE, 0x40000);
 	if (srp.sram == NULL) {
 		printk(KERN_ERR "SRP: ioremap error for sram space\n");
-		ret = -ENXIO;
+		ret = -ENOMEM;
 		goto err1;
 	}
 
 	srp.commbox = ioremap(SRP_COMMBOX_BASE, 0x0200);
 	if (srp.commbox == NULL) {
 		printk(KERN_ERR "SRP: ioremap error for sram space\n");
-		ret = -ENXIO;
+		ret = -ENOMEM;
 		goto err2;
 	}
 
@@ -1732,7 +1733,7 @@ static int __init srp_probe(struct platform_device *pdev)
 	srp.special = ioremap(0x030F0000, 0x0100);
 	if (srp.special == NULL) {
 		printk(KERN_ERR "SRP: ioremap error for special register\n");
-		ret = -ENXIO;
+		ret = -ENOMEM;
 		goto err3;
 	}
 
@@ -1745,7 +1746,6 @@ static int __init srp_probe(struct platform_device *pdev)
 	ret = request_irq(IRQ_AUDIO_SS, srp_irq, 0, "samsung-rp", pdev);
 	if (ret < 0) {
 		printk(KERN_ERR "SRP: Fail to claim SRP(AUDIO_SS) irq\n");
-		ret = -ENXIO;
 		goto err4;
 	}
 
@@ -1761,7 +1761,6 @@ static int __init srp_probe(struct platform_device *pdev)
 	ret = srp_prepare_fw_buff(dev);
 	if (ret < 0) {
 		printk(KERN_ERR "SRP: Fail to allocate memory\n");
-		ret = -ENOMEM;
 		goto err5;
 	}
 
@@ -1808,7 +1807,6 @@ static int __init srp_probe(struct platform_device *pdev)
 	if (ret) {
 		printk(KERN_ERR "SRP: Cannot register miscdev on minor=%d\n",
 			SRP_DEV_MINOR);
-		ret = -ENXIO;
 		goto err6;
 	}
 
@@ -1816,7 +1814,6 @@ static int __init srp_probe(struct platform_device *pdev)
 	if (ret) {
 		printk(KERN_ERR "SRP: Cannot register miscdev on minor=%d\n",
 			SRP_CTRL_DEV_MINOR);
-		ret = -ENXIO;
 		goto err7;
 	}
 
@@ -1849,10 +1846,13 @@ static int srp_remove(struct platform_device *pdev)
 	free_irq(IRQ_AUDIO_SS, pdev);
 	srp_remove_fw_buff();
 
-	iounmap(srp.iram);
-	iounmap(srp.sram);
-	iounmap(srp.commbox);
+	misc_deregister(&srp_miscdev);
+	misc_deregister(&srp_ctrl_miscdev);
+
 	iounmap(srp.special);
+	iounmap(srp.commbox);
+	iounmap(srp.sram);
+	iounmap(srp.iram);
 
 	return 0;
 }

@@ -1032,8 +1032,15 @@ static __devinit int srp_probe(struct platform_device *pdev)
 	int ret = 0;
 
 	srp.iram = ioremap(SRP_IRAM_BASE, IRAM_SIZE);
+	if (srp.iram == NULL) {
+		srpdbg("SRP: Failed to ioremap for sram area\n");
+		ret = -ENOMEM;
+		return ret;
+
+	}
+
 	srp.dmem = ioremap(SRP_DMEM_BASE, DMEM_SIZE);
-	if (!srp.iram || !srp.dmem) {
+	if (srp.dmem == NULL) {
 		srpdbg("SRP: Failed to ioremap for sram area\n");
 		ret = -ENOMEM;
 		goto err1;
@@ -1041,11 +1048,17 @@ static __devinit int srp_probe(struct platform_device *pdev)
 	}
 
 	srp.icache = ioremap(SRP_ICACHE_ADDR, ICACHE_SIZE);
-	srp.commbox = ioremap(SRP_COMMBOX_BASE, COMMBOX_SIZE);
-	if (!srp.icache || !srp.commbox) {
+	if (srp.icache == NULL) {
 		srpdbg("SRP: Failed to ioremap for audio subsystem\n");
 		ret = -ENOMEM;
 		goto err2;
+	}
+
+	srp.commbox = ioremap(SRP_COMMBOX_BASE, COMMBOX_SIZE);
+	if (srp.commbox == NULL) {
+		srpdbg("SRP: Failed to ioremap for audio subsystem\n");
+		ret = -ENOMEM;
+		goto err3;
 	}
 
 	srp.ibuf0 = srp.iram + IBUF_OFFSET;
@@ -1063,13 +1076,13 @@ static __devinit int srp_probe(struct platform_device *pdev)
 	ret = srp_prepare_fw_buff(&pdev->dev);
 	if (ret) {
 		pr_err("SRP: Can't prepare memory for srp\n");
-		goto err3;
+		goto err4;
 	}
 
 	ret = request_irq(IRQ_AUDIO_SS, srp_irq, 0, "samsung-rp", pdev);
 	if (ret < 0) {
 		pr_err("SRP: Fail to claim SRP(AUDIO_SS) irq\n");
-		goto err4;
+		goto err5;
 	}
 
 	srp.audss_clk_enable = audss_clk_enable;
@@ -1078,29 +1091,38 @@ static __devinit int srp_probe(struct platform_device *pdev)
 	if (ret) {
 		pr_err("SRP: Cannot register miscdev on minor=%d\n",
 			SRP_DEV_MINOR);
-		goto err5;
+		goto err6;
 	}
 
 	return 0;
 
-err5:
+err6:
 	free_irq(IRQ_AUDIO_SS, pdev);
-err4:
+err5:
 	srp_remove_fw_buff();
+err4:
+	iounmap(srp.commbox);
 err3:
 	iounmap(srp.icache);
-	iounmap(srp.commbox);
 err2:
-	iounmap(srp.iram);
 	iounmap(srp.dmem);
 err1:
+	iounmap(srp.iram);
+
 	return ret;
 }
 
 static __devexit int srp_remove(struct platform_device *pdev)
 {
-	iounmap(srp.ibuf0);
+	free_irq(IRQ_AUDIO_SS, pdev);
+	srp_remove_fw_buff();
+
+	misc_deregister(&srp_miscdev);
+
 	iounmap(srp.commbox);
+	iounmap(srp.icache);
+	iounmap(srp.dmem);
+	iounmap(srp.iram);
 
 	return 0;
 }
