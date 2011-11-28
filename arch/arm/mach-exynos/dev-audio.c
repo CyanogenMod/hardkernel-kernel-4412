@@ -402,7 +402,7 @@ struct platform_device exynos_device_spdif = {
 	},
 };
 
-#ifdef CONFIG_SND_SAMSUNG_RP
+#if defined(CONFIG_SND_SAMSUNG_RP) || defined(CONFIG_SND_SAMSUNG_ALP)
 static struct resource exynos_srp_resource[] = {
 };
 
