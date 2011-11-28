@@ -15,6 +15,7 @@
 #include <linux/spinlock.h>
 #include <linux/types.h>
 #include <linux/videodev2.h>
+#include <linux/videodev2_samsung.h>
 #include <linux/io.h>
 #include <media/videobuf2-core.h>
 #include <media/v4l2-device.h>
@@ -43,6 +44,8 @@
 #define __pm_runtime_disable(x, y)	(void)NULL
 #endif
 
+#define fimc_cam_use(x)		((pdata->isp_info[x]->use_cam) ? 1 : 0)
+
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 
@@ -55,7 +58,7 @@
 
 /* Time to wait for next frame VSYNC interrupt while stopping operation. */
 #define FIMC_SHUTDOWN_TIMEOUT	((100*HZ)/1000)
-#define MAX_FIMC_CLOCKS		3
+#define MAX_FIMC_CLOCKS		4
 #define MODULE_NAME		"s5p-fimc"
 #define FIMC_MAX_DEVS		4
 #define FIMC_MAX_OUT_BUFS	4
@@ -67,7 +70,7 @@
 #define CAM_SRC_CLOCK		"xusbxti"
 #define FIMC_CMA_NAME		"fimc"
 #define FIMC_CMA_NAME_SIZE	6
-#define WORKQUEUE_NAME_SIZE 	32
+#define WORKQUEUE_NAME_SIZE	32
 
 #ifdef CONFIG_FB_S5P
 #define FIMD_MODULE_NAME	"s3cfb"
@@ -79,7 +82,8 @@
 enum {
 	CLK_BUS,
 	CLK_GATE,
-	CLK_CAM,
+	CLK_CAM1,
+	CLK_CAM2,
 };
 
 enum fimc_dev_flags {
@@ -328,6 +332,22 @@ struct fimc_frame {
 };
 
 /**
+ * struct fimc_is - fimc is subdevice information
+ */
+struct fimc_is {
+	struct v4l2_pix_format	fmt;
+	struct v4l2_mbus_framefmt mbus_fmt;
+	struct v4l2_subdev      *sd;
+	u32 frame_count;
+	u32 valid;
+	u32 bad_mark;
+	u32 offset_x;
+	u32 offset_y;
+	bool use_isp;
+	bool use_cam;
+};
+
+/**
  * struct fimc_m2m_device - v4l2 memory-to-memory device data
  * @vfd: the video device node for v4l2 m2m mode
  * @v4l2_dev: v4l2 device for m2m mode
@@ -372,12 +392,15 @@ struct fimc_vid_cap {
 	struct list_head		pending_buf_q;
 	struct list_head		active_buf_q;
 	struct vb2_queue		vbq;
+	struct fimc_is			is;
+	struct v4l2_subdev		*flite_sd;
 	int				active_buf_cnt;
 	int				buf_index;
 	unsigned int			frame_count;
 	unsigned int			reqbufs_count;
 	int				input_index;
 	int				refcnt;
+	u16				mux_id;
 };
 
 /**
@@ -709,6 +732,7 @@ int fimc_hw_set_camera_type(struct fimc_dev *fimc,
 			    struct s5p_fimc_isp_info *cam);
 int fimc_hwset_sysreg_camblk_fimd0_wb(struct fimc_dev *fimc);
 int fimc_hwset_sysreg_camblk_fimd1_wb(struct fimc_dev *fimc);
+int fimc_hwset_sysreg_camblk_isp_wb(struct fimc_dev *fimc);
 int fimc_wait_disable_capture(struct fimc_dev *fimc);
 int fimc_hwset_enable_lastend(struct fimc_dev *fimc);
 /* -----------------------------------------------------*/

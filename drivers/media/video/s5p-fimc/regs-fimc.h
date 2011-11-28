@@ -57,6 +57,7 @@
 #define S5P_CIGCTRL_IRQ_ENABLE		(1 << 16)
 #define S5P_CIGCTRL_SHDW_DISABLE	(1 << 12)
 #define S5P_CIGCTRL_SELWRITEBACK_A	(1 << 10)
+#define S5P_CIGCTRL_SELWRITEBACK_B	(0 << 10)
 #define S5P_CIGCTRL_CAM_JPEG		(1 << 8)
 #define S5P_CIGCTRL_SELCAM_MIPI_A	(1 << 7)
 #define S5P_CIGCTRL_CAMIF_SELWB		(1 << 6)
@@ -311,6 +312,7 @@
 
 /* SYSREG for writeback */
 #define SYSREG_CAMERA_BLK			(S3C_VA_SYS + 0x0218)
+#define SYSREG_ISP_BLK				(S3C_VA_SYS + 0x020c)
 #define FIMD0_WB_DEST_FIMC0			(0x0 << 14)
 #define FIMD0_WB_DEST_FIMC1			(0x1 << 14)
 #define FIMD0_WB_DEST_FIMC2			(0x2 << 14)

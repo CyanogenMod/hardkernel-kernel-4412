@@ -680,10 +680,14 @@ int fimc_hw_set_camera_source(struct fimc_dev *fimc,
 				cfg |= S5P_CISRCFMT_ITU601_16BIT;
 		} /* else defaults to ITU-R BT.656 8-bit */
 	} else if (cam->bus_type == FIMC_MIPI_CSI2) {
-		if (fimc_fmt_is_jpeg(f->fmt->color))
+		if (fimc_fmt_is_jpeg(f->fmt->color) || fimc->vid_cap.is.sd)
 			cfg |= S5P_CISRCFMT_ITU601_8BIT;
 	}
 
+	if (fimc->vid_cap.is.sd)
+		cfg |= S5P_CISRCFMT_HSIZE(fimc->vid_cap.is.fmt.width) |
+			S5P_CISRCFMT_VSIZE(fimc->vid_cap.is.fmt.height);
+	else
 	cfg |= S5P_CISRCFMT_HSIZE(f->o_width) | S5P_CISRCFMT_VSIZE(f->o_height);
 	writel(cfg, fimc->regs + S5P_CISRCFMT);
 	return 0;
@@ -728,7 +732,8 @@ int fimc_hw_set_camera_type(struct fimc_dev *fimc,
 		S5P_CIGCTRL_CAM_JPEG);
 
 	if (cam->bus_type == FIMC_MIPI_CSI2) {
-		cfg |= S5P_CIGCTRL_SELCAM_MIPI;
+		if (!vid_cap->is.use_isp) {
+			cfg |= S5P_CIGCTRL_SELCAM_MIPI;
 
 		if (cam->mux_id == 0)
 			cfg |= S5P_CIGCTRL_SELCAM_MIPI_A;
@@ -752,6 +757,10 @@ int fimc_hw_set_camera_type(struct fimc_dev *fimc,
 		tmp |= (cam->csi_data_align == 32) << 8;
 
 		writel(tmp, fimc->regs + S5P_CSIIMGFMT);
+		} else {
+			cfg |= S5P_CIGCTRL_CAMIF_SELWB;
+			cfg |= S5P_CIGCTRL_SELWRITEBACK_B;
+		}
 	} else if (cam->bus_type == FIMC_ITU_601 ||
 		  cam->bus_type == FIMC_ITU_656) {
 		if (cam->mux_id == 0) /* ITU-A, ITU-B: 0, 1 */
@@ -804,6 +813,37 @@ int fimc_hwset_sysreg_camblk_fimd1_wb(struct fimc_dev *fimc)
 		err("%s: not supported id : %d\n", __func__, fimc->id);
 
 	writel(cfg, SYSREG_CAMERA_BLK);
+
+	return 0;
+}
+
+int fimc_hwset_sysreg_camblk_isp_wb(struct fimc_dev *fimc)
+{
+	u32 camblk_cfg = readl(SYSREG_CAMERA_BLK);
+	u32 ispblk_cfg = readl(SYSREG_ISP_BLK);
+	camblk_cfg = camblk_cfg & (~(0x7 << 20));
+	if (fimc->id == 0)
+		camblk_cfg = camblk_cfg | (0x1 << 20);
+	else if (fimc->id == 1)
+		camblk_cfg = camblk_cfg | (0x2 << 20);
+	else if (fimc->id == 2)
+		camblk_cfg = camblk_cfg | (0x4 << 20);
+	else if (fimc->id == 3)
+		camblk_cfg = camblk_cfg | (0x7 << 20); /* FIXME*/
+	else
+		err("%s: not supported id : %d\n", __func__, fimc->id);
+
+	camblk_cfg = camblk_cfg & (~(0x1 << 15));
+	writel(camblk_cfg, SYSREG_CAMERA_BLK);
+	udelay(1000);
+	camblk_cfg = camblk_cfg | (0x1 << 15);
+	writel(camblk_cfg, SYSREG_CAMERA_BLK);
+
+	ispblk_cfg = ispblk_cfg & (~(0x1 << 7));
+	writel(ispblk_cfg, SYSREG_ISP_BLK);
+	udelay(1000);
+	ispblk_cfg = ispblk_cfg | (0x1 << 7);
+	writel(ispblk_cfg, SYSREG_ISP_BLK);
 
 	return 0;
 }

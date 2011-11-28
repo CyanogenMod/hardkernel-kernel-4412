@@ -30,7 +30,7 @@
 #include "fimc-core.h"
 
 static char *fimc_clocks[MAX_FIMC_CLOCKS] = {
-	"sclk_fimc", "fimc", "sclk_cam0"
+	"sclk_fimc", "fimc", "sclk_cam0" , "sclk_cam1"
 };
 
 static struct fimc_fmt fimc_formats[] = {
@@ -327,14 +327,24 @@ int fimc_set_scaler_info(struct fimc_ctx *ctx)
 		return -EINVAL;
 	}
 
-	sx = s_frame->width;
-	sy = s_frame->height;
+	if (ctx->fimc_dev->vid_cap.is.use_isp) {
+		sx = ctx->fimc_dev->vid_cap.is.fmt.width;
+		sy = ctx->fimc_dev->vid_cap.is.fmt.height;
+	} else {
+		sx = s_frame->width;
+		sy = s_frame->height;
+	}
 	if (sx <= 0 || sy <= 0) {
 		err("invalid source size: %d x %d", sx, sy);
 		return -EINVAL;
 	}
 	sc->real_width = sx;
 	sc->real_height = sy;
+
+	dbg("%s : d_frame->width : %d, d_frame->height : %d\n", __func__,
+			tx, ty);
+	dbg("%s : s_frame->width : %d, s_frame->height : %d\n", __func__,
+			sx, sy);
 
 	ret = fimc_get_scaler_factor(sx, tx, &sc->pre_hratio, &sc->hfactor);
 	if (ret)
@@ -431,6 +441,8 @@ void fimc_capture_irq_handler(struct fimc_dev *fimc)
 {
 	struct fimc_vid_cap *cap = &fimc->vid_cap;
 	struct fimc_vid_buffer *v_buf;
+	struct v4l2_control is_ctrl;
+	u32 is_fn;
 
 	if (!list_empty(&cap->active_buf_q) &&
 	    test_bit(ST_CAPT_RUN, &fimc->state)) {
@@ -447,6 +459,47 @@ void fimc_capture_irq_handler(struct fimc_dev *fimc)
 		dbg("hw ptr: %d, sw ptr: %d",
 		    fimc_hw_get_frame_index(fimc), cap->buf_index);
 
+		/* frame management for FIMC-IS */
+		if (fimc->vid_cap.is.sd && fimc->vid_cap.is.use_cam) {
+			is_ctrl.id = V4L2_CID_IS_GET_FRAME_NUMBER;
+			v4l2_subdev_call(fimc->vid_cap.is.sd, core, g_ctrl, &is_ctrl);
+			is_fn = is_ctrl.value;
+			if (fimc->vid_cap.is.frame_count == is_fn) {
+				is_ctrl.id = V4L2_CID_IS_GET_FRAME_VALID;
+				v4l2_subdev_call(fimc->vid_cap.is.sd, core, g_ctrl,
+					&is_ctrl);
+				if (is_ctrl.value) {
+					is_ctrl.id =
+						V4L2_CID_IS_SET_FRAME_VALID;
+					is_ctrl.value = 0;
+					v4l2_subdev_call(fimc->vid_cap.is.sd,
+						core, s_ctrl, &is_ctrl);
+				} else {
+					dbg(
+					"Invalid frame - fn %d\n", is_fn);
+					is_ctrl.id =
+						V4L2_CID_IS_SET_FRAME_VALID;
+					is_ctrl.value = 0;
+					v4l2_subdev_call(fimc->vid_cap.is.sd,
+						core, s_ctrl, &is_ctrl);
+				}
+				fimc->vid_cap.is.frame_count++;
+			} else {
+			/* Frame lost case */
+				is_ctrl.id =
+					V4L2_CID_IS_GET_LOSTED_FRAME_NUMBER;
+				v4l2_subdev_call(fimc->vid_cap.is.sd,
+					core, g_ctrl, &is_ctrl);
+				dbg("%d Frame lost - %d,%d",
+					(is_ctrl.value-ctrl->is.frame_count),
+					ctrl->is.frame_count, is_ctrl.value);
+				fimc->vid_cap.is.frame_count = is_ctrl.value;
+				is_ctrl.id = V4L2_CID_IS_CLEAR_FRAME_NUMBER;
+				is_ctrl.value = fimc->vid_cap.is.frame_count;
+				v4l2_subdev_call(fimc->vid_cap.is.sd,
+					core, s_ctrl, &is_ctrl);
+			}
+		}
 		/* Move the buffer to the capture active queue */
 		active_queue_add(cap, v_buf);
 
@@ -1795,7 +1848,7 @@ int fimc_clk_setrate(struct fimc_dev *fimc, int clk_num, void *pdata)
 		clk_set_parent(fimc->clock[clk_num], srclk);
 		clk_put(srclk);
 		clk_set_rate(fimc->clock[clk_num], drv_data->lclk_frequency);
-	} else if (clk_num == CLK_CAM) {
+	} else if ((clk_num == CLK_CAM1) || (clk_num == CLK_CAM2)) {
 		struct s5p_fimc_isp_info *isp_info =
 			(struct s5p_fimc_isp_info *)pdata;
 		srclk = clk_get(&fimc->pdev->dev, CAM_SRC_CLOCK);
@@ -2006,7 +2059,8 @@ static int fimc_probe(struct platform_device *pdev)
 		ret = fimc_register_capture_device(fimc);
 		if (ret)
 			goto err_m2m;
-		clk_disable(fimc->clock[CLK_CAM]);
+		clk_disable(fimc->clock[CLK_CAM1]);
+		clk_disable(fimc->clock[CLK_CAM2]);
 	}
 
 	pm_runtime_enable(&pdev->dev);
