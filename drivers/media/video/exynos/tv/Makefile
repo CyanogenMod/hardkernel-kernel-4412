@@ -13,6 +13,8 @@ obj-$(CONFIG_VIDEO_EXYNOS_SDO) += s5p-sdo.o
 s5p-sdo-y += sdo_drv.o
 obj-$(CONFIG_VIDEO_EXYNOS_MIXER) += s5p-mixer.o
 s5p-mixer-y += mixer_vb2.o mixer_drv.o mixer_video.o mixer_reg.o mixer_grp_layer.o
+obj-$(CONFIG_VIDEO_EXYNOS_HDMI_CEC) += s5p-hdmi_cec.o
+s5p-hdmi_cec-y += hdmi_cec.o hdmi_cec_ctrl.o
 
 ifeq ($(CONFIG_ARCH_EXYNOS4), y)
 	s5p-mixer-y += mixer_vp_layer.o
