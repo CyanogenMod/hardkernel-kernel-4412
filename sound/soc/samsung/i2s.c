@@ -83,14 +83,11 @@ static DEFINE_SPINLOCK(lock);
 /* If SRP is enabled for ULP audio */
 static inline bool is_srp_enabled(struct i2s_dai *i2s, u32 stream)
 {
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (i2s->quirks & QUIRK_ENABLED_SRP)
-			return true;
-		else
-			return false;
-	} else {
+	if ((stream == SNDRV_PCM_STREAM_PLAYBACK)
+			&& (i2s->quirks & QUIRK_ENABLED_SRP))
+		return true;
+	else
 		return false;
-	}
 }
 
 /* Get srp status(opened/running) infomation */
@@ -106,12 +103,10 @@ static inline int srp_active(struct i2s_dai *i2s, int cmd)
 /* If idma is used for LP audio */
 static inline bool use_internal_dma(struct i2s_dai *i2s, u32 stream)
 {
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		if (i2s->quirks & QUIRK_USE_IDMA)
-			return true;
-		else
-			return false;
-	} else
+	if ((stream == SNDRV_PCM_STREAM_PLAYBACK) &&
+			(i2s->quirks & QUIRK_USE_IDMA))
+		return true;
+	else
 		return false;
 }
 
