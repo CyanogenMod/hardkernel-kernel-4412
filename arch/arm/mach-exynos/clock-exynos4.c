@@ -651,30 +651,25 @@ static struct clk exynos4_init_clocks_off[] = {
 	}, {
 		.name		= "hsmmc",
 		.devname	= "s3c-sdhci.0",
-		.parent		= &exynos4_clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 5),
 	}, {
 		.name		= "hsmmc",
 		.devname	= "s3c-sdhci.1",
-		.parent		= &exynos4_clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 6),
 	}, {
 		.name		= "hsmmc",
 		.devname	= "s3c-sdhci.2",
-		.parent		= &exynos4_clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 7),
 	}, {
 		.name		= "hsmmc",
 		.devname	= "s3c-sdhci.3",
-		.parent		= &exynos4_clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 8),
 	}, {
 		.name		= "dwmci",
-		.parent		= &exynos4_clk_aclk_133.clk,
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 9),
 	}, {
@@ -692,7 +687,6 @@ static struct clk exynos4_init_clocks_off[] = {
 		.ctrlbit	= (1 << 15),
 	}, {
 		.name		= "watchdog",
-		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_perir_ctrl,
 		.ctrlbit	= (1 << 14),
 	}, {
@@ -758,27 +752,22 @@ static struct clk exynos4_init_clocks_off[] = {
 		.ctrlbit	= (1 << 27),
 	}, {
 		.name		= "i2c-hdmiphy",
-		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 14),
 	}, {
 		.name		= "hdmi",
-		.parent		= &exynos4_clk_aclk_160.clk,
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
 		.name		= "tvenc",
-		.parent		= &exynos4_clk_aclk_160.clk,
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 2),
 	}, {
 		.name		= "mixer",
-		.parent		= &exynos4_clk_aclk_160.clk,
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 1),
 	}, {
 		.name		= "vp",
-		.parent		= &exynos4_clk_aclk_160.clk,
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 0),
 	}, {
@@ -843,13 +832,11 @@ static struct clk exynos4_init_clocks_off[] = {
 		.ctrlbit	= (1 << 2),
 	}, {
 		.name		= "ppmumfc",
-		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= ((0x1 << 4) | (0x1 << 3)),
 	}, {
 		.name		= "mfc",
 		.devname	= "s3c-mfc",
-		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_mfc_ctrl,
 		.ctrlbit	= (0x1 << 0),
 	}, {
