@@ -122,15 +122,16 @@ static int s5p_iommu_attach_device(struct iommu_domain *domain,
 				   struct device *dev)
 {
 	int ret;
+	unsigned long flags;
 	struct s5p_iommu_domain *s5p_domain = domain->priv;
 
 	ret = s5p_sysmmu_enable(dev, virt_to_phys(s5p_domain->pgtable));
 	if (ret)
 		return ret;
 
-	spin_lock(&s5p_domain->lock);
+	spin_lock_irqsave(&s5p_domain->lock, flags);
 	s5p_domain->dev = dev;
-	spin_unlock(&s5p_domain->lock);
+	spin_unlock_irqrestore(&s5p_domain->lock, flags);
 
 	return 0;
 }
@@ -223,12 +224,13 @@ static int s5p_iommu_map(struct iommu_domain *domain, unsigned long iova,
 {
 	struct s5p_iommu_domain *s5p_domain = domain->priv;
 	unsigned long *start_entry, *entry, *end_entry;
+	unsigned long flags;
 	int num_entry;
 	int ret = 0;
 
 	BUG_ON(s5p_domain->pgtable== NULL);
 
-	spin_lock(&s5p_domain->lock);
+	spin_lock_irqsave(&s5p_domain->lock, flags);
 
 	start_entry = entry = s5p_domain->pgtable + (iova >> S5P_SECTION_SHIFT);
 
@@ -326,7 +328,7 @@ mapping_error:
 
 nomem_error:
 mapping_done:
-	spin_unlock(&s5p_domain->lock);
+	spin_unlock_irqrestore(&s5p_domain->lock, flags);
 
 	return 0;
 }
