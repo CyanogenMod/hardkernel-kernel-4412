@@ -48,7 +48,7 @@
 
 #include <trace/events/asoc.h>
 #ifdef CONFIG_SND_SAMSUNG_RP
-#include "samsung/srp/srp_reg.h"
+#include "samsung/srp-types.h"
 #endif
 /* dapm power sequences - make this per codec in the future */
 static int dapm_up_seq[] = {
@@ -2414,7 +2414,7 @@ static void soc_dapm_stream_event(struct snd_soc_dapm_context *dapm,
 				break;
 			case SND_SOC_DAPM_STREAM_STOP:
 #ifdef CONFIG_SND_SAMSUNG_RP
-				if (!srp_get_status(SRP_IS_RUNNING))
+				if (!srp_get_status(IS_RUNNING))
 #endif
 				w->active = 0;
 				break;
