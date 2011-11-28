@@ -1251,32 +1251,6 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int srp_ctrl_open(struct inode *inode, struct file *file)
-{
-	s5pdbg("srp_ctrl_open()\n");
-	return 0;
-}
-
-static int srp_ctrl_release(struct inode *inode, struct file *file)
-{
-	s5pdbg("srp_ctrl_release()\n");
-	return 0;
-}
-
-static ssize_t srp_ctrl_read(struct file *file, char *buffer,
-				size_t size, loff_t *pos)
-{
-	s5pdbg("srp_ctrl_read()\n");
-	return -1;
-}
-
-static ssize_t srp_ctrl_write(struct file *file, const char *buffer,
-				size_t size, loff_t *pos)
-{
-	s5pdbg("srp_ctrl_write()\n");
-	return -1;
-}
-
 static long srp_ctrl_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -1672,7 +1646,6 @@ static int srp_remove_fw_buff(void)
 
 static const struct file_operations srp_fops = {
 	.owner		= THIS_MODULE,
-	.read		= srp_read,
 	.write		= srp_write,
 	.unlocked_ioctl	= srp_ioctl,
 	.open		= srp_open,
@@ -1687,11 +1660,7 @@ static struct miscdevice srp_miscdev = {
 
 static const struct file_operations srp_ctrl_fops = {
 	.owner		= THIS_MODULE,
-	.read		= srp_ctrl_read,
-	.write		= srp_ctrl_write,
 	.unlocked_ioctl	= srp_ctrl_ioctl,
-	.open		= srp_ctrl_open,
-	.release	= srp_ctrl_release,
 };
 
 static struct miscdevice srp_ctrl_miscdev = {
