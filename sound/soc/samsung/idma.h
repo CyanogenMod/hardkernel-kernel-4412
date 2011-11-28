@@ -46,8 +46,13 @@
 #define I2SSIZE_TRNMSK		(0xffff)
 #define I2SSIZE_SHIFT		(16)
 
-#ifdef CONFIG_ARCH_EXYNOS
+#if defined(CONFIG_ARCH_EXYNOS)
+#if defined(CONFIG_SND_SAMSUNG_ALP)
+#define LP_TXBUFF_OFFSET	(0x38000)
+#define LP_TXBUFF_ADDR		(0x02020000 + LP_TXBUFF_OFFSET)
+#else
 #define LP_TXBUFF_ADDR		(0x03000000)
+#endif
 #else
 #define LP_TXBUFF_ADDR		(0xC0000000)
 #endif

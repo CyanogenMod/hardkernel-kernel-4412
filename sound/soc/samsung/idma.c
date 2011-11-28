@@ -17,6 +17,8 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
+#include <mach/map.h>
+
 #include "i2s.h"
 #include "idma.h"
 #include "dma.h"
@@ -37,11 +39,11 @@ static const struct snd_pcm_hardware idma_hardware = {
 		    SNDRV_PCM_FMTBIT_U24_LE |
 		    SNDRV_PCM_FMTBIT_U8 |
 		    SNDRV_PCM_FMTBIT_S8,
-	.channels_min = 2,
+	.channels_min = 1,
 	.channels_max = 2,
-	.buffer_bytes_max = 128*1024,
+	.buffer_bytes_max = 32 * 1024,
 	.period_bytes_min = 128,
-	.period_bytes_max = PAGE_SIZE*2,
+	.period_bytes_max = 16 * 1024,
 	.periods_min = 2,
 	.periods_max = 128,
 	.fifo_size = 32,
@@ -61,42 +63,36 @@ struct idma_ctrl {
 
 static struct idma_info {
 	spinlock_t	lock;
-	void		 __iomem  *regs;
+	void		__iomem	*regs;
+	dma_addr_t	buf_addr;
+	unsigned int	buf_size;
 	int		trigger_stat;
 } idma;
 
-static void idma_getpos(dma_addr_t *src)
+static void idma_getpos(dma_addr_t *src, struct snd_pcm_substream *substream)
 {
-	*src = LP_TXBUFF_ADDR +
-		(readl(idma.regs + I2STRNCNT) & 0xffffff) * 4;
-}
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct idma_ctrl *prtd = runtime->private_data;
 
-void i2sdma_getpos(dma_addr_t *src)
-{
-	if (idma.trigger_stat == LPAM_DMA_START)
-		*src = LP_TXBUFF_ADDR +
-			(readl(idma.regs + I2STRNCNT) & 0xffffff) * 4;
-	else
-		*src = LP_TXBUFF_ADDR;
+	*src = prtd->start + (readl(idma.regs + I2STRNCNT) & 0xffffff) * 4;
 }
 
 static int idma_enqueue(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct idma_ctrl *prtd = substream->runtime->private_data;
-	u32 val;
+	u32 val = prtd->start;
 
 	spin_lock(&prtd->lock);
 	prtd->token = (void *) substream;
 	spin_unlock(&prtd->lock);
 
-	/* Internal DMA Level0 Interrupt Address */
-	val = LP_TXBUFF_ADDR + prtd->periodsz;
-	writel(val, idma.regs + I2SLVL0ADDR);
-
 	/* Start address0 of I2S internal DMA operation. */
-	val = LP_TXBUFF_ADDR;
 	writel(val, idma.regs + I2SSTR0);
+
+	/* Internal DMA Level0 Interrupt Address */
+	val = prtd->start + prtd->periodsz;
+	writel(val, idma.regs + I2SLVL0ADDR);
 
 	/*
 	 * Transfer block size for I2S internal DMA.
@@ -170,7 +166,7 @@ static int idma_hw_params(struct snd_pcm_substream *substream,
 	prtd->start = prtd->pos = runtime->dma_addr;
 	prtd->period = params_periods(params);
 	prtd->periodsz = params_period_bytes(params);
-	prtd->end = LP_TXBUFF_ADDR + runtime->dma_bytes;
+	prtd->end = prtd->start + runtime->dma_bytes;
 
 	idma_setcallbk(substream, idma_done);
 
@@ -251,7 +247,7 @@ static snd_pcm_uframes_t
 
 	spin_lock_irqsave(&prtd->lock, flags);
 
-	idma_getpos(&src);
+	idma_getpos(&src, substream);
 	res = src - prtd->start;
 
 	spin_unlock_irqrestore(&prtd->lock, flags);
@@ -305,7 +301,7 @@ static irqreturn_t iis_irq(int irqno, void *dev_id)
 		addr += prtd->periodsz;
 
 		if (addr >= prtd->end)
-			addr = LP_TXBUFF_ADDR;
+			addr = prtd->start;
 
 		writel(addr, idma.regs + I2SLVL0ADDR);
 
@@ -411,7 +407,7 @@ static int preallocate_idma_buffer(struct snd_pcm *pcm, int stream)
 	buf->addr = LP_TXBUFF_ADDR;
 	buf->bytes = idma_hardware.buffer_bytes_max;
 	buf->area = (unsigned char *)ioremap(buf->addr, buf->bytes);
-	pr_debug("%s:  VA-%p  PA-%X  %ubytes\n",
+	pr_info("%s:  VA-%p  PA-%X  %ubytes\n",
 			__func__, buf->area, buf->addr, buf->bytes);
 
 	return 0;

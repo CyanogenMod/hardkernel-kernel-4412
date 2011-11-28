@@ -23,11 +23,11 @@
 #include <mach/regs-clock.h>
 #include <mach/regs-audss.h>
 
-#include "srp/srp_reg.h"
 #include "audss.h"
 #include "dma.h"
 #include "idma.h"
 #include "i2s.h"
+#include "srp-types.h"
 
 struct i2s_dai {
 	/* Platform device for this DAI */
@@ -74,8 +74,6 @@ struct i2s_dai {
 	bool	rx_active;
 	bool	reg_saved;
 
-	bool	use_idma;
-	bool	enabled_srp;
 	void	(*audss_clk_enable)(bool enable);
 };
 
@@ -85,29 +83,35 @@ static DEFINE_SPINLOCK(lock);
 /* If SRP is enabled for ULP audio */
 static inline bool is_srp_enabled(struct i2s_dai *i2s, u32 stream)
 {
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
-		return i2s->enabled_srp;
-	else
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (i2s->quirks & QUIRK_ENABLED_SRP)
+			return true;
+		else
+			return false;
+	} else {
 		return false;
+	}
 }
 
 /* Get srp status(opened/running) infomation */
 static inline int srp_active(struct i2s_dai *i2s, int cmd)
 {
-#ifdef CONFIG_SND_SAMSUNG_RP
-	if (i2s->enabled_srp)
-		return srp_get_status(cmd);
-	else
+#if defined(CONFIG_SND_SAMSUNG_RP) || defined(CONFIG_SND_SAMSUNG_ALP)
+	return srp_get_status(cmd);
+#else
+	return 0;
 #endif
-		return 0;
 }
 
 /* If idma is used for LP audio */
 static inline bool use_internal_dma(struct i2s_dai *i2s, u32 stream)
 {
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
-		return i2s->use_idma;
-	else
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (i2s->quirks & QUIRK_USE_IDMA)
+			return true;
+		else
+			return false;
+	} else
 		return false;
 }
 
@@ -350,7 +354,7 @@ static void i2s_txctrl(struct i2s_dai *i2s, int on, int stream)
 			return;
 		}
 
-		if (!srp_active(i2s, SRP_IS_RUNNING)) {
+		if (!srp_active(i2s, IS_RUNNING)) {
 			con |=  CON_TXCH_PAUSE;
 
 			if (any_rx_active(i2s))
@@ -762,7 +766,7 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 	i2s->rclk_srcrate = 0;
 
 	if (!i2s->tx_active && !i2s->rx_active
-		&& !srp_active(i2s, SRP_IS_OPENED)) {
+		&& !srp_active(i2s, IS_OPENED)) {
 		i2s_clk_enable(i2s, true);
 
 		if (i2s->reg_saved)
@@ -804,7 +808,7 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 		i2s->rx_active = false;
 
 	if (!i2s->tx_active && !i2s->rx_active
-			&& !srp_active(i2s, SRP_IS_OPENED)) {
+			&& !srp_active(i2s, IS_OPENED)) {
 		/* Gate CDCLK by default */
 		if (!is_opened(i2s))
 			i2s_set_sysclk(dai, SAMSUNG_I2S_CDCLK,
@@ -952,7 +956,7 @@ static int i2s_trigger(struct snd_pcm_substream *substream,
 		if (capture)
 			i2s_fifo(i2s, FIC_RXFLUSH, substream->stream);
 		else {
-			if (!srp_active(i2s, SRP_IS_RUNNING))
+			if (!srp_active(i2s, IS_RUNNING))
 				i2s_fifo(i2s, FIC_TXFLUSH, substream->stream);
 		}
 		local_irq_restore(flags);
@@ -1258,31 +1262,11 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 		sec_dai->dma_playback.dma_size = 4;
 		sec_dai->base = regs_base;
 		sec_dai->quirks = quirks;
+
 		sec_dai->pri_dai = pri_dai;
 		pri_dai->sec_dai = sec_dai;
 		if (pdev->id == 0)
 			sec_dai->audss_clk_enable = audss_clk_enable;
-	}
-
-	if (quirks & QUIRK_USE_IDMA) {
-		if (sec_dai)
-			sec_dai->use_idma = true;
-		else
-			pri_dai->use_idma = true;
-	}
-
-	if (quirks & QUIRK_ENABLED_SRP) {
-		if (sec_dai) {
-			sec_dai->enabled_srp = true;
-			if (sec_dai->use_idma)
-				sec_dai->use_idma = false;
-		} else {
-			pri_dai->enabled_srp = true;
-			if (pri_dai->use_idma)
-				pri_dai->use_idma = false;
-		}
-		pr_debug("%s: enable srp %d, use_idma %d\n",
-			__func__, pri_dai->enabled_srp, pri_dai->use_idma);
 	}
 
 	if (i2s_pdata->cfg_gpio && i2s_pdata->cfg_gpio(pdev)) {
