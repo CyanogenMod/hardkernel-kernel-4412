@@ -1,0 +1,4 @@
+config SND_SAMSUNG_RP
+	bool "ULP Audio support"
+	help
+	  Say Y if you want to support ULP audio.
