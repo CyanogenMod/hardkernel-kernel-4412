@@ -38,6 +38,7 @@
 #include <asm/pgtable.h>
 #include <linux/firmware.h>
 #include <linux/dma-mapping.h>
+#include <media/videobuf2-core.h>
 
 #include "fimc-is-core.h"
 #include "fimc-is-regs.h"
@@ -48,58 +49,6 @@
 struct fimc_is_dev *to_fimc_is_dev(struct v4l2_subdev *sdev)
 {
 	return container_of(sdev, struct fimc_is_dev, sd);
-}
-
-void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size)
-{
-	unsigned long paddr;
-
-	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
-	/*
-	 * virtual & phsical addrees mapped directly, so we can convert
-	 * the address just using offset
-	 */
-	paddr = __pa((unsigned long)start_addr);
-	outer_clean_range(paddr, paddr + size);
-}
-
-void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size)
-{
-	unsigned long paddr;
-	paddr = __pa((unsigned long)start_addr);
-	outer_inv_range(paddr, paddr + size);
-	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
-}
-
-int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
-{
-	struct cma_info mem_info;
-	int err;
-
-	sprintf(dev->cma_name, "%s%d", "fimc_is", 0);
-	err = cma_info(&mem_info, &dev->pdev->dev, 0);
-	printk(KERN_INFO "%s : [cma_info] start_addr : 0x%x, end_addr : 0x%x, "
-			"total_size : 0x%x, free_size : 0x%x\n",
-			__func__, mem_info.lower_bound, mem_info.upper_bound,
-			mem_info.total_size, mem_info.free_size);
-	if (err) {
-		dev_err(&dev->pdev->dev, "%s: get cma info failed\n", __func__);
-		return -EINVAL;
-	}
-	dev->mem.size = mem_info.total_size;
-	dev->mem.base = (dma_addr_t)cma_alloc
-		(&dev->pdev->dev, dev->cma_name, (size_t)dev->mem.size, 0);
-	dev->is_p_region =
-		(struct is_region *)(phys_to_virt(dev->mem.base +
-				FIMC_IS_A5_MEM_SIZE - FIMC_IS_REGION_SIZE));
-	memset((void *)dev->is_p_region, 0,
-		(unsigned long)sizeof(struct is_region));
-	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
-
-	printk(KERN_INFO "ctrl->mem.size = 0x%x\n", dev->mem.size);
-	printk(KERN_INFO "ctrl->mem.base = 0x%x\n", dev->mem.base);
-
-	return 0;
 }
 
 static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
@@ -333,6 +282,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 			"failed to fimc_is_init_mem_mgr (%d)\n", ret);
 		goto e_irqfree1;
 	}
+	dbg("Parameter region = 0x%08x\n", (unsigned int)dev->is_p_region);
 
 	/* Init v4l2 sub device */
 	v4l2_subdev_init(&dev->sd, &fimc_is_subdev_ops);
@@ -374,6 +324,9 @@ static int fimc_is_remove(struct platform_device *pdev)
 {
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
+#if defined(CONFIG_VIDEOBUF2_ION)
+	fimc_is_mem_init_mem_cleanup(dev->alloc_ctx);
+#endif
 	kfree(dev);
 	return 0;
 }
@@ -420,8 +373,14 @@ static int fimc_is_runtime_suspend(struct device *dev)
 		printk(KERN_ERR "#### failed to Clock OFF ####\n");
 		return -EINVAL;
 	}
+#ifdef CONFIG_BUSFREQ_OPP
 	/* Unlock bus frequency */
 	dev_unlock(is_dev->bus_dev, dev);
+#endif
+#if CONFIG_VIDEOBUF2_ION
+	if (is_dev->alloc_ctx)
+		fimc_is_mem_suspend(is_dev->alloc_ctx);
+#endif
 	mutex_unlock(&is_dev->lock);
 	return 0;
 }
@@ -448,9 +407,15 @@ static int fimc_is_runtime_resume(struct device *dev)
 		printk(KERN_ERR "#### failed to Clock On ####\n");
 		return -EINVAL;
 	}
+#ifdef CONFIG_BUSFREQ_OPP
 	/* lock bus frequency */
-	dev_lock(is_dev->bus_dev, dev, 400200);
+	dev_lock(is_dev->bus_dev, dev, BUS_LOCK_FREQ_L0);
+#endif
 	is_dev->frame_count = 0;
+#if CONFIG_VIDEOBUF2_ION
+	if (is_dev->alloc_ctx)
+		fimc_is_mem_resume(is_dev->alloc_ctx);
+#endif
 	mutex_unlock(&is_dev->lock);
 	return 0;
 }

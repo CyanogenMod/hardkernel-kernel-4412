@@ -41,6 +41,7 @@
 #include <media/exynos_fimc_is.h>
 #include <mach/dev.h>
 
+#include <media/videobuf2-core.h>
 #define MODULE_NAME	"exynos4-fimc-is"
 
 #define MAX_I2H_ARG 4
@@ -58,6 +59,8 @@
 #define FD_SETFILE_SIZE		(0x88*2)
 
 #define GED_FD_RANGE	1000
+#define BUS_LOCK_FREQ_L0	400200
+#define BUS_LOCK_FREQ_L1	267200
 
 #define FIX_FRAMERATE
 
@@ -69,8 +72,6 @@
 #endif
 #define FIMC_IS_FW		"fimc_is_fw.bin"
 #define FIMC_IS_SETFILE		"setfile.bin"
-
-#define DEBUG
 
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
@@ -169,6 +170,11 @@ struct is_meminfo {
 	size_t		size;		/* total length */
 	dma_addr_t	vaddr_base;		/* buffer base */
 	dma_addr_t	vaddr_curr;		/* current addr */
+
+	void		*bitproc_buf;
+	size_t		dvaddr;
+	unsigned char	*kvaddr;
+	struct vb2_buffer	vb2_buf;
 };
 
 struct is_fw {
@@ -256,6 +262,7 @@ struct fimc_is_dev {
 
 	struct is_fw			fw;
 	struct is_setfile		setfile;
+	struct vb2_alloc_ctx		*alloc_ctx;
 	struct is_meminfo		mem;		/* for reserved mem */
 	struct is_fd_result_header	fd_header;
 #ifdef CONFIG_CMA
@@ -324,8 +331,14 @@ extern void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev);
 extern void fimc_is_param_err_checker(struct fimc_is_dev *dev);
 extern void fimc_is_print_err_number(u32 num_err);
 
-void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size);
-void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size);
+extern int fimc_is_init_mem_mgr(struct fimc_is_dev *dev);
+extern void *fimc_is_mem_init(struct device *dev);
+extern int fimc_is_alloc_firmware(struct fimc_is_dev *dev);
+extern void fimc_is_mem_resume(void *alloc_ctxes);
+extern void fimc_is_mem_suspend(void *alloc_ctxes);
+extern void fimc_is_mem_init_mem_cleanup(void *alloc_ctxes);
+extern void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size);
+extern void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size);
 
 struct fimc_is_dev *to_fimc_is_dev(struct v4l2_subdev *sdev);
 #endif

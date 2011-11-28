@@ -815,7 +815,11 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 
 	if (on) {
 		/* 1. A5 start address setting */
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 		cfg = dev->mem.base;
+#elif defined(CONFIG_VIDEOBUF2_ION)
+		cfg = dev->mem.dvaddr;
+#endif
 		writel(cfg, dev->regs + BBOAR);
 		/* 2. enable A5 */
 		writel(0x00018000, PMUREG_ISP_ARM_OPTION);

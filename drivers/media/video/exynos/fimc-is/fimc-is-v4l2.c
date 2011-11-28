@@ -84,9 +84,20 @@ static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 		goto out;
 	}
 
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	memcpy((void *)phys_to_virt(dev->mem.base), (void *)buf, fsize);
 	fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
 		fsize + 1);
+#elif defined(CONFIG_VIDEOBUF2_ION)
+	if (dev->mem.bitproc_buf == 0) {
+		err("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
+	} else {
+		memcpy(dev->mem.kvaddr, (void *)buf, fsize);
+		fimc_is_mem_cache_clean((void *)dev->mem.kvaddr, fsize + 1);
+		dev->fw.state = 1;
+		dbg("FIMC_IS F/W loaded successfully - size:%ld\n", fsize);
+	}
+#endif
 	dev->fw.state = 1;
 request_fw:
 	if (fw_requested) {
@@ -99,10 +110,22 @@ request_fw:
 				"could not load firmware (err=%d)\n", ret);
 			return -EINVAL;
 		}
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 		memcpy((void *)phys_to_virt(dev->mem.base),
 				fw_blob->data, fw_blob->size);
 		fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
 							fw_blob->size + 1);
+#elif defined(CONFIG_VIDEOBUF2_ION)
+		if (dev->mem.bitproc_buf == 0) {
+			err("failed to load FIMC-IS F/W\n");
+		} else {
+			memcpy(dev->mem.kvaddr, fw_blob->data, fw_blob->size);
+			fimc_is_mem_cache_clean(
+				(void *)dev->mem.kvaddr, fw_blob->size + 1);
+			dbg(
+		"FIMC_IS F/W loaded successfully - size:%d\n", fw_blob->size);
+		}
+#endif
 		dev->fw.state = 1;
 		dbg("FIMC_IS F/W loaded successfully - size:%d\n",
 							fw_blob->size);
@@ -157,12 +180,23 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 		ret = -EIO;
 		goto out;
 	}
-
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	memcpy((void *)phys_to_virt(dev->mem.base + dev->setfile.base),
 							(void *)buf, fsize);
 	fimc_is_mem_cache_clean(
 		(void *)phys_to_virt(dev->mem.base + dev->setfile.base),
 		fsize + 1);
+#elif defined(CONFIG_VIDEOBUF2_ION)
+	if (dev->mem.bitproc_buf == 0) {
+		err("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
+	} else {
+		memcpy((dev->mem.kvaddr + dev->setfile.base),
+						(void *)buf, fsize);
+		fimc_is_mem_cache_clean((void *)dev->mem.kvaddr, fsize + 1);
+		dev->fw.state = 1;
+		dbg("FIMC_IS F/W loaded successfully - size:%ld\n", fsize);
+	}
+#endif
 	dev->fw.state = 1;
 request_fw:
 	if (fw_requested) {
@@ -175,11 +209,24 @@ request_fw:
 				"could not load firmware (err=%d)\n", ret);
 			return -EINVAL;
 		}
+#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 		memcpy((void *)phys_to_virt(dev->mem.base + dev->setfile.base),
 			fw_blob->data, fw_blob->size);
 		fimc_is_mem_cache_clean(
 			(void *)phys_to_virt(dev->mem.base + dev->setfile.base),
 			fw_blob->size + 1);
+#elif defined(CONFIG_VIDEOBUF2_ION)
+		if (dev->mem.bitproc_buf == 0) {
+			err("failed to load FIMC-IS F/W\n");
+		} else {
+			memcpy((dev->mem.kvaddr + dev->setfile.base),
+						fw_blob->data, fw_blob->size);
+			fimc_is_mem_cache_clean((void *)dev->mem.kvaddr,
+						fw_blob->size + 1);
+			dbg(
+		"FIMC_IS F/W loaded successfully - size:%d\n", fw_blob->size);
+		}
+#endif
 		dev->setfile.state = 1;
 		dbg("FIMC_IS setfile loaded successfully - size:%d\n",
 								fw_blob->size);
