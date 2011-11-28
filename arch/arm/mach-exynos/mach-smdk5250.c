@@ -808,7 +808,7 @@ static struct regulator_init_data __initdata max8997_buck2_data = {
 	.constraints	= {
 		.name		= "vdd_int range",
 		.min_uV		= 950000,
-		.max_uV		= 1000000,
+		.max_uV		= 1150000,
 		.always_on	= 1,
 		.boot_on	= 1,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE,
@@ -871,7 +871,7 @@ static struct max8997_platform_data __initdata exynos5_max8997_info = {
 	.buck1_voltage[6] = 1000000, /* 1.0V */
 	.buck1_voltage[7] = 950000, /* 0.95V */
 
-	.buck2_voltage[0] = 1100000, /* 1.1V */
+	.buck2_voltage[0] = 1150000, /* 1.15V */
 	.buck2_voltage[1] = 1000000, /* 1.0V */
 	.buck2_voltage[2] = 950000, /* 0.95V */
 	.buck2_voltage[3] = 900000, /* 0.9V */
