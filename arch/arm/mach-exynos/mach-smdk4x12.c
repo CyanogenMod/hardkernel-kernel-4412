@@ -119,6 +119,11 @@
 #include <plat/jpeg.h>
 #endif
 
+#ifdef CONFIG_REGULATOR_S5M8767
+#include <linux/mfd/s5m87xx/s5m-core.h>
+#include <linux/mfd/s5m87xx/s5m-pmic.h>
+#endif
+
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK4X12_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -2075,6 +2080,144 @@ static struct max8997_platform_data __initdata exynos4_max8997_info = {
 	.buck5_voltage[7] = 1100000, /* 1.1V */
 };
 
+#ifdef CONFIG_REGULATOR_S5M8767
+/* S5M8767 Regulator */
+static int s5m_cfg_irq(void)
+{
+	/* AP_PMIC_IRQ: EINT26 */
+	s3c_gpio_cfgpin(EXYNOS4_GPX3(2), S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(EXYNOS4_GPX3(2), S3C_GPIO_PULL_UP);
+	return 0;
+}
+static struct regulator_consumer_supply s5m8767_buck1_consumer =
+	REGULATOR_SUPPLY("vdd_mif", NULL);
+
+static struct regulator_consumer_supply s5m8767_buck2_consumer =
+	REGULATOR_SUPPLY("vdd_arm", NULL);
+
+static struct regulator_consumer_supply s5m8767_buck3_consumer =
+	REGULATOR_SUPPLY("vdd_int", NULL);
+
+static struct regulator_consumer_supply s5m8767_buck4_consumer =
+	REGULATOR_SUPPLY("vdd_g3d", NULL);
+
+static struct regulator_init_data s5m8767_buck1_data = {
+	.constraints	= {
+		.name		= "vdd_mif range",
+		.min_uV		= 950000,
+		.max_uV		= 1100000,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				  REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &s5m8767_buck1_consumer,
+};
+
+static struct regulator_init_data s5m8767_buck2_data = {
+	.constraints	= {
+		.name		= "vdd_arm range",
+		.min_uV		=  925000,
+		.max_uV		= 1450000,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				  REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &s5m8767_buck2_consumer,
+};
+
+static struct regulator_init_data s5m8767_buck3_data = {
+	.constraints	= {
+		.name		= "vdd_int range",
+		.min_uV		=  900000,
+		.max_uV		= 1200000,
+		.apply_uV	= 1,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.uV		= 1100000,
+			.mode		= REGULATOR_MODE_NORMAL,
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &s5m8767_buck3_consumer,
+};
+
+static struct regulator_init_data s5m8767_buck4_data = {
+	.constraints	= {
+		.name		= "vdd_g3d range",
+		.min_uV		= 750000,
+		.max_uV		= 1500000,
+		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
+				REGULATOR_CHANGE_STATUS,
+		.state_mem	= {
+			.disabled	= 1,
+		},
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &s5m8767_buck4_consumer,
+};
+
+static struct s5m_regulator_data pegasus_regulators[] = {
+	{ S5M8767_BUCK1, &s5m8767_buck1_data },
+	{ S5M8767_BUCK2, &s5m8767_buck2_data },
+	{ S5M8767_BUCK3, &s5m8767_buck3_data },
+	{ S5M8767_BUCK4, &s5m8767_buck4_data },
+};
+
+static struct s5m_platform_data exynos4_s5m8767_pdata = {
+	.device_type		= S5M8767X,
+	.irq_base		= IRQ_BOARD_START,
+	.num_regulators		= ARRAY_SIZE(pegasus_regulators),
+	.regulators		= pegasus_regulators,
+	.cfg_pmic_irq		= s5m_cfg_irq,
+
+	.buck2_voltage[0]	= 1250000,
+	.buck2_voltage[1]	= 1200000,
+	.buck2_voltage[2]	= 1150000,
+	.buck2_voltage[3]	= 1100000,
+	.buck2_voltage[4]	= 1050000,
+	.buck2_voltage[5]	= 1000000,
+	.buck2_voltage[6]	=  950000,
+	.buck2_voltage[7]	=  900000,
+
+	.buck3_voltage[0]	= 1100000,
+	.buck3_voltage[1]	= 1000000,
+	.buck3_voltage[2]	= 950000,
+	.buck3_voltage[3]	= 900000,
+	.buck3_voltage[4]	= 1100000,
+	.buck3_voltage[5]	= 1000000,
+	.buck3_voltage[6]	= 950000,
+	.buck3_voltage[7]	= 900000,
+
+	.buck4_voltage[0]	= 1200000,
+	.buck4_voltage[1]	= 1150000,
+	.buck4_voltage[2]	= 1200000,
+	.buck4_voltage[3]	= 1100000,
+	.buck4_voltage[4]	= 1100000,
+	.buck4_voltage[5]	= 1100000,
+	.buck4_voltage[6]	= 1100000,
+	.buck4_voltage[7]	= 1100000,
+
+	.buck_default_idx	= 3,
+	.buck_gpios[0]		= EXYNOS4_GPX2(3),
+	.buck_gpios[1]		= EXYNOS4_GPX2(4),
+	.buck_gpios[2]		= EXYNOS4_GPX2(5),
+
+	.buck_ramp_delay        = 50,
+	.buck2_ramp_enable      = true,
+	.buck3_ramp_enable      = true,
+	.buck4_ramp_enable      = true,
+};
+/* End of S5M8767 */
+#endif
+
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 static struct regulator_consumer_supply mipi_csi_fixed_voltage_supplies[] = {
 	REGULATOR_SUPPLY("mipi_csi", "s5p-mipi-csis.0"),
@@ -2256,10 +2399,18 @@ static struct wm8994_pdata wm8994_platform_data = {
 };
 
 static struct i2c_board_info i2c_devs0[] __initdata = {
+#ifdef CONFIG_REGULATOR_S5M8767
+	{
+		I2C_BOARD_INFO("s5m87xx", 0xCC >> 1),
+		.platform_data = &exynos4_s5m8767_pdata,
+		.irq		= IRQ_EINT(26),
+	},
+#else
 	{
 		I2C_BOARD_INFO("max8997", 0x66),
 		.platform_data	= &exynos4_max8997_info,
-	}
+	},
+#endif
 };
 
 static struct i2c_board_info i2c_devs1[] __initdata = {
