@@ -60,7 +60,6 @@
 #define OBUF_OFFSET	(0x4)
 #define IBUF_NUM	(0x2)
 #define OBUF_NUM	(0x2)
-#define OBUF_MMAP_SIZE	(OBUF_SIZE * OBUF_NUM + OBUF_OFFSET)
 
 /* Commbox & Etc information */
 #define COMMBOX_SIZE	(0x2000)
@@ -94,8 +93,9 @@
 #endif
 
 struct srp_buf_info {
-	void		*mapped_addr;
+	void		*mmapped_addr;
 	void		*addr;
+	unsigned int	mmaped_size;
 	unsigned int	size;
 	int		num;
 };
@@ -473,7 +473,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 
 	srp.pcm_info->addr = srp.obuf_ready ? obuf0 : obuf1;
 	srp.pcm_info->size = readl(srp.commbox + SRP_PCM_DUMP_ADDR);
-	srp.pcm_info->num = 2;
+	srp.pcm_info->num = srp.obuf_info->num;
 
 	ret = copy_to_user(argp, srp.pcm_info, sizeof(struct srp_buf_info));
 	srpdbg("SRP: Return OBUF Num[%d] fill size %d\n",
@@ -591,14 +591,14 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case SRP_DEINIT:
 		srpdbg("SRP: SRP DEINIT\n");
 		srp.decoding_started = 0;
-		srp.is_opened = 0;
 
 		/* Reset commbox */
 		srp_commbox_deinit();
 		break;
 
 	case SRP_GET_MMAP_SIZE:
-		val = OBUF_MMAP_SIZE;
+		srp.obuf_info->mmaped_size = OBUF_SIZE * OBUF_NUM + OBUF_OFFSET;
+		val = srp.obuf_info->mmaped_size;
 		srpdbg("SRP: SRP_GET_MMAP_SIZE = %ld\n", val);
 		ret = copy_to_user((unsigned long *)arg,
 					&val, sizeof(unsigned long));
@@ -628,7 +628,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		ret = copy_from_user(srp.obuf_info, argp,
 				sizeof(struct srp_buf_info));
 		if (!ret) {
-			srp.obuf_info->addr = srp.obuf_info->mapped_addr
+			srp.obuf_info->addr = srp.obuf_info->mmapped_addr
 							+ OBUF_OFFSET;
 			srp.obuf_info->size = OBUF_SIZE;
 			srp.obuf_info->num = OBUF_NUM;
@@ -751,10 +751,6 @@ static int srp_release(struct inode *inode, struct file *file)
 	srp.is_opened = 0;
 
 	mutex_unlock(&rp_mutex);
-
-	srp.audss_clk_enable(false);
-
-	srpdbg("SRP: srp is released\n");
 
 	return 0;
 }
