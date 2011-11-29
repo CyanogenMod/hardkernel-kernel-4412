@@ -58,7 +58,7 @@
 #define IRQ_MCT_G0		IRQ_SPI(57)
 #define IRQ_IIC			IRQ_SPI(58)
 #define IRQ_IIC1		IRQ_SPI(59)
-#define IRQ_CAN0		IRQ_SPI(60)
+#define IRQ_IIC2		IRQ_SPI(60)
 #define IRQ_IIC3		IRQ_SPI(61)
 #define IRQ_IIC4		IRQ_SPI(62)
 #define IRQ_IIC5		IRQ_SPI(63)
