@@ -68,5 +68,7 @@ extern void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode);
 
 /* external function for exynos5 series */
 extern void exynos5_sys_powerdown_conf(enum sys_powerdown mode);
+extern int exynos5_enter_lp(unsigned long *saveblk, long);
+extern void exynos5_idle_resume(void);
 
 #endif /* __ASM_ARCH_PMU_H */

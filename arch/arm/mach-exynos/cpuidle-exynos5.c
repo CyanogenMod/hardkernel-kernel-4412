@@ -15,8 +15,26 @@
 #include <linux/suspend.h>
 #include <linux/platform_device.h>
 
+#include <asm/proc-fns.h>
+#include <asm/tlbflush.h>
+#include <asm/cacheflush.h>
+
+#include <plat/pm.h>
+
+#include <mach/regs-pmu5.h>
+#include <mach/pm-core.h>
+#include <mach/pmu.h>
+
+#define REG_DIRECTGO_ADDR	(S5P_VA_SYSRAM + 0x24)
+#define REG_DIRECTGO_FLAG	(S5P_VA_SYSRAM + 0x20)
+
+extern unsigned long sys_pwr_conf_addr;
+
 static int exynos5_enter_idle(struct cpuidle_device *dev,
 			      struct cpuidle_state *state);
+
+static int exynos5_enter_lowpower(struct cpuidle_device *dev,
+				  struct cpuidle_state *state);
 
 static struct cpuidle_state exynos5_cpuidle_set[] = {
 	[0] = {
@@ -26,6 +44,14 @@ static struct cpuidle_state exynos5_cpuidle_set[] = {
 		.flags			= CPUIDLE_FLAG_TIME_VALID,
 		.name			= "IDLE",
 		.desc			= "ARM clock gating(WFI)",
+	},
+	[1] = {
+		.enter			= exynos5_enter_lowpower,
+		.exit_latency		= 300,
+		.target_residency	= 10000,
+		.flags			= CPUIDLE_FLAG_TIME_VALID,
+		.name			= "LOW_POWER",
+		.desc			= "ARM power down",
 	},
 };
 
@@ -55,6 +81,101 @@ static int exynos5_enter_idle(struct cpuidle_device *dev,
 	return idle_time;
 }
 
+void exynos5_flush_cache(void *addr, phys_addr_t phy_ttb_base)
+{
+	flush_cache_all();
+}
+
+static void exynos5_set_wakeupmask(void)
+{
+	__raw_writel(0x0000ff3e, EXYNOS5_WAKEUP_MASK);
+}
+
+static inline void vfp_enable(void *unused)
+{
+	u32 access = get_copro_access();
+
+	/*
+	 * Enable full access to VFP (cp10 and cp11)
+	 */
+	set_copro_access(access | CPACC_FULL(10) | CPACC_FULL(11));
+}
+
+static int exynos5_enter_core0_aftr(struct cpuidle_device *dev,
+				    struct cpuidle_state *state)
+{
+	struct timeval before, after;
+	int idle_time;
+	unsigned long tmp;
+
+	local_irq_disable();
+	do_gettimeofday(&before);
+
+	exynos5_set_wakeupmask();
+
+	__raw_writel(virt_to_phys(exynos5_idle_resume), REG_DIRECTGO_ADDR);
+	__raw_writel(0xfcba0d10, REG_DIRECTGO_FLAG);
+
+	/* Set value of power down register for aftr mode */
+	exynos5_sys_powerdown_conf(SYS_AFTR);
+
+	exynos4_reset_assert_ctrl(1);
+
+	if (exynos5_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
+		/*
+		 * Clear Central Sequence Register in exiting early wakeup
+		 */
+		tmp = __raw_readl(EXYNOS5_CENTRAL_SEQ_CONFIGURATION);
+		tmp |= EXYNOS5_CENTRAL_LOWPWR_CFG;
+		__raw_writel(tmp, EXYNOS5_CENTRAL_SEQ_CONFIGURATION);
+
+		goto early_wakeup;
+	}
+	flush_tlb_all();
+
+	cpu_init();
+
+	vfp_enable(NULL);
+
+early_wakeup:
+	exynos4_reset_assert_ctrl(0);
+
+	/* Clear wakeup state register */
+	__raw_writel(0x0, EXYNOS5_WAKEUP_STAT);
+
+	do_gettimeofday(&after);
+
+	local_irq_enable();
+	idle_time = (after.tv_sec - before.tv_sec) * USEC_PER_SEC +
+		    (after.tv_usec - before.tv_usec);
+
+	return idle_time;
+}
+
+static int exynos5_enter_lowpower(struct cpuidle_device *dev,
+				  struct cpuidle_state *state)
+{
+	struct cpuidle_state *new_state = state;
+	unsigned int tmp;
+
+	/* This mode only can be entered when only Core0 is online */
+	if (num_online_cpus() != 1) {
+		BUG_ON(!dev->safe_state);
+		new_state = dev->safe_state;
+	}
+	dev->last_state = new_state;
+
+	if (new_state == &dev->states[0])
+		return exynos5_enter_idle(dev, new_state);
+
+	tmp = __raw_readl(EXYNOS5_CENTRAL_SEQ_OPTION);
+	tmp = (EXYNOS5_USE_STANDBYWFI_ARM_CORE0 |
+		EXYNOS5_USE_STANDBYWFE_ARM_CORE0);
+	__raw_writel(tmp, EXYNOS5_CENTRAL_SEQ_OPTION);
+
+	/*In this time, only support aftr mode*/
+	return exynos5_enter_core0_aftr(dev, new_state);
+}
 static int exynos5_cpuidle_notifier_event(struct notifier_block *this,
 					  unsigned long event,
 					  void *ptr)
@@ -109,6 +230,7 @@ static int __init exynos5_init_cpuidle(void)
 	}
 
 	register_pm_notifier(&exynos5_cpuidle_notifier);
+	sys_pwr_conf_addr = (unsigned long)EXYNOS5_CENTRAL_SEQ_CONFIGURATION;
 
 	return 0;
 }

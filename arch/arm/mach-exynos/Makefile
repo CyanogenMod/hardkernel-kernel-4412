@@ -25,7 +25,7 @@ obj-$(CONFIG_EXYNOS4_CPUFREQ)	+= asv.o asv-4210.o asv-4x12.o
 obj-$(CONFIG_EXYNOS4_CPUFREQ)	+= cpufreq-4210.o cpufreq-4212.o
 obj-$(CONFIG_EXYNOS5_CPUFREQ)	+= cpufreq-5250.o
 obj-$(CONFIG_EXYNOS4_CPUIDLE)	+= cpuidle-exynos4.o idle-exynos4.o
-obj-$(CONFIG_EXYNOS5_CPUIDLE)	+= cpuidle-exynos5.o
+obj-$(CONFIG_EXYNOS5_CPUIDLE)	+= cpuidle-exynos5.o idle-exynos5.o
 
 obj-$(CONFIG_BUSFREQ)		+= busfreq.o
 obj-$(CONFIG_BUSFREQ_OPP)	+= busfreq_opp.o busfreq_opp_4210.o busfreq_opp_4212.o

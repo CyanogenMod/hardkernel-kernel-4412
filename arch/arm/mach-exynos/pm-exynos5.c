@@ -160,7 +160,7 @@ void exynos5_cpu_suspend(void)
 
 	/* Disable wakeup by EXT_GIC */
 	tmp = __raw_readl(EXYNOS5_WAKEUP_MASK);
-	tmp |= EXYNOS5_DEFAULT_WAKEUP_MACK;
+	tmp |= EXYNOS5_DEFAULT_WAKEUP_MASK;
 	__raw_writel(tmp, EXYNOS5_WAKEUP_MASK);
 
 	/*
@@ -172,64 +172,14 @@ void exynos5_cpu_suspend(void)
 	cpu_do_idle();
 }
 
-void __iomem *list_both_cnt_feed[] = {
-	EXYNOS5_ARM_CORE0_OPTION,
-	EXYNOS5_ARM_CORE1_OPTION,
-	EXYNOS5_ARM_COMMON_OPTION,
-	EXYNOS5_GSCL_OPTION,
-	EXYNOS5_ISP_OPTION,
-	EXYNOS5_MFC_OPTION,
-	EXYNOS5_G3D_OPTION,
-	EXYNOS5_DISP1_OPTION,
-	EXYNOS5_MAU_OPTION,
-	EXYNOS5_GPS_OPTION,
-	EXYNOS5_TOP_PWR_OPTION,
-	EXYNOS5_TOP_PWR_SYSMEM_OPTION,
-};
-
-void __iomem *list_diable_wfi_wfe[] = {
-	EXYNOS5_ARM_CORE1_OPTION,
-	EXYNOS5_FSYS_ARM_OPTION,
-	EXYNOS5_ISP_ARM_OPTION,
-};
-
-static void exynos5_init_pmu(void)
+static void exynos5_pm_prepare(void)
 {
-	unsigned int i;
 	unsigned int tmp;
 
 	/* Disable USE_RETENTION of JPEG_MEM_OPTION */
 	tmp = __raw_readl(EXYNOS5_JPEG_MEM_OPTION);
 	tmp &= ~EXYNOS5_OPTION_USE_RETENTION;
 	__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
-
-	for (i = 0 ; i < ARRAY_SIZE(list_both_cnt_feed) ; i++) {
-		tmp = __raw_readl(list_both_cnt_feed[i]);
-		tmp |= (EXYNOS5_USE_SC_FEEDBACK |
-			EXYNOS5_USE_SC_COUNTER);
-		__raw_writel(tmp, list_both_cnt_feed[i]);
-	}
-
-	/*
-	 * SKIP_DEACTIVATE_ACEACP_IN_PWDN_BITFIELD Enable
-	 * MANUAL_L2RSTDISABLE_CONTROL_BITFIELD Enable
-	 */
-	tmp = __raw_readl(EXYNOS5_ARM_COMMON_OPTION);
-	tmp |= (EXYNOS5_MANUAL_L2RSTDISABLE_CONTROL |
-		EXYNOS5_SKIP_DEACTIVATE_ACEACP_IN_PWDN);
-	__raw_writel(tmp, EXYNOS5_ARM_COMMON_OPTION);
-
-	for (i = 0 ; i < ARRAY_SIZE(list_diable_wfi_wfe) ; i++) {
-		tmp = __raw_readl(list_diable_wfi_wfe[i]);
-		tmp &= ~(EXYNOS5_OPTION_USE_STANDBYWFE |
-			 EXYNOS5_OPTION_USE_STANDBYWFI);
-		__raw_writel(tmp, list_diable_wfi_wfe[i]);
-	}
-}
-
-static void exynos5_pm_prepare(void)
-{
-	exynos5_init_pmu();
 
 	s3c_pm_do_save(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
 
