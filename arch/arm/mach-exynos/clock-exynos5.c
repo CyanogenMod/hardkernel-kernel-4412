@@ -132,6 +132,11 @@ static int exynos5_clksrc_mask_top_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_TOP, clk, enable);
 }
 
+static int exynos5_clk_ip_core_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_CORE, clk, enable);
+}
+
 static int exynos5_clk_ip_gps_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GPS, clk, enable);
@@ -968,6 +973,18 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "nfcon",
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 22),
+	}, {
+		.name		= "iop",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= ((1 << 30) | (1 << 26) | (1 << 23)),
+	}, {
+		.name		= "core_iop",
+		.enable		= exynos5_clk_ip_core_ctrl,
+		.ctrlbit	= ((1 << 21) | (1 << 3)),
+	}, {
+		.name		= "mcu_iop",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 0),
 	},
 };
 
