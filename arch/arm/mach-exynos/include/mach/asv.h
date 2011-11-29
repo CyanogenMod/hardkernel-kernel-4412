@@ -17,6 +17,8 @@
 
 #define LOOP_CNT			10
 
+extern unsigned int exynos_result_of_asv;
+
 struct asv_judge_table {
 	unsigned int hpm_limit; /* HPM value to decide group of target */
 	unsigned int ids_limit; /* IDS value to decide group of target */
