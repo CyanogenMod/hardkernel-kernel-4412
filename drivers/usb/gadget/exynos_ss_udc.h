@@ -34,6 +34,7 @@
 #define EXYNOS_USB3_EVENT_BUFF_BSIZE	(EXYNOS_USB3_EVENT_BUFF_WSIZE << 2)
 
 #define EXYNOS_USB3_CTRL_BUFF_SIZE	8
+#define EXYNOS_USB3_EP0_BUFF_SIZE	512
 
 #define call_gadget(_udc, _entry)				\
 	if ((_udc)->gadget.speed != USB_SPEED_UNKNOWN &&	\

@@ -38,6 +38,8 @@
 #include "exynos_ss_udc.h"
 
 
+static int exynos_ss_udc_enqueue_data(struct exynos_ss_udc *udc,
+				       void *buff, int length);
 static void exynos_ss_udc_enqueue_setup(struct exynos_ss_udc *udc);
 static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 			      gfp_t gfp_flags);
@@ -468,74 +470,6 @@ static struct usb_ep_ops exynos_ss_udc_ep_ops = {
 };
 
 /**
- * exynos_ss_udc_complete_oursetup - setup completion callback
- * @ep: The endpoint the request was on.
- * @req: The request completed.
- *
- * Called on completion of any requests the driver itself
- * submitted that need cleaning up.
- */
-static void exynos_ss_udc_complete_oursetup(struct usb_ep *ep,
-					struct usb_request *req)
-{
-	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
-	struct exynos_ss_udc *udc = udc_ep->parent;
-
-	dev_dbg(udc->dev, "%s: ep %p, req %p\n", __func__, ep, req);
-
-	exynos_ss_udc_ep_free_request(ep, req);
-}
-
-/**
- * exynos_ss_udc_send_reply - send reply to control request
- * @udc: The device state
- * @ep: Endpoint 0
- * @buff: Buffer for request
- * @length: Length of reply.
- *
- * Create a request and queue it on the given endpoint. This is useful as
- * an internal method of sending replies to certain control requests, etc.
- */
-static int exynos_ss_udc_send_reply(struct exynos_ss_udc *udc,
-				struct exynos_ss_udc_ep *ep,
-				void *buff,
-				int length)
-{
-	struct usb_request *req;
-	struct exynos_ss_udc_req *udc_req;
-	int ret;
-
-	dev_dbg(udc->dev, "%s: buff %p, len %d\n", __func__, buff, length);
-
-	req = exynos_ss_udc_ep_alloc_request(&ep->ep, GFP_ATOMIC);
-	udc->ep0_reply = req;
-	if (!req) {
-		dev_warn(udc->dev, "%s: cannot alloc req\n", __func__);
-		return -ENOMEM;
-	}
-
-	udc_req = our_req(req);
-
-	req->buf = udc->ep0_buff;
-	req->length = length;
-	req->zero = 1; /* always do zero-length final transfer */
-	req->complete = exynos_ss_udc_complete_oursetup;
-
-	if (length && (buff != req->buf))
-		memcpy(req->buf, buff, length);
-	else
-		ep->sent_zlp = 1;
-
-	ret = exynos_ss_udc_ep_queue(&ep->ep, req, GFP_ATOMIC);
-	if (ret) {
-		dev_warn(udc->dev, "%s: cannot queue req\n", __func__);
-		return ret;
-	}
-
-	return 0;
-}
-
-/**
  * exynos_ss_udc_start_req - start a USB request from an endpoint's queue
  * @udc: The controller state.
  * @udc_ep: The endpoint to process a request for
@@ -758,7 +692,7 @@ static int exynos_ss_udc_process_get_status(struct exynos_ss_udc *udc,
 {
 	struct exynos_ss_udc_ep *ep0 = &udc->eps[0];
 	struct exynos_ss_udc_ep *ep;
-	__le16 reply;
+	__le16 *reply = (__le16 *) udc->ep0_buff;
 	int ret;
 
 	dev_dbg(udc->dev, "%s: USB_REQ_GET_STATUS\n", __func__);
@@ -770,13 +704,13 @@ static int exynos_ss_udc_process_get_status(struct exynos_ss_udc *udc,
 
 	switch (ctrl->bRequestType & USB_RECIP_MASK) {
 	case USB_RECIP_DEVICE:
-		reply = cpu_to_le16(0); /* bit 0 => self powered,
-					 * bit 1 => remote wakeup */
+		*reply = cpu_to_le16(0); /* bit 0 => self powered,
+					  * bit 1 => remote wakeup */
 		break;
 
 	case USB_RECIP_INTERFACE:
 		/* currently, the data result should be zero */
-		reply = cpu_to_le16(0);
+		*reply = cpu_to_le16(0);
 		break;
 
 	case USB_RECIP_ENDPOINT:
@@ -784,7 +718,7 @@ static int exynos_ss_udc_process_get_status(struct exynos_ss_udc *udc,
 		if (!ep)
 			return -ENOENT;
 
-		reply = cpu_to_le16(ep->halted ? 1 : 0);
+		*reply = cpu_to_le16(ep->halted ? 1 : 0);
 		break;
 
 	default:
@@ -794,7 +728,7 @@ static int exynos_ss_udc_process_get_status(struct exynos_ss_udc *udc,
 	if (le16_to_cpu(ctrl->wLength) != 2)
 		return -EINVAL;
 
-	ret = exynos_ss_udc_send_reply(udc, ep0, &reply, 2);
+	ret = exynos_ss_udc_enqueue_data(udc, reply, 2);
 	if (ret) {
 		dev_err(udc->dev, "%s: failed to send reply\n", __func__);
 		return ret;
@@ -1036,6 +970,46 @@ static void exynos_ss_udc_enqueue_status(struct exynos_ss_udc *udc)
 		/* Don't think there's much we can do other than watch the
 		 * driver fail. */
 	}
+}
+
+/**
+ * exynos_ss_udc_enqueue_data - start a request for EP0 data stage
+ * @udc: The device state.
+ * @buff: Buffer for request.
+ * @length: Length of data.
+ */
+static int exynos_ss_udc_enqueue_data(struct exynos_ss_udc *udc,
+				       void *buff, int length)
+{
+	struct usb_request *req = udc->ctrl_req;
+	struct exynos_ss_udc_req *udc_req = our_req(req);
+	int ret;
+
+	dev_dbg(udc->dev, "%s: queueing data request\n", __func__);
+
+	req->zero = 0;
+	req->length = length;
+
+	if (buff == NULL)
+		req->buf = udc->ep0_buff;
+	else
+		req->buf = buff;
+
+	req->complete = NULL;
+
+	if (!list_empty(&udc_req->queue)) {
+		dev_info(udc->dev, "%s: already queued???\n", __func__);
+		return -EAGAIN;
+	}
+
+	ret = exynos_ss_udc_ep_queue(&udc->eps[0].ep, req, GFP_ATOMIC);
+	if (ret < 0) {
+		dev_err(udc->dev, "%s: failed to enqueue data request (%d)\n",
+				   __func__, ret);
+		return ret;
+	}
+
+	return 0;
 }
 
 /**
@@ -2157,7 +2131,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	}
 	memset(udc->ctrl_buff, 0, EXYNOS_USB3_CTRL_BUFF_SIZE);
 
-	udc->ep0_buff = kzalloc(512, GFP_KERNEL);
+	udc->ep0_buff = kzalloc(EXYNOS_USB3_EP0_BUFF_SIZE, GFP_KERNEL);
 	if (!udc->ep0_buff) {
 		dev_err(dev, "cannot get memory for EP0 buffer\n");
 		ret = -ENOMEM;
