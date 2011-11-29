@@ -627,24 +627,40 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 }
 
 /**
- * exynos_ss_udc_process_req_featire - process request {SET,CLEAR}_FEATURE
+ * exynos_ss_udc_process_clr_feature - process request CLEAR_FEATURE
  * @udc: The device state
  * @ctrl: USB control request
  */
-static int exynos_ss_udc_process_req_feature(struct exynos_ss_udc *udc,
-					 struct usb_ctrlrequest *ctrl)
+static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
+					     struct usb_ctrlrequest *ctrl)
 {
+	struct exynos_ss_udc_ep *udc_ep;
 	struct exynos_ss_udc_req *udc_req;
 	bool restart;
-	bool set = (ctrl->bRequest == USB_REQ_SET_FEATURE);
-	struct exynos_ss_udc_ep *ep;
 
-	dev_dbg(udc->dev, "%s: %s_FEATURE\n",
-		__func__, set ? "SET" : "CLEAR");
+	dev_dbg(udc->dev, "%s\n", __func__);
 
-	if (ctrl->bRequestType == USB_RECIP_ENDPOINT) {
-		ep = ep_from_windex(udc, le16_to_cpu(ctrl->wIndex));
-		if (!ep) {
+	switch (ctrl->bRequestType & USB_RECIP_MASK) {
+	case USB_RECIP_DEVICE:
+		switch (le16_to_cpu(ctrl->wValue)) {
+		case USB_DEVICE_U1_ENABLE:
+			__bic32(udc->regs + EXYNOS_USB3_DCTL,
+				EXYNOS_USB3_DCTL_InitU1Ena);
+			break;
+
+		case USB_DEVICE_U2_ENABLE:
+			__bic32(udc->regs + EXYNOS_USB3_DCTL,
+				EXYNOS_USB3_DCTL_InitU2Ena);
+			break;
+
+		default:
+			return -ENOENT;
+		}
+		break;
+
+	case USB_RECIP_ENDPOINT:
+		udc_ep = ep_from_windex(udc, le16_to_cpu(ctrl->wIndex));
+		if (!udc_ep) {
 			dev_dbg(udc->dev, "%s: no endpoint for 0x%04x\n",
 				__func__, le16_to_cpu(ctrl->wIndex));
 			return -ENOENT;
@@ -652,34 +668,92 @@ static int exynos_ss_udc_process_req_feature(struct exynos_ss_udc *udc,
 
 		switch (le16_to_cpu(ctrl->wValue)) {
 		case USB_ENDPOINT_HALT:
-			exynos_ss_udc_ep_sethalt(&ep->ep, set);
+			exynos_ss_udc_ep_sethalt(&udc_ep->ep, 0);
 
-			if (!set) {
-				/* If we have pending request, then start it */
-				restart = !list_empty(&ep->queue);
-				if (restart) {
-					udc_req = get_ep_head(ep);
-					exynos_ss_udc_start_req(udc, ep,
-								udc_req, false);
-				}
+			/* If we have pending request, then start it */
+			restart = !list_empty(&udc_ep->queue);
+			if (restart) {
+				udc_req = get_ep_head(udc_ep);
+				exynos_ss_udc_start_req(udc, udc_ep,
+							udc_req, false);
 			}
 			break;
 
 		default:
 			return -ENOENT;
 		}
-	} else
-		return -ENOENT;  /* currently only deal with endpoint */
+
+		break;
+
+	default:
+		return -ENOENT;
+	}
 
 	return 1;
 }
 
 /**
- * exynos_ss_udc_process_req_status - process request GET_STATUS
+ * exynos_ss_udc_process_set_feature - process request SET_FEATURE
  * @udc: The device state
  * @ctrl: USB control request
  */
-static int exynos_ss_udc_process_req_status(struct exynos_ss_udc *udc,
+static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
+					     struct usb_ctrlrequest *ctrl)
+{
+	struct exynos_ss_udc_ep *udc_ep;
+
+	dev_dbg(udc->dev, "%s\n", __func__);
+
+	switch (ctrl->bRequestType & USB_RECIP_MASK) {
+	case USB_RECIP_DEVICE:
+		switch (le16_to_cpu(ctrl->wValue)) {
+		case USB_DEVICE_U1_ENABLE:
+			__orr32(udc->regs + EXYNOS_USB3_DCTL,
+				EXYNOS_USB3_DCTL_InitU1Ena);
+			break;
+
+		case USB_DEVICE_U2_ENABLE:
+			__orr32(udc->regs + EXYNOS_USB3_DCTL,
+				EXYNOS_USB3_DCTL_InitU2Ena);
+			break;
+
+		default:
+			return -ENOENT;
+		}
+		break;
+
+	case USB_RECIP_ENDPOINT:
+		udc_ep = ep_from_windex(udc, le16_to_cpu(ctrl->wIndex));
+		if (!udc_ep) {
+			dev_dbg(udc->dev, "%s: no endpoint for 0x%04x\n",
+				__func__, le16_to_cpu(ctrl->wIndex));
+			return -ENOENT;
+		}
+
+		switch (le16_to_cpu(ctrl->wValue)) {
+		case USB_ENDPOINT_HALT:
+			exynos_ss_udc_ep_sethalt(&udc_ep->ep, 1);
+			break;
+
+		default:
+			return -ENOENT;
+		}
+
+		break;
+
+	default:
+		return -ENOENT;
+	}
+
+	return 1;
+}
+
+/**
+ * exynos_ss_udc_process_get_status - process request GET_STATUS
+ * @udc: The device state
+ * @ctrl: USB control request
+ */
+static int exynos_ss_udc_process_get_status(struct exynos_ss_udc *udc,
 					struct usb_ctrlrequest *ctrl)
 {
 	struct exynos_ss_udc_ep *ep0 = &udc->eps[0];
@@ -779,13 +853,16 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 			return;
 
 		case USB_REQ_GET_STATUS:
-			ret = exynos_ss_udc_process_req_status(udc, ctrl);
+			ret = exynos_ss_udc_process_get_status(udc, ctrl);
 			break;
 
 		case USB_REQ_CLEAR_FEATURE:
-		case USB_REQ_SET_FEATURE:
-			ret = exynos_ss_udc_process_req_feature(udc, ctrl);
+			ret = exynos_ss_udc_process_clr_feature(udc, ctrl);
+			udc->ep0_state = EP0_WAIT_NRDY;
+			break;
 
+		case USB_REQ_SET_FEATURE:
+			ret = exynos_ss_udc_process_set_feature(udc, ctrl);
 			udc->ep0_state = EP0_WAIT_NRDY;
 			break;
 		}
