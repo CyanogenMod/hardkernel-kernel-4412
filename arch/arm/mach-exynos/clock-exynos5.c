@@ -964,6 +964,10 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "gps",
 		.enable		= exynos5_clk_ip_gps_ctrl,
 		.ctrlbit	= ((1 << 3) | (1 << 2) | (1 << 0)),
+	}, {
+		.name		= "nfcon",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 22),
 	},
 };
 
