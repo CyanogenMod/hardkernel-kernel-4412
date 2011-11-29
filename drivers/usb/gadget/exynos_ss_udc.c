@@ -1681,7 +1681,11 @@ static void exynos_ss_udc_ep0_activate(struct exynos_ss_udc *udc)
 
 	/* Configure Physical Endpoint 0 */
 	epcmd->ep = 0;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(0x200);
+#if defined(CONFIG_USB_GADGET_EXYNOS_SS_UDC_SSMODE)
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_SS_MPS);
+#else
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_HS_MPS);
+#endif
 	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
 			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
 	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
@@ -1693,7 +1697,11 @@ static void exynos_ss_udc_ep0_activate(struct exynos_ss_udc *udc)
 
 	/* Configure Physical Endpoint 1 */
 	epcmd->ep = 1;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(0x200);
+#if defined(CONFIG_USB_GADGET_EXYNOS_SS_UDC_SSMODE)
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_SS_MPS);
+#else
+	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_HS_MPS);
+#endif
 	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_EpDir |
 			EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
 			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
