@@ -2018,7 +2018,7 @@ static struct regulator_init_data __initdata max8997_buck2_data = {
 static struct regulator_init_data __initdata max8997_buck3_data = {
 	.constraints	= {
 		.name		= "vdd_g3d range",
-		.min_uV		= 950000,
+		.min_uV		= 900000,
 		.max_uV		= 1150000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
