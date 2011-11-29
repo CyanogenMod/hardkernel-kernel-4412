@@ -427,7 +427,12 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 
 	spin_lock_irqsave(&udc_ep->lock, irqflags);
 
-	epcmd->ep = index;
+	if (udc_ep->epnum == 0)
+		/* Only OUT direction can be stalled */
+		epcmd->ep = 0;
+	else
+		epcmd->ep = index;
+
 	if (value)
 		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSSTALL;
 	else
@@ -441,18 +446,8 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 		return -EINVAL;
 	}
 
-	/* If EP0, do it for another direction */
-	if (udc_ep->epnum == 0) {
-		epcmd->ep = ~udc_ep->dir_in;
-
-		res = exynos_ss_udc_issue_cmd(udc, epcmd);
-		if (!res) {
-			dev_err(udc->dev, "Failed to set/clear stall\n");
-			return -EINVAL;
-		}
-
+	if (udc_ep->epnum == 0)
 		udc->ep0_state = EP0_STALL;
-	}
 
 	/* If everything is Ok, we mark endpoint as halted */
 	udc_ep->halted = value ? 1 : 0;
@@ -813,8 +808,7 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 		bool res;
 
 		dev_dbg(udc->dev, "ep0 stall (dir=%d)\n", ep0->dir_in);
-		/* FIXME */
-		epcmd->ep = (ep0->dir_in) ? 1 : 0;
+		epcmd->ep = 0;
 		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSSTALL;
 		epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
