@@ -11,22 +11,26 @@
  * published by the Free Software Foundation.
  */
 
-#include <linux/platform_device.h>
+#include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/errno.h>
+#include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
+#include <linux/cma.h>
+#include <asm/cacheflush.h>
+#include <asm/pgtable.h>
 #include <media/videobuf2-core.h>
 #include <asm/cacheflush.h>
-
 #include <media/videobuf2-cma-phys.h>
+#if defined(CONFIG_VIDEOBUF2_ION)
 #include <media/videobuf2-ion.h>
-
+#endif
 #include "fimc-is-core.h"
 #include "fimc-is-param.h"
 
+#if defined(CONFIG_VIDEOBUF2_ION)
 #define	FIMC_IS_ION_NAME	"exynos4-fimc-is"
 #define FIMC_IS_FW_BASE_MASK		((1 << 26) - 1)
-
-//#define CONTIG /*FIXME */
 
 struct vb2_buffer *is_vb;
 
@@ -66,6 +70,7 @@ struct vb2_ion_buf {
 
 	bool				cacheable;
 };
+#endif
 
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size)

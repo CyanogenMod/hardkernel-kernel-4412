@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 111  /* IS REGION VERSION 1.11 */
+#define IS_REGION_VER 112  /* IS REGION VERSION 1.12 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -861,7 +861,8 @@ enum isp_af_mode {
 	ISP_AF_MODE_AUTO		= 1,
 	ISP_AF_MODE_MACRO		= 2,
 	ISP_AF_MODE_CENTER		= 3,
-	ISP_AF_MODE_INFINITY		= 4
+	ISP_AF_MODE_INFINITY		= 4,
+	ISP_AF_MODE_MANUAL		= 5
 };
 
 enum isp_af_face {
@@ -1174,7 +1175,8 @@ struct param_isp_aa {
 	u32	win_pos_y;
 	u32	win_width;
 	u32	win_height;
-	u32	reserved[PARAMETER_MAX_MEMBER-10];
+	u32	manual_af_setting;
+	u32	reserved[PARAMETER_MAX_MEMBER-11];
 	u32	err;
 };
 
