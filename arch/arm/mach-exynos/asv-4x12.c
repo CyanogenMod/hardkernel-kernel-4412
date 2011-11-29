@@ -120,7 +120,7 @@ static int exynos4x12_fuse_asv_store_result(struct samsung_asv *asv_info)
 	unsigned int i;
 
 	for (i = 0; i < ARRAY_SIZE(exynos4x12_limit); i++) {
-		if (asv_info->ids_result == exynos4x12_limit[i].ids_limit) {
+		if (asv_info->ids_result <= exynos4x12_limit[i].ids_limit) {
 			exynos_result_of_asv = i;
 			break;
 		}
