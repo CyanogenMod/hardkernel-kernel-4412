@@ -219,12 +219,12 @@ static struct platform_device smdk5250_mipi_lcd = {
 
 static struct s3c_fb_pd_win smdk5250_fb_win0 = {
 	.win_mode = {
-		.left_margin	= 0xa,
-		.right_margin	= 0xa,
-		.upper_margin	= 80,
-		.lower_margin	= 48,
-		.hsync_len	= 32,
-		.vsync_len	= 5,
+		.left_margin	= 0x4,
+		.right_margin	= 0x4,
+		.upper_margin	= 4,
+		.lower_margin	= 4,
+		.hsync_len	= 4,
+		.vsync_len	= 4,
 		.xres		= 1280,
 		.yres		= 800,
 	},
@@ -238,12 +238,12 @@ static struct s3c_fb_pd_win smdk5250_fb_win0 = {
 
 static struct s3c_fb_pd_win smdk5250_fb_win1 = {
 	.win_mode = {
-		.left_margin	= 0xa,
-		.right_margin	= 0xa,
-		.upper_margin	= 80,
-		.lower_margin	= 48,
-		.hsync_len	= 32,
-		.vsync_len	= 5,
+		.left_margin	= 0x2,
+		.right_margin	= 0x4,
+		.upper_margin	= 4,
+		.lower_margin	= 4,
+		.hsync_len	= 4,
+		.vsync_len	= 4,
 		.xres		= 1280,
 		.yres		= 800,
 	},
@@ -257,12 +257,127 @@ static struct s3c_fb_pd_win smdk5250_fb_win1 = {
 
 static struct s3c_fb_pd_win smdk5250_fb_win2 = {
 	.win_mode = {
-		.left_margin	= 0xa,
-		.right_margin	= 0xa,
-		.upper_margin	= 80,
-		.lower_margin	= 48,
-		.hsync_len	= 32,
-		.vsync_len	= 5,
+		.left_margin	= 0x4,
+		.right_margin	= 0x4,
+		.upper_margin	= 4,
+		.lower_margin	= 4,
+		.hsync_len	= 4,
+		.vsync_len	= 4,
+		.xres		= 1280,
+		.yres		= 800,
+	},
+	.virtual_x		= 1280,
+	.virtual_y		= 800 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+#elif defined(CONFIG_LCD_MIPI_TC358764)
+static void mipi_lcd_set_power(struct plat_lcd_data *pd,
+				unsigned int power)
+{
+	/* reset */
+	gpio_request_one(EXYNOS5_GPX1(5), GPIOF_OUT_INIT_HIGH, "GPX1");
+
+	mdelay(20);
+	if (power) {
+		/* fire nRESET on power up */
+		gpio_set_value(EXYNOS5_GPX1(5), 0);
+		mdelay(20);
+		gpio_set_value(EXYNOS5_GPX1(5), 1);
+		mdelay(20);
+		gpio_free(EXYNOS5_GPX1(5));
+	} else {
+		/* fire nRESET on power off */
+		gpio_set_value(EXYNOS5_GPX1(5), 0);
+		mdelay(20);
+		gpio_set_value(EXYNOS5_GPX1(5), 1);
+		mdelay(20);
+		gpio_free(EXYNOS5_GPX1(5));
+	}
+	mdelay(20);
+	/* power */
+	gpio_request_one(EXYNOS5_GPX3(0), GPIOF_OUT_INIT_LOW, "GPX3");
+	if (power) {
+		/* fire nRESET on power up */
+		gpio_set_value(EXYNOS5_GPX3(0), 1);
+		gpio_free(EXYNOS5_GPX3(0));
+	} else {
+		/* fire nRESET on power off */
+		gpio_set_value(EXYNOS5_GPX3(0), 0);
+		gpio_free(EXYNOS5_GPX3(0));
+	}
+
+	/* backlight */
+	gpio_request_one(EXYNOS5_GPB2(0), GPIOF_OUT_INIT_LOW, "GPB2");
+	if (power) {
+		/* fire nRESET on power up */
+		gpio_set_value(EXYNOS5_GPB2(0), 1);
+		gpio_free(EXYNOS5_GPB2(0));
+	} else {
+		/* fire nRESET on power off */
+		gpio_set_value(EXYNOS5_GPB2(0), 0);
+		gpio_free(EXYNOS5_GPB2(0));
+	}
+}
+
+static struct plat_lcd_data smdk5250_mipi_lcd_data = {
+	.set_power	= mipi_lcd_set_power,
+};
+
+static struct platform_device smdk5250_mipi_lcd = {
+	.name			= "platform-lcd",
+	.dev.parent		= &s5p_device_fimd1.dev,
+	.dev.platform_data	= &smdk5250_mipi_lcd_data,
+};
+
+static struct s3c_fb_pd_win smdk5250_fb_win0 = {
+	.win_mode = {
+		.left_margin	= 4,
+		.right_margin	= 4,
+		.upper_margin	= 4,
+		.lower_margin	= 4,
+		.hsync_len	= 4,
+		.vsync_len	= 4,
+		.xres		= 1280,
+		.yres		= 800,
+	},
+	.virtual_x		= 1280,
+	.virtual_y		= 800 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk5250_fb_win1 = {
+	.win_mode = {
+		.left_margin	= 4,
+		.right_margin	= 4,
+		.upper_margin	= 4,
+		.lower_margin	= 4,
+		.hsync_len	= 4,
+		.vsync_len	= 4,
+		.xres		= 1280,
+		.yres		= 800,
+	},
+	.virtual_x		= 1280,
+	.virtual_y		= 800 * 2,
+	.width			= 223,
+	.height			= 125,
+	.max_bpp		= 32,
+	.default_bpp		= 24,
+};
+
+static struct s3c_fb_pd_win smdk5250_fb_win2 = {
+	.win_mode = {
+		.left_margin	= 4,
+		.right_margin	= 4,
+		.upper_margin	= 4,
+		.lower_margin	= 4,
+		.hsync_len	= 4,
+		.vsync_len	= 4,
 		.xres		= 1280,
 		.yres		= 800,
 	},
@@ -376,6 +491,10 @@ static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
 	.win[0]		= &smdk5250_fb_win0,
 	.win[1]		= &smdk5250_fb_win1,
 	.win[2]		= &smdk5250_fb_win2,
+#elif defined(CONFIG_LCD_MIPI_TC358764)
+	.win[0]		= &smdk5250_fb_win0,
+	.win[1]		= &smdk5250_fb_win1,
+	.win[2]		= &smdk5250_fb_win2,
 #elif defined(CONFIG_S5P_DP)
 	.win[0]		= &smdk5250_fb_win2,
 	.win[1]		= &smdk5250_fb_win2,
@@ -384,6 +503,8 @@ static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
 	.default_win	= 2,
 	.vidcon0	= VIDCON0_VIDOUT_RGB | VIDCON0_PNRMODE_RGB,
 #if defined(CONFIG_LCD_MIPI_S6E8AB0)
+	.vidcon1	= VIDCON1_INV_VCLK,
+#elif defined(CONFIG_LCD_MIPI_TC358764)
 	.vidcon1	= VIDCON1_INV_VCLK,
 #elif defined(CONFIG_S5P_DP)
 	.vidcon1	= 0,
@@ -1322,7 +1443,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&s5p_device_mipi_dsim,
 #endif
 	&s5p_device_fimd1,
-#ifdef CONFIG_LCD_MIPI_S6E8AB0
+#ifdef CONFIG_FB_MIPI_DSIM
 	&smdk5250_mipi_lcd,
 #endif
 #ifdef CONFIG_S5P_DP
