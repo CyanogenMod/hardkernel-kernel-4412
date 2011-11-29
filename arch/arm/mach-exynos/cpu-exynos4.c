@@ -334,10 +334,21 @@ static void exynos4_l2x0_set_debug(unsigned long val)
 static int __init exynos4_l2x0_cache_init(void)
 {
 #ifdef CONFIG_ARM_TRUSTZONE
-	if (soc_is_exynos4210())
-		exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, 0x110, 0x30000007);
-	else
-		exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, 0x120, 0x30000007);
+	u32 latency;
+	u32 prefech;
+
+	if (soc_is_exynos4210()) {
+		latency = 0x110;
+		prefech = 0x30000007;
+	} else {
+		latency = 0x120;
+		if (soc_is_exynos4412() && (samsung_rev() == EXYNOS4412_REV_1_0))
+			prefech = 0x70000007;
+		else
+			prefech = 0x30000007;
+	}
+
+	exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, latency, prefech);
 	exynos_smc(SMC_CMD_L2X0SETUP2,
 		   L2X0_DYNAMIC_CLK_GATING_EN | L2X0_STNDBY_MODE_EN,
 		   0x7C470001, 0xC200FFFF);
@@ -352,7 +363,10 @@ static int __init exynos4_l2x0_cache_init(void)
 		__raw_writel(0x120, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
 
 	/* L2X0 Prefetch Control */
-	__raw_writel(0x30000007, S5P_VA_L2CC + L2X0_PREFETCH_CTRL);
+	if (soc_is_exynos4412() && (samsung_rev() == EXYNOS4412_REV_1_0))
+		__raw_writel(0x70000007, S5P_VA_L2CC + L2X0_PREFETCH_CTRL);
+	else
+		__raw_writel(0x30000007, S5P_VA_L2CC + L2X0_PREFETCH_CTRL);
 
 	/* L2X0 Power Control */
 	__raw_writel(L2X0_DYNAMIC_CLK_GATING_EN | L2X0_STNDBY_MODE_EN,
