@@ -211,6 +211,7 @@
 /* Definition for XXX_OPTION */
 #define EXYNOS5_OPTION_USE_STANDBYWFE				(1 << 24)
 #define EXYNOS5_OPTION_USE_STANDBYWFI				(1 << 16)
+#define EXYNOS5_OPTION_USE_RETENTION				(1 << 4)
 #define EXYNOS5_USE_SC_FEEDBACK					(1 << 1)
 #define EXYNOS5_USE_SC_COUNTER					(1 << 0)
 

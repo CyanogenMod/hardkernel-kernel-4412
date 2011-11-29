@@ -33,8 +33,6 @@
 
 #include <mach/map-exynos5.h>
 
-void __iomem *exynos5_jpeg_base;
-
 static struct sleep_save exynos5_core_save[] = {
 	/* GIC side */
 	SAVE_ITEM(S5P_VA_GIC_CPU + 0x000),
@@ -160,21 +158,6 @@ void exynos5_cpu_suspend(void)
 {
 	unsigned int tmp;
 
-	/*
-	 * There is some issue on JPEG Device.
-	 * Before enter sleep mode, Jpeg be reset.
-	 */
-	tmp = __raw_readl(EXYNOS5_CLKGATE_IP_GEN);
-	tmp |= (1 << 2);
-	__raw_writel(tmp, EXYNOS5_CLKGATE_IP_GEN);
-
-	__raw_writel(0x10000000, exynos5_jpeg_base);
-	__raw_writel(0x30000000, exynos5_jpeg_base);
-
-	tmp = __raw_readl(EXYNOS5_CLKGATE_IP_GEN);
-	tmp &= ~(1 << 2);
-	__raw_writel(tmp, EXYNOS5_CLKGATE_IP_GEN);
-
 	/* Disable wakeup by EXT_GIC */
 	tmp = __raw_readl(EXYNOS5_WAKEUP_MASK);
 	tmp |= EXYNOS5_DEFAULT_WAKEUP_MACK;
@@ -214,6 +197,11 @@ static void exynos5_init_pmu(void)
 {
 	unsigned int i;
 	unsigned int tmp;
+
+	/* Disable USE_RETENTION of JPEG_MEM_OPTION */
+	tmp = __raw_readl(EXYNOS5_JPEG_MEM_OPTION);
+	tmp &= ~EXYNOS5_OPTION_USE_RETENTION;
+	__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
 
 	for (i = 0 ; i < ARRAY_SIZE(list_both_cnt_feed) ; i++) {
 		tmp = __raw_readl(list_both_cnt_feed[i]);
@@ -336,11 +324,6 @@ static struct syscore_ops exynos5_pm_syscore_ops = {
 
 static __init int exynos5_pm_syscore_init(void)
 {
-	exynos5_jpeg_base = ioremap(EXYNOS4_PA_JPEG, SZ_16K);
-
-	if (!exynos5_jpeg_base)
-		pr_err("EXYNOS5 PMU :exynos5_jpeg_base get fail\n");
-
 	register_syscore_ops(&exynos5_pm_syscore_ops);
 
 	return 0;
