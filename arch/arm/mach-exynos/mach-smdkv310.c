@@ -54,6 +54,7 @@
 #include <plat/fimc.h>
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
+#include <media/s5p_fimc.h>
 #include <plat/fimc-core.h>
 #endif
 #ifdef CONFIG_VIDEO_FIMC_MIPI
@@ -105,7 +106,6 @@
 #include <plat/s5p-mfc.h>
 #endif
 
-#include <media/s5p_fimc.h>
 #include <media/s5k4ba_platform.h>
 #include <media/s5k4ea_platform.h>
 #include <media/m5mo_platform.h>
