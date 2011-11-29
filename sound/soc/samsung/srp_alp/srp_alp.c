@@ -95,7 +95,7 @@
 struct srp_buf_info {
 	void		*mmapped_addr;
 	void		*addr;
-	unsigned int	mmaped_size;
+	unsigned int	mmapped_size;
 	unsigned int	size;
 	int		num;
 };
@@ -597,8 +597,8 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case SRP_GET_MMAP_SIZE:
-		srp.obuf_info->mmaped_size = OBUF_SIZE * OBUF_NUM + OBUF_OFFSET;
-		val = srp.obuf_info->mmaped_size;
+		srp.obuf_info->mmapped_size = OBUF_SIZE * OBUF_NUM + OBUF_OFFSET;
+		val = srp.obuf_info->mmapped_size;
 		srpdbg("SRP: SRP_GET_MMAP_SIZE = %ld\n", val);
 		ret = copy_to_user((unsigned long *)arg,
 					&val, sizeof(unsigned long));
