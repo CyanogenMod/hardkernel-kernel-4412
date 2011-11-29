@@ -470,11 +470,11 @@ int s5p_mipi_dsi_set_display_mode(struct mipi_dsim_device *dsim,
 	if (dsim->dsim_config->e_interface == (u32) DSIM_VIDEO) {
 			s5p_mipi_dsi_set_main_disp_vporch(dsim,
 				DSIM_CMD_LEN,
-				dsim->pd->dsim_lcd_config->rgb_timing.upper_margin,
-				dsim->pd->dsim_lcd_config->rgb_timing.lower_margin);
-			s5p_mipi_dsi_set_main_disp_hporch(dsim,
 				dsim->pd->dsim_lcd_config->rgb_timing.left_margin,
 				dsim->pd->dsim_lcd_config->rgb_timing.right_margin);
+			s5p_mipi_dsi_set_main_disp_hporch(dsim,
+				dsim->pd->dsim_lcd_config->rgb_timing.upper_margin,
+				dsim->pd->dsim_lcd_config->rgb_timing.lower_margin);
 			s5p_mipi_dsi_set_main_disp_sync_area(dsim,
 				dsim->pd->dsim_lcd_config->rgb_timing.vsync_len,
 				dsim->pd->dsim_lcd_config->rgb_timing.hsync_len);
@@ -641,11 +641,14 @@ static void s5p_mipi_dsi_late_resume(struct early_suspend *handler)
 
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
-
-	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
-
+#if defined(CONFIG_LCD_MIPI_TC358764)
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-
+	s5p_mipi_dsi_set_hs_enable(dsim);
+	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+#else
+	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
+	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+#endif
 	/* lcd init */
 	dsim->dsim_lcd_drv->resume(dsim);
 
@@ -674,10 +677,14 @@ static int s5p_mipi_dsi_resume(struct platform_device *pdev)
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
 
-	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
-
+#if defined(CONFIG_LCD_MIPI_TC358764)
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-
+	s5p_mipi_dsi_set_hs_enable(dsim);
+	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+#else
+	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
+	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+#endif
 	/* lcd init */
 	dsim->dsim_lcd_drv->resume(dsim);
 
@@ -782,17 +789,18 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
-
-	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
-
 	/* initialize mipi-dsi client(lcd panel). */
 	dsim->dsim_lcd_drv->probe(dsim);
 
+#if defined(CONFIG_LCD_MIPI_TC358764)
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-
-	/* lcd init */
+	s5p_mipi_dsi_set_hs_enable(dsim);
+	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+#else
+	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
+	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+#endif
 	dsim->dsim_lcd_drv->displayon(dsim);
-
 	s5p_mipi_dsi_set_hs_enable(dsim);
 
 	dev_info(&pdev->dev, "mipi-dsi driver(%s mode) has been probed.\n",
