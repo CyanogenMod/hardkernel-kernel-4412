@@ -20,6 +20,7 @@
 #include <mach/regs-clock.h>
 #include <mach/regs-pmu.h>
 #include <mach/cpufreq.h>
+#include <mach/asv.h>
 
 #include <plat/clock.h>
 #include <plat/cpu.h>
@@ -306,23 +307,45 @@ static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
  * ASV group voltage table
  */
 
-#define NUM_ASV_GROUP	2
+static const unsigned int asv_voltage_s[CPUFREQ_LEVEL_END] = {
+	1500000, 1375000, 1350000, 1250000, 1200000, 1175000, 1100000,
+	1050000, 1025000, 1000000, 1000000, 1000000, 950000, 950000
+};
 
-static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
-	{ 1500000, 1400000 },	/* L0 */
-	{ 1375000, 1350000 },	/* L1 */
-	{ 1350000, 1300000 },	/* L2 */
-	{ 1250000, 1225000 },	/* L3 */
-	{ 1200000, 1150000 },	/* L4 */
-	{ 1175000, 1075000 },	/* L5 */
-	{ 1100000, 1025000 },	/* L6 */
-	{ 1050000, 1000000 },	/* L7 */
-	{ 1025000, 975000 },	/* L8 */
-	{ 1000000, 925000 },	/* L9 */
-	{ 1000000, 875000 },	/* L10 */
-	{ 1000000, 850000 },	/* L11 */
-	{ 950000, 850000 },	/* L12 */
-	{ 950000, 850000 },	/* L13 */
+/* ASV table for 12.5mV step */
+static const unsigned int asv_voltage_step_12_5[CPUFREQ_LEVEL_END][9] = {
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },	/* L0 - Not used */
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },	/* L1 - Not used */
+	{ 1350000, 1337500, 1325000, 1312500, 1300000, 1287500, 1275000, 1275000, 1262500 },	/* L2 */
+	{ 1262500, 1250000, 1237500, 1225000, 1212500, 1212500, 1200000, 1200000, 1187500 },	/* L3 */
+	{ 1187500, 1175000, 1162500, 1150000, 1137500, 1125000, 1112500, 1125000, 1100000 },	/* L4 */
+	{ 1125000, 1125000, 1100000, 1087500, 1075000, 1062500, 1062500, 1050000, 1050000 },	/* L5 */
+	{ 1062500, 1062500, 1050000, 1037500, 1025000, 1025000, 1012500, 1012500, 1000000 },	/* L6 */
+	{ 1037500, 1025000, 1025000, 1012500, 1000000, 987500, 975000, 975000, 975000 },	/* L7 */
+	{ 1000000, 987500, 975000, 975000, 962500, 950000, 950000, 937500, 937500 },	/* L8 */
+	{ 950000, 950000, 937500, 925000, 912500, 900000, 900000, 887500, 887500 },	/* L9 */
+	{ 900000, 900000, 887500, 875000, 862500, 850000, 850000, 850000, 850000 },	/* L10 */
+	{ 875000, 875000, 875000, 862500, 850000, 850000, 850000, 850000, 850000 },	/* L11 */
+	{ 850000, 850000, 850000, 850000, 850000, 850000, 850000, 850000, 850000 },	/* L12 */
+	{ 850000, 850000, 850000, 850000, 850000, 850000, 850000, 850000, 850000 },	/* L13 */
+};
+
+/* ASV table for 25mV step */
+static const unsigned int asv_voltage_step_25[CPUFREQ_LEVEL_END][9] = {
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },	/* L0 - Not used */
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },	/* L1 - Not used */
+	{ 1350000, 1350000, 1325000, 1325000, 1300000, 1300000, 1275000, 1275000, 1275000 },	/* L2 */
+	{ 1275000, 1250000, 1250000, 1225000, 1225000, 1225000, 1200000, 1200000, 1200000 },	/* L3 */
+	{ 1200000, 1175000, 1175000, 1150000, 1150000, 1125000, 1125000, 1125000, 1100000 },	/* L4 */
+	{ 1125000, 1125000, 1100000, 1100000, 1075000, 1075000, 1075000, 1050000, 1050000 },	/* L5 */
+	{ 1075000, 1075000, 1050000, 1050000, 1025000, 1025000, 1025000, 1025000, 1000000 },	/* L6 */
+	{ 1050000, 1025000, 1025000, 1025000, 1000000, 1000000, 975000, 975000, 975000 },	/* L7 */
+	{ 1000000, 1000000, 975000, 975000, 975000, 950000, 950000, 950000, 950000 },	/* L8 */
+	{ 950000, 950000, 950000, 925000, 925000, 900000, 900000, 900000, 900000 },	/* L9 */
+	{ 900000, 900000, 900000, 875000, 875000, 850000, 850000, 850000, 850000 },	/* L10 */
+	{ 875000, 875000, 875000, 875000, 850000, 850000, 850000, 850000, 850000 },	/* L11 */
+	{ 850000, 850000, 850000, 850000, 850000, 850000, 850000, 850000, 850000 },	/* L12 */
+	{ 850000, 850000, 850000, 850000, 850000, 850000, 850000, 850000, 850000 },	/* L13 */
 };
 
 static void set_clkdiv(unsigned int div_index)
@@ -458,33 +481,8 @@ static void exynos4212_set_frequency(unsigned int old_index,
 
 static void __init set_volt_table(void)
 {
-	unsigned int asv_group = 0;
 	bool for_1500 = false, for_1200 = false;
 	unsigned int i;
-#if 0
-	tmp = __raw_readl(EXYNOS4_INFORM2);
-
-	asv_group = (tmp & 0xF);
-
-	switch (tmp  & (SUPPORT_FREQ_MASK << SUPPORT_FREQ_SHIFT)) {
-	case SUPPORT_1400MHZ:
-		for_1400 = true;
-		max_support_idx = L0;
-		break;
-	case SUPPORT_1200MHZ:
-		for_1200 = true;
-		max_support_idx = L1;
-		break;
-	case SUPPORT_1000MHZ:
-		for_1000 = true;
-		max_support_idx = L2;
-		break;
-	default:
-		for_1000 = true;
-		max_support_idx = L2;
-		break;
-	}
-#else
 
 #ifdef CONFIG_EXYNOS4212_1500MHZ_SUPPORT
 	for_1500 = true;
@@ -494,8 +492,6 @@ static void __init set_volt_table(void)
 	max_support_idx = L3;
 #else
 	max_support_idx = L5;
-#endif
-	asv_group = __raw_readl(S5P_INFORM2);
 #endif
 	/*
 	 * Should be fixed !!!
@@ -525,10 +521,16 @@ static void __init set_volt_table(void)
 	}
 #endif
 
-	printk(KERN_INFO "DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
+	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", exynos_result_of_asv);
 
-	for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
-		exynos4212_volt_table[i] = asv_voltage[i][asv_group];
+	if (exynos_result_of_asv == 0xff) {
+		for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
+			exynos4212_volt_table[i] = asv_voltage_s[i];
+	} else {
+		for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
+			exynos4212_volt_table[i] =
+				asv_voltage_step_25[i][exynos_result_of_asv];
+	}
 }
 
 int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
