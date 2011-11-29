@@ -132,6 +132,11 @@ static int exynos5_clksrc_mask_top_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKSRC_MASK_TOP, clk, enable);
 }
 
+static int exynos5_clk_ip_gps_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GPS, clk, enable);
+}
+
 static int exynos5_clk_ip_peric_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_PERIC, clk, enable);
@@ -955,6 +960,10 @@ static struct clk exynos5_init_clocks_off[] = {
 		.devname	= "s5p-fimg2d",
 		.enable		= exynos5_clk_ip_acp_ctrl,
 		.ctrlbit	= (1 << 3),
+	}, {
+		.name		= "gps",
+		.enable		= exynos5_clk_ip_gps_ctrl,
+		.ctrlbit	= ((1 << 3) | (1 << 2) | (1 << 0)),
 	},
 };
 
