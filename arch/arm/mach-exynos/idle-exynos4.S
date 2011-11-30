@@ -29,6 +29,7 @@
 #include <linux/linkage.h>
 #include <asm/assembler.h>
 #include <asm/memory.h>
+#include <asm/hardware/cache-l2x0.h>
 #include <plat/map-base.h>
 #include <plat/map-s5p.h>
 #include <mach/smc.h>
@@ -142,6 +143,12 @@ sleep_save_misc:
 sys_pwr_conf_addr:
 	.long	0
 
+	.global l2x0_save
+l2x0_save:
+	.word	0
+	.word	0
+	.word	0
+
 	/*
 	 * exynos4_idle_resume
 	 *
@@ -160,68 +167,51 @@ ENTRY(exynos4_idle_resume)
 	orr	r0, r0, #(1 << 5)
 	str	r0, [r1]
 
-	ldr	r1, =0x10000000
-
 #ifdef CONFIG_CACHE_L2X0
-	/* Read CHIP ID */
-	ldr	r0, [r1]
-	mov	r0, r0, lsr #12
-	/* Check soc id */
-	ldr	r2, =0x43210
-	cmp	r0, r2
+	/* Restore register value for L2X0 */
+	adr	r0, l2x0_save
+
+	ldr	r5, [r0], #4	@ Data latency
+	ldr	r6, [r0], #4	@ Tag latency
+	ldr	r7, [r0], #4	@ prepatch
+
 #ifdef CONFIG_ARM_TRUSTZONE
+	mov	r1, r5
+	mov	r2, r6
+	mov	r3, r7
+
 	ldr	r0, =SMC_CMD_L2X0SETUP1
-	ldr	r1, =0x110
-	ldreq	r2, =0x110
-	ldrne	r2, =0x120
-	ldr	r3, =0x30000007
+
 	smc	0
 
 	ldr	r0, =SMC_CMD_L2X0SETUP2
 	ldr	r1, =0x3
 	ldr	r2, =0x7C470001
 	ldr	r3, =0xC200FFFF
+
 	smc	0
 #else
-	bne	exynos4212_l2_cache
+	ldr	r0, =EXYNOS4_PA_L2CC
 
-	/* Outer cache TAG,DATA latency */
-	ldr	r1, =0x10502000
-	mov	r0, #0x110
-	str	r0, [r1, #0x108]
-	str	r0, [r1, #0x10C]
+	str	r5, [r0, #L2X0_TAG_LATENCY_CTRL]
+	str	r6, [r0, #L2X0_DATA_LATENCY_CTRL]
+	str	r7, [r0, #L2X0_DATA_LATENCY_CTRL]
 
-	/* L2 cache prefetch control register */
-	ldr	r0, =0x30000007
-	str	r0, [r1, #0xF60]
+	/*
+	 * Set Power ctrl register for L2X0
+	 */
+	mov	r1, #0x3
+	str	r1, [r0, #L2X0_POWER_CTRL]
 
-	b	pwr_ctrl_regster
+	ldr	r1, [r0, #L2X0_AUX_CTRL]
+	ldr	r2, =0x7C470001
+	ldr	r3, 0xC200FFFF
 
-exynos4212_l2_cache:
-	/* Outer cache TAG,DATA latency */
-	ldr	r1, =0x10502000
-	mov	r0, #0x110
-	str	r0, [r1, #0x108]
-	mov	r0, #0x120
-	str	r0, [r1, #0x10C]
+	and	r1, r1, r3
+	orr	r1, r1, r2
 
-	/* L2 cache prefetch control register */
-	ldr	r0, =0x30000007
-	str	r0, [r1, #0xF60]
+	str	r1, [r0, #L2X0_AUX_CTRL]
 
-pwr_ctrl_regster:
-	/* Power control register setting*/
-	mov	r0, #0x3
-	str	r0, [r1, #0xF80]
-
-	ldr	r0, [r1, #0x104]
-	ldr	r2, =0x7c470001
-	ldr	r3, =0xc200ffff
-
-	and	r0, r0, r3
-	orr	r0, r0, r2
-	str	r0, [r1, #0x104]
 #endif
 #endif
-
 	b	cpu_resume
