@@ -335,7 +335,14 @@ config EXYNOS5_DEV_GSC
 
 config EXYNOS4_ENBLE_CLOCK_DOWN
 	bool "ARM core clock down feature enable"
-	depends on CPU_IDLE
+	depends on EXYNOS4_CPUIDLE
+	default n
+	help
+	  ARM core clock down in idle time.
+
+config EXYNOS5_ENBLE_CLOCK_DOWN
+	bool "ARM core clock down feature enable"
+	depends on EXYNOS5_CPUIDLE
 	default n
 	help
 	  ARM core clock down in idle time.

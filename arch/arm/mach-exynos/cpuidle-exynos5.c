@@ -24,6 +24,7 @@
 #include <mach/regs-pmu5.h>
 #include <mach/pm-core.h>
 #include <mach/pmu.h>
+#include <mach/regs-clock.h>
 
 #define REG_DIRECTGO_ADDR	(S5P_VA_SYSRAM + 0x24)
 #define REG_DIRECTGO_FLAG	(S5P_VA_SYSRAM + 0x20)
@@ -198,10 +199,57 @@ static struct notifier_block exynos5_cpuidle_notifier = {
 	.notifier_call = exynos5_cpuidle_notifier_event,
 };
 
+#ifdef CONFIG_EXYNOS5_ENBLE_CLOCK_DOWN
+static void __init exynos5_core_down_clk(void)
+{
+	unsigned int tmp;
+
+	tmp = __raw_readl(EXYNOS5_PWR_CTRL1);
+
+	tmp &= ~(PWR_CTRL1_CORE2_DOWN_MASK | PWR_CTRL1_CORE1_DOWN_MASK);
+
+	/* set arm clock divider value on idle state */
+	tmp |= ((0x7 << PWR_CTRL1_CORE2_DOWN_RATIO) |
+		(0x7 << PWR_CTRL1_CORE1_DOWN_RATIO));
+
+	tmp |= (PWR_CTRL1_DIV2_DOWN_EN |
+		PWR_CTRL1_DIV1_DOWN_EN |
+		PWR_CTRL1_USE_CORE1_WFE |
+		PWR_CTRL1_USE_CORE0_WFE |
+		PWR_CTRL1_USE_CORE1_WFI |
+		PWR_CTRL1_USE_CORE0_WFI);
+
+	__raw_writel(tmp, EXYNOS5_PWR_CTRL1);
+
+	tmp = __raw_readl(EXYNOS5_PWR_CTRL2);
+
+	tmp &= ~(PWR_CTRL2_DUR_STANDBY2_MASK | PWR_CTRL2_DUR_STANDBY1_MASK |
+		PWR_CTRL2_CORE2_UP_MASK | PWR_CTRL2_CORE1_UP_MASK);
+
+	/* set duration value on middle wakeup step */
+	tmp |=  ((0x1 << PWR_CTRL2_DUR_STANDBY2) |
+		 (0x1 << PWR_CTRL2_DUR_STANDBY1));
+
+	/* set arm clock divier value on middle wakeup step */
+	tmp |= ((0x1 << PWR_CTRL2_CORE2_UP_RATIO) |
+		(0x1 << PWR_CTRL2_CORE1_UP_RATIO));
+
+	/* Set PWR_CTRL2 register to use step up for arm clock */
+	tmp |= (PWR_CTRL2_DIV2_UP_EN | PWR_CTRL2_DIV1_UP_EN);
+
+	__raw_writel(tmp, EXYNOS5_PWR_CTRL2);
+	printk(KERN_INFO "Exynos5 : ARM Clock down on idle mode is enabled\n");
+}
+#else
+#define exynos5_core_down_clk()	do { } while (0)
+#endif
+
 static int __init exynos5_init_cpuidle(void)
 {
 	int i, max_cpuidle_state, cpu_id;
 	struct cpuidle_device *device;
+
+	exynos5_core_down_clk();
 
 	cpuidle_register_driver(&exynos5_idle_driver);
 
