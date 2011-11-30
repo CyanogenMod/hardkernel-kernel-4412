@@ -887,12 +887,11 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	/* Fix value for H.264, H.263 in the driver */
 	/* FIXME: it should be applied at NAL_start */
 	p->rc_frame_delta = FRAME_DELTA_H264_H263;
-	WRITEL(0x10000, S5P_FIMV_E_RC_FRAME_RATE);
 	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
 		/* FIXME: user set 1000x scale value */
 		reg = 0;
 		reg &= ~(0xffff << 16);
-		reg |= ((p_264->rc_framerate * 1000) << 16);
+		reg |= ((p_264->rc_framerate * p->rc_frame_delta) << 16);
 		reg &= ~(0xffff);
 		reg |= p->rc_frame_delta;
 		WRITEL(reg, S5P_FIMV_E_RC_FRAME_RATE);
@@ -1060,12 +1059,11 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 
 	/* frame rate */
 	/* FIXME: it should be applied at NAL_start */
-	WRITEL(0x10000, S5P_FIMV_E_RC_FRAME_RATE);
 	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
 		/* FIXME: user set 1000x scale value */
 		reg = 0;
 		reg &= ~(0xffff << 16);
-		reg |= ((p_mpeg4->vop_time_res * 1000) << 16);
+		reg |= (p_mpeg4->vop_time_res << 16);
 		reg &= ~(0xffff);
 		reg |= p_mpeg4->vop_frm_delta;
 		WRITEL(reg, S5P_FIMV_E_RC_FRAME_RATE);
@@ -1134,12 +1132,11 @@ static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 	/* Fix value for H.264, H.263 in the driver */
 	/* FIXME: it should be applied at NAL_start */
 	p->rc_frame_delta = FRAME_DELTA_H264_H263;
-	WRITEL(0x10000, S5P_FIMV_E_RC_FRAME_RATE);
 	if (p->rc_frame == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
 		/* FIXME: user set 1000x scale value */
 		reg = 0;
 		reg &= ~(0xffff << 16);
-		reg |= ((p_mpeg4->rc_framerate * 1000) << 16);
+		reg |= ((p_mpeg4->rc_framerate * p->rc_frame_delta) << 16);
 		reg &= ~(0xffff);
 		reg |= p->rc_frame_delta;
 		WRITEL(reg, S5P_FIMV_E_RC_FRAME_RATE);

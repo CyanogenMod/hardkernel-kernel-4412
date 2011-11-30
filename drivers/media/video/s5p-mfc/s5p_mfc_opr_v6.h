@@ -117,7 +117,7 @@ void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx);
 #define ENC_H264_PROFILE_MAX		3
 #define ENC_H264_LEVEL_MAX		42
 #define ENC_MPEG4_VOP_TIME_RES_MAX	(1 << 16) - 1
-#define FRAME_DELTA_H264_H263		1000
+#define FRAME_DELTA_H264_H263		1
 #define TIGHT_CBR_MAX			10
 
 /* Definitions for shared memory compatibility */
