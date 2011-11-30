@@ -561,6 +561,27 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 }
 
 /**
+ * exynos_ss_udc_process_set_sel - process request SET_SEL
+ * @udc: The device state
+ */
+static int exynos_ss_udc_process_set_sel(struct exynos_ss_udc *udc)
+{
+	int ret;
+
+	dev_dbg(udc->dev, "%s\n", __func__);
+
+	ret = exynos_ss_udc_enqueue_data(udc, udc->ep0_buff,
+					 EXYNOS_USB3_EP0_BUFF_SIZE);
+	if (ret < 0) {
+		dev_err(udc->dev, "%s: failed to become ready for SEL data\n",
+				   __func__);
+		return ret;
+	}
+
+	return 1;
+}
+
+/**
  * exynos_ss_udc_process_clr_feature - process request CLEAR_FEATURE
  * @udc: The device state
  * @ctrl: USB control request
@@ -802,6 +823,10 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 		case USB_REQ_SET_FEATURE:
 			ret = exynos_ss_udc_process_set_feature(udc, ctrl);
 			udc->ep0_state = EP0_WAIT_NRDY;
+			break;
+
+		case USB_REQ_SET_SEL:
+			ret = exynos_ss_udc_process_set_sel(udc);
 			break;
 		}
 	}
