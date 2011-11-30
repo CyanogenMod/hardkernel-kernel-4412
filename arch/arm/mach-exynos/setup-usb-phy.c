@@ -79,64 +79,88 @@ static int exynos5_usb_host_phy20_is_on(void)
 	return (readl(EXYNOS5_PHY_HOST_CTRL0) & HOST_CTRL0_PHYSWRSTALL) ? 0 : 1;
 }
 
-static u32 exynos4_usb_phy_set_clock(struct platform_device *pdev)
+static u32 exynos_usb_phy_set_clock(struct platform_device *pdev)
 {
-	struct clk *xusbxti_clk;
-	u32 phyclk = readl(EXYNOS4_PHYCLK);
+	struct clk *ref_clk;
+	u32 refclk_freq = 0;
 
-	xusbxti_clk = clk_get(&pdev->dev, "xusbxti");
-	if (IS_ERR(xusbxti_clk)) {
-		printk(KERN_ERR"Failed to get xusbxti clock\n");
-		return PTR_ERR(xusbxti_clk);
+	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
+		ref_clk = clk_get(&pdev->dev, "xusbxti");
+	else
+		ref_clk = clk_get(&pdev->dev, "ext_xtal");
+
+	if (IS_ERR(ref_clk)) {
+		printk(KERN_ERR"Failed to get reference clock\n");
+		return PTR_ERR(ref_clk);
 	}
 
 	if (soc_is_exynos4210()) {
-		phyclk &= ~(EXYNOS4210_PHY0_ID_PULLUP |
-				EXYNOS4210_CLKSEL_MASK);
-		switch (clk_get_rate(xusbxti_clk)) {
+		switch (clk_get_rate(ref_clk)) {
 		case 12 * MHZ:
-			phyclk |= EXYNOS4210_CLKSEL_12M;
+			refclk_freq = EXYNOS4210_CLKSEL_12M;
+			break;
+		case 48 * MHZ:
+			refclk_freq = EXYNOS4210_CLKSEL_48M;
 			break;
 		case 24 * MHZ:
-			phyclk |= EXYNOS4210_CLKSEL_24M;
-			break;
 		default:
-		case 48 * MHZ:
-			phyclk |= EXYNOS4210_CLKSEL_48M;
 			/* default reference clock */
+			refclk_freq = EXYNOS4210_CLKSEL_24M;
+			break;
+		}
+	} else if (soc_is_exynos4212() | soc_is_exynos4412()) {
+		switch (clk_get_rate(ref_clk)) {
+		case 96 * 100000:
+			refclk_freq = EXYNOS4212_CLKSEL_9600K;
+			break;
+		case 10 * MHZ:
+			refclk_freq = EXYNOS4212_CLKSEL_10M;
+			break;
+		case 12 * MHZ:
+			refclk_freq = EXYNOS4212_CLKSEL_12M;
+			break;
+		case 192 * 100000:
+			refclk_freq = EXYNOS4212_CLKSEL_19200K;
+			break;
+		case 20 * MHZ:
+			refclk_freq = EXYNOS4212_CLKSEL_20M;
+			break;
+		case 24 * MHZ:
+		default:
+			/* default reference clock */
+			refclk_freq = EXYNOS4212_CLKSEL_24M;
 			break;
 		}
 	} else {
-		phyclk &= ~(EXYNOS4212_PHY0_ID_PULLUP |
-				EXYNOS4212_CLKSEL_MASK);
-		switch (clk_get_rate(xusbxti_clk)) {
+		switch (clk_get_rate(ref_clk)) {
 		case 96 * 100000:
-			phyclk |= EXYNOS4212_CLKSEL_9600K;
+			refclk_freq = EXYNOS5_CLKSEL_9600K;
 			break;
 		case 10 * MHZ:
-			phyclk |= EXYNOS4212_CLKSEL_10M;
+			refclk_freq = EXYNOS5_CLKSEL_10M;
 			break;
 		case 12 * MHZ:
-			phyclk |= EXYNOS4212_CLKSEL_12M;
+			refclk_freq = EXYNOS5_CLKSEL_12M;
 			break;
 		case 192 * 100000:
-			phyclk |= EXYNOS4212_CLKSEL_19200K;
+			refclk_freq = EXYNOS5_CLKSEL_19200K;
 			break;
 		case 20 * MHZ:
-			phyclk |= EXYNOS4212_CLKSEL_20M;
+			refclk_freq = EXYNOS5_CLKSEL_20M;
 			break;
-		default:
+		case 50 * MHZ:
+			refclk_freq = EXYNOS5_CLKSEL_50M;
+			break;
 		case 24 * MHZ:
+		default:
 			/* default reference clock */
-			phyclk |= EXYNOS4212_CLKSEL_24M;
+			refclk_freq = EXYNOS5_CLKSEL_24M;
 			break;
 		}
 	}
+	clk_put(ref_clk);
 
-	phyclk |= PHY1_COMMON_ON_N;
-	clk_put(xusbxti_clk);
-
-	return phyclk;
+	return refclk_freq;
 }
 
 static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
@@ -221,7 +245,7 @@ static int exynos4_usb_phy0_init(struct platform_device *pdev)
 	}
 
 	/* set clock frequency for PLL */
-	phyclk = exynos4_usb_phy_set_clock(pdev);
+	phyclk = exynos_usb_phy_set_clock(pdev);
 	writel(phyclk, EXYNOS4_PHYCLK);
 
 	/* USB MUX change from Host to Device */
@@ -515,7 +539,7 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 		ETC6PUD);
 
 	/* set clock frequency for PLL */
-	phyclk = exynos4_usb_phy_set_clock(pdev);
+	phyclk = exynos_usb_phy_set_clock(pdev);
 	writel(phyclk, EXYNOS4_PHYCLK);
 
 	phypwr = readl(EXYNOS4_PHYPWR);
@@ -620,7 +644,6 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 
 static int exynos5_usb_phy20_init(struct platform_device *pdev)
 {
-	struct clk *ext_xtal;
 	u32 refclk_freq;
 	u32 hostphy_ctrl0;
 	u32 otgphy_sys;
@@ -643,32 +666,7 @@ static int exynos5_usb_phy20_init(struct platform_device *pdev)
 	otgphy_sys &= ~(OTG_SYS_CTRL0_FSEL_MASK);
 
 	/* 2.0 phy reference clock configuration */
-	ext_xtal = clk_get(&pdev->dev, "ext_xtal");
-	switch (clk_get_rate(ext_xtal)) {
-	case 96 * 100000:
-		refclk_freq = EXYNOS5_CLKSEL_9600K;
-		break;
-	case 10 * MHZ:
-		refclk_freq = EXYNOS5_CLKSEL_10M;
-		break;
-	case 12 * MHZ:
-		refclk_freq = EXYNOS5_CLKSEL_12M;
-		break;
-	case 192 * 100000:
-		refclk_freq = EXYNOS5_CLKSEL_19200K;
-		break;
-	case 20 * MHZ:
-		refclk_freq = EXYNOS5_CLKSEL_20M;
-		break;
-	case 24 * MHZ:
-		refclk_freq = EXYNOS5_CLKSEL_24M;
-		break;
-	default:
-	case 50 * MHZ:
-		/* default reference clock */
-		refclk_freq = EXYNOS5_CLKSEL_50M;
-		break;
-	}
+	refclk_freq = exynos_usb_phy_set_clock(pdev);
 	hostphy_ctrl0 |= (refclk_freq << HOST_CTRL0_CLKSEL_SHIFT);
 	otgphy_sys |= (refclk_freq << OTG_SYS_CLKSEL_SHIFT);
 
