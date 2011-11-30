@@ -18,6 +18,10 @@
 #define PPC_THRESHOLD		23
 #define PPMU_THRESHOLD		5
 #define IDLE_THRESHOLD		4
+#define AVE_CUTLINE		5
+#define LV0_CUTLINE		9
+#define LV1_CUTLINE		4
+#define PRE_LOAD_SIZE		3
 
 struct opp;
 struct device;
@@ -36,6 +40,8 @@ struct busfreq_data {
 	struct busfreq_table *table;
 	cputime64_t *time_in_state;
 	unsigned long long last_time;
+	unsigned int load_average[PRE_LOAD_SIZE];
+	int index;
 
 	struct notifier_block exynos4_buspm_notifier;
 	struct notifier_block exynos4_reboot_notifier;

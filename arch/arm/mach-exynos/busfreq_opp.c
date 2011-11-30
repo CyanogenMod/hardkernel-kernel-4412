@@ -60,11 +60,23 @@ void update_busfreq_stat(struct busfreq_data *data, unsigned int index)
 	data->last_time = cur_time;
 }
 
+static struct opp *step_down(struct busfreq_data *data)
+{
+	unsigned long newfreq = opp_get_freq(data->curr_opp) - 1;
+
+	if (newfreq < 100100)
+		newfreq = 100100;
+
+	return opp_find_freq_floor(data->dev, &newfreq);
+}
+
 static struct opp *busfreq_monitor(struct busfreq_data *data)
 {
 	struct opp *opp;
+	int i, cpu_load_average;
+	int sum = 0;
 	unsigned long lockfreq;
-	unsigned long newfreq = 100100;
+	unsigned long newfreq = opp_get_freq(data->curr_opp);
 	unsigned long long cpu_load = 0;
 	unsigned long long dmc_load = 0;
 
@@ -72,6 +84,29 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 
 	cpu_load = ppmu_load[PPMU_CPU];
 	dmc_load = (ppmu_load[PPMU_DMC0] + ppmu_load[PPMU_DMC1]) / 2;
+
+	data->load_average[data->index++] = cpu_load;
+
+	if (data->index >= PRE_LOAD_SIZE)
+		data->index = 0;
+
+	for (i = 0; i < PRE_LOAD_SIZE; i++)
+		sum += data->load_average[i];
+
+	cpu_load_average = (int)(div_u64(sum, PRE_LOAD_SIZE));
+
+	if (cpu_load > LV0_CUTLINE) {
+		newfreq = 400200;
+	} else if (cpu_load_average <= AVE_CUTLINE) {
+		if (cpu_load > LV1_CUTLINE) {
+			newfreq = 267200;
+		} else if (cpu_load == 0) {
+			newfreq = 100100;
+		} else {
+			opp = step_down(data);
+			newfreq = opp_get_freq(opp);
+		}
+	}
 
 	if (dmc_load > IDLE_THRESHOLD)
 		newfreq = 400200;
@@ -94,7 +129,6 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 	struct delayed_work *delayed_work = to_delayed_work(work);
 	struct busfreq_data *data = container_of(delayed_work, struct busfreq_data,
 			worker);
-
 	struct opp *opp;
 	unsigned int voltage;
 	unsigned long currfreq;
