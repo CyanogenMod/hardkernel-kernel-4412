@@ -45,7 +45,6 @@
 #endif
 
 extern unsigned long sys_pwr_conf_addr;
-extern unsigned int l2x0_save[3];
 
 enum hc_type {
 	HC_SDHC,
@@ -799,14 +798,6 @@ static int __init exynos4_init_cpuidle(void)
 
 	register_pm_notifier(&exynos4_cpuidle_notifier);
 	sys_pwr_conf_addr = (unsigned long)S5P_CENTRAL_SEQ_CONFIGURATION;
-
-	/* Save register value for L2X0 */
-	l2x0_save[0] = __raw_readl(S5P_VA_L2CC + 0x108);
-	l2x0_save[1] = __raw_readl(S5P_VA_L2CC + 0x10C);
-	l2x0_save[2] = __raw_readl(S5P_VA_L2CC + 0xF60);
-
-	flush_cache_all();
-	outer_clean_range(virt_to_phys(l2x0_save), ARRAY_SIZE(l2x0_save));
 
 	return 0;
 }
