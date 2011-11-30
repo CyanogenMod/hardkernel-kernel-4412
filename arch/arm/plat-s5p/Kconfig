@@ -163,6 +163,11 @@ config S5P_DEV_JPEG
 	help
 	  Compile in platform device definitions for JPEG
 
+config S5P_DEV_TV
+	bool
+	help
+	  Compile in platform device definition for TV interface
+
 config S5P_DEV_USB_EHCI
 	bool
 	help

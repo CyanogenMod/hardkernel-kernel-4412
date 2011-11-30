@@ -569,6 +569,7 @@ config MACH_SMDK4X12
 	select S3C_DEV_I2C4
 	select S3C_DEV_I2C5
 	select S3C_DEV_I2C7
+	select S5P_DEV_I2C_HDMIPHY
 	select S5P_GPIO_INT
 	select S5P_DEV_MFC
 	select S5P_DEV_TVOUT
@@ -578,6 +579,7 @@ config MACH_SMDK4X12
 	select S5P_DEV_USB_EHCI
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_USB_SWITCH
+	select S5P_DEV_TV
 	select S5P_SYSTEM_MMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_SDHCI

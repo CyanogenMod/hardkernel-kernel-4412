@@ -49,6 +49,10 @@
 #define S5P_DAC_ENABLE				(1)
 #define S5P_DAC_DISABLE				(0)
 
+#define S5P_DAC_PHY_CONTROL			S5P_PMUREG(0x070C)
+#define S5P_DAC_PHY_ENABLE			(1 << 0)
+#define S5P_DAC_DISABLE				(0)
+
 #define S5P_MIPI_DPHY_CONTROL(n)		S5P_PMUREG(0x0710 + (n) * 4)
 #define S5P_MIPI_DPHY_ENABLE			(1 << 0)
 #define S5P_MIPI_DPHY_SRESETN			(1 << 1)

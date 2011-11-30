@@ -245,6 +245,16 @@ int exynos4_clk_ip_dmc_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_DMC, clk, enable);
 }
 
+static int exynos4_clk_hdmiphy_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_HDMI_PHY_CONTROL, clk, enable);
+}
+
+static int exynos4_clk_dac_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(S5P_DAC_PHY_CONTROL, clk, enable);
+}
+
 /* Core list of CMU_CPU side */
 
 static struct clksrc_clk exynos4_clk_mout_apll = {
@@ -582,6 +592,24 @@ static struct clksrc_sources exynos4_clkset_sclk_mixer = {
 	.nr_sources	= ARRAY_SIZE(exynos4_clkset_sclk_mixer_list),
 };
 
+static struct clksrc_clk exynos4_clk_sclk_mixer = {
+	.clk    = {
+		.name           = "sclk_mixer",
+		.id             = -1,
+		.enable         = exynos4_clksrc_mask_tv_ctrl,
+		.ctrlbit        = (1 << 4),
+	},
+	.sources = &exynos4_clkset_sclk_mixer,
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TV, .shift = 4, .size = 1 },
+};
+
+static struct clksrc_clk *exynos4_sclk_tv[] = {
+	&exynos4_clk_sclk_dac,
+	&exynos4_clk_sclk_pixel,
+	&exynos4_clk_sclk_hdmi,
+	&exynos4_clk_sclk_mixer,
+};
+
 static struct clk exynos4_init_clocks_off[] = {
 	{
 		.name		= "timers",
@@ -763,6 +791,11 @@ static struct clk exynos4_init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 2),
 	}, {
+		.name		= "dac",
+		.devname        = "s5p-sdo",
+		.enable		= exynos4_clk_ip_tv_ctrl,
+		.ctrlbit	= (1 << 2),
+	}, {
 		.name		= "mixer",
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 1),
@@ -770,6 +803,16 @@ static struct clk exynos4_init_clocks_off[] = {
 		.name		= "vp",
 		.enable		= exynos4_clk_ip_tv_ctrl,
 		.ctrlbit	= (1 << 0),
+	}, {
+		.name           = "hdmiphy",
+		.devname        = "exynos4-hdmi",
+		.enable         = exynos4_clk_hdmiphy_ctrl,
+		.ctrlbit        = (1 << 0),
+	}, {
+		.name           = "dacphy",
+		.devname        = "s5p-sdo",
+		.enable         = exynos4_clk_dac_ctrl,
+		.ctrlbit        = (1 << 0),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(sss, 0),
@@ -923,6 +966,12 @@ static struct clk exynos4_i2cs_clocks[] = {
 		.parent		= &exynos4_clk_aclk_100.clk,
 		.enable		= exynos4_clk_ip_peril_ctrl,
 		.ctrlbit	= (1 << 13),
+	}, {
+		.name		= "i2c",
+		.devname	= "s3c2440-hdmiphy-i2c",
+		.parent		= &exynos4_clk_aclk_100.clk,
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 14),
 	}
 };
 
@@ -1543,14 +1592,6 @@ static struct clksrc_clk exynos4_clksrcs[] = {
 		.reg_div = { .reg = EXYNOS4_CLKDIV_CAM, .shift = 12, .size = 4 },
 	}, {
 		.clk	= {
-			.name		= "sclk_mixer",
-			.enable		= exynos4_clksrc_mask_tv_ctrl,
-			.ctrlbit	= (1 << 4),
-		},
-		.sources = &exynos4_clkset_sclk_mixer,
-		.reg_src = { .reg = EXYNOS4_CLKSRC_TV, .shift = 4, .size = 1 },
-	}, {
-		.clk	= {
 			.name		= "sclk_fimd",
 			.devname	= "s3cfb.0",
 			.enable		= exynos4_clksrc_mask_lcd0_ctrl,
@@ -1748,9 +1789,6 @@ static struct clksrc_clk *exynos4_sysclks[] = {
 	&exynos4_clk_mout_g2d0,
 	&exynos4_clk_mout_g2d1,
 	&exynos4_clk_dout_copy,
-	&exynos4_clk_sclk_dac,
-	&exynos4_clk_sclk_pixel,
-	&exynos4_clk_sclk_hdmi,
 	&exynos4_clk_mout_g3d0,
 	&exynos4_clk_mout_g3d1,
 	&exynos4_clk_sclk_fimg2d,
@@ -2029,6 +2067,9 @@ void __init exynos4_register_clocks(void)
 
 	for (ptr = 0; ptr < ARRAY_SIZE(exynos4_sysclks); ptr++)
 		s3c_register_clksrc(exynos4_sysclks[ptr], 1);
+
+	for (ptr = 0; ptr < ARRAY_SIZE(exynos4_sclk_tv); ptr++)
+		s3c_register_clksrc(exynos4_sclk_tv[ptr], 1);
 
 	s3c_register_clksrc(exynos4_clksrcs, ARRAY_SIZE(exynos4_clksrcs));
 	s3c_register_clocks(exynos4_init_clocks, ARRAY_SIZE(exynos4_init_clocks));

@@ -33,6 +33,7 @@
 #include <plat/ace-core.h>
 #include <plat/reset.h>
 #include <plat/audio.h>
+#include <plat/tv-core.h>
 
 #include <mach/regs-irq.h>
 #include <mach/regs-pmu.h>
@@ -259,6 +260,8 @@ void __init exynos4_map_io(void)
 	s5p_fb_setname(0, "exynos4-fb");	/* FIMD0 */
 #endif
 	s3c_adc_setname("s5pv210-adc");
+
+	s5p_hdmi_setname("exynos4-hdmi");
 
 	/* The I2C bus controllers are directly compatible with s3c2440 */
 	s3c_i2c0_setname("s3c2440-i2c");

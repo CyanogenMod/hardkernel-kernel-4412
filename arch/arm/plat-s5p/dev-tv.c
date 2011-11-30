@@ -40,6 +40,7 @@ struct platform_device s5p_device_hdmi = {
 EXPORT_SYMBOL(s5p_device_hdmi);
 
 /* MIXER */
+#if defined(CONFIG_ARCH_EXYNOS4)
 static struct resource s5p_mixer_resources[] = {
 	[0] = {
 		.start	= S5P_PA_MIXER,
@@ -48,12 +49,34 @@ static struct resource s5p_mixer_resources[] = {
 		.name	= "mxr"
 	},
 	[1] = {
+		.start	= S5P_PA_VP,
+		.end	= S5P_PA_VP + SZ_64K - 1,
+		.flags	= IORESOURCE_MEM,
+		.name	= "vp"
+	},
+	[2] = {
 		.start	= IRQ_MIXER,
 		.end	= IRQ_MIXER,
 		.flags	= IORESOURCE_IRQ,
 		.name	= "irq"
 	}
 };
+#else
+static struct resource s5p_mixer_resources[] = {
+	[0] = {
+		.start	= S5P_PA_MIXER,
+		.end	= S5P_PA_MIXER + SZ_64K - 1,
+		.flags	= IORESOURCE_MEM,
+		.name	= "mxr"
+	},
+	[2] = {
+		.start	= IRQ_MIXER,
+		.end	= IRQ_MIXER,
+		.flags	= IORESOURCE_IRQ,
+		.name	= "irq"
+	}
+};
+#endif
 
 struct platform_device s5p_device_mixer = {
 	.name		= "s5p-mixer",
@@ -66,3 +89,31 @@ struct platform_device s5p_device_mixer = {
 	}
 };
 EXPORT_SYMBOL(s5p_device_mixer);
+
+#if defined(CONFIG_ARCH_EXYNOS4)
+/* HDMI interface */
+static struct resource s5p_sdo_resources[] = {
+	[0] = {
+		.start	= S5P_PA_SDO,
+		.end	= S5P_PA_SDO + SZ_64K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IRQ_SDO,
+		.end	= IRQ_SDO,
+		.flags	= IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device s5p_device_sdo = {
+	.name		= "s5p-sdo",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(s5p_sdo_resources),
+	.resource	= s5p_sdo_resources,
+	.dev		= {
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+		.dma_mask = &s5p_device_sdo.dev.coherent_dma_mask,
+	}
+};
+EXPORT_SYMBOL(s5p_device_sdo);
+#endif

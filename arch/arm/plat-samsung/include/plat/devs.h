@@ -202,6 +202,7 @@ extern struct platform_device s5p_device_dsim;
 
 extern struct platform_device s5p_device_hdmi;
 extern struct platform_device s5p_device_mixer;
+extern struct platform_device s5p_device_sdo;
 
 /* s3c2440 specific devices */
 
