@@ -2073,10 +2073,9 @@ static void __init smdk5250_machine_init(void)
 	exynos5_jpeg_setup_clock(&s5p_device_jpeg.dev, 150000000);
 #endif
 	smdk5250_smsc911x_init();
-#ifdef CONFIG_VIDEO_EXYNOS_TV
+
 	s5p_tv_setup();
 	s5p_i2c_hdmiphy_set_platdata(NULL);
-#endif
 }
 
 MACHINE_START(SMDK5250, "SMDK5250")
