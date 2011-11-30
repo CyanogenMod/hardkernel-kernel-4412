@@ -2560,6 +2560,12 @@ static struct samsung_keypad_platdata smdk4x12_keypad_data __initdata = {
 	.cols		= 5,
 };
 
+#ifdef CONFIG_WAKEUP_ASSIST
+static struct platform_device wakeup_assist_device = {
+	.name   = "wakeup_assist",
+};
+#endif
+
 #ifdef CONFIG_VIDEO_FIMG2D
 static struct fimg2d_platdata fimg2d_data __initdata = {
 	.hw_ver = 0x41,
@@ -2802,6 +2808,9 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&samsung_device_battery,
 #endif
 	&samsung_device_keypad,
+#ifdef CONFIG_WAKEUP_ASSIST
+	&wakeup_assist_device,
+#endif
 #ifdef CONFIG_EXYNOS4_C2C
 	&exynos_device_c2c,
 #endif

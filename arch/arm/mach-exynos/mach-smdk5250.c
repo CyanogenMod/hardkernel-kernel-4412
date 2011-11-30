@@ -1423,6 +1423,12 @@ static void __init smdk5250_gpio_power_init(void)
 	gpio_free(EXYNOS5_GPX0(0));
 }
 
+#ifdef CONFIG_WAKEUP_ASSIST
+static struct platform_device wakeup_assist_device = {
+        .name   = "wakeup_assist",
+};
+#endif
+
 static struct i2c_board_info i2c_devs7[] __initdata = {
 	{
 		I2C_BOARD_INFO("egalax_i2c", 0x04),
@@ -1564,6 +1570,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&samsung_device_battery,
 #endif
 	&smdk5250_input_device,
+#ifdef CONFIG_WAKEUP_ASSIST
+        &wakeup_assist_device,
+#endif
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
 #endif

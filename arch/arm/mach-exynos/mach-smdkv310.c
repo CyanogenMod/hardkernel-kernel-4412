@@ -1522,6 +1522,12 @@ static struct platform_device smdkv310_input_device = {
 	},
 };
 
+#ifdef CONFIG_WAKEUP_ASSIST
+static struct platform_device wakeup_assist_device = {
+	.name   = "wakeup_assist",
+};
+#endif
+
 static struct regulator_consumer_supply wm8994_fixed_voltage0_supplies[] = {
 	REGULATOR_SUPPLY("AVDD2", "1-001a"),
 	REGULATOR_SUPPLY("CPVDD", "1-001a"),
@@ -1916,6 +1922,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #endif
 	&smdkv310_smsc911x,
 	&smdkv310_input_device,
+#ifdef CONFIG_WAKEUP_ASSIST
+	&wakeup_assist_device,
+#endif
 #ifdef CONFIG_VIDEO_FIMC
 	&s3c_device_fimc0,
 	&s3c_device_fimc1,
