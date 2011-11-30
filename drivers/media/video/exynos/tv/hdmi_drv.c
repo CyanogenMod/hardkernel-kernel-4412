@@ -47,6 +47,7 @@ static struct i2c_board_info hdmiphy_info = {
 static struct hdmi_driver_data hdmi_driver_data[] = {
 	{ .hdmiphy_bus = 3 },
 	{ .hdmiphy_bus = 8 },
+	{ .hdmiphy_bus = 8 },
 };
 
 static struct platform_device_id hdmi_driver_types[] = {
@@ -54,8 +55,11 @@ static struct platform_device_id hdmi_driver_types[] = {
 		.name		= "s5pv210-hdmi",
 		.driver_data	= (unsigned long)&hdmi_driver_data[0],
 	}, {
-		.name		= "exynos5-hdmi",
+		.name		= "exynos4-hdmi",
 		.driver_data	= (unsigned long)&hdmi_driver_data[1],
+	}, {
+		.name		= "exynos5-hdmi",
+		.driver_data	= (unsigned long)&hdmi_driver_data[2],
 	}, {
 		/* end node */
 	}

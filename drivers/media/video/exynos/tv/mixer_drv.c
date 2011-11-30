@@ -71,7 +71,6 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 #endif
 		struct sub_mxr_device *sub_mxr;
 		struct mxr_layer *layer;
-
 		/* If pipeline is started from Gscaler input video device,
 		 * TV basic configuration must be set before running mixer */
 		if (!mdev->from_graph_layer) {
@@ -406,13 +405,14 @@ static int mxr_acquire_clocks(struct mxr_device *mdev)
 		mxr_err(mdev, "failed to get clock 'vp'\n");
 		goto fail;
 	}
-#endif
-#if defined(CONFIG_CPU_EXYNOS4210)
 	res->sclk_mixer = clk_get(dev, "sclk_mixer");
 	if (IS_ERR_OR_NULL(res->sclk_mixer)) {
 		mxr_err(mdev, "failed to get clock 'sclk_mixer'\n");
 		goto fail;
 	}
+#endif
+#if defined(CONFIG_CPU_EXYNOS4210)
+
 	res->sclk_dac = clk_get(dev, "sclk_dac");
 	if (IS_ERR_OR_NULL(res->sclk_dac)) {
 		mxr_err(mdev, "failed to get clock 'sclk_dac'\n");
@@ -485,7 +485,11 @@ static int __devinit mxr_acquire_layers(struct mxr_device *mdev,
 
 	for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
 		sub_mxr = &mdev->sub_mxr[i];
+#if defined(CONFIG_ARCH_EXYNOS4)
+		sub_mxr->layer[0] = mxr_vp_layer_create(mdev, i, i);
+#else
 		sub_mxr->layer[0] = mxr_video_layer_create(mdev, i, i);
+#endif
 		sub_mxr->layer[1] = mxr_graph_layer_create(mdev, i, i * 2);
 		sub_mxr->layer[2] = mxr_graph_layer_create(mdev, i, i * 2 + 1);
 		if (!mdev->sub_mxr[i].layer[0] || !mdev->sub_mxr[i].layer[1]

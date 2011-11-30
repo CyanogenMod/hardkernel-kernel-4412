@@ -34,7 +34,11 @@
 #define MXR_SUB_MIXER0		0
 #define MXR_SUB_MIXER1		1
 /** maximum number of sub-mixers */
+#if defined(CONFIG_ARCH_EXYNOS4)
+#define MXR_MAX_SUB_MIXERS	1
+#else
 #define MXR_MAX_SUB_MIXERS	2
+#endif
 
 /** each sub-mixer supports 1 video layer and 2 graphic layers */
 #define MXR_LAYER_VIDEO		0
@@ -244,9 +248,9 @@ struct mxr_resources {
 	struct clk *vp;
 #endif
 #if defined(CONFIG_CPU_EXYNOS4210)
-	struct clk *sclk_mixer;
 	struct clk *sclk_dac;
 #endif
+	struct clk *sclk_mixer;
 	struct clk *mixer;
 	struct clk *sclk_hdmi;
 };
