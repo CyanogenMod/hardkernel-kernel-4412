@@ -715,43 +715,55 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 static int exynos_ss_udc_process_get_status(struct exynos_ss_udc *udc,
 					struct usb_ctrlrequest *ctrl)
 {
-	struct exynos_ss_udc_ep *ep0 = &udc->eps[0];
-	struct exynos_ss_udc_ep *ep;
-	__le16 *reply = (__le16 *) udc->ep0_buff;
+	struct exynos_ss_udc_ep *udc_ep0 = &udc->eps[0];
+	struct exynos_ss_udc_ep *udc_ep;
+	u8 *reply = udc->ep0_buff;
+	u32 reg;
 	int ret;
 
 	dev_dbg(udc->dev, "%s: USB_REQ_GET_STATUS\n", __func__);
 
-	if (!ep0->dir_in) {
+	if (!udc_ep0->dir_in) {
 		dev_warn(udc->dev, "%s: direction out?\n", __func__);
 		return -EINVAL;
 	}
 
+	if (le16_to_cpu(ctrl->wLength) != 2)
+		return -EINVAL;
+
 	switch (ctrl->bRequestType & USB_RECIP_MASK) {
 	case USB_RECIP_DEVICE:
-		*reply = cpu_to_le16(0); /* bit 0 => self powered,
-					  * bit 1 => remote wakeup */
+		*reply = 1;
+		if (udc->gadget.speed == USB_SPEED_SUPER) {
+			reg = readl(udc->regs + EXYNOS_USB3_DCTL);
+
+			if (reg & EXYNOS_USB3_DCTL_InitU1Ena)
+				*reply |= 1 << 2;
+
+			if (reg & EXYNOS_USB3_DCTL_InitU2Ena)
+				*reply |= 1 << 3;
+		}
+		*(reply + 1) = 0;
 		break;
 
 	case USB_RECIP_INTERFACE:
 		/* currently, the data result should be zero */
-		*reply = cpu_to_le16(0);
+		*reply = 0;
+		*(reply + 1) = 0;
 		break;
 
 	case USB_RECIP_ENDPOINT:
-		ep = ep_from_windex(udc, le16_to_cpu(ctrl->wIndex));
-		if (!ep)
+		udc_ep = ep_from_windex(udc, le16_to_cpu(ctrl->wIndex));
+		if (!udc_ep)
 			return -ENOENT;
 
-		*reply = cpu_to_le16(ep->halted ? 1 : 0);
+		*reply = udc_ep->halted ? 1 : 0;
+		*(reply + 1) = 0;
 		break;
 
 	default:
 		return 0;
 	}
-
-	if (le16_to_cpu(ctrl->wLength) != 2)
-		return -EINVAL;
 
 	ret = exynos_ss_udc_enqueue_data(udc, reply, 2);
 	if (ret) {
