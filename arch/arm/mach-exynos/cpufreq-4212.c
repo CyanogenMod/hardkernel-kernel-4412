@@ -315,7 +315,7 @@ static const unsigned int asv_voltage_s[CPUFREQ_LEVEL_END] = {
 /* ASV table for 12.5mV step */
 static const unsigned int asv_voltage_step_12_5[CPUFREQ_LEVEL_END][9] = {
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },	/* L0 - Not used */
-	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },	/* L1 - Not used */
+	{ 1350000, 1337500, 1325000, 1312500, 1300000, 1287500, 1275000, 1275000, 1262500 },	/* L1 */
 	{ 1350000, 1337500, 1325000, 1312500, 1300000, 1287500, 1275000, 1275000, 1262500 },	/* L2 */
 	{ 1262500, 1250000, 1237500, 1225000, 1212500, 1212500, 1200000, 1200000, 1187500 },	/* L3 */
 	{ 1187500, 1175000, 1162500, 1150000, 1137500, 1125000, 1112500, 1125000, 1100000 },	/* L4 */
@@ -333,7 +333,7 @@ static const unsigned int asv_voltage_step_12_5[CPUFREQ_LEVEL_END][9] = {
 /* ASV table for 25mV step */
 static const unsigned int asv_voltage_step_25[CPUFREQ_LEVEL_END][9] = {
 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },	/* L0 - Not used */
-	{ 0, 0, 0, 0, 0, 0, 0, 0, 0 },	/* L1 - Not used */
+	{ 1350000, 1350000, 1325000, 1325000, 1300000, 1300000, 1275000, 1275000, 1275000 },	/* L1 */
 	{ 1350000, 1350000, 1325000, 1325000, 1300000, 1300000, 1275000, 1275000, 1275000 },	/* L2 */
 	{ 1275000, 1250000, 1250000, 1225000, 1225000, 1225000, 1200000, 1200000, 1200000 },	/* L3 */
 	{ 1200000, 1175000, 1175000, 1150000, 1150000, 1125000, 1125000, 1125000, 1100000 },	/* L4 */
@@ -481,15 +481,18 @@ static void exynos4212_set_frequency(unsigned int old_index,
 
 static void __init set_volt_table(void)
 {
-	bool for_1500 = false, for_1200 = false;
+	bool for_1500 = false, for_1200 = false, for_1400 = false;
 	unsigned int i;
 
-#ifdef CONFIG_EXYNOS4212_1500MHZ_SUPPORT
+#ifdef CONFIG_EXYNOS4X12_1500MHZ_SUPPORT
 	for_1500 = true;
 	max_support_idx = L0;
-#elif defined(CONFIG_EXYNOS4212_1200MHZ_SUPPORT)
+#elif defined(CONFIG_EXYNOS4X12_1200MHZ_SUPPORT)
 	for_1200 = true;
 	max_support_idx = L3;
+#elif defined(CONFIG_EXYNOS4X12_1400MHZ_SUPPORT)
+	for_1400 = true;
+	max_support_idx = L1;
 #else
 	max_support_idx = L5;
 #endif
@@ -500,7 +503,7 @@ static void __init set_volt_table(void)
 	if ((asv_group == 0) || !for_1400)
 		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
 #else
-	if (!for_1500 && !for_1200) {
+	if (!for_1500 && !for_1200 && !for_1400) {
 		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos4212_freq_table[L1].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos4212_freq_table[L2].frequency = CPUFREQ_ENTRY_INVALID;
@@ -510,6 +513,8 @@ static void __init set_volt_table(void)
 		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos4212_freq_table[L1].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos4212_freq_table[L2].frequency = CPUFREQ_ENTRY_INVALID;
+	} else if (for_1400) {
+		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
 	}
 
 	if (soc_is_exynos4212()) {
