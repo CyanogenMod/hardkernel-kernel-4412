@@ -1868,7 +1868,7 @@ static unsigned long exynos4_fout_apll_get_rate(struct clk *clk)
 	if (soc_is_exynos4210())
 		return s5p_get_pll45xx(xtal_rate, __raw_readl(EXYNOS4_APLL_CON0), pll_4508);
 	else
-		return s5p_get_pll35xx(xtal_rate, __raw_readl(EXYNOS4_APLL_CON0), pll_3500);
+		return s5p_get_pll35xx(xtal_rate, __raw_readl(EXYNOS4_APLL_CON0));
 }
 
 static struct clk_ops exynos4_fout_apll_ops = {
@@ -1915,14 +1915,14 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 		vpll = s5p_get_pll46xx(vpllsrc, __raw_readl(EXYNOS4_VPLL_CON0),
 				__raw_readl(EXYNOS4_VPLL_CON1), pll_4650c);
 	} else {
-		apll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS4_APLL_CON0), pll_3500);
-		mpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS4_MPLL_CON0), pll_3500);
+		apll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS4_APLL_CON0));
+		mpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS4_MPLL_CON0));
 		epll = s5p_get_pll36xx(xtal, __raw_readl(EXYNOS4_EPLL_CON0),
-				__raw_readl(EXYNOS4_EPLL_CON1), pll_3600);
+				__raw_readl(EXYNOS4_EPLL_CON1));
 
 		vpllsrc = clk_get_rate(&exynos4_clk_vpllsrc.clk);
 		vpll = s5p_get_pll36xx(vpllsrc, __raw_readl(EXYNOS4_VPLL_CON0),
-				__raw_readl(EXYNOS4_VPLL_CON1), pll_3600);
+				__raw_readl(EXYNOS4_VPLL_CON1));
 	}
 
 	clk_fout_apll.ops = &exynos4_fout_apll_ops;

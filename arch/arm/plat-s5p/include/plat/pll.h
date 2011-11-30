@@ -21,12 +21,7 @@
 
 #include <asm/div64.h>
 
-enum pll35xx_type_t {
-	pll_3500,
-};
-
-static inline unsigned long s5p_get_pll35xx(unsigned long baseclk, u32 pll_con,
-					    enum pll35xx_type_t pll_type)
+static inline unsigned long s5p_get_pll35xx(unsigned long baseclk, u32 pll_con)
 {
 	u32 mdiv, pdiv, sdiv;
 	u64 fvco = baseclk;
@@ -49,13 +44,8 @@ static inline unsigned long s5p_get_pll35xx(unsigned long baseclk, u32 pll_con,
 #define PLL36XX_PDIV_SHIFT	(8)
 #define PLL36XX_SDIV_SHIFT	(0)
 
-enum pll36xx_type_t {
-	pll_3600,
-};
-
 static inline unsigned long s5p_get_pll36xx(unsigned long baseclk,
-					    u32 pll_con0, u32 pll_con1,
-					    enum pll36xx_type_t pll_type)
+					    u32 pll_con0, u32 pll_con1)
 {
 	unsigned long result;
 	u32 mdiv, pdiv, sdiv, kdiv;

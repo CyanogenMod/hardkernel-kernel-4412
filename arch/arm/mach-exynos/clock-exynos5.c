@@ -1686,7 +1686,7 @@ static int xtal_rate;
 
 static unsigned long exynos5_fout_apll_get_rate(struct clk *clk)
 {
-	return s5p_get_pll35xx(xtal_rate, __raw_readl(EXYNOS5_APLL_CON0), pll_3500);
+	return s5p_get_pll35xx(xtal_rate, __raw_readl(EXYNOS5_APLL_CON0));
 }
 
 static struct clk_ops exynos5_fout_apll_ops = {
@@ -1749,16 +1749,16 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 
 	printk(KERN_DEBUG "%s: xtal is %ld\n", __func__, xtal);
 
-	apll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_APLL_CON0), pll_3500);
-	bpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_BPLL_CON0), pll_3500);
-	cpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_CPLL_CON0), pll_3500);
-	mpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_MPLL_CON0), pll_3500);
+	apll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_APLL_CON0));
+	bpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_BPLL_CON0));
+	cpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_CPLL_CON0));
+	mpll = s5p_get_pll35xx(xtal, __raw_readl(EXYNOS5_MPLL_CON0));
 	epll = s5p_get_pll36xx(xtal, __raw_readl(EXYNOS5_EPLL_CON0),
-			__raw_readl(EXYNOS5_EPLL_CON1), pll_3600);
+			__raw_readl(EXYNOS5_EPLL_CON1));
 
 	vpllsrc = clk_get_rate(&exynos5_clk_mout_vpllsrc.clk);
 	vpll = s5p_get_pll36xx(vpllsrc, __raw_readl(EXYNOS5_VPLL_CON0),
-			__raw_readl(EXYNOS5_VPLL_CON1), pll_3600);
+			__raw_readl(EXYNOS5_VPLL_CON1));
 
 	clk_fout_apll.ops = &exynos5_fout_apll_ops;
 	clk_fout_bpll.rate = bpll;
