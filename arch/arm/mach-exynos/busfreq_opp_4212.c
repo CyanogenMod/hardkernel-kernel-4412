@@ -37,6 +37,7 @@
 #include <mach/gpio.h>
 #include <mach/regs-mem.h>
 #include <mach/dev.h>
+#include <mach/asv.h>
 
 #include <plat/map-s5p.h>
 #include <plat/gpio-cfg.h>
@@ -220,21 +221,18 @@ static unsigned int clkdiv_sclkip[LV_END][3] = {
 
 static void exynos4212_set_bus_volt(void)
 {
-	unsigned int asv_group;
 	unsigned int i;
 
-	asv_group = __raw_readl(S5P_INFORM2) & 0xF;
+	asv_group_index = exynos_result_of_asv;
 
-	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group);
+	if (asv_group_index == 0xff)
+		asv_group_index = 0;
 
-	if ((asv_group > 8) || (samsung_rev() != EXYNOS4412_REV_0_1))
-		asv_group = 4;
-
-	asv_group_index = asv_group;
+	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group_index);
 
 	for (i = 0 ; i < LV_END ; i++)
 		exynos4_busfreq_table[i].volt =
-			exynos4_asv_volt[asv_group][i];
+			exynos4_asv_volt[asv_group_index][i];
 
 	return;
 }
