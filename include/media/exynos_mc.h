@@ -25,7 +25,7 @@
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 
-#define MDEV_MODULE_NAME "exynos5-mdev"
+#define MDEV_MODULE_NAME "exynos-mdev"
 #define MAX_GSC_SUBDEV		4
 #define MDEV_MAX_NUM	2
 
