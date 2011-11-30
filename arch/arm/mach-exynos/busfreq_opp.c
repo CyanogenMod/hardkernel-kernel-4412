@@ -305,10 +305,10 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		data->get_int_volt = NULL;
 		data->get_table_index = exynos4210_get_table_index;
 	} else {
-		data->init = exynos4212_init;
-		data->target = exynos4212_target;
-		data->get_int_volt = exynos4212_get_int_volt;
-		data->get_table_index = exynos4212_get_table_index;
+		data->init = exynos4x12_init;
+		data->target = exynos4x12_target;
+		data->get_int_volt = exynos4x12_get_int_volt;
+		data->get_table_index = exynos4x12_get_table_index;
 	}
 
 	data->dev = &pdev->dev;

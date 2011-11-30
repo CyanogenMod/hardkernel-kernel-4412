@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos/busfreq_opp_4212.c
+/* linux/arch/arm/mach-exynos/busfreq_opp_4x12.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/
@@ -79,7 +79,7 @@ static unsigned int exynos4_asv_volt[ASV_GROUP][LV_END] = {
 	{1025000, 900000,  900000,  850000, 850000, 850000}, /* ASV8 */
 };
 
-static unsigned int exynos4212_int_volt[ASV_GROUP][LV_END] = {
+static unsigned int exynos4x12_int_volt[ASV_GROUP][LV_END] = {
 	/* 200      200     160    160      133     100 */
 	{1000000, 1000000, 950000, 950000, 925000, 900000}, /* ASV0 */
 	{975000,  975000,  925000, 925000, 925000, 900000}, /* ASV1 */
@@ -219,7 +219,7 @@ static unsigned int clkdiv_sclkip[LV_END][3] = {
 	{7, 7, 7},
 };
 
-static void exynos4212_set_bus_volt(void)
+static void exynos4x12_set_bus_volt(void)
 {
 	unsigned int i;
 
@@ -237,7 +237,7 @@ static void exynos4212_set_bus_volt(void)
 	return;
 }
 
-unsigned int exynos4212_target(unsigned int div_index)
+unsigned int exynos4x12_target(unsigned int div_index)
 {
 	unsigned int tmp;
 
@@ -362,7 +362,7 @@ unsigned int exynos4212_target(unsigned int div_index)
 	return div_index;
 }
 
-unsigned int exynos4212_get_table_index(struct opp *opp)
+unsigned int exynos4x12_get_table_index(struct opp *opp)
 {
 	unsigned int index;
 
@@ -374,12 +374,12 @@ unsigned int exynos4212_get_table_index(struct opp *opp)
 }
 
 
-unsigned int exynos4212_get_int_volt(unsigned long index)
+unsigned int exynos4x12_get_int_volt(unsigned long index)
 {
-	return exynos4212_int_volt[asv_group_index][index];
+	return exynos4x12_int_volt[asv_group_index][index];
 }
 
-int exynos4212_init(struct device *dev, struct busfreq_data *data)
+int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 {
 	unsigned int i;
 	unsigned int tmp;
@@ -411,7 +411,7 @@ int exynos4212_init(struct device *dev, struct busfreq_data *data)
 		exynos4_busfreq_table[i].clk_dmc0div = tmp;
 	}
 
-	exynos4212_set_bus_volt();
+	exynos4x12_set_bus_volt();
 
 	for (i = 0; i < LV_END; i++) {
 		ret = opp_add(dev, exynos4_busfreq_table[i].mem_clk,

@@ -58,8 +58,8 @@ struct busfreq_table {
 int exynos4210_init(struct device *dev, struct busfreq_data *data);
 unsigned int exynos4210_target(unsigned int index);
 unsigned int exynos4210_get_table_index(struct opp *opp);
-int exynos4212_init(struct device *dev, struct busfreq_data *data);
-unsigned int exynos4212_target(unsigned int index);
-unsigned int exynos4212_get_int_volt(unsigned long freq);
-unsigned int exynos4212_get_table_index(struct opp *opp);
+int exynos4x12_init(struct device *dev, struct busfreq_data *data);
+unsigned int exynos4x12_target(unsigned int index);
+unsigned int exynos4x12_get_int_volt(unsigned long freq);
+unsigned int exynos4x12_get_table_index(struct opp *opp);
 #endif /* __ASM_ARCH_BUSFREQ_H */
