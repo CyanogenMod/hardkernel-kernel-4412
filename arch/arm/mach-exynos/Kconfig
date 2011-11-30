@@ -747,6 +747,17 @@ config EXYNOS4_MSHC_DDR
 
 endmenu
 
+comment "Miscellaneous drivers"
+config WAKEUP_ASSIST
+	bool "Wakeup assist driver"
+	depends on PM
+	help
+	  If the wakeup time is too slow, toggling POWER butten shortly causes to
+	  ignore report of key event. It makes the android system not execute wake
+	  up codes.
+
+	  If selected, the wakeup assistant driver will report POWER key event
+	  directly
 endif
 
 config EXYNOS4_C2C
