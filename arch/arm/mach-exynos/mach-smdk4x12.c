@@ -73,6 +73,7 @@
 #include <plat/media.h>
 #include <plat/regs-srom.h>
 #include <plat/sysmmu.h>
+#include <plat/tv-core.h>
 #include <media/s5k4ba_platform.h>
 #include <media/s5k4ea_platform.h>
 #include <media/exynos_flite.h>
@@ -2748,7 +2749,12 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&s5p_device_cec,
 	&s5p_device_hpd,
 #endif
-
+#ifdef CONFIG_VIDEO_EXYNOS_TV
+	&s5p_device_i2c_hdmiphy,
+	&s5p_device_hdmi,
+	&s5p_device_sdo,
+	&s5p_device_mixer,
+#endif
 #if defined(CONFIG_VIDEO_FIMC)
 	&s3c_device_fimc0,
 	&s3c_device_fimc1,
@@ -3123,6 +3129,13 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0,
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_TV
+		{
+			.name = "tv",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_TV * SZ_1K,
+			.start = 0
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_JPEG
 		{
 			.name = "jpeg",
@@ -3284,6 +3297,7 @@ static void __init exynos4_reserve_mem(void)
 		"samsung-rp=srp;"
 		"s5p-jpeg=jpeg;"
 		"exynos4-fimc-is=fimc_is;"
+		"s5p-mixer=tv;"
 		"s5p-fimg2d=fimg2d;"
 		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;"
 		"s5p-smem/mfc=mfc0;"
@@ -3393,6 +3407,20 @@ static void __init exynos_sysmmu_init(void)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(is_cpu).dev,
 						&exynos4_device_fimc_is.dev);
 #endif
+}
+
+static void s5p_tv_setup(void)
+{
+	/* direct HPD to HDMI chip */
+	gpio_request(EXYNOS4_GPX3(7), "hpd-plug");
+
+	gpio_direction_input(EXYNOS4_GPX3(7));
+	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0x3));
+	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
+
+	/* setup dependencies between TV devices */
+	s5p_device_hdmi.dev.parent = &exynos4_device_pd[PD_TV].dev;
+	s5p_device_mixer.dev.parent = &exynos4_device_pd[PD_TV].dev;
 }
 
 static void __init smdk4x12_machine_init(void)
@@ -3524,7 +3552,13 @@ static void __init smdk4x12_machine_init(void)
 #ifdef CONFIG_S5P_DEV_MSHC
 	s3c_mshci_set_platdata(&exynos4_mshc_pdata);
 #endif
-
+#if defined(CONFIG_VIDEO_EXYNOS_TV) && defined(CONFIG_VIDEO_EXYNOS_HDMI)
+	dev_set_name(&s5p_device_hdmi.dev, "exynos4-hdmi");
+	clk_add_alias("hdmi", "s5p-hdmi", "hdmi", &s5p_device_hdmi.dev);
+	clk_add_alias("hdmiphy", "s5p-hdmi", "hdmiphy", &s5p_device_hdmi.dev);
+#endif
+	s5p_tv_setup();
+	s5p_i2c_hdmiphy_set_platdata(NULL);
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);
 	s3c_fimc1_set_platdata(&fimc_plat);
