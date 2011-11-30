@@ -642,13 +642,17 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 	case USB_RECIP_DEVICE:
 		switch (le16_to_cpu(ctrl->wValue)) {
 		case USB_DEVICE_U1_ENABLE:
+#if 0
 			__orr32(udc->regs + EXYNOS_USB3_DCTL,
 				EXYNOS_USB3_DCTL_InitU1Ena);
+#endif
 			break;
 
 		case USB_DEVICE_U2_ENABLE:
+#if 0
 			__orr32(udc->regs + EXYNOS_USB3_DCTL,
 				EXYNOS_USB3_DCTL_InitU2Ena);
+#endif
 			break;
 
 		default:
