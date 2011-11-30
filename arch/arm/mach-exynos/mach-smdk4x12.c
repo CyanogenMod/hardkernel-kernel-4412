@@ -200,6 +200,13 @@ static struct platform_device smdk4x12_smsc911x = {
 	},
 };
 
+#ifdef CONFIG_EXYNOS_MEDIA_DEVICE
+struct platform_device exynos_device_md0 = {
+	.name = "exynos-mdev",
+	.id = -1,
+};
+#endif
+
 #define WRITEBACK_ENABLED
 
 #if defined(CONFIG_VIDEO_FIMC) || defined(CONFIG_VIDEO_SAMSUNG_S5P_FIMC)
@@ -2797,6 +2804,9 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
 	&s5p_device_fimg2d,
+#endif
+#ifdef CONFIG_EXYNOS_MEDIA_DEVICE
+	&exynos_device_md0,
 #endif
 #ifdef CONFIG_VIDEO_JPEG_V2X
 	&s5p_device_jpeg,
