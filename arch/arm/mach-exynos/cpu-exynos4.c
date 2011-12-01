@@ -336,47 +336,30 @@ static void exynos4_l2x0_set_debug(unsigned long val)
 
 static int __init exynos4_l2x0_cache_init(void)
 {
+	u32 tag_latency = 0x110;
+	u32 data_latency = soc_is_exynos4210() ? 0x110 : 0x120;
+	u32 prefetch = (soc_is_exynos4412() &&
+			samsung_rev() >= EXYNOS4412_REV_1_0) ?
+			0x71000007 : 0x30000007;
+	u32 aux_val = 0x7C470001;
+	u32 aux_mask = 0xC200FFFF;
+
 #ifdef CONFIG_ARM_TRUSTZONE
-	u32 latency;
-	u32 prefech;
-
-	if (soc_is_exynos4210()) {
-		latency = 0x110;
-		prefech = 0x30000007;
-	} else {
-		latency = 0x120;
-		if (soc_is_exynos4412() && (samsung_rev() == EXYNOS4412_REV_1_0))
-			prefech = 0x70000007;
-		else
-			prefech = 0x30000007;
-	}
-
-	exynos_smc(SMC_CMD_L2X0SETUP1, 0x110, latency, prefech);
+	exynos_smc(SMC_CMD_L2X0SETUP1, tag_latency, data_latency, prefetch);
 	exynos_smc(SMC_CMD_L2X0SETUP2,
 		   L2X0_DYNAMIC_CLK_GATING_EN | L2X0_STNDBY_MODE_EN,
-		   0x7C470001, 0xC200FFFF);
+		   aux_val, aux_mask);
 	exynos_smc(SMC_CMD_L2X0INVALL, 0, 0, 0);
 	exynos_smc(SMC_CMD_L2X0CTRL, 1, 0, 0);
 #else
-	/* TAG, Data Latency Control: 2cycle */
-	__raw_writel(0x110, S5P_VA_L2CC + L2X0_TAG_LATENCY_CTRL);
-	if (soc_is_exynos4210())
-		__raw_writel(0x110, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
-	else
-		__raw_writel(0x120, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
-
-	/* L2X0 Prefetch Control */
-	if (soc_is_exynos4412() && (samsung_rev() == EXYNOS4412_REV_1_0))
-		__raw_writel(0x70000007, S5P_VA_L2CC + L2X0_PREFETCH_CTRL);
-	else
-		__raw_writel(0x30000007, S5P_VA_L2CC + L2X0_PREFETCH_CTRL);
-
-	/* L2X0 Power Control */
+	__raw_writel(tag_latency, S5P_VA_L2CC + L2X0_TAG_LATENCY_CTRL);
+	__raw_writel(data_latency, S5P_VA_L2CC + L2X0_DATA_LATENCY_CTRL);
+	__raw_writel(prefetch, S5P_VA_L2CC + L2X0_PREFETCH_CTRL);
 	__raw_writel(L2X0_DYNAMIC_CLK_GATING_EN | L2X0_STNDBY_MODE_EN,
 		     S5P_VA_L2CC + L2X0_POWER_CTRL);
 #endif
 
-	l2x0_init(S5P_VA_L2CC, 0x7C470001, 0xC200ffff);
+	l2x0_init(S5P_VA_L2CC, aux_val, aux_mask);
 
 #ifdef CONFIG_ARM_TRUSTZONE
 	outer_cache.set_debug = exynos4_l2x0_set_debug;
