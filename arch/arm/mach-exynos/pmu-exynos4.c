@@ -360,7 +360,7 @@ void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode)
 	/* If C2C mode is MAXIMAL LATENCY */
 	case MAX_LATENCY:
 		exynos4_config_for_c2c[1].val = 0x0;
-		if (soc_is_exynos4412())
+		if (soc_is_exynos4412() && (samsung_rev() < EXYNOS4412_REV_1_0))
 			exynos4_config_for_c2c[2].val = 0x1;
 		else
 			exynos4_config_for_c2c[2].val = 0x0;

@@ -20,6 +20,7 @@
 #include <mach/regs-pmu5.h>
 #include <mach/c2c.h>
 #include <plat/irqs.h>
+#include <plat/cpu.h>
 
 static struct resource exynos_c2c_resource[] = {
 	[0] = {
@@ -68,8 +69,17 @@ void __init exynos_c2c_set_platdata(struct exynos_c2c_platdata *pd)
 	if (!npd->clear_cprst)
 		npd->clear_cprst = exynos_c2c_clear_cprst;
 
-	exynos_device_c2c.dev.platform_data = npd;
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+		/* Set C2C_CTRL Register */
+		writel(0x1, S5P_C2C_CTRL);
+		if (samsung_rev() < EXYNOS4412_REV_1_0)
+			npd->c2c_sysreg = S3C_VA_SYS + 0x010C;
+	}
+	else if (soc_is_exynos5250()) {
+		/* TODO : SysReg address will be changed at EVT1 */
+		/* Set C2C_CTRL Register */
+		writel(0x1, EXYNOS5_C2C_CTRL);
+	}
 
-	/* Set C2C_CTRL Register */
-	writel(0x1, S5P_C2C_CTRL);
+	exynos_device_c2c.dev.platform_data = npd;
 }
