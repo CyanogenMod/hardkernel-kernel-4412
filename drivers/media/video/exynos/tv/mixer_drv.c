@@ -167,7 +167,9 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 		int ret, i;
 		struct sub_mxr_device *sub_mxr;
 		struct mxr_layer *layer;
-		struct exynos_md *md;
+		struct v4l2_subdev *hdmi_sd;
+		struct v4l2_subdev *gsc_sd;
+		struct exynos_entity_data *md_data;
 
 		for (i = MXR_PAD_SOURCE_GSCALER; i < MXR_PADS_NUM; ++i) {
 			pad = &sd->entity.pads[i];
@@ -183,7 +185,7 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 				return -ENODEV;
 		}
 
-		sd = media_entity_to_v4l2_subdev(pad->entity);
+		hdmi_sd = media_entity_to_v4l2_subdev(pad->entity);
 
 		mxr_reg_streamoff(mdev);
 		/* vsync applies Mixer setup */
@@ -194,25 +196,23 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 			return ret;
 		}
 
-		if (mdev->sub_mxr[MXR_SUB_MIXER0].local ||
-				mdev->sub_mxr[MXR_SUB_MIXER1].local) {
-			md = (struct exynos_md *)module_name_to_driver_data(
-					MDEV_MODULE_NAME);
-
-			/* stopping between mixer and hdmi, gscaler must
-			 * be stopped */
-			ret = v4l2_subdev_call(md->gsc_sd[0], video, s_stream, 0);
-			if (ret) {
-				mxr_err(mdev, "stop stream fail for output %s\n",
-						md->gsc_sd[0]->name);
-				return ret;
+		if (!mdev->from_graph_layer) {
+			pad = &sd->entity.pads[MXR_PAD_SINK_GSCALER];
+			pad = media_entity_remote_source(pad);
+			if (pad) {
+				gsc_sd = media_entity_to_v4l2_subdev(
+						pad->entity);
+				mxr_dbg(mdev, "stop from %s\n", gsc_sd->name);
+				md_data = (struct exynos_entity_data *)
+					gsc_sd->dev_priv;
+				md_data->media_ops->power_off(gsc_sd);
 			}
 		}
 
-		ret = v4l2_subdev_call(sd, video, s_stream, 0);
+		ret = v4l2_subdev_call(hdmi_sd, video, s_stream, 0);
 		if (ret) {
 			mxr_err(mdev, "stopping stream failed for output %s\n",
-					sd->name);
+					hdmi_sd->name);
 			return ret;
 		}
 
@@ -939,13 +939,13 @@ static int mxr_link_setup(struct media_entity *entity,
 	else if (!strcmp(local->entity->name, "s5p-mixer1"))
 		mxr_num = MXR_SUB_MIXER1;
 
-	if (!strcmp(remote->entity->name, "GSC.0"))
+	if (!strcmp(remote->entity->name, "exynos-gsc-sd.0"))
 		gsc_num = 0;
-	else if (!strcmp(remote->entity->name, "GSC.1"))
+	else if (!strcmp(remote->entity->name, "exynos-gsc-sd.1"))
 		gsc_num = 1;
-	else if (!strcmp(remote->entity->name, "GSC.2"))
+	else if (!strcmp(remote->entity->name, "exynos-gsc-sd.2"))
 		gsc_num = 2;
-	else if (!strcmp(remote->entity->name, "GSC.3"))
+	else if (!strcmp(remote->entity->name, "exynos-gsc-sd.3"))
 		gsc_num = 3;
 
 	mxr_reg_local_path_set(mdev, mxr_num, gsc_num, flags);
