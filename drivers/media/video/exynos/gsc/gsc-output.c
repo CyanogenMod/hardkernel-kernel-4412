@@ -647,7 +647,8 @@ static int gsc_out_stop_streaming(struct vb2_queue *q)
 		return ret;
 
 	if (ctx->out_path == GSC_FIMD) {
-		ret = gsc_out_hw_reset_off(gsc);
+		gsc_hw_enable_control(gsc, false);
+		ret = gsc_wait_stop(gsc);
 		if (ret < 0)
 			return ret;
 	}
@@ -757,7 +758,6 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 	if (gsc->out.s_stream == false) {
 		if (ctx->out_path == GSC_FIMD) {
 			gsc_pipeline_s_stream(gsc, 1);
-			msleep(100);
 		}
 		gsc_hw_enable_control(gsc, true);
 		ret = gsc_wait_operating(gsc);
