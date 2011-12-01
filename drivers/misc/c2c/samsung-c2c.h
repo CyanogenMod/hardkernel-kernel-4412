@@ -274,9 +274,16 @@ static inline void c2c_set_reset(enum c2c_set_clear val)
 	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
-static inline void reset_c2c_retreg(void)
+static inline void c2c_set_rtrst(enum c2c_set_clear val)
 {
-	writel((0x1 << C2C_SYSREG_RTRST), c2c_con.c2c_sysreg);
+	u32 sysreg = readl(c2c_con.c2c_sysreg);
+
+	if (val == C2C_SET)
+		sysreg |= (1 << C2C_SYSREG_RTRST);
+	else
+		sysreg &= ~(1 << C2C_SYSREG_RTRST);
+
+	writel(sysreg, c2c_con.c2c_sysreg);
 }
 
 static inline u32 c2c_get_base_addr(void)

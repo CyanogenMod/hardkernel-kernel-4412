@@ -222,11 +222,6 @@ void set_c2c_device(struct platform_device *pdev)
 	struct exynos_c2c_platdata *pdata = pdev->dev.platform_data;
 	u32 default_clk;
 
-	if (soc_is_exynos4212() || soc_is_exynos4412())
-		exynos_c2c_request_pwr_mode = exynos4_c2c_request_pwr_mode;
-	else if (soc_is_exynos5250())
-		exynos_c2c_request_pwr_mode = NULL;
-
 	c2c_con.c2c_sysreg = pdata->c2c_sysreg;
 	c2c_con.rx_width = pdata->rx_width;
 	c2c_con.tx_width = pdata->tx_width;
@@ -241,6 +236,15 @@ void set_c2c_device(struct platform_device *pdev)
 #endif
 	c2c_con.c2c_sclk = clk_get(&pdev->dev, "sclk_c2c");
 	c2c_con.c2c_aclk = clk_get(&pdev->dev, "aclk_c2c");
+
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+		exynos_c2c_request_pwr_mode = exynos4_c2c_request_pwr_mode;
+		if (samsung_rev() >= EXYNOS4412_REV_1_0) {
+			c2c_set_reset(C2C_SET);
+			c2c_set_rtrst(C2C_SET);
+		}
+	} else if (soc_is_exynos5250())
+		exynos_c2c_request_pwr_mode = NULL;
 
 	/* Set clock to default mode */
 	if (c2c_con.opp_mode == C2C_OPP100)
