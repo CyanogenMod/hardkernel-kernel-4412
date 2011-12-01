@@ -617,7 +617,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case SRP_GET_IBUF_INFO:
 		srp.ibuf_info->addr = (void *) srp.wbuf;
-		srp.ibuf_info->size = WBUF_SIZE;
+		srp.ibuf_info->size = IBUF_SIZE;
 		srp.ibuf_info->num  = IBUF_NUM;
 
 		ret = copy_to_user(argp, srp.ibuf_info,
