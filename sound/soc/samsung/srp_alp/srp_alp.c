@@ -492,11 +492,14 @@ static void srp_commbox_init(void)
 {
 	unsigned int reg = 0x0;
 
-	writel(reg, srp.commbox + SRP_INTERRUPT);
-	writel(reg, srp.commbox + SRP_ARM_INTERRUPT_CODE);
 	srp_pending_ctrl(STALL);
-
 	writel(reg, srp.commbox + SRP_FRAME_INDEX);
+	writel(reg, srp.commbox + SRP_INTERRUPT);
+
+	/* Support Mono Decoding */
+	reg |= SRP_ARM_INTR_CODE_SUPPORT_MONO;
+	writel(reg, srp.commbox + SRP_ARM_INTERRUPT_CODE);
+
 	writel(srp.ibuf0_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR0);
 	writel(srp.ibuf1_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR1);
 
