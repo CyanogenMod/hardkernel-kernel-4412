@@ -2598,7 +2598,7 @@ struct exynos_c2c_platdata smdk4x12_c2c_pdata = {
 	.clk_opp25	= 0,
 	.default_opp_mode	= C2C_OPP50,
 	.get_c2c_state	= NULL,
-	.c2c_sysreg	= S3C_VA_SYS + 0x010C,
+	.c2c_sysreg	= S5P_VA_CMU + 0x12000,
 };
 #endif
 
