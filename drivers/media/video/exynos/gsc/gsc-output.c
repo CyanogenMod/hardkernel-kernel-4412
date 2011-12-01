@@ -922,8 +922,9 @@ static int gsc_create_link(struct gsc_dev *gsc)
 
 	source= &gsc->out.vfd->entity;
 	sink= &gsc->out.sd->entity;
-	ret = media_entity_create_link(source, 0,
-				      sink, GSC_PAD_SINK, 0);
+	ret = media_entity_create_link(source, 0, sink, GSC_PAD_SINK,
+				       MEDIA_LNK_FL_IMMUTABLE |
+				       MEDIA_LNK_FL_ENABLED);
 	if (ret) {
 		gsc_err("Failed to create link between G-Scaler vfd and subdev");
 		return ret;
