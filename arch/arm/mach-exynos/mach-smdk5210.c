@@ -138,13 +138,13 @@ static struct platform_device smdk5210_smsc911x = {
 };
 
 #ifdef CONFIG_EXYNOS_MEDIA_DEVICE
-struct platform_device exynos5_device_md0 = {
-	.name = "exynos5-mdev",
+struct platform_device exynos_device_md0 = {
+	.name = "exynos-mdev",
 	.id = 0,
 };
 
-struct platform_device exynos5_device_md1 = {
-	.name = "exynos5-mdev",
+struct platform_device exynos_device_md1 = {
+	.name = "exynos-mdev",
 	.id = 1,
 };
 #endif
@@ -789,8 +789,8 @@ static void __init smdk5210_ss_udc_init(void)
 
 static struct platform_device *smdk5210_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS_MEDIA_DEVICE
-	&exynos5_device_md0,
-	&exynos5_device_md1,
+	&exynos_device_md0,
+	&exynos_device_md1,
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
 	&exynos5_device_gsc0,
