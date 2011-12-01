@@ -16,6 +16,7 @@
 #include <linux/err.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <linux/regulator/consumer.h>
 
 #include <plat/cpu.h>
 #include <plat/clock.h>
@@ -60,7 +61,32 @@ static struct asv_judge_table exynos4210_single_1200_limit[] = {
 
 static int exynos4210_check_vdd_arm(void)
 {
-	/* It will be support */
+	struct regulator *arm_regulator;
+	int ret;
+
+#if defined(CONFIG_REGULATOR)
+	arm_regulator = regulator_get(NULL, "vdd_arm");
+	if (IS_ERR(arm_regulator)) {
+		pr_err("%s failed to get resource %s\n", __func__, "vdd_arm");
+		return -EINVAL;
+	}
+
+	/* Set vdd_arm to 1.2V to get hpm value */
+	ret = regulator_get_voltage(arm_regulator);
+	if (ret != 1200000) {
+		pr_info("%s: current vdd_arm(%duV), set vdd_arm (1.2V)\n",
+				__func__, ret);
+	        ret = regulator_set_voltage(arm_regulator, 1200000, 1200000);
+	        if (ret < 0) {
+	                pr_err("%s: fail to set vdd_arm(%d)\n", __func__, ret);
+			return -EINVAL;
+		}
+	} else {
+                pr_info("%s: current vdd_arm(%duV)\n", __func__, ret);
+	}
+
+	regulator_put(arm_regulator);
+#endif
 	return 0;
 }
 
