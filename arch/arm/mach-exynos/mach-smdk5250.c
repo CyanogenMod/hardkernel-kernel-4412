@@ -71,6 +71,9 @@
 #ifdef CONFIG_EXYNOS_C2C
 #include <mach/c2c.h>
 #endif
+#ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
+#include <plat/tvout.h>
+#endif
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK5250_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -1552,6 +1555,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_EXYNOS_MIXER
 	&s5p_device_mixer,
 #endif
+#ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
+	&s5p_device_cec,
+#endif
 #endif
 #ifdef CONFIG_USB_EHCI_S5P
 	&s5p_device_ehci,
@@ -1586,6 +1592,12 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&exynos_device_c2c,
 #endif
 };
+
+#ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
+static struct s5p_platform_cec hdmi_cec_data __initdata = {
+
+};
+#endif
 
 #if defined(CONFIG_S5P_MEM_CMA)
 static void __init exynos_cma_region_reserve(
@@ -1999,6 +2011,9 @@ static void __init smdk5250_machine_init(void)
 	dev_set_name(&s5p_device_hdmi.dev, "exynos5-hdmi");
 	clk_add_alias("hdmi", "s5p-hdmi", "hdmi", &s5p_device_hdmi.dev);
 	clk_add_alias("hdmiphy", "s5p-hdmi", "hdmiphy", &s5p_device_hdmi.dev);
+#ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
+	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
+#endif
 #endif
 	s3c_i2c0_set_platdata(NULL);
 	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
