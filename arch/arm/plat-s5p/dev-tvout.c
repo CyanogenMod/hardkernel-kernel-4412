@@ -78,28 +78,6 @@ struct platform_device s5p_device_tvout = {
 };
 EXPORT_SYMBOL(s5p_device_tvout);
 
-/* CEC */
-static struct resource s5p_cec_resources[] = {
-	[0] = {
-		.start  = S5P_PA_CEC,
-		.end    = S5P_PA_CEC + S5P_SZ_CEC - 1,
-		.flags  = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start  = IRQ_CEC,
-		.end    = IRQ_CEC,
-		.flags  = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device s5p_device_cec = {
-	.name           = "s5p-tvout-cec",
-	.id             = -1,
-	.num_resources  = ARRAY_SIZE(s5p_cec_resources),
-	.resource       = s5p_cec_resources,
-};
-EXPORT_SYMBOL(s5p_device_cec);
-
 /* HPD */
 static struct resource s5p_hpd_resources[] = {
 	[0] = {
@@ -135,6 +113,31 @@ void __init s5p_hdmi_hpd_set_platdata(struct s5p_platform_hpd *pd)
 	}
 }
 
+#endif
+
+/* CEC */
+static struct resource s5p_cec_resources[] = {
+	[0] = {
+		.start  = S5P_PA_HDMI_CEC,
+		.end    = S5P_PA_HDMI_CEC + S5P_SZ_HDMI_CEC - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start  = IRQ_CEC,
+		.end    = IRQ_CEC,
+		.flags  = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device s5p_device_cec = {
+	.name           = "s5p-tvout-cec",
+	.id             = -1,
+	.num_resources  = ARRAY_SIZE(s5p_cec_resources),
+	.resource       = s5p_cec_resources,
+};
+EXPORT_SYMBOL(s5p_device_cec);
+
+
 void __init s5p_hdmi_cec_set_platdata(struct s5p_platform_cec *pd)
 {
 	struct s5p_platform_cec *npd;
@@ -149,4 +152,3 @@ void __init s5p_hdmi_cec_set_platdata(struct s5p_platform_cec *pd)
 		s5p_device_cec.dev.platform_data = npd;
 	}
 }
-#endif
