@@ -60,8 +60,8 @@ static void exynos_usb_mux_change(struct platform_device *pdev, int val)
 
 	if (is_host != val)
 		dev_dbg(&pdev->dev, "Change USB MUX from %s to %s",
-			is_host ? "Host":"Device",
-			val ? "Host":"Device");
+			is_host ? "Host" : "Device",
+			val ? "Host" : "Device");
 }
 
 static int exynos4_usb_host_phy_is_on(void)
@@ -74,9 +74,54 @@ static int exynos4_usb_device_phy_is_on(void)
 	return (readl(EXYNOS4_PHYPWR) & PHY0_ANALOG_POWERDOWN) ? 0 : 1;
 }
 
+static int exynos4_usb_phy20_is_on(void)
+{
+	return exynos4_usb_host_phy_is_on();
+}
+
 static int exynos5_usb_host_phy20_is_on(void)
 {
 	return (readl(EXYNOS5_PHY_HOST_CTRL0) & HOST_CTRL0_PHYSWRSTALL) ? 0 : 1;
+}
+
+static int exynos_usb_phy_clock_enable(struct platform_device *pdev)
+{
+	struct clk *phy_clk;
+	int err;
+
+	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
+		phy_clk = clk_get(&pdev->dev, "usbotg");
+	else
+		phy_clk = clk_get(&pdev->dev, "usbhost");
+
+	if (IS_ERR(phy_clk)) {
+		dev_err(&pdev->dev, "Failed to get phy clock\n");
+		return PTR_ERR(phy_clk);
+	}
+
+	err = clk_enable(phy_clk);
+	clk_put(phy_clk);
+
+	return err;
+}
+
+static int exynos_usb_phy_clock_disable(struct platform_device *pdev)
+{
+	struct clk *phy_clk;
+
+	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
+		phy_clk = clk_get(&pdev->dev, "usbotg");
+	else
+		phy_clk = clk_get(&pdev->dev, "usbhost");
+	if (IS_ERR(phy_clk)) {
+		dev_err(&pdev->dev, "Failed to get phy clock\n");
+		return PTR_ERR(phy_clk);
+	}
+
+	clk_disable(phy_clk);
+	clk_put(phy_clk);
+
+	return 0;
 }
 
 static u32 exynos_usb_phy_set_clock(struct platform_device *pdev)
@@ -90,7 +135,7 @@ static u32 exynos_usb_phy_set_clock(struct platform_device *pdev)
 		ref_clk = clk_get(&pdev->dev, "ext_xtal");
 
 	if (IS_ERR(ref_clk)) {
-		printk(KERN_ERR"Failed to get reference clock\n");
+		dev_err(&pdev->dev, "Failed to get reference clock\n");
 		return PTR_ERR(ref_clk);
 	}
 
@@ -163,7 +208,7 @@ static u32 exynos_usb_phy_set_clock(struct platform_device *pdev)
 	return refclk_freq;
 }
 
-static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
+static void exynos_usb_phy_control(enum usb_phy_type phy_type , int on)
 {
 	spin_lock(&phy_lock);
 
@@ -180,7 +225,7 @@ static void exynos4_usb_phy_control(enum usb_phy_type phy_type , int on)
 			else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
 				writel(PHY_DISABLE, S5P_USBHOST_PHY_CONTROL);
 		}
-	} else if (soc_is_exynos4212() | soc_is_exynos4412()){
+	} else if (soc_is_exynos4212() | soc_is_exynos4412()) {
 		if (phy_type & USB_PHY) {
 			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
 				writel(PHY_ENABLE, S5P_USB_PHY_CONTROL);
@@ -230,11 +275,9 @@ static int exynos4_usb_phy0_init(struct platform_device *pdev)
 	u32 rstcon;
 	int err;
 
-	exynos4_usb_phy_control(USB_PHY0, PHY_ENABLE);
-
 	otg_clk = clk_get(&pdev->dev, "usbotg");
 	if (IS_ERR(otg_clk)) {
-		printk(KERN_ERR"Failed to get otg clock\n");
+		dev_err(&pdev->dev, "Failed to get otg clock\n");
 		return PTR_ERR(otg_clk);
 	}
 
@@ -244,13 +287,12 @@ static int exynos4_usb_phy0_init(struct platform_device *pdev)
 		return err;
 	}
 
+	exynos_usb_phy_control(USB_PHY0, PHY_ENABLE);
+
 	/* set clock frequency for PLL */
 	phyclk = exynos_usb_phy_set_clock(pdev);
+	phyclk &= ~(PHY0_COMMON_ON_N);
 	writel(phyclk, EXYNOS4_PHYCLK);
-
-	/* USB MUX change from Host to Device */
-	if (soc_is_exynos4212() || soc_is_exynos4412())
-		exynos_usb_mux_change(pdev, 0);
 
 	/* set to normal of PHY0 */
 	phypwr = readl(EXYNOS4_PHYPWR) & ~PHY0_NORMAL_MASK;
@@ -264,6 +306,7 @@ static int exynos4_usb_phy0_init(struct platform_device *pdev)
 	writel(rstcon, EXYNOS4_RSTCON);
 
 	clk_put(otg_clk);
+
 	return 0;
 }
 
@@ -281,11 +324,8 @@ static int exynos4_usb_phy0_exit(struct platform_device *pdev)
 	writel((readl(EXYNOS4_PHYPWR) | PHY0_NORMAL_MASK),
 			EXYNOS4_PHYPWR);
 
-	exynos4_usb_phy_control(USB_PHY0, PHY_DISABLE);
+	exynos_usb_phy_control(USB_PHY0, PHY_DISABLE);
 
-	/* USB MUX change from Device to Host */
-	if (soc_is_exynos4212() || soc_is_exynos4412())
-		exynos_usb_mux_change(pdev, 1);
 	clk_disable(otg_clk);
 	clk_put(otg_clk);
 
@@ -329,7 +369,7 @@ int exynos4_check_usb_op(void)
 			writel(readl(EXYNOS4_PHYPWR)
 				| PHY1_STD_ANALOG_POWERDOWN,
 				EXYNOS4_PHYPWR);
-			exynos4_usb_phy_control(USB_PHY1, PHY_DISABLE);
+			exynos_usb_phy_control(USB_PHY1, PHY_DISABLE);
 
 			op = 0;
 		}
@@ -342,7 +382,7 @@ int exynos4_check_usb_op(void)
 				| EXYNOS4212_HSIC0_ANALOG_POWERDOWN
 				| EXYNOS4212_HSIC1_ANALOG_POWERDOWN,
 				EXYNOS4_PHYPWR);
-			exynos4_usb_phy_control(USB_PHY
+			exynos_usb_phy_control(USB_PHY
 				| USB_PHY_HSIC0
 				| USB_PHY_HSIC1,
 				PHY_DISABLE);
@@ -359,21 +399,7 @@ done:
 
 static int exynos4_usb_phy1_suspend(struct platform_device *pdev)
 {
-	struct clk *otg_clk;
 	u32 phypwr;
-	int err;
-
-	otg_clk = clk_get(&pdev->dev, "usbotg");
-	if (IS_ERR(otg_clk)) {
-		dev_err(&pdev->dev, "Failed to get otg clock\n");
-		return PTR_ERR(otg_clk);
-	}
-
-	err = clk_enable(otg_clk);
-	if (err) {
-		clk_put(otg_clk);
-		return err;
-	}
 
 	/* set to suspend HSIC 0 and 1 and standard of PHY1 */
 	phypwr = readl(EXYNOS4_PHYPWR);
@@ -389,30 +415,14 @@ static int exynos4_usb_phy1_suspend(struct platform_device *pdev)
 	}
 	writel(phypwr, EXYNOS4_PHYPWR);
 
-	clk_disable(otg_clk);
-	clk_put(otg_clk);
-
 	return 0;
 }
 
 static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 {
-	struct clk *otg_clk;
 	u32 rstcon;
 	u32 phypwr;
-	int err = 0;
-
-	otg_clk = clk_get(&pdev->dev, "usbotg");
-	if (IS_ERR(otg_clk)) {
-		dev_err(&pdev->dev, "Failed to get otg clock\n");
-		return PTR_ERR(otg_clk);
-	}
-
-	err = clk_enable(otg_clk);
-	if (err) {
-		clk_put(otg_clk);
-		return err;
-	}
+	int err;
 
 	if (exynos4_usb_host_phy_is_on()) {
 		/* set to resume HSIC 0 and 1 and standard of PHY1 */
@@ -422,10 +432,6 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| EXYNOS4210_HSIC0_FORCE_SUSPEND
 				| EXYNOS4210_HSIC1_FORCE_SUSPEND);
 		} else {
-			/* USB MUX change from Device to Host */
-			if (!exynos4_usb_device_phy_is_on())
-				exynos_usb_mux_change(pdev, 1);
-
 			phypwr = readl(EXYNOS4_PHYPWR);
 			phypwr &= ~(PHY1_STD_FORCE_SUSPEND
 				| EXYNOS4212_HSIC0_FORCE_SUSPEND
@@ -437,7 +443,7 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 		phypwr = readl(EXYNOS4_PHYPWR);
 		/* set to normal HSIC 0 and 1 of PHY1 */
 		if (soc_is_exynos4210()) {
-			exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
+			exynos_usb_phy_control(USB_PHY1, PHY_ENABLE);
 
 			phypwr &= ~(PHY1_STD_NORMAL_MASK
 				| EXYNOS4210_HSIC0_NORMAL_MASK
@@ -455,14 +461,10 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| EXYNOS4210_PHY1_SWRST_MASK);
 			writel(rstcon, EXYNOS4_RSTCON);
 		} else {
-			exynos4_usb_phy_control(USB_PHY
+			exynos_usb_phy_control(USB_PHY
 				| USB_PHY_HSIC0
 				| USB_PHY_HSIC1,
 				PHY_ENABLE);
-
-			/* USB MUX change from Device to Host */
-			if (!exynos4_usb_device_phy_is_on())
-				exynos_usb_mux_change(pdev, 1);
 
 			phypwr &= ~(PHY1_STD_NORMAL_MASK
 				| EXYNOS4212_HSIC0_NORMAL_MASK
@@ -484,47 +486,19 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 	}
 	udelay(80);
 
-	clk_disable(otg_clk);
-	clk_put(otg_clk);
-
 	return err;
 }
 
 static int exynos4_usb_phy1_init(struct platform_device *pdev)
 {
-	struct clk *otg_clk;
 	u32 phypwr;
 	u32 phyclk;
 	u32 rstcon;
-	int err;
-
-	otg_clk = clk_get(&pdev->dev, "usbotg");
-	if (IS_ERR(otg_clk)) {
-		dev_err(&pdev->dev, "Failed to get otg clock\n");
-		return PTR_ERR(otg_clk);
-	}
-
-	err = clk_enable(otg_clk);
-	if (err) {
-		clk_put(otg_clk);
-		return err;
-	}
-
-	if (soc_is_exynos4210()) {
-		exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
-	} else {
-		exynos4_usb_phy_control(USB_PHY
-			| USB_PHY_HSIC0
-			| USB_PHY_HSIC1,
-			PHY_ENABLE);
-	}
 
 	atomic_inc(&host_usage);
 
 	if (exynos4_usb_host_phy_is_on()) {
 		dev_err(&pdev->dev, "Already power on PHY\n");
-		clk_disable(otg_clk);
-		clk_put(otg_clk);
 		return 0;
 	}
 
@@ -538,106 +512,150 @@ static int exynos4_usb_phy1_init(struct platform_device *pdev)
 	writel((__raw_readl(ETC6PUD) & ~(0x3 << 14)) | (0x3 << 14),
 		ETC6PUD);
 
+	exynos_usb_phy_control(USB_PHY1, PHY_ENABLE);
+
 	/* set clock frequency for PLL */
 	phyclk = exynos_usb_phy_set_clock(pdev);
+	phyclk &= ~(PHY1_COMMON_ON_N);
 	writel(phyclk, EXYNOS4_PHYCLK);
 
-	phypwr = readl(EXYNOS4_PHYPWR);
 	/* set to normal HSIC 0 and 1 of PHY1 */
-	if (soc_is_exynos4210()) {
-		phypwr &= ~(PHY1_STD_NORMAL_MASK
-			| EXYNOS4210_HSIC0_NORMAL_MASK
-			| EXYNOS4210_HSIC1_NORMAL_MASK);
-		writel(phypwr, EXYNOS4_PHYPWR);
+	phypwr = readl(EXYNOS4_PHYPWR);
+	phypwr &= ~(PHY1_STD_NORMAL_MASK
+		| EXYNOS4210_HSIC0_NORMAL_MASK
+		| EXYNOS4210_HSIC1_NORMAL_MASK);
+	writel(phypwr, EXYNOS4_PHYPWR);
 
-		/* floating prevention logic: disable */
-		writel((readl(EXYNOS4_PHY1CON) | FPENABLEN), EXYNOS4_PHY1CON);
+	/* floating prevention logic: disable */
+	writel((readl(EXYNOS4_PHY1CON) | FPENABLEN), EXYNOS4_PHY1CON);
 
-		/* reset all ports of both PHY and Link */
-		rstcon = readl(EXYNOS4_RSTCON)
-			| EXYNOS4210_HOST_LINK_PORT_SWRST_MASK
-			| EXYNOS4210_PHY1_SWRST_MASK;
-		writel(rstcon, EXYNOS4_RSTCON);
-		udelay(10);
+	/* reset all ports of both PHY and Link */
+	rstcon = readl(EXYNOS4_RSTCON)
+		| EXYNOS4210_HOST_LINK_PORT_SWRST_MASK
+		| EXYNOS4210_PHY1_SWRST_MASK;
+	writel(rstcon, EXYNOS4_RSTCON);
+	udelay(10);
 
-		rstcon &= ~(EXYNOS4210_HOST_LINK_PORT_SWRST_MASK
-			| EXYNOS4210_PHY1_SWRST_MASK);
-		writel(rstcon, EXYNOS4_RSTCON);
-	} else {
-		/* USB MUX change from Device to Host */
-		exynos_usb_mux_change(pdev, 1);
-
-		phypwr &= ~(PHY1_STD_NORMAL_MASK
-			| EXYNOS4212_HSIC0_NORMAL_MASK
-			| EXYNOS4212_HSIC1_NORMAL_MASK);
-		writel(phypwr, EXYNOS4_PHYPWR);
-
-		/* reset all ports of both PHY and Link */
-		rstcon = readl(EXYNOS4_RSTCON)
-			| EXYNOS4212_HOST_LINK_PORT_SWRST_MASK
-			| EXYNOS4212_PHY1_SWRST_MASK;
-		writel(rstcon, EXYNOS4_RSTCON);
-		udelay(10);
-
-		rstcon &= ~(EXYNOS4212_HOST_LINK_PORT_SWRST_MASK
-			| EXYNOS4212_PHY1_SWRST_MASK);
-		writel(rstcon, EXYNOS4_RSTCON);
-	}
+	rstcon &= ~(EXYNOS4210_HOST_LINK_PORT_SWRST_MASK
+		| EXYNOS4210_PHY1_SWRST_MASK);
+	writel(rstcon, EXYNOS4_RSTCON);
 	udelay(80);
-
-	clk_disable(otg_clk);
-	clk_put(otg_clk);
 
 	return 0;
 }
 
 static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 {
-	struct clk *otg_clk;
 	u32 phypwr;
-	int err;
 
 	if (atomic_dec_return(&host_usage) > 0) {
 		dev_info(&pdev->dev, "still being used\n");
 		return -EBUSY;
 	}
 
-	otg_clk = clk_get(&pdev->dev, "usbotg");
-	if (IS_ERR(otg_clk)) {
-		dev_err(&pdev->dev, "Failed to get otg clock\n");
-		return PTR_ERR(otg_clk);
-	}
-
-	err = clk_enable(otg_clk);
-	if (err) {
-		clk_put(otg_clk);
-		return err;
-	}
-
-	if (soc_is_exynos4210()) {
-		phypwr = readl(EXYNOS4_PHYPWR)
-			| PHY1_STD_NORMAL_MASK
-			| EXYNOS4210_HSIC0_NORMAL_MASK
-			| EXYNOS4210_HSIC1_NORMAL_MASK;
-	} else {
-		phypwr = readl(EXYNOS4_PHYPWR)
-			| PHY1_STD_NORMAL_MASK
-			| EXYNOS4212_HSIC0_NORMAL_MASK
-			| EXYNOS4212_HSIC1_NORMAL_MASK;
-	}
+	phypwr = readl(EXYNOS4_PHYPWR)
+		| PHY1_STD_NORMAL_MASK
+		| EXYNOS4210_HSIC0_NORMAL_MASK
+		| EXYNOS4210_HSIC1_NORMAL_MASK;
 	writel(phypwr, EXYNOS4_PHYPWR);
 
-	if (soc_is_exynos4210()) {
-		exynos4_usb_phy_control(USB_PHY1, PHY_DISABLE);
-	} else {
-		exynos4_usb_phy_control(USB_PHY
-			| USB_PHY_HSIC0
-			| USB_PHY_HSIC1,
-			PHY_DISABLE);
+	exynos_usb_phy_control(USB_PHY1, PHY_DISABLE);
+
+	return 0;
+}
+
+static int exynos4_usb_phy20_init(struct platform_device *pdev)
+{
+	u32 phypwr, phyclk, rstcon;
+
+	atomic_inc(&host_usage);
+
+	if (exynos4_usb_phy20_is_on()) {
+		dev_err(&pdev->dev, "Already power on PHY\n");
+		return 0;
 	}
 
-	clk_disable(otg_clk);
-	clk_put(otg_clk);
+	/*
+	 *  set XuhostOVERCUR to in-active by controlling ET6PUD[15:14]
+	 *  0x0 : pull-up/down disabled
+	 *  0x1 : pull-down enabled
+	 *  0x2 : reserved
+	 *  0x3 : pull-up enabled
+	 */
+	writel((__raw_readl(ETC6PUD) & ~(0x3 << 14)) | (0x3 << 14),
+		ETC6PUD);
+
+	exynos_usb_phy_control(USB_PHY
+		| USB_PHY_HSIC0
+		| USB_PHY_HSIC1,
+		PHY_ENABLE);
+
+	/* USB MUX change from Device to Host */
+	exynos_usb_mux_change(pdev, 1);
+
+	/* set clock frequency for PLL */
+	phyclk = exynos_usb_phy_set_clock(pdev);
+	/* COMMON Block configuration during suspend */
+	phyclk &= ~(PHY0_COMMON_ON_N | PHY1_COMMON_ON_N);
+	writel(phyclk, EXYNOS4_PHYCLK);
+
+	/* set to normal of Device */
+	phypwr = readl(EXYNOS4_PHYPWR) & ~PHY0_NORMAL_MASK;
+	writel(phypwr, EXYNOS4_PHYPWR);
+
+	/* set to normal of Host */
+	phypwr = readl(EXYNOS4_PHYPWR);
+	phypwr &= ~(PHY1_STD_NORMAL_MASK
+		| EXYNOS4212_HSIC0_NORMAL_MASK
+		| EXYNOS4212_HSIC1_NORMAL_MASK);
+	writel(phypwr, EXYNOS4_PHYPWR);
+
+	/* reset both PHY and Link of Device */
+	rstcon = readl(EXYNOS4_RSTCON) | PHY0_SWRST_MASK;
+	writel(rstcon, EXYNOS4_RSTCON);
+	udelay(10);
+	rstcon &= ~PHY0_SWRST_MASK;
+	writel(rstcon, EXYNOS4_RSTCON);
+
+	/* reset both PHY and Link of Host */
+	rstcon = readl(EXYNOS4_RSTCON)
+		| EXYNOS4212_HOST_LINK_PORT_SWRST_MASK
+		| EXYNOS4212_PHY1_SWRST_MASK;
+	writel(rstcon, EXYNOS4_RSTCON);
+	udelay(10);
+
+	rstcon &= ~(EXYNOS4212_HOST_LINK_PORT_SWRST_MASK
+		| EXYNOS4212_PHY1_SWRST_MASK);
+	writel(rstcon, EXYNOS4_RSTCON);
+	udelay(80);
+
+	return 0;
+}
+
+static int exynos4_usb_phy20_exit(struct platform_device *pdev)
+{
+	u32 phypwr;
+
+	if (atomic_dec_return(&host_usage) > 0) {
+		dev_info(&pdev->dev, "still being used\n");
+		return -EBUSY;
+	}
+
+	/* unset to normal of Device */
+	writel((readl(EXYNOS4_PHYPWR) | PHY0_NORMAL_MASK),
+			EXYNOS4_PHYPWR);
+
+	/* unset to normal of Host */
+	phypwr = readl(EXYNOS4_PHYPWR)
+		| PHY1_STD_NORMAL_MASK
+		| EXYNOS4212_HSIC0_NORMAL_MASK
+		| EXYNOS4212_HSIC1_NORMAL_MASK;
+	writel(phypwr, EXYNOS4_PHYPWR);
+
+	exynos_usb_phy_control(USB_PHY
+		| USB_PHY_HSIC0
+		| USB_PHY_HSIC1,
+		PHY_DISABLE);
 
 	return 0;
 }
@@ -645,12 +663,9 @@ static int exynos4_usb_phy1_exit(struct platform_device *pdev)
 static int exynos5_usb_phy20_init(struct platform_device *pdev)
 {
 	u32 refclk_freq;
-	u32 hostphy_ctrl0;
-	u32 otgphy_sys;
-	u32 hsic_ctrl;
-	u32 ehcictrl;
+	u32 hostphy_ctrl0, otgphy_sys, hsic_ctrl, ehcictrl;
 
-	exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
+	atomic_inc(&host_usage);
 
 	if (exynos5_usb_host_phy20_is_on()) {
 		dev_err(&pdev->dev, "Already power on PHY\n");
@@ -658,6 +673,8 @@ static int exynos5_usb_phy20_init(struct platform_device *pdev)
 	}
 
 	exynos_usb_mux_change(pdev, 1);
+
+	exynos_usb_phy_control(USB_PHY1, PHY_ENABLE);
 
 	/* Host and Device should be set at the same time */
 	hostphy_ctrl0 = readl(EXYNOS5_PHY_HOST_CTRL0);
@@ -715,9 +732,12 @@ static int exynos5_usb_phy20_init(struct platform_device *pdev)
 
 static int exynos5_usb_phy20_exit(struct platform_device *pdev)
 {
-	u32 hostphy_ctrl0;
-	u32 otgphy_sys;
-	u32 hsic_ctrl;
+	u32 hostphy_ctrl0, otgphy_sys, hsic_ctrl;
+
+	if (atomic_dec_return(&host_usage) > 0) {
+		dev_info(&pdev->dev, "still being used\n");
+		return -EBUSY;
+	}
 
 	hsic_ctrl = (HSIC_CTRL_REFCLKDIV(0x24) | HSIC_CTRL_REFCLKSEL(0x2) |
 			HSIC_CTRL_SIDDQ | HSIC_CTRL_FORCESLEEP | HSIC_CTRL_FORCESUSPEND);
@@ -734,36 +754,15 @@ static int exynos5_usb_phy20_exit(struct platform_device *pdev)
 	otgphy_sys |= (OTG_SYS_FORCE_SUSPEND | OTG_SYS_SIDDQ_UOTG | OTG_SYS_FORCE_SLEEP);
 	writel(otgphy_sys, EXYNOS5_PHY_OTG_SYS);
 
-	exynos4_usb_phy_control(USB_PHY1, PHY_DISABLE);
+	exynos_usb_phy_control(USB_PHY1, PHY_DISABLE);
 
 	return 0;
 }
 
-static int exynos5_usb_dev_phy20_init(struct platform_device *pdev)
+static int exynos_usb_dev_phy20_init(struct platform_device *pdev)
 {
 	struct clk *otg_clk;
-	struct clk *host_clk;
 	int err;
-
-	exynos4_usb_phy_control(USB_PHY1, PHY_ENABLE);
-
-	host_clk = clk_get(&pdev->dev, "usbhost");
-	if (IS_ERR(host_clk)) {
-		dev_err(&pdev->dev, "Failed to get otg clock\n");
-		return PTR_ERR(host_clk);
-	}
-
-	err = clk_enable(host_clk);
-	if (err) {
-		clk_put(host_clk);
-		return err;
-	}
-
-	if (!exynos5_usb_host_phy20_is_on()) {
-		exynos5_usb_phy20_init(pdev);
-	}
-	clk_disable(host_clk);
-	clk_put(host_clk);
 
 	otg_clk = clk_get(&pdev->dev, "usbotg");
 	if (IS_ERR(otg_clk)) {
@@ -777,13 +776,22 @@ static int exynos5_usb_dev_phy20_init(struct platform_device *pdev)
 		return err;
 	}
 
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+		exynos_usb_phy_control(USB_PHY0, PHY_ENABLE);
+		exynos4_usb_phy20_init(pdev);
+	} else {
+		exynos_usb_phy_control(USB_PHY1, PHY_ENABLE);
+		exynos5_usb_phy20_init(pdev);
+	}
+
 	exynos_usb_mux_change(pdev, 0);
 
 	clk_put(otg_clk);
+
 	return 0;
 }
 
-static int exynos5_usb_dev_phy20_exit(struct platform_device *pdev)
+static int exynos_usb_dev_phy20_exit(struct platform_device *pdev)
 {
 	struct clk *otg_clk;
 
@@ -791,6 +799,14 @@ static int exynos5_usb_dev_phy20_exit(struct platform_device *pdev)
 	if (IS_ERR(otg_clk)) {
 		dev_err(&pdev->dev, "Failed to get otg clock\n");
 		return PTR_ERR(otg_clk);
+	}
+
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+		exynos4_usb_phy20_exit(pdev);
+		exynos_usb_phy_control(USB_PHY0, PHY_DISABLE);
+	} else {
+		exynos5_usb_phy20_exit(pdev);
+		exynos_usb_phy_control(USB_PHY1, PHY_DISABLE);
 	}
 
 	exynos_usb_mux_change(pdev, 1);
@@ -805,7 +821,7 @@ static int exynos5_usb_phy30_init(struct platform_device *pdev)
 {
 	u32 reg;
 
-	exynos4_usb_phy_control(USB_PHY0, PHY_ENABLE);
+	exynos_usb_phy_control(USB_PHY0, PHY_ENABLE);
 
 	/* Reset USB 3.0 PHY */
 	writel(0x087fffc0, EXYNOS_USB3_LINKSYSTEM);
@@ -857,61 +873,109 @@ static int exynos5_usb_phy30_exit(struct platform_device *pdev)
 		EXYNOS_USB3_PHYUTMI_FORCESLEEP;
 	writel(reg, EXYNOS_USB3_PHYUTMI);
 
-	exynos4_usb_phy_control(USB_PHY0, PHY_DISABLE);
+	exynos_usb_phy_control(USB_PHY0, PHY_DISABLE);
 
 	return 0;
 }
 
 int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 {
-	if (type == S5P_USB_PHY_HOST)
-		return exynos4_usb_phy1_suspend(pdev);
+	int ret = -EINVAL;
 
-	return -EINVAL;
+	ret = exynos_usb_phy_clock_enable(pdev);
+	if (ret)
+		return ret;
+
+	if (type == S5P_USB_PHY_HOST)
+		ret = exynos4_usb_phy1_suspend(pdev);
+
+	exynos_usb_phy_clock_disable(pdev);
+
+	return ret;
 }
 
 int s5p_usb_phy_resume(struct platform_device *pdev, int type)
 {
-	if (type == S5P_USB_PHY_HOST)
-		return exynos4_usb_phy1_resume(pdev);
+	int ret = -EINVAL;
 
-	return -EINVAL;
+	ret = exynos_usb_phy_clock_enable(pdev);
+	if (ret)
+		return ret;
+
+	if (type == S5P_USB_PHY_HOST)
+		ret = exynos4_usb_phy1_resume(pdev);
+
+	exynos_usb_phy_clock_disable(pdev);
+
+	return ret;
 }
 
 int s5p_usb_phy_init(struct platform_device *pdev, int type)
 {
+	int ret = -EINVAL;
+
 	if (type == S5P_USB_PHY_HOST) {
-		if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
-			return exynos4_usb_phy1_init(pdev);
+		ret = exynos_usb_phy_clock_enable(pdev);
+		if (ret)
+			return ret;
+
+		if (soc_is_exynos4210())
+			ret = exynos4_usb_phy1_init(pdev);
+		else if (soc_is_exynos4212() || soc_is_exynos4412())
+			ret = exynos4_usb_phy20_init(pdev);
 		else
-			return exynos5_usb_phy20_init(pdev);
+			ret = exynos5_usb_phy20_init(pdev);
+
+		exynos_usb_phy_clock_disable(pdev);
 	} else if (type == S5P_USB_PHY_DEVICE) {
-		if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
-			return exynos4_usb_phy0_init(pdev);
+		ret = exynos_usb_phy_clock_enable(pdev);
+		if (ret)
+			return ret;
+
+		if (soc_is_exynos4210())
+			ret = exynos4_usb_phy0_init(pdev);
 		else
-			return exynos5_usb_dev_phy20_init(pdev);
+			ret = exynos_usb_dev_phy20_init(pdev);
+
+		exynos_usb_phy_clock_disable(pdev);
 	} else if (type == S5P_USB_PHY_DRD) {
 		return exynos5_usb_phy30_init(pdev);
 	}
 
-	return -EINVAL;
+	return ret;
 }
 
 int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 {
+	int ret = -EINVAL;
+
 	if (type == S5P_USB_PHY_HOST) {
-		if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
-			return exynos4_usb_phy1_exit(pdev);
+		ret = exynos_usb_phy_clock_enable(pdev);
+		if (ret)
+			return ret;
+
+		if (soc_is_exynos4210())
+			ret = exynos4_usb_phy1_exit(pdev);
+		else if (soc_is_exynos4212() || soc_is_exynos4412())
+			ret = exynos4_usb_phy20_exit(pdev);
 		else
-			return exynos5_usb_phy20_exit(pdev);
+			ret = exynos5_usb_phy20_exit(pdev);
+
+		exynos_usb_phy_clock_disable(pdev);
 	} else if (type == S5P_USB_PHY_DEVICE) {
-		if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
-			return exynos4_usb_phy0_exit(pdev);
+		ret = exynos_usb_phy_clock_enable(pdev);
+		if (ret)
+			return ret;
+
+		if (soc_is_exynos4210())
+			ret = exynos4_usb_phy0_exit(pdev);
 		else
-			return exynos5_usb_dev_phy20_exit(pdev);
+			ret = exynos_usb_dev_phy20_exit(pdev);
+
+		exynos_usb_phy_clock_disable(pdev);
 	} else if (type == S5P_USB_PHY_DRD) {
-		return exynos5_usb_phy30_exit(pdev);
+		ret = exynos5_usb_phy30_exit(pdev);
 	}
 
-	return -EINVAL;
+	return ret;
 }
