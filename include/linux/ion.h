@@ -51,7 +51,7 @@ enum ion_heap_type {
 #define ION_HEAP_EXYNOS_MASK		(1 << ION_HEAP_TYPE_EXYNOS)
 #define ION_HEAP_EXYNOS_CONTIG_MASK	(1 << ION_HEAP_TYPE_EXYNOS_CONTIG)
 #define ION_HEAP_EXYNOS_USER_MASK	(1 << ION_HEAP_TYPE_EXYNOS_USER)
-#define ION_EXYNOS_WRITE_MASK		(1 << (sizeof(long) - 1))
+#define ION_EXYNOS_WRITE_MASK		(1 << (BITS_PER_LONG - 1))
 #endif
 
 #ifdef __KERNEL__
