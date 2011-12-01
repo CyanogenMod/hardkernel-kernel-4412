@@ -2729,6 +2729,7 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&s5p_device_hdmi,
 	&s5p_device_sdo,
 	&s5p_device_mixer,
+	&s5p_device_cec,
 #endif
 #if defined(CONFIG_VIDEO_FIMC)
 	&s3c_device_fimc0,
@@ -2825,6 +2826,12 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 static struct s5p_platform_hpd hdmi_hpd_data __initdata = {
 
 };
+static struct s5p_platform_cec hdmi_cec_data __initdata = {
+
+};
+#endif
+
+#ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
 static struct s5p_platform_cec hdmi_cec_data __initdata = {
 
 };
@@ -3574,6 +3581,9 @@ static void __init smdk4x12_machine_init(void)
 	dev_set_name(&s5p_device_hdmi.dev, "exynos4-hdmi");
 	clk_add_alias("hdmi", "s5p-hdmi", "hdmi", &s5p_device_hdmi.dev);
 	clk_add_alias("hdmiphy", "s5p-hdmi", "hdmiphy", &s5p_device_hdmi.dev);
+#ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
+	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
+#endif
 #endif
 	s5p_tv_setup();
 	s5p_i2c_hdmiphy_set_platdata(NULL);
