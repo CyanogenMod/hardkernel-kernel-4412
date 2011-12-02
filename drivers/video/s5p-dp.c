@@ -2321,7 +2321,7 @@ static int __devinit s5p_dp_probe(struct platform_device *pdev)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	dp->early_suspend.suspend = s5p_dp_early_suspend;
 	dp->early_suspend.resume = s5p_dp_late_resume;
-	dp->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
+	dp->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 1;
 	register_early_suspend(&dp->early_suspend);
 #endif
 	return 0;
