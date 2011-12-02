@@ -596,7 +596,6 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	switch (cmd) {
 	case SRP_INIT:
 		srpdbg("SRP: SRP_INIT\n");
-		init_waitqueue_head(&srp.read_wait);
 		srp_flush_ibuf();
 		srp_flush_obuf();
 		srp_reset();
@@ -1100,6 +1099,7 @@ static __devinit int srp_probe(struct platform_device *pdev)
 	}
 
 	srp.audss_clk_enable = audss_clk_enable;
+	init_waitqueue_head(&srp.read_wait);
 
 	ret = misc_register(&srp_miscdev);
 	if (ret) {
