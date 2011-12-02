@@ -237,6 +237,16 @@ static void srp_check_stream_info(void)
 			srpdbg("SRP: Channel = %lu\n", srp.channel);
 	}
 
+	if (!srp.sample_rate) {
+		srp.sample_rate = readl(srp.commbox
+				+ SRP_ARM_INTERRUPT_CODE);
+		srp.sample_rate >>= SRP_ARM_INTR_CODE_SRINF_SHIFT;
+		srp.sample_rate &= SRP_ARM_INTR_CODE_SRINF_MASK;
+		if (srp.sample_rate)
+			srpdbg("SRP: Sample Rate = %lu\n", srp.sample_rate);
+
+	}
+
 	if (!srp.frame_size) {
 		switch (readl(srp.commbox
 			+ SRP_ARM_INTERRUPT_CODE)
@@ -738,6 +748,7 @@ static int srp_open(struct inode *inode, struct file *file)
 
 	srp.channel = 0;
 	srp.frame_size = 0;
+	srp.sample_rate = 0;
 	srp_reset_frame_counter();
 	srp_set_default_fw();
 
