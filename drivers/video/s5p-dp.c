@@ -2163,11 +2163,24 @@ static void s5p_dp_late_resume(struct early_suspend *handler)
 	clk_enable(dp->clock);
 
 	s5p_dp_init_dp(dp);
-	s5p_dp_detect_hpd(dp);
 
-	s5p_dp_handle_edid(dp);
+	if (!soc_is_exynos5250()) {
+		s5p_dp_detect_hpd(dp);
+		s5p_dp_handle_edid(dp);
+	}
+
 	s5p_dp_set_link_train(dp, dp->video_info->lane_count,
 				dp->video_info->link_rate);
+
+	if (soc_is_exynos5250()) {
+		s5p_dp_enable_scramble(dp, 1);
+		s5p_dp_enable_rx_to_enhanced_mode(dp, 1);
+		s5p_dp_enable_enhanced_mode(dp, 1);
+	} else {
+		s5p_dp_enable_scramble(dp, 0);
+		s5p_dp_enable_rx_to_enhanced_mode(dp, 0);
+		s5p_dp_enable_enhanced_mode(dp, 0);
+	}
 
 	s5p_dp_set_lane_count(dp, dp->video_info->lane_count);
 	s5p_dp_set_link_bandwidth(dp, dp->video_info->link_rate);
@@ -2391,11 +2404,24 @@ static int s5p_dp_resume(struct device *dev)
 	clk_enable(dp->clock);
 
 	s5p_dp_init_dp(dp);
-	s5p_dp_detect_hpd(dp);
 
-	s5p_dp_handle_edid(dp);
+	if (!soc_is_exynos5250()) {
+		s5p_dp_detect_hpd(dp);
+		s5p_dp_handle_edid(dp);
+	}
+
 	s5p_dp_set_link_train(dp, dp->video_info->lane_count,
 				dp->video_info->link_rate);
+
+	if (soc_is_exynos5250()) {
+		s5p_dp_enable_scramble(dp, 1);
+		s5p_dp_enable_rx_to_enhanced_mode(dp, 1);
+		s5p_dp_enable_enhanced_mode(dp, 1);
+	} else {
+		s5p_dp_enable_scramble(dp, 0);
+		s5p_dp_enable_rx_to_enhanced_mode(dp, 0);
+		s5p_dp_enable_enhanced_mode(dp, 0);
+	}
 
 	s5p_dp_set_lane_count(dp, dp->video_info->lane_count);
 	s5p_dp_set_link_bandwidth(dp, dp->video_info->link_rate);
