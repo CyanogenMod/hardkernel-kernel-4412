@@ -808,6 +808,7 @@ static int fimc50_outdev_check_src_size(struct fimc_control *ctrl,
 						real->height);
 				return -EINVAL;
 			}
+			break;
 		case V4L2_PIX_FMT_YUV422P:
 			if (real->height % 2) {
 				fimc_err("SRC Real_H(%d): multiple of 2\n",
@@ -818,6 +819,7 @@ static int fimc50_outdev_check_src_size(struct fimc_control *ctrl,
 						real->width);
 				return -EINVAL;
 			}
+			break;
 		case V4L2_PIX_FMT_YVU420:
 			if (real->height % 4) {
 				fimc_err("SRC Real_H(%d): multiple of 4\n",
@@ -828,6 +830,7 @@ static int fimc50_outdev_check_src_size(struct fimc_control *ctrl,
 						real->width);
 				return -EINVAL;
 			}
+			break;
 		}
 	} else if (ctx->pix.field == V4L2_FIELD_NONE) {
 		if (pixelformat == V4L2_PIX_FMT_YUV422P) {
@@ -1835,6 +1838,7 @@ int fimc_cropcap_output(void *fh, struct v4l2_cropcap *a)
 	case V4L2_PIX_FMT_YUV420:	/* fall through */
 		max_w = FIMC_SRC_MAX_W;
 		max_h = FIMC_SRC_MAX_H;
+		break;
 	case V4L2_PIX_FMT_RGB32:	/* fall through */
 	case V4L2_PIX_FMT_RGB565:	/* fall through */
 		if (is_rotate & FIMC_ROT) {		/* Landscape mode */
