@@ -955,7 +955,7 @@ int mxr_base_layer_register(struct mxr_layer *layer)
 	}
 
 	layer->vfd.v4l2_dev = &md->v4l2_dev;
-	ret = video_register_device(&layer->vfd, VFL_TYPE_GRABBER, -1);
+	ret = video_register_device(&layer->vfd, VFL_TYPE_GRABBER, layer->minor);
 	if (ret)
 		mxr_err(mdev, "failed to register video device\n");
 	else

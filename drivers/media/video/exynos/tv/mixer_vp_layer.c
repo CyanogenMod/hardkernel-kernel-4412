@@ -180,7 +180,7 @@ static void mxr_vp_fix_geometry(struct mxr_layer *layer)
 /* PUBLIC API */
 
 struct mxr_layer *mxr_vp_layer_create(struct mxr_device *mdev, int cur_mxr,
-		int idx)
+		int idx, int nr)
 {
 	struct mxr_layer *layer;
 	int ret;
@@ -203,6 +203,7 @@ struct mxr_layer *mxr_vp_layer_create(struct mxr_device *mdev, int cur_mxr,
 
 	layer->fmt_array = mxr_video_format;
 	layer->fmt_array_size = ARRAY_SIZE(mxr_video_format);
+	layer->minor = nr;
 
 	ret = mxr_base_layer_register(layer);
 	if (ret)

@@ -23,6 +23,7 @@
 #include <linux/clk.h>
 #include <linux/kernel.h>
 
+#include <mach/videonode-exynos5.h>
 #include <media/exynos_mc.h>
 
 MODULE_AUTHOR("Tomasz Stanislawski, <t.stanislaws@samsung.com>");
@@ -480,20 +481,38 @@ static void mxr_release_layers(struct mxr_device *mdev)
 static int __devinit mxr_acquire_layers(struct mxr_device *mdev,
 	struct mxr_platform_data *pdata)
 {
-	int i;
 	struct sub_mxr_device *sub_mxr;
 
-	for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
-		sub_mxr = &mdev->sub_mxr[i];
+	sub_mxr = &mdev->sub_mxr[MXR_SUB_MIXER0];
 #if defined(CONFIG_ARCH_EXYNOS4)
-		sub_mxr->layer[0] = mxr_vp_layer_create(mdev, i, i);
+	sub_mxr->layer[MXR_LAYER_VIDEO] = mxr_vp_layer_create(mdev,
+			MXR_SUB_MIXER0, 0, EXYNOS_VIDEONODE_MXR_VIDEO);
 #else
-		sub_mxr->layer[0] = mxr_video_layer_create(mdev, i, i);
+	sub_mxr->layer[MXR_LAYER_VIDEO] =
+		mxr_video_layer_create(mdev, MXR_SUB_MIXER0, 0);
 #endif
-		sub_mxr->layer[1] = mxr_graph_layer_create(mdev, i, i * 2);
-		sub_mxr->layer[2] = mxr_graph_layer_create(mdev, i, i * 2 + 1);
-		if (!mdev->sub_mxr[i].layer[0] || !mdev->sub_mxr[i].layer[1]
-				|| !mdev->sub_mxr[i].layer[2]) {
+	sub_mxr->layer[MXR_LAYER_GRP0] = mxr_graph_layer_create(mdev,
+			MXR_SUB_MIXER0, 0, EXYNOS_VIDEONODE_MXR_GRP(0));
+	sub_mxr->layer[MXR_LAYER_GRP1] = mxr_graph_layer_create(mdev,
+			MXR_SUB_MIXER0, 1, EXYNOS_VIDEONODE_MXR_GRP(1));
+	if (!sub_mxr->layer[MXR_LAYER_VIDEO] || !sub_mxr->layer[MXR_LAYER_GRP0]
+			|| !sub_mxr->layer[MXR_LAYER_GRP1]) {
+		mxr_err(mdev, "failed to acquire layers\n");
+		goto fail;
+	}
+
+	/* Exynos5250 supports 2 sub-mixers */
+	if (MXR_MAX_SUB_MIXERS == 2) {
+		sub_mxr = &mdev->sub_mxr[MXR_SUB_MIXER1];
+		sub_mxr->layer[MXR_LAYER_VIDEO] =
+			mxr_video_layer_create(mdev, MXR_SUB_MIXER1, 1);
+		sub_mxr->layer[MXR_LAYER_GRP0] = mxr_graph_layer_create(mdev,
+				MXR_SUB_MIXER1, 2, EXYNOS_VIDEONODE_MXR_GRP(2));
+		sub_mxr->layer[MXR_LAYER_GRP1] = mxr_graph_layer_create(mdev,
+				MXR_SUB_MIXER1, 3, EXYNOS_VIDEONODE_MXR_GRP(3));
+		if (!sub_mxr->layer[MXR_LAYER_VIDEO] ||
+				!sub_mxr->layer[MXR_LAYER_GRP0] ||
+				!sub_mxr->layer[MXR_LAYER_GRP1]) {
 			mxr_err(mdev, "failed to acquire layers\n");
 			goto fail;
 		}

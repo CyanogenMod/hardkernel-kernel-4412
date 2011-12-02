@@ -176,6 +176,8 @@ struct mxr_layer {
 	struct mxr_device *mdev;
 	/** layer index (unique identifier) */
 	int idx;
+	/** minor number of mixer layer as video device */
+	int minor;
 	/** callbacks for layer methods */
 	struct mxr_layer_ops ops;
 	/** format array */
@@ -411,9 +413,9 @@ int __devinit mxr_acquire_video(struct mxr_device *mdev,
 void __devexit mxr_release_video(struct mxr_device *mdev);
 
 struct mxr_layer *mxr_graph_layer_create(struct mxr_device *mdev, int cur_mxr,
-	int idx);
+	int idx, int nr);
 struct mxr_layer *mxr_vp_layer_create(struct mxr_device *mdev, int cur_mxr,
-	int idx);
+	int idx, int nr);
 struct mxr_layer *mxr_video_layer_create(struct mxr_device *mdev, int cur_mxr,
 	int idx);
 struct mxr_layer *mxr_base_layer_create(struct mxr_device *mdev,
