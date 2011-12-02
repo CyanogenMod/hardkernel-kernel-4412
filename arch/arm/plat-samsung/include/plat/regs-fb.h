@@ -108,18 +108,22 @@
 
 /* VIDCON2 */
 
-#define VIDCON2					(0x08)
-#define VIDCON2_EN601				(1 << 23)
-#define VIDCON2_TVFMTSEL_SW			(1 << 14)
+#define VIDCON2				(0x08)
+#define VIDCON2_EN601			(1 << 23)
+#define VIDCON2_WB_DISABLE		(0 << 15)
+#define VIDCON2_WB_ENABLE		(1 << 15)
+#define VIDCON2_WB_MASK			(1 << 15)
+#define VIDCON2_TVFORMATSEL_HW		(0 << 14)
+#define VIDCON2_TVFORMATSEL_SW		(1 << 14)
+#define VIDCON2_TVFORMATSEL_HW_SW_MASK	(1 << 14)
+#define VIDCON2_TVFORMATSEL_MASK	(0x3 << 12)
+#define VIDCON2_TVFORMATSEL_SHIFT	(12)
+#define VIDCON2_TVFORMATSEL_RGB		(0x0 << 12)
+#define VIDCON2_TVFORMATSEL_YUV422	(0x1 << 12)
+#define VIDCON2_TVFORMATSEL_YUV444	(0x2 << 12)
 
-#define VIDCON2_TVFMTSEL1_MASK			(0x3 << 12)
-#define VIDCON2_TVFMTSEL1_SHIFT			(12)
-#define VIDCON2_TVFMTSEL1_RGB			(0x0 << 12)
-#define VIDCON2_TVFMTSEL1_YUV422		(0x1 << 12)
-#define VIDCON2_TVFMTSEL1_YUV444		(0x2 << 12)
-
-#define VIDCON2_ORGYCbCr			(1 << 8)
-#define VIDCON2_YUVORDCrCb			(1 << 7)
+#define VIDCON2_ORGYCbCr		(1 << 8)
+#define VIDCON2_YUVORDCrCb		(1 << 7)
 
 /* PRTCON (S3C6410, S5PC100)
  * Might not be present in the S3C6410 documentation,
