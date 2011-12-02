@@ -320,7 +320,7 @@ static void set_clkdiv(unsigned int div_index)
 static void set_apll(unsigned int new_index,
 			     unsigned int old_index)
 {
-	unsigned int tmp;
+	unsigned int tmp, pdiv;
 
 	/* 1. MUX_CORE_SEL = MPLL,
 	 * ARMCLK uses MPLL for lock time */
@@ -334,7 +334,9 @@ static void set_apll(unsigned int new_index,
 	} while (tmp != 0x2);
 
 	/* 2. Set APLL Lock time */
-	__raw_writel(0x3e8, EXYNOS5_APLL_LOCK);
+	pdiv = ((exynos5_apll_pms_table[new_index] >> 8) & 0x3f);
+
+	__raw_writel((pdiv * 250), EXYNOS5_APLL_LOCK);
 
 	/* 3. Change PLL PMS values */
 	tmp = __raw_readl(EXYNOS5_APLL_CON0);
