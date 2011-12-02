@@ -920,6 +920,8 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 	/* Sync the buffers as necessary */
 	if (req->buf == udc->ctrl_buff)
 		req->dma = udc->ctrl_buff_dma;
+	else if (req->buf == udc->ep0_buff)
+		req->dma = udc->ep0_buff_dma;
 	else {
 		ret = exynos_ss_udc_map_dma(udc, udc_ep, req);
 		if (ret)
@@ -1126,7 +1128,8 @@ static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
 	udc_ep->tri = 0;
 	list_del_init(&udc_req->queue);
 
-	if (udc_req->req.buf != udc->ctrl_buff)
+	if (udc_req->req.buf != udc->ctrl_buff &&
+	    udc_req->req.buf != udc->ep0_buff)
 		exynos_ss_udc_unmap_dma(udc, udc_ep, udc_req);
 
 	if (udc_ep->epnum == 0) {
@@ -2172,12 +2175,16 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	}
 	memset(udc->ctrl_buff, 0, EXYNOS_USB3_CTRL_BUFF_SIZE);
 
-	udc->ep0_buff = kzalloc(EXYNOS_USB3_EP0_BUFF_SIZE, GFP_KERNEL);
+	udc->ep0_buff = dma_alloc_coherent(NULL,
+					   EXYNOS_USB3_EP0_BUFF_SIZE,
+					   &udc->ep0_buff_dma,
+					   GFP_KERNEL);
 	if (!udc->ep0_buff) {
 		dev_err(dev, "cannot get memory for EP0 buffer\n");
 		ret = -ENOMEM;
 		goto err_mem;
 	}
+	memset(udc->ep0_buff, 0, EXYNOS_USB3_EP0_BUFF_SIZE);
 
 	udc->dev = dev;
 	udc->plat = plat;
@@ -2282,7 +2289,8 @@ err_clk:
 	clk_put(udc->clk);
 err_mem:
 	if (udc->ep0_buff)
-		kfree(udc->ep0_buff);
+		dma_free_coherent(NULL, EXYNOS_USB3_EP0_BUFF_SIZE,
+				  udc->ep0_buff, udc->ep0_buff_dma);
 	if (udc->ctrl_buff)
 		dma_free_coherent(NULL, EXYNOS_USB3_CTRL_BUFF_SIZE,
 				  udc->ctrl_buff, udc->ctrl_buff_dma);
@@ -2315,7 +2323,8 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 	clk_put(udc->clk);
 
 	exynos_ss_udc_free_all_trb(udc);
-	kfree(udc->ep0_buff);
+	dma_free_coherent(NULL, EXYNOS_USB3_EP0_BUFF_SIZE,
+			  udc->ep0_buff, udc->ep0_buff_dma);
 	dma_free_coherent(NULL, EXYNOS_USB3_CTRL_BUFF_SIZE,
 			  udc->ctrl_buff, udc->ctrl_buff_dma);
 	dma_free_coherent(NULL, EXYNOS_USB3_EVENT_BUFF_BSIZE,

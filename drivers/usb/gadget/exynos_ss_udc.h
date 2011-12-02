@@ -186,6 +186,7 @@ struct exynos_ss_udc {
 	enum ctrl_ep_state	ep0_state;
 	int			ep0_three_stage;
 	u8			*ep0_buff;
+	dma_addr_t		ep0_buff_dma;
 	u8			*ctrl_buff;
 	dma_addr_t		ctrl_buff_dma;
 	struct usb_request	*ep0_reply;
