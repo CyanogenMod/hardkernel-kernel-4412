@@ -284,12 +284,9 @@ static void srp_reset(void)
 		wake_up_interruptible(&srp.read_wait);
 
 	srp_pending_ctrl(STALL);
-	writel(srp.vliw_rp, srp.commbox + SRP_CODE_START_ADDR);
 
 	writel(reg, srp.commbox + SRP_FRAME_INDEX);
 	writel(reg, srp.commbox + SRP_READ_BITSTREAM_SIZE);
-	writel(srp.ibuf_size, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_SIZE);
-	writel(BITSTREAM_SIZE_MAX, srp.commbox + SRP_BITSTREAM_SIZE);
 
 	/* RESET */
 	writel(reg, srp.commbox + SRP_CONT);
@@ -335,6 +332,7 @@ static void srp_stop(void)
 static void srp_fill_ibuf(void)
 {
 	unsigned long fill_size;
+	unsigned long flags;
 
 	if (!srp.wbuf_pos)		/* wbuf empty? */
 		return;
@@ -355,6 +353,8 @@ static void srp_fill_ibuf(void)
 		}
 	}
 
+	spin_lock_irqsave(&srp.lock, flags);
+
 	if (srp.ibuf_next == 0) {
 		memcpy(srp.ibuf0, srp.wbuf, srp.ibuf_size);
 		srpdbg("SRP: Fill IBUF0 (%lu)\n", fill_size);
@@ -371,6 +371,8 @@ static void srp_fill_ibuf(void)
 
 	if (srp.wbuf_pos)
 		memcpy(srp.wbuf, &srp.wbuf[srp.ibuf_size], srp.wbuf_pos);
+
+	spin_unlock_irqrestore(&srp.lock, flags);
 }
 
 static ssize_t srp_write(struct file *file, const char *buffer,
@@ -418,7 +420,6 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 		srp_fill_ibuf();
 		srp.save_ibuf_empty = 0;
 	}
-
 	mutex_unlock(&rp_mutex);
 
 	/* SRP Decoding Error occurred? */
@@ -456,22 +457,16 @@ static ssize_t srp_read(struct file *file, char *buffer,
 		srp.prepare_for_eos = 1;
 
 	if (srp.decoding_started) {
-		if (!srp.obuf_fill_done[srp.obuf_ready]) {
-			srpdbg("SRP: Enter to sleep for Obuf INT\n");
-			srp.read_event_put = 1;
-			wait_event_interruptible_timeout(srp.read_wait,
-							!srp.read_event_put,
-							HZ / 10);
-			srpdbg("SRP: Wake up by Obuf INT\n");
-		} else
-			srpdbg("SRP: Already filled Obuf[%d]\n", srp.obuf_ready);
+		srpdbg("SRP: Enter to sleep for Obuf INT\n");
+		wait_event_interruptible(srp.read_wait, srp.is_pending == STALL);
+		srpdbg("SRP: Wake up by Obuf INT\n");
 	} else {
 		srpdbg("SRP: not prepared not yet! OBUF[%d]\n", srp.obuf_ready);
 		srp.pcm_info->size = 0;
 		return copy_to_user(argp, srp.pcm_info, sizeof(struct srp_buf_info));
 	}
 
-	srp.pcm_info->addr = srp.obuf_ready ? obuf0 : obuf1;
+	srp.pcm_info->addr = srp.obuf_ready ? obuf1 : obuf0;
 	srp.pcm_info->size = readl(srp.commbox + SRP_PCM_DUMP_ADDR);
 	srp.pcm_info->num = srp.obuf_info->num;
 
@@ -500,13 +495,19 @@ static void srp_commbox_init(void)
 	reg |= SRP_ARM_INTR_CODE_SUPPORT_MONO;
 	writel(reg, srp.commbox + SRP_ARM_INTERRUPT_CODE);
 
+	/* Init Ibuf information */
 	writel(srp.ibuf0_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR0);
 	writel(srp.ibuf1_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR1);
+	writel(srp.ibuf_size, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_SIZE);
 
 	/* Output PCM control : 16bit */
 	writel(SRP_CFGR_OUTPUT_PCM_16BIT, srp.commbox + SRP_CFGR);
 
+	/* Bit stream size : Max */
+	writel(BITSTREAM_SIZE_MAX, srp.commbox + SRP_BITSTREAM_SIZE);
+
 	/* Configure fw address */
+	writel(srp.vliw_rp, srp.commbox + SRP_CODE_START_ADDR);
 	writel(srp.fw_data_pa, srp.commbox + SRP_DATA_START_ADDR);
 	writel(srp.fw_code_cga_pa, srp.commbox + SRP_CONF_START_ADDR);
 }
@@ -886,6 +887,9 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	if (irq_code & SRP_INTR_CODE_PLAYDONE) {
 		srpdbg("SRP-IRQ: Play Done interrupt!!\n");
 		srp.stop_after_eos = 1;
+		srp_pending_ctrl(STALL);
+		if (waitqueue_active(&srp.read_wait))
+			wake_up_interruptible(&srp.read_wait);
 	}
 
 	if (irq_code & SRP_INTR_CODE_UART_OUTPUT) {
