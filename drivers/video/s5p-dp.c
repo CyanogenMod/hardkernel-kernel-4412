@@ -2480,7 +2480,11 @@ static void __exit s5p_dp_exit(void)
 	platform_driver_unregister(&s5p_dp_driver);
 }
 
+#ifdef CONFIG_FB_EXYNOS_FIMD_MC
+late_initcall(s5p_dp_init);
+#else
 module_init(s5p_dp_init);
+#endif
 module_exit(s5p_dp_exit);
 
 MODULE_AUTHOR("Jingoo Han <jg1.han@samsung.com>");
