@@ -29,6 +29,11 @@
 #define PHY_ENABLE	(1 << 0)
 #define PHY_DISABLE	(0)
 
+enum usb_host_type {
+	HOST_PHY_EHCI	= (0x1 << 0),
+	HOST_PHY_OHCI	= (0x1 << 1),
+};
+
 enum usb_phy_type {
 	USB_PHY		= (0x1 << 0),
 	USB_PHY0	= (0x1 << 0),
@@ -37,13 +42,14 @@ enum usb_phy_type {
 	USB_PHY_HSIC1	= (0x1 << 2),
 };
 
-struct exynos4_usb_phy {
+struct exynos_usb_phy {
 	u8 phy0_usage;
 	u8 phy1_usage;
 	u8 phy2_usage;
+	unsigned long flags;
 };
 
-static struct exynos4_usb_phy usb_phy_control;
+static struct exynos_usb_phy usb_phy_control;
 static atomic_t host_usage;
 static DEFINE_SPINLOCK(phy_lock);
 
@@ -882,6 +888,14 @@ int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 {
 	int ret = -EINVAL;
 
+	if (!strcmp(pdev->name, "s5p-ehci"))
+		clear_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
+	else if (!strcmp(pdev->name, "s5p-ohci"))
+		clear_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
+
+	if (usb_phy_control.flags)
+		return 0;
+
 	ret = exynos_usb_phy_clock_enable(pdev);
 	if (ret)
 		return ret;
@@ -898,6 +912,9 @@ int s5p_usb_phy_resume(struct platform_device *pdev, int type)
 {
 	int ret = -EINVAL;
 
+	if (usb_phy_control.flags)
+		goto done;
+
 	ret = exynos_usb_phy_clock_enable(pdev);
 	if (ret)
 		return ret;
@@ -906,6 +923,11 @@ int s5p_usb_phy_resume(struct platform_device *pdev, int type)
 		ret = exynos4_usb_phy1_resume(pdev);
 
 	exynos_usb_phy_clock_disable(pdev);
+done:
+	if (!strcmp(pdev->name, "s5p-ehci"))
+		set_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
+	else if (!strcmp(pdev->name, "s5p-ohci"))
+		set_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
 
 	return ret;
 }
@@ -915,6 +937,11 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 	int ret = -EINVAL;
 
 	if (type == S5P_USB_PHY_HOST) {
+		if (!strcmp(pdev->name, "s5p-ehci"))
+			set_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
+		else if (!strcmp(pdev->name, "s5p-ohci"))
+			set_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
+
 		ret = exynos_usb_phy_clock_enable(pdev);
 		if (ret)
 			return ret;
@@ -962,6 +989,11 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 			ret = exynos5_usb_phy20_exit(pdev);
 
 		exynos_usb_phy_clock_disable(pdev);
+
+		if (!strcmp(pdev->name, "s5p-ehci"))
+			clear_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
+		else if (!strcmp(pdev->name, "s5p-ohci"))
+			clear_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
 	} else if (type == S5P_USB_PHY_DEVICE) {
 		ret = exynos_usb_phy_clock_enable(pdev);
 		if (ret)
