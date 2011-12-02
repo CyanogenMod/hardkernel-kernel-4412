@@ -14,6 +14,7 @@
 enum s5p_usb_phy_type {
 	S5P_USB_PHY_DEVICE,
 	S5P_USB_PHY_HOST,
+	S5P_USB_PHY_HSIC,
 	S5P_USB_PHY_DRD,
 };
 
