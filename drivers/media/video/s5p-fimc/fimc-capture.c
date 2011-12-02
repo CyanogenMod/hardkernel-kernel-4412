@@ -1185,11 +1185,6 @@ static int fimc_cap_streamon(struct file *file, void *priv,
 	struct fimc_ctx *ctx = priv;
 	struct fimc_dev *fimc = ctx->fimc_dev;
 
-	if (fimc_capture_active(fimc) ||
-		(!fimc->vid_cap.sd && !fimc->vid_cap.fb_sd &&
-		!fimc->vid_cap.is.sd))
-		return -EBUSY;
-
 	if (!(ctx->state & FIMC_DST_FMT)) {
 		v4l2_err(&fimc->vid_cap.v4l2_dev, "Format is not set\n");
 		return -EINVAL;
