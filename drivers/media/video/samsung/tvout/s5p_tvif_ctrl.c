@@ -46,6 +46,9 @@
 #include <linux/err.h>
 
 #include <plat/clock.h>
+#if defined(CONFIG_BUSFREQ_OPP)
+#include <mach/dev.h>
+#endif
 
 #include "s5p_tvout_common_lib.h"
 #include "hw_if/hw_if.h"
@@ -54,6 +57,10 @@
 /****************************************
  * Definitions for sdo ctrl class
  ***************************************/
+#if defined(CONFIG_BUSFREQ_OPP)
+#define BUSFREQ_400MHZ	400200
+#endif
+
 #ifdef CONFIG_ANALOG_TVENC
 
 enum {
@@ -1911,6 +1918,11 @@ struct s5p_tvif_ctrl_private_data {
 	enum s5p_tvout_o_mode		curr_if;
 
 	bool				running;
+
+#if defined(CONFIG_BUSFREQ_OPP)
+	struct device *bus_dev; /* for BusFreq with Opp */
+#endif
+	struct device *dev; /* hpd device pointer */
 };
 
 static struct s5p_tvif_ctrl_private_data s5p_tvif_ctrl_private = {
@@ -2839,8 +2851,13 @@ static void s5p_tvenc_src_to_hdmiphy_off(void)
 /****************************************
  * Functions for tvif ctrl class
  ***************************************/
-static void s5p_tvif_ctrl_init_private(void)
+static void s5p_tvif_ctrl_init_private(struct platform_device *pdev)
 {
+#if defined(CONFIG_BUSFREQ_OPP)
+	/* add bus device ptr for using bus frequency with opp */
+	s5p_tvif_ctrl_private.bus_dev = dev_get("exynos4-busfreq");
+#endif
+	s5p_tvif_ctrl_private.dev = &pdev->dev;
 }
 
 /*
@@ -2975,9 +2992,16 @@ int s5p_tvif_ctrl_start(
 		enum s5p_tvout_disp_mode std, enum s5p_tvout_o_mode inf)
 {
 	tvout_dbg("\n");
+#if defined(CONFIG_BUSFREQ_OPP)
+	if ((std == TVOUT_1080P_60) || (std == TVOUT_1080P_59)
+			|| (std == TVOUT_1080P_50)) {
+		dev_lock(s5p_tvif_ctrl_private.bus_dev,
+				s5p_tvif_ctrl_private.dev, BUSFREQ_400MHZ);
+	}
+#endif
 	if (s5p_tvif_ctrl_private.running &&
-		(std == s5p_tvif_ctrl_private.curr_std) &&
-		(inf == s5p_tvif_ctrl_private.curr_if))	{
+			(std == s5p_tvif_ctrl_private.curr_std) &&
+			(inf == s5p_tvif_ctrl_private.curr_if))	{
 		on_start_process = false;
 		tvout_dbg("on_start_process(%d)\n", on_start_process);
 		goto cannot_change;
@@ -3024,6 +3048,9 @@ void s5p_tvif_ctrl_stop(void)
 
 		s5p_tvif_ctrl_private.running = false;
 	}
+#if defined(CONFIG_BUSFREQ_OPP)
+	dev_unlock(s5p_tvif_ctrl_private.bus_dev, s5p_tvif_ctrl_private.dev);
+#endif
 }
 
 int s5p_tvif_ctrl_constructor(struct platform_device *pdev)
@@ -3036,7 +3063,7 @@ int s5p_tvif_ctrl_constructor(struct platform_device *pdev)
 	if (s5p_hdmi_ctrl_constructor(pdev))
 		goto err;
 
-	s5p_tvif_ctrl_init_private();
+	s5p_tvif_ctrl_init_private(pdev);
 
 	return 0;
 

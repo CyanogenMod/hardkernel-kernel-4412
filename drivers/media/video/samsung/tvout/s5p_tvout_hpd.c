@@ -48,7 +48,6 @@ struct hpd_struct {
 	void (*int_src_ext_hpd)(void);
 	int (*read_gpio)(void);
 	int irq_n;
-	struct device *dev; /* hpd device pointer */
 };
 
 static struct hpd_struct hpd_struct;
@@ -431,8 +430,6 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 		atomic_set(&hpd_struct.state, HPD_LO);
 		last_hpd_state = HPD_LO;
 	}
-
-	hpd_struct.dev = &pdev->dev;
 
 	irq_set_irq_type(hpd_struct.irq_n, IRQ_TYPE_EDGE_BOTH);
 
