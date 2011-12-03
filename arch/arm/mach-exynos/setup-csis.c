@@ -25,6 +25,13 @@
 #include <mach/regs-clock.h>
 #include <plat/csis.h>
 
+#ifdef DEBUG
+#define dbg(fmt, args...) \
+	printk(KERN_INFO "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
+#else
+#define dbg(fmt, args...)
+#endif
+
 struct platform_device; /* don't need the contents */
 
 void s3c_csis0_cfg_gpio(void) { }
@@ -44,14 +51,14 @@ void s3c_csis0_cfg_phy_global(int on)
 		cfg |= EXYNOS4_MIPI_DPHY_EN;
 		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL0);
 
-		printk(KERN_INFO "csis0 on\n");
+		dbg(KERN_INFO "csis0 on\n");
 	} else {
 		/* MIPI Power Disable */
 		cfg = __raw_readl(EXYNOS4_MIPI_CONTROL0);
 		cfg &= ~EXYNOS4_MIPI_DPHY_EN;
 		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL0);
 
-		printk(KERN_INFO "csis0 off\n");
+		dbg(KERN_INFO "csis0 off\n");
 	}
 }
 void s3c_csis1_cfg_phy_global(int on)
@@ -68,14 +75,14 @@ void s3c_csis1_cfg_phy_global(int on)
 		cfg |= EXYNOS4_MIPI_DPHY_EN;
 		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL1);
 
-		printk(KERN_INFO "csis1 on\n");
+		dbg(KERN_INFO "csis1 on\n");
 	} else {
 		/* MIPI Power Disable */
 		cfg = __raw_readl(EXYNOS4_MIPI_CONTROL1);
 		cfg &= ~EXYNOS4_MIPI_DPHY_EN;
 		__raw_writel(cfg, EXYNOS4_MIPI_CONTROL1);
 
-		printk(KERN_INFO "csis1 off\n");
+		dbg(KERN_INFO "csis1 off\n");
 	}
 }
 int s3c_csis_clk_on(struct platform_device *pdev, struct clk **clk)
