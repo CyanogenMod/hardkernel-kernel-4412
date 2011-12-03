@@ -804,10 +804,10 @@ static irqreturn_t gsc_irq_handler(int irq, void *priv)
 		/* schedule pm_runtime_put_sync */
 		queue_work(gsc->irq_workqueue, &gsc->work_struct);
 	} else if (test_bit(ST_OUTPUT_STREAMON, &gsc->state)) {
-		struct gsc_input_buf *done_buf;
-		done_buf = active_queue_pop(&gsc->out, gsc);
-		gsc_hw_set_input_buf_masking(gsc, done_buf->idx, true);
-		if (!list_is_last(&done_buf->list, &gsc->out.active_buf_q)) {
+		if (!list_empty(&gsc->out.active_buf_q)) {
+			struct gsc_input_buf *done_buf;
+			done_buf = active_queue_pop(&gsc->out, gsc);
+			gsc_hw_set_input_buf_masking(gsc, done_buf->idx, true);
 			vb2_buffer_done(&done_buf->vb, VB2_BUF_STATE_DONE);
 			list_del(&done_buf->list);
 		}
@@ -1044,20 +1044,16 @@ static int gsc_suspend(struct device *dev)
 	pdev = to_platform_device(dev);
 	gsc = (struct gsc_dev *)platform_get_drvdata(pdev);
 
-	if (gsc_out_run(gsc)) {
-		ret = gsc_pipeline_s_stream(gsc, 0);
-		if (ret)
-			return ret;
-		if (gsc->out.ctx->out_path == GSC_FIMD) {
-			gsc_hw_enable_control(gsc, false);
-			ret = gsc_wait_stop(gsc);
-			if (ret < 0)
-				return ret;
-		}
+	if (gsc_m2m_run(gsc)) {
+		set_bit(ST_STOP_REQ, &gsc->state);
+		ret = wait_event_timeout(gsc->irq_queue,
+				!test_bit(ST_STOP_REQ, &gsc->state),
+				GSC_SHUTDOWN_TIMEOUT);
+		if (ret == 0)
+			dev_err(&gsc->pdev->dev, "wait timeout : %s\n",
+				__func__);
 	}
-
-	/* Add clock disable function */
-	clear_bit(ST_PWR_ON, &gsc->state);
+	pm_runtime_put_sync(dev);
 
 	return ret;
 }
@@ -1068,43 +1064,18 @@ static int gsc_resume(struct device *dev)
 	struct gsc_driverdata *drv_data;
 	struct gsc_dev *gsc;
 	struct gsc_ctx *ctx;
-	int ret;
-
-	/* Need to add clock operation code in here */
 
 	pdev = to_platform_device(dev);
 	gsc = (struct gsc_dev *)platform_get_drvdata(pdev);
 	drv_data = (struct gsc_driverdata *)
 		platform_get_device_id(pdev)->driver_data;
 
-	set_bit(ST_PWR_ON, &gsc->state);
-
+	pm_runtime_get_sync(dev);
 	if (gsc_m2m_opened(gsc)) {
-		ctx = gsc->m2m.ctx;
-		if (IS_ERR(ctx))
-			return PTR_ERR(ctx);
-		gsc->m2m.ctx = NULL;
-		v4l2_m2m_job_finish(gsc->m2m.m2m_dev, ctx->m2m_ctx);
-	} else if (gsc_out_opened(gsc)) {
-		ctx = gsc->out.ctx;
-		if (ctx == NULL)
-			return 0;
-		if (!list_empty(&gsc->out.active_buf_q)) {
-			struct gsc_input_buf *buf;
-			if (gsc_out_hw_set(ctx)) {
-				gsc_err("GSC H/W Setting is failed");
-				return -EINVAL;
-			}
-			/* FIXME: Modify this sequence after discusstion about
-			   GSC power management policy */
-			list_for_each_entry(buf, &gsc->out.active_buf_q, list) {
-				ret = gsc_out_set_in_addr(gsc, ctx, buf,
-						buf->vb.v4l2_buf.index);
-				if (ret)
-					gsc_err("Failed to prepare G-Scaler address");
-				gsc_hw_set_input_buf_masking(gsc,
-					buf->vb.v4l2_buf.index, false);
-			}
+		ctx = v4l2_m2m_get_curr_priv(gsc->m2m.m2m_dev);
+		if (ctx != NULL) {
+			gsc->m2m.ctx = NULL;
+			v4l2_m2m_job_finish(gsc->m2m.m2m_dev, ctx->m2m_ctx);
 		}
 	}
 
