@@ -41,35 +41,32 @@
 /*
 Default setting values
 */
-#ifndef CONFIG_VIDEO_S5K6A3
-#ifdef CONFIG_VIDEO_S5K3H1
-#define PREVIEW_WIDTH		640
-#define PREVIEW_HEIGHT		480
-#define CAPTURE_WIDTH		3232
-#define CAPTURE_HEIGHT		2424
-#define CAMCORDING_WIDTH	1920
-#define CAMCORDING_HEIGHT	1080
-#define PREVIEW_FRAMERATE	15
-#define CAPTURE_FRAMERATE	15
-#define CAMCORDING_FRAMERATE	15
+
+#if defined(CONFIG_VIDEO_S5K3H2)
+#define BACK_PREVIEW_WIDTH		1280
+#define BACK_PREVIEW_HEIGHT		720
+#define BACK_CAPTURE_WIDTH		3248
+#define BACK_CAPTURE_HEIGHT		2436
+#define BACK_CAMCORDING_WIDTH		1920
+#define BACK_CAMCORDING_HEIGHT		1080
+#define BACK_PREVIEW_FRAMERATE		15
+#define BACK_CAPTURE_FRAMERATE		15
+#define BACK_CAMCORDING_FRAMERATE	30
+#elif defined(CONFIG_VIDEO_S5K3H7)
+#define BACK_PREVIEW_WIDTH		1280
+#define BACK_PREVIEW_HEIGHT		720
+#define BACK_CAPTURE_WIDTH		3248
+#define BACK_CAPTURE_HEIGHT		2436
+#define BACK_CAMCORDING_WIDTH		1920
+#define BACK_CAMCORDING_HEIGHT		1080
+#define BACK_PREVIEW_FRAMERATE		15
+#define BACK_CAPTURE_FRAMERATE		15
+#define BACK_CAMCORDING_FRAMERATE	30
 #endif
-#endif
-#ifndef CONFIG_VIDEO_S5K6A3
-#ifdef CONFIG_VIDEO_S5K3H2
-#define PREVIEW_WIDTH		640
-#define PREVIEW_HEIGHT		480
-#define CAPTURE_WIDTH		3232
-#define CAPTURE_HEIGHT		2424
-#define CAMCORDING_WIDTH	1920
-#define CAMCORDING_HEIGHT	1080
-#define PREVIEW_FRAMERATE	15
-#define CAPTURE_FRAMERATE	15
-#define CAMCORDING_FRAMERATE	15
-#endif
-#endif
+
 #ifdef CONFIG_VIDEO_S5K6A3
-#define PREVIEW_WIDTH		640
-#define PREVIEW_HEIGHT		480
+#define PREVIEW_WIDTH		960
+#define PREVIEW_HEIGHT		720
 #define CAPTURE_WIDTH		1392
 #define CAPTURE_HEIGHT		1392
 #define CAMCORDING_WIDTH	1280
@@ -109,7 +106,7 @@ static const struct isp_param init_val_isp_preview = {
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
 #ifdef FIX_FRAMERATE
 		.reserved[3] = 0,
-		.reserved[4] = 66666,
+		.reserved[4] = 33333,
 #endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
@@ -508,7 +505,7 @@ static const struct isp_param init_val_isp_camcording = {
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
 #ifdef FIX_FRAMERATE
 		.reserved[3] = 0,
-		.reserved[4] = 66666,
+		.reserved[4] = 33333,
 #endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
@@ -747,21 +744,25 @@ void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 	switch (sensor_index) {
 	case SENSOR_S5K3H2_CSI_A:
 		dev->af.use_af = 1;
+		dev->sensor.sensor_type = SENSOR_S5K3H2_CSI_A;
 		writel(SENSOR_NAME_S5K3H2, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
 		break;
 	case SENSOR_S5K3H2_CSI_B:
 		dev->af.use_af = 1;
+		dev->sensor.sensor_type = SENSOR_S5K3H2_CSI_B;
 		writel(SENSOR_NAME_S5K3H2, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
 		break;
 	case SENSOR_S5K6A3_CSI_A:
 		dev->af.use_af = 0;
+		dev->sensor.sensor_type = SENSOR_S5K6A3_CSI_A;
 		writel(SENSOR_NAME_S5K6A3, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
 		break;
 	case SENSOR_S5K6A3_CSI_B:
 		dev->af.use_af = 0;
+		dev->sensor.sensor_type = SENSOR_S5K6A3_CSI_B;
 		writel(SENSOR_NAME_S5K6A3, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
 		break;
@@ -995,8 +996,20 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
-		IS_SENSOR_SET_FRAME_RATE(dev,
+		switch (dev->sensor.sensor_type) {
+		case SENSOR_S5K3H2_CSI_A:
+		case SENSOR_S5K3H2_CSI_B:
+		case SENSOR_S5K4E5_CSI_A:
+		case SENSOR_S5K4E5_CSI_B:
+		case SENSOR_S5K3H7_CSI_A:
+		case SENSOR_S5K3H7_CSI_B:
+			IS_SENSOR_SET_FRAME_RATE(dev, BACK_PREVIEW_FRAMERATE);
+			break;
+		case SENSOR_S5K6A3_CSI_A:
+		case SENSOR_S5K6A3_CSI_B:
+			IS_SENSOR_SET_FRAME_RATE(dev,
 			init_val_sensor_preview.frame_rate.frame_rate);
+		}
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
@@ -1363,8 +1376,20 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
-		IS_SENSOR_SET_FRAME_RATE(dev,
+		switch (dev->sensor.sensor_type) {
+		case SENSOR_S5K3H2_CSI_A:
+		case SENSOR_S5K3H2_CSI_B:
+		case SENSOR_S5K4E5_CSI_A:
+		case SENSOR_S5K4E5_CSI_B:
+		case SENSOR_S5K3H7_CSI_A:
+		case SENSOR_S5K3H7_CSI_B:
+			IS_SENSOR_SET_FRAME_RATE(dev, BACK_PREVIEW_FRAMERATE);
+			break;
+		case SENSOR_S5K6A3_CSI_A:
+		case SENSOR_S5K6A3_CSI_B:
+			IS_SENSOR_SET_FRAME_RATE(dev,
 			init_val_sensor_preview.frame_rate.frame_rate);
+		}
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
@@ -1732,8 +1757,20 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
-		IS_SENSOR_SET_FRAME_RATE(dev,
+		switch (dev->sensor.sensor_type) {
+		case SENSOR_S5K3H2_CSI_A:
+		case SENSOR_S5K3H2_CSI_B:
+		case SENSOR_S5K4E5_CSI_A:
+		case SENSOR_S5K4E5_CSI_B:
+		case SENSOR_S5K3H7_CSI_A:
+		case SENSOR_S5K3H7_CSI_B:
+			IS_SENSOR_SET_FRAME_RATE(dev, BACK_CAPTURE_FRAMERATE);
+			break;
+		case SENSOR_S5K6A3_CSI_A:
+		case SENSOR_S5K6A3_CSI_B:
+			IS_SENSOR_SET_FRAME_RATE(dev,
 			init_val_sensor_capture.frame_rate.frame_rate);
+		}
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
@@ -2096,8 +2133,21 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
-		IS_SENSOR_SET_FRAME_RATE(dev,
+		switch (dev->sensor.sensor_type) {
+		case SENSOR_S5K3H2_CSI_A:
+		case SENSOR_S5K3H2_CSI_B:
+		case SENSOR_S5K4E5_CSI_A:
+		case SENSOR_S5K4E5_CSI_B:
+		case SENSOR_S5K3H7_CSI_A:
+		case SENSOR_S5K3H7_CSI_B:
+			IS_SENSOR_SET_FRAME_RATE(dev,
+				BACK_CAMCORDING_FRAMERATE);
+			break;
+		case SENSOR_S5K6A3_CSI_A:
+		case SENSOR_S5K6A3_CSI_B:
+			IS_SENSOR_SET_FRAME_RATE(dev,
 			init_val_sensor_camcording.frame_rate.frame_rate);
+		}
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */

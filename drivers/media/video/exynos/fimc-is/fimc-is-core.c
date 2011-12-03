@@ -377,7 +377,7 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	/* Unlock bus frequency */
 	dev_unlock(is_dev->bus_dev, dev);
 #endif
-#if defined(CONFIG_VIDEOBUF2_ION)
+#ifdef CONFIG_VIDEOBUF2_ION
 	if (is_dev->alloc_ctx)
 		fimc_is_mem_suspend(is_dev->alloc_ctx);
 #endif
@@ -412,7 +412,7 @@ static int fimc_is_runtime_resume(struct device *dev)
 	dev_lock(is_dev->bus_dev, dev, BUS_LOCK_FREQ_L0);
 #endif
 	is_dev->frame_count = 0;
-#if defined(CONFIG_VIDEOBUF2_ION)
+#ifdef CONFIG_VIDEOBUF2_ION
 	if (is_dev->alloc_ctx)
 		fimc_is_mem_resume(is_dev->alloc_ctx);
 #endif

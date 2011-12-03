@@ -1209,12 +1209,12 @@ struct param_isp_iso {
 
 struct param_isp_adjust {
 	u32	cmd;
-	int	contrast;
-	int	saturation;
-	int	sharpness;
-	int	exposure;
-	int	brightness;
-	int	hue;
+	s32	contrast;
+	s32	saturation;
+	s32	sharpness;
+	s32	exposure;
+	s32	brightness;
+	s32	hue;
 	u32	reserved[PARAMETER_MAX_MEMBER-8];
 	u32	err;
 };
