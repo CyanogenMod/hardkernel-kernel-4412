@@ -631,15 +631,17 @@ static struct clksrc_clk exynos5_clk_dout_aclk_300_gscl = {
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP1, .shift = 12, .size = 3 },
 };
 
-static struct clk exynos5_clk_aclk_300_gscl_sub = {
-	.name		= "aclk_300_gscl_sub",
-	.parent		= &exynos5_clk_dout_aclk_300_gscl.clk,
+static struct clksrc_clk  exynos5_clk_aclk_300_gscl_sub = {
+	.clk	= {
+		.name		= "aclk_300_gscl_sub",
+		.parent		= &exynos5_clk_dout_aclk_300_gscl.clk,
+	},
 };
 
 /* Possible clock sources for aclk_300_gscl_sub Mux */
 static struct clk *clk_src_gscl_300_list[] = {
 	[0] = &clk_ext_xtal_mux,
-	[1] = &exynos5_clk_aclk_300_gscl_sub,
+	[1] = &exynos5_clk_aclk_300_gscl_sub.clk,
 };
 
 static struct clksrc_sources clk_src_gscl_300 = {
@@ -1593,6 +1595,7 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_mout_aclk_300_disp1,
 	&exynos5_clk_mout_aclk_300_gscl_mid,
 	&exynos5_clk_mout_aclk_300_gscl,
+	&exynos5_clk_aclk_300_gscl_sub,
 	&exynos5_clk_dout_aclk_300_gscl,
 	&exynos5_clk_aclk_300_gscl,
 	&exynos5_clk_dout_aclk_266,
@@ -1843,18 +1846,8 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	if (clk_set_parent(&exynos5_clk_mout_epll.clk, &clk_fout_epll))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				clk_fout_epll.name, exynos5_clk_mout_epll.clk.name);
-	if (clk_set_parent(&exynos5_clk_mout_aclk_300_gscl_mid.clk, &exynos5_clk_mout_mpll_user.clk))
-		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
-			exynos5_clk_mout_mpll_user.clk.name, exynos5_clk_mout_aclk_300_gscl_mid.clk.name);
-	if (clk_set_parent(&exynos5_clk_mout_aclk_300_gscl.clk, &exynos5_clk_sclk_vpll.clk))
-		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
-			exynos5_clk_sclk_vpll.clk.name, exynos5_clk_mout_aclk_300_gscl.clk.name);
-	if (clk_set_parent(&exynos5_clk_aclk_300_gscl.clk, &exynos5_clk_aclk_300_gscl_sub))
-		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
-			exynos5_clk_aclk_300_gscl_sub.name, exynos5_clk_aclk_300_gscl.clk.name);
 
 	clk_set_rate(&exynos5_clk_sclk_apll.clk, 100000000);
-	clk_set_rate(&exynos5_clk_dout_aclk_300_gscl.clk, 310000000);
 	clk_set_rate(&exynos5_clk_dout_aclk_266.clk, 300000000);
 
 	clk_set_rate(&exynos5_clk_aclk_acp.clk, 267000000);

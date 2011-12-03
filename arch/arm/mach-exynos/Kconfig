@@ -333,6 +333,13 @@ config EXYNOS5_DEV_GSC
 	help
 	  Compile in platform device definitions for GSC
 
+config EXYNOS5_SETUP_GSC
+	bool
+	depends on VIDEO_EXYNOS_GSCALER
+	default y
+	help
+	  Common setup code for GSC
+
 config EXYNOS4_ENBLE_CLOCK_DOWN
 	bool "ARM core clock down feature enable"
 	depends on EXYNOS4_CPUIDLE
