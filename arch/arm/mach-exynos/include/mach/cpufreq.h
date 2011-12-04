@@ -87,7 +87,7 @@ struct exynos_dvfs_info {
 
 #if defined(CONFIG_ARCH_EXYNOS4)
 extern int exynos4210_cpufreq_init(struct exynos_dvfs_info *);
-extern int exynos4212_cpufreq_init(struct exynos_dvfs_info *);
+extern int exynos4x12_cpufreq_init(struct exynos_dvfs_info *);
 static inline int exynos5250_cpufreq_init(struct exynos_dvfs_info *info)
 {
 	return 0;
@@ -99,7 +99,7 @@ static inline int exynos4210_cpufreq_init(struct exynos_dvfs_info *info)
 	return 0;
 }
 
-static inline int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
+static inline int exynos4x12_cpufreq_init(struct exynos_dvfs_info *info)
 {
 	return 0;
 }

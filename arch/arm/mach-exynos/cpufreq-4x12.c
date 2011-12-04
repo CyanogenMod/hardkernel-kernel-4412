@@ -1,9 +1,9 @@
-/* linux/arch/arm/mach-exynos/cpufreq-4212.c
+/* linux/arch/arm/mach-exynos/cpufreq-4x12.c
  *
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * EXYNOS4212 - CPU frequency scaling support
+ * EXYNOS4X12 - CPU frequency scaling support
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -44,9 +44,9 @@ struct cpufreq_clkdiv {
 	unsigned int	clkdiv1;
 };
 
-static unsigned int exynos4212_volt_table[CPUFREQ_LEVEL_END];
+static unsigned int exynos4x12_volt_table[CPUFREQ_LEVEL_END];
 
-static struct cpufreq_frequency_table exynos4212_freq_table[] = {
+static struct cpufreq_frequency_table exynos4x12_freq_table[] = {
 	{L0, 1500*1000},
 	{L1, 1400*1000},
 	{L2, 1300*1000},
@@ -64,7 +64,7 @@ static struct cpufreq_frequency_table exynos4212_freq_table[] = {
 	{0, CPUFREQ_TABLE_END},
 };
 
-static struct cpufreq_clkdiv exynos4212_clkdiv_table[CPUFREQ_LEVEL_END];
+static struct cpufreq_clkdiv exynos4x12_clkdiv_table[CPUFREQ_LEVEL_END];
 
 static unsigned int clkdiv_cpu0_4212[CPUFREQ_LEVEL_END][7] = {
 	/*
@@ -258,7 +258,7 @@ static unsigned int clkdiv_cpu1_4412[CPUFREQ_LEVEL_END][3] = {
 	{ 3, 0, 0 },
 };
 
-static unsigned int exynos4_apll_pms_table[CPUFREQ_LEVEL_END] = {
+static unsigned int exynos4x12_apll_pms_table[CPUFREQ_LEVEL_END] = {
 	/* APLL FOUT L0: 1500MHz */
 	((250<<16)|(4<<8)|(0x0)),
 
@@ -355,7 +355,7 @@ static void set_clkdiv(unsigned int div_index)
 
 	/* Change Divider - CPU0 */
 
-	tmp = exynos4212_clkdiv_table[div_index].clkdiv;
+	tmp = exynos4x12_clkdiv_table[div_index].clkdiv;
 
 	__raw_writel(tmp, EXYNOS4_CLKDIV_CPU);
 
@@ -370,7 +370,7 @@ static void set_clkdiv(unsigned int div_index)
 #endif
 
 	/* Change Divider - CPU1 */
-	tmp = exynos4212_clkdiv_table[div_index].clkdiv1;
+	tmp = exynos4x12_clkdiv_table[div_index].clkdiv1;
 
 	__raw_writel(tmp, EXYNOS4_CLKDIV_CPU1);
 	if (soc_is_exynos4212())
@@ -405,14 +405,14 @@ static void set_apll(unsigned int new_index,
 	} while (tmp != 0x2);
 
 	/* 2. Set APLL Lock time */
-	pdiv = ((exynos4_apll_pms_table[new_index] >> 8) & 0x3f);
+	pdiv = ((exynos4x12_apll_pms_table[new_index] >> 8) & 0x3f);
 
 	__raw_writel((pdiv * 250), EXYNOS4_APLL_LOCK);
 
 	/* 3. Change PLL PMS values */
 	tmp = __raw_readl(EXYNOS4_APLL_CON0);
 	tmp &= ~((0x3ff << 16) | (0x3f << 8) | (0x7 << 0));
-	tmp |= exynos4_apll_pms_table[new_index];
+	tmp |= exynos4x12_apll_pms_table[new_index];
 	__raw_writel(tmp, EXYNOS4_APLL_CON0);
 
 	/* 4. wait_lock_time */
@@ -432,27 +432,27 @@ static void set_apll(unsigned int new_index,
 
 }
 
-bool exynos4212_pms_change(unsigned int old_index, unsigned int new_index)
+bool exynos4x12_pms_change(unsigned int old_index, unsigned int new_index)
 {
-	unsigned int old_pm = (exynos4_apll_pms_table[old_index] >> 8);
-	unsigned int new_pm = (exynos4_apll_pms_table[new_index] >> 8);
+	unsigned int old_pm = (exynos4x12_apll_pms_table[old_index] >> 8);
+	unsigned int new_pm = (exynos4x12_apll_pms_table[new_index] >> 8);
 
 	return (old_pm == new_pm) ? 0 : 1;
 }
 
-static void exynos4212_set_frequency(unsigned int old_index,
+static void exynos4x12_set_frequency(unsigned int old_index,
 				  unsigned int new_index)
 {
 	unsigned int tmp;
 
 	if (old_index > new_index) {
-		if (!exynos4212_pms_change(old_index, new_index)) {
+		if (!exynos4x12_pms_change(old_index, new_index)) {
 			/* 1. Change the system clock divider values */
 			set_clkdiv(new_index);
 			/* 2. Change just s value in apll m,p,s value */
 			tmp = __raw_readl(EXYNOS4_APLL_CON0);
 			tmp &= ~(0x7 << 0);
-			tmp |= (exynos4_apll_pms_table[new_index] & 0x7);
+			tmp |= (exynos4x12_apll_pms_table[new_index] & 0x7);
 			__raw_writel(tmp, EXYNOS4_APLL_CON0);
 
 		} else {
@@ -463,11 +463,11 @@ static void exynos4212_set_frequency(unsigned int old_index,
 			set_apll(new_index, old_index);
 		}
 	} else if (old_index < new_index) {
-		if (!exynos4212_pms_change(old_index, new_index)) {
+		if (!exynos4x12_pms_change(old_index, new_index)) {
 			/* 1. Change just s value in apll m,p,s value */
 			tmp = __raw_readl(EXYNOS4_APLL_CON0);
 			tmp &= ~(0x7 << 0);
-			tmp |= (exynos4_apll_pms_table[new_index] & 0x7);
+			tmp |= (exynos4x12_apll_pms_table[new_index] & 0x7);
 			__raw_writel(tmp, EXYNOS4_APLL_CON0);
 			/* 2. Change the system clock divider values */
 			set_clkdiv(new_index);
@@ -506,25 +506,25 @@ static void __init set_volt_table(void)
 		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
 #else
 	if (!for_1500 && !for_1200 && !for_1400) {
-		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L1].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L2].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L3].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L4].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L1].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L2].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L3].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L4].frequency = CPUFREQ_ENTRY_INVALID;
 	} else if (for_1200) {
-		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L1].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L2].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L1].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L2].frequency = CPUFREQ_ENTRY_INVALID;
 	} else if (for_1400) {
-		exynos4212_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
 	}
 
 	if (soc_is_exynos4212()) {
-		exynos4212_freq_table[L6].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L11].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4212_freq_table[L12].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L6].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L11].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos4x12_freq_table[L12].frequency = CPUFREQ_ENTRY_INVALID;
 	}
 #endif
 
@@ -532,15 +532,15 @@ static void __init set_volt_table(void)
 
 	if (exynos_result_of_asv == 0xff) {
 		for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
-			exynos4212_volt_table[i] = asv_voltage_s[i];
+			exynos4x12_volt_table[i] = asv_voltage_s[i];
 	} else {
 		for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
-			exynos4212_volt_table[i] =
+			exynos4x12_volt_table[i] =
 				asv_voltage_step_25[i][exynos_result_of_asv];
 	}
 }
 
-int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
+int exynos4x12_cpufreq_init(struct exynos_dvfs_info *info)
 {
 	int i;
 	unsigned int tmp;
@@ -568,7 +568,7 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 
 	for (i = L0; i <  CPUFREQ_LEVEL_END; i++) {
 
-		exynos4212_clkdiv_table[i].index = i;
+		exynos4x12_clkdiv_table[i].index = i;
 
 		tmp = __raw_readl(EXYNOS4_CLKDIV_CPU);
 
@@ -601,7 +601,7 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 				(clkdiv_cpu0_4412[i][7] << EXYNOS4_CLKDIV_CPU0_CORE2_SHIFT));
 		}
 
-		exynos4212_clkdiv_table[i].clkdiv = tmp;
+		exynos4x12_clkdiv_table[i].clkdiv = tmp;
 
 		tmp = __raw_readl(EXYNOS4_CLKDIV_CPU1);
 
@@ -618,7 +618,7 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 				(clkdiv_cpu1_4412[i][1] << EXYNOS4_CLKDIV_CPU1_HPM_SHIFT) |
 				(clkdiv_cpu1_4412[i][2] << EXYNOS4_CLKDIV_CPU1_CORES_SHIFT));
 		}
-		exynos4212_clkdiv_table[i].clkdiv1 = tmp;
+		exynos4x12_clkdiv_table[i].clkdiv1 = tmp;
 	}
 
 	info->mpll_freq_khz = rate;
@@ -627,10 +627,10 @@ int exynos4212_cpufreq_init(struct exynos_dvfs_info *info)
 	info->max_support_idx = max_support_idx;
 	info->min_support_idx = min_support_idx;
 	info->cpu_clk = cpu_clk;
-	info->volt_table = exynos4212_volt_table;
-	info->freq_table = exynos4212_freq_table;
-	info->set_freq = exynos4212_set_frequency;
-	info->need_apll_change = exynos4212_pms_change;
+	info->volt_table = exynos4x12_volt_table;
+	info->freq_table = exynos4x12_freq_table;
+	info->set_freq = exynos4x12_set_frequency;
+	info->need_apll_change = exynos4x12_pms_change;
 
 #ifdef ENABLE_CLKOUT
 	tmp = __raw_readl(EXYNOS4_CLKOUT_CMU_CPU);
@@ -660,4 +660,4 @@ err_moutcore:
 	pr_debug("%s: failed initialization\n", __func__);
 	return -EINVAL;
 }
-EXPORT_SYMBOL(exynos4212_cpufreq_init);
+EXPORT_SYMBOL(exynos4x12_cpufreq_init);
