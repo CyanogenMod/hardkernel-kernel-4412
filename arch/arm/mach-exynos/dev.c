@@ -17,6 +17,7 @@
 #include <linux/slab.h>
 
 #include <mach/dev.h>
+#include <mach/busfreq.h>
 
 static LIST_HEAD(domains_list);
 static DEFINE_MUTEX(domains_mutex);
@@ -104,6 +105,7 @@ int dev_lock(struct device *device, struct device *dev, unsigned long freq)
 	lock->device = dev;
 	lock->freq = freq;
 	list_add(&lock->node, &domain->domain_list);
+	exynos4_request_apply(freq, dev);
 
 out:
 	mutex_unlock(&domains_mutex);

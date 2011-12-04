@@ -13,6 +13,8 @@
 #ifndef __ASM_ARCH_BUSFREQ_H
 #define __ASM_ARCH_BUSFREQ_H __FILE__
 
+#include <linux/notifier.h>
+
 #define MAX_LOAD		100
 #define DIVIDING_FACTOR		10000
 #define PPC_THRESHOLD		23
@@ -25,6 +27,7 @@
 
 struct opp;
 struct device;
+struct busfreq_table;
 
 struct busfreq_data {
 	bool use;
@@ -38,13 +41,14 @@ struct busfreq_data {
 	struct kobject *busfreq_kobject;
 	int table_size;
 	struct busfreq_table *table;
-	cputime64_t *time_in_state;
+	unsigned long long *time_in_state;
 	unsigned long long last_time;
 	unsigned int load_average[PRE_LOAD_SIZE];
 	int index;
 
 	struct notifier_block exynos4_buspm_notifier;
 	struct notifier_block exynos4_reboot_notifier;
+	struct notifier_block exynos4_request_notifier;
 	struct attribute_group busfreq_attr_group;
 	int (*init)	(struct device *dev, struct busfreq_data *data);
 	unsigned int (*target)	(unsigned int index);
@@ -60,6 +64,8 @@ struct busfreq_table {
 	unsigned int clk_dmc0div;
 	unsigned int clk_dmc1div;
 };
+
+void exynos4_request_apply(unsigned long freq, struct device *dev);
 
 int exynos4210_init(struct device *dev, struct busfreq_data *data);
 unsigned int exynos4210_target(unsigned int index);
