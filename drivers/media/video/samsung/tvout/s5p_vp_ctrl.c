@@ -532,7 +532,7 @@ void s5p_vp_ctrl_stop(void)
 		s5p_vp_ctrl_private.running = false;
 
 #if defined(CONFIG_BUSFREQ)
-	exynos4_cpufreq_lock_free(DVFS_LOCK_ID_TV);
+	exynos_cpufreq_lock_free(DVFS_LOCK_ID_TV);
 	exynos4_busfreq_lock_free(DVFS_LOCK_ID_TV);
 #elif defined(CONFIG_BUSFREQ_OPP)
 	/* unlock fixed bus frequency */

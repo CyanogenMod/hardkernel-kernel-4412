@@ -52,17 +52,17 @@ enum cpufreq_lock_ID {
 	DVFS_LOCK_ID_END,
 };
 
-int exynos4_cpufreq_lock(unsigned int nId,
+int exynos_cpufreq_lock(unsigned int nId,
 			enum cpufreq_level_request cpufreq_level);
-void exynos4_cpufreq_lock_free(unsigned int nId);
+void exynos_cpufreq_lock_free(unsigned int nId);
 
 int exynos4_busfreq_lock(unsigned int nId,
 			enum busfreq_level_request busfreq_level);
 void exynos4_busfreq_lock_free(unsigned int nId);
 
-int exynos4_cpufreq_upper_limit(unsigned int nId,
+int exynos_cpufreq_upper_limit(unsigned int nId,
 			enum cpufreq_level_request cpufreq_level);
-void exynos4_cpufreq_upper_limit_free(unsigned int nId);
+void exynos_cpufreq_upper_limit_free(unsigned int nId);
 
 #define MAX_INDEX	10
 

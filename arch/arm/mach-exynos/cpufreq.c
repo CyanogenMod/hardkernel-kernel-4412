@@ -3,7 +3,7 @@
  * Copyright (c) 2010-2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com
  *
- * EXYNOS4 - CPU frequency scaling support
+ * EXYNOS - CPU frequency scaling support for EXYNOS series
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -35,7 +35,7 @@ static struct exynos_dvfs_info *exynos_info;
 static struct regulator *arm_regulator;
 static struct cpufreq_freqs freqs;
 
-static bool exynos4_cpufreq_init_done;
+static bool exynos_cpufreq_init_done;
 static DEFINE_MUTEX(set_freq_lock);
 static DEFINE_MUTEX(set_cpu_freq_lock);
 
@@ -49,18 +49,18 @@ unsigned int g_cpufreq_lock_id;
 unsigned int g_cpufreq_lock_val[DVFS_LOCK_ID_END];
 unsigned int g_cpufreq_lock_level;
 
-int exynos4_verify_speed(struct cpufreq_policy *policy)
+int exynos_verify_speed(struct cpufreq_policy *policy)
 {
 	return cpufreq_frequency_table_verify(policy,
 					      exynos_info->freq_table);
 }
 
-unsigned int exynos4_getspeed(unsigned int cpu)
+unsigned int exynos_getspeed(unsigned int cpu)
 {
 	return clk_get_rate(exynos_info->cpu_clk) / 1000;
 }
 
-static int exynos4_target(struct cpufreq_policy *policy,
+static int exynos_target(struct cpufreq_policy *policy,
 			  unsigned int target_freq,
 			  unsigned int relation)
 {
@@ -141,9 +141,9 @@ out:
 	return ret;
 }
 
-atomic_t exynos4_cpufreq_lock_count;
+atomic_t exynos_cpufreq_lock_count;
 
-int exynos4_cpufreq_lock(unsigned int nId,
+int exynos_cpufreq_lock(unsigned int nId,
 			 enum cpufreq_level_request cpufreq_level)
 {
 	int ret = 0, i, old_idx = 0;
@@ -152,7 +152,7 @@ int exynos4_cpufreq_lock(unsigned int nId,
 	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
 	struct cpufreq_frequency_table *freq_table = exynos_info->freq_table;
 
-	if (!exynos4_cpufreq_init_done)
+	if (!exynos_cpufreq_init_done)
 		return 0;
 
 	if (g_cpufreq_lock_id & (1 << nId)) {
@@ -207,13 +207,13 @@ int exynos4_cpufreq_lock(unsigned int nId,
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(exynos4_cpufreq_lock);
+EXPORT_SYMBOL_GPL(exynos_cpufreq_lock);
 
-void exynos4_cpufreq_lock_free(unsigned int nId)
+void exynos_cpufreq_lock_free(unsigned int nId)
 {
 	unsigned int i;
 
-	if (!exynos4_cpufreq_init_done)
+	if (!exynos_cpufreq_init_done)
 		return;
 
 	mutex_lock(&set_cpu_freq_lock);
@@ -228,9 +228,9 @@ void exynos4_cpufreq_lock_free(unsigned int nId)
 	}
 	mutex_unlock(&set_cpu_freq_lock);
 }
-EXPORT_SYMBOL_GPL(exynos4_cpufreq_lock_free);
+EXPORT_SYMBOL_GPL(exynos_cpufreq_lock_free);
 
-int exynos4_cpufreq_upper_limit(unsigned int nId,
+int exynos_cpufreq_upper_limit(unsigned int nId,
 				enum cpufreq_level_request cpufreq_level)
 {
 	int ret = 0, cpu = 0;
@@ -238,7 +238,7 @@ int exynos4_cpufreq_upper_limit(unsigned int nId,
 	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
 	struct cpufreq_frequency_table *freq_table = exynos_info->freq_table;
 
-	if (!exynos4_cpufreq_init_done)
+	if (!exynos_cpufreq_init_done)
 		return 0;
 
 	if (g_cpufreq_limit_id & (1 << nId)) {
@@ -267,11 +267,11 @@ int exynos4_cpufreq_upper_limit(unsigned int nId,
 	return ret;
 }
 
-void exynos4_cpufreq_upper_limit_free(unsigned int nId)
+void exynos_cpufreq_upper_limit_free(unsigned int nId)
 {
 	unsigned int i;
 
-	if (!exynos4_cpufreq_init_done)
+	if (!exynos_cpufreq_init_done)
 		return;
 
 	mutex_lock(&set_cpu_freq_lock);
@@ -289,25 +289,25 @@ void exynos4_cpufreq_upper_limit_free(unsigned int nId)
 }
 
 #ifdef CONFIG_PM
-static int exynos4_cpufreq_suspend(struct cpufreq_policy *policy)
+static int exynos_cpufreq_suspend(struct cpufreq_policy *policy)
 {
 	return 0;
 }
 
-static int exynos4_cpufreq_resume(struct cpufreq_policy *policy)
+static int exynos_cpufreq_resume(struct cpufreq_policy *policy)
 {
 	return 0;
 }
 #endif
 
-static int exynos4_cpufreq_notifier_event(struct notifier_block *this,
+static int exynos_cpufreq_notifier_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
 	int ret = 0;
 
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
-		ret = exynos4_cpufreq_lock(DVFS_LOCK_ID_PM,
+		ret = exynos_cpufreq_lock(DVFS_LOCK_ID_PM,
 					   exynos_info->pm_lock_idx);
 		if (ret < 0)
 			return NOTIFY_BAD;
@@ -316,19 +316,19 @@ static int exynos4_cpufreq_notifier_event(struct notifier_block *this,
 	case PM_POST_RESTORE:
 	case PM_POST_SUSPEND:
 		pr_debug("PM_POST_SUSPEND for CPUFREQ: %d\n", ret);
-		exynos4_cpufreq_lock_free(DVFS_LOCK_ID_PM);
+		exynos_cpufreq_lock_free(DVFS_LOCK_ID_PM);
 		return NOTIFY_OK;
 	}
 	return NOTIFY_DONE;
 }
 
-static struct notifier_block exynos4_cpufreq_notifier = {
-	.notifier_call = exynos4_cpufreq_notifier_event,
+static struct notifier_block exynos_cpufreq_notifier = {
+	.notifier_call = exynos_cpufreq_notifier_event,
 };
 
-static int exynos4_cpufreq_cpu_init(struct cpufreq_policy *policy)
+static int exynos_cpufreq_cpu_init(struct cpufreq_policy *policy)
 {
-	policy->cur = policy->min = policy->max = exynos4_getspeed(policy->cpu);
+	policy->cur = policy->min = policy->max = exynos_getspeed(policy->cpu);
 
 	cpufreq_frequency_table_get_attr(exynos_info->freq_table, policy->cpu);
 
@@ -351,12 +351,12 @@ static int exynos4_cpufreq_cpu_init(struct cpufreq_policy *policy)
 	return cpufreq_frequency_table_cpuinfo(policy, exynos_info->freq_table);
 }
 
-static int exynos4_cpufreq_reboot_notifier_call(struct notifier_block *this,
+static int exynos_cpufreq_reboot_notifier_call(struct notifier_block *this,
 				   unsigned long code, void *_cmd)
 {
 	int ret = 0;
 
-	ret = exynos4_cpufreq_lock(DVFS_LOCK_ID_PM, exynos_info->pm_lock_idx);
+	ret = exynos_cpufreq_lock(DVFS_LOCK_ID_PM, exynos_info->pm_lock_idx);
 	if (ret < 0)
 		return NOTIFY_BAD;
 
@@ -364,20 +364,20 @@ static int exynos4_cpufreq_reboot_notifier_call(struct notifier_block *this,
 	return NOTIFY_DONE;
 }
 
-static struct notifier_block exynos4_cpufreq_reboot_notifier = {
-	.notifier_call = exynos4_cpufreq_reboot_notifier_call,
+static struct notifier_block exynos_cpufreq_reboot_notifier = {
+	.notifier_call = exynos_cpufreq_reboot_notifier_call,
 };
 
-static struct cpufreq_driver exynos4_driver = {
+static struct cpufreq_driver exynos_driver = {
 	.flags		= CPUFREQ_STICKY,
-	.verify		= exynos4_verify_speed,
-	.target		= exynos4_target,
-	.get		= exynos4_getspeed,
-	.init		= exynos4_cpufreq_cpu_init,
-	.name		= "exynos4_cpufreq",
+	.verify		= exynos_verify_speed,
+	.target		= exynos_target,
+	.get		= exynos_getspeed,
+	.init		= exynos_cpufreq_cpu_init,
+	.name		= "exynos_cpufreq",
 #ifdef CONFIG_PM
-	.suspend	= exynos4_cpufreq_suspend,
-	.resume		= exynos4_cpufreq_resume,
+	.suspend	= exynos_cpufreq_suspend,
+	.resume		= exynos_cpufreq_resume,
 #endif
 };
 
@@ -413,23 +413,23 @@ static int __init exynos_cpufreq_init(void)
 		goto err_vdd_arm;
 	}
 
-	register_pm_notifier(&exynos4_cpufreq_notifier);
-	register_reboot_notifier(&exynos4_cpufreq_reboot_notifier);
+	register_pm_notifier(&exynos_cpufreq_notifier);
+	register_reboot_notifier(&exynos_cpufreq_reboot_notifier);
 
-	exynos4_cpufreq_init_done = true;
+	exynos_cpufreq_init_done = true;
 
 	g_cpufreq_lock_level = exynos_info->min_support_idx;
 	g_cpufreq_limit_level = exynos_info->max_support_idx;
 
-	if (cpufreq_register_driver(&exynos4_driver)) {
+	if (cpufreq_register_driver(&exynos_driver)) {
 		pr_err("failed to register cpufreq driver\n");
 		goto err_cpufreq;
 	}
 
 	return 0;
 err_cpufreq:
-	unregister_reboot_notifier(&exynos4_cpufreq_reboot_notifier);
-	unregister_pm_notifier(&exynos4_cpufreq_notifier);
+	unregister_reboot_notifier(&exynos_cpufreq_reboot_notifier);
+	unregister_pm_notifier(&exynos_cpufreq_notifier);
 
 	if (!IS_ERR(arm_regulator))
 		regulator_put(arm_regulator);
