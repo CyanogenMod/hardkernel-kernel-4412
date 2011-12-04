@@ -116,12 +116,12 @@ static int exynos_target(struct cpufreq_policy *policy,
 	if ((freqs.new > freqs.old) && !safe_arm_volt) {
 		/* Firstly, voltage up to increase frequency */
 		regulator_set_voltage(arm_regulator, arm_volt,
-				arm_volt);
+				arm_volt + 25000);
 	}
 
 	if (safe_arm_volt)
 		regulator_set_voltage(arm_regulator, safe_arm_volt,
-				      safe_arm_volt);
+				      safe_arm_volt + 25000);
 	if (freqs.new != freqs.old)
 		exynos_info->set_freq(old_index, index);
 
@@ -132,7 +132,7 @@ static int exynos_target(struct cpufreq_policy *policy,
 	   ((freqs.new > freqs.old) && safe_arm_volt)) {
 		/* down the voltage after frequency change */
 		regulator_set_voltage(arm_regulator, arm_volt,
-				arm_volt);
+				arm_volt + 25000);
 	}
 
 out:
