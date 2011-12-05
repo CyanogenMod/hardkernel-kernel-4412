@@ -309,7 +309,13 @@ static int __devinit s5p_cec_probe(struct platform_device *pdev)
 
 
 	/* get ioremap addr */
-	s5p_cec_mem_probe(pdev);
+	ret = s5p_cec_mem_probe(pdev);
+
+	if (ret != 0) {
+		printk(KERN_ERR  "failed to s5p_cec_mem_probe ret = %d\n", ret);
+
+		return ret;
+	}
 
 	if (misc_register(&cec_misc_device)) {
 		printk(KERN_WARNING " Couldn't register device 10, %d.\n",

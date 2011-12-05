@@ -390,7 +390,7 @@ int s5p_mixer_ctrl_disable_layer(enum s5p_mixer_layer layer)
 
 int s5p_mixer_ctrl_set_priority(enum s5p_mixer_layer layer, u32 prio)
 {
-	if ((prio < 0) || (prio > 15)) {
+	if (prio > 15) {
 		tvout_err("layer priority range : 0 - 15\n");
 		return -1;
 	}
@@ -415,7 +415,7 @@ int s5p_mixer_ctrl_set_priority(enum s5p_mixer_layer layer, u32 prio)
 }
 
 int s5p_mixer_ctrl_set_dst_win_pos(enum s5p_mixer_layer layer,
-				u32 dst_x, u32 dst_y, u32 w, u32 h)
+				int dst_x, int dst_y, u32 w, u32 h)
 {
 	u32 w_t, h_t;
 	enum s5p_tvout_disp_mode std;
@@ -507,8 +507,8 @@ int s5p_mixer_ctrl_set_dst_win_pos(enum s5p_mixer_layer layer,
 	tvout_dbg("output device screen size : width = %d, height = %d",
 			w_t, h_t);
 
-	s5p_mixer_ctrl_private.layer[layer].dst_x = dst_x;
-	s5p_mixer_ctrl_private.layer[layer].dst_y = dst_y;
+	s5p_mixer_ctrl_private.layer[layer].dst_x = (u32)dst_x;
+	s5p_mixer_ctrl_private.layer[layer].dst_y = (u32)dst_y;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	if (suspend_status) {
@@ -517,7 +517,7 @@ int s5p_mixer_ctrl_set_dst_win_pos(enum s5p_mixer_layer layer,
 	}
 #endif
 	if (s5p_mixer_ctrl_private.running)
-		s5p_mixer_set_grp_layer_dst_pos(layer, dst_x, dst_y);
+		s5p_mixer_set_grp_layer_dst_pos(layer, (u32)dst_x, (u32)dst_y);
 
 	return 0;
 }

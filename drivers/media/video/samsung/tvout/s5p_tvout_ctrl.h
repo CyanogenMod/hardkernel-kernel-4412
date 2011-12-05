@@ -34,7 +34,7 @@ extern int s5p_mixer_ctrl_enable_layer(enum s5p_mixer_layer layer);
 extern int s5p_mixer_ctrl_disable_layer(enum s5p_mixer_layer layer);
 extern int s5p_mixer_ctrl_set_priority(enum s5p_mixer_layer layer, u32 prio);
 extern int s5p_mixer_ctrl_set_dst_win_pos(enum s5p_mixer_layer layer,
-		u32 dst_x, u32 dst_y, u32 w, u32 h);
+		int dst_x, int dst_y, u32 w, u32 h);
 extern int s5p_mixer_ctrl_set_src_win_pos(enum s5p_mixer_layer layer,
 		u32 src_x, u32 src_y, u32 w, u32 h);
 extern int s5p_mixer_ctrl_set_buffer_address(enum s5p_mixer_layer layer,

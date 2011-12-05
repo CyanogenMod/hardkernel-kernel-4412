@@ -135,10 +135,10 @@ not_found:
 void s5p_tvout_unmap_resource_mem(
 		void __iomem *base, struct resource *res)
 {
-	if (!base)
+	if (base)
 		iounmap(base);
 
-	if (!res) {
+	if (res) {
 		release_resource(res);
 		kfree(res);
 	}
