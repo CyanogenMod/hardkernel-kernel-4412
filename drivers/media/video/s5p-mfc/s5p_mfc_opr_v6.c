@@ -208,6 +208,7 @@ int s5p_mfc_alloc_instance_buffer(struct s5p_mfc_ctx *ctx)
 		break;
 	case S5P_FIMV_CODEC_MPEG4_DEC:
 	case S5P_FIMV_CODEC_H263_DEC:
+	case S5P_FIMV_CODEC_VC1RCV_DEC:
 	case S5P_FIMV_CODEC_VC1_DEC:
 	case S5P_FIMV_CODEC_MPEG2_DEC:
 	case S5P_FIMV_CODEC_VP8_DEC:
