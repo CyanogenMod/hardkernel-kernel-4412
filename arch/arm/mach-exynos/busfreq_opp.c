@@ -63,12 +63,22 @@ void update_busfreq_stat(struct busfreq_data *data, unsigned int index)
 	data->last_time = cur_time;
 }
 
-static struct opp *step_down(struct busfreq_data *data)
+static struct opp __maybe_unused *step_up(struct busfreq_data *data)
+{
+	unsigned long newfreq = opp_get_freq(data->curr_opp) + 1;
+
+	if (data->max_opp == data->curr_opp)
+		return data->curr_opp;
+
+	return opp_find_freq_ceil(data->dev, &newfreq);
+}
+
+static struct opp __maybe_unused *step_down(struct busfreq_data *data)
 {
 	unsigned long newfreq = opp_get_freq(data->curr_opp) - 1;
 
-	if (newfreq < 100100)
-		newfreq = 100100;
+	if (data->min_opp == data->curr_opp)
+		return data->curr_opp;
 
 	return opp_find_freq_floor(data->dev, &newfreq);
 }
