@@ -37,6 +37,7 @@ struct busfreq_data {
 	struct delayed_work worker;
 	struct opp *curr_opp;
 	struct opp *max_opp;
+	struct opp *min_opp;
 	struct regulator *vdd_int;
 	struct regulator *vdd_mif;
 	unsigned int sampling_rate;

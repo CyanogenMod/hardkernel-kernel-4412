@@ -384,6 +384,7 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 	unsigned int i;
 	unsigned int tmp;
 	unsigned long maxfreq = UINT_MAX;
+	unsigned long minfreq = 0;
 	int ret;
 
 	/* Enable pause function for DREX2 DVFS */
@@ -427,6 +428,7 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 
 	/* Find max frequency */
 	data->max_opp = opp_find_freq_floor(dev, &maxfreq);
+	data->min_opp = opp_find_freq_ceil(dev, &minfreq);
 
 	data->vdd_int = regulator_get(NULL, "vdd_int");
 	if (IS_ERR(data->vdd_int)) {
