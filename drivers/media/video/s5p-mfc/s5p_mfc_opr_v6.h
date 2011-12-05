@@ -123,8 +123,8 @@ void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx);
 /* Definitions for shared memory compatibility */
 #define PIC_TIME_TOP		S5P_FIMV_D_RET_PICTURE_TAG_TOP
 #define PIC_TIME_BOT		S5P_FIMV_D_RET_PICTURE_TAG_BOT
-#define CROP_INFO_H		S5P_FIMV_D_DECODED_CROP_INFO1
-#define CROP_INFO_V		S5P_FIMV_D_DECODED_CROP_INFO2
+#define CROP_INFO_H		S5P_FIMV_D_DISPLAY_CROP_INFO1
+#define CROP_INFO_V		S5P_FIMV_D_DISPLAY_CROP_INFO2
 
 /* FIXME: temporal definition to avoid compile error */
 enum MFC_SHM_OFS
