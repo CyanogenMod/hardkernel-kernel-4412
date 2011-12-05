@@ -693,16 +693,29 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		regs |= (0x1 << slot->id) << 16;
 		mci_writel(slot->host, UHS_REG, regs);
 
-		if (ios->bus_width == MMC_BUS_WIDTH_4)
-			mci_writel(slot->host, CLKSEL, 0x00020001);
-		else if (ios->bus_width == MMC_BUS_WIDTH_8)
-			mci_writel(slot->host, CLKSEL, 0x00020001);
+		if (ios->bus_width == MMC_BUS_WIDTH_4) {
+			if (soc_is_exynos4412() && (samsung_rev() >=
+						EXYNOS4412_REV_1_0))
+				mci_writel(slot->host, CLKSEL, 0x00010002);
+			else
+				mci_writel(slot->host, CLKSEL, 0x00020001);
+		} else if (ios->bus_width == MMC_BUS_WIDTH_8) {
+			if (soc_is_exynos4412() && (samsung_rev() >=
+						EXYNOS4412_REV_1_0))
+				mci_writel(slot->host, CLKSEL, 0x00010002);
+			else
+				mci_writel(slot->host, CLKSEL, 0x00020001);
+		}
 	} else {
 		/* 1, 4, 8 Bit SDR */
 		regs = mci_readl(slot->host, UHS_REG);
 		regs &= ~(0x1 << slot->id) << 16;
 		mci_writel(slot->host, UHS_REG, regs);
-		mci_writel(slot->host, CLKSEL, 0x00010001);
+		if (soc_is_exynos4412() && (samsung_rev() >=
+					EXYNOS4412_REV_1_0))
+			mci_writel(slot->host, CLKSEL, 0x00010002);
+		else
+			mci_writel(slot->host, CLKSEL, 0x00010001);
 	}
 
 	if (ios->clock) {
@@ -1654,6 +1667,10 @@ static int dw_mci_probe(struct platform_device *pdev)
 		goto err_free_hclk;
 	}
 	clk_enable(host->cclk);
+
+	if ((soc_is_exynos4412() || soc_is_exynos4212())
+			&& (samsung_rev() <  EXYNOS4412_REV_1_0))
+		pdata->bus_hz = 66 * 1000 * 1000;
 
 	host->bus_hz = pdata->bus_hz;
 	host->quirks = pdata->quirks;
