@@ -1199,7 +1199,7 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 		mfc_debug(2, "Set loop filter to: %d\n", ctx->loop_filter_mpeg4);
 		reg |= (ctx->loop_filter_mpeg4 << S5P_FIMV_D_OPT_LF_CTRL_SHIFT);
 	}
-	if (ctx->dst_fmt->fourcc == V4L2_PIX_FMT_NV12MT)
+	if (ctx->dst_fmt->fourcc == V4L2_PIX_FMT_NV12MT_16X16)
 		reg |= (0x1 << S5P_FIMV_D_OPT_TILE_MODE_SHIFT);
 
 	WRITEL(reg, S5P_FIMV_D_DEC_OPTIONS);

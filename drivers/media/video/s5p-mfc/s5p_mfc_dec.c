@@ -36,6 +36,13 @@
 
 static struct s5p_mfc_fmt formats[] = {
 	{
+		.name = "4:2:0 2 Planes 16x16 Tiles",
+		.fourcc = V4L2_PIX_FMT_NV12MT_16X16,
+		.codec_mode = MFC_FORMATS_NO_CODEC,
+		.type = MFC_FMT_RAW,
+		.num_planes = 2,
+	},
+	{
 		.name = "4:2:0 2 Planes 64x32 Tiles",
 		.fourcc = V4L2_PIX_FMT_NV12MT,
 		.codec_mode = MFC_FORMATS_NO_CODEC,
@@ -937,7 +944,12 @@ static int vidioc_try_fmt(struct file *file, void *priv, struct v4l2_format *f)
 			mfc_err("Unsupported format for destination.\n");
 			return -EINVAL;
 		}
-		if (!IS_MFCV6(dev)) {
+		if (IS_MFCV6(dev)) {
+			if (fmt->fourcc == V4L2_PIX_FMT_NV12MT) {
+				mfc_err("Not supported format.\n");
+				return -EINVAL;
+			}
+		} else {
 			if (fmt->fourcc != V4L2_PIX_FMT_NV12MT) {
 				mfc_err("Not supported format.\n");
 				return -EINVAL;
