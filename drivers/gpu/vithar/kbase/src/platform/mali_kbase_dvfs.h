@@ -1,11 +1,13 @@
-/*
- * This confidential and proprietary software may be used only as
- * authorised by a licensing agreement from ARM Limited
- * (C) COPYRIGHT 2010-2011 ARM Limited
- * ALL RIGHTS RESERVED
- * The entire notice above must be reproduced on all authorised
- * copies and copies may only be made to the extent permitted
- * by a licensing agreement from ARM Limited.
+/* drivers/gpu/vithar/kbase/src/platform/mali_kbase_dvfs.h
+ *
+ * Copyright 2011 by S.LSI. Samsung Electronics Inc.
+ * San#24, Nongseo-Dong, Giheung-Gu, Yongin, Korea
+ *
+ * Samsung SoC Mali-T604 DVFS driver
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software FoundatIon.
  */
 
 /**
