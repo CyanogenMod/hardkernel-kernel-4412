@@ -15,6 +15,8 @@
 
 #include <linux/notifier.h>
 
+#include <mach/ppmu.h>
+
 #define MAX_LOAD		100
 #define DIVIDING_FACTOR		10000
 #define PPC_THRESHOLD		23
@@ -23,7 +25,7 @@
 #define AVE_CUTLINE		5
 #define LV0_CUTLINE		9
 #define LV1_CUTLINE		4
-#define PRE_LOAD_SIZE		3
+#define LOAD_HISTORY_SIZE	5
 
 struct opp;
 struct device;
@@ -43,7 +45,7 @@ struct busfreq_data {
 	struct busfreq_table *table;
 	unsigned long long *time_in_state;
 	unsigned long long last_time;
-	unsigned int load_average[PRE_LOAD_SIZE];
+	unsigned int load_history[PPMU_END][LOAD_HISTORY_SIZE];
 	int index;
 
 	struct notifier_block exynos4_buspm_notifier;

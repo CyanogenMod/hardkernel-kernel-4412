@@ -76,30 +76,44 @@ static struct opp *step_down(struct busfreq_data *data)
 static struct opp *busfreq_monitor(struct busfreq_data *data)
 {
 	struct opp *opp;
-	int i, cpu_load_average;
-	int sum = 0;
+	int i;
+	unsigned int cpu_load_average;
+	unsigned int dmc0_load_average;
+	unsigned int dmc1_load_average;
 	unsigned long lockfreq;
-	unsigned long newfreq = opp_get_freq(data->curr_opp);
-	unsigned long long cpu_load = 0;
-	unsigned long long dmc_load = 0;
+	unsigned long newfreq = opp_get_freq(data->curr_opp) / 1000;
+	unsigned long maxfreq = opp_get_freq(data->max_opp) / 1000;
+	unsigned long long cpu_load;
+	unsigned long long dmc0_load;
+	unsigned long long dmc1_load;
 
 	ppmu_update(data->dev);
 
-	cpu_load = ppmu_load[PPMU_CPU];
-	dmc_load = (ppmu_load[PPMU_DMC0] + ppmu_load[PPMU_DMC1]) / 2;
+	/* Convert from base xxx to base maxfreq */
+	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * newfreq, maxfreq);
+	dmc0_load = div64_u64(ppmu_load[PPMU_DMC0] * newfreq, maxfreq);
+	dmc1_load = div64_u64(ppmu_load[PPMU_DMC1] * newfreq, maxfreq);
 
-	data->load_average[data->index++] = cpu_load;
+	data->load_history[PPMU_CPU][data->index] = cpu_load;
+	data->load_history[PPMU_DMC0][data->index] = dmc0_load;
+	data->load_history[PPMU_DMC1][data->index++] = dmc1_load;
 
-	if (data->index >= PRE_LOAD_SIZE)
+	if (data->index >= LOAD_HISTORY_SIZE)
 		data->index = 0;
 
-	for (i = 0; i < PRE_LOAD_SIZE; i++)
-		sum += data->load_average[i];
+	for (i = 0; i < LOAD_HISTORY_SIZE; i++) {
+		cpu_load_average += data->load_history[PPMU_CPU][i];
+		dmc0_load_average += data->load_history[PPMU_DMC0][i];
+		dmc1_load_average += data->load_history[PPMU_DMC1][i];
+	}
 
-	cpu_load_average = (int)(div_u64(sum, PRE_LOAD_SIZE));
+	/* Calculate average Load */
+	cpu_load_average /= LOAD_HISTORY_SIZE;
+	dmc0_load_average /= LOAD_HISTORY_SIZE;
+	dmc1_load_average /= LOAD_HISTORY_SIZE;
 
 	if (cpu_load > LV0_CUTLINE) {
-		newfreq = 400200;
+		newfreq = opp_get_freq(data->max_opp);
 	} else if (cpu_load_average <= AVE_CUTLINE) {
 		if (cpu_load > LV1_CUTLINE) {
 			newfreq = 267200;
@@ -111,13 +125,9 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 		}
 	}
 
-	if (dmc_load > IDLE_THRESHOLD)
-		newfreq = 400200;
-
 	lockfreq = dev_max_freq(data->dev);
 
-	if (lockfreq > newfreq)
-		newfreq = lockfreq;
+	newfreq = max(lockfreq, newfreq);
 
 	opp = opp_find_freq_ceil(data->dev, &newfreq);
 
