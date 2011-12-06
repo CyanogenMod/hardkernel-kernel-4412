@@ -238,6 +238,7 @@ struct mmc_host {
 
 #define MMC_CAP2_CACHE_CTRL	(1 << 1)	/* Allow cache control */
 #define MMC_CAP2_POWEROFF_NOTIFY (1 << 2)	/* Notify poweroff supported */
+#define MMC_CAP2_PACKED_CMD	(1 << 4)	/* Allow packed command */
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 	unsigned int        power_notify_type;
