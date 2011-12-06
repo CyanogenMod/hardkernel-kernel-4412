@@ -71,7 +71,7 @@
 
 /* Reserved memory on DRAM */
 #define BASE_MEM_SIZE	(CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP << 10)
-#define VLIW_SIZE_MAX	(0x20000)	/* Enough? */
+#define VLIW_SIZE_MAX	(0x20000)
 #define CGA_SIZE_MAX	(0x10000)
 #define DATA_SIZE_MAX	(0x20000)
 #define BITSTREAM_SIZE_MAX	(0x7FFFFFFF)
@@ -124,11 +124,11 @@ struct srp_info {
 	unsigned int	obuf1_pa;
 	unsigned long	obuf_size;		/* OBUF size byte */
 	unsigned long	ibuf_size;		/* IBUF size byte */
-	unsigned long	ibuf_fill_size[2];	/* Fill size */
+	unsigned long	ibuf_fill_size[2];	/* IBUF Fill size */
 
-	unsigned char	*wbuf;
-	unsigned int	wbuf_pa;			/* Physical address */
-	unsigned long	wbuf_pos;			/* Write pointer */
+	unsigned char	*wbuf;			/* Temporatry BUF VA */
+	unsigned int	wbuf_pa;		/* Temporatry BUF PA */
+	unsigned long	wbuf_pos;		/* Write pointer */
 	unsigned long	wbuf_fill_size;		/* Total size by user write() */
 
 	int ibuf_next;
@@ -141,32 +141,28 @@ struct srp_info {
 	unsigned long frame_size;
 	unsigned long frame_count;
 	unsigned long frame_count_base;
-	unsigned long decoded_pcmsz;
 	unsigned long channel;			/* Mono = 1, Stereo = 2 */
-	unsigned long sample_rate;
+	unsigned long sample_rate;		/* Sampling Rate 8000 ~ 48000 */
 	unsigned long bit_rate;
-	unsigned long vliw_rp;
 
-	int decoding_started;
 	int first_decoding;
+	int decoding_started;
 	int is_opened;				/* Running status of SRP */
 	int is_running;				/* Open status of SRP */
 	int is_pending;
-	int playdone;
 	int block_mode;				/* Block Mode */
 	int ibuf_req_skip;
 	int stop_after_eos;
 	int wait_for_eos;
 	int prepare_for_eos;
 	int save_ibuf_empty;
-	int err_info;
 
 	unsigned char *fw_code_vliw;		/* VLIW */
 	unsigned char *fw_code_cga;		/* CGA */
-	unsigned char *fw_code_cga_sa;		/* CGA for SoundAlive */
 	unsigned char *fw_data;			/* DATA */
 
 	dma_addr_t fw_mem_base;			/* Base memory for FW */
+	unsigned long vliw_rp;
 	unsigned long fw_mem_base_pa;		/* Physical address of base */
 	unsigned long fw_code_vliw_pa;		/* Physical address of VLIW */
 	unsigned long fw_code_cga_pa;		/* Physical address of CGA */
@@ -174,10 +170,9 @@ struct srp_info {
 	unsigned long fw_code_vliw_size;	/* Size of VLIW */
 	unsigned long fw_code_cga_size;		/* Size of CGA */
 	unsigned long fw_data_size;		/* Size of DATA */
-	void	(*audss_clk_enable)(bool enable);
 
+	void	(*audss_clk_enable)(bool enable);
 	wait_queue_head_t read_wait;
-	int read_event_put;
 };
 
 /* SRP Pending On/Off status */
@@ -187,7 +182,7 @@ enum {
 };
 
 static struct srp_info srp;
-static DEFINE_MUTEX(rp_mutex);
+static DEFINE_MUTEX(srp_mutex);
 
 int srp_get_status(int cmd)
 {
@@ -303,8 +298,6 @@ static void srp_reset(void)
 	writel(reg, srp.commbox + SRP_CONT);
 	writel(reg, srp.commbox + SRP_INTERRUPT);
 
-	/* Clear Error Info */
-	srp.err_info = 0;
 	/* Store Total Count */
 	srp.frame_count_base = srp.frame_count;
 	srp.decoding_started = 0;
@@ -333,7 +326,6 @@ static void srp_reset(void)
 	srp.wait_for_eos = 0;
 	srp.prepare_for_eos = 0;
 	srp.save_ibuf_empty = 0;
-	srp.read_event_put = 0;
 }
 
 static void srp_stop(void)
@@ -344,9 +336,8 @@ static void srp_stop(void)
 static void srp_fill_ibuf(void)
 {
 	unsigned long fill_size;
-	unsigned long flags;
 
-	if (!srp.wbuf_pos)		/* wbuf empty? */
+	if (!srp.wbuf_pos)
 		return;
 
 	if (srp.wbuf_pos >= srp.ibuf_size) {
@@ -365,8 +356,6 @@ static void srp_fill_ibuf(void)
 		}
 	}
 
-	spin_lock_irqsave(&srp.lock, flags);
-
 	if (srp.ibuf_next == 0) {
 		memcpy(srp.ibuf0, srp.wbuf, srp.ibuf_size);
 		srpdbg("SRP: Fill IBUF0 (%lu)\n", fill_size);
@@ -381,15 +370,17 @@ static void srp_fill_ibuf(void)
 		srp.ibuf_fill_size[1] = srp.ibuf_fill_size[0] + fill_size;
 	}
 
-	if (srp.wbuf_pos)
+	if (srp.wbuf_pos) {
+		srpdbg("SRP: WBUF_POS = %ld\n", srp.wbuf_pos);
 		memcpy(srp.wbuf, &srp.wbuf[srp.ibuf_size], srp.wbuf_pos);
-
-	spin_unlock_irqrestore(&srp.lock, flags);
+	}
 }
 
 static ssize_t srp_write(struct file *file, const char *buffer,
 					size_t size, loff_t *pos)
 {
+	unsigned long flags;
+
 	srpdbg("SRP: write(%d bytes)\n", size);
 
 	if (srp.obuf_fill_done[srp.obuf_ready]) {
@@ -405,22 +396,27 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 		srp.obuf_next = srp.obuf_next ? 0 : 1;
 	}
 
+	spin_lock_irqsave(&srp.lock, flags);
 	if (srp.wbuf_pos + size > WBUF_SIZE) {
 		srpdbg("SRP: Occured Ibuf Overflow!!\n");
+		spin_unlock_irqrestore(&srp.lock, flags);
 		return SRP_ERROR_IBUF_OVERFLOW;
 	}
 
-	if (copy_from_user(&srp.wbuf[srp.wbuf_pos], buffer, size))
+	if (copy_from_user(&srp.wbuf[srp.wbuf_pos], buffer, size)) {
+		spin_unlock_irqrestore(&srp.lock, flags);
 		return -EFAULT;
+	}
 
 	srp.wbuf_pos += size;
 	srp.wbuf_fill_size += size;
 	if (srp.wbuf_pos < srp.ibuf_size) {
 		srpdbg("SRP : Return WBUF POS %ld\n", srp.wbuf_pos);
+		spin_unlock_irqrestore(&srp.lock, flags);
 		return size;
 	}
+	spin_unlock_irqrestore(&srp.lock, flags);
 
-	mutex_lock(&rp_mutex);
 	if (!srp.decoding_started) {
 		srp_fill_ibuf();
 		if (!srp.ibuf_empty[0] && !srp.ibuf_empty[1]) {
@@ -435,11 +431,6 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 		srp_fill_ibuf();
 		srp.save_ibuf_empty = 0;
 	}
-	mutex_unlock(&rp_mutex);
-
-	/* SRP Decoding Error occurred? */
-	if (srp.err_info)
-		return -1;
 
 	return size;
 }
@@ -473,7 +464,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 
 	if (srp.decoding_started) {
 		if (srp.first_decoding) {
-			srpdbg("SRP: Enter to sleep for filling both Obuf\n");
+			srpdbg("SRP: Enter to sleep until filling both Obuf\n");
 			wait_event_interruptible(srp.read_wait, !srp.first_decoding);
 			srpdbg("SRP: Wake up by Both Obuf\n");
 		} else {
@@ -500,7 +491,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 			srp.obuf_ready, srp.pcm_info->size);
 
 	/* For End-Of-Stream */
-	if (srp.wait_for_eos && srp.pcm_info->size < OBUF_SIZE) {
+	if (srp.wait_for_eos && (srp.pcm_info->size < OBUF_SIZE)) {
 		srpdbg("SRP: Stop EOS by PCM SIZE\n");
 		srp.stop_after_eos = 1;
 	}
@@ -606,7 +597,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	
 	srpdbg("SRP: srp_ioctl(cmd:: %08X)\n", cmd);
 
-	mutex_lock(&rp_mutex);
+	mutex_lock(&srp_mutex);
 
 	switch (cmd) {
 	case SRP_INIT:
@@ -732,7 +723,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	}
 
-	mutex_unlock(&rp_mutex);
+	mutex_unlock(&srp_mutex);
 
 	return ret;
 }
@@ -741,14 +732,14 @@ static int srp_open(struct inode *inode, struct file *file)
 {
 	srpdbg("SRP: srp is open!!\n");
 
-	mutex_lock(&rp_mutex);
+	mutex_lock(&srp_mutex);
 	if (srp.is_opened) {
 		srpdbg("SRP: SRP is already opened.\n");
-		mutex_unlock(&rp_mutex);
+		mutex_unlock(&srp_mutex);
 		return -1;
 	}
 	srp.is_opened = 1;
-	mutex_unlock(&rp_mutex);
+	mutex_unlock(&srp_mutex);
 
 	srp.audss_clk_enable(true);
 
@@ -773,13 +764,13 @@ static int srp_release(struct inode *inode, struct file *file)
 {
 	srpdbg("SRP: srp is released!\n");
 
-	mutex_lock(&rp_mutex);
+	mutex_lock(&srp_mutex);
 
 	/* Reset commbox */
 	srp_commbox_deinit();
 	srp.is_opened = 0;
 
-	mutex_unlock(&rp_mutex);
+	mutex_unlock(&srp_mutex);
 
 	return 0;
 }
@@ -885,7 +876,6 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 
 		case SRP_INTR_CODE_OBUF_FULL:
 			srp.is_pending = STALL;
-			srp.read_event_put = 0;
 
 			if ((irq_code & SRP_INTR_CODE_OBUF_MASK)
 				==  SRP_INTR_CODE_OBUF0_FULL) {
@@ -1128,6 +1118,7 @@ static __devinit int srp_probe(struct platform_device *pdev)
 
 	srp.audss_clk_enable = audss_clk_enable;
 	init_waitqueue_head(&srp.read_wait);
+	spin_lock_init(&srp.lock);
 
 	ret = misc_register(&srp_miscdev);
 	if (ret) {
