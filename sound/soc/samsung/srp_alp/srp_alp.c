@@ -148,6 +148,7 @@ struct srp_info {
 	unsigned long vliw_rp;
 
 	int decoding_started;
+	int first_decoding;
 	int is_opened;				/* Running status of SRP */
 	int is_running;				/* Open status of SRP */
 	int is_pending;
@@ -307,6 +308,7 @@ static void srp_reset(void)
 	/* Store Total Count */
 	srp.frame_count_base = srp.frame_count;
 	srp.decoding_started = 0;
+	srp.first_decoding = 1;
 
 	/* Next IBUF is IBUF0 */
 	srp.ibuf_next = 0;
@@ -394,8 +396,9 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 		srp.obuf_fill_done[srp.obuf_ready] = 0;
 		srpdbg("SRP: Elapsed Obuf[%d]\n", srp.obuf_ready);
 
-		if (!srp.obuf_fill_done[srp.obuf_next]) {
-			srpdbg("SRP: Decoding start in write function\n");
+		if (!srp.obuf_fill_done[srp.obuf_ready]) {
+			srpdbg("SRP: Decoding start for filling OBUF[%d]\n",
+							srp.obuf_ready);
 			srp_pending_ctrl(RUN);
 		}
 		srp.obuf_ready = srp.obuf_ready ? 0 : 1;
@@ -420,9 +423,11 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 	mutex_lock(&rp_mutex);
 	if (!srp.decoding_started) {
 		srp_fill_ibuf();
-		srpdbg("SRP: First Start decoding!!\n");
-		srp_pending_ctrl(RUN);
-		srp.decoding_started = 1;
+		if (!srp.ibuf_empty[0] && !srp.ibuf_empty[1]) {
+			srpdbg("SRP: First Start decoding!!\n");
+			srp_pending_ctrl(RUN);
+			srp.decoding_started = 1;
+		}
 	}
 
 	if (srp.save_ibuf_empty) {
@@ -447,7 +452,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	void *obuf1 = srp.obuf_info->addr + OBUF_SIZE;
 	int ret = 0;
 
-	srpdbg("SRP: Entered Get PCM function\n");
+	srpdbg("SRP: Entered Get Obuf[%d] in PCM function\n", srp.obuf_ready);
 
 	if (srp.prepare_for_eos) {
 		srp.obuf_fill_done[srp.obuf_ready] = 0;
@@ -467,9 +472,19 @@ static ssize_t srp_read(struct file *file, char *buffer,
 		srp.prepare_for_eos = 1;
 
 	if (srp.decoding_started) {
-		srpdbg("SRP: Enter to sleep for Obuf INT\n");
-		wait_event_interruptible(srp.read_wait, srp.is_pending == STALL);
-		srpdbg("SRP: Wake up by Obuf INT\n");
+		if (srp.first_decoding) {
+			srpdbg("SRP: Enter to sleep for filling both Obuf\n");
+			wait_event_interruptible(srp.read_wait, !srp.first_decoding);
+			srpdbg("SRP: Wake up by Both Obuf\n");
+		} else {
+			if (srp.obuf_fill_done[srp.obuf_ready])
+				srpdbg("SRP: Already filled obuf[%d]\n", srp.obuf_ready);
+			else {
+				srpdbg("SRP: Enter to sleep for Obuf INT\n");
+				wait_event_interruptible(srp.read_wait, srp.is_pending == STALL);
+				srpdbg("SRP: Wake up by Obuf INT\n");
+			}
+		}
 	} else {
 		srpdbg("SRP: not prepared not yet! OBUF[%d]\n", srp.obuf_ready);
 		srp.pcm_info->size = 0;
@@ -630,7 +645,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case SRP_GET_IBUF_INFO:
 		srp.ibuf_info->addr = (void *) srp.wbuf;
-		srp.ibuf_info->size = IBUF_SIZE;
+		srp.ibuf_info->size = IBUF_SIZE * 2;
 		srp.ibuf_info->num  = IBUF_NUM;
 
 		ret = copy_to_user(argp, srp.ibuf_info,
@@ -881,8 +896,21 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 				srp.obuf_fill_done[1] = 1;
 			}
 
-			if (waitqueue_active(&srp.read_wait))
-				wake_up_interruptible(&srp.read_wait);
+			if (srp.first_decoding) {
+				if (!srp.obuf_fill_done[srp.obuf_next]) {
+					srpdbg("SRP-IRQ: Decoding start for filling both OBUF\n");
+					srp_pending_ctrl(RUN);
+				}
+
+				if (srp.obuf_fill_done[0] && srp.obuf_fill_done[1]) {
+					srp.first_decoding = 0;
+					if (waitqueue_active(&srp.read_wait))
+						wake_up_interruptible(&srp.read_wait);
+				}
+			} else {
+				if (waitqueue_active(&srp.read_wait))
+					wake_up_interruptible(&srp.read_wait);
+			}
 
 			break;
 
@@ -963,7 +991,7 @@ static int srp_prepare_fw_buff(struct device *dev)
 	memcpy(srp.fw_data, rp_fw_data,
 			srp.fw_data_size);
 
-	srp.wbuf = dma_alloc_writecombine(0, WBUF_SIZE,
+	srp.wbuf = dma_alloc_writecombine(dev, WBUF_SIZE,
 			   (dma_addr_t *)&srp.wbuf_pa, GFP_KERNEL);
 
 	srp.ibuf_info = kzalloc(sizeof(struct srp_buf_info), GFP_KERNEL);
