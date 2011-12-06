@@ -194,7 +194,7 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 	    clk_set_rate(sclk_g3d, 267000000);
 	} else if (sysfs_streq("200", buf)) {
 	    cmd = 1;
-	    clk_set_rate(sclk_g3d, VITHAR_DEFAULT_CLOCK);
+	    clk_set_rate(sclk_g3d, 200000000);
 	} else if (sysfs_streq("133", buf)) {
 	    cmd = 1;
 	    clk_set_rate(sclk_g3d, 134000000);
