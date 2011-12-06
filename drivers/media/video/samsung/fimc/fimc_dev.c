@@ -652,6 +652,10 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 	case 0x51:
 		ctrl->limit = &fimc51_limits[id];
 		break;
+	default:
+		ctrl->limit = &fimc51_limits[id];
+		fimc_err("%s: failed to get HW version\n", __func__);
+		break;
 	}
 
 	sprintf(ctrl->name, "%s%d", FIMC_NAME, id);
