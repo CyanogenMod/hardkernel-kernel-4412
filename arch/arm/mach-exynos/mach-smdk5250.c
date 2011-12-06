@@ -10,6 +10,9 @@
 
 #include <linux/platform_device.h>
 #include <linux/serial_core.h>
+#include <linux/spi/spi.h>
+#include <linux/spi/spi_gpio.h>
+#include <linux/clk.h>
 #include <linux/gpio.h>
 #include <linux/gpio_event.h>
 #include <linux/i2c.h>
@@ -57,11 +60,13 @@
 #include <plat/s5p-mfc.h>
 #include <plat/fimg2d.h>
 #include <plat/tv-core.h>
+#include <plat/s3c64xx-spi.h>
 
 #include <plat/mipi_csis.h>
 #include <mach/map.h>
 #include <mach/exynos-ion.h>
 #include <mach/dev-sysmmu.h>
+#include <mach/spi-clocks.h>
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
@@ -700,6 +705,68 @@ static struct s3c_sdhci_platdata smdk5250_hsmmc2_pdata __initdata = {
 static struct s3c_sdhci_platdata smdk5250_hsmmc3_pdata __initdata = {
 	.cd_type		= S3C_SDHCI_CD_INTERNAL,
 	.clk_type		= S3C_SDHCI_CLK_DIV_EXTERNAL,
+};
+#endif
+
+#ifdef CONFIG_S3C64XX_DEV_SPI
+static struct s3c64xx_spi_csinfo spi0_csi[] = {
+	[0] = {
+		.line = EXYNOS5_GPA2(1),
+		.set_level = gpio_set_value,
+		.fb_delay = 0x2,
+	},
+};
+
+static struct spi_board_info spi0_board_info[] __initdata = {
+	{
+		.modalias = "spidev",
+		.platform_data = NULL,
+		.max_speed_hz = 10*1000*1000,
+		.bus_num = 0,
+		.chip_select = 0,
+		.mode = SPI_MODE_0,
+		.controller_data = &spi0_csi[0],
+	}
+};
+
+static struct s3c64xx_spi_csinfo spi1_csi[] = {
+	[0] = {
+		.line = EXYNOS5_GPA2(5),
+		.set_level = gpio_set_value,
+		.fb_delay = 0x2,
+	},
+};
+
+static struct spi_board_info spi1_board_info[] __initdata = {
+	{
+		.modalias = "spidev",
+		.platform_data = NULL,
+		.max_speed_hz = 10*1000*1000,
+		.bus_num = 1,
+		.chip_select = 0,
+		.mode = SPI_MODE_0,
+		.controller_data = &spi1_csi[0],
+	}
+};
+
+static struct s3c64xx_spi_csinfo spi2_csi[] = {
+	[0] = {
+		.line = EXYNOS5_GPB1(2),
+		.set_level = gpio_set_value,
+		.fb_delay = 0x2,
+	},
+};
+
+static struct spi_board_info spi2_board_info[] __initdata = {
+	{
+		.modalias = "spidev",
+		.platform_data = NULL,
+		.max_speed_hz = 10*1000*1000,
+		.bus_num = 2,
+		.chip_select = 0,
+		.mode = SPI_MODE_0,
+		.controller_data = &spi2_csi[0],
+	}
 };
 #endif
 
@@ -1591,6 +1658,11 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS_C2C
 	&exynos_device_c2c,
 #endif
+#ifdef CONFIG_S3C64XX_DEV_SPI
+	&exynos_device_spi0,
+	&exynos_device_spi1,
+	&exynos_device_spi2,
+#endif
 };
 
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
@@ -1986,6 +2058,14 @@ static void s5p_tv_setup(void)
 
 static void __init smdk5250_machine_init(void)
 {
+#ifdef CONFIG_S3C64XX_DEV_SPI
+	unsigned int gpio;
+	struct clk *sclk = NULL;
+	struct clk *prnt = NULL;
+	struct device *spi0_dev = &exynos_device_spi0.dev;
+	struct device *spi1_dev = &exynos_device_spi1.dev;
+	struct device *spi2_dev = &exynos_device_spi2.dev;
+#endif
 #if defined(CONFIG_VIDEO_EXYNOS_TV) && defined(CONFIG_VIDEO_EXYNOS_HDMI)
 	dev_set_name(&s5p_device_hdmi.dev, "exynos5-hdmi");
 	clk_add_alias("hdmi", "s5p-hdmi", "hdmi", &s5p_device_hdmi.dev);
@@ -2142,6 +2222,88 @@ static void __init smdk5250_machine_init(void)
 	s5p_device_jpeg.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
 #endif
 	exynos5_jpeg_setup_clock(&s5p_device_jpeg.dev, 150000000);
+#endif
+#ifdef CONFIG_S3C64XX_DEV_SPI
+	sclk = clk_get(spi0_dev, "dout_spi0");
+	if (IS_ERR(sclk))
+		dev_err(spi0_dev, "failed to get sclk for SPI-0\n");
+	prnt = clk_get(spi0_dev, "mout_mpll_user");
+	if (IS_ERR(prnt))
+		dev_err(spi0_dev, "failed to get prnt\n");
+	if (clk_set_parent(sclk, prnt))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				prnt->name, sclk->name);
+
+	clk_set_rate(sclk, 800 * 1000 * 1000);
+	clk_put(sclk);
+	clk_put(prnt);
+
+	if (!gpio_request(EXYNOS5_GPA2(1), "SPI_CS0")) {
+		gpio_direction_output(EXYNOS5_GPA2(1), 1);
+		s3c_gpio_cfgpin(EXYNOS5_GPA2(1), S3C_GPIO_SFN(1));
+		s3c_gpio_setpull(EXYNOS5_GPA2(1), S3C_GPIO_PULL_UP);
+		exynos_spi_set_info(0, EXYNOS_SPI_SRCCLK_SCLK,
+			ARRAY_SIZE(spi0_csi));
+	}
+
+	for (gpio = EXYNOS5_GPA2(0); gpio < EXYNOS5_GPA2(4); gpio++)
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV3);
+
+	spi_register_board_info(spi0_board_info, ARRAY_SIZE(spi0_board_info));
+
+	sclk = clk_get(spi1_dev, "dout_spi1");
+	if (IS_ERR(sclk))
+		dev_err(spi1_dev, "failed to get sclk for SPI-1\n");
+	prnt = clk_get(spi1_dev, "mout_mpll_user");
+	if (IS_ERR(prnt))
+		dev_err(spi1_dev, "failed to get prnt\n");
+	if (clk_set_parent(sclk, prnt))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				prnt->name, sclk->name);
+
+	clk_set_rate(sclk, 800 * 1000 * 1000);
+	clk_put(sclk);
+	clk_put(prnt);
+
+	if (!gpio_request(EXYNOS5_GPA2(5), "SPI_CS1")) {
+		gpio_direction_output(EXYNOS5_GPA2(5), 1);
+		s3c_gpio_cfgpin(EXYNOS5_GPA2(5), S3C_GPIO_SFN(1));
+		s3c_gpio_setpull(EXYNOS5_GPA2(5), S3C_GPIO_PULL_UP);
+		exynos_spi_set_info(1, EXYNOS_SPI_SRCCLK_SCLK,
+			ARRAY_SIZE(spi1_csi));
+	}
+
+	for (gpio = EXYNOS5_GPA2(4); gpio < EXYNOS5_GPA2(8); gpio++)
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV3);
+
+	spi_register_board_info(spi1_board_info, ARRAY_SIZE(spi1_board_info));
+
+	sclk = clk_get(spi2_dev, "dout_spi2");
+	if (IS_ERR(sclk))
+		dev_err(spi2_dev, "failed to get sclk for SPI-2\n");
+	prnt = clk_get(spi2_dev, "mout_mpll_user");
+	if (IS_ERR(prnt))
+		dev_err(spi2_dev, "failed to get prnt\n");
+	if (clk_set_parent(sclk, prnt))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				prnt->name, sclk->name);
+
+	clk_set_rate(sclk, 800 * 1000 * 1000);
+	clk_put(sclk);
+	clk_put(prnt);
+
+	if (!gpio_request(EXYNOS5_GPB1(2), "SPI_CS2")) {
+		gpio_direction_output(EXYNOS5_GPB1(2), 1);
+		s3c_gpio_cfgpin(EXYNOS5_GPB1(2), S3C_GPIO_SFN(1));
+		s3c_gpio_setpull(EXYNOS5_GPB1(2), S3C_GPIO_PULL_UP);
+		exynos_spi_set_info(2, EXYNOS_SPI_SRCCLK_SCLK,
+			ARRAY_SIZE(spi2_csi));
+	}
+
+	for (gpio = EXYNOS5_GPB1(1); gpio < EXYNOS5_GPB1(5); gpio++)
+		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV3);
+
+	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
 	smdk5250_smsc911x_init();
 
