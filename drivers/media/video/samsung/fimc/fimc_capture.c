@@ -497,7 +497,7 @@ int fimc_enum_input(struct file *file, void *fh, struct v4l2_input *inp)
 
 	fimc_dbg("%s: index %d\n", __func__, inp->index);
 
-	if (inp->index < 0 || inp->index >= FIMC_MAXCAMS) {
+	if (inp->index >= FIMC_MAXCAMS) {
 		fimc_err("%s: invalid input index, received = %d\n",
 				__func__, inp->index);
 		return -EINVAL;
@@ -807,7 +807,7 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 
 	fimc_dbg("%s: index %d\n", __func__, i);
 
-	if (i < 0 || i >= FIMC_MAXCAMS) {
+	if (i >= FIMC_MAXCAMS) {
 		fimc_err("%s: invalid input index\n", __func__);
 		return -EINVAL;
 	}
