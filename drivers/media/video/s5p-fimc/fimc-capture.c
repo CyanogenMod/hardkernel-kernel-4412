@@ -701,7 +701,8 @@ static void buffer_queue(struct vb2_buffer *vb)
 	spin_lock_irqsave(&fimc->slock, flags);
 	fimc_prepare_addr(ctx, &buf->vb, &ctx->d_frame, &buf->paddr);
 
-	if (fmt->fourcc == V4L2_PIX_FMT_YVU420) {
+	if (fmt->fourcc == V4L2_PIX_FMT_YVU420 ||
+			fmt->fourcc == V4L2_PIX_FMT_YVU420M) {
 		u32 t_cb = buf->paddr.cb;
 		buf->paddr.cb = buf->paddr.cr;
 		buf->paddr.cr = t_cb;
