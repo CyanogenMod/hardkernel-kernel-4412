@@ -1640,18 +1640,18 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		break;
 
 	case V4L2_CID_PADDR_Y:
-		if (ctrl->cap->bufs)
+		if (&ctrl->cap->bufs[c->value])
 			c->value = ctrl->cap->bufs[c->value].base[FIMC_ADDR_Y];
 		break;
 
 	case V4L2_CID_PADDR_CB:		/* fall through */
 	case V4L2_CID_PADDR_CBCR:
-		if (ctrl->cap->bufs)
+		if (&ctrl->cap->bufs[c->value])
 			c->value = ctrl->cap->bufs[c->value].base[FIMC_ADDR_CB];
 		break;
 
 	case V4L2_CID_PADDR_CR:
-		if (ctrl->cap->bufs)
+		if (&ctrl->cap->bufs[c->value])
 			c->value = ctrl->cap->bufs[c->value].base[FIMC_ADDR_CR];
 		break;
 	/* Implementation as per C100 FIMC driver */
