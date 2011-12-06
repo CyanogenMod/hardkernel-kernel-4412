@@ -813,7 +813,7 @@ static struct s3c64xx_spi_csinfo spi0_csi[] = {
 	[0] = {
 		.line = EXYNOS4_GPB(1),
 		.set_level = gpio_set_value,
-		.fb_delay = 0x0,
+		.fb_delay = 0x2,
 	},
 };
 
@@ -842,7 +842,7 @@ static struct spi_board_info spi1_board_info[] __initdata = {
 	{
 		.modalias = "spidev",
 		.platform_data = NULL,
-		.max_speed_hz = 1200000,
+		.max_speed_hz = 10*1000*1000,
 		.bus_num = 1,
 		.chip_select = 0,
 		.mode = SPI_MODE_3,
@@ -855,7 +855,7 @@ static struct s3c64xx_spi_csinfo spi2_csi[] = {
 	[0] = {
 		.line = EXYNOS4_GPC1(2),
 		.set_level = gpio_set_value,
-		.fb_delay = 0x0,
+		.fb_delay = 0x2,
 	},
 };
 
@@ -2829,11 +2829,11 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&smdk4x12_input_device,
 	&smdk4x12_smsc911x,
 #ifdef CONFIG_S3C64XX_DEV_SPI
-	&exynos4_device_spi0,
+	&exynos_device_spi0,
 #ifndef CONFIG_FB_S5P_LMS501KF03
-	&exynos4_device_spi1,
+	&exynos_device_spi1,
 #endif
-	&exynos4_device_spi2,
+	&exynos_device_spi2,
 #endif
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
@@ -3473,11 +3473,11 @@ static void __init smdk4x12_machine_init(void)
 	unsigned int gpio;
 	struct clk *sclk = NULL;
 	struct clk *prnt = NULL;
-	struct device *spi0_dev = &exynos4_device_spi0.dev;
+	struct device *spi0_dev = &exynos_device_spi0.dev;
 #ifndef CONFIG_FB_S5P_LMS501KF03
-	struct device *spi1_dev = &exynos4_device_spi1.dev;
+	struct device *spi1_dev = &exynos_device_spi1.dev;
 #endif
-	struct device *spi2_dev = &exynos4_device_spi2.dev;
+	struct device *spi2_dev = &exynos_device_spi2.dev;
 #endif
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
@@ -3795,7 +3795,7 @@ static void __init smdk4x12_machine_init(void)
 		gpio_direction_output(EXYNOS4_GPB(1), 1);
 		s3c_gpio_cfgpin(EXYNOS4_GPB(1), S3C_GPIO_SFN(1));
 		s3c_gpio_setpull(EXYNOS4_GPB(1), S3C_GPIO_PULL_UP);
-		exynos4_spi_set_info(0, EXYNOS4_SPI_SRCCLK_SCLK,
+		exynos_spi_set_info(0, EXYNOS_SPI_SRCCLK_SCLK,
 			ARRAY_SIZE(spi0_csi));
 	}
 
@@ -3823,7 +3823,7 @@ static void __init smdk4x12_machine_init(void)
 		gpio_direction_output(EXYNOS4_GPB(5), 1);
 		s3c_gpio_cfgpin(EXYNOS4_GPB(5), S3C_GPIO_SFN(1));
 		s3c_gpio_setpull(EXYNOS4_GPB(5), S3C_GPIO_PULL_UP);
-		exynos4_spi_set_info(1, EXYNOS4_SPI_SRCCLK_SCLK,
+		exynos_spi_set_info(1, EXYNOS_SPI_SRCCLK_SCLK,
 			ARRAY_SIZE(spi1_csi));
 	}
 
@@ -3851,7 +3851,7 @@ static void __init smdk4x12_machine_init(void)
 		gpio_direction_output(EXYNOS4_GPC1(2), 1);
 		s3c_gpio_cfgpin(EXYNOS4_GPC1(2), S3C_GPIO_SFN(1));
 		s3c_gpio_setpull(EXYNOS4_GPC1(2), S3C_GPIO_PULL_UP);
-		exynos4_spi_set_info(2, EXYNOS4_SPI_SRCCLK_SCLK,
+		exynos_spi_set_info(2, EXYNOS_SPI_SRCCLK_SCLK,
 			ARRAY_SIZE(spi2_csi));
 	}
 

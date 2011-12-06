@@ -1896,8 +1896,8 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
 #ifdef CONFIG_S3C64XX_DEV_SPI
-	&exynos4_device_spi0,
-	&exynos4_device_spi2,
+	&exynos_device_spi0,
+	&exynos_device_spi2,
 #endif
 /* mainline fimd */
 #ifdef CONFIG_FB_S3C
@@ -2450,8 +2450,8 @@ static void __init smdkv310_machine_init(void)
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	struct clk *sclk = NULL;
 	struct clk *prnt = NULL;
-	struct device *spi0_dev = &exynos4_device_spi0.dev;
-	struct device *spi2_dev = &exynos4_device_spi2.dev;
+	struct device *spi0_dev = &exynos_device_spi0.dev;
+	struct device *spi2_dev = &exynos_device_spi2.dev;
 #endif
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
 	mipi_fb_init();
@@ -2726,7 +2726,7 @@ static void __init smdkv310_machine_init(void)
 		gpio_direction_output(EXYNOS4_GPB(1), 1);
 		s3c_gpio_cfgpin(EXYNOS4_GPB(1), S3C_GPIO_SFN(1));
 		s3c_gpio_setpull(EXYNOS4_GPB(1), S3C_GPIO_PULL_UP);
-		exynos4_spi_set_info(0, EXYNOS4_SPI_SRCCLK_SCLK,
+		exynos_spi_set_info(0, EXYNOS_SPI_SRCCLK_SCLK,
 				ARRAY_SIZE(spi0_csi));
 	}
 	spi_register_board_info(spi0_board_info, ARRAY_SIZE(spi0_board_info));
@@ -2750,7 +2750,7 @@ static void __init smdkv310_machine_init(void)
 		gpio_direction_output(EXYNOS4_GPC1(2), 1);
 		s3c_gpio_cfgpin(EXYNOS4_GPC1(2), S3C_GPIO_SFN(1));
 		s3c_gpio_setpull(EXYNOS4_GPC1(2), S3C_GPIO_PULL_UP);
-		exynos4_spi_set_info(2, EXYNOS4_SPI_SRCCLK_SCLK,
+		exynos_spi_set_info(2, EXYNOS_SPI_SRCCLK_SCLK,
 				ARRAY_SIZE(spi2_csi));
 	}
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
