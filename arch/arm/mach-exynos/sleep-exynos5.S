@@ -105,4 +105,14 @@ sleep_save_misc:
 	 */
 
 ENTRY(s3c_cpu_resume)
+	/*
+	 * Set for L2 Cache latency
+	 */
+	mcr	p15, 1, r0, c9, c0, 2
+	ldr	r1, =0x3ff
+	bic	r0, r0, r1
+	ldr	r1, =0x2a2
+	orr	r0, r0, r1
+	mrc	p15, 1, r0, c9, c0, 2
+
 	b	cpu_resume
