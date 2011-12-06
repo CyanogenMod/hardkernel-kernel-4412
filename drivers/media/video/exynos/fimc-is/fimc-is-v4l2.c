@@ -65,7 +65,7 @@ static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 	set_fs(KERNEL_DS);
 	fp = filp_open(FIMC_IS_FW_SDCARD, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
-		err("failed to open %s\n", FIMC_IS_FW_SDCARD);
+		dbg("failed to open %s\n", FIMC_IS_FW_SDCARD);
 		goto request_fw;
 	}
 	fw_requested = 0;
@@ -161,7 +161,7 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 	set_fs(KERNEL_DS);
 	fp = filp_open(FIMC_IS_SETFILE_SDCARD, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
-		err("failed to open %s\n", FIMC_IS_SETFILE_SDCARD);
+		dbg("failed to open %s\n", FIMC_IS_SETFILE_SDCARD);
 		goto request_fw;
 	}
 	fw_requested = 0;

@@ -137,6 +137,9 @@ void fimc_is_print_param_err_name(u32 err)
 	case ERROR_SENSOR_INVALID_SIZE:
 		printk(KERN_ERR "ERROR_SENSOR_INVALID_SIZE!!\n");
 		break;
+	case ERROR_SENSOR_INVALID_SETTING:
+		printk(KERN_ERR "ERROR_SENSOR_INVALID_SETTING!!\n");
+		break;
 	case ERROR_SENSOR_ACTURATOR_INIT_FAIL:
 		printk(KERN_ERR "ERROR_SENSOR_ACTURATOR_INIT_FAIL!!\n");
 		break;
@@ -386,8 +389,8 @@ void fimc_is_print_err_number(u32 num_err)
 	case IS_ERROR_DRC_ABSENT_INPUT:
 		printk(KERN_ERR "IS_ERROR_DRC_ABSENT_INPUT !!\n");
 		break;
-	case IS_ERROR_DRC_NONADJACENT_INTPUT:
-		printk(KERN_ERR "IS_ERROR_DRC_NONADJACENT_INTPUT !!\n");
+	case IS_ERROR_DRC_NONADJACENT_INPUT:
+		printk(KERN_ERR "IS_ERROR_DRC_NONADJACENT_INPUT !!\n");
 		break;
 	case IS_ERROR_DRC_ABSENT_OUTPUT:
 		printk(KERN_ERR "IS_ERROR_DRC_ABSENT_OUTPUT !!\n");

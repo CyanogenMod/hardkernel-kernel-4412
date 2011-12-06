@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 112  /* IS REGION VERSION 1.12 */
+#define IS_REGION_VER 113  /* IS REGION VERSION 1.13 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -364,7 +364,7 @@
 		(dev->is_p_region->parameter.fd.dma_input.buffer_address = x)
 #define IS_FD_SET_PARAM_DMA_INPUT_ERR(dev, x) \
 	(dev->is_p_region->parameter.fd.dma_input.err = x)
-	
+
 #define IS_FD_SET_PARAM_FD_CONFIG_CMD(dev, x) \
 	(dev->is_p_region->parameter.fd.config.cmd = x)
 #define IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev, x) \
@@ -387,7 +387,7 @@
 	(dev->is_p_region->parameter.fd.config.orientation_value = x)
 #define IS_FD_SET_PARAM_FD_CONFIG_ERR(dev, x) \
 	(dev->is_p_region->parameter.fd.config.err = x)
-	
+
 #ifndef BIT0
 #define  BIT0     0x00000001
 #define  BIT1     0x00000002
@@ -951,7 +951,8 @@ enum isp_adjust_error {
 enum isp_metering_command {
 	ISP_METERING_COMMAND_AVERAGE	= 0,
 	ISP_METERING_COMMAND_SPOT	= 1,
-	ISP_METERING_COMMAND_MATRIX	= 2
+	ISP_METERING_COMMAND_MATRIX	= 2,
+	ISP_METERING_COMMAND_CENTER	= 3
 };
 
 enum isp_metering_error {
@@ -1275,7 +1276,7 @@ struct param_3dnr_1stframe {
 	u32	err;
 };
 
-struct param_fd_config{
+struct param_fd_config {
 	u32	cmd;
 	u32	max_number;
 	u32	roll_angle;
@@ -1530,6 +1531,8 @@ struct is_share_region {
 	u32	r_gain;
 	u32	g_gain;
 	u32	b_gain;
+
+	u32	af_position;
 };
 
 #endif

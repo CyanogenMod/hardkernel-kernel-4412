@@ -224,13 +224,13 @@ static int fimc_is_probe(struct platform_device *pdev)
 	dev->pdev = pdev;
 	if (!dev->pdev) {
 		dev_err(&pdev->dev, "No platform data specified\n");
-		goto p_err1;
+		goto p_err_info;
 	}
 
 	pdata = pdev->dev.platform_data;
 	if (!pdata) {
 		dev_err(&pdev->dev, "Platform data not set\n");
-		goto p_err1;
+		goto p_err_info;
 	}
 	dev->pdata = pdata;
 	/*
@@ -239,21 +239,24 @@ static int fimc_is_probe(struct platform_device *pdev)
 	mem_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem_res) {
 		dev_err(&pdev->dev, "Failed to get io memory region\n");
-		goto p_err1;
+		ret = -ENOENT;
+		goto p_err_info;
 	}
 
 	regs_res = request_mem_region(mem_res->start,
 		resource_size(mem_res), pdev->name);
 	if (!regs_res) {
 		dev_err(&pdev->dev, "Failed to request io memory region\n");
-		goto p_err1;
+		ret = -ENOENT;
+		goto p_err_info;
 	}
 	dev->regs_res = regs_res;
 
 	dev->regs = ioremap(mem_res->start, resource_size(mem_res));
 	if (!dev->regs) {
 		dev_err(&pdev->dev, "Failed to remap io region\n");
-		goto p_err2;
+		ret = -ENXIO;
+		goto p_err_req_region;
 	}
 
 	/*
@@ -263,14 +266,14 @@ static int fimc_is_probe(struct platform_device *pdev)
 	if (dev->irq1 < 0) {
 		ret = dev->irq1;
 		dev_err(&pdev->dev, "Failed to get irq\n");
-		goto p_err2;
+		goto p_err_get_irq;
 	}
 
 	ret = request_irq(dev->irq1, fimc_is_irq_handler1,
 		IRQF_DISABLED, dev_name(&pdev->dev), dev);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to allocate irq (%d)\n", ret);
-		goto e_irqfree1;
+		goto p_err_req_irq;
 	}
 
 	/*
@@ -280,7 +283,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev,
 			"failed to fimc_is_init_mem_mgr (%d)\n", ret);
-		goto e_irqfree1;
+		goto p_err_init_mem;
 	}
 	dbg("Parameter region = 0x%08x\n", (unsigned int)dev->is_p_region);
 
@@ -310,11 +313,14 @@ static int fimc_is_probe(struct platform_device *pdev)
 	dbg("FIMC-IS probe completed\n");
 	return 0;
 
-e_irqfree1:
+p_err_init_mem:
 	free_irq(dev->irq1, dev);
-p_err2:
+p_err_req_irq:
+p_err_get_irq:
+	iounmap(dev->regs);
+p_err_req_region:
 	release_mem_region(regs_res->start, resource_size(regs_res));
-p_err1:
+p_err_info:
 	kfree(dev);
 	dev_err(&dev->pdev->dev, "failed to install\n");
 	return ret;
@@ -377,7 +383,7 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	/* Unlock bus frequency */
 	dev_unlock(is_dev->bus_dev, dev);
 #endif
-#ifdef CONFIG_VIDEOBUF2_ION
+#if defined(CONFIG_VIDEOBUF2_ION)
 	if (is_dev->alloc_ctx)
 		fimc_is_mem_suspend(is_dev->alloc_ctx);
 #endif
@@ -412,7 +418,7 @@ static int fimc_is_runtime_resume(struct device *dev)
 	dev_lock(is_dev->bus_dev, dev, BUS_LOCK_FREQ_L0);
 #endif
 	is_dev->frame_count = 0;
-#ifdef CONFIG_VIDEOBUF2_ION
+#if defined(CONFIG_VIDEOBUF2_ION)
 	if (is_dev->alloc_ctx)
 		fimc_is_mem_resume(is_dev->alloc_ctx);
 #endif

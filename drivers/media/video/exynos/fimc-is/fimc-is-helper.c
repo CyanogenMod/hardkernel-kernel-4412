@@ -49,9 +49,6 @@ Default setting values
 #define BACK_CAPTURE_HEIGHT		2436
 #define BACK_CAMCORDING_WIDTH		1920
 #define BACK_CAMCORDING_HEIGHT		1080
-#define BACK_PREVIEW_FRAMERATE		15
-#define BACK_CAPTURE_FRAMERATE		15
-#define BACK_CAMCORDING_FRAMERATE	30
 #elif defined(CONFIG_VIDEO_S5K3H7)
 #define BACK_PREVIEW_WIDTH		1280
 #define BACK_PREVIEW_HEIGHT		720
@@ -71,6 +68,11 @@ Default setting values
 #define CAPTURE_HEIGHT		1392
 #define CAMCORDING_WIDTH	1280
 #define CAMCORDING_HEIGHT	720
+#endif
+
+#define BACK_PREVIEW_FRAMERATE		15
+#define BACK_CAPTURE_FRAMERATE		15
+#define BACK_CAMCORDING_FRAMERATE	30
 #ifndef FIX_FRAMERATE
 #define PREVIEW_FRAMERATE	30
 #define CAPTURE_FRAMERATE	15
@@ -79,7 +81,6 @@ Default setting values
 #define PREVIEW_FRAMERATE	30
 #define CAPTURE_FRAMERATE	30
 #define CAMCORDING_FRAMERATE	30
-#endif
 #endif
 
 static const struct sensor_param init_val_sensor_preview = {
@@ -282,7 +283,7 @@ static const struct fd_param init_val_fd_preview = {
 		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
 		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
 		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
-		.mouth_detect = FD_CONFIG_MOUTH_DETECT_ENABLE,
+		.mouth_detect = FD_CONFIG_MOUTH_DETECT_DISABLE,
 		.orientation = FD_CONFIG_ORIENTATION_DISABLE,
 		.orientation_value = 0,
 		.err = ERROR_FD_NO,
@@ -474,7 +475,7 @@ static const struct fd_param init_val_fd_capture = {
 		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
 		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
 		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
-		.mouth_detect = FD_CONFIG_MOUTH_DETECT_ENABLE,
+		.mouth_detect = FD_CONFIG_MOUTH_DETECT_DISABLE,
 		.orientation = FD_CONFIG_ORIENTATION_DISABLE,
 		.orientation_value = 0,
 		.err = ERROR_FD_NO,
@@ -681,7 +682,7 @@ static const struct fd_param init_val_fd_camcording = {
 		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
 		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
 		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
-		.mouth_detect = FD_CONFIG_MOUTH_DETECT_ENABLE,
+		.mouth_detect = FD_CONFIG_MOUTH_DETECT_DISABLE,
 		.orientation = FD_CONFIG_ORIENTATION_DISABLE,
 		.orientation_value = 0,
 		.err = ERROR_FD_NO,
