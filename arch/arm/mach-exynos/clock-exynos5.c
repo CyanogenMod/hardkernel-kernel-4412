@@ -980,7 +980,9 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "nfcon",
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 22),
-	}, {
+	},
+#ifdef CONFIG_CPU_EXYNOS5250
+	{
 		.name		= "iop",
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= ((1 << 30) | (1 << 26) | (1 << 23)),
@@ -993,6 +995,7 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 0),
 	},
+#endif
 };
 
 static struct clk exynos5_i2cs_clocks[] = {
