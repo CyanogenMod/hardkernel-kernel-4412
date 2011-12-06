@@ -229,10 +229,22 @@ static int fimc_init_camera(struct fimc_control *ctrl)
 	 * but it needs to set source width, height depend on LCD resolution.
 	*/
 	if ((cam->id == CAMERA_WB) || (cam->id == CAMERA_WB_B)) {
-		s3cfb_direct_ioctl(0, S3CFB_GET_LCD_WIDTH,
+		ret = s3cfb_direct_ioctl(0, S3CFB_GET_LCD_WIDTH,
 					(unsigned long)&cam->width);
-		s3cfb_direct_ioctl(0, S3CFB_GET_LCD_HEIGHT,
+		if (ret) {
+			fimc_err("fail to get LCD size\n");
+			pm_runtime_put_sync(&pdev->dev);
+			return ret;
+		}
+
+		ret = s3cfb_direct_ioctl(0, S3CFB_GET_LCD_HEIGHT,
 					(unsigned long)&cam->height);
+		if (ret) {
+			fimc_err("fail to get LCD size\n");
+			pm_runtime_put_sync(&pdev->dev);
+			return ret;
+		}
+
 		cam->window.width = cam->width;
 		cam->window.height = cam->height;
 		cam->initialized = 1;
