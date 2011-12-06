@@ -202,6 +202,7 @@ struct dw_mci_board {
 	unsigned int bus_hz; /* Bus speed */
 
 	unsigned int caps;	/* Capabilities */
+	unsigned int caps2;	/* More capabilities */
 
 	/* delay in mS before detecting cards after interrupt */
 	u32 detect_delay_ms;
