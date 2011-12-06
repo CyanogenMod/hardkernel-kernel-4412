@@ -1069,16 +1069,6 @@ static int smdk5250_cam1_reset(int dummy)
 	return 0;
 }
 #endif
-#ifdef WRITEBACK_ENABLED
-struct writeback_mbus_platform_data {
-	int id;
-	struct v4l2_mbus_framefmt fmt;
-};
-
-static struct i2c_board_info __initdata writeback_info = {
-	I2C_BOARD_INFO("writeback", 0x0),
-};
-#endif
 
 #ifdef CONFIG_VIDEO_S5K4BA
 static struct s5k4ba_mbus_platform_data s5k4ba_mbus_plat = {
@@ -1092,6 +1082,9 @@ static struct s5k4ba_mbus_platform_data s5k4ba_mbus_plat = {
 	.clk_rate	= 24000000UL,
 #ifdef CONFIG_ITU_A
 	.set_power	= smdk5250_cam0_reset,
+#endif
+#ifdef CONFIG_ITU_B
+	.set_power	= smdk5250_cam1_reset,
 #endif
 };
 
@@ -1119,21 +1112,6 @@ static struct i2c_board_info m5mols_board_info = {
 	.platform_data = &m5mols_platdata,
 };
 #endif
-/* This is for platdata of fimc-lite */
-static struct s3c_platform_camera m5mo = {
-	.type		= CAM_TYPE_MIPI,
-	.use_isp	= true,
-	.inv_pclk	= 1,
-	.inv_vsync	= 1,
-	.inv_href	= 0,
-	.inv_hsync	= 0,
-};
-
-static struct exynos_platform_flite flite_plat = {
-#ifdef CONFIG_VIDEO_M5MOLS
-	.cam		= &m5mo,
-#endif
-};
 #endif /* CONFIG_VIDEO_EXYNOS_FIMC_LITE */
 
 #ifdef CONFIG_VIDEO_EXYNOS_MIPI_CSIS
@@ -1783,66 +1761,116 @@ static void __init smdk5250_camera_gpio_cfg(void)
 #endif
 
 #if defined(CONFIG_VIDEO_EXYNOS_GSCALER) && defined(CONFIG_VIDEO_EXYNOS_FIMC_LITE)
-static struct exynos_gscaler_isp_info isp_info[] = {
 #if defined(CONFIG_VIDEO_S5K4BA)
-	{
-		.board_info	= &s5k4ba_info,
-		.cam_srclk_name	= "xxti",
-		.clk_frequency  = 24000000UL,
-		.bus_type	= GSC_ITU_601,
+static struct exynos_gscaler_isp_info s5k4ba = {
+	.board_info	= &s5k4ba_info,
+	.cam_srclk_name	= "xxti",
+	.clk_frequency  = 24000000UL,
+	.bus_type	= GSC_ITU_601,
 #ifdef CONFIG_ITU_A
-		.cam_clk_name	= "sclk_cam0",
-		.i2c_bus_num	= 4,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
+	.cam_clk_name	= "sclk_cam0",
+	.i2c_bus_num	= 4,
+	.cam_port	= CAM_PORT_A, /* A-Port : 0, B-Port : 1 */
 #endif
 #ifdef CONFIG_ITU_B
-		.cam_clk_name	= "sclk_cam1",
-		.i2c_bus_num	= 5,
-		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
+	.cam_clk_name	= "sclk_cam1",
+	.i2c_bus_num	= 5,
+	.cam_port	= CAM_PORT_B, /* A-Port : 0, B-Port : 1 */
 #endif
-		.flags		= GSC_CLK_INV_VSYNC,
-	},
+	.flags		= GSC_CLK_INV_VSYNC,
+};
+/* This is for platdata of fimc-lite */
+static struct s3c_platform_camera flite_s5k4ba = {
+	.type		= CAM_TYPE_MIPI,
+	.use_isp	= true,
+	.inv_pclk	= 1,
+	.inv_vsync	= 1,
+	.inv_href	= 0,
+	.inv_hsync	= 0,
+};
 #endif
 #if defined(CONFIG_VIDEO_M5MOLS)
-	{
-		.board_info	= &m5mols_board_info,
-		.cam_srclk_name	= "xxti",
-		.clk_frequency  = 24000000UL,
-		.bus_type	= GSC_MIPI_CSI2,
+static struct exynos_gscaler_isp_info m5mols = {
+	.board_info	= &m5mols_board_info,
+	.cam_srclk_name	= "xxti",
+	.clk_frequency  = 24000000UL,
+	.bus_type	= GSC_MIPI_CSI2,
 #ifdef CONFIG_CSI_C
-		.cam_clk_name	= "sclk_cam0",
-		.i2c_bus_num	= 4,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
+	.cam_clk_name	= "sclk_cam0",
+	.i2c_bus_num	= 4,
+	.cam_port	= CAM_PORT_A, /* A-Port : 0, B-Port : 1 */
 #endif
 #ifdef CONFIG_CSI_D
-		.cam_clk_name	= "sclk_cam1",
-		.i2c_bus_num	= 5,
-		.mux_id		= 1, /* A-Port : 0, B-Port : 1 */
+	.cam_clk_name	= "sclk_cam1",
+	.i2c_bus_num	= 5,
+	.cam_port	= CAM_PORT_B, /* A-Port : 0, B-Port : 1 */
 #endif
-		.flags		= GSC_CLK_INV_PCLK | GSC_CLK_INV_VSYNC,
-		.csi_data_align = 32,
-	},
-#endif
-#if defined(WRITEBACK_ENABLED)
-	{
-		.board_info	= &writeback_info,
-		.bus_type	= GSC_LCD_WB,
-		.i2c_bus_num	= 0,
-		.mux_id		= 0, /* A-Port : 0, B-Port : 1 */
-		.flags		= GSC_CLK_INV_VSYNC,
-	},
-#endif
+	.flags		= GSC_CLK_INV_PCLK | GSC_CLK_INV_VSYNC,
+	.csi_data_align = 32,
 };
+/* This is for platdata of fimc-lite */
+static struct s3c_platform_camera flite_m5mo = {
+	.type		= CAM_TYPE_MIPI,
+	.use_isp	= true,
+	.inv_pclk	= 1,
+	.inv_vsync	= 1,
+	.inv_href	= 0,
+	.inv_hsync	= 0,
+};
+#endif
 
-static void __init smdk5250_set_gsc_platdata(void)
+static void __set_gsc_camera_config(struct exynos_platform_gscaler *data,
+					u32 active_index, u32 preview,
+					u32 camcording, u32 max_cam)
 {
-	exynos_gsc0_default_data.isp_info[0] = &isp_info[0];
-	if (exynos_gsc0_default_data.isp_info[0] == NULL)
-		return;
-	exynos_gsc0_default_data.active_cam_index = 0;
-	exynos_gsc0_default_data.cam_preview = 1;
-	exynos_gsc0_default_data.cam_camcording = 0;
-	exynos_gsc0_default_data.num_clients = 1;
+	data->active_cam_index = active_index;
+	data->cam_preview = preview;
+	data->cam_camcording = camcording;
+	data->num_clients = max_cam;
+}
+
+static void __set_flite_camera_config(struct exynos_platform_flite *data,
+					u32 active_index, u32 max_cam)
+{
+	data->active_cam_index = active_index;
+	data->num_clients = max_cam;
+}
+
+static void __init smdk5250_set_camera_platdata(void)
+{
+	int gsc_cam_index = 0;
+	int flite0_cam_index = 0;
+	int flite1_cam_index = 0;
+#if defined(CONFIG_VIDEO_M5MOLS)
+	exynos_gsc0_default_data.isp_info[gsc_cam_index++] = &m5mols;
+#if defined(CONFIG_CSI_C)
+	exynos_flite0_default_data.cam[flite0_cam_index++] = &flite_m5mo;
+#endif
+#if defined(CONFIG_CSI_D)
+	exynos_flite1_default_data.cam[flite1_cam_index++] = &flite_m5mo;
+#endif
+#endif
+
+#if defined(CONFIG_VIDEO_S5K4BA)
+	exynos_gsc0_default_data.isp_info[gsc_cam_index++] = &s5k4ba;
+#if defined(CONFIG_ITU_A)
+	exynos_flite0_default_data.cam[flite0_cam_index++] = &flite_s5k4ba;
+#endif
+#if defined(CONFIG_ITU_B)
+	exynos_flite1_default_data.cam[flite1_cam_index++] = &flite_s5k4ba;
+#endif
+#endif
+	/* flite platdata register */
+	__set_flite_camera_config(&exynos_flite0_default_data, 0, flite0_cam_index);
+	__set_flite_camera_config(&exynos_flite1_default_data, 0, flite1_cam_index);
+
+	/* gscaler platdata register */
+	/* GSC-0 */
+	__set_gsc_camera_config(&exynos_gsc0_default_data, 0, 1, 0, gsc_cam_index);
+
+	/* GSC-1 */
+	/* GSC-2 */
+	/* GSC-3 */
 }
 #endif /* CONFIG_VIDEO_EXYNOS_GSCALER */
 
@@ -2087,8 +2115,11 @@ static void __init smdk5250_machine_init(void)
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 	smdk5250_camera_gpio_cfg();
-	exynos_flite0_set_platdata(&flite_plat);
-	exynos_flite1_set_platdata(&flite_plat);
+	smdk5250_set_camera_platdata();
+	s3c_set_platdata(&exynos_flite0_default_data,
+			sizeof(exynos_flite0_default_data), &exynos_device_flite0);
+	s3c_set_platdata(&exynos_flite1_default_data,
+			sizeof(exynos_flite1_default_data), &exynos_device_flite1);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
 #if defined(CONFIG_EXYNOS_DEV_PD)
@@ -2096,9 +2127,6 @@ static void __init smdk5250_machine_init(void)
 	exynos5_device_gsc1.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
 	exynos5_device_gsc2.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
 	exynos5_device_gsc3.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
-#endif
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
-	smdk5250_set_gsc_platdata();
 #endif
 	s3c_set_platdata(&exynos_gsc0_default_data, sizeof(exynos_gsc0_default_data),
 			&exynos5_device_gsc0);
