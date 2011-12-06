@@ -3211,16 +3211,6 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
-		{
-			.name = "fimc_is",
-			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS * SZ_1K,
-			{
-				.alignment = 1 << 26,
-			},
-			.start = 0
-		},
-#endif
 #if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
 	defined(CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1)
 		{
@@ -3254,6 +3244,16 @@ static void __init exynos4_reserve_mem(void)
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC * SZ_1K,
 			{
 				.alignment = 1 << 17,
+			},
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
+		{
+			.name = "fimc_is",
+			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS * SZ_1K,
+			{
+				.alignment = 1 << 26,
 			},
 			.start = 0
 		},
