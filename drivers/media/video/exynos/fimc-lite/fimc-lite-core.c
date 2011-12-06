@@ -721,12 +721,18 @@ static int flite_probe(struct platform_device *pdev)
 	struct flite_dev *flite;
 	int ret = -ENODEV;
 
+	if (!pdev->dev.platform_data) {
+		dev_err(&pdev->dev, "platform data is NULL\n");
+		return -EINVAL;
+	}
+
 	flite = kzalloc(sizeof(struct flite_dev), GFP_KERNEL);
 	if (!flite)
 		return -ENOMEM;
 
 	flite->pdev = pdev;
 	flite->pdata = pdev->dev.platform_data;
+
 	flite->id = pdev->id;
 
 	init_waitqueue_head(&flite->irq_queue);
