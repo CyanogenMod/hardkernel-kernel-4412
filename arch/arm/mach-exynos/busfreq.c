@@ -455,6 +455,11 @@ void exynos4_busfreq_lock_free(unsigned int nId)
 	mutex_unlock(&set_bus_freq_lock);
 }
 
+void exynos4_request_apply(unsigned long freq, struct device *dev)
+{
+	/* not supported yet */
+}
+
 static void __init exynos4_set_bus_volt(void)
 {
 	unsigned int asv_group;
