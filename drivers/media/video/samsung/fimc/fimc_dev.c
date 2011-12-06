@@ -2164,9 +2164,7 @@ static struct platform_driver fimc_driver = {
 
 static int fimc_register(void)
 {
-	platform_driver_register(&fimc_driver);
-
-	return 0;
+	return platform_driver_register(&fimc_driver);
 }
 
 static void fimc_unregister(void)
