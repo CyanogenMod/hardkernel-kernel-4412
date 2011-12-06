@@ -546,7 +546,7 @@ int fimc_release_subdev(struct fimc_control *ctrl)
 	struct i2c_client *client;
 	int ret;
 
-	if (ctrl && ctrl->cam && ctrl->cam->sd) {
+	if (ctrl->cam->sd) {
 		fimc_dbg("%s called\n", __func__);
 
 		/* WriteBack doesn't need clock setting */
