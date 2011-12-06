@@ -399,9 +399,7 @@ static struct platform_driver s3c_csis_driver = {
 
 static int s3c_csis_register(void)
 {
-	platform_driver_register(&s3c_csis_driver);
-
-	return 0;
+	return platform_driver_register(&s3c_csis_driver);
 }
 
 static void s3c_csis_unregister(void)
