@@ -1692,17 +1692,18 @@ static int __devinit fimc_probe(struct platform_device *pdev)
 	}
 	printk(KERN_INFO "FIMC%d registered successfully\n", ctrl->id);
 #if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-	ctrl->power_status = FIMC_POWER_OFF;
-	pm_runtime_enable(&pdev->dev);
-
 	sprintf(buf, "fimc%d_iqr_wq_name", ctrl->id);
 	ctrl->fimc_irq_wq = create_workqueue(buf);
-
-	if (ctrl->fimc_irq_wq == NULL)
-		printk(KERN_ERR "Cannot create workqueue for fimc driver\n");
+	if (ctrl->fimc_irq_wq == NULL) {
+		fimc_err("failed to create_workqueue\n");
+		goto err_global;
+	}
 
 	INIT_WORK(&ctrl->work_struct, s3c_fimc_irq_work);
 	ctrl->irq_cnt.counter = 0;
+
+	ctrl->power_status = FIMC_POWER_OFF;
+	pm_runtime_enable(&pdev->dev);
 #endif
 
 	return 0;
