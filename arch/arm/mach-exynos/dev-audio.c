@@ -406,11 +406,17 @@ struct platform_device exynos_device_spdif = {
 static struct resource exynos_srp_resource[] = {
 };
 
+static u64 exynos_srp_dmamask = DMA_BIT_MASK(32);
+
 struct platform_device exynos_device_srp = {
 	.name             = "samsung-rp",
 	.id               = -1,
 	.num_resources    = ARRAY_SIZE(exynos_srp_resource),
 	.resource         = exynos_srp_resource,
+	.dev = {
+		.dma_mask = &exynos_srp_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
 };
 EXPORT_SYMBOL(exynos_device_srp);
 #endif
