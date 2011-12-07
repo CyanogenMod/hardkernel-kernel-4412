@@ -2014,7 +2014,7 @@ static int s5p_dp_config_video(struct s5p_dp_device *dp,
 
 		for (;;) {
 			timeout_loop++;
-			if (s5p_dp_is_video_stram_on(dp) == 0) {
+			if (s5p_dp_is_video_stream_on(dp) == 0) {
 				done_count++;
 				if (done_count > 10)
 					break;

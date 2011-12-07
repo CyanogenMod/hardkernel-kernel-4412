@@ -1426,7 +1426,7 @@ void s5p_dp_start_video(struct s5p_dp_device *dp)
 	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_1);
 }
 
-int s5p_dp_is_video_stram_on(struct s5p_dp_device *dp)
+int s5p_dp_is_video_stream_on(struct s5p_dp_device *dp)
 {
 	u32 reg;
 

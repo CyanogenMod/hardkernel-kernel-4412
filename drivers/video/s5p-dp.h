@@ -137,7 +137,7 @@ void s5p_dp_set_video_cr_mn(struct s5p_dp_device *dp,
 void s5p_dp_set_video_timing_mode(struct s5p_dp_device *dp, u32 type);
 void s5p_dp_enable_video_master(struct s5p_dp_device *dp, bool enable);
 void s5p_dp_start_video(struct s5p_dp_device *dp);
-int s5p_dp_is_video_stram_on(struct s5p_dp_device *dp);
+int s5p_dp_is_video_stream_on(struct s5p_dp_device *dp);
 void s5p_dp_config_video_master_mode(struct s5p_dp_device *dp,
 			struct video_info *video_info);
 void s5p_dp_config_video_slave_mode(struct s5p_dp_device *dp,
