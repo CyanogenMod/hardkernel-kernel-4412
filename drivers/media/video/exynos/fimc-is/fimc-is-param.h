@@ -62,7 +62,6 @@
 		(dev->is_p_region->parameter.isp.otf_input.order = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.err = x)
-#ifdef FIX_FRAMERATE
 #define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED0(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.reserved[0] = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED1(dev, x) \
@@ -73,7 +72,6 @@
 		(dev->is_p_region->parameter.isp.otf_input.reserved[3] = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.reserved[4] = x)
-#endif
 
 #define IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev, x) \
 		(dev->is_p_region->parameter.isp.dma1_input.cmd = x)

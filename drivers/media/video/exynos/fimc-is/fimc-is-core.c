@@ -297,9 +297,10 @@ static int fimc_is_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(&pdev->dev);
 
+#ifdef CONFIG_BUSFREQ_OPP
 	/* To lock bus frequency in OPP mode */
 	dev->bus_dev = dev_get("exynos4-busfreq");
-
+#endif
 	dev->power = 0;
 	dev->state = 0;
 	dev->sensor_num = FIMC_IS_SENSOR_NUM;

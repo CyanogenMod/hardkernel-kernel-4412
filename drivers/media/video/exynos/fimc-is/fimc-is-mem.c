@@ -33,6 +33,7 @@
 #define FIMC_IS_FW_BASE_MASK		((1 << 26) - 1)
 
 struct vb2_buffer *is_vb;
+void *buf_start;
 
 struct vb2_ion_conf {
 	struct device		*dev;
@@ -136,7 +137,7 @@ void *fimc_is_mem_init(struct device *dev)
 	struct vb2_ion vb2_ion;
 	void **alloc_ctxes;
 	struct vb2_drv vb2_drv = {0, };
-	
+
 	/* TODO */
 	vb2_ion.name = FIMC_IS_ION_NAME;
 	vb2_ion.dev = dev;
@@ -164,12 +165,14 @@ void fimc_is_mem_suspend(void *alloc_ctxes)
 	vb2_ion_suspend(alloc_ctxes);
 }
 
-int fimc_is_cache_flush(struct vb2_buffer *vb, const void *start_addr, unsigned long size)
+int fimc_is_cache_flush(struct vb2_buffer *vb,
+				const void *start_addr, unsigned long size)
 {
-	return vb2_ion_cache_flush(vb, 1); 
+	return vb2_ion_cache_flush(vb, 1);
 }
 
-int fimc_is_cache_inv(struct vb2_buffer *vb, const void *start_addr, unsigned long size)
+int fimc_is_cache_inv(struct vb2_buffer *vb,
+				const void *start_addr, unsigned long size)
 {
 	return vb2_ion_cache_inv(vb, 1);
 }
@@ -179,7 +182,8 @@ int fimc_is_alloc_firmware(struct fimc_is_dev *dev)
 {
 	void *fimc_is_bitproc_buf;
 	dbg("Allocating memory for FIMC-IS firmware.\n");
-	fimc_is_bitproc_buf = vb2_ion_memops.alloc(dev->alloc_ctx, FIMC_IS_A5_MEM_SIZE);
+	fimc_is_bitproc_buf =
+		vb2_ion_memops.alloc(dev->alloc_ctx, FIMC_IS_A5_MEM_SIZE);
 	if (IS_ERR(fimc_is_bitproc_buf)) {
 		fimc_is_bitproc_buf = 0;
 		printk(KERN_ERR "Allocating bitprocessor buffer failed\n");
@@ -194,7 +198,8 @@ int fimc_is_alloc_firmware(struct fimc_is_dev *dev)
 		fimc_is_bitproc_buf = 0;
 		return -EIO;
 	}
-	dbg("Device vaddr = %08x , size = %08x\n", dev->mem.dvaddr, FIMC_IS_A5_MEM_SIZE);
+	dbg("Device vaddr = %08x , size = %08x\n",
+				dev->mem.dvaddr, FIMC_IS_A5_MEM_SIZE);
 
 	dev->mem.kvaddr = vb2_ion_memops.vaddr(fimc_is_bitproc_buf);
 	if (!dev->mem.kvaddr) {
@@ -205,71 +210,89 @@ int fimc_is_alloc_firmware(struct fimc_is_dev *dev)
 		return -EIO;
 	}
 	dbg("Virtual address for FW: %08lx\n",
-				(long unsigned int)dev->mem.kvaddr);
+			(long unsigned int)dev->mem.kvaddr);
 	dbg("Physical address for FW: %08lx\n",
-				(long unsigned int)virt_to_phys(dev->mem.kvaddr));
+			(long unsigned int)virt_to_phys(dev->mem.kvaddr));
 	dev->mem.bitproc_buf = fimc_is_bitproc_buf;
 	dev->mem.vb2_buf.planes[0].mem_priv = fimc_is_bitproc_buf;
 
 	is_vb = &dev->mem.vb2_buf;
+	buf_start = dev->mem.kvaddr;
 	return 0;
 }
 
 void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size)
 {
 	struct vb2_ion_buf *buf;
-	unsigned long buf_size = 0;
-	struct scatterlist *s;
-	phys_addr_t start, end;
+	struct scatterlist *sg;
 	int i;
-	
-	buf = is_vb->planes[0].mem_priv;
-	buf_size = buf->size;
+	off_t offset;
 
-	/* sequentially traversal phys */
-	if (size > SZ_64K ) {
-		flush_cache_all();	/* L1 */
-		smp_call_function((void (*)(void *))__cpuc_flush_kern_all, NULL, 1);
+	if (start_addr < buf_start) {
+		err("Start address error\n");
+		return;
+	}
+	size--;
 
-		for_each_sg(buf->sg, s, buf->nents, i) {
-			start = sg_phys(s);
-			end = start + sg_dma_len(s) - 1;
+	offset = start_addr - buf_start;
 
-			outer_flush_range(start, end);	/* L2 */
+	buf = (struct vb2_ion_buf *)is_vb->planes[0].mem_priv;
+	for_each_sg(buf->sg, sg, buf->nents, i) {
+		phys_addr_t start, end;
+
+		if (offset >= sg_dma_len(sg)) {
+			offset -= sg_dma_len(sg);
+			continue;
 		}
-	} else {
-		for_each_sg(buf->sg, s, buf->nents, i) {
-			start = sg_phys(s);	/* KVA */
-			end = start + sg_dma_len(s) - 1;
 
-			dmac_flush_range(phys_to_virt(start),
-					 phys_to_virt(end));
-			outer_flush_range(start, end);	/* L2 */
-		}
+		start = sg_phys(sg);
+		end = start + sg_dma_len(sg);
+
+		dmac_flush_range(phys_to_virt(start),
+				 phys_to_virt(end));
+		outer_flush_range(start, end);	/* L2 */
+
+		if (size == 0)
+			break;
 	}
 }
 
 void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size)
 {
-#ifndef CONTIG
-	struct vb2_ion_conf *conf;
 	struct vb2_ion_buf *buf;
+	struct scatterlist *sg;
+	int i;
+	off_t offset;
 
-	buf = is_vb->planes[0].mem_priv;
-	conf = buf->conf;
+	if (start_addr < buf_start) {
+		err("Start address error\n");
+		return;
+	}
 
-	err("fimc_is_mem_cache_inv - %p, %p, %p",conf->dev, buf->sg, buf->nents);
-	dma_unmap_sg(conf->dev, buf->sg, buf->nents, DMA_FROM_DEVICE);
-#else
-	unsigned long paddr;
+	offset = start_addr - buf_start;
 
-	paddr = __pa((unsigned long)start_addr);
-	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
-	outer_inv_range(paddr, paddr + size);
-#endif
+	buf = (struct vb2_ion_buf *)is_vb->planes[0].mem_priv;
+	for_each_sg(buf->sg, sg, buf->nents, i) {
+		phys_addr_t start, end;
+
+		if (offset >= sg_dma_len(sg)) {
+			offset -= sg_dma_len(sg);
+			continue;
+		}
+
+		start = sg_phys(sg);
+		end = start + sg_dma_len(sg);
+
+		dmac_flush_range(phys_to_virt(start),
+				 phys_to_virt(end));
+		outer_flush_range(start, end);	/* L2 */
+		if (size == 0)
+			break;
+	}
 }
 
-int fimc_is_init_mem_mgr(struct fimc_is_dev *dev) {
+int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
+{
 	int ret;
 	dev->alloc_ctx = (struct vb2_alloc_ctx *)
 			fimc_is_mem_init(&dev->pdev->dev);
@@ -284,8 +307,10 @@ int fimc_is_init_mem_mgr(struct fimc_is_dev *dev) {
 	}
 	memset(dev->mem.kvaddr, 0, FIMC_IS_A5_MEM_SIZE);
 	dev->is_p_region =
-		(struct is_region *)(dev->mem.kvaddr + FIMC_IS_A5_MEM_SIZE - FIMC_IS_REGION_SIZE);
-	if (fimc_is_cache_flush(&dev->mem.vb2_buf, (void *)dev->is_p_region, IS_PARAM_SIZE)) {
+		(struct is_region *)(dev->mem.kvaddr +
+			FIMC_IS_A5_MEM_SIZE - FIMC_IS_REGION_SIZE);
+	if (fimc_is_cache_flush(&dev->mem.vb2_buf,
+			(void *)dev->is_p_region, IS_PARAM_SIZE)) {
 		err("fimc_is_cache_flush-Err\n");
 		return -EINVAL;
 	}

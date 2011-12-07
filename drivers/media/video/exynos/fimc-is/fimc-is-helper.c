@@ -41,55 +41,27 @@
 /*
 Default setting values
 */
+#define DEFAULT_PREVIEW_STILL_WIDTH	640
+#define DEFAULT_PREVIEW_STILL_HEIGHT	480
+#define DEFAULT_CAPTURE_STILL_WIDTH	640
+#define DEFAULT_CAPTURE_STILL_HEIGHT	480
+#define DEFAULT_PREVIEW_VIDEO_WIDTH	640
+#define DEFAULT_PREVIEW_VIDEO_HEIGHT	480
+#define DEFAULT_CAPTURE_VIDEO_WIDTH	640
+#define DEFAULT_CAPTURE_VIDEO_HEIGHT	480
 
-#if defined(CONFIG_VIDEO_S5K3H2)
-#define BACK_PREVIEW_WIDTH		1280
-#define BACK_PREVIEW_HEIGHT		720
-#define BACK_CAPTURE_WIDTH		3248
-#define BACK_CAPTURE_HEIGHT		2436
-#define BACK_CAMCORDING_WIDTH		1920
-#define BACK_CAMCORDING_HEIGHT		1080
-#elif defined(CONFIG_VIDEO_S5K3H7)
-#define BACK_PREVIEW_WIDTH		1280
-#define BACK_PREVIEW_HEIGHT		720
-#define BACK_CAPTURE_WIDTH		3248
-#define BACK_CAPTURE_HEIGHT		2436
-#define BACK_CAMCORDING_WIDTH		1920
-#define BACK_CAMCORDING_HEIGHT		1080
-#define BACK_PREVIEW_FRAMERATE		15
-#define BACK_CAPTURE_FRAMERATE		15
-#define BACK_CAMCORDING_FRAMERATE	30
-#endif
+#define DEFAULT_PREVIEW_STILL_FRAMERATE	30
+#define DEFAULT_CAPTURE_STILL_FRAMERATE	30
+#define DEFAULT_PREVIEW_VIDEO_FRAMERATE	30
+#define DEFAULT_CAPTURE_VIDEO_FRAMERATE	30
 
-#ifdef CONFIG_VIDEO_S5K6A3
-#define PREVIEW_WIDTH		960
-#define PREVIEW_HEIGHT		720
-#define CAPTURE_WIDTH		1392
-#define CAPTURE_HEIGHT		1392
-#define CAMCORDING_WIDTH	1280
-#define CAMCORDING_HEIGHT	720
-#endif
-
-#define BACK_PREVIEW_FRAMERATE		15
-#define BACK_CAPTURE_FRAMERATE		15
-#define BACK_CAMCORDING_FRAMERATE	30
-#ifndef FIX_FRAMERATE
-#define PREVIEW_FRAMERATE	30
-#define CAPTURE_FRAMERATE	15
-#define CAMCORDING_FRAMERATE	30
-#else
-#define PREVIEW_FRAMERATE	30
-#define CAPTURE_FRAMERATE	30
-#define CAMCORDING_FRAMERATE	30
-#endif
-
-static const struct sensor_param init_val_sensor_preview = {
+static const struct sensor_param init_val_sensor_preview_still = {
 	.frame_rate = {
-		.frame_rate = PREVIEW_FRAMERATE,
+		.frame_rate = DEFAULT_PREVIEW_STILL_FRAMERATE,
 	},
 };
 
-static const struct isp_param init_val_isp_preview = {
+static const struct isp_param init_val_isp_preview_still = {
 	.control = {
 		.cmd = CONTROL_COMMAND_START,
 		.bypass = CONTROL_BYPASS_DISABLE,
@@ -97,7 +69,8 @@ static const struct isp_param init_val_isp_preview = {
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
-		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.width = DEFAULT_PREVIEW_STILL_WIDTH,
+		.height = DEFAULT_PREVIEW_STILL_HEIGHT,
 #ifndef ISP_STRGEN
 		.format = OTF_INPUT_FORMAT_BAYER,
 #else
@@ -105,10 +78,8 @@ static const struct isp_param init_val_isp_preview = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
-#ifdef FIX_FRAMERATE
 		.reserved[3] = 0,
 		.reserved[4] = 33333,
-#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -168,7 +139,8 @@ static const struct isp_param init_val_isp_preview = {
 	.metering = {
 		.cmd = ISP_METERING_COMMAND_MATRIX,
 		.win_pos_x = 0, .win_pos_y = 0,
-		.win_width = PREVIEW_WIDTH, .win_height = PREVIEW_HEIGHT,
+		.win_width = DEFAULT_PREVIEW_STILL_WIDTH,
+		.win_height = DEFAULT_PREVIEW_STILL_HEIGHT,
 		.err = ISP_METERING_ERROR_NO,
 	},
 	.afc = {
@@ -177,7 +149,8 @@ static const struct isp_param init_val_isp_preview = {
 	},
 	.otf_output = {
 		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
-		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.width = DEFAULT_PREVIEW_STILL_WIDTH,
+		.height = DEFAULT_PREVIEW_STILL_HEIGHT,
 		.format = OTF_OUTPUT_FORMAT_YUV444,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_12BIT,
 		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
@@ -189,7 +162,8 @@ static const struct isp_param init_val_isp_preview = {
 #else
 		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
 #endif
-		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.width = DEFAULT_PREVIEW_STILL_WIDTH,
+		.height = DEFAULT_PREVIEW_STILL_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_YUV422,
 		.bitwidth = DMA_OUTPUT_BIT_WIDTH_8BIT,
 		.plane = DMA_OUTPUT_PLANE_3,
@@ -204,7 +178,8 @@ static const struct isp_param init_val_isp_preview = {
 #else
 		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
 #endif
-		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.width = DEFAULT_PREVIEW_STILL_WIDTH,
+		.height = DEFAULT_PREVIEW_STILL_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_BAYER,
 		.bitwidth = DMA_OUTPUT_BIT_WIDTH_10BIT,
 		.plane = DMA_OUTPUT_PLANE_1,
@@ -215,7 +190,7 @@ static const struct isp_param init_val_isp_preview = {
 	},
 };
 
-static const struct drc_param init_val_drc_preview = {
+static const struct drc_param init_val_drc_preview_still = {
 	.control = {
 		.cmd = CONTROL_COMMAND_START,
 		.bypass = CONTROL_BYPASS_ENABLE,
@@ -223,7 +198,8 @@ static const struct drc_param init_val_drc_preview = {
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
-		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.width = DEFAULT_PREVIEW_STILL_WIDTH,
+		.height = DEFAULT_PREVIEW_STILL_HEIGHT,
 		.format = OTF_INPUT_FORMAT_YUV444,
 		.bitwidth = OTF_INPUT_BIT_WIDTH_12BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
@@ -238,7 +214,8 @@ static const struct drc_param init_val_drc_preview = {
 	},
 	.otf_output = {
 		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
-		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.width = DEFAULT_PREVIEW_STILL_WIDTH,
+		.height = DEFAULT_PREVIEW_STILL_HEIGHT,
 		.format = OTF_OUTPUT_FORMAT_YUV444,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
 		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
@@ -246,7 +223,7 @@ static const struct drc_param init_val_drc_preview = {
 	},
 };
 
-static const struct fd_param init_val_fd_preview = {
+static const struct fd_param init_val_fd_preview_still = {
 	.control = {
 		.cmd = CONTROL_COMMAND_STOP,
 		.bypass = CONTROL_BYPASS_DISABLE,
@@ -254,7 +231,8 @@ static const struct fd_param init_val_fd_preview = {
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
-		.width = PREVIEW_WIDTH, .height = PREVIEW_HEIGHT,
+		.width = DEFAULT_PREVIEW_STILL_WIDTH,
+		.height = DEFAULT_PREVIEW_STILL_HEIGHT,
 		.format = OTF_INPUT_FORMAT_YUV444,
 		.bitwidth = OTF_INPUT_BIT_WIDTH_8BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
@@ -292,7 +270,7 @@ static const struct fd_param init_val_fd_preview = {
 
 static const struct sensor_param init_val_sensor_capture = {
 	.frame_rate = {
-		.frame_rate = CAPTURE_FRAMERATE,
+		.frame_rate = DEFAULT_CAPTURE_STILL_FRAMERATE,
 	},
 };
 
@@ -304,7 +282,8 @@ static const struct isp_param init_val_isp_capture = {
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
-		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+		.width = DEFAULT_CAPTURE_STILL_WIDTH,
+		.height = DEFAULT_CAPTURE_STILL_HEIGHT,
 #ifndef ISP_STRGEN
 		.format = OTF_INPUT_FORMAT_BAYER,
 #else
@@ -312,10 +291,8 @@ static const struct isp_param init_val_isp_capture = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
-#ifdef FIX_FRAMERATE
 		.reserved[3] = 0,
-		.reserved[4] = 66666,
-#endif
+		.reserved[4] = 33333,
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -375,7 +352,8 @@ static const struct isp_param init_val_isp_capture = {
 	.metering = {
 		.cmd = ISP_METERING_COMMAND_MATRIX,
 		.win_pos_x = 0, .win_pos_y = 0,
-		.win_width = CAPTURE_WIDTH, .win_height = CAPTURE_HEIGHT,
+		.win_width = DEFAULT_CAPTURE_STILL_WIDTH,
+		.win_height = DEFAULT_CAPTURE_STILL_HEIGHT,
 		.err = ISP_METERING_ERROR_NO,
 	},
 	.afc = {
@@ -384,7 +362,8 @@ static const struct isp_param init_val_isp_capture = {
 	},
 	.otf_output = {
 		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
-		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+		.width = DEFAULT_CAPTURE_STILL_WIDTH,
+		.height = DEFAULT_CAPTURE_STILL_HEIGHT,
 		.format = OTF_OUTPUT_FORMAT_YUV444,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_12BIT,
 		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
@@ -414,7 +393,8 @@ static const struct drc_param init_val_drc_capture = {
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
-		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+		.width = DEFAULT_CAPTURE_STILL_WIDTH,
+		.height = DEFAULT_CAPTURE_STILL_HEIGHT,
 		.format = OTF_INPUT_FORMAT_YUV444,
 		.bitwidth = OTF_INPUT_BIT_WIDTH_12BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
@@ -429,7 +409,8 @@ static const struct drc_param init_val_drc_capture = {
 	},
 	.otf_output = {
 		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
-		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+		.width = DEFAULT_CAPTURE_STILL_WIDTH,
+		.height = DEFAULT_CAPTURE_STILL_HEIGHT,
 		.format = OTF_OUTPUT_FORMAT_YUV444,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
 		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
@@ -446,7 +427,8 @@ static const struct fd_param init_val_fd_capture = {
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
-		.width = CAPTURE_WIDTH, .height = CAPTURE_HEIGHT,
+		.width = DEFAULT_CAPTURE_STILL_WIDTH,
+		.height = DEFAULT_CAPTURE_STILL_HEIGHT,
 		.format = OTF_INPUT_FORMAT_YUV444,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
@@ -482,13 +464,13 @@ static const struct fd_param init_val_fd_capture = {
 	},
 };
 
-static const struct sensor_param init_val_sensor_camcording = {
+static const struct sensor_param init_val_sensor_preview_video = {
 	.frame_rate = {
-		.frame_rate = CAMCORDING_FRAMERATE,
+		.frame_rate = DEFAULT_PREVIEW_VIDEO_FRAMERATE,
 	},
 };
 
-static const struct isp_param init_val_isp_camcording = {
+static const struct isp_param init_val_isp_preview_video = {
 	.control = {
 		.cmd = CONTROL_COMMAND_START,
 		.bypass = CONTROL_BYPASS_DISABLE,
@@ -496,7 +478,8 @@ static const struct isp_param init_val_isp_camcording = {
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
-		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.width = DEFAULT_PREVIEW_VIDEO_WIDTH,
+		.height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
 #ifndef ISP_STRGEN
 		.format = OTF_INPUT_FORMAT_BAYER,
 #else
@@ -504,10 +487,8 @@ static const struct isp_param init_val_isp_camcording = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
-#ifdef FIX_FRAMERATE
 		.reserved[3] = 0,
 		.reserved[4] = 33333,
-#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -567,7 +548,8 @@ static const struct isp_param init_val_isp_camcording = {
 	.metering = {
 		.cmd = ISP_METERING_COMMAND_MATRIX,
 		.win_pos_x = 0, .win_pos_y = 0,
-		.win_width = CAMCORDING_WIDTH, .win_height = CAMCORDING_HEIGHT,
+		.win_width = DEFAULT_PREVIEW_VIDEO_WIDTH,
+		.win_height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
 		.err = ISP_METERING_ERROR_NO,
 	},
 	.afc = {
@@ -576,7 +558,8 @@ static const struct isp_param init_val_isp_camcording = {
 	},
 	.otf_output = {
 		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
-		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.width = DEFAULT_PREVIEW_VIDEO_WIDTH,
+		.height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
 		.format = OTF_OUTPUT_FORMAT_YUV444,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_12BIT,
 		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
@@ -588,7 +571,8 @@ static const struct isp_param init_val_isp_camcording = {
 #else
 		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
 #endif
-		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.width = DEFAULT_PREVIEW_VIDEO_WIDTH,
+		.height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_YUV422,
 		.bitwidth = DMA_OUTPUT_BIT_WIDTH_8BIT,
 		.plane = DMA_OUTPUT_PLANE_3,
@@ -603,7 +587,222 @@ static const struct isp_param init_val_isp_camcording = {
 #else
 		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
 #endif
-		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.width = DEFAULT_PREVIEW_VIDEO_WIDTH,
+		.height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
+		.format = DMA_OUTPUT_FORMAT_BAYER,
+		.bitwidth = DMA_OUTPUT_BIT_WIDTH_10BIT,
+		.plane = DMA_OUTPUT_PLANE_1,
+		.order = DMA_OUTPUT_ORDER_GB_BG,
+		.buffer_number = 1,
+		.buffer_address = 0x501D0000,
+		.err = DMA_OUTPUT_ERROR_NO,
+	},
+};
+
+static const struct drc_param init_val_drc_preview_video = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_ENABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = DEFAULT_PREVIEW_VIDEO_WIDTH,
+		.height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
+		.format = OTF_INPUT_FORMAT_YUV444,
+		.bitwidth = OTF_INPUT_BIT_WIDTH_12BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.otf_output = {
+		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
+		.width = DEFAULT_PREVIEW_VIDEO_WIDTH,
+		.height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
+		.format = OTF_OUTPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
+		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_OUTPUT_ERROR_NO,
+	},
+};
+
+static const struct fd_param init_val_fd_preview_video = {
+	.control = {
+		.cmd = CONTROL_COMMAND_STOP,
+		.bypass = CONTROL_BYPASS_DISABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = DEFAULT_PREVIEW_VIDEO_WIDTH,
+		.height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
+		.format = OTF_INPUT_FORMAT_YUV444,
+		.bitwidth = OTF_INPUT_BIT_WIDTH_8BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.config = {
+		.cmd = FD_CONFIG_COMMAND_MAXIMUM_NUMBER |
+			FD_CONFIG_COMMAND_ROLL_ANGLE |
+			FD_CONFIG_COMMAND_YAW_ANGLE |
+			FD_CONFIG_COMMAND_SMILE_MODE |
+			FD_CONFIG_COMMAND_BLINK_MODE |
+			FD_CONFIG_COMMAND_EYES_DETECT |
+			FD_CONFIG_COMMAND_MOUTH_DETECT |
+			FD_CONFIG_COMMAND_ORIENTATION |
+			FD_CONFIG_COMMAND_ORIENTATION_VALUE,
+		.max_number = 5,
+		.roll_angle = FD_CONFIG_ROLL_ANGLE_FULL,
+		.yaw_angle = FD_CONFIG_YAW_ANGLE_45,
+		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
+		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
+		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
+		.mouth_detect = FD_CONFIG_MOUTH_DETECT_DISABLE,
+		.orientation = FD_CONFIG_ORIENTATION_DISABLE,
+		.orientation_value = 0,
+		.err = ERROR_FD_NO,
+	},
+};
+
+
+static const struct sensor_param init_val_sensor_camcording = {
+	.frame_rate = {
+		.frame_rate = DEFAULT_CAPTURE_VIDEO_FRAMERATE,
+	},
+};
+
+static const struct isp_param init_val_isp_camcording = {
+	.control = {
+		.cmd = CONTROL_COMMAND_START,
+		.bypass = CONTROL_BYPASS_DISABLE,
+		.err = CONTROL_ERROR_NO,
+	},
+	.otf_input = {
+		.cmd = OTF_INPUT_COMMAND_ENABLE,
+		.width = DEFAULT_CAPTURE_VIDEO_WIDTH,
+		.height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
+#ifndef ISP_STRGEN
+		.format = OTF_INPUT_FORMAT_BAYER,
+#else
+		.format = OTF_INPUT_FORMAT_STRGEN_COLORBAR_BAYER,
+#endif
+		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
+		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.reserved[3] = 0,
+		.reserved[4] = 33333,
+		.err = OTF_INPUT_ERROR_NO,
+	},
+	.dma1_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.dma2_input = {
+		.cmd = DMA_INPUT_COMMAND_DISABLE,
+		.width = 0, .height = 0,
+		.format = 0, .bitwidth = 0, .plane = 0,
+		.order = 0, .buffer_number = 0, .buffer_address = 0,
+		.err = 0,
+	},
+	.aa = {
+		.cmd = ISP_AA_COMMAND_START,
+		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
+						ISP_AA_TARGET_AWB,
+		.mode = 0,
+		.face = 0,
+		.continuous = 0,
+		.win_pos_x = 0, .win_pos_y = 0,
+		.win_width = 0, .win_height = 0,
+		.err = ISP_AF_ERROR_NO,
+	},
+	.flash = {
+		.cmd = ISP_FLASH_COMMAND_DISABLE,
+		.redeye = ISP_FLASH_REDEYE_DISABLE,
+		.err = ISP_FLASH_ERROR_NO,
+	},
+	.awb = {
+		.cmd = ISP_AWB_COMMAND_AUTO,
+		.illumination = 0,
+		.err = ISP_AWB_ERROR_NO,
+	},
+	.effect = {
+		.cmd = ISP_IMAGE_EFFECT_DISABLE,
+		.err = ISP_IMAGE_EFFECT_ERROR_NO,
+	},
+	.iso = {
+		.cmd = ISP_ISO_COMMAND_AUTO,
+		.value = 0,
+		.err = ISP_ISO_ERROR_NO,
+	},
+	.adjust = {
+		.cmd = ISP_ADJUST_COMMAND_AUTOCONTRAST,
+		.contrast = 0,
+		.saturation = 0,
+		.sharpness = 0,
+		.exposure = 0,
+		.brightness = 0,
+		.hue = 0,
+		.err = ISP_ADJUST_ERROR_NO,
+	},
+	.metering = {
+		.cmd = ISP_METERING_COMMAND_MATRIX,
+		.win_pos_x = 0, .win_pos_y = 0,
+		.win_width = DEFAULT_CAPTURE_VIDEO_WIDTH,
+		.win_height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
+		.err = ISP_METERING_ERROR_NO,
+	},
+	.afc = {
+		.cmd = ISP_AFC_COMMAND_AUTO,
+		.manual = 0, .err = ISP_AFC_ERROR_NO,
+	},
+	.otf_output = {
+		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
+		.width = DEFAULT_CAPTURE_VIDEO_WIDTH,
+		.height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
+		.format = OTF_OUTPUT_FORMAT_YUV444,
+		.bitwidth = OTF_OUTPUT_BIT_WIDTH_12BIT,
+		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
+		.err = OTF_OUTPUT_ERROR_NO,
+	},
+	.dma1_output = {
+#ifndef ISP_DMA
+		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
+#else
+		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
+#endif
+		.width = DEFAULT_CAPTURE_VIDEO_WIDTH,
+		.height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
+		.format = DMA_OUTPUT_FORMAT_YUV422,
+		.bitwidth = DMA_OUTPUT_BIT_WIDTH_8BIT,
+		.plane = DMA_OUTPUT_PLANE_3,
+		.order = DMA_INPUT_ORDER_NO,
+		.buffer_number = 1,
+		.buffer_address = 0x50060400,
+		.err = DMA_OUTPUT_ERROR_NO,
+	},
+	.dma2_output = {
+#ifndef ISP_DMA
+		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
+#else
+		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
+#endif
+		.width = DEFAULT_CAPTURE_VIDEO_WIDTH,
+		.height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_BAYER,
 		.bitwidth = DMA_OUTPUT_BIT_WIDTH_10BIT,
 		.plane = DMA_OUTPUT_PLANE_1,
@@ -622,7 +821,8 @@ static const struct drc_param init_val_drc_camcording = {
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
-		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.width = DEFAULT_CAPTURE_VIDEO_WIDTH,
+		.height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
 		.format = OTF_INPUT_FORMAT_YUV444,
 		.bitwidth = OTF_INPUT_BIT_WIDTH_12BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
@@ -637,7 +837,8 @@ static const struct drc_param init_val_drc_camcording = {
 	},
 	.otf_output = {
 		.cmd = OTF_OUTPUT_COMMAND_ENABLE,
-		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.width = DEFAULT_CAPTURE_VIDEO_WIDTH,
+		.height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
 		.format = OTF_OUTPUT_FORMAT_YUV444,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
 		.order = OTF_OUTPUT_ORDER_BAYER_GR_BG,
@@ -653,7 +854,8 @@ static const struct fd_param init_val_fd_camcording = {
 	},
 	.otf_input = {
 		.cmd = OTF_INPUT_COMMAND_ENABLE,
-		.width = CAMCORDING_WIDTH, .height = CAMCORDING_HEIGHT,
+		.width = DEFAULT_CAPTURE_VIDEO_WIDTH,
+		.height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
 		.format = OTF_INPUT_FORMAT_YUV444,
 		.bitwidth = OTF_OUTPUT_BIT_WIDTH_8BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
@@ -997,781 +1199,754 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
-		switch (dev->sensor.sensor_type) {
-		case SENSOR_S5K3H2_CSI_A:
-		case SENSOR_S5K3H2_CSI_B:
-		case SENSOR_S5K4E5_CSI_A:
-		case SENSOR_S5K4E5_CSI_B:
-		case SENSOR_S5K3H7_CSI_A:
-		case SENSOR_S5K3H7_CSI_B:
-			IS_SENSOR_SET_FRAME_RATE(dev, BACK_PREVIEW_FRAMERATE);
-			break;
-		case SENSOR_S5K6A3_CSI_A:
-		case SENSOR_S5K6A3_CSI_B:
-			IS_SENSOR_SET_FRAME_RATE(dev,
-			init_val_sensor_preview.frame_rate.frame_rate);
-		}
+		IS_SENSOR_SET_FRAME_RATE(dev, DEFAULT_PREVIEW_STILL_FRAMERATE);
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
-			init_val_isp_preview.control.cmd);
+			init_val_isp_preview_still.control.cmd);
 		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev,
-			init_val_isp_preview.control.bypass);
+			init_val_isp_preview_still.control.bypass);
 		IS_ISP_SET_PARAM_CONTROL_ERR(dev,
-			init_val_isp_preview.control.err);
+			init_val_isp_preview_still.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev,
-			init_val_isp_preview.otf_input.cmd);
+			init_val_isp_preview_still.otf_input.cmd);
 		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev,
-			init_val_isp_preview.otf_input.width);
+			init_val_isp_preview_still.otf_input.width);
 		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-			init_val_isp_preview.otf_input.height);
+			init_val_isp_preview_still.otf_input.height);
+		dev->sensor.width_prev =
+			init_val_isp_preview_still.otf_input.width;
+		dev->sensor.height_prev =
+			init_val_isp_preview_still.otf_input.height;
 		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			init_val_isp_preview.otf_input.format);
+			init_val_isp_preview_still.otf_input.format);
 		IS_ISP_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			init_val_isp_preview.otf_input.bitwidth);
+			init_val_isp_preview_still.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
-			init_val_isp_preview.otf_input.order);
+			init_val_isp_preview_still.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
-			init_val_isp_preview.otf_input.err);
-#ifdef FIX_FRAMERATE
+			init_val_isp_preview_still.otf_input.err);
 		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
-			init_val_isp_preview.otf_input.reserved[3]);
+			init_val_isp_preview_still.otf_input.reserved[3]);
 		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
-			init_val_isp_preview.otf_input.reserved[4]);
-#endif
+			init_val_isp_preview_still.otf_input.reserved[4]);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
-			init_val_isp_preview.dma1_input.cmd);
+			init_val_isp_preview_still.dma1_input.cmd);
 		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev,
-			init_val_isp_preview.dma1_input.width);
+			init_val_isp_preview_still.dma1_input.width);
 		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev,
-			init_val_isp_preview.dma1_input.height);
+			init_val_isp_preview_still.dma1_input.height);
 		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev,
-			init_val_isp_preview.dma1_input.format);
+			init_val_isp_preview_still.dma1_input.format);
 		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev,
-			init_val_isp_preview.dma1_input.bitwidth);
+			init_val_isp_preview_still.dma1_input.bitwidth);
 		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev,
-			init_val_isp_preview.dma1_input.plane);
+			init_val_isp_preview_still.dma1_input.plane);
 		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev,
-			init_val_isp_preview.dma1_input.order);
+			init_val_isp_preview_still.dma1_input.order);
 		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev,
-			init_val_isp_preview.dma1_input.buffer_number);
+			init_val_isp_preview_still.dma1_input.buffer_number);
 		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev,
-			init_val_isp_preview.dma1_input.buffer_address);
+			init_val_isp_preview_still.dma1_input.buffer_address);
 		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev,
-			init_val_isp_preview.dma1_input.err);
+			init_val_isp_preview_still.dma1_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT2_CMD(dev,
-			init_val_isp_preview.dma2_input.cmd);
+			init_val_isp_preview_still.dma2_input.cmd);
 		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev,
-			init_val_isp_preview.dma2_input.width);
+			init_val_isp_preview_still.dma2_input.width);
 		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev,
-			init_val_isp_preview.dma2_input.height);
+			init_val_isp_preview_still.dma2_input.height);
 		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev,
-			init_val_isp_preview.dma2_input.format);
+			init_val_isp_preview_still.dma2_input.format);
 		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev,
-			init_val_isp_preview.dma2_input.bitwidth);
+			init_val_isp_preview_still.dma2_input.bitwidth);
 		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev,
-			init_val_isp_preview.dma2_input.plane);
+			init_val_isp_preview_still.dma2_input.plane);
 		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev,
-			init_val_isp_preview.dma2_input.order);
+			init_val_isp_preview_still.dma2_input.order);
 		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev,
-			init_val_isp_preview.dma2_input.buffer_number);
+			init_val_isp_preview_still.dma2_input.buffer_number);
 		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev,
-			init_val_isp_preview.dma2_input.buffer_address);
+			init_val_isp_preview_still.dma2_input.buffer_address);
 		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev,
-			init_val_isp_preview.dma2_input.err);
+			init_val_isp_preview_still.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AA_CMD(dev, init_val_isp_preview.aa.cmd);
-		IS_ISP_SET_PARAM_AA_TARGET(dev, init_val_isp_preview.aa.target);
-		IS_ISP_SET_PARAM_AA_MODE(dev, init_val_isp_preview.aa.mode);
-		IS_ISP_SET_PARAM_AA_FACE(dev, init_val_isp_preview.aa.face);
+		IS_ISP_SET_PARAM_AA_CMD(dev,
+				init_val_isp_preview_still.aa.cmd);
+		IS_ISP_SET_PARAM_AA_TARGET(dev,
+				init_val_isp_preview_still.aa.target);
+		IS_ISP_SET_PARAM_AA_MODE(dev,
+				init_val_isp_preview_still.aa.mode);
+		IS_ISP_SET_PARAM_AA_FACE(dev,
+				init_val_isp_preview_still.aa.face);
 		IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
-			init_val_isp_preview.aa.continuous);
+			init_val_isp_preview_still.aa.continuous);
 		IS_ISP_SET_PARAM_AA_WIN_POS_X(dev,
-			init_val_isp_preview.aa.win_pos_x);
+			init_val_isp_preview_still.aa.win_pos_x);
 		IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev,
-			init_val_isp_preview.aa.win_pos_y);
+			init_val_isp_preview_still.aa.win_pos_y);
 		IS_ISP_SET_PARAM_AA_WIN_WIDTH(dev,
-			init_val_isp_preview.aa.win_width);
+			init_val_isp_preview_still.aa.win_width);
 		IS_ISP_SET_PARAM_AA_WIN_HEIGHT(dev,
-			init_val_isp_preview.aa.win_height);
-		IS_ISP_SET_PARAM_AA_ERR(dev, init_val_isp_preview.aa.err);
+			init_val_isp_preview_still.aa.win_height);
+		IS_ISP_SET_PARAM_AA_ERR(dev,
+			init_val_isp_preview_still.aa.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
-			init_val_isp_preview.flash.cmd);
+			init_val_isp_preview_still.flash.cmd);
 		IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-			init_val_isp_preview.flash.redeye);
+			init_val_isp_preview_still.flash.redeye);
 		IS_ISP_SET_PARAM_FLASH_ERR(dev,
-			init_val_isp_preview.flash.err);
+			init_val_isp_preview_still.flash.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AWB_CMD(dev, init_val_isp_preview.awb.cmd);
+		IS_ISP_SET_PARAM_AWB_CMD(dev,
+			init_val_isp_preview_still.awb.cmd);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-			init_val_isp_preview.awb.illumination);
-		IS_ISP_SET_PARAM_AWB_ERR(dev, init_val_isp_preview.awb.err);
+			init_val_isp_preview_still.awb.illumination);
+		IS_ISP_SET_PARAM_AWB_ERR(dev,
+			init_val_isp_preview_still.awb.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-			init_val_isp_preview.effect.cmd);
+			init_val_isp_preview_still.effect.cmd);
 		IS_ISP_SET_PARAM_EFFECT_ERR(dev,
-			init_val_isp_preview.effect.err);
+			init_val_isp_preview_still.effect.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_ISO_CMD(dev,
-			init_val_isp_preview.iso.cmd);
+			init_val_isp_preview_still.iso.cmd);
 		IS_ISP_SET_PARAM_ISO_VALUE(dev,
-			init_val_isp_preview.iso.value);
+			init_val_isp_preview_still.iso.value);
 		IS_ISP_SET_PARAM_ISO_ERR(dev,
-			init_val_isp_preview.iso.err);
+			init_val_isp_preview_still.iso.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-			init_val_isp_preview.adjust.cmd);
+			init_val_isp_preview_still.adjust.cmd);
 		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev,
-			init_val_isp_preview.adjust.contrast);
+			init_val_isp_preview_still.adjust.contrast);
 		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev,
-			init_val_isp_preview.adjust.saturation);
+			init_val_isp_preview_still.adjust.saturation);
 		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev,
-			init_val_isp_preview.adjust.sharpness);
+			init_val_isp_preview_still.adjust.sharpness);
 		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev,
-			init_val_isp_preview.adjust.exposure);
+			init_val_isp_preview_still.adjust.exposure);
 		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev,
-			init_val_isp_preview.adjust.brightness);
+			init_val_isp_preview_still.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
-			init_val_isp_preview.adjust.hue);
+			init_val_isp_preview_still.adjust.hue);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
-			init_val_isp_preview.adjust.err);
+			init_val_isp_preview_still.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_METERING_CMD(dev,
-			init_val_isp_preview.metering.cmd);
+			init_val_isp_preview_still.metering.cmd);
 		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev,
-			init_val_isp_preview.metering.win_pos_x);
+			init_val_isp_preview_still.metering.win_pos_x);
 		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev,
-			init_val_isp_preview.metering.win_pos_y);
+			init_val_isp_preview_still.metering.win_pos_y);
 		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
-			init_val_isp_preview.metering.win_width);
+			init_val_isp_preview_still.metering.win_width);
 		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
-			init_val_isp_preview.metering.win_height);
+			init_val_isp_preview_still.metering.win_height);
 		IS_ISP_SET_PARAM_METERING_ERR(dev,
-			init_val_isp_preview.metering.err);
+			init_val_isp_preview_still.metering.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AFC_CMD(dev, init_val_isp_preview.afc.cmd);
+		IS_ISP_SET_PARAM_AFC_CMD(dev,
+			init_val_isp_preview_still.afc.cmd);
 		IS_ISP_SET_PARAM_AFC_MANUAL(dev,
-			init_val_isp_preview.afc.manual);
-		IS_ISP_SET_PARAM_AFC_ERR(dev, init_val_isp_preview.afc.err);
+			init_val_isp_preview_still.afc.manual);
+		IS_ISP_SET_PARAM_AFC_ERR(dev,
+			init_val_isp_preview_still.afc.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			init_val_isp_preview.otf_output.cmd);
+			init_val_isp_preview_still.otf_output.cmd);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-			init_val_isp_preview.otf_output.width);
+			init_val_isp_preview_still.otf_output.width);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-			init_val_isp_preview.otf_output.height);
+			init_val_isp_preview_still.otf_output.height);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			init_val_isp_preview.otf_output.format);
+			init_val_isp_preview_still.otf_output.format);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			init_val_isp_preview.otf_output.bitwidth);
+			init_val_isp_preview_still.otf_output.bitwidth);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			init_val_isp_preview.otf_output.order);
+			init_val_isp_preview_still.otf_output.order);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ERR(dev,
-			init_val_isp_preview.otf_output.err);
+			init_val_isp_preview_still.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_CMD(dev,
-			init_val_isp_preview.dma1_output.cmd);
+			init_val_isp_preview_still.dma1_output.cmd);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev,
-			init_val_isp_preview.dma1_output.width);
+			init_val_isp_preview_still.dma1_output.width);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev,
-			init_val_isp_preview.dma1_output.height);
+			init_val_isp_preview_still.dma1_output.height);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev,
-			init_val_isp_preview.dma1_output.format);
+			init_val_isp_preview_still.dma1_output.format);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev,
-			init_val_isp_preview.dma1_output.bitwidth);
+			init_val_isp_preview_still.dma1_output.bitwidth);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev,
-			init_val_isp_preview.dma1_output.plane);
+			init_val_isp_preview_still.dma1_output.plane);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev,
-			init_val_isp_preview.dma1_output.order);
+			init_val_isp_preview_still.dma1_output.order);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev,
-			init_val_isp_preview.dma1_output.buffer_number);
+			init_val_isp_preview_still.dma1_output.buffer_number);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev,
-			init_val_isp_preview.dma1_output.buffer_address);
+			init_val_isp_preview_still.dma1_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_ERR(dev,
-			init_val_isp_preview.dma1_output.err);
+			init_val_isp_preview_still.dma1_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(dev,
-			init_val_isp_preview.dma2_output.cmd);
+			init_val_isp_preview_still.dma2_output.cmd);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev,
-			init_val_isp_preview.dma2_output.width);
+			init_val_isp_preview_still.dma2_output.width);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev,
-			init_val_isp_preview.dma2_output.height);
+			init_val_isp_preview_still.dma2_output.height);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev,
-			init_val_isp_preview.dma2_output.format);
+			init_val_isp_preview_still.dma2_output.format);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev,
-			init_val_isp_preview.dma2_output.bitwidth);
+			init_val_isp_preview_still.dma2_output.bitwidth);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev,
-			init_val_isp_preview.dma2_output.plane);
+			init_val_isp_preview_still.dma2_output.plane);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev,
-			init_val_isp_preview.dma2_output.order);
+			init_val_isp_preview_still.dma2_output.order);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev,
-			init_val_isp_preview.dma2_output.buffer_number);
+			init_val_isp_preview_still.dma2_output.buffer_number);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev,
-			init_val_isp_preview.dma2_output.buffer_address);
+			init_val_isp_preview_still.dma2_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_ERR(dev,
-			init_val_isp_preview.dma2_output.err);
+			init_val_isp_preview_still.dma2_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* DRC */
 		IS_DRC_SET_PARAM_CONTROL_CMD(dev,
-			init_val_drc_preview.control.cmd);
+			init_val_drc_preview_still.control.cmd);
 		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev,
-			init_val_drc_preview.control.bypass);
+			init_val_drc_preview_still.control.bypass);
 		IS_DRC_SET_PARAM_CONTROL_ERR(dev,
-			init_val_drc_preview.control.err);
+			init_val_drc_preview_still.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev,
-			init_val_drc_preview.otf_input.cmd);
+			init_val_drc_preview_still.otf_input.cmd);
 		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev,
-			init_val_drc_preview.otf_input.width);
+			init_val_drc_preview_still.otf_input.width);
 		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-			init_val_drc_preview.otf_input.height);
+			init_val_drc_preview_still.otf_input.height);
 		IS_DRC_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			init_val_drc_preview.otf_input.format);
+			init_val_drc_preview_still.otf_input.format);
 		IS_DRC_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			init_val_drc_preview.otf_input.bitwidth);
+			init_val_drc_preview_still.otf_input.bitwidth);
 		IS_DRC_SET_PARAM_OTF_INPUT_ORDER(dev,
-			init_val_drc_preview.otf_input.order);
+			init_val_drc_preview_still.otf_input.order);
 		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev,
-			init_val_drc_preview.otf_input.err);
+			init_val_drc_preview_still.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev,
-			init_val_drc_preview.dma_input.cmd);
+			init_val_drc_preview_still.dma_input.cmd);
 		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev,
-			init_val_drc_preview.dma_input.width);
+			init_val_drc_preview_still.dma_input.width);
 		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev,
-			init_val_drc_preview.dma_input.height);
+			init_val_drc_preview_still.dma_input.height);
 		IS_DRC_SET_PARAM_DMA_INPUT_FORMAT(dev,
-			init_val_drc_preview.dma_input.format);
+			init_val_drc_preview_still.dma_input.format);
 		IS_DRC_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
-			init_val_drc_preview.dma_input.bitwidth);
+			init_val_drc_preview_still.dma_input.bitwidth);
 		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev,
-			init_val_drc_preview.dma_input.plane);
+			init_val_drc_preview_still.dma_input.plane);
 		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev,
-			init_val_drc_preview.dma_input.order);
+			init_val_drc_preview_still.dma_input.order);
 		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
-			init_val_drc_preview.dma_input.buffer_number);
+			init_val_drc_preview_still.dma_input.buffer_number);
 		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
-			init_val_drc_preview.dma_input.buffer_address);
+			init_val_drc_preview_still.dma_input.buffer_address);
 		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev,
-			init_val_drc_preview.dma_input.err);
+			init_val_drc_preview_still.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			init_val_drc_preview.otf_output.cmd);
+			init_val_drc_preview_still.otf_output.cmd);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-			init_val_drc_preview.otf_output.width);
+			init_val_drc_preview_still.otf_output.width);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-			init_val_drc_preview.otf_output.height);
+			init_val_drc_preview_still.otf_output.height);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			init_val_drc_preview.otf_output.format);
+			init_val_drc_preview_still.otf_output.format);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			init_val_drc_preview.otf_output.bitwidth);
+			init_val_drc_preview_still.otf_output.bitwidth);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			init_val_drc_preview.otf_output.order);
+			init_val_drc_preview_still.otf_output.order);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev,
-			init_val_drc_preview.otf_output.err);
+			init_val_drc_preview_still.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* FD */
 		IS_FD_SET_PARAM_CONTROL_CMD(dev,
-			init_val_fd_preview.control.cmd);
+			init_val_fd_preview_still.control.cmd);
 		IS_FD_SET_PARAM_CONTROL_BYPASS(dev,
-			init_val_fd_preview.control.bypass);
+			init_val_fd_preview_still.control.bypass);
 		IS_FD_SET_PARAM_CONTROL_ERR(dev,
-			init_val_fd_preview.control.err);
+			init_val_fd_preview_still.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_OTF_INPUT_CMD(dev,
-			init_val_fd_preview.otf_input.cmd);
+			init_val_fd_preview_still.otf_input.cmd);
 		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev,
-			init_val_fd_preview.otf_input.width);
+			init_val_fd_preview_still.otf_input.width);
 		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-			init_val_fd_preview.otf_input.height);
+			init_val_fd_preview_still.otf_input.height);
 		IS_FD_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			init_val_fd_preview.otf_input.format);
+			init_val_fd_preview_still.otf_input.format);
 		IS_FD_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			init_val_fd_preview.otf_input.bitwidth);
+			init_val_fd_preview_still.otf_input.bitwidth);
 		IS_FD_SET_PARAM_OTF_INPUT_ORDER(dev,
-			init_val_fd_preview.otf_input.order);
+			init_val_fd_preview_still.otf_input.order);
 		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev,
-			init_val_fd_preview.otf_input.err);
+			init_val_fd_preview_still.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_DMA_INPUT_CMD(dev,
-			init_val_fd_preview.dma_input.cmd);
+			init_val_fd_preview_still.dma_input.cmd);
 		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev,
-			init_val_fd_preview.dma_input.width);
+			init_val_fd_preview_still.dma_input.width);
 		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev,
-			init_val_fd_preview.dma_input.height);
+			init_val_fd_preview_still.dma_input.height);
 		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev,
-			init_val_fd_preview.dma_input.format);
+			init_val_fd_preview_still.dma_input.format);
 		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
-			init_val_fd_preview.dma_input.bitwidth);
+			init_val_fd_preview_still.dma_input.bitwidth);
 		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev,
-			init_val_fd_preview.dma_input.plane);
+			init_val_fd_preview_still.dma_input.plane);
 		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev,
-			init_val_fd_preview.dma_input.order);
+			init_val_fd_preview_still.dma_input.order);
 		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
-			init_val_fd_preview.dma_input.buffer_number);
+			init_val_fd_preview_still.dma_input.buffer_number);
 		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
-			init_val_fd_preview.dma_input.buffer_address);
+			init_val_fd_preview_still.dma_input.buffer_address);
 		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev,
-			init_val_fd_preview.dma_input.err);
+			init_val_fd_preview_still.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-			init_val_fd_preview.config.cmd);
+			init_val_fd_preview_still.config.cmd);
 		IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev,
-			init_val_fd_preview.config.max_number);
+			init_val_fd_preview_still.config.max_number);
 		IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev,
-			init_val_fd_preview.config.roll_angle);
+			init_val_fd_preview_still.config.roll_angle);
 		IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev,
-			init_val_fd_preview.config.yaw_angle);
+			init_val_fd_preview_still.config.yaw_angle);
 		IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev,
-			init_val_fd_preview.config.smile_mode);
+			init_val_fd_preview_still.config.smile_mode);
 		IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev,
-			init_val_fd_preview.config.blink_mode);
+			init_val_fd_preview_still.config.blink_mode);
 		IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev,
-			init_val_fd_preview.config.eye_detect);
+			init_val_fd_preview_still.config.eye_detect);
 		IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev,
-			init_val_fd_preview.config.mouth_detect);
+			init_val_fd_preview_still.config.mouth_detect);
 		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev,
-			init_val_fd_preview.config.orientation);
+			init_val_fd_preview_still.config.orientation);
 		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev,
-			init_val_fd_preview.config.orientation_value);
+			init_val_fd_preview_still.config.orientation_value);
 		IS_FD_SET_PARAM_FD_CONFIG_ERR(dev,
-			init_val_fd_preview.config.err);
+			init_val_fd_preview_still.config.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
 		IS_INC_PARAM_NUM(dev);
-
-		dev->sensor.width_prev =
-			init_val_isp_preview.otf_input.width;
-		dev->sensor.height_prev =
-			init_val_isp_preview.otf_input.height;
 		break;
 	case ISS_PREVIEW_VIDEO:
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
-		switch (dev->sensor.sensor_type) {
-		case SENSOR_S5K3H2_CSI_A:
-		case SENSOR_S5K3H2_CSI_B:
-		case SENSOR_S5K4E5_CSI_A:
-		case SENSOR_S5K4E5_CSI_B:
-		case SENSOR_S5K3H7_CSI_A:
-		case SENSOR_S5K3H7_CSI_B:
-			IS_SENSOR_SET_FRAME_RATE(dev, BACK_PREVIEW_FRAMERATE);
-			break;
-		case SENSOR_S5K6A3_CSI_A:
-		case SENSOR_S5K6A3_CSI_B:
-			IS_SENSOR_SET_FRAME_RATE(dev,
-			init_val_sensor_preview.frame_rate.frame_rate);
-		}
+		IS_SENSOR_SET_FRAME_RATE(dev, DEFAULT_PREVIEW_VIDEO_FRAMERATE);
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
 		IS_ISP_SET_PARAM_CONTROL_CMD(dev,
-			init_val_isp_preview.control.cmd);
+			init_val_isp_preview_video.control.cmd);
 		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev,
-			init_val_isp_preview.control.bypass);
+			init_val_isp_preview_video.control.bypass);
 		IS_ISP_SET_PARAM_CONTROL_ERR(dev,
-			init_val_isp_preview.control.err);
+			init_val_isp_preview_video.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev,
-			init_val_isp_preview.otf_input.cmd);
+			init_val_isp_preview_video.otf_input.cmd);
 		IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev,
-			init_val_isp_preview.otf_input.width);
+			init_val_isp_preview_video.otf_input.width);
 		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-			init_val_isp_preview.otf_input.height);
+			init_val_isp_preview_video.otf_input.height);
+		dev->sensor.width_prev_cam =
+			init_val_isp_preview_video.otf_input.width;
+		dev->sensor.height_prev_cam =
+			init_val_isp_preview_video.otf_input.height;
 		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			init_val_isp_preview.otf_input.format);
+			init_val_isp_preview_video.otf_input.format);
 		IS_ISP_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			init_val_isp_preview.otf_input.bitwidth);
+			init_val_isp_preview_video.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
-			init_val_isp_preview.otf_input.order);
+			init_val_isp_preview_video.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
-			init_val_isp_preview.otf_input.err);
-#ifdef FIX_FRAMERATE
+			init_val_isp_preview_video.otf_input.err);
 		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
-			init_val_isp_preview.otf_input.reserved[3]);
+			init_val_isp_preview_video.otf_input.reserved[3]);
 		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
-			init_val_isp_preview.otf_input.reserved[4]);
-#endif
+			init_val_isp_preview_video.otf_input.reserved[4]);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
-			init_val_isp_preview.dma1_input.cmd);
+			init_val_isp_preview_video.dma1_input.cmd);
 		IS_ISP_SET_PARAM_DMA_INPUT1_WIDTH(dev,
-			init_val_isp_preview.dma1_input.width);
+			init_val_isp_preview_video.dma1_input.width);
 		IS_ISP_SET_PARAM_DMA_INPUT1_HEIGHT(dev,
-			init_val_isp_preview.dma1_input.height);
+			init_val_isp_preview_video.dma1_input.height);
 		IS_ISP_SET_PARAM_DMA_INPUT1_FORMAT(dev,
-			init_val_isp_preview.dma1_input.format);
+			init_val_isp_preview_video.dma1_input.format);
 		IS_ISP_SET_PARAM_DMA_INPUT1_BITWIDTH(dev,
-			init_val_isp_preview.dma1_input.bitwidth);
+			init_val_isp_preview_video.dma1_input.bitwidth);
 		IS_ISP_SET_PARAM_DMA_INPUT1_PLANE(dev,
-			init_val_isp_preview.dma1_input.plane);
+			init_val_isp_preview_video.dma1_input.plane);
 		IS_ISP_SET_PARAM_DMA_INPUT1_ORDER(dev,
-			init_val_isp_preview.dma1_input.order);
+			init_val_isp_preview_video.dma1_input.order);
 		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERNUM(dev,
-			init_val_isp_preview.dma1_input.buffer_number);
+			init_val_isp_preview_video.dma1_input.buffer_number);
 		IS_ISP_SET_PARAM_DMA_INPUT1_BUFFERADDR(dev,
-			init_val_isp_preview.dma1_input.buffer_address);
+			init_val_isp_preview_video.dma1_input.buffer_address);
 		IS_ISP_SET_PARAM_DMA_INPUT1_ERR(dev,
-			init_val_isp_preview.dma1_input.err);
+			init_val_isp_preview_video.dma1_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT2_CMD(dev,
-			init_val_isp_preview.dma2_input.cmd);
+			init_val_isp_preview_video.dma2_input.cmd);
 		IS_ISP_SET_PARAM_DMA_INPUT2_WIDTH(dev,
-			init_val_isp_preview.dma2_input.width);
+			init_val_isp_preview_video.dma2_input.width);
 		IS_ISP_SET_PARAM_DMA_INPUT2_HEIGHT(dev,
-			init_val_isp_preview.dma2_input.height);
+			init_val_isp_preview_video.dma2_input.height);
 		IS_ISP_SET_PARAM_DMA_INPUT2_FORMAT(dev,
-			init_val_isp_preview.dma2_input.format);
+			init_val_isp_preview_video.dma2_input.format);
 		IS_ISP_SET_PARAM_DMA_INPUT2_BITWIDTH(dev,
-			init_val_isp_preview.dma2_input.bitwidth);
+			init_val_isp_preview_video.dma2_input.bitwidth);
 		IS_ISP_SET_PARAM_DMA_INPUT2_PLANE(dev,
-			init_val_isp_preview.dma2_input.plane);
+			init_val_isp_preview_video.dma2_input.plane);
 		IS_ISP_SET_PARAM_DMA_INPUT2_ORDER(dev,
-			init_val_isp_preview.dma2_input.order);
+			init_val_isp_preview_video.dma2_input.order);
 		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERNUM(dev,
-			init_val_isp_preview.dma2_input.buffer_number);
+			init_val_isp_preview_video.dma2_input.buffer_number);
 		IS_ISP_SET_PARAM_DMA_INPUT2_BUFFERADDR(dev,
-			init_val_isp_preview.dma2_input.buffer_address);
+			init_val_isp_preview_video.dma2_input.buffer_address);
 		IS_ISP_SET_PARAM_DMA_INPUT2_ERR(dev,
-			init_val_isp_preview.dma2_input.err);
+			init_val_isp_preview_video.dma2_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_INPUT);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AA_CMD(dev, init_val_isp_preview.aa.cmd);
-		IS_ISP_SET_PARAM_AA_TARGET(dev, init_val_isp_preview.aa.target);
-		IS_ISP_SET_PARAM_AA_MODE(dev, init_val_isp_preview.aa.mode);
-		IS_ISP_SET_PARAM_AA_FACE(dev, init_val_isp_preview.aa.face);
+		IS_ISP_SET_PARAM_AA_CMD(dev,
+			init_val_isp_preview_video.aa.cmd);
+		IS_ISP_SET_PARAM_AA_TARGET(dev,
+			init_val_isp_preview_video.aa.target);
+		IS_ISP_SET_PARAM_AA_MODE(dev,
+			init_val_isp_preview_video.aa.mode);
+		IS_ISP_SET_PARAM_AA_FACE(dev,
+			init_val_isp_preview_video.aa.face);
 		IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
-			init_val_isp_preview.aa.continuous);
+			init_val_isp_preview_video.aa.continuous);
 		IS_ISP_SET_PARAM_AA_WIN_POS_X(dev,
-			init_val_isp_preview.aa.win_pos_x);
+			init_val_isp_preview_video.aa.win_pos_x);
 		IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev,
-			init_val_isp_preview.aa.win_pos_y);
+			init_val_isp_preview_video.aa.win_pos_y);
 		IS_ISP_SET_PARAM_AA_WIN_WIDTH(dev,
-			init_val_isp_preview.aa.win_width);
+			init_val_isp_preview_video.aa.win_width);
 		IS_ISP_SET_PARAM_AA_WIN_HEIGHT(dev,
-			init_val_isp_preview.aa.win_height);
-		IS_ISP_SET_PARAM_AA_ERR(dev, init_val_isp_preview.aa.err);
+			init_val_isp_preview_video.aa.win_height);
+		IS_ISP_SET_PARAM_AA_ERR(dev,
+			init_val_isp_preview_video.aa.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_FLASH_CMD(dev,
-			init_val_isp_preview.flash.cmd);
+			init_val_isp_preview_video.flash.cmd);
 		IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-			init_val_isp_preview.flash.redeye);
+			init_val_isp_preview_video.flash.redeye);
 		IS_ISP_SET_PARAM_FLASH_ERR(dev,
-			init_val_isp_preview.flash.err);
+			init_val_isp_preview_video.flash.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AWB_CMD(dev, init_val_isp_preview.awb.cmd);
+		IS_ISP_SET_PARAM_AWB_CMD(dev,
+			init_val_isp_preview_video.awb.cmd);
 		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-			init_val_isp_preview.awb.illumination);
-		IS_ISP_SET_PARAM_AWB_ERR(dev, init_val_isp_preview.awb.err);
+			init_val_isp_preview_video.awb.illumination);
+		IS_ISP_SET_PARAM_AWB_ERR(dev,
+			init_val_isp_preview_video.awb.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-			init_val_isp_preview.effect.cmd);
+			init_val_isp_preview_video.effect.cmd);
 		IS_ISP_SET_PARAM_EFFECT_ERR(dev,
-			init_val_isp_preview.effect.err);
+			init_val_isp_preview_video.effect.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_ISO_CMD(dev,
-			init_val_isp_preview.iso.cmd);
+			init_val_isp_preview_video.iso.cmd);
 		IS_ISP_SET_PARAM_ISO_VALUE(dev,
-			init_val_isp_preview.iso.value);
+			init_val_isp_preview_video.iso.value);
 		IS_ISP_SET_PARAM_ISO_ERR(dev,
-			init_val_isp_preview.iso.err);
+			init_val_isp_preview_video.iso.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-			init_val_isp_preview.adjust.cmd);
+			init_val_isp_preview_video.adjust.cmd);
 		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev,
-			init_val_isp_preview.adjust.contrast);
+			init_val_isp_preview_video.adjust.contrast);
 		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev,
-			init_val_isp_preview.adjust.saturation);
+			init_val_isp_preview_video.adjust.saturation);
 		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev,
-			init_val_isp_preview.adjust.sharpness);
+			init_val_isp_preview_video.adjust.sharpness);
 		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev,
-			init_val_isp_preview.adjust.exposure);
+			init_val_isp_preview_video.adjust.exposure);
 		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev,
-			init_val_isp_preview.adjust.brightness);
+			init_val_isp_preview_video.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
-			init_val_isp_preview.adjust.hue);
+			init_val_isp_preview_video.adjust.hue);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
-			init_val_isp_preview.adjust.err);
+			init_val_isp_preview_video.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_METERING_CMD(dev,
-			init_val_isp_preview.metering.cmd);
+			init_val_isp_preview_video.metering.cmd);
 		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev,
-			init_val_isp_preview.metering.win_pos_x);
+			init_val_isp_preview_video.metering.win_pos_x);
 		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev,
-			init_val_isp_preview.metering.win_pos_y);
+			init_val_isp_preview_video.metering.win_pos_y);
 		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev,
-			init_val_isp_preview.metering.win_width);
+			init_val_isp_preview_video.metering.win_width);
 		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev,
-			init_val_isp_preview.metering.win_height);
+			init_val_isp_preview_video.metering.win_height);
 		IS_ISP_SET_PARAM_METERING_ERR(dev,
-			init_val_isp_preview.metering.err);
+			init_val_isp_preview_video.metering.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_AFC_CMD(dev, init_val_isp_preview.afc.cmd);
+		IS_ISP_SET_PARAM_AFC_CMD(dev,
+			init_val_isp_preview_video.afc.cmd);
 		IS_ISP_SET_PARAM_AFC_MANUAL(dev,
-			init_val_isp_preview.afc.manual);
-		IS_ISP_SET_PARAM_AFC_ERR(dev, init_val_isp_preview.afc.err);
+			init_val_isp_preview_video.afc.manual);
+		IS_ISP_SET_PARAM_AFC_ERR(dev,
+			init_val_isp_preview_video.afc.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			init_val_isp_preview.otf_output.cmd);
+			init_val_isp_preview_video.otf_output.cmd);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-			init_val_isp_preview.otf_output.width);
+			init_val_isp_preview_video.otf_output.width);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-			init_val_isp_preview.otf_output.height);
+			init_val_isp_preview_video.otf_output.height);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			init_val_isp_preview.otf_output.format);
+			init_val_isp_preview_video.otf_output.format);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			init_val_isp_preview.otf_output.bitwidth);
+			init_val_isp_preview_video.otf_output.bitwidth);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			init_val_isp_preview.otf_output.order);
+			init_val_isp_preview_video.otf_output.order);
 		IS_ISP_SET_PARAM_OTF_OUTPUT_ERR(dev,
-			init_val_isp_preview.otf_output.err);
+			init_val_isp_preview_video.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_CMD(dev,
-			init_val_isp_preview.dma1_output.cmd);
+			init_val_isp_preview_video.dma1_output.cmd);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev,
-			init_val_isp_preview.dma1_output.width);
+			init_val_isp_preview_video.dma1_output.width);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev,
-			init_val_isp_preview.dma1_output.height);
+			init_val_isp_preview_video.dma1_output.height);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_FORMAT(dev,
-			init_val_isp_preview.dma1_output.format);
+			init_val_isp_preview_video.dma1_output.format);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_BITWIDTH(dev,
-			init_val_isp_preview.dma1_output.bitwidth);
+			init_val_isp_preview_video.dma1_output.bitwidth);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_PLANE(dev,
-			init_val_isp_preview.dma1_output.plane);
+			init_val_isp_preview_video.dma1_output.plane);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_ORDER(dev,
-			init_val_isp_preview.dma1_output.order);
+			init_val_isp_preview_video.dma1_output.order);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_NUMBER(dev,
-			init_val_isp_preview.dma1_output.buffer_number);
+			init_val_isp_preview_video.dma1_output.buffer_number);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_BUFFER_ADDRESS(dev,
-			init_val_isp_preview.dma1_output.buffer_address);
+			init_val_isp_preview_video.dma1_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT1_ERR(dev,
-			init_val_isp_preview.dma1_output.err);
+			init_val_isp_preview_video.dma1_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_CMD(dev,
-			init_val_isp_preview.dma2_output.cmd);
+			init_val_isp_preview_video.dma2_output.cmd);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev,
-			init_val_isp_preview.dma2_output.width);
+			init_val_isp_preview_video.dma2_output.width);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev,
-			init_val_isp_preview.dma2_output.height);
+			init_val_isp_preview_video.dma2_output.height);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_FORMAT(dev,
-			init_val_isp_preview.dma2_output.format);
+			init_val_isp_preview_video.dma2_output.format);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_BITWIDTH(dev,
-			init_val_isp_preview.dma2_output.bitwidth);
+			init_val_isp_preview_video.dma2_output.bitwidth);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_PLANE(dev,
-			init_val_isp_preview.dma2_output.plane);
+			init_val_isp_preview_video.dma2_output.plane);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_ORDER(dev,
-			init_val_isp_preview.dma2_output.order);
+			init_val_isp_preview_video.dma2_output.order);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_NUMBER(dev,
-			init_val_isp_preview.dma2_output.buffer_number);
+			init_val_isp_preview_video.dma2_output.buffer_number);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_BUFFER_ADDRESS(dev,
-			init_val_isp_preview.dma2_output.buffer_address);
+			init_val_isp_preview_video.dma2_output.buffer_address);
 		IS_ISP_SET_PARAM_DMA_OUTPUT2_ERR(dev,
-			init_val_isp_preview.dma2_output.err);
+			init_val_isp_preview_video.dma2_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* DRC */
 		IS_DRC_SET_PARAM_CONTROL_CMD(dev,
-			init_val_drc_preview.control.cmd);
+			init_val_drc_preview_video.control.cmd);
 		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev,
-			init_val_drc_preview.control.bypass);
+			init_val_drc_preview_video.control.bypass);
 		IS_DRC_SET_PARAM_CONTROL_ERR(dev,
-			init_val_drc_preview.control.err);
+			init_val_drc_preview_video.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_OTF_INPUT_CMD(dev,
-			init_val_drc_preview.otf_input.cmd);
+			init_val_drc_preview_video.otf_input.cmd);
 		IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev,
-			init_val_drc_preview.otf_input.width);
+			init_val_drc_preview_video.otf_input.width);
 		IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-			init_val_drc_preview.otf_input.height);
+			init_val_drc_preview_video.otf_input.height);
 		IS_DRC_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			init_val_drc_preview.otf_input.format);
+			init_val_drc_preview_video.otf_input.format);
 		IS_DRC_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			init_val_drc_preview.otf_input.bitwidth);
+			init_val_drc_preview_video.otf_input.bitwidth);
 		IS_DRC_SET_PARAM_OTF_INPUT_ORDER(dev,
-			init_val_drc_preview.otf_input.order);
+			init_val_drc_preview_video.otf_input.order);
 		IS_DRC_SET_PARAM_OTF_INPUT_ERR(dev,
-			init_val_drc_preview.otf_input.err);
+			init_val_drc_preview_video.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_DMA_INPUT_CMD(dev,
-			init_val_drc_preview.dma_input.cmd);
+			init_val_drc_preview_video.dma_input.cmd);
 		IS_DRC_SET_PARAM_DMA_INPUT_WIDTH(dev,
-			init_val_drc_preview.dma_input.width);
+			init_val_drc_preview_video.dma_input.width);
 		IS_DRC_SET_PARAM_DMA_INPUT_HEIGHT(dev,
-			init_val_drc_preview.dma_input.height);
+			init_val_drc_preview_video.dma_input.height);
 		IS_DRC_SET_PARAM_DMA_INPUT_FORMAT(dev,
-			init_val_drc_preview.dma_input.format);
+			init_val_drc_preview_video.dma_input.format);
 		IS_DRC_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
-			init_val_drc_preview.dma_input.bitwidth);
+			init_val_drc_preview_video.dma_input.bitwidth);
 		IS_DRC_SET_PARAM_DMA_INPUT_PLANE(dev,
-			init_val_drc_preview.dma_input.plane);
+			init_val_drc_preview_video.dma_input.plane);
 		IS_DRC_SET_PARAM_DMA_INPUT_ORDER(dev,
-			init_val_drc_preview.dma_input.order);
+			init_val_drc_preview_video.dma_input.order);
 		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
-			init_val_drc_preview.dma_input.buffer_number);
+			init_val_drc_preview_video.dma_input.buffer_number);
 		IS_DRC_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
-			init_val_drc_preview.dma_input.buffer_address);
+			init_val_drc_preview_video.dma_input.buffer_address);
 		IS_DRC_SET_PARAM_DMA_INPUT_ERR(dev,
-			init_val_drc_preview.dma_input.err);
+			init_val_drc_preview_video.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_CMD(dev,
-			init_val_drc_preview.otf_output.cmd);
+			init_val_drc_preview_video.otf_output.cmd);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev,
-			init_val_drc_preview.otf_output.width);
+			init_val_drc_preview_video.otf_output.width);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev,
-			init_val_drc_preview.otf_output.height);
+			init_val_drc_preview_video.otf_output.height);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_FORMAT(dev,
-			init_val_drc_preview.otf_output.format);
+			init_val_drc_preview_video.otf_output.format);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev,
-			init_val_drc_preview.otf_output.bitwidth);
+			init_val_drc_preview_video.otf_output.bitwidth);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_ORDER(dev,
-			init_val_drc_preview.otf_output.order);
+			init_val_drc_preview_video.otf_output.order);
 		IS_DRC_SET_PARAM_OTF_OUTPUT_ERR(dev,
-			init_val_drc_preview.otf_output.err);
+			init_val_drc_preview_video.otf_output.err);
 		IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_OUTPUT);
 		IS_INC_PARAM_NUM(dev);
 
 		/* FD */
 		IS_FD_SET_PARAM_CONTROL_CMD(dev,
-			init_val_fd_preview.control.cmd);
+			init_val_fd_preview_video.control.cmd);
 		IS_FD_SET_PARAM_CONTROL_BYPASS(dev,
-			init_val_fd_preview.control.bypass);
+			init_val_fd_preview_video.control.bypass);
 		IS_FD_SET_PARAM_CONTROL_ERR(dev,
-			init_val_fd_preview.control.err);
+			init_val_fd_preview_video.control.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_OTF_INPUT_CMD(dev,
-			init_val_fd_preview.otf_input.cmd);
+			init_val_fd_preview_video.otf_input.cmd);
 		IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev,
-			init_val_fd_preview.otf_input.width);
+			init_val_fd_preview_video.otf_input.width);
 		IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev,
-			init_val_fd_preview.otf_input.height);
+			init_val_fd_preview_video.otf_input.height);
 		IS_FD_SET_PARAM_OTF_INPUT_FORMAT(dev,
-			init_val_fd_preview.otf_input.format);
+			init_val_fd_preview_video.otf_input.format);
 		IS_FD_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
-			init_val_fd_preview.otf_input.bitwidth);
+			init_val_fd_preview_video.otf_input.bitwidth);
 		IS_FD_SET_PARAM_OTF_INPUT_ORDER(dev,
-			init_val_fd_preview.otf_input.order);
+			init_val_fd_preview_video.otf_input.order);
 		IS_FD_SET_PARAM_OTF_INPUT_ERR(dev,
-			init_val_fd_preview.otf_input.err);
+			init_val_fd_preview_video.otf_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_DMA_INPUT_CMD(dev,
-			init_val_fd_preview.dma_input.cmd);
+			init_val_fd_preview_video.dma_input.cmd);
 		IS_FD_SET_PARAM_DMA_INPUT_WIDTH(dev,
-			init_val_fd_preview.dma_input.width);
+			init_val_fd_preview_video.dma_input.width);
 		IS_FD_SET_PARAM_DMA_INPUT_HEIGHT(dev,
-			init_val_fd_preview.dma_input.height);
+			init_val_fd_preview_video.dma_input.height);
 		IS_FD_SET_PARAM_DMA_INPUT_FORMAT(dev,
-			init_val_fd_preview.dma_input.format);
+			init_val_fd_preview_video.dma_input.format);
 		IS_FD_SET_PARAM_DMA_INPUT_BITWIDTH(dev,
-			init_val_fd_preview.dma_input.bitwidth);
+			init_val_fd_preview_video.dma_input.bitwidth);
 		IS_FD_SET_PARAM_DMA_INPUT_PLANE(dev,
-			init_val_fd_preview.dma_input.plane);
+			init_val_fd_preview_video.dma_input.plane);
 		IS_FD_SET_PARAM_DMA_INPUT_ORDER(dev,
-			init_val_fd_preview.dma_input.order);
+			init_val_fd_preview_video.dma_input.order);
 		IS_FD_SET_PARAM_DMA_INPUT_BUFFERNUM(dev,
-			init_val_fd_preview.dma_input.buffer_number);
+			init_val_fd_preview_video.dma_input.buffer_number);
 		IS_FD_SET_PARAM_DMA_INPUT_BUFFERADDR(dev,
-			init_val_fd_preview.dma_input.buffer_address);
+			init_val_fd_preview_video.dma_input.buffer_address);
 		IS_FD_SET_PARAM_DMA_INPUT_ERR(dev,
-			init_val_fd_preview.dma_input.err);
+			init_val_fd_preview_video.dma_input.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_DMA_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-			init_val_fd_preview.config.cmd);
+			init_val_fd_preview_video.config.cmd);
 		IS_FD_SET_PARAM_FD_CONFIG_MAX_NUMBER(dev,
-			init_val_fd_preview.config.max_number);
+			init_val_fd_preview_video.config.max_number);
 		IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev,
-			init_val_fd_preview.config.roll_angle);
+			init_val_fd_preview_video.config.roll_angle);
 		IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev,
-			init_val_fd_preview.config.yaw_angle);
+			init_val_fd_preview_video.config.yaw_angle);
 		IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev,
-			init_val_fd_preview.config.smile_mode);
+			init_val_fd_preview_video.config.smile_mode);
 		IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev,
-			init_val_fd_preview.config.blink_mode);
+			init_val_fd_preview_video.config.blink_mode);
 		IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev,
-			init_val_fd_preview.config.eye_detect);
+			init_val_fd_preview_video.config.eye_detect);
 		IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev,
-			init_val_fd_preview.config.mouth_detect);
+			init_val_fd_preview_video.config.mouth_detect);
 		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev,
-			init_val_fd_preview.config.orientation);
+			init_val_fd_preview_video.config.orientation);
 		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev,
-			init_val_fd_preview.config.orientation_value);
+			init_val_fd_preview_video.config.orientation_value);
 		IS_FD_SET_PARAM_FD_CONFIG_ERR(dev,
-			init_val_fd_preview.config.err);
+			init_val_fd_preview_video.config.err);
 		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
 		IS_INC_PARAM_NUM(dev);
-
-		dev->sensor.width_prev_cam =
-			init_val_isp_preview.otf_input.width;
-		dev->sensor.height_prev_cam =
-			init_val_isp_preview.otf_input.height;
 		break;
 
 	case ISS_CAPTURE_STILL:
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
-		switch (dev->sensor.sensor_type) {
-		case SENSOR_S5K3H2_CSI_A:
-		case SENSOR_S5K3H2_CSI_B:
-		case SENSOR_S5K4E5_CSI_A:
-		case SENSOR_S5K4E5_CSI_B:
-		case SENSOR_S5K3H7_CSI_A:
-		case SENSOR_S5K3H7_CSI_B:
-			IS_SENSOR_SET_FRAME_RATE(dev, BACK_CAPTURE_FRAMERATE);
-			break;
-		case SENSOR_S5K6A3_CSI_A:
-		case SENSOR_S5K6A3_CSI_B:
-			IS_SENSOR_SET_FRAME_RATE(dev,
-			init_val_sensor_capture.frame_rate.frame_rate);
-		}
+		IS_SENSOR_SET_FRAME_RATE(dev, DEFAULT_CAPTURE_STILL_FRAMERATE);
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
@@ -1797,12 +1972,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_capture.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_capture.otf_input.err);
-#ifdef FIX_FRAMERATE
 		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
 			init_val_isp_capture.otf_input.reserved[3]);
 		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
 			init_val_isp_capture.otf_input.reserved[4]);
-#endif
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -2134,21 +2307,7 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
-		switch (dev->sensor.sensor_type) {
-		case SENSOR_S5K3H2_CSI_A:
-		case SENSOR_S5K3H2_CSI_B:
-		case SENSOR_S5K4E5_CSI_A:
-		case SENSOR_S5K4E5_CSI_B:
-		case SENSOR_S5K3H7_CSI_A:
-		case SENSOR_S5K3H7_CSI_B:
-			IS_SENSOR_SET_FRAME_RATE(dev,
-				BACK_CAMCORDING_FRAMERATE);
-			break;
-		case SENSOR_S5K6A3_CSI_A:
-		case SENSOR_S5K6A3_CSI_B:
-			IS_SENSOR_SET_FRAME_RATE(dev,
-			init_val_sensor_camcording.frame_rate.frame_rate);
-		}
+		IS_SENSOR_SET_FRAME_RATE(dev, DEFAULT_CAPTURE_VIDEO_FRAMERATE);
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_CONTROL);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
@@ -2174,12 +2333,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_camcording.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_camcording.otf_input.err);
-#ifdef FIX_FRAMERATE
 		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
 			init_val_isp_camcording.otf_input.reserved[3]);
 		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
 			init_val_isp_camcording.otf_input.reserved[4]);
-#endif
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
