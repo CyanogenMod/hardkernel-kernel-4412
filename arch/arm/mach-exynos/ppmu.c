@@ -83,7 +83,10 @@ unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu)
 			total += __raw_readl(ppmu_base + PMCNT_OFFSET(i));
 	}
 
-	return div_u64((total * ppmu->weight * 100), ppmu->ccnt);
+	if (total > ppmu->ccnt)
+		total = ppmu->ccnt;
+
+	return div64_u64((total * ppmu->weight * 100), ppmu->ccnt);
 }
 
 void ppmu_start(struct device *dev)

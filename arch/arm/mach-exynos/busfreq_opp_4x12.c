@@ -383,7 +383,7 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 {
 	unsigned int i;
 	unsigned int tmp;
-	unsigned long maxfreq = UINT_MAX;
+	unsigned long maxfreq = ULONG_MAX;
 	unsigned long minfreq = 0;
 	int ret;
 

@@ -307,9 +307,6 @@ static unsigned int busfreq_monitor(void)
 	exynos4_ppmu_stop(&cpu);
 	ppmuload = exynos4_ppmu_update(&cpu);
 
-	if (cpu.ccnt == 0)
-		cpu.ccnt = MAX_LOAD;
-
 	ppcload = max(bus_utilization[0], bus_utilization[1]);
 	index = p_idx;
 
