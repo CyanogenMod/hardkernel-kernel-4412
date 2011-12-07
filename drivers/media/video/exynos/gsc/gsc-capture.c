@@ -32,7 +32,7 @@
 
 #include "gsc-core.h"
 
-static int queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
+static int gsc_capture_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 		       unsigned int *num_planes, unsigned long sizes[],
 		       void *allocators[])
 {
@@ -52,7 +52,7 @@ static int queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 
 	return 0;
 }
-static int buffer_prepare(struct vb2_buffer *vb)
+static int gsc_capture_buf_prepare(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct gsc_ctx *ctx = vq->drv_priv;
@@ -128,7 +128,7 @@ int gsc_cap_pipeline_s_stream(struct gsc_dev *gsc, int on)
 	return ret == -ENOIOCTLCMD ? 0 : ret;
 }
 
-static void buffer_queue(struct vb2_buffer *vb)
+static void gsc_capture_buf_queue(struct vb2_buffer *vb)
 {
 	struct gsc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 	struct gsc_dev *gsc = ctx->gsc_dev;
@@ -243,7 +243,7 @@ static int gsc_capture_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 
 }
 
-static int start_streaming(struct vb2_queue *q)
+static int gsc_capture_start_streaming(struct vb2_queue *q)
 {
 	struct gsc_ctx *ctx = q->drv_priv;
 	struct gsc_dev *gsc = ctx->gsc_dev;
@@ -316,7 +316,7 @@ static int gsc_cap_stop_capture(struct gsc_dev *gsc)
 	return gsc_capture_state_cleanup(gsc);
 }
 
-static int stop_streaming(struct vb2_queue *q)
+static int gsc_capture_stop_streaming(struct vb2_queue *q)
 {
 	struct gsc_ctx *ctx = q->drv_priv;
 	struct gsc_dev *gsc = ctx->gsc_dev;
@@ -328,13 +328,13 @@ static int stop_streaming(struct vb2_queue *q)
 }
 
 static struct vb2_ops gsc_capture_qops = {
-	.queue_setup		= queue_setup,
-	.buf_prepare		= buffer_prepare,
-	.buf_queue		= buffer_queue,
+	.queue_setup		= gsc_capture_queue_setup,
+	.buf_prepare		= gsc_capture_buf_prepare,
+	.buf_queue		= gsc_capture_buf_queue,
 	.wait_prepare		= gsc_unlock,
 	.wait_finish		= gsc_lock,
-	.start_streaming	= start_streaming,
-	.stop_streaming		= stop_streaming,
+	.start_streaming	= gsc_capture_start_streaming,
+	.stop_streaming		= gsc_capture_stop_streaming,
 };
 
 /*
