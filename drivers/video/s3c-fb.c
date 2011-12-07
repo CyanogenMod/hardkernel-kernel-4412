@@ -708,8 +708,11 @@ static int s3c_fb_set_par(struct fb_info *info)
 		writel(data, sfb->regs + SHADOWCON);
 	}
 
-	data = WINCONx_ENWIN;
-	sfb->enabled |= (1 << win->index);
+	if (win_no == sfb->pdata->default_win) {
+		data = WINCONx_ENWIN;
+		sfb->enabled |= (1 << win->index);
+	} else
+		data = 0;
 
 	/* note, since we have to round up the bits-per-pixel, we end up
 	 * relying on the bitfield information for r/g/b/a to work out
