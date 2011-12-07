@@ -13,7 +13,7 @@ obj-				:=
 # Core support for EXYNOS system
 
 obj-y				+= init.o irq-combiner.o dma.o irq-eint.o
-obj-$(CONFIG_ARCH_EXYNOS4)	+= cpu-exynos4.o clock-exynos4.o pmu-exynos4.o ppc.o ppmu.o clock-domain.o dev.o dev-pd-exynos4.o
+obj-$(CONFIG_ARCH_EXYNOS4)	+= cpu-exynos4.o clock-exynos4.o pmu-exynos4.o ppc.o ppmu.o clock-domain.o dev-pd-exynos4.o
 obj-$(CONFIG_ARCH_EXYNOS5)	+= cpu-exynos5.o clock-exynos5.o clock-domain.o pmu-exynos5.o dev-pd-exynos5.o
 
 obj-$(CONFIG_CPU_EXYNOS4210)	+= clock-exynos4210.o
@@ -28,7 +28,7 @@ obj-$(CONFIG_EXYNOS4_CPUIDLE)	+= cpuidle-exynos4.o idle-exynos4.o
 obj-$(CONFIG_EXYNOS5_CPUIDLE)	+= cpuidle-exynos5.o idle-exynos5.o
 
 obj-$(CONFIG_BUSFREQ)		+= busfreq.o
-obj-$(CONFIG_BUSFREQ_OPP)	+= busfreq_opp.o busfreq_opp_4210.o busfreq_opp_4x12.o
+obj-$(CONFIG_BUSFREQ_OPP)	+= busfreq_opp.o busfreq_opp_4210.o busfreq_opp_4x12.o dev.o
 obj-$(CONFIG_SMP)		+= platsmp.o headsmp.o
 
 obj-$(CONFIG_EXYNOS_MCT)	+= mct.o

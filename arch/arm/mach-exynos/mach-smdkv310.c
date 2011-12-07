@@ -2753,7 +2753,9 @@ static void __init smdkv310_machine_init(void)
 	}
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
+#ifdef CONFIG_BUSFREQ_OPP
 	dev_add(&busfreq, &exynos4_busfreq.dev);
+#endif
 }
 
 MACHINE_START(SMDKC210, "SMDKC210")

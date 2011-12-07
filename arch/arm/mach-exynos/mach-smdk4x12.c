@@ -2609,8 +2609,10 @@ static void __init smdk4x12_usbswitch_init(void)
 }
 #endif
 
+#ifdef CONFIG_BUSFREQ_OPP
 /* BUSFREQ to control memory/bus*/
 static struct device_domain busfreq;
+#endif
 
 static struct platform_device exynos4_busfreq = {
 	.id = -1,
@@ -3829,10 +3831,12 @@ static void __init smdk4x12_machine_init(void)
 
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
+#ifdef CONFIG_BUSFREQ_OPP
 	dev_add(&busfreq, &exynos4_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_DMC0], &exynos4_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_DMC1], &exynos4_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_CPU], &exynos4_busfreq.dev);
+#endif
 }
 
 #ifdef CONFIG_EXYNOS_C2C
