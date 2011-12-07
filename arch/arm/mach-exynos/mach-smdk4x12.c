@@ -805,20 +805,7 @@ static struct s3c_platform_camera s5k6a3 = {
 	.inv_hsync = 0,
 };
 #endif
-
-static struct exynos_platform_flite flite_plat = {
-#ifdef CONFIG_VIDEO_S5K3H1
-	.cam  = &s5k3h1,
 #endif
-#ifdef CONFIG_VIDEO_S5K3H2
-	.cam  = &s5k3h2,
-#endif
-#ifdef CONFIG_VIDEO_S5K6A3
-	.cam  = &s5k6a3,
-#endif
-};
-#endif
-
 #endif /* CONFIG_VIDEO_SAMSUNG_S5P_FIMC */
 
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -3588,6 +3575,13 @@ static void __init smdk4x12_machine_init(void)
 #endif
 	s5p_tv_setup();
 	s5p_i2c_hdmiphy_set_platdata(NULL);
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
+	smdk4x12_set_camera_flite_platdata();
+	s3c_set_platdata(&exynos_flite0_default_data,
+			sizeof(exynos_flite0_default_data), &exynos_device_flite0);
+	s3c_set_platdata(&exynos_flite1_default_data,
+			sizeof(exynos_flite1_default_data), &exynos_device_flite1);
+#endif
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);
 	s3c_fimc1_set_platdata(&fimc_plat);
@@ -3610,13 +3604,7 @@ static void __init smdk4x12_machine_init(void)
 	s3c_device_csis1.dev.parent = &exynos4_device_pd[PD_CAM].dev;
 #endif
 #endif
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
-	smdk4x12_set_camera_flite_platdata();
-	s3c_set_platdata(&exynos_flite0_default_data,
-			sizeof(exynos_flite0_default_data), &exynos_device_flite0);
-	s3c_set_platdata(&exynos_flite1_default_data,
-			sizeof(exynos_flite1_default_data), &exynos_device_flite1);
-#endif
+
 #if defined(CONFIG_ITU_A) || defined(CONFIG_CSI_C) \
 	|| defined(CONFIG_S5K3H1_CSI_C) || defined(CONFIG_S5K3H2_CSI_C) \
 	|| defined(CONFIG_S5K6A3_CSI_C)
@@ -3702,10 +3690,6 @@ static void __init smdk4x12_machine_init(void)
 	|| defined(CONFIG_S5K3H1_CSI_D) || defined(CONFIG_S5K3H2_CSI_D) \
 	|| defined(CONFIG_S5K6A3_CSI_D)
 	smdk4x12_cam1_reset(1);
-#endif
-#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
-	exynos_flite0_set_platdata(&flite_plat);
-	exynos_flite1_set_platdata(&flite_plat);
 #endif
 #endif
 
