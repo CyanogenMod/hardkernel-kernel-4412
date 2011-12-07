@@ -715,7 +715,7 @@ int fimc_is_release_subdev(struct fimc_control *ctrl)
 {
 	int ret;
 	struct fimc_global *fimc = get_fimc_dev();
-	if (ctrl->is.sd) {
+	if (ctrl->is.sd && ctrl->cam) {
 		if (ctrl->cam->cam_power)
 			ctrl->cam->cam_power(0);
 		/* shutdown the MCLK */
