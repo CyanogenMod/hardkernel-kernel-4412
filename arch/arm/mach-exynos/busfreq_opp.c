@@ -87,9 +87,9 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 {
 	struct opp *opp;
 	int i;
-	unsigned int cpu_load_average;
-	unsigned int dmc0_load_average;
-	unsigned int dmc1_load_average;
+	unsigned int cpu_load_average = 0;
+	unsigned int dmc0_load_average = 0;
+	unsigned int dmc1_load_average = 0;
 	unsigned long lockfreq;
 	unsigned long newfreq = opp_get_freq(data->curr_opp) / 1000;
 	unsigned long maxfreq = opp_get_freq(data->max_opp) / 1000;
@@ -122,18 +122,10 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	dmc0_load_average /= LOAD_HISTORY_SIZE;
 	dmc1_load_average /= LOAD_HISTORY_SIZE;
 
-	if (cpu_load > LV0_CUTLINE) {
-		newfreq = opp_get_freq(data->max_opp);
-	} else if (cpu_load_average <= AVE_CUTLINE) {
-		if (cpu_load > LV1_CUTLINE) {
-			newfreq = 267200;
-		} else if (cpu_load == 0) {
-			newfreq = 100100;
-		} else {
-			opp = step_down(data);
-			newfreq = opp_get_freq(opp);
-		}
-	}
+	if (dmc1_load >= MAX_THRESHOLD)
+		opp = step_up(data);
+
+	newfreq = max(newfreq, opp_get_freq(opp));
 
 	lockfreq = dev_max_freq(data->dev);
 
