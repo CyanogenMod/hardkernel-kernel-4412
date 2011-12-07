@@ -1036,11 +1036,9 @@ static void gsc_cap_try_format(struct gsc_dev *gsc,
 	WARN_ON(!gfmt);
 
 	if (pad == GSC_PAD_SINK) {
-		if (gfmt->flags != FMT_FLAGS_CAM)
-			gsc_warn("Not supported format of gsc capture\n");
-
 		struct gsc_ctx *ctx = gsc->cap.ctx;
 		struct gsc_frame *frame = &ctx->s_frame;
+
 		frame->fmt = gfmt;
 	}
 

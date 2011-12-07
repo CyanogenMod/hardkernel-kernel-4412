@@ -98,8 +98,6 @@
 #define	GSC_CTX_STOP_REQ		(1 << 6)
 #define	GSC_CTX_CAP			(1 << 10)
 
-#define FMT_FLAGS_CAM	(1 << 0)
-
 enum gsc_dev_flags {
 	/* for global */
 	ST_PWR_ON,

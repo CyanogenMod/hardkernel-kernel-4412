@@ -18,7 +18,6 @@
 enum gsc_cam_bus_type {
 	GSC_ITU_601 = 1,
 	GSC_MIPI_CSI2,
-	GSC_LCD_WB, /* FIFO link from FIMD*/
 };
 
 enum gsc_cam_port {

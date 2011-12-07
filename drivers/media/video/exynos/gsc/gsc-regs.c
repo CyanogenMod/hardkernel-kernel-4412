@@ -293,7 +293,6 @@ void gsc_hw_set_output_addr(struct gsc_dev *dev,
 void gsc_hw_set_input_path(struct gsc_ctx *ctx)
 {
 	struct gsc_dev *dev = ctx->gsc_dev;
-	struct v4l2_subdev *sd = NULL;
 
 	u32 cfg = readl(dev->regs + GSC_IN_CON);
 	cfg &= ~(GSC_IN_PATH_MASK | GSC_IN_LOCAL_SEL_MASK);
