@@ -73,6 +73,10 @@ static void fimc_subdev_unregister(struct fimc_dev *fimc)
 		i2c_put_adapter(client->adapter);
 		vid_cap->sd = NULL;
 	}
+	if (vid_cap->mipi_sd) {
+		v4l2_device_unregister_subdev(vid_cap->mipi_sd);
+		vid_cap->mipi_sd = NULL;
+	}
 	if (vid_cap->fb_sd) {
 		v4l2_device_unregister_subdev(vid_cap->fb_sd);
 		vid_cap->fb_sd = NULL;
@@ -80,6 +84,10 @@ static void fimc_subdev_unregister(struct fimc_dev *fimc)
 	if (vid_cap->is.sd) {
 		v4l2_device_unregister_subdev(vid_cap->is.sd);
 		vid_cap->is.sd = NULL;
+	}
+	if (vid_cap->flite_sd) {
+		v4l2_device_unregister_subdev(vid_cap->flite_sd);
+		vid_cap->flite_sd = NULL;
 	}
 	vid_cap->input_index = -1;
 }
@@ -823,6 +831,12 @@ static int fimc_capture_close(struct file *file)
 		if (fimc->vid_cap.sd)
 			v4l2_subdev_call(fimc->vid_cap.sd, core, s_power, 0);
 
+		if (fimc->vid_cap.is.sd)
+			v4l2_subdev_call(fimc->vid_cap.is.sd, core, s_power, 0);
+
+		if (fimc->vid_cap.flite_sd)
+			v4l2_subdev_call(fimc->vid_cap.flite_sd, core, s_power, 0);
+
 		if (fimc->vid_cap.mipi_sd)
 			v4l2_subdev_call(fimc->vid_cap.mipi_sd, core, s_power, 0);
 		if (fimc->vid_cap.mux_id == 0)
@@ -941,10 +955,6 @@ static int sync_capture_fmt(struct fimc_ctx *ctx, struct v4l2_rect *r)
 		}
 	}
 
-	err("is->mbus_fmt->width : %d", fimc->vid_cap.is.mbus_fmt.width);
-	err("is->mbus_fmt->height : %d", fimc->vid_cap.is.mbus_fmt.height);
-	err("is->mbus_fmt->code : %d", fimc->vid_cap.is.mbus_fmt.code);
-	err("is->mbus_fmt->colorspace : %d", fimc->vid_cap.is.mbus_fmt.colorspace);
 	if (fimc->vid_cap.flite_sd)
 		ret = v4l2_subdev_call(fimc->vid_cap.flite_sd, video, s_mbus_fmt, &fimc->vid_cap.is.mbus_fmt);
 
@@ -1164,6 +1174,7 @@ static int fimc_cap_s_input(struct file *file, void *priv,
 	if (ret)
 		err("subdev init failed");
 
+	fimc->vid_cap.refcnt++;
 	if (test_and_clear_bit(ST_PWR_ON, &fimc->state))
 		pm_runtime_put_sync(&fimc->pdev->dev);
 
