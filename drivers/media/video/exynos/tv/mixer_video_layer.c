@@ -46,9 +46,9 @@ static void mxr_video_fix_geometry(struct mxr_layer *layer)
 			geo->dst.full_height - 1);
 
 	/* mixer scale-up is unuseful. so no use it */
-	geo->dst.width = clamp_val(geo->src.width, 1,
+	geo->dst.width = clamp_val(geo->dst.width, 1,
 			geo->dst.full_width - geo->dst.x_offset);
-	geo->dst.height = clamp_val(geo->src.height, 1,
+	geo->dst.height = clamp_val(geo->dst.height, 1,
 			geo->dst.full_height - geo->dst.y_offset);
 }
 

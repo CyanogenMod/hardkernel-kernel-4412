@@ -772,8 +772,7 @@ static void mxr_apply_crop(struct v4l2_subdev *sd,
 		} else if (pad == MXR_PAD_SOURCE_GSCALER
 				|| pad == MXR_PAD_SOURCE_GRP0
 				|| pad == MXR_PAD_SOURCE_GRP1) {
-			pad = pad - (MXR_PADS_NUM >> 1);
-			layer = sub_mxr->layer[pad];
+			layer = sub_mxr->layer[pad - (MXR_PADS_NUM >> 1)];
 
 			layer->geo.dst.width = r->width;
 			layer->geo.dst.height = r->height;

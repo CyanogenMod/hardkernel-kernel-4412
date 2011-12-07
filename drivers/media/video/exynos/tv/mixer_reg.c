@@ -257,8 +257,8 @@ void mxr_reg_video_geo(struct mxr_device *mdev, int cur_mxr, int idx,
 
 	lt  = MXR_VIDEO_LT_LEFT_VAL(geo->dst.x_offset);
 	lt |= MXR_VIDEO_LT_TOP_VAL(geo->dst.y_offset);
-	rb  = MXR_VIDEO_RB_RIGHT_VAL(geo->dst.x_offset + geo->dst.width);
-	rb |= MXR_VIDEO_RB_BOTTOM_VAL(geo->dst.y_offset + geo->dst.height);
+	rb  = MXR_VIDEO_RB_RIGHT_VAL(geo->dst.x_offset + geo->dst.width - 1);
+	rb |= MXR_VIDEO_RB_BOTTOM_VAL(geo->dst.y_offset + geo->dst.height - 1);
 
 	if (cur_mxr == MXR_SUB_MIXER0) {
 		mxr_write(mdev, MXR_VIDEO_LT, lt);
