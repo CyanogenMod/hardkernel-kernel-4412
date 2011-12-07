@@ -33,23 +33,25 @@
 
 int gsc_out_hw_reset_off (struct gsc_dev *gsc)
 {
-	int ret = 0;
+	int ret;
 
-	/* FIXME: G-Scaler reset generates abnormal display
-	   after G-Scaler & Mixer local out is disconnected.
-	   After getting the guide from AP Dev. team, fix this*/
-/*	gsc_hw_set_sw_reset(gsc);
+	mdelay(1);
+	gsc_hw_set_sw_reset(gsc);
 	ret = gsc_wait_reset(gsc);
-	if (ret < 0)
+	if (ret < 0) {
+		gsc_err("gscaler s/w reset timeout");
 		return ret;
+	}
+	gsc_pixelasync_sw_reset(gsc);
 	gsc_disp_fifo_sw_reset(gsc);
-	gsc_pixelasync_sw_reset(gsc);*/
 	gsc_hw_enable_control(gsc, false);
 	ret = gsc_wait_stop(gsc);
-	if (ret < 0)
+	if (ret < 0) {
+		gsc_err("gscaler stop timeout");
 		return ret;
+	}
 
-	return ret;
+	return 0;
 }
 
 int gsc_out_check_scaler_ratio(struct gsc_variant *var, int sw, int sh,
