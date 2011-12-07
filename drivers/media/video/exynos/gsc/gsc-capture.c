@@ -544,16 +544,22 @@ void gsc_cap_pipeline_prepare(struct gsc_dev *gsc, struct media_entity *me)
 		switch (sd->grp_id) {
 		case GSC_CAP_GRP_ID:
 			gsc->pipeline.sd_gsc = sd;
+			break;
 		case FLITE_GRP_ID:
 			gsc->pipeline.flite = sd;
+			break;
 		case SENSOR_GRP_ID:
 			gsc->pipeline.sensor = sd;
+			break;
 		case CSIS_GRP_ID:
 			gsc->pipeline.csis = sd;
+			break;
 		case FIMD_GRP_ID:
 			gsc->pipeline.disp= sd;
+			break;
 		default:
 			gsc_err("Unsupported group id");
+			break;
 		}
 	}
 
