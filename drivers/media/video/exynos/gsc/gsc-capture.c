@@ -128,15 +128,35 @@ int gsc_cap_pipeline_s_stream(struct gsc_dev *gsc, int on)
 	return ret == -ENOIOCTLCMD ? 0 : ret;
 }
 
+static int gsc_capture_set_addr(struct vb2_buffer *vb)
+{
+	struct gsc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+	struct gsc_dev *gsc = ctx->gsc_dev;
+	int ret;
+
+	ret = gsc_prepare_addr(ctx, vb, &ctx->d_frame, &ctx->d_frame.addr);
+	if (ret) {
+		gsc_err("Prepare G-Scaler address failed\n");
+		return -EINVAL;
+	}
+
+	gsc_hw_set_output_addr(gsc, &ctx->d_frame.addr, vb->v4l2_buf.index);
+
+	return 0;
+}
+
 static void gsc_capture_buf_queue(struct vb2_buffer *vb)
 {
 	struct gsc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 	struct gsc_dev *gsc = ctx->gsc_dev;
 	struct gsc_capture_device *cap = &gsc->cap;
-	int min_bufs;
+	int min_bufs, ret;
 	unsigned long flags;
 
 	spin_lock_irqsave(&gsc->slock, flags);
+	ret = gsc_capture_set_addr(vb);
+	if (ret)
+		gsc_err("Failed to prepare output addr");
 
 	if (!test_bit(ST_CAPT_SUSPENDED, &gsc->state)) {
 		gsc_info("buf_index : %d", vb->v4l2_buf.index);
@@ -248,22 +268,11 @@ static int gsc_capture_start_streaming(struct vb2_queue *q)
 	struct gsc_ctx *ctx = q->drv_priv;
 	struct gsc_dev *gsc = ctx->gsc_dev;
 	struct gsc_capture_device *cap = &gsc->cap;
-	struct vb2_buffer *vb;
-	int min_bufs, ret, i;
+	int min_bufs;
 
 	gsc_hw_set_sw_reset(gsc);
 	gsc_wait_reset(gsc);
 	gsc_hw_set_output_buf_mask_all(gsc);
-
-	for (i = 0; i < cap->reqbufs_cnt; i++) {
-		vb = q->bufs[i];
-		ret = gsc_prepare_addr(ctx, vb, &ctx->d_frame, &ctx->d_frame.addr);
-		if (ret) {
-			gsc_err("Prepare G-Scaler address failed\n");
-			return -EINVAL;
-		}
-		gsc_hw_set_output_addr(gsc, &ctx->d_frame.addr, vb->v4l2_buf.index);
-	}
 
 	min_bufs = cap->reqbufs_cnt > 1 ? 2 : 1;
 	if ((gsc_hw_get_nr_unmask_bits(gsc) >= min_bufs) &&

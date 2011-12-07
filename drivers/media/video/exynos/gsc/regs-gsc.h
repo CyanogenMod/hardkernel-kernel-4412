@@ -126,6 +126,7 @@
 #define GSC_OUT_XRGB8888		(0 << 4)
 #define GSC_OUT_RGB565			(1 << 4)
 #define GSC_OUT_YUV420_2P		(2 << 4)
+#define GSC_OUT_YUV420_3P		(3 << 4)
 #define GSC_OUT_YUV422_1P		(4 << 4)
 #define GSC_OUT_YUV422_2P		(5 << 4)
 #define GSC_OUT_YUV444			(7 << 4)

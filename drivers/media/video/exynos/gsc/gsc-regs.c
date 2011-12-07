@@ -516,6 +516,9 @@ void gsc_hw_set_out_image_format(struct gsc_ctx *ctx)
 		else
 			cfg |= GSC_OUT_CHROMA_ORDER_CRCB;
 		break;
+	case 3:
+		cfg |= GSC_OUT_YUV420_3P;
+		break;
 	};
 
 	if(is_tiled(frame->fmt))
