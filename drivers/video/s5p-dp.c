@@ -1506,7 +1506,7 @@ static int s5p_dp_process_equalizer_training(struct s5p_dp_device *dp)
 						dp->link_train.lt_state =
 							START;
 					} else {
-						/* bit-rate already reduced*/
+						/* bit-rate already reduced */
 						s5p_dp_training_pattern_dis(dp);
 
 						/*
@@ -1563,7 +1563,7 @@ static void s5p_dp_get_max_rx_bandwidth(struct s5p_dp_device *dp,
 
 	/*
 	 * For DP rev.1.1, Maximum link rate of Main Link lanes
-	 * 0x06 : 1.62 Gbps, 0x0a : 2.7 Gbps
+	 * 0x06 = 1.62 Gbps, 0x0a = 2.7 Gbps
 	 */
 	s5p_dp_read_byte_from_dpcd(dp, DPCD_ADDR_MAX_LINK_RATE, &data);
 	*bandwidth = data;
@@ -1575,7 +1575,7 @@ static void s5p_dp_get_max_rx_lane_count(struct s5p_dp_device *dp,
 	u8 data;
 
 	/*
-	 * For DP rev.1.1, Maximum number of lanes
+	 * For DP rev.1.1, Maximum number of Main Link lanes
 	 * 0x01 = 1 lane, 0x02 = 2 lanes, 0x04 = 4 lanes
 	 */
 	s5p_dp_read_byte_from_dpcd(dp, DPCD_ADDR_MAX_LANE_COUNT, &data);

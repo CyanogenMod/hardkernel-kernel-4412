@@ -913,12 +913,10 @@ void s5p_dp_enable_enhanced_mode(struct s5p_dp_device *dp, bool enable)
 	u32 reg;
 
 	if (enable) {
-		/* Set ENHANCED[3] */
 		reg = readl(dp->reg_base + S5P_DP_SYS_CTL_4);
 		reg |= ENHANCED;
 		writel(reg, dp->reg_base + S5P_DP_SYS_CTL_4);
 	} else {
-		/* Clear ENHANCED[3] */
 		reg = readl(dp->reg_base + S5P_DP_SYS_CTL_4);
 		reg &= ~ENHANCED;
 		writel(reg, dp->reg_base + S5P_DP_SYS_CTL_4);
@@ -1329,7 +1327,7 @@ int s5p_dp_is_slave_video_stream_clock_on(struct s5p_dp_device *dp)
 
 	/* To check whether input stream clock is stable. */
 	/* To do that clear it first. */
-	/* Update Video stream clk change status */
+	/* Update Video stream clock change status */
 	if (soc_is_exynos5250()) {
 		reg = CHA_CTRL;
 		writel(reg, dp->reg_base + S5P_DP_SYS_CTL_2);
