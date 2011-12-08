@@ -1805,8 +1805,10 @@ static void __init smdkv310_usbgadget_init(void)
 }
 #endif
 
+#ifdef CONFIG_BUSFREQ_OPP
 /* BUSFREQ to control memory/bus*/
 static struct device_domain busfreq;
+#endif
 
 static struct platform_device exynos4_busfreq = {
 	.id = -1,
