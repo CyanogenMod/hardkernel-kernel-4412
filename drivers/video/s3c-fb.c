@@ -1846,6 +1846,7 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 }
 #endif
 
+/* --------------------For Local path from Gscaler ------------------------*/
 #ifdef CONFIG_FB_EXYNOS_FIMD_MC
 static inline struct s3c_fb_win *v4l2_subdev_to_s3c_fb_win(struct v4l2_subdev *sd)
 {
@@ -2046,7 +2047,7 @@ static const struct media_entity_operations s3c_fb_me_ops = {
 	.link_setup = s3c_fb_me_link_setup,
 };
 
-/*------------- In probing function -------------------------------*/
+/*---- In probing function (local path) ------*/
 static int s3c_fb_register_mc_entity(struct s3c_fb_win *win, struct exynos_md *md)
 {
 	int ret;
@@ -2185,6 +2186,7 @@ static void s3c_fb_unregister_mc_entities(struct s3c_fb_win *win)
 }
 #endif
 
+/* --------------------For Writeback to Scaler ------------------------*/
 #ifdef CONFIG_FB_EXYNOS_FIMD_MC_WB
 static inline struct s3c_fb *v4l2_subdev_to_s3c_fb(struct v4l2_subdev *sd)
 {
@@ -2225,12 +2227,35 @@ static int s3c_fb_sd_wb_s_stream(struct v4l2_subdev *sd_wb, int enable)
 	return 0;
 }
 
+static int s3c_fb_sd_wb_pad_get_fmt(struct v4l2_subdev *sd_wb, struct v4l2_subdev_fh *fh,
+		       struct v4l2_subdev_format *format)
+{
+	struct s3c_fb *sfb = v4l2_subdev_to_s3c_fb(sd_wb);
+	int default_win = sfb->pdata->default_win;
+
+	/* (width, height) : (xres, yres) */
+	format->format.width = sfb->windows[default_win]->fbinfo->var.xres;
+	format->format.height = sfb->windows[default_win]->fbinfo->var.yres;
+
+	/* FIMD writes the video data back to GSCALER */
+	format->format.code = V4L2_MBUS_FMT_XRGB8888_4X8_LE;
+
+	dev_dbg(sfb->dev, "Get sd wb pad format (width, height) : (%d, %d)\n",
+			format->format.width, format->format.height);
+	return 0;
+}
+
+static const struct v4l2_subdev_pad_ops s3c_fb_sd_wb_pad_ops = {
+	.get_fmt = s3c_fb_sd_wb_pad_get_fmt,
+};
+
 static const struct v4l2_subdev_video_ops s3c_fb_sd_wb_video_ops = {
 	.s_stream = s3c_fb_sd_wb_s_stream,
 };
 
 static const struct v4l2_subdev_ops s3c_fb_sd_wb_ops = {
 	.video = &s3c_fb_sd_wb_video_ops,
+	.pad = &s3c_fb_sd_wb_pad_ops,
 };
 
 static int s3c_fb_me_wb_link_setup(struct media_entity *entity,
@@ -2265,7 +2290,7 @@ static const struct media_entity_operations s3c_fb_me_wb_ops = {
 	.link_setup = s3c_fb_me_wb_link_setup,
 };
 
-/*------------- In probing function -------------------------------*/
+/* --- In probing function (writeback) ---*/
 static int s3c_fb_register_mc_wb_entity(struct s3c_fb *sfb, struct exynos_md *md_wb)
 {
 	int ret;
@@ -2325,7 +2350,7 @@ static int s3c_fb_register_mc_wb_components(struct s3c_fb *sfb)
 
 	driver = driver_find(MDEV_MODULE_NAME, &platform_bus_type);
 	if (!driver)
-		dev_err(sfb->dev, "MC driver not found\n");
+		dev_err(sfb->dev, "MC driver not found in s3c_fb\n");
 
 	ret = driver_for_each_device(driver, NULL, &mdev[0],
 		fimd_get_media_info);
@@ -2409,6 +2434,7 @@ static void s3c_fb_unregister_mc_wb_entities(struct s3c_fb *sfb)
 	v4l2_device_unregister_subdev(&sfb->sd_wb);
 }
 #endif
+/*------------------------------------------------------------------ */
 
 static int __devinit s3c_fb_probe(struct platform_device *pdev)
 {
