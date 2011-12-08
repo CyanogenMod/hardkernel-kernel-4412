@@ -2181,12 +2181,20 @@ static void __init smdk5250_machine_init(void)
 				800 * MHZ);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_MIPI_CSIS
+#if defined(CONFIG_EXYNOS_DEV_PD)
+	s5p_device_mipi_csis0.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+	s5p_device_mipi_csis1.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+#endif
 	s3c_set_platdata(&s5p_mipi_csis0_default_data,
 			sizeof(s5p_mipi_csis0_default_data), &s5p_device_mipi_csis0);
 	s3c_set_platdata(&s5p_mipi_csis1_default_data,
 			sizeof(s5p_mipi_csis1_default_data), &s5p_device_mipi_csis1);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
+#if defined(CONFIG_EXYNOS_DEV_PD)
+	exynos_device_flite0.dev.parent = &exynos5_device_pd[PD_ISP].dev;
+	exynos_device_flite1.dev.parent = &exynos5_device_pd[PD_ISP].dev;
+#endif
 	smdk5250_camera_gpio_cfg();
 	smdk5250_set_camera_platdata();
 	s3c_set_platdata(&exynos_flite0_default_data,
