@@ -963,12 +963,16 @@ static int s3c_fb_blank(int blank_mode, struct fb_info *info)
 
 	case FB_BLANK_NORMAL:
 		/* disable the DMA and display 0x0 (black) */
+		shadow_protect_win(win, 1);
 		writel(WINxMAP_MAP | WINxMAP_MAP_COLOUR(0x0),
 		       sfb->regs + sfb->variant.winmap + (index * 4));
+		shadow_protect_win(win, 0);
 		break;
 
 	case FB_BLANK_UNBLANK:
+		shadow_protect_win(win, 1);
 		writel(0x0, sfb->regs + sfb->variant.winmap + (index * 4));
+		shadow_protect_win(win, 0);
 		wincon |= WINCONx_ENWIN;
 		sfb->enabled |= (1 << index);
 		break;
@@ -979,7 +983,9 @@ static int s3c_fb_blank(int blank_mode, struct fb_info *info)
 		return 1;
 	}
 
+	shadow_protect_win(win, 1);
 	writel(wincon, sfb->regs + sfb->variant.wincon + (index * 4));
+	shadow_protect_win(win, 0);
 
 	/* Check the enabled state to see if we need to be running the
 	 * main LCD interface, as if there are no active windows then
@@ -993,7 +999,9 @@ static int s3c_fb_blank(int blank_mode, struct fb_info *info)
 	 * the windows being down.
 	 *
 	 */
+	shadow_protect_win(win, 1);
 	s3c_fb_enable(sfb, sfb->enabled ? 1 : 0);
+	shadow_protect_win(win, 0);
 
 	/* we're stuck with this until we can do something about overriding
 	 * the power control using the blanking event for a single fb.
@@ -1234,6 +1242,8 @@ int s3c_fb_set_plane_alpha_blending(struct fb_info *info,
 			(((user_alpha.green & 0xf)) << 8) |
 			(((user_alpha.blue & 0xf)) << 0));
 
+	shadow_protect_win(win, 1);
+
 	data = readl(regs + sfb->variant.wincon + (win_no * 4));
 	data &= ~(WINCON1_BLD_PIX | WINCON1_ALPHA_SEL);
 	data |= WINCON1_BLD_PLANE;
@@ -1255,6 +1265,8 @@ int s3c_fb_set_plane_alpha_blending(struct fb_info *info,
 			writel(alpha_low, regs + VIDW0ALPHA1 + (win_no * 8));
 	}
 
+	shadow_protect_win(win, 0);
+
 	return 0;
 }
 
@@ -1275,6 +1287,8 @@ int s3c_fb_set_chroma_key(struct fb_info *info,
 			((user_chroma.green & 0xff) << 8) |
 			((user_chroma.blue & 0xff) << 0));
 
+	shadow_protect_win(win, 1);
+
 	if (user_chroma.enabled)
 		data |= WxKEYCON0_KEYEN_F;
 
@@ -1283,6 +1297,8 @@ int s3c_fb_set_chroma_key(struct fb_info *info,
 
 	data = (chroma_value & 0xffffff);
 	writel(data, keycon + WKEYCON1);
+
+	shadow_protect_win(win, 0);
 
 	return 0;
 }
@@ -1427,6 +1443,7 @@ static int s3c_fb_open(struct fb_info *info, int user)
 	int win_no;
 
 	if (!atomic_read(&sfb->fb_use)) {
+		shadow_protect_win(win, 1);
 		/* disable all windows */
 		for (win_no = 0; win_no < S3C_FB_MAX_WIN; win_no++) {
 			void __iomem *regs = sfb->regs;
@@ -1438,6 +1455,7 @@ static int s3c_fb_open(struct fb_info *info, int user)
 			writel(wincon, regs + sfb->variant.wincon
 						+ (win_no * 4));
 		}
+		shadow_protect_win(win, 0);
 	}
 
 	atomic_inc(&sfb->fb_use);
@@ -1839,10 +1857,15 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 
 	for (win_no = 0; win_no < sfb->variant.nr_windows - 1; win_no++) {
 		void __iomem *regs = sfb->regs + sfb->variant.keycon;
+		win = sfb->windows[win_no];
+		if (!win)
+			continue;
 
+		shadow_protect_win(win, 1);
 		regs += (win_no * 8);
 		writel(0xffffff, regs + WKEYCON0);
 		writel(0xffffff, regs + WKEYCON1);
+		shadow_protect_win(win, 0);
 	}
 
 	/* restore framebuffers */
@@ -2006,6 +2029,8 @@ static void s3c_fb_mc_local_path_setup(struct s3c_fb_win *win)
 	if (win->local) {
 		/* Enable  the channel 1 to a local path for the window1
 		   in fimd1 */
+		shadow_protect_win(win, 1);
+
 		data = readl(sfb->regs + SHADOWCON);
 		data |= SHADOWCON_CHx_LOCAL_ENABLE(win->index);
 		writel(data, sfb->regs + SHADOWCON);
@@ -2014,6 +2039,8 @@ static void s3c_fb_mc_local_path_setup(struct s3c_fb_win *win)
 		data &= ~WINCONx_ENLOCAL_MASK;
 		data |= (WINCONx_ENLOCAL | WINCONx_INRGB_YCBCR);
 		writel(data, sfb->regs + WINCON(win->index));
+
+		shadow_protect_win(win, 0);
 
 		/* MIXER0_VALID[7] & MIXER1_VALID[4] : should be 0
 		   (FIMD1 Data Valid) */
@@ -2793,10 +2820,15 @@ static int s3c_fb_resume(struct device *dev)
 
 	for (win_no = 0; win_no < sfb->variant.nr_windows - 1; win_no++) {
 		void __iomem *regs = sfb->regs + sfb->variant.keycon;
+		win = sfb->windows[win_no];
+		if (!win)
+			continue;
 
+		shadow_protect_win(win, 1);
 		regs += (win_no * 8);
 		writel(0xffffff, regs + WKEYCON0);
 		writel(0xffffff, regs + WKEYCON1);
+		shadow_protect_win(win, 0);
 	}
 
 	/* restore framebuffers */
