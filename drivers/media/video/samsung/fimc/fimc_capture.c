@@ -2141,13 +2141,8 @@ int fimc_streamoff_capture(void *fh)
 
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 
-	if (!ctrl->cam) {
+	if (fimc_check_capture_source(ctrl)) {
 		fimc_err("%s: No capture device.\n", __func__);
-		return -ENODEV;
-	}
-
-	if (!ctrl->cam->sd) {
-		fimc_err("%s: No sub device.\n", __func__);
 		return -ENODEV;
 	}
 
