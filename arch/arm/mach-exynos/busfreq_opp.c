@@ -116,7 +116,7 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	/* Convert from base xxx to base maxfreq */
 	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * newfreq, maxfreq);
 	dmc0_load = div64_u64(ppmu_load[PPMU_DMC0] * newfreq, maxfreq);
-	dmc1_load = div64_u64(ppmu_load[PPMU_DMC1] * newfreq, maxfreq);
+	dmc1_load = div64_u64(ppmu_load[PPMU_DMC1] * newfreq, maxfreq) - cpu_load;
 
 	data->load_history[PPMU_CPU][data->index] = cpu_load;
 	data->load_history[PPMU_DMC0][data->index] = dmc0_load;
