@@ -50,11 +50,16 @@ struct timer_list c2c_status_timer;
 static void c2c_timer_func(unsigned long data)
 {
 	/* Check C2C state */
-	static int current_state = 0xff;
 	struct exynos_c2c_platdata *pdata = (struct exynos_c2c_platdata*)data;
-	if (current_state != pdata->get_c2c_state()) {
-		printk("[C2C]C2C state is chaged (0x%x --> 0x%x)\n",current_state, pdata->get_c2c_state());
+	static int old_state = 0xff;
+	int current_state = 0;
+
+	if (pdata->get_c2c_state() != NULL) {
 		current_state = pdata->get_c2c_state();
+		if (current_state != old_state) {
+			dev_info(c2c_con.c2c_dev, "C2C state is chaged (0x%x --> 0x%x)\n",old_state, current_state);
+			old_state = current_state;
+		}
 	}
         c2c_status_timer.expires = jiffies + (HZ/5);
         add_timer(&c2c_status_timer);
@@ -63,6 +68,7 @@ static void c2c_timer_func(unsigned long data)
 
 void c2c_reset_ops(void)
 {
+	/* This function will be only used for EVT0 or EVT0.1 */
 	u32 set_clk = 0;
 
 	if (c2c_con.opp_mode == C2C_OPP100)
@@ -72,8 +78,8 @@ void c2c_reset_ops(void)
 	else if (c2c_con.opp_mode == C2C_OPP25)
 		set_clk = c2c_con.clk_opp25;
 
-	printk("[C2C] c2c_reset_ops()\n");
-	clk_set_rate(c2c_con.c2c_sclk, (set_clk + 1) * 1000000);
+	dev_info(c2c_con.c2c_dev, "c2c_reset_ops()\n");
+	clk_set_rate(c2c_con.c2c_sclk, (set_clk + 1) * MHZ);
 	c2c_set_func_clk(set_clk);
 
 	/* First phase - C2C block reset */
@@ -82,7 +88,7 @@ void c2c_reset_ops(void)
 	/* Second phase - Clear clock gating */
 	c2c_set_clock_gating(C2C_CLEAR);
 	/* Third phase - Retention reg */
-	c2c_writel(c2c_con.rtt_enableset, EXYNOS_C2C_IRQ_EN_SET1);
+	c2c_writel(c2c_con.retention_reg, EXYNOS_C2C_IRQ_EN_SET1);
 	c2c_writel(set_clk, EXYNOS_C2C_FCLK_FREQ);
 	c2c_writel(set_clk, EXYNOS_C2C_RX_MAX_FREQ);
 	/* Last phase - Set clock gating */
@@ -92,7 +98,7 @@ void c2c_reset_ops(void)
 int c2c_open(struct inode *inode, struct file *filp)
 {
 	/* This function is not needed.(Test Function) */
-	printk("[C2C] C2C chrdrv Opened.\n");
+	dev_info(c2c_con.c2c_dev, "C2C chrdrv Opened.\n");
 
 	return 0;
 }
@@ -117,15 +123,42 @@ static struct miscdevice char_dev = {
         .fops           = &c2c_fops
 };
 
-static int set_sharedmem(enum c2c_shrdmem_size size, u32 addr)
+static int c2c_set_sharedmem(enum c2c_shrdmem_size size, u32 addr)
 {
-	c2c_dbg(KERN_INFO "[C2C] Set BaseAddr(0x%x) and Size(%d)\n", addr, 1 << (2 + size));
+	dev_info(c2c_con.c2c_dev, "Set BaseAddr(0x%x) and Size(%d)\n", addr, 1 << (2 + size));
 
 	/* Set DRAM Base Addr & Size */
 	c2c_set_shdmem_size(size);
 	c2c_set_base_addr((addr >> 22));
 
 	return 0;
+}
+
+static void c2c_set_interrupt(u32 genio_num, enum c2c_interrupt set_int)
+{
+	u32 cur_int_reg, cur_lev_reg;
+
+	cur_int_reg = c2c_readl(EXYNOS_C2C_GENO_INT);
+	cur_lev_reg = c2c_readl(EXYNOS_C2C_GENO_LEVEL);
+
+	switch(set_int) {
+	case C2C_INT_TOGGLE:
+		cur_int_reg &= ~(0x1 << genio_num);
+		c2c_writel(cur_int_reg, EXYNOS_C2C_GENO_INT);
+		break;
+	case C2C_INT_HIGH:
+		cur_int_reg |= (0x1 << genio_num);
+		cur_lev_reg |= (0x1 << genio_num);
+		c2c_writel(cur_int_reg, EXYNOS_C2C_GENO_INT);
+		c2c_writel(cur_lev_reg, EXYNOS_C2C_GENO_LEVEL);
+		break;
+	case C2C_INT_LOW:
+		cur_int_reg |= (0x1 << genio_num);
+		cur_lev_reg &= ~(0x1 << genio_num);
+		c2c_writel(cur_int_reg, EXYNOS_C2C_GENO_INT);
+		c2c_writel(cur_lev_reg, EXYNOS_C2C_GENO_LEVEL);
+		break;
+	}
 }
 
 static irqreturn_t c2c_sscm0_irq(int irq, void *data)
@@ -142,7 +175,7 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 
 #ifdef CONFIG_C2C_IPC_ENABLE
 	if (raw_irq & 0x1) {
-		c2c_dbg("IPC interrupt occured : GENO[0]\n");
+		dev_info(c2c_con.c2c_dev, "IPC interrupt occured : GENO[0]\n");
 		if (c2c_con.hd.handler)
 			c2c_con.hd.handler(c2c_con.hd.handler);
 
@@ -150,7 +183,7 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 		c2c_writel(0x1, EXYNOS_C2C_IRQ_EN_STAT1);
 	}
 #endif
-	if ((raw_irq >> 27) & 1) { /* OPP Change */
+	if ((raw_irq >> C2C_GENIO_OPP_INT) & 1) { /* OPP Change */
 		/*
 		    OPP mode GENI/O bit definition[29:27]
 		    OPP100 GENI/O[29:28] : 1 1
@@ -160,7 +193,7 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 		*/
 		opp_val = (c2c_readl(EXYNOS_C2C_GENO_STATUS) >> 28) & 3;
 		req_clk = 0;
-		c2c_dbg("OPP interrupt occured (%d)\n", opp_val);
+		dev_info(c2c_con.c2c_dev, "OPP interrupt occured (%d)\n", opp_val);
 
 		if (opp_val == C2C_OPP100)
 			req_clk = c2c_con.clk_opp100;
@@ -170,54 +203,54 @@ static irqreturn_t c2c_sscm1_irq(int irq, void *data)
 			req_clk = c2c_con.clk_opp25;
 
 		if (opp_val == 0 || req_clk == 1) {
-			printk("[C2C] This mode is not reserved in OPP mode.\n");
+			dev_info(c2c_con.c2c_dev, "This mode is not reserved in OPP mode.\n");
 		} else {
 			if (c2c_con.opp_mode > opp_val) { /* increase case */
-				clk_set_rate(c2c_con.c2c_sclk, (req_clk +1) * 1000000);
+				clk_set_rate(c2c_con.c2c_sclk, (req_clk +1) * MHZ);
 				c2c_writel(req_clk, EXYNOS_C2C_FCLK_FREQ);
-				c2c_writel(req_clk, EXYNOS_C2C_RX_MAX_FREQ);
 				c2c_set_func_clk(req_clk);
+				c2c_writel(req_clk, EXYNOS_C2C_RX_MAX_FREQ);
 			} else if (c2c_con.opp_mode < opp_val) { /* decrease case */
 				c2c_writel(req_clk, EXYNOS_C2C_RX_MAX_FREQ);
-				clk_set_rate(c2c_con.c2c_sclk, (req_clk +1) * 1000000);
+				clk_set_rate(c2c_con.c2c_sclk, (req_clk +1) * MHZ);
 				c2c_writel(req_clk, EXYNOS_C2C_FCLK_FREQ);
 				c2c_set_func_clk(req_clk);
 			} else{
-				printk("Requested same OPP mode\n");
+				dev_info(c2c_con.c2c_dev, "Requested same OPP mode\n");
 			}
 			c2c_con.opp_mode = opp_val;
 		}
 
 		/* Interrupt Clear */
-		c2c_writel((0x1 << 27), EXYNOS_C2C_IRQ_EN_STAT1);
+		c2c_writel((0x1 << C2C_GENIO_OPP_INT), EXYNOS_C2C_IRQ_EN_STAT1);
 	}
-	if ((raw_irq >> 26) & 1) { /* Memory I/F latency change */
+	if ((raw_irq >> C2C_GENIO_LATENCY_INT) & 1) { /* Memory I/F latency change */
 		latency_val = (c2c_readl(EXYNOS_C2C_GENO_STATUS) >> 30) & 3;
 		switch(latency_val) {
 		case 3:
-			c2c_dbg("[C2C] Set Min latency\n");
+			dev_info(c2c_con.c2c_dev, "Set Min latency\n");
 			if (exynos_c2c_request_pwr_mode != NULL)
 				exynos_c2c_request_pwr_mode(MIN_LATENCY);
 			break;
 		case 1:
-			c2c_dbg("[C2C] Set Short latency\n");
+			dev_info(c2c_con.c2c_dev, "Set Short latency\n");
 			if (exynos_c2c_request_pwr_mode != NULL)
 				exynos_c2c_request_pwr_mode(SHORT_LATENCY);
 			break;
 		case 0:
-			c2c_dbg("[C2C] Set Max latency\n");
+			dev_info(c2c_con.c2c_dev, "Set Max latency\n");
 			if (exynos_c2c_request_pwr_mode != NULL)
 				exynos_c2c_request_pwr_mode(MAX_LATENCY);
 			break;
 		}
 		/* Interrupt Clear */
-		c2c_writel((0x1 << 26), EXYNOS_C2C_IRQ_EN_STAT1);
+		c2c_writel((0x1 << C2C_GENIO_LATENCY_INT), EXYNOS_C2C_IRQ_EN_STAT1);
 	}
 
 	return IRQ_HANDLED;
 }
 
-void set_c2c_device(struct platform_device *pdev)
+static void set_c2c_device(struct platform_device *pdev)
 {
 	struct exynos_c2c_platdata *pdata = pdev->dev.platform_data;
 	u32 default_clk;
@@ -254,20 +287,20 @@ void set_c2c_device(struct platform_device *pdev)
 	else if (c2c_con.opp_mode == C2C_OPP25)
 		default_clk = c2c_con.clk_opp25;
 	else {
-		printk("[C2C] Default OPP mode is not selected.\n");
+		dev_info(c2c_con.c2c_dev, "Default OPP mode is not selected.\n");
 		c2c_con.opp_mode = C2C_OPP50;
 		default_clk = c2c_con.clk_opp50;
 	}
 
-	clk_set_rate(c2c_con.c2c_sclk, (default_clk +1)  * 1000000);
-	clk_set_rate(c2c_con.c2c_aclk, ((default_clk / 2) + 1) * 1000000);
+	clk_set_rate(c2c_con.c2c_sclk, (default_clk +1)  * MHZ);
+	clk_set_rate(c2c_con.c2c_aclk, ((default_clk / 2) + 1) * MHZ);
 
-	c2c_dbg("[C2C] Get C2C sclk rate : %ld\n", clk_get_rate(c2c_con.c2c_sclk));
-	c2c_dbg("[C2C] Get C2C aclk rate : %ld\n", clk_get_rate(c2c_con.c2c_aclk));
+	dev_info(c2c_con.c2c_dev, "Get C2C sclk rate : %ld\n", clk_get_rate(c2c_con.c2c_sclk));
+	dev_info(c2c_con.c2c_dev, "Get C2C aclk rate : %ld\n", clk_get_rate(c2c_con.c2c_aclk));
 	if (pdata->setup_gpio)
 		pdata->setup_gpio(pdata->rx_width, pdata->tx_width);
 
-	set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
+	c2c_set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
 
 	/* Set SYSREG to memdone */
 	c2c_set_memdone(C2C_SET);
@@ -284,19 +317,18 @@ void set_c2c_device(struct platform_device *pdev)
 	c2c_set_rx_buswidth(pdata->rx_width);
 
 	/* Enable all of GENI/O Interrupt */
-	c2c_writel(0x8000000, EXYNOS_C2C_IRQ_EN_SET1);
-	c2c_con.rtt_enableset = 0x8000000;
+	c2c_writel((0x1 << C2C_GENIO_OPP_INT), EXYNOS_C2C_IRQ_EN_SET1);
+	c2c_con.retention_reg = (0x1 << C2C_GENIO_OPP_INT);
 
 	if (exynos_c2c_request_pwr_mode != NULL)
 		exynos_c2c_request_pwr_mode(MAX_LATENCY);
 
-	c2c_writel(0x8000000, EXYNOS_C2C_GENO_INT);
-	c2c_writel(0x8000000, EXYNOS_C2C_GENO_LEVEL);
+	c2c_set_interrupt(C2C_GENIO_OPP_INT, C2C_INT_HIGH);
 
-	c2c_dbg("[C2C] Port Config : 0x%x\n", c2c_readl(EXYNOS_C2C_PORTCONFIG));
-	c2c_dbg("[C2C] FCLK_FREQ register : %d\n", c2c_readl(EXYNOS_C2C_FCLK_FREQ));
-	c2c_dbg("[C2C] RX_MAX_FREQ register : %d\n", c2c_readl(EXYNOS_C2C_RX_MAX_FREQ));
-	c2c_dbg("[C2C] IRQ_EN_SET1 register : 0x%x\n", c2c_readl(EXYNOS_C2C_IRQ_EN_SET1));
+	dev_info(c2c_con.c2c_dev, "Port Config : 0x%x\n", c2c_readl(EXYNOS_C2C_PORTCONFIG));
+	dev_info(c2c_con.c2c_dev, "FCLK_FREQ register : %d\n", c2c_readl(EXYNOS_C2C_FCLK_FREQ));
+	dev_info(c2c_con.c2c_dev, "RX_MAX_FREQ register : %d\n", c2c_readl(EXYNOS_C2C_RX_MAX_FREQ));
+	dev_info(c2c_con.c2c_dev, "IRQ_EN_SET1 register : 0x%x\n", c2c_readl(EXYNOS_C2C_IRQ_EN_SET1));
 
 	c2c_set_clock_gating(C2C_SET);
 }
@@ -309,7 +341,7 @@ volatile void __iomem *c2c_request_cp_region(unsigned int cp_addr,
 
 	phy_cpmem = cma_alloc(c2c_con.c2c_dev, "c2c_shdmem", size, 0);
 	if (IS_ERR_VALUE(phy_cpmem)) {
-		printk(KERN_ERR "C2C CMA Alloc Error!!!");
+		dev_info(c2c_con.c2c_dev, KERN_ERR "C2C CMA Alloc Error!!!");
 		return -ENOMEM;
 	}
 
@@ -393,7 +425,7 @@ EXPORT_SYMBOL(c2c_send_interrupt);
 void c2c_reset_interrupt(void) {
 	c2c_writel(c2c_readl(EXYNOS_C2C_IRQ_EN_SET1) | 0x1,
 			EXYNOS_C2C_IRQ_EN_SET1);
-	c2c_con.rtt_enableset |= 0x1;
+	c2c_con.retention_reg |= 0x1;
 }
 EXPORT_SYMBOL(c2c_reset_interrupt);
 #endif
@@ -403,8 +435,8 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 	struct exynos_c2c_platdata *pdata = pdev->dev.platform_data;
 	struct resource *res = NULL;
 	struct resource *res1 = NULL;
-	int sscm_irq0, sscm_irq1, err;
-	err = 0;
+	int sscm_irq0, sscm_irq1;
+	int err =0;
 
 	c2c_con.c2c_dev = &pdev->dev;
 
@@ -414,38 +446,34 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "no memory resource defined(AP's SSCM)\n");
 		return -ENOENT;
 	}
-
-	res1 = request_mem_region(res->start, resource_size(res), pdev->name);
-	if (!res1) {
+	res = request_mem_region(res->start, resource_size(res), pdev->name);
+	if (!res) {
 		dev_err(&pdev->dev, "failded to request memory resource(AP)\n");
 		return -ENOENT;
 	}
-
 	pdata->ap_sscm_addr = ioremap(res->start, resource_size(res));
 	if (!pdata->ap_sscm_addr) {
 		dev_err(&pdev->dev, "failded to request memory resource(AP)\n");
 		goto release_ap_sscm;
 	}
-
 	c2c_con.ap_sscm_addr = pdata->ap_sscm_addr;
 
 	/* resource for CP's SSCM region */
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (!res) {
+	res1 = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	if (!res1) {
 		dev_err(&pdev->dev, "no memory resource defined(AP's SSCM)\n");
 		goto unmap_ap_sscm;
 	}
-	res1 = request_mem_region(res->start, resource_size(res), pdev->name);
+	res1 = request_mem_region(res1->start, resource_size(res1), pdev->name);
 	if (!res1) {
 		dev_err(&pdev->dev, "failded to request memory resource(AP)\n");
 		goto unmap_ap_sscm;
 	}
-	pdata->cp_sscm_addr = ioremap(res->start, resource_size(res));
-	if (!pdata->ap_sscm_addr) {
-		dev_err(&pdev->dev, "failded to request memory resource(AP)\n");
+	pdata->cp_sscm_addr = ioremap(res1->start, resource_size(res1));
+	if (!pdata->cp_sscm_addr) {
+		dev_err(&pdev->dev, "failded to request memory resource(CP)\n");
 		goto release_cp_sscm;
 	}
-
 	c2c_con.cp_sscm_addr = pdata->cp_sscm_addr;
 
 	/* Request IRQ */
@@ -459,7 +487,7 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Can't request SSCM0 IRQ\n");
 		goto unmap_cp_sscm;
 	}
-	/* SSCM0 irq will be only used from master(CP) device */
+	/* SSCM0 irq will be only used for master(CP) device */
 	disable_irq(sscm_irq0);
 
 	sscm_irq1 = platform_get_irq(pdev, 1);
@@ -473,18 +501,13 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 		goto release_sscm_irq0;
 	}
 
-	set_c2c_device(pdev);
-
-	/* It is test code for C2C link.
-	if (pdata->set_cprst)
-		pdata->set_cprst();
-	*/
-
 	err = misc_register(&char_dev);
 	if (err) {
-		printk(KERN_ERR "[C2C] Can't register chrdev!\n");
+		dev_err(&pdev->dev, "Can't register chrdev!\n");
 		goto release_sscm_irq0;
 	}
+
+	set_c2c_device(pdev);
 
 #ifdef ENABLE_C2CSTATE_TIMER
 	/* Timer for debugging to check C2C state */
@@ -535,11 +558,11 @@ static int samsung_c2c_resume(struct platform_device *dev)
 	if ((soc_is_exynos4212() || soc_is_exynos4412())
 		&& samsung_rev() == EXYNOS4412_REV_0) {
 		/* Set SYSREG */
-		set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
+		c2c_set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
 		c2c_set_memdone(C2C_SET);
 	} else if (soc_is_exynos5250()) {
 		/* Set SYSREG */
-		set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
+		c2c_set_sharedmem(pdata->shdmem_size, pdata->shdmem_addr);
 		c2c_set_memdone(C2C_SET);
 	}
 
@@ -573,6 +596,6 @@ static void __exit samsung_c2c_exit(void)
 }
 module_exit(samsung_c2c_exit);
 
-MODULE_DESCRIPTION("Samsung c2c driver");
+MODULE_DESCRIPTION("Samsung C2C driver");
 MODULE_AUTHOR("Kisang Lee <kisang80.lee@samsung.com>");
 MODULE_LICENSE("GPL");

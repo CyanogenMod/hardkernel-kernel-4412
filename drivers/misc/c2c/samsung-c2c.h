@@ -46,6 +46,12 @@ enum c2c_set_clear {
 	C2C_SET = 1,
 };
 
+enum c2c_interrupt {
+	C2C_INT_TOGGLE = 0,
+	C2C_INT_HIGH = 1,
+	C2C_INT_LOW = 2,
+};
+
 struct c2c_state_control {
 	void __iomem *ap_sscm_addr;
 	void __iomem *cp_sscm_addr;
@@ -67,7 +73,7 @@ struct c2c_state_control {
 
 	enum c2c_opp_mode opp_mode;
 	/* Below variables are needed in reset for retention */
-	u32 rtt_enableset;
+	u32 retention_reg;
 	void __iomem *c2c_sysreg;
 };
 
@@ -323,11 +329,5 @@ static inline void c2c_set_shdmem_size(u32 val)
 
 	writel(sysreg, c2c_con.c2c_sysreg);
 }
-
-#ifdef CONFIG_C2C_DEBUG
-#define c2c_dbg printk
-#else
-#define c2c_dbg(x...)
-#endif
 
 #endif
