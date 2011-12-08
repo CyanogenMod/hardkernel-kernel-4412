@@ -25,6 +25,7 @@
 #include <linux/regulator/fixed.h>
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/mfd/max8997.h>
+#include <linux/mfd/max77686.h>
 #include <linux/v4l2-mediabus.h>
 #include <linux/memblock.h>
 #include <linux/delay.h>
@@ -2146,6 +2147,115 @@ static struct max8997_platform_data __initdata exynos4_max8997_info = {
 	.buck5_voltage[7] = 1100000, /* 1.1V */
 };
 
+/* max77686 */
+static struct regulator_consumer_supply max77686_buck1 =
+REGULATOR_SUPPLY("vdd_mif", NULL);
+
+static struct regulator_consumer_supply max77686_buck2 =
+REGULATOR_SUPPLY("vdd_arm", NULL);
+
+static struct regulator_consumer_supply max77686_buck3 =
+REGULATOR_SUPPLY("vdd_int", NULL);
+
+static struct regulator_consumer_supply max77686_buck4 =
+REGULATOR_SUPPLY("vdd_g3d", NULL);
+
+static struct regulator_init_data max77686_buck1_data = {
+	.constraints = {
+		.name = "vdd_mif range",
+		.min_uV = 850000,
+		.max_uV = 1050000,
+		.always_on = 1,
+		.boot_on = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
+				REGULATOR_CHANGE_STATUS,
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &max77686_buck1,
+};
+
+static struct regulator_init_data max77686_buck2_data = {
+	.constraints = {
+		.name = "vdd_arm range",
+		.min_uV = 850000,
+		.max_uV = 1350000,
+		.always_on = 1,
+		.boot_on = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &max77686_buck2,
+};
+
+static struct regulator_init_data max77686_buck3_data = {
+	.constraints = {
+		.name = "vdd_int range",
+		.min_uV = 850000,
+		.max_uV = 1000000,
+		.always_on = 1,
+		.boot_on = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &max77686_buck3,
+};
+
+static struct regulator_init_data max77686_buck4_data = {
+	.constraints = {
+		.name = "vdd_g3d range",
+		.min_uV = 800000,
+		.max_uV = 1200000,
+		.boot_on = 1,
+		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
+				  REGULATOR_CHANGE_STATUS,
+		.state_mem = {
+			.disabled = 1,
+		},
+	},
+	.num_consumer_supplies = 1,
+	.consumer_supplies = &max77686_buck4,
+};
+
+static struct max77686_regulator_data max77686_regulators[] = {
+	{MAX77686_BUCK1, &max77686_buck1_data,},
+	{MAX77686_BUCK2, &max77686_buck2_data,},
+	{MAX77686_BUCK3, &max77686_buck3_data,},
+	{MAX77686_BUCK4, &max77686_buck4_data,},
+};
+
+static struct max77686_platform_data exynos4_max77686_info = {
+	.num_regulators = ARRAY_SIZE(max77686_regulators),
+	.regulators = max77686_regulators,
+	.irq_gpio	= 0,
+	.irq_base	= 0,
+
+	.buck1_voltage[0] = 1250000,	/* 1.25V */
+	.buck1_voltage[1] = 1100000,	/* 1.1V */
+	.buck1_voltage[2] = 1100000,	/* 1.1V */
+	.buck1_voltage[3] = 1100000,	/* 1.1V */
+	.buck1_voltage[4] = 1100000,	/* 1.1V */
+	.buck1_voltage[5] = 1100000,	/* 1.1V */
+	.buck1_voltage[6] = 1000000,	/* 1.0V */
+	.buck1_voltage[7] = 950000,	/* 0.95V */
+
+	.buck2_voltage[0] = 1000000,	/* 1.0V */
+	.buck2_voltage[1] = 1000000,	/* 1.0V */
+	.buck2_voltage[2] = 950000,	/* 0.95V */
+	.buck2_voltage[3] = 900000,	/* 0.9V */
+	.buck2_voltage[4] = 1000000,	/* 1.0V */
+	.buck2_voltage[5] = 1000000,	/* 1.0V */
+	.buck2_voltage[6] = 950000,	/* 0.95V */
+	.buck2_voltage[7] = 900000,	/* 0.9V */
+
+	.buck5_voltage[0] = 1100000,	/* 1.1V */
+	.buck5_voltage[1] = 1100000,	/* 1.1V */
+	.buck5_voltage[2] = 1100000,	/* 1.1V */
+	.buck5_voltage[3] = 1100000,	/* 1.1V */
+	.buck5_voltage[4] = 1100000,	/* 1.1V */
+	.buck5_voltage[5] = 1100000,	/* 1.1V */
+	.buck5_voltage[6] = 1100000,	/* 1.1V */
+	.buck5_voltage[7] = 1100000,	/* 1.1V */
+};
 #ifdef CONFIG_REGULATOR_S5M8767
 /* S5M8767 Regulator */
 static int s5m_cfg_irq(void)
@@ -2475,6 +2585,9 @@ static struct i2c_board_info i2c_devs0[] __initdata = {
 	{
 		I2C_BOARD_INFO("max8997", 0x66),
 		.platform_data	= &exynos4_max8997_info,
+	}, {
+		I2C_BOARD_INFO("max77686", (0x12 >> 1)),
+		.platform_data	= &exynos4_max77686_info,
 	},
 #endif
 };
