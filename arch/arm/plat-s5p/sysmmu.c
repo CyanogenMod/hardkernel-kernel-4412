@@ -432,10 +432,10 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 
 	data->dev = dev;
 	data->sfrbase = sfr;
-	__set_fault_handler(data, &default_fault_handler);
 	rwlock_init(&data->lock);
 	INIT_LIST_HEAD(&data->node);
 
+	__set_fault_handler(data, &default_fault_handler);
 	list_add(&data->node, &sysmmu_list);
 
 	if (dev->parent)
