@@ -119,7 +119,6 @@ struct platform_device s5p_device_sdo = {
 EXPORT_SYMBOL(s5p_device_sdo);
 #endif
 
-#if defined(CONFIG_ARCH_EXYNOS5)
 /* CEC */
 static struct resource s5p_cec_resources[] = {
 	[0] = {
@@ -157,4 +156,3 @@ void __init s5p_hdmi_cec_set_platdata(struct s5p_platform_cec *pd)
 		s5p_device_cec.dev.platform_data = npd;
 	}
 }
-#endif
