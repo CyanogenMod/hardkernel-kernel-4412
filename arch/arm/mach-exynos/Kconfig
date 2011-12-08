@@ -454,7 +454,6 @@ config MACH_SMDKC210
 	select S5P_GPIO_INT
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
-	select S5P_DEV_TVOUT
 	select S5P_DEV_MFC
 	select S5P_DEV_FIMG2D
 	select S5P_DEV_USBGADGET
@@ -491,7 +490,6 @@ config MACH_SMDKV310
 	select S5P_GPIO_INT
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
-	select S5P_DEV_TVOUT
 	select S5P_DEV_MFC
 	select S5P_DEV_FIMG2D
 	select S5P_DEV_USBGADGET
@@ -582,14 +580,12 @@ config MACH_SMDK4X12
 	select S5P_DEV_I2C_HDMIPHY
 	select S5P_GPIO_INT
 	select S5P_DEV_MFC
-	select S5P_DEV_TVOUT
 	select S5P_DEV_FIMG2D
 	select S5P_DEV_FIMD0
 	select S5P_DEV_FIMD_S5P
 	select S5P_DEV_USB_EHCI
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_USB_SWITCH
-	select S5P_DEV_TV
 	select S5P_SYSTEM_MMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_SDHCI
@@ -638,7 +634,6 @@ config MACH_SMDK5210
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_PWM
 	select S5P_DEV_I2C_HDMIPHY
-	select S5P_DEV_TV
 	select EXYNOS_DEV_SS_UDC
 	help
 	  Machine support for Samsung SMDK5210
@@ -660,7 +655,6 @@ config MACH_SMDK5250
 	select S5P_DEV_FIMG2D
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_I2C_HDMIPHY
-	select S5P_DEV_TV
 	select EXYNOS_DEV_PD
 	select EXYNOS4_DEV_FIMC_LITE
 	select EXYNOS4_SETUP_I2C1

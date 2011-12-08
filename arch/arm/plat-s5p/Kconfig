@@ -97,6 +97,8 @@ config S5P_DEV_I2C_HDMIPHY
 
 config S5P_DEV_TV
 	bool
+	depends on VIDEO_EXYNOS_TV
+	default y
 	help
 	  Compile in platform device definition for TV interface
 
@@ -122,6 +124,8 @@ config S5P_DEV_DP
 
 config S5P_DEV_TVOUT
 	bool
+	depends on VIDEO_TVOUT
+	default y
 	help
 	  Compile in platform device definitions for TVOUT
 
@@ -162,11 +166,6 @@ config S5P_DEV_JPEG
 	default y
 	help
 	  Compile in platform device definitions for JPEG
-
-config S5P_DEV_TV
-	bool
-	help
-	  Compile in platform device definition for TV interface
 
 config S5P_DEV_USB_EHCI
 	bool
