@@ -64,4 +64,10 @@
 #define C2C_SYSREG_BASE_ADDR	(3)  /* DRAM Base Address [12:3] */
 #define C2C_SYSREG_DRAM_SIZE	(0)  /* DRAM Size [2:0] */
 
+#define C2C_GENIO_LATENCY_INT	(26)
+#define C2C_GENIO_OPP_INT	(27)
+#define C2C_GENIO_OPP_MODE0	(28)
+#define C2C_GENIO_OPP_MODE1	(29)
+#define C2C_GENIO_LATENCY0	(30)
+#define C2C_GENIO_LATENCY1	(31)
 #endif /* __ASM_ARM_REGS_S5P_C2C_H */
