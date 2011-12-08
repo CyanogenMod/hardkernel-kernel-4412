@@ -228,11 +228,11 @@ static int __init exynos5_l2_cache_init(void)
 			(2 << DATA_RAM_LATENCY_SHIFT);
 
 		asm volatile(
-			"mcr p15, 1, %0, c9, c0, 2\n"
 			"mrc p15, 0, %0, c1, c0, 0\n"
 			"orr %0, %0, #(1 << 2)\n"	/* cache enable */
 			"mcr p15, 0, %0, c1, c0, 0\n"
-			: "=r"(val));
+			"mcr p15, 1, %0, c9, c0, 2\n"
+			: : "r"(val));
 	}
 
 	return 0;
