@@ -412,6 +412,7 @@ static struct cpufreq_driver exynos_driver = {
 static int __init exynos_cpufreq_init(void)
 {
 	int ret = -EINVAL;
+	int i;
 
 	exynos_info = kzalloc(sizeof(struct exynos_dvfs_info), GFP_KERNEL);
 	if (!exynos_info)
@@ -445,6 +446,11 @@ static int __init exynos_cpufreq_init(void)
 	register_reboot_notifier(&exynos_cpufreq_reboot_notifier);
 
 	exynos_cpufreq_init_done = true;
+
+	for (i = 0; i < DVFS_LOCK_ID_END; i++) {
+		g_cpufreq_lock_val[i] = exynos_info->min_support_idx;
+		g_cpufreq_limit_val[i] = exynos_info->max_support_idx;
+	}
 
 	g_cpufreq_lock_level = exynos_info->min_support_idx;
 	g_cpufreq_limit_level = exynos_info->max_support_idx;
