@@ -360,7 +360,7 @@ int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f)
 		min_w = variant->pix_min->target_w;
 		min_h = variant->pix_min->target_h;
 	}
-	gsc_dbg("mod_x: %d, mod_y: %d, max_w: %d, max_h = %d",
+	gsc_info("mod_x: %d, mod_y: %d, max_w: %d, max_h = %d",
 	     mod_x, mod_y, max_w, max_h);
 	/* To check if image size is modified to adjust parameter against
 	   hardware abilities */
@@ -370,7 +370,7 @@ int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f)
 	v4l_bound_align_image(&pix_mp->width, min_w, max_w, mod_x,
 		&pix_mp->height, min_h, max_h, mod_y, 0);
 	if (tmp_w != pix_mp->width || tmp_h != pix_mp->height)
-		gsc_dbg("Image size has been modified from %dx%d to %dx%d",
+		gsc_info("Image size has been modified from %dx%d to %dx%d",
 			 tmp_w, tmp_h, pix_mp->width, pix_mp->height);
 
 	pix_mp->num_planes = fmt->num_planes;
@@ -487,7 +487,7 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 	v4l_bound_align_image(&cr->c.width, min_w, max_w, mod_x,
 			      &cr->c.height, min_h, max_h, mod_y, 0);
 	if (tmp_w != cr->c.width || tmp_h != cr->c.height)
-		gsc_dbg("Image cropped size has been modified from %dx%d to %dx%d",
+		gsc_info("Image cropped size has been modified from %dx%d to %dx%d",
 			 tmp_w, tmp_h, cr->c.width, cr->c.height);
 
 	/* adjust left/top if cropping rectangle is out of bounds */
@@ -1060,6 +1060,11 @@ static int gsc_suspend(struct device *dev)
 			dev_err(&gsc->pdev->dev, "wait timeout : %s\n",
 				__func__);
 	}
+	if (gsc_cap_active(gsc)) {
+		gsc_err("capture device is running!!");
+		return -EINVAL;
+	}
+
 	pm_runtime_put_sync(dev);
 
 	return ret;
