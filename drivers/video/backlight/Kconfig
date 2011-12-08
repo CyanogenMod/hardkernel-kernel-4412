@@ -143,7 +143,7 @@ config LCD_LD9040
 
 config LCD_AMS369FG06
 	tristate "AMS369FG06 AMOLED LCD Driver"
-	depends on SPI && BACKLIGHT_CLASS_DEVICE && FB_S3C
+	depends on SPI_GPIO && BACKLIGHT_CLASS_DEVICE && FB_S3C
 	default y
 	help
 	  If you have an AMS369FG06 AMOLED Panel, say Y to enable its
@@ -151,7 +151,7 @@ config LCD_AMS369FG06
 
 config LCD_LMS501KF03
 	tristate "LMS501KF03 TFT LCD Driver"
-	depends on SPI && BACKLIGHT_CLASS_DEVICE && FB_S3C
+	depends on SPI_GPIO && BACKLIGHT_CLASS_DEVICE && FB_S3C
 	default y
 	help
 	  If you have an LMS501KF03 AMOLED Panel, say Y to enable its
