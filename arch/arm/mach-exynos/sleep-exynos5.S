@@ -46,10 +46,9 @@ ENTRY(s3c_cpu_save)
 
 	adr	r0, sleep_save_misc
 
-	mrc	p15, 0, r2, c15, c0, 0	@ read power control register
+	mrc	p15, 1, r2, c9, c0, 2	@ read l2 control register
 	str	r2, [r0], #4
-
-	mrc	p15, 0, r2, c15, c0, 1	@ read diagnostic register
+	mrc	p15, 1, r2, c15, c0, 3	@ read l2 prefetch register
 	str	r2, [r0], #4
 
 	ldr	r3, =resume_with_mmu
@@ -70,10 +69,9 @@ resume_with_mmu:
 	adr	r0, sleep_save_misc
 
 	ldr	r1, [r0], #4
-	mcr	p15, 0, r1, c15, c0, 0	@ write power control register
-
+	mcr	p15, 1, r1, c9, c0, 2	@ write l2 control register
 	ldr	r1, [r0], #4
-	mcr	p15, 0, r1, c15, c0, 1	@ write diagnostic register
+	mcr	p15, 1, r1, c15, c0, 3	@ write l2 prefetch register
 
 	mov	r0, #1
 early_wakeup:
