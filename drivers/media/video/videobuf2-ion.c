@@ -19,6 +19,7 @@
 #include <linux/scatterlist.h>
 #include <linux/dma-mapping.h>
 #include <linux/ion.h>
+#include <linux/syscalls.h>
 
 #include <asm/cacheflush.h>
 
