@@ -63,24 +63,38 @@ void update_busfreq_stat(struct busfreq_data *data, unsigned int index)
 	data->last_time = cur_time;
 }
 
-static struct opp __maybe_unused *step_up(struct busfreq_data *data)
+static struct opp *step_up(struct busfreq_data *data, int step)
 {
-	unsigned long newfreq = opp_get_freq(data->curr_opp) + 1;
+	int i;
+	struct opp *opp = data->curr_opp;
+	unsigned long newfreq;
 
 	if (data->max_opp == data->curr_opp)
 		return data->curr_opp;
 
-	return opp_find_freq_ceil(data->dev, &newfreq);
+	for (i = 0; i < step; i++) {
+		newfreq = opp_get_freq(opp) + 1;
+		opp = opp_find_freq_ceil(data->dev, &newfreq);
+	}
+
+	return opp;
 }
 
-static struct opp __maybe_unused *step_down(struct busfreq_data *data)
+static struct opp *step_down(struct busfreq_data *data, int step)
 {
-	unsigned long newfreq = opp_get_freq(data->curr_opp) - 1;
+	int i;
+	struct opp *opp = data->curr_opp;
+	unsigned long newfreq;
 
 	if (data->min_opp == data->curr_opp)
 		return data->curr_opp;
 
-	return opp_find_freq_floor(data->dev, &newfreq);
+	for (i = 0; i < step; i++) {
+		newfreq = opp_get_freq(opp) - 1;
+		opp = opp_find_freq_floor(data->dev, &newfreq);
+	}
+
+	return opp;
 }
 
 static struct opp *busfreq_monitor(struct busfreq_data *data)
@@ -123,10 +137,10 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	dmc1_load_average /= LOAD_HISTORY_SIZE;
 
 	if (dmc1_load >= MAX_THRESHOLD) {
-		opp = step_up(data);
+		opp = step_up(data, 1);
 		newfreq = max(newfreq, opp_get_freq(opp));
 	} else if (cpu_load < IDLE_THRESHOLD && dmc1_load < IDLE_THRESHOLD) {
-		opp = step_down(data);
+		opp = step_down(data, 1);
 		newfreq = max(newfreq, opp_get_freq(opp));
 	} else {
 		newfreq = div64_u64(opp_get_freq(data->max_opp) * dmc1_load, MAX_THRESHOLD);
