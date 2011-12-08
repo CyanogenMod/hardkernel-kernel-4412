@@ -574,6 +574,9 @@ static int __init busfreq_mon_init(void)
 			minFreq = freq;
 	}
 
+	for (i = 0; i < DVFS_LOCK_ID_END; i++)
+		g_busfreq_lock_val[i] = BUS_LEVEL_END - 1;
+
 	g_busfreq_lock_level = BUS_LEVEL_END - 1;
 
 	cpu.hw_base = S5P_VA_PPMU_CPU;
