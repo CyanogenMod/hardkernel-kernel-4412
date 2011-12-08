@@ -272,29 +272,21 @@ static int flite_s_power(struct v4l2_subdev *sd, int on)
 	int ret = 0;
 	unsigned long flags;
 
-	spin_lock_irqsave(&flite->slock, flags);
-
 	if (on) {
-		set_bit(FLITE_ST_POWERED, &flite->state);
-		/*
-		implement not yet
 		ret = pm_runtime_get_sync(&flite->pdev->dev);
-		if (ret)
+		if (ret) {
 			v4l2_err(sd, "get_sync failed\n");
-		*/
-		clear_bit(FLITE_ST_SUSPENDED, &flite->state);
+			return ret;
+		}
+		set_bit(FLITE_ST_POWERED, &flite->state);
 	} else {
-		/*
-		implement not yet
 		ret = pm_runtime_put_sync(&flite->pdev->dev);
-		*/
-		set_bit(FLITE_ST_SUSPENDED, &flite->state);
-	}
-
-	if ((!ret && !on) || (ret && on))
+		if (ret) {
+			v4l2_err(sd, "put_sync failed\n");
+			return ret;
+		}
 		clear_bit(FLITE_ST_POWERED, &flite->state);
-
-	spin_unlock_irqrestore(&flite->slock, flags);
+	}
 
 	return ret;
 }
@@ -803,10 +795,8 @@ static int flite_probe(struct platform_device *pdev)
 
 	/* .. and a pointer to the subdev. */
 	platform_set_drvdata(pdev, &flite->sd);
-	/*
-	implement not yet
+
 	pm_runtime_enable(&pdev->dev);
-	*/
 
 	set_bit(FLITE_ST_SUSPENDED, &flite->state);
 
@@ -830,10 +820,7 @@ static int flite_remove(struct platform_device *pdev)
 	struct resource *res = flite->regs_res;
 
 	flite_s_power(&flite->sd, 0);
-	/*
-	implement not yet
 	pm_runtime_disable(&pdev->dev);
-	*/
 	free_irq(flite->irq, flite);
 	iounmap(flite->regs);
 	release_mem_region(res->start, resource_size(res));
