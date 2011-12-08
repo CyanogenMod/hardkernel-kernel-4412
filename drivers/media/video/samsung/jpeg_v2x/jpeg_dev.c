@@ -722,7 +722,7 @@ static int jpeg_probe(struct platform_device *pdev)
 	if (!res) {
 		jpeg_err("failed to request jpeg irq resource\n");
 		ret = -ENOENT;
-		goto err_map;
+		goto err_irq;
 	}
 
 	dev->irq_no = res->start;
@@ -760,7 +760,7 @@ static int jpeg_probe(struct platform_device *pdev)
 	if (!vfd) {
 		v4l2_err(&dev->v4l2_dev, "Failed to allocate video device\n");
 		ret = -ENOMEM;
-		goto err_vd_alloc;
+		goto err_vd_alloc_enc;
 	}
 
 	*vfd = jpeg_enc_videodev;
@@ -769,7 +769,8 @@ static int jpeg_probe(struct platform_device *pdev)
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev,
 			 "%s(): failed to register video device\n", __func__);
-		goto err_video_reg;
+		video_device_release(vfd);
+		goto err_video_reg_enc;
 	}
 	v4l2_info(&dev->v4l2_dev,
 		"JPEG driver is registered to /dev/video%d\n", vfd->num);
@@ -789,7 +790,7 @@ static int jpeg_probe(struct platform_device *pdev)
 	if (!vfd) {
 		v4l2_err(&dev->v4l2_dev, "Failed to allocate video device\n");
 		ret = -ENOMEM;
-		goto err_vd_alloc;
+		goto err_vd_alloc_dec;
 	}
 
 	*vfd = jpeg_dec_videodev;
@@ -798,7 +799,8 @@ static int jpeg_probe(struct platform_device *pdev)
 	if (ret) {
 		v4l2_err(&dev->v4l2_dev,
 			 "%s(): failed to register video device\n", __func__);
-		goto err_video_reg;
+		video_device_release(vfd);
+		goto err_video_reg_dec;
 	}
 	v4l2_info(&dev->v4l2_dev,
 		"JPEG driver is registered to /dev/video%d\n", vfd->num);
@@ -840,16 +842,22 @@ static int jpeg_probe(struct platform_device *pdev)
 	return 0;
 
 err_video_reg:
-	video_unregister_device(vfd);
+	video_unregister_device(dev->vfd_dec);
 err_m2m_init_dec:
 	v4l2_m2m_release(dev->m2m_dev_dec);
+err_video_reg_dec:
 	video_device_release(dev->vfd_dec);
+err_vd_alloc_dec:
+	video_unregister_device(dev->vfd_enc);
 err_m2m_init_enc:
 	v4l2_m2m_release(dev->m2m_dev_enc);
+err_video_reg_enc:
 	video_device_release(dev->vfd_enc);
-err_vd_alloc:
-err_v4l2:
+err_vd_alloc_enc:
 	v4l2_device_unregister(&dev->v4l2_dev);
+err_v4l2:
+	clk_disable(dev->clk);
+	clk_put(dev->clk);
 err_clk:
 	free_irq(dev->irq_no, NULL);
 err_irq:
@@ -860,8 +868,8 @@ err_region:
 err_res:
 	mutex_destroy(&dev->lock);
 err_setup:
-err_alloc:
 	kfree(dev);
+err_alloc:
 	return ret;
 
 }
