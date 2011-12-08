@@ -1969,27 +1969,6 @@ static inline void exynos_sysmmu_init(void)
 }
 #endif
 
-static void l2_control(unsigned int setup, unsigned int latency)
-{
-	unsigned int val;
-
-	asm volatile(
-	"mrc p15, 0, %0, c1, c0, 0\n"
-	"bic %0, %0, #(1 << 2)\n"
-	"mcr p15, 0, %0, c1, c0, 0\n"
-	"mrc p15, 1, %0, c9, c0, 2\n"
-	: "=r"(val));
-
-	val |= ((setup<<9)|(setup<<5)|(latency<<6)|latency);
-
-	asm volatile(
-	"mcr p15, 1, %0, c9, c0, 2\n"
-	"mrc p15, 0, %0, c1, c0, 0\n"
-	"orr %0, %0, #(1 << 2)\n"
-	"mcr p15, 0, %0, c1, c0, 0\n"
-	: : "r"(val));
-}
-
 static void s5p_tv_setup(void)
 {
 	/* direct HPD to HDMI chip */
@@ -2018,7 +1997,6 @@ static void __init smdk5250_machine_init(void)
 	s3c_i2c0_set_platdata(NULL);
 	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
 
-	l2_control(1, 2);
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)

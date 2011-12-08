@@ -205,6 +205,41 @@ static int __init exynos5_core_init(void)
 
 core_initcall(exynos5_core_init);
 
+#define TAG_RAM_SETUP_SHIFT		(9)
+#define DATA_RAM_SETUP_SHIFT		(5)
+#define TAG_RAM_LATENCY_SHIFT		(6)
+#define DATA_RAM_LATENCY_SHIFT		(0)
+
+static int __init exynos5_l2_cache_init(void)
+{
+        unsigned int val;
+
+	if (soc_is_exynos5250()){
+		asm volatile(
+			"mrc p15, 0, %0, c1, c0, 0\n"
+			"bic %0, %0, #(1 << 2)\n"	/* cache disable */
+			"mcr p15, 0, %0, c1, c0, 0\n"
+			"mrc p15, 1, %0, c9, c0, 2\n"
+			: "=r"(val));
+
+		val |= (1 << TAG_RAM_SETUP_SHIFT) |
+			(1 << DATA_RAM_SETUP_SHIFT) |
+			(2 << TAG_RAM_LATENCY_SHIFT) |
+			(2 << DATA_RAM_LATENCY_SHIFT);
+
+		asm volatile(
+			"mcr p15, 1, %0, c9, c0, 2\n"
+			"mrc p15, 0, %0, c1, c0, 0\n"
+			"orr %0, %0, #(1 << 2)\n"	/* cache enable */
+			"mcr p15, 0, %0, c1, c0, 0\n"
+			: "=r"(val));
+	}
+
+	return 0;
+}
+
+early_initcall(exynos5_l2_cache_init);
+
 int __init exynos5_init(void)
 {
 	printk(KERN_INFO "EXYNOS5: Initializing architecture\n");
