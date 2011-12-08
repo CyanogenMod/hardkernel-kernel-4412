@@ -1034,7 +1034,38 @@ int fimc_s_fmt_vid_private(struct file *file, void *fh, struct v4l2_format *f)
 	int ret = 0;
 
 	fimc_dbg("%s\n", __func__);
-	if (f->type == V4L2_BUF_TYPE_PRIVATE) {
+	if (ctrl->cam->sd) {
+		struct v4l2_pix_format *pix = &f->fmt.pix;
+		int depth;
+
+		fimc_info1("%s %d:\n", __func__, __LINE__);
+
+		mbus_fmt = &ctrl->cap->mbus_fmt;
+		mbus_fmt->width = pix->width;
+		mbus_fmt->height = pix->height;
+
+		depth = fimc_fmt_depth(ctrl, pix);
+		if (depth == 0) {
+			fimc_err("%s: Invalid pixel format\n", __func__);
+			return -EINVAL;
+		} else if (depth < 0) {	/* JPEG  */
+			mbus_fmt->code = V4L2_MBUS_FMT_JPEG_1X8;
+			mbus_fmt->colorspace = V4L2_COLORSPACE_JPEG;
+		} else {
+			mbus_fmt->code = V4L2_MBUS_FMT_VYUY8_2X8;
+		}
+
+		if (fimc_cam_use) {
+			ret = v4l2_subdev_call(ctrl->cam->sd, video,
+					       s_mbus_fmt, mbus_fmt);
+			if (ret) {
+				fimc_err("%s: fail to s_mbus_fmt\n", __func__);
+				return ret;
+			}
+		}
+
+		return 0;
+	} else {
 		mbus_fmt = kzalloc(sizeof(*mbus_fmt), GFP_KERNEL);
 		if (!mbus_fmt) {
 			fimc_err("%s: no memory for "
@@ -1056,6 +1087,7 @@ int fimc_s_fmt_vid_private(struct file *file, void *fh, struct v4l2_format *f)
 		kfree(mbus_fmt);
 		return ret;
 	}
+
 	return -EINVAL;
 }
 
@@ -1063,7 +1095,6 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 {
 	struct fimc_control *ctrl = ((struct fimc_prv_data *)fh)->ctrl;
 	struct fimc_capinfo *cap = ctrl->cap;
-	struct v4l2_mbus_framefmt *mbus_fmt;
 #if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	struct platform_device *pdev = to_platform_device(ctrl->dev);
 #endif
@@ -1103,10 +1134,6 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 	memset(&cap->fmt, 0, sizeof(cap->fmt));
 	memcpy(&cap->fmt, &f->fmt.pix, sizeof(cap->fmt));
 
-	mbus_fmt = &cap->mbus_fmt;
-	mbus_fmt->width = cap->fmt.width;
-	mbus_fmt->height = cap->fmt.height;
-
 	/*
 	 * Note that expecting format only can be with
 	 * available output format from FIMC
@@ -1130,15 +1157,12 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 		 * in JPEG compressed format
 		*/
 		cap->fmt.colorspace = V4L2_COLORSPACE_JPEG;
-		mbus_fmt->code = V4L2_MBUS_FMT_JPEG_1X8;
 		cap->fmt.priv = V4L2_PIX_FMT_MODE_CAPTURE;
 	} else {
 		cap->fmt.bytesperline = (cap->fmt.width * depth) >> 3;
 		cap->fmt.sizeimage = (cap->fmt.bytesperline * cap->fmt.height);
-		mbus_fmt->code = V4L2_MBUS_FMT_VYUY8_2X8;
 		cap->fmt.priv = V4L2_PIX_FMT_MODE_PREVIEW;
 	}
-	mbus_fmt->colorspace = cap->fmt.colorspace;
 
 	if (cap->fmt.colorspace == V4L2_COLORSPACE_JPEG) {
 		ctrl->sc.bypass = 1;
@@ -1171,9 +1195,6 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 		ctrl->is.offset_x = 16;
 		ctrl->is.offset_y = 12;
 	}
-
-	if (ctrl->cam->sd && fimc_cam_use)
-		ret = v4l2_subdev_call(ctrl->cam->sd, video, s_mbus_fmt, mbus_fmt);
 
 	mutex_unlock(&ctrl->v4l2_lock);
 	fimc_dbg("%s -- FIMC%d\n", __func__, ctrl->id);
@@ -1905,6 +1926,29 @@ static int fimc_check_capture_source(struct fimc_control *ctrl)
 	return -ENODEV;
 }
 
+static int is_scale_up(struct fimc_control *ctrl)
+{
+	struct v4l2_mbus_framefmt *mbus_fmt = &ctrl->cap->mbus_fmt;
+	struct v4l2_pix_format *pix = &ctrl->cap->fmt;
+
+	if (!mbus_fmt->width) {
+		fimc_err("%s: sensor resolution isn't selected.\n", __func__);
+		return -EINVAL;
+	}
+
+	if (pix->width > mbus_fmt->width) {
+		fimc_err("%s: Horizontal ScaleUp isn't supported.\n", __func__);
+		return -EINVAL;
+	}
+
+	if (pix->height > mbus_fmt->height) {
+		fimc_err("%s: Vertical ScaleUp isn't supported.\n", __func__);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int fimc_streamon_capture(void *fh)
 {
 	struct fimc_control *ctrl = fh;
@@ -1925,6 +1969,11 @@ int fimc_streamon_capture(void *fh)
 	if (fimc_check_capture_source(ctrl)) {
 		fimc_err("%s: No capture device.\n", __func__);
 		return -ENODEV;
+	}
+
+	if (ctrl->cam->sd) {
+		if (is_scale_up(ctrl))
+			return -EINVAL;
 	}
 
 	if (pdata->hw_ver < 0x51)
