@@ -319,6 +319,8 @@ static void vb2_ion_put(void *buf_priv)
 	dbg(6, "released: buf_refcnt(%d)\n", atomic_read(&buf->ref) - 1);
 
 	if (atomic_dec_and_test(&buf->ref)) {
+		sys_close(buf->fd);
+
 		if (conf->use_mmu)
 			iovmm_unmap(conf->dev, buf->dva);
 
