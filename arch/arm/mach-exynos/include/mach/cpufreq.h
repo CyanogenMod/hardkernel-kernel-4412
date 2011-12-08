@@ -52,6 +52,8 @@ enum cpufreq_lock_ID {
 	DVFS_LOCK_ID_END,
 };
 
+int exynos_cpufreq_get_level(unsigned int freq,
+			unsigned int *level);
 int exynos_cpufreq_lock(unsigned int nId,
 			enum cpufreq_level_request cpufreq_level);
 void exynos_cpufreq_lock_free(unsigned int nId);

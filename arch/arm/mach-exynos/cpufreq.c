@@ -141,6 +141,30 @@ out:
 	return ret;
 }
 
+int exynos_cpufreq_get_level(unsigned int freq, unsigned int *level)
+{
+	struct cpufreq_frequency_table *table;
+	unsigned int i = 0;
+
+	table = cpufreq_frequency_get_table(0);
+	if (!table) {
+		pr_err("%s: Failed to get the cpufreq table\n", __func__);
+		return -EINVAL;
+	}
+
+	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
+		if (table[i].frequency == freq) {
+			*level = i;
+			return 0;
+		}
+	}
+
+	pr_err("%s: %u KHz is an unsupported cpufreq\n", __func__, freq);
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(exynos_cpufreq_get_level);
+
 atomic_t exynos_cpufreq_lock_count;
 
 int exynos_cpufreq_lock(unsigned int nId,
@@ -242,7 +266,7 @@ int exynos_cpufreq_upper_limit(unsigned int nId,
 		return 0;
 
 	if (g_cpufreq_limit_id & (1 << nId)) {
-		printk(KERN_ERR "[CPUFREQ]This device [%d] already limited cpufreq\n", nId);
+		pr_err("[CPUFREQ]This device [%d] already limited cpufreq\n", nId);
 		return 0;
 	}
 
