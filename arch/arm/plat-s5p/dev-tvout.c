@@ -17,7 +17,6 @@
 #include <mach/map.h>
 #include <plat/tvout.h>
 
-#if defined(CONFIG_VIDEO_TVOUT)
 /* TVOUT interface */
 static struct resource s5p_tvout_resources[] = {
 	[0] = {
@@ -112,8 +111,6 @@ void __init s5p_hdmi_hpd_set_platdata(struct s5p_platform_hpd *pd)
 		s5p_device_hpd.dev.platform_data = npd;
 	}
 }
-
-#endif
 
 /* CEC */
 static struct resource s5p_cec_resources[] = {
