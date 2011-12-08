@@ -24,6 +24,7 @@
 #include <linux/io.h>
 #include <mach/map.h>
 #include <mach/gpio.h>
+#include <plat/tvout.h>
 
 struct platform_device; /* don't need the contents */
 
@@ -49,3 +50,15 @@ void s5p_cec_cfg_gpio(struct platform_device *pdev)
 	s3c_gpio_cfgpin(EXYNOS4_GPX3(6), S3C_GPIO_SFN(0x3));
 	s3c_gpio_setpull(EXYNOS4_GPX3(6), S3C_GPIO_PULL_NONE);
 }
+
+#ifdef CONFIG_VIDEO_EXYNOS_TV
+void s5p_tv_setup(void)
+{
+	/* direct HPD to HDMI chip */
+	gpio_request(EXYNOS4_GPX3(7), "hpd-plug");
+
+	gpio_direction_input(EXYNOS4_GPX3(7));
+	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0x3));
+	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
+}
+#endif

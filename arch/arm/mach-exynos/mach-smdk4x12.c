@@ -3702,20 +3702,6 @@ static void __init exynos_sysmmu_init(void)
 #endif
 }
 
-static void s5p_tv_setup(void)
-{
-	/* direct HPD to HDMI chip */
-	gpio_request(EXYNOS4_GPX3(7), "hpd-plug");
-
-	gpio_direction_input(EXYNOS4_GPX3(7));
-	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0x3));
-	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
-
-	/* setup dependencies between TV devices */
-	s5p_device_hdmi.dev.parent = &exynos4_device_pd[PD_TV].dev;
-	s5p_device_mixer.dev.parent = &exynos4_device_pd[PD_TV].dev;
-}
-
 static void __init smdk4x12_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -3849,12 +3835,18 @@ static void __init smdk4x12_machine_init(void)
 	dev_set_name(&s5p_device_hdmi.dev, "exynos4-hdmi");
 	clk_add_alias("hdmi", "s5p-hdmi", "hdmi", &s5p_device_hdmi.dev);
 	clk_add_alias("hdmiphy", "s5p-hdmi", "hdmiphy", &s5p_device_hdmi.dev);
+
+	s5p_tv_setup();
+
+	/* setup dependencies between TV devices */
+	s5p_device_hdmi.dev.parent = &exynos4_device_pd[PD_TV].dev;
+	s5p_device_mixer.dev.parent = &exynos4_device_pd[PD_TV].dev;
+
+	s5p_i2c_hdmiphy_set_platdata(NULL);
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
 	s5p_hdmi_cec_set_platdata(&hdmi_cec_data);
 #endif
 #endif
-	s5p_tv_setup();
-	s5p_i2c_hdmiphy_set_platdata(NULL);
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 	smdk4x12_set_camera_flite_platdata();
 	s3c_set_platdata(&exynos_flite0_default_data,

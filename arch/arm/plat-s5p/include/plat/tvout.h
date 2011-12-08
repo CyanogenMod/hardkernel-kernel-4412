@@ -38,4 +38,6 @@ extern void s5p_hdmi_cec_set_platdata(struct s5p_platform_cec *pd);
 /* defined by architecture to configure gpio */
 extern void s5p_cec_cfg_gpio(struct platform_device *pdev);
 
+extern void s5p_tv_setup(void);
+
 #endif /* __ASM_PLAT_TV_HPD_H */
