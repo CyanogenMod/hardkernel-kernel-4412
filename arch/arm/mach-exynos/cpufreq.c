@@ -144,7 +144,10 @@ out:
 int exynos_cpufreq_get_level(unsigned int freq, unsigned int *level)
 {
 	struct cpufreq_frequency_table *table;
-	unsigned int i = 0;
+	unsigned int i;
+
+	if (!exynos_cpufreq_init_done)
+		return -EINVAL;
 
 	table = cpufreq_frequency_get_table(0);
 	if (!table) {
@@ -152,7 +155,8 @@ int exynos_cpufreq_get_level(unsigned int freq, unsigned int *level)
 		return -EINVAL;
 	}
 
-	for (i = 0; (table[i].frequency != CPUFREQ_TABLE_END); i++) {
+	for (i = exynos_info->max_support_idx;
+		(table[i].frequency != CPUFREQ_TABLE_END); i++) {
 		if (table[i].frequency == freq) {
 			*level = i;
 			return 0;
