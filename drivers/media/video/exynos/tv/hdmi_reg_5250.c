@@ -2475,11 +2475,13 @@ irqreturn_t hdmi_irq_handler(int irq, void *dev_data)
 
 		hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
 			HDMI_INTC_FLAG_HPD_UNPLUG);
+		atomic_set(&hdev->hpd_state, HPD_LOW);
 	}
 	if (intc_flag & HDMI_INTC_FLAG_HPD_PLUG) {
 		printk(KERN_INFO "plugged\n");
 		hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
 			HDMI_INTC_FLAG_HPD_PLUG);
+		atomic_set(&hdev->hpd_state, HPD_HIGH);
 	}
 	if (intc_flag & HDMI_INTC_FLAG_HDCP) {
 		printk(KERN_INFO "hdcp interrupt occur\n");
@@ -2487,6 +2489,9 @@ irqreturn_t hdmi_irq_handler(int irq, void *dev_data)
 		hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
 			HDMI_INTC_FLAG_HDCP);
 	}
+
+	queue_work(hdev->hpd_wq, &hdev->hpd_work);
+
 	return IRQ_HANDLED;
 }
 

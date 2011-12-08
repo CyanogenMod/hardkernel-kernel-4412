@@ -41,6 +41,10 @@
 #define HDMI_PAD_SINK		0
 #define HDMI_PADS_NUM		1
 
+/* HPD state definitions */
+#define HPD_LOW		0
+#define HPD_HIGH	1
+
 enum HDMI_VIDEO_FORMAT {
 	HDMI_VIDEO_FORMAT_2D = 0x0,
 	/** refer to Table 8-12 HDMI_Video_Format in HDMI specification v1.4a */
@@ -276,7 +280,10 @@ struct hdmi_device {
 	/** HDCP information */
 	struct hdcp_info hdcp_info;
 	struct work_struct work;
+	struct work_struct hpd_work;
 	struct workqueue_struct	*hdcp_wq;
+	struct workqueue_struct *hpd_wq;
+	atomic_t hpd_state;
 };
 
 struct hdmi_conf {

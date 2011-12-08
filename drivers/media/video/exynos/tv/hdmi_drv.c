@@ -504,6 +504,24 @@ static void hdmi_entity_info_print(struct hdmi_device *hdev)
 	dev_dbg(hdev->dev, "*********************************************\n\n");
 }
 
+static void s5p_hpd_kobject_uevent(struct work_struct *work)
+{
+	struct hdmi_device *hdev = container_of(work, struct hdmi_device,
+						hpd_work);
+	char *disconnected[2] = { "HDMI_STATE=offline", NULL };
+	char *connected[2]    = { "HDMI_STATE=online", NULL };
+	char **envp = NULL;
+	int state = atomic_read(&hdev->hpd_state);
+
+	if (state)
+		envp = connected;
+	else
+		envp = disconnected;
+
+	kobject_uevent_env(&hdev->dev->kobj, KOBJ_CHANGE, envp);
+	pr_info("%s: sent uevent %s\n", __func__, envp[0]);
+}
+
 static int __devinit hdmi_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -556,6 +574,12 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 		goto fail_regs;
 	}
 	hdmi_dev->irq = res->start;
+
+	/* workqueue for HPD */
+	hdmi_dev->hpd_wq = create_workqueue("hdmi-hpd");
+	if (hdmi_dev->hpd_wq == NULL)
+		ret = -ENXIO;
+	INIT_WORK(&hdmi_dev->hpd_work, s5p_hpd_kobject_uevent);
 
 	/* setting v4l2 name to prevent WARN_ON in v4l2_device_register */
 	strlcpy(hdmi_dev->v4l2_dev.name, dev_name(dev),
