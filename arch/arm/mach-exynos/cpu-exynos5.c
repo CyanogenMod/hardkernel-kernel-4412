@@ -232,7 +232,7 @@ static int __init exynos5_l2_cache_init(void)
 			"mrc p15, 0, %0, c1, c0, 0\n"
 			"orr %0, %0, #(1 << 2)\n"	/* cache enable */
 			"mcr p15, 0, %0, c1, c0, 0\n"
-			: "=r"(val));
+			: : "r"(val));
 	}
 
 	return 0;
