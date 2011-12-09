@@ -326,7 +326,7 @@ int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f)
 	u32 min_w, min_h, tmp_w, tmp_h;
 	int i;
 
-	gsc_info("user put w: %d, h: %d", pix_mp->width, pix_mp->height);
+	gsc_dbg("user put w: %d, h: %d", pix_mp->width, pix_mp->height);
 
 	fmt = find_format(&pix_mp->pixelformat, NULL, 0);
 	if (!fmt) {
@@ -360,7 +360,7 @@ int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f)
 		min_w = variant->pix_min->target_w;
 		min_h = variant->pix_min->target_h;
 	}
-	gsc_info("mod_x: %d, mod_y: %d, max_w: %d, max_h = %d",
+	gsc_dbg("mod_x: %d, mod_y: %d, max_w: %d, max_h = %d",
 	     mod_x, mod_y, max_w, max_h);
 	/* To check if image size is modified to adjust parameter against
 	   hardware abilities */
