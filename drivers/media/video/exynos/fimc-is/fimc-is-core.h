@@ -66,6 +66,8 @@
 #define BUS_LOCK_FREQ_L4	133133
 #define BUS_LOCK_FREQ_L5	100100
 
+#define FIXED_60_FPS
+
 #define SDCARD_FW
 
 #ifdef SDCARD_FW

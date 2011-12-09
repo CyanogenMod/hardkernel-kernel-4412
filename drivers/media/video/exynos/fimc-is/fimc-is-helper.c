@@ -50,8 +50,12 @@ Default setting values
 #define DEFAULT_CAPTURE_VIDEO_WIDTH	640
 #define DEFAULT_CAPTURE_VIDEO_HEIGHT	480
 
+#ifdef FIXED_60_FPS
+#define DEFAULT_PREVIEW_STILL_FRAMERATE	60
+#else
 #define DEFAULT_PREVIEW_STILL_FRAMERATE	30
-#define DEFAULT_CAPTURE_STILL_FRAMERATE	30
+#endif
+#define DEFAULT_CAPTURE_STILL_FRAMERATE	15
 #define DEFAULT_PREVIEW_VIDEO_FRAMERATE	30
 #define DEFAULT_CAPTURE_VIDEO_FRAMERATE	30
 
@@ -79,7 +83,11 @@ static const struct isp_param init_val_isp_preview_still = {
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
 		.reserved[3] = 0,
+#ifdef FIXED_60_FPS
+		.reserved[4] = 16666,
+#else
 		.reserved[4] = 33333,
+#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -292,7 +300,7 @@ static const struct isp_param init_val_isp_capture = {
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
 		.reserved[3] = 0,
-		.reserved[4] = 33333,
+		.reserved[4] = 66666,
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -488,7 +496,11 @@ static const struct isp_param init_val_isp_preview_video = {
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
 		.reserved[3] = 0,
+#ifdef FIXED_60_FPS
+		.reserved[4] = 16666,
+#else
 		.reserved[4] = 33333,
+#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -702,7 +714,11 @@ static const struct isp_param init_val_isp_camcording = {
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
 		.reserved[3] = 0,
+#ifdef FIXED_60_FPS
+		.reserved[4] = 16666,
+#else
 		.reserved[4] = 33333,
+#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {

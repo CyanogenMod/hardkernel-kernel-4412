@@ -4344,6 +4344,13 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 		dev->scenario_id = ISS_PREVIEW_STILL;
 		dev->sensor.width_prev = mf->width;
 		dev->sensor.height_prev = mf->height;
+#ifdef FIXED_60_FPS
+		IS_SENSOR_SET_FRAME_RATE(dev, 60);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev, 16666);
+#endif
 		break;
 	case 1:
 		dev->scenario_id = ISS_PREVIEW_VIDEO;
@@ -4354,6 +4361,13 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 		dev->scenario_id = ISS_CAPTURE_STILL;
 		dev->sensor.width_cap = mf->width;
 		dev->sensor.height_cap = mf->height;
+#ifdef FIXED_60_FPS
+		IS_SENSOR_SET_FRAME_RATE(dev, 15);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev, 66666);
+#endif
 		break;
 	case 3:
 		dev->scenario_id = ISS_CAPTURE_VIDEO;
