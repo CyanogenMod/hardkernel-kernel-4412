@@ -80,7 +80,7 @@ typedef struct umpp_allocation
 	ump_alloc_flags flags; /**< Flags for all supported devices */
 	uint32_t management_flags; /**< Managment flags tracking */
 
-	uid_t owner; /**< The process ID owning the memory if not sharable */
+	pid_t owner; /**< The process ID owning the memory if not sharable */
 
 	ump_dd_security_filter filter_func; /**< Hook to verify use, called during retains from new clients */
 	ump_dd_final_release_callback final_release_func; /**< Hook called when the last reference is removed */
@@ -123,6 +123,7 @@ typedef struct umpp_session
 {
 	struct mutex session_lock; /**< Lock for memory usage manipulation */
 	struct list_head memory_usage; /**< list of memory currently being used by the this session */
+	void*  import_handler_data[UMPP_EXTERNAL_MEM_COUNT]; /**< Import modules per-session data pointer */
 } umpp_session;
 
 /**
@@ -197,6 +198,20 @@ int umpp_dd_find_start_block(const umpp_allocation * alloc, uint64_t offset, uin
  * @param size Length (in bytes) of the range to do the operation on
  */
 void umpp_dd_cpu_msync_now(ump_dd_handle mem, ump_cpu_msync_op op, void * address, size_t size);
+
+/**
+ * Import module session early init.
+ * Calls session_begin on all installed import modules.
+ * @param session The core session object to initialized the import handler for
+ * */
+void umpp_import_handlers_init(umpp_session * session);
+
+/**
+ * Import module session cleanup.
+ * Calls session_end on all import modules bound to the session.
+ * @param session The core session object to initialized the import handler for
+ */
+void umpp_import_handlers_term(umpp_session * session);
 
 #endif /* _UMP_KERNEL_CORE_H_ */
 

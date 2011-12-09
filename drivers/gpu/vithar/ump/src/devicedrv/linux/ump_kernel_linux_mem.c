@@ -56,9 +56,15 @@ int umpp_phys_commit(umpp_allocation * alloc)
 	uint64_t i;
 
 	/* round up to a page boundary */
-	alloc->size = (alloc->size + PAGE_SIZE - 1) & ~(PAGE_SIZE-1);
+	alloc->size = (alloc->size + PAGE_SIZE - 1) & ~((uint64_t)PAGE_SIZE-1) ;
 	/* calculate number of pages */
 	alloc->blocksCount = alloc->size >> PAGE_SHIFT;
+
+	if( (sizeof(ump_dd_physical_block_64) * alloc->blocksCount) > ((size_t)-1))
+	{
+		printk(KERN_WARNING "UMP: umpp_phys_commit - trying to allocate more than possible\n");
+		return -ENOMEM;
+	}
 
 	alloc->block_array = kmalloc(sizeof(ump_dd_physical_block_64) * alloc->blocksCount, __GFP_HARDWALL | GFP_KERNEL | __GFP_NORETRY | __GFP_NOWARN);
 	if (NULL == alloc->block_array)
@@ -128,9 +134,15 @@ int umpp_linux_mmap(struct file * filp, struct vm_area_struct * vma)
 	ump_dd_handle h;
 	size_t offset;
 	int err = -EINVAL;
+	size_t length = vma->vm_end - vma->vm_start;
 
 	umpp_cpu_mapping * map = NULL;
 	umpp_session *session = filp->private_data;
+
+	if ( 0 == length )
+	{
+		return -EINVAL;
+	}
 
 	map = kzalloc(sizeof(*map), GFP_KERNEL);
 	if (NULL == map)
@@ -166,7 +178,6 @@ int umpp_linux_mmap(struct file * filp, struct vm_area_struct * vma)
 		umpp_allocation * alloc;
 		uint64_t last_byte;
 
-		size_t length = vma->vm_end - vma->vm_start;
 
 		alloc = (umpp_allocation*)h;
 

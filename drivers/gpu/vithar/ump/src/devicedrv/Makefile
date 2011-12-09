@@ -20,6 +20,8 @@ else
 include $(VITHAR_ROOT)/$(UMP_PATH)/Makefile.common
 endif
 
+include $(VITHAR_ROOT)/$(UMP_PATH)/imports/ion/Makefile
+
 # default to building for the host
 ARCH ?= $(shell uname -m)
 

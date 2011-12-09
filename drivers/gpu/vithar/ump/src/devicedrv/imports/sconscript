@@ -1,0 +1,20 @@
+# Copyright:
+# ----------------------------------------------------------------------------
+# This confidential and proprietary software may be used only as authorized 
+# by a licensing agreement from ARM Limited.
+#      (C) COPYRIGHT 2011 ARM Limited, ALL RIGHTS RESERVED
+# The entire notice above must be reproduced on all authorized copies and 
+# copies may only be made to the extent permitted by a licensing agreement
+# from ARM Limited.
+# ----------------------------------------------------------------------------
+#
+
+import os, sys
+Import('env')
+
+import_modules = [ os.path.join( path, 'sconscript' ) for path in sorted(os.listdir( os.getcwd() )) ]
+
+for m in import_modules:
+	if os.path.exists(m):
+		SConscript( m, variant_dir=os.path.join( env['BUILD_DIR_PATH'], os.path.dirname(m) ), duplicate=0 )
+

@@ -65,30 +65,6 @@ typedef struct ump_k_msync
 } ump_k_msync;
 
 /**
- * UMP memory map request.
- * Used when performing ump_map
- */
-typedef struct ump_k_map
-{
-	u64 offset; /**< [in] Offset (in bytes) from the start of the allocation */
-	ump_pointer mapped_ptr; /**< [out] Pointer to mapping created */
-	u64 size; /**< [in] Size in bytes to map */
-	ump_secure_id secure_id; /**< ID of allocation to map */
-	u32 padding; /* don't remove */
-} ump_k_map;
-
-/**
- * UMP memory unmap request.
- * Used when performing ump_unmap
- */
-typedef struct ump_k_unmap
-{
-	ump_pointer mapped_ptr; /**< [in] Pointer to apping to unmap */
-	ump_secure_id secure_id; /**< [in] ID of the allocation to unmap */
-	u32 padding; /* don't remove */
-} ump_k_unmap;
-
-/**
  * UMP memory retain request.
  * Used when performing ump_retain
  */
@@ -107,6 +83,15 @@ typedef struct ump_k_release
 	ump_secure_id secure_id; /**< [in] ID of allocation to release a reference to */
 	u32 padding; /* don't remove */
 } ump_k_release;
+
+typedef struct ump_k_import
+{
+	ump_pointer phandle;                /**< [in]  Pointer to handle to import */
+	u32 type;                           /**< [in]  Type of handle to import */
+	ump_alloc_flags alloc_flags;        /**< [in]  Flags to assign to the imported memory */
+	ump_secure_id secure_id;            /**< [out] UMP ID representing the imported memory */
+	u32 padding;                        /* don't remove */
+} ump_k_import;
 
 /**
  * UMP allocation flags request.
@@ -135,12 +120,10 @@ typedef struct ump_k_allocation_flags
 #define UMP_FUNC_RETAIN _IOW(UMP_IOC_MAGIC,  4, ump_k_retain)
 #define UMP_FUNC_RELEASE _IOW(UMP_IOC_MAGIC,  5, ump_k_release)
 #define UMP_FUNC_ALLOCATION_FLAGS_GET _IOWR(UMP_IOC_MAGIC,  6, ump_k_allocation_flags)
-/* OS specific, IDs reserved for those OSes which will use uk to perform them */
-#define UMP_FUNC_MAP _IO(UMP_IOC_MAGIC,  7)
-#define UMP_FUNC_UNMAP _IO(UMP_IOC_MAGIC,  8)
+#define UMP_FUNC_IMPORT _IOWR(UMP_IOC_MAGIC, 7, ump_k_import)
 
 /*max ioctl sequential number*/
-#define UMP_IOC_MAXNR 6
+#define UMP_IOC_MAXNR 7
 
 /* 15 bits for the UMP ID (allowing 32768 IDs) */
 #define UMP_LINUX_ID_BITS 15

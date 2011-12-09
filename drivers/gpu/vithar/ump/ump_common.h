@@ -182,6 +182,23 @@ enum
 
 typedef u32 ump_cpu_msync_op;
 
+/**
+ * Memory import types supported.
+ * If new import types are added they will appear here.
+ * They must be added before UMPP_EXTERNAL_MEM_COUNT and
+ * must be assigned an explicit sequantial number.
+ *
+ * @li UMP_EXTERNAL_MEM_TYPE_ION - Import an ION allocation
+ *                                 Takes a int* (pointer to a file descriptor)
+ *                                 Another ION reference is taken which is released on the final ump_release
+ */
+enum ump_external_memory_type
+{
+	UMPP_EXTERNAL_MEM_TYPE_UNUSED = 0, /* reserve type 0 */
+	UMP_EXTERNAL_MEM_TYPE_ION = 1,
+	UMPP_EXTERNAL_MEM_COUNT
+};
+
 /** @name UMP v1 API
  *
  *@{

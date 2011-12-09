@@ -90,6 +90,9 @@ static struct file_operations ump_fops =
 	.mmap = umpp_linux_mmap
 };
 
+/* import module handling */
+DEFINE_MUTEX(import_list_lock);
+struct ump_import_handler *  import_handlers[UMPP_EXTERNAL_MEM_COUNT];
 
 /* The global variable containing the global device data */
 static struct ump_linux_device ump_linux_device;
@@ -310,10 +313,27 @@ static int do_ump_dd_retain(umpp_session * session, ump_k_retain * params)
 	{
 		if (it->id == params->secure_id)
 		{
-			/* found to already be in use, just add a process local ref */
-			atomic_inc(&it->process_usage_count);
-			mutex_unlock(&session->session_lock);
-			return 0;
+			/* found to already be in use */
+			/* check for overflow */
+			while(1)
+			{
+				int refcnt = atomic_read(&it->process_usage_count);
+				if (refcnt + 1 > 0)
+				{
+					/* add a process local ref */
+					if(atomic_cmpxchg(&it->process_usage_count, refcnt, refcnt + 1) == refcnt)
+					{
+						mutex_unlock(&session->session_lock);
+						return 0;
+					}
+				}
+				else
+				{
+					/* maximum usage cap reached */
+					mutex_unlock(&session->session_lock);
+					return -EBUSY;
+				}
+			}
 		}
 	}
 	/* try to look it up globally */
@@ -446,6 +466,169 @@ static int do_ump_dd_msync_now(umpp_session * session, ump_k_msync * params)
 	return result;
 }
 
+
+void umpp_import_handlers_init(umpp_session * session)
+{
+	int i;
+	mutex_lock(&import_list_lock);
+	for ( i = 1; i < UMPP_EXTERNAL_MEM_COUNT; i++ )
+	{
+		if (import_handlers[i])
+		{
+			import_handlers[i]->session_begin(&session->import_handler_data[i]);
+			/* It is OK if session_begin returned an error.
+			 * We won't do any import calls if so */
+		}
+	}
+	mutex_unlock(&import_list_lock);
+}
+
+void umpp_import_handlers_term(umpp_session * session)
+{
+	int i;
+	mutex_lock(&import_list_lock);
+	for ( i = 1; i < UMPP_EXTERNAL_MEM_COUNT; i++ )
+	{
+		/* only call if session_begin succeeded */
+		if (session->import_handler_data[i] != NULL)
+		{
+			/* if session_beging succeeded the handler
+			 * should not have unregistered with us */
+			BUG_ON(!import_handlers[i]);
+			import_handlers[i]->session_end(session->import_handler_data[i]);
+			session->import_handler_data[i] = NULL;
+		}
+	}
+	mutex_unlock(&import_list_lock);
+}
+
+int ump_import_module_register(enum ump_external_memory_type type, struct ump_import_handler * handler)
+{
+	int res = -EEXIST;
+
+	/* validate input */
+	BUG_ON(type == 0 || type >= UMPP_EXTERNAL_MEM_COUNT);
+	BUG_ON(!handler);
+	//BUG_ON(!handler->linux_module);
+	BUG_ON(!handler->session_begin);
+	BUG_ON(!handler->session_end);
+	BUG_ON(!handler->import);
+
+	mutex_lock(&import_list_lock);
+
+	if (!import_handlers[type])
+	{
+		import_handlers[type] = handler;
+		res = 0;
+	}
+
+	mutex_unlock(&import_list_lock);
+
+	return res;
+}
+
+void ump_import_module_unregister(enum ump_external_memory_type type)
+{
+	BUG_ON(type == 0 || type >= UMPP_EXTERNAL_MEM_COUNT);
+
+	mutex_lock(&import_list_lock);
+	/* an error to call this if ump_import_module_register didn't succeed */
+	BUG_ON(!import_handlers[type]);
+	import_handlers[type] = NULL;
+	mutex_unlock(&import_list_lock);
+}
+
+static struct ump_import_handler * import_handler_get(int type_id)
+{
+	enum ump_external_memory_type type;
+	struct ump_import_handler * handler;
+
+	/* validate and convert input */
+	/* handle bad data here, not just BUG_ON */
+	if (type_id == 0 || type_id >= UMPP_EXTERNAL_MEM_COUNT)
+		return NULL;
+
+	type = (enum ump_external_memory_type)type_id;
+
+	/* find the handler */
+	mutex_lock(&import_list_lock);
+
+	handler = import_handlers[type];
+
+	if (handler)
+	{
+		if (!try_module_get(handler->linux_module))
+		{
+			handler = NULL;
+		}
+	}
+
+	mutex_unlock(&import_list_lock);
+
+	return handler;
+}
+
+static void import_handler_put(struct ump_import_handler * handler)
+{
+	module_put(handler->linux_module);
+}
+
+static int do_ump_dd_import(umpp_session * session, ump_k_import * params)
+{
+	ump_dd_handle new_allocation = UMP_DD_INVALID_MEMORY_HANDLE;
+	struct ump_import_handler * handler;
+
+	handler = import_handler_get(params->type);
+
+	if (handler)
+	{
+		/* try late binding if not already bound */
+		if (!session->import_handler_data[params->type])
+		{
+			handler->session_begin(&session->import_handler_data[params->type]);
+		}
+
+		/* do we have a bound session? */
+		if (session->import_handler_data[params->type])
+		{
+			new_allocation = handler->import( session->import_handler_data[params->type],
+		                                      params->phandle.value,
+		                                      params->alloc_flags);
+		}
+
+		/* done with the handler */
+		import_handler_put(handler);
+	}
+
+	/* did the import succeed? */
+	if (UMP_DD_INVALID_MEMORY_HANDLE != new_allocation)
+	{
+		umpp_session_memory_usage * tracker;
+
+		tracker = kmalloc(sizeof(*tracker), GFP_KERNEL | __GFP_HARDWALL);
+		if (NULL != tracker)
+		{
+			/* update the return struct with the new ID */
+			params->secure_id = ump_dd_secure_id_get(new_allocation);
+
+			tracker->mem = new_allocation;
+			tracker->id = params->secure_id;
+			atomic_set(&tracker->process_usage_count, 1);
+
+			/* link it into the session in-use list */
+			mutex_lock(&session->session_lock);
+			list_add(&tracker->link, &session->memory_usage);
+			mutex_unlock(&session->session_lock);
+
+			return 0;
+		}
+		ump_dd_release(new_allocation);
+	}
+
+	return -ENOMEM;
+
+}
+
 #ifdef HAVE_UNLOCKED_IOCTL
 static long umpp_linux_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 #else
@@ -534,6 +717,25 @@ static int umpp_linux_ioctl(struct inode *inode, struct file *filp, unsigned int
 				return -EFAULT;
 			}
 			return 0;
+		case UMP_FUNC_IMPORT:
+			if (size != sizeof(ump_k_import))
+			{
+				return -ENOTTY;
+			}
+			if (copy_from_user(&msg, (void __user*)arg, size))
+			{
+				return -EFAULT;
+			}
+			ret = do_ump_dd_import(session, (ump_k_import*) &msg);
+			if (ret)
+			{
+				return ret;
+			}
+			if (copy_to_user((void *)arg, &msg, size))
+			{
+				return -EFAULT;
+			}
+			return 0;
 		/* used only by v1 API */
 		case UMP_FUNC_ALLOCATION_FLAGS_GET:
 			if (size != sizeof(ump_k_allocation_flags))
@@ -603,6 +805,12 @@ EXPORT_SYMBOL(ump_dd_size_get_64);
 EXPORT_SYMBOL(ump_dd_retain);
 EXPORT_SYMBOL(ump_dd_release);
 EXPORT_SYMBOL(ump_dd_create_from_phys_blocks_64);
+
+/* import API */
+EXPORT_SYMBOL(ump_import_module_register);
+EXPORT_SYMBOL(ump_import_module_unregister);
+
+
 
 /* V1 API */
 EXPORT_SYMBOL(ump_dd_handle_create_from_secure_id);

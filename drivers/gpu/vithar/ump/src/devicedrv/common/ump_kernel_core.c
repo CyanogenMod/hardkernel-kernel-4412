@@ -53,16 +53,18 @@ umpp_session *umpp_core_session_start(void)
 {
 	umpp_session * session;
 
-	session = kmalloc(sizeof(*session), GFP_KERNEL);
+	session = kzalloc(sizeof(*session), GFP_KERNEL);
 	if (NULL != session)
 	{
 		mutex_init(&session->session_lock);
 
 		INIT_LIST_HEAD(&session->memory_usage);
 
-		return session;
+		/* try to create import client session, not a failure if they fail to initialize */
+		umpp_import_handlers_init(session);
 	}
-	return NULL;
+
+	return session;
 }
 
 void umpp_core_session_end(umpp_session *session)
@@ -77,6 +79,10 @@ void umpp_core_session_end(umpp_session *session)
 		kfree(usage);
 
 	}
+
+	/* we should now not hold any imported memory objects,
+	 * detatch all import handlers */
+	umpp_import_handlers_term(session);
 
 	mutex_destroy(&session->session_lock);
 	kfree(session);
@@ -102,9 +108,8 @@ ump_dd_handle ump_dd_allocate_64(uint64_t size, ump_alloc_flags flags, ump_dd_se
 
 	if (!(alloc->flags & UMP_PROT_SHAREABLE))
 	{
-		alloc->owner = current_euid();
+		alloc->owner = get_current()->pid;
 	}
-
 
 	if (0 != umpp_phys_commit(alloc))
 	{
@@ -187,7 +192,6 @@ ump_dd_handle ump_dd_from_secure_id(ump_secure_id secure_id)
 	umpp_allocation * alloc = UMP_DD_INVALID_MEMORY_HANDLE;
 
 	mutex_lock(&device.secure_id_map_lock);
-
 	if (0 == umpp_descriptor_mapping_lookup(device.secure_id_map, secure_id, (void**)&alloc))
 	{
 		if (NULL != alloc->filter_func)
@@ -201,7 +205,7 @@ ump_dd_handle ump_dd_from_secure_id(ump_secure_id secure_id)
 		/*check permission to access it*/
 		if (!(alloc->flags & UMP_PROT_SHAREABLE))
 		{
-			if (alloc->owner != current_euid())
+			if (alloc->owner != get_current()->pid)
 			{
 				alloc = UMP_DD_INVALID_MEMORY_HANDLE; /*no rights for the current process*/
 			}
@@ -209,7 +213,10 @@ ump_dd_handle ump_dd_from_secure_id(ump_secure_id secure_id)
 
 		if (UMP_DD_INVALID_MEMORY_HANDLE != alloc)
 		{
-			ump_dd_retain(alloc);
+			if( ump_dd_retain(alloc) != UMP_DD_SUCCESS)
+			{
+				alloc = UMP_DD_INVALID_MEMORY_HANDLE;
+			}
 		}
 	}
 
@@ -226,7 +233,7 @@ ump_dd_handle ump_dd_handle_create_from_secure_id(ump_secure_id secure_id)
 	return ump_dd_from_secure_id(secure_id);
 }
 
-void ump_dd_retain(ump_dd_handle mem)
+int ump_dd_retain(ump_dd_handle mem)
 {
 	umpp_allocation * alloc;
 
@@ -234,7 +241,22 @@ void ump_dd_retain(ump_dd_handle mem)
 
 	alloc = (umpp_allocation*)mem;
 
-	atomic_inc(&alloc->refcount);
+	/* check for overflow */
+	while(1)
+	{
+		int refcnt = atomic_read(&alloc->refcount);
+		if (refcnt + 1 > 0)
+		{
+			if(atomic_cmpxchg(&alloc->refcount, refcnt, refcnt + 1) == refcnt)
+			{
+				return 0;
+			}
+		}
+		else
+		{
+			return -EBUSY;
+		}
+	}
 }
 
 /*

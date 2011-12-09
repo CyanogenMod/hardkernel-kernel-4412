@@ -25,7 +25,7 @@ if env_ump['v'] != '1':
 	env_ump['MAKECOMSTR'] = '[MAKE] ${SOURCE.dir}'
 
 # Source files required for UMP.
-ump_src = [Glob('#ump/src/devicedrv/linux/*.c'), Glob('#ump/src/devicedrv/common/*.c')]
+ump_src = [Glob('#ump/src/devicedrv/linux/*.c'), Glob('#ump/src/devicedrv/common/*.c'), Glob('#ump/src/devicedrv/imports/*/*.c')]
 
 env_ump.Append( CPPPATH='#ump/src/devicedrv/' ) 
 
@@ -57,3 +57,6 @@ for p in patterns:
 	Clean(cmd, Glob('#ump/src/devicedrv/%s' % p))
 
 env_ump.ProgTarget('ump', cmd)
+
+SConscript( 'imports/sconscript' )
+

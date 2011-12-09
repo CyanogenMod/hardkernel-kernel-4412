@@ -75,6 +75,7 @@ include $(ROOT)/$(UMP_PATH)/Makefile
 
 obj-$(CONFIG_VITHAR) += $(addprefix $(UMP_PATH)/,$(SRC:.c=.o))
 
+
 #=============================================================================================
 
 

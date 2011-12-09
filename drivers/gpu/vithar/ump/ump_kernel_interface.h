@@ -30,18 +30,22 @@
 /** @defgroup ump_kernel_space_api UMP Kernel Space API
  * @{ */
 
-#include <ump/ump_kernel_platform.h>
+/**
+ * External representation of a UMP handle in kernel space.
+ */
+typedef void * ump_dd_handle;
+
 #include <ump/ump_common.h>
+#include <ump/ump_kernel_platform.h>
+
+#if defined(__KERNEL__)
+#include <ump/src/devicedrv/imports/ump_import.h>
+#endif
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-
-/**
- * External representation of a UMP handle in kernel space.
- */
-typedef void * ump_dd_handle;
 
 /**
  * Value to indicate an invalid UMP memory handle.
@@ -225,8 +229,9 @@ UMP_KERNEL_API_EXPORT u64 ump_dd_size_get_64(const ump_dd_handle mem);
  * @see ump_retain
  *
  * @param mem Handle to UMP memory.
+ * @return 0 indicates success, any other value indicates failure.
  */
-UMP_KERNEL_API_EXPORT void ump_dd_retain(ump_dd_handle mem);
+UMP_KERNEL_API_EXPORT int ump_dd_retain(ump_dd_handle mem);
 
 
 /**
@@ -236,6 +241,7 @@ UMP_KERNEL_API_EXPORT void ump_dd_retain(ump_dd_handle mem);
  * When the last reference is released, all resources associated with this UMP memory
  * handle are freed.
  *
+ * One can only call ump_release when matched with a successful ump_dd_retain, ump_dd_allocate_64 or ump_dd_from_secure_id
  * If called on an @a UMP_DD_INVALID_MEMORY_HANDLE the function will early out.
  *
  * @note There is a user space equivalent function called @ref ump_release
