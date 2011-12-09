@@ -37,6 +37,7 @@
 #include <mach/map.h>
 
 #include "../srp-types.h"
+#include "srp_alp.h"
 #include "srp_alp_reg.h"
 #include "srp_alp_fw.h"
 #include "srp_alp_ioctl.h"
@@ -45,159 +46,9 @@
 #include "../idma.h"
 #include "../audss.h"
 
-#define SRP_DEV_MINOR	(250)
-
-/* SRAM information */
-#if defined(CONFIG_CPU_EXYNOS4210)
-#define IRAM_SIZE	(0x20000)
-#else
-#define IRAM_SIZE	(0x40000)
-#endif
-#define DMEM_SIZE	(0x20000)
-#define ICACHE_SIZE	(0x10000)
-
-/* Buffer information */
-#define IBUF_SIZE	(0x4000)
-#define OBUF_SIZE	(0x8000)
-#define WBUF_SIZE	(IBUF_SIZE * 4)
-#if defined(CONFIG_CPU_EXYNOS4210)
-#define IBUF_OFFSET	(0x10000)
-#else
-#define IBUF_OFFSET	(0x30000)
-#endif
-#define OBUF_OFFSET	(0x4)
-#define IBUF_NUM	(0x2)
-#define OBUF_NUM	(0x2)
-
-/* Commbox & Etc information */
-#define COMMBOX_SIZE	(0x2000)
-
-/* F/W code size */
-#define VLIW_SIZE	(0x20000)	/* 128KBytes */
-#define DATA_SIZE	(0x20000)	/* 128KBytes */
-#define CGA_SIZE	(0x9000)	/* 36KBytes */
-
-/* Reserved memory on DRAM */
-#define BASE_MEM_SIZE	(CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP << 10)
-#define VLIW_SIZE_MAX	(0x20000)
-#define CGA_SIZE_MAX	(0x10000)
-#define DATA_SIZE_MAX	(0x20000)
-#define BITSTREAM_SIZE_MAX	(0x7FFFFFFF)
-
-#ifdef USE_FW_ENDIAN_CONVERT
-#define ENDIAN_CHK_CONV(VAL)		\
-	(((VAL >> 24) & 0x000000FF) |	\
-	((VAL >> 8) & 0x0000FF00) |	\
-	((VAL << 8) & 0x00FF0000) |	\
-	((VAL << 24) & 0xFF000000))
-#else
-#define ENDIAN_CHK_CONV(VAL)	(VAL)
-#endif
-
-#ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
-#define srp_info(x... )	pr_info("SRP: " x)
-#define srp_debug(x...)	pr_debug("SRP: " x)
-#define srp_err(x...)	pr_err("SRP_ERR: " x)
-#else
-#define srp_info(x...)
-#define srp_debug(x...)
-#define srp_err(x...)
-#endif
-
-struct srp_buf_info {
-	void		*mmapped_addr;
-	void		*addr;
-	unsigned int	mmapped_size;
-	unsigned int	size;
-	int		num;
-};
-
-struct srp_info {
-	struct srp_buf_info	*ibuf_info;
-	struct srp_buf_info	*obuf_info;
-	struct srp_buf_info	*pcm_info;
-
-	spinlock_t	lock;
-	int		state;
-
-	void __iomem	*iram;
-	void __iomem	*dmem;
-	void __iomem	*icache;
-	void __iomem	*commbox;
-
-	unsigned char	*ibuf0;
-	unsigned char	*ibuf1;
-	unsigned char	*obuf0;
-	unsigned char	*obuf1;
-
-	unsigned int	ibuf0_pa;
-	unsigned int	ibuf1_pa;
-	unsigned int	obuf0_pa;
-	unsigned int	obuf1_pa;
-	unsigned long	obuf_size;		/* OBUF size byte */
-	unsigned long	ibuf_size;		/* IBUF size byte */
-	unsigned long	ibuf_fill_size[2];	/* IBUF Fill size */
-
-	unsigned char	*wbuf;			/* Temporatry BUF VA */
-	unsigned long	wbuf_pos;		/* Write pointer */
-	unsigned long	wbuf_fill_size;		/* Total size by user write() */
-	unsigned int	wbuf_ready;
-
-	unsigned int ibuf_next;
-	unsigned int ibuf_empty[2];
-
-	unsigned int obuf_fill_done[2];
-	unsigned int obuf_ready;
-	unsigned int obuf_next;
-
-	unsigned long frame_size;
-	unsigned long frame_count;
-	unsigned long frame_count_base;
-	unsigned long channel;			/* Mono = 1, Stereo = 2 */
-	unsigned long sample_rate;		/* Sampling Rate 8000 ~ 48000 */
-	unsigned long bit_rate;
-	unsigned long set_bitstream_size;
-
-	unsigned int first_decoding;
-	unsigned int decoding_started;
-	unsigned int wakeup_waitqueue;
-	unsigned int is_opened;			/* Running status of SRP */
-	unsigned int is_running;		/* Open status of SRP */
-	unsigned int is_pending;		/* Pending status of SRP */
-	unsigned int block_mode;		/* Block Mode */
-	unsigned int stop_after_eos;
-	unsigned int wait_for_eos;
-	unsigned int prepare_for_eos;
-	unsigned int play_done;
-	unsigned int save_ibuf_empty;
-
-	unsigned char *fw_code_vliw;		/* VLIW */
-	unsigned char *fw_code_cga;		/* CGA */
-	unsigned char *fw_data;			/* DATA */
-
-	dma_addr_t fw_mem_base;			/* Base memory for FW */
-	unsigned long vliw_rp;
-	unsigned long fw_mem_base_pa;		/* Physical address of base */
-	unsigned long fw_code_vliw_pa;		/* Physical address of VLIW */
-	unsigned long fw_code_cga_pa;		/* Physical address of CGA */
-	unsigned long fw_data_pa;		/* Physical address of DATA */
-	unsigned long fw_code_vliw_size;	/* Size of VLIW */
-	unsigned long fw_code_cga_size;		/* Size of CGA */
-	unsigned long fw_data_size;		/* Size of DATA */
-
-	void	(*audss_clk_enable)(bool enable);
-};
-
-/* SRP Pending On/Off status */
-enum {
-	RUN = 0,
-	STALL,
-};
-
 static struct srp_info srp;
 static DEFINE_MUTEX(srp_mutex);
-
-DECLARE_WAIT_QUEUE_HEAD(read_waitqueue);
+static DECLARE_WAIT_QUEUE_HEAD(read_waitqueue);
 
 int srp_get_status(int cmd)
 {
@@ -217,22 +68,6 @@ static void srp_pending_ctrl(int ctrl)
 
 	srp_debug("Current SRP Status[%s]\n",
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN");
-}
-
-static void srp_reset_frame_counter(void)
-{
-	srp.frame_count = 0;
-	srp.frame_count_base = 0;
-}
-
-static unsigned long srp_get_frame_counter(void)
-{
-	unsigned long val;
-
-	val = readl(srp.commbox + SRP_FRAME_INDEX);
-	srp.frame_count = srp.frame_count_base + val;
-
-	return srp.frame_count;
 }
 
 static void srp_check_stream_info(void)
@@ -313,7 +148,6 @@ static void srp_reset(void)
 	writel(reg, srp.commbox + SRP_INTERRUPT);
 
 	/* Store Total Count */
-	srp.frame_count_base = srp.frame_count;
 	srp.decoding_started = 0;
 	srp.first_decoding = 1;
 	srp.wakeup_waitqueue = 0;
@@ -462,8 +296,8 @@ static ssize_t srp_read(struct file *file, char *buffer,
 				size_t size, loff_t *pos)
 {
 	struct srp_buf_info *argp = (struct srp_buf_info *)buffer;
-	void *obuf0 = srp.obuf_info->addr;
-	void *obuf1 = srp.obuf_info->addr + OBUF_SIZE;
+	void *obuf0 = srp.obuf_info.addr;
+	void *obuf1 = srp.obuf_info.addr + OBUF_SIZE;
 	int ret = 0;
 
 	srp_debug("Entered Get Obuf[%d] in PCM function\n", srp.obuf_ready);
@@ -497,19 +331,19 @@ static ssize_t srp_read(struct file *file, char *buffer,
 		}
 	} else {
 		srp_debug("not prepared not yet! OBUF[%d]\n", srp.obuf_ready);
-		srp.pcm_info->size = 0;
-		return copy_to_user(argp, srp.pcm_info, sizeof(struct srp_buf_info));
+		srp.pcm_info.size = 0;
+		return copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
 	}
 
-	srp.pcm_info->addr = srp.obuf_ready ? obuf1 : obuf0;
-	srp.pcm_info->size = readl(srp.commbox + SRP_PCM_DUMP_ADDR);
-	srp.pcm_info->num = srp.obuf_info->num;
+	srp.pcm_info.addr = srp.obuf_ready ? obuf1 : obuf0;
+	srp.pcm_info.size = readl(srp.commbox + SRP_PCM_DUMP_ADDR);
+	srp.pcm_info.num = srp.obuf_info.num;
 	if (srp.play_done)
-		srp.pcm_info->size = 0;
+		srp.pcm_info.size = 0;
 
-	ret = copy_to_user(argp, srp.pcm_info, sizeof(struct srp_buf_info));
+	ret = copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
 	srp_debug("Return OBUF Num[%d] fill size %d\n",
-			srp.obuf_ready, srp.pcm_info->size);
+			srp.obuf_ready, srp.pcm_info.size);
 
 	srp.wakeup_waitqueue = 0;
 
@@ -624,8 +458,8 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case SRP_GET_MMAP_SIZE:
-		srp.obuf_info->mmapped_size = OBUF_SIZE * OBUF_NUM + OBUF_OFFSET;
-		val = srp.obuf_info->mmapped_size;
+		srp.obuf_info.mmapped_size = OBUF_SIZE * OBUF_NUM + OBUF_OFFSET;
+		val = srp.obuf_info.mmapped_size;
 		ret = copy_to_user((unsigned long *)arg,
 					&val, sizeof(unsigned long));
 
@@ -645,60 +479,27 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case SRP_GET_IBUF_INFO:
-		srp.ibuf_info->addr = (void *) srp.wbuf;
-		srp.ibuf_info->size = IBUF_SIZE * 2;
-		srp.ibuf_info->num  = IBUF_NUM;
+		srp.ibuf_info.addr = (void *) srp.wbuf;
+		srp.ibuf_info.size = IBUF_SIZE * 2;
+		srp.ibuf_info.num  = IBUF_NUM;
 
-		ret = copy_to_user(argp, srp.ibuf_info,
+		ret = copy_to_user(argp, &srp.ibuf_info,
 						sizeof(struct srp_buf_info));
 		break;
 
 	case SRP_GET_OBUF_INFO:
-		ret = copy_from_user(srp.obuf_info, argp,
+		ret = copy_from_user(&srp.obuf_info, argp,
 				sizeof(struct srp_buf_info));
 		if (!ret) {
-			srp.obuf_info->addr = srp.obuf_info->mmapped_addr
+			srp.obuf_info.addr = srp.obuf_info.mmapped_addr
 							+ OBUF_OFFSET;
-			srp.obuf_info->size = OBUF_SIZE;
-			srp.obuf_info->num = OBUF_NUM;
+			srp.obuf_info.size = OBUF_SIZE;
+			srp.obuf_info.num = OBUF_NUM;
 		}
 
-		ret = copy_to_user(argp, srp.obuf_info,
+		ret = copy_to_user(argp, &srp.obuf_info,
 					sizeof(struct srp_buf_info));
 
-		break;
-
-	case SRP_DECODED_FRAME_SIZE:
-		if (srp.frame_size) {
-			val = srp_get_frame_counter() * srp.frame_size;
-			srp_debug("Decoded Frame Size [%lu]\n", val);
-			ret = copy_to_user((unsigned long *)arg,
-					&val, sizeof(unsigned long));
-		}
-		break;
-
-	case SRP_GET_CHANNEL_COUNT:
-		if (srp.channel) {
-			srp_debug("Channel Count [%lu]\n", srp.channel);
-			ret = copy_to_user((unsigned long *)arg,
-				&srp.channel, sizeof(unsigned long));
-		}
-		break;
-
-	case SRP_GET_SAMPLE_RATE:
-		if (srp.sample_rate) {
-			srp_debug("Sample Rate [%lu]\n", srp.sample_rate);
-			ret = copy_to_user((unsigned long *)arg,
-					&srp.sample_rate, sizeof(unsigned long));
-		}
-		break;
-
-	case SRP_GET_BIT_RATE:
-		if (srp.bit_rate) {
-			srp_debug("Bit Rate [%lu]\n", srp.bit_rate);
-			ret = copy_to_user((unsigned long *)arg,
-					&srp.bit_rate, sizeof(unsigned long));
-		}
 		break;
 
 	case SRP_SEND_EOS:
@@ -759,7 +560,6 @@ static int srp_open(struct inode *inode, struct file *file)
 	srp.channel = 0;
 	srp.frame_size = 0;
 	srp.sample_rate = 0;
-	srp_reset_frame_counter();
 	srp_set_default_fw();
 
 	return 0;
@@ -962,11 +762,8 @@ static int srp_prepare_fw_buff(struct device *dev)
 			srp.fw_data_size);
 
 	srp.wbuf = kzalloc(WBUF_SIZE, GFP_KERNEL);
-	srp.ibuf_info = kzalloc(sizeof(struct srp_buf_info), GFP_KERNEL);
-	srp.obuf_info = kzalloc(sizeof(struct srp_buf_info), GFP_KERNEL);
-	srp.pcm_info = kzalloc(sizeof(struct srp_buf_info), GFP_KERNEL);
-	if (!srp.ibuf_info || !srp.obuf_info || !srp.pcm_info) {
-		srp_err("Failed to alloc buf info\n");
+	if (!srp.wbuf) {
+		srp_err("Failed to alloc WBUF!\n");
 		return -ENOMEM;
 	}
 
