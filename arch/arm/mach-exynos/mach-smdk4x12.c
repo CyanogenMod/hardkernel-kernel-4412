@@ -51,6 +51,7 @@
 #include <plat/regs-fb-v4.h>
 #include <plat/backlight.h>
 #include <plat/gpio-cfg.h>
+#include <plat/adc.h>
 #include <plat/iic.h>
 #include <plat/pd.h>
 #include <plat/sdhci.h>
@@ -2703,6 +2704,10 @@ static struct platform_device exynos4_busfreq = {
 	.name = "exynos4-busfreq",
 };
 
+static struct platform_device *smdk4412_devices[] __initdata = {
+	&s3c_device_adc,
+};
+
 static struct platform_device *smdk4x12_devices[] __initdata = {
 #ifdef CONFIG_ANDROID_PMEM
 	&pmem_device,
@@ -3870,6 +3875,8 @@ static void __init smdk4x12_machine_init(void)
 	smdk4x12_gpio_power_init();
 
 	platform_add_devices(smdk4x12_devices, ARRAY_SIZE(smdk4x12_devices));
+	if (soc_is_exynos4412())
+		platform_add_devices(smdk4412_devices, ARRAY_SIZE(smdk4412_devices));
 
 #ifdef CONFIG_FB_S3C
 	exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev, "mout_mpll_user",
