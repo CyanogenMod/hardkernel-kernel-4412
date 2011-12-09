@@ -127,7 +127,7 @@ static void exynos4_mct_frc_start(u32 hi, u32 lo)
 	exynos4_mct_write(reg, EXYNOS4_MCT_G_TCON);
 }
 
-static cycle_t exynos4_frc_read(struct clocksource *cs)
+static cycle_t notrace exynos4_frc_read(struct clocksource *cs)
 {
 	unsigned int lo, hi;
 	u32 hi2 = __raw_readl(EXYNOS4_MCT_G_CNT_U);
