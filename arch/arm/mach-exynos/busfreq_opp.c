@@ -75,6 +75,9 @@ static struct opp __maybe_unused *step_up(struct busfreq_data *data, int step)
 	for (i = 0; i < step; i++) {
 		newfreq = opp_get_freq(opp) + 1;
 		opp = opp_find_freq_ceil(data->dev, &newfreq);
+
+		if (opp == data->max_opp)
+			break;
 	}
 
 	return opp;
@@ -92,6 +95,9 @@ static struct opp *step_down(struct busfreq_data *data, int step)
 	for (i = 0; i < step; i++) {
 		newfreq = opp_get_freq(opp) - 1;
 		opp = opp_find_freq_floor(data->dev, &newfreq);
+
+		if (opp == data->min_opp)
+			break;
 	}
 
 	return opp;
