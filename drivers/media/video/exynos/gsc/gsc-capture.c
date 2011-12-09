@@ -1695,7 +1695,7 @@ int gsc_register_capture_device(struct gsc_dev *gsc)
 	}
 
 	vfd->ctrl_handler = &ctx->ctrl_handler;
-	gsc_info("gsc capture driver registered as /dev/video%d", vfd->num);
+	gsc_dbg("gsc capture driver registered as /dev/video%d", vfd->num);
 
 	return 0;
 

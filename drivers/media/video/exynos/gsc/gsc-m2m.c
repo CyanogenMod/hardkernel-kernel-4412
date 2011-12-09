@@ -761,7 +761,7 @@ int gsc_register_m2m_device(struct gsc_dev *gsc)
 		goto err_m2m_r2;
 	}
 
-	gsc_info("gsc m2m driver registered as /dev/video%d", vfd->num);
+	gsc_dbg("gsc m2m driver registered as /dev/video%d", vfd->num);
 
 	return 0;
 

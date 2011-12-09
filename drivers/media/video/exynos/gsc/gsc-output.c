@@ -963,7 +963,7 @@ static int gsc_create_subdev(struct gsc_dev *gsc)
 		goto error;
 	}
 	gsc->mdev[MDEV_OUTPUT]->gsc_sd[gsc->id] = sd;
-	gsc_info("gsc_sd[%d] = 0x%08x\n", gsc->id,
+	gsc_dbg("gsc_sd[%d] = 0x%08x\n", gsc->id,
 			(u32)gsc->mdev[MDEV_OUTPUT]->gsc_sd[gsc->id]);
 	gsc->out.sd = sd;
 	gsc->md_data.media_ops = &gsc_out_link_callback;
@@ -1050,7 +1050,7 @@ int gsc_register_output_device(struct gsc_dev *gsc)
 		goto err_sd_reg;
 
 	vfd->ctrl_handler = &ctx->ctrl_handler;
-	gsc_info("gsc output driver registered as /dev/video%d, ctx(0x%08x)",
+	gsc_dbg("gsc output driver registered as /dev/video%d, ctx(0x%08x)",
 		vfd->num, (u32)ctx);
 	return 0;
 
