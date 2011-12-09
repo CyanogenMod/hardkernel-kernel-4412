@@ -233,7 +233,9 @@ static int fimc_init_camera(struct fimc_control *ctrl)
 					(unsigned long)&cam->width);
 		if (ret) {
 			fimc_err("fail to get LCD size\n");
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 			pm_runtime_put_sync(&pdev->dev);
+#endif
 			return ret;
 		}
 
@@ -241,7 +243,9 @@ static int fimc_init_camera(struct fimc_control *ctrl)
 					(unsigned long)&cam->height);
 		if (ret) {
 			fimc_err("fail to get LCD size\n");
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 			pm_runtime_put_sync(&pdev->dev);
+#endif
 			return ret;
 		}
 
