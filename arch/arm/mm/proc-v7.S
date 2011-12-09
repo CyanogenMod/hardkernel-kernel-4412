@@ -17,6 +17,8 @@
 #include <asm/pgtable-hwdef.h>
 #include <asm/pgtable.h>
 
+#include <mach/smc.h>
+
 #include "proc-macros.S"
 
 #define TTB_S		(1 << 1)
@@ -395,26 +397,54 @@ __v7_setup:
 3:	ldr	r10, =0x00000c0f		@ Cortex-A15 primary part number
 	teq	r0, r10
 	bne	4f
+
+#ifdef CONFIG_ARM_TRUSTZONE
+	stmia	r12, {r0-r3}
+	mov	r3, #0
+#endif
 #ifdef CONFIG_ARM_ERRATA_761171
 	teq	r6, #0x0			@ present in r0p0
 	teqne	r6, #0x1			@ present in r0p1
 	teqne	r6, #0x2			@ present in r0p2
 	mrceq	p15, 0, r10, c1, c0, 1		@ read aux control register
 	orreq	r10, r10, #3 << 27		@ set [28:27] bit
+#ifdef CONFIG_ARM_TRUSTZONE
+	ldreq	r0, =SMC_CMD_REG
+	ldreq	r1, =SMC_REG_ID_CP15(1, 0, 0, 1)
+	moveq	r2, r10
+	smceq	0
+#else
 	mcreq	p15, 0, r10, c1, c0, 1		@ write aux control register
+#endif
 #endif
 #ifdef CONFIG_ARM_ERRATA_762974
 	teq	r6, #0x0			@ present in r0p0
 	teqne	r6, #0x1			@ present in r0p1
 	teqne	r6, #0x2			@ present in r0p2
-	mrceq	p15, 1, r10, c15, c0, 3		@ read l2 prefetch ctrl register
 	ldreq	r10, =0x400			@ disable l2 prefetch function
+#ifdef CONFIG_ARM_TRUSTZONE
+	ldreq	r0, =SMC_CMD_REG
+	ldreq	r1, =SMC_REG_ID_CP15(15, 1, 0, 3)
+	moveq	r2, r10
+	smceq	0
+#else
 	mcreq	p15, 1, r10, c15, c0, 3		@ write l2 prefetch ctrl register
+#endif
 #endif
 #ifdef CONFIG_ARM_ERRATA_763722
 	mrc	p15, 0, r10, c1, c0, 1		@ read aux control register
 	orr	r10, r10, #15 << 25		@ set [28:25] bit
+#ifdef CONFIG_ARM_TRUSTZONE
+	ldr	r0, =SMC_CMD_REG
+	ldr	r1, =SMC_REG_ID_CP15(1, 0, 0, 1)
+	mov	r2, r10
+	smc	0
+#else
 	mcr	p15, 0, r10, c1, c0, 1		@ write aux control register
+#endif
+#endif
+#ifdef CONFIG_ARM_TRUSTZONE
+	ldmia	r12, {r0-r3}
 #endif
 
 4:	mov	r10, #0

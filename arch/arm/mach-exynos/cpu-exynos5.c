@@ -28,6 +28,7 @@
 #include <plat/ace-core.h>
 
 #include <mach/regs-irq.h>
+#include <mach/smc.h>
 
 unsigned int gic_bank_offset __read_mostly;
 
@@ -112,6 +113,13 @@ static struct map_desc exynos5_iodesc[] __initdata = {
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_SS_PHY),
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
+#ifdef CONFIG_ARM_TRUSTZONE
+        }, {
+                .virtual        = (unsigned long)S5P_VA_SYSRAM_NS,
+                .pfn            = __phys_to_pfn(EXYNOS5_PA_SYSRAM_NS),
+                .length         = SZ_4K,
+                .type           = MT_DEVICE,
+#endif
 	},
 };
 
@@ -227,8 +235,12 @@ static int __init exynos5_l2_cache_init(void)
 			(2 << TAG_RAM_LATENCY_SHIFT) |
 			(2 << DATA_RAM_LATENCY_SHIFT);
 
+#ifdef CONFIG_ARM_TRUSTZONE
+		exynos_smc(SMC_CMD_REG, SMC_REG_ID_CP15(9,1,0,2), val, 0);
+#else
+		asm volatile("mcr p15, 1, %0, c9, c0, 2\n": : "r"(val));
+#endif
 		asm volatile(
-			"mcr p15, 1, %0, c9, c0, 2\n"
 			"mrc p15, 0, %0, c1, c0, 0\n"
 			"orr %0, %0, #(1 << 2)\n"	/* cache enable */
 			"mcr p15, 0, %0, c1, c0, 0\n"

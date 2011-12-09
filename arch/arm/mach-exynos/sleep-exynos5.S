@@ -46,6 +46,10 @@ ENTRY(s3c_cpu_save)
 
 	adr	r0, sleep_save_misc
 
+#ifdef CONFIG_ARM_TRUSTZONE
+	mrc	p15, 0, r2, c1, c0, 1	@ read aux control register
+	str	r2, [r0], #4
+#endif
 	mrc	p15, 1, r2, c9, c0, 2	@ read l2 control register
 	str	r2, [r0], #4
 	mrc	p15, 1, r2, c15, c0, 3	@ read l2 prefetch register
@@ -66,13 +70,29 @@ ENTRY(s3c_cpu_save)
 
 resume_with_mmu:
 
-	adr	r0, sleep_save_misc
+	adr	r4, sleep_save_misc
 
-	ldr	r1, [r0], #4
-	mcr	p15, 1, r1, c9, c0, 2	@ write l2 control register
-	ldr	r1, [r0], #4
-	mcr	p15, 1, r1, c15, c0, 3	@ write l2 prefetch register
+#ifdef CONFIG_ARM_TRUSTZONE
+        mov	r3, #0
 
+	ldr	r0, =SMC_CMD_REG
+	ldr	r1, =SMC_REG_ID_CP15(1, 0, 0, 1)	@ aux control register
+	ldr	r2, [r4], #4
+	smc	0
+	ldr	r0, =SMC_CMD_REG
+	ldr	r1, =SMC_REG_ID_CP15(9, 1, 0, 2)	@ L2 control register
+	ldr	r2, [r4], #4
+	smc	0
+	ldr	r0, =SMC_CMD_REG
+	ldr	r1, =SMC_REG_ID_CP15(15, 1, 0, 3)	@ L2 prefetch register
+	ldr	r2, [r4], #4
+	smc	0
+#else
+	ldr	r2, [r4], #4
+	mcr	p15, 1, r2, c9, c0, 2			@ L2 control register
+	ldr	r2, [r4], #4
+	mcr	p15, 1, r2, c15, c0, 3			@ L2 prefetch register
+#endif
 	mov	r0, #1
 early_wakeup:
 
@@ -89,6 +109,7 @@ early_wakeup:
 	.word	0x2bedf00d
 
 sleep_save_misc:
+	.long	0
 	.long	0
 	.long	0
 

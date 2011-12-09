@@ -25,9 +25,15 @@
 #include <mach/pm-core.h>
 #include <mach/pmu.h>
 #include <mach/regs-clock.h>
+#include <mach/smc.h>
 
+#ifdef CONFIG_ARM_TRUSTZONE
+#define REG_DIRECTGO_ADDR       (S5P_VA_SYSRAM_NS + 0x24)
+#define REG_DIRECTGO_FLAG       (S5P_VA_SYSRAM_NS + 0x20)
+#else
 #define REG_DIRECTGO_ADDR	(S5P_VA_SYSRAM + 0x24)
 #define REG_DIRECTGO_FLAG	(S5P_VA_SYSRAM + 0x20)
+#endif
 
 extern unsigned long sys_pwr_conf_addr;
 

@@ -30,8 +30,17 @@
 #include <mach/regs-pmu5.h>
 #include <mach/pm-core.h>
 #include <mach/pmu.h>
+#include <mach/smc.h>
 
 #include <mach/map-exynos5.h>
+
+#ifdef CONFIG_ARM_TRUSTZONE
+#define REG_INFORM0            (S5P_VA_SYSRAM_NS + 0x8)
+#define REG_INFORM1            (S5P_VA_SYSRAM_NS + 0xC)
+#else
+#define REG_INFORM0            (EXYNOS5_INFORM0)
+#define REG_INFORM1            (EXYNOS5_INFORM1)
+#endif
 
 static struct sleep_save exynos5_core_save[] = {
 	/* GIC side */
@@ -168,8 +177,12 @@ void exynos5_cpu_suspend(void)
 	 */
 	__raw_writel(0x10000, EXYNOS5_GPS_LPI);
 
+#ifdef CONFIG_ARM_TRUSTZONE
+        exynos_smc(SMC_CMD_SLEEP, 0, 0, 0);
+#else
 	/* issue the standby signal into the pm unit. */
 	cpu_do_idle();
+#endif
 }
 
 static void exynos5_pm_prepare(void)
@@ -185,11 +198,10 @@ static void exynos5_pm_prepare(void)
 
 	/* Set value of power down register for sleep mode */
 	exynos5_sys_powerdown_conf(SYS_SLEEP);
-
-	__raw_writel(S5P_CHECK_SLEEP, EXYNOS5_INFORM1);
+	__raw_writel(S5P_CHECK_SLEEP, REG_INFORM1);
 
 	/* ensure at least INFORM0 has the resume address */
-	__raw_writel(virt_to_phys(s3c_cpu_resume), EXYNOS5_INFORM0);
+	__raw_writel(virt_to_phys(s3c_cpu_resume), REG_INFORM0);
 }
 
 static int exynos5_pm_add(struct sys_device *sysdev)
@@ -264,7 +276,7 @@ static void exynos5_pm_resume(void)
 	s3c_pm_do_restore_core(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
 
 early_wakeup:
-	__raw_writel(0x0, EXYNOS5_INFORM1);
+	__raw_writel(0x0, REG_INFORM1);
 }
 
 static struct syscore_ops exynos5_pm_syscore_ops = {
