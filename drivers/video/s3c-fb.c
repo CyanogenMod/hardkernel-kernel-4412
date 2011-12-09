@@ -258,7 +258,6 @@ struct s3c_fb_vsync {
  * @irq_no: IRQ line number
  * @irq_flags: irq flags
  * @vsync_info: VSYNC-related information (count, queues...)
- * @fb_use: The reference count of opened windows
  */
 struct s3c_fb {
 	spinlock_t		slock;
@@ -277,8 +276,6 @@ struct s3c_fb {
 	int			 irq_no;
 	unsigned long		 irq_flags;
 	struct s3c_fb_vsync	 vsync_info;
-
-	atomic_t		fb_use;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend	early_suspend;
@@ -1436,47 +1433,8 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	return ret;
 }
 
-static int s3c_fb_open(struct fb_info *info, int user)
-{
-	struct s3c_fb_win *win = info->par;
-	struct s3c_fb *sfb = win->parent;
-	int win_no;
-
-	if (!atomic_read(&sfb->fb_use)) {
-		shadow_protect_win(win, 1);
-		/* disable all windows */
-		for (win_no = 0; win_no < S3C_FB_MAX_WIN; win_no++) {
-			void __iomem *regs = sfb->regs;
-			u32 wincon;
-			wincon = readl(regs + sfb->variant.wincon
-						+ (win_no * 4));
-			wincon &= ~WINCONx_ENWIN;
-			sfb->enabled &= ~(1 << win->index);
-			writel(wincon, regs + sfb->variant.wincon
-						+ (win_no * 4));
-		}
-		shadow_protect_win(win, 0);
-	}
-
-	atomic_inc(&sfb->fb_use);
-
-	return 0;
-}
-
-static int s3c_fb_release(struct fb_info *info, int user)
-{
-	struct s3c_fb_win *win = info->par;
-	struct s3c_fb *sfb = win->parent;
-
-	atomic_dec(&sfb->fb_use);
-
-	return 0;
-}
-
 static struct fb_ops s3c_fb_ops = {
 	.owner		= THIS_MODULE,
-	.fb_open	= s3c_fb_open,
-	.fb_release	= s3c_fb_release,
 	.fb_check_var	= s3c_fb_check_var,
 	.fb_set_par	= s3c_fb_set_par,
 	.fb_blank	= s3c_fb_blank,
