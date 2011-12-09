@@ -63,7 +63,7 @@ void update_busfreq_stat(struct busfreq_data *data, unsigned int index)
 	data->last_time = cur_time;
 }
 
-static struct opp *step_up(struct busfreq_data *data, int step)
+static struct opp __maybe_unused *step_up(struct busfreq_data *data, int step)
 {
 	int i;
 	struct opp *opp = data->curr_opp;
@@ -105,18 +105,21 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	unsigned int dmc0_load_average = 0;
 	unsigned int dmc1_load_average = 0;
 	unsigned long lockfreq;
-	unsigned long newfreq = opp_get_freq(data->curr_opp) / 1000;
+	unsigned long dmc0freq;
+	unsigned long dmc1freq;
+	unsigned long newfreq;
+	unsigned long currfreq = opp_get_freq(data->curr_opp) / 1000;
 	unsigned long maxfreq = opp_get_freq(data->max_opp) / 1000;
-	unsigned long long cpu_load;
-	unsigned long long dmc0_load;
-	unsigned long long dmc1_load;
+	unsigned long cpu_load;
+	unsigned long dmc0_load;
+	unsigned long dmc1_load;
 
 	ppmu_update(data->dev);
 
 	/* Convert from base xxx to base maxfreq */
-	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * newfreq, maxfreq);
-	dmc0_load = div64_u64(ppmu_load[PPMU_DMC0] * newfreq, maxfreq);
-	dmc1_load = div64_u64(ppmu_load[PPMU_DMC1] * newfreq, maxfreq) - cpu_load;
+	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * currfreq, maxfreq);
+	dmc0_load = div64_u64(ppmu_load[PPMU_DMC0] * currfreq, maxfreq);
+	dmc1_load = div64_u64(ppmu_load[PPMU_DMC1] * currfreq, maxfreq) - cpu_load;
 
 	data->load_history[PPMU_CPU][data->index] = cpu_load;
 	data->load_history[PPMU_DMC0][data->index] = dmc0_load;
@@ -136,14 +139,19 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	dmc0_load_average /= LOAD_HISTORY_SIZE;
 	dmc1_load_average /= LOAD_HISTORY_SIZE;
 
-	if (dmc1_load >= MAX_THRESHOLD) {
-		opp = step_up(data, 1);
-		newfreq = max(newfreq, opp_get_freq(opp));
-	} else if (cpu_load < IDLE_THRESHOLD && dmc1_load < IDLE_THRESHOLD) {
-		opp = step_down(data, 1);
-		newfreq = max(newfreq, opp_get_freq(opp));
+	if (dmc0_load >= UP_THRESHOLD || dmc1_load >= UP_THRESHOLD) {
+		newfreq = opp_get_freq(data->max_opp);
+	} else if (dmc0_load < IDLE_THRESHOLD
+			&& dmc1_load < IDLE_THRESHOLD) {
+		if (dmc0_load_average < IDLE_THRESHOLD &&  dmc1_load_average < IDLE_THRESHOLD)
+			opp = step_down(data, 1);
+		else
+			opp = data->curr_opp;
+		newfreq = opp_get_freq(opp);
 	} else {
-		newfreq = div64_u64(opp_get_freq(data->max_opp) * dmc1_load, MAX_THRESHOLD);
+		dmc0freq = div64_u64(opp_get_freq(data->max_opp) * dmc0_load, DMC0_MAX_THRESHOLD);
+		dmc1freq = div64_u64(opp_get_freq(data->max_opp) * dmc1_load, DMC1_MAX_THRESHOLD);
+		newfreq = max(dmc0freq, dmc1freq);
 	}
 
 	lockfreq = dev_max_freq(data->dev);

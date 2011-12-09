@@ -423,6 +423,9 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 		}
 	}
 
+	/* Disable MIF 267 INT 160 Level */
+	opp_disable(dev, 267160);
+
 	data->table = exynos4_busfreq_table;
 	data->table_size = LV_END;
 

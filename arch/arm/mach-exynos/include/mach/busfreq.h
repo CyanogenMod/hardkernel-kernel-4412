@@ -18,7 +18,9 @@
 #include <mach/ppmu.h>
 
 #define MAX_LOAD		100
-#define MAX_THRESHOLD		30
+#define UP_THRESHOLD		30
+#define DMC0_MAX_THRESHOLD	32
+#define DMC1_MAX_THRESHOLD	30
 #define DIVIDING_FACTOR		10000
 #define PPC_THRESHOLD		23
 #define PPMU_THRESHOLD		5
