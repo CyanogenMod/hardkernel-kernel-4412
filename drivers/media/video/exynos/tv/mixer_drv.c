@@ -317,8 +317,7 @@ static int __devinit mxr_acquire_plat_resources(struct mxr_device *mdev,
 		goto fail;
 	}
 
-#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
-	defined(CONFIG_CPU_EXYNOS4412)
+#if defined(CONFIG_ARCH_EXYNOS4)
 	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "vp");
 	if (res == NULL) {
 		mxr_err(mdev, "get memory resource failed.\n");
@@ -351,8 +350,7 @@ static int __devinit mxr_acquire_plat_resources(struct mxr_device *mdev,
 	return 0;
 
 fail_vp_regs:
-#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
-	defined(CONFIG_CPU_EXYNOS4412)
+#if defined(CONFIG_ARCH_EXYNOS4)
 	iounmap(mdev->res.vp_regs);
 
 fail_mxr_regs:
@@ -366,8 +364,7 @@ fail:
 static void mxr_release_plat_resources(struct mxr_device *mdev)
 {
 	free_irq(mdev->res.irq, mdev);
-#if defined(CONFIG_CPU_EXYNOS4210) ||  defined(CONFIG_CPU_EXYNOS4212) || \
-	defined(CONFIG_CPU_EXYNOS4412)
+#if defined(CONFIG_ARCH_EXYNOS4)
 	iounmap(mdev->res.vp_regs);
 #endif
 	iounmap(mdev->res.mxr_regs);
@@ -377,8 +374,7 @@ static void mxr_release_clocks(struct mxr_device *mdev)
 {
 	struct mxr_resources *res = &mdev->res;
 
-#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
-	defined(CONFIG_CPU_EXYNOS4412)
+#if defined(CONFIG_ARCH_EXYNOS4)
 	if (!IS_ERR_OR_NULL(res->vp))
 		clk_put(res->vp);
 #endif
@@ -399,8 +395,7 @@ static int mxr_acquire_clocks(struct mxr_device *mdev)
 	struct mxr_resources *res = &mdev->res;
 	struct device *dev = mdev->dev;
 
-#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
-	defined(CONFIG_CPU_EXYNOS4412)
+#if defined(CONFIG_ARCH_EXYNOS4)
 	res->vp = clk_get(dev, "vp");
 	if (IS_ERR_OR_NULL(res->vp)) {
 		mxr_err(mdev, "failed to get clock 'vp'\n");
@@ -536,8 +531,7 @@ static int mxr_runtime_resume(struct device *dev)
 	mutex_lock(&mdev->mutex);
 	/* turn clocks on */
 	clk_enable(res->mixer);
-#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
-	defined(CONFIG_CPU_EXYNOS4412)
+#if defined(CONFIG_ARCH_EXYNOS4)
 	clk_enable(res->vp);
 #endif
 #if defined(CONFIG_CPU_EXYNOS4210)
@@ -567,8 +561,7 @@ static int mxr_runtime_suspend(struct device *dev)
 #if defined(CONFIG_CPU_EXYNOS4210)
 	clk_disable(res->sclk_mixer);
 #endif
-#if defined(CONFIG_CPU_EXYNOS4210) || defined(CONFIG_CPU_EXYNOS4212) || \
-	defined(CONFIG_CPU_EXYNOS4412)
+#if defined(CONFIG_ARCH_EXYNOS4)
 	clk_disable(res->vp);
 #endif
 	clk_disable(res->mixer);
@@ -1055,9 +1048,14 @@ static void mxr_entities_info_print(struct mxr_device *mdev)
 	struct v4l2_subdev *sd;
 	struct media_entity *sd_me;
 	struct media_entity *vd_me;
-	int num_layers = 2;
+	int num_layers;
 	int i, j;
 
+#if defined(CONFIG_ARCH_EXYNOS4)
+	num_layers = 3;
+#else
+	num_layers = 2;
+#endif
 	mxr_dbg(mdev, "\n************ MIXER entities info ***********\n");
 
 	for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
@@ -1161,6 +1159,16 @@ static int mxr_create_links(struct mxr_device *mdev)
 	int ret, i;
 	int flags;
 
+#if defined(CONFIG_ARCH_EXYNOS4)
+	struct mxr_layer *layer;
+	struct media_entity *source, *sink;
+
+	layer = mdev->sub_mxr[MXR_SUB_MIXER0].layer[MXR_LAYER_VIDEO];
+	source = &layer->vfd.entity;
+	sink = &mdev->sub_mxr[MXR_SUB_MIXER0].sd.entity;
+	ret = media_entity_create_link(source, 0, sink, MXR_PAD_SINK_GSCALER,
+			MEDIA_LNK_FL_ENABLED);
+#endif
 	for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
 		if (mdev->sub_mxr[i].use)
 			flags = MEDIA_LNK_FL_ENABLED;
