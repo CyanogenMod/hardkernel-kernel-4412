@@ -335,6 +335,12 @@ static int __init s5p_tvout_init(void)
 	}
 #ifdef CONFIG_PM
 	tvout_resume_wq = create_freezable_workqueue("tvout resume work");
+	if (!tvout_resume_wq) {
+		printk(KERN_ERR "Platform Device Register Failed %d\n", ret);
+		platform_driver_unregister(&s5p_tvout_driver);
+		return -1;
+	}
+
 	INIT_WORK(&tvout_resume_work, (work_func_t) s5p_tvout_resume_work);
 #endif
 

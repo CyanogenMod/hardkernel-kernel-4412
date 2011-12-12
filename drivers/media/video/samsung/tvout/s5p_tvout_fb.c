@@ -713,6 +713,7 @@ int s5p_tvout_fb_register_framebuffer(struct device *dev_fb)
 		if (ret) {
 			tvout_err("fail to register framebuffer device\n");
 			ret = -1;
+			goto err;
 		}
 	}
 
