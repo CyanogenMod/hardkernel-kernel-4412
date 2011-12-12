@@ -698,7 +698,7 @@ err_alloc_fb:
 
 int s5p_tvout_fb_register_framebuffer(struct device *dev_fb)
 {
-	int ret, i = 0;
+	int ret, j, i = 0;
 
 	do {
 		ret = register_framebuffer(fb[0]);
@@ -712,7 +712,7 @@ int s5p_tvout_fb_register_framebuffer(struct device *dev_fb)
 		ret = register_framebuffer(fb[i]);
 		if (ret) {
 			tvout_err("fail to register framebuffer device\n");
-			return -1;
+			ret = -1;
 		}
 	}
 
@@ -729,4 +729,9 @@ int s5p_tvout_fb_register_framebuffer(struct device *dev_fb)
 	}
 
 	return 0;
+
+err:
+	for (j = 0; j < i; j++)
+		unregister_framebuffer(fb[j]);
+	return ret;
 }
