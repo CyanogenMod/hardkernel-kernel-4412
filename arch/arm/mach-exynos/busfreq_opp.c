@@ -202,11 +202,11 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 	if (newfreq > currfreq) {
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage);
+					voltage + 25000);
 			voltage = data->get_int_volt(index);
 		}
 		regulator_set_voltage(data->vdd_int, voltage,
-				voltage);
+				voltage + 25000);
 	}
 
 	data->target(index);
@@ -214,11 +214,11 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 	if (newfreq < currfreq) {
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage);
+					voltage + 25000);
 			voltage = data->get_int_volt(index);
 		}
 		regulator_set_voltage(data->vdd_int, voltage,
-				voltage);
+				voltage + 25000);
 	}
 	data->curr_opp = opp;
 
@@ -242,10 +242,10 @@ static int exynos4_buspm_notifier_event(struct notifier_block *this,
 		data->use = false;
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage);
+					voltage + 25000);
 			voltage = data->get_int_volt(freq);
 		}
-		regulator_set_voltage(data->vdd_int, voltage, voltage);
+		regulator_set_voltage(data->vdd_int, voltage, voltage + 25000);
 		return NOTIFY_OK;
 	case PM_POST_RESTORE:
 	case PM_POST_SUSPEND:
@@ -267,10 +267,10 @@ static int exynos4_busfreq_reboot_event(struct notifier_block *this,
 
 	if (!IS_ERR(data->vdd_mif)) {
 		regulator_set_voltage(data->vdd_mif, voltage,
-				voltage);
+				voltage + 25000);
 		voltage = data->get_int_volt(freq);
 	}
-	regulator_set_voltage(data->vdd_int, voltage, voltage);
+	regulator_set_voltage(data->vdd_int, voltage, voltage + 25000);
 	data->use = false;
 
 	printk(KERN_INFO "REBOOT Notifier for BUSFREQ\n");
@@ -299,11 +299,11 @@ static int exynos4_busfreq_request_event(struct notifier_block *this,
 	if (newfreq > curr_freq) {
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage);
+					voltage + 25000);
 			voltage = data->get_int_volt(index);
 		}
 		regulator_set_voltage(data->vdd_int, voltage,
-				voltage);
+				voltage + 25000);
 	}
 
 	data->target(index);
@@ -311,11 +311,11 @@ static int exynos4_busfreq_request_event(struct notifier_block *this,
 	if (newfreq < curr_freq) {
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage);
+					voltage + 25000);
 			voltage = data->get_int_volt(index);
 		}
 		regulator_set_voltage(data->vdd_int, voltage,
-				voltage);
+				voltage + 25000);
 	}
 	data->curr_opp = opp;
 
