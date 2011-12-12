@@ -307,39 +307,32 @@ static int __devinit s5p_cec_probe(struct platform_device *pdev)
 	if (pdata->cfg_gpio)
 		pdata->cfg_gpio(pdev);
 
-
 	/* get ioremap addr */
 	ret = s5p_cec_mem_probe(pdev);
-
 	if (ret != 0) {
 		printk(KERN_ERR  "failed to s5p_cec_mem_probe ret = %d\n", ret);
-
-		return ret;
+		goto err_mem_probe;
 	}
 
 	if (misc_register(&cec_misc_device)) {
 		printk(KERN_WARNING " Couldn't register device 10, %d.\n",
 			CEC_MINOR);
-
-		return -EBUSY;
+		ret = -EBUSY;
+		goto err_misc_register;
 	}
 
 	irq_num = platform_get_irq(pdev, 0);
-
 	if (irq_num < 0) {
 		printk(KERN_ERR  "failed to get %s irq resource\n", "cec");
 		ret = -ENOENT;
-
-		return ret;
+		goto err_get_irq;
 	}
 
 	ret = request_irq(irq_num, s5p_cec_irq_handler, IRQF_DISABLED,
 		pdev->name, &pdev->id);
-
 	if (ret != 0) {
 		printk(KERN_ERR  "failed to install %s irq (%d)\n", "cec", ret);
-
-		return ret;
+		goto err_request_irq;
 	}
 
 	init_waitqueue_head(&cec_rx_struct.waitq);
@@ -347,19 +340,24 @@ static int __devinit s5p_cec_probe(struct platform_device *pdev)
 	init_waitqueue_head(&cec_tx_struct.waitq);
 
 	buffer = kmalloc(CEC_TX_BUFF_SIZE, GFP_KERNEL);
-
 	if (!buffer) {
 		printk(KERN_ERR " kmalloc() failed!\n");
 		misc_deregister(&cec_misc_device);
-
-		return -EIO;
+		ret = -EIO;
+		goto err_kmalloc;
 	}
 
 	cec_rx_struct.buffer = buffer;
-
 	cec_rx_struct.size   = 0;
 	TV_CLK_GET_WITH_ERR_CHECK(hdmi_cec_clk, pdev, "hdmicec");
 
+err_kmalloc:
+	free_irq(irq_num, &pdev->id);
+err_request_irq:
+err_get_irq:
+	misc_deregister(&cec_misc_device);
+err_misc_register:
+err_mem_probe:
 
 	return 0;
 }
