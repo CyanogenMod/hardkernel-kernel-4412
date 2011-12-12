@@ -1581,7 +1581,8 @@ int fimc_querybuf_capture(void *fh, struct v4l2_buffer *b)
 			+ ALIGN(ctrl->cap->bufs[b->index].length[1], SZ_64K);
 		break;
 	case V4L2_PIX_FMT_YUV422P:	/* fall through */
-	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_YUV420:	/* fall through */
+	case V4L2_PIX_FMT_YVU420:
 		b->length = ctrl->cap->bufs[b->index].length[0]
 			+ ctrl->cap->bufs[b->index].length[1]
 			+ ctrl->cap->bufs[b->index].length[2];
