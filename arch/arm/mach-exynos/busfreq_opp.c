@@ -145,7 +145,7 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	dmc0_load_average /= LOAD_HISTORY_SIZE;
 	dmc1_load_average /= LOAD_HISTORY_SIZE;
 
-	if (dmc0_load >= UP_THRESHOLD || dmc1_load >= UP_THRESHOLD) {
+	if (dmc0_load >= DMC0_MAX_THRESHOLD || dmc1_load >= DMC1_MAX_THRESHOLD) {
 		newfreq = opp_get_freq(data->max_opp);
 	} else if (dmc0_load < IDLE_THRESHOLD
 			&& dmc1_load < IDLE_THRESHOLD) {
