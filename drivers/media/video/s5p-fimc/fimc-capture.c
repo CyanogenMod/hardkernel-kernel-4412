@@ -84,6 +84,11 @@ static void fimc_subdev_unregister(struct fimc_dev *fimc)
 	if (vid_cap->is.sd) {
 		v4l2_device_unregister_subdev(vid_cap->is.sd);
 		vid_cap->is.sd = NULL;
+		vid_cap->is.frame_count = 0;
+		vid_cap->is.valid = 0;
+		vid_cap->is.bad_mark = 0;
+		vid_cap->is.offset_x = 0;
+		vid_cap->is.offset_y = 0;
 	}
 	if (vid_cap->flite_sd) {
 		v4l2_device_unregister_subdev(vid_cap->flite_sd);
@@ -385,10 +390,8 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 					(unsigned int)NULL, &wb_on);
 	}
 
-	fimc->vid_cap.is.use_cam = isp_info->use_cam;
-	if (fimc->vid_cap.is.sd && isp_info->use_cam) {
+	if (fimc->vid_cap.is.sd) {
 		dbg("FIMC-IS Init sequence\n");
-		fimc->vid_cap.is.use_isp = isp_info->use_isp;
 		ret = isp_info->cam_power(1);
 		if (unlikely(ret < 0))
 			err("Fail to power on\n");
@@ -403,26 +406,7 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 			return -ENODEV;
 		}
 
-		if (strcmp(&isp_info->board_info->type[0], "S5K3H1") == 0) {
-			switch (isp_info->mux_id) {
-			case 0:
-				ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, init, 0);
-				if (ret < 0) {
-					err("FIMC-IS init failed - open sensor");
-					return -ENODEV;
-				}
-				break;
-			case 1:
-				ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, init, 100);
-				if (ret < 0) {
-					err("FIMC-IS init failed - open sensor");
-					return -ENODEV;
-				}
-				break;
-			default:
-				break;
-			}
-		} else if (strcmp(&isp_info->board_info->type[0], "S5K3H2") == 0) {
+		if (strcmp(&isp_info->board_info->type[0], "S5K3H2") == 0) {
 			switch (isp_info->mux_id) {
 			case 0:
 				ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, init, 1);
@@ -433,6 +417,44 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 				break;
 			case 1:
 				ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, init, 101);
+				if (ret < 0) {
+					err("FIMC-IS init failed - open sensor");
+					return -ENODEV;
+				}
+				break;
+			default:
+				break;
+			}
+		} else if (strcmp(&isp_info->board_info->type[0], "S5K4E5") == 0) {
+			switch (isp_info->mux_id) {
+			case 0:
+				ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, init, 3);
+				if (ret < 0) {
+					err("FIMC-IS init failed - open sensor");
+					return -ENODEV;
+				}
+				break;
+			case 1:
+				ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, init, 103);
+				if (ret < 0) {
+					err("FIMC-IS init failed - open sensor");
+					return -ENODEV;
+				}
+				break;
+			default:
+				break;
+			}
+		} else if (strcmp(&isp_info->board_info->type[0], "S5K3H7") == 0) {
+			switch (isp_info->mux_id) {
+			case 0:
+				ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, init, 4);
+				if (ret < 0) {
+					err("FIMC-IS init failed - open sensor");
+					return -ENODEV;
+				}
+				break;
+			case 1:
+				ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, init, 104);
 				if (ret < 0) {
 					err("FIMC-IS init failed - open sensor");
 					return -ENODEV;
@@ -498,10 +520,10 @@ static int fimc_stop_capture(struct fimc_dev *fimc)
 	if (cap->sd)
 		v4l2_subdev_call(cap->sd, video, s_stream, 0);
 
-	if (cap->is.sd && fimc->vid_cap.is.use_cam)
+	if (cap->is.sd)
 		v4l2_subdev_call(fimc->vid_cap.is.sd, video, s_stream, 0);
 
-	if (cap->flite_sd && fimc->vid_cap.is.use_cam)
+	if (cap->flite_sd)
 		v4l2_subdev_call(fimc->vid_cap.flite_sd, video, s_stream, 0);
 
 	if (cap->mipi_sd)
@@ -563,7 +585,7 @@ static int start_streaming(struct vb2_queue *q)
 			fimc_hwset_sysreg_camblk_fimd1_wb(fimc);
 	}
 
-	if (fimc->vid_cap.is.sd && fimc->vid_cap.is.use_cam) {
+	if (fimc->vid_cap.is.sd) {
 		struct platform_device *pdev = fimc->pdev;
 		struct clk *pxl_async = NULL;
 
@@ -579,7 +601,7 @@ static int start_streaming(struct vb2_queue *q)
 		fimc_hwset_sysreg_camblk_isp_wb(fimc);
 	}
 
-	if (fimc->vid_cap.flite_sd && fimc->vid_cap.is.use_cam) {
+	if (fimc->vid_cap.flite_sd) {
 		dbg("FIMC-Lite stream on..\n");
 		v4l2_subdev_call(fimc->vid_cap.flite_sd, video, s_stream, 1);
 	}
@@ -747,7 +769,7 @@ static void buffer_queue(struct vb2_buffer *vb)
 		spin_unlock_irqrestore(&fimc->slock, flags);
 
 		if (!test_and_set_bit(ST_CAPT_SENS_STREAM, &fimc->state)) {
-			if (fimc->vid_cap.is.sd && fimc->vid_cap.is.use_cam)
+			if (fimc->vid_cap.is.sd)
 				ret = v4l2_subdev_call(fimc->vid_cap.is.sd,
 					video, s_stream, 1);
 			else
@@ -945,7 +967,7 @@ static int sync_capture_fmt(struct fimc_ctx *ctx, struct v4l2_rect *r)
 
 	err("IS : w= %d, h= %d", fimc->vid_cap.is.mbus_fmt.width, fimc->vid_cap.is.mbus_fmt.height);
 	if (fimc->vid_cap.mipi_sd) {
-		if (fimc->vid_cap.is.use_isp)
+		if (fimc->vid_cap.is.sd)
 			ret = v4l2_subdev_call(fimc->vid_cap.mipi_sd, video, s_mbus_fmt, &fimc->vid_cap.is.mbus_fmt);
 		else
 			ret = v4l2_subdev_call(fimc->vid_cap.mipi_sd, video, s_mbus_fmt, fmt);
@@ -1036,7 +1058,7 @@ static int fimc_cap_s_fmt_mplane(struct file *file, void *priv,
 	ctx->state |= (FIMC_PARAMS | FIMC_DST_FMT);
 
 	/* for returning preview size for FIMC-Lite */
-	if (fimc->vid_cap.is.sd && fimc->vid_cap.is.use_cam) {
+	if (fimc->vid_cap.is.sd) {
 		fimc->vid_cap.is.mbus_fmt.code = V4L2_MBUS_FMT_SGRBG10_1X10;
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_WIDTH;
 		v4l2_subdev_call(fimc->vid_cap.is.sd, core, g_ctrl, &is_ctrl);
@@ -1067,33 +1089,30 @@ static int fimc_s_fmt_vid_private(struct file *file, void *fh, struct v4l2_forma
 	int ret = 0;
 
 	dbg("%s\n", __func__);
-	if (f->type == V4L2_BUF_TYPE_PRIVATE) {
-		mbus_fmt = kzalloc(sizeof(*mbus_fmt), GFP_KERNEL);
-		if (!mbus_fmt) {
-			err("%s: no memory for "
-				"mbus_fmt\n", __func__);
-			return -ENOMEM;
-		}
-		fimc->vid_cap.is.fmt.width = f->fmt.pix.width;
-		fimc->vid_cap.is.fmt.height = f->fmt.pix.height;
-		fimc->vid_cap.is.fmt.pixelformat = f->fmt.pix.pixelformat;
-		fimc->vid_cap.is.mbus_fmt.width = f->fmt.pix.width + 16;
-		fimc->vid_cap.is.mbus_fmt.height = f->fmt.pix.height + 12;
-		fimc->vid_cap.is.mbus_fmt.code = V4L2_MBUS_FMT_SGRBG10_1X10;
-		fimc->vid_cap.is.mbus_fmt.colorspace = V4L2_COLORSPACE_SRGB;
-
-		mbus_fmt->width = f->fmt.pix.width;
-		mbus_fmt->height = f->fmt.pix.height;
-		mbus_fmt->code = V4L2_MBUS_FMT_YUYV8_2X8; /*dummy*/
-		mbus_fmt->field = f->fmt.pix.field;
-		mbus_fmt->colorspace = V4L2_COLORSPACE_SRGB;
-		if (fimc->vid_cap.is.use_cam)
-			ret = v4l2_subdev_call(fimc->vid_cap.is.sd, video,
-					s_mbus_fmt, mbus_fmt);
-		kfree(mbus_fmt);
-		return ret;
+	mbus_fmt = kzalloc(sizeof(*mbus_fmt), GFP_KERNEL);
+	if (!mbus_fmt) {
+		err("%s: no memory for "
+			"mbus_fmt\n", __func__);
+		return -ENOMEM;
 	}
-	return -EINVAL;
+	fimc->vid_cap.is.fmt.width = f->fmt.pix.width;
+	fimc->vid_cap.is.fmt.height = f->fmt.pix.height;
+	fimc->vid_cap.is.fmt.pixelformat = f->fmt.pix.pixelformat;
+	fimc->vid_cap.is.mbus_fmt.width = f->fmt.pix.width + 16;
+	fimc->vid_cap.is.mbus_fmt.height = f->fmt.pix.height + 12;
+	fimc->vid_cap.is.mbus_fmt.code = V4L2_MBUS_FMT_SGRBG10_1X10;
+	fimc->vid_cap.is.mbus_fmt.colorspace = V4L2_COLORSPACE_SRGB;
+
+	mbus_fmt->width = f->fmt.pix.width;
+	mbus_fmt->height = f->fmt.pix.height;
+	mbus_fmt->code = V4L2_MBUS_FMT_YUYV8_2X8; /*dummy*/
+	mbus_fmt->field = f->fmt.pix.field;
+	mbus_fmt->colorspace = V4L2_COLORSPACE_SRGB;
+	if (fimc->vid_cap.is.sd)
+		ret = v4l2_subdev_call(fimc->vid_cap.is.sd, video,
+						s_mbus_fmt, mbus_fmt);
+	kfree(mbus_fmt);
+	return ret;
 }
 
 static int fimc_cap_enum_input(struct file *file, void *priv,
@@ -1280,8 +1299,7 @@ static int fimc_cap_s_ctrl(struct file *file, void *priv,
 	if (ret == -EINVAL && ctx->fimc_dev->vid_cap.sd)
 		ret = v4l2_subdev_call(ctx->fimc_dev->vid_cap.sd,
 				       core, s_ctrl, ctrl);
-	if (ctx->fimc_dev->vid_cap.is.sd &&
-		ctx->fimc_dev->vid_cap.is.use_cam)
+	if (ctx->fimc_dev->vid_cap.is.sd)
 		ret = v4l2_subdev_call(ctx->fimc_dev->vid_cap.is.sd,
 				       core, s_ctrl, ctrl);
 	return ret;
@@ -1486,7 +1504,12 @@ int fimc_register_capture_device(struct fimc_dev *fimc)
 	vid_cap->fb_sd = NULL;
 	vid_cap->mipi_sd = NULL;
 	vid_cap->is.sd = NULL;
-
+	vid_cap->is.frame_count = 0;
+	vid_cap->is.valid = 0;
+	vid_cap->is.bad_mark = 0;
+	vid_cap->is.offset_x = 0;
+	vid_cap->is.offset_y = 0;
+	
 	/* Default color format for 4EA image sensor */
 	vid_cap->fmt.code = V4L2_MBUS_FMT_VYUY8_2X8;
 

@@ -343,8 +343,6 @@ struct fimc_is {
 	u32 bad_mark;
 	u32 offset_x;
 	u32 offset_y;
-	bool use_isp;
-	bool use_cam;
 };
 
 /**

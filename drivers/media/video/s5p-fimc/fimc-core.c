@@ -335,7 +335,7 @@ int fimc_set_scaler_info(struct fimc_ctx *ctx)
 		return -EINVAL;
 	}
 
-	if (ctx->fimc_dev->vid_cap.is.use_isp) {
+	if (ctx->fimc_dev->vid_cap.is.sd) {
 		sx = ctx->fimc_dev->vid_cap.is.fmt.width;
 		sy = ctx->fimc_dev->vid_cap.is.fmt.height;
 	} else {
@@ -468,7 +468,7 @@ void fimc_capture_irq_handler(struct fimc_dev *fimc)
 		    fimc_hw_get_frame_index(fimc), cap->buf_index);
 
 		/* frame management for FIMC-IS */
-		if (fimc->vid_cap.is.sd && fimc->vid_cap.is.use_cam) {
+		if (fimc->vid_cap.is.sd) {
 			is_ctrl.id = V4L2_CID_IS_GET_FRAME_NUMBER;
 			v4l2_subdev_call(fimc->vid_cap.is.sd, core, g_ctrl, &is_ctrl);
 			is_fn = is_ctrl.value;

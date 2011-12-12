@@ -732,31 +732,31 @@ int fimc_hw_set_camera_type(struct fimc_dev *fimc,
 		S5P_CIGCTRL_CAM_JPEG);
 
 	if (cam->bus_type == FIMC_MIPI_CSI2) {
-		if (!vid_cap->is.use_isp) {
+		if (!vid_cap->is.sd) {
 			cfg |= S5P_CIGCTRL_SELCAM_MIPI;
 
-		if (cam->mux_id == 0)
-			cfg |= S5P_CIGCTRL_SELCAM_MIPI_A;
+			if (cam->mux_id == 0)
+				cfg |= S5P_CIGCTRL_SELCAM_MIPI_A;
 
-		/* TODO: add remaining supported formats. */
-		switch (vid_cap->fmt.code) {
-		case V4L2_MBUS_FMT_VYUY8_2X8:
-		case V4L2_MBUS_FMT_UYVY8_2X8:
-		case V4L2_MBUS_FMT_YUYV8_2X8:
-			tmp = S5P_CSIIMGFMT_YCBCR422_8BIT;
-			break;
-		case V4L2_MBUS_FMT_JPEG_1X8:
-			tmp = S5P_CSIIMGFMT_USER(1);
-			cfg |= S5P_CIGCTRL_CAM_JPEG;
-			break;
-		default:
-			v4l2_err(&fimc->vid_cap.v4l2_dev,
+			/* TODO: add remaining supported formats. */
+			switch (vid_cap->fmt.code) {
+			case V4L2_MBUS_FMT_VYUY8_2X8:
+			case V4L2_MBUS_FMT_UYVY8_2X8:
+			case V4L2_MBUS_FMT_YUYV8_2X8:
+				tmp = S5P_CSIIMGFMT_YCBCR422_8BIT;
+				break;
+			case V4L2_MBUS_FMT_JPEG_1X8:
+				tmp = S5P_CSIIMGFMT_USER(1);
+				cfg |= S5P_CIGCTRL_CAM_JPEG;
+				break;
+			default:
+				v4l2_err(&fimc->vid_cap.v4l2_dev,
 				 "Not supported camera pixel format: %d",
-			    vid_cap->fmt.code);
-		}
-		tmp |= (cam->csi_data_align == 32) << 8;
+			    	vid_cap->fmt.code);
+			}
+			tmp |= (cam->csi_data_align == 32) << 8;
 
-		writel(tmp, fimc->regs + S5P_CSIIMGFMT);
+			writel(tmp, fimc->regs + S5P_CSIIMGFMT);
 		} else {
 			cfg |= S5P_CIGCTRL_CAMIF_SELWB;
 			cfg |= S5P_CIGCTRL_SELWRITEBACK_B;
