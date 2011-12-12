@@ -59,8 +59,8 @@ static struct clk  *mali_clock = 0;
 
 static unsigned int GPU_MHZ	= 1000000;
 
-int mali_gpu_clk = 350;
-int mali_gpu_vol = 1000000;
+int mali_gpu_clk = 266;
+int mali_gpu_vol = 900000;
 
 #if MALI_DVFS_ENABLED
 #define MALI_DVFS_DEFAULT_STEP 0
@@ -111,6 +111,7 @@ int mali_regulator_get_usecount(void)
 
 void mali_regulator_disable(void)
 {
+	bPoweroff = 1;
 	if( IS_ERR_OR_NULL(g3d_regulator) )
 	{
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_disable : g3d_regulator is null\n"));
@@ -122,6 +123,7 @@ void mali_regulator_disable(void)
 
 void mali_regulator_enable(void)
 {
+	bPoweroff = 0;
 	if( IS_ERR_OR_NULL(g3d_regulator) )
 	{
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_enable : g3d_regulator is null\n"));
@@ -336,7 +338,6 @@ static mali_bool init_mali_clock(void)
 	mali_bool ret = MALI_TRUE;
 
 	gpu_power_state = 0;
-	bPoweroff = 1;
 
 	if (mali_clock != 0)
 		return ret; // already initialized
@@ -501,7 +502,7 @@ _mali_osk_errcode_t mali_platform_init()
 	MALI_CHECK(init_mali_clock(), _MALI_OSK_ERR_FAULT);
 #if MALI_DVFS_ENABLED
 	if (!clk_register_map) clk_register_map = _mali_osk_mem_mapioregion( CLK_DIV_STAT_G3D, 0x20, CLK_DESC );
-	if(!init_mali_dvfs_staus(MALI_DVFS_DEFAULT_STEP))
+	if(!init_mali_dvfs_status(MALI_DVFS_DEFAULT_STEP))
 		MALI_DEBUG_PRINT(1, ("mali_platform_init failed\n"));
 #endif
 
@@ -513,7 +514,7 @@ _mali_osk_errcode_t mali_platform_deinit()
 	deinit_mali_clock();
 
 #if MALI_DVFS_ENABLED
-	deinit_mali_dvfs_staus();
+	deinit_mali_dvfs_status();
 	if (clk_register_map )
 	{
 		_mali_osk_mem_unmapioregion(CLK_DIV_STAT_G3D, 0x20, clk_register_map);
@@ -544,10 +545,6 @@ _mali_osk_errcode_t mali_platform_powerdown(u32 cores)
 		MALI_PRINT(("mali_platform_powerdown gpu_power_state == 0 and cores %x \n", cores));
 	}
 
-	bPoweroff=1;
-
-
-
 	MALI_SUCCESS;
 }
 
@@ -570,9 +567,6 @@ _mali_osk_errcode_t mali_platform_powerup(u32 cores)
 	{
 		gpu_power_state = gpu_power_state | cores;
 	}
-
-	bPoweroff=0;
-
 
 	MALI_SUCCESS;
 }

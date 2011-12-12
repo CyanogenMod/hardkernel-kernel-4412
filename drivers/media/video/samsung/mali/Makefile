@@ -46,10 +46,8 @@ USING_MALI_RUN_TIME_PM=1
 endif
 
 ifeq ($(CONFIG_VIDEO_MALI400MP_DVFS),y)
-ifeq ($(CONFIG_CPU_EXYNOS4210),y)
 USING_GPU_UTILIZATION=1
 USING_MALI_DVFS_ENABLED=1
-endif
 endif
 
 ifeq ($(CONFIG_VIDEO_MALI400MP_DEBUG),y)
@@ -85,7 +83,7 @@ ifeq ($(USING_OS_MEMORY),1)
         USING_MMU = 1
 endif
 # Check if a Mali Core sub module should be enabled, true or false returned
-submodule_enabled = $(shell gcc $(DEFINES) -E $(MALI_FILE_PREFIX)/arch/config.h | grep type | grep -c $(2))
+#submodule_enabled = $(shell gcc $(DEFINES) -E $(MALI_FILE_PREFIX)/arch/config.h | grep type | grep -c $(2))
 
 # Inside the kernel build system
 
@@ -144,12 +142,7 @@ EXTRA_CFLAGS += $(INCLUDES)\
 		$(DEFINES) 
 
 
-# The GPL product will only include the license/gpl directory
-ifeq ($(wildcard $(MALI_FILE_PREFIX)/linux/license/gpl/*),)
-EXTRA_CFLAGS += -I$(MALI_FILE_PREFIX)/linux/license/proprietary
-else
 EXTRA_CFLAGS += -I$(MALI_FILE_PREFIX)/linux/license/gpl
-endif
 EXTRA_CFLAGS += -I$(MALI_FILE_PREFIX)/common/pmm
 
 # Source files which always are included in a build
@@ -232,54 +225,33 @@ mali-y += \
 	common/mali_kernel_utilization.o
 endif
 
-ifneq ($(call submodule_enabled, $M, MALI400PP),0)
-	# Mali-400 PP in use
-	EXTRA_CFLAGS += -DUSING_MALI400
-	mali-y += common/mali_kernel_MALI200.o
-endif
+# Mali-400 PP in use
+EXTRA_CFLAGS += -DUSING_MALI400
+mali-y += common/mali_kernel_MALI200.o
 
-ifneq ($(call submodule_enabled, $M, MALI400GP),0)
-	# Mali-400 GP in use
-	mali-y += common/mali_kernel_GP2.o
-endif
+# Mali-400 GP in use
+mali-y += common/mali_kernel_GP2.o
 
-ifneq ($(call submodule_enabled, $M, MALI200),0)
-        # Mali200 in use
-        EXTRA_CFLAGS += -DUSING_MALI200
-	mali-y += common/mali_kernel_MALI200.o
-endif
 
-ifneq ($(call submodule_enabled, $M, MALIGP2),0)
-	# MaliGP2 in use
-	mali-y += common/mali_kernel_GP2.o
-endif
+# Mali MMU in use
+mali-y += \
+	common/mali_kernel_mem_mmu.o \
+	common/mali_kernel_memory_engine.o \
+	common/mali_block_allocator.o \
+	common/mali_kernel_mem_os.o
 
-ifneq ($(call submodule_enabled, $M, MMU),0)
-	# Mali MMU in use
-	mali-y += \
-		common/mali_kernel_mem_mmu.o \
-		common/mali_kernel_memory_engine.o \
-		common/mali_block_allocator.o \
-		common/mali_kernel_mem_os.o
-else
-	# No Mali MMU in use
-	mali-y += common/mali_kernel_mem_buddy.o
-endif
-
-ifneq ($(call submodule_enabled, $M, MALI400L2),0)
-        # Mali Level2 cache in use
-        EXTRA_CFLAGS += -DUSING_MALI400_L2_CACHE
-        mali-y += common/mali_kernel_l2_cache.o
-endif
+# Mali Level2 cache in use
+EXTRA_CFLAGS += -DUSING_MALI400_L2_CACHE
+mali-y += common/mali_kernel_l2_cache.o
 
 ifeq ($(USING_MALI_DVFS_ENABLED),1)
-ifeq ($(CONFIG_CPU_EXYNOS4212),y)
-mali-y += \
-	platform/pegasus-m400/mali_platform_dvfs.o
-else
+ifeq ($(CONFIG_CPU_EXYNOS4210),y)
 mali-y += \
 	platform/orion-m400/mali_platform_dvfs.o
-endif #($(CONFIG_CPU_EXYNOS4212),y)
+else
+mali-y += \
+	platform/pegasus-m400/mali_platform_dvfs.o
+endif #($(CONFIG_CPU_EXYNOS4210),y)
 endif #($(USING_MALI_DVFS_ENABLED),1)
 
 ifeq ($(PANIC_ON_WATCHDOG_TIMEOUT),1)

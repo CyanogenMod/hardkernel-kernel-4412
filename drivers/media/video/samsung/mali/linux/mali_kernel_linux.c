@@ -83,6 +83,50 @@ MODULE_PARM_DESC(mali_boot_profiling, "Start profiling as a part of Mali driver 
 extern int mali_dvfs_control;
 module_param(mali_dvfs_control, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
 MODULE_PARM_DESC(mali_dvfs_control, "Mali Current DVFS");
+#if defined(CONFIG_CPU_EXYNOS4210)
+#else
+extern int step1_clk;
+module_param(step1_clk, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step1_clk, "Mali Current step1_clk");
+
+extern int step0_clk;
+module_param(step0_clk, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step0_clk, "Mali Current step0_clk");
+
+extern int step2_clk;
+module_param(step2_clk, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step2_clk, "Mali Current step2_clk");
+
+extern int step0_up;
+module_param(step0_up, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step0_up, "Mali Current step0_up");
+
+extern int step1_up;
+module_param(step1_up, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step1_up, "Mali Current step1_up");
+
+extern int step1_down;
+module_param(step1_down, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step1_down, "Mali Current step1_down");
+
+extern int step2_down;
+module_param(step2_down, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step2_down, "Mali Current step2_down");
+
+#ifdef DEBUG
+extern int step0_vol;
+module_param(step0_vol, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step0_vol, "Mali Current step0_vol");
+
+extern int step1_vol;
+module_param(step1_vol, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step1_vol, "Mali Current step1_vol");
+
+extern int step2_vol;
+module_param(step2_vol, int, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP| S_IROTH); /* rw-rw-r-- */
+MODULE_PARM_DESC(step2_vol, "Mali Current step2_vol");
+#endif
+#endif
 #endif
 
 extern int mali_gpu_clk;

@@ -311,9 +311,6 @@ static int mali_pm_suspend(struct device *dev)
 	}
 	err = mali_device_suspend(MALI_PMM_EVENT_OS_POWER_DOWN, &pm_thread);
 	mali_device_state = _MALI_DEVICE_SUSPEND;
-#ifdef CONFIG_REGULATOR
-	mali_regulator_disable();
-#endif
 	_mali_osk_lock_signal(lock, _MALI_OSK_LOCKMODE_RW);
 	return err;
 }
@@ -376,6 +373,7 @@ int mali_device_resume(unsigned int event_id, struct task_struct **pwr_mgmt_thre
 
 /** This function is called when mali GPU device is to be resumed
  */
+extern int mali_gpu_clk;
 
 static int mali_pm_resume(struct device *dev)
 {
@@ -384,10 +382,11 @@ static int mali_pm_resume(struct device *dev)
 
 #ifdef CONFIG_REGULATOR
 	mali_regulator_enable();
-	if (soc_is_exynos4210())
-		mali_clk_set_rate(260, 1000000);
-	else
-		mali_clk_set_rate(350, 1000000);
+#ifdef CONFIG_VIDEO_MALI400MP_DVFS
+	mali_default_step_set(0, 0);
+#else
+	mali_clk_set_rate(mali_gpu_clk, 1000000);
+#endif
 #endif
 
 	if (mali_device_state == _MALI_DEVICE_RESUME)

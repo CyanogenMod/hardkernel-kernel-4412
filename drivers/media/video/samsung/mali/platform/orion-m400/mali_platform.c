@@ -56,7 +56,7 @@ static struct clk               *mpll_clock = 0;
 static struct clk               *mali_parent_clock = 0;
 static struct clk               *mali_clock = 0;
 
-int mali_gpu_clk 	=		260;
+int mali_gpu_clk 	=		160;
 static unsigned int GPU_MHZ	=		1000000;
 #ifdef CONFIG_S5PV310_ASV
 int mali_gpu_vol     =               1100000;        /* 1.10V for ASV */
@@ -113,6 +113,7 @@ int mali_regulator_get_usecount(void)
 
 void mali_regulator_disable(void)
 {
+	bPoweroff = 1;
 	if( IS_ERR_OR_NULL(g3d_regulator) )
 	{
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_disable : g3d_regulator is null\n"));
@@ -124,6 +125,7 @@ void mali_regulator_disable(void)
 
 void mali_regulator_enable(void)
 {
+	bPoweroff = 0;
 	if( IS_ERR_OR_NULL(g3d_regulator) )
 	{
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_enable : g3d_regulator is null\n"));
@@ -293,7 +295,7 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 	unsigned long rate = 0;
 	mali_bool bis_vpll = MALI_FALSE;
 
-#ifndef CONFIG_VPLL_USE_FOR_TVENC
+#ifdef CONFIG_VPLL_USE_FOR_TVENC
 	bis_vpll = MALI_TRUE;
 #endif
 
@@ -338,7 +340,6 @@ static mali_bool init_mali_clock(void)
 	mali_bool ret = MALI_TRUE;
 	
 	gpu_power_state = 0;
-	bPoweroff = 1;
 
 	if (mali_clock != 0)
 		return ret; // already initialized
@@ -504,7 +505,7 @@ _mali_osk_errcode_t mali_platform_init()
 	MALI_CHECK(init_mali_clock(), _MALI_OSK_ERR_FAULT);
 #if MALI_DVFS_ENABLED
 	if (!clk_register_map) clk_register_map = _mali_osk_mem_mapioregion( CLK_DIV_STAT_G3D, 0x20, CLK_DESC );
-	if(!init_mali_dvfs_staus(MALI_DVFS_DEFAULT_STEP))
+	if(!init_mali_dvfs_status(MALI_DVFS_DEFAULT_STEP))
 		MALI_DEBUG_PRINT(1, ("mali_platform_init failed\n"));        
 #endif
 
@@ -516,9 +517,9 @@ _mali_osk_errcode_t mali_platform_deinit()
 	deinit_mali_clock();
 
 #if MALI_DVFS_ENABLED
-	deinit_mali_dvfs_staus();
+	deinit_mali_dvfs_status();
 	if (clk_register_map )
-	{	
+	{
 		_mali_osk_mem_unmapioregion(CLK_DIV_STAT_G3D, 0x20, clk_register_map);
 		clk_register_map=0;
 	}
@@ -581,7 +582,7 @@ _mali_osk_errcode_t mali_platform_powerup(u32 cores)
 }
 
 void mali_gpu_utilization_handler(u32 utilization)
-{	
+{
 	if (bPoweroff==0) 
 	{
 #if MALI_DVFS_ENABLED

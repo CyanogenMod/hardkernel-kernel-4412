@@ -25,6 +25,7 @@
 #include <linux/debugfs.h>
 #include <asm/uaccess.h>
 #include <linux/slab.h>
+#include "mali_ukk.h"
 #include "mali_kernel_subsystem.h"
 #include "mali_kernel_sysfs.h"
 #include "mali_kernel_profiling.h"
@@ -289,6 +290,21 @@ static const struct file_operations profiling_proc_default_enable_fops = {
 };
 #endif
 
+static ssize_t memory_used_read(struct file *filp, char __user *ubuf, size_t cnt, loff_t *ppos)
+{
+	char buf[64];
+	size_t r;
+	u32 mem = _mali_ukk_report_memory_usage();
+
+	r = snprintf(buf, 64, "%u\n", mem);
+	return simple_read_from_buffer(ubuf, cnt, ppos, buf, r);
+}
+
+static const struct file_operations memory_usage_fops = {
+	.owner = THIS_MODULE,
+	.read = memory_used_read,
+};
+
 int mali_sysfs_register(struct mali_dev *device, dev_t dev, const char *mali_dev_name)
 {
 	int err = 0;
@@ -339,6 +355,8 @@ int mali_sysfs_register(struct mali_dev *device, dev_t dev, const char *mali_dev
 #if MALI_STATE_TRACKING
 			debugfs_create_file("state_dump", 0400, mali_debugfs_dir, NULL, &mali_seq_internal_state_fops);
 #endif
+
+			debugfs_create_file("memory_usage", 0400, mali_debugfs_dir, NULL, &memory_usage_fops);
 		}
 	}
 
