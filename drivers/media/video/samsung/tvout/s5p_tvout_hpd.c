@@ -400,7 +400,6 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 		return -EBUSY;
 	}
 
-
 	init_waitqueue_head(&hpd_struct.waitq);
 
 	spin_lock_init(&hpd_struct.lock);
@@ -438,6 +437,7 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 
 	if (ret) {
 		printk(KERN_ERR  "failed to install hpd irq\n");
+		misc_deregister(&hpd_misc_device);
 		return -EIO;
 	}
 
