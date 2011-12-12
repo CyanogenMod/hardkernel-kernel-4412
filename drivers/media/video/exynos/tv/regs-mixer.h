@@ -180,6 +180,16 @@
 #define MXR_LAYER_CFG_GRP0_VAL(x)	MXR_MASK_VAL(x, 7, 4)
 #define MXR_LAYER_CFG_VP_VAL(x)		MXR_MASK_VAL(x, 3, 0)
 
+/* bit for MXR_VIDEO_CFG */
+#define MXR_VIDEO_CFG_BLEND_EN		(1 << 16)
+#define MXR_VIDEO_CFG_ALPHA(x)		MXR_MASK_VAL(x, 7, 0)
+
+/* bit for MXR_GRAPHIC0_CFG */
+#define MXR_GRP_CFG_BLANK_KEY_EN	(1 << 21)
+#define MXR_GRP_CFG_LAYER_BLEND_EN	(1 << 17)
+#define MXR_GRP_CFG_PIXEL_BLEND_EN	(1 << 16)
+#define MXR_GRP_CFG_ALPHA(x)		MXR_MASK_VAL(x, 7, 0)
+
 /* bit for MXR_VIDEO_LT */
 #define MXR_VIDEO_LT_LEFT_VAL(x)	MXR_MASK_VAL(x, 31, 16)
 #define MXR_VIDEO_LT_TOP_VAL(x)		MXR_MASK_VAL(x, 15, 0)

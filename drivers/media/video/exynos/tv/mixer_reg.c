@@ -364,6 +364,123 @@ void mxr_reg_vp_buffer(struct mxr_device *mdev,
 #endif
 }
 
+void mxr_reg_set_layer_blend(struct mxr_device *mdev, int sub_mxr, int num,
+		int en)
+{
+	u32 val = en ? ~0 : 0;
+
+	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+
+	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_VIDEO)
+		mxr_write_mask(mdev, MXR_VIDEO_CFG, val,
+				MXR_VIDEO_CFG_BLEND_EN);
+	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0), val,
+				MXR_GRP_CFG_LAYER_BLEND_EN);
+	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP1)
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(1), val,
+				MXR_GRP_CFG_LAYER_BLEND_EN);
+#if defined(CONFIG_ARCH_EXYNOS5)
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_VIDEO)
+		mxr_write_mask(mdev, MXR1_VIDEO_CFG, val,
+				MXR_VIDEO_CFG_BLEND_EN);
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP0)
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(0), val,
+				MXR_GRP_CFG_LAYER_BLEND_EN);
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP1)
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), val,
+				MXR_GRP_CFG_LAYER_BLEND_EN);
+#endif
+}
+
+void mxr_reg_layer_alpha(struct mxr_device *mdev, int sub_mxr, int num, u32 a)
+{
+	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+
+	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_VIDEO)
+		mxr_write_mask(mdev, MXR_VIDEO_CFG, MXR_VIDEO_CFG_ALPHA(a),
+				0xff);
+	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0), MXR_GRP_CFG_ALPHA(a),
+				0xff);
+	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP1)
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(1), MXR_GRP_CFG_ALPHA(a),
+				0xff);
+#if defined(CONFIG_ARCH_EXYNOS5)
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_VIDEO)
+		mxr_write_mask(mdev, MXR1_VIDEO_CFG, MXR_VIDEO_CFG_ALPHA(a),
+				0xff);
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP0)
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(0), MXR_GRP_CFG_ALPHA(a),
+				0xff);
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP1)
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), MXR_GRP_CFG_ALPHA(a),
+				0xff);
+#endif
+
+}
+
+void mxr_reg_set_pixel_blend(struct mxr_device *mdev, int sub_mxr, int num,
+		int en)
+{
+	u32 val = en ? ~0 : 0;
+
+	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+
+	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0), val,
+				MXR_GRP_CFG_PIXEL_BLEND_EN);
+	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP1)
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(1), val,
+				MXR_GRP_CFG_PIXEL_BLEND_EN);
+#if defined(CONFIG_ARCH_EXYNOS5)
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP0)
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(0), val,
+				MXR_GRP_CFG_PIXEL_BLEND_EN);
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP1)
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), val,
+				MXR_GRP_CFG_PIXEL_BLEND_EN);
+#endif
+}
+
+void mxr_reg_set_colorkey(struct mxr_device *mdev, int sub_mxr, int num, int en)
+{
+	u32 val = en ? ~0 : 0;
+
+	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+
+	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0), val,
+				MXR_GRP_CFG_BLANK_KEY_EN);
+	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP1)
+		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(1), val,
+				MXR_GRP_CFG_BLANK_KEY_EN);
+#if defined(CONFIG_ARCH_EXYNOS5)
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP0)
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(0), val,
+				MXR_GRP_CFG_BLANK_KEY_EN);
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP1)
+		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), val,
+				MXR_GRP_CFG_BLANK_KEY_EN);
+#endif
+}
+
+void mxr_reg_colorkey_val(struct mxr_device *mdev, int sub_mxr, int num, u32 v)
+{
+	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+
+	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
+		mxr_write(mdev, MXR_GRAPHIC_BLANK(0), v);
+	else if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP1)
+		mxr_write(mdev, MXR_GRAPHIC_BLANK(1), v);
+#if defined(CONFIG_ARCH_EXYNOS5)
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP0)
+		mxr_write(mdev, MXR1_GRAPHIC_BLANK(0), v);
+	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP1)
+		mxr_write(mdev, MXR1_GRAPHIC_BLANK(1), v);
+#endif
+}
+
 static void mxr_irq_layer_handle(struct mxr_layer *layer)
 {
 	struct list_head *head = &layer->enq_list;

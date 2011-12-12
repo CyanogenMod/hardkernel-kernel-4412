@@ -73,6 +73,7 @@ struct mxr_layer *mxr_video_layer_create(struct mxr_device *mdev, int cur_mxr,
 
 	layer->mdev = mdev;
 	layer->idx = idx;
+	layer->type = MXR_LAYER_TYPE_VIDEO;
 	layer->ops = ops;
 
 	layer->cur_mxr = cur_mxr;

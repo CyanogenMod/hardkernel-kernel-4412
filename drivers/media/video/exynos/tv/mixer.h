@@ -170,12 +170,19 @@ struct mxr_layer_ops {
 	void (*fix_geometry)(struct mxr_layer *);
 };
 
+enum mxr_layer_type {
+	MXR_LAYER_TYPE_VIDEO = 0,
+	MXR_LAYER_TYPE_GRP = 1,
+};
+
 /** layer instance, a single window and content displayed on output */
 struct mxr_layer {
 	/** parent mixer device */
 	struct mxr_device *mdev;
 	/** layer index (unique identifier) */
 	int idx;
+	/** layer type */
+	enum mxr_layer_type type;
 	/** minor number of mixer layer as video device */
 	int minor;
 	/** callbacks for layer methods */
@@ -462,6 +469,13 @@ void mxr_get_mbus_fmt(struct mxr_device *mdev,
 
 void mxr_vsync_set_update(struct mxr_device *mdev, int en);
 void mxr_reg_reset(struct mxr_device *mdev);
+void mxr_reg_set_layer_blend(struct mxr_device *mdev, int sub_mxr, int num,
+		int en);
+void mxr_reg_layer_alpha(struct mxr_device *mdev, int sub_mxr, int num, u32 a);
+void mxr_reg_set_pixel_blend(struct mxr_device *mdev, int sub_mxr, int num,
+		int en);
+void mxr_reg_set_colorkey(struct mxr_device *mdev, int sub_mxr, int num, int en);
+void mxr_reg_colorkey_val(struct mxr_device *mdev, int sub_mxr, int num, u32 v);
 irqreturn_t mxr_irq_handler(int irq, void *dev_data);
 void mxr_reg_s_output(struct mxr_device *mdev, int cookie);
 void mxr_reg_streamon(struct mxr_device *mdev);

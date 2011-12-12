@@ -168,6 +168,7 @@ struct mxr_layer *mxr_graph_layer_create(struct mxr_device *mdev, int cur_mxr,
 	layer->fmt_array = mxr_graph_format;
 	layer->fmt_array_size = ARRAY_SIZE(mxr_graph_format);
 	layer->minor = nr;
+	layer->type = MXR_LAYER_TYPE_GRP;
 
 	ret = mxr_base_layer_register(layer);
 	if (ret)
