@@ -25,6 +25,7 @@
 #include <plat/cpu.h>
 
 #include <asm/mach/irq.h>
+#include <mach/regs-gpio.h>
 
 #define GPIO_BASE(chip)		(((unsigned long)(chip)->base) & 0xFFFFF000u)
 
@@ -50,6 +51,7 @@ static int s5p_gpioint_set_type(struct irq_data *d, unsigned int type)
 	struct irq_chip_type *ct = gc->chip_types;
 	unsigned int shift = (d->irq - gc->irq_base) << 2;
 	struct irq_desc *desc = irq_to_desc(d->irq);
+	struct s3c_gpio_chip *chip = gc->private;
 
 	switch (type) {
 	case IRQ_TYPE_EDGE_RISING:
@@ -76,6 +78,11 @@ static int s5p_gpioint_set_type(struct irq_data *d, unsigned int type)
 	gc->type_cache &= ~(0x7 << shift);
 	gc->type_cache |= type << shift;
 	writel(gc->type_cache, gc->reg_base + ct->regs.type);
+
+	pr_info("%s irq:%d is at %s(%d)\n", __func__, d->irq, chip->chip.label,
+		(d->irq - chip->irq_base));
+
+	s3c_gpio_cfgpin(chip->chip.base + (d->irq - chip->irq_base), EINT_MODE);
 
 	if (type & IRQ_TYPE_EDGE_BOTH)
 		desc->handle_irq = handle_edge_irq;
@@ -167,6 +174,9 @@ static __init int s5p_gpioint_add(struct s3c_gpio_chip *chip)
 				    handle_level_irq);
 	if (!gc)
 		return -ENOMEM;
+
+	gc->private = chip;
+
 	ct = gc->chip_types;
 	ct->chip.irq_ack = irq_gc_ack_set_bit;
 	ct->chip.irq_mask = irq_gc_mask_set_bit;
