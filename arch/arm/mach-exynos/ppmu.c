@@ -77,7 +77,7 @@ unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu)
 			continue;
 
 		if (i == 3)
-			total += (((u64)__raw_readl(ppmu_base + PMCNT_OFFSET(i)) << 32) |
+			total += (((u64)__raw_readl(ppmu_base + PMCNT_OFFSET(i)) << 8) |
 				__raw_readl(ppmu_base + PMCNT_OFFSET(i + 1)));
 		else
 			total += __raw_readl(ppmu_base + PMCNT_OFFSET(i));
