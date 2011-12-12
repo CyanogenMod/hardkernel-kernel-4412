@@ -75,9 +75,6 @@ struct platform_device exynos5_device_pd[] = {
 				.enable		= exynos_pd_enable,
 				.disable	= exynos_pd_disable,
 				.base		= EXYNOS5_ISP_CONFIGURATION,
-				.data		= &(struct exynos_pd_data) {
-					.clk_base	= EXYNOS5_CLKGATE_IP_ISP0,
-				},
 			},
 		},
 	},
