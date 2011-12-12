@@ -1944,22 +1944,46 @@ static int s3c_fb_sd_pad_get_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh 
 
 static int s3c_fb_sd_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	int ret;
+	u32 data = 0;
 	struct s3c_fb_win *win = v4l2_subdev_to_s3c_fb_win(sd);
 	struct s3c_fb *sfb = win->parent;
 
-	if (enable) {
+	if (enable) { /* Enable  1 channel  to a local path for a window in fimd1 */
+		/* The following sequence should be observed to enable a local path */
+		/* Enlocal On --> Enlocal Channel On --> Window On*/
+		shadow_protect_win(win, 1);
+		data = readl(sfb->regs + WINCON(win->index));
+		data &= ~WINCONx_ENLOCAL_MASK;
+		data |= (WINCONx_ENLOCAL | WINCONx_INRGB_YCBCR);
+		writel(data, sfb->regs + WINCON(win->index));
+
+		data = readl(sfb->regs + SHADOWCON);
+		data &=  ~(SHADOWCON_CHx_ENABLE(win->index) | SHADOWCON_CHx_LOCAL_ENABLE(win->index));
+		data |= (SHADOWCON_CHx_ENABLE(win->index) | SHADOWCON_CHx_LOCAL_ENABLE(win->index));
+		writel(data, sfb->regs + SHADOWCON);
+		shadow_protect_win(win, 0);
+
 		s3c_fb_blank(FB_BLANK_UNBLANK, win->fbinfo);
-	} else {
+
+	} else { /* Disable  1 channel  to a local path for a window in fimd1 */
+		/* The following sequence should be observed to disable a local path */
+		/* Enlocal channel Off --> Window Off --> Enlocal Off */
+		shadow_protect_win(win, 1);
+		data = readl(sfb->regs + SHADOWCON);
+		data &=  ~(SHADOWCON_CHx_ENABLE(win->index) | SHADOWCON_CHx_LOCAL_ENABLE(win->index));
+		writel(data, sfb->regs + SHADOWCON);
+		shadow_protect_win(win, 0);
+
 		s3c_fb_blank(FB_BLANK_POWERDOWN, win->fbinfo);
-		ret = s3c_fb_wait_for_vsync(sfb, 0);
-		if (ret) {
-			dev_err(sfb->dev, "wait timeout(local path) : %s\n", __func__);
-			return ret;
-		}
+
+		shadow_protect_win(win, 1);
+		data = readl(sfb->regs + WINCON(win->index));
+		data &= ~WINCONx_ENLOCAL;
+		writel(data, sfb->regs + WINCON(win->index));
+		shadow_protect_win(win, 0);
 	}
 
-	dev_dbg(sfb->dev, "Get the window via local path started : %d\n",
+	dev_dbg(sfb->dev, "Get the window via local path started/stopped : %d\n",
 			enable);
 	return 0;
 }
@@ -1988,18 +2012,6 @@ static void s3c_fb_mc_local_path_setup(struct s3c_fb_win *win)
 	if (win->local) {
 		/* Enable  the channel 1 to a local path for the window1
 		   in fimd1 */
-		shadow_protect_win(win, 1);
-
-		data = readl(sfb->regs + SHADOWCON);
-		data |= SHADOWCON_CHx_LOCAL_ENABLE(win->index);
-		writel(data, sfb->regs + SHADOWCON);
-
-		data = readl(sfb->regs + WINCON(win->index));
-		data &= ~WINCONx_ENLOCAL_MASK;
-		data |= (WINCONx_ENLOCAL | WINCONx_INRGB_YCBCR);
-		writel(data, sfb->regs + WINCON(win->index));
-
-		shadow_protect_win(win, 0);
 
 		/* MIXER0_VALID[7] & MIXER1_VALID[4] : should be 0
 		   (FIMD1 Data Valid) */
