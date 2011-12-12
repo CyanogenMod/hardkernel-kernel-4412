@@ -92,7 +92,7 @@ int s3cfb_register_framebuffer(struct s3cfb_global *fbdev)
 		if (ret) {
 			dev_err(fbdev->dev, "failed to register	\
 				framebuffer device\n");
-			return -EINVAL;
+			goto err;
 		}
 #ifndef CONFIG_FRAMEBUFFER_CONSOLE
 		if (j == pdata->default_win) {
@@ -104,6 +104,13 @@ int s3cfb_register_framebuffer(struct s3cfb_global *fbdev)
 #endif
 	}
 	return 0;
+
+err:
+	while (--i >= pdata->default_win) {
+		j = i % pdata->nr_wins;
+		unregister_framebuffer(fbdev->fb[j]);
+	}
+	return -EINVAL;
 }
 
 static int s3cfb_sysfs_show_win_power(struct device *dev,
