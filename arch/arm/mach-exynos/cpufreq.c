@@ -226,7 +226,7 @@ int exynos_cpufreq_lock(unsigned int nId,
 		/* get the voltage value */
 		arm_volt = volt_table[cpufreq_level];
 		regulator_set_voltage(arm_regulator, arm_volt,
-				arm_volt);
+				arm_volt + 25000);
 
 		exynos_info->set_freq(old_idx, cpufreq_level);
 		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
