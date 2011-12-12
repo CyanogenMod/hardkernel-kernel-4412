@@ -1441,6 +1441,17 @@ static void __init smdk5250_ss_udc_init(void)
 }
 #endif
 
+#ifdef CONFIG_USB_XHCI_EXYNOS
+static struct exynos_xhci_plat smdk5250_xhci_pdata;
+
+static void __init smdk5250_xhci_init(void)
+{
+	struct exynos_xhci_plat *pdata = &smdk5250_xhci_pdata;
+
+	exynos_xhci_set_platdata(pdata);
+}
+#endif
+
 #ifdef CONFIG_BATTERY_SAMSUNG
 static struct platform_device samsung_device_battery = {
 	.name	= "samsung-fake-battery",
@@ -1678,6 +1689,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	&exynos_device_ss_udc,
+#endif
+#ifdef CONFIG_USB_XHCI_EXYNOS
+	&exynos_device_xhci,
 #endif
 #ifdef CONFIG_BATTERY_SAMSUNG
 	&samsung_device_battery,
@@ -2190,6 +2204,9 @@ static void __init smdk5250_machine_init(void)
 #endif
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
 	smdk5250_ss_udc_init();
+#endif
+#ifdef CONFIG_USB_XHCI_EXYNOS
+	smdk5250_xhci_init();
 #endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 #if defined(CONFIG_EXYNOS_DEV_PD)
