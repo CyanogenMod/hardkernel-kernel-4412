@@ -22,7 +22,20 @@
 #include <plat/udc-ss.h>
 #include <plat/usb-phy.h>
 
-static struct resource exynos_ss_drd_resources[] = {
+static struct resource exynos_ss_udc_resources[] = {
+	[0] = {
+		.start	= EXYNOS5_PA_SS_DRD,
+		.end	= EXYNOS5_PA_SS_DRD + 0x100000 - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IRQ_USB3_DRD,
+		.end	= IRQ_USB3_DRD,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct resource exynos_xhci_resources[] = {
 	[0] = {
 		.start	= EXYNOS5_PA_SS_DRD,
 		.end	= EXYNOS5_PA_SS_DRD + 0x100000 - 1,
@@ -36,14 +49,26 @@ static struct resource exynos_ss_drd_resources[] = {
 };
 
 static u64 exynos_ss_udc_dmamask = DMA_BIT_MASK(32);
+static u64 exynos_xhci_dmamask = DMA_BIT_MASK(32);
 
 struct platform_device exynos_device_ss_udc = {
 	.name		= "exynos-ss-udc",
 	.id		= -1,
-	.num_resources	= ARRAY_SIZE(exynos_ss_drd_resources),
-	.resource	= exynos_ss_drd_resources,
+	.num_resources	= ARRAY_SIZE(exynos_ss_udc_resources),
+	.resource	= exynos_ss_udc_resources,
 	.dev		= {
 		.dma_mask		= &exynos_ss_udc_dmamask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	},
+};
+
+struct platform_device exynos_device_xhci = {
+	.name		= "exynos-xhci",
+	.id		= -1,
+	.num_resources	= ARRAY_SIZE(exynos_xhci_resources),
+	.resource	= exynos_xhci_resources,
+	.dev		= {
+		.dma_mask		= &exynos_xhci_dmamask,
 		.coherent_dma_mask	= DMA_BIT_MASK(32),
 	},
 };
@@ -54,6 +79,19 @@ void __init exynos_ss_udc_set_platdata(struct exynos_ss_udc_plat *pd)
 
 	npd = s3c_set_platdata(pd, sizeof(struct exynos_ss_udc_plat),
 			&exynos_device_ss_udc);
+
+	if (!npd->phy_init)
+		npd->phy_init = s5p_usb_phy_init;
+	if (!npd->phy_exit)
+		npd->phy_exit = s5p_usb_phy_exit;
+}
+
+void __init exynos_xhci_set_platdata(struct exynos_xhci_plat *pd)
+{
+	struct exynos_xhci_plat *npd;
+
+	npd = s3c_set_platdata(pd, sizeof(struct exynos_xhci_plat),
+			&exynos_device_xhci);
 
 	if (!npd->phy_init)
 		npd->phy_init = s5p_usb_phy_init;

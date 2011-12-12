@@ -18,4 +18,10 @@ struct exynos_ss_udc_plat {
 	int (*phy_exit)(struct platform_device *pdev, int type);
 };
 
+struct exynos_xhci_plat {
+	int (*phy_init)(struct platform_device *pdev, int type);
+	int (*phy_exit)(struct platform_device *pdev, int type);
+};
+
 extern void exynos_ss_udc_set_platdata(struct exynos_ss_udc_plat *pd);
+extern void exynos_xhci_set_platdata(struct exynos_xhci_plat *pd);
