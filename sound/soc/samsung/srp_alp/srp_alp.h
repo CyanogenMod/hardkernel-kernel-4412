@@ -68,10 +68,16 @@ struct srp_buf_info {
 	int		num;
 };
 
+struct srp_dec_info {
+	unsigned int sample_rate;
+	unsigned int channels;
+};
+
 struct srp_info {
 	struct srp_buf_info	ibuf_info;
 	struct srp_buf_info	obuf_info;
 	struct srp_buf_info	pcm_info;
+	struct srp_dec_info	dec_info;
 
 	spinlock_t	lock;
 	int		state;
@@ -109,14 +115,12 @@ struct srp_info {
 	unsigned long frame_size;
 	unsigned long frame_count;
 	unsigned long frame_count_base;
-	unsigned long channel;			/* Mono = 1, Stereo = 2 */
-	unsigned long sample_rate;		/* Sampling Rate 8000 ~ 48000 */
-	unsigned long bit_rate;
 	unsigned long set_bitstream_size;
 
 	unsigned int first_decoding;
 	unsigned int decoding_started;
-	unsigned int wakeup_waitqueue;
+	unsigned int wakeup_read_wq;
+	unsigned int wakeup_decinfo_wq;
 	unsigned int is_opened;			/* Running status of SRP */
 	unsigned int is_running;		/* Open status of SRP */
 	unsigned int is_pending;		/* Pending status of SRP */

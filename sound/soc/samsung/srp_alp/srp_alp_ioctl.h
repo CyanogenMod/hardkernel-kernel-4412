@@ -11,5 +11,6 @@
 #define SRP_IBUF_FLUSH                          (0x20010)
 #define SRP_OBUF_FLUSH                          (0x20011)
 #define SRP_STOP_EOS_STATE			(0x30007)
+#define SRP_GET_DEC_INFO			(0x30008)
 
 #endif /* __SRP_ALP_IOCTL_H */

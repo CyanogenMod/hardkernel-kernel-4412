@@ -48,7 +48,8 @@
 
 static struct srp_info srp;
 static DEFINE_MUTEX(srp_mutex);
-static DECLARE_WAIT_QUEUE_HEAD(read_waitqueue);
+static DECLARE_WAIT_QUEUE_HEAD(read_wq);
+static DECLARE_WAIT_QUEUE_HEAD(decinfo_wq);
 
 int srp_get_status(int cmd)
 {
@@ -72,23 +73,27 @@ static void srp_pending_ctrl(int ctrl)
 
 static void srp_check_stream_info(void)
 {
-	if (!srp.channel) {
-		srp.channel = readl(srp.commbox
+	if (!srp.dec_info.channels) {
+		srp.dec_info.channels = readl(srp.commbox
 				+ SRP_ARM_INTERRUPT_CODE);
-		srp.channel >>= SRP_ARM_INTR_CODE_CHINF_SHIFT;
-		srp.channel &= SRP_ARM_INTR_CODE_CHINF_MASK;
-		if (srp.channel)
-			srp_debug("Channel = %lu\n", srp.channel);
+		srp.dec_info.channels >>= SRP_ARM_INTR_CODE_CHINF_SHIFT;
+		srp.dec_info.channels &= SRP_ARM_INTR_CODE_CHINF_MASK;
 	}
 
-	if (!srp.sample_rate) {
-		srp.sample_rate = readl(srp.commbox
+	if (!srp.dec_info.sample_rate) {
+		srp.dec_info.sample_rate = readl(srp.commbox
 				+ SRP_ARM_INTERRUPT_CODE);
-		srp.sample_rate >>= SRP_ARM_INTR_CODE_SRINF_SHIFT;
-		srp.sample_rate &= SRP_ARM_INTR_CODE_SRINF_MASK;
-		if (srp.sample_rate)
-			srp_debug("Sample Rate = %lu\n", srp.sample_rate);
+		srp.dec_info.sample_rate >>= SRP_ARM_INTR_CODE_SRINF_SHIFT;
+		srp.dec_info.sample_rate &= SRP_ARM_INTR_CODE_SRINF_MASK;
+	}
 
+	if (srp.dec_info.sample_rate && srp.dec_info.channels) {
+		if (!srp.wakeup_decinfo_wq) {
+			srp.wakeup_decinfo_wq = 1;
+			srp_info("Sample Rate[%d], Channels[%d]\n",
+						srp.dec_info.sample_rate,
+						srp.dec_info.channels);
+		}
 	}
 
 	if (!srp.frame_size) {
@@ -114,6 +119,12 @@ static void srp_check_stream_info(void)
 		if (srp.frame_size)
 			srp_debug("Frame size = %lu\n", srp.frame_size);
 	}
+
+	if (srp.wakeup_decinfo_wq) {
+		if (waitqueue_active(&decinfo_wq))
+			wake_up_interruptible(&decinfo_wq);
+
+	}
 }
 
 static void srp_flush_ibuf(void)
@@ -134,9 +145,9 @@ static void srp_reset(void)
 
 	srp_debug("Reset\n");
 
-	srp.wakeup_waitqueue = 1;
-	if (waitqueue_active(&read_waitqueue))
-		wake_up_interruptible(&read_waitqueue);
+	srp.wakeup_read_wq = 1;
+	if (waitqueue_active(&read_wq))
+		wake_up_interruptible(&read_wq);
 
 	srp_pending_ctrl(STALL);
 
@@ -150,7 +161,8 @@ static void srp_reset(void)
 	/* Store Total Count */
 	srp.decoding_started = 0;
 	srp.first_decoding = 1;
-	srp.wakeup_waitqueue = 0;
+	srp.wakeup_read_wq = 0;
+	srp.wakeup_decinfo_wq = 0;
 
 	/* Next IBUF is IBUF0 */
 	srp.ibuf_next = 0;
@@ -323,8 +335,8 @@ static ssize_t srp_read(struct file *file, char *buffer,
 			srp_debug("Already filled OBUF[%d] INT\n", srp.obuf_ready);
 		} else {
 			srp_debug("Enter to sleep until to ready OBUF[%d]\n", srp.obuf_ready);
-			ret = wait_event_interruptible_timeout(read_waitqueue,
-							srp.wakeup_waitqueue,
+			ret = wait_event_interruptible_timeout(read_wq,
+							srp.wakeup_read_wq,
 							HZ / 10);
 			if (!ret)
 				srp_err("Couldn't start decoding!!!\n");
@@ -345,7 +357,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	srp_debug("Return OBUF Num[%d] fill size %d\n",
 			srp.obuf_ready, srp.pcm_info.size);
 
-	srp.wakeup_waitqueue = 0;
+	srp.wakeup_read_wq = 0;
 
 	/* For End-Of-Stream */
 	if (srp.wait_for_eos && srp.play_done) {
@@ -441,7 +453,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct srp_buf_info *argp = (struct srp_buf_info *)arg;
 	unsigned long val = 0;
 	long ret = 0;
-	
+
 	mutex_lock(&srp_mutex);
 
 	switch (cmd) {
@@ -530,6 +542,26 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		val = copy_to_user((unsigned long *)arg,
 			&val, sizeof(unsigned long));
 		break;
+
+	case SRP_GET_DEC_INFO:
+		if (!srp.decoding_started) {
+			srp.dec_info.sample_rate = 0;
+			srp.dec_info.channels = 0;
+		} else {
+			ret = wait_event_interruptible_timeout(decinfo_wq,
+							srp.wakeup_decinfo_wq,
+							HZ / 2);
+			if (!ret) {
+				srp_err("Couldn't Get Decoding info!!!\n");
+				ret = SRP_ERROR_GETINFO_FAIL;
+			} else {
+				val = copy_to_user((struct srp_dec_info *)arg,
+						&srp.dec_info,
+						sizeof(struct srp_dec_info));
+				srp.wakeup_decinfo_wq = 0;
+			}
+		}
+		break;
 	}
 
 	mutex_unlock(&srp_mutex);
@@ -557,9 +589,9 @@ static int srp_open(struct inode *inode, struct file *file)
 	else
 		srp.block_mode = 0;
 
-	srp.channel = 0;
+	srp.dec_info.channels = 0;
+	srp.dec_info.sample_rate = 0;
 	srp.frame_size = 0;
-	srp.sample_rate = 0;
 	srp_set_default_fw();
 
 	return 0;
@@ -634,8 +666,6 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			break;
 
 		case SRP_INTR_CODE_IBUF_REQUEST:
-			srp_check_stream_info();
-
 			if ((irq_code & SRP_INTR_CODE_IBUF_MASK)
 				== SRP_INTR_CODE_IBUF0_EMPTY) {
 				srp_debug("IBUF0 empty\n");
@@ -647,9 +677,8 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 
 			srp_fill_ibuf();
 			if (srp.decoding_started) {
-				if (srp.wait_for_eos & !srp.wbuf_pos) {
+				if (srp.wait_for_eos & !srp.wbuf_pos)
 					srp_set_stream_size();
-				}
 			}
 			break;
 
@@ -666,13 +695,13 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			if (srp.first_decoding) {
 				if (srp.obuf_fill_done[0] && srp.obuf_fill_done[1]) {
 					srp.first_decoding = 0;
-					srp.wakeup_waitqueue = 1;
+					srp.wakeup_read_wq = 1;
 				} else {
 					srp_debug("Decoding Start for filling both OBUF\n");
 					pending_off = 1;
 				}
 			} else if (srp.obuf_fill_done[srp.obuf_ready]) {
-				srp.wakeup_waitqueue = 1;
+				srp.wakeup_read_wq = 1;
 			}
 			break;
 
@@ -687,7 +716,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	if (irq_code & SRP_INTR_CODE_PLAYDONE) {
 		srp_info("Play Done interrupt!!\n");
 		srp.play_done = 1;
-		srp.wakeup_waitqueue = 1;
+		srp.wakeup_read_wq = 1;
 	}
 
 	if (irq_code & SRP_INTR_CODE_UART_OUTPUT) {
@@ -701,9 +730,9 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	if (pending_off)
 		srp_pending_ctrl(RUN);
 
-	if (srp.wakeup_waitqueue) {
-		if (waitqueue_active(&read_waitqueue)) {
-			wake_up_interruptible(&read_waitqueue);
+	if (srp.wakeup_read_wq) {
+		if (waitqueue_active(&read_wq)) {
+			wake_up_interruptible(&read_wq);
 			srp_debug("Wake up by Obuf INT\n");
 		}
 	}
