@@ -699,23 +699,10 @@ static int gsc_out_buffer_prepare(struct vb2_buffer *vb)
 	struct gsc_ctx *ctx = vq->drv_priv;
 	struct gsc_dev *gsc = ctx->gsc_dev;
 	struct gsc_frame *frame = &ctx->s_frame;
-	int i;
 
 	if (!ctx->s_frame.fmt || !is_output(vq->type)) {
 		gsc_err("Invalid argument");
 		return -EINVAL;
-	}
-
-	for (i = 0; i < ctx->s_frame.fmt->num_planes; i++) {
-		unsigned long size = get_plane_size(&ctx->s_frame, i);
-
-		if (vb2_plane_size(vb, i) < size) {
-			gsc_err("User buffer too small(%ld < %ld)\n",
-				 vb2_plane_size(vb, i), size);
-			return -EINVAL;
-		}
-
-		vb2_set_plane_payload(vb, i, size);
 	}
 
 	if (ctx->s_frame.cacheable)
