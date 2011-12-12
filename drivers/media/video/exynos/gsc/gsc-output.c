@@ -647,7 +647,7 @@ static int gsc_out_stop_streaming(struct vb2_queue *q)
 	struct gsc_dev *gsc = ctx->gsc_dev;
 	int ret = 0;
 
-	ret = gsc_pipeline_s_stream(gsc, 0);
+	ret = gsc_pipeline_s_stream(gsc, false);
 	if (ret)
 		return ret;
 
@@ -748,28 +748,30 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 	struct vb2_queue *q = vb->vb2_queue;
 	struct gsc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 	struct gsc_dev *gsc = ctx->gsc_dev;
-	int ret, queued_cnt;
+	int ret;
 
-	queued_cnt = atomic_read(&q->queued_count);
-	if (gsc->out.req_cnt >= queued_cnt) {
+	if (gsc->out.req_cnt >= atomic_read(&q->queued_count)) {
 		ret = gsc_out_set_in_addr(gsc, ctx, buf, vb->v4l2_buf.index);
-		if (ret)
+		if (ret) {
 			gsc_err("Failed to prepare G-Scaler address");
+			return;
+		}
 		gsc_hw_set_input_buf_masking(gsc, vb->v4l2_buf.index, false);
 	} else {
 		gsc_err("All requested buffers have been queued already");
+		return;
 	}
 
 	if (gsc->out.s_stream == false) {
-		if (ctx->out_path == GSC_FIMD) {
-			gsc_pipeline_s_stream(gsc, 1);
-		}
+		gsc_disp_fifo_sw_reset(gsc);
+		gsc_pixelasync_sw_reset(gsc);
 		gsc_hw_enable_control(gsc, true);
 		ret = gsc_wait_operating(gsc);
-		if (ret < 0)
+		if (ret < 0) {
+			gsc_err("wait operation timeout");
 			return;
-		if (ctx->out_path != GSC_FIMD)
-			gsc_pipeline_s_stream(gsc, 1);
+		}
+		gsc_pipeline_s_stream(gsc, true);
 	}
 	gsc->out.s_stream = true;
 }

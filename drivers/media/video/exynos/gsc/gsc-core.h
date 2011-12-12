@@ -589,7 +589,7 @@ int gsc_prepare_addr(struct gsc_ctx *ctx, struct vb2_buffer *vb,
 		     struct gsc_frame *frame, struct gsc_addr *addr);
 int gsc_out_link_validate(const struct media_pad *source,
 			  const struct media_pad *sink);
-int gsc_pipeline_s_stream(struct gsc_dev *gsc, int on);
+int gsc_pipeline_s_stream(struct gsc_dev *gsc, bool on);
 
 static inline void gsc_ctx_state_lock_set(u32 state, struct gsc_ctx *ctx)
 {

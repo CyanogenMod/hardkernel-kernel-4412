@@ -518,7 +518,7 @@ int gsc_check_scaler_ratio(struct gsc_variant *var, int sw, int sh, int dw, int 
 	return 0;
 }
 
-int gsc_pipeline_s_stream(struct gsc_dev *gsc, int on)
+int gsc_pipeline_s_stream(struct gsc_dev *gsc, bool on)
 {
 	struct gsc_pipeline *p = &gsc->pipeline;
 	int ret = 0;
