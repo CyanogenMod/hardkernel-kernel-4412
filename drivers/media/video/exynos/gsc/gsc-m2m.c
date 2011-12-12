@@ -64,7 +64,7 @@ static int gsc_m2m_stop_streaming(struct vb2_queue *q)
 	return 0;
 }
 
-static void gsc_job_abort(void *priv)
+static void gsc_m2m_job_abort(void *priv)
 {
 	struct gsc_ctx *ctx = priv;
 	struct gsc_dev *gsc = ctx->gsc_dev;
@@ -185,7 +185,7 @@ int gsc_fill_addr(struct gsc_ctx *ctx)
 }
 
 
-static void gsc_dma_run(void *priv)
+static void gsc_m2m_device_run(void *priv)
 {
 	struct gsc_ctx *ctx = priv;
 	struct gsc_dev *gsc;
@@ -715,9 +715,9 @@ static const struct v4l2_file_operations gsc_m2m_fops = {
 	.mmap		= gsc_m2m_mmap,
 };
 
-static struct v4l2_m2m_ops m2m_ops = {
-	.device_run	= gsc_dma_run,
-	.job_abort	= gsc_job_abort,
+static struct v4l2_m2m_ops gsc_m2m_ops = {
+	.device_run	= gsc_m2m_device_run,
+	.job_abort	= gsc_m2m_job_abort,
 };
 
 int gsc_register_m2m_device(struct gsc_dev *gsc)
@@ -746,7 +746,7 @@ int gsc_register_m2m_device(struct gsc_dev *gsc)
 	video_set_drvdata(vfd, gsc);
 
 	gsc->m2m.vfd = vfd;
-	gsc->m2m.m2m_dev = v4l2_m2m_init(&m2m_ops);
+	gsc->m2m.m2m_dev = v4l2_m2m_init(&gsc_m2m_ops);
 	if (IS_ERR(gsc->m2m.m2m_dev)) {
 		dev_err(&pdev->dev, "failed to initialize v4l2-m2m device\n");
 		ret = PTR_ERR(gsc->m2m.m2m_dev);
