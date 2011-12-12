@@ -2783,10 +2783,16 @@ int s5p_hdmi_ctrl_constructor(struct platform_device *pdev)
 	s5p_hdmi_ctrl_phy_power(0);
 #endif
 
-	s5p_hdcp_init();
+	ret = s5p_hdcp_init();
+
+	if (ret) {
+		printk(KERN_ERR "HDCP init failed..\n");
+		goto err_hdcp_init;
+	}
 
 	return 0;
 
+err_hdcp_init:
 err_on_irq:
 err_on_clk:
 	for (j = 0; j < k; j++)

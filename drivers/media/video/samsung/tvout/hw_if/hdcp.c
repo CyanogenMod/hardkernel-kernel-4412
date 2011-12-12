@@ -1046,6 +1046,8 @@ irqreturn_t s5p_hdcp_irq_handler(int irq, void *dev_id)
 int s5p_hdcp_init(void)
 {
 	hdcp_wq = create_freezable_workqueue("hdcp work");
+	if (!hdcp_wq)
+		return -1;
 	INIT_WORK(&hdcp_info.work, (work_func_t) s5p_hdcp_work);
 
 	spin_lock_init(&hdcp_info.reset_lock);
