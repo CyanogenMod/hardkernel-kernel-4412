@@ -784,7 +784,7 @@ static struct vb2_ops gsc_output_qops = {
 	.stop_streaming		= gsc_out_stop_streaming,
 };
 
-static int gsc_link_setup(struct media_entity *entity,
+static int gsc_out_link_setup(struct media_entity *entity,
 			   const struct media_pad *local,
 			   const struct media_pad *remote, u32 flags)
 {
@@ -822,8 +822,8 @@ static int gsc_link_setup(struct media_entity *entity,
 	return 0;
 }
 
-static const struct media_entity_operations gsc_media_ops = {
-	.link_setup = gsc_link_setup,
+static const struct media_entity_operations gsc_out_media_ops = {
+	.link_setup = gsc_out_link_setup,
 };
 
 int gsc_output_ctrls_create(struct gsc_dev *gsc)
@@ -958,7 +958,7 @@ static int gsc_create_subdev(struct gsc_dev *gsc)
 		goto error;
 	}
 
-	sd->entity.ops = &gsc_media_ops;
+	sd->entity.ops = &gsc_out_media_ops;
 	ret = v4l2_device_register_subdev(&gsc->mdev[MDEV_OUTPUT]->v4l2_dev, sd);
 	if (ret) {
 		media_entity_cleanup(&sd->entity);
