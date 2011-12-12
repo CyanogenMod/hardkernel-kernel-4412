@@ -270,7 +270,6 @@ static int flite_s_power(struct v4l2_subdev *sd, int on)
 {
 	struct flite_dev *flite = to_flite_dev(sd);
 	int ret = 0;
-	unsigned long flags;
 
 	if (on) {
 		ret = pm_runtime_get_sync(&flite->pdev->dev);
