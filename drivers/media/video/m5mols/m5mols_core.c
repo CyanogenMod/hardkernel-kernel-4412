@@ -84,7 +84,7 @@ static struct regulator_bulk_data supplies[] = {
 };
 
 /* M5MOLS default format (codes, sizes, preset values) */
-static const struct v4l2_mbus_framefmt default_fmt[M5MOLS_RES_MAX] = {
+static struct v4l2_mbus_framefmt default_fmt[M5MOLS_RES_MAX] = {
 	[M5MOLS_RES_MON] = {
 		.width		= DEFAULT_SENSOR_WIDTH,
 		.height		= DEFAULT_SENSOR_HEIGHT,
@@ -1369,7 +1369,7 @@ static int m5mols_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 	if (!sfmt)
 		return 0;
 
-	*sfmt		= default_fmt[type];
+	sfmt		= &default_fmt[type];
 	sfmt->width	= format->width;
 	sfmt->height	= format->height;
 
