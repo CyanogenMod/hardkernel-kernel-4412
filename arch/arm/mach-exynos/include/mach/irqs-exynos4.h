@@ -166,6 +166,8 @@
 #define IRQ_SYSMMU_MFC_L_0	COMBINER_IRQ(5, 6)
 #define IRQ_SYSMMU_PCIE_0	COMBINER_IRQ(5, 7)
 
+#define IRQ_EXYNOS4412_ADC	COMBINER_IRQ(10, 3)
+
 #define IRQ_FIMD0_FIFO		COMBINER_IRQ(11, 0)
 #define IRQ_FIMD0_VSYNC		COMBINER_IRQ(11, 1)
 #define IRQ_FIMD0_SYSTEM	COMBINER_IRQ(11, 2)
@@ -193,12 +195,16 @@
 
 #define IRQ_TVOUT_HPD		(S5P_IRQ_EINT_BASE + 31)
 
+#if defined(CONFIG_CPU_EXYNOS4210)
 #if defined(CONFIG_S3C_DEV_ADC)
 #define IRQ_ADC		IRQ_ADC0
 #define IRQ_TC		IRQ_PEN0
 #else
 #define IRQ_ADC		IRQ_ADC1
 #define IRQ_TC		IRQ_PEN1
+#endif
+#elif defined(CONFIG_CPU_EXYNOS4412)
+#define IRQ_ADC		IRQ_EXYNOS4412_ADC
 #endif
 
 /* optional GPIO interrupts */

@@ -259,7 +259,10 @@ void __init exynos4_map_io(void)
 #ifdef CONFIG_FB_S3C
 	s5p_fb_setname(0, "exynos4-fb");	/* FIMD0 */
 #endif
-	s3c_adc_setname("s5pv210-adc");
+	if (soc_is_exynos4210())
+		s3c_adc_setname("s5pv210-adc");
+	else
+		s3c_adc_setname("exynos4412-adc");
 
 	s5p_hdmi_setname("exynos4-hdmi");
 
