@@ -203,10 +203,12 @@ enum blit_op {
 	BLIT_OP_CONJ_DST_ATOP, BLIT_OP_CONJ_ATOP_REV = BLIT_OP_CONJ_DST_ATOP,
 	BLIT_OP_CONJ_XOR,
 
-	/* Add new operation type here */
-
 	/* user select coefficient manually */
 	BLIT_OP_USER_COEFF,
+
+	BLIT_OP_USER_SRC_GA,
+
+	/* Add new operation type here */
 
 	/* end of blit operation */
 	BLIT_OP_END,

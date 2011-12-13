@@ -597,55 +597,52 @@ void fimg2d4x_enable_alpha(struct fimg2d_control *info, unsigned char g_alpha)
 
 /**
  * Four channels of the image are computed with:
- *	R = [ coeff(S)*S  + coeff(D)*D ]
+ *	R = [ coeff(S)*Sc  + coeff(D)*Dc ]
  *	where
- *	R is result color or alpha
- *	S is source color or alpha
- *	D is destination color or alpha
+ *	Rc is result color or alpha
+ *	Sc is source color or alpha
+ *	Dc is destination color or alpha
  *
- * Caution: supposed that Sc and Dc are alpha-premultiplied value
+ * Caution: supposed that Sc and Dc are perpixel-alpha-premultiplied value
  *
- *
- * MODE:             coeff(S)               coeff(D)
+ * MODE:             Formula
  * ----------------------------------------------------------------------------
  * FILL:
- * CLEAR:	     0,                     0
- * SRC:		     1,                     0
- * DST:		     0,                     1
- * SRC_OVER:         1,                     1-Sa
- * DST_OVER:         1-Da                   1
- * SRC_IN:	     Da                     0
- * DST_IN:           0                      Sa
- * SRC_OUT:          1-Da                   0
- * DST_OUT:          0                      1-Sa
- * SRC_ATOP:         Da                     1-Sa
- * DST_ATOP:         1-Da                   Sa
- * XOR:              1-Da                   1-Sa
- * ADD:              1                      1
- * MULTIPLY:         Dc                     0
- * SCREEN:           1                      1-Sc
- * DARKEN:
- *    [ Ra = Sa + (1-Sa)*Da, Rc = (Da*Sc<Sa*Dc)? Sc+(1-Sa)*Dc : (1-Da)*Sc+Dc ]
- * LIGHTEN:
- *    [ Ra = Sa + (1-Sa)*Da, Rc = (Da*Sc>Sa*Dc)? Sc+(1-Sa)*Dc : (1-Da)*Sc+Dc ]
- * DISJ_SRC_OVER:    1                      min(1,(1-Sa)/Da)
- * DISJ_DST_OVER:    min(1,(1-Da)/Sa)       1
- * DISJ_SRC_IN:      max(1-(1-Da)/Sa,0)     0
- * DISJ_DST_IN:      0                      max(1-(1-Sa)/Da,0)
- * DISJ_SRC_OUT:     min(1,(1-Da)/Sa)       0
- * DISJ_DST_OUT:     0                      min(1,(1-Sa)/Da)
- * DISJ_SRC_ATOP:    max(1-(1-Da)/Sa,0)     min(1,(1-Sa)/Da)
- * DISJ_DST_ATOP:    min(1,(1-Da)/Sa)       max(1-(1-Sa)/Da,0)
- * DISJ_XOR:         min(1,(1-Da)/Sa)       min(1,(1-Sa)/Da)
- * CONJ_SRC_OVER:    1                      max(1-Sa/Da,0)
- * CONJ_DST_OVER:    max(1-Da/Sa,0)         1
- * CONJ_SRC_IN:      min(1,Da/Sa)           0
- * CONJ_DST_IN:      0                      min(1,Sa/Da)
- * CONJ_SRC_OUT:     max(1-Da/Sa,0)         0
- * CONJ_DST_OUT:     0                      max(1-Sa/Da,0)
- * CONJ_SRC_ATOP:    min(1,Da/Sa)           max(1-Sa/Da,0)
- * CONJ_DST_ATOP:    max(1-Da/Sa,0)         min(1,Sa/Da)
- * CONJ_XOR:         max(1-Da/Sa,0)         max(1-Sa/Da,0)
+ * CLEAR:	     R = 0
+ * SRC:		     R = Sc
+ * DST:		     R = Dc
+ * SRC_OVER:         R = Sc + (1-Sa)*Dc
+ * DST_OVER:         R = (1-Da)*Sc + Dc
+ * SRC_IN:	     R = Da*Sc
+ * DST_IN:           R = Sa*Dc
+ * SRC_OUT:          R = (1-Da)*Sc
+ * DST_OUT:          R = (1-Sa)*Dc
+ * SRC_ATOP:         R = Da*Sc + (1-Sa)*Dc
+ * DST_ATOP:         R = (1-Da)*Sc + Sa*Dc
+ * XOR:              R = (1-Da)*Sc + (1-Sa)*Dc
+ * ADD:              R = Sc + Dc
+ * MULTIPLY:         R = Sc*Dc
+ * SCREEN:           R = Sc + (1-Sc)*Dc
+ * DARKEN:           R = (Da*Sc<Sa*Dc)? Sc+(1-Sa)*Dc : (1-Da)*Sc+Dc
+ * LIGHTEN:          R = (Da*Sc>Sa*Dc)? Sc+(1-Sa)*Dc : (1-Da)*Sc+Dc
+ * DISJ_SRC_OVER:    R = Sc + (min(1,(1-Sa)/Da))*Dc
+ * DISJ_DST_OVER:    R = (min(1,(1-Da)/Sa))*Sc + Dc
+ * DISJ_SRC_IN:      R = (max(1-(1-Da)/Sa,0))*Sc
+ * DISJ_DST_IN:      R = (max(1-(1-Sa)/Da,0))*Dc
+ * DISJ_SRC_OUT:     R = (min(1,(1-Da)/Sa))*Sc
+ * DISJ_DST_OUT:     R = (min(1,(1-Sa)/Da))*Dc
+ * DISJ_SRC_ATOP:    R = (max(1-(1-Da)/Sa,0))*Sc + (min(1,(1-Sa)/Da))*Dc
+ * DISJ_DST_ATOP:    R = (min(1,(1-Da)/Sa))*Sc + (max(1-(1-Sa)/Da,0))*Dc
+ * DISJ_XOR:         R = (min(1,(1-Da)/Sa))*Sc + (min(1,(1-Sa)/Da))*Dc
+ * CONJ_SRC_OVER:    R = Sc + (max(1-Sa/Da,0))*Dc
+ * CONJ_DST_OVER:    R = (max(1-Da/Sa,0))*Sc + Dc
+ * CONJ_SRC_IN:      R = (min(1,Da/Sa))*Sc
+ * CONJ_DST_IN:      R = (min(1,Sa/Da))*Dc
+ * CONJ_SRC_OUT:     R = (max(1-Da/Sa,0)*Sc
+ * CONJ_DST_OUT:     R = (max(1-Sa/Da,0))*Dc
+ * CONJ_SRC_ATOP:    R = (min(1,Da/Sa))*Sc + (max(1-Sa/Da,0))*Dc
+ * CONJ_DST_ATOP:    R = (max(1-Da/Sa,0))*Sc + (min(1,Sa/Da))*Dc
+ * CONJ_XOR:         R = (max(1-Da/Sa,0))*Sc + (max(1-Sa/Da,0))*Dc
  */
 static struct fimg2d_blend_coeff const coeff_table[MAX_FIMG2D_BLIT_OP] = {
 	{ 0, 0, 0, 0 },		/* FILL */
@@ -685,50 +682,91 @@ static struct fimg2d_blend_coeff const coeff_table[MAX_FIMG2D_BLIT_OP] = {
 	{ 1, COEFF_CONJ_D,	0, COEFF_CONJ_D },	/* CONJ_DST_ATOP */
 	{ 1, COEFF_CONJ_D,	1, COEFF_CONJ_S },	/* CONJ_XOR */
 	{ 0, 0, 0, 0 },		/* USER */
+	{ 1, COEFF_GA,		1, COEFF_ZERO },	/* USER_SRC_GA */
 };
 
 /*
  * coefficient table with global (constant) alpha
  * replace COEFF_ONE with COEFF_GA
+ *
+ * MODE:             Formula with Global Alpha (Ga is multiplied to both Sc and Sa)
+ * ----------------------------------------------------------------------------
+ * FILL:
+ * CLEAR:	     R = 0
+ * SRC:		     R = Ga*Sc
+ * DST:		     R = Dc
+ * SRC_OVER:         R = Ga*Sc + (1-Sa*Ga)*Dc
+ * DST_OVER:         R = (1-Da)*Ga*Sc + Dc --> (W/A) 1st:Ga*Sc, 2nd:DST_OVER
+ * SRC_IN:	     R = Da*Ga*Sc
+ * DST_IN:           R = Sa*Ga*Dc
+ * SRC_OUT:          R = (1-Da)*Ga*Sc --> (W/A) 1st: Ga*Sc, 2nd:SRC_OUT
+ * DST_OUT:          R = (1-Sa*Ga)*Dc
+ * SRC_ATOP:         R = Da*Ga*Sc + (1-Sa*Ga)*Dc
+ * DST_ATOP:         R = (1-Da)*Ga*Sc + Sa*Ga*Dc --> (W/A) 1st: Ga*Sc, 2nd:DST_ATOP
+ * XOR:              R = (1-Da)*Ga*Sc + (1-Sa*Ga)*Dc --> (W/A) 1st: Ga*Sc, 2nd:XOR
+ * ADD:              R = Ga*Sc + Dc
+ * MULTIPLY:         R = Ga*Sc*Dc --> (W/A) 1st: Ga*Sc, 2nd: MULTIPLY
+ * SCREEN:           R = Ga*Sc + (1-Ga*Sc)*Dc --> (W/A) 1st: Ga*Sc, 2nd: SCREEN
+ * DARKEN:           R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * LIGHTEN:          R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * DISJ_SRC_OVER:    R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * DISJ_DST_OVER:    R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * DISJ_SRC_IN:      R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * DISJ_DST_IN:      R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * DISJ_SRC_OUT:     R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * DISJ_DST_OUT:     R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * DISJ_SRC_ATOP:    R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * DISJ_DST_ATOP:    R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * DISJ_XOR:         R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * CONJ_SRC_OVER:    R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * CONJ_DST_OVER:    R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * CONJ_SRC_IN:      R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * CONJ_DST_IN:      R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * CONJ_SRC_OUT:     R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * CONJ_DST_OUT:     R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * CONJ_SRC_ATOP:    R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * CONJ_DST_ATOP:    R = (W/A) 1st: Ga*Sc, 2nd: OP
+ * CONJ_XOR:         R = (W/A) 1st: Ga*Sc, 2nd: OP
  */
 static struct fimg2d_blend_coeff const ga_coeff_table[MAX_FIMG2D_BLIT_OP] = {
 	{ 0, 0, 0, 0 },		/* FILL */
 	{ 0, COEFF_ZERO,	0, COEFF_ZERO },	/* CLEAR */
 	{ 0, COEFF_GA,		0, COEFF_ZERO },	/* SRC */
-	{ 0, COEFF_ZERO,	0, COEFF_GA },		/* DST */
+	{ 0, COEFF_ZERO,	0, COEFF_ONE },		/* DST */
 	{ 0, COEFF_GA,		1, COEFF_SA },		/* SRC_OVER */
-	{ 1, COEFF_DA,		0, COEFF_GA },		/* DST_OVER */
+	{ 1, COEFF_DA,		0, COEFF_ONE },		/* DST_OVER (use W/A) */
 	{ 0, COEFF_DA,		0, COEFF_ZERO },	/* SRC_IN */
 	{ 0, COEFF_ZERO,	0, COEFF_SA },		/* DST_IN */
-	{ 1, COEFF_DA,		0, COEFF_ZERO },	/* SRC_OUT */
+	{ 1, COEFF_DA,		0, COEFF_ZERO },	/* SRC_OUT (use W/A) */
 	{ 0, COEFF_ZERO,	1, COEFF_SA },		/* DST_OUT */
 	{ 0, COEFF_DA,		1, COEFF_SA },		/* SRC_ATOP */
-	{ 1, COEFF_DA,		0, COEFF_SA },		/* DST_ATOP */
-	{ 1, COEFF_DA,		1, COEFF_SA },		/* XOR */
-	{ 0, COEFF_GA,		0, COEFF_GA },		/* ADD */
-	{ 0, COEFF_DC,		0, COEFF_ZERO },	/* MULTIPLY */
-	{ 0, COEFF_GA,		1, COEFF_SC },		/* SCREEN */
-	{ 0, 0, 0, 0 },		/* DARKEN */
-	{ 0, 0, 0, 0 },		/* LIGHTEN */
-	{ 0, COEFF_GA,		0, COEFF_DISJ_S },	/* DISJ_SRC_OVER */
-	{ 0, COEFF_DISJ_D,	0, COEFF_GA },		/* DISJ_DST_OVER */
-	{ 1, COEFF_DISJ_D,	0, COEFF_ZERO },	/* DISJ_SRC_IN */
-	{ 0, COEFF_ZERO,	1, COEFF_DISJ_S },	/* DISJ_DST_IN */
-	{ 0, COEFF_DISJ_D,	0, COEFF_GA },		/* DISJ_SRC_OUT */
-	{ 0, COEFF_ZERO,	0, COEFF_DISJ_S },	/* DISJ_DST_OUT */
-	{ 1, COEFF_DISJ_D,	0, COEFF_DISJ_S },	/* DISJ_SRC_ATOP */
-	{ 0, COEFF_DISJ_D,	1, COEFF_DISJ_S },	/* DISJ_DST_ATOP */
-	{ 0, COEFF_DISJ_D,	0, COEFF_DISJ_S },	/* DISJ_XOR */
-	{ 0, COEFF_GA,		1, COEFF_DISJ_S },	/* CONJ_SRC_OVER */
-	{ 1, COEFF_DISJ_D,	0, COEFF_GA },		/* CONJ_DST_OVER */
-	{ 0, COEFF_CONJ_D,	0, COEFF_GA },		/* CONJ_SRC_IN */
-	{ 0, COEFF_ZERO,	0, COEFF_CONJ_S },	/* CONJ_DST_IN */
-	{ 1, COEFF_CONJ_D,	0, COEFF_ZERO },	/* CONJ_SRC_OUT */
-	{ 0, COEFF_ZERO,	1, COEFF_CONJ_S },	/* CONJ_DST_OUT */
-	{ 0, COEFF_CONJ_D,	1, COEFF_CONJ_S },	/* CONJ_SRC_ATOP */
-	{ 1, COEFF_CONJ_D,	0, COEFF_CONJ_D },	/* CONJ_DST_ATOP */
-	{ 1, COEFF_CONJ_D,	1, COEFF_CONJ_S },	/* CONJ_XOR */
+	{ 1, COEFF_DA,		0, COEFF_SA },		/* DST_ATOP (use W/A) */
+	{ 1, COEFF_DA,		1, COEFF_SA },		/* XOR (use W/A) */
+	{ 0, COEFF_GA,		0, COEFF_ONE },		/* ADD */
+	{ 0, COEFF_DC,		0, COEFF_ZERO },	/* MULTIPLY (use W/A) */
+	{ 0, COEFF_ONE,		1, COEFF_SC },		/* SCREEN (use W/A) */
+	{ 0, 0, 0, 0 },		/* DARKEN (use W/A) */
+	{ 0, 0, 0, 0 },		/* LIGHTEN (use W/A) */
+	{ 0, COEFF_ONE,		0, COEFF_DISJ_S },	/* DISJ_SRC_OVER (use W/A) */
+	{ 0, COEFF_DISJ_D,	0, COEFF_ONE },		/* DISJ_DST_OVER (use W/A) */
+	{ 1, COEFF_DISJ_D,	0, COEFF_ZERO },	/* DISJ_SRC_IN (use W/A) */
+	{ 0, COEFF_ZERO,	1, COEFF_DISJ_S },	/* DISJ_DST_IN (use W/A) */
+	{ 0, COEFF_DISJ_D,	0, COEFF_ONE },		/* DISJ_SRC_OUT (use W/A) */
+	{ 0, COEFF_ZERO,	0, COEFF_DISJ_S },	/* DISJ_DST_OUT (use W/A) */
+	{ 1, COEFF_DISJ_D,	0, COEFF_DISJ_S },	/* DISJ_SRC_ATOP (use W/A) */
+	{ 0, COEFF_DISJ_D,	1, COEFF_DISJ_S },	/* DISJ_DST_ATOP (use W/A) */
+	{ 0, COEFF_DISJ_D,	0, COEFF_DISJ_S },	/* DISJ_XOR (use W/A) */
+	{ 0, COEFF_ONE,		1, COEFF_DISJ_S },	/* CONJ_SRC_OVER (use W/A) */
+	{ 1, COEFF_DISJ_D,	0, COEFF_ONE },		/* CONJ_DST_OVER (use W/A) */
+	{ 0, COEFF_CONJ_D,	0, COEFF_ONE },		/* CONJ_SRC_IN (use W/A) */
+	{ 0, COEFF_ZERO,	0, COEFF_CONJ_S },	/* CONJ_DST_IN (use W/A) */
+	{ 1, COEFF_CONJ_D,	0, COEFF_ZERO },	/* CONJ_SRC_OUT (use W/A) */
+	{ 0, COEFF_ZERO,	1, COEFF_CONJ_S },	/* CONJ_DST_OUT (use W/A) */
+	{ 0, COEFF_CONJ_D,	1, COEFF_CONJ_S },	/* CONJ_SRC_ATOP (use W/A) */
+	{ 1, COEFF_CONJ_D,	0, COEFF_CONJ_D },	/* CONJ_DST_ATOP (use W/A) */
+	{ 1, COEFF_CONJ_D,	1, COEFF_CONJ_S },	/* CONJ_XOR (use W/A) */
 	{ 0, 0, 0, 0 },		/* USER */
+	{ 1, COEFF_GA,		1, COEFF_ZERO },	/* USER_SRC_GA */
 };
 
 void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
