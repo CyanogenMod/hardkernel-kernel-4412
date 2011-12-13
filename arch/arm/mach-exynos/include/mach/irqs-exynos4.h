@@ -205,6 +205,7 @@
 #endif
 #elif defined(CONFIG_CPU_EXYNOS4412)
 #define IRQ_ADC		IRQ_EXYNOS4412_ADC
+#define IRQ_TC		IRQ_PEN0
 #endif
 
 /* optional GPIO interrupts */
