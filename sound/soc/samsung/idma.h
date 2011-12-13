@@ -48,7 +48,11 @@
 
 #if defined(CONFIG_ARCH_EXYNOS)
 #if defined(CONFIG_SND_SAMSUNG_ALP)
-#define LP_TXBUFF_OFFSET	(0x38000)
+#if defined(CONFIG_CPU_EXYNOS4210)
+#define LP_TXBUFF_OFFSET       (0x18000)
+#else
+#define LP_TXBUFF_OFFSET       (0x38000)
+#endif
 #define LP_TXBUFF_ADDR		(0x02020000 + LP_TXBUFF_OFFSET)
 #else
 #define LP_TXBUFF_ADDR		(0x03000000)
