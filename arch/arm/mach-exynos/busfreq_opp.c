@@ -46,6 +46,8 @@
 #include <plat/cpu.h>
 #include <plat/clock.h>
 
+#define BUSFREQ_DEBUG	1
+
 static DEFINE_MUTEX(busfreq_lock);
 BLOCKING_NOTIFIER_HEAD(exynos4_busfreq_notifier_list);
 
@@ -58,9 +60,11 @@ static struct busfreq_control bus_ctrl;
 
 void update_busfreq_stat(struct busfreq_data *data, unsigned int index)
 {
+#ifdef BUSFREQ_DEBUG
 	unsigned long long cur_time = get_jiffies_64();
 	data->time_in_state[index] = cputime64_add(data->time_in_state[index], cputime_sub(cur_time, data->last_time));
 	data->last_time = cur_time;
+#endif
 }
 
 static struct opp __maybe_unused *step_up(struct busfreq_data *data, int step)
@@ -189,14 +193,14 @@ static void exynos4_busfreq_timer(struct work_struct *work)
 
 	newfreq = opp_get_freq(opp);
 
+	mutex_lock(&busfreq_lock);
+
 	if (opp == data->curr_opp || newfreq == 0 || data->use == false)
 		goto out;
 
 	currfreq = opp_get_freq(data->curr_opp);
 
 	index = data->get_table_index(opp);
-
-	mutex_lock(&busfreq_lock);
 
 	voltage = opp_get_voltage(opp);
 	if (newfreq > currfreq) {
