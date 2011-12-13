@@ -461,9 +461,7 @@ static struct platform_driver fimg2d_driver = {
 
 static int __init fimg2d_register(void)
 {
-	platform_driver_register(&fimg2d_driver);
-
-	return 0;
+	return platform_driver_register(&fimg2d_driver);
 }
 
 static void __exit fimg2d_unregister(void)
