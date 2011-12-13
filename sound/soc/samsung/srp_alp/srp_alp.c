@@ -60,7 +60,11 @@
 #define IBUF_SIZE	(0x4000)
 #define OBUF_SIZE	(0x8000)
 #define WBUF_SIZE	(IBUF_SIZE * 4)
+#if defined(CONFIG_CPU_EXYNOS4210)
+#define IBUF_OFFSET	(0x10000)
+#else
 #define IBUF_OFFSET	(0x30000)
+#endif
 #define OBUF_OFFSET	(0x4)
 #define IBUF_NUM	(0x2)
 #define OBUF_NUM	(0x2)
