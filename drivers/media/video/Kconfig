@@ -467,7 +467,7 @@ config VIDEO_S5K6A3
 	  This driver supports S5K6A3 sensor.
 choice
 depends on VIDEO_S5K6A3
-prompt " MIPI Camera port for S5K6A3"
+prompt "MIPI Camera port for S5K6A3"
 default S5K6A3_CSI_D
 config S5K6A3_CSI_C
 	bool "CSI Camera A port"
