@@ -48,7 +48,11 @@
 #define SRP_DEV_MINOR	(250)
 
 /* SRAM information */
+#if defined(CONFIG_CPU_EXYNOS4210)
+#define IRAM_SIZE	(0x20000)
+#else
 #define IRAM_SIZE	(0x40000)
+#endif
 #define DMEM_SIZE	(0x20000)
 #define ICACHE_SIZE	(0x10000)
 
