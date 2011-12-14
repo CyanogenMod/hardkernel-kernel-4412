@@ -1031,13 +1031,15 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 	struct i2s_dai *i2s = to_info(dai);
 	struct i2s_dai *other = i2s->pri_dai ? : i2s->sec_dai;
 
-	if (other) /* If this is probe on secondary */
-		goto probe_exit;
-
 	i2s->addr = ioremap(i2s->base, 0x100);
 	if (i2s->addr == NULL) {
 		dev_err(&i2s->pdev->dev, "cannot ioremap registers\n");
 		return -ENXIO;
+	}
+
+	if (i2s->pdev->id == SAMSUNG_I2S_SECOFF) { /* If this is probe on secondary */
+		idma_init((void *)i2s->addr);
+		goto probe_exit;
 	}
 
 	i2s->cclk = clk_get(&i2s->pdev->dev, "iis");
@@ -1062,9 +1064,6 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 	i2s_fifo(i2s, FIC_TXFLUSH, 0);
 	i2s_fifo(other, FIC_TXFLUSH, 0);
 	i2s_fifo(i2s, FIC_RXFLUSH, 1);
-
-	if (use_internal_dma(i2s, 0) || is_srp_enabled(i2s, 0))
-		idma_init((void *)i2s->addr);
 
 	i2s_reg_save(dai);
 
