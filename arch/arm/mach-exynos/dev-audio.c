@@ -66,9 +66,7 @@ static struct s3c_audio_pdata i2sv5_pdata = {
 	.type = {
 		.i2s = {
 			.quirks = QUIRK_PRI_6CHAN
-#ifdef CONFIG_SND_SOC_SAMSUNG_I2S_IDMA
-				| QUIRK_USE_IDMA
-#endif
+				| QUIRK_SEC_DAI
 #ifdef CONFIG_SND_SAMSUNG_RP
 				| QUIRK_ENABLED_SRP
 #endif
