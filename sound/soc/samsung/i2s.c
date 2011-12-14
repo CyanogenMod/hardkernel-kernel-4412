@@ -100,16 +100,6 @@ static inline int srp_active(struct i2s_dai *i2s, int cmd)
 #endif
 }
 
-/* If idma is used for LP audio */
-static inline bool use_internal_dma(struct i2s_dai *i2s, u32 stream)
-{
-	if ((stream == SNDRV_PCM_STREAM_PLAYBACK) &&
-			(i2s->quirks & QUIRK_USE_IDMA))
-		return true;
-	else
-		return false;
-}
-
 /* If this is the 'overlay' stereo DAI */
 static inline bool is_secondary(struct i2s_dai *i2s)
 {
@@ -132,7 +122,7 @@ static inline bool tx_active(struct i2s_dai *i2s)
 
 	active = readl(i2s->addr + I2SCON);
 
-	if (is_secondary(i2s) || use_internal_dma(i2s, 0))
+	if (is_secondary(i2s))
 		active &= CON_TXSDMA_ACTIVE;
 	else
 		active &= CON_TXDMA_ACTIVE;
@@ -323,7 +313,7 @@ static void i2s_txctrl(struct i2s_dai *i2s, int on, int stream)
 		con |= CON_ACTIVE;
 		con &= ~CON_TXCH_PAUSE;
 
-		if (is_secondary(i2s) || use_internal_dma(i2s, stream)) {
+		if (is_secondary(i2s)) {
 			con |= CON_TXSDMA_ACTIVE;
 			con &= ~CON_TXSDMA_PAUSE;
 		} else {
@@ -336,7 +326,7 @@ static void i2s_txctrl(struct i2s_dai *i2s, int on, int stream)
 		else
 			mod |= MOD_TXONLY;
 	} else {
-		if (is_secondary(i2s) || use_internal_dma(i2s, stream)) {
+		if (is_secondary(i2s)) {
 			con |=  CON_TXSDMA_PAUSE;
 			con &= ~CON_TXSDMA_ACTIVE;
 		} else {
@@ -401,7 +391,7 @@ static inline void i2s_fifo(struct i2s_dai *i2s, u32 flush, int stream)
 	if (!i2s)
 		return;
 
-	if (is_secondary(i2s) || use_internal_dma(i2s, stream))
+	if (is_secondary(i2s))
 		fic = i2s->addr + I2SFICS;
 	else
 		fic = i2s->addr + I2SFIC;
@@ -599,7 +589,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 	u32 ahb = readl(i2s->addr + I2SAHB);
 	u32 stream = substream->stream;
 
-	if (!is_secondary(i2s) || !use_internal_dma(i2s, stream))
+	if (!is_secondary(i2s))
 		mod &= ~(MOD_DC2_EN | MOD_DC1_EN);
 
 	switch (params_channels(params)) {
@@ -627,7 +617,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	if (is_secondary(i2s) || use_internal_dma(i2s, stream))
+	if (is_secondary(i2s))
 		mod &= ~MOD_BLCS_MASK;
 	else
 		mod &= ~MOD_BLCP_MASK;
@@ -637,7 +627,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S8:
-		if (is_secondary(i2s) || use_internal_dma(i2s, stream))
+		if (is_secondary(i2s))
 			mod |= MOD_BLCS_8BIT;
 		else
 			mod |= MOD_BLCP_8BIT;
@@ -645,7 +635,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 			mod |= MOD_BLC_8BIT;
 		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
-		if (is_secondary(i2s) || use_internal_dma(i2s, stream))
+		if (is_secondary(i2s))
 			mod |= MOD_BLCS_16BIT;
 		else
 			mod |= MOD_BLCP_16BIT;
@@ -653,7 +643,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 			mod |= MOD_BLC_16BIT;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
-		if (is_secondary(i2s) || use_internal_dma(i2s, stream))
+		if (is_secondary(i2s))
 			mod |= MOD_BLCS_24BIT;
 		else
 			mod |= MOD_BLCP_24BIT;
@@ -666,12 +656,17 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	if (i2s->pdev->id == 0) {
-		if (use_internal_dma(i2s, stream)) {
+	if ((i2s->pdev->id == 0) || (i2s->pdev->id == SAMSUNG_I2S_SECOFF)){
+		if (is_secondary(i2s)) {
 			ahb |= (AHB_DMARLD | AHB_INTMASK);
+#if !defined(CONFIG_SND_SAMSUNG_NORMAL)
 			mod |= MOD_TXS_IDMA;
-		} else if (is_srp_enabled(i2s, stream))
+#endif
+		} else if (is_srp_enabled(i2s, stream)) {
+#if !defined(CONFIG_SND_SAMSUNG_NORMAL)
 			mod |= MOD_TXS_IDMA;
+#endif
+		}
 
 		writel(ahb, i2s->addr + I2SAHB);
 	}
@@ -697,7 +692,7 @@ static void i2s_reg_save(struct snd_soc_dai *dai)
 	i2s->suspend_i2scon = readl(i2s->addr + I2SCON);
 	i2s->suspend_i2spsr = readl(i2s->addr + I2SPSR);
 
-	if (i2s->pdev->id == 0)
+	if ((i2s->pdev->id == 0) || (i2s->pdev->id == SAMSUNG_I2S_SECOFF))
 		i2s->suspend_i2sahb = readl(i2s->addr + I2SAHB);
 
 	i2s->reg_saved = true;
@@ -715,7 +710,7 @@ static void i2s_reg_restore(struct snd_soc_dai *dai)
 	writel(i2s->suspend_i2scon, i2s->addr + I2SCON);
 	writel(i2s->suspend_i2spsr, i2s->addr + I2SPSR);
 
-	if (i2s->pdev->id == 0)
+	if ((i2s->pdev->id == 0) || (i2s->pdev->id == SAMSUNG_I2S_SECOFF))
 		writel(i2s->suspend_i2sahb, i2s->addr + I2SAHB);
 
 	i2s->reg_saved = false;
@@ -728,12 +723,14 @@ static void i2s_reg_restore(struct snd_soc_dai *dai)
 static void i2s_clk_enable(struct i2s_dai *i2s, bool on)
 {
 	if (on) {
-		if (i2s->pdev->id == 0)
+		if ((i2s->pdev->id == 0) ||
+			(i2s->pdev->id == SAMSUNG_I2S_SECOFF))
 			i2s->audss_clk_enable(true);
 		else
 			clk_enable(i2s->cclk);
 	} else {
-		if (i2s->pdev->id == 0)
+		if ((i2s->pdev->id == 0) ||
+			(i2s->pdev->id == SAMSUNG_I2S_SECOFF))
 			i2s->audss_clk_enable(false);
 		else
 			clk_disable(i2s->cclk);
@@ -996,7 +993,7 @@ i2s_delay(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		delay = FIC_RXCOUNT(reg);
-	else if (is_secondary(i2s) || use_internal_dma(i2s, substream->stream))
+	else if (is_secondary(i2s))
 		delay = FICS_TXCOUNT(readl(i2s->addr + I2SFICS));
 	else
 		delay = FIC_TXCOUNT(reg);
