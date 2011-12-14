@@ -768,6 +768,7 @@ static void snd_pcm_free_stream(struct snd_pcm_str * pstr)
 		substream_next = substream->next;
 		snd_pcm_timer_done(substream);
 		snd_pcm_substream_proc_done(substream);
+		kfree(substream->ops);
 		kfree(substream);
 		substream = substream_next;
 	}
