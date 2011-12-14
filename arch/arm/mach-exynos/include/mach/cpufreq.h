@@ -22,16 +22,6 @@ enum cpufreq_level_index {
 	L20,
 };
 
-enum cpufreq_level_request {
-	CPU_L0,		/* 1400MHz */
-	CPU_L1,		/* 1200MHz */
-	CPU_L2,		/* 1000MHz */
-	CPU_L3,		/* 800MHz */
-	CPU_L4,		/* 500MHz */
-	CPU_L5,		/* 200MHz */
-	CPU_LEVEL_END,
-};
-
 enum busfreq_level_request {
 	BUS_L0,		/* MEM 400MHz BUS 200MHz */
 	BUS_L1,		/* MEM 267MHz BUS 160MHz */
@@ -55,7 +45,7 @@ enum cpufreq_lock_ID {
 int exynos_cpufreq_get_level(unsigned int freq,
 			unsigned int *level);
 int exynos_cpufreq_lock(unsigned int nId,
-			enum cpufreq_level_request cpufreq_level);
+			enum cpufreq_level_index cpufreq_level);
 void exynos_cpufreq_lock_free(unsigned int nId);
 
 int exynos4_busfreq_lock(unsigned int nId,
@@ -63,7 +53,7 @@ int exynos4_busfreq_lock(unsigned int nId,
 void exynos4_busfreq_lock_free(unsigned int nId);
 
 int exynos_cpufreq_upper_limit(unsigned int nId,
-			enum cpufreq_level_request cpufreq_level);
+			enum cpufreq_level_index cpufreq_level);
 void exynos_cpufreq_upper_limit_free(unsigned int nId);
 
 #define MAX_INDEX	10

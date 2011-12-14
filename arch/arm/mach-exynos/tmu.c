@@ -99,7 +99,7 @@ static void tmu_monitor(struct work_struct *work)
 		if (cur_temp >= warning_temp)
 			tz->data.tmu_flag = TMU_STATUS_WARNING;
 		else if (cur_temp >= tz->data.cooling && cur_temp < warning_temp)
-			exynos_cpufreq_upper_limit(DVFS_LOCK_ID_TMU, CPU_L2);
+			exynos_cpufreq_upper_limit(DVFS_LOCK_ID_TMU, L2);
 		else {
 			tz->data.tmu_flag = TMU_STATUS_NORMAL;
 			exynos_cpufreq_upper_limit_free(DVFS_LOCK_ID_TMU);
@@ -110,7 +110,7 @@ static void tmu_monitor(struct work_struct *work)
 		if (cur_temp >= tripped_temp)
 			tz->data.tmu_flag = TMU_STATUS_TRIPPED;
 		else if (cur_temp > tz->data.cooling && cur_temp < tripped_temp)
-			exynos_cpufreq_upper_limit(DVFS_LOCK_ID_TMU, CPU_L3);
+			exynos_cpufreq_upper_limit(DVFS_LOCK_ID_TMU, L3);
 		else {
 			tz->data.tmu_flag = TMU_STATUS_NORMAL;
 			exynos_cpufreq_upper_limit_free(DVFS_LOCK_ID_TMU);

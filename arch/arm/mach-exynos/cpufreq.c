@@ -188,7 +188,7 @@ EXPORT_SYMBOL_GPL(exynos_cpufreq_get_level);
 atomic_t exynos_cpufreq_lock_count;
 
 int exynos_cpufreq_lock(unsigned int nId,
-			 enum cpufreq_level_request cpufreq_level)
+			 enum cpufreq_level_index cpufreq_level)
 {
 	int ret = 0, i, old_idx = 0;
 	unsigned int freq_old, freq_new, arm_volt, safe_arm_volt;
@@ -284,7 +284,7 @@ void exynos_cpufreq_lock_free(unsigned int nId)
 EXPORT_SYMBOL_GPL(exynos_cpufreq_lock_free);
 
 int exynos_cpufreq_upper_limit(unsigned int nId,
-				enum cpufreq_level_request cpufreq_level)
+				enum cpufreq_level_index cpufreq_level)
 {
 	int ret = 0, old_idx = 0, i;
 	unsigned int freq_old, freq_new, arm_volt, safe_arm_volt;
