@@ -554,13 +554,12 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			if (!ret) {
 				srp_err("Couldn't Get Decoding info!!!\n");
 				ret = SRP_ERROR_GETINFO_FAIL;
-			} else {
-				val = copy_to_user((struct srp_dec_info *)arg,
-						&srp.dec_info,
-						sizeof(struct srp_dec_info));
-				srp.wakeup_decinfo_wq = 0;
 			}
 		}
+		val = copy_to_user((struct srp_dec_info *)arg, &srp.dec_info,
+						sizeof(struct srp_dec_info));
+		if (ret)
+			srp.wakeup_decinfo_wq = 0;
 		break;
 	}
 
