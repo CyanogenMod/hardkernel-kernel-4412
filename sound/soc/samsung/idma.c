@@ -483,11 +483,44 @@ void idma_stop(void)
 EXPORT_SYMBOL(idma_stop);
 #endif
 
-struct snd_soc_platform_driver asoc_idma_platform = {
-	.ops = &idma_ops,
-	.pcm_new = idma_new,
-	.pcm_free = idma_free,
+static struct snd_soc_platform_driver asoc_idma_platform = {
+	.ops		= &idma_ops,
+	.pcm_new	= idma_new,
+	.pcm_free	= idma_free,
 };
+
+static int __devinit samsung_idma_platform_probe(struct platform_device *pdev)
+{
+	return snd_soc_register_platform(&pdev->dev, &asoc_idma_platform);
+}
+
+static int __devexit samsung_idma_platform_remove(struct platform_device *pdev)
+{
+	snd_soc_unregister_platform(&pdev->dev);
+	return 0;
+}
+
+static struct platform_driver asoc_idma_driver = {
+	.driver = {
+		.name = "samsung-audio-idma",
+		.owner = THIS_MODULE,
+	},
+
+	.probe = samsung_idma_platform_probe,
+	.remove = __devexit_p(samsung_idma_platform_remove),
+};
+
+static int __init samsung_idma_init(void)
+{
+	return platform_driver_register(&asoc_idma_driver);
+}
+module_init(samsung_idma_init);
+
+static void __exit samsung_idma_exit(void)
+{
+	platform_driver_unregister(&asoc_idma_driver);
+}
+module_exit(samsung_idma_exit);
 
 MODULE_DESCRIPTION("Samsung ASoC IDMA Driver");
 MODULE_LICENSE("GPL");

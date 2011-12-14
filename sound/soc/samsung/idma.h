@@ -65,7 +65,6 @@
 #define LPAM_DMA_STOP		0
 #define LPAM_DMA_START		1
 
-extern struct snd_soc_platform_driver asoc_idma_platform;
 extern void idma_init(void *regs);
 
 /* These functions are used for srp driver. */
