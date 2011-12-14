@@ -301,9 +301,10 @@ static void dw_mci_dma_cleanup(struct dw_mci *host)
 	struct mmc_data *data = host->data;
 
 	if (data)
-		dma_unmap_sg(&host->pdev->dev, data->sg, data->sg_len,
-			     ((data->flags & MMC_DATA_WRITE)
-			      ? DMA_TO_DEVICE : DMA_FROM_DEVICE));
+		if (!data->host_cookie)
+			dma_unmap_sg(&host->pdev->dev, data->sg, data->sg_len,
+					((data->flags & MMC_DATA_WRITE)
+					 ? DMA_TO_DEVICE : DMA_FROM_DEVICE));
 }
 
 static void dw_mci_idmac_stop_dma(struct dw_mci *host)
@@ -419,6 +420,81 @@ static int dw_mci_idmac_init(struct dw_mci *host)
 	return 0;
 }
 
+static unsigned int dw_mci_pre_dma_transfer(struct dw_mci *host,
+					    struct mmc_data *data,
+					    struct dw_mci_next *next)
+{
+	unsigned int sg_len;
+
+	if (!next && data->host_cookie &&
+			data->host_cookie != host->next_data.cookie) {
+		data->host_cookie = 0;
+	}
+
+	if (next ||
+		(!next && data->host_cookie != host->next_data.cookie)) {
+		sg_len = dma_map_sg(&host->pdev->dev, data->sg,
+				data->sg_len, ((data->flags & MMC_DATA_WRITE)
+					? DMA_TO_DEVICE : DMA_FROM_DEVICE));
+	} else {
+		sg_len = host->next_data.sg_len;
+		host->next_data.sg_len = 0;
+	}
+
+	if (sg_len == 0)
+		return -EINVAL;
+
+	if (next) {
+		next->sg_len = sg_len;
+		data->host_cookie = ++next->cookie < 0 ? 1 : next->cookie;
+	} else
+		data->sg_len = sg_len;
+
+	return sg_len;
+}
+
+static void dw_mci_pre_req(struct mmc_host *mmc,
+			   struct mmc_request *mrq,
+			   bool is_first_req)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct mmc_data *data = mrq->data;
+
+	if (!data)
+		return;
+
+	if (data->host_cookie) {
+		data->host_cookie = 0;
+		return;
+	}
+
+	if (slot->host->use_dma) {
+		if (dw_mci_pre_dma_transfer(slot->host, mrq->data,
+					&slot->host->next_data) < 0)
+			data->host_cookie = 0;
+	}
+}
+
+static void dw_mci_post_req(struct mmc_host *mmc,
+			    struct mmc_request *mrq,
+			    int err)
+{
+	struct dw_mci_slot *slot = mmc_priv(mmc);
+	struct mmc_data *data = mrq->data;
+
+	if (!data)
+		return;
+
+	if (slot->host->use_dma) {
+		if (data->host_cookie)
+			dma_unmap_sg(&slot->host->pdev->dev, data->sg,
+					data->sg_len,
+					((data->flags & MMC_DATA_WRITE)
+					 ? DMA_TO_DEVICE : DMA_FROM_DEVICE));
+		data->host_cookie = 0;
+	}
+}
+
 static struct dw_mci_dma_ops dw_mci_idmac_ops = {
 	.init = dw_mci_idmac_init,
 	.start = dw_mci_idmac_start_dma,
@@ -426,12 +502,15 @@ static struct dw_mci_dma_ops dw_mci_idmac_ops = {
 	.complete = dw_mci_idmac_complete_dma,
 	.cleanup = dw_mci_dma_cleanup,
 };
+#else
+#define dw_mci_pre_req	NULL
+#define dw_mci_post_req	NULL
 #endif /* CONFIG_MMC_DW_IDMAC */
 
 static int dw_mci_submit_data_dma(struct dw_mci *host, struct mmc_data *data)
 {
 	struct scatterlist *sg;
-	unsigned int i, direction, sg_len;
+	unsigned int i, sg_len;
 	u32 temp;
 
 	/* If we don't have a channel, we can't do DMA */
@@ -453,13 +532,9 @@ static int dw_mci_submit_data_dma(struct dw_mci *host, struct mmc_data *data)
 			return -EINVAL;
 	}
 
-	if (data->flags & MMC_DATA_READ)
-		direction = DMA_FROM_DEVICE;
-	else
-		direction = DMA_TO_DEVICE;
-
-	sg_len = dma_map_sg(&host->pdev->dev, data->sg, data->sg_len,
-			    direction);
+	sg_len = dw_mci_pre_dma_transfer(host, data, NULL);
+	if (sg_len < 0)
+		return sg_len;
 
 	dev_vdbg(&host->pdev->dev,
 		 "sd sg_cpu: %#lx sg_dma: %#lx sg_len: %d\n",
@@ -791,6 +866,8 @@ static int dw_mci_get_cd(struct mmc_host *mmc)
 
 static const struct mmc_host_ops dw_mci_ops = {
 	.request	= dw_mci_request,
+	.pre_req	= dw_mci_pre_req,
+	.post_req	= dw_mci_post_req,
 	.set_ios	= dw_mci_set_ios,
 	.get_ro		= dw_mci_get_ro,
 	.get_cd		= dw_mci_get_cd,
@@ -1711,6 +1788,8 @@ static int dw_mci_probe(struct platform_device *pdev)
 
 	host->dma_ops = pdata->dma_ops;
 	dw_mci_init_dma(host);
+
+	host->next_data.cookie = 1;
 
 	/*
 	 * Get the host data width - this assumes that HCON has been set with
