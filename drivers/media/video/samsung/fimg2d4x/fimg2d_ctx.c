@@ -385,8 +385,12 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 
 	fimg2d_debug("cached size all = %d\n", cmd->size_all);
 
+	/* innercache flush */
 	/* FIXME: L1 cache size = (num_possible_cpus()*SZ_32K) */
-	if (cmd->size_all > 0 && cmd->size_all < L1_CACHE_SIZE) {
+	if (cmd->size_all >= L1_CACHE_SIZE) {
+		fimg2d_debug("innercache all\n");
+		flush_all_cpu_caches();
+	} else {
 		fimg2d_debug("innercache range\n");
 		if (cmd->srcen && cmd->src.addr.cacheable)
 			fimg2d_dma_sync_inner(csrc->addr, csrc->size, DMA_TO_DEVICE);

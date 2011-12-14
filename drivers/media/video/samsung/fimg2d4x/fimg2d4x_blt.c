@@ -34,46 +34,38 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 {
 #ifdef CONFIG_OUTER_CACHE
 	struct mm_struct *mm = cmd->ctx->mm;
-#endif
 	struct fimg2d_cache *csrc, *cdst, *cmsk;
 
 	csrc = &cmd->src_cache;
 	cdst = &cmd->dst_cache;
 	cmsk = &cmd->msk_cache;
 
-	/* FIXME: L1 cache size = (num_possible_cpus()*SZ_32K) */
+	/* outercache flush */
 	if (cmd->size_all >= L2_CACHE_SIZE) {
-		flush_all_cpu_caches();	/* innercache all */
-#ifdef CONFIG_OUTER_CACHE
-		outer_flush_all();	/* outercache all */
-#endif
-		return;
-	} else if (cmd->size_all >= L1_CACHE_SIZE) {
-		flush_all_cpu_caches();	/* innercache all */
-	}
+		fimg2d_debug("outercache all\n");
+		outer_flush_all();
+	} else {
+		fimg2d_debug("outercache range\n");
+		if (cmd->srcen) {
+			if (cmd->src.addr.type == ADDR_USER)
+				fimg2d_clean_outer_pagetable(mm, csrc->addr, csrc->size);
+			if (cmd->src.addr.cacheable)
+				fimg2d_dma_sync_outer(mm, csrc->addr, csrc->size, CACHE_CLEAN);
+		}
 
-#ifdef CONFIG_OUTER_CACHE
-	/* innercache range is done at fimg2d_check_dma_sync() */
-	fimg2d_debug("outercache range\n");
-	if (cmd->srcen) {
-		if (cmd->src.addr.type == ADDR_USER)
-			fimg2d_clean_outer_pagetable(mm, csrc->addr, csrc->size);
-		if (cmd->src.addr.cacheable)
-			fimg2d_dma_sync_outer(mm, csrc->addr, csrc->size, CACHE_CLEAN);
-	}
+		if (cmd->msken) {
+			if (cmd->msk.addr.type == ADDR_USER)
+				fimg2d_clean_outer_pagetable(mm, cmsk->addr, cmsk->size);
+			if (cmd->msk.addr.cacheable)
+				fimg2d_dma_sync_outer(mm, cmsk->addr, cmsk->size, CACHE_CLEAN);
+		}
 
-	if (cmd->msken) {
-		if (cmd->msk.addr.type == ADDR_USER)
-			fimg2d_clean_outer_pagetable(mm, cmsk->addr, cmsk->size);
-		if (cmd->msk.addr.cacheable)
-			fimg2d_dma_sync_outer(mm, cmsk->addr, cmsk->size, CACHE_CLEAN);
-	}
-
-	if (cmd->dsten) {
-		if (cmd->dst.addr.type == ADDR_USER)
-			fimg2d_clean_outer_pagetable(mm, cdst->addr, cdst->size);
-		if (cmd->dst.addr.cacheable)
-			fimg2d_dma_sync_outer(mm, cdst->addr, cdst->size, CACHE_FLUSH);
+		if (cmd->dsten) {
+			if (cmd->dst.addr.type == ADDR_USER)
+				fimg2d_clean_outer_pagetable(mm, cdst->addr, cdst->size);
+			if (cmd->dst.addr.cacheable)
+				fimg2d_dma_sync_outer(mm, cdst->addr, cdst->size, CACHE_FLUSH);
+		}
 	}
 #endif
 }
