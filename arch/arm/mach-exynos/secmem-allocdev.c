@@ -26,6 +26,7 @@ static char *secmem_info[] = {
 	"mfc",		/* 0 */
 	"fimc",		/* 1 */
 	"mfc-shm",	/* 2 */
+	"sectbl",	/* 3 */
 	NULL
 };
 

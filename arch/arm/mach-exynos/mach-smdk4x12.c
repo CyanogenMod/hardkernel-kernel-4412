@@ -3412,11 +3412,15 @@ static void __init exynos4_reserve_mem(void)
 		{
 			.name = "mfc0",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
+		},
+#endif
+		{
+			.name = "sectbl",
+			.size = SZ_1M,
 			{
 				.alignment = SZ_64M,
 			},
 		},
-#endif
 		{
 			.size = 0
 		},
@@ -3446,6 +3450,9 @@ static void __init exynos4_reserve_mem(void)
 		"s5p-mixer=tv;"
 		"s5p-fimg2d=fimg2d;"
 		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;"
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+		"s5p-smem/sectbl=sectbl;"
+#endif
 		"s5p-smem/mfc=mfc0;"
 		"s5p-smem/fimc=fimc1;"
 		"s5p-smem/mfc-shm=mfc1;";
