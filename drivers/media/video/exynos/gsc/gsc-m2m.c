@@ -211,7 +211,7 @@ static void gsc_m2m_device_run(void *priv)
 	ctx->state &= ~GSC_CTX_STOP_REQ;
 	if (is_set) {
 		wake_up(&gsc->irq_queue);
-		return;
+		goto dma_unlock;
 	}
 
 	ret = gsc_fill_addr(ctx);
