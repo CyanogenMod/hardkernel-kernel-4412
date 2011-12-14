@@ -2886,6 +2886,7 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
+	&samsung_asoc_idma,
 #ifdef CONFIG_BATTERY_SAMSUNG
 	&samsung_device_battery,
 #endif

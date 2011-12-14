@@ -1895,6 +1895,7 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&wm8994_fixed_voltage1,
 	&wm8994_fixed_voltage2,
 	&samsung_asoc_dma,
+	&samsung_asoc_idma,
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	&exynos_device_spi0,
 	&exynos_device_spi2,
