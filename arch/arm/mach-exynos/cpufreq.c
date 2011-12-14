@@ -35,6 +35,7 @@ static struct exynos_dvfs_info *exynos_info;
 static struct regulator *arm_regulator;
 static struct cpufreq_freqs freqs;
 
+static bool exynos_cpufreq_disable;
 static bool exynos_cpufreq_init_done;
 static DEFINE_MUTEX(set_freq_lock);
 static DEFINE_MUTEX(set_cpu_freq_lock);
@@ -93,6 +94,9 @@ static int exynos_target(struct cpufreq_policy *policy,
 	unsigned int *volt_table = exynos_info->volt_table;
 
 	mutex_lock(&set_freq_lock);
+
+	if (exynos_cpufreq_disable)
+		goto out;
 
 	freqs.old = policy->cur;
 
@@ -392,12 +396,18 @@ static int exynos_cpufreq_notifier_event(struct notifier_block *this,
 					   exynos_info->pm_lock_idx);
 		if (ret < 0)
 			return NOTIFY_BAD;
+
+		exynos_cpufreq_disable = true;
+
 		pr_debug("PM_SUSPEND_PREPARE for CPUFREQ\n");
 		return NOTIFY_OK;
 	case PM_POST_RESTORE:
 	case PM_POST_SUSPEND:
 		pr_debug("PM_POST_SUSPEND for CPUFREQ: %d\n", ret);
 		exynos_cpufreq_lock_free(DVFS_LOCK_ID_PM);
+
+		exynos_cpufreq_disable = false;
+
 		return NOTIFY_OK;
 	}
 	return NOTIFY_DONE;
@@ -494,6 +504,8 @@ static int __init exynos_cpufreq_init(void)
 		printk(KERN_ERR "failed to get resource %s\n", "vdd_arm");
 		goto err_vdd_arm;
 	}
+
+	exynos_cpufreq_disable = false;
 
 	register_pm_notifier(&exynos_cpufreq_notifier);
 	register_reboot_notifier(&exynos_cpufreq_reboot_notifier);
