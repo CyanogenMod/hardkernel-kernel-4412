@@ -743,6 +743,7 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 {
 	struct i2s_dai *i2s = to_info(dai);
 	struct i2s_dai *other = i2s->pri_dai ? : i2s->sec_dai;
+	bool other_tx_rx_active = false;
 	unsigned long flags;
 
 	spin_lock_irqsave(&lock, flags);
@@ -757,7 +758,12 @@ static int i2s_startup(struct snd_pcm_substream *substream,
 	/* Enforce set_sysclk in Master mode */
 	i2s->rclk_srcrate = 0;
 
-	if (!i2s->tx_active && !i2s->rx_active
+	if (other) {
+		if (other->tx_active || other->rx_active)
+			other_tx_rx_active = true;
+	}
+
+	if (!i2s->tx_active && !i2s->rx_active && !other_tx_rx_active
 		&& !srp_active(i2s, IS_OPENED)) {
 		i2s_clk_enable(i2s, true);
 
@@ -780,6 +786,7 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 {
 	struct i2s_dai *i2s = to_info(dai);
 	struct i2s_dai *other = i2s->pri_dai ? : i2s->sec_dai;
+	bool other_tx_rx_active = false;
 	unsigned long flags;
 
 	spin_lock_irqsave(&lock, flags);
@@ -799,8 +806,13 @@ static void i2s_shutdown(struct snd_pcm_substream *substream,
 	else
 		i2s->rx_active = false;
 
-	if (!i2s->tx_active && !i2s->rx_active
-			&& !srp_active(i2s, IS_OPENED)) {
+	if (other) {
+		if (other->tx_active || other->rx_active)
+			other_tx_rx_active = true;
+	}
+
+	if (!i2s->tx_active && !i2s->rx_active && !other_tx_rx_active
+		&& !srp_active(i2s, IS_OPENED)) {
 		/* Gate CDCLK by default */
 		if (!is_opened(i2s))
 			i2s_set_sysclk(dai, SAMSUNG_I2S_CDCLK,
