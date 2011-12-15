@@ -662,7 +662,8 @@ void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr_num, int gsc_num,
 	mxr_write_mask(mdev, MXR_TVOUT_CFG, val, MXR_TVOUT_CFG_PATH_MASK);
 
 	/* set local path gscaler to mixer */
-	val = DISP1BLK_CFG_FIFORST_DISP1;
+	val = readl(SYSREG_DISP1BLK_CFG);
+	val |= DISP1BLK_CFG_FIFORST_DISP1;
 	if (flags & MEDIA_LNK_FL_ENABLED) {
 		if (mxr_num == MXR_SUB_MIXER0) {
 			val |= DISP1BLK_CFG_MIXER0_VALID;
