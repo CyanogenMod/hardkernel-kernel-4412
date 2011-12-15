@@ -80,6 +80,16 @@ struct i2s_dai {
 /* Lock for cross i/f checks */
 static DEFINE_SPINLOCK(lock);
 
+/* If IDMA is enabled for LP/ALP audio */
+static inline bool is_idma_enabled(struct i2s_dai *i2s, u32 stream)
+{
+	if ((stream == SNDRV_PCM_STREAM_PLAYBACK)
+			&& (i2s->quirks & QUIRK_ENABLED_IDMA))
+		return true;
+	else
+		return false;
+}
+
 /* If SRP is enabled for ULP audio */
 static inline bool is_srp_enabled(struct i2s_dai *i2s, u32 stream)
 {
@@ -586,7 +596,6 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 {
 	struct i2s_dai *i2s = to_info(dai);
 	u32 mod = readl(i2s->addr + I2SMOD);
-	u32 ahb = readl(i2s->addr + I2SAHB);
 	u32 stream = substream->stream;
 
 	if (!is_secondary(i2s))
@@ -656,20 +665,9 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	if ((i2s->pdev->id == 0) || (i2s->pdev->id == SAMSUNG_I2S_SECOFF)){
-		if (is_secondary(i2s)) {
-			ahb |= (AHB_DMARLD | AHB_INTMASK);
-#if !defined(CONFIG_SND_SAMSUNG_NORMAL)
-			mod |= MOD_TXS_IDMA;
-#endif
-		} else if (is_srp_enabled(i2s, stream)) {
-#if !defined(CONFIG_SND_SAMSUNG_NORMAL)
-			mod |= MOD_TXS_IDMA;
-#endif
-		}
+	if (is_idma_enabled(i2s, stream) || is_srp_enabled(i2s, stream))
+		mod |= MOD_TXS_IDMA;
 
-		writel(ahb, i2s->addr + I2SAHB);
-	}
 	writel(mod, i2s->addr + I2SMOD);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
@@ -1049,10 +1047,9 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 		return -ENXIO;
 	}
 
-	if (i2s->pdev->id == SAMSUNG_I2S_SECOFF) { /* If this is probe on secondary */
-		idma_init((void *)i2s->addr);
+	/* If this is probe on secondary */
+	if (i2s->pdev->id == SAMSUNG_I2S_SECOFF)
 		goto probe_exit;
-	}
 
 	i2s->cclk = clk_get(&i2s->pdev->dev, "iis");
 	if (IS_ERR(i2s->cclk)) {
@@ -1067,6 +1064,9 @@ static int samsung_i2s_dai_probe(struct snd_soc_dai *dai)
 
 	if (i2s->quirks & QUIRK_NEED_RSTCLR)
 		writel(CON_RSTCLR, i2s->addr + I2SCON);
+
+	if (is_idma_enabled(i2s, 0) || is_srp_enabled(i2s, 0))
+		idma_init((void *)i2s->addr);
 
 	/* Reset any constraint on RFS and BFS */
 	i2s->rfs = 0;

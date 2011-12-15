@@ -41,9 +41,9 @@ static const struct snd_pcm_hardware idma_hardware = {
 		    SNDRV_PCM_FMTBIT_S8,
 	.channels_min = 1,
 	.channels_max = 2,
-	.buffer_bytes_max = 32 * 1024,
-	.period_bytes_min = 128,
-	.period_bytes_max = 16 * 1024,
+	.buffer_bytes_max = 128 * 1024,
+	.period_bytes_min = PAGE_SIZE,
+	.period_bytes_max = PAGE_SIZE * 2,
 	.periods_min = 2,
 	.periods_max = 128,
 	.fifo_size = 32,
@@ -156,8 +156,12 @@ static int idma_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct idma_ctrl *prtd = substream->runtime->private_data;
+	u32 ahb = readl(idma.regs + I2SAHB);
 
 	pr_debug("Entered %s\n", __func__);
+
+	ahb |= (AHB_DMARLD | AHB_INTMASK);
+	writel(ahb, idma.regs + I2SAHB);
 
 	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
 	runtime->dma_bytes = params_buffer_bytes(params);
