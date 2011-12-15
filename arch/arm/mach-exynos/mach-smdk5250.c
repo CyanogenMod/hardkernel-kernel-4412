@@ -67,6 +67,7 @@
 #include <mach/exynos-ion.h>
 #include <mach/dev-sysmmu.h>
 #include <mach/spi-clocks.h>
+#include <mach/ppmu.h>
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
@@ -1506,6 +1507,11 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 	},
 };
 
+static struct platform_device exynos5_busfreq = {
+	.id = -1,
+	.name = "exynos5-busfreq",
+};
+
 static struct platform_device *smdk5250_devices[] __initdata = {
 	/* Samsung Power Domain */
 	&exynos5_device_pd[PD_MFC],
@@ -1664,6 +1670,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&exynos_device_spi1,
 	&exynos_device_spi2,
 #endif
+	&exynos5_busfreq,
 };
 
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
