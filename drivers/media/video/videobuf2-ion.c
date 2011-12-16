@@ -722,14 +722,8 @@ static void _vb2_ion_cache_flush_range(struct vb2_ion_buf *buf,
 			outer_flush_range(start, end);	/* L2 */
 		}
 	} else {
-		for_each_sg(buf->sg, s, buf->nents, i) {
-			start = sg_phys(s);	/* KVA */
-			end = start + sg_dma_len(s) - 1;
-
-			dmac_flush_range(phys_to_virt(start),
-					 phys_to_virt(end));
-			outer_flush_range(start, end);	/* L2 */
-		}
+		dma_sync_sg_for_device(buf->conf->dev, buf->sg, buf->nents,
+							DMA_BIDIRECTIONAL);
 	}
 }
 
