@@ -194,8 +194,6 @@ static void exynos5_pm_prepare(void)
 	tmp &= ~EXYNOS5_OPTION_USE_RETENTION;
 	__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
 
-	s3c_pm_do_save(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
-
 	/* Set value of power down register for sleep mode */
 	exynos5_sys_powerdown_conf(SYS_SLEEP);
 	__raw_writel(S5P_CHECK_SLEEP, REG_INFORM1);
@@ -227,6 +225,8 @@ arch_initcall(exynos5_pm_drvinit);
 static int exynos5_pm_suspend(void)
 {
 	unsigned long tmp;
+
+	s3c_pm_do_save(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
 
 	tmp = __raw_readl(EXYNOS5_CENTRAL_SEQ_CONFIGURATION);
 	tmp &= ~(EXYNOS5_CENTRAL_LOWPWR_CFG);

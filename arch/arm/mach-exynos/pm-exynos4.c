@@ -212,11 +212,6 @@ void exynos4_cpu_suspend(void)
 
 static void exynos4_pm_prepare(void)
 {
-	if (!exynos4_is_c2c_use())
-		s3c_pm_do_save(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
-
-	s3c_pm_do_save(exynos4_l2cc_save, ARRAY_SIZE(exynos4_l2cc_save));
-
 	/* Set value of power down register for sleep mode */
 
 	exynos4_sys_powerdown_conf(SYS_SLEEP);
@@ -286,6 +281,11 @@ arch_initcall(exynos4_pm_drvinit);
 static int exynos4_pm_suspend(void)
 {
 	unsigned long tmp;
+
+	if (!exynos4_is_c2c_use())
+		s3c_pm_do_save(exynos4_core_save, ARRAY_SIZE(exynos4_core_save));
+
+	s3c_pm_do_save(exynos4_l2cc_save, ARRAY_SIZE(exynos4_l2cc_save));
 
 	/* Setting Central Sequence Register for power down mode */
 
