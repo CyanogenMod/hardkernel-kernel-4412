@@ -595,6 +595,8 @@ int fimc_release_subdev(struct fimc_control *ctrl)
 		ret = v4l2_subdev_call(ctrl->flite_sd, core, s_power, 0);
 		if (ret)
 			fimc_err("s_power failed: %d", ret);
+
+		ctrl->flite_sd = NULL;
 	}
 
 	return 0;
