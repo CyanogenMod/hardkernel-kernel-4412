@@ -368,8 +368,10 @@ void mxr_reg_set_layer_blend(struct mxr_device *mdev, int sub_mxr, int num,
 		int en)
 {
 	u32 val = en ? ~0 : 0;
+	unsigned long flags;
 
-	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+	spin_lock_irqsave(&mdev->reg_slock, flags);
+	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
 	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_VIDEO)
 		mxr_write_mask(mdev, MXR_VIDEO_CFG, val,
@@ -391,11 +393,17 @@ void mxr_reg_set_layer_blend(struct mxr_device *mdev, int sub_mxr, int num,
 		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), val,
 				MXR_GRP_CFG_LAYER_BLEND_EN);
 #endif
+
+	mxr_vsync_set_update(mdev, MXR_ENABLE);
+	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
 void mxr_reg_layer_alpha(struct mxr_device *mdev, int sub_mxr, int num, u32 a)
 {
-	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+	unsigned long flags;
+
+	spin_lock_irqsave(&mdev->reg_slock, flags);
+	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
 	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_VIDEO)
 		mxr_write_mask(mdev, MXR_VIDEO_CFG, MXR_VIDEO_CFG_ALPHA(a),
@@ -418,14 +426,18 @@ void mxr_reg_layer_alpha(struct mxr_device *mdev, int sub_mxr, int num, u32 a)
 				0xff);
 #endif
 
+	mxr_vsync_set_update(mdev, MXR_ENABLE);
+	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
 void mxr_reg_set_pixel_blend(struct mxr_device *mdev, int sub_mxr, int num,
 		int en)
 {
 	u32 val = en ? ~0 : 0;
+	unsigned long flags;
 
-	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+	spin_lock_irqsave(&mdev->reg_slock, flags);
+	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
 	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
 		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0), val,
@@ -441,13 +453,18 @@ void mxr_reg_set_pixel_blend(struct mxr_device *mdev, int sub_mxr, int num,
 		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), val,
 				MXR_GRP_CFG_PIXEL_BLEND_EN);
 #endif
+
+	mxr_vsync_set_update(mdev, MXR_ENABLE);
+	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
 void mxr_reg_set_colorkey(struct mxr_device *mdev, int sub_mxr, int num, int en)
 {
 	u32 val = en ? ~0 : 0;
+	unsigned long flags;
 
-	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+	spin_lock_irqsave(&mdev->reg_slock, flags);
+	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
 	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
 		mxr_write_mask(mdev, MXR_GRAPHIC_CFG(0), val,
@@ -463,11 +480,17 @@ void mxr_reg_set_colorkey(struct mxr_device *mdev, int sub_mxr, int num, int en)
 		mxr_write_mask(mdev, MXR1_GRAPHIC_CFG(1), val,
 				MXR_GRP_CFG_BLANK_KEY_EN);
 #endif
+
+	mxr_vsync_set_update(mdev, MXR_ENABLE);
+	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
 void mxr_reg_colorkey_val(struct mxr_device *mdev, int sub_mxr, int num, u32 v)
 {
-	mxr_dbg(mdev, "%s: #%d mixer, #%d layer\n", __func__, sub_mxr, num);
+	unsigned long flags;
+
+	spin_lock_irqsave(&mdev->reg_slock, flags);
+	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
 	if (sub_mxr == MXR_SUB_MIXER0 && num == MXR_LAYER_GRP0)
 		mxr_write(mdev, MXR_GRAPHIC_BLANK(0), v);
@@ -479,6 +502,9 @@ void mxr_reg_colorkey_val(struct mxr_device *mdev, int sub_mxr, int num, u32 v)
 	else if (sub_mxr == MXR_SUB_MIXER1 && num == MXR_LAYER_GRP1)
 		mxr_write(mdev, MXR1_GRAPHIC_BLANK(1), v);
 #endif
+
+	mxr_vsync_set_update(mdev, MXR_ENABLE);
+	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
 static void mxr_irq_layer_handle(struct mxr_layer *layer)

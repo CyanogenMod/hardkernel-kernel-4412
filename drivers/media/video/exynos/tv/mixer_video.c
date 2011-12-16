@@ -412,19 +412,19 @@ static int mxr_s_ctrl(struct file *file, void *fh, struct v4l2_control *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_TV_LAYER_BLEND_ENABLE:
-		mxr_reg_set_layer_blend(mdev, cur_mxr, num, v);
+		mdev->sub_mxr[cur_mxr].layer[num]->layer_blend_en = v;
 		break;
 	case V4L2_CID_TV_LAYER_BLEND_ALPHA:
-		mxr_reg_layer_alpha(mdev, cur_mxr, num, (u32)v);
+		mdev->sub_mxr[cur_mxr].layer[num]->layer_alpha = (u32)v;
 		break;
 	case V4L2_CID_TV_PIXEL_BLEND_ENABLE:
-		mxr_reg_set_pixel_blend(mdev, cur_mxr, num, v);
+		mdev->sub_mxr[cur_mxr].layer[num]->pixel_blend_en = v;
 		break;
 	case V4L2_CID_TV_CHROMA_ENABLE:
-		mxr_reg_set_colorkey(mdev, cur_mxr, num, v);
+		mdev->sub_mxr[cur_mxr].layer[num]->chroma_en = v;
 		break;
 	case V4L2_CID_TV_CHROMA_VALUE:
-		mxr_reg_colorkey_val(mdev, cur_mxr, num, v);
+		mdev->sub_mxr[cur_mxr].layer[num]->chroma_val = (u32)v;
 		break;
 	default:
 		mxr_err(mdev, "invalid control id\n");
@@ -747,6 +747,14 @@ static int mxr_video_release(struct file *file)
 	struct mxr_layer *layer = video_drvdata(file);
 
 	mxr_dbg(layer->mdev, "%s:%d\n", __func__, __LINE__);
+
+	/* initialize alpha blending variables */
+	layer->layer_blend_en = 0;
+	layer->layer_alpha = 0;
+	layer->pixel_blend_en = 0;
+	layer->chroma_en = 0;
+	layer->chroma_val = 0;
+
 	if (v4l2_fh_is_singular_file(file)) {
 		vb2_queue_release(&layer->vb_queue);
 		mxr_power_put(layer->mdev);

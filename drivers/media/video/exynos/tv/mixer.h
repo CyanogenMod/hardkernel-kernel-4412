@@ -218,6 +218,17 @@ struct mxr_layer {
 	struct media_pad pad;
 	/** pipeline structure for streaming TV graphic layer */
 	struct tv_graph_pipeline pipe;
+
+	/** enable per layer blending for each layer */
+	int layer_blend_en;
+	/** alpha value for per layer blending */
+	u32 layer_alpha;
+	/** enable per pixel blending */
+	int pixel_blend_en;
+	/** enable chromakey */
+	int chroma_en;
+	/** value for chromakey */
+	u32 chroma_val;
 };
 
 /** description of mixers output interface */

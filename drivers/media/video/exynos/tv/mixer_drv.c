@@ -58,6 +58,37 @@ void mxr_get_mbus_fmt(struct mxr_device *mdev,
 	mutex_unlock(&mdev->mutex);
 }
 
+static void mxr_set_alpha_blend(struct mxr_device *mdev)
+{
+	int i, j;
+	int layer_en, pixel_en, chroma_en;
+	u32 a, v;
+
+	for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
+		for (j = 0; j < MXR_MAX_LAYERS; ++j) {
+			layer_en = mdev->sub_mxr[i].layer[j]->layer_blend_en;
+			a = mdev->sub_mxr[i].layer[j]->layer_alpha;
+			pixel_en = mdev->sub_mxr[i].layer[j]->pixel_blend_en;
+			chroma_en = mdev->sub_mxr[i].layer[j]->chroma_en;
+			v = mdev->sub_mxr[i].layer[j]->chroma_val;
+
+			mxr_dbg(mdev, "mixer%d: layer%d\n", i, j);
+			mxr_dbg(mdev, "layer blend is %s, alpha = %d\n",
+					layer_en ? "enabled" : "disabled", a);
+			mxr_dbg(mdev, "pixel blend is %s\n",
+					pixel_en ? "enabled" : "disabled");
+			mxr_dbg(mdev, "chromakey is %s, value = %d\n",
+					chroma_en ? "enabled" : "disabled", v);
+
+			mxr_reg_set_layer_blend(mdev, i, j, layer_en);
+			mxr_reg_layer_alpha(mdev, i, j, a);
+			mxr_reg_set_pixel_blend(mdev, i, j, pixel_en);
+			mxr_reg_set_colorkey(mdev, i, j, chroma_en);
+			mxr_reg_colorkey_val(mdev, i, j, v);
+		}
+	}
+}
+
 static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 {
 	mutex_lock(&mdev->s_mutex);
@@ -135,6 +166,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 			return ret;
 		}
 
+		mxr_set_alpha_blend(mdev);
 		mxr_reg_set_mbus_fmt(mdev, &mbus_fmt);
 		mxr_reg_streamon(mdev);
 
