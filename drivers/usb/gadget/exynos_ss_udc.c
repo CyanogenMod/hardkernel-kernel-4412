@@ -415,7 +415,7 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 {
 	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
 	struct exynos_ss_udc *udc = udc_ep->parent;
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	struct exynos_ss_udc_ep_command epcmd;
 	int index = get_phys_epnum(udc_ep);
 	unsigned long irqflags;
 	bool res;
@@ -426,18 +426,18 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 
 	if (udc_ep->epnum == 0)
 		/* Only OUT direction can be stalled */
-		epcmd->ep = 0;
+		epcmd.ep = 0;
 	else
-		epcmd->ep = index;
+		epcmd.ep = index;
 
 	if (value)
-		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSSTALL;
+		epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSSTALL;
 	else
-		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCSTALL;
+		epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCSTALL;
 
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (!res) {
 		dev_err(udc->dev, "Failed to set/clear stall\n");
 		return -EINVAL;
@@ -479,7 +479,7 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 				 struct exynos_ss_udc_req *udc_req,
 				 bool continuing)
 {
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	struct exynos_ss_udc_ep_command epcmd;
 	struct usb_request *ureq = &udc_req->req;
 	int trb_type = 1;
 	int epnum = udc_ep->epnum;
@@ -540,17 +540,17 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 			EXYNOS_USB3_TRB_HWO | EXYNOS_USB3_TRB_TRBCTL(trb_type);
 
 	/* Start Transfer */
-	epcmd->ep = get_phys_epnum(udc_ep);
-	epcmd->param0 = 0;
-	epcmd->param1 = udc_ep->trb_dma;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTRTXFER;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	epcmd.ep = get_phys_epnum(udc_ep);
+	epcmd.param0 = 0;
+	epcmd.param1 = udc_ep->trb_dma;
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTRTXFER;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (!res)
 		dev_err(udc->dev, "Failed to start transfer\n");
 
-	udc_ep->tri = (readl(udc->regs + EXYNOS_USB3_DEPCMD(epcmd->ep)) >>
+	udc_ep->tri = (readl(udc->regs + EXYNOS_USB3_DEPCMD(epcmd.ep)) >>
 				EXYNOS_USB3_DEPCMDx_EventParam_SHIFT) &
 				EXYNOS_USB3_DEPCMDx_XferRscIdx_LIMIT;
 }
@@ -851,15 +851,15 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 	 */
 
 	if (ret < 0) {
-		struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+		struct exynos_ss_udc_ep_command epcmd;
 		bool res;
 
 		dev_dbg(udc->dev, "ep0 stall (dir=%d)\n", ep0->dir_in);
-		epcmd->ep = 0;
-		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSSTALL;
-		epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+		epcmd.ep = 0;
+		epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSSTALL;
+		epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-		res = exynos_ss_udc_issue_cmd(udc, epcmd);
+		res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 		if (!res)
 			dev_err(udc->dev, "Failed to set/clear stall\n");
 
@@ -1299,7 +1299,7 @@ static void exynos_ss_udc_complete_out(struct exynos_ss_udc *udc,
 
 static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 {
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	struct exynos_ss_udc_ep_command epcmd;
 	u32 reg, speed;
 	int mps0, mps;
 	int i;
@@ -1350,38 +1350,38 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 	for (i = 1; i < EXYNOS_USB3_EPS; i++)
 		udc->eps[i].ep.maxpacket = mps;
 
-	epcmd->ep = 0;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(mps0);
-	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
+	epcmd.ep = 0;
+	epcmd.param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(mps0);
+	epcmd.param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
 			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (!res)
 		dev_err(udc->dev, "Failed to configure physical EP0\n");
 
-	epcmd->ep = 1;
-	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_EpDir |
+	epcmd.ep = 1;
+	epcmd.param1 = EXYNOS_USB3_DEPCMDPAR1x_EpDir |
 			EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
 			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (!res)
 		dev_err(udc->dev, "Failed to configure physical EP1\n");
 }
 
 static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 {
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	struct exynos_ss_udc_ep_command epcmd;
 	struct exynos_ss_udc_ep *ep;
 	bool res;
 	int epnum;
 
 	dev_dbg(udc->dev, "%s\n", __func__);
 
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
 
 	/* End transfer, kill all requests and clear STALL on the
 	   non-EP0 endpoints */
@@ -1389,16 +1389,16 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 
 		ep = &udc->eps[epnum];
 
-		epcmd->ep = get_phys_epnum(ep);
+		epcmd.ep = get_phys_epnum(ep);
 
 		if (ep->tri) {
-			epcmd->cmdflags = (ep->tri <<
+			epcmd.cmdflags = (ep->tri <<
 				EXYNOS_USB3_DEPCMDx_CommandParam_SHIFT) |
 				EXYNOS_USB3_DEPCMDx_HiPri_ForceRM |
 				EXYNOS_USB3_DEPCMDx_CmdIOC |
 				EXYNOS_USB3_DEPCMDx_CmdAct;
 
-			res = exynos_ss_udc_issue_cmd(udc, epcmd);
+			res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 			if (!res) {
 				dev_err(udc->dev, "Failed to end transfer\n");
 				ep->not_ready = true;
@@ -1770,69 +1770,69 @@ static int exynos_ss_udc_corereset(struct exynos_ss_udc *udc)
  */
 static void exynos_ss_udc_ep0_activate(struct exynos_ss_udc *udc)
 {
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	struct exynos_ss_udc_ep_command epcmd;
 	bool res;
 
 	/* Start New Configuration */
-	epcmd->ep = 0;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTARTCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	epcmd.ep = 0;
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPSTARTCFG;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (!res)
 		dev_err(udc->dev, "Failed to start new configuration\n");
 
 	/* Configure Physical Endpoint 0 */
-	epcmd->ep = 0;
+	epcmd.ep = 0;
 #if defined(CONFIG_USB_GADGET_EXYNOS_SS_UDC_SSMODE)
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_SS_MPS);
+	epcmd.param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_SS_MPS);
 #else
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_HS_MPS);
+	epcmd.param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_HS_MPS);
 #endif
-	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
+	epcmd.param1 = EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
 			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (!res)
 		dev_err(udc->dev, "Failed to configure physical EP0\n");
 
 	/* Configure Physical Endpoint 1 */
-	epcmd->ep = 1;
+	epcmd.ep = 1;
 #if defined(CONFIG_USB_GADGET_EXYNOS_SS_UDC_SSMODE)
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_SS_MPS);
+	epcmd.param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_SS_MPS);
 #else
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_HS_MPS);
+	epcmd.param0 = EXYNOS_USB3_DEPCMDPAR0x_MPS(EP0_HS_MPS);
 #endif
-	epcmd->param1 = EXYNOS_USB3_DEPCMDPAR1x_EpDir |
+	epcmd.param1 = EXYNOS_USB3_DEPCMDPAR1x_EpDir |
 			EXYNOS_USB3_DEPCMDPAR1x_XferNRdyEn |
 			EXYNOS_USB3_DEPCMDPAR1x_XferCmplEn;
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPCFG;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (!res)
 		dev_err(udc->dev, "Failed to configure physical EP1\n");
 
 	/* Configure Pysical Endpoint 0 Transfer Resource */
-	epcmd->ep = 0;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	epcmd.ep = 0;
+	epcmd.param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (!res)
 		dev_err(udc->dev,
 			"Failed to configure physical EP0 transfer resource\n");
 
 	/* Configure Pysical Endpoint 1 Transfer Resource */
-	epcmd->ep = 1;
-	epcmd->param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
-	epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
-	epcmd->cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
+	epcmd.ep = 1;
+	epcmd.param0 = EXYNOS_USB3_DEPCMDPAR0x_NumXferRes(1);
+	epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPXFERCFG;
+	epcmd.cmdflags = EXYNOS_USB3_DEPCMDx_CmdAct;
 
-	res = exynos_ss_udc_issue_cmd(udc, epcmd);
+	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (!res)
 		dev_err(udc->dev,
 			"Failed to configure physical EP1 transfer resource\n");
@@ -1851,7 +1851,8 @@ static void exynos_ss_udc_ep0_activate(struct exynos_ss_udc *udc)
 static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 				      struct exynos_ss_udc_ep *udc_ep)
 {
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	struct exynos_ss_udc_ep_command ep_command;
+	struct exynos_ss_udc_ep_command *epcmd = &ep_command;
 	int epnum = udc_ep->epnum;
 	int maxburst = udc_ep->ep.maxburst;
 	bool res;
@@ -1876,7 +1877,7 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 				GFP_ATOMIC);
 		if (!epcmd) {
 			/* Will try to issue command immediately */
-			epcmd = &udc->epcmd;
+			epcmd = &ep_command;
 			udc_ep->not_ready = false;
 		}
 	}
@@ -1907,7 +1908,7 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 		epcmd = kzalloc(sizeof(struct exynos_ss_udc_ep_command),
 				GFP_ATOMIC);
 		if (!epcmd) {
-			epcmd = &udc->epcmd;
+			epcmd = &ep_command;
 			udc_ep->not_ready = false;
 		}
 	}
@@ -1940,7 +1941,7 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
 					struct exynos_ss_udc_ep *udc_ep)
 {
-	struct exynos_ss_udc_ep_command *epcmd = &udc->epcmd;
+	struct exynos_ss_udc_ep_command epcmd;
 	int index = get_phys_epnum(udc_ep);
 
 	udc->eps_enabled = false;
@@ -1948,15 +1949,15 @@ static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
 	if (udc_ep->tri && !udc_ep->not_ready) {
 		bool res;
 
-		epcmd->ep = get_phys_epnum(udc_ep);
-		epcmd->cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
-		epcmd->cmdflags = (udc_ep->tri <<
+		epcmd.ep = get_phys_epnum(udc_ep);
+		epcmd.cmdtyp = EXYNOS_USB3_DEPCMDx_CmdTyp_DEPENDXFER;
+		epcmd.cmdflags = (udc_ep->tri <<
 			EXYNOS_USB3_DEPCMDx_CommandParam_SHIFT) |
 			EXYNOS_USB3_DEPCMDx_HiPri_ForceRM |
 			EXYNOS_USB3_DEPCMDx_CmdIOC |
 			EXYNOS_USB3_DEPCMDx_CmdAct;
 
-		res = exynos_ss_udc_issue_cmd(udc, epcmd);
+		res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 		if (!res) {
 			dev_err(udc->dev, "Failed to end transfer\n");
 			udc_ep->not_ready = true;

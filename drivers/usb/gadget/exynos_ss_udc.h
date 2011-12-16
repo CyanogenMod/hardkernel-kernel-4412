@@ -192,8 +192,6 @@ struct exynos_ss_udc {
 	struct usb_request	*ep0_reply;
 	struct usb_request	*ctrl_req;
 
-	struct exynos_ss_udc_ep_command epcmd;
-
 	struct usb_gadget	gadget;
 	struct exynos_ss_udc_ep	eps[];
 
