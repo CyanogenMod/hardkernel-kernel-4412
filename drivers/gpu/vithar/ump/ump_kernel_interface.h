@@ -40,6 +40,8 @@ typedef void * ump_dd_handle;
 
 #if defined(__KERNEL__)
 #include <ump/src/devicedrv/imports/ump_import.h>
+#else
+#include <ump/src/library/common/ump_user.h>
 #endif
 
 #ifdef __cplusplus

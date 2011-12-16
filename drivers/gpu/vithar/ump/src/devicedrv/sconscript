@@ -1,6 +1,6 @@
 #
 # (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
-
+#
 # This program is free software and is provided to you under the terms of the GNU General Public License version 2
 # as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
 #
@@ -18,7 +18,7 @@ env_ump = env.Clone()
 
 # Abort building of the device driver for user-mode builds. This is a stop-gap
 # until we can build the ump common device driver source for user-mode.
-if env_ump['hw'] != '2':
+if env_ump['backend'] == 'user':
    Return()
 
 if env_ump['v'] != '1':
@@ -39,7 +39,7 @@ else:
 		env_ump['arch_linux'] = 'arm'
 	else:
 		env_ump['arch_linux'] = env['arch']
-	makeAction=Action("cd ${SOURCE.dir}/.. && make ARCH=$arch_linux MALI_HW_TYPE=${hw} MALI_HW_VERSION=${hwver} PLATFORM=${platform} MALI_LICENSE_IS_GPL=${mali_license_is_gpl} && cp ump.ko $STATIC_LIB_PATH/ump.ko", '$MAKECOMSTR')
+	makeAction=Action("cd ${SOURCE.dir}/.. && make ARCH=$arch_linux MALI_BACKEND_KERNEL=1 MALI_HW_VERSION=${hwver} PLATFORM=${platform} MALI_LICENSE_IS_GPL=${mali_license_is_gpl} && cp ump.ko $STATIC_LIB_PATH/ump.ko", '$MAKECOMSTR')
 # The target is ump.ko, built from the source in ump_src, via the action makeAction
 # ump.ko will be copied to $STATIC_LIB_PATH after being built by the standard Linux
 # kernel build system, after which it can be installed to the directory specified if

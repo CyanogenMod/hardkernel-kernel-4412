@@ -19,67 +19,6 @@
 #include <osk/mali_osk.h>
 #include <uk/mali_ukk.h>
 
-mali_error ukk_buffer_open(ukk_buffer * const buffer, void * const user_buffer, size_t size, ukk_buffer_type type)
-{
-	void * v;
-
-	OSK_ASSERT(NULL != buffer);
-	OSK_ASSERT(NULL != user_buffer);
-	OSK_ASSERT(size != 0);
-
-	buffer->user_buffer = user_buffer;
-	buffer->size = size;
-	buffer->type = type;
-	buffer->kernel_buffer = NULL;
-
-	v = osk_malloc(size);
-	if (NULL == v)
-	{
-		return MALI_ERROR_OUT_OF_MEMORY;
-	}
-
-	if (UKK_BUFFER_OUTPUT != type)
-	{
-		if (0 != copy_from_user(v, user_buffer, size))
-		{
-			osk_free(v);
-			return MALI_ERROR_FUNCTION_FAILED;
-		}
-	}
-
-	buffer->kernel_buffer = v;
-
-	return MALI_ERROR_NONE;
-}
-
-mali_error ukk_buffer_close(ukk_buffer * const buffer)
-{
-	mali_error ret = MALI_ERROR_NONE;
-
-	OSK_ASSERT(NULL != buffer);
-	OSK_ASSERT(NULL != buffer->user_buffer);
-	OSK_ASSERT(buffer->size != 0);
-
-	if (NULL != buffer->kernel_buffer)
-	{
-		if (UKK_BUFFER_INPUT != buffer->type)
-		{
-			if (0 != copy_to_user(buffer->user_buffer, buffer->kernel_buffer, buffer->size))
-			{
-				ret = MALI_ERROR_FUNCTION_FAILED;
-			}
-		}
-		osk_free((void *)buffer->kernel_buffer);
-	}
-
-	buffer->kernel_buffer = NULL;
-	buffer->user_buffer = NULL;
-	buffer->size = 0;
-
-	return ret;
-}
-
-
 mali_error ukk_session_init(ukk_session *ukk_session, ukk_dispatch_function dispatch, u16 version_major, u16 version_minor)
 {
 	OSK_ASSERT(NULL != ukk_session);
@@ -122,9 +61,6 @@ EXPORT_SYMBOL(ukk_call_data_set);
 EXPORT_SYMBOL(ukk_call_data_get);
 EXPORT_SYMBOL(ukk_dispatch);
 EXPORT_SYMBOL(ukk_thread_ctx_get);
-EXPORT_SYMBOL(ukk_buffer_open);
-EXPORT_SYMBOL(ukk_buffer_close);
-EXPORT_SYMBOL(ukk_buffer_get);
 
 module_init(ukk_module_init);
 module_exit(ukk_module_exit);

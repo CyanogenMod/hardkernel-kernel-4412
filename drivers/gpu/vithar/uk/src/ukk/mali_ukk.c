@@ -16,6 +16,11 @@
 #include <uk/mali_ukk.h>
 #include <plat/mali_ukk_os.h>
 
+/* following OS specific includes can be removed when osk functions are implemented */
+#if 0
+#include <linux/module.h>       /* Kernel module definitions */
+#include <linux/kernel.h>       /* Needed for KERN_INFO */
+#endif
 
 mali_error ukk_start(void)
 {

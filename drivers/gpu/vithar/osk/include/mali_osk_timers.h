@@ -110,6 +110,20 @@ OSK_STATIC_INLINE osk_error osk_timer_on_stack_init(osk_timer * const tim) CHECK
 OSK_STATIC_INLINE osk_error osk_timer_start(osk_timer *tim, u32 delay) CHECK_RESULT;
 
 /**
+ * @brief Modifies a timer's timeout
+ *
+ * See \a osk_timer_start for details.
+ *
+ * The only difference of this function from \a osk_timer_start is:
+ * If the timer was already set to expire the timer is modified to expire in \a new_delay milliseconds.
+ *
+ * @param[in] tim       an initialized osk timer object
+ * @param[in] new_delay timer expiration in milliseconds, at least 1.
+ * @return OSK_ERR_NONE on success. Any other value indicates failure.
+ */
+OSK_STATIC_INLINE osk_error osk_timer_modify(osk_timer *tim, u32 new_delay) CHECK_RESULT;
+
+/**
  * @brief Stops a timer
  *
  * Stops a timer. If the timer already expired this will have no 

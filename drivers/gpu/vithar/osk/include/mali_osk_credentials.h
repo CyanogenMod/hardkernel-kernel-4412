@@ -50,6 +50,31 @@ extern "C"
  */
 OSK_STATIC_INLINE mali_bool osk_is_privileged(void);
 
+#define OSK_PROCESS_PRIORITY_MIN ( -20 )
+#define OSK_PROCESS_PRIORITY_MAX ( 19 )
+
+typedef struct osk_process_priority
+{
+	/* MALI_TRUE if process is using a realtime scheduling policy */
+	mali_bool is_realtime;
+	/* The process priority in the range of OSK_PROCESS_PRIORITY_MIN
+	   and OSK_PROCESS_PRIORITY_MAX. */
+	int priority;
+} osk_process_priority;
+
+/** @brief Check if the caller is using a realtime scheduling policy
+ *
+ * @return MALI_TRUE if process is running a realtime policy.
+ */
+OSK_STATIC_INLINE mali_bool osk_is_policy_realtime(void);
+
+/** @brief Retrieve the calling process priority and policy
+ *
+ *  @param[out] prio    structure to contain the process policy type
+ *                      and priority number
+ */
+OSK_STATIC_INLINE void osk_get_process_priority(osk_process_priority *prio);
+
 /** @} */ /* end group oskcredentials */
 
 /** @} */ /* end group base_osk_api */

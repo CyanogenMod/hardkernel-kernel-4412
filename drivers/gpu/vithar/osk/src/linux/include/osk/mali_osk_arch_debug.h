@@ -33,7 +33,7 @@ void      oskp_kernel_test_exit(void);
 #endif
 
 /** Maximum number of bytes (incl. end of string character) supported in the generated debug output string */
-#define OSK_DEBUG_MESSAGE_SIZE 128
+#define OSK_DEBUG_MESSAGE_SIZE 192
 
 /**
  * All OSKP_ASSERT* and OSKP_PRINT_* macros will eventually call OSKP_PRINT to output messages

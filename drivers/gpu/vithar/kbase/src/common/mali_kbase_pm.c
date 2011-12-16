@@ -171,9 +171,7 @@ void kbase_pm_context_active(kbase_device *kbdev)
 	OSK_ASSERT(kbdev != NULL);
 	
 	osk_spinlock_irq_lock(&kbdev->pm.active_count_lock);
-
 	c = ++kbdev->pm.active_count;
-
 	osk_spinlock_irq_unlock(&kbdev->pm.active_count_lock);
 
 	if (c == 1)
@@ -378,6 +376,7 @@ STATIC int kbasep_pm_merge_event(int old_events, kbase_pm_event new_event)
 		case KBASE_PM_EVENT_POLICY_INIT:
 		case KBASE_PM_EVENT_GPU_STATE_CHANGED:
 		case KBASE_PM_EVENT_POLICY_CHANGE:
+		case KBASE_PM_EVENT_CHANGE_GPU_STATE:
 			/* Just merge these events into the list */
 			return old_events | (1 << new_event);
 		case KBASE_PM_EVENT_SYSTEM_SUSPEND:
@@ -386,14 +385,12 @@ STATIC int kbasep_pm_merge_event(int old_events, kbase_pm_event new_event)
 				return old_events & ~(1 << KBASE_PM_EVENT_SYSTEM_RESUME);
 			}
 			return old_events | (1 << new_event);
-			break;
 		case KBASE_PM_EVENT_SYSTEM_RESUME:
 			if (old_events & (1 << KBASE_PM_EVENT_SYSTEM_SUSPEND))
 			{
 				return old_events & ~(1 << KBASE_PM_EVENT_SYSTEM_SUSPEND);
 			}
 			return old_events | (1 << new_event);
-			break;
 		case KBASE_PM_EVENT_GPU_ACTIVE:
 			if (old_events & (1 << KBASE_PM_EVENT_GPU_IDLE))
 			{
@@ -464,7 +461,8 @@ void kbase_pm_send_event(kbase_device *kbdev, kbase_pm_event event)
 
 	if (old_value == 0)
 	{
-		osk_workq_submit(&kbdev->pm.workqueue, kbase_pm_worker, &kbdev->pm.work);
+		osk_workq_work_init(&kbdev->pm.work, kbase_pm_worker);
+		osk_workq_submit(&kbdev->pm.workqueue, &kbdev->pm.work);
 	}
 }
 

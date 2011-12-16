@@ -1,6 +1,6 @@
 #
-# 
-
+# (C) COPYRIGHT ARM Limited. All rights reserved.
+#
 # This program is free software and is provided to you under the terms of the GNU General Public License version 2
 # as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
 #
@@ -15,7 +15,6 @@ ifneq ($(VITHAR_ROOT),)
 OS=linux
 RELATIVE_ROOT=../../../..
 ROOT = $(KBUILD_EXTMOD)/$(RELATIVE_ROOT)
-
 ifneq ($(KBUILD_EXTMOD),)
 OSK_PATH = $(ROOT)/osk
 include $(OSK_PATH)/src/$(OS)/Makefile.osk
@@ -46,7 +45,7 @@ endif
 
 #$(MODULE:.ko=-objs) := $(SRC:.c=.o) $(RELATIVE_ROOT)/osk/src/$(OS)/lib.a
 
-EXTRA_CFLAGS += -I$(ROOT)/uk -I$(ROOT)/uk/platform_$(PLATFORM) -DMALI_DEBUG=$(MALI_DEBUG) -DMALI_HW_TYPE=$(MALI_HW_TYPE) -DMALI_BASE_TRACK_MEMLEAK=$(MALI_BASE_TRACK_MEMLEAK) -DMALI_UNIT_TEST=$(MALI_UNIT_TEST) -DMALI_LICENSE_IS_GPL=$(MALI_LICENSE_IS_GPL)
+EXTRA_CFLAGS += -I$(ROOT)/uk -I$(ROOT)/uk/platform_$(PLATFORM) -DMALI_DEBUG=$(MALI_DEBUG) -DMALI_BACKEND_KERNEL=$(MALI_BACKEND_KERNEL) -DMALI_BASE_TRACK_MEMLEAK=$(MALI_BASE_TRACK_MEMLEAK) -DMALI_UNIT_TEST=$(MALI_UNIT_TEST) -DMALI_LICENSE_IS_GPL=$(MALI_LICENSE_IS_GPL)
 
 else
 

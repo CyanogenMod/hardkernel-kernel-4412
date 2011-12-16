@@ -177,6 +177,7 @@ static void always_on_event(kbase_device *kbdev, kbase_pm_event event)
 		break;
 	case KBASE_PM_EVENT_GPU_ACTIVE:
 	case KBASE_PM_EVENT_GPU_IDLE:
+	case KBASE_PM_EVENT_CHANGE_GPU_STATE:
 		/* Not used - the GPU is always kept on */
 		break;
 	default:

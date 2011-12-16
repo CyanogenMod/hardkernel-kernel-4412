@@ -23,9 +23,6 @@
 #define GPU_NUM_ADDRESS_SPACES 4
 #define GPU_NUM_JOB_SLOTS 3
 
-void kbasep_reset_timer_callback(void *data);
-void kbasep_reset_timeout_worker(osk_workq_work *data);
-
 /* This array is referenced at compile time, it cannot be made static... */
 const kbase_device_info kbase_dev_info[] = {
 	{
@@ -48,6 +45,10 @@ const kbase_device_info kbase_dev_info[] = {
 		KBASE_MALI_T608,
 	},
 };
+
+void kbasep_as_do_poke(osk_workq_work * work);
+void kbasep_reset_timer_callback(void *data);
+void kbasep_reset_timeout_worker(osk_workq_work *data);
 
 kbase_device *kbase_device_create(const kbase_device_info *dev_info)
 {
@@ -98,6 +99,14 @@ kbase_device *kbase_device_create(const kbase_device_info *dev_info)
 	{
 		const char format[] = "mali_mmu%d";
 		char name[sizeof(format)];
+#if BASE_HW_ISSUE_8316
+		const char poke_format[] = "mali_mmu%d_poker";
+		char poke_name[sizeof(poke_format)];
+		if (0 > cutils_cstr_snprintf(poke_name, sizeof(poke_name), poke_format, i))
+		{
+			goto free_workqs;
+		}
+#endif /* BASE_HW_ISSUE_8316 */
 
 		if (0 > cutils_cstr_snprintf(name, sizeof(name), format, i))
 		{
@@ -117,6 +126,26 @@ kbase_device *kbase_device_create(const kbase_device_info *dev_info)
 			osk_workq_term(&kbdev->as[i].pf_wq);
 			goto free_workqs;
 		}
+#if BASE_HW_ISSUE_8316
+		osk_err = osk_workq_init(&kbdev->as[i].poke_wq, poke_name, 0);
+		if (OSK_ERR_NONE != osk_err)
+		{
+			osk_workq_term(&kbdev->as[i].pf_wq);
+			osk_mutex_term(&kbdev->as[i].transaction_mutex);
+			goto free_workqs;
+		}
+		osk_workq_work_init(&kbdev->as[i].poke_work, kbasep_as_do_poke);
+		osk_err = osk_timer_init(&kbdev->as[i].poke_timer);
+		if (OSK_ERR_NONE != osk_err)
+		{
+			osk_workq_term(&kbdev->as[i].poke_wq);
+			osk_workq_term(&kbdev->as[i].pf_wq);
+			osk_mutex_term(&kbdev->as[i].transaction_mutex);
+			goto free_workqs;
+		}
+		osk_timer_callback_set(&kbdev->as[i].poke_timer, kbasep_as_poke_timer_callback , &kbdev->as[i]);
+		osk_atomic_set(&kbdev->as[i].poke_refcount, 0);
+#endif /* BASE_HW_ISSUE_8316 */
 	}
 	/* don't change i after this point */
 
@@ -139,6 +168,8 @@ kbase_device *kbase_device_create(const kbase_device_info *dev_info)
 	{
 		goto free_hwcnt_waitq;
 	}
+
+	osk_workq_work_init(&kbdev->reset_work, kbasep_reset_timeout_worker);
 
 	osk_err = osk_waitq_init(&kbdev->reset_waitq);
 	if (OSK_ERR_NONE != osk_err)
@@ -169,6 +200,10 @@ free_workqs:
 		i--;
 		osk_mutex_term(&kbdev->as[i].transaction_mutex);
 		osk_workq_term(&kbdev->as[i].pf_wq);
+#if BASE_HW_ISSUE_8316
+		osk_workq_term(&kbdev->as[i].poke_wq);
+		osk_timer_term(&kbdev->as[i].poke_timer);
+#endif /* BASE_HW_ISSUE_8316 */
 	}
 	osk_spinlock_irq_term(&kbdev->mmu_mask_change);
 free_dev:
@@ -189,6 +224,10 @@ void kbase_device_destroy(kbase_device *kbdev)
 	{
 		osk_mutex_term(&kbdev->as[i].transaction_mutex);
 		osk_workq_term(&kbdev->as[i].pf_wq);
+#if BASE_HW_ISSUE_8316
+		osk_workq_term(&kbdev->as[i].poke_wq);
+		osk_timer_term(&kbdev->as[i].poke_timer);
+#endif /* BASE_HW_ISSUE_8316 */
 	}
 
 	osk_spinlock_term(&kbdev->hwcnt_lock);
@@ -206,6 +245,7 @@ kbase_midgard_type kbase_device_get_type(kbase_device *kbdev)
 {
 	return kbdev->dev_info->dev_type;
 }
+KBASE_EXPORT_TEST_API(kbase_device_get_type)
 
 #if KBASE_REGISTER_TRACE_ENABLED
 
@@ -233,7 +273,6 @@ void kbase_device_trace_buffer_install(kbase_context * kctx, u32 * tb, size_t si
 void kbase_device_trace_buffer_uninstall(kbase_context * kctx)
 {
 	OSK_ASSERT(kctx);
-
 	osk_spinlock_irq_lock(&kctx->jctx.tb_lock);
 	kctx->jctx.tb = NULL;
 	kctx->jctx.tb_wrap_offset = 0;
@@ -293,6 +332,7 @@ void kbase_reg_write(kbase_device *kbdev, u16 offset, u32 value, kbase_context *
 	if (kctx) kbase_device_trace_register_access(kctx, REG_WRITE, offset, value);
 #endif /* KBASE_REGISTER_TRACE_ENABLED */
 }
+KBASE_EXPORT_TEST_API(kbase_reg_write)
 
 u32 kbase_reg_read(kbase_device *kbdev, u16 offset, kbase_context * kctx)
 {
@@ -304,6 +344,7 @@ u32 kbase_reg_read(kbase_device *kbdev, u16 offset, kbase_context * kctx)
 #endif /* KBASE_REGISTER_TRACE_ENABLED */
 	return val;
 }
+KBASE_EXPORT_TEST_API(kbase_reg_read)
 
 void kbase_report_gpu_fault(kbase_device *kbdev, int multiple)
 {
@@ -314,7 +355,7 @@ void kbase_report_gpu_fault(kbase_device *kbdev, int multiple)
 	address = (u64)kbase_reg_read(kbdev, GPU_CONTROL_REG(GPU_FAULTADDRESS_HI), NULL) << 32;
 	address |= kbase_reg_read(kbdev, GPU_CONTROL_REG(GPU_FAULTADDRESS_LO), NULL);
 
-	OSK_PRINT_WARN(OSK_BASE_CORE, "GPU Fault 0x08%x at 0x%016llx", status, address);
+	OSK_PRINT_WARN(OSK_BASE_CORE, "GPU Fault 0x08%x (%s) at 0x%016llx", status, kbase_exception_name(status), address);
 	if (multiple)
 	{
 		OSK_PRINT_WARN(OSK_BASE_CORE, "There were multiple GPU faults - some have not been reported\n");

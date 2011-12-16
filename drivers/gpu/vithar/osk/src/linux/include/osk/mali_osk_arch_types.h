@@ -53,7 +53,31 @@ typedef atomic_t osk_atomic;
 
 typedef struct osk_waitq
 {
-       mali_bool signaled;    /**< set to MALI_TRUE when the waitq is signaled; set to MALI_FALSE when not signaled */
+       /**
+		* set to MALI_TRUE when the waitq is signaled; set to MALI_FALSE when
+		* not signaled.
+		*
+		* This does not require locking for the setter, clearer and waiter.
+		* Here's why:
+		* - The only sensible use of a waitq is for operations to occur in
+		* strict order, without possibility of race between the callers of
+		* osk_waitq_set() and osk_waitq_clear() (the setter and clearer).
+		* Effectively, the clear must cause a later set to occur.
+		* - When the clear/set operations occur in different threads, some
+		* form of communication needs to happen for the clear to cause the
+		* signal to occur later.
+		* - This itself \b must involve a memory barrier, and so the clear is
+		* guarenteed to be observed by the waiter such that it is before the set.
+		* (and the set is observed after the clear).
+		*
+		* For example, running a GPU job might clear a "there are jobs in
+		* flight" waitq. Running the job must issue an register write, (and
+		* likely a post to a workqueue due to IRQ handling). Those operations
+		* must cause a data barrier to occur. During IRQ handling/workqueue
+		* processing, we might then set the waitq, and this happens after the
+		* barrier. Hence, the set and clear are observed in strict order.
+		*/
+       mali_bool signaled;
        wait_queue_head_t wq;  /**< threads waiting for flag to be signalled */
 } osk_waitq;
 
@@ -69,12 +93,42 @@ typedef struct vm_area_struct osk_vma;
 
 typedef unsigned long osk_ticks; /* 32-bit resolution deemed to be sufficient */
 
+/* Separate definitions for the following, to avoid wrapper functions for GPL drivers */
+#if MALI_LICENSE_IS_GPL
 typedef work_func_t		osk_workq_fn;
-typedef struct work_struct	osk_workq_work;
+
+typedef struct work_struct osk_workq_work;
+
 typedef struct osk_workq
 {
 	struct workqueue_struct *wqs;
 } osk_workq;
+
+#else /* MALI_LICENSE_IS_GPL */
+
+/* Forward decls */
+typedef struct osk_workq_work osk_workq_work;
+typedef struct osk_workq osk_workq;
+
+typedef void (*osk_workq_fn)(osk_workq_work *);
+
+struct osk_workq_work
+{
+	struct work_struct os_work;
+	/* Non-GPL driver must manually track work */
+	osk_workq_fn actual_fn;
+	osk_workq *parent_wq;
+};
+
+struct osk_workq
+{
+	/* Non-GPL driver shouldn't flush the global workqueue, so we do a manual form of flushing */
+	spinlock_t active_items_lock;
+	u32 nr_active_items;
+	wait_queue_head_t waitq_zero_active_items;
+};
+
+#endif /* MALI_LICENSE_IS_GPL */
 
 typedef struct device osk_power_info;
 

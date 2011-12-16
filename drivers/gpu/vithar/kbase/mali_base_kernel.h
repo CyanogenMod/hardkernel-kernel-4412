@@ -85,12 +85,11 @@ enum
 	BASE_MEM_HINT_GPU_RD =	(1U << 7), /**< Heavily read GPU side */
 	BASE_MEM_HINT_GPU_WR =	(1U << 8), /**< Heavily written GPU side */
 
-	BASE_MEM_GROW_ON_GPF =	(1U << 9), /**< Grow backing store on GPU Page Fault */
+	BASEP_MEM_GROWABLE   =	(1U << 9), /**< Growable memory. This is a private flag that is set automatically. Not valid for PMEM. */
+	BASE_MEM_GROW_ON_GPF =	(1U << 10), /**< Grow backing store on GPU Page Fault */
 
-	BASE_MEM_COHERENT_SYSTEM =	(1U << 10),/**< Page coherence Outer shareable */
-	BASE_MEM_COHERENT_LOCAL =	(1U << 11),/**< Page coherence Inner shareable */
-	
-	BASEP_MEM_IS_CACHED =	(1U << 20) /**< Is cached (Kernel hint only) */
+	BASE_MEM_COHERENT_SYSTEM =	(1U << 11),/**< Page coherence Outer shareable */
+	BASE_MEM_COHERENT_LOCAL =	(1U << 12) /**< Page coherence Inner shareable */
 };
 
 /**
@@ -98,7 +97,7 @@ enum
  *
  * Must be kept in sync with the ::base_mem_alloc_flags flags
  */
-#define BASE_MEM_FLAGS_NR_BITS	20
+#define BASE_MEM_FLAGS_NR_BITS	13
 
 /**
  * @brief Result codes of changing the size of the backing store allocated to a tmem region
@@ -209,12 +208,12 @@ typedef u8 base_jd_core_req;
  */
 #define	BASE_JD_REQ_COHERENT_GROUP (1U << 6)
 
-
 /**
- * This requirement is currently unused - but it's the last one available in
- * our base_jd_core_req (currently a u8)
+ * SW Only requirement: The performance counters should be enabled only when
+ * they are needed, to reduce power consumption.
  */
-#define	BASEP_JD_REQ_RESERVED (1U << 7)
+
+#define	BASE_JD_REQ_PERMON (1U << 7)
 
 /**
  * @brief A single job chain, with pre/post dependendencies and mem ops
@@ -278,6 +277,15 @@ static INLINE size_t base_jd_atom_size(u32 nr)
  */
 static INLINE base_syncset *base_jd_get_atom_syncset(base_jd_atom *atom, int n)
 {
+#if defined CDBG_ASSERT
+	CDBG_ASSERT(atom != NULL);
+	CDBG_ASSERT( (n >= 0) && (n <= atom->nr_syncsets) );
+#elif defined OSK_ASSERT
+	OSK_ASSERT(atom != NULL);
+	OSK_ASSERT( (n >= 0) && (n <= atom->nr_syncsets) );
+#else
+#error assert macro not defined!
+#endif
 	return &((basep_jd_atom_ss *)atom)->syncsets[n];
 }
 
@@ -293,6 +301,13 @@ static INLINE base_syncset *base_jd_get_atom_syncset(base_jd_atom *atom, int n)
  */
 static INLINE base_jd_atom *base_jd_get_next_atom(base_jd_atom *atom)
 {
+#if defined CDBG_ASSERT
+	CDBG_ASSERT(atom != NULL);
+#elif defined OSK_ASSERT
+	OSK_ASSERT(atom != NULL);
+#else
+#error assert macro not defined!
+#endif
 	return (base_jd_atom *)base_jd_get_atom_syncset(atom, atom->nr_syncsets);
 }
 
@@ -389,6 +404,7 @@ typedef enum base_jd_event_code
 	BASE_JD_EVENT_TILE_RANGE_FAULT = 0x59,
 	BASE_JD_EVENT_STATE_FAULT = 0x5A,
 	BASE_JD_EVENT_OUT_OF_MEMORY = 0x60,
+	BASE_JD_EVENT_UNKNOWN = 0x7F,
 	
 	/* GPU exceptions */
 	BASE_JD_EVENT_DELAYED_BUS_FAULT = 0x80,

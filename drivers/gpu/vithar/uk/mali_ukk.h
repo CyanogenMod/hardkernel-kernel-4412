@@ -114,9 +114,7 @@ typedef struct ukk_call_context ukk_call_context;
  *      } *kctx;
  *	kctx = CONTAINER_OF(ukk_session_get(ukk_call_ctx), kbase_context, ukk_session_member);
  *
- * A UK call may use an argument structure with embedded pointers pointing to user-space memory. To support 
- * an OS independent implemenation of the UK calls, the UKK API provides the OS independent ukk_buffer_open(), 
- * ukk_buffer_close() and ukk_buffer_get() functions to access the user-space memory areas in kernel-space. 
+ * A UK call may not use an argument structure with embedded pointers.
  *
  * All of this can be translated into the following minimal sample code for a UKK client driver:
 @code
@@ -297,58 +295,6 @@ struct ukk_call_context
 };
 
 /**
- * Values describing the type of access to the buffer created to access a memory area in user space.
- * The value can be used to identify access to a memory area in user space as input only, output only, or both
- * input and output. The values cannot be combined. Use with the ukk_buffer_open() and
- * ukk_buffer_close() functions that deal with accessing embedded pointers in the argument structure
- * of a UK call.
- */
-typedef enum ukk_buffer_type
-{
-	/**
-	 * The kernel space buffer is for input purposes only. Existing data from a user space memory area
-	 * will be copied to the kernel space buffer when the kernel space buffer is opened.
-	 */
-	UKK_BUFFER_INPUT,
-	/**
-	 * The kernel space buffer is for output purposes only. The data from the kernel space buffer will
-	 * be copied back to a user space memory area when the kernel space buffer is closed.
-	 */
-	UKK_BUFFER_OUTPUT,
-	/**
-	 * The kernel space buffer is for input and output purposes. Existing data from a user space memory area
-	 * will be copied to the kernel space buffer when the kernel space buffer is opened. The data from 
-	 * the kernel space buffer will be copied back to a user space memory area when the kernel space 
-	 * buffer is closed.
-	 */
-	UKK_BUFFER_INPUT_OUTPUT
-} ukk_buffer_type;
-
-/**
- * A ukk_buffer object represents a memory area in user space that is made accessible in kernel space.
- * This object is managed by the ukk_buffer_open(), ukk_buffer_close(), and ukk_buffer_get() functions.
- */
-typedef struct ukk_buffer
-{
-	/**
-	 * Pointer to the kernel space buffer created to buffer the user space memory area.
-	 */
-	void *kernel_buffer;
-	/**
-	 * Pointer to the user space memory area passed in to ukk_buffer_open()
-	 */
-	void *user_buffer;
-	/**
-	 * Specifies the buffer type (input, output or both) as passed in to ukk_buffer_open()
-	 */
-	ukk_buffer_type type;
-	/**
-	 * Specifies the size of the user space memory area as passed in to ukk_buffer_open()
-	 */
-	u32 size;
-} ukk_buffer;
-
-/**
  * @brief UKK core startup
  *
  * Must be called during the UKK client driver initialization before accessing any UKK provided functionality.
@@ -481,80 +427,6 @@ uintptr_t ukk_call_data_get(ukk_call_context * const ukk_ctx);
  * @return Pointer to the calling thread's context associated with the call context
  */
 void *ukk_thread_ctx_get(ukk_call_context * const ukk_ctx);
-
-/**
- * @brief Open a buffer for accessing or updating a user space memory area 
- * 
- * Used for accessing user space pointers in the argument structure of a UK call. The argument
- * structure of a UK call should be defined such that it contains a field specifying the size
- * of the memory area pointed to by the user space pointer, and serves as the size argument of
- * this function.
- *
- * A transient buffer in kernel space will be created to access the memory area pointed to by the
- * user space pointer. The type argument specifies the type of access (input, output, or
- * input and output).
- *
- * When the type is UKK_BUFFER_INPUT or UKK_BUFFER_INPUT_OUTPUT, the transient buffer
- * will be initialized with the data from the memory area in user space. 
- *
- * When the type is UKK_BUFFER_OUTPUT the transient buffer will not be initialized and contain
- * random data. The user must ensure the entire buffer is written when the buffer is
- * closed to prevent information leaks from kernel to user space.
- *
- * Note that a buffer should be closed before returning from a UK call. Leaving buffers allocated
- * between UK calls is not allowed.
- *
- * Changes made to the data in a buffer are not visible to user space until you close the buffer.
- *
- * Debug builds will assert when a NULL pointer is passed for buffer, user_buffer, size is zero
- * or an unknown enumerated value is passed for type.
- *
- * @param[out] buffer      Pointer to ukk_buffer that ukk_buffer_open will initialize.
- * @param[in] user_buffer  Pointer to memory area in user space
- * @param[in] size         Size of the memory area in user space (in bytes)
- * @param[in] type         Flags describing type of access to the memory area. See ukk_buffer_type.
- * @return Pointer to kernel accessible buffer containing the data from the memory area in user space. NULL on failure.
- */
-mali_error ukk_buffer_open(ukk_buffer * const buffer, void * const user_buffer, size_t size, ukk_buffer_type type);
-
-/**
- * @brief Close a buffer opened for accessing or updating a user-side memory area 
- * 
- * Releases any resources created when the buffer was opened.
- *
- * If the buffer was opened for output, or input and output, any changes in the buffer will be copied 
- * to the user space memory area. If an error occurs, this function will return MALI_ERROR_FUNCTION_FAILED
- * and the kernel space buffer will be released without having copied the data (completely) to the
- * user space memory area.
- *
- * Debug builds will assert when a NULL pointer is passed for buffer, or, the internal data of the
- * ukk_buffer object got corrupted.
- *
- * @param[in,out] buffer  Pointer to buffer returned from ukk_buffer_open.
- * @return MALI_ERROR_NONE on success. MALI_ERROR_FUNCTION_FAILED when the buffer couldn't
- * be copied back completely to the user space memory area.
- */
-mali_error ukk_buffer_close(ukk_buffer * const buffer);
-
-/**
- * @brief Retrieves the kernel space pointer of the buffer
- * 
- * Returns the kernel space pointer of the buffer. This kernel space pointer is only valid
- * until the buffer is closed.
- *
- * Calling ukk_buffer_get() on a buffer that failed to open, will return NULL.
- * Calling ukk_buffer_get() on a buffer that hasn't been opened yet returns random data.
- *
- * Debug builds will assert when a NULL pointer is passed for buffer.
- *
- * @param[in] buffer  Pointer to buffer returned from ukk_buffer_open.
- * @return Kernel space pointer of the buffer. NULL when used on a buffer that failed to open.
- */
-static INLINE void *ukk_buffer_get(ukk_buffer * const buffer)
-{
-	OSK_ASSERT(NULL != buffer);
-	return buffer->kernel_buffer;
-}
 
 /**
  * @brief Dispatch a UK call

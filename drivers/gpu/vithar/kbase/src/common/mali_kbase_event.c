@@ -65,16 +65,21 @@ int kbase_event_pending(kbase_context *ctx)
 {
 	int ret;
 
+	OSK_ASSERT(ctx);
+
 	osk_mutex_lock(&ctx->event_mutex);
 	ret  = (MALI_FALSE == OSK_DLIST_IS_EMPTY(&ctx->event_list)) || (MALI_TRUE == ctx->event_closed);
 	osk_mutex_unlock(&ctx->event_mutex);
 
 	return ret;
 }
+KBASE_EXPORT_TEST_API(kbase_event_pending)
 
 int kbase_event_dequeue(kbase_context *ctx, base_jd_event *uevent)
 {
 	kbase_event *event;
+
+	OSK_ASSERT(ctx);
 
 	osk_mutex_lock(&ctx->event_mutex);
 
@@ -107,11 +112,15 @@ int kbase_event_dequeue(kbase_context *ctx, base_jd_event *uevent)
 
 	return 0;
 }
+KBASE_EXPORT_TEST_API(kbase_event_dequeue)
 
 void kbase_event_post(kbase_context *ctx,
 		      kbase_event *event)
 {
 	beenthere("event queuing %p\n", event);
+
+	OSK_ASSERT(ctx);
+
 	osk_mutex_lock(&ctx->event_mutex);
 	OSK_DLIST_PUSH_BACK(&ctx->event_list, event,
 			       kbase_event, entry);
@@ -119,6 +128,7 @@ void kbase_event_post(kbase_context *ctx,
 
 	kbase_event_wakeup(ctx);
 }
+KBASE_EXPORT_TEST_API(kbase_event_post)
 
 void kbase_event_close(kbase_context * kctx)
 {
@@ -132,6 +142,8 @@ mali_error kbase_event_init(kbase_context *kctx)
 {
 	osk_error osk_err;
 
+	OSK_ASSERT(kctx);
+
 	OSK_DLIST_INIT(&kctx->event_list);
 	osk_err = osk_mutex_init(&kctx->event_mutex, OSK_LOCK_ORDER_QUEUE);
 	if (OSK_ERR_NONE != osk_err)
@@ -142,9 +154,12 @@ mali_error kbase_event_init(kbase_context *kctx)
 	kctx->event_closed = MALI_FALSE;
 	return MALI_ERROR_NONE;
 }
+KBASE_EXPORT_TEST_API(kbase_event_init)
 
 void kbase_event_cleanup(kbase_context *kctx)
 {
+	OSK_ASSERT(kctx);
+
 	osk_mutex_lock(&kctx->event_mutex);
 	while (!OSK_DLIST_IS_EMPTY(&kctx->event_list))
 	{
@@ -157,3 +172,5 @@ void kbase_event_cleanup(kbase_context *kctx)
 	osk_mutex_unlock(&kctx->event_mutex);
 	osk_mutex_term(&kctx->event_mutex);
 }
+KBASE_EXPORT_TEST_API(kbase_event_cleanup)
+

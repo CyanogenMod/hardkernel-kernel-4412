@@ -117,6 +117,46 @@ static kbase_attribute config_attributes[] = {
 	},
 
 	{
+		KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS,
+		15000000 /* 15ms, an agressive tick for testing purposes. This will reduce performance significantly */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS,
+		1 /* between 15ms and 30ms before soft-stop a job */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS,
+		133 /* 2s (0.2s scaled up from 50MHz to 5MHz) before hard-stop */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS,
+		40000 /* 10min (60s scaled up from 50MHz to 5MHz) before NSS hard-stop */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS,
+		200 /* 3s before resetting GPU */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS,
+		40067 /* 10min 1 second before resetting GPU */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_RESET_TIMEOUT_MS,
+		3000 /* 3s before cancelling stuck jobs */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS,
+		1000000 /* 1ms - an agressive timeslice for testing purposes (causes lots of scheduling out for >4 ctxs) */
+	},
+
+	{
 		KBASE_CONFIG_ATTR_END,
 		0
 	}

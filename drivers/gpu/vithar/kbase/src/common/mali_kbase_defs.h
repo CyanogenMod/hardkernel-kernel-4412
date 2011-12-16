@@ -28,17 +28,13 @@
 #include <mali_base_hwconfig.h>
 #include <kbase/mali_kbase_config.h>
 
-/* Number of milliseconds before resetting the GPU when a job cannot be "zapped" from the hardware.
+/**
+ * Number of milliseconds before resetting the GPU when a job cannot be "zapped" from the hardware.
  * Note that the time is actually ZAP_TIMEOUT+SOFT_STOP_RESET_TIMEOUT between the context zap starting and the GPU
  * actually being reset to give other contexts time for their jobs to be soft-stopped and removed from the hardware
  * before resetting.
  */
 #define ZAP_TIMEOUT             1000
-
-/**
- * Number of milliseconds given for other jobs on the GPU to be soft-stopped when the GPU needs to be reset.
- */
-#define SOFT_STOP_RESET_TIMEOUT 500
 
 /**
  * Prevent soft-stops from occuring in scheduling situations
@@ -51,7 +47,7 @@
  *
  * @note if not in use, define this value to 0 instead of #undef'ing it
  */
-#define KBASE_DISABLE_SCHEDULING_SOFT_STOPS 1 /* Disabled for r0p0_beta_eco1 as soft-stops cause issues on this h/w */
+#define KBASE_DISABLE_SCHEDULING_SOFT_STOPS 1
 
 /**
  * Prevent hard-stops from occuring in scheduling situations
@@ -62,7 +58,7 @@
  *
  * @note if not in use, define this value to 0 instead of #undef'ing it
  */
-#define KBASE_DISABLE_SCHEDULING_HARD_STOPS 1 /* Disabled for r0p0_beta_eco1 as soft-stops are disabled */
+#define KBASE_DISABLE_SCHEDULING_HARD_STOPS 1
 
 /* Forward declarations+defintions */
 typedef struct kbase_context kbase_context;
@@ -157,12 +153,19 @@ typedef struct kbase_jd_atom {
 	base_jd_dep     pre_dep;
 	base_jd_dep     post_dep;
 	u32             nr_syncsets;
+	u64             affinity;
 
 	kbasep_js_policy_job_info sched_info;
 	/** Job Slot to retry submitting to if submission from IRQ handler failed
 	 *
 	 * NOTE: see if this can be unified into the another member e.g. the event */
 	int             retry_submit_on_slot;
+	/* atom priority scaled to nice range with +20 offset 0..39 */
+	int             nice_prio;
+
+#if BASE_HW_ISSUE_8316
+	int             poking;
+#endif /* BASE_HW_ISSUE_8316 */
 } kbase_jd_atom;
 
 /*
@@ -226,7 +229,7 @@ typedef struct kbase_jd_context {
 } kbase_jd_context;
 
 typedef struct kbase_jm_slot {
-#if BASE_HW_ISSUE_7347==0
+#if BASE_HW_ISSUE_7347 == 0
 	osk_spinlock_irq lock;
 #endif
 
@@ -299,6 +302,13 @@ typedef struct kbase_as
 	osk_workq_work    work_busfault;
 	mali_addr64       fault_addr;
 	osk_mutex         transaction_mutex;
+
+#if BASE_HW_ISSUE_8316
+	osk_workq         poke_wq;
+	osk_workq_work    poke_work;
+	osk_atomic        poke_refcount;
+	osk_timer         poke_timer;
+#endif /* BASE_HW_ISSUE_8316 */
 } kbase_as;
 
 /* tracking of memory usage */
@@ -413,6 +423,14 @@ struct kbase_device {
 	u64                     shader_inuse_bitmap;
 	u64                     tiler_inuse_bitmap;
 
+	/* Bitmaps of cores the JS needs for jobs ready to run */
+	u64                     shader_needed_bitmap;
+	u64                     tiler_needed_bitmap;
+ 
+ 	/* Refcount for cores usage */
+	u8                      shader_needed_cnt[64];
+	u8                      tiler_needed_cnt[64];
+	
 	/* Bitmaps of cores that are currently available (powered up and the power policy is happy for jobs to be
 	 * submitted to these cores. These are updated by the power management code. The job scheduler should avoid
 	 * submitting new jobs to any cores that are not marked as available.
@@ -438,14 +456,14 @@ struct kbase_device {
 	/* Instrumentation state machine current state */
 	kbase_instr_state       hwcnt_state;
 
-	/* Set when we're about to reset the GPU. */
+	/* Set when we're about to reset the GPU */
 	osk_atomic              reset_gpu;
 #define KBASE_RESET_GPU_NOT_PENDING     0 /* The GPU reset isn't pending */
 #define KBASE_RESET_GPU_PREPARED        1 /* kbase_prepare_to_reset_gpu has been called */
-#define KBASE_RESET_GPU_COMMITTED       2 /* kbase_reset_gpu has been call - the reset will now definitely happen
+#define KBASE_RESET_GPU_COMMITTED       2 /* kbase_reset_gpu has been called - the reset will now definitely happen
                                            * within the timeout period */
 #define KBASE_RESET_GPU_HAPPENING       3 /* The GPU reset process is currently occuring (timeout has expired or
-                                           * kbasep_try_reset_gpu_early */
+                                           * kbasep_try_reset_gpu_early was called) */
 
 	/* Work queue and work item for performing the reset in */
 	osk_workq               reset_workq;
@@ -456,6 +474,8 @@ struct kbase_device {
 
 	/*value to be written to the irq_throttle register each time an irq is served */
 	osk_atomic irq_throttle_cycles;
+
+	kbase_attribute        *config_attributes;
 };
 
 struct kbase_context

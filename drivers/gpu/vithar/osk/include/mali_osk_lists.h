@@ -116,7 +116,7 @@ typedef struct osk_dlist
  * @return Returns MALI_TRUE if @c container_ptr is valid or MALI_FALSE otherwise.
  */
 #define OSK_DLIST_IS_VALID(container_ptr, attribute)\
-	(NULL != &(container_ptr)->attribute)
+		( NULL != (container_ptr) )
 
 /**
  * @brief Return the next item in the list
@@ -125,15 +125,15 @@ typedef struct osk_dlist
  * @param [in] type          Type of the container
  * @param [in] attribute     Attribute of the container of type @c osk_dlist_item
  *
- * @return A pointer to the next container item.
+ * @return A pointer to the next container item, or @c NULL.
 
- * @note If @c OSK_DLIST_IS_VALID returns MALI_FALSE when testing the returned pointer then the back of the list has
- * been reached.
+ * @note If this macro evaluates as null then the back of the list has been reached.
  * @note An assert is triggered if @a container_ptr is NULL.
  * @note If @c type or @c attribute is invalid then the behavior is undefined.
  */
 #define OSK_DLIST_NEXT(container_ptr, type, attribute)\
-	CONTAINER_OF((OSK_CHECK_PTR(container_ptr))->attribute.oskp.next, type, attribute)
+	( OSK_DLIST_IS_BACK( container_ptr, attribute ) ?\
+	NULL :CONTAINER_OF( (container_ptr)->attribute.oskp.next, type, attribute ) )
 
 /**
  * @brief Return MALI_TRUE if the list is empty
@@ -145,7 +145,7 @@ typedef struct osk_dlist
  * @return Returns MALI_TRUE if @c osk_dlist_ptr is an empty list.
  */
 #define OSK_DLIST_IS_EMPTY(osk_dlist_ptr)\
-	(NULL == (OSK_CHECK_PTR(osk_dlist_ptr))->oskp.front)
+	(NULL == OSK_CHECK_PTR(osk_dlist_ptr)->oskp.front)
 
 /**
  * @brief Return the previous item in the list
@@ -154,15 +154,15 @@ typedef struct osk_dlist
  * @param [in] type          Type of the container
  * @param [in] attribute     Attribute of the container of type @c osk_dlist_item
  *
- * @return A pointer to the previous container item.
+ * @return A pointer to the previous container item, or @c NULL.
 
- * @note If @c OSK_DLIST_IS_VALID returns MALI_FALSE when testing the returned pointer then the front of the list has
- * been reached.
+ * @note If this macro evaluates as null then the front of the list has been reached.
  * @note An assert is triggered if @a container_ptr is NULL.
  * @note If @c type or @c attribute is invalid then the behavior is undefined.
  */
 #define OSK_DLIST_PREV(container_ptr, type, attribute)\
-	CONTAINER_OF((OSK_CHECK_PTR(container_ptr))->attribute.oskp.prev, type, attribute)
+	( OSK_DLIST_IS_FRONT( container_ptr, attribute ) ?\
+	NULL : CONTAINER_OF( (container_ptr)->attribute.oskp.prev, type, attribute) )
 
 /**
  * @brief Return the front container of the list
@@ -171,14 +171,15 @@ typedef struct osk_dlist
  * @param [in] type             Type of the list container
  * @param [in] attribute        Attribute of the container of type @c osk_dlist_item
  *
- * @return A pointer to the front container item.
+ * @return A pointer to the front container item, or @c NULL.
 
- * @note If @c OSK_DLIST_IS_VALID returns MALI_FALSE when testing the returned pointer then the list is empty.
+ * @note If this macro evaluates as null then the list is empty.
  * @note An assert is triggered if @a osk_dlist_ptr is NULL.
  * @note If @c type or @c attribute is invalid then the behavior is undefined.
  */
 #define OSK_DLIST_FRONT(osk_dlist_ptr, type, attribute)\
-	CONTAINER_OF((OSK_CHECK_PTR(osk_dlist_ptr))->oskp.front, type, attribute)
+	( OSK_CHECK_PTR( osk_dlist_ptr )->oskp.front == NULL ?\
+	NULL : CONTAINER_OF( (osk_dlist_ptr)->oskp.front, type, attribute ) )
 
 /**
  * @brief Check whether or not @c container_ptr is a member of @c osk_dlist_ptr.
@@ -194,7 +195,7 @@ typedef struct osk_dlist
  * @note If @c attribute is invalid then the behavior is undefined.
  */
 #define OSK_DLIST_MEMBER_OF(osk_dlist_ptr, container_ptr, attribute)\
-	oskp_dlist_member_of(osk_dlist_ptr, &(container_ptr)->attribute)
+		oskp_dlist_member_of(osk_dlist_ptr, &(OSK_CHECK_PTR(container_ptr))->attribute)
 
 /**
  * @brief Return the back container of the list
@@ -203,14 +204,15 @@ typedef struct osk_dlist
  * @param [in] type             Type of the list container
  * @param [in] attribute        Attribute of the container of type @c osk_dlist_item
  *
- * @return A pointer to the back container item.
+ * @return A pointer to the back container item, or @c NULL.
  *
- * @note If @c OSK_DLIST_IS_VALID returns MALI_FALSE when testing the returned pointer then the list is empty
+ * @note If this macro evaluates as null then the list is empty.
  * @note An assert is triggered if @a osk_dlist_ptr is NULL.
  * @note If @c type or @c attribute is invalid then the behavior is undefined.
  */
 #define OSK_DLIST_BACK(osk_dlist_ptr, type, attribute)\
-	CONTAINER_OF((OSK_CHECK_PTR(osk_dlist_ptr))->oskp.back, type, attribute)
+	( OSK_CHECK_PTR( osk_dlist_ptr )->oskp.back == NULL ?\
+	NULL : 	CONTAINER_OF( (osk_dlist_ptr)->oskp.back, type, attribute) )
 
 /**
  * @brief Initialize a list
@@ -222,7 +224,8 @@ typedef struct osk_dlist
 #define OSK_DLIST_INIT(osk_dlist_ptr)\
 	do\
 	{\
-		(OSK_CHECK_PTR(osk_dlist_ptr))->oskp.front = NULL;	\
+		OSK_CHECK_PTR(osk_dlist_ptr); \
+		(osk_dlist_ptr)->oskp.front = NULL;	\
 		(osk_dlist_ptr)->oskp.back = NULL;\
        	}while(MALI_FALSE)
 
@@ -279,7 +282,7 @@ typedef struct osk_dlist
 	CONTAINER_OF(\
 		oskp_dlist_remove(\
 			osk_dlist_ptr, \
-			&OSK_DLIST_BACK(osk_dlist_ptr, type, attribute)->attribute), \
+			&OSK_CHECK_PTR( OSK_DLIST_BACK(osk_dlist_ptr, type, attribute) )->attribute), \
 		type, \
 		attribute)
 
@@ -303,7 +306,7 @@ typedef struct osk_dlist
 	CONTAINER_OF(\
 		oskp_dlist_remove(\
 			osk_dlist_ptr, \
-			&(OSK_DLIST_FRONT(osk_dlist_ptr, type, attribute))->attribute), \
+			&OSK_CHECK_PTR( OSK_DLIST_FRONT(osk_dlist_ptr, type, attribute) )->attribute), \
 		type, \
 		attribute)
 
@@ -328,7 +331,7 @@ typedef struct osk_dlist
 #define OSK_DLIST_INSERT_AFTER(osk_dlist_ptr, container_to_insert_ptr, container_pos_ptr, type, attribute)\
 		 oskp_dlist_insert_after(\
 				osk_dlist_ptr, \
-				&(container_to_insert_ptr)->attribute,	\
+				&(OSK_CHECK_PTR(container_to_insert_ptr))->attribute,	\
 				&((type*)container_pos_ptr)->attribute,	\
 				NULL == container_pos_ptr)
 /**
@@ -353,12 +356,12 @@ typedef struct osk_dlist
 #define OSK_DLIST_INSERT_BEFORE(osk_dlist_ptr, container_to_insert_ptr, container_pos_ptr, type, attribute)\
 		 oskp_dlist_insert_before(\
 				osk_dlist_ptr, \
-				&(container_to_insert_ptr)->attribute,	\
+				&(OSK_CHECK_PTR(container_to_insert_ptr))->attribute,	\
 				&((type*)container_pos_ptr)->attribute, \
 				NULL == container_pos_ptr)
 
 /**
- * @brief Remove @c container_to_delete_ptr from @c osk_dlist_ptr and return a pointer to the element
+ * @brief Remove an item container from a doubly-linked list and return a pointer to the element
  * which was next in the list.
  *
  * The front and the back of the list are automatically adjusted.
@@ -368,23 +371,30 @@ typedef struct osk_dlist
  * @param [in] type                         Type of the list container
  * @param [in] attribute                    Attribute of the container of type @c osk_dlist_item
  *
- * @return A pointer to the container item which was next in the list.
+ * @return A pointer to the item container that was immediately after the one
+ *         removed from the list, or @c NULL.
  *
- * @note If @c OSK_DLIST_IS_VALID returns MALI_FALSE when testing the returned pointer then the back of the
- * list has been reached.
+ * @note If this macro evaluates as null then the back of the list has been reached.
  * @note An assert is triggered if @c osk_dlist_ptr is NULL.
  * @note An assert is triggered if @c container_to_remove_ptr is NULL or if it doesn't belong to the list.
  * @note If @c type or @c attribute is invalid then the behavior is undefined.
+
+ * @pre @p osk_dlist_ptr must have been initialized by @ref OSK_DLIST_INIT.
+ * @pre @p container_to_remove_ptr must be a member of list @p osk_dlist_ptr.
+ * @post @p container_to_remove_ptr is no longer a member of list @p osk_dlist_ptr.
+ *
  */
 
 #define OSK_DLIST_REMOVE_AND_RETURN_NEXT(osk_dlist_ptr, container_to_remove_ptr, type, attribute)\
-	CONTAINER_OF(\
-			oskp_dlist_remove_and_return_next(osk_dlist_ptr, &(container_to_remove_ptr)->attribute), \
-			type, attribute)
-
+		( OSK_DLIST_IS_BACK( container_to_remove_ptr, attribute ) ?\
+		  ( oskp_dlist_remove( osk_dlist_ptr, &( container_to_remove_ptr )->attribute ), NULL ) :\
+		  CONTAINER_OF( oskp_dlist_remove_and_return_next( osk_dlist_ptr,\
+		                &( container_to_remove_ptr )->attribute ),\
+		                type,\
+		                attribute ) )
 
 /**
- * @brief Remove @c container_to_delete_ptr from @c osk_dlist_ptr.
+ * @brief Remove an item container from a doubly-linked list.
  *
  * The front and the back of the list are automatically adjusted.
  *
@@ -392,17 +402,19 @@ typedef struct osk_dlist
  * @param [in, out] container_to_remove_ptr Pointer to an item to remove of type @c type.
  * @param [in] attribute                    Attribute of the container of type @c osk_dlist_item
  *
- * @return Nothing.
- *
  * @note An assert error is triggered if @c osk_dlist_ptr is NULL.
  * @note An assert error is triggered if @c container_to_remove_ptr is NULL or if it doesn't belong to the list.
  * @note If @c attribute is invalid then the behavior is undefined.
+ *
+ * @pre @p osk_dlist_ptr must have been initialized by @ref OSK_DLIST_INIT.
+ * @pre @p container_to_remove_ptr must be a member of list @p osk_dlist_ptr.
+ * @post @p container_to_remove_ptr is no longer a member of list @p osk_dlist_ptr.
  */
 #define OSK_DLIST_REMOVE(osk_dlist_ptr, container_to_remove_ptr, attribute)\
-	oskp_dlist_remove_item(osk_dlist_ptr, &(container_to_remove_ptr)->attribute)
+	oskp_dlist_remove_item(osk_dlist_ptr, &((OSK_CHECK_PTR(container_to_remove_ptr))->attribute) )
 
 /**
- * @brief Remove @c container_to_delete_ptr from @c osk_dlist_ptr and return a pointer to the element which was the
+ * @brief Remove an item container from a doubly-linked list and return a pointer to the element which was the
  * previous one in the list.
  *
  * The front and the back of the list are automatically adjusted.
@@ -412,19 +424,26 @@ typedef struct osk_dlist
  * @param [in] type                         Type of the list container
  * @param [in] attribute                    Attribute of the container of type @c osk_dlist_item
  *
- * @return A pointer to the container item which was right before the removed one in the list.
+ * @return A pointer to the item container that was immediately before the one
+ *         removed from the list, or @c NULL.
  *
- * @note If @c OSK_DLIST_IS_VALID returns MALI_FALSE when testing the returned pointer then the front of the list
- * has been reached.
+ * @note If this macro evaluates as null then the front of the list has been reached.
  * @note An assert is triggered if @c osk_dlist_ptr is NULL.
  * @note An assert is triggered if @c container_to_remove_ptr is NULL or if it doesn't belong to the list.
  * @note If @c type or @c attribute is invalid then the behavior is undefined.
+ *
+ * @pre @p osk_dlist_ptr must have been initialized by @ref OSK_DLIST_INIT.
+ * @pre @p container_to_remove_ptr must be a member of list @p osk_dlist_ptr.
+ * @post @p container_to_remove_ptr is no longer a member of list @p osk_dlist_ptr.
  */
 
 #define OSK_DLIST_REMOVE_AND_RETURN_PREV(osk_dlist_ptr, container_to_remove_ptr, type, attribute)\
-	CONTAINER_OF(\
-			oskp_dlist_remove_and_return_prev(osk_dlist_ptr, &(container_to_remove_ptr)->attribute), \
-			type, attribute)
+	( OSK_DLIST_IS_FRONT( container_to_remove_ptr, attribute ) ?\
+	  ( oskp_dlist_remove( osk_dlist_ptr, &( container_to_remove_ptr )->attribute ), NULL ) :\
+	  CONTAINER_OF( oskp_dlist_remove_and_return_prev( osk_dlist_ptr,\
+			  	  	&( container_to_remove_ptr )->attribute ),\
+					type,\
+					attribute ) )
 
 
 /**
@@ -445,8 +464,10 @@ typedef struct osk_dlist
 	do\
 	{\
 		type* oskp_it;\
+		OSK_ASSERT(NULL != osk_dlist_ptr); \
+		OSK_ASSERT(NULL != destructor_func); \
 		oskp_it = OSK_DLIST_FRONT(osk_dlist_ptr, type, attribute);\
-		while(MALI_FALSE != OSK_DLIST_IS_VALID(oskp_it,attribute))\
+		while ( oskp_it != NULL )\
 		{\
 			type* to_delete = oskp_it;\
 			oskp_it = OSK_DLIST_REMOVE_AND_RETURN_NEXT(osk_dlist_ptr, oskp_it, type, attribute);\
@@ -466,9 +487,10 @@ typedef struct osk_dlist
  * @note If @c type or @c attribute is invalid then the behavior is undefined.
  */
 #define OSK_DLIST_FOREACH(osk_dlist_ptr, type, attribute, container_iterator)\
+	OSK_ASSERT(NULL != osk_dlist_ptr); \
 	for(\
 			container_iterator = OSK_DLIST_FRONT(osk_dlist_ptr, type, attribute);\
-			NULL != &(container_iterator)->attribute ;	\
+			NULL != container_iterator;	\
 			container_iterator = OSK_DLIST_NEXT(container_iterator, type, attribute))
 
 /**
@@ -483,9 +505,10 @@ typedef struct osk_dlist
  * @note If @c type or @c attribute is invalid then the behavior is undefined.
  */
 #define OSK_DLIST_FOREACH_REVERSE(osk_dlist_ptr, type, attribute, container_iterator)\
+	OSK_ASSERT(NULL != osk_dlist_ptr); \
 	for(\
 			container_iterator = OSK_DLIST_BACK(osk_dlist_ptr, type, attribute);\
-			NULL != &(container_iterator)->attribute;	\
+			NULL != container_iterator;	\
 			container_iterator = OSK_DLIST_PREV(container_iterator, type, attribute))
 
 /**
@@ -570,7 +593,7 @@ OSK_STATIC_INLINE osk_dlist_item* oskp_dlist_remove_and_return_prev(osk_dlist * 
  */
 
 OSK_STATIC_INLINE osk_dlist_item* oskp_dlist_remove(osk_dlist * const list_ptr,
-	osk_dlist_item * const item_to_remove) CHECK_RESULT;
+	osk_dlist_item * const item_to_remove);
 
 /**
  * @brief Check that @c item  is a member of the @c list
@@ -657,6 +680,7 @@ OSK_STATIC_INLINE void oskp_dlist_insert_before(osk_dlist * const front, osk_dli
 	else
 	{
 		/* insertion at a position which is not the back*/
+		OSK_ASSERT(MALI_FALSE != oskp_dlist_member_of(front, position));
 
 		item_to_insert->oskp.prev = position->oskp.prev;
 		item_to_insert->oskp.next = position;
@@ -701,6 +725,7 @@ void oskp_dlist_insert_after(osk_dlist * const front, osk_dlist_item * const ite
 	else
 	{
 		/* insertion at a position which is not the front */
+		OSK_ASSERT(MALI_FALSE != oskp_dlist_member_of(front, position));
 
 		item_to_insert->oskp.next = position->oskp.next;
 		item_to_insert->oskp.prev = position;
@@ -726,7 +751,6 @@ void oskp_dlist_remove_item(osk_dlist* const front, osk_dlist_item* const item_t
 	OSK_ASSERT(NULL != front);
 	OSK_ASSERT(NULL != item_to_remove);
 	OSK_ASSERT(MALI_TRUE == oskp_dlist_member_of(front, item_to_remove));
-	OSK_ASSERT(MALI_TRUE != OSK_DLIST_IS_EMPTY(front));
 
 	/* if the item to remove is the current front*/
 	if( front->oskp.front == item_to_remove )
@@ -756,10 +780,13 @@ void oskp_dlist_remove_item(osk_dlist* const front, osk_dlist_item* const item_t
 	item_to_remove->oskp.prev = NULL;
 }
 
-CHECK_RESULT OSK_STATIC_INLINE
+OSK_STATIC_INLINE
 osk_dlist_item* oskp_dlist_remove(osk_dlist * const front, osk_dlist_item * const item_to_remove)
 {
 	oskp_dlist_remove_item(front, item_to_remove);
+
+	item_to_remove->oskp.next = NULL;
+	item_to_remove->oskp.prev = NULL;
 
 	return item_to_remove;
 }
@@ -771,12 +798,11 @@ osk_dlist_item* oskp_dlist_remove_and_return_next(osk_dlist * const front,
 {
 	osk_dlist_item *next;
 
+	OSK_ASSERT(NULL != front);
 	OSK_ASSERT(NULL != item_to_remove);
 
 	next = item_to_remove->oskp.next;
-
 	oskp_dlist_remove_item(front, item_to_remove);
-
 	return next;
 }
 
@@ -786,12 +812,11 @@ osk_dlist_item* oskp_dlist_remove_and_return_prev(osk_dlist * const front,
 {
 	osk_dlist_item *prev;
 
+	OSK_ASSERT(NULL != front);
 	OSK_ASSERT(NULL != item_to_remove);
 
 	prev = item_to_remove->oskp.prev;
-
 	oskp_dlist_remove_item(front, item_to_remove);
-
 	return prev;
 }
 

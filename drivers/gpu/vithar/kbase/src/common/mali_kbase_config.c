@@ -20,7 +20,7 @@
 /* Specifies how many attributes are permitted in the config (excluding terminating attribute).
  * This is used in validation function so we can detect if configuration is properly terminated. This value can be
  * changed if we need to introduce more attributes or many memory regions need to be defined */
-#define ATTRIBUTE_COUNT_MAX 8
+#define ATTRIBUTE_COUNT_MAX 16
 
 /* right now we allow only 2 memory attributes (excluding termination attribute) */
 #define MEMORY_ATTRIBUTE_COUNT_MAX 2
@@ -32,6 +32,80 @@
 /* Default irq throttle time. This is the default desired minimum time in between two consecutive
  * interrupts from the gpu. The irq throttle gpu register is set after this value. */
 #define DEFAULT_IRQ_THROTTLE_TIME_US 20
+
+/*** Begin Scheduling defaults ***/
+
+/**
+ * Default scheduling tick granuality, in nanoseconds
+ */
+#define DEFAULT_JS_SCHEDULING_TICK_NS 100000000u /* 100ms */
+
+/**
+ * Default minimum number of scheduling ticks before jobs are soft-stopped.
+ *
+ * This defines the time-slice for a job (which may be different from that of a context)
+ */
+#define DEFAULT_JS_SOFT_STOP_TICKS 1 /* Between 0.1 and 0.2s before soft-stop */
+
+/**
+ * Default minimum number of scheduling ticks before Soft-Stoppable
+ * (BASE_JD_REQ_NSS bit clear) jobs are hard-stopped
+ */
+#define DEFAULT_JS_HARD_STOP_TICKS_SS 2 /* Between 0.2 and 0.3s before hard-stop */
+
+/**
+ * Default minimum number of scheduling ticks before Non-Soft-Stoppable
+ * (BASE_JD_REQ_NSS bit set) jobs are hard-stopped
+ */
+#define DEFAULT_JS_HARD_STOP_TICKS_NSS 600 /* 60s @ 100ms tick */
+
+/**
+ * Default minimum number of scheduling ticks before the GPU is reset
+ * to clear a "stuck" Soft-Stoppable job
+ */
+#define DEFAULT_JS_RESET_TICKS_SS 5 /* 0.5-0.6s before GPU is reset */
+
+/**
+ * Default minimum number of scheduling ticks before the GPU is reset
+ * to clear a "stuck" Non-Soft-Stoppable job
+ */
+#define DEFAULT_JS_RESET_TICKS_NSS 610 /* 61s @ 100ms tick */
+
+/**
+ * Number of milliseconds given for other jobs on the GPU to be 
+ * soft-stopped when the GPU needs to be reset.
+ */
+#define DEFAULT_JS_RESET_TIMEOUT_MS 3000
+
+/**
+ * Default timeslice that a context is scheduled in for, in nanoseconds.
+ *
+ * When a context has used up this amount of time across its jobs, it is
+ * scheduled out to let another run.
+ *
+ * @note the resolution is nanoseconds (ns) here, because that's the format
+ * often used by the OS.
+ */
+#define DEFAULT_JS_CTX_TIMESLICE_NS 50000000 /* 0.05s - at 20fps a ctx does at least 1 frame before being scheduled out. At 40fps, 2 frames, etc */
+
+/**
+ * Default initial runtime of a context for CFS, in ticks.
+ *
+ * This value is relative to that of the least-run context, and defines where
+ * in the CFS queue a new context is added.
+ */
+#define DEFAULT_JS_CFS_CTX_RUNTIME_INIT_SLICES 1
+
+/**
+ * Default minimum runtime value of a context for CFS, in ticks.
+ *
+ * This value is relative to that of the least-run context. This prevents
+ * "stored-up timeslices" DoS attacks.
+ */
+#define DEFAULT_JS_CFS_CTX_RUNTIME_MIN_SLICES 2
+
+/*** End Scheduling defaults ***/
+
 
 #if (!defined(MALI_KBASE_USERSPACE) || !MALI_KBASE_USERSPACE) && (!MALI_LICENSE_IS_GPL || MALI_FAKE_PLATFORM_DEVICE)
 
@@ -92,6 +166,7 @@ const char *kbasep_midgard_type_to_string(kbase_midgard_type midgard_type)
 	return midgard_type_strings[midgard_type];
 }
 
+KBASE_EXPORT_TEST_API(kbasep_get_next_attribute)
 const kbase_attribute *kbasep_get_next_attribute(const kbase_attribute *attributes, int attribute_id)
 {
 	OSK_ASSERT(attributes != NULL);
@@ -107,6 +182,7 @@ const kbase_attribute *kbasep_get_next_attribute(const kbase_attribute *attribut
 	return NULL;
 }
 
+KBASE_EXPORT_TEST_API(kbasep_get_config_value)
 uintptr_t kbasep_get_config_value(const kbase_attribute *attributes, int attribute_id)
 {
 	const kbase_attribute *attr;
@@ -130,11 +206,34 @@ uintptr_t kbasep_get_config_value(const kbase_attribute *attributes, int attribu
 			return (uintptr_t)-1;
 		case KBASE_CONFIG_ATTR_MEMORY_OS_SHARED_PERF_GPU:
 			return KBASE_MEM_PERF_NORMAL;
-	    case KBASE_CONFIG_ATTR_GPU_IRQ_THROTTLE_TIME_US:
+		case KBASE_CONFIG_ATTR_GPU_IRQ_THROTTLE_TIME_US:
 			return DEFAULT_IRQ_THROTTLE_TIME_US;
+		/* Begin scheduling defaults */
+		case KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS:
+			return     DEFAULT_JS_SCHEDULING_TICK_NS;
+		case KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS:
+			return     DEFAULT_JS_SOFT_STOP_TICKS;
+		case KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS:
+			return     DEFAULT_JS_HARD_STOP_TICKS_SS;
+		case KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS:
+			return     DEFAULT_JS_HARD_STOP_TICKS_NSS;
+		case KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS:
+			return     DEFAULT_JS_CTX_TIMESLICE_NS;
+		case KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_INIT_SLICES:
+			return     DEFAULT_JS_CFS_CTX_RUNTIME_INIT_SLICES;
+		case KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_MIN_SLICES:
+			return     DEFAULT_JS_CFS_CTX_RUNTIME_MIN_SLICES;
+		case KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS:
+			return     DEFAULT_JS_RESET_TICKS_SS;
+		case KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS:
+			return     DEFAULT_JS_RESET_TICKS_NSS;
+		case KBASE_CONFIG_ATTR_JS_RESET_TIMEOUT_MS:
+			return     DEFAULT_JS_RESET_TIMEOUT_MS;
+		/* End scheduling defaults */
 		default:
-			OSK_PRINT_ERROR(OSK_BASE_CORE, "kbasep_get_config_value. Cannot get value of attribute with id=%i and no default value defined",
-					attribute_id);
+			OSK_PRINT_ERROR(OSK_BASE_CORE,
+			    "kbasep_get_config_value. Cannot get value of attribute with id=%i and no default value defined",
+			    attribute_id);
 			return 0;
 	}
 }
@@ -280,7 +379,6 @@ static mali_bool kbasep_validate_gpu_clock_freq(const kbase_attribute *attribute
 	return MALI_TRUE;
 }
 
-
 mali_bool kbasep_validate_configuration_attributes(const kbase_attribute *attributes)
 {
 	int i;
@@ -335,6 +433,37 @@ mali_bool kbasep_validate_configuration_attributes(const kbase_attribute *attrib
 		    case KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MAX:
 				if (MALI_FALSE == kbasep_validate_gpu_clock_freq(attributes))
 				{
+					/* Warning message handled by kbasep_validate_gpu_clock_freq() */
+					return MALI_FALSE;
+				}
+				break;
+
+				/* Only non-zero unsigned 32-bit values accepted */
+			case KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS:
+				if ( attributes[i].data == 0u || (u64)attributes[i].data > (u64)U32_MAX )
+				{
+					OSK_PRINT_WARN(OSK_BASE_CORE, "Invalid Job Scheduling Configuration attribute for "
+								   "KBASE_CONFIG_ATTR_JS_SCHEDULING_TICKS_NS: %i",
+								   (int)attributes[i].data);
+					return MALI_FALSE;
+				}
+				break;
+
+				/* All these Job Scheduling attributes are FALLTHROUGH: only unsigned 32-bit values accepted */
+			case KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS:
+			case KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS:
+			case KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS:
+			case KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS:
+			case KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS:
+			case KBASE_CONFIG_ATTR_JS_RESET_TIMEOUT_MS:
+			case KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS:
+			case KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_INIT_SLICES:
+			case KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_MIN_SLICES:
+				if ( (u64)attributes[i].data > (u64)U32_MAX )
+				{
+					OSK_PRINT_WARN(OSK_BASE_CORE, "Job Scheduling Configuration attribute exceeds 32-bits: "
+								   "id==%d val==%i",
+								   attributes[i].id, (int)attributes[i].data);
 					return MALI_FALSE;
 				}
 				break;

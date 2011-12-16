@@ -61,6 +61,46 @@ static kbase_attribute config_attributes[] = {
 	},
 
 	{
+		KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS,
+		577000000 /* 0.577s: vexpress settings, scaled by clock frequency (5000/130) */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS,
+		1 /* between 0.577s and 1.154s before soft-stop a job */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS,
+		133 /* 77s before hard-stop */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS,
+		40000 /* 6.4hrs before NSS hard-stop (5000/130 times slower than vexpress) */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS,
+		200 /* 115s before resetting GPU */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS,
+		40067 /* 6.4 hrs before resetting GPU */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_RESET_TIMEOUT_MS,
+		3000 /* 3s before cancelling stuck jobs */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS,
+		38000000 /* 38ms: vexpress settings, scaled by clock frequency (5000/130) */
+	},
+
+	{
 		KBASE_CONFIG_ATTR_END,
 		0
 	}

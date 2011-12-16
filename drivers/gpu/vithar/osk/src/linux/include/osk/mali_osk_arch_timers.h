@@ -47,11 +47,22 @@ OSK_STATIC_INLINE osk_error osk_timer_start(osk_timer *tim, u32 delay)
 	OSK_ASSERT(NULL != tim);
 	OSK_ASSERT(NULL != tim->timer.function);
 	OSK_ASSERT(0 != delay);
-	tim->timer.expires = jiffies + (delay * HZ / 1000);
+	tim->timer.expires = jiffies + ((delay * HZ + 999) / 1000);
 	add_timer(&tim->timer);
 	OSK_DEBUG_CODE(	tim->active = MALI_TRUE );
 	return OSK_ERR_NONE;
 }
+
+OSK_STATIC_INLINE osk_error osk_timer_modify(osk_timer *tim, u32 delay)
+{
+	OSK_ASSERT(NULL != tim);
+	OSK_ASSERT(NULL != tim->timer.function);
+	OSK_ASSERT(0 != delay);
+	mod_timer(&tim->timer, jiffies + ((delay * HZ + 999) / 1000));
+	OSK_DEBUG_CODE(	tim->active = MALI_TRUE );
+	return OSK_ERR_NONE;
+}
+
 
 OSK_STATIC_INLINE void osk_timer_stop(osk_timer *tim)
 {

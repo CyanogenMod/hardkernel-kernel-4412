@@ -27,6 +27,12 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 
+/*
+ * Note:
+ *
+ * We do not need locking on the signalled member (see its doxygen description)
+ */
+
 OSK_STATIC_INLINE osk_error osk_waitq_init(osk_waitq * const waitq)
 {
 	OSK_ASSERT(NULL != waitq);

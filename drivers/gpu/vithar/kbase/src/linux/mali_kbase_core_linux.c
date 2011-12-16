@@ -13,7 +13,7 @@
 
 
 /**
- * @file mali_kbase_core.c
+ * @file mali_kbase_core_linux.c
  * Base kernel driver init.
  */
 
@@ -24,6 +24,9 @@
 #include <kbase/src/linux/mali_kbase_mem_linux.h>
 #include <kbase/src/linux/mali_kbase_config_linux.h>
 #include <uk/mali_ukk.h>
+#if MALI_NO_MALI
+#include "mali_kbase_model_linux.h"
+#endif
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -108,6 +111,18 @@ KBASE_EXPORT_TEST_API(g_kbdev);
 
 #endif
 
+
+#if MALI_LICENSE_IS_GPL
+#define KERNEL_SIDE_DDK_VERSION_STRING "K:" MALI_RELEASE_NAME "(GPL)"
+#else
+#define KERNEL_SIDE_DDK_VERSION_STRING "K:" MALI_RELEASE_NAME
+#endif /* MALI_LICENSE_IS_GPL */
+
+static INLINE void __compile_time_asserts( void )
+{
+	CSTD_COMPILE_TIME_ASSERT( sizeof(KERNEL_SIDE_DDK_VERSION_STRING) <= KBASE_GET_VERSION_BUFFER_SIZE);
+}
+
 static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const args, u32 args_size)
 {
 	struct kbase_context *kctx;
@@ -133,7 +148,7 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 				goto bad_size;
 
 			reg = kbase_tmem_alloc(kctx, tmem->vsize, tmem->psize,
-					       tmem->extent, tmem->flags);
+					       tmem->extent, tmem->flags, tmem->is_growable);
 			if (reg)
 			{
 				tmem->gpu_addr	= reg->start_pfn << 12;
@@ -316,6 +331,22 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			}
 			break;
 		}
+		case KBASE_FUNC_GET_VERSION:
+		{
+			kbase_uk_get_ddk_version *get_version = (kbase_uk_get_ddk_version *)args;
+
+			if (sizeof(*get_version) != args_size)
+			{
+				goto bad_size;
+			}
+
+			/* version buffer size check is made in compile time assert */
+			OSK_MEMCPY(get_version->version_buffer, KERNEL_SIDE_DDK_VERSION_STRING,
+				sizeof(KERNEL_SIDE_DDK_VERSION_STRING));
+			get_version->version_string_size = sizeof(KERNEL_SIDE_DDK_VERSION_STRING);
+			break;
+		}
+
 #if MALI_DEBUG
 		case KBASE_FUNC_SET_TEST_DATA:
 		{
@@ -325,9 +356,22 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			shared_kernel_test_data.kctx = kctx;
 			shared_kernel_test_data.mm = (void*)current->mm;
 			ukh->ret = MALI_ERROR_NONE;
+			break;
 		}
-		break;
 #endif /* MALI_DEBUG */
+#if MALI_ERROR_INJECT_ON
+		case KBASE_FUNC_INJECT_ERROR:
+		{
+			kbase_error_params params = ((kbase_uk_error_params*)args)->params;
+			/*mutex lock*/
+			osk_spinlock_lock(&kbdev->osdev.reg_op_lock);
+			ukh->ret = job_atom_inject_error(&params);
+			osk_spinlock_unlock(&kbdev->osdev.reg_op_lock);
+			/*mutex unlock*/
+
+			break;
+		}
+#endif /*MALI_ERROR_INJECT_ON*/
 		default:
 			dev_err(kbdev->osdev.dev, "unknown syscall %08x", ukh->id);
 			goto out_bad;
@@ -375,6 +419,15 @@ static int kbase_open(struct inode *inode, struct file *filp)
 	if (!kbdev)
 		return -ENODEV;
 
+	/* Enforce that the driver is opened with O_CLOEXEC so that execve() automatically
+	 * closes the file descriptor in a child process. 
+	 */
+	if (0 == (filp->f_flags & O_CLOEXEC))
+	{
+		dev_err(kbdev->osdev.dev, "O_CLOEXEC flag not set\n");
+		return -EINVAL;
+	}
+
 #if MALI_LICENSE_IS_GPL
 	get_device(kbdev->osdev.dev);
 #endif
@@ -413,6 +466,7 @@ static int kbase_release(struct inode *inode, struct file *filp)
 	ukk_session_term(&kctx->ukk_session);
 	filp->private_data = NULL;
 	kbase_destroy_context(kctx);
+
 #if MALI_LICENSE_IS_GPL
 	dev_dbg(kbdev->osdev.dev, "deleted base context\n");
 	put_device(kbdev->osdev.dev);
@@ -489,7 +543,23 @@ static unsigned int kbase_poll(struct file *filp, poll_table *wait)
 
 void kbase_event_wakeup(kbase_context *kctx)
 {
+	OSK_ASSERT(kctx);
+
 	wake_up_interruptible(&kctx->osctx.event_queue);
+}
+KBASE_EXPORT_TEST_API(kbase_event_wakeup)
+
+int kbase_check_flags(int flags)
+{
+	/* Enforce that the driver keeps the O_CLOEXEC flag so that execve() always
+	 * closes the file descriptor in a child process. 
+	 */
+	if (0 == (flags & O_CLOEXEC))
+	{
+		return -EINVAL; 
+	}
+
+	return 0;
 }
 
 static const struct file_operations kbase_fops =
@@ -501,8 +571,10 @@ static const struct file_operations kbase_fops =
 	.poll		= kbase_poll,
 	.unlocked_ioctl	= kbase_ioctl,
 	.mmap		= kbase_mmap,
+	.check_flags    = kbase_check_flags,
 };
 
+#if !MALI_NO_MALI
 void kbase_os_reg_write(kbase_device *kbdev, u16 offset, u32 value)
 {
 	writel(value, kbdev->osdev.reg + offset);
@@ -624,6 +696,7 @@ static void kbase_release_interrupts(kbase_device *kbdev)
 			free_irq(osdev->irqs[i].irq, kbase_tag(kbdev, i));
 	}
 }
+#endif
 
 #if MALI_LICENSE_IS_GPL
 
@@ -770,7 +843,6 @@ static int kbase_common_device_init(kbase_device *kbdev)
 		err = -EINVAL;
 		goto out_ioremap;
 	}
-
 #if MALI_LICENSE_IS_GPL
 	dev_set_drvdata(osdev->dev, kbdev);
 #ifdef CONFIG_VITHAR_DEVICE_NODE_CREATION_IN_RUNTIME
@@ -808,6 +880,14 @@ static int kbase_common_device_init(kbase_device *kbdev)
 	list_add(&osdev->entry, &kbase_dev_list);
 	up(&kbase_dev_list_lock);
 	dev_info(osdev->dev, "Probed as %s\n", dev_name(osdev->mdev.this_device));
+#endif
+
+#if MALI_NO_MALI
+	mali_err = midg_device_create(kbdev);
+	if (MALI_ERROR_NONE != mali_err)
+	{
+		goto out_kbdev;
+	}
 #endif
 
 	mali_err = kbase_pm_init(kbdev);
@@ -891,6 +971,11 @@ out_partial:
 	{
 		kbase_pm_term(kbdev);
 	}
+
+#if MALI_NO_MALI
+	midg_device_destroy(kbdev);
+out_kbdev:
+#endif
 
 #if MALI_LICENSE_IS_GPL
 	down(&kbase_dev_list_lock);
@@ -978,6 +1063,8 @@ static int kbase_pci_device_probe(struct pci_dev *pdev,
 		err = -EINVAL;
 		goto out_disable;
 	}
+	/* Use the master passed in instead of the pci attributes */
+	kbdev->config_attributes = platform_data;
 
 	kbdev->memdev.ump_device_id = kbasep_get_config_value(pci_attributes,
 			KBASE_CONFIG_ATTR_UMP_DEVICE);
@@ -1046,9 +1133,11 @@ static int kbase_platform_device_probe(struct platform_device *pdev)
 
 	if (MALI_TRUE != kbasep_validate_configuration_attributes(platform_data))
 	{
+		dev_err(osdev->dev, "Configuration attributes failed to validate\n");
 		err = -EINVAL;
 		goto out_free_dev;
 	}
+	kbdev->config_attributes = platform_data;
 
 	kbdev->memdev.ump_device_id = kbasep_get_config_value(platform_data,
 			KBASE_CONFIG_ATTR_UMP_DEVICE);
@@ -1103,12 +1192,14 @@ static int kbase_platform_device_probe(struct platform_device *pdev)
 	err = kbase_register_memory_regions(kbdev, (kbase_attribute *)osdev->dev->platform_data);
 	if (err)
 	{
+		dev_err(osdev->dev, "Failed to register memory regions\n");
 		goto out_free_dev;
 	}
 
 	err = kbase_common_device_init(kbdev);
 	if (err)
 	{
+		dev_err(osdev->dev, "Failed kbase_common_device_init\n");
 		goto out_free_dev;
 	}
 	return 0;
@@ -1141,6 +1232,10 @@ static int kbase_common_device_remove(struct kbase_device *kbdev)
 	kbase_mem_term(kbdev);
 	kbase_pm_term(kbdev);
 
+#if MALI_NO_MALI
+	midg_device_destroy(kbdev);
+#endif
+
 #if MALI_LICENSE_IS_GPL
 	down(&kbase_dev_list_lock);
 	list_del(&kbdev->osdev.entry);
@@ -1151,6 +1246,7 @@ static int kbase_common_device_remove(struct kbase_device *kbdev)
 	iounmap(kbdev->osdev.reg);
 	release_resource(kbdev->osdev.reg_res);
 	kfree(kbdev->osdev.reg_res);
+
 	kbase_device_destroy(kbdev);
 
 	return 0;
@@ -1423,6 +1519,7 @@ static int __init kbase_driver_init(void)
 		err = -ENOMEM;
 		goto out_device_create;
 	}
+	kbdev->config_attributes = config->attributes;
 
 
 	osdev = &kbdev->osdev;
@@ -1508,5 +1605,16 @@ module_exit(kbase_driver_exit);
 MODULE_LICENSE("GPL");
 #else
 MODULE_LICENSE("Proprietary");
+#endif
+
+#if MALI_GATOR_SUPPORT
+/* Create the trace points (otherwise we just get code to call a tracepoint) */
+#define CREATE_TRACE_POINTS
+#include "mali_linux_trace.h"
+
+void kbase_trace_mali_timeline_event(u32 event)
+{
+	trace_mali_timeline_event(event);
+}
 #endif
 

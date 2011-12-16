@@ -60,7 +60,6 @@ static u32 make_multiple(u32 minimum, u32 multiple)
 static void mmu_mask_reenable(kbase_device * kbdev, kbase_context *kctx, kbase_as * as)
 {
 	u32 mask;
-
 	osk_spinlock_irq_lock(&kbdev->mmu_mask_change);
 	mask = kbase_reg_read(kbdev, MMU_REG(MMU_IRQ_MASK), kctx);
 	mask |= ((1UL << as->number) | (1UL << (16 + as->number)));
@@ -95,7 +94,6 @@ static void page_fault_worker(osk_workq_work *data)
 	{
 		/* Address space has no context, terminate the work */
 		u32 reg;
-
 		/* AS transaction begin */
 		osk_mutex_lock(&faulting_as->transaction_mutex);
 		reg = kbase_reg_read(kbdev, MMU_AS_REG(as_no, ASn_TRANSTAB_LO), NULL);
@@ -149,7 +147,6 @@ static void page_fault_worker(osk_workq_work *data)
 	{
 		/* alloc success */
 		mali_addr64 lock_addr;
-
 		OSK_ASSERT(region->nr_alloc_pages <= region->nr_pages);
 
 		/* AS transaction begin */
@@ -203,7 +200,7 @@ osk_phy_addr kbase_mmu_alloc_pgd(kbase_context *kctx)
 	u64 *page;
 	int i;
 	u32 count;
-
+	OSK_ASSERT( NULL != kctx);
 	if (MALI_ERROR_NONE != kbase_mem_usage_request_pages(&kctx->usage, 1))
 	{
 		return 0;
@@ -309,6 +306,11 @@ void kbase_mmu_insert_pages(struct kbase_context *kctx, u64 vpfn,
 	u64 *pgd_page;
 	u64 mmu_flags;
 
+	OSK_ASSERT( NULL != kctx );
+	OSK_ASSERT( 0 != vpfn );
+	OSK_ASSERT( (flags & ~((1 << KBASE_REG_FLAGS_NR_BITS) - 1)) == 0 );
+	OSK_ASSERT( vpfn <= (UINT64_MAX / OSK_PAGE_SIZE) ); /* 64-bit address range is the max */
+
 	mmu_flags = ENTRY_RD_BIT; /* GPU read always given */
 	mmu_flags |= (flags & KBASE_REG_GPU_RW) ? ENTRY_WR_BIT : 0; /* write perm if requested */
 	mmu_flags |= (flags & KBASE_REG_GPU_NX) ? ENTRY_NX_BIT : 0; /* nx if requested */
@@ -378,6 +380,8 @@ void kbase_mmu_teardown_pages(struct kbase_context *kctx, u64 vpfn, u32 nr)
 
 	beenthere("kctx %p vpfn %lx nr %d", (void *)kctx, (unsigned long)vpfn, nr);
 
+	OSK_ASSERT(NULL != kctx);
+
 	if (0 == nr)
 	{
 		/* early out if nothing to do */
@@ -402,6 +406,7 @@ void kbase_mmu_teardown_pages(struct kbase_context *kctx, u64 vpfn, u32 nr)
 		OSK_ASSERT(pgd_page);
 
 		for (i = 0; i < count; i++) {
+			OSK_ASSERT(pgd_page[index+i] != ENTRY_IS_INVAL);
 			/*
 			 * Possible micro-optimisation: only write to the
 			 * low 32bits. That's enough to invalidate the mapping.
@@ -479,7 +484,6 @@ static void mmu_teardown_level(kbase_context *kctx, osk_phy_addr pgd, int level,
 
 	pgd_page = osk_kmap(pgd);
 	OSK_ASSERT(pgd_page);
-	OSK_ASSERT(pgd_page);
 
 	for (i = 0; i < 512; i++) {
 		target_pgd = mmu_pte_to_phy_addr(pgd_page[i]);
@@ -511,6 +515,7 @@ static void mmu_teardown_level(kbase_context *kctx, osk_phy_addr pgd, int level,
 KBASE_EXPORT_TEST_API(kbase_mmu_free_pgd)
 void kbase_mmu_free_pgd(struct kbase_context *kctx)
 {
+	OSK_ASSERT(NULL != kctx);
 	mmu_teardown_level(kctx, kctx->pgd, MIDGARD_MMU_TOPLEVEL, 1);
 	beenthere("pgd %lx", (unsigned long)kctx->pgd);
 	kbase_phy_pages_free(kctx->kbdev, &kctx->pgd_allocator, 1, &kctx->pgd);
@@ -697,7 +702,7 @@ static void bus_fault_worker(osk_workq_work *data)
 		kbasep_js_runpool_release_ctx( kbdev, kctx );
 	}
 }
-
+KBASE_EXPORT_TEST_API(kbase_mmu_interrupt)
 void kbase_mmu_interrupt(kbase_device * kbdev, u32 irq_stat)
 {
 	const int num_as = 16;
@@ -713,6 +718,8 @@ void kbase_mmu_interrupt(kbase_device * kbdev, u32 irq_stat)
 	u32 bf_bits = (irq_stat >> busfault_shift) & mask; /* bus faults */
 	/* Ignore ASes with both pf and bf */
 	u32 pf_bits = ((irq_stat >> pf_shift) & mask) & ~bf_bits;  /* page faults */
+
+	OSK_ASSERT( NULL != kbdev);
 
 	js_devdata = &kbdev->js_data;
 
@@ -775,7 +782,8 @@ void kbase_mmu_interrupt(kbase_device * kbdev, u32 irq_stat)
 		new_mask &= ~(1UL << (as_no + num_as));
 
 		/* We need to switch to UNMAPPED mode - but we do this in a worker so that we can sleep */
-		osk_workq_submit(&as->pf_wq, bus_fault_worker, &as->work_busfault);
+		osk_workq_work_init(&as->work_busfault, bus_fault_worker);
+		osk_workq_submit(&as->pf_wq, &as->work_busfault);
 	}
 
 	/*
@@ -818,7 +826,8 @@ void kbase_mmu_interrupt(kbase_device * kbdev, u32 irq_stat)
 		/* queue work pending for this AS */
 		as->fault_addr = fault_addr;
 
-		osk_workq_submit(&as->pf_wq, page_fault_worker, &as->work_pagefault);
+		osk_workq_work_init(&as->work_pagefault, page_fault_worker);
+		osk_workq_submit(&as->pf_wq, &as->work_pagefault);
 	}
 
 	/* reenable interrupts */
@@ -827,6 +836,56 @@ void kbase_mmu_interrupt(kbase_device * kbdev, u32 irq_stat)
 	new_mask |= tmp;
 	kbase_reg_write(kbdev, MMU_REG(MMU_IRQ_MASK), new_mask, NULL);
 	osk_spinlock_irq_unlock(&kbdev->mmu_mask_change);
+}
+
+const char *kbase_exception_name(u32 exception_code)
+{
+	const char *e;
+
+	switch(exception_code)
+	{
+		/* Non-Fault Status code */
+		case 0x00: e = "NOT_STARTED/IDLE/OK"; break;
+		case 0x01: e = "DONE"; break;
+		case 0x02: e = "INTERRUPTED"; break;
+		case 0x03: e = "STOPPED"; break;
+		case 0x04: e = "TERMINATED"; break;
+		case 0x08: e = "ACTIVE"; break;
+		/* Job exceptions */
+		case 0x40: e = "JOB_CONFIG_FAULT"; break;
+		case 0x41: e = "JOB_POWER_FAULT"; break;
+		case 0x42: e = "JOB_READ_FAULT"; break;
+		case 0x43: e = "JOB_WRITE_FAULT"; break;
+		case 0x44: e = "JOB_AFFINITY_FAULT"; break;
+		case 0x48: e = "JOB_BUS_FAULT"; break;
+		case 0x50: e = "INSTR_INVALID_PC"; break;
+		case 0x51: e = "INSTR_INVALID_ENC"; break;
+		case 0x52: e = "INSTR_TYPE_MISMATCH"; break;
+		case 0x53: e = "INSTR_OPERAND_FAULT"; break;
+		case 0x54: e = "INSTR_TLS_FAULT"; break;
+		case 0x55: e = "INSTR_BARRIER_FAULT"; break;
+		case 0x56: e = "INSTR_ALIGN_FAULT"; break;
+		case 0x58: e = "DATA_INVALID_FAULT"; break;
+		case 0x59: e = "TILE_RANGE_FAULT"; break;
+		case 0x5A: e = "ADDR_RANGE_FAULT"; break;
+		case 0x60: e = "OUT_OF_MEMORY"; break;
+		/* GPU exceptions */
+		case 0x80: e = "DELAYED_BUS_FAULT"; break;
+		case 0x81: e = "SHAREABILITY_FAULT"; break;
+		/* MMU exceptions */
+		case 0xC0: case 0xC1: case 0xC2: case 0xC3:
+		case 0xC4: case 0xC5: case 0xC6: case 0xC7:
+			e = "TRANSLATION_FAULT"; break;
+		case 0xC8: e = "PERMISSION_FAULT"; break;
+		case 0xD0: case 0xD1: case 0xD2: case 0xD3:
+		case 0xD4: case 0xD5: case 0xD6: case 0xD7:
+			e = "TRANSTAB_BUS_FAULT"; break;
+		case 0xD8: e = "ACCESS_FLAG"; break;
+		default:
+			e = "UNKNOWN"; break;
+	};
+
+	return e;
 }
 
 /**
@@ -843,6 +902,9 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 	kbasep_js_device_data *js_devdata;
 #if BASE_HW_ISSUE_8245
 	mali_bool reset_status;
+#endif
+#if MALI_DEBUG
+	static const char *access_type_names[] = { "RESERVED", "EXECUTE", "READ", "WRITE" };
 #endif
 
 	OSK_ASSERT(as);
@@ -863,17 +925,26 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 	source_id =     (fault_status >> 16);
 
 	/* terminal fault, print info about the fault */
-	OSK_PRINT_WARN(OSK_BASE_MMU, "Fault in AS%d at VA 0x%016llX\n", as_no, fault_addr);
-	OSK_PRINT_WARN(OSK_BASE_MMU, "raw fault status 0x%X\n", fault_status);
-	OSK_PRINT_WARN(OSK_BASE_MMU, "decoded fault status:\n");
-	OSK_PRINT_WARN(OSK_BASE_MMU, "exception type 0x%X\n", exception_type);
-	OSK_PRINT_WARN(OSK_BASE_MMU, "access type 0x%X\n", access_type);
-	OSK_PRINT_WARN(OSK_BASE_MMU, "source id 0x%X\n", source_id);
+	OSK_PRINT_WARN(OSK_BASE_MMU, "Fault in AS%d at VA 0x%016llX", as_no, fault_addr);
+	OSK_PRINT_WARN(OSK_BASE_MMU, "raw fault status 0x%X", fault_status);
+	OSK_PRINT_WARN(OSK_BASE_MMU, "decoded fault status (%s):", (fault_status & (1 << 10) ? "DECODER FAULT" : "SLAVE FAULT"));
+	OSK_PRINT_WARN(OSK_BASE_MMU, "exception type 0x%X: %s", exception_type, kbase_exception_name(exception_type));
+	OSK_PRINT_WARN(OSK_BASE_MMU, "access type 0x%X: %s", access_type,  access_type_names[access_type]);
+	OSK_PRINT_WARN(OSK_BASE_MMU, "source id 0x%X", source_id);
 
 	/* hardware counters dump fault handling */
 	if (kbdev->hwcnt_context && kbdev->hwcnt_context->as_nr == as_no && kbdev->hwcnt_in_progress == MALI_TRUE)
 	{
-	    kbdev->hwcnt_in_progress = MALI_FALSE;
+#if 0
+		PRLAM-5311 blocks any address checking
+		u32 num_core_groups = 1; /* See MIDBASE-701 */
+		if ((fault_addr >= kbdev->hwcnt_addr) && (fault_addr < (kbdev->hwcnt_addr + (num_core_groups * 2048))))
+		{
+#endif
+			kbdev->hwcnt_in_progress = MALI_FALSE;
+#if 0
+		}
+#endif
 	}
 
 	/* Stop the kctx from submitting more jobs and cause it to be scheduled
@@ -885,7 +956,6 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 	/* Kill any running jobs from the context. Submit is disallowed, so no more jobs from this
 	 * context can appear in the job slots from this point on */
 	kbase_job_kill_jobs_from_context(kctx);
-
 	/* AS transaction begin */
 	osk_mutex_lock(&as->transaction_mutex);
 
@@ -896,7 +966,6 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 	 */
 	reset_status = kbase_prepare_to_reset_gpu(kbdev);
 #endif
-
 	{
 		u32 reg;
 		/* switch to UNMAPPED mode, will abort all jobs and stop any hw counter dumping */
@@ -904,15 +973,13 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 		reg &= ~3;
 		kbase_reg_write(kbdev, MMU_AS_REG(as_no, ASn_TRANSTAB_LO), reg, kctx);
 		kbase_reg_write(kbdev, MMU_AS_REG(as_no, ASn_COMMAND), 1, kctx);
-	}
 
+	}
 	kbase_reg_write(kbdev, MMU_REG(MMU_IRQ_CLEAR), (1UL << as_no), NULL);
 
 	osk_mutex_unlock(&as->transaction_mutex);
 	/* AS transaction end */
-
 	mmu_mask_reenable(kbdev, kctx, as);
-	
 #if BASE_HW_ISSUE_8245
 	if (reset_status)
 	{
@@ -921,3 +988,59 @@ static void kbase_mmu_report_fault_and_kill(kbase_context *kctx, kbase_as * as, 
 #endif
 }
 
+#if BASE_HW_ISSUE_8316
+
+void kbasep_as_do_poke(osk_workq_work * work)
+{
+	kbase_as * as;
+	kbase_device * kbdev;
+
+	OSK_ASSERT(work);
+	as = CONTAINER_OF(work, kbase_as, poke_work);
+	kbdev = CONTAINER_OF(as, kbase_device, as[as->number]);
+
+	/* AS transaction begin */
+	osk_mutex_lock(&as->transaction_mutex);
+	/* Force a uTLB invalidate */
+	kbase_reg_write(kbdev, MMU_AS_REG(as->number, ASn_COMMAND), 3/*UNLOCK*/, NULL);
+	osk_mutex_unlock(&as->transaction_mutex);
+	/* AS transaction end */
+
+	if (osk_atomic_get(&as->poke_refcount))
+	{
+		osk_error err;
+		/* still someone depending on the UNLOCK, schedule a run */
+		err = osk_timer_modify(&as->poke_timer, 5/*ms*/);
+		if (err != OSK_ERR_NONE)
+		{
+			OSK_PRINT_WARN(OSK_BASE_MMU, "Failed to enable the BASE_HW_ISSUE_8316 workaround");
+		}
+	}
+}
+
+void kbasep_as_poke_timer_callback(void* arg)
+{
+	kbase_as * as;
+	as = (kbase_as*)arg;
+	osk_workq_submit(&as->poke_wq, &as->poke_work);
+}
+
+void kbase_as_poking_timer_retain(kbase_as * as)
+{
+	OSK_ASSERT(as);
+
+	if (1 == osk_atomic_inc(&as->poke_refcount))
+	{
+		/* need to start poking */
+		osk_workq_submit(&as->poke_wq, &as->poke_work);
+
+	}
+}
+
+void kbase_as_poking_timer_release(kbase_as * as)
+{
+	OSK_ASSERT(as);
+	osk_atomic_dec(&as->poke_refcount);
+}
+
+#endif /* BASE_HW_ISSUE_8316 */

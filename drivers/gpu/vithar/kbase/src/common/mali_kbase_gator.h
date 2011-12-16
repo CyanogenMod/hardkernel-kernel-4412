@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2009 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -12,11 +12,14 @@
 
 
 
-#ifndef __ARCH_CONFIG_H__
-#define __ARCH_CONFIG_H__
+#ifndef MALI_GATOR_SUPPORT
+#define MALI_GATOR_SUPPORT 0
+#endif
 
-#define ARCH_UMP_BACKEND_DEFAULT          1
-#define ARCH_UMP_MEMORY_ADDRESS_DEFAULT   0x00000000
-#define ARCH_UMP_MEMORY_SIZE_DEFAULT 32UL * 1024UL * 1024UL
+#if MALI_GATOR_SUPPORT
+#define GATOR_MAKE_EVENT(type,number) (((type) << 24) | ((number) << 16))
+#define GATOR_TIMELINE_START 1
+#define GATOR_TIMELINE_STOP  2
+void kbase_trace_mali_timeline_event(u32 event);
+#endif
 
-#endif /* __ARCH_CONFIG_H__ */

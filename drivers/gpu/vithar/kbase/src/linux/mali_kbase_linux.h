@@ -13,7 +13,7 @@
 
 
 /**
- * @file mali_kbase_mem_linux.h
+ * @file mali_kbase_linux.h
  * Base kernel APIs, Linux implementation.
  */
 
@@ -55,6 +55,16 @@ typedef struct kbase_os_device
 		int		flags;
 	} irqs[3];
 	char			devname[DEVNAME_SIZE];
+
+#if MALI_NO_MALI
+	void *model;
+	struct kmem_cache *irq_slab;
+	osk_workq irq_workq;
+	osk_atomic serving_job_irq;
+	osk_atomic serving_gpu_irq;
+	osk_atomic serving_mmu_irq;
+	osk_spinlock reg_op_lock;
+#endif
 } kbase_os_device;
 
 #define KBASE_OS_SUPPORT	1

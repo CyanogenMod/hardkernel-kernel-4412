@@ -43,6 +43,8 @@ OSK_STATIC_INLINE osk_error oskp_phy_dedicated_allocator_init(oskp_phy_dedicated
 
 	OSK_ASSERT(allocator);
 	OSK_ASSERT(nr_pages > 0);
+	/* Assert if not page aligned */
+	OSK_ASSERT( 0 == (mem & (OSK_PAGE_SIZE-1)) );
 
 	if (!mem)
 	{
@@ -124,7 +126,14 @@ OSK_STATIC_INLINE u32 oskp_phy_dedicated_pages_alloc(oskp_phy_dedicated_allocato
 
 #ifdef __KERNEL__
 		/* zero the page */
-		mapping = ioremap_wc(pages[pages_allocated], SZ_4K);
+		if(OSK_SIMULATE_FAILURE(OSK_OSK))
+		{
+			mapping = NULL;
+		}
+		else
+		{
+			mapping = ioremap_wc(pages[pages_allocated], SZ_4K);
+		}
 #else
 		mapping = osk_kmap(pages[pages_allocated]);
 #endif /* __KERNEL__ */

@@ -1,6 +1,6 @@
 #
 # (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
-
+#
 # This program is free software and is provided to you under the terms of the GNU General Public License version 2
 # as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
 #
@@ -10,8 +10,6 @@
 #
 
 
-
-UMP_FILE_PREFIX =
 
 ifneq ($(KBUILD_EXTMOD),)
 OS=linux
@@ -43,9 +41,7 @@ else
 EXTRA_CFLAGS += -I$(KBUILD_EXTMOD)/linux/license/gpl
 endif
 
-SRC +=	$(UMP_FILE_PREFIX)linux/ump_kernel_linux.c $(UMP_FILE_PREFIX)linux/ump_kernel_linux_mem.c
-
-# Selecting files to compile by parsing the config file
+SRC +=	linux/ump_kernel_linux.c linux/ump_kernel_linux_mem.c
 
 #MODULE:=ump.ko
 

@@ -94,8 +94,8 @@ void kbase_job_slot_term(kbase_device *kbdev);
 void kbase_job_done(kbase_device *kbdev, u32 done);
 void kbase_job_zap_context(kbase_context *kctx);
 
-void kbase_job_slot_softstop(kbase_device *kbdev, int js);
-void kbase_job_slot_hardstop(kbase_device *kbdev, int js);
+void kbase_job_slot_softstop(kbase_device *kbdev, int js, kbase_jd_atom *target_katom);
+void kbase_job_slot_hardstop(kbase_context *kctx, int js, kbase_jd_atom *target_katom);
 
 void kbase_event_post(kbase_context *ctx, kbase_event *event);
 int kbase_event_dequeue(kbase_context *ctx, base_jd_event *uevent);
@@ -170,5 +170,13 @@ mali_bool kbase_prepare_to_reset_gpu(kbase_device *kbdev);
  * the caller should wait for kbdev->reset_waitq to be signalled to know when the reset has completed.
  */
 void kbase_reset_gpu(kbase_device *kbdev);
+
+
+/** Returns the name associated with a Mali exception code
+ *
+ * @param exception_code[in] exception code
+ * @return name associated with the exception code
+ */
+const char *kbase_exception_name(u32 exception_code);
 
 #endif

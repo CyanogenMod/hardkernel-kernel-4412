@@ -1,6 +1,6 @@
 #
 # (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
-
+#
 # This program is free software and is provided to you under the terms of the GNU General Public License version 2
 # as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
 #
@@ -13,9 +13,11 @@
 # Defaults
 #export MALI_KBASE_SCHEDULING_POLICY?=cfs
 #export PLATFORM?=dummy
-#export MALI_HW_TYPE?=2
+#export MALI_BACKEND_KERNEL?=1
+#export MALI_NO_MALI?=0
 #export MALI_USE_UMP?=1
 #export MALI_DEBUG?=0
+#export MALI_ERROR_INJECT_ON?=0
 #export MALI_ANDROID?=0
 #export MALI_BASE_TRACK_MEMLEAK?=0
 #export MALI_KERNEL_TEST_API?=0

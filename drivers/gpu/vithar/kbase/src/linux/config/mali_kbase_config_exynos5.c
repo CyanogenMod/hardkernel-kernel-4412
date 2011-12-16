@@ -44,7 +44,7 @@ static kbase_attribute config_attributes[] = {
 
 	{
 		KBASE_CONFIG_ATTR_MEMORY_OS_SHARED_MAX,
-		768 * 1024 * 1024UL /* 768MB */
+		2048 * 1024 * 1024UL /* 2048MB */
 	},
 
 	{

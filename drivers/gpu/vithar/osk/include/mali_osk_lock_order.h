@@ -118,7 +118,7 @@ typedef enum
 	/**
 	 * For modification of the MMU mask register, which is done as a read-modify-write
 	 */
-	OSK_LOCK_ORDER_MMU_MASK = OSK_LOCK_ORDER_TB,
+	OSK_LOCK_ORDER_MMU_MASK,
 
 	/**
 	 * For access and modification to the power state of a device
@@ -211,6 +211,11 @@ typedef enum
 	 * For job dispatch management
 	 */
 	OSK_LOCK_ORDER_JCTX,
+
+	/**
+	 * Register queue lock for model
+	 */
+	OSK_LOCK_ORDER_BASE_REG_QUEUE,
 
 	/**
 	 * Reserved mutex order, indicating that the mutex will be the first to be

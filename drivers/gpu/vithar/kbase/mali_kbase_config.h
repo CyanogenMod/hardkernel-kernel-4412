@@ -123,6 +123,239 @@ enum
 	 */
 	KBASE_CONFIG_ATTR_GPU_IRQ_THROTTLE_TIME_US,
 
+	/*** Begin Job Scheduling Configs ***/
+	/**
+	 * Job Scheduler scheduling tick granuality. This is in nanoseconds to
+	 * allow HR timer support.
+	 *
+	 * On each scheduling tick, the scheduler may decide to:
+	 * -# soft stop a job (the job will be re-run later, and other jobs will
+	 * be able to run on the GPU now). This effectively controls the
+	 * 'timeslice' given to a job.
+	 * -# hard stop a job (to kill a job if it has spent too long on the GPU
+	 * and didn't soft-stop).
+	 *
+	 * The numbers of ticks for these events are controlled by:
+	 * - @ref KBASE_CONIFG_ATTR_JS_SOFT_STOP_TICKS
+	 * - @ref KBASE_CONIFG_ATTR_JS_HARD_STOP_TICKS_SS
+	 * - @ref KBASE_CONIFG_ATTR_JS_HARD_STOP_TICKS_NSS
+	 *
+	 * A soft-stopped job will later be resumed, allowing it to use more GPU
+	 * time <em>in total</em> than that defined by any of the above. However,
+	 * the scheduling policy attempts to limit the amount of \em uninterrupted
+	 * time spent on the GPU using the above values (that is, the 'timeslice'
+	 * of a job)
+	 *
+	 * This value is supported by the following scheduling policies:
+	 * - The Completely Fair Share (CFS) policy
+	 *
+	 * Attached value: unsigned 32-bit kbasep_js_device_data::scheduling_tick_ns.
+	 * The value might be rounded down to lower precision. Must be non-zero
+	 * after rounding.<br>
+	 * Default value: @ref DEFAULT_JS_SCHEDULING_TICK_NS
+	 *
+	 * @note this value is allowed to be greater than
+	 * @ref KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS. This allows jobs to run on (much)
+	 * longer than the job-timeslice, but once this happens, the context gets
+	 * scheduled in (much) less frequently than others that stay within the
+	 * ctx-timeslice.
+	 */
+	KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS,
+
+	/**
+	 * Job Scheduler minimum number of scheduling ticks before jobs are soft-stopped.
+	 *
+	 * This defines the amount of time a job is allowed to stay on the GPU,
+	 * before it is soft-stopped to allow other jobs to run.
+	 *
+	 * That is, this defines the 'timeslice' of the job. It is separate from the
+	 * timeslice of the context that contains the job (see
+	 * @ref KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS).
+	 *
+	 * This value is supported by the following scheduling policies:
+	 * - The Completely Fair Share (CFS) policy
+	 *
+	 * Attached value: unsigned 32-bit kbasep_js_device_data::soft_stop_ticks<br>
+	 * Default value: @ref DEFAULT_JS_SOFT_STOP_TICKS
+	 *
+	 * @note a value of zero means "the quickest time to soft-stop a job",
+	 * which is somewhere between instant and one tick later.
+	 *
+	 * @note this value is allowed to be greater than
+	 * @ref KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS or
+	 * @ref KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS. This effectively disables
+	 * soft-stop, and just uses hard-stop instead. In this case, this value
+	 * should be much greater than any of the hard stop values (to avoid
+	 * soft-stop-after-hard-stop)
+	 *
+	 * @see KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS
+	 */
+	KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS,
+
+	/**
+	 * Job Scheduler minimum number of scheduling ticks before Soft-Stoppable
+	 * (BASE_JD_REQ_NSS bit \b clear) jobs are hard-stopped.
+	 *
+	 * This defines the amount of time a Soft-Stoppable job is allowed to spend
+	 * on the GPU before it is killed. Such jobs won't be resumed if killed.
+	 *
+	 * This value is supported by the following scheduling policies:
+	 * - The Completely Fair Share (CFS) policy
+	 *
+	 * Attached value: unsigned 32-bit kbasep_js_device_data::hard_stop_ticks_ss<br>
+	 * Default value: @ref DEFAULT_JS_HARD_STOP_TICKS_SS
+	 *
+	 * @note a value of zero means "the quickest time to hard-stop a job",
+	 * which is somewhere between instant and one tick later.
+	 *
+	 * @see KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS
+	 */
+	KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS,
+
+	/**
+	 * Job Scheduler minimum number of scheduling ticks before Non-Soft-Stoppable
+	 * (BASE_JD_REQ_NSS bit \b set) jobs are hard-stopped.
+	 *
+	 * This defines the amount of time a Non-Soft-Stoppable job is allowed to spend
+	 * on the GPU before it is killed. Such jobs won't be resumed if killed.
+	 *
+	 * This value is supported by the following scheduling policies:
+	 * - The Completely Fair Share (CFS) policy
+	 *
+	 * Attached value: unsigned 32-bit kbasep_js_device_data::hard_stop_ticks_nss<br>
+	 * Default value: @ref DEFAULT_JS_HARD_STOP_TICKS_NSS
+	 *
+	 * @note a value of zero means "the quickest time to hard-stop a job",
+	 * which is somewhere between instant and one tick later.
+	 *
+	 * @see KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS
+	 */
+	KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS,
+
+	/**
+	 * Job Scheduler timeslice that a context is scheduled in for, in nanoseconds.
+	 *
+	 * When a context has used up this amount of time across its jobs, it is
+	 * scheduled out to let another run.
+	 *
+	 * @note the resolution is nanoseconds (ns) here, because that's the format
+	 * often used by the OS.
+	 *
+	 * This value controls affects the actual time defined by the following
+	 * config values:
+	 * - @ref KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_INIT_SLICES
+	 * - @ref KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_MIN_SLICES
+	 *
+	 * This value is supported by the following scheduling policies:
+	 * - The Completely Fair Share (CFS) policy
+	 *
+	 * Attached value: unsigned 32-bit kbasep_js_device_data::ctx_timeslice_ns.
+	 * The value might be rounded down to lower precision.<br>
+	 * Default value: @ref DEFAULT_JS_CTX_TIMESLICE_NS
+	 *
+	 * @note a value of zero models a "Round Robin" scheduling policy, and
+	 * disables @ref KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_INIT_SLICES
+	 * (initially causing LIFO scheduling) and
+	 * @ref KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_MIN_SLICES (allowing
+	 * not-run-often contexts to get scheduled in quickly, but to only use
+	 * a single timeslice when they get scheduled in).
+	 */
+	KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS,
+
+	/**
+	 * Job Scheduler initial runtime of a context for the CFS Policy, in time-slices.
+	 *
+	 * This value is relative to that of the least-run context, and defines
+	 * where in the CFS queue a new context is added. A value of 1 means 'after
+	 * the least-run context has used its timeslice'. Therefore, when all
+	 * contexts consistently use the same amount of time, a value of 1 models a
+	 * FIFO. A value of 0 would model a LIFO.
+	 *
+	 * The value is represented in "numbers of time slices". Multiply this
+	 * value by that defined in @ref KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS to get
+	 * the time value for this in nanoseconds.
+	 *
+	 * Attached value: unsigned 32-bit kbasep_js_device_data::cfs_ctx_runtime_init_slices<br>
+	 * Default value: @ref DEFAULT_JS_CFS_CTX_RUNTIME_INIT_SLICES
+	 */
+	KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_INIT_SLICES,
+
+	/**
+	 * Job Scheduler minimum runtime value of a context for CFS, in time_slices
+	 * relative to that of the least-run context.
+	 *
+	 * This is a measure of how much preferrential treatment is given to a
+	 * context that is not run very often.
+	 *
+	 * Specficially, this value defines how many timeslices such a context is
+	 * (initially) allowed to use at once. Such contexts (e.g. 'interactive'
+	 * processes) will appear near the front of the CFS queue, and can initially
+	 * use more time than contexts that run continuously (e.g. 'batch'
+	 * processes).
+	 *
+	 * This limit \b prevents a "stored-up timeslices" DoS attack, where a ctx
+	 * not run for a long time attacks the system by using a very large initial
+	 * number of timeslices when it finally does run.
+	 *
+	 * Attached value: unsigned 32-bit kbasep_js_device_data::cfs_ctx_runtime_min_slices<br>
+	 * Default value: @ref DEFAULT_JS_CFS_CTX_RUNTIME_MIN_SLICES
+	 *
+	 * @note A value of zero allows not-run-often contexts to get scheduled in
+	 * quickly, but to only use a single timeslice when they get scheduled in.
+	 */
+	KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_MIN_SLICES,
+
+	/**
+	 * Job Scheduler minimum number of scheduling ticks before Soft-Stoppable
+	 * (BASE_JD_REQ_NSS bit \b clear) jobs cause the GPU to be reset.
+	 *
+	 * This defines the amount of time a Soft-Stoppable job is allowed to spend
+	 * on the GPU before it is assumed that the GPU has hung and needs to be reset.
+	 * The assumes that the job has been hard-stopped already and so the presence of
+	 * a job that has remained on the GPU for so long indicates that the GPU has in some
+	 * way hung.
+	 *
+	 * This value is supported by the following scheduling policies:
+	 * - The Completely Fair Share (CFS) policy
+	 *
+	 * Attached value: unsigned 32-bit kbasep_js_device_data::gpu_reset_ticks_nss<br>
+	 * Default value: @ref DEFAULT_JS_RESET_TICKS_SS
+	 *
+	 * @see KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS
+	 */
+	KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS,
+
+	/**
+	 * Job Scheduler minimum number of scheduling ticks before Non-Soft-Stoppable
+	 * (BASE_JD_REQ_NSS bit \b set) jobs cause the GPU to be reset.
+	 *
+	 * This defines the amount of time a Non-Soft-Stoppable job is allowed to spend
+	 * on the GPU before it is assumed that the GPU has hung and needs to be reset.
+	 * The assumes that the job has been hard-stopped already and so the presence of
+	 * a job that has remained on the GPU for so long indicates that the GPU has in some
+	 * way hung.
+	 *
+	 * This value is supported by the following scheduling policies:
+	 * - The Completely Fair Share (CFS) policy
+	 *
+	 * Attached value: unsigned 32-bit kbasep_js_device_data::gpu_reset_ticks_nss<br>
+	 * Default value: @ref DEFAULT_JS_RESET_TICKS_NSS
+	 *
+	 * @see KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS
+	 */
+	KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS,
+
+	/**
+	 * Number of milliseconds given for other jobs on the GPU to be 
+	 * soft-stopped when the GPU needs to be reset.
+	 *
+	 * Attached value: number in milliseconds
+	 * Default value: @ref DEFAULT_JS_RESET_TIMEOUT_MS
+	 */
+	KBASE_CONFIG_ATTR_JS_RESET_TIMEOUT_MS,
+
+	/*** End Job Scheduling Configs ***/
+
 	/**
 	 * End of attribute list indicator.
 	 * The configuration loader will stop processing any more elements

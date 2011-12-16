@@ -122,12 +122,12 @@ typedef struct kbasep_js_per_as_data
  * device. This context is global to the device, and is not tied to any
  * particular kbase_context running on the device.
  *
- * nr_contexts_running, nr_nss_ctxs_running and as_free are optimized for
- * packing together (by making them smaller types than u32). The operations on
- * them should rarely involve masking. The use of signed types for arithmetic
- * indicates to the compiler that the value will not rollover (which would be
- * undefined behavior), and so under the Total License model, it is free to
- * make optimizations based on that (i.e. to remove masking).
+ * nr_contexts_running, nr_nss_ctxs_running, nr_permon_jobs_submitted and as_free are
+ * optimized for packing together (by making them smaller types than u32). The
+ * operations on them should rarely involve masking. The use of signed types for
+ * arithmetic indicates to the compiler that the value will not rollover (which
+ * would be undefined behavior), and so under the Total License model, it is free
+ * to make optimizations based on that (i.e. to remove masking).
  */
 typedef struct kbasep_js_device_data
 {
@@ -164,7 +164,7 @@ typedef struct kbasep_js_device_data
 		u16 submit_allowed;
 
 		s8 nr_nss_ctxs_running;                 /**< Number of NSS contexts */
-
+		s8 nr_permon_jobs_submitted;			/**< Number of PERMON jobs submitted to hw */
 		/** Data that is unique for each AS */
 		kbasep_js_per_as_data per_as_data[BASE_MAX_NR_AS];
 	} runpool_irq;
@@ -201,6 +201,16 @@ typedef struct kbasep_js_device_data
 	/** Core Requirements to match up with base_js_atom's core_req memeber
 	 * @note This is a write-once member, and so no locking is required to read */
 	base_jd_core_req js_reqs[BASE_JM_MAX_NR_SLOTS];
+
+	u32 scheduling_tick_ns;          /**< Value for KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS */
+	u32 soft_stop_ticks;             /**< Value for KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS */
+	u32 hard_stop_ticks_ss;          /**< Value for KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS */
+	u32 hard_stop_ticks_nss;         /**< Value for KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS */
+	u32 gpu_reset_ticks_ss;          /**< Value for KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS */
+	u32 gpu_reset_ticks_nss;         /**< Value for KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS */
+	u32 ctx_timeslice_ns;            /**< Value for KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS */
+	u32 cfs_ctx_runtime_init_slices; /**< Value for KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_INIT_SLICES */
+	u32 cfs_ctx_runtime_min_slices;  /**< Value for  KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_MIN_SLICES */
 
 	/** The initalized-flag is placed at the end, to avoid cache-pollution (we should
 	 * only be using this during init/term paths).

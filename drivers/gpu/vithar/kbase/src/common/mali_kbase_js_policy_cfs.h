@@ -52,6 +52,9 @@ typedef struct kbasep_js_policy_cfs
 	 * kbasep_js_device_data::queue_mutex whilst accessing. */
 	osk_dlist ctx_queue_head;
 
+	/** List of all contexts in the realtime (priority) context queue */
+	osk_dlist ctx_rt_queue_head;
+
 	/** List of scheduled contexts. Hold kbasep_jd_device_data::runpool_irq::lock
 	 * whilst accessing, which is a spinlock */
 	osk_dlist scheduled_ctxs_head;
@@ -116,6 +119,20 @@ typedef struct kbasep_js_policy_cfs_ctx
 	 * Reads are possible without this spinlock, but an older value might be read
 	 * if no memory barriers are issued beforehand */
 	u64 runtime_us;
+	
+	/* Calling process is privileged and can increase the priority of jobs */
+	mali_bool process_privileged;
+	/* Calling process policy scheme is a realtime scheduler and will use the priority queue */
+	mali_bool process_rt_policy;
+	/* Calling process NICE priority */
+	int process_priority;
+	/* Average NICE priority of all atoms in bag */
+	int bag_priority;
+	/* Total NICE priority of all atoms in bag */
+	int bag_total_priority;
+	/* Total number of atoms in the bag */
+	int bag_total_nr_atoms;
+
 } kbasep_js_policy_cfs_ctx;
 
 /**

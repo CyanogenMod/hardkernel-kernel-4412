@@ -146,9 +146,16 @@ typedef enum kbase_pm_event
 	 * the transition is complete.
 	 */
 	KBASE_PM_EVENT_SYSTEM_RESUME,
+	/** The job scheduler is requesting to power up/down cores.
+	 *
+	 * This event is sent when:
+	 * - powered down cores are needed to complete a job
+	 * - powered up cores are not needed anymore
+	 */
+	KBASE_PM_EVENT_CHANGE_GPU_STATE,
 
 	/* helpers for tests */
-	KBASEP_PM_EVENT_LAST = KBASE_PM_EVENT_SYSTEM_RESUME,
+	KBASEP_PM_EVENT_LAST = KBASE_PM_EVENT_CHANGE_GPU_STATE,
 	KBASEP_PM_EVENT_INVALID
 } kbase_pm_event;
 
@@ -570,6 +577,28 @@ void kbase_pm_check_transitions(struct kbase_device *kbdev);
  */
 void kbasep_pm_read_present_cores(struct kbase_device *kbdev);
 
+/** Retain one or more cores.
+ *
+ * This function is called by the job scheduler to retain one or more cores for future use.
+ * As a result, cores can be powered up (depending on the policy).
+ *
+ * @param kbdev     The kbase device structure for the device
+ * @param type      The type of core (see the @ref kbase_pm_core_type enumeration)
+ * @param cores     A bitmask of cores to retain
+ */
+void kbase_pm_retain_cores(struct kbase_device *kbdev, kbase_pm_core_type type, u64 cores);
+
+/** Release one or more cores.
+ *
+ * This function is called by the job scheduler to release one or more cores when it's done using them.
+ * As a result, cores can be powered down (depending on the policy).
+ *
+ * @param kbdev     The kbase device structure for the device
+ * @param type      The type of core (see the @ref kbase_pm_core_type enumeration)
+ * @param cores     A bitmask of cores to release
+ */
+void kbase_pm_release_cores(struct kbase_device *kbdev, kbase_pm_core_type type, u64 cores);
+
 /** Initialize the metrics gathering framework.
  *
  * This must be called before other metric gathering APIs are called.
@@ -653,10 +682,5 @@ void kbase_pm_unregister_vsync_callback(struct kbase_device *kbdev);
  */
 kbase_pm_dvfs_action kbase_pm_get_dvfs_action(struct kbase_device *kbdev);
 
-#if MALI_MOCK_TEST
-#define MOCKABLE(function) function##_original
-#else
-#define MOCKABLE(function) function
-#endif /* MALI_UNIT_TEST */
 
 #endif /* _KBASE_PM_H_ */

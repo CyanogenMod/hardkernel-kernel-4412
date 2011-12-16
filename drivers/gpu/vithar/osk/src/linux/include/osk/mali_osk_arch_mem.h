@@ -30,12 +30,24 @@
 OSK_STATIC_INLINE void * osk_malloc(size_t size)
 {
 	OSK_ASSERT(0 != size);
+
+	if(OSK_SIMULATE_FAILURE(OSK_OSK))
+	{
+		return NULL;
+	}
+
 	return kmalloc(size, GFP_KERNEL);
 }
 
 OSK_STATIC_INLINE void * osk_calloc(size_t size)
 {
 	OSK_ASSERT(0 != size);
+
+	if(OSK_SIMULATE_FAILURE(OSK_OSK))
+	{
+		return NULL;
+	}
+
 	return kzalloc(size, GFP_KERNEL);
 }
 
@@ -47,6 +59,12 @@ OSK_STATIC_INLINE void osk_free(void * ptr)
 OSK_STATIC_INLINE void * osk_vmalloc(size_t size)
 {
 	OSK_ASSERT(0 != size);
+
+	if(OSK_SIMULATE_FAILURE(OSK_OSK))
+	{
+		return NULL;
+	}
+
 	return vmalloc_user(size);
 }
 

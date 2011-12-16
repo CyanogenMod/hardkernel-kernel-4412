@@ -34,16 +34,10 @@
  *                      URL="\ref kbasep_pm_demand_state.KBASEP_PM_DEMAND_STATE_POWERING_UP"];
  *      POWERING_DOWN   [label="STATE_POWERING_DOWN"
  *                      URL="\ref kbasep_pm_demand_state.KBASEP_PM_DEMAND_STATE_POWERING_DOWN"];
- *      SUSPENDING      [label="STATE_SUSPENDING"
- *                      URL="\ref kbasep_pm_demand_state.KBASEP_PM_DEMAND_STATE_SUSPENDING"];
- *      RESUMING        [label="STATE_RESUMING"
- *                      URL="\ref kbasep_pm_demand_state.KBASEP_PM_DEMAND_STATE_RESUMING"];
  *      POWERED_UP      [label="STATE_POWERED_UP"
  *                      URL="\ref kbasep_pm_demand_state.KBASEP_PM_DEMAND_STATE_POWERED_UP"];
  *      POWERED_DOWN    [label="STATE_POWERED_DOWN"
  *                      URL="\ref kbasep_pm_demand_state.KBASEP_PM_DEMAND_STATE_POWERED_DOWN"];
- *      SUSPENDED       [label="STATE_SUSPENDED"
- *                      URL="\ref kbasep_pm_demand_state.KBASEP_PM_DEMAND_STATE_SUSPENDED"];
  *      CHANGING_POLICY [label="STATE_CHANGING_POLICY"
  *                      URL="\ref kbasep_pm_demand_state.KBASEP_PM_DEMAND_STATE_CHANGING_POLICY"];
  *
@@ -54,8 +48,6 @@
  *
  *      POWERING_UP -> POWERED_UP [label = "Power state change" URL="\ref KBASE_PM_EVENT_STATE_CHANGED"];
  *      POWERING_DOWN -> POWERED_DOWN [label = "Power state change" URL="\ref KBASE_PM_EVENT_STATE_CHANGED"];
- *      SUSPENDING -> SUSPENDED [label = "Power state change" URL="\ref KBASE_PM_EVENT_STATE_CHANGED"];
- *      RESUMING -> POWERED_UP [label = "Power state change" URL="\ref KBASE_PM_EVENT_STATE_CHANGED"];
  *      CHANGING_POLICY -> change_policy [label = "Power state change" URL="\ref KBASE_PM_EVENT_STATE_CHANGED"];
  *
  *      POWERED_UP -> POWERING_DOWN [label = "GPU Idle" URL="\ref KBASE_PM_EVENT_GPU_IDLE"];
@@ -63,20 +55,11 @@
  *
  *      POWERED_DOWN -> POWERING_UP [label = "GPU Active" URL="\ref KBASE_PM_EVENT_GPU_ACTIVE"];
  *      POWERING_DOWN -> POWERING_UP [label = "GPU Active" URL="\ref KBASE_PM_EVENT_GPU_ACTIVE"];
- *
- *      POWERED_UP -> SUSPENDING [label = "GPU Active" URL="\ref KBASE_PM_EVENT_SYSTEM_SUSPEND"];
- *      RESUMING -> SUSPENDING [label = "GPU Active" URL="\ref KBASE_PM_EVENT_SYSTEM_SUSPEND"];
- *
- *      SUSPENDED -> RESUMING [label = "GPU Active" URL="\ref KBASE_PM_EVENT_SYSTEM_RESUME"];
- *      SUSPENDING -> RESUMING [label = "GPU Active" URL="\ref KBASE_PM_EVENT_SYSTEM_RESUME"];
- *
+
  *      POWERING_UP -> CHANGING_POLICY [label = "Change policy" URL="\ref KBASE_PM_EVENT_CHANGE_POLICY"];
  *      POWERING_DOWN -> CHANGING_POLICY [label = "Change policy" URL="\ref KBASE_PM_EVENT_CHANGE_POLICY"];
- *      SUSPENDING -> CHANGING_POLICY [label = "Change policy" URL="\ref KBASE_PM_EVENT_CHANGE_POLICY"];
- *      RESUMING -> CHANGING_POLICY [label = "Change policy" URL="\ref KBASE_PM_EVENT_CHANGE_POLICY"];
  *      POWERED_UP -> change_policy [label = "Change policy" URL="\ref KBASE_PM_EVENT_CHANGE_POLICY"];
  *      POWERED_DOWN -> change_policy [label = "Change policy" URL="\ref KBASE_PM_EVENT_CHANGE_POLICY"];
- *      SUSPENDED -> change_policy [label = "Change policy" URL="\ref KBASE_PM_EVENT_CHANGE_POLICY"];
  * }
  * @enddot
  */
@@ -86,10 +69,8 @@ typedef enum kbasep_pm_demand_state
 	KBASEP_PM_DEMAND_STATE_POWERED_UP,           /**< The GPU is powered up and jobs can execute */
 	KBASEP_PM_DEMAND_STATE_POWERING_DOWN,        /**< The GPU is powering down */
 	KBASEP_PM_DEMAND_STATE_POWERED_DOWN,         /**< The GPU is powered down */
-	KBASEP_PM_DEMAND_STATE_SUSPENDING,           /**< The GPU is being suspended */
-	KBASEP_PM_DEMAND_STATE_SUSPENDED,            /**< The GPU is suspended (GPU was powered on) */
-	KBASEP_PM_DEMAND_STATE_RESUMING,             /**< The GPU is being resumed */
-	KBASEP_PM_DEMAND_STATE_CHANGING_POLICY       /**< The power policy is about to change */
+	KBASEP_PM_DEMAND_STATE_CHANGING_POLICY,      /**< The power policy is about to change */
+	KBASEP_PM_DEMAND_STATE_CHANGING              /**< Cores are powering up or down */
 } kbasep_pm_demand_state;
 
 /** Private structure for policy instance data.

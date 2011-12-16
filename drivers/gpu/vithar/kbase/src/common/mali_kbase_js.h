@@ -403,6 +403,16 @@ void kbasep_js_try_schedule_head_ctx( kbase_device *kbdev );
  */
 void kbasep_js_job_done_slot_irq( kbase_device *kbdev, int s, kbase_jd_atom *katom, kbasep_js_tick *end_timestamp );
 
+/**
+ * @brief Try to submit the next job on each slot
+ *
+ * The following locks may be used:
+ * - kbasep_js_device_data::runpool_mutex
+ * - kbasep_js_device_data::runpool_irq::lock
+ * - bdev->jm_slots[ \a js ].lock
+ */
+void kbase_js_try_run_jobs( kbase_device *kbdev );
+
 /*
  * Helpers follow
  */

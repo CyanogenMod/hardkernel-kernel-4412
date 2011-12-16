@@ -19,11 +19,14 @@
 #include <ump/ump_common.h>
 #include <malisw/mali_malisw.h>
 #include <kbase/mali_base_kernel.h>
+#if MALI_ERROR_INJECT_ON
+#include <kbase/src/common/mali_kbase_model_dummy.h>
+#endif
 
 #include "mali_kbase_gpuprops_types.h"
 
 #define BASE_UK_VERSION_MAJOR 0
-#define BASE_UK_VERSION_MINOR 0
+#define BASE_UK_VERSION_MINOR 1
 
 typedef struct kbase_uk_tmem_alloc
 {
@@ -33,6 +36,7 @@ typedef struct kbase_uk_tmem_alloc
 	u32         psize;
 	u32         extent;
 	u32         flags;
+	mali_bool   is_growable;
 	/* OUT */
 	mali_addr64 gpu_addr;
 } kbase_uk_tmem_alloc;
@@ -149,14 +153,27 @@ typedef struct kbase_uk_find_cpu_mapping
 	mali_size64   page_off;
 } kbase_uk_find_cpu_mapping;
 
+#define KBASE_GET_VERSION_BUFFER_SIZE 64
+typedef struct kbase_uk_get_ddk_version
+{
+	uk_header header;
+	/* OUT */
+	char version_buffer[KBASE_GET_VERSION_BUFFER_SIZE];
+	u32  version_string_size;
+} kbase_uk_get_ddk_version;
+
+
 #if MALI_DEBUG
 #define TEST_ADDR_COUNT 4
+#define KBASE_TEST_BUFFER_SIZE 128
 typedef struct kbase_exported_test_data
 {
 	mali_addr64           test_addr[TEST_ADDR_COUNT];		/* memory address */
 	u32                   test_addr_pages[TEST_ADDR_COUNT]; /* memory size in pages */
 	struct kbase_context *kctx;								/* base context created by process */
 	void *mm;												/* pointer to process address space */
+	u8 buffer1[KBASE_TEST_BUFFER_SIZE];   /* unit test defined parameter */
+	u8 buffer2[KBASE_TEST_BUFFER_SIZE];   /* unit test defined parameter */
 } kbase_exported_test_data;
 
 typedef struct kbase_uk_set_test_data
@@ -167,8 +184,16 @@ typedef struct kbase_uk_set_test_data
 } kbase_uk_set_test_data;
 
 #endif /* MALI_DEBUG */
+#if MALI_ERROR_INJECT_ON
+typedef struct kbase_uk_error_params
+{
+	uk_header header;
+	/* IN */
+	kbase_error_params params;
+} kbase_uk_error_params;
+#endif
 
-typedef enum kbase_uk_function_id 
+typedef enum kbase_uk_function_id
 {
 	KBASE_FUNC_TMEM_ALLOC = (UK_FUNC_ID + 0),
 	KBASE_FUNC_TMEM_FROM_UMP,
@@ -189,10 +214,16 @@ typedef enum kbase_uk_function_id
 
 	KBASE_FUNC_TMEM_RESIZE,
 
-	KBASE_FUNC_FIND_CPU_MAPPING
+	KBASE_FUNC_FIND_CPU_MAPPING,
+
+	KBASE_FUNC_GET_VERSION
+
 #if MALI_DEBUG
 	, KBASE_FUNC_SET_TEST_DATA
 #endif /* MALI_DEBUG */
+#if MALI_ERROR_INJECT_ON
+	, KBASE_FUNC_INJECT_ERROR
+#endif
 
 } kbase_uk_function_id;
 

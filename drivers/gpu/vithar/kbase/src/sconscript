@@ -1,6 +1,6 @@
 #
 # (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
-
+#
 # This program is free software and is provided to you under the terms of the GNU General Public License version 2
 # as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
 #
@@ -18,8 +18,16 @@ Import('env')
 scheduling_policy = 'cfs'
 mock_test = 0
 
+if env['error_inject'] == '1':
+	env.Append( CPPDEFINES = {'MALI_ERROR_INJECT_ON' : 1} )
+elif env['error_inject'] == '2':
+	env.Append( CPPDEFINES = {'MALI_ERROR_INJECT_ON' : 2} )
+else:
+	env['error_inject'] = 0
+	env.Append( CPPDEFINES = {'MALI_ERROR_INJECT_ON' : 0} )
+
 if env['os'] == 'linux' or env['os'] == 'android':
-	if env['hw'] == '2':
+	if env['backend'] == 'kernel':
 		if env['v'] != '1':
 			env['MAKECOMSTR'] = '[MAKE] ${SOURCE.dir}'
 
@@ -65,7 +73,7 @@ if env['os'] == 'linux' or env['os'] == 'android':
 				env['kernel_test'] = 1
 			else:
 				env['kernel_test'] = 0
-			makeAction=Action("cd ${SOURCE.dir}/.. && make PLATFORM=${platform} MALI_HW_TYPE=${hw} MALI_HW_VERSION=${hwver} MALI_USE_UMP=${ump} MALI_DEBUG=${debug} MALI_ANDROID=${android} MALI_BASE_TRACK_MEMLEAK=${base_qa} MALI_KERNEL_TEST_API=${kernel_test} MALI_KBASE_SCHEDULING_POLICY=%s MALI_UNIT_TEST=${unit} MALI_INFINITE_CACHE=${infinite_cache} MALI_LICENSE_IS_GPL=${mali_license_is_gpl} MALI_PLATFORM_CONFIG=${platform_config} MALI_FAKE_PLATFORM_DEVICE=%s MALI_MOCK_TEST=%s && cp mali_kbase.ko $STATIC_LIB_PATH/mali_kbase.ko" % (scheduling_policy, fake_platform_device, mock_test), '$MAKECOMSTR')
+			makeAction=Action("cd ${SOURCE.dir}/.. && make PLATFORM=${platform} MALI_ERROR_INJECT_ON=${error_inject} MALI_BACKEND_KERNEL=1 MALI_NO_MALI=${no_mali} MALI_HW_VERSION=${hwver} MALI_USE_UMP=${ump} MALI_DEBUG=${debug} MALI_ANDROID=${android} MALI_BASE_TRACK_MEMLEAK=${base_qa} MALI_KERNEL_TEST_API=${kernel_test} MALI_KBASE_SCHEDULING_POLICY=%s MALI_UNIT_TEST=${unit} MALI_INFINITE_CACHE=${infinite_cache} MALI_LICENSE_IS_GPL=${mali_license_is_gpl} MALI_PLATFORM_CONFIG=${platform_config} MALI_ERROR_INJECT_ON=${error_inject} MALI_RELEASE_NAME=\"${mali_release_name}\" MALI_FAKE_PLATFORM_DEVICE=%s MALI_MOCK_TEST=%s MALI_GATOR_SUPPORT=${gator} && cp mali_kbase.ko $STATIC_LIB_PATH/mali_kbase.ko" % (scheduling_policy, fake_platform_device, mock_test), '$MAKECOMSTR')
 			
 		cmd = env.Command('$STATIC_LIB_PATH/mali_kbase.ko', kbase_src, [makeAction])
 
@@ -111,8 +119,8 @@ if env['os'] == 'linux' or env['os'] == 'android':
 			'common/mali_kbase_security.c',
 			'common/mali_kbase_instr.c',
 			'common/mali_kbase_instr_7115.c',
-			'userspace/mali_kbase_core.c',
-			'userspace/mali_kbase_model.c',
+			'userspace/mali_kbase_core_userspace.c',
+			'userspace/mali_kbase_model_userspace.c',
 			'userspace/mali_kbase_mem_userspace.c',
 			'userspace/mali_kbase_ump.c',
 			'userspace/mali_kbase_pm_metrics_userspace.c'
@@ -133,8 +141,9 @@ if env['os'] == 'linux' or env['os'] == 'android':
 		env.Append( CPPDEFINES = {'MALI_KBASE_USERSPACE' : 1} )
 		env.Append( CPPDEFINES = {'MALI_MOCK_TEST' : mock_test} )
 
-		if env['hw'] == '0':
-			hwsim_source = ['userspace/mali_kbase_model_dummy.c']
+		if env['backend'] == 'user' and env['no_mali'] == '1':
+			hwsim_source = ['common/mali_kbase_model_dummy.c',
+							'common/mali_kbase_model_error_generator.c']
 			env.AppendUnique(BASE=['cutils_list', 'kbase'])
 		else:
 			# Unpack and extract the model - will only work on x86 Linux

@@ -53,6 +53,11 @@ OSK_STATIC_INLINE u32 oskp_phy_os_pages_alloc(oskp_phy_os_allocator *allocator,
 
 	OSK_ASSERT(NULL != allocator);
 
+	if(OSK_SIMULATE_FAILURE(OSK_OSK))
+	{
+		return 0;
+	}
+
 	for (i = 0; i < nr_pages; i++)
 	{
 		struct page *p;
@@ -108,6 +113,11 @@ static inline void oskp_phy_os_pages_free(oskp_phy_os_allocator *allocator,
 
 OSK_STATIC_INLINE osk_error oskp_phy_dedicated_allocator_request_memory(osk_phy_addr mem,u32 nr_pages, const char* name)
 {
+	if(OSK_SIMULATE_FAILURE(OSK_OSK))
+	{
+		return OSK_ERR_FAIL;
+	}
+
 	if (NULL != request_mem_region(mem, nr_pages << OSK_PAGE_SHIFT , name))
 	{
 		return OSK_ERR_NONE;
@@ -123,6 +133,11 @@ OSK_STATIC_INLINE void oskp_phy_dedicated_allocator_release_memory(osk_phy_addr 
 
 static inline void *osk_kmap(osk_phy_addr page)
 {
+	if(OSK_SIMULATE_FAILURE(OSK_OSK))
+	{
+		return NULL;
+	}
+
 	return kmap(pfn_to_page(PFN_DOWN(page)));
 }
 

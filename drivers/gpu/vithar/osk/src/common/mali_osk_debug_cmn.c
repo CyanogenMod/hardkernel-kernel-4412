@@ -14,6 +14,7 @@
 
 
 #include <osk/mali_osk.h>
+#include "mali_osk_compile_asserts.h"
 
 /**
  * @brief Contains the module names (modules in the same order as for the osk_module enumeration)
@@ -37,7 +38,7 @@ static const char* CONST oskp_str_modules[] =
 
 #define MODULE_STRING_ARRAY_SIZE (sizeof(oskp_str_modules)/sizeof(oskp_str_modules[0]))
 
-static INLINE void oskp_compile_time_assertions(void)
+INLINE void oskp_cmn_compile_time_assertions(void)
 {
 	/*
 	 * If this assert triggers you have forgotten to update oskp_str_modules

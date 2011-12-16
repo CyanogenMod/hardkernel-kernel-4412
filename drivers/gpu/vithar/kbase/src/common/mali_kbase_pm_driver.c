@@ -23,6 +23,12 @@
 
 #include <kbase/src/common/mali_kbase_pm.h>
 
+#if MALI_MOCK_TEST
+#define MOCKABLE(function) function##_original
+#else
+#define MOCKABLE(function) function
+#endif /* MALI_MOCK_TEST */
+
 /** Number of milliseconds before we time out on a reset */
 #define RESET_TIMEOUT   500
 
@@ -154,8 +160,13 @@ void kbasep_pm_read_present_cores(kbase_device *kbdev)
 
 	kbdev->shader_inuse_bitmap = 0;
 	kbdev->tiler_inuse_bitmap = 0;
+	kbdev->shader_needed_bitmap = 0;
+	kbdev->tiler_needed_bitmap = 0;
 	kbdev->shader_available_bitmap = 0;
 	kbdev->tiler_available_bitmap = 0;
+
+	OSK_MEMSET(kbdev->shader_needed_cnt, 0, sizeof(kbdev->shader_needed_cnt));
+	OSK_MEMSET(kbdev->shader_needed_cnt, 0, sizeof(kbdev->tiler_needed_cnt));
 }
 
 /** Get the cores that are present
@@ -186,6 +197,7 @@ u64 kbase_pm_get_active_cores(kbase_device *kbdev, kbase_pm_core_type type)
 {
 	return kbase_pm_get_state(kbdev, type, ACTION_PWRACTIVE);
 }
+KBASE_EXPORT_TEST_API(kbase_pm_get_active_cores)
 
 /** Get the cores that are transitioning between power states
  */
@@ -200,6 +212,7 @@ u64 kbase_pm_get_ready_cores(kbase_device *kbdev, kbase_pm_core_type type)
 {
 	return kbase_pm_get_state(kbdev, type, ACTION_READY);
 }
+KBASE_EXPORT_TEST_API(kbase_pm_get_ready_cores)
 
 /** Is there an active power transition?
  *
@@ -259,6 +272,13 @@ static mali_bool kbase_pm_transition_core_type(kbase_device *kbdev, kbase_pm_cor
 	{
 		desired_state = present;
 	}
+#if BASE_HW_ISSUE_7347
+	/* Workaround for HW issue 7347: always keep the tiler powered */
+	if (type == KBASE_PM_CORE_TILER)
+	{
+		desired_state = present;
+	}
+#endif
 
 	if (desired_state == ready && trans == 0)
 	{
@@ -321,6 +341,113 @@ static u64 get_desired_cache_status(u64 present, u64 cores_powered)
 	return desired;
 }
 
+void kbase_pm_retain_cores(kbase_device *kbdev, kbase_pm_core_type type, u64 cores)
+{
+	u64 *needed_bitmap;
+	u8 *needed_cnt;
+	u64 power_up_bitmap = 0;
+	int bit = 0;
+
+	switch (type)
+	{
+		case KBASE_PM_CORE_SHADER:
+			needed_bitmap = &kbdev->shader_needed_bitmap;	
+			needed_cnt = kbdev->shader_needed_cnt;	
+			break;
+		case KBASE_PM_CORE_TILER:
+			needed_bitmap = &kbdev->tiler_needed_bitmap;	
+			needed_cnt = kbdev->tiler_needed_cnt;	
+			break;
+		default:
+			OSK_ASSERT(0);
+			return;
+	}
+
+	osk_spinlock_irq_lock(&kbdev->pm.power_change_lock);
+	/* Update per core usage refcount */
+	while (cores)
+	{   
+		if (cores & 1)
+		{   
+			int cnt = needed_cnt[bit]++;
+
+			if (0 == cnt)
+			{
+				/* This core can be powered up */
+				power_up_bitmap |= (1ULL << bit);
+			}
+		}   
+
+		bit++;
+		cores >>= 1;
+	}   
+
+	/* Update needed cores */
+	*needed_bitmap |= power_up_bitmap;
+
+	/* Power up cores */
+	if (power_up_bitmap)
+	{
+		kbase_pm_send_event(kbdev, KBASE_PM_EVENT_CHANGE_GPU_STATE);
+	}
+
+	osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
+}
+
+void kbase_pm_release_cores(kbase_device *kbdev, kbase_pm_core_type type, u64 cores)
+{
+	u64 *needed_bitmap;
+	u8 *needed_cnt;
+	u64 power_down_bitmap = 0;
+	int bit = 0;
+
+	switch (type)
+	{
+		case KBASE_PM_CORE_SHADER:
+			needed_bitmap = &kbdev->shader_needed_bitmap;	
+			needed_cnt = kbdev->shader_needed_cnt;	
+			break;
+		case KBASE_PM_CORE_TILER:
+			needed_bitmap = &kbdev->tiler_needed_bitmap;	
+			needed_cnt = kbdev->tiler_needed_cnt;	
+			break;
+		default:
+			OSK_ASSERT(0);
+			return;
+	}
+
+	osk_spinlock_irq_lock(&kbdev->pm.power_change_lock);
+
+	/* Update per core usage refcount */
+	while (cores)
+	{   
+		if (cores & 1)
+		{
+			int cnt = --needed_cnt[bit];
+
+			if (0 == cnt)
+			{
+				/* This core can be powered down */
+				power_down_bitmap |= (1ULL << bit);
+			}
+		}   
+
+		bit++;
+		cores >>= 1;
+	}
+	
+	/* Update needed cores */
+	*needed_bitmap ^= power_down_bitmap;
+
+	/* Power down cores */
+	if (power_down_bitmap)
+	{   
+		kbase_pm_send_event(kbdev, KBASE_PM_EVENT_CHANGE_GPU_STATE);
+	}   
+
+	osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
+}
+
 void MOCKABLE(kbase_pm_check_transitions)(kbase_device *kbdev)
 {
 	mali_bool in_desired_state = MALI_TRUE;
@@ -353,7 +480,8 @@ void MOCKABLE(kbase_pm_check_transitions)(kbase_device *kbdev)
 		                                                  &shader_available_bitmap);
 	}
 
-	if (in_desired_state) {
+	if (in_desired_state)
+	{
 		kbdev->tiler_available_bitmap = tiler_available_bitmap;
 		kbdev->shader_available_bitmap = shader_available_bitmap;
 
@@ -370,10 +498,7 @@ void MOCKABLE(kbase_pm_enable_interrupts)(kbase_device *kbdev)
 	 * and unmask them all.
 	 */
 	kbase_reg_write(kbdev, GPU_CONTROL_REG(GPU_IRQ_CLEAR), GPU_IRQ_REG_ALL, NULL);
-
-	/* Disable the PRFCNT_SAMPLE_COMPLETED interrupt as we enable it when we use hwcounters */
-	kbase_reg_write(kbdev, GPU_CONTROL_REG(GPU_IRQ_MASK),
-			GPU_IRQ_REG_ALL & ~(PRFCNT_SAMPLE_COMPLETED), NULL);
+	kbase_reg_write(kbdev, GPU_CONTROL_REG(GPU_IRQ_MASK), GPU_IRQ_REG_ALL, NULL);
 
 	kbase_reg_write(kbdev, JOB_CONTROL_REG(JOB_IRQ_CLEAR), 0xFFFFFFFF, NULL);
 	kbase_reg_write(kbdev, JOB_CONTROL_REG(JOB_IRQ_MASK), 0xFFFFFFFF, NULL);
@@ -434,7 +559,7 @@ static void kbasep_reset_timeout(void *data)
 
 	rtdata->timed_out = 1;
 
-	/* Set the wait queue to take up kbase_pm_init_hw even though the reset hasn't completed */
+	/* Set the wait queue to wake up kbase_pm_init_hw even though the reset hasn't completed */
 	kbase_pm_reset_done(rtdata->kbdev);
 }
 
@@ -569,8 +694,8 @@ mali_error kbase_pm_init_hw(kbase_device *kbdev)
 	return MALI_ERROR_FUNCTION_FAILED;
 
 out:
-	/* Start the Cycle Counter, see MIDBASE-801 */
-	kbase_reg_write(kbdev, GPU_CONTROL_REG(GPU_COMMAND), 5, NULL);
+	/* Ensure cycle counter is off */
+	kbase_reg_write(kbdev, GPU_CONTROL_REG(GPU_COMMAND), GPU_COMMAND_CYCLE_COUNT_STOP, NULL);
 
 	kbase_pm_hw_issues(kbdev, gpu_id);
 
@@ -579,3 +704,5 @@ out:
 
 KBASE_EXPORT_TEST_API(kbase_pm_get_present_cores)
 KBASE_EXPORT_TEST_API(kbase_pm_check_transitions)
+KBASE_EXPORT_TEST_API(kbase_pm_retain_cores)
+KBASE_EXPORT_TEST_API(kbase_pm_release_cores)

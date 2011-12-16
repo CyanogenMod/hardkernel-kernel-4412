@@ -188,8 +188,8 @@ void kbase_job_done_slot(kbase_device *kbdev, int s, u32 completion_code, u64 jo
  *
  * This function also returns the structure for the specified job slot to simplify the code
  *
- * @param kbdev     Kbase device pointer
- * @param js        The job slot number to lock
+ * @param[in] kbdev     Kbase device pointer
+ * @param[in] js        The job slot number to lock
  *
  * @return  The job slot structure
  */
@@ -206,8 +206,8 @@ static INLINE kbase_jm_slot *kbase_job_slot_lock(kbase_device *kbdev, int js)
 /**
  * @brief Release the lock for a job slot
  *
- * @param kbdev     Kbase device pointer
- * @param js        The job slot number to unlock
+ * @param[in] kbdev     Kbase device pointer
+ * @param[in] js        The job slot number to unlock
  */
 static INLINE void kbase_job_slot_unlock(kbase_device *kbdev, int js)
 {

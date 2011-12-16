@@ -37,23 +37,28 @@ struct kbase_va_region *kbase_pmem_alloc(struct kbase_context *kctx, u32 size,
 	OSK_ASSERT(kctx != NULL);
 	OSK_ASSERT(pmem_cookie != NULL);
 
+	if ( 0 == size )
+	{
+		goto out1;
+	}
+
 	reg = kbase_alloc_free_region(kctx, 0, size, KBASE_REG_ZONE_PMEM);
 	if (!reg)
 		goto out1;
 
 	reg->flags &= ~KBASE_REG_FREE;
 
-	kbase_update_region_flags(reg, flags);
+	kbase_update_region_flags(reg, flags, MALI_FALSE);
 
 	if (kbase_alloc_phy_pages(reg, size, size))
 		goto out2;
 
+	reg->nr_alloc_pages = size;
+	reg->extent = 0;
+
 	kbase_gpu_vm_lock(kctx);
 	if (!kctx->osctx.cookies)
 		goto out3;
-
-	reg->nr_alloc_pages = size;
-	reg->extent = 0;
 	
 	cookie = __ffs(kctx->osctx.cookies);
 	kctx->osctx.cookies &= ~(1UL << cookie);
@@ -70,7 +75,7 @@ struct kbase_va_region *kbase_pmem_alloc(struct kbase_context *kctx, u32 size,
 
 out3:
 	kbase_gpu_vm_unlock(kctx);
-	kbase_free_phy_pages(reg, size);
+	kbase_free_phy_pages(reg);
 out2:
 	osk_free(reg);
 out1:
@@ -150,14 +155,8 @@ static int kbase_cpu_mmap(struct kbase_va_region *reg, struct vm_area_struct *vm
 		 * maintenance necessary to support an uncached mapping
 		 */
 		BUG_ON(kaddr);
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-	}
-#if 0
-   else
-	{
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	}
-#endif
 
 	if (!kaddr)
 	{
@@ -383,11 +382,28 @@ KBASE_EXPORT_TEST_API(kbase_lookup_cookie)
 
 void kbase_unlink_cookie(struct kbase_context * kctx, mali_addr64 cookie, struct kbase_va_region * reg)
 {
+	OSKP_ASSERT(kctx != NULL);
+	OSKP_ASSERT(reg != NULL);
+
 	OSK_DLIST_REMOVE(&kctx->osctx.reg_pending, reg, link);
 	kctx->osctx.cookies |= (1UL << cookie); /* mark as resolved */
 }
 
 KBASE_EXPORT_TEST_API(kbase_unlink_cookie)
+
+void kbase_os_mem_map_lock(struct kbase_context * kctx)
+{
+	struct mm_struct * mm = current->mm;
+	(void)kctx;
+	down_read(&mm->mmap_sem);
+}
+
+void kbase_os_mem_map_unlock(struct kbase_context * kctx)
+{
+	struct mm_struct * mm = current->mm;
+	(void)kctx;
+	up_read(&mm->mmap_sem);
+}
 
 int kbase_mmap(struct file *file, struct vm_area_struct *vma)
 {
@@ -399,6 +415,12 @@ int kbase_mmap(struct file *file, struct vm_area_struct *vma)
 
 	pr_debug("kbase_mmap\n");
 	nr_pages = (vma->vm_end - vma->vm_start) >> OSK_PAGE_SHIFT;
+	
+	if ( 0 == nr_pages )
+	{
+		err = -EINVAL;
+		goto out;
+	}
 
 	kbase_gpu_vm_lock(kctx);
 
@@ -406,7 +428,7 @@ int kbase_mmap(struct file *file, struct vm_area_struct *vma)
 	{
 		/* Reserve offset 0 for the shared ring-buffer */
 		if ((err = kbase_rb_mmap(kctx, vma, &reg, &kaddr)))
-			goto out;
+			goto out_unlock;
 
 		pr_debug("kbase_rb_mmap ok\n");
 		goto map;
@@ -415,7 +437,7 @@ int kbase_mmap(struct file *file, struct vm_area_struct *vma)
 	{
 		err = kbase_trace_buffer_mmap(kctx, vma, &reg, &kaddr);
 		if (0 != err)
-			goto out;
+			goto out_unlock;
 		pr_debug("kbase_trace_buffer_mmap ok\n");
 		goto map;
 	}
@@ -423,7 +445,7 @@ int kbase_mmap(struct file *file, struct vm_area_struct *vma)
 	{
 		/* MMU dump */
 		if ((err = kbase_mmu_dump_mmap(kctx, vma, &reg, &kaddr)))
-			goto out;
+			goto out_unlock;
 
 		goto map;
 	}
@@ -440,7 +462,7 @@ int kbase_mmap(struct file *file, struct vm_area_struct *vma)
 				/* incorrect mmap size */
 				/* leave the cookie for a potential later mapping, or to be reclaimed later when the context is freed */
 				err = -ENOMEM;
-				goto out;
+				goto out_unlock;
 			}
 
 			kbase_unlink_cookie(kctx, vma->vm_pgoff, reg);
@@ -464,13 +486,13 @@ int kbase_mmap(struct file *file, struct vm_area_struct *vma)
 		}
 
 		err = -ENOMEM;
-		goto out;
+		goto out_unlock;
 	}
 	else if (vma->vm_pgoff < KBASE_REG_ZONE_TMEM_BASE)
 	{
 		/* invalid offset as it identifies an already mapped pmem */
 		err = -ENOMEM;
-		goto out;
+		goto out_unlock;
 	}
 	else
 	{
@@ -489,7 +511,7 @@ int kbase_mmap(struct file *file, struct vm_area_struct *vma)
 		}
 
 		err = -ENOMEM;
-		goto out;
+		goto out_unlock;
 	}
 map:
 	err = kbase_cpu_mmap(reg, vma, kaddr, nr_pages);
@@ -497,11 +519,11 @@ map:
 	if (vma->vm_pgoff == KBASE_REG_COOKIE_MMU_DUMP) {
 		/* MMU dump - userspace should now have a reference on
 		 * the pages, so we can now free the kernel mapping */
-		vfree(kaddr);
+		osk_vfree(kaddr);
 	}
-out:
+out_unlock:
 	kbase_gpu_vm_unlock(kctx);
-
+out:
 	if (err)
 	{
 		pr_err("mmap failed %d\n", err);
@@ -524,7 +546,7 @@ KBASE_EXPORT_TEST_API(kbase_create_os_context)
 
 static void kbase_reg_pending_dtor(struct kbase_va_region *reg)
 {
-	kbase_free_phy_pages(reg, reg->nr_pages);
+	kbase_free_phy_pages(reg);
 	pr_info("Freeing pending unmapped region\n");
 	osk_free(reg);
 }

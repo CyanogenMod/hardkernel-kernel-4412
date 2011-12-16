@@ -25,6 +25,45 @@
 
 static umpp_device device;
 
+/**
+ * Update UMP allocation flags
+ *
+ * Sets implicit flags
+ *    - Hint flags implicitly set PROT flags
+ *
+ * Clears flags not in use by the UMP
+ *
+ * @param  flags UMP allocation flags
+ * @return flags updated for implicitly set flags
+ */
+static ump_alloc_flags umpp_dd_update_alloc_flags(ump_alloc_flags flags)
+{
+	/* Clear any flags not in use by the UMP API */
+	u32 device_shift[] = { UMP_DEVICE_CPU_SHIFT,
+						   UMP_DEVICE_W_SHIFT,
+						   UMP_DEVICE_X_SHIFT,
+						   UMP_DEVICE_Y_SHIFT,
+	 					   UMP_DEVICE_Z_SHIFT};
+	u32 i;
+
+	flags &= ~UMPP_ALLOCBITS_UNUSED;
+
+	for(i = 0; i < ARRAY_SIZE(device_shift); i++)
+	{
+		/* Hint flags implicitly set Prot flags */
+		if( flags & (UMP_HINT_DEVICE_RD << device_shift[i]) )
+		{
+			flags |= UMP_PROT_DEVICE_RD << device_shift[i];
+		}
+		if( flags & (UMP_HINT_DEVICE_WR << device_shift[i]) )
+		{
+			flags |= UMP_HINT_DEVICE_WR << device_shift[i];
+		}
+	}
+
+	return flags;
+}
+
 ump_result umpp_core_constructor(void)
 {
 	mutex_init(&device.secure_id_map_lock);
@@ -91,6 +130,14 @@ void umpp_core_session_end(umpp_session *session)
 ump_dd_handle ump_dd_allocate_64(uint64_t size, ump_alloc_flags flags, ump_dd_security_filter filter_func, ump_dd_final_release_callback final_release_func, void* callback_data)
 {
 	umpp_allocation * alloc;
+
+	flags = umpp_dd_update_alloc_flags(flags);
+	if( ( flags & (UMP_PROT_CPU_RD | UMP_PROT_W_RD | UMP_PROT_X_RD | UMP_PROT_Y_RD | UMP_PROT_Z_RD ) ) == 0 ||
+	    ( flags & (UMP_PROT_CPU_WR | UMP_PROT_W_WR | UMP_PROT_X_WR | UMP_PROT_Y_WR | UMP_PROT_Z_WR )) == 0 )
+	{
+		printk(KERN_WARNING "UMP: allocation flags should have at least one read and one write permission bit set\n");
+		return UMP_DD_INVALID_MEMORY_HANDLE;
+	}
 
 	alloc = kzalloc(sizeof(*alloc), GFP_KERNEL | __GFP_HARDWALL);
 
@@ -542,6 +589,14 @@ UMP_KERNEL_API_EXPORT ump_dd_handle ump_dd_create_from_phys_blocks_64(const ump_
 	uint64_t size = 0;
 	uint64_t i;
 	umpp_allocation * alloc;
+
+	flags = umpp_dd_update_alloc_flags(flags);
+	if( ( flags & (UMP_PROT_CPU_RD | UMP_PROT_W_RD | UMP_PROT_X_RD | UMP_PROT_Y_RD | UMP_PROT_Z_RD
+	    | UMP_PROT_CPU_WR | UMP_PROT_W_WR | UMP_PROT_X_WR | UMP_PROT_Y_WR | UMP_PROT_Z_WR )) == 0 )
+	{
+		printk(KERN_WARNING "UMP: allocation flags should have at least one read or write permission bit set\n");
+		return UMP_DD_INVALID_MEMORY_HANDLE;
+	}
 
 	alloc = kzalloc(sizeof(*alloc),__GFP_HARDWALL | GFP_KERNEL);
 

@@ -38,6 +38,16 @@ mali_bool kbase_security_has_capability(kbase_context *kctx, kbase_security_capa
 	/* Determine if access is allowed for the given cap */
 	switch(cap)
 	{
+		case KBASE_SEC_MODIFY_PRIORITY:
+#if KBASE_HWCNT_DUMP_BYPASS_ROOT
+				access_allowed = TRUE;
+#else
+				if (osk_is_privileged() == MALI_TRUE)
+				{
+					access_allowed = TRUE;
+				}
+#endif
+				break;
 		case KBASE_SEC_INSTR_HW_COUNTERS_COLLECT:
 				/* Access is granted only if the caller is privileged */
 #if KBASE_HWCNT_DUMP_BYPASS_ROOT

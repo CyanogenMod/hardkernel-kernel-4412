@@ -38,6 +38,9 @@
 /* Multisample write mask must be set to all 1s. */
 #define BASE_HW_ISSUE_5936  1
 
+/* Jobs can get stuck after page fault */
+#define BASE_HW_ISSUE_6035 1
+
 /* Hierarchical tiling doesn't work properly. */
 #define BASE_HW_ISSUE_6097  1
 
@@ -59,6 +62,9 @@
 /* Pixel format 95 doesn't work properly (HW writes to memory) */
 #define BASE_HW_ISSUE_6405  1
 
+/* Point size arrays using half-floats may be read out of order. */
+#define BASE_HW_ISSUE_6676  1
+
 /* On job complete with non-done the cache is not flushed */
 #define BASE_HW_ISSUE_6787  1
 
@@ -68,6 +74,9 @@
 /* Descriptor Cache usage-counter issue */
 #define BASE_HW_ISSUE_7347  1
 
+/* Writing to averaging mode MULTISAMPLE might hang */
+#define BASE_HW_ISSUE_7516 1
+
 /* Nested page faults not visible to SW */
 #define BASE_HW_ISSUE_7660  1
 
@@ -75,10 +84,28 @@
    PRFCNT_TILER_EN is enabled */
 #define BASE_HW_ISSUE_8186  1
 
+/** Hierz doesn't work when stenciling is enabled */
+#define BASE_HW_ISSUE_8260  1
+
+/** uTLB deadlock could occur when writing to an invalid page at the same time as
+ * access to a valid page in the same uTLB cache line ( == 4 PTEs == 16K block of mapping) */
+#define BASE_HW_ISSUE_8316  1
+
 /* Livelock in L0 icache */
 #define BASE_HW_ISSUE_8280  1
 
 /* TIB: Reports faults from a vtile which has not yet been allocated */
 #define BASE_HW_ISSUE_8245  1
+
+/* Repeatedly Soft-stopping a job chain consisting of (Vertex Shader, Cache Flush, Tiler)
+ * jobs causes 0x58 error on tiler job. */
+#define BASE_HW_ISSUE_8408 1
+
+/** Tiler heap issue using FBOs or multiple processes using the tiler simultaneously
+ */
+#define BASE_HW_ISSUE_8564 0
+
+/* Jobs with relaxed dependencies are not supporting soft-stop */
+#define BASE_HW_ISSUE_8803 1
 
 #endif /* _BASE_HWCONFIG_H_ */

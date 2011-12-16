@@ -14,16 +14,8 @@
 
 #include <kbase/src/common/mali_kbase.h>
 #include <kbase/src/common/mali_kbase_uku.h>
-#include <kbase/src/common/mali_kbase_jm.h>
 
 #define beenthere(f, a...)  OSK_PRINT_INFO(OSK_BASE_JD, "%s:" f, __func__, ##a)
-
-/* Structure for workaround for MIDBASE-791 */
-typedef struct jd_flush_info
-{
-	osk_workq_work work;
-	osk_waitq done_waitq;
-} jd_flush_info;
 
 /*
  * This is the kernel side of the API. Only entry points are:
@@ -35,31 +27,34 @@ typedef struct jd_flush_info
  * - to the event subsystem (signals the completion/failure of bag/job-chains).
  */
 
-static INLINE void dep_raise_sem(u32 *sem, u8 dep)
+STATIC INLINE void dep_raise_sem(u32 *sem, u8 dep)
 {
 	if (!dep)
 		return;
 
 	sem[BASEP_JD_SEM_WORD_NR(dep)] |= BASEP_JD_SEM_MASK_IN_WORD(dep);
 }
+KBASE_EXPORT_TEST_API(dep_raise_sem)
 
-static INLINE void dep_clear_sem(u32 *sem, u8 dep)
+STATIC INLINE void dep_clear_sem(u32 *sem, u8 dep)
 {
 	if (!dep)
 		return;
 
 	sem[BASEP_JD_SEM_WORD_NR(dep)] &= ~BASEP_JD_SEM_MASK_IN_WORD(dep);
 }
+KBASE_EXPORT_TEST_API(dep_clear_sem)
 
-static INLINE int dep_get_sem(u32 *sem, u8 dep)
+STATIC INLINE int dep_get_sem(u32 *sem, u8 dep)
 {
 	if (!dep)
 		return 0;
 
 	return !!(sem[BASEP_JD_SEM_WORD_NR(dep)] & BASEP_JD_SEM_MASK_IN_WORD(dep));
 }
+KBASE_EXPORT_TEST_API(dep_get_sem)
 
-static INLINE mali_bool jd_add_dep(kbase_jd_context *ctx,
+STATIC INLINE mali_bool jd_add_dep(kbase_jd_context *ctx,
 				   kbase_jd_atom *katom, u8 d)
 {
 	kbase_jd_dep_queue *dq = &ctx->dep_queue;
@@ -79,13 +74,14 @@ static INLINE mali_bool jd_add_dep(kbase_jd_context *ctx,
 
 	return MALI_TRUE;
 }
+KBASE_EXPORT_TEST_API(jd_add_dep)
 
 /*
  * This function only computes the address of the first possible
  * atom. It doesn't mean it's actually valid (jd_validate_atom takes
  * care of that).
  */
-static INLINE base_jd_atom *jd_get_first_atom(kbase_jd_context *ctx,
+STATIC INLINE base_jd_atom *jd_get_first_atom(kbase_jd_context *ctx,
 					      kbase_jd_bag *bag)
 {
 	/* Check that offset is within pool */
@@ -94,28 +90,39 @@ static INLINE base_jd_atom *jd_get_first_atom(kbase_jd_context *ctx,
 
 	return  (base_jd_atom *)((char *)ctx->pool + bag->offset);
 }
+KBASE_EXPORT_TEST_API(jd_get_first_atom)
 
 /*
  * Same as with jd_get_first_atom, but for any subsequent atom.
  */
-static INLINE base_jd_atom *jd_get_next_atom(kbase_jd_atom *katom)
+STATIC INLINE base_jd_atom *jd_get_next_atom(kbase_jd_atom *katom)
 {
 	/* Think of adding extra padding for userspace */
 	return (base_jd_atom *)base_jd_get_atom_syncset(katom->atom, katom->nr_syncsets);
 }
+KBASE_EXPORT_TEST_API(jd_get_next_atom)
 
 /*
  * This will check atom for correctness and if so, initialize its js policy.
  */
-static INLINE kbase_jd_atom *jd_validate_atom(struct kbase_context *kctx,
+STATIC INLINE kbase_jd_atom *jd_validate_atom(struct kbase_context *kctx,
 					      kbase_jd_bag *bag,
 					      base_jd_atom *atom,
 					      u32 *sem)
 {
 	kbase_jd_context *jctx = &kctx->jctx;
 	kbase_jd_atom *katom;
-	u32 nr_syncsets = atom->nr_syncsets;
-	base_jd_dep pre_dep = atom->pre_dep;
+	u32 nr_syncsets;
+	base_jd_dep pre_dep;
+	int nice_priority;
+
+	/* Check the atom struct fits in the pool before we attempt to access it
+	   Note: a bad bag->nr_atom could trigger this condition */
+	if(((char *)atom + sizeof(base_jd_atom)) > ((char *)jctx->pool + jctx->pool_size))
+		return NULL;
+
+	nr_syncsets = atom->nr_syncsets;
+	pre_dep = atom->pre_dep;
 
 	/* Check that the whole atom fits within the pool.
 	 * syncsets integrity will be performed as we execute them */
@@ -150,6 +157,33 @@ static INLINE kbase_jd_atom *jd_validate_atom(struct kbase_context *kctx,
 	katom->bag          = bag;
 	katom->kctx         = kctx;
 	katom->nr_syncsets  = nr_syncsets;
+	katom->affinity	= 0;
+
+	/*
+	 * If the priority is increased we need to check the caller has security caps to do this, if
+	 * prioirty is decreased then this is ok as the result will have no negative impact on other
+	 * processes running.
+	 */
+	katom->nice_prio = atom->prio;
+	if( 0 > atom->prio)
+	{
+		mali_bool access_allowed;
+		access_allowed = kbase_security_has_capability(kctx, KBASE_SEC_MODIFY_PRIORITY, KBASE_SEC_FLAG_NOAUDIT);
+		if(!access_allowed)
+		{
+			/* For unprivileged processes - a negative priority is interpreted as zero */
+			katom->nice_prio = 0;
+		}
+	}
+
+	/* Scale priority range to use NICE range */
+	if(katom->nice_prio)
+	{
+		/* Remove sign for calculation */
+		nice_priority = katom->nice_prio+128;
+		/* Fixed point maths to scale from ..255 to 0..39 (NICE range with +20 offset) */
+		katom->nice_prio = (((20<<16)/128)*nice_priority)>>16;
+	}
 
 	/* pre-fill the event */
 	katom->event.event_code	= BASE_JD_EVENT_DONE;
@@ -169,6 +203,7 @@ static INLINE kbase_jd_atom *jd_validate_atom(struct kbase_context *kctx,
 
 	return katom;
 }
+KBASE_EXPORT_TEST_API(jd_validate_atom)
 
 static void kbase_jd_cancel_bag(kbase_context *kctx, kbase_jd_bag *bag,
 				base_jd_event_code code)
@@ -177,7 +212,7 @@ static void kbase_jd_cancel_bag(kbase_context *kctx, kbase_jd_bag *bag,
 	kbase_event_post(kctx, &bag->event);
 }
 
-static void kbase_jd_katom_dtor(kbase_event *event)
+STATIC void kbase_jd_katom_dtor(kbase_event *event)
 {
 	kbase_jd_atom *katom = CONTAINER_OF(event, kbase_jd_atom, event);
 	kbasep_js_policy *js_policy = &(katom->kctx->kbdev->js_data.policy);
@@ -185,10 +220,11 @@ static void kbase_jd_katom_dtor(kbase_event *event)
 	kbasep_js_policy_term_job( js_policy, katom );
 	osk_free(katom);
 }
+KBASE_EXPORT_TEST_API(kbase_jd_katom_dtor)
 
-static mali_error kbase_jd_validate_bag(kbase_context *kctx,
-					kbase_jd_bag *bag,
-					osk_dlist *klistp)
+STATIC mali_error kbase_jd_validate_bag(kbase_context *kctx,
+                                        kbase_jd_bag *bag,
+                                        osk_dlist *klistp)
 {
 	kbase_jd_context *jctx = &kctx->jctx;
 	kbase_jd_atom *katom;
@@ -196,6 +232,8 @@ static mali_error kbase_jd_validate_bag(kbase_context *kctx,
 	mali_error err = MALI_ERROR_NONE;
 	u32 sem[BASEP_JD_SEM_ARRAY_SIZE] = { 0 };
 	int i;
+	s32 bag_priority_total = 0;
+	kbasep_js_policy_cfs_ctx *ctx_info;
 
 	atom = jd_get_first_atom(jctx, bag);
 	if (!atom)
@@ -218,16 +256,32 @@ static mali_error kbase_jd_validate_bag(kbase_context *kctx,
 			goto out;
 		}
 
+		bag_priority_total+= katom->nice_prio;
+
 		OSK_DLIST_PUSH_BACK(klistp, &katom->event,
 				       kbase_event, entry);
 		atom = jd_get_next_atom(katom);
 	}
+
+	/*
+	 * Priorities currently operate on a per context basis rather than per atom
+	 * so we take an average of the priorities within the bag and adjust the context
+	 * priority
+	 */
+	ctx_info = &kctx->jctx.sched_info.runpool.policy_ctx.cfs;
+	/* Keep a running total of all atoms in the context */
+	ctx_info->bag_total_nr_atoms+= bag->nr_atoms;
+	/* Keep a running total of all priorities in the context */
+	ctx_info->bag_total_priority+= bag_priority_total;
+	/* Store the average priority for all atoms (using NICE range -20..19 */
+	ctx_info->bag_priority = (ctx_info->bag_total_priority / ctx_info->bag_total_nr_atoms) - 20;
+
 out:
 	return err;
 }
+KBASE_EXPORT_TEST_API(kbase_jd_validate_bag)
 
-static INLINE kbase_jd_atom *jd_resolve_dep(kbase_jd_atom *katom, u8 d,
-					    int zapping)
+STATIC INLINE kbase_jd_atom *jd_resolve_dep(kbase_jd_atom *katom, u8 d, int zapping)
 {
 	u8 other_dep;
 	u8 dep;
@@ -302,6 +356,7 @@ static INLINE kbase_jd_atom *jd_resolve_dep(kbase_jd_atom *katom, u8 d,
 		  (void *)dep_katom, other_dep);
 	return NULL;
 }
+KBASE_EXPORT_TEST_API(jd_resolve_dep)
 
 /*
  * Perform the necessary handling of an atom that has finished running
@@ -314,7 +369,7 @@ static INLINE kbase_jd_atom *jd_resolve_dep(kbase_jd_atom *katom, u8 d,
  *
  * When not zapping, the caller must hold the kbasep_js_kctx_info::ctx::jsctx_mutex.
  */
-static mali_bool jd_done_nolock(kbase_jd_atom *katom, int zapping)
+STATIC mali_bool jd_done_nolock(kbase_jd_atom *katom, int zapping)
 {
 	kbase_jd_atom *dep_katom;
 	struct kbase_context *kctx = katom->kctx;
@@ -418,6 +473,7 @@ static mali_bool jd_done_nolock(kbase_jd_atom *katom, int zapping)
 
 	return need_to_try_schedule_context;
 }
+KBASE_EXPORT_TEST_API(jd_done_nolock)
 
 mali_error kbase_jd_submit(kbase_context *kctx, const kbase_uk_job_submit *user_bag)
 {
@@ -430,6 +486,11 @@ mali_error kbase_jd_submit(kbase_context *kctx, const kbase_uk_job_submit *user_
 	int i = -1;
 	mali_bool need_to_try_schedule_context = MALI_FALSE;
 	kbase_device *kbdev;
+
+	/*
+	 * kbase_jd_submit isn't expected to fail and so all errors with the jobs
+	 * are reported by immediately falling them (through event system)
+	 */
 
 	kbdev = kctx->kbdev;
 
@@ -479,14 +540,12 @@ mali_error kbase_jd_submit(kbase_context *kctx, const kbase_uk_job_submit *user_
 		kbase_pre_job_sync(kctx,
 				   base_jd_get_atom_syncset(katom->atom, 0),
 				   katom->nr_syncsets);
-
 		/* Update the TOTAL number of jobs. This includes those not tracked by
 		 * the scheduler: 'not ready to run' and 'dependency-only' jobs. */
 		jctx->job_nr++;
 		/* Cause any future waiter-on-termination to wait until the jobs are
 		 * finished */
 		osk_waitq_clear(&jctx->zero_jobs_waitq);
-
 		/* If no pre-dep has been set, then we're free to run
 		 * the job immediately */
 		if ((jd_add_dep(jctx, katom, 0) | jd_add_dep(jctx, katom, 1)))
@@ -502,6 +561,7 @@ mali_error kbase_jd_submit(kbase_context *kctx, const kbase_uk_job_submit *user_
 		/* Lock the JS Context, for submitting jobs, and queue an action about
 		 * whether we need to try scheduling the context */
 		osk_mutex_lock( &kctx->jctx.sched_info.ctx.jsctx_mutex );
+
 		if (katom->atom->core_req != BASE_JD_REQ_DEP)
 		{
 			need_to_try_schedule_context |= kbasep_js_add_job( kctx, katom );
@@ -512,7 +572,6 @@ mali_error kbase_jd_submit(kbase_context *kctx, const kbase_uk_job_submit *user_
 			need_to_try_schedule_context |= jd_done_nolock(katom, 0);
 		}
 		osk_mutex_unlock( &kctx->jctx.sched_info.ctx.jsctx_mutex );
-
 	}
 
 	/* Only whilst we've dropped the JS context lock can we schedule a new
@@ -524,12 +583,25 @@ mali_error kbase_jd_submit(kbase_context *kctx, const kbase_uk_job_submit *user_
 	{
 		kbasep_js_try_schedule_head_ctx( kbdev );
 	}
-
 out:
 	osk_mutex_unlock(&jctx->lock);
 out_bag:
 	beenthere("%s", "Exit");
 	return err;
+}
+
+STATIC void kbasep_jd_check_deref_cores(struct kbase_device *kbdev, struct kbase_jd_atom *katom)
+{
+	if (katom->affinity != 0)
+	{
+		kbase_pm_release_cores(kbdev, KBASE_PM_CORE_SHADER, katom->affinity);
+		if (katom->atom->core_req & BASE_JD_REQ_T)
+		{
+			/* Release tiler cores */
+			kbase_pm_release_cores(kbdev, KBASE_PM_CORE_TILER, kbdev->tiler_present_bitmap);
+		}
+		katom->affinity = 0;
+	}
 }
 
 /**
@@ -574,13 +646,17 @@ static void jd_done_worker(osk_workq_work *data)
 	 */
 	OSK_ASSERT( js_kctx_info->ctx.is_scheduled != MALI_FALSE );
 
+	/* Release cores this job was using (this might power down unused cores) */ 
+	kbasep_jd_check_deref_cores(kbdev, katom);
+
 	/* Grab the retry_submit state before the katom disappears */
 	retry_submit = kbasep_js_get_job_retry_submit_slot( katom, &retry_jobslot );
 
-	if (katom->event.event_code == BASE_JD_EVENT_STOPPED)
+	if (katom->event.event_code == BASE_JD_EVENT_STOPPED
+		|| katom->event.event_code == BASE_JD_EVENT_REMOVED_FROM_NEXT )
 	{
-		/* Requeue the atom on soft-stop */
-		OSK_PRINT_INFO(OSK_BASE_JM, "JS: Soft Stopped %p on Ctx %p; Requeuing", kctx );
+		/* Requeue the atom on soft-stop / removed from NEXT registers */
+		OSK_PRINT_INFO(OSK_BASE_JM, "JS: Soft Stopped/Removed from next %p on Ctx %p; Requeuing", kctx );
 
 		osk_mutex_lock( &js_devdata->runpool_mutex );
 		kbasep_js_clear_job_retry_submit( katom );
@@ -589,16 +665,10 @@ static void jd_done_worker(osk_workq_work *data)
 		kbasep_js_policy_enqueue_job( js_policy, katom );
 		osk_spinlock_irq_unlock( &js_devdata->runpool_irq.lock );
 
-		osk_mutex_unlock( &js_devdata->runpool_mutex );
-	}
-	else if (katom->event.event_code == BASE_JD_EVENT_REMOVED_FROM_NEXT)
-	{
-		/* Requeue atom if it was removed from NEXT registers */
-		osk_mutex_lock( &js_devdata->runpool_mutex );
-
-		osk_spinlock_irq_lock( &js_devdata->runpool_irq.lock );
-		kbasep_js_policy_enqueue_job( js_policy, katom );
-		osk_spinlock_irq_unlock( &js_devdata->runpool_irq.lock );
+		/* This may now be the only job present (work queues can run items out of order
+		 * e.g. on different CPUs), so we must try to run it, otherwise it might not get
+		 * run at all after this. */
+		kbasep_js_try_run_next_job( kbdev );
 
 		osk_mutex_unlock( &js_devdata->runpool_mutex );
 	}
@@ -649,7 +719,6 @@ static void jd_cancel_worker(osk_workq_work *data)
 	kbase_jd_context *jctx;
 	kbase_context *kctx;
 	kbasep_js_kctx_info *js_kctx_info;
-	int zapping;
 	mali_bool need_to_try_schedule_context;
 
 	kctx = katom->kctx;
@@ -663,15 +732,18 @@ static void jd_cancel_worker(osk_workq_work *data)
 	 */
 	OSK_ASSERT( js_kctx_info->ctx.is_scheduled == MALI_FALSE );
 
+	/* Release cores this job was using (this might power down unused cores) */ 
+	kbasep_jd_check_deref_cores(kctx->kbdev, katom);
+
 	/* Scheduler: Remove the job from the system */
 	osk_mutex_lock( &js_kctx_info->ctx.jsctx_mutex );
 	kbasep_js_remove_job( kctx, katom );
 	osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
 
 	osk_mutex_lock(&jctx->lock);
-	zapping = (katom->event.event_code != BASE_JD_EVENT_DONE);
 
-	need_to_try_schedule_context = jd_done_nolock(katom, zapping);
+	/* Always enable zapping */
+	need_to_try_schedule_context = jd_done_nolock(katom, 1);
 	/* Because we're zapping, we're not adding any more jobs to this ctx, so no need to
 	 * schedule the context. There's also no need for the jsctx_mutex to have been taken
 	 * around this too. */
@@ -685,9 +757,11 @@ static void jd_cancel_worker(osk_workq_work *data)
 
 void kbase_jd_done(kbase_jd_atom *katom)
 {
-	osk_workq_submit(&katom->kctx->jctx.job_done_wq,
-			jd_done_worker, &katom->work);
+	OSK_ASSERT(katom);
+	osk_workq_work_init(&katom->work, jd_done_worker);
+	osk_workq_submit(&katom->kctx->jctx.job_done_wq, &katom->work);
 }
+KBASE_EXPORT_TEST_API(kbase_jd_done)
 
 void kbase_jd_cancel(kbase_jd_atom *katom)
 {
@@ -702,22 +776,12 @@ void kbase_jd_cancel(kbase_jd_atom *katom)
 
 	katom->event.event_code = BASE_JD_EVENT_JOB_CANCELLED;
 
-	osk_workq_submit(&kctx->jctx.job_done_wq,
-			jd_cancel_worker, &katom->work);
-}
-
-/* Workaround for MIDBASE-791 */
-static void jd_flush_worker(osk_workq_work *data)
-{
-	jd_flush_info *flusher = CONTAINER_OF(data, jd_flush_info, work);
-	/* Just signal the attached wait-queue, to make use of the FIFO ordering */
-	osk_waitq_set(&flusher->done_waitq);
+	osk_workq_work_init(&katom->work, jd_cancel_worker);
+	osk_workq_submit(&kctx->jctx.job_done_wq, &katom->work);
 }
 
 void kbase_jd_flush_workqueues(kbase_context *kctx)
 {
-	jd_flush_info flusher;
-	osk_error osk_err;
 	kbase_device *kbdev;
 	int i;
 
@@ -726,26 +790,13 @@ void kbase_jd_flush_workqueues(kbase_context *kctx)
 	kbdev = kctx->kbdev;
 	OSK_ASSERT( kbdev );
 
-	osk_err = osk_waitq_init(&flusher.done_waitq);
-	if (OSK_ERR_NONE != osk_err)
-	{
-		OSK_PRINT_ERROR(OSK_BASE_JD, "Failed to initialize a wait queue for the job dispatch flusher!\n");
-		return;
-	}
-
-	osk_waitq_clear(&flusher.done_waitq);
-	osk_workq_on_stack_submit( &kctx->jctx.job_done_wq, jd_flush_worker, &flusher.work );
-	osk_waitq_wait( &flusher.done_waitq );
+	osk_workq_flush( &kctx->jctx.job_done_wq );
 
 	/* Flush all workqueues, for simplicity */
 	for (i = 0; i < kbdev->nr_address_spaces; i++)
 	{
-		osk_waitq_clear(&flusher.done_waitq);
-		osk_workq_on_stack_submit(&kbdev->as[i].pf_wq, jd_flush_worker, &flusher.work);
-		osk_waitq_wait( &flusher.done_waitq );
+		osk_workq_flush( &kbdev->as[i].pf_wq );
 	}
-
-	osk_waitq_term( &flusher.done_waitq );
 }
 
 typedef struct zap_reset_data
@@ -788,10 +839,14 @@ out:
 
 void kbase_jd_zap_context(kbase_context *kctx)
 {
-	kbase_device *kbdev = kctx->kbdev;
+	kbase_device *kbdev;
 	osk_timer zap_timeout;
 	osk_error ret;
 	zap_reset_data reset_data;
+
+	OSK_ASSERT(kctx);
+
+	kbdev = kctx->kbdev;
 
 	kbase_job_zap_context(kctx);
 
@@ -864,6 +919,7 @@ skip_timeout:
 	osk_mutex_unlock(&kctx->jctx.sched_info.ctx.jsctx_mutex);
 	osk_mutex_unlock(&kctx->jctx.lock);
 }
+KBASE_EXPORT_TEST_API(kbase_jd_zap_context)
 
 mali_error kbase_jd_init(struct kbase_context *kctx)
 {
@@ -871,6 +927,9 @@ mali_error kbase_jd_init(struct kbase_context *kctx)
 	int i;
 	mali_error mali_err;
 	osk_error osk_err;
+
+	OSK_ASSERT(kctx);
+	OSK_ASSERT(NULL == kctx->jctx.pool);
 
 	kaddr = osk_vmalloc(BASEP_JCTX_RB_NRPAGES * OSK_PAGE_SIZE);
 	if (!kaddr)
@@ -931,9 +990,15 @@ out1:
 out:
 	return mali_err;
 }
+KBASE_EXPORT_TEST_API(kbase_jd_init)
 
 void kbase_jd_exit(struct kbase_context *kctx)
 {
+	OSK_ASSERT(kctx);
+	/* Assert if kbase_jd_init has not been called before this function
+	   (kbase_jd_init initializes the pool) */
+	OSK_ASSERT(kctx->jctx.pool);
+
 	osk_spinlock_irq_term(&kctx->jctx.tb_lock);
 	/* Work queue is emptied by this */
 	osk_workq_term(&kctx->jctx.job_done_wq);
@@ -941,3 +1006,4 @@ void kbase_jd_exit(struct kbase_context *kctx)
 	osk_vfree(kctx->jctx.pool);
 	osk_mutex_term(&kctx->jctx.lock);
 }
+KBASE_EXPORT_TEST_API(kbase_jd_exit)

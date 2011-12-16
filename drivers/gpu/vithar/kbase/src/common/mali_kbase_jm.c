@@ -19,44 +19,33 @@
 
 #include <kbase/src/common/mali_kbase.h>
 #include <kbase/src/common/mali_midg_regmap.h>
-#include <kbase/src/common/mali_kbase_js_affinity.h>
+#include <kbase/src/common/mali_kbase_gator.h>
+
 
 #include "mali_kbase_jm.h"
 
 #define beenthere(f, a...)  OSK_PRINT_INFO(OSK_BASE_JM, "%s:" f, __func__, ##a)
 
-#define VITHAR_LOG
-#ifdef VITHAR_LOG
-#include <linux/jiffies.h>
-#define _VITHAR_LOG(logs) {\
-	    static u64 last_time_log = 0;\
-	    u64 curr_time_log = get_jiffies_64();\
-	    if ((curr_time_log - last_time_log) > 1000)\
-		logs;\
-	    last_time_log = curr_time_log;\
-	}
-#else
-#endif
-
 static void kbasep_try_reset_gpu_early(kbase_device *kbdev);
 
 static void kbase_job_hw_submit(kbase_device *kbdev, kbase_jd_atom *katom, int js)
 {
-	kbase_context *kctx = katom->kctx;
-	u64 affinity = 0;
+	kbase_context *kctx;
 	u32 cfg;
+
+	OSK_ASSERT(kbdev);
+	OSK_ASSERT(katom);
+
+	kctx = katom->kctx;
 
 	/* Command register must be available */
 	OSK_ASSERT(kbasep_jm_is_js_free(kbdev, js, katom->kctx));
 
 	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_LO), katom->atom->jc & 0xFFFFFFFF, katom->kctx);
 	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_HI), katom->atom->jc >> 32, katom->kctx);
-	
-	/* compute affinity */
-	kbase_js_choose_affinity(&affinity, kbdev, katom, js);
 
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_AFFINITY_NEXT_LO), affinity & 0xFFFFFFFF, katom->kctx);
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_AFFINITY_NEXT_HI), affinity >> 32, katom->kctx);
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_AFFINITY_NEXT_LO), katom->affinity & 0xFFFFFFFF, katom->kctx);
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_AFFINITY_NEXT_HI), katom->affinity >> 32, katom->kctx);
 
 	/* start MMU, medium priority, cache clean/flush on end, clean/flush on start */
 	cfg = kctx->as_nr | (3 << 12) | (1 << 10) | (8 << 16) | (3 << 8);
@@ -70,14 +59,21 @@ static void kbase_job_hw_submit(kbase_device *kbdev, kbase_jd_atom *katom, int j
 
 	/* GO ! */
 	OSK_PRINT_INFO(OSK_BASE_JM, "JS: Submitting atom %p from ctx %p to js[%d] with head=0x%llx, affinity=0x%llx",
-				   katom, kctx, js, katom->atom->jc, affinity );
+				   katom, kctx, js, katom->atom->jc, katom->affinity );
 
+#if MALI_GATOR_SUPPORT
+	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(GATOR_TIMELINE_START, js));
+#endif
 	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), 1, katom->kctx);
 }
 
 void kbase_job_submit_nolock(kbase_device *kbdev, kbase_jd_atom *katom, int js)
 {
-	kbase_jm_slot *jm_slots = kbdev->jm_slots;
+	kbase_jm_slot *jm_slots;
+
+	OSK_ASSERT(kbdev);
+
+	jm_slots = kbdev->jm_slots;
 
 #if BASE_HW_ISSUE_5713
 	OSK_ASSERT(!jm_slots[js].submission_blocked_for_soft_stop);
@@ -97,12 +93,23 @@ void kbase_job_submit_nolock(kbase_device *kbdev, kbase_jd_atom *katom, int js)
 
 void kbase_job_done_slot(kbase_device *kbdev, int s, u32 completion_code, u64 job_tail, kbasep_js_tick *end_timestamp)
 {
-	kbase_jm_slot *slot = &kbdev->jm_slots[s];
+	kbase_jm_slot *slot;
 	kbase_jd_atom *katom;
 
+	OSK_ASSERT(kbdev);
 
+	slot = &kbdev->jm_slots[s];
 	katom = kbasep_jm_dequeue_submit_slot( slot );
-	
+
+#if BASE_HW_ISSUE_8316
+	if (katom->poking)
+	{
+		OSK_ASSERT(katom->kctx->as_nr != KBASEP_AS_NR_INVALID);
+		kbase_as_poking_timer_release(&kbdev->as[katom->kctx->as_nr]);
+		katom->poking = 0;
+	}
+#endif /* BASE_HW_ISSUE_8316 */
+
 	if (job_tail != 0)
 	{
 		/* Some of the job has been executed, so we update the job chain address to where we should resume from */
@@ -122,6 +129,9 @@ void kbase_job_done_slot(kbase_device *kbdev, int s, u32 completion_code, u64 jo
 		katom->event.event_code = completion_code;
 	}
 
+#if MALI_GATOR_SUPPORT
+	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(GATOR_TIMELINE_STOP, s));
+#endif
 	kbasep_js_job_done_slot_irq( kbdev, s, katom, end_timestamp );
 
 	kbase_device_trace_register_access(katom->kctx, REG_WRITE , JOB_CONTROL_REG(JOB_IRQ_CLEAR), 1 << s);
@@ -145,6 +155,8 @@ void kbase_job_done_slot(kbase_device *kbdev, int s, u32 completion_code, u64 jo
  */
 STATIC void kbasep_job_slot_update_head_start_timestamp( kbase_jm_slot *slot, kbasep_js_tick end_timestamp )
 {
+	OSK_ASSERT(slot);
+
 	if ( kbasep_jm_nr_jobs_submitted( slot ) > 0 )
 	{
 		kbase_jd_atom *katom;
@@ -170,7 +182,9 @@ void kbase_job_done(kbase_device *kbdev, u32 done)
 	int i;
 	u32 count = 0;
 	kbasep_js_tick end_timestamp = kbasep_js_get_js_ticks();
- 
+
+	OSK_ASSERT(kbdev);
+
 	OSK_MEMSET( &kbdev->slot_submit_count_irq[0], 0, sizeof(kbdev->slot_submit_count_irq) );
 
 	/* write irq throttle register, this will prevent irqs from occurring until
@@ -231,8 +245,8 @@ void kbase_job_done(kbase_device *kbdev, u32 done)
 						}
 #endif
 					default:
-						OSK_PRINT_WARN(OSK_BASE_JD, "error detected from slot %d, job status 0x%08x",
-						               i, completion_code);
+						OSK_PRINT_WARN(OSK_BASE_JD, "error detected from slot %d, job status 0x%08x (%s)",
+						               i, completion_code, kbase_exception_name(completion_code));
 				}
 #if BASE_HW_ISSUE_6787
 				/* cache flush when jobs complete with non-done codes */
@@ -379,7 +393,7 @@ spurious:
 		kbase_job_slot_unlock(kbdev, i);
 	}
 
-	if (osk_atomic_get(&kbdev->reset_gpu) != 0)
+	if (osk_atomic_get(&kbdev->reset_gpu) == KBASE_RESET_GPU_COMMITTED)
 	{
 		/* If we're trying to reset the GPU then we might be able to do it early
 		 * (without waiting for a timeout) because some jobs have completed
@@ -389,38 +403,106 @@ spurious:
 
 	beenthere("irq efficiency = %d", count);
 }
+KBASE_EXPORT_TEST_API(kbase_job_done)
 
-/**
- * Remove all jobs queued on a given job slot and belonging to a given
- * context. Job slot lock must be held so we don't race against the
- * interrupt.
- */
-static void kbase_zap_context_slot(kbase_context *kctx, kbase_jm_slot *slot, int js)
+
+static void kbasep_job_slot_soft_or_hard_stop_do_action(kbase_device *kbdev, int js, u32 action)
 {
-	kbase_device *kbdev = kctx->kbdev;
+#if BASE_HW_ISSUE_8316
+	if (action == JSn_COMMAND_SOFT_STOP)
+	{
+		int i;
+		kbase_jm_slot *slot;
+		slot = &kbdev->jm_slots[js];
+
+		for (i = 0; i < kbasep_jm_nr_jobs_submitted(slot); i++)
+		{
+			kbase_jd_atom *katom;
+			kbase_as * as;
+	
+			katom = kbasep_jm_peek_idx_submit_slot(slot, i);
+	
+			OSK_ASSERT(katom);
+			OSK_ASSERT(katom->kctx);
+			OSK_ASSERT(katom->kctx->as_nr != KBASEP_AS_NR_INVALID);
+	
+			katom->poking = 1;
+			as = &kbdev->as[katom->kctx->as_nr];
+			kbase_as_poking_timer_retain(as);
+		}
+	}
+#endif /* BASE_HW_ISSUE_8316 */
+
+#if BASE_HW_ISSUE_5713
+	if (action == JSn_COMMAND_SOFT_STOP)
+	{
+		/* PRLAM-5713 means that we can't reliably identify a job that has been soft-stopped in the interrupt handler.
+		 * To work around this we ensure that the slot is not submitted to again until we've dealt with the job that 
+		 * is soft-stopped.
+		 */
+		kbase_jm_slot *slot;
+		slot = &kbdev->jm_slots[js];
+		slot->submission_blocked_for_soft_stop = MALI_TRUE;
+	}
+#endif
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND), action, NULL);
+}
+
+/** Soft or hard-stop a slot
+ *
+ * This function safely ensures that the correct job is either hard or soft-stopped.
+ * It deals with evicting jobs from the next registers where appropriate.
+ *
+ * @param kbdex         The kbase device
+ * @param kctx          The context to soft/hard-stop job(s) from (or NULL is all jobs should be targeted)
+ * @param js            The slot that the job(s) are on
+ * @param target_katom  The atom that should be targeted (or NULL if all jobs from the context should be targeted)
+ * @param action        The action to perform, either JSn_COMMAND_HARD_STOP or JSn_COMMAND_SOFT_STOP
+ */
+static void kbasep_job_slot_soft_or_hard_stop(kbase_device *kbdev, kbase_context *kctx, int js,
+                                              kbase_jd_atom *target_katom, u32 action)
+{
 	kbase_jd_atom *katom;
 	u8 i;
 	u8 jobs_submitted;
+	kbase_jm_slot *slot;
+
+	OSK_ASSERT(action == JSn_COMMAND_HARD_STOP || action == JSn_COMMAND_SOFT_STOP);
+	OSK_ASSERT(kbdev);
+
+	slot = &kbdev->jm_slots[js];
+	OSK_ASSERT(slot);
 
 	jobs_submitted = kbasep_jm_nr_jobs_submitted( slot );
 
-	/* Start with whatever we've already queued */
-	for (i = 0; i < jobs_submitted; i++)
+	if (jobs_submitted > 2)
+	{
+		i = jobs_submitted - 2;
+	}
+	else
+	{
+		i = 0;
+	}
+
+	/* Loop through all jobs that have been submitted to the slot and haven't completed */
+	for(;i < jobs_submitted;i++)
 	{
 		katom = kbasep_jm_peek_idx_submit_slot( slot, i );
 
-		if (katom->kctx != kctx)
+		if (kctx && katom->kctx != kctx)
+		{
 			continue;
+		}
+		if (target_katom && katom != target_katom)
+		{
+			continue;
+		}
 
-		katom->event.event_code = BASE_JD_EVENT_JOB_CANCELLED;
-		
 		if (i+1 == jobs_submitted) {
 			/* The last job in the slot, check if there is a job in the next register */
 			if (kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), NULL) == 0)
 			{
-				beenthere("hard-stopping job on slot %d", js);
-				/* There is no next job - so the one we want to cancel is in the current register */
-				kbase_job_slot_hardstop(kctx->kbdev, js);
+				kbasep_job_slot_soft_or_hard_stop_do_action(kbdev, js, action);
 			}
 			else
 			{
@@ -447,16 +529,16 @@ static void kbase_zap_context_slot(kbase_context *kctx, kbase_jm_slot *slot, int
 				else
 				{
 					/* The job transitioned into the current registers before we managed to evict it,
-					 * in this case we fall back to hard-stopping the job */
-					beenthere("missed job in next register, hard-stopping slot %d", js);
-					kbase_job_slot_hardstop(kctx->kbdev, js);
+					 * in this case we fall back to soft/hard-stopping the job */
+					beenthere("missed job in next register, soft/hard-stopping slot %d", js);
+					kbasep_job_slot_soft_or_hard_stop_do_action(kbdev, js, action);
 				}
 			}
 		} else if (i+2 == jobs_submitted) {
 			/* There's a job after this one, check to see if that job is in the next registers */
 			if (kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), NULL) != 0)
 			{
-				/* It is - we should remove that job and hard-stop the slot */
+				/* It is - we should remove that job and soft/hard-stop the slot */
 				beenthere("clearing job from next registers on slot %d", js);
 				kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), JSn_COMMAND_NOP, NULL);
 
@@ -482,9 +564,9 @@ static void kbase_zap_context_slot(kbase_context *kctx, kbase_jm_slot *slot, int
 					continue;
 				}
 
-				/* Next is now free, so we can hard-stop the slot */
-				beenthere("hard-stopped slot %d (there was a job in next which was successfully cleared)\n", js);
-				kbase_job_slot_hardstop(kctx->kbdev, js);
+				/* Next is now free, so we can soft/hard-stop the slot */
+				beenthere("soft/hard-stopped slot %d (there was a job in next which was successfully cleared)\n", js);
+				kbasep_job_slot_soft_or_hard_stop_do_action(kbdev, js, action);
 			}
 			/* If there was no job in the next registers, then the job we were
 			 * interested in has finished, so we need not take any action
@@ -505,8 +587,8 @@ void kbase_job_kill_jobs_from_context(kbase_context *kctx)
 	/* Cancel any remaining running jobs for this kctx  */
 	for (i = 0; i < kbdev->nr_job_slots; i++)
 	{
-		kbase_jm_slot *slot = kbase_job_slot_lock(kbdev, i);
-		kbase_zap_context_slot(kctx, slot, i);
+		kbase_job_slot_lock(kbdev, i);
+		kbase_job_slot_hardstop(kctx, i, NULL);
 		kbase_job_slot_unlock(kbdev, i);
 	}
 }
@@ -637,8 +719,8 @@ void kbase_job_zap_context(kbase_context *kctx)
 		 * jobs will appear after we do this.  */
 		for (i = 0; i < kbdev->nr_job_slots; i++)
 		{
-			kbase_jm_slot *slot = kbase_job_slot_lock(kbdev, i);
-			kbase_zap_context_slot(kctx, slot, i);
+			kbase_job_slot_lock(kbdev, i);
+			kbase_job_slot_hardstop(kctx, i, NULL);
 			kbase_job_slot_unlock(kbdev, i);
 		}
 		osk_mutex_unlock( &js_kctx_info->ctx.jsctx_mutex );
@@ -660,6 +742,7 @@ mali_error kbase_job_slot_init(kbase_device *kbdev)
 	int i;
 	osk_error osk_err;
 
+	OSK_ASSERT(kbdev);
 
 #if BASE_HW_ISSUE_7347 == 0
 	for (i = 0; i < kbdev->nr_job_slots; i++)
@@ -689,6 +772,7 @@ mali_error kbase_job_slot_init(kbase_device *kbdev)
 #endif
 	return MALI_ERROR_NONE;
 }
+KBASE_EXPORT_TEST_API(kbase_job_slot_init)
 
 void kbase_job_slot_halt(kbase_device *kbdev)
 {
@@ -700,6 +784,8 @@ void kbase_job_slot_term(kbase_device *kbdev)
 #if BASE_HW_ISSUE_7347 == 0
 	int i;
 
+	OSK_ASSERT(kbdev);
+
 	for (i = 0; i < kbdev->nr_job_slots; i++)
 	{
 		osk_spinlock_irq_term(&kbdev->jm_slots[i].lock);
@@ -708,85 +794,59 @@ void kbase_job_slot_term(kbase_device *kbdev)
 	osk_spinlock_irq_term(&kbdev->jm_slot_lock);
 #endif
 }
+KBASE_EXPORT_TEST_API(kbase_job_slot_term)
 
-/*
+
+/**
+ * Soft-stop the specified job slot
+ *
  * The job slot lock must be held when calling this function.
  * The job slot must not already be in the process of being soft-stopped.
  *
  * Where possible any job in the next register is evicted before the soft-stop.
+ *
+ * @param kbdev         The kbase device
+ * @param js            The job slot to soft-stop
+ * @param target_katom  The job that should be soft-stopped (or NULL for any job)
  */
-void kbase_job_slot_softstop(kbase_device *kbdev, int js)
+void kbase_job_slot_softstop(kbase_device *kbdev, int js, kbase_jd_atom *target_katom)
 {
-	kbase_jm_slot *slot;
-
-	slot = &kbdev->jm_slots[js];
-
-	if ( kbasep_jm_nr_jobs_submitted( slot ) == 0)
-	{
-		/* No jobs submitted */
-		return;
-	}
-
-	/* Clear the next register to prevent any job in the next registers from transitioning */
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), JSn_COMMAND_NOP, NULL);
-
-	/* Check to see if we did remove a job from the next registers */
-	if (kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_LO), NULL) ||
-	    kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_HI), NULL))
-	{
-		/* There was a job in the next registers, requeue it */
-		kbase_jd_atom *katom = kbasep_jm_dequeue_tail_submit_slot( slot );
-
-		/* Set the next registers to NULL */
-		kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_LO), 0, NULL);
-		kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_HI), 0, NULL);
-
-		katom->event.event_code = BASE_JD_EVENT_REMOVED_FROM_NEXT;
-		kbase_jd_done(katom);
-	}
-
-#if BASE_HW_ISSUE_5713
-	/* PRLAM-5713 means that we can't reliably identify a job that has been soft-stopped in the interrupt handler.
-	 * To work around this we ensure that the slot is not submitted to again until we've dealt with the job that is
-	 * soft-stopped.
-	 */
-	slot->submission_blocked_for_soft_stop = MALI_TRUE;
-#endif
-
-	/* The next register should now be empty */
-	OSK_ASSERT(kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), NULL) == 0);
-
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND), JSn_COMMAND_SOFT_STOP, NULL);
+	kbasep_job_slot_soft_or_hard_stop(kbdev, NULL, js, target_katom, JSn_COMMAND_SOFT_STOP);
 }
 
-/*
+/**
+ * Hard-stop the specified job slot
+ *
  * The job slot lock must be held when calling this function.
- * This function unconditionally hard-stops the slot, it is up to the caller to
- * ensure that the correct job is hard-stopped.
+ *
+ * @param kctx          The kbase context that contains the job(s) that should be hard-stopped
+ * @param js            The job slot to hard-stop
+ * @param target_katom  The job that should be hard-stopped (or NULL for all jobs from the context)
  */
-void kbase_job_slot_hardstop(kbase_device *kbdev, int js)
+void kbase_job_slot_hardstop(kbase_context *kctx, int js, kbase_jd_atom *target_katom)
 {
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND), JSn_COMMAND_HARD_STOP, NULL);
+	kbasep_job_slot_soft_or_hard_stop(kctx->kbdev, kctx, js, target_katom, JSn_COMMAND_HARD_STOP);
 }
 
 void kbasep_reset_timeout_worker(osk_workq_work *data)
 {
-	kbase_device *kbdev = CONTAINER_OF(data, kbase_device, reset_work);
+	kbase_device *kbdev;
 	int i;
 	kbasep_js_tick end_timestamp = kbasep_js_get_js_ticks();
 	kbasep_js_device_data *js_devdata;
+
+	OSK_ASSERT(data);
+
+	kbdev = CONTAINER_OF(data, kbase_device, reset_work);
+
+	OSK_ASSERT(kbdev);
 
 	js_devdata = &kbdev->js_data;
 
 	/* All slot have been soft-stopped and we've waited SOFT_STOP_RESET_TIMEOUT for the slots to clear, at this point
 	 * we assume that anything that is still left on the GPU is stuck there and we'll kill it when we reset the GPU */
 
-
-#ifdef VITHAR_LOG
-	_VITHAR_LOG(OSK_PRINT_ERROR(OSK_BASE_JD, "Resetting GPU"));
-#else
 	OSK_PRINT_ERROR(OSK_BASE_JD, "Resetting GPU");
-#endif
 
 	/* Make sure the timer has completed - this cannot be done from interrupt context,
 	 * so this cannot be done within kbasep_try_reset_gpu_early. */
@@ -823,6 +883,7 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 
 		nr_done = kbasep_jm_nr_jobs_submitted( slot );
 		while (nr_done) {
+			OSK_PRINT_ERROR(OSK_BASE_JD, "Job stuck in slot %d on the GPU was cancelled", i);
 			kbase_job_done_slot(kbdev, i, BASE_JD_EVENT_JOB_CANCELLED, 0, &end_timestamp);
 			nr_done--;
 		}
@@ -838,12 +899,8 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 
 	osk_atomic_set(&kbdev->reset_gpu, KBASE_RESET_GPU_NOT_PENDING);
 	osk_waitq_set(&kbdev->reset_waitq);
-
-#ifdef VITHAR_LOG
-	_VITHAR_LOG(OSK_PRINT_ERROR(OSK_BASE_JD, "Reset complete"));
-#else
 	OSK_PRINT_ERROR(OSK_BASE_JD, "Reset complete");
-#endif
+
 	/* Reprogram the GPU's MMU */
 	for(i = 0; i < BASE_MAX_NR_AS; i++)
 	{
@@ -861,14 +918,16 @@ void kbasep_reset_timer_callback(void *data)
 {
 	kbase_device *kbdev = (kbase_device*)data;
 
+	OSK_ASSERT(kbdev);
+
 	if (osk_atomic_compare_and_swap(&kbdev->reset_gpu, KBASE_RESET_GPU_COMMITTED, KBASE_RESET_GPU_HAPPENING) !=
-	    KBASE_RESET_GPU_COMMITTED)
+	        KBASE_RESET_GPU_COMMITTED)
 	{
 		/* Reset has been cancelled or has already occurred */
 		return;
 	}
 
-	osk_workq_submit(&kbdev->reset_workq, kbasep_reset_timeout_worker, &kbdev->reset_work);
+	osk_workq_submit(&kbdev->reset_workq, &kbdev->reset_work);
 }
 
 /*
@@ -879,6 +938,9 @@ static void kbasep_try_reset_gpu_early(kbase_device *kbdev)
 {
 	int i;
 	int pending_jobs = 0;
+
+	OSK_ASSERT(kbdev);
+
 	/* Count the number of jobs */
 	for (i = 0; i < kbdev->nr_job_slots; i++)
 	{
@@ -895,14 +957,14 @@ static void kbasep_try_reset_gpu_early(kbase_device *kbdev)
 
 	/* Check that the reset has been committed to (i.e. kbase_reset_gpu has been called), and that no other
 	 * thread beat this thread to starting the reset */
-	if (osk_atomic_compare_and_swap(&kbdev->reset_gpu, KBASE_RESET_GPU_COMMITTED, KBASE_RESET_GPU_HAPPENING) != 
-	    KBASE_RESET_GPU_COMMITTED)
+	if (osk_atomic_compare_and_swap(&kbdev->reset_gpu, KBASE_RESET_GPU_COMMITTED, KBASE_RESET_GPU_HAPPENING) !=
+	        KBASE_RESET_GPU_COMMITTED)
 	{
 		/* Reset has already occurred */
 		return;
 	}
 
-	osk_workq_submit(&kbdev->reset_workq, kbasep_reset_timeout_worker, &kbdev->reset_work);
+	osk_workq_submit(&kbdev->reset_workq, &kbdev->reset_work);
 }
 
 /*
@@ -919,8 +981,10 @@ mali_bool kbase_prepare_to_reset_gpu(kbase_device *kbdev)
 {
 	int i;
 
-	if (osk_atomic_compare_and_swap(&kbdev->reset_gpu, KBASE_RESET_GPU_NOT_PENDING,
-	                                KBASE_RESET_GPU_PREPARED) != KBASE_RESET_GPU_NOT_PENDING)
+	OSK_ASSERT(kbdev);
+
+	if (osk_atomic_compare_and_swap(&kbdev->reset_gpu, KBASE_RESET_GPU_NOT_PENDING, KBASE_RESET_GPU_PREPARED) !=
+	        KBASE_RESET_GPU_NOT_PENDING)
 	{
 		/* Some other thread is already resetting the GPU */
 		return MALI_FALSE;
@@ -928,16 +992,12 @@ mali_bool kbase_prepare_to_reset_gpu(kbase_device *kbdev)
 
 	osk_waitq_clear(&kbdev->reset_waitq);
 
-#ifdef VITHAR_LOG
-	_VITHAR_LOG(OSK_PRINT_ERROR(OSK_BASE_JD, "Preparing to soft-reset GPU: Soft-stopping all jobs"));
-#else
 	OSK_PRINT_ERROR(OSK_BASE_JD, "Preparing to soft-reset GPU: Soft-stopping all jobs");
-#endif
 
 	for (i = 0; i < kbdev->nr_job_slots; i++)
 	{
 		kbase_job_slot_lock(kbdev, i);
-		kbase_job_slot_softstop(kbdev, i);
+		kbase_job_slot_softstop(kbdev, i, NULL);
 		kbase_job_slot_unlock(kbdev, i);
 	}
 
@@ -954,17 +1014,21 @@ mali_bool kbase_prepare_to_reset_gpu(kbase_device *kbdev)
 void kbase_reset_gpu(kbase_device *kbdev)
 {
 	osk_error ret;
+	u32 timeout_ms;
+
+	OSK_ASSERT(kbdev);
 
 	/* Note this is an assert/atomic_set because it is a software bug for a race to be occuring here */
 	OSK_ASSERT(osk_atomic_get(&kbdev->reset_gpu) == KBASE_RESET_GPU_PREPARED);
 	osk_atomic_set(&kbdev->reset_gpu, KBASE_RESET_GPU_COMMITTED);
 
-	ret = osk_timer_start(&kbdev->reset_timer, SOFT_STOP_RESET_TIMEOUT);
+	timeout_ms = kbasep_get_config_value(kbdev->config_attributes, KBASE_CONFIG_ATTR_JS_RESET_TIMEOUT_MS);
+	ret = osk_timer_start(&kbdev->reset_timer, timeout_ms);
 	if (ret != OSK_ERR_NONE)
 	{
 		OSK_PRINT_ERROR(OSK_BASE_JD, "Failed to start timer for soft-resetting GPU");
 		/* We can't rescue jobs from the GPU so immediately reset */
-		osk_workq_submit(&kbdev->reset_workq, kbasep_reset_timeout_worker, &kbdev->reset_work);
+		osk_workq_submit(&kbdev->reset_workq, &kbdev->reset_work);
 	}
 
 	/* Try resetting early */

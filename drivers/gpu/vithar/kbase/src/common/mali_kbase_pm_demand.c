@@ -27,18 +27,9 @@
  */
 static void demand_power_up(kbase_device *kbdev)
 {
-	u64 cores;
-
 	/* Turn clocks and interrupts on */
 	kbase_pm_clock_on(kbdev);
 	kbase_pm_enable_interrupts(kbdev);
-
-	/* Turn the cores on */
-	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_SHADER);
-	kbase_pm_invoke_power_up(kbdev, KBASE_PM_CORE_SHADER, cores);
-
-	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_TILER);
-	kbase_pm_invoke_power_up(kbdev, KBASE_PM_CORE_TILER, cores);
 
 	kbase_pm_check_transitions(kbdev);
 
@@ -60,63 +51,27 @@ static void demand_power_down(kbase_device *kbdev)
 	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_SHADER);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_SHADER, cores);
 
-	/* Avoid powering tiler cores down
 	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_TILER);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_TILER, cores);
-	*/
 
 	kbase_pm_check_transitions(kbdev);
 
 	kbdev->pm.policy_data.demand.state = KBASEP_PM_DEMAND_STATE_POWERING_DOWN;
 }
 
-/** Resume the GPU.
+/** Turn some cores on/off.
  *
- * This function turns all the cores of the GPU on.
+ * This function turns on/off the cores needed by the scheduler.
  */
-static void demand_resume(kbase_device *kbdev)
+static void demand_change_gpu_state(kbase_device *kbdev)
 {
-	u64 cores;
-
-	/* Turn clocks and interrupts on */
-	kbase_pm_clock_on(kbdev);
-	kbase_pm_enable_interrupts(kbdev);
-
-	/* Turn the cores on */
-	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_SHADER);
-	kbase_pm_invoke_power_up(kbdev, KBASE_PM_CORE_SHADER, cores);
-
-	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_TILER);
-	kbase_pm_invoke_power_up(kbdev, KBASE_PM_CORE_TILER, cores);
+	/* Update the bitmap of the cores we need */
+	kbdev->pm.desired_shader_state = kbdev->shader_needed_bitmap;
+	kbdev->pm.desired_tiler_state = kbdev->tiler_needed_bitmap;
 
 	kbase_pm_check_transitions(kbdev);
 
-	kbdev->pm.policy_data.demand.state = KBASEP_PM_DEMAND_STATE_RESUMING;
-}
-
-/** Suspend the GPU.
- *
- * This function turns all the cores of the GPU off.
- */
-static void demand_suspend(kbase_device *kbdev)
-{
-	u64 cores;
-
-	/* Inform the system that the transition has started */
-	kbase_pm_power_transitioning(kbdev);
-
-	/* Turn the cores off */
-	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_SHADER);
-	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_SHADER, cores);
-
-	/* Avoid turning tiler cores off
-	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_TILER);
-	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_TILER, cores);
-	*/
-
-	kbase_pm_check_transitions(kbdev);
-
-	kbdev->pm.policy_data.demand.state = KBASEP_PM_DEMAND_STATE_SUSPENDING;
+	kbdev->pm.policy_data.demand.state = KBASEP_PM_DEMAND_STATE_CHANGING;
 }
 
 /** Function to handle a GPU state change for the demand power policy
@@ -132,8 +87,7 @@ static void demand_state_changed(kbase_device *kbdev)
 		case KBASEP_PM_DEMAND_STATE_CHANGING_POLICY:
 		case KBASEP_PM_DEMAND_STATE_POWERING_UP:
 		case KBASEP_PM_DEMAND_STATE_POWERING_DOWN:
-		case KBASEP_PM_DEMAND_STATE_SUSPENDING:
-		case KBASEP_PM_DEMAND_STATE_RESUMING:
+		case KBASEP_PM_DEMAND_STATE_CHANGING:
 			if (kbase_pm_get_pwr_active(kbdev)) {
 				/* Cores are still transitioning - ignore the event */
 				return;
@@ -147,19 +101,14 @@ static void demand_state_changed(kbase_device *kbdev)
 	switch(data->state)
 	{
 		case KBASEP_PM_DEMAND_STATE_CHANGING_POLICY:
+			/* Signal power events before switching the policy */
+			kbase_pm_power_up_done(kbdev);
+			kbase_pm_power_down_done(kbdev);
 			kbase_pm_change_policy(kbdev);
 			break;
-		case KBASEP_PM_DEMAND_STATE_RESUMING:
 		case KBASEP_PM_DEMAND_STATE_POWERING_UP:
 			data->state = KBASEP_PM_DEMAND_STATE_POWERED_UP;
 			kbase_pm_power_up_done(kbdev);
-			break;
-		case KBASEP_PM_DEMAND_STATE_SUSPENDING:
-			data->state = KBASEP_PM_DEMAND_STATE_SUSPENDED;
-			/* Disable interrupts and turn the clock off */
-			kbase_pm_disable_interrupts(kbdev);
-			kbase_pm_clock_off(kbdev);
-			kbase_pm_power_down_done(kbdev);
 			break;
 		case KBASEP_PM_DEMAND_STATE_POWERING_DOWN:
 			data->state = KBASEP_PM_DEMAND_STATE_POWERED_DOWN;
@@ -167,6 +116,11 @@ static void demand_state_changed(kbase_device *kbdev)
 			kbase_pm_disable_interrupts(kbdev);
 			kbase_pm_clock_off(kbdev);
 			kbase_pm_power_down_done(kbdev);
+			break;
+		case KBASEP_PM_DEMAND_STATE_CHANGING:
+			data->state = KBASEP_PM_DEMAND_STATE_POWERED_UP;
+			/* State changed, try to run jobs */
+			kbase_js_try_run_jobs(kbdev);
 			break;
 		default:
 			break;
@@ -184,35 +138,11 @@ static void demand_state_changed(kbase_device *kbdev)
 static void demand_event(kbase_device *kbdev, kbase_pm_event event)
 {
 	kbasep_pm_policy_demand *data = &kbdev->pm.policy_data.demand;
-
+	
 	switch(event)
 	{
 		case KBASE_PM_EVENT_POLICY_INIT:
 			demand_power_up(kbdev);
-			break;
-		case KBASE_PM_EVENT_SYSTEM_SUSPEND:
-			if (data->state == KBASEP_PM_DEMAND_STATE_POWERED_UP ||
-			    data->state == KBASEP_PM_DEMAND_STATE_POWERING_UP)
-			{
-				demand_suspend(kbdev);
-			}
-			else
-			{
-				kbase_pm_power_down_done(kbdev);
-			}
-			break;
-		case KBASE_PM_EVENT_SYSTEM_RESUME:
-			if (data->state == KBASEP_PM_DEMAND_STATE_SUSPENDED)
-			{
-				demand_resume(kbdev);
-			}
-			else
-			{
-				kbase_pm_power_up_done(kbdev);
-			}
-			break;
-		case KBASE_PM_EVENT_GPU_STATE_CHANGED:
-			demand_state_changed(kbdev);
 			break;
 		case KBASE_PM_EVENT_POLICY_CHANGE:
 			if (data->state == KBASEP_PM_DEMAND_STATE_POWERED_UP ||
@@ -225,11 +155,41 @@ static void demand_event(kbase_device *kbdev, kbase_pm_event event)
 				data->state = KBASEP_PM_DEMAND_STATE_CHANGING_POLICY;
 			}
 			break;
+		case KBASE_PM_EVENT_SYSTEM_RESUME:
 		case KBASE_PM_EVENT_GPU_ACTIVE:
-			demand_power_up(kbdev);
+			switch (data->state)
+			{
+				case KBASEP_PM_DEMAND_STATE_POWERING_UP:
+					break;
+				case KBASEP_PM_DEMAND_STATE_POWERED_UP:
+					kbase_pm_power_up_done(kbdev);
+					break;
+				default:	
+					demand_power_up(kbdev);
+			}
 			break;
+		case KBASE_PM_EVENT_SYSTEM_SUSPEND:
 		case KBASE_PM_EVENT_GPU_IDLE:
-			demand_power_down(kbdev);
+			switch (data->state)
+			{
+				case KBASEP_PM_DEMAND_STATE_POWERING_DOWN:
+					break;
+				case KBASEP_PM_DEMAND_STATE_POWERED_DOWN:
+					kbase_pm_power_down_done(kbdev);
+					break;
+				default:	
+					demand_power_down(kbdev);
+			}
+			break;
+		case KBASE_PM_EVENT_CHANGE_GPU_STATE:
+			if (data->state != KBASEP_PM_DEMAND_STATE_POWERED_DOWN &&
+			    data->state != KBASEP_PM_DEMAND_STATE_POWERING_DOWN)
+			{
+				demand_change_gpu_state(kbdev);
+			}
+			break;
+		case KBASE_PM_EVENT_GPU_STATE_CHANGED:
+			demand_state_changed(kbdev);
 			break;
 		default:
 			/* unrecognized event, should never happen */

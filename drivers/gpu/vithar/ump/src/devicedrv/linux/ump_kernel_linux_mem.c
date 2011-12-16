@@ -178,6 +178,9 @@ int umpp_linux_mmap(struct file * filp, struct vm_area_struct * vma)
 		umpp_allocation * alloc;
 		uint64_t last_byte;
 
+		vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_RESERVED | VM_IO | VM_MIXEDMAP;
+		vma->vm_ops = &umpp_vm_ops;
+		vma->vm_private_data = map;
 
 		alloc = (umpp_allocation*)h;
 
@@ -210,7 +213,7 @@ int umpp_linux_mmap(struct file * filp, struct vm_area_struct * vma)
 				paddr = alloc->block_array[block_idx].addr;
 			}
 
-			err = vm_insert_page(vma, vma->vm_start + (i << PAGE_SHIFT), pfn_to_page(paddr>>PAGE_SHIFT));
+			err = vm_insert_mixed(vma, vma->vm_start + (i << PAGE_SHIFT), paddr >> PAGE_SHIFT);
 			paddr += PAGE_SIZE;
 		}
 
@@ -223,10 +226,6 @@ int umpp_linux_mmap(struct file * filp, struct vm_area_struct * vma)
 		mutex_lock(&session->session_lock);
 		umpp_dd_add_cpu_mapping(h, map);
 		mutex_unlock(&session->session_lock);
-
-		vma->vm_flags |= VM_DONTCOPY | VM_DONTEXPAND | VM_RESERVED | VM_IO;
-		vma->vm_ops = &umpp_vm_ops;
-		vma->vm_private_data = map;
 
 		return 0;
 

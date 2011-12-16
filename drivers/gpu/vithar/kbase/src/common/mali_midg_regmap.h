@@ -285,10 +285,12 @@
 
 
 /* ASn_COMMAND register commands */
-/* (none present at this time) */
+#define ASn_COMMAND_NOP                0x00    /* NOP Operation */
+#define ASn_COMMAND_UPDATE             0x01    /* Broadcast values in AS<n>_TRANSTAB and AS<n>_MEMATTR to all MMUs */
+#define ASn_COMMAND_LOCK               0x02    /* Issue a lock region command to all MMUs */
+#define ASn_COMMAND_UNLOCK             0x03    /* Issue a flush region command to all MMUs */
+#define ASn_COMMAND_FLUSH              0x04    /* Flush all L2 caches, then issue a flush region command to all MMUs */
 
-
-/* End Command Values */
 
 /* GPU_COMMAND values */
 #define GPU_COMMAND_NOP                0x00    /* No operation, nothing happens */

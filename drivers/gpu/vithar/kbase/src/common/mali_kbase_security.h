@@ -28,7 +28,8 @@
 /* List of unique capabilities that have security access privileges */
 typedef enum {
 		/* Instrumentation Counters access privilege */
-        KBASE_SEC_INSTR_HW_COUNTERS_COLLECT = 1
+        KBASE_SEC_INSTR_HW_COUNTERS_COLLECT = 1,
+        KBASE_SEC_MODIFY_PRIORITY
 		/* Add additional access privileges here */
 } kbase_security_capability;
 

@@ -54,12 +54,7 @@ module_param(ump_debug_level, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IRO
 MODULE_PARM_DESC(ump_debug_level, "Higher number, more dmesg output");
 
 /* By default the module uses any available major, but it's possible to set it at load time to a specific number */
-#ifdef CONFIG_VITHAR_DEVICE_NODE_CREATION_IN_RUNTIME
 int ump_major = 0;
-#else
-int ump_major = 240;
-#endif
-
 module_param(ump_major, int, S_IRUGO); /* r--r--r-- */
 MODULE_PARM_DESC(ump_major, "Device major number");
 
@@ -456,8 +451,26 @@ static int do_ump_dd_msync_now(umpp_session * session, ump_k_msync * params)
 		if (it->id == params->secure_id)
 		{
 			/* found, do the cache op */
-		        umpp_dd_cpu_msync_now(it->mem, params->cache_operation, params->mapped_ptr.value, params->size);
-			result = 0;
+#if 0
+			/* waiting for OSK api as requested in MIDBASE-515 */
+#if defined CONFIG_64BIT && CONFIG_64BIT
+			if (is_compat_task())
+			{
+				umpp_dd_cpu_msync_now(it->mem, params->cache_operation, params->mapped_ptr.compat_value, params->size);
+				result = 0;
+			}
+			else
+			{
+#endif
+#endif
+				umpp_dd_cpu_msync_now(it->mem, params->cache_operation, params->mapped_ptr.value, params->size);
+				result = 0;
+#if 0
+				/* waiting for OSK api as requested in MIDBASE-515 */
+#if defined CONFIG_64BIT && CONFIG_64BIT
+			}
+#endif
+#endif
 			break;
 		}
 	}
@@ -509,7 +522,7 @@ int ump_import_module_register(enum ump_external_memory_type type, struct ump_im
 	/* validate input */
 	BUG_ON(type == 0 || type >= UMPP_EXTERNAL_MEM_COUNT);
 	BUG_ON(!handler);
-	//BUG_ON(!handler->linux_module);
+	/* BUG_ON(!handler->linux_module); */
 	BUG_ON(!handler->session_begin);
 	BUG_ON(!handler->session_end);
 	BUG_ON(!handler->import);
