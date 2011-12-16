@@ -74,6 +74,22 @@
 		cmpne	\irqnr, \tmp
 		cmpcs	\irqnr, \irqnr
 		addne	\irqnr, \irqnr, #32
+#if defined(CONFIG_ARM_TRUSTZONE)
+		bne	101f
+
+		mrc	p15, 0, \tmp, c0, c0, 5
+		and	\tmp, \tmp, #0x3
+		cmp	\tmp, #1
+		cmpcs	\tmp, \tmp
+		beq	101f
+
+		cmp	\irqnr, #7
+		cmpcc	\irqnr, \irqnr
+		cmpne	\irqnr, #16
+		cmpcs	\irqnr, \irqnr
+		addne	\irqnr, \irqnr, #32
+101:
+#endif
 
 		.endm
 
