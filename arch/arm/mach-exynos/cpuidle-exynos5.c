@@ -235,10 +235,6 @@ static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
 	 */
 	__raw_writel(0x10000, EXYNOS5_GPS_LPI);
 
-	tmp = __raw_readl(EXYNOS5_JPEG_MEM_OPTION);
-	tmp &= ~EXYNOS5_OPTION_USE_RETENTION;
-	__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
-
 	if (exynos5_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 		/*
 		 * Clear Central Sequence Register in exiting early wakeup
@@ -370,12 +366,7 @@ static int exynos5_enter_lowpower(struct cpuidle_device *dev,
 		EXYNOS5_USE_STANDBYWFE_ARM_CORE0);
 	__raw_writel(tmp, EXYNOS5_CENTRAL_SEQ_OPTION);
 
-/*
- * In this time, LPA mode is not working correctly.
- * So after fix the problem about LPA mode, will enable LPA mode
- * if (exynos5_check_enter_mode() == S5P_CHECK_DIDLE)
- */
-	if (1)
+	if (exynos5_check_enter_mode() == S5P_CHECK_DIDLE)
 		return exynos5_enter_core0_aftr(dev, new_state);
 	else
 		return exynos5_enter_core0_lpa(dev, new_state);
