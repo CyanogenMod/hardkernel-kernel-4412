@@ -14,12 +14,15 @@
 #include <linux/io.h>
 #include <linux/suspend.h>
 #include <linux/platform_device.h>
+#include <linux/gpio.h>
 
 #include <asm/proc-fns.h>
 #include <asm/tlbflush.h>
 #include <asm/cacheflush.h>
 
 #include <plat/pm.h>
+#include <plat/gpio-cfg.h>
+#include <plat/gpio-core.h>
 
 #include <mach/regs-pmu5.h>
 #include <mach/pm-core.h>
@@ -42,6 +45,66 @@ static int exynos5_enter_idle(struct cpuidle_device *dev,
 
 static int exynos5_enter_lowpower(struct cpuidle_device *dev,
 				  struct cpuidle_state *state);
+
+struct check_reg_lpa {
+	void __iomem	*check_reg;
+	unsigned int	check_bit;
+};
+
+/*
+ * List of check power domain list for LPA mode
+ * These register are have to power off to enter LPA mode
+ */
+static struct check_reg_lpa exynos5_power_domain[] = {
+	{.check_reg = EXYNOS5_GSCL_STATUS,	.check_bit = 0x7},
+	{.check_reg = EXYNOS5_ISP_STATUS,	.check_bit = 0x7},
+	{.check_reg = EXYNOS5_MFC_STATUS,	.check_bit = 0x7},
+	{.check_reg = EXYNOS5_G3D_STATUS,	.check_bit = 0x7},
+	{.check_reg = EXYNOS5_DISP1_STATUS,	.check_bit = 0x7},
+	{.check_reg = EXYNOS5_MAU_STATUS,	.check_bit = 0x7},
+	{.check_reg = EXYNOS5_GPS_STATUS,	.check_bit = 0x7},
+};
+
+/*
+ * List of check clock gating list for LPA mode
+ * If clock of list is not gated, system can not enter LPA mode.
+ */
+static struct check_reg_lpa exynos5_clock_gating[] = {
+	{.check_reg = EXYNOS5_CLKGATE_IP_GEN,	.check_bit = 0x4210},
+	{.check_reg = EXYNOS5_CLKGATE_IP_FSYS,	.check_bit = 0x0002},
+	{.check_reg = EXYNOS5_CLKGATE_IP_PERIC,	.check_bit = 0x3FC0},
+};
+
+static int exynos5_check_reg_status(struct check_reg_lpa *reg_list,
+				    unsigned int list_cnt)
+{
+	unsigned int i;
+	unsigned int tmp;
+
+	for (i = 0; i < list_cnt; i++) {
+		tmp = __raw_readl(reg_list[i].check_reg);
+		if (tmp & reg_list[i].check_bit)
+			return -EBUSY;
+	}
+
+	return 0;
+}
+
+static int exynos5_uart_fifo_check(void)
+{
+	unsigned int ret;
+	unsigned int check_val;
+
+	ret = 0;
+
+	/* Check UART for console is empty */
+	check_val = __raw_readl(S5P_VA_UART(CONFIG_S3C_LOWLEVEL_UART_PORT) +
+				0x18);
+
+	ret = ((check_val >> 16) & 0xff);
+
+	return ret;
+}
 
 static struct cpuidle_state exynos5_cpuidle_set[] = {
 	[0] = {
@@ -68,6 +131,31 @@ static struct cpuidle_driver exynos5_idle_driver = {
 	.name		= "exynos5_idle",
 	.owner		= THIS_MODULE,
 };
+
+/*
+ * To keep value of gpio on power down mode
+ * set Power down register of gpio
+ */
+static void exynos5_gpio_set_pd_reg(void)
+{
+	struct s3c_gpio_chip *target_chip;
+	unsigned int gpio_nr;
+	unsigned int tmp;
+
+	for (gpio_nr = 0; gpio_nr < EXYNOS5_GPIO_END; gpio_nr++) {
+		target_chip = s3c_gpiolib_getchip(gpio_nr);
+
+		if (!target_chip)
+			continue;
+
+		/* Keep the previous state in LPA mode */
+		s5p_gpio_set_pd_cfg(gpio_nr, 0x3);
+
+		/* Pull up-down state in LPA mode is same as normal */
+		tmp = s3c_gpio_getpull(gpio_nr);
+		s5p_gpio_set_pd_pull(gpio_nr, tmp);
+	}
+}
 
 static int exynos5_enter_idle(struct cpuidle_device *dev,
 			      struct cpuidle_state *state)
@@ -108,6 +196,92 @@ static inline void vfp_enable(void *unused)
 	set_copro_access(access | CPACC_FULL(10) | CPACC_FULL(11));
 }
 
+static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
+				   struct cpuidle_state *state)
+{
+	struct timeval before, after;
+	int idle_time;
+	unsigned long tmp;
+
+	local_irq_disable();
+
+	do_gettimeofday(&before);
+
+	/*
+	 * Unmasking all wakeup source.
+	 */
+	__raw_writel(0x0, S5P_WAKEUP_MASK);
+
+	/* Configure GPIO Power down control register */
+	exynos5_gpio_set_pd_reg();
+
+	/* ensure at least INFORM0 has the resume address */
+	__raw_writel(virt_to_phys(exynos5_idle_resume), EXYNOS5_INFORM0);
+	__raw_writel(virt_to_phys(exynos5_idle_resume), REG_DIRECTGO_ADDR);
+	__raw_writel(0xfcba0d10, REG_DIRECTGO_FLAG);
+
+	__raw_writel(S5P_CHECK_LPA, EXYNOS5_INFORM1);
+
+	exynos5_sys_powerdown_conf(SYS_LPA);
+
+	exynos4_reset_assert_ctrl(1);
+
+	do {
+		/* Waiting for flushing UART fifo */
+	} while (exynos5_uart_fifo_check());
+
+	/*
+	 * GPS and JPEG power can not turn off.
+	 */
+	__raw_writel(0x10000, EXYNOS5_GPS_LPI);
+
+	tmp = __raw_readl(EXYNOS5_JPEG_MEM_OPTION);
+	tmp &= ~EXYNOS5_OPTION_USE_RETENTION;
+	__raw_writel(tmp, EXYNOS5_JPEG_MEM_OPTION);
+
+	if (exynos5_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
+		/*
+		 * Clear Central Sequence Register in exiting early wakeup
+		 */
+		tmp = __raw_readl(EXYNOS5_CENTRAL_SEQ_CONFIGURATION);
+		tmp |= (EXYNOS5_CENTRAL_LOWPWR_CFG);
+		__raw_writel(tmp, EXYNOS5_CENTRAL_SEQ_CONFIGURATION);
+
+		goto early_wakeup;
+	}
+
+	flush_tlb_all();
+
+	cpu_init();
+
+	vfp_enable(NULL);
+
+	/* For release retention */
+	__raw_writel((1 << 28), S5P_PAD_RET_GPIO_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_UART_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_MMCA_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_MMCB_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_EBIA_OPTION);
+	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
+
+early_wakeup:
+	exynos4_reset_assert_ctrl(0);
+
+	/* Clear wakeup state register */
+	__raw_writel(0x0, EXYNOS5_WAKEUP_STAT);
+
+	__raw_writel(0x0, EXYNOS5_WAKEUP_MASK);
+
+	do_gettimeofday(&after);
+
+	local_irq_enable();
+
+	idle_time = (after.tv_sec - before.tv_sec) * USEC_PER_SEC +
+		    (after.tv_usec - before.tv_usec);
+
+	return idle_time;
+}
+
 static int exynos5_enter_core0_aftr(struct cpuidle_device *dev,
 				    struct cpuidle_state *state)
 {
@@ -138,6 +312,7 @@ static int exynos5_enter_core0_aftr(struct cpuidle_device *dev,
 
 		goto early_wakeup;
 	}
+
 	flush_tlb_all();
 
 	cpu_init();
@@ -157,6 +332,21 @@ early_wakeup:
 		    (after.tv_usec - before.tv_usec);
 
 	return idle_time;
+}
+
+static int __maybe_unused exynos5_check_enter_mode(void)
+{
+	/* Check power domain */
+	if (exynos5_check_reg_status(exynos5_power_domain,
+				    ARRAY_SIZE(exynos5_power_domain)))
+		return S5P_CHECK_DIDLE;
+
+	/* Check clock gating */
+	if (exynos5_check_reg_status(exynos5_clock_gating,
+				    ARRAY_SIZE(exynos5_clock_gating)))
+		return S5P_CHECK_DIDLE;
+
+	return S5P_CHECK_LPA;
 }
 
 static int exynos5_enter_lowpower(struct cpuidle_device *dev,
@@ -180,9 +370,17 @@ static int exynos5_enter_lowpower(struct cpuidle_device *dev,
 		EXYNOS5_USE_STANDBYWFE_ARM_CORE0);
 	__raw_writel(tmp, EXYNOS5_CENTRAL_SEQ_OPTION);
 
-	/*In this time, only support aftr mode*/
-	return exynos5_enter_core0_aftr(dev, new_state);
+/*
+ * In this time, LPA mode is not working correctly.
+ * So after fix the problem about LPA mode, will enable LPA mode
+ * if (exynos5_check_enter_mode() == S5P_CHECK_DIDLE)
+ */
+	if (1)
+		return exynos5_enter_core0_aftr(dev, new_state);
+	else
+		return exynos5_enter_core0_lpa(dev, new_state);
 }
+
 static int exynos5_cpuidle_notifier_event(struct notifier_block *this,
 					  unsigned long event,
 					  void *ptr)
