@@ -3837,6 +3837,10 @@ static void __init smdk4x12_machine_init(void)
 			sizeof(exynos_flite0_default_data), &exynos_device_flite0);
 	s3c_set_platdata(&exynos_flite1_default_data,
 			sizeof(exynos_flite1_default_data), &exynos_device_flite1);
+#ifdef CONFIG_EXYNOS_DEV_PD
+	exynos_device_flite0.dev.parent = &exynos4_device_pd[PD_ISP].dev;
+	exynos_device_flite1.dev.parent = &exynos4_device_pd[PD_ISP].dev;
+#endif
 #endif
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);
