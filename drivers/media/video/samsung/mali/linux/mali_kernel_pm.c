@@ -301,14 +301,14 @@ static int mali_pm_suspend(struct device *dev)
 {
 	int err = 0;
 	_mali_osk_lock_wait(lock, _MALI_OSK_LOCKMODE_RW);
-#if MALI_GPU_UTILIZATION
-	mali_utilization_suspend();
-#endif /* MALI_GPU_UTILIZATION */
 	if ((mali_device_state == _MALI_DEVICE_SUSPEND))
 	{
 		_mali_osk_lock_signal(lock, _MALI_OSK_LOCKMODE_RW);
 		return err;
 	}
+#if MALI_DVFS_ENABLED
+	mali_utilization_suspend();
+#endif
 	err = mali_device_suspend(MALI_PMM_EVENT_OS_POWER_DOWN, &pm_thread);
 	mali_device_state = _MALI_DEVICE_SUSPEND;
 	_mali_osk_lock_signal(lock, _MALI_OSK_LOCKMODE_RW);

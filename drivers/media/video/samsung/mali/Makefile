@@ -232,7 +232,6 @@ mali-y += common/mali_kernel_MALI200.o
 # Mali-400 GP in use
 mali-y += common/mali_kernel_GP2.o
 
-
 # Mali MMU in use
 mali-y += \
 	common/mali_kernel_mem_mmu.o \

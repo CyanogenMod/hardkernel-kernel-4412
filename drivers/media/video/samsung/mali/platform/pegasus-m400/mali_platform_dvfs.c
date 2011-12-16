@@ -118,7 +118,7 @@ static unsigned int asv_3d_volt_9_table[ASV_9_LEVEL][MALI_DVFS_STEPS] = {
 mali_dvfs_currentstatus maliDvfsStatus;
 int mali_dvfs_control=0;
 
-static u32 mali_dvfs_utilization = 255;
+static u32 mali_dvfs_utilization = 400;
 
 static void mali_dvfs_work_handler(struct work_struct *w);
 
@@ -221,21 +221,21 @@ static unsigned int decideNextStatus(unsigned int utilization)
 	if (!mali_dvfs_control) {
 		switch (maliDvfsStatus.currentStep) {
 		case 0:
-			if (utilization > (int)(255 * mali_dvfs_threshold[maliDvfsStatus.currentStep].upthreshold / 100))
+			if (utilization > (int)(400 * mali_dvfs_threshold[maliDvfsStatus.currentStep].upthreshold / 100))
 				level = 1;
 			else
 				level = maliDvfsStatus.currentStep;
 			break;
 		case 1:
-			if (utilization > (int)(255 * mali_dvfs_threshold[maliDvfsStatus.currentStep].upthreshold / 100))
+			if (utilization > (int)(400 * mali_dvfs_threshold[maliDvfsStatus.currentStep].upthreshold / 100))
 				level = 2;
-			else if (utilization < (int)(255 * mali_dvfs_threshold[maliDvfsStatus.currentStep].downthreshold / 100))
+			else if (utilization < (int)(400 * mali_dvfs_threshold[maliDvfsStatus.currentStep].downthreshold / 100))
 				level = 0;
 			else
 				level = maliDvfsStatus.currentStep;
 			break;
 		case 2:
-			if (utilization < (int)(255 * mali_dvfs_threshold[maliDvfsStatus.currentStep].downthreshold / 100))
+			if (utilization < (int)(400 * mali_dvfs_threshold[maliDvfsStatus.currentStep].downthreshold / 100))
 				level = 1;
 			else
 				level = maliDvfsStatus.currentStep;
