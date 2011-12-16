@@ -695,17 +695,10 @@ static int mxr_video_open(struct file *file)
 	if (!v4l2_fh_is_singular_file(file))
 		return 0;
 
-	/* FIXME: should power be enabled on open? */
-	ret = mxr_power_get(mdev);
-	if (ret) {
-		mxr_err(mdev, "power on failed\n");
-		goto fail_fh_open;
-	}
-
 	ret = vb2_queue_init(&layer->vb_queue);
 	if (ret != 0) {
 		mxr_err(mdev, "failed to initialize vb2 queue\n");
-		goto fail_power;
+		goto fail_fh_open;
 	}
 	/* set default format, first on the list */
 	layer->fmt = layer->fmt_array[0];
@@ -713,9 +706,6 @@ static int mxr_video_open(struct file *file)
 	mxr_layer_default_geo(layer);
 
 	return 0;
-
-fail_power:
-	mxr_power_put(mdev);
 
 fail_fh_open:
 	v4l2_fh_release(file);
@@ -755,10 +745,9 @@ static int mxr_video_release(struct file *file)
 	layer->chroma_en = 0;
 	layer->chroma_val = 0;
 
-	if (v4l2_fh_is_singular_file(file)) {
+	if (v4l2_fh_is_singular_file(file))
 		vb2_queue_release(&layer->vb_queue);
-		mxr_power_put(layer->mdev);
-	}
+
 	v4l2_fh_release(file);
 	return 0;
 }
@@ -900,8 +889,16 @@ static int start_streaming(struct vb2_queue *vq)
 	struct mxr_device *mdev = layer->mdev;
 	struct tv_graph_pipeline *pipe = &layer->pipe;
 	unsigned long flags;
+	int ret;
 
 	mxr_dbg(mdev, "%s\n", __func__);
+
+	/* enable mixer clock */
+	ret = mxr_power_get(mdev);
+	if (ret) {
+		mxr_err(mdev, "power on failed\n");
+		return -ENODEV;
+	}
 
 	/* start streaming from graphic layer */
 	mdev->from_graph_layer = 1;
@@ -1002,6 +999,10 @@ static int stop_streaming(struct vb2_queue *vq)
 
 	/* allow changes in output configuration */
 	mxr_output_put(mdev);
+
+	/* disable mixer clock */
+	mxr_power_put(mdev);
+
 	return 0;
 }
 

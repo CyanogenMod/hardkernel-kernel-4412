@@ -107,6 +107,13 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 		 * TV basic configuration must be set before running mixer */
 		if (!mdev->from_graph_layer) {
 			mxr_dbg(mdev, "%s: from graphic layer\n", __func__);
+			/* enable mixer clock */
+			ret = mxr_power_get(mdev);
+			if (ret) {
+				mxr_err(mdev, "power on failed\n");
+				return -ENODEV;
+			}
+
 			/* turn on connected output device through link
 			 * with mixer */
 			mxr_output_get(mdev);
@@ -260,6 +267,9 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 				}
 			}
 			mxr_output_put(mdev);
+
+			/* disable mixer clock */
+			mxr_power_put(mdev);
 		}
 	}
 	WARN(mdev->n_streamer < 0, "negative number of streamers (%d)\n",
