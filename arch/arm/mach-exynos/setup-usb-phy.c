@@ -77,7 +77,14 @@ static int exynos4_usb_host_phy_is_on(void)
 
 static int exynos4_usb_device_phy_is_on(void)
 {
-	return (readl(EXYNOS4_PHYPWR) & PHY0_ANALOG_POWERDOWN) ? 0 : 1;
+	int ret;
+
+	if (soc_is_exynos4210())
+		ret = (readl(EXYNOS4_PHYPWR) & PHY0_ANALOG_POWERDOWN) ? 0 : 1;
+	else
+		ret = readl(EXYNOS4_USB_CFG) ? 0 : 1;
+
+	return ret;
 }
 
 static int exynos4_usb_phy20_is_on(void)
@@ -383,11 +390,16 @@ int exynos4_check_usb_op(void)
 		if (phypwr & (PHY1_STD_FORCE_SUSPEND
 			| EXYNOS4212_HSIC0_FORCE_SUSPEND
 			| EXYNOS4212_HSIC1_FORCE_SUSPEND)) {
+			/* unset to normal of Host */
 			writel(readl(EXYNOS4_PHYPWR)
 				| PHY1_STD_ANALOG_POWERDOWN
 				| EXYNOS4212_HSIC0_ANALOG_POWERDOWN
 				| EXYNOS4212_HSIC1_ANALOG_POWERDOWN,
 				EXYNOS4_PHYPWR);
+			/* unset to normal of Device */
+			writel((readl(EXYNOS4_PHYPWR) | PHY0_NORMAL_MASK),
+					EXYNOS4_PHYPWR);
+
 			exynos_usb_phy_control(USB_PHY
 				| USB_PHY_HSIC0
 				| USB_PHY_HSIC1,
@@ -472,6 +484,18 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| USB_PHY_HSIC1,
 				PHY_ENABLE);
 
+			/* set to normal of Device */
+			phypwr = readl(EXYNOS4_PHYPWR) & ~PHY0_NORMAL_MASK;
+			writel(phypwr, EXYNOS4_PHYPWR);
+
+			/* reset both PHY and Link of Device */
+			rstcon = readl(EXYNOS4_RSTCON) | PHY0_SWRST_MASK;
+			writel(rstcon, EXYNOS4_RSTCON);
+			udelay(10);
+			rstcon &= ~PHY0_SWRST_MASK;
+			writel(rstcon, EXYNOS4_RSTCON);
+
+			/* set to normal of Host */
 			phypwr &= ~(PHY1_STD_NORMAL_MASK
 				| EXYNOS4212_HSIC0_NORMAL_MASK
 				| EXYNOS4212_HSIC1_NORMAL_MASK);
@@ -782,13 +806,10 @@ static int exynos_usb_dev_phy20_init(struct platform_device *pdev)
 		return err;
 	}
 
-	if (soc_is_exynos4212() || soc_is_exynos4412()) {
-		exynos_usb_phy_control(USB_PHY0, PHY_ENABLE);
+	if (soc_is_exynos4212() || soc_is_exynos4412())
 		exynos4_usb_phy20_init(pdev);
-	} else {
-		exynos_usb_phy_control(USB_PHY1, PHY_ENABLE);
+	else
 		exynos5_usb_phy20_init(pdev);
-	}
 
 	exynos_usb_mux_change(pdev, 0);
 
@@ -807,13 +828,10 @@ static int exynos_usb_dev_phy20_exit(struct platform_device *pdev)
 		return PTR_ERR(otg_clk);
 	}
 
-	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+	if (soc_is_exynos4212() || soc_is_exynos4412())
 		exynos4_usb_phy20_exit(pdev);
-		exynos_usb_phy_control(USB_PHY0, PHY_DISABLE);
-	} else {
+	else
 		exynos5_usb_phy20_exit(pdev);
-		exynos_usb_phy_control(USB_PHY1, PHY_DISABLE);
-	}
 
 	exynos_usb_mux_change(pdev, 1);
 

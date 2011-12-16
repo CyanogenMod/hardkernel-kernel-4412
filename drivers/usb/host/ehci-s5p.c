@@ -221,15 +221,16 @@ static int s5p_ehci_runtime_resume(struct device *dev)
 		ehci_work(ehci);
 		spin_unlock_irq(&ehci->lock);
 
-		/* here we "know" root ports should always stay powered */
-		ehci_port_power(ehci, 1);
-
-		hcd->state = HC_STATE_SUSPENDED;
 		usb_root_hub_lost_power(hcd->self.root_hub);
 
 		ehci_writel(ehci, FLAG_CF, &ehci->regs->configured_flag);
 		ehci_writel(ehci, INTR_MASK, &ehci->regs->intr_enable);
 		(void)ehci_readl(ehci, &ehci->regs->intr_enable);
+
+		/* here we "know" root ports should always stay powered */
+		ehci_port_power(ehci, 1);
+
+		hcd->state = HC_STATE_SUSPENDED;
 #ifdef CONFIG_USB_EXYNOS_SWITCH
 	} else {
 		(void) ehci_hub_control(ehci_to_hcd(ehci),
