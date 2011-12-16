@@ -116,6 +116,7 @@ struct srp_info {
 	unsigned long frame_count;
 	unsigned long frame_count_base;
 	unsigned long set_bitstream_size;
+        unsigned long old_pcm_size;
 
 	unsigned int first_decoding;
 	unsigned int decoding_started;

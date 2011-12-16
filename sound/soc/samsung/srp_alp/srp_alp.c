@@ -187,6 +187,7 @@ static void srp_reset(void)
 	srp.prepare_for_eos = 0;
 	srp.play_done = 0;
 	srp.save_ibuf_empty = 0;
+	srp.old_pcm_size = 0;
 }
 
 static void srp_stop(void)
@@ -337,7 +338,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 			srp_debug("Enter to sleep until to ready OBUF[%d]\n", srp.obuf_ready);
 			ret = wait_event_interruptible_timeout(read_wq,
 							srp.wakeup_read_wq,
-							HZ / 10);
+							HZ / 2);
 			if (!ret)
 				srp_err("Couldn't start decoding!!!\n");
 		}
@@ -350,13 +351,21 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	srp.pcm_info.addr = srp.obuf_ready ? obuf1 : obuf0;
 	srp.pcm_info.size = readl(srp.commbox + SRP_PCM_DUMP_ADDR);
 	srp.pcm_info.num = srp.obuf_info.num;
-	if (srp.play_done)
-		srp.pcm_info.size = 0;
+	if (srp.play_done && srp.pcm_info.size) {
+		if (srp.pcm_info.size < OBUF_SIZE &&
+			srp.pcm_info.size == srp.old_pcm_size)
+			srp.pcm_info.size = 0;
+	}
 
 	ret = copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
 	srp_debug("Return OBUF Num[%d] fill size %d\n",
 			srp.obuf_ready, srp.pcm_info.size);
 
+	if (srp.is_pending == STALL)
+		writel(0x0, srp.commbox + SRP_PCM_DUMP_ADDR);
+
+	srp.old_pcm_size = srp.pcm_info.size;
+	srp.pcm_info.size = 0;
 	srp.wakeup_read_wq = 0;
 
 	/* For End-Of-Stream */
@@ -522,6 +531,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			srp_debug("%ld, smaller than ibuf_size * 3\n", srp.wbuf_fill_size);
 			srp.wait_for_eos = 1;
 			srp_fill_ibuf();
+			srp_set_stream_size();
 			srp_pending_ctrl(RUN);
 			srp.decoding_started = 1;
 		} else if (srp.wbuf_fill_size >= srp.ibuf_size * 3) {
@@ -691,7 +701,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 				srp.obuf_fill_done[1] = 1;
 			}
 
-			if (srp.first_decoding) {
+			if (srp.first_decoding && !srp.wait_for_eos) {
 				if (srp.obuf_fill_done[0] && srp.obuf_fill_done[1]) {
 					srp.first_decoding = 0;
 					srp.wakeup_read_wq = 1;
@@ -713,7 +723,8 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 		srp_check_obuf_info();
 
 	if (irq_code & SRP_INTR_CODE_PLAYDONE) {
-		srp_info("Play Done interrupt!!\n");
+		srp_info("Play Done interrupt!! Decoded Size[%d]\n",
+				readl(srp.commbox + SRP_PCM_DUMP_ADDR));
 		srp.play_done = 1;
 		srp.wakeup_read_wq = 1;
 	}
