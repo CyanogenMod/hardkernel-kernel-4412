@@ -1710,7 +1710,6 @@ void srp_late_resume(struct early_suspend *h)
 static int __init srp_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	unsigned long iram_size = 0;
 	int ret;
 
 	srp.iram = ioremap(SRP_IRAM_BASE, _IRAM_SIZE_);
