@@ -10,6 +10,7 @@
 
 #include <linux/sched.h>
 #include <linux/sysdev.h>
+#include <linux/delay.h>
 
 #include <asm/mach/map.h>
 #include <asm/mach/irq.h>
@@ -26,8 +27,10 @@
 #include <plat/iic-core.h>
 #include <plat/tv-core.h>
 #include <plat/ace-core.h>
+#include <plat/reset.h>
 
 #include <mach/regs-irq.h>
+#include <mach/regs-pmu.h>
 #include <mach/smc.h>
 
 unsigned int gic_bank_offset __read_mostly;
@@ -252,12 +255,25 @@ static int __init exynos5_l2_cache_init(void)
 
 early_initcall(exynos5_l2_cache_init);
 
+static void exynos5_sw_reset(void)
+{
+	int count = 3;
+
+	while (count--) {
+		__raw_writel(0x1, S5P_SWRESET);
+		mdelay(500);
+	}
+}
+
 int __init exynos5_init(void)
 {
 	printk(KERN_INFO "EXYNOS5: Initializing architecture\n");
 
 	/* set idle function */
 	pm_idle = exynos5_idle;
+
+	/* set sw_reset function */
+	s5p_reset_hook = exynos5_sw_reset;
 
 	return sysdev_register(&exynos5_sysdev);
 }
