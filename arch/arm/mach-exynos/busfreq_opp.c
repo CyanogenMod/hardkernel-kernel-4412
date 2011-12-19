@@ -298,6 +298,10 @@ static int exynos4_busfreq_request_event(struct notifier_block *this,
 	mutex_lock(&busfreq_lock);
 
 	curr_freq = opp_get_freq(data->curr_opp);
+	if (curr_freq >= newfreq) {
+		mutex_unlock(&busfreq_lock);
+		return NOTIFY_DONE;
+	}
 
 	voltage = opp_get_voltage(opp);
 	if (newfreq > curr_freq) {
