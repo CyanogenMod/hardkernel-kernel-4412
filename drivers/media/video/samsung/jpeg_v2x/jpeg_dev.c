@@ -122,7 +122,7 @@ static int jpeg_dec_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 		for (i = 0; i < ctx->param.dec_param.out_plane; i++) {
 			sizes[i] = (ctx->param.dec_param.out_width *
 				ctx->param.dec_param.out_height *
-				ctx->param.dec_param.out_depth) / 8;
+				ctx->param.dec_param.out_depth[i]) / 8;
 			allocators[i] = ctx->dev->alloc_ctx;
 		}
 	}
@@ -193,7 +193,7 @@ static int jpeg_enc_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
 		for (i = 0; i < ctx->param.enc_param.in_plane; i++) {
 			sizes[i] = (ctx->param.enc_param.in_width *
 				ctx->param.enc_param.in_height *
-				ctx->param.enc_param.in_depth) / 8;
+				ctx->param.enc_param.in_depth[i]) / 8;
 			allocators[i] = ctx->dev->alloc_ctx;
 		}
 
@@ -492,9 +492,18 @@ static void jpeg_device_enc_run(void *priv)
 	jpeg_set_stream_buf_address(dev->reg_base, dev->vb2->plane_addr(vb, 0));
 
 	vb = v4l2_m2m_next_src_buf(ctx->m2m_ctx);
-	jpeg_set_frame_buf_address(dev->reg_base,
-		enc_param.in_fmt, dev->vb2->plane_addr(vb, 0),
-		enc_param.in_width, enc_param.in_height);
+	if (enc_param.in_plane == 1)
+		jpeg_set_frame_buf_address(dev->reg_base,
+			enc_param.in_fmt, dev->vb2->plane_addr(vb, 0), 0, 0);
+	if (enc_param.in_plane == 2)
+		jpeg_set_frame_buf_address(dev->reg_base,
+			enc_param.in_fmt, dev->vb2->plane_addr(vb, 0),
+			dev->vb2->plane_addr(vb, 1), 0);
+	if (enc_param.in_plane == 3)
+		jpeg_set_frame_buf_address(dev->reg_base,
+			enc_param.in_fmt, dev->vb2->plane_addr(vb, 0),
+			dev->vb2->plane_addr(vb, 1), dev->vb2->plane_addr(vb, 2));
+
 	jpeg_set_encode_hoff_cnt(dev->reg_base, enc_param.out_fmt);
 
 	jpeg_set_enc_dec_mode(dev->reg_base, ENCODING);
@@ -535,9 +544,16 @@ static void jpeg_device_dec_run(void *priv)
 	jpeg_set_stream_buf_address(dev->reg_base, dev->vb2->plane_addr(vb, 0));
 
 	vb = v4l2_m2m_next_dst_buf(ctx->m2m_ctx);
-	jpeg_set_frame_buf_address(dev->reg_base,
-		dec_param.out_fmt, dev->vb2->plane_addr(vb, 0),
-		dec_param.in_width, dec_param.in_height);
+	if (dec_param.out_plane == 1)
+		jpeg_set_frame_buf_address(dev->reg_base,
+			dec_param.out_fmt, dev->vb2->plane_addr(vb, 0), 0, 0);
+	else if (dec_param.out_plane == 2) {
+		jpeg_set_frame_buf_address(dev->reg_base,
+		dec_param.out_fmt, dev->vb2->plane_addr(vb, 0), dev->vb2->plane_addr(vb, 1), 0);
+	} else if (dec_param.out_plane == 3)
+		jpeg_set_frame_buf_address(dev->reg_base,
+			dec_param.out_fmt, dev->vb2->plane_addr(vb, 0),
+			dev->vb2->plane_addr(vb, 1), dev->vb2->plane_addr(vb, 2));
 
 	if (dec_param.out_width > 0 && dec_param.out_height > 0) {
 		if ((dec_param.out_width * 2 == dec_param.in_width) &&

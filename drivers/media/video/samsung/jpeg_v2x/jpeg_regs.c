@@ -402,8 +402,8 @@ void jpeg_set_stream_size(void __iomem *base,
 }
 
 void jpeg_set_frame_buf_address(void __iomem *base,
-		enum jpeg_frame_format fmt, unsigned int address,
-		unsigned int width, unsigned int height)
+		enum jpeg_frame_format fmt, unsigned int address_1p,
+		unsigned int address_2p, unsigned int address_3p)
 {
 	switch (fmt) {
 	case GRAY:
@@ -411,7 +411,7 @@ void jpeg_set_frame_buf_address(void __iomem *base,
 	case RGB_888:
 	case YCRYCB_422_1P:
 	case YCBYCR_422_1P:
-		writel(address, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
+		writel(address_1p, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
 		writel(0, base + S5P_JPEG_IMG_BA_PLANE_2_REG);
 		writel(0, base + S5P_JPEG_IMG_BA_PLANE_3_REG);
 		break;
@@ -421,31 +421,24 @@ void jpeg_set_frame_buf_address(void __iomem *base,
 	case YCBCR_422_2P:
 	case YCBCR_420_2P:
 	case YCRCB_420_2P:
-		writel(address, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
-		writel(address+(width * height),
-			base + S5P_JPEG_IMG_BA_PLANE_2_REG);
+		writel(address_1p, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
+		writel(address_2p, base + S5P_JPEG_IMG_BA_PLANE_2_REG);
 		writel(0, base + S5P_JPEG_IMG_BA_PLANE_3_REG);
 		break;
 	case YCBCR_444_3P:
-		writel(address, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
-		writel(address+(width * height),
-			base + S5P_JPEG_IMG_BA_PLANE_2_REG);
-		writel(address+(width * height * 2),
-			base + S5P_JPEG_IMG_BA_PLANE_3_REG);
+		writel(address_1p, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
+		writel(address_2p, base + S5P_JPEG_IMG_BA_PLANE_2_REG);
+		writel(address_3p, base + S5P_JPEG_IMG_BA_PLANE_3_REG);
 		break;
 	case YCBYCR_422_3P:
-		writel(address, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
-		writel(address+(width * height),
-			base + S5P_JPEG_IMG_BA_PLANE_2_REG);
-		writel(address+(width * height +  (width * height / 2)),
-			base + S5P_JPEG_IMG_BA_PLANE_3_REG);
+		writel(address_1p, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
+		writel(address_2p, base + S5P_JPEG_IMG_BA_PLANE_2_REG);
+		writel(address_3p, base + S5P_JPEG_IMG_BA_PLANE_3_REG);
 		break;
 	case YCBCR_420_3P:
-		writel(address, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
-		writel(address+(width * height),
-			base + S5P_JPEG_IMG_BA_PLANE_2_REG);
-		writel(address+(width * height + (width * height / 4)),
-			base + S5P_JPEG_IMG_BA_PLANE_3_REG);
+		writel(address_1p, base + S5P_JPEG_IMG_BA_PLANE_1_REG);
+		writel(address_2p, base + S5P_JPEG_IMG_BA_PLANE_2_REG);
+		writel(address_3p, base + S5P_JPEG_IMG_BA_PLANE_3_REG);
 		break;
 	default:
 		break;

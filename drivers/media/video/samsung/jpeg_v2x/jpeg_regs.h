@@ -35,7 +35,7 @@ void jpeg_set_stream_size(void __iomem *base,
 		unsigned int x_value, unsigned int y_value);
 void jpeg_set_frame_buf_address(void __iomem *base,
 		enum jpeg_frame_format fmt, unsigned int address,
-		unsigned int width, unsigned int height);
+		unsigned int address_2p, unsigned int address_3p);
 void jpeg_set_encode_tbl_select(void __iomem *base,
 		enum jpeg_img_quality_level level);
 void jpeg_set_encode_hoff_cnt(void __iomem *base, enum jpeg_stream_format fmt);

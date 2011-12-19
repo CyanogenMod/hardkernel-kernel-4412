@@ -37,6 +37,7 @@
 #define INT_TIMEOUT		1000
 
 #define JPEG_NUM_INST		4
+#define JPEG_MAX_PLANE		3
 
 enum jpeg_state {
 	JPEG_IDLE,
@@ -118,7 +119,7 @@ enum jpeg_node_type {
 struct jpeg_fmt {
 	char			*name;
 	unsigned int			fourcc;
-	int			depth;
+	int			depth[JPEG_MAX_PLANE];
 	int			color;
 	int			memplanes;
 	int			colplanes;
@@ -135,7 +136,7 @@ struct jpeg_dec_param {
 	unsigned int in_plane;
 	unsigned int out_plane;
 	unsigned int in_depth;
-	unsigned int out_depth;
+	unsigned int out_depth[JPEG_MAX_PLANE];
 
 	enum jpeg_stream_format in_fmt;
 	enum jpeg_frame_format out_fmt;
@@ -149,7 +150,7 @@ struct jpeg_enc_param {
 	unsigned int size;
 	unsigned int in_plane;
 	unsigned int out_plane;
-	unsigned int in_depth;
+	unsigned int in_depth[JPEG_MAX_PLANE];
 	unsigned int out_depth;
 
 	enum jpeg_frame_format in_fmt;

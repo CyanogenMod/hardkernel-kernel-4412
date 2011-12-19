@@ -51,133 +51,133 @@ static struct jpeg_fmt formats[] = {
 	{
 		.name		= "JPEG compressed format",
 		.fourcc		= V4L2_PIX_FMT_JPEG_444,
-		.depth		= 8,
+		.depth		= {8},
 		.color		= JPEG_444,
 		.memplanes	= 1,
 		.types		= M2M_OUTPUT,
 	}, {
 		.name		= "JPEG compressed format",
 		.fourcc		= V4L2_PIX_FMT_JPEG_422,
-		.depth		= 8,
+		.depth		= {8},
 		.color		= JPEG_422,
 		.memplanes	= 1,
 		.types		= M2M_OUTPUT,
 	}, {
 		.name		= "JPEG compressed format",
 		.fourcc		= V4L2_PIX_FMT_JPEG_420,
-		.depth		= 8,
+		.depth		= {8},
 		.color		= JPEG_420,
 		.memplanes	= 1,
 		.types		= M2M_OUTPUT,
 	}, {
 		.name		= "JPEG compressed format",
 		.fourcc		= V4L2_PIX_FMT_JPEG_GRAY,
-		.depth		= 8,
+		.depth		= {8},
 		.color		= JPEG_GRAY,
 		.memplanes	= 1,
 		.types		= M2M_OUTPUT,
 	}, {
 		.name		= "RGB565",
 		.fourcc		= V4L2_PIX_FMT_RGB565X,
-		.depth		= 16,
+		.depth		= {16},
 		.color		= RGB_565,
 		.memplanes	= 1,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "XRGB-8-8-8-8, 32 bpp",
 		.fourcc		= V4L2_PIX_FMT_RGB32,
-		.depth		= 32,
+		.depth		= {32},
 		.color		= RGB_888,
 		.memplanes	= 1,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:4:4 packed, Y/CbCr",
 		.fourcc		= V4L2_PIX_FMT_YUV444_2P,
-		.depth		= 32,
+		.depth		= {8, 16},
 		.color		= YCBCR_444_2P,
-		.memplanes	= 1,
+		.memplanes	= 2,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:4:4 packed, Y/CrCb",
 		.fourcc		= V4L2_PIX_FMT_YVU444_2P,
-		.depth		= 32,
+		.depth		= {8, 16},
 		.color		= YCRCB_444_2P,
-		.memplanes	= 1,
+		.memplanes	= 2,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:4:4 packed, Y/Cb/Cr",
 		.fourcc		= V4L2_PIX_FMT_YUV444_3P,
-		.depth		= 32,
+		.depth		= {8, 8, 8},
 		.color		= YCBCR_444_3P,
-		.memplanes	= 1,
+		.memplanes	= 3,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:2:2 packed, YCrYCb",
 		.fourcc		= V4L2_PIX_FMT_YVYU,
-		.depth		= 16,
+		.depth		= {16},
 		.color		= YCRYCB_422_1P,
 		.memplanes	= 1,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:2:2 packed, CrYCbY",
 		.fourcc		= V4L2_PIX_FMT_VYUY,
-		.depth		= 16,
+		.depth		= {16},
 		.color		= CRYCBY_422_1P,
 		.memplanes	= 1,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:2:2 packed, CbYCrY",
 		.fourcc		= V4L2_PIX_FMT_UYVY,
-		.depth		= 16,
+		.depth		= {16},
 		.color		= CRYCBY_422_1P,
 		.memplanes	= 1,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:2:2 packed, YCbYCr",
 		.fourcc		= V4L2_PIX_FMT_YUYV,
-		.depth		= 16,
+		.depth		= {16},
 		.color		= YCBYCR_422_1P,
 		.memplanes	= 1,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:2:2 planar, Y/CrCb",
 		.fourcc		= V4L2_PIX_FMT_NV61,
-		.depth		= 16,
+		.depth		= {8, 8},
 		.color		= YCRCB_422_2P,
-		.memplanes	= 1,
+		.memplanes	= 2,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:2:2 planar, Y/CbCr",
 		.fourcc		= V4L2_PIX_FMT_NV16,
-		.depth		= 16,
+		.depth		= {8, 8},
 		.color		= YCBCR_422_2P,
-		.memplanes	= 1,
+		.memplanes	= 2,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:2:0 planar, Y/CbCr",
 		.fourcc		= V4L2_PIX_FMT_NV12,
-		.depth		= 16,
+		.depth		= {8, 4},
 		.color		= YCBCR_420_2P,
-		.memplanes	= 1,
+		.memplanes	= 2,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:2:0 planar, Y/CrCb",
 		.fourcc		= V4L2_PIX_FMT_NV21,
-		.depth		= 16,
+		.depth		= {8, 4},
 		.color		= YCRCB_420_2P,
-		.memplanes	= 1,
+		.memplanes	= 2,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "YUV 4:2:0 contiguous 3-planar, Y/Cr/Cb",
 		.fourcc		= V4L2_PIX_FMT_YUV420,
-		.depth		= 12,
+		.depth		= {8, 2, 2},
 		.color		= YCBCR_420_3P,
-		.memplanes	= 1,
+		.memplanes	= 3,
 		.types		= M2M_CAPTURE,
 	}, {
 		.name		= "Gray",
 		.fourcc		= V4L2_PIX_FMT_GREY,
-		.depth		= 8,
+		.depth		= {8},
 		.color		= GRAY,
 		.memplanes	= 1,
 		.types		= M2M_CAPTURE,
@@ -293,10 +293,9 @@ static int jpeg_dec_vidioc_try_fmt(struct file *file, void *priv,
 		int bpl = pix->plane_fmt[i].bytesperline;
 
 		jpeg_dbg("[%d] bpl: %d, depth: %d, w: %d, h: %d",
-		    i, bpl, fmt->depth, pix->width, pix->height);
-
-		if (!bpl || (bpl * 8 / fmt->depth) > pix->width)
-			bpl = (pix->width * fmt->depth) >> 3;
+		    i, bpl, fmt->depth[i], pix->width, pix->height);
+		if (!bpl || (bpl * 8 / fmt->depth[i]) > pix->width)
+			bpl = (pix->width * fmt->depth[i]) >> 3;
 
 		if (!pix->plane_fmt[i].sizeimage)
 			pix->plane_fmt[i].sizeimage = pix->height * bpl;
@@ -344,14 +343,14 @@ static int jpeg_dec_vidioc_s_fmt_cap(struct file *file, void *priv,
 	pix = &f->fmt.pix_mp;
 	fmt = find_format(f);
 
-	for (i = 0; i < fmt->memplanes; i++)
+	for (i = 0; i < fmt->memplanes; i++) {
 		ctx->payload[i] =
 			pix->plane_fmt[i].bytesperline * pix->height;
-
+		ctx->param.dec_param.out_depth[i] = fmt->depth[i];
+	}
 	ctx->param.dec_param.out_width = pix->width;
 	ctx->param.dec_param.out_height = pix->height;
 	ctx->param.dec_param.out_plane = fmt->memplanes;
-	ctx->param.dec_param.out_depth = fmt->depth;
 	ctx->param.dec_param.out_fmt = fmt->color;
 
 	return 0;
@@ -391,9 +390,9 @@ static int jpeg_dec_vidioc_s_fmt_out(struct file *file, void *priv,
 	ctx->param.dec_param.in_width = pix->width;
 	ctx->param.dec_param.in_height = pix->height;
 	ctx->param.dec_param.in_plane = fmt->memplanes;
-	ctx->param.dec_param.in_depth = fmt->depth;
+	ctx->param.dec_param.in_depth = fmt->depth[0];
 	ctx->param.dec_param.in_fmt = fmt->color;
-	ctx->param.dec_param.size = (pix->plane_fmt[0].sizeimage / 32) + 0xf;
+	ctx->param.dec_param.size = (pix->plane_fmt[0].sizeimage / 32);
 	ctx->param.dec_param.mem_size = pix->plane_fmt[0].sizeimage;
 
 	return 0;
