@@ -2864,7 +2864,7 @@ static void s5p_tvif_ctrl_init_private(struct platform_device *pdev)
 {
 #if defined(CONFIG_BUSFREQ_OPP)
 	/* add bus device ptr for using bus frequency with opp */
-	s5p_tvif_ctrl_private.bus_dev = dev_get("exynos4-busfreq");
+	s5p_tvif_ctrl_private.bus_dev = dev_get("exynos-busfreq");
 #endif
 	s5p_tvif_ctrl_private.dev = &pdev->dev;
 }
