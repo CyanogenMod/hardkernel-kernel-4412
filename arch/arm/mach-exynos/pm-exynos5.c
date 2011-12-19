@@ -178,7 +178,7 @@ void exynos5_cpu_suspend(void)
 	__raw_writel(0x10000, EXYNOS5_GPS_LPI);
 
 #ifdef CONFIG_ARM_TRUSTZONE
-        exynos_smc(SMC_CMD_SLEEP, 0, 0, 0);
+	exynos_smc(SMC_CMD_SLEEP, 0, 0, 0);
 #else
 	/* issue the standby signal into the pm unit. */
 	cpu_do_idle();
@@ -222,11 +222,21 @@ static __init int exynos5_pm_drvinit(void)
 }
 arch_initcall(exynos5_pm_drvinit);
 
+bool isp_pwr_off;
+
 static int exynos5_pm_suspend(void)
 {
 	unsigned long tmp;
 
 	s3c_pm_do_save(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
+
+	if (!(__raw_readl(EXYNOS5_ISP_STATUS) & S5P_INT_LOCAL_PWR_EN)) {
+		isp_pwr_off = true;
+		/*
+		 * Before enter suspend, ISP power domain should be on
+		 */
+		__raw_writel(S5P_INT_LOCAL_PWR_EN, EXYNOS5_ISP_CONFIGURATION);
+	}
 
 	tmp = __raw_readl(EXYNOS5_CENTRAL_SEQ_CONFIGURATION);
 	tmp &= ~(EXYNOS5_CENTRAL_LOWPWR_CFG);
@@ -260,6 +270,11 @@ static void exynos5_pm_resume(void)
 		__raw_writel(tmp, EXYNOS5_CENTRAL_SEQ_CONFIGURATION);
 		/* No need to perform below restore code */
 		goto early_wakeup;
+	}
+
+	if (isp_pwr_off) {
+		__raw_writel(0x0, EXYNOS5_ISP_CONFIGURATION);
+		isp_pwr_off = false;
 	}
 
 	exynos4_reset_assert_ctrl(1);

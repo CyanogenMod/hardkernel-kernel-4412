@@ -16,6 +16,7 @@
 #include <linux/delay.h>
 
 #include <mach/regs-pmu.h>
+#include <mach/regs-pmu5.h>
 #include <mach/regs-clock.h>
 
 #include <plat/cpu.h>
@@ -80,6 +81,36 @@ int exynos_pd_disable(struct device *dev)
 {
 	struct samsung_pd_info *pdata =  dev->platform_data;
 	u32 timeout;
+
+	/*
+	 * To ISP power domain off,
+	 * first, ISP_ARM power domain be off.
+	 */
+	if (soc_is_exynos5250() &&
+		(pdata->base == EXYNOS5_ISP_CONFIGURATION)) {
+		if (!(__raw_readl(EXYNOS5_ISP_ARM_STATUS) & 0x1)) {
+			/* Disable ISP_ARM */
+			timeout = __raw_readl(EXYNOS5_ISP_ARM_OPTION);
+			timeout &= ~EXYNOS5_ISP_ARM_ENABLE;
+			__raw_writel(timeout, EXYNOS5_ISP_ARM_OPTION);
+
+			/* ISP_ARM power off */
+			__raw_writel(0x0, EXYNOS5_ISP_ARM_CONFIGURATION);
+
+			timeout = 1000;
+
+			while (__raw_readl(EXYNOS5_ISP_ARM_STATUS) & 0x1) {
+				if (timeout == 0) {
+					printk(KERN_ERR "ISP_ARM power domain can not off\n");
+					return -ETIMEDOUT;
+				}
+				timeout--;
+				udelay(1);
+			}
+			/* CMU_RESET_ISP_ARM off */
+			__raw_writel(0x0, EXYNOS5_CMU_RESET_ISP_SYS_PWR_REG);
+		}
+	}
 
 	__raw_writel(0, pdata->base);
 
