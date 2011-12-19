@@ -1146,7 +1146,7 @@ static struct s5k4ba_mbus_platform_data s5k4ba_mbus_plat = {
 	.fmt = {
 		.width	= 1600,
 		.height	= 1200,
-		//.code	= V4L2_MBUS_FMT_UYVY8_2X8,
+		/*.code	= V4L2_MBUS_FMT_UYVY8_2X8,*/
 		.code	= V4L2_MBUS_FMT_VYUY8_2X8,
 	},
 	.clk_rate	= 24000000UL,
@@ -1494,7 +1494,7 @@ static void __init smdk5250_gpio_power_init(void)
 
 #ifdef CONFIG_WAKEUP_ASSIST
 static struct platform_device wakeup_assist_device = {
-        .name   = "wakeup_assist",
+	.name = "wakeup_assist",
 };
 #endif
 
@@ -1651,7 +1651,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 	&smdk5250_input_device,
 #ifdef CONFIG_WAKEUP_ASSIST
-        &wakeup_assist_device,
+	&wakeup_assist_device,
 #endif
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
