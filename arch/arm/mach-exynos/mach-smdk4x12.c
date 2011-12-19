@@ -3110,6 +3110,7 @@ static struct s5p_fimc_isp_info isp_info[] = {
 		.flite_id	= FLITE_IDX_B,
 		.cam_power	= smdk4x12_cam1_reset,
 #endif
+		.flags		= 0,
 		.csi_data_align = 24,
 		.use_isp	= true,
 	},
@@ -3173,6 +3174,7 @@ static struct s5p_fimc_isp_info isp_info[] = {
 		.flite_id	= FLITE_IDX_B,
 		.cam_power	= smdk4x12_cam1_reset,
 #endif
+		.flags		= 0,
 		.csi_data_align = 12,
 		.use_isp	= true,
 	},
@@ -3199,32 +3201,54 @@ static void __init smdk4x12_subdev_config(void)
 	s3c_fimc0_default_data.isp_info[2]->use_cam = false;
 	/* support using two fimc as one sensore */
 	{
-		static struct s5p_fimc_isp_info camcording;
-		memcpy(&camcording, &isp_info[0], sizeof(struct s5p_fimc_isp_info));
-		s3c_fimc1_default_data.isp_info[0] = &camcording;
+		static struct s5p_fimc_isp_info camcording1;
+		static struct s5p_fimc_isp_info camcording2;
+		memcpy(&camcording1, &isp_info[0], sizeof(struct s5p_fimc_isp_info));
+		memcpy(&camcording2, &isp_info[1], sizeof(struct s5p_fimc_isp_info));
+		s3c_fimc1_default_data.isp_info[0] = &camcording1;
 		s3c_fimc1_default_data.isp_info[0]->use_cam = false;
+		s3c_fimc1_default_data.isp_info[1] = &camcording2;
+		s3c_fimc1_default_data.isp_info[1]->use_cam = false;
 	}
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
-#ifdef CONFIG_VIDEO_S5K3H1
-#ifdef CONFIG_S5K3H1_CSI_C
-	s5p_mipi_csis0_default_data.lanes 	= 2;
-	s5p_mipi_csis0_default_data.alignment	= 24;
-	s5p_mipi_csis0_default_data.hs_settle	= 12;
-#endif
-#ifdef CONFIG_S5K3H1_CSI_D
-	s5p_mipi_csis1_default_data.lanes 	= 2;
-	s5p_mipi_csis1_default_data.alignment	= 24;
-	s5p_mipi_csis1_default_data.hs_settle	= 12;
-#endif
-#endif
 #ifdef CONFIG_VIDEO_S5K3H2
 #ifdef CONFIG_S5K3H2_CSI_C
-	s5p_mipi_csis0_default_data.lanes 	= 2;
+	s5p_mipi_csis0_default_data.clk_rate	= 160000000;
+	s5p_mipi_csis0_default_data.lanes	= 2;
 	s5p_mipi_csis0_default_data.alignment	= 24;
 	s5p_mipi_csis0_default_data.hs_settle	= 12;
 #endif
 #ifdef CONFIG_S5K3H2_CSI_D
-	s5p_mipi_csis1_default_data.lanes 	= 2;
+	s5p_mipi_csis1_default_data.clk_rate	= 160000000;
+	s5p_mipi_csis1_default_data.lanes	= 2;
+	s5p_mipi_csis1_default_data.alignment	= 24;
+	s5p_mipi_csis1_default_data.hs_settle	= 12;
+#endif
+#endif
+#ifdef CONFIG_VIDEO_S5K3H7
+#ifdef CONFIG_S5K3H7_CSI_C
+	s5p_mipi_csis0_default_data.clk_rate	= 160000000;
+	s5p_mipi_csis0_default_data.lanes	= 2;
+	s5p_mipi_csis0_default_data.alignment	= 24;
+	s5p_mipi_csis0_default_data.hs_settle	= 12;
+#endif
+#ifdef CONFIG_S5K3H7_CSI_D
+	s5p_mipi_csis1_default_data.clk_rate	= 160000000;
+	s5p_mipi_csis1_default_data.lanes	= 2;
+	s5p_mipi_csis1_default_data.alignment	= 24;
+	s5p_mipi_csis1_default_data.hs_settle	= 12;
+#endif
+#endif
+#ifdef CONFIG_VIDEO_S5K4E5
+#ifdef CONFIG_S5K4E5_CSI_C
+	s5p_mipi_csis0_default_data.clk_rate	= 160000000;
+	s5p_mipi_csis0_default_data.lanes	= 2;
+	s5p_mipi_csis0_default_data.alignment	= 24;
+	s5p_mipi_csis0_default_data.hs_settle	= 12;
+#endif
+#ifdef CONFIG_S5K4E5_CSI_D
+	s5p_mipi_csis1_default_data.clk_rate	= 160000000;
+	s5p_mipi_csis1_default_data.lanes	= 2;
 	s5p_mipi_csis1_default_data.alignment	= 24;
 	s5p_mipi_csis1_default_data.hs_settle	= 12;
 #endif
