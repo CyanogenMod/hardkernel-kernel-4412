@@ -871,7 +871,7 @@ static int gsc_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct gsc_driverdata *drv_data;
 	struct device_driver *driver;
-	struct exynos_md *mdev[2] = {NULL, NULL};
+	struct exynos_md *mdev[MDEV_MAX_NUM] = {NULL,};
 	int ret = 0;
 	char workqueue_name[WORKQUEUE_NAME_SIZE];
 
