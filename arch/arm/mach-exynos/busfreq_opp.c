@@ -49,7 +49,7 @@
 #define BUSFREQ_DEBUG	1
 
 static DEFINE_MUTEX(busfreq_lock);
-BLOCKING_NOTIFIER_HEAD(exynos4_busfreq_notifier_list);
+BLOCKING_NOTIFIER_HEAD(exynos_busfreq_notifier_list);
 
 struct busfreq_control {
 	struct opp *opp_lock;
@@ -176,7 +176,7 @@ static struct opp *busfreq_monitor(struct busfreq_data *data)
 	return opp;
 }
 
-static void exynos4_busfreq_timer(struct work_struct *work)
+static void exynos_busfreq_timer(struct work_struct *work)
 {
 	struct delayed_work *delayed_work = to_delayed_work(work);
 	struct busfreq_data *data = container_of(delayed_work, struct busfreq_data,
@@ -281,7 +281,7 @@ static int exynos_busfreq_reboot_event(struct notifier_block *this,
 	return NOTIFY_DONE;
 }
 
-static int exynos4_busfreq_request_event(struct notifier_block *this,
+static int exynos_busfreq_request_event(struct notifier_block *this,
 		unsigned long newfreq, void *device)
 {
 	struct busfreq_data *data = container_of(this, struct busfreq_data,
@@ -334,13 +334,13 @@ static int exynos4_busfreq_request_event(struct notifier_block *this,
 	return NOTIFY_DONE;
 }
 
-int exynos4_busfreq_lock(unsigned int nId,
+int exynos_busfreq_lock(unsigned int nId,
 	enum busfreq_level_request busfreq_level)
 {
 	return 0;
 }
 
-void exynos4_busfreq_lock_free(unsigned int nId)
+void exynos_busfreq_lock_free(unsigned int nId)
 {
 }
 
@@ -413,17 +413,17 @@ static struct attribute *busfreq_attributes[] = {
 	NULL
 };
 
-int exynos4_request_register(struct notifier_block *n)
+int exynos_request_register(struct notifier_block *n)
 {
-	return blocking_notifier_chain_register(&exynos4_busfreq_notifier_list, n);
+	return blocking_notifier_chain_register(&exynos_busfreq_notifier_list, n);
 }
 
-void exynos4_request_apply(unsigned long freq, struct device *dev)
+void exynos_request_apply(unsigned long freq, struct device *dev)
 {
-	blocking_notifier_call_chain(&exynos4_busfreq_notifier_list, freq, dev);
+	blocking_notifier_call_chain(&exynos_busfreq_notifier_list, freq, dev);
 }
 
-static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
+static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
 	struct clk *sclk_dmc;
@@ -453,7 +453,7 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		exynos_busfreq_reboot_event;
 	data->busfreq_attr_group.attrs = busfreq_attributes;
 	data->exynos_request_notifier.notifier_call =
-		exynos4_busfreq_request_event;
+		exynos_busfreq_request_event;
 
 	if (soc_is_exynos5250()) {
 		data->init = exynos5250_init;
@@ -472,7 +472,7 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 	bus_ctrl.opp_lock =  NULL;
 	bus_ctrl.dev =  data->dev;
 
-	INIT_DELAYED_WORK_DEFERRABLE(&data->worker, exynos4_busfreq_timer);
+	INIT_DELAYED_WORK_DEFERRABLE(&data->worker, exynos_busfreq_timer);
 
 	if (data->init(&pdev->dev, data)) {
 		pr_err("Failed to init busfreq.\n");
@@ -516,7 +516,7 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 	if (register_reboot_notifier(&data->exynos_reboot_notifier))
 		pr_err("Failed to setup reboot notifier\n");
 
-	if (exynos4_request_register(&data->exynos_request_notifier))
+	if (exynos_request_register(&data->exynos_request_notifier))
 		pr_err("Failed to setup request notifier\n");
 
 	platform_set_drvdata(pdev, data);
@@ -538,7 +538,7 @@ err_busfreq:
 	return -ENODEV;
 }
 
-static __devexit int exynos4_busfreq_remove(struct platform_device *pdev)
+static __devexit int exynos_busfreq_remove(struct platform_device *pdev)
 {
 	struct busfreq_data *data = platform_get_drvdata(pdev);
 
@@ -553,34 +553,34 @@ static __devexit int exynos4_busfreq_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int exynos4_busfreq_resume(struct device *dev)
+static int exynos_busfreq_resume(struct device *dev)
 {
 	ppmu_reset(dev);
 	return 0;
 }
 
-static const struct dev_pm_ops exynos4_busfreq_pm = {
-	.resume = exynos4_busfreq_resume,
+static const struct dev_pm_ops exynos_busfreq_pm = {
+	.resume = exynos_busfreq_resume,
 };
 
-static struct platform_driver exynos4_busfreq_driver = {
-	.probe  = exynos4_busfreq_probe,
-	.remove = __devexit_p(exynos4_busfreq_remove),
+static struct platform_driver exynos_busfreq_driver = {
+	.probe  = exynos_busfreq_probe,
+	.remove = __devexit_p(exynos_busfreq_remove),
 	.driver = {
 		.name   = "exynos-busfreq",
 		.owner  = THIS_MODULE,
-		.pm     = &exynos4_busfreq_pm,
+		.pm     = &exynos_busfreq_pm,
 	},
 };
 
-static int __init exynos4_busfreq_init(void)
+static int __init exynos_busfreq_init(void)
 {
-	return platform_driver_register(&exynos4_busfreq_driver);
+	return platform_driver_register(&exynos_busfreq_driver);
 }
-late_initcall(exynos4_busfreq_init);
+late_initcall(exynos_busfreq_init);
 
-static void __exit exynos4_busfreq_exit(void)
+static void __exit exynos_busfreq_exit(void)
 {
-	platform_driver_unregister(&exynos4_busfreq_driver);
+	platform_driver_unregister(&exynos_busfreq_driver);
 }
-module_exit(exynos4_busfreq_exit);
+module_exit(exynos_busfreq_exit);

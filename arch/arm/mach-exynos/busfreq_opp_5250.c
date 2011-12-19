@@ -197,7 +197,7 @@ static unsigned int clkdiv_top[LV_END][10] = {
 };
 
 /* For CMU_CDREX */
-static unsigned int clkdiv_cdrex_for800[LV_END][9] = {
+static unsigned int __maybe_unused clkdiv_cdrex_for800[LV_END][9] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVMCLK_DPHY, DIVMCLK_CDREX2, DIVACLK_CDREX, DIVMCLK_CDREX,
@@ -223,7 +223,7 @@ static unsigned int clkdiv_cdrex_for800[LV_END][9] = {
 	{0, 7, 1, 5, 7, 7, 1, 15, 1},
 };
 
-static unsigned int clkdiv_cdrex_for667[LV_END][9] = {
+static unsigned int __maybe_unused clkdiv_cdrex_for667[LV_END][9] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVMCLK_DPHY, DIVMCLK_CDREX2, DIVACLK_CDREX, DIVMCLK_CDREX,
@@ -275,7 +275,7 @@ static unsigned int clkdiv_cdrex_for533[LV_END][9] = {
 	{0, 7, 1, 3, 7, 7, 1, 15, 1},
 };
 
-static unsigned int clkdiv_cdrex_for400[LV_END][9] = {
+static unsigned int __maybe_unused clkdiv_cdrex_for400[LV_END][9] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVMCLK_DPHY, DIVMCLK_CDREX2, DIVACLK_CDREX, DIVMCLK_CDREX,

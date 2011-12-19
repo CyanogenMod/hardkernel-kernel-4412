@@ -71,7 +71,7 @@ struct busfreq_table {
 	unsigned int clk_dmc1div;
 };
 
-void exynos4_request_apply(unsigned long freq, struct device *dev);
+void exynos_request_apply(unsigned long freq, struct device *dev);
 
 #if defined(CONFIG_ARCH_EXYNOS5)
 int exynos5250_init(struct device *dev, struct busfreq_data *data);
