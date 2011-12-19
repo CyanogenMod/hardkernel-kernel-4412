@@ -176,7 +176,8 @@ enum gsc_yuv_fmt {
 	container_of((__ctrl)->handler, struct gsc_ctx, ctrl_handler)
 #define entity_data_to_gsc(data) \
 	container_of(data, struct gsc_dev, md_data)
-
+#define gsc_capture_get_frame(ctx, pad)\
+	((pad == GSC_PAD_SINK) ? &ctx->s_frame : &ctx->d_frame)
 /**
  * struct gsc_fmt - the driver's internal color format data
  * @mbus_code: Media Bus pixel code, -1 if not applicable

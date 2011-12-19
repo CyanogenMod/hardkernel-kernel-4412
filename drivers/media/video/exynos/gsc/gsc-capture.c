@@ -1083,10 +1083,7 @@ static int gsc_capture_subdev_set_fmt(struct v4l2_subdev *sd,
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
-	if (fmt->pad == GSC_PAD_SINK)
-		frame = &ctx->s_frame;
-	else
-		frame = &ctx->d_frame;
+	frame = gsc_capture_get_frame(ctx, fmt->pad);
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_ACTIVE) {
 		frame->crop.left = 0;
@@ -1126,7 +1123,7 @@ static int __gsc_cap_get_crop(struct gsc_dev *gsc, struct v4l2_subdev_fh *fh,
 				struct v4l2_rect *crop)
 {
 	struct gsc_ctx *ctx = gsc->cap.ctx;
-	struct gsc_frame *frame = &ctx->d_frame;
+	struct gsc_frame *frame = gsc_capture_get_frame(ctx, pad);
 
 	if (which == V4L2_SUBDEV_FORMAT_TRY) {
 		crop = v4l2_subdev_get_try_crop(fh, pad);
@@ -1140,11 +1137,12 @@ static int __gsc_cap_get_crop(struct gsc_dev *gsc, struct v4l2_subdev_fh *fh,
 	return 0;
 }
 
-static void gsc_cap_try_crop(struct gsc_dev *gsc, struct v4l2_rect *crop)
+static void gsc_cap_try_crop(struct gsc_dev *gsc, struct v4l2_rect *crop,
+				u32 pad)
 {
 	struct gsc_variant *variant = gsc->variant;
 	struct gsc_ctx *ctx = gsc->cap.ctx;
-	struct gsc_frame *frame = &ctx->d_frame;
+	struct gsc_frame *frame = gsc_capture_get_frame(ctx, pad);
 
 	u32 crop_min_w = variant->pix_min->target_rot_dis_w;
 	u32 crop_min_h = variant->pix_min->target_rot_dis_h;
@@ -1163,30 +1161,12 @@ static int gsc_capture_subdev_set_crop(struct v4l2_subdev *sd,
 {
 	struct gsc_dev *gsc = v4l2_get_subdevdata(sd);
 	struct gsc_ctx *ctx = gsc->cap.ctx;
-	struct gsc_frame *frame = &ctx->d_frame;
-	struct v4l2_rect *gcrop;
+	struct gsc_frame *frame = gsc_capture_get_frame(ctx, crop->pad);
 
-	if (crop->pad == GSC_PAD_SINK)
-		return -EINVAL;
+	gsc_cap_try_crop(gsc, &crop->rect, crop->pad);
 
-	gcrop = kzalloc(sizeof(*gcrop), GFP_KERNEL);
-	if (!gcrop) {
-		gsc_err("could not allocate memory\n");
-		return -ENOMEM;
-	}
-	gsc_cap_try_crop(gsc, &crop->rect);
-
-	__gsc_cap_get_crop(gsc, fh, crop->pad, crop->which, gcrop);
-	*gcrop = crop->rect;
-
-	if (crop->which == V4L2_SUBDEV_FORMAT_ACTIVE) {
-		frame->crop.left = gcrop->left;
-		frame->crop.top = gcrop->top;
-		frame->crop.width = gcrop->width;
-		frame->crop.height = gcrop->height;
-	}
-
-	kfree(gcrop);
+	if (crop->which == V4L2_SUBDEV_FORMAT_ACTIVE)
+		frame->crop = crop->rect;
 
 	return 0;
 }
@@ -1196,20 +1176,10 @@ static int gsc_capture_subdev_get_crop(struct v4l2_subdev *sd,
 				       struct v4l2_subdev_crop *crop)
 {
 	struct gsc_dev *gsc = v4l2_get_subdevdata(sd);
-	struct v4l2_rect *gcrop;
+	struct v4l2_rect gcrop = {0, };
 
-	if (crop->pad == GSC_PAD_SINK)
-		return -EINVAL;
-
-	gcrop = kzalloc(sizeof(*gcrop), GFP_KERNEL);
-	if (!gcrop) {
-		gsc_err("could not allocate memory\n");
-		return -ENOMEM;
-	}
-	__gsc_cap_get_crop(gsc, fh, crop->pad, crop->which, gcrop);
-	crop->rect = *gcrop;
-
-	kfree(gcrop);
+	__gsc_cap_get_crop(gsc, fh, crop->pad, crop->which, &gcrop);
+	crop->rect = gcrop;
 
 	return 0;
 }
