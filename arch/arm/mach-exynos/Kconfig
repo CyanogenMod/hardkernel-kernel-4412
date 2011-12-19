@@ -430,7 +430,7 @@ config BUSFREQ
 
 config BUSFREQ_OPP
 	bool "Busfreq with OPP"
-	depends on EXYNOS4_CPUFREQ
+	depends on EXYNOS4_CPUFREQ || EXYNOS5_CPUFREQ
 
 endchoice
 

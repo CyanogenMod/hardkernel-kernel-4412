@@ -2814,7 +2814,7 @@ static struct device_domain busfreq;
 
 static struct platform_device exynos4_busfreq = {
 	.id = -1,
-	.name = "exynos4-busfreq",
+	.name = "exynos-busfreq",
 };
 
 static struct platform_device *smdk4412_devices[] __initdata = {

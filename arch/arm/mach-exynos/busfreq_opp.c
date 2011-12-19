@@ -232,11 +232,11 @@ out:
 	schedule_delayed_work(&data->worker, data->sampling_rate);
 }
 
-static int exynos4_buspm_notifier_event(struct notifier_block *this,
+static int exynos_buspm_notifier_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
 	struct busfreq_data *data = container_of(this, struct busfreq_data,
-			exynos4_buspm_notifier);
+			exynos_buspm_notifier);
 
 	unsigned long voltage = opp_get_voltage(data->max_opp);
 	unsigned long freq = opp_get_freq(data->max_opp);
@@ -260,11 +260,11 @@ static int exynos4_buspm_notifier_event(struct notifier_block *this,
 	return NOTIFY_DONE;
 }
 
-static int exynos4_busfreq_reboot_event(struct notifier_block *this,
+static int exynos_busfreq_reboot_event(struct notifier_block *this,
 		unsigned long code, void *unused)
 {
 	struct busfreq_data *data = container_of(this, struct busfreq_data,
-			exynos4_reboot_notifier);
+			exynos_reboot_notifier);
 
 	unsigned long voltage = opp_get_voltage(data->max_opp);
 	unsigned long freq = opp_get_freq(data->max_opp);
@@ -285,7 +285,7 @@ static int exynos4_busfreq_request_event(struct notifier_block *this,
 		unsigned long newfreq, void *device)
 {
 	struct busfreq_data *data = container_of(this, struct busfreq_data,
-			exynos4_request_notifier);
+			exynos_request_notifier);
 	struct opp *opp = opp_find_freq_ceil(data->dev, &newfreq);
 	unsigned long curr_freq;
 	unsigned int index, voltage;
@@ -426,13 +426,15 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 	unsigned long freq;
 	unsigned int val;
 
-	val = __raw_readl(S5P_VA_DMC0 + 0x4);
-	val = (val >> 8) & 0xf;
+	if (!soc_is_exynos5250()) {
+		val = __raw_readl(S5P_VA_DMC0 + 0x4);
+		val = (val >> 8) & 0xf;
 
-	/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
-	if (val != 0x05) {
-		pr_err("[ %x ] Memory Type Undertermined.\n", val);
-		return -ENODEV;
+		/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
+		if (val != 0x05) {
+			pr_err("[ %x ] Memory Type Undertermined.\n", val);
+			return -ENODEV;
+		}
 	}
 
 	data = kzalloc(sizeof(struct busfreq_data), GFP_KERNEL);
@@ -441,19 +443,19 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	data->exynos4_buspm_notifier.notifier_call =
-		exynos4_buspm_notifier_event;
-	data->exynos4_reboot_notifier.notifier_call =
-		exynos4_busfreq_reboot_event;
+	data->exynos_buspm_notifier.notifier_call =
+		exynos_buspm_notifier_event;
+	data->exynos_reboot_notifier.notifier_call =
+		exynos_busfreq_reboot_event;
 	data->busfreq_attr_group.attrs = busfreq_attributes;
-	data->exynos4_request_notifier.notifier_call =
+	data->exynos_request_notifier.notifier_call =
 		exynos4_busfreq_request_event;
 
-	if (soc_is_exynos4210()) {
-		data->init = exynos4210_init;
-		data->target = exynos4210_target;
-		data->get_int_volt = NULL;
-		data->get_table_index = exynos4210_get_table_index;
+	if (soc_is_exynos5250()) {
+		data->init = exynos5250_init;
+		data->target = exynos5250_target;
+		data->get_int_volt = exynos5250_get_int_volt;
+		data->get_table_index = exynos5250_get_table_index;
 	} else {
 		data->init = exynos4x12_init;
 		data->target = exynos4x12_target;
@@ -500,17 +502,17 @@ static __devinit int exynos4_busfreq_probe(struct platform_device *pdev)
 	if (sysfs_create_group(data->busfreq_kobject, &data->busfreq_attr_group))
 		pr_err("Failed to create attributes group.!\n");
 
-	if (register_pm_notifier(&data->exynos4_buspm_notifier)) {
+	if (register_pm_notifier(&data->exynos_buspm_notifier)) {
 		pr_err("Failed to setup buspm notifier\n");
 		goto err_pm_notifier;
 	}
 
 	data->use = true;
 
-	if (register_reboot_notifier(&data->exynos4_reboot_notifier))
+	if (register_reboot_notifier(&data->exynos_reboot_notifier))
 		pr_err("Failed to setup reboot notifier\n");
 
-	if (exynos4_request_register(&data->exynos4_request_notifier))
+	if (exynos4_request_register(&data->exynos_request_notifier))
 		pr_err("Failed to setup request notifier\n");
 
 	platform_set_drvdata(pdev, data);
@@ -536,8 +538,8 @@ static __devexit int exynos4_busfreq_remove(struct platform_device *pdev)
 {
 	struct busfreq_data *data = platform_get_drvdata(pdev);
 
-	unregister_pm_notifier(&data->exynos4_buspm_notifier);
-	unregister_reboot_notifier(&data->exynos4_reboot_notifier);
+	unregister_pm_notifier(&data->exynos_buspm_notifier);
+	unregister_reboot_notifier(&data->exynos_reboot_notifier);
 	regulator_put(data->vdd_int);
 	regulator_put(data->vdd_mif);
 	sysfs_remove_group(data->busfreq_kobject, &data->busfreq_attr_group);
@@ -561,7 +563,7 @@ static struct platform_driver exynos4_busfreq_driver = {
 	.probe  = exynos4_busfreq_probe,
 	.remove = __devexit_p(exynos4_busfreq_remove),
 	.driver = {
-		.name   = "exynos4-busfreq",
+		.name   = "exynos-busfreq",
 		.owner  = THIS_MODULE,
 		.pm     = &exynos4_busfreq_pm,
 	},

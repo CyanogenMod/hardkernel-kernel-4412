@@ -52,9 +52,9 @@ struct busfreq_data {
 	unsigned int load_history[PPMU_END][LOAD_HISTORY_SIZE];
 	int index;
 
-	struct notifier_block exynos4_buspm_notifier;
-	struct notifier_block exynos4_reboot_notifier;
-	struct notifier_block exynos4_request_notifier;
+	struct notifier_block exynos_buspm_notifier;
+	struct notifier_block exynos_reboot_notifier;
+	struct notifier_block exynos_request_notifier;
 	struct attribute_group busfreq_attr_group;
 	int (*init)	(struct device *dev, struct busfreq_data *data);
 	unsigned int (*target)	(unsigned int index);
@@ -73,11 +73,54 @@ struct busfreq_table {
 
 void exynos4_request_apply(unsigned long freq, struct device *dev);
 
-int exynos4210_init(struct device *dev, struct busfreq_data *data);
-unsigned int exynos4210_target(unsigned int index);
-unsigned int exynos4210_get_table_index(struct opp *opp);
+#if defined(CONFIG_ARCH_EXYNOS5)
+int exynos5250_init(struct device *dev, struct busfreq_data *data);
+unsigned int exynos5250_target(unsigned int index);
+unsigned int exynos5250_get_int_volt(unsigned long freq);
+unsigned int exynos5250_get_table_index(struct opp *opp);
+static inline int exynos4x12_init(struct device *dev, struct busfreq_data *data)
+{
+	return 0;
+}
+
+static inline unsigned int exynos4x12_target(unsigned int index)
+{
+	return 0;
+}
+
+static inline unsigned int exynos4x12_get_int_volt(unsigned long freq)
+{
+	return 0;
+}
+
+static inline unsigned int exynos4x12_get_table_index(struct opp *opp)
+{
+	return 0;
+}
+#elif defined(CONFIG_ARCH_EXYNOS4)
+static inline int exynos5250_init(struct device *dev, struct busfreq_data *data)
+{
+	return 0;
+}
+
+static inline unsigned int exynos5250_target(unsigned int index)
+{
+	return 0;
+}
+
+static inline unsigned int exynos5250_get_int_volt(unsigned long freq)
+{
+	return 0;
+}
+
+static inline unsigned int exynos5250_get_table_index(struct opp *opp)
+{
+	return 0;
+}
+
 int exynos4x12_init(struct device *dev, struct busfreq_data *data);
 unsigned int exynos4x12_target(unsigned int index);
 unsigned int exynos4x12_get_int_volt(unsigned long freq);
 unsigned int exynos4x12_get_table_index(struct opp *opp);
+#endif
 #endif /* __ASM_ARCH_BUSFREQ_H */

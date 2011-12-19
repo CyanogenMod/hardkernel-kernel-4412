@@ -1509,7 +1509,7 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 
 static struct platform_device exynos5_busfreq = {
 	.id = -1,
-	.name = "exynos5-busfreq",
+	.name = "exynos-busfreq",
 };
 
 static struct platform_device *smdk5250_devices[] __initdata = {

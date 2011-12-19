@@ -29,7 +29,11 @@ obj-$(CONFIG_EXYNOS4_CPUIDLE)	+= cpuidle-exynos4.o idle-exynos4.o
 obj-$(CONFIG_EXYNOS5_CPUIDLE)	+= cpuidle-exynos5.o idle-exynos5.o
 
 obj-$(CONFIG_BUSFREQ)		+= busfreq.o
-obj-$(CONFIG_BUSFREQ_OPP)	+= busfreq_opp.o busfreq_opp_4210.o busfreq_opp_4x12.o dev.o
+obj-$(CONFIG_BUSFREQ_OPP)	+= busfreq_opp.o dev.o
+ifeq ($(CONFIG_BUSFREQ_OPP),y)
+obj-$(CONFIG_ARCH_EXYNOS4)	+= busfreq_opp_4x12.o
+obj-$(CONFIG_ARCH_EXYNOS5)	+= busfreq_opp_5250.o
+endif
 obj-$(CONFIG_SMP)		+= platsmp.o headsmp.o
 
 obj-$(CONFIG_EXYNOS_MCT)	+= mct.o

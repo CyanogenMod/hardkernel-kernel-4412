@@ -60,7 +60,6 @@ static struct busfreq_table exynos4_busfreq_table[] = {
 	{LV_3, 160160, 950000, 0, 0, 0},  /* MIF : 160MHz INT : 160MHz */
 	{LV_4, 133133, 950000, 0, 0, 0},  /* MIF : 133MHz INT : 133MHz */
 	{LV_5, 100100, 950000, 0, 0, 0},  /* MIF : 100MHz INT : 100MHz */
-	{0, 0, 0, 0, 0, 0},
 };
 
 #define ASV_GROUP	9
