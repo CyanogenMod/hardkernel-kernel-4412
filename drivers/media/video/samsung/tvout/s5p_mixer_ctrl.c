@@ -961,9 +961,9 @@ int s5p_mixer_ctrl_start(
 		s5p_mixer_ctrl_set_reg(MIXER_GPR0_LAYER);
 		s5p_mixer_set_show(MIXER_GPR0_LAYER, true);
 	}
-	if (s5p_mixer_ctrl_private.layer[MIXER_GPR0_LAYER].use_grp_layer) {
-		s5p_mixer_ctrl_set_reg(MIXER_GPR0_LAYER);
-		s5p_mixer_set_show(MIXER_GPR0_LAYER, true);
+	if (s5p_mixer_ctrl_private.layer[MIXER_GPR1_LAYER].use_grp_layer) {
+		s5p_mixer_ctrl_set_reg(MIXER_GPR1_LAYER);
+		s5p_mixer_set_show(MIXER_GPR1_LAYER, true);
 	}
 
 	s5p_mixer_start();
