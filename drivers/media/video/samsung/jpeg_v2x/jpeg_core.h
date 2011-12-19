@@ -215,6 +215,7 @@ struct jpeg_dev {
 	struct timer_list	watchdog_timer;
 	struct workqueue_struct	*watchdog_workqueue;
 	struct work_struct	watchdog_work;
+	struct device			*bus_dev;
 };
 
 enum jpeg_log {

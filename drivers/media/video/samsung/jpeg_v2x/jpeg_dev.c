@@ -44,6 +44,7 @@
 #endif
 
 #include <media/v4l2-ioctl.h>
+#include <mach/dev.h>
 
 #include "jpeg_core.h"
 #include "jpeg_dev.h"
@@ -418,6 +419,10 @@ static int jpeg_m2m_release(struct file *file)
 
 	v4l2_m2m_ctx_release(ctx->m2m_ctx);
 	spin_unlock_irqrestore(&ctx->slock, flags);
+#ifdef CONFIG_BUSFREQ_OPP
+	/* Unlock bus frequency */
+	dev_unlock(ctx->dev->bus_dev, &ctx->dev->plat_dev->dev);
+#endif
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_put_sync(&ctx->dev->plat_dev->dev);
 #endif
@@ -845,6 +850,11 @@ static int jpeg_probe(struct platform_device *pdev)
 		goto err_video_reg;
 	}
 
+#ifdef CONFIG_BUSFREQ_OPP
+	/* To lock bus frequency in OPP mode */
+	dev->bus_dev = dev_get("exynos-busfreq");
+#endif
+
 	dev->watchdog_workqueue = create_singlethread_workqueue(JPEG_NAME);
 	INIT_WORK(&dev->watchdog_work, jpeg_watchdog_worker);
 	atomic_set(&dev->watchdog_cnt, 0);
@@ -973,7 +983,10 @@ static int jpeg_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct jpeg_dev *jpeg_drv = platform_get_drvdata(pdev);
-
+#ifdef CONFIG_BUSFREQ_OPP
+	/* lock bus frequency */
+	dev_unlock(jpeg_drv->bus_dev, dev);
+#endif
 	jpeg_drv->vb2->suspend(jpeg_drv->alloc_ctx);
 	return 0;
 }
@@ -982,7 +995,10 @@ static int jpeg_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct jpeg_dev *jpeg_drv = platform_get_drvdata(pdev);
-
+#ifdef CONFIG_BUSFREQ_OPP
+	/* lock bus frequency */
+	dev_lock(jpeg_drv->bus_dev, dev, BUSFREQ_400MHZ);
+#endif
 	jpeg_drv->vb2->resume(jpeg_drv->alloc_ctx);
 	return 0;
 }
