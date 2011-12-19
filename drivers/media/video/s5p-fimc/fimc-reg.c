@@ -680,15 +680,17 @@ int fimc_hw_set_camera_source(struct fimc_dev *fimc,
 				cfg |= S5P_CISRCFMT_ITU601_16BIT;
 		} /* else defaults to ITU-R BT.656 8-bit */
 	} else if (cam->bus_type == FIMC_MIPI_CSI2) {
-		if (fimc_fmt_is_jpeg(f->fmt->color) || fimc->vid_cap.is.sd)
+		if (fimc_fmt_is_jpeg(f->fmt->color) || fimc->vid_cap.is.sd
+						|| fimc->vid_cap.is.camcording)
 			cfg |= S5P_CISRCFMT_ITU601_8BIT;
 	}
 
-	if (fimc->vid_cap.is.sd)
+	if (fimc->vid_cap.is.sd || fimc->vid_cap.is.camcording)
 		cfg |= S5P_CISRCFMT_HSIZE(fimc->vid_cap.is.fmt.width) |
 			S5P_CISRCFMT_VSIZE(fimc->vid_cap.is.fmt.height);
 	else
-	cfg |= S5P_CISRCFMT_HSIZE(f->o_width) | S5P_CISRCFMT_VSIZE(f->o_height);
+		cfg |= S5P_CISRCFMT_HSIZE(f->o_width) |
+			S5P_CISRCFMT_VSIZE(f->o_height);
 	writel(cfg, fimc->regs + S5P_CISRCFMT);
 	return 0;
 }
@@ -732,7 +734,7 @@ int fimc_hw_set_camera_type(struct fimc_dev *fimc,
 		S5P_CIGCTRL_CAM_JPEG);
 
 	if (cam->bus_type == FIMC_MIPI_CSI2) {
-		if (!vid_cap->is.sd) {
+		if (!vid_cap->is.sd && !vid_cap->is.camcording) {
 			cfg |= S5P_CIGCTRL_SELCAM_MIPI;
 
 			if (cam->mux_id == 0)
@@ -752,7 +754,7 @@ int fimc_hw_set_camera_type(struct fimc_dev *fimc,
 			default:
 				v4l2_err(&fimc->vid_cap.v4l2_dev,
 				 "Not supported camera pixel format: %d",
-			    	vid_cap->fmt.code);
+				 vid_cap->fmt.code);
 			}
 			tmp |= (cam->csi_data_align == 32) << 8;
 

@@ -41,7 +41,7 @@ static struct fimc_fmt fimc_formats[] = {
 		.color		= S5P_FIMC_RGB565,
 		.memplanes	= 1,
 		.colplanes	= 1,
-		.flags		= FMT_FLAGS_M2M,
+		.flags		= FMT_FLAGS_M2M | FMT_FLAGS_CAM,
 	}, {
 		.name		= "BGR666",
 		.fourcc		= V4L2_PIX_FMT_BGR666,
@@ -335,7 +335,7 @@ int fimc_set_scaler_info(struct fimc_ctx *ctx)
 		return -EINVAL;
 	}
 
-	if (ctx->fimc_dev->vid_cap.is.sd) {
+	if (ctx->fimc_dev->vid_cap.is.sd || ctx->fimc_dev->vid_cap.is.camcording) {
 		sx = ctx->fimc_dev->vid_cap.is.fmt.width;
 		sy = ctx->fimc_dev->vid_cap.is.fmt.height;
 	} else {
@@ -499,8 +499,8 @@ void fimc_capture_irq_handler(struct fimc_dev *fimc)
 				v4l2_subdev_call(fimc->vid_cap.is.sd,
 					core, g_ctrl, &is_ctrl);
 				dbg("%d Frame lost - %d,%d",
-					(is_ctrl.value-ctrl->is.frame_count),
-					ctrl->is.frame_count, is_ctrl.value);
+					(is_ctrl.value-fimc->vid_cap.is.frame_count),
+					fimc->vid_cap.is.frame_count, is_ctrl.value);
 				fimc->vid_cap.is.frame_count = is_ctrl.value;
 				is_ctrl.id = V4L2_CID_IS_CLEAR_FRAME_NUMBER;
 				is_ctrl.value = fimc->vid_cap.is.frame_count;

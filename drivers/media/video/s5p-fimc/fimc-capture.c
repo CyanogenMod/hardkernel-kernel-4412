@@ -368,9 +368,14 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 		ret = fimc_subdev_attach(fimc, index);
 		if (ret)
 			return ret;
+		fimc->vid_cap.is.camcording = 0;
 	} else {
 		dbg("FIMC%d didn't try to attatch sensor\n", fimc->id);
 		fimc->vid_cap.input_index = index;
+		if (isp_info->use_isp)
+			fimc->vid_cap.is.camcording = 1;
+		else
+			fimc->vid_cap.is.camcording = 0;
 	}
 
 	ret = fimc_hw_set_camera_polarity(fimc, isp_info);
@@ -464,7 +469,7 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 				break;
 			}
 		} else if (strcmp(&isp_info->board_info->type[0], "S5K6A3") == 0) {
-			switch(isp_info->mux_id) {
+			switch (isp_info->mux_id) {
 			case 0:
 				ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, init, 2);
 				if (ret < 0) {
@@ -1146,7 +1151,7 @@ static int fimc_cap_s_input(struct file *file, void *priv,
 		return -EBUSY;
 
 	if (i >= FIMC_MAX_CAMIF_CLIENTS || !pdata->isp_info[i]) {
-		printk("error max client or pdata\n");
+		printk(KERN_ERR "error max client or pdata\n");
 		return -EINVAL;
 	}
 
@@ -1509,7 +1514,7 @@ int fimc_register_capture_device(struct fimc_dev *fimc)
 	vid_cap->is.bad_mark = 0;
 	vid_cap->is.offset_x = 0;
 	vid_cap->is.offset_y = 0;
-	
+
 	/* Default color format for 4EA image sensor */
 	vid_cap->fmt.code = V4L2_MBUS_FMT_VYUY8_2X8;
 

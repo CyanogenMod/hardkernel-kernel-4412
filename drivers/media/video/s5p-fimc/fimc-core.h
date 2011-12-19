@@ -343,6 +343,7 @@ struct fimc_is {
 	u32 bad_mark;
 	u32 offset_x;
 	u32 offset_y;
+	u16 camcording;
 };
 
 /**
