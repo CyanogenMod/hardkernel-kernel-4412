@@ -1773,7 +1773,6 @@ static void s3c_fb_early_suspend(struct early_suspend *handler)
 		clk_disable(sfb->lcd_clk);
 
 	clk_disable(sfb->bus_clk);
-	pm_runtime_put_sync(sfb->dev);
 
 	return;
 }
@@ -1791,7 +1790,6 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 	sfb = container_of(handler, struct s3c_fb, early_suspend);
 	pd = sfb->pdata;
 
-	pm_runtime_get_sync(sfb->dev);
 	clk_enable(sfb->bus_clk);
 
 	if (!sfb->variant.has_clksel)
@@ -2744,7 +2742,6 @@ static int __devexit s3c_fb_remove(struct platform_device *pdev)
 
 	release_mem_region(sfb->regs_res->start, resource_size(sfb->regs_res));
 
-	pm_runtime_put_sync(sfb->dev);
 	pm_runtime_disable(sfb->dev);
 
 	kfree(sfb);
@@ -2792,7 +2789,6 @@ static int s3c_fb_resume(struct device *dev)
 	int i;
 	u32 reg;
 
-	pm_runtime_get_sync(sfb->dev);
 	clk_enable(sfb->bus_clk);
 
 	if (!sfb->variant.has_clksel)
