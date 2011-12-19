@@ -96,18 +96,17 @@ static int s5p_ehci_suspend(struct device *dev)
 
 	spin_lock_irqsave(&ehci->lock, flags);
 	if (hcd->state != HC_STATE_SUSPENDED && hcd->state != HC_STATE_HALT) {
-		rc = -EINVAL;
-		goto fail;
+		spin_unlock_irqrestore(&ehci->lock, flags);
+		return -EINVAL;
 	}
 	ehci_writel(ehci, 0, &ehci->regs->intr_enable);
 	(void)ehci_readl(ehci, &ehci->regs->intr_enable);
 
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+	spin_unlock_irqrestore(&ehci->lock, flags);
 
 	if (pdata && pdata->phy_exit)
 		pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
-fail:
-	spin_unlock_irqrestore(&ehci->lock, flags);
 
 	return rc;
 }
