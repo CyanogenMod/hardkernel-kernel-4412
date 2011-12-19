@@ -50,11 +50,8 @@ Default setting values
 #define DEFAULT_CAPTURE_VIDEO_WIDTH	640
 #define DEFAULT_CAPTURE_VIDEO_HEIGHT	480
 
-#ifdef FIXED_60_FPS
-#define DEFAULT_PREVIEW_STILL_FRAMERATE	60
-#else
+
 #define DEFAULT_PREVIEW_STILL_FRAMERATE	30
-#endif
 #define DEFAULT_CAPTURE_STILL_FRAMERATE	15
 #define DEFAULT_PREVIEW_VIDEO_FRAMERATE	30
 #define DEFAULT_CAPTURE_VIDEO_FRAMERATE	30
@@ -82,12 +79,6 @@ static const struct isp_param init_val_isp_preview_still = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
-		.reserved[3] = 0,
-#ifdef FIXED_60_FPS
-		.reserved[4] = 16666,
-#else
-		.reserved[4] = 33333,
-#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -135,13 +126,15 @@ static const struct isp_param init_val_isp_preview_still = {
 		.err = ISP_ISO_ERROR_NO,
 	},
 	.adjust = {
-		.cmd = ISP_ADJUST_COMMAND_AUTOCONTRAST,
+		.cmd = ISP_ADJUST_COMMAND_AUTO,
 		.contrast = 0,
 		.saturation = 0,
 		.sharpness = 0,
 		.exposure = 0,
 		.brightness = 0,
 		.hue = 0,
+		.shutter_time_min = 0,
+		.shutter_time_max = 66666,
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
@@ -299,8 +292,6 @@ static const struct isp_param init_val_isp_capture = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
-		.reserved[3] = 0,
-		.reserved[4] = 66666,
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -348,13 +339,15 @@ static const struct isp_param init_val_isp_capture = {
 		.err = ISP_ISO_ERROR_NO,
 	},
 	.adjust = {
-		.cmd = ISP_ADJUST_COMMAND_AUTOCONTRAST,
+		.cmd = ISP_ADJUST_COMMAND_AUTO,
 		.contrast = 0,
 		.saturation = 0,
 		.sharpness = 0,
 		.exposure = 0,
 		.brightness = 0,
 		.hue = 0,
+		.shutter_time_min = 0,
+		.shutter_time_max = 66666,
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
@@ -495,12 +488,6 @@ static const struct isp_param init_val_isp_preview_video = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
-		.reserved[3] = 0,
-#ifdef FIXED_60_FPS
-		.reserved[4] = 16666,
-#else
-		.reserved[4] = 33333,
-#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -548,13 +535,15 @@ static const struct isp_param init_val_isp_preview_video = {
 		.err = ISP_ISO_ERROR_NO,
 	},
 	.adjust = {
-		.cmd = ISP_ADJUST_COMMAND_AUTOCONTRAST,
+		.cmd = ISP_ADJUST_COMMAND_AUTO,
 		.contrast = 0,
 		.saturation = 0,
 		.sharpness = 0,
 		.exposure = 0,
 		.brightness = 0,
 		.hue = 0,
+		.shutter_time_min = 0,
+		.shutter_time_max = 33333,
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
@@ -713,12 +702,6 @@ static const struct isp_param init_val_isp_camcording = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
-		.reserved[3] = 0,
-#ifdef FIXED_60_FPS
-		.reserved[4] = 16666,
-#else
-		.reserved[4] = 33333,
-#endif
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -766,13 +749,15 @@ static const struct isp_param init_val_isp_camcording = {
 		.err = ISP_ISO_ERROR_NO,
 	},
 	.adjust = {
-		.cmd = ISP_ADJUST_COMMAND_AUTOCONTRAST,
+		.cmd = ISP_ADJUST_COMMAND_AUTO,
 		.contrast = 0,
 		.saturation = 0,
 		.sharpness = 0,
 		.exposure = 0,
 		.brightness = 0,
 		.hue = 0,
+		.shutter_time_min = 0,
+		.shutter_time_max = 33333,
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
@@ -955,6 +940,32 @@ int fimc_is_fw_clear_irq2(struct fimc_is_dev *dev)
 /*
  Group 2. Common
 */
+int fimc_is_hw_get_sensor_max_framerate(struct fimc_is_dev *dev)
+{
+	int max_framerate = 0;
+	switch (dev->sensor.sensor_type) {
+	case SENSOR_S5K3H2_CSI_A:
+	case SENSOR_S5K3H2_CSI_B:
+		max_framerate = 15;
+		break;
+	case SENSOR_S5K3H7_CSI_A:
+	case SENSOR_S5K3H7_CSI_B:
+		max_framerate = 30;
+		break;
+	case SENSOR_S5K6A3_CSI_A:
+	case SENSOR_S5K6A3_CSI_B:
+		max_framerate = 30;
+		break;
+	case SENSOR_S5K4E5_CSI_A:
+	case SENSOR_S5K4E5_CSI_B:
+		max_framerate = 15;
+		break;
+	default:
+		max_framerate = 15;
+	}
+	return max_framerate;
+}
+
 void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 {
 	fimc_is_hw_wait_intmsr0_intmsd0(dev);
@@ -1245,10 +1256,6 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_still.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_preview_still.otf_input.err);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
-			init_val_isp_preview_still.otf_input.reserved[3]);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
-			init_val_isp_preview_still.otf_input.reserved[4]);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -1361,6 +1368,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_still.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
 			init_val_isp_preview_still.adjust.hue);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev,
+			init_val_isp_preview_still.adjust.shutter_time_min);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
+			init_val_isp_preview_still.adjust.shutter_time_max);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
 			init_val_isp_preview_still.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
@@ -1618,10 +1629,6 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_video.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_preview_video.otf_input.err);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
-			init_val_isp_preview_video.otf_input.reserved[3]);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
-			init_val_isp_preview_video.otf_input.reserved[4]);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -1734,6 +1741,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_video.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
 			init_val_isp_preview_video.adjust.hue);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev,
+			init_val_isp_preview_video.adjust.shutter_time_min);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
+			init_val_isp_preview_video.adjust.shutter_time_max);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
 			init_val_isp_preview_video.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
@@ -1988,10 +1999,6 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_capture.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_capture.otf_input.err);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
-			init_val_isp_capture.otf_input.reserved[3]);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
-			init_val_isp_capture.otf_input.reserved[4]);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -2097,6 +2104,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_capture.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
 			init_val_isp_capture.adjust.hue);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev,
+			init_val_isp_capture.adjust.shutter_time_min);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
+			init_val_isp_capture.adjust.shutter_time_max);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
 			init_val_isp_capture.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
@@ -2349,10 +2360,6 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_camcording.otf_input.order);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_camcording.otf_input.err);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev,
-			init_val_isp_camcording.otf_input.reserved[3]);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev,
-			init_val_isp_camcording.otf_input.reserved[4]);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -2459,6 +2466,10 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_camcording.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
 			init_val_isp_camcording.adjust.hue);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev,
+			init_val_isp_camcording.adjust.shutter_time_min);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
+			init_val_isp_camcording.adjust.shutter_time_max);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
 			init_val_isp_camcording.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);

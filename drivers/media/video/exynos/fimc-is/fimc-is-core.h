@@ -44,12 +44,12 @@
 #include <media/videobuf2-core.h>
 #define MODULE_NAME	"exynos4-fimc-is"
 
-#define MAX_I2H_ARG 4
+#define MAX_I2H_ARG 12
 #define NUM_FIMC_IS_CLOCKS 1
 
 #define FIMC_IS_SENSOR_NUM	1
 
-#define FIMC_IS_SHUTDOWN_TIMEOUT	(50*HZ)
+#define FIMC_IS_SHUTDOWN_TIMEOUT	(8*HZ)
 #define FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR	(3*HZ)
 
 #define FIMC_IS_A5_MEM_SIZE	0x00A00000
@@ -66,7 +66,7 @@
 #define BUS_LOCK_FREQ_L4	133133
 #define BUS_LOCK_FREQ_L5	100100
 
-#define FIXED_60_FPS
+#define DEBUG
 
 #define SDCARD_FW
 
@@ -331,6 +331,7 @@ extern void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val);
 extern void fimc_is_hw_set_lite(struct fimc_is_dev *dev, u32 width, u32 height);
 extern void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev);
 extern void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev);
+extern int fimc_is_hw_get_sensor_max_framerate(struct fimc_is_dev *dev);
 
 extern void fimc_is_param_err_checker(struct fimc_is_dev *dev);
 extern void fimc_is_print_err_number(u32 num_err);

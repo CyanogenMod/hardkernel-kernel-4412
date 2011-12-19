@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 113  /* IS REGION VERSION 1.13 */
+#define IS_REGION_VER 115  /* IS REGION VERSION 1.15 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -176,6 +176,10 @@
 		(dev->is_p_region->parameter.isp.adjust.brightness = x)
 #define IS_ISP_SET_PARAM_ADJUST_HUE(dev, x) \
 		(dev->is_p_region->parameter.isp.adjust.hue = x)
+#define IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, x) \
+		(dev->is_p_region->parameter.isp.adjust.shutter_time_min = x)
+#define IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, x) \
+		(dev->is_p_region->parameter.isp.adjust.shutter_time_max = x)
 #define IS_ISP_SET_PARAM_ADJUST_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.adjust.err = x)
 
@@ -735,6 +739,10 @@ enum dma_input_error {
 };
 
 /* ----------------------  Output  ----------------------------------- */
+enum otf_output_crop {
+	OTF_OUTPUT_CROP_DISABLE		= 0,
+	OTF_OUTPUT_CROP_ENABLE		= 1
+};
 
 enum otf_output_command {
 	OTF_OUTPUT_COMMAND_DISABLE	= 0,
@@ -855,12 +863,14 @@ enum isp_lock_target {
 };
 
 enum isp_af_mode {
-	ISP_AF_MODE_TOUCH		= 0,
-	ISP_AF_MODE_AUTO		= 1,
-	ISP_AF_MODE_MACRO		= 2,
-	ISP_AF_MODE_CENTER		= 3,
-	ISP_AF_MODE_INFINITY		= 4,
-	ISP_AF_MODE_MANUAL		= 5
+	ISP_AF_MODE_MANUAL		= 0,
+	ISP_AF_MODE_SINGLE		= 1,
+	ISP_AF_MODE_CONTINUOUS		= 2,
+	ISP_AF_MODE_TOUCH		= 3,
+	ISP_AF_MODE_SLEEP		= 4,
+	ISP_AF_MODE_INIT		= 5,
+	ISP_AF_MODE_SET_CENTER_WINDOW	= 6,
+	ISP_AF_MODE_SET_TOUCH_WINDOW	= 7
 };
 
 enum isp_af_face {
@@ -937,7 +947,7 @@ enum iso_error {
 
 /* --------------------------  Adjust  ----------------------------------- */
 enum iso_adjust_command {
-	ISP_ADJUST_COMMAND_AUTOCONTRAST	= 0,
+	ISP_ADJUST_COMMAND_AUTO		= 0,
 	ISP_ADJUST_COMMAND_MANUAL	= 1
 };
 
@@ -1107,7 +1117,11 @@ struct param_otf_input {
 	u32	format;
 	u32	bitwidth;
 	u32	order;
-	u32	reserved[PARAMETER_MAX_MEMBER-7];
+	u32	crop_offset_x;
+	u32	crop_offset_y;
+	u32	crop_width;
+	u32	crop_height;
+	u32	reserved[PARAMETER_MAX_MEMBER-11];
 	u32	err;
 };
 
@@ -1214,7 +1228,9 @@ struct param_isp_adjust {
 	s32	exposure;
 	s32	brightness;
 	s32	hue;
-	u32	reserved[PARAMETER_MAX_MEMBER-8];
+	s32	shutter_time_min;
+	s32	shutter_time_max;
+	u32	reserved[PARAMETER_MAX_MEMBER-10];
 	u32	err;
 };
 
@@ -1513,14 +1529,24 @@ struct is_face_marker {
 #define MAX_FRAME_COUNT_CAPTURE	1
 #define MAX_FACE_COUNT		16
 
+#define MAX_SHARED_COUNT	500
+
 struct is_region {
 	struct is_param_region	parameter;
 	struct is_tune_region	tune;
 	struct is_frame_header	header[MAX_FRAME_COUNT];
 	struct is_face_marker	face[MAX_FACE_COUNT];
-	u32			shared[500];
+	u32			shared[MAX_SHARED_COUNT];
 };
 
+struct is_debug_frame_descriptor {
+	u32	sensor_frame_time;
+	u32	sensor_exposure_time;
+	u32	sensor_analog_gain;
+	u32	req_lei;
+};
+
+#define MAX_FRAMEDESCRIPTOR_CONTEXT_NUM	(30*30)	/* 30 sec */
 struct is_share_region {
 	u32	frame_time;
 	u32	exposure_time;
@@ -1531,6 +1557,13 @@ struct is_share_region {
 	u32	b_gain;
 
 	u32	af_position;
+	u32	af_status;
+
+	u32	frame_descp_onoff_control;
+	u32	frame_descp_update_done;
+	u32	frame_descp_idx;
+	struct is_debug_frame_descriptor
+		dbg_frame_descp_ctx[MAX_FRAMEDESCRIPTOR_CONTEXT_NUM];
 };
 
 #endif

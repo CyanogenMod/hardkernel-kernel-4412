@@ -300,13 +300,58 @@ static int fimc_is_load_fw(struct v4l2_subdev *sd)
 	return 0;
 }
 
+static int fimc_is_s_power(struct v4l2_subdev *sd, int on)
+{
+	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
+	struct device *dev = &is_dev->pdev->dev;
+	int ret = 0;
+
+	dbg("fimc_is_s_power\n");
+	if (on) {
+		clear_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
+		set_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
+		ret = pm_runtime_get_sync(dev);
+	} else {
+		clear_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
+		fimc_is_hw_subip_poweroff(is_dev);
+		ret = wait_event_timeout(is_dev->irq_queue1,
+			test_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&is_dev->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
+		fimc_is_hw_a5_power(is_dev, 0);
+		dbg("A5 power off\n");
+		ret = pm_runtime_put_sync(dev);
+
+		is_dev->sensor.id = 0;
+		is_dev->p_region_index1 = 0;
+		is_dev->p_region_index2 = 0;
+		atomic_set(&is_dev->p_region_num, 0);
+		is_dev->state = 0;
+		set_bit(IS_ST_IDLE, &is_dev->state);
+		is_dev->power = 0;
+		is_dev->af.af_state = FIMC_IS_AF_IDLE;
+		set_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
+	}
+
+	if ((!ret && !on) || (ret && on))
+		clear_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
+
+	return ret;
+}
+
 static int fimc_is_reset(struct v4l2_subdev *sd, u32 val)
 {
 	dbg("fimc_is_reset\n");
-	if (val)
+	if (val) {
 		dbg("hard reset start\n");
-	else
+		fimc_is_s_power(sd, 0);
+	} else {
 		return -EINVAL;
+	}
 	return 0;
 }
 
@@ -339,6 +384,9 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		if (!ret) {
 			dev_err(&dev->pdev->dev,
 				"wait timeout:%s\n", __func__);
+			ret = fimc_is_s_power(sd, 0);
+			if (!ret)
+				err("s_power off failed!!\n");
 			return -EBUSY;
 		}
 		fimc_is_load_setfile(dev);
@@ -374,6 +422,9 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		if (!ret) {
 			dev_err(&dev->pdev->dev,
 				"wait timeout : %s\n", __func__);
+			ret = fimc_is_s_power(sd, 0);
+			if (!ret)
+				err("s_power off failed!!\n");
 			return -EBUSY;
 		}
 		clear_bit(IS_ST_RUN, &dev->state);
@@ -445,49 +496,6 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 	}
 
 	return 0;
-}
-
-static int fimc_is_s_power(struct v4l2_subdev *sd, int on)
-{
-	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
-	struct device *dev = &is_dev->pdev->dev;
-	int ret = 0;
-
-	dbg("fimc_is_s_power\n");
-	if (on) {
-		clear_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
-		set_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
-		ret = pm_runtime_get_sync(dev);
-	} else {
-		clear_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
-		fimc_is_hw_subip_poweroff(is_dev);
-		ret = wait_event_timeout(is_dev->irq_queue1,
-			test_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&is_dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		fimc_is_hw_a5_power(is_dev, 0);
-		dbg("A5 power off\n");
-		ret = pm_runtime_put_sync(dev);
-
-		is_dev->sensor.id = 0;
-		is_dev->p_region_index1 = 0;
-		is_dev->p_region_index2 = 0;
-		atomic_set(&is_dev->p_region_num, 0);
-		is_dev->state = 0;
-		set_bit(IS_ST_IDLE, &is_dev->state);
-		is_dev->power = 0;
-		is_dev->af.af_state = FIMC_IS_AF_IDLE;
-		set_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
-	}
-
-	if ((!ret && !on) || (ret && on))
-		clear_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
-
-	return ret;
 }
 
 static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
@@ -702,9 +710,63 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		fimc_is_hw_set_param(dev);
 		break;
 	case V4L2_CID_CAMERA_FRAME_RATE:
-		IS_SENSOR_SET_FRAME_RATE(dev, ctrl->value);
-		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
-		IS_INC_PARAM_NUM(dev);
+		switch (ctrl->value) {
+		case FRAME_RATE_AUTO: /* FRAME_RATE_AUTO */
+			i = fimc_is_hw_get_sensor_max_framerate(dev);
+			IS_SENSOR_SET_FRAME_RATE(dev, i);
+			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+			IS_INC_PARAM_NUM(dev);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			break;
+		case FRAME_RATE_7: /* FRAME_RATE_7 */
+			IS_SENSOR_SET_FRAME_RATE(dev, 7);
+			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+			IS_INC_PARAM_NUM(dev);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 124950);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			break;
+		case FRAME_RATE_15: /* FRAME_RATE_15 */
+			IS_SENSOR_SET_FRAME_RATE(dev, 15);
+			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+			IS_INC_PARAM_NUM(dev);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			break;
+		case FRAME_RATE_20: /* FRAME_RATE_20 */
+			IS_SENSOR_SET_FRAME_RATE(dev, 20);
+			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+			IS_INC_PARAM_NUM(dev);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 50000);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			break;
+		case FRAME_RATE_30: /* FRAME_RATE_30 */
+			IS_SENSOR_SET_FRAME_RATE(dev, 30);
+			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+			IS_INC_PARAM_NUM(dev);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 33333);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			break;
+		case FRAME_RATE_60: /* FRAME_RATE_60 */
+			IS_SENSOR_SET_FRAME_RATE(dev, 60);
+			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+			IS_INC_PARAM_NUM(dev);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 16666);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			break;
+		}
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
 		fimc_is_hw_set_param(dev);
@@ -766,7 +828,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 				ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_INFINITY);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_MANUAL);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_DISABLE);
@@ -805,7 +867,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			Focus starts after mode change */
 			IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 						ISP_AF_CONTINUOUS_ENABLE);
@@ -906,7 +968,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
 				IS_ISP_SET_PARAM_AA_MODE(dev,
-					ISP_AF_MODE_AUTO);
+					ISP_AF_MODE_SINGLE);
 				IS_ISP_SET_PARAM_AA_FACE(dev,
 					ISP_AF_FACE_DISABLE);
 				IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
@@ -964,7 +1026,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 				switch (dev->af.mode) {
 				case IS_FOCUS_MODE_AUTO:
 					IS_ISP_SET_PARAM_AA_MODE(dev,
-							ISP_AF_MODE_AUTO);
+							ISP_AF_MODE_MANUAL);
 					IS_ISP_SET_PARAM_AA_FACE(dev,
 							ISP_AF_FACE_DISABLE);
 					IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
@@ -980,7 +1042,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					break;
 				case IS_FOCUS_MODE_MACRO:
 					IS_ISP_SET_PARAM_AA_MODE(dev,
-							ISP_AF_MODE_MACRO);
+							ISP_AF_MODE_MANUAL);
 					IS_ISP_SET_PARAM_AA_FACE(dev,
 							ISP_AF_FACE_DISABLE);
 					IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
@@ -1229,7 +1291,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			break;
 		case IMAGE_EFFECT_NEGATIVE:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_NEGATIVE_MONO);
+				ISP_IMAGE_EFFECT_NEGATIVE_COLOR);
 			break;
 		case IMAGE_EFFECT_SEPIA:
 			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
@@ -1410,7 +1472,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ctrl->value) {
 		case IS_CONTRAST_AUTO:
 			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_AUTOCONTRAST);
+				ISP_ADJUST_COMMAND_AUTO);
 			break;
 		case IS_CONTRAST_MINUS_2:
 			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
@@ -2180,7 +2242,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -2271,7 +2333,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -2358,7 +2420,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -2445,7 +2507,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -2532,7 +2594,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -2619,7 +2681,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -2707,7 +2769,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -2795,7 +2857,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -2882,7 +2944,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -2969,7 +3031,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -3056,7 +3118,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -3144,7 +3206,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -3231,7 +3293,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_MACRO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_MANUAL);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -3319,7 +3381,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev,
 					ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_MACRO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_MANUAL);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 					ISP_AF_CONTINUOUS_DISABLE);
@@ -3955,7 +4017,7 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 			IS_ISP_SET_PARAM_AA_CMD(dev,
 				ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_AUTO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_SINGLE);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_DISABLE);
@@ -3971,7 +4033,7 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 			IS_ISP_SET_PARAM_AA_CMD(dev,
 				ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_MACRO);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_MANUAL);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_DISABLE);
@@ -3987,7 +4049,7 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 			IS_ISP_SET_PARAM_AA_CMD(dev,
 				ISP_AA_COMMAND_START);
 			IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AF);
-			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_INFINITY);
+			IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_MANUAL);
 			IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
 			IS_ISP_SET_PARAM_AA_CONTINUOUS(dev,
 				ISP_AF_CONTINUOUS_DISABLE);
@@ -4143,7 +4205,7 @@ static int fimc_is_s_ext_ctrls_handler(struct fimc_is_dev *dev,
 		switch (ctrl->value) {
 		case IS_CONTRAST_AUTO:
 			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_AUTOCONTRAST);
+				ISP_ADJUST_COMMAND_AUTO);
 			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
 			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
 			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
@@ -4334,7 +4396,7 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 	struct v4l2_mbus_framefmt *mf)
 {
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
-	int ret = 0;
+	int tmp, ret = 0;
 
 	dbg("fimc_is_s_mbus_fmt- %d,%d", mf->width, mf->height);
 
@@ -4344,13 +4406,10 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 		dev->scenario_id = ISS_PREVIEW_STILL;
 		dev->sensor.width_prev = mf->width;
 		dev->sensor.height_prev = mf->height;
-#ifdef FIXED_60_FPS
-		IS_SENSOR_SET_FRAME_RATE(dev, 60);
+		tmp = fimc_is_hw_get_sensor_max_framerate(dev);
+		IS_SENSOR_SET_FRAME_RATE(dev, tmp);
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev, 16666);
-#endif
 		break;
 	case 1:
 		dev->scenario_id = ISS_PREVIEW_VIDEO;
@@ -4361,13 +4420,6 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 		dev->scenario_id = ISS_CAPTURE_STILL;
 		dev->sensor.width_cap = mf->width;
 		dev->sensor.height_cap = mf->height;
-#ifdef FIXED_60_FPS
-		IS_SENSOR_SET_FRAME_RATE(dev, 15);
-		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
-		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev, 66666);
-#endif
 		break;
 	case 3:
 		dev->scenario_id = ISS_CAPTURE_VIDEO;

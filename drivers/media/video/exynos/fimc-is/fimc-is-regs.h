@@ -282,19 +282,35 @@
 #define ISSR17			(MCUCTL+0xc4)
 #define ISSR18			(MCUCTL+0xc8)
 #define ISSR19			(MCUCTL+0xcc)
+/* IS Shared Register 20 between ISP CPU and HOST CPU */
+/* ISP_FRAME_DONE : SENSOR ID */
 #define ISSR20			(MCUCTL+0xd0)
+/* IS Shared Register 21 between ISP CPU and HOST CPU */
+/* ISP_FRAME_DONE : PARAMETER 1 */
 #define ISSR21			(MCUCTL+0xd4)
 #define ISSR22			(MCUCTL+0xd8)
 #define ISSR23			(MCUCTL+0xdc)
+/* IS Shared Register 24 between ISP CPU and HOST CPU */
+/* SCALERC_FRAME_DONE : SENSOR ID */
 #define ISSR24			(MCUCTL+0xe0)
+/* IS Shared Register 25 between ISP CPU and HOST CPU */
+/* SCALERC_FRAME_DONE : PARAMETER 1 */
 #define ISSR25			(MCUCTL+0xe4)
 #define ISSR26			(MCUCTL+0xe8)
 #define ISSR27			(MCUCTL+0xec)
+/* IS Shared Register 28 between ISP CPU and HOST CPU */
+/* 3DNR_FRAME_DONE : SENSOR ID */
 #define ISSR28			(MCUCTL+0xf0)
+/* IS Shared Register 29 between ISP CPU and HOST CPU */
+/* 3DNR_FRAME_DONE : PARAMETER 1 */
 #define ISSR29			(MCUCTL+0xf4)
 #define ISSR30			(MCUCTL+0xf8)
 #define ISSR31			(MCUCTL+0xfc)
+/* IS Shared Register 32 between ISP CPU and HOST CPU */
+/* SCALERP_FRAME_DONE : SENSOR ID */
 #define ISSR32			(MCUCTL+0x100)
+/* IS Shared Register 33 between ISP CPU and HOST CPU */
+/* SCALERP_FRAME_DONE : PARAMETER 1 */
 #define ISSR33			(MCUCTL+0x104)
 #define ISSR34			(MCUCTL+0x108)
 #define ISSR35			(MCUCTL+0x10c)

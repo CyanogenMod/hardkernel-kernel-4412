@@ -40,6 +40,8 @@
 
 /* Sensor 100 ~ 200 */
 #define IS_ERROR_SENSOR_PWRDN_FAIL	100
+#define IS_ERROR_SENSOR_STREAM_ON_FAIL	(IS_ERROR_SENSOR_PWRDN_FAIL + 1)
+#define IS_ERROR_SENSOR_STREAM_OFF_FAIL	(IS_ERROR_SENSOR_STREAM_ON_FAIL + 1)
 
 /* ISP 200 ~ 300 */
 #define IS_ERROR_ISP_PWRDN_FAIL		200
@@ -73,6 +75,11 @@
 #define IS_ERROR_FD_NONADJACENT_INPUT	(IS_ERROR_FD_ABSENT_INPUT+1)
 #define IS_ERROR_LHFD_FRAME_END_TIME_OUT \
 					(IS_ERROR_FD_NONADJACENT_INPUT+1)
+
+struct is_debug_control {
+	u32 write_point;
+	u32 assert_flag;
+};
 
 /* Set parameter error enum */
 enum error {
