@@ -128,10 +128,8 @@ struct flite_dev {
 	struct v4l2_subdev		sd;
 #if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
 	struct media_pad		pads[FLITE_PADS_NUM];
-	struct v4l2_mbus_framefmt	mbus_fmt[FLITE_PADS_NUM];
-#else
-	struct v4l2_mbus_framefmt	mbus_fmt[FLITE_MAX_MBUS_NUM];
 #endif
+	struct v4l2_mbus_framefmt	mbus_fmt;
 	struct flite_frame		source_frame;
 	struct resource			*regs_res;
 	void __iomem			*regs;

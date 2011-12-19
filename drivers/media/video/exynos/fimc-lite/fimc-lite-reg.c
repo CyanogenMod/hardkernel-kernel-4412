@@ -92,7 +92,7 @@ void flite_hw_set_capture_stop(struct flite_dev *dev)
 
 int flite_hw_set_source_format(struct flite_dev *dev)
 {
-	struct v4l2_mbus_framefmt *mbus_fmt = &dev->mbus_fmt[0];
+	struct v4l2_mbus_framefmt *mbus_fmt = &dev->mbus_fmt;
 	struct flite_fmt const *f_fmt = find_flite_format(mbus_fmt);
 	u32 cfg = 0;
 

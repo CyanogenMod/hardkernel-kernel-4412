@@ -104,7 +104,7 @@ static int flite_s_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *m
 		return -EINVAL;
 	}
 
-	flite->mbus_fmt[0] = *mf;
+	flite->mbus_fmt = *mf;
 
 	/*
 	 * These are the datas from fimc
@@ -124,7 +124,7 @@ static int flite_g_mbus_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *m
 {
 	struct flite_dev *flite = to_flite_dev(sd);
 
-	mf = &flite->mbus_fmt[0];
+	mf = &flite->mbus_fmt;
 
 	return 0;
 }
@@ -302,40 +302,27 @@ static struct v4l2_mbus_framefmt *__flite_get_format(
 	if (which == V4L2_SUBDEV_FORMAT_TRY)
 		return fh ? v4l2_subdev_get_try_format(fh, pad) : NULL;
 	else
-		return &flite->mbus_fmt[pad];
+		return &flite->mbus_fmt;
 }
 
 static void flite_try_format(struct flite_dev *flite, struct v4l2_subdev_fh *fh,
-			     unsigned int pad, struct v4l2_mbus_framefmt *fmt,
+			     struct v4l2_mbus_framefmt *fmt,
 			     enum v4l2_subdev_format_whence which)
 {
 	struct flite_fmt const *ffmt;
-	struct v4l2_mbus_framefmt *mbus_fmt;
 	struct flite_frame *f = &flite->source_frame;
 
-	switch (pad) {
-	case FLITE_PAD_SINK:
-		ffmt = find_flite_format(fmt);
-		if (ffmt == NULL)
-			ffmt = &flite_formats[1];
+	ffmt = find_flite_format(fmt);
+	if (ffmt == NULL)
+		ffmt = &flite_formats[1];
 
-		fmt->code = ffmt->code;
-		fmt->width = clamp_t(u32, fmt->width, 1, FLITE_MAX_WIDTH_SIZE);
-		fmt->height = clamp_t(u32, fmt->height, 1, FLITE_MAX_HEIGHT_SIZE);
+	fmt->code = ffmt->code;
+	fmt->width = clamp_t(u32, fmt->width, 1, FLITE_MAX_WIDTH_SIZE);
+	fmt->height = clamp_t(u32, fmt->height, 1, FLITE_MAX_HEIGHT_SIZE);
 
-		f->offs_h = f->offs_v = 0;
-		f->width = f->o_width = fmt->width;
-		f->height = f->o_height = fmt->height;
-
-		break;
-
-	case FLITE_PAD_SOURCE_PREVIEW:			/* fall through */
-	case FLITE_PAD_SOURCE_CAMCORDING:
-		/* Source format same as sink format */
-		mbus_fmt = __flite_get_format(flite, fh, FLITE_PAD_SINK, which);
-		memcpy(fmt, mbus_fmt, sizeof(*fmt));
-		break;
-	}
+	f->offs_h = f->offs_v = 0;
+	f->width = f->o_width = fmt->width;
+	f->height = f->o_height = fmt->height;
 
 	fmt->colorspace = V4L2_COLORSPACE_JPEG;
 	fmt->field = V4L2_FIELD_NONE;
@@ -353,6 +340,12 @@ static int flite_subdev_get_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *f
 
 	fmt->format = *mf;
 
+	if (fmt->pad != FLITE_PAD_SINK) {
+		struct flite_frame *f = &flite->source_frame;
+		fmt->format.width = f->width;
+		fmt->format.height = f->height;
+	}
+
 	return 0;
 }
 
@@ -362,29 +355,15 @@ static int flite_subdev_set_fmt(struct v4l2_subdev *sd, struct v4l2_subdev_fh *f
 	struct flite_dev *flite = to_flite_dev(sd);
 	struct v4l2_mbus_framefmt *mf;
 
+	if (fmt->pad != FLITE_PAD_SINK)
+		return -EPERM;
+
 	mf = __flite_get_format(flite, fh, fmt->pad, fmt->which);
 	if (mf == NULL)
 		return -EINVAL;
 
-	flite_try_format(flite, fh, fmt->pad, &fmt->format, fmt->which);
+	flite_try_format(flite, fh, &fmt->format, fmt->which);
 	*mf = fmt->format;
-
-	/* Propagate the format from sink to source */
-	if (fmt->pad == FLITE_PAD_SINK) {
-		/* sink to source_preview */
-		mf = __flite_get_format(flite, fh, FLITE_PAD_SOURCE_PREVIEW,
-					fmt->which);
-		*mf = fmt->format;
-		flite_try_format(flite, fh, FLITE_PAD_SOURCE_PREVIEW,
-				 mf, fmt->which);
-
-		/* sink to source_camcording */
-		mf = __flite_get_format(flite, fh, FLITE_PAD_SOURCE_CAMCORDING,
-					fmt->which);
-		*mf = fmt->format;
-		flite_try_format(flite, fh, FLITE_PAD_SOURCE_CAMCORDING,
-				 mf, fmt->which);
-	}
 
 	return 0;
 }
@@ -426,21 +405,15 @@ static int flite_subdev_get_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *
 				 struct v4l2_subdev_crop *crop)
 {
 	struct flite_dev *flite = to_flite_dev(sd);
-	struct v4l2_rect *fcrop;
+	struct v4l2_rect fcrop;
+
+	fcrop.left = fcrop.top = fcrop.width = fcrop.height = 0;
 
 	if (crop->pad != FLITE_PAD_SINK)
 		return -EINVAL;
 
-	fcrop = kzalloc(sizeof(*fcrop), GFP_KERNEL);
-	if (!fcrop) {
-		flite_err("could not allocate memory");
-		return -ENOMEM;
-	}
-
-	__flite_get_crop(flite, fh, crop->pad, crop->which, fcrop);
-	crop->rect = *fcrop;
-
-	kfree(fcrop);
+	__flite_get_crop(flite, fh, crop->pad, crop->which, &fcrop);
+	crop->rect = fcrop;
 
 	return 0;
 }
@@ -450,29 +423,18 @@ static int flite_subdev_set_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *
 {
 	struct flite_dev *flite = to_flite_dev(sd);
 	struct flite_frame *f_frame = &flite->source_frame;
-	struct v4l2_rect *fcrop;
 
 	if (crop->pad != FLITE_PAD_SINK)
 		return -EINVAL;
 
-	fcrop = kzalloc(sizeof(*fcrop), GFP_KERNEL);
-	if (!fcrop) {
-		flite_err("could not allocate memory");
-		return -ENOMEM;
-	}
-
 	flite_try_crop(flite, &crop->rect);
 
-	__flite_get_crop(flite, fh, crop->pad, crop->which, fcrop);
-	*fcrop = crop->rect;
-
 	if (crop->which == V4L2_SUBDEV_FORMAT_ACTIVE) {
-		f_frame->offs_h = fcrop->left;
-		f_frame->offs_v = fcrop->top;
-		f_frame->width = fcrop->width;
-		f_frame->height = fcrop->height;
+		f_frame->offs_h = crop->rect.left;
+		f_frame->offs_v = crop->rect.top;
+		f_frame->width = crop->rect.width;
+		f_frame->height = crop->rect.height;
 	}
-	kfree(fcrop);
 
 	return 0;
 }
