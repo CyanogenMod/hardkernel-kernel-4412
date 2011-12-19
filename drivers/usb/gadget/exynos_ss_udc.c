@@ -363,11 +363,6 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 	dev_dbg(udc->dev, "%s: ep%d%s\n", __func__,
 			  udc_ep->epnum, udc_ep->dir_in ? "in" : "out");
 
-	if (ep == &udc->eps[0].ep) {
-		dev_err(udc->dev, "%s: called for ep0\n", __func__);
-		return -EINVAL;
-	}
-
 	spin_lock_irqsave(&udc_ep->lock, flags);
 	exynos_ss_udc_ep_deactivate(udc, udc_ep);
 	spin_unlock_irqrestore(&udc_ep->lock, flags);
@@ -1724,6 +1719,25 @@ static void exynos_ss_udc_phy_set(struct platform_device *pdev)
 		readl(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0)));
 }
 
+static void exynos_ss_udc_phy_unset(struct platform_device *pdev)
+{
+	struct exynos_ss_udc_plat *plat = pdev->dev.platform_data;
+	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
+
+	__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
+		EXYNOS_USB3_GUSB2PHYCFGx_SusPHY |
+		EXYNOS_USB3_GUSB2PHYCFGx_EnblSlpM);
+	__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
+			    EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
+
+	if (plat && plat->phy_exit)
+		plat->phy_exit(pdev, S5P_USB_PHY_DRD);
+
+	dev_dbg(udc->dev, "GUSB2PHYCFG(0)=0x%08x, GUSB3PIPECTL(0)=0x%08x",
+		readl(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0)),
+		readl(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0)));
+}
+
 /**
  * exynos_ss_udc_corereset - issue softreset to the core
  * @udc: The device state
@@ -2306,7 +2320,6 @@ err_mem:
 static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 {
 	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
-	struct exynos_ss_udc_plat *plat = pdev->dev.platform_data;
 
 	usb_gadget_unregister_driver(udc->driver);
 
@@ -2316,8 +2329,7 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 	release_resource(udc->regs_res);
 	kfree(udc->regs_res);
 
-	if (plat && plat->phy_exit)
-		plat->phy_exit(pdev, S5P_USB_PHY_DRD);
+	exynos_ss_udc_phy_unset(pdev);
 
 	clk_disable(udc->clk);
 	clk_put(udc->clk);
@@ -2334,8 +2346,59 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int exynos_ss_udc_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
+	int ep;
+
+	if (udc->driver) {
+		call_gadget(udc, suspend);
+
+		/* all endpoints should be shutdown */
+		for (ep = 0; ep < EXYNOS_USB3_EPS; ep++)
+			exynos_ss_udc_ep_disable(&udc->eps[ep].ep);
+
+		call_gadget(udc, disconnect);
+		udc->gadget.speed = USB_SPEED_UNKNOWN;
+	}
+
+	exynos_ss_udc_run_stop(udc, 0);
+	exynos_ss_udc_phy_unset(pdev);
+
+	clk_disable(udc->clk);
+
+	return 0;
+}
+
+static int exynos_ss_udc_resume(struct platform_device *pdev)
+{
+	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
+
+	clk_enable(udc->clk);
+
+	exynos_ss_udc_phy_set(pdev);
+
+	if (udc->driver) {
+		/* we must now enable ep0 ready for host detection and then
+		 * set configuration. */
+
+		exynos_ss_udc_corereset(udc);
+
+		exynos_ss_udc_init(udc);
+
+		udc->ep0_state = EP0_SETUP_PHASE;
+		exynos_ss_udc_enqueue_setup(udc);
+
+		call_gadget(udc, resume);
+	}
+
+	return 0;
+}
+#else
 #define exynos_ss_udc_suspend NULL
 #define exynos_ss_udc_resume NULL
+#endif /* CONFIG_PM */
 
 static struct platform_driver exynos_ss_udc_driver = {
 	.driver		= {
