@@ -309,6 +309,58 @@ static int s5p_mfc_find_start_code(unsigned char *src_mem, unsigned int remainSi
 
 	return -1;
 }
+
+static void s5p_mfc_handle_frame_error(struct s5p_mfc_ctx *ctx,
+		unsigned int reason, unsigned int err)
+{
+	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
+	struct s5p_mfc_buf *src_buf;
+	unsigned long flags;
+	unsigned int index;
+
+	mfc_err("Interrupt Error: %d\n", err);
+
+	dec->dpb_flush = 0;
+	dec->remained = 0;
+
+	spin_lock_irqsave(&dev->irqlock, flags);
+	if (!list_empty(&ctx->src_queue)) {
+		src_buf = list_entry(ctx->src_queue.next, struct s5p_mfc_buf, list);
+		index = src_buf->vb.v4l2_buf.index;
+		if (call_cop(ctx, recover_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
+			mfc_err("failed in recover_buf_ctrls_val\n");
+
+		mfc_debug(2, "MFC needs next buffer.\n");
+		dec->consumed = 0;
+		list_del(&src_buf->list);
+		ctx->src_queue_cnt--;
+
+		vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_ERROR);
+
+		if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
+			mfc_err("failed in get_buf_ctrls_val\n");
+	}
+	spin_unlock_irqrestore(&dev->irqlock, flags);
+
+	mfc_debug(2, "Assesing whether this context should be run again.\n");
+	/* This context state is always RUNNING */
+	if (ctx->src_queue_cnt == 0 || ctx->dst_queue_cnt < ctx->dpb_count) {
+		mfc_err("No need to run again.\n");
+		clear_work_bit(ctx);
+	}
+	mfc_debug(2, "After assesing whether this context should be run again. %d\n", ctx->src_queue_cnt);
+
+	s5p_mfc_clear_int_flags();
+	wake_up_ctx(ctx, reason, err);
+	if (test_and_clear_bit(0, &dev->hw_lock) == 0)
+		BUG();
+
+	queue_work(dev->irq_workqueue, &dev->work_struct);
+
+	s5p_mfc_try_run(dev);
+}
+
 /* Handle frame decoding interrupt */
 static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 					unsigned int reason, unsigned int err)
@@ -419,10 +471,8 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 			dec->consumed = 0;
 			list_del(&src_buf->list);
 			ctx->src_queue_cnt--;
-			if (s5p_mfc_err_dec(err) > 0)
-				vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_ERROR);
-			else
-				vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_DONE);
+
+			vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_DONE);
 
 			if (call_cop(ctx, get_buf_ctrls_val, ctx, &ctx->src_ctrls[index]) < 0)
 				mfc_err("failed in get_buf_ctrls_val\n");
@@ -488,7 +538,6 @@ static inline void s5p_mfc_handle_error(struct s5p_mfc_ctx *ctx,
 		break;
 	case MFCINST_FINISHING:
 	case MFCINST_FINISHED:
-	case MFCINST_RUNNING:
 		/* It is higly probable that an error occured
 		 * while decoding a frame */
 		clear_work_bit(ctx);
@@ -536,11 +585,14 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	switch (reason) {
 	case S5P_FIMV_R2H_CMD_ERR_RET:
 		/* An error has occured */
-		if (ctx->state == MFCINST_RUNNING &&
-			s5p_mfc_err_dec(err) >= S5P_FIMV_ERR_WARNINGS_START)
-			s5p_mfc_handle_frame(ctx, reason, err);
-		else
+		if (ctx->state == MFCINST_RUNNING) {
+			if (s5p_mfc_err_dec(err) >= S5P_FIMV_ERR_WARNINGS_START)
+				s5p_mfc_handle_frame(ctx, reason, err);
+			else
+				s5p_mfc_handle_frame_error(ctx, reason, err);
+		} else {
 			s5p_mfc_handle_error(ctx, reason, err);
+		}
 		break;
 	case S5P_FIMV_R2H_CMD_SLICE_DONE_RET:
 	case S5P_FIMV_R2H_CMD_FIELD_DONE_RET:
