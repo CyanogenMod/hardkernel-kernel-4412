@@ -295,7 +295,6 @@ static int gsc_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 	int ret;
 
 	if (enable) {
-		set_bit(ST_OUTPUT_STREAMON, &gsc->state);
 		pm_runtime_get_sync(&gsc->pdev->dev);
 		ret = gsc_out_hw_set(gsc->out.ctx);
 		if (ret) {
@@ -749,7 +748,7 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 		return;
 	}
 
-	if (gsc->out.s_stream == false) {
+	if (!test_and_set_bit(ST_OUTPUT_STREAMON, &gsc->state)) {
 		gsc_disp_fifo_sw_reset(gsc);
 		gsc_pixelasync_sw_reset(gsc);
 		gsc_hw_enable_control(gsc, true);
@@ -760,7 +759,6 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 		}
 		gsc_pipeline_s_stream(gsc, true);
 	}
-	gsc->out.s_stream = true;
 }
 
 static struct vb2_ops gsc_output_qops = {
@@ -858,7 +856,6 @@ static int gsc_output_open(struct file *file)
 		clear_bit(ST_OUTPUT_OPEN, &gsc->state);
 		return ret;
 	}
-	gsc->out.s_stream = false;
 
 	return ret;
 }

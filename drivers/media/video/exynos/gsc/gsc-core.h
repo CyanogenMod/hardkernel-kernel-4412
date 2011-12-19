@@ -335,7 +335,6 @@ struct gsc_output_device {
 	struct media_pad	sd_pads[GSC_PADS_NUM];
 	struct list_head	active_buf_q;
 	int			req_cnt;
-	bool			s_stream;
 };
 
 /**
