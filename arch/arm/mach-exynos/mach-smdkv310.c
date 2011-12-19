@@ -519,7 +519,7 @@ static struct s5k4ba_mbus_platform_data s5k4ba_mbus_plat = {
 	.fmt = {
 		.width	= 1600,
 		.height	= 1200,
-		//.code	= V4L2_MBUS_FMT_UYVY8_2X8,
+		/*.code	= V4L2_MBUS_FMT_UYVY8_2X8,*/
 		.code	= V4L2_MBUS_FMT_VYUY8_2X8,
 	},
 	.clk_rate	= 24000000UL,
@@ -2679,7 +2679,7 @@ static void __init smdkv310_machine_init(void)
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
 	clk_add_alias("mfc", "s5p-mfc", "mfc", &s5p_device_mfc.dev);
-	s5p_mfc_setname(&s5p_device_mfc,"s5p-mfc");
+	s5p_mfc_setname(&s5p_device_mfc, "s5p-mfc");
 #endif
 
 #ifdef CONFIG_VIDEO_FIMG2D
