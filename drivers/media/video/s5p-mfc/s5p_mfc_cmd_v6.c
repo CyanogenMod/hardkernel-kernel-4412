@@ -87,6 +87,7 @@ int s5p_mfc_wakeup_cmd(struct s5p_mfc_dev *dev)
 int s5p_mfc_open_inst_cmd(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_cmd_args h2r_args;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	int ret;
 
 	mfc_debug_enter();
@@ -96,7 +97,8 @@ int s5p_mfc_open_inst_cmd(struct s5p_mfc_ctx *ctx)
 	s5p_mfc_write_reg(ctx->codec_mode, S5P_FIMV_CODEC_TYPE);
 	s5p_mfc_write_reg(ctx->ctx.ofs, S5P_FIMV_CONTEXT_MEM_ADDR);
 	s5p_mfc_write_reg(ctx->ctx_buf_size, S5P_FIMV_CONTEXT_MEM_SIZE);
-	s5p_mfc_write_reg(ctx->crc_enable, S5P_FIMV_D_CRC_CTRL);
+	if (ctx->type == MFCINST_DECODER)
+		s5p_mfc_write_reg(dec->crc_enable, S5P_FIMV_D_CRC_CTRL);
 
 	ret = s5p_mfc_cmd_host2risc(S5P_FIMV_H2R_CMD_OPEN_INSTANCE, &h2r_args);
 

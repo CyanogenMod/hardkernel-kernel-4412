@@ -73,6 +73,8 @@ void s5p_mfc_release_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	unsigned int mb_width, mb_height;
 
 	mfc_debug_enter();
@@ -83,17 +85,17 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 	if (ctx->type == MFCINST_DECODER) {
 		mfc_debug(2, "Luma size:%d Chroma size:%d MV size:%d\n",
 			  ctx->luma_size, ctx->chroma_size, ctx->mv_size);
-		mfc_debug(2, "Totals bufs: %d\n", ctx->total_dpb_count);
+		mfc_debug(2, "Totals bufs: %d\n", dec->total_dpb_count);
 	} else if (ctx->type == MFCINST_ENCODER) {
-		ctx->enc_tmv_buffer_size = 2 * ALIGN((mb_width + 1) * (mb_height + 1) * 8, 16);
-		ctx->enc_luma_dpb_size = ALIGN((mb_width * mb_height) * 256, 256);
-		ctx->enc_chroma_dpb_size = ALIGN((mb_width * mb_height) * 128, 256);
-		ctx->enc_me_buffer_size = ALIGN( ((((ctx->img_width+63)/64) * 16) *
+		enc->tmv_buffer_size = 2 * ALIGN((mb_width + 1) * (mb_height + 1) * 8, 16);
+		enc->luma_dpb_size = ALIGN((mb_width * mb_height) * 256, 256);
+		enc->chroma_dpb_size = ALIGN((mb_width * mb_height) * 128, 256);
+		enc->me_buffer_size = ALIGN( ((((ctx->img_width+63)/64) * 16) *
 			(((ctx->img_height+63)/64) * 16)) +
 			 ((((mb_width*mb_height)+31)/32) * 16), 256);
 
 		mfc_debug(2, "recon luma size: %d chroma size: %d\n",
-			  ctx->enc_luma_dpb_size, ctx->enc_chroma_dpb_size);
+			  enc->luma_dpb_size, enc->chroma_dpb_size);
 	} else {
 		return -EINVAL;
 	}
@@ -105,7 +107,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		ctx->scratch_buf_size = ALIGN(ctx->scratch_buf_size, 256);
 		ctx->port_a_size =
 			ctx->scratch_buf_size +
-			(ctx->total_dpb_count * ctx->mv_size);
+			(dec->total_dpb_count * ctx->mv_size);
 		break;
 	case S5P_FIMV_CODEC_MPEG4_DEC:
 	case S5P_FIMV_CODEC_FIMV1_DEC:
@@ -144,9 +146,9 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 			((mb_width + 1) * 16) + (4096 * 16);
 		ctx->scratch_buf_size = ALIGN(ctx->scratch_buf_size, 256);
 		ctx->port_a_size =
-			ctx->scratch_buf_size + ctx->enc_tmv_buffer_size +
-			(ctx->dpb_count * (ctx->enc_luma_dpb_size +
-			ctx->enc_chroma_dpb_size + ctx->enc_me_buffer_size));
+			ctx->scratch_buf_size + enc->tmv_buffer_size +
+			(ctx->dpb_count * (enc->luma_dpb_size +
+			enc->chroma_dpb_size + enc->me_buffer_size));
 		ctx->port_b_size = 0;
 		break;
 	case S5P_FIMV_CODEC_MPEG4_ENC:
@@ -154,9 +156,9 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 		ctx->scratch_buf_size = (mb_width * 16) + ((mb_width + 1) * 16);
 		ctx->scratch_buf_size = ALIGN(ctx->scratch_buf_size, 256);
 		ctx->port_a_size =
-			ctx->scratch_buf_size + ctx->enc_tmv_buffer_size +
-			(ctx->dpb_count * (ctx->enc_luma_dpb_size +
-			ctx->enc_chroma_dpb_size + ctx->enc_me_buffer_size));
+			ctx->scratch_buf_size + enc->tmv_buffer_size +
+			(ctx->dpb_count * (enc->luma_dpb_size +
+			enc->chroma_dpb_size + enc->me_buffer_size));
 		ctx->port_b_size = 0;
 		break;
 	default:
@@ -410,6 +412,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	unsigned int frame_size, i;
 	unsigned int frame_size_ch, frame_size_mv;
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	size_t buf_addr1;
 	int buf_size1;
 	int align_gap;
@@ -419,10 +422,10 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	buf_size1 = ctx->port_a_size;
 
 	mfc_debug(2, "Buf1: %p (%d)\n", (void *)buf_addr1, buf_size1);
-	mfc_debug(2, "Total DPB COUNT: %d\n", ctx->total_dpb_count);
-	mfc_debug(2, "Setting display delay to %d\n", ctx->display_delay);
+	mfc_debug(2, "Total DPB COUNT: %d\n", dec->total_dpb_count);
+	mfc_debug(2, "Setting display delay to %d\n", dec->display_delay);
 
-	WRITEL(ctx->total_dpb_count, S5P_FIMV_D_NUM_DPB);
+	WRITEL(dec->total_dpb_count, S5P_FIMV_D_NUM_DPB);
 	WRITEL(ctx->luma_size, S5P_FIMV_D_LUMA_DPB_SIZE);
 	WRITEL(ctx->chroma_size, S5P_FIMV_D_CHROMA_DPB_SIZE);
 
@@ -441,7 +444,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 								frame_size_mv);
 
 	i = 0;
-	list_for_each_entry(buf, &ctx->dpb_queue, list) {
+	list_for_each_entry(buf, &dec->dpb_queue, list) {
 		mfc_debug(2, "Luma %x\n", buf->cookie.raw.luma);
 		WRITEL(buf->cookie.raw.luma, S5P_FIMV_D_LUMA_DPB + i * 4);
 		mfc_debug(2, "\tChroma %x\n", buf->cookie.raw.chroma);
@@ -464,7 +467,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	}
 
 	mfc_debug(2, "Buf1: %u, buf_size1: %d (frames %d)\n",
-			buf_addr1, buf_size1, ctx->total_dpb_count);
+			buf_addr1, buf_size1, dec->total_dpb_count);
 	if (buf_size1 < 0) {
 		mfc_debug(2, "Not enough memory has been allocated.\n");
 		return -ENOMEM;
@@ -527,6 +530,7 @@ void s5p_mfc_get_enc_frame_buffer(struct s5p_mfc_ctx *ctx,
 int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	size_t buf_addr1, buf_size1;
 	int i;
 
@@ -535,17 +539,17 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 	buf_addr1 = ctx->port_a_phys;
 	buf_size1 = ctx->port_a_size;
 
-	mfc_debug(2, "Buf1: %p (%d)\n", (void *)buf_addr1, buf_size1);	
+	mfc_debug(2, "Buf1: %p (%d)\n", (void *)buf_addr1, buf_size1);
 
 	for (i = 0; i < ctx->dpb_count; i++) {
 		WRITEL(buf_addr1, S5P_FIMV_E_LUMA_DPB + (4 * i));
-		buf_addr1 += ctx->enc_luma_dpb_size;
+		buf_addr1 += enc->luma_dpb_size;
 		WRITEL(buf_addr1, S5P_FIMV_E_CHROMA_DPB + (4 * i));
-		buf_addr1 += ctx->enc_chroma_dpb_size;
+		buf_addr1 += enc->chroma_dpb_size;
 		WRITEL(buf_addr1, S5P_FIMV_E_ME_BUFFER + (4 * i));
-		buf_addr1 += ctx->enc_me_buffer_size;
-		buf_size1 -= (ctx->enc_luma_dpb_size + ctx->enc_chroma_dpb_size +
-			ctx->enc_me_buffer_size);
+		buf_addr1 += enc->me_buffer_size;
+		buf_size1 -= (enc->luma_dpb_size + enc->chroma_dpb_size +
+			enc->me_buffer_size);
 	}
 
 	WRITEL(buf_addr1, S5P_FIMV_E_SCRATCH_BUFFER_ADDR);
@@ -554,10 +558,10 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 	buf_size1 -= ctx->scratch_buf_size;
 
 	WRITEL(buf_addr1, S5P_FIMV_E_TMV_BUFFER0);
-	buf_addr1 += ctx->enc_tmv_buffer_size >> 1;
+	buf_addr1 += enc->tmv_buffer_size >> 1;
 	WRITEL(buf_addr1, S5P_FIMV_E_TMV_BUFFER1);
-	buf_addr1 += ctx->enc_tmv_buffer_size >> 1;
-	buf_size1 -= ctx->enc_tmv_buffer_size;
+	buf_addr1 += enc->tmv_buffer_size >> 1;
+	buf_size1 -= enc->tmv_buffer_size;
 
 	mfc_debug(2, "Buf1: %u, buf_size1: %d (ref frames %d)\n",
 			buf_addr1, buf_size1, ctx->dpb_count);
@@ -577,17 +581,18 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 static int s5p_mfc_set_slice_mode(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 
 	/* multi-slice control */
 	/* multi-slice MB number or bit size */
-	if (ctx->slice_mode == V4L2_CODEC_MFC5X_ENC_MULTI_SLICE_MODE_MACROBLOCK_COUNT) {
-		WRITEL(ctx->slice_mode, S5P_FIMV_E_MSLICE_MODE);
-		WRITEL(ctx->slice_size.mb, S5P_FIMV_E_MSLICE_SIZE_MB);
-	} else if (ctx->slice_mode == V4L2_CODEC_MFC5X_ENC_MULTI_SLICE_MODE_BIT_COUNT) {
-		WRITEL(ctx->slice_mode-1, S5P_FIMV_E_MSLICE_MODE);
-		WRITEL(ctx->slice_size.bits, S5P_FIMV_E_MSLICE_SIZE_BITS);
+	if (enc->slice_mode == V4L2_CODEC_MFC5X_ENC_MULTI_SLICE_MODE_MACROBLOCK_COUNT) {
+		WRITEL(enc->slice_mode, S5P_FIMV_E_MSLICE_MODE);
+		WRITEL(enc->slice_size.mb, S5P_FIMV_E_MSLICE_SIZE_MB);
+	} else if (enc->slice_mode == V4L2_CODEC_MFC5X_ENC_MULTI_SLICE_MODE_BIT_COUNT) {
+		WRITEL(enc->slice_mode-1, S5P_FIMV_E_MSLICE_MODE);
+		WRITEL(enc->slice_size.bits, S5P_FIMV_E_MSLICE_SIZE_BITS);
 	} else {
-		WRITEL(ctx->slice_mode, S5P_FIMV_E_MSLICE_MODE);
+		WRITEL(enc->slice_mode, S5P_FIMV_E_MSLICE_MODE);
 		WRITEL(0x0, S5P_FIMV_E_MSLICE_SIZE_MB);
 		WRITEL(0x0, S5P_FIMV_E_MSLICE_SIZE_BITS);
 	}
@@ -599,7 +604,8 @@ static int s5p_mfc_set_slice_mode(struct s5p_mfc_ctx *ctx)
 static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	unsigned int reg = 0;
 
 	mfc_debug_enter();
@@ -627,18 +633,18 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 	/* multi-slice control */
 	/* multi-slice MB number or bit size */
 	reg = 0;
-	ctx->slice_mode = p->slice_mode;
+	enc->slice_mode = p->slice_mode;
 
 	if (p->slice_mode == V4L2_CODEC_MFC5X_ENC_MULTI_SLICE_MODE_MACROBLOCK_COUNT) {
 		/* FIXME: test is needed with appl. seq. */
 		/* reg |= (0x1 << 3); */
 		WRITEL(reg, S5P_FIMV_E_ENC_OPTIONS);
-		ctx->slice_size.mb = p->slice_mb;
+		enc->slice_size.mb = p->slice_mb;
 	} else if (p->slice_mode == V4L2_CODEC_MFC5X_ENC_MULTI_SLICE_MODE_BIT_COUNT) {
 		/* FIXME: test is needed with appl. seq. */
 		/* reg |= (0x1 << 3); */
 		WRITEL(reg, S5P_FIMV_E_ENC_OPTIONS);
-		ctx->slice_size.bits = p->slice_bit;
+		enc->slice_size.bits = p->slice_bit;
 	} else {
 		reg &= ~(0x1 << 3);
 		WRITEL(reg, S5P_FIMV_E_ENC_OPTIONS);
@@ -791,7 +797,8 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	struct s5p_mfc_h264_enc_params *p_264 = &p->codec.h264;
 	unsigned int reg = 0;
 
@@ -1016,7 +1023,8 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	struct s5p_mfc_mpeg4_enc_params *p_mpeg4 = &p->codec.mpeg4;
 	unsigned int reg = 0;
 
@@ -1103,7 +1111,8 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	struct s5p_mfc_mpeg4_enc_params *p_mpeg4 = &p->codec.mpeg4;
 	unsigned int reg = 0;
 
@@ -1173,6 +1182,7 @@ static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	unsigned int reg = 0;
 	int fmo_aso_ctrl = 0;
 
@@ -1191,14 +1201,14 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 	 * It works as "display_delay enable" and delay set to 0.
 	 * If user wants display_delay disable, It should be
 	 * set to negative value. */
-	if (ctx->display_delay >= 0) {
+	if (dec->display_delay >= 0) {
 		reg |= (0x1 << S5P_FIMV_D_OPT_DDELAY_EN_SHIFT);
-		WRITEL(ctx->display_delay, S5P_FIMV_D_DISPLAY_DELAY);
+		WRITEL(dec->display_delay, S5P_FIMV_D_DISPLAY_DELAY);
 	}
 	/* Setup loop filter, for decoding this is only valid for MPEG4 */
 	if (ctx->codec_mode == S5P_FIMV_CODEC_MPEG4_DEC) {
-		mfc_debug(2, "Set loop filter to: %d\n", ctx->loop_filter_mpeg4);
-		reg |= (ctx->loop_filter_mpeg4 << S5P_FIMV_D_OPT_LF_CTRL_SHIFT);
+		mfc_debug(2, "Set loop filter to: %d\n", dec->loop_filter_mpeg4);
+		reg |= (dec->loop_filter_mpeg4 << S5P_FIMV_D_OPT_LF_CTRL_SHIFT);
 	}
 	if (ctx->dst_fmt->fourcc == V4L2_PIX_FMT_NV12MT_16X16)
 		reg |= (0x1 << S5P_FIMV_D_OPT_TILE_MODE_SHIFT);
@@ -1240,23 +1250,24 @@ static inline void s5p_mfc_set_flush(struct s5p_mfc_ctx *ctx, int flush)
 int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 
 	mfc_debug(2, "Setting flags to %08lx (free:%d WTF:%d)\n",
-				ctx->dec_dst_flag, ctx->dst_queue_cnt,
-						ctx->dpb_queue_cnt);
+				dec->dpb_status, ctx->dst_queue_cnt,
+						dec->dpb_queue_cnt);
 	/* FIXME: flags are hard-coded */
 #if 0
-	WRITEL(ctx->dec_dst_flag, S5P_FIMV_D_AVAILABLE_DPB_FLAG_LOWER);
+	WRITEL(dec->dpb_status, S5P_FIMV_D_AVAILABLE_DPB_FLAG_LOWER);
 	WRITEL(0x0, S5P_FIMV_D_AVAILABLE_DPB_FLAG_UPPER);
 #else
 	WRITEL(0xffffffff, S5P_FIMV_D_AVAILABLE_DPB_FLAG_LOWER);
 	WRITEL(0xffffffff, S5P_FIMV_D_AVAILABLE_DPB_FLAG_UPPER);
-	WRITEL(ctx->slice_interface, S5P_FIMV_D_SLICE_IF_ENABLE);
+	WRITEL(dec->slice_enable, S5P_FIMV_D_SLICE_IF_ENABLE);
 #endif
 
 	/* FIXME: Is it needed for 6.x? */
 #if 0
-	s5p_mfc_set_flush(ctx, ctx->dpb_flush_flag);
+	s5p_mfc_set_flush(ctx, ctx->dpb_flush);
 #endif
 
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);

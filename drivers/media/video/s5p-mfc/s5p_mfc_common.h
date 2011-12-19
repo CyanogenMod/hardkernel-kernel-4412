@@ -450,6 +450,59 @@ struct s5p_mfc_codec_ops {
 	(((c)->c_ops->op) ?					\
 		((c)->c_ops->op(args)) : 0)
 
+struct s5p_mfc_dec {
+	int total_dpb_count;
+
+	struct list_head dpb_queue;
+	unsigned int dpb_queue_cnt;
+
+	size_t src_buf_size;
+
+	int loop_filter_mpeg4;
+	int display_delay;
+	int is_packedpb;
+	int slice_enable;
+
+	int crc_enable;
+	int crc_luma0;
+	int crc_chroma0;
+	int crc_luma1;
+	int crc_chroma1;
+
+	struct s5p_mfc_extra_buf dsc;
+	unsigned long consumed;
+	unsigned long dpb_status;
+	unsigned int dpb_flush;
+
+	/* For 6.x */
+	int remained;
+};
+
+struct s5p_mfc_enc {
+	struct s5p_mfc_enc_params params;
+
+	size_t dst_buf_size;
+
+	int frame_count;
+	enum v4l2_codec_mfc5x_enc_frame_type frame_type;
+	enum v4l2_codec_mfc5x_enc_force_frame_type force_frame_type;
+
+	struct list_head ref_queue;
+	unsigned int ref_queue_cnt;
+
+	/* For 6.x */
+	size_t luma_dpb_size;
+	size_t chroma_dpb_size;
+	size_t me_buffer_size;
+	size_t tmv_buffer_size;
+
+	unsigned int slice_mode;
+	union {
+		unsigned int mb;
+		unsigned int bits;
+	} slice_size;
+};
+
 /**
  * struct s5p_mfc_ctx - This struct contains the instance context
  */
@@ -479,22 +532,15 @@ struct s5p_mfc_ctx {
 	enum s5p_mfc_inst_state state;
 	int inst_no;
 
-	/* Decoder parameters */
 	int img_width;
 	int img_height;
 	int buf_width;
 	int buf_height;
 	int dpb_count;
-	int total_dpb_count;
 
 	int luma_size;
 	int chroma_size;
 	int mv_size;
-
-	unsigned long consumed_stream;
-	int slice_interface;
-
-	unsigned int dpb_flush_flag;
 
 	/* Buffers */
 	void *port_a_buf;
@@ -508,9 +554,6 @@ struct s5p_mfc_ctx {
 	enum s5p_mfc_queue_state capture_state;
 	enum s5p_mfc_queue_state output_state;
 
-	struct list_head dpb_queue;
-	unsigned int dpb_queue_cnt;
-
 	struct list_head ctrls;
 
 	struct list_head src_ctrls[MFC_MAX_BUFFERS];
@@ -520,50 +563,24 @@ struct s5p_mfc_ctx {
 	int dst_ctrls_flag[MFC_MAX_BUFFERS];
 
 	unsigned int sequence;
-	unsigned long dec_dst_flag;
-	size_t dec_src_buf_size;
 
 	/* Control values */
 	int codec_mode;
 	__u32 pix_format;
-	int loop_filter_mpeg4;
-	int display_delay;
-	int is_packedpb;
 	int cacheable;
-	int crc_enable;
 
 	/* Extra Buffers */
 	unsigned int ctx_buf_size;
 	struct s5p_mfc_extra_buf ctx;
-	struct s5p_mfc_extra_buf dsc;
 	struct s5p_mfc_extra_buf shm;
 
-	struct s5p_mfc_enc_params enc_params;
-
-	size_t enc_dst_buf_size;
-
-	int frame_count;
-	enum v4l2_codec_mfc5x_enc_frame_type frame_type;
-	enum v4l2_codec_mfc5x_enc_force_frame_type force_frame_type;
-
-	struct list_head ref_queue;
-	unsigned int ref_queue_cnt;
+	struct s5p_mfc_dec *dec_priv;
+	struct s5p_mfc_enc *enc_priv;
 
 	struct s5p_mfc_codec_ops *c_ops;
 
 	/* For 6.x */
 	size_t scratch_buf_size;
-	size_t enc_luma_dpb_size;
-	size_t enc_chroma_dpb_size;
-	size_t enc_me_buffer_size;
-	size_t enc_tmv_buffer_size;
-	int remained_flag;
-
-	unsigned int slice_mode;
-	union {
-		unsigned int mb;
-		unsigned int bits;
-	} slice_size;
 
 	/* ION file descriptor */
 	int fd_ion;

@@ -186,6 +186,7 @@ static inline enum s5p_mfc_node_type s5p_mfc_get_node_type(struct file *file)
 
 static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 {
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	struct s5p_mfc_buf *dst_buf;
 	int index;
 
@@ -212,7 +213,7 @@ static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 		else
 			dst_buf->vb.v4l2_buf.field = V4L2_FIELD_INTERLACED;
 		#endif
-		ctx->dec_dst_flag &= ~(1 << dst_buf->vb.v4l2_buf.index);
+		clear_bit(dst_buf->vb.v4l2_buf.index, &dec->dpb_status);
 
 		vb2_buffer_done(&dst_buf->vb, VB2_BUF_STATE_DONE);
 		index = dst_buf->vb.v4l2_buf.index;
@@ -227,7 +228,8 @@ static void s5p_mfc_handle_frame_all_extracted(struct s5p_mfc_ctx *ctx)
 
 static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 {
-	struct s5p_mfc_buf  *dst_buf;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
+	struct s5p_mfc_buf *dst_buf;
 	size_t dspl_y_addr = MFC_GET_ADR(DEC_DISPLAY_Y);
 	unsigned int index;
 	unsigned int frame_type = s5p_mfc_get_disp_frame_type();
@@ -258,7 +260,7 @@ static void s5p_mfc_handle_frame_new(struct s5p_mfc_ctx *ctx, unsigned int err)
 			#endif
 			vb2_set_plane_payload(&dst_buf->vb, 0, ctx->luma_size);
 			vb2_set_plane_payload(&dst_buf->vb, 1, ctx->chroma_size);
-			clear_bit(dst_buf->vb.v4l2_buf.index, &ctx->dec_dst_flag);
+			clear_bit(dst_buf->vb.v4l2_buf.index, &dec->dpb_status);
 
 			dst_buf->vb.v4l2_buf.flags &=
 					~(V4L2_BUF_FLAG_KEYFRAME |
@@ -312,6 +314,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 					unsigned int reason, unsigned int err)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	unsigned int dst_frame_status;
 	struct s5p_mfc_buf *src_buf;
 	unsigned long flags;
@@ -342,10 +345,10 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 		s5p_mfc_try_run(dev);
 		return;
 	}
-	if (ctx->dpb_flush_flag)
-		ctx->dpb_flush_flag = 0;
-	if (ctx->remained_flag)
-		ctx->remained_flag = 0;
+	if (dec->dpb_flush)
+		dec->dpb_flush = 0;
+	if (dec->remained)
+		dec->remained = 0;
 
 	spin_lock_irqsave(&dev->irqlock, flags);
 	/* All frames remaining in the buffer have been extracted  */
@@ -374,11 +377,11 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 								list);
 		mfc_debug(2, "Packed PB test. Size:%d, prev offset: %ld, this run:"
 			" %d\n", src_buf->vb.v4l2_planes[0].bytesused,
-			ctx->consumed_stream, s5p_mfc_get_consumed_stream());
-		ctx->consumed_stream += s5p_mfc_get_consumed_stream();
-		remained = src_buf->vb.v4l2_planes[0].bytesused - ctx->consumed_stream;
+			dec->consumed, s5p_mfc_get_consumed_stream());
+		dec->consumed += s5p_mfc_get_consumed_stream();
+		remained = src_buf->vb.v4l2_planes[0].bytesused - dec->consumed;
 
-		if (ctx->is_packedpb && remained > STUFF_BYTE &&
+		if (dec->is_packedpb && remained > STUFF_BYTE &&
 			s5p_mfc_get_dec_frame_type() == S5P_FIMV_DECODE_FRAME_P_FRAME) {
 			unsigned char *stream_vir;
 			int offset = 0;
@@ -391,15 +394,15 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 					src_buf->vb.v4l2_planes[0].bytesused);
 
 			offset = s5p_mfc_find_start_code(
-					stream_vir + ctx->consumed_stream, remained);
+					stream_vir + dec->consumed, remained);
 
 			if (offset > STUFF_BYTE)
-				ctx->consumed_stream += offset;
+				dec->consumed += offset;
 
 			s5p_mfc_set_dec_stream_buffer(ctx,
-				src_buf->cookie.stream, ctx->consumed_stream,
+				src_buf->cookie.stream, dec->consumed,
 				src_buf->vb.v4l2_planes[0].bytesused -
-							ctx->consumed_stream);
+							dec->consumed);
 			dev->curr_ctx = ctx->num;
 			s5p_mfc_clean_ctx_int_flags(ctx);
 			spin_unlock_irqrestore(&dev->irqlock, flags);
@@ -413,7 +416,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 				mfc_err("failed in recover_buf_ctrls_val\n");
 
 			mfc_debug(2, "MFC needs next buffer.\n");
-			ctx->consumed_stream = 0;
+			dec->consumed = 0;
 			list_del(&src_buf->list);
 			ctx->src_queue_cnt--;
 			if (s5p_mfc_err_dec(err) > 0)
@@ -515,6 +518,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	struct s5p_mfc_dev *dev = priv;
 	struct s5p_mfc_buf *src_buf;
 	struct s5p_mfc_ctx *ctx;
+	struct s5p_mfc_dec *dec;
 	unsigned int reason;
 	unsigned int err;
 	unsigned long flags;
@@ -523,6 +527,8 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	/* Reset the timeout watchdog */
 	atomic_set(&dev->watchdog_cnt, 0);
 	ctx = dev->ctx[dev->curr_ctx];
+	dec = ctx->dec_priv;
+
 	/* Get the reason of interrupt and the error code */
 	reason = s5p_mfc_get_int_reason();
 	err = s5p_mfc_get_int_err();
@@ -584,7 +590,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 						src_buf->vb.v4l2_planes[0].bytesused);
 				if (s5p_mfc_get_consumed_stream() <
 						src_buf->vb.v4l2_planes[0].bytesused)
-					ctx->remained_flag = 1;
+					dec->remained = 1;
 			}
 		}
 
@@ -622,6 +628,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 		clear_bit(0, &dev->hw_lock);
 		break;
 	case S5P_FIMV_R2H_CMD_INIT_BUFFERS_RET:
+		/* FIXME: check encoder on MFC 6.x */
 		s5p_mfc_clear_int_flags();
 		ctx->int_type = reason;
 		ctx->int_err = err;
@@ -631,21 +638,34 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 		spin_unlock(&dev->condlock);
 		if (err == 0) {
 			ctx->state = MFCINST_RUNNING;
-			if (!ctx->dpb_flush_flag && !ctx->remained_flag) {
-				mfc_debug(2, "INIT_BUFFERS with dpb_flush - leaving image in src queue.\n");
+			if (ctx->type == MFCINST_DECODER) {
+				if (!dec->dpb_flush && !dec->remained) {
+					mfc_debug(2, "INIT_BUFFERS with dpb_flush - leaving image in src queue.\n");
+					spin_lock_irqsave(&dev->irqlock, flags);
+					if (!list_empty(&ctx->src_queue)) {
+						src_buf = list_entry(ctx->src_queue.next,
+								struct s5p_mfc_buf, list);
+						list_del(&src_buf->list);
+						ctx->src_queue_cnt--;
+						vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_DONE);
+					}
+					spin_unlock_irqrestore(&dev->irqlock, flags);
+				} else {
+					if (dec->dpb_flush)
+						dec->dpb_flush = 0;
+				}
+			} else {
 				spin_lock_irqsave(&dev->irqlock, flags);
 				if (!list_empty(&ctx->src_queue)) {
 					src_buf = list_entry(ctx->src_queue.next,
-							     struct s5p_mfc_buf, list);
+							struct s5p_mfc_buf, list);
 					list_del(&src_buf->list);
 					ctx->src_queue_cnt--;
 					vb2_buffer_done(&src_buf->vb, VB2_BUF_STATE_DONE);
 				}
 				spin_unlock_irqrestore(&dev->irqlock, flags);
-			} else {
-				if (ctx->dpb_flush_flag)
-					ctx->dpb_flush_flag = 0;
 			}
+
 			if (test_and_clear_bit(0, &dev->hw_lock) == 0)
 				BUG();
 
@@ -806,6 +826,11 @@ err_fw_alloc:
 	call_cop(ctx, cleanup_ctx_ctrls, ctx);
 
 err_ctx_ctrls:
+	if (node == MFCNODE_DECODER)
+		kfree(ctx->dec_priv);
+	else if (ctx->type == MFCINST_ENCODER)
+		kfree(ctx->enc_priv);
+
 err_ctx_init:
 	dev->ctx[ctx->num] = 0;
 
@@ -895,6 +920,10 @@ static int s5p_mfc_release(struct file *file)
 	}
 
 	s5p_mfc_clock_off();
+	if (ctx->type == MFCINST_DECODER)
+		kfree(ctx->dec_priv);
+	else if (ctx->type == MFCINST_ENCODER)
+		kfree(ctx->enc_priv);
 	dev->ctx[ctx->num] = 0;
 	kfree(ctx);
 

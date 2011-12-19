@@ -58,36 +58,37 @@
 int s5p_mfc_alloc_dec_temp_buffers(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	struct s5p_mfc_buf_size_v5 *buf_size = dev->variant->buf_size->buf;
 
 	mfc_debug_enter();
 
-	ctx->dsc.alloc = s5p_mfc_mem_alloc(
+	dec->dsc.alloc = s5p_mfc_mem_alloc(
 			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], buf_size->desc_buf);
-	if (IS_ERR(ctx->dsc.alloc)) {
+	if (IS_ERR(dec->dsc.alloc)) {
 		mfc_err("Allocating DESC buffer failed.\n");
-		return PTR_ERR(ctx->dsc.alloc);
+		return PTR_ERR(dec->dsc.alloc);
 	}
 
-	ctx->dsc.ofs = OFFSETA(s5p_mfc_mem_cookie(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->dsc.alloc));
+	dec->dsc.ofs = OFFSETA(s5p_mfc_mem_cookie(
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dec->dsc.alloc));
 
 	/* FIXME: need clean to zero */
 #if 0
-	ctx->dsc.virt = s5p_mfc_mem_vaddr(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->dsc.alloc);
-	if (!ctx->dsc.virt) {
+	dec->dsc.virt = s5p_mfc_mem_vaddr(
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dec->dsc.alloc);
+	if (!dec->dsc.virt) {
 		s5p_mfc_mem_put(
-			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], ctx->dsc.alloc);
-		ctx->dsc.alloc = NULL;
-		ctx->dsc.ofs = 0;
+			dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX], dec->dsc.alloc);
+		dec->dsc.alloc = NULL;
+		dec->dsc.ofs = 0;
 
 		mfc_err("Remapping DESC buffer failed.\n");
 		return -ENOMEM;
 	}
 
-	memset(ctx->dsc.virt, 0, DESC_BUF_SIZE);
-	s5p_mfc_cache_clean(ctx->dsc.virt, DESC_BUF_SIZE);
+	memset(ctx->dec.virt, 0, DESC_BUF_SIZE);
+	s5p_mfc_cache_clean(ctx->dec.virt, DESC_BUF_SIZE);
 #endif
 	mfc_debug_leave();
 
@@ -97,12 +98,14 @@ int s5p_mfc_alloc_dec_temp_buffers(struct s5p_mfc_ctx *ctx)
 /* Release temproary buffers for decoding */
 void s5p_mfc_release_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 {
-	if (ctx->dsc.alloc) {
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
+
+	if (dec->dsc.alloc) {
 		s5p_mfc_mem_put(ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX],
-								ctx->dsc.alloc);
-		ctx->dsc.alloc = NULL;
-		ctx->dsc.ofs = 0;
-		ctx->dsc.virt = NULL;
+								dec->dsc.alloc);
+		dec->dsc.alloc = NULL;
+		dec->dsc.ofs = 0;
+		dec->dsc.virt = NULL;
 	}
 }
 
@@ -110,6 +113,7 @@ void s5p_mfc_release_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	unsigned int enc_ref_y_size = 0;
 	unsigned int enc_ref_c_size = 0;
 	unsigned int guard_width, guard_height;
@@ -119,7 +123,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 	if (ctx->type == MFCINST_DECODER) {
 		mfc_debug(2, "Luma size:%d Chroma size:%d MV size:%d\n",
 			  ctx->luma_size, ctx->chroma_size, ctx->mv_size);
-		mfc_debug(2, "Totals bufs: %d\n", ctx->total_dpb_count);
+		mfc_debug(2, "Totals bufs: %d\n", dec->total_dpb_count);
 	} else if (ctx->type == MFCINST_ENCODER) {
 		enc_ref_y_size = ALIGN(ctx->img_width, S5P_FIMV_NV12MT_HALIGN)
 			* ALIGN(ctx->img_height, S5P_FIMV_NV12MT_VALIGN);
@@ -151,7 +155,7 @@ int s5p_mfc_alloc_codec_buffers(struct s5p_mfc_ctx *ctx)
 					S5P_FIMV_DEC_BUF_ALIGN);
 		/* TODO, when merged with FIMC then test will it work without
 		 * alignment to 8192. For all codecs. */
-		ctx->port_b_size = ctx->total_dpb_count * ctx->mv_size;
+		ctx->port_b_size = dec->total_dpb_count * ctx->mv_size;
 		break;
 	case S5P_FIMV_CODEC_MPEG4_DEC:
 	case S5P_FIMV_CODEC_FIMV1_DEC:
@@ -441,9 +445,10 @@ void s5p_mfc_enc_calc_src_size(struct s5p_mfc_ctx *ctx)
 void s5p_mfc_set_dec_desc_buffer(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	struct s5p_mfc_buf_size_v5 *buf_size = dev->variant->buf_size->buf;
 
-	WRITEL(ctx->dsc.ofs, S5P_FIMV_SI_CH0_DESC_ADR);
+	WRITEL(dec->dsc.ofs, S5P_FIMV_SI_CH0_DESC_ADR);
 	WRITEL(buf_size->desc_buf, S5P_FIMV_SI_CH0_DESC_SIZE);
 }
 
@@ -481,6 +486,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	unsigned int frame_size, i;
 	unsigned int frame_size_ch, frame_size_mv;
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	unsigned int dpb;
 	size_t buf_addr1, buf_addr2;
 	int buf_size1, buf_size2;
@@ -494,11 +500,11 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	mfc_debug(2, "Buf1: %p (%d) Buf2: %p (%d)\n",
 		  (void *)buf_addr1, buf_size1,
 		  (void *)buf_addr2, buf_size2);
-	mfc_debug(2, "Total DPB COUNT: %d\n", ctx->total_dpb_count);
-	mfc_debug(2, "Setting display delay to %d\n", ctx->display_delay);
+	mfc_debug(2, "Total DPB COUNT: %d\n", dec->total_dpb_count);
+	mfc_debug(2, "Setting display delay to %d\n", dec->display_delay);
 
 	dpb = READL(S5P_FIMV_SI_CH0_DPB_CONF_CTRL) & ~S5P_FIMV_DPB_COUNT_MASK;
-	WRITEL(ctx->total_dpb_count | dpb, S5P_FIMV_SI_CH0_DPB_CONF_CTRL);
+	WRITEL(dec->total_dpb_count | dpb, S5P_FIMV_SI_CH0_DPB_CONF_CTRL);
 
 	s5p_mfc_set_shared_buffer(ctx);
 
@@ -585,7 +591,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 								frame_size_mv);
 
 	i = 0;
-	list_for_each_entry(buf, &ctx->dpb_queue, list) {
+	list_for_each_entry(buf, &dec->dpb_queue, list) {
 		mfc_debug(2, "Luma %x\n", buf->cookie.raw.luma);
 		WRITEL(OFFSETB(buf->cookie.raw.luma), S5P_FIMV_DEC_LUMA_ADR + i * 4);
 		mfc_debug(2, "\tChroma %x\n", buf->cookie.raw.chroma);
@@ -603,7 +609,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 
 	mfc_debug(2, "Buf1: %u, buf_size1: %d\n", buf_addr1, buf_size1);
 	mfc_debug(2, "Buf 1/2 size after: %d/%d (frames %d)\n",
-			buf_size1,  buf_size2, ctx->total_dpb_count);
+			buf_size1,  buf_size2, dec->total_dpb_count);
 	if (buf_size1 < 0 || buf_size2 < 0) {
 		mfc_debug(2, "Not enough memory has been allocated.\n");
 		return -ENOMEM;
@@ -813,7 +819,8 @@ int s5p_mfc_set_enc_ref_buffer(struct s5p_mfc_ctx *ctx)
 static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	unsigned int reg;
 	unsigned int shm;
 
@@ -918,7 +925,8 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	struct s5p_mfc_h264_enc_params *p_264 = &p->codec.h264;
 	unsigned int reg;
 	unsigned int shm;
@@ -1088,7 +1096,8 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	struct s5p_mfc_mpeg4_enc_params *p_mpeg4 = &p->codec.mpeg4;
 	unsigned int reg;
 	unsigned int shm;
@@ -1170,7 +1179,8 @@ static int s5p_mfc_set_enc_params_mpeg4(struct s5p_mfc_ctx *ctx)
 static int s5p_mfc_set_enc_params_h263(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	struct s5p_mfc_mpeg4_enc_params *p_mpeg4 = &p->codec.mpeg4;
 	unsigned int reg;
 	unsigned int shm;
@@ -1253,6 +1263,7 @@ int s5p_mfc_close_inst(struct s5p_mfc_ctx *ctx)
 int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 
 	mfc_debug_enter();
 	mfc_debug(2, "InstNo: %d/%d\n", ctx->inst_no, S5P_FIMV_CH_SEQ_HEADER);
@@ -1265,8 +1276,8 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 		  READL(S5P_FIMV_SI_CH0_SB_FRM_SIZE));
 	/* Setup loop filter, for decoding this is only valid for MPEG4 */
 	if (ctx->codec_mode == S5P_FIMV_CODEC_MPEG4_DEC) {
-		mfc_debug(2, "Set loop filter to: %d\n", ctx->loop_filter_mpeg4);
-		WRITEL(ctx->loop_filter_mpeg4, S5P_FIMV_ENC_LF_CTRL);
+		mfc_debug(2, "Set loop filter to: %d\n", dec->loop_filter_mpeg4);
+		WRITEL(dec->loop_filter_mpeg4, S5P_FIMV_ENC_LF_CTRL);
 	} else {
 		WRITEL(0, S5P_FIMV_ENC_LF_CTRL);
 	}
@@ -1274,11 +1285,11 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 	 * It works as "display_delay enable" and delay set to 0.
 	 * If user wants display_delay disable, It should be
 	 * set to negative value. */
-	WRITEL(((ctx->slice_interface & S5P_FIMV_SLICE_INT_MASK) <<
+	WRITEL(((dec->slice_enable & S5P_FIMV_SLICE_INT_MASK) <<
 				S5P_FIMV_SLICE_INT_SHIFT) |
-			((ctx->display_delay < 0 ? 0 : 1) <<
+			((dec->display_delay < 0 ? 0 : 1) <<
 			S5P_FIMV_DDELAY_ENA_SHIFT) |
-			(((ctx->display_delay >= 0 ? ctx->display_delay : 0) &
+			(((dec->display_delay >= 0 ? dec->display_delay : 0) &
 			S5P_FIMV_DDELAY_VAL_MASK) << S5P_FIMV_DDELAY_VAL_SHIFT),
 			S5P_FIMV_SI_CH0_DPB_CONF_CTRL);
 	if (ctx->codec_mode == S5P_FIMV_CODEC_FIMV1_DEC) {
@@ -1292,7 +1303,7 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 			| (ctx->inst_no), S5P_FIMV_SI_CH0_INST_ID);
 
 	/* Enable CRC data */
-	WRITEL(ctx->crc_enable << 31, S5P_FIMV_HOST2RISC_ARG2);
+	WRITEL(dec->crc_enable << 31, S5P_FIMV_HOST2RISC_ARG2);
 
 	mfc_debug(2, "DELAY : %x\n", READL(S5P_FIMV_SI_CH0_DPB_CONF_CTRL));
 
@@ -1315,13 +1326,14 @@ static inline void s5p_mfc_set_flush(struct s5p_mfc_ctx *ctx, int flush)
 int s5p_mfc_decode_one_frame(struct s5p_mfc_ctx *ctx, int last_frame)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 
 	mfc_debug(2, "Setting flags to %08lx (free:%d WTF:%d)\n",
-				ctx->dec_dst_flag, ctx->dst_queue_cnt,
-						ctx->dpb_queue_cnt);
-	WRITEL(ctx->dec_dst_flag, S5P_FIMV_SI_CH0_RELEASE_BUF);
+		dec->dpb_status, ctx->dst_queue_cnt, dec->dpb_queue_cnt);
+
+	WRITEL(dec->dpb_status, S5P_FIMV_SI_CH0_RELEASE_BUF);
 	s5p_mfc_set_shared_buffer(ctx);
-	s5p_mfc_set_flush(ctx, ctx->dpb_flush_flag);
+	s5p_mfc_set_flush(ctx, dec->dpb_flush);
 	/* Issue different commands to instance basing on whether it
 	 * is the last frame or not. */
 	switch(last_frame) {

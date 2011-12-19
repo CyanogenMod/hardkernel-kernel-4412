@@ -1198,12 +1198,13 @@ static int enc_get_buf_ctrls_val(struct s5p_mfc_ctx *ctx, struct list_head *head
 
 static void cleanup_ref_queue(struct s5p_mfc_ctx *ctx)
 {
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	struct s5p_mfc_buf *mb_entry;
 	unsigned long mb_y_addr, mb_c_addr;
 
 	/* move buffers in ref queue to src queue */
-	while (!list_empty(&ctx->ref_queue)) {
-		mb_entry = list_entry((&ctx->ref_queue)->next, struct s5p_mfc_buf, list);
+	while (!list_empty(&enc->ref_queue)) {
+		mb_entry = list_entry((&enc->ref_queue)->next, struct s5p_mfc_buf, list);
 
 		mb_y_addr = mfc_plane_cookie(&mb_entry->vb, 0);
 		mb_c_addr = mfc_plane_cookie(&mb_entry->vb, 1);
@@ -1212,17 +1213,17 @@ static void cleanup_ref_queue(struct s5p_mfc_ctx *ctx)
 		mfc_debug(2, "enc ref c addr: 0x%08lx", mb_c_addr);
 
 		list_del(&mb_entry->list);
-		ctx->ref_queue_cnt--;
+		enc->ref_queue_cnt--;
 
 		list_add_tail(&mb_entry->list, &ctx->src_queue);
 		ctx->src_queue_cnt++;
 	}
 
 	mfc_debug(2, "enc src count: %d, enc ref count: %d\n",
-		  ctx->src_queue_cnt, ctx->ref_queue_cnt);
+		  ctx->src_queue_cnt, enc->ref_queue_cnt);
 
-	INIT_LIST_HEAD(&ctx->ref_queue);
-	ctx->ref_queue_cnt = 0;
+	INIT_LIST_HEAD(&enc->ref_queue);
+	enc->ref_queue_cnt = 0;
 }
 
 static int enc_pre_seq_start(struct s5p_mfc_ctx *ctx)
@@ -1248,7 +1249,8 @@ static int enc_pre_seq_start(struct s5p_mfc_ctx *ctx)
 static int enc_post_seq_start(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	struct s5p_mfc_buf *dst_mb;
 	unsigned long flags;
 
@@ -1324,6 +1326,7 @@ static int enc_pre_frame_start(struct s5p_mfc_ctx *ctx)
 static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	struct s5p_mfc_buf *mb_entry;
 	unsigned long enc_y_addr, enc_c_addr;
 	unsigned long mb_y_addr, mb_c_addr;
@@ -1343,7 +1346,7 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 
 	/* FIXME: set it to dest buffer not context */
 	/* set encoded frame type */
-	ctx->frame_type = slice_type;
+	enc->frame_type = slice_type;
 
 	spin_lock_irqsave(&dev->irqlock, flags);
 
@@ -1377,7 +1380,7 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 			}
 		}
 
-		list_for_each_entry(mb_entry, &ctx->ref_queue, list) {
+		list_for_each_entry(mb_entry, &enc->ref_queue, list) {
 			mb_y_addr = mfc_plane_cookie(&mb_entry->vb, 0);
 			mb_c_addr = mfc_plane_cookie(&mb_entry->vb, 1);
 
@@ -1386,7 +1389,7 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 
 			if ((enc_y_addr == mb_y_addr) && (enc_c_addr == mb_c_addr)) {
 				list_del(&mb_entry->list);
-				ctx->ref_queue_cnt--;
+				enc->ref_queue_cnt--;
 
 				vb2_buffer_done(&mb_entry->vb, VB2_BUF_STATE_DONE);
 				break;
@@ -1403,8 +1406,8 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 			list_del(&mb_entry->list);
 			ctx->src_queue_cnt--;
 
-			list_add_tail(&mb_entry->list, &ctx->ref_queue);
-			ctx->ref_queue_cnt++;
+			list_add_tail(&mb_entry->list, &enc->ref_queue);
+			enc->ref_queue_cnt++;
 		}
 		/* FIXME: slice_type = 4 && strm_size = 0, skipped enable
 		   should be considered */
@@ -1413,7 +1416,7 @@ static int enc_post_frame_start(struct s5p_mfc_ctx *ctx)
 
 		mfc_debug(2, "slice_type: %d, ctx->state: %d \n", slice_type, ctx->state);
 		mfc_debug(2, "enc src count: %d, enc ref count: %d\n",
-			  ctx->src_queue_cnt, ctx->ref_queue_cnt);
+			  ctx->src_queue_cnt, enc->ref_queue_cnt);
 	}
 
 	if (strm_size > 0) {
@@ -1600,6 +1603,7 @@ static int vidioc_enum_fmt_vid_out_mplane(struct file *file, void *prov,
 static int vidioc_g_fmt(struct file *file, void *priv, struct v4l2_format *f)
 {
 	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	struct v4l2_pix_format_mplane *pix_fmt_mp = &f->fmt.pix_mp;
 
 	mfc_debug_enter();
@@ -1614,8 +1618,8 @@ static int vidioc_g_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		pix_fmt_mp->pixelformat = ctx->dst_fmt->fourcc;
 		pix_fmt_mp->num_planes = ctx->dst_fmt->num_planes;
 
-		pix_fmt_mp->plane_fmt[0].bytesperline = ctx->enc_dst_buf_size;
-		pix_fmt_mp->plane_fmt[0].sizeimage = ctx->enc_dst_buf_size;
+		pix_fmt_mp->plane_fmt[0].bytesperline = enc->dst_buf_size;
+		pix_fmt_mp->plane_fmt[0].sizeimage = enc->dst_buf_size;
 	} else if (f->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		/* This is run on capture (encoder src) */
 		pix_fmt_mp->width = ctx->img_width;
@@ -1692,6 +1696,7 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 {
 	struct s5p_mfc_dev *dev = video_drvdata(file);
 	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	struct s5p_mfc_fmt *fmt;
 	struct v4l2_pix_format_mplane *pix_fmt_mp = &f->fmt.pix_mp;
 	unsigned long flags;
@@ -1722,7 +1727,7 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 		mfc_debug(2, "codec number: %d\n", ctx->dst_fmt->codec_mode);
 
 		/* CHKME: 2KB aligned, multiple of 4KB - it may be ok with SDVMM */
-		ctx->enc_dst_buf_size =	pix_fmt_mp->plane_fmt[0].sizeimage;
+		enc->dst_buf_size = pix_fmt_mp->plane_fmt[0].sizeimage;
 		pix_fmt_mp->plane_fmt[0].bytesperline = 0;
 
 		ctx->capture_state = QUEUE_FREE;
@@ -2028,6 +2033,7 @@ static int vidioc_queryctrl(struct file *file, void *priv,
 static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
 	int ret = 0;
 	int check = 0;
@@ -2037,14 +2043,14 @@ static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		ctrl->value = ctx->cacheable;
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_STREAM_SIZE:
-		ctrl->value = ctx->enc_dst_buf_size;
+		ctrl->value = enc->dst_buf_size;
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_FRAME_COUNT:
-		ctrl->value = ctx->frame_count;
+		ctrl->value = enc->frame_count;
 		break;
 	/* FIXME: it doesn't need to return using GetConfig */
 	case V4L2_CID_CODEC_MFC5X_ENC_FRAME_TYPE:
-		ctrl->value = ctx->frame_type;
+		ctrl->value = enc->frame_type;
 		break;
 	case V4L2_CID_CODEC_CHECK_STATE:
 		if (ctx->state == MFCINST_RUNNING_NO_OUTPUT)
@@ -2104,7 +2110,8 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 {
 	struct s5p_mfc_dev *dev = ctx->dev;
-	struct s5p_mfc_enc_params *p = &ctx->enc_params;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
 	int ret = 0;
 
 	switch (ctrl->id) {
@@ -2146,7 +2153,7 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	/* FIXME: why is it used ? */
 	case V4L2_CID_CODEC_MFC5X_ENC_FORCE_FRAME_TYPE:
-		ctx->force_frame_type = ctrl->value;
+		enc->force_frame_type = ctrl->value;
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_VBV_BUF_SIZE:
 		p->vbv_buf_size = ctrl->value;
@@ -2572,6 +2579,7 @@ static int s5p_mfc_queue_setup(struct vb2_queue *vq,
 			       unsigned long psize[], void *allocators[])
 {
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	struct s5p_mfc_dev *dev = ctx->dev;
 	int i;
 
@@ -2599,7 +2607,7 @@ static int s5p_mfc_queue_setup(struct vb2_queue *vq,
 		if (*buf_count > MFC_MAX_BUFFERS)
 			*buf_count = MFC_MAX_BUFFERS;
 
-		psize[0] = ctx->enc_dst_buf_size;
+		psize[0] = enc->dst_buf_size;
 		allocators[0] = ctx->dev->alloc_ctx[MFC_CMA_BANK1_ALLOC_CTX];
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		if (ctx->src_fmt)
@@ -2697,6 +2705,7 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
 	unsigned int index = vb->v4l2_buf.index;
 	int ret;
 
@@ -2708,9 +2717,9 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 			return ret;
 
 		mfc_debug(2, "plane size: %ld, dst size: %d\n",
-			vb2_plane_size(vb, 0), ctx->enc_dst_buf_size);
+			vb2_plane_size(vb, 0), enc->dst_buf_size);
 
-		if (vb2_plane_size(vb, 0) < ctx->enc_dst_buf_size) {
+		if (vb2_plane_size(vb, 0) < enc->dst_buf_size) {
 			mfc_err("plane size is too small for capture\n");
 			return -EINVAL;
 		}
@@ -2933,7 +2942,15 @@ const struct v4l2_ioctl_ops *get_enc_v4l2_ioctl_ops(void)
 
 int s5p_mfc_init_enc_ctx(struct s5p_mfc_ctx *ctx)
 {
+	struct s5p_mfc_enc *enc;
 	int ret = 0;
+
+	enc = kzalloc(sizeof(struct s5p_mfc_enc), GFP_KERNEL);
+	if (!enc) {
+		mfc_err("failed to allocate encoder private data\n");
+		return -ENOMEM;
+	}
+	ctx->enc_priv = enc;
 
 	ctx->inst_no = MFC_NO_INSTANCE_SET;
 
@@ -2947,8 +2964,8 @@ int s5p_mfc_init_enc_ctx(struct s5p_mfc_ctx *ctx)
 	ctx->src_fmt = &formats[DEF_SRC_FMT];
 	ctx->dst_fmt = &formats[DEF_DST_FMT];
 
-	INIT_LIST_HEAD(&ctx->ref_queue);
-	ctx->ref_queue_cnt = 0;
+	INIT_LIST_HEAD(&enc->ref_queue);
+	enc->ref_queue_cnt = 0;
 
 	/* Init videobuf2 queue for OUTPUT */
 	ctx->vq_src.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
