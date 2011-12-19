@@ -691,10 +691,8 @@ static int gsc_m2m_release(struct file *file)
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
 
-	if (--gsc->m2m.refcnt <= 0) {
-		clear_bit(ST_PWR_ON, &gsc->state);
+	if (--gsc->m2m.refcnt <= 0)
 		clear_bit(ST_M2M_OPEN, &gsc->state);
-	}
 	kfree(ctx);
 	return 0;
 }
