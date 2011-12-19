@@ -43,6 +43,11 @@
 #include <mach/regs-gpio.h>
 #include <mach/gpio.h>
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+static struct early_suspend egalax_early_suspend;
+#endif
+
 /* Global define to enable function */
 #define _ENABLE_DBG_LEVEL
 
@@ -138,7 +143,7 @@ static unsigned int DbgLevel; /* DBG_INT|DBG_MODULE|DBG_SUSP|DBG_WAKEUP */
 
 #define EGALAX_DBG(level, fmt, args...) { if ((level&DbgLevel) > 0) \
 			printk(KERN_INFO "[egalax_i2c]: " fmt, ## args); }
-#define IDLE_INTERVAL 5 /* Second */
+#define IDLE_INTERVAL HZ/20 	/* 50ms */
 
 static int sendLoopback(struct i2c_client *client)
 {
@@ -218,7 +223,7 @@ static int egalax_cdev_release(struct inode *inode, struct file *filp)
 
 	kfifo_reset(&cdev->DataKFiFo);
 
-	mod_timer(&p_egalax_i2c_dev->idle_timer, jiffies+HZ*IDLE_INTERVAL);
+	mod_timer(&p_egalax_i2c_dev->idle_timer, jiffies+IDLE_INTERVAL);
 
 	EGALAX_DBG(DBG_CDEV, "CDev release done!\n");
 	module_put(THIS_MODULE);
@@ -584,7 +589,7 @@ static void egalax_i2c_wq_irq(struct work_struct *work)
 		egalax_i2c->skip_packet = 0;
 
 	if (p_char_dev->OpenCnts <= 0 && egalax_i2c->work_state == MODE_WORKING)
-		mod_timer(&egalax_i2c->idle_timer, jiffies+HZ*IDLE_INTERVAL);
+		mod_timer(&egalax_i2c->idle_timer, jiffies+IDLE_INTERVAL);
 
 	mutex_unlock(&egalax_i2c->mutex_wq);
 
@@ -636,6 +641,18 @@ static void egalax_idle_timer_routine(unsigned long data)
 
 	queue_work(egalax_i2c->ktouch_wq, &egalax_i2c->work_idle);
 }
+
+
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void egalax_i2c_early_suspend(struct early_suspend *handler)
+{
+	mod_timer(&p_egalax_i2c_dev->idle_timer, jiffies);
+
+	return;
+}
+
+#endif // #ifdef CONFIG_HAS_EARLYSUSPEND
 
 static int __devinit egalax_i2c_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
@@ -701,7 +718,7 @@ static int __devinit egalax_i2c_probe(struct i2c_client *client,
 	/* setup timer */
 	setup_timer(&p_egalax_i2c_dev->idle_timer, egalax_idle_timer_routine,
 					(unsigned long)p_egalax_i2c_dev);
-	mod_timer(&p_egalax_i2c_dev->idle_timer, jiffies+HZ*IDLE_INTERVAL * 10);
+	mod_timer(&p_egalax_i2c_dev->idle_timer, jiffies);
 
 	ret = request_irq(client->irq, egalax_i2c_interrupt,
 				IRQF_DISABLED | IRQF_TRIGGER_FALLING,
@@ -710,6 +727,15 @@ static int __devinit egalax_i2c_probe(struct i2c_client *client,
 		EGALAX_DBG(DBG_MODULE, "Request irq(%d) failed\n", client->irq);
 		goto fail3;
 	}
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	egalax_early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
+	egalax_early_suspend.suspend = egalax_i2c_early_suspend;
+	egalax_early_suspend.resume = NULL;
+	register_early_suspend(&egalax_early_suspend);
+	EGALAX_DBG(DBG_MODULE, " Register early_suspend done\n");
+#endif
+
 	EGALAX_DBG(DBG_MODULE, "Request irq(%d) gpio(%d) with result:%d\n",
 							client->irq, gpio, ret);
 
@@ -751,6 +777,10 @@ static int __devexit egalax_i2c_remove(struct i2c_client *client)
 
 	if (egalax_i2c->ktouch_wq)
 		destroy_workqueue(egalax_i2c->ktouch_wq);
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&egalax_early_suspend);
+#endif
 
 	if (input_dev) {
 		EGALAX_DBG(DBG_MODULE,  " Unregister input device\n");
