@@ -390,18 +390,18 @@ config EXYNOS4X12_1200MHZ_SUPPORT
 endchoice
 
 menu "Support dynamic CPU Hotplug"
-	depends on (CPU_EXYNOS4210 || CPU_EXYNOS4212 || CPU_EXYNOS4412) && HOTPLUG_CPU && SMP
+	depends on HOTPLUG_CPU && SMP
 
-config EXYNOS4_PM_HOTPLUG
-	bool "EXYNOS4 Dynamic Hotplug"
+config EXYNOS_PM_HOTPLUG
+	bool "EXYNOS Dynamic Hotplug"
 	help
 	  Dynamic CPU HOTLUG for EXYNOS series
 
 choice
 	prompt "Dynamic CPU HOTPLUG Policy"
-	depends on EXYNOS4_PM_HOTPLUG
+	depends on EXYNOS_PM_HOTPLUG
 	default STAND_ALONE_POLICY if CPU_EXYNOS4210
-	default DVFS_NR_RUNNING_POLICY if (CPU_EXYNOS4212 || CPU_EXYNOS4412)
+	default DVFS_NR_RUNNING_POLICY if (CPU_EXYNOS4212 || CPU_EXYNOS4412 || CPU_EXYNOS5250)
 
 config STAND_ALONE_POLICY
 	bool "Stand alone policy CPU hotplug"
@@ -411,7 +411,7 @@ config WITH_DVFS_POLICY
 	bool "Intergrated DVFS CPU hotplug"
 
 config DVFS_NR_RUNNING_POLICY
-	depends on EXYNOS4_CPUFREQ
+	depends on (EXYNOS4_CPUFREQ || EXYNOS5_CPUFREQ)
 	bool "DVFS-nr_running CPU hotplug"
 
 config NR_RUNNING_POLICY
