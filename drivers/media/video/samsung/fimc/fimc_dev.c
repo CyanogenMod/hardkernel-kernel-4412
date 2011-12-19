@@ -1213,7 +1213,7 @@ static int fimc_release(struct file *filp)
 		fimc_streamoff_capture((void *)ctrl);
 
 	/* FIXME: turning off actual working camera */
-	if (ctrl->cam && fimc_cam_use) {
+	if (ctrl->cam) {
 		/* Unload the subdev (camera sensor) module,
 		 * reset related status flags */
 		fimc_release_subdev(ctrl);
@@ -1230,9 +1230,8 @@ static int fimc_release(struct file *filp)
 #endif
 
 #if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-		if (ctrl->power_status == FIMC_POWER_ON) {
+		if (ctrl->power_status == FIMC_POWER_ON)
 			pm_runtime_put_sync(ctrl->dev);
-		}
 #endif
 	}
 	if (ctrl->out) {

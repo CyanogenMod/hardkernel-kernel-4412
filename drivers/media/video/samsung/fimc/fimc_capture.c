@@ -220,9 +220,8 @@ static int fimc_init_camera(struct fimc_control *ctrl)
 		return 0;
 
 #if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-	if (ctrl->power_status == FIMC_POWER_OFF) {
+	if (ctrl->power_status == FIMC_POWER_OFF)
 		pm_runtime_get_sync(&pdev->dev);
-	}
 #endif
 	/*
 	 * WriteBack mode doesn't need to set clock and power,
@@ -560,9 +559,10 @@ int fimc_release_subdev(struct fimc_control *ctrl)
 {
 	struct fimc_global *fimc = get_fimc_dev();
 	struct i2c_client *client;
+	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 	int ret;
 
-	if (ctrl->cam->sd) {
+	if (ctrl->cam->sd && fimc_cam_use) {
 		fimc_dbg("%s called\n", __func__);
 
 		/* WriteBack doesn't need clock setting */
@@ -585,6 +585,14 @@ int fimc_release_subdev(struct fimc_control *ctrl)
 			clk_disable(ctrl->cam->clk);
 			fimc->mclk_status = CAM_MCLK_OFF;
 		}
+
+		ctrl->cam->initialized = 0;
+		ctrl->cam = NULL;
+		fimc->active_camera = -1;
+	} else if (ctrl->cam->sd) {
+		client = v4l2_get_subdevdata(ctrl->cam->sd);
+		i2c_unregister_device(client);
+		ctrl->cam->sd = NULL;
 
 		ctrl->cam->initialized = 0;
 		ctrl->cam = NULL;
@@ -725,7 +733,7 @@ static int fimc_is_register_callback(struct device *dev, void *p)
 
 	if (!*sd)
 		return -EINVAL;
-	
+
 	return 0; /* non-zero value stops iteration */
 }
 
@@ -733,7 +741,9 @@ int fimc_is_release_subdev(struct fimc_control *ctrl)
 {
 	int ret;
 	struct fimc_global *fimc = get_fimc_dev();
-	if (ctrl->is.sd && ctrl->cam) {
+	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
+
+	if (ctrl->is.sd && ctrl->cam && fimc_cam_use) {
 		if (ctrl->cam->cam_power)
 			ctrl->cam->cam_power(0);
 		/* shutdown the MCLK */
@@ -748,6 +758,12 @@ int fimc_is_release_subdev(struct fimc_control *ctrl)
 			return -ENODEV;
 		}
 
+		v4l2_device_unregister_subdev(ctrl->is.sd);
+		ctrl->is.sd = NULL;
+		ctrl->cam->initialized = 0;
+		ctrl->cam = NULL;
+		fimc->active_camera = -1;
+	} else if (ctrl->is.sd && ctrl->cam) {
 		v4l2_device_unregister_subdev(ctrl->is.sd);
 		ctrl->is.sd = NULL;
 		ctrl->cam->initialized = 0;
@@ -1921,7 +1937,7 @@ int fimc_stop_capture(struct fimc_control *ctrl)
 
 static int fimc_check_capture_source(struct fimc_control *ctrl)
 {
-	if(!ctrl->cam)
+	if (!ctrl->cam)
 		return -ENODEV;
 
 	if (ctrl->cam->sd || ctrl->is.sd || !ctrl->flite_sd)
@@ -2175,9 +2191,8 @@ int fimc_streamon_capture(void *fh)
 			fimc_add_outqueue(ctrl, i);
 	}
 
-	if (ctrl->cap->fmt.colorspace == V4L2_COLORSPACE_JPEG) {
+	if (ctrl->cap->fmt.colorspace == V4L2_COLORSPACE_JPEG)
 		fimc_hwset_scaler_bypass(ctrl);
-	}
 
 	fimc_start_capture(ctrl);
 	ctrl->status = FIMC_STREAMON;
