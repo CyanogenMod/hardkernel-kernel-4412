@@ -299,7 +299,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_BUSFREQ_OPP
 	/* To lock bus frequency in OPP mode */
-	dev->bus_dev = dev_get("exynos4-busfreq");
+	dev->bus_dev = dev_get("exynos-busfreq");
 #endif
 	dev->power = 0;
 	dev->state = 0;
