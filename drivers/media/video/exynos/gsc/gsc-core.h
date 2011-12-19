@@ -600,6 +600,15 @@ static inline void gsc_ctx_state_lock_set(u32 state, struct gsc_ctx *ctx)
 	spin_unlock_irqrestore(&ctx->slock, flags);
 }
 
+static inline void gsc_ctx_state_lock_clear(u32 state, struct gsc_ctx *ctx)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&ctx->slock, flags);
+	ctx->state &= ~state;
+	spin_unlock_irqrestore(&ctx->slock, flags);
+}
+
 static inline int get_win_num(struct gsc_dev *dev)
 {
 	return (dev->id == 3) ? 2 : dev->id;

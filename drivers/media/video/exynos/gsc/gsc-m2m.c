@@ -438,6 +438,12 @@ static int gsc_m2m_reqbufs(struct file *file, void *fh,
 		gsc->variant->in_buf_cnt : gsc->variant->out_buf_cnt;
 	if (reqbufs->count > max_cnt)
 		return -EINVAL;
+	else if (reqbufs->count == 0) {
+		if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+			gsc_ctx_state_lock_clear(GSC_SRC_FMT, ctx);
+		else
+			gsc_ctx_state_lock_clear(GSC_DST_FMT, ctx);
+	}
 
 	frame = ctx_get_frame(ctx, reqbufs->type);
 	frame->cacheable = ctx->ctrl_val.cacheable;
