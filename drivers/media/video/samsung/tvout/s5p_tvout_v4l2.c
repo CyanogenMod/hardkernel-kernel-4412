@@ -730,7 +730,7 @@ const struct v4l2_ioctl_ops s5p_tvout_tvif_ioctl_ops = {
 long s5p_tvout_tvif_ioctl(
 		struct file *file, unsigned int cmd, unsigned long arg)
 {
-	long ret = 0;
+	int ret = 0;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	s5p_tvout_mutex_lock();
 #endif
@@ -739,14 +739,14 @@ long s5p_tvout_tvif_ioctl(
 
 	switch (cmd) {
 	case VIDIOC_INIT_AUDIO:
-		tvout_dbg("VIDIOC_INIT_AUDIO(%d)\n", (int) arg);
-
 /*		s5ptv_status.hdmi.audio = (unsigned int) arg; */
-
 		if (arg)
-			s5p_tvif_ctrl_set_audio(true);
+			ret = s5p_tvif_ctrl_set_audio(true);
 		else
-			s5p_tvif_ctrl_set_audio(false);
+			ret = s5p_tvif_ctrl_set_audio(false);
+
+		tvout_dbg("VIDIOC_INIT_AUDIO(%d), Ret : %d\n", (int) arg,
+		ret);
 
 		goto end_tvif_ioctl;
 

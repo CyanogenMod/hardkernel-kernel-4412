@@ -2958,7 +2958,6 @@ int s5p_tvif_ctrl_set_audio(bool en)
 	case TVOUT_HDMI_RGB:
 	case TVOUT_DVI:
 		s5p_hdmi_ctrl_set_audio(en);
-
 		break;
 	default:
 		return -EINVAL;
