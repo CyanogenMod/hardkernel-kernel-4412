@@ -838,8 +838,9 @@ static int gsc_output_open(struct file *file)
 
 	gsc_dbg("pid: %d, state: 0x%lx", task_pid_nr(current), gsc->state);
 
-	/* Return if the corresponding video mem2mem node is already opened. */
-	if (gsc_m2m_opened(gsc)) {
+	/* Return if the corresponding mem2mem/output/capture video node
+	   is already opened. */
+	if (gsc_m2m_opened(gsc) || gsc_cap_opened(gsc) || gsc_out_opened(gsc)) {
 		gsc_err("G-Scaler%d has been opened already", gsc->id);
 		return -EBUSY;
 	}
@@ -850,11 +851,6 @@ static int gsc_output_open(struct file *file)
 	}
 
 	set_bit(ST_OUTPUT_OPEN, &gsc->state);
-	gsc->out.refcnt++;
-	if (gsc->out.refcnt > 1) {
-		gsc_err("G-Scaler%d has been used as output device", gsc->id);
-		return -EBUSY;
-	}
 
 	ret = gsc_ctrls_create(gsc->out.ctx);
 	if (ret < 0) {
@@ -873,7 +869,6 @@ static int gsc_output_close(struct file *file)
 
 	gsc_dbg("pid: %d, state: 0x%lx", task_pid_nr(current), gsc->state);
 
-	gsc->out.refcnt--;
 	clear_bit(ST_OUTPUT_OPEN, &gsc->state);
 	vb2_queue_release(&gsc->out.vbq);
 	gsc_ctrls_delete(gsc->out.ctx);
@@ -1003,7 +998,6 @@ int gsc_register_output_device(struct gsc_dev *gsc)
 
 	gsc_out	= &gsc->out;
 	gsc_out->vfd = vfd;
-	gsc_out->refcnt = 0;
 
 	INIT_LIST_HEAD(&gsc_out->active_buf_q);
 	spin_lock_init(&ctx->slock);

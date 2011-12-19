@@ -324,7 +324,6 @@ struct gsc_capture_device {
  * @sd_pads: pads of gscaler subdev entity
  * @active_buf_q: linked list structure of input buffer
  * @req_cnt: the number of requested buffer
- * @refcnt: the reference counter
  */
 struct gsc_output_device {
 	struct video_device	*vfd;
@@ -336,7 +335,6 @@ struct gsc_output_device {
 	struct media_pad	sd_pads[GSC_PADS_NUM];
 	struct list_head	active_buf_q;
 	int			req_cnt;
-	int			refcnt;
 	bool			s_stream;
 };
 
