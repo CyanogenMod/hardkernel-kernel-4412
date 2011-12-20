@@ -108,9 +108,9 @@ static void mxr_reg_sub_mxr_reset(struct mxr_device *mdev, int mxr_num)
 		mxr_write(mdev, MXR_LAYER_CFG, val);
 
 		/* use dark gray background color */
-		mxr_write(mdev, MXR_BG_COLOR0, 0x808080);
-		mxr_write(mdev, MXR_BG_COLOR1, 0x808080);
-		mxr_write(mdev, MXR_BG_COLOR2, 0x808080);
+		mxr_write(mdev, MXR_BG_COLOR0, 0x008080);
+		mxr_write(mdev, MXR_BG_COLOR1, 0x008080);
+		mxr_write(mdev, MXR_BG_COLOR2, 0x008080);
 
 		/* setting graphical layers */
 
@@ -128,9 +128,9 @@ static void mxr_reg_sub_mxr_reset(struct mxr_device *mdev, int mxr_num)
 		mxr_write(mdev, MXR1_LAYER_CFG, val);
 
 		/* use dark gray background color */
-		mxr_write(mdev, MXR1_BG_COLOR0, 0x808080);
-		mxr_write(mdev, MXR1_BG_COLOR1, 0x808080);
-		mxr_write(mdev, MXR1_BG_COLOR2, 0x808080);
+		mxr_write(mdev, MXR1_BG_COLOR0, 0x008080);
+		mxr_write(mdev, MXR1_BG_COLOR1, 0x008080);
+		mxr_write(mdev, MXR1_BG_COLOR2, 0x008080);
 
 		/* setting graphical layers */
 
