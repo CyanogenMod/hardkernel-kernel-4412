@@ -30,6 +30,8 @@
 #define LV1_CUTLINE		4
 #define LOAD_HISTORY_SIZE	5
 
+#define TIMINGROW_OFFSET	0x34
+
 struct opp;
 struct device;
 struct busfreq_table;
@@ -61,6 +63,8 @@ struct busfreq_data {
 	unsigned int (*target)	(unsigned int index);
 	unsigned int (*get_int_volt) (unsigned long freq);
 	unsigned int (*get_table_index) (struct opp *opp);
+	void (*busfreq_prepare) (unsigned int index);
+	void (*busfreq_post) (unsigned int index);
 };
 
 struct busfreq_table {
@@ -81,6 +85,8 @@ unsigned int exynos5250_target(unsigned int index);
 unsigned int exynos5250_get_int_volt(unsigned long freq);
 unsigned int exynos5250_get_table_index(struct opp *opp);
 struct opp *exynos5250_monitor(struct busfreq_data *data);
+void exynos5250_prepare(unsigned int index);
+void exynos5250_post(unsigned int index);
 static inline int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 {
 	return 0;
@@ -100,9 +106,20 @@ static inline unsigned int exynos4x12_get_table_index(struct opp *opp)
 {
 	return 0;
 }
+
 static inline struct opp *exynos4x12_monitor(struct busfreq_data *data)
 {
 	return NULL;
+}
+
+static inline void exynos4x12_prepare(unsigned int index);
+{
+	return;
+}
+
+static inline void exynos4x12_post(unsigned int index)
+{
+	return;
 }
 #elif defined(CONFIG_ARCH_EXYNOS4)
 static inline int exynos5250_init(struct device *dev, struct busfreq_data *data)
@@ -129,10 +146,23 @@ static inline struct opp *exynos5250_monitor(struct busfreq_data *data)
 {
 	return NULL;
 }
+
+static inline void exynos5250_prepare(unsigned int index);
+{
+	return;
+}
+
+static inline void exynos5250_post(unsigned int index)
+{
+	return;
+}
+
 int exynos4x12_init(struct device *dev, struct busfreq_data *data);
 unsigned int exynos4x12_target(unsigned int index);
 unsigned int exynos4x12_get_int_volt(unsigned long freq);
 unsigned int exynos4x12_get_table_index(struct opp *opp);
 struct opp *exynos4x12_monitor(struct busfreq_data *data);
+void exynos4x12_prepare(unsigned int index);
+void exynos4x12_post(unsigned int index);
 #endif
 #endif /* __ASM_ARCH_BUSFREQ_H */

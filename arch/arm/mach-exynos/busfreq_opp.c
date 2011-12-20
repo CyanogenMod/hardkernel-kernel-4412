@@ -145,11 +145,15 @@ static void exynos_busfreq_timer(struct work_struct *work)
 		}
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
+		if (data->busfreq_prepare)
+			data->busfreq_prepare(index);
 	}
 
 	data->target(index);
 
 	if (newfreq < currfreq) {
+		if (data->busfreq_post)
+			data->busfreq_post(index);
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
 					voltage + 25000);
@@ -246,11 +250,15 @@ static int exynos_busfreq_request_event(struct notifier_block *this,
 		}
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
+		if (data->busfreq_prepare)
+			data->busfreq_prepare(index);
 	}
 
 	data->target(index);
 
 	if (newfreq < curr_freq) {
+		if (data->busfreq_post)
+			data->busfreq_post(index);
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
 					voltage + 25000);
@@ -401,6 +409,8 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 		data->get_int_volt = exynos4x12_get_int_volt;
 		data->get_table_index = exynos4x12_get_table_index;
 		data->monitor = exynos4x12_monitor;
+		data->busfreq_prepare = exynos4x12_prepare;
+		data->busfreq_post = exynos4x12_post;
 	}
 
 	data->dev = &pdev->dev;

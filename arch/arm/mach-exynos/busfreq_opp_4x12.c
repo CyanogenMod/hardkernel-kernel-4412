@@ -91,6 +91,10 @@ static unsigned int exynos4x12_int_volt[ASV_GROUP][LV_END] = {
 	{900000,  900000,  850000, 850000, 850000, 850000}, /* ASV8 */
 };
 
+static unsigned int exynos4x12_timingrow[LV_END] = {
+	0x34498691, 0x2336544C, 0x2336544C, 0x152432C7, 0x152432C7, 0x0D233206
+};
+
 static unsigned int clkdiv_dmc0[LV_END][6] = {
 	/*
 	 * Clock divider value for following
@@ -372,6 +376,33 @@ unsigned int exynos4x12_get_table_index(struct opp *opp)
 	return index;
 }
 
+void exynos4x12_prepare(unsigned int index)
+{
+	unsigned int timing0, timing1;
+
+	timing0 = __raw_readl(S5P_VA_DMC0 + TIMINGROW_OFFSET);
+	timing1 = __raw_readl(S5P_VA_DMC1 + TIMINGROW_OFFSET);
+	timing0 |= exynos4x12_timingrow[index];
+	timing1 |= exynos4x12_timingrow[index];
+	__raw_writel(timing0, S5P_VA_DMC0 + TIMINGROW_OFFSET);
+	__raw_writel(timing1, S5P_VA_DMC1 + TIMINGROW_OFFSET);
+	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC0 + TIMINGROW_OFFSET);
+	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
+}
+
+void exynos4x12_post(unsigned int index)
+{
+	unsigned int timing0, timing1;
+
+	timing0 = __raw_readl(S5P_VA_DMC0 + TIMINGROW_OFFSET);
+	timing1 = __raw_readl(S5P_VA_DMC1 + TIMINGROW_OFFSET);
+	timing0 |= exynos4x12_timingrow[index];
+	timing1 |= exynos4x12_timingrow[index];
+	__raw_writel(timing0, S5P_VA_DMC0 + TIMINGROW_OFFSET);
+	__raw_writel(timing1, S5P_VA_DMC1 + TIMINGROW_OFFSET);
+	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC0 + TIMINGROW_OFFSET);
+	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
+}
 
 unsigned int exynos4x12_get_int_volt(unsigned long index)
 {
