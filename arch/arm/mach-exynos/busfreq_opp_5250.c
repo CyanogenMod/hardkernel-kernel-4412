@@ -27,6 +27,7 @@
 #include <linux/reboot.h>
 #include <linux/slab.h>
 #include <linux/opp.h>
+#include <linux/clk.h>
 #include <mach/busfreq.h>
 
 #include <asm/mach-types.h>
@@ -42,6 +43,7 @@
 #include <plat/map-s5p.h>
 #include <plat/gpio-cfg.h>
 #include <plat/cpu.h>
+#include <plat/clock.h>
 
 enum busfreq_level_idx {
 	LV_0,
@@ -301,6 +303,8 @@ static unsigned int __maybe_unused clkdiv_cdrex_for400[LV_END][9] = {
 	{1, 7, 1, 2, 7, 7, 1, 15, 1},
 };
 
+static unsigned int (*clkdiv_cdrex)[9];
+
 static void exynos5250_set_bus_volt(void)
 {
 	unsigned int i;
@@ -338,14 +342,14 @@ unsigned int exynos5250_target(unsigned int div_index)
 		EXYNOS5_CLKDIV_CDREX_ACLK_C2C200_MASK |
 		EXYNOS5_CLKDIV_CDREX_ACLK_EFCON_MASK);
 
-	tmp |= ((clkdiv_cdrex_for533[div_index][0] << EXYNOS5_CLKDIV_CDREX_MCLK_DPHY_SHIFT) |
-		(clkdiv_cdrex_for533[div_index][1] << EXYNOS5_CLKDIV_CDREX_MCLK_CDREX2_SHIFT) |
-		(clkdiv_cdrex_for533[div_index][2] << EXYNOS5_CLKDIV_CDREX_ACLK_CDREX_SHIFT) |
-		(clkdiv_cdrex_for533[div_index][3] << EXYNOS5_CLKDIV_CDREX_MCLK_CDREX_SHIFT) |
-		(clkdiv_cdrex_for533[div_index][4] << EXYNOS5_CLKDIV_CDREX_PCLK_CDREX_SHIFT) |
-		(clkdiv_cdrex_for533[div_index][5] << EXYNOS5_CLKDIV_CDREX_ACLK_CLK400_SHIFT) |
-		(clkdiv_cdrex_for533[div_index][6] << EXYNOS5_CLKDIV_CDREX_ACLK_C2C200_SHIFT) |
-		(clkdiv_cdrex_for533[div_index][8] << EXYNOS5_CLKDIV_CDREX_ACLK_EFCON_SHIFT));
+	tmp |= ((clkdiv_cdrex[div_index][0] << EXYNOS5_CLKDIV_CDREX_MCLK_DPHY_SHIFT) |
+		(clkdiv_cdrex[div_index][1] << EXYNOS5_CLKDIV_CDREX_MCLK_CDREX2_SHIFT) |
+		(clkdiv_cdrex[div_index][2] << EXYNOS5_CLKDIV_CDREX_ACLK_CDREX_SHIFT) |
+		(clkdiv_cdrex[div_index][3] << EXYNOS5_CLKDIV_CDREX_MCLK_CDREX_SHIFT) |
+		(clkdiv_cdrex[div_index][4] << EXYNOS5_CLKDIV_CDREX_PCLK_CDREX_SHIFT) |
+		(clkdiv_cdrex[div_index][5] << EXYNOS5_CLKDIV_CDREX_ACLK_CLK400_SHIFT) |
+		(clkdiv_cdrex[div_index][6] << EXYNOS5_CLKDIV_CDREX_ACLK_C2C200_SHIFT) |
+		(clkdiv_cdrex[div_index][8] << EXYNOS5_CLKDIV_CDREX_ACLK_EFCON_SHIFT));
 
 	__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX);
 
@@ -357,7 +361,7 @@ unsigned int exynos5250_target(unsigned int div_index)
 
 	tmp &= ~EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_MASK;
 
-	tmp |= clkdiv_cdrex_for533[div_index][7] << EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_SHIFT;
+	tmp |= clkdiv_cdrex[div_index][7] << EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_SHIFT;
 
 	do {
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX2);
@@ -490,7 +494,32 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	unsigned int i;
 	unsigned long maxfreq = ULONG_MAX;
 	unsigned long minfreq = 0;
+	unsigned long cdrexfreq;
+	struct clk *clk;
 	int ret;
+
+	clk = clk_get(NULL, "mout_cdrex");
+	if (IS_ERR(clk)) {
+		dev_err(dev, "Fail to get mclk_cdrex clock");
+		ret = PTR_ERR(clk);
+		return ret;
+	}
+	cdrexfreq = clk_get_rate(clk) / 1000000;
+
+	clk_put(clk);
+
+	if (cdrexfreq == 800) {
+		clkdiv_cdrex = clkdiv_cdrex_for800;
+	} else if (cdrexfreq == 667) {
+		clkdiv_cdrex = clkdiv_cdrex_for667;
+	} else if (cdrexfreq == 533) {
+		clkdiv_cdrex = clkdiv_cdrex_for533;
+	} else if (cdrexfreq == 400) {
+		clkdiv_cdrex = clkdiv_cdrex_for400;
+	} else {
+		dev_err(dev, "Don't support cdrex table\n");
+		return -EINVAL;
+	}
 
 	exynos5250_set_bus_volt();
 

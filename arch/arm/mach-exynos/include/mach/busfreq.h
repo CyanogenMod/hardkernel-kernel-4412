@@ -112,7 +112,7 @@ static inline struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	return NULL;
 }
 
-static inline void exynos4x12_prepare(unsigned int index);
+static inline void exynos4x12_prepare(unsigned int index)
 {
 	return;
 }
