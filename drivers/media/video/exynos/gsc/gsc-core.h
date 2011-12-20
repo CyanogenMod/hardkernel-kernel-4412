@@ -63,7 +63,7 @@
 #define FIMD_NAME_SIZE			32
 #define GSC_M2M_BUF_NUM			0
 #define GSC_OUT_BUF_MAX			2
-#define GSC_MAX_CTRL_NUM		5
+#define GSC_MAX_CTRL_NUM		7
 #define GSC_OUT_MAX_MASK_NUM		7
 #define GSC_SC_ALIGN_4			4
 #define GSC_SC_ALIGN_2			2
@@ -527,6 +527,11 @@ struct gsc_dev {
  * @ctrl_vflip          vertical flip control
  * @ctrl_global_alpha:	alpha value when DMA-out is XRGB8888 control
  * @ctrl_cacheable:	frame's cacheable property
+ * @ctrl_layer_blend_en	enable mixer layer alpha blending
+ * @ctrl_layer_alpha:	set alpha value for mixer layer
+ * @ctrl_pixel_blend_en	enable mixer pixel alpha blending
+ * $ctrl_chroma_en:	enable chromakey
+ * @ctrl_chroma_val:	set value for chromakey
  * @ctrls_rdy:          true if the control handler is initialized
  * @m2m_ctx:		memory-to-memory device context
  */
@@ -549,6 +554,11 @@ struct gsc_ctx {
 	struct v4l2_ctrl	*ctrl_vflip;
 	struct v4l2_ctrl	*ctrl_global_alpha;
 	struct v4l2_ctrl	*ctrl_cacheable;
+	struct v4l2_ctrl	*ctrl_layer_blend_en;
+	struct v4l2_ctrl	*ctrl_layer_alpha;
+	struct v4l2_ctrl	*ctrl_pixel_blend_en;
+	struct v4l2_ctrl	*ctrl_chroma_en;
+	struct v4l2_ctrl	*ctrl_chroma_val;
 	bool			ctrls_rdy;
 };
 

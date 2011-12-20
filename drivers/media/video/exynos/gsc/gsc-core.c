@@ -589,11 +589,56 @@ int gsc_out_link_validate(const struct media_pad *source,
 }
 
 /*
+ * Set alpha blending for all layers of mixer when gscaler is connected
+ * to mixer only
+ */
+static int gsc_s_ctrl_to_mxr(struct v4l2_ctrl *ctrl)
+{
+	struct gsc_ctx *ctx = ctrl_to_ctx(ctrl);
+	struct media_pad *pad = &ctx->gsc_dev->out.sd_pads[GSC_PAD_SOURCE];
+	struct v4l2_subdev *sd, *gsc_sd;
+	struct v4l2_control control;
+
+	pad = media_entity_remote_source(pad);
+	if (IS_ERR(pad)) {
+		gsc_err("No sink pad conncted with a gscaler source pad");
+		return PTR_ERR(pad);
+	}
+
+	sd = media_entity_to_v4l2_subdev(pad->entity);
+	gsc_sd = ctx->gsc_dev->out.sd;
+	gsc_dbg("%s is connected to %s\n", gsc_sd->name, sd->name);
+	if (strcmp(sd->name, "s5p-mixer0") && strcmp(sd->name, "s5p-mixer1")) {
+		gsc_err("%s is not connected to mixer\n", gsc_sd->name);
+		return -ENODEV;
+	}
+
+	switch (ctrl->id) {
+	case V4L2_CID_TV_LAYER_BLEND_ENABLE:
+	case V4L2_CID_TV_LAYER_BLEND_ALPHA:
+	case V4L2_CID_TV_PIXEL_BLEND_ENABLE:
+	case V4L2_CID_TV_CHROMA_ENABLE:
+	case V4L2_CID_TV_CHROMA_VALUE:
+		control.id = ctrl->id;
+		control.value = ctrl->val;
+		v4l2_subdev_call(sd, core, s_ctrl, &control);
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+/*
  * V4L2 controls handling
  */
 static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct gsc_ctx *ctx = ctrl_to_ctx(ctrl);
+	int ret;
+
 	switch (ctrl->id) {
 	case V4L2_CID_HFLIP:
 		if (ctrl->val)
@@ -622,8 +667,11 @@ static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 
 	default:
-		gsc_err("Invalid control\n");
-		return -EINVAL;
+		ret = gsc_s_ctrl_to_mxr(ctrl);
+		if (ret) {
+			gsc_err("Invalid control\n");
+			return ret;
+		}
 	}
 
 	if (gsc_m2m_opened(ctx->gsc_dev))
@@ -651,6 +699,42 @@ static const struct v4l2_ctrl_config gsc_custom_ctrl[] = {
 		.name = "Set cacheable",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_TV_LAYER_BLEND_ENABLE,
+		.name = "Enable layer alpha blending",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_TV_LAYER_BLEND_ALPHA,
+		.name = "Set alpha for layer blending",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = 255,
+		.step = 1,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_TV_PIXEL_BLEND_ENABLE,
+		.name = "Enable pixel alpha blending",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_TV_CHROMA_ENABLE,
+		.name = "Enable chromakey",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_TV_CHROMA_VALUE,
+		.name = "Set chromakey value",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.min = 0,
+		.max = 255,
+		.step = 1,
 	},
 };
 
@@ -673,6 +757,18 @@ int gsc_ctrls_create(struct gsc_ctx *ctx)
 					&gsc_custom_ctrl[0], NULL);
 	ctx->ctrl_cacheable = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[1], NULL);
+	/* for mixer control */
+	ctx->ctrl_layer_blend_en = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[2], NULL);
+	ctx->ctrl_layer_alpha = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[3], NULL);
+	ctx->ctrl_pixel_blend_en = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[4], NULL);
+	ctx->ctrl_chroma_en = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[5], NULL);
+	ctx->ctrl_chroma_val = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[6], NULL);
+
 	ctx->ctrls_rdy = ctx->ctrl_handler.error == 0;
 
 	if (ctx->ctrl_handler.error) {

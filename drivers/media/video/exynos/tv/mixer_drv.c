@@ -624,6 +624,46 @@ static int mxr_s_power(struct v4l2_subdev *sd, int on)
 	return 0;
 }
 
+/* When mixer is connected to gscaler through local path, only gscaler's
+ * video device can command alpha blending functionality for mixer */
+static int mxr_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+{
+	struct mxr_device *mdev = sd_to_mdev(sd);
+	int v = ctrl->value;
+	int num = 0;
+
+	mxr_dbg(mdev, "%s start\n", __func__);
+	mxr_dbg(mdev, "id = %d, value = %d\n", ctrl->id, ctrl->value);
+
+	if (!strcmp(sd->name, "s5p-mixer0"))
+		num = MXR_SUB_MIXER0;
+	else if (!strcmp(sd->name, "s5p-mixer1"))
+		num = MXR_SUB_MIXER1;
+
+	switch (ctrl->id) {
+	case V4L2_CID_TV_LAYER_BLEND_ENABLE:
+		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->layer_blend_en = v;
+		break;
+	case V4L2_CID_TV_LAYER_BLEND_ALPHA:
+		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->layer_alpha = (u32)v;
+		break;
+	case V4L2_CID_TV_PIXEL_BLEND_ENABLE:
+		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->pixel_blend_en = v;
+		break;
+	case V4L2_CID_TV_CHROMA_ENABLE:
+		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->chroma_en = v;
+		break;
+	case V4L2_CID_TV_CHROMA_VALUE:
+		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->chroma_val = (u32)v;
+		break;
+	default:
+		mxr_err(mdev, "invalid control id\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int mxr_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct mxr_device *mdev = sd_to_mdev(sd);
@@ -931,6 +971,7 @@ static int mxr_get_crop(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
 
 static const struct v4l2_subdev_core_ops mxr_sd_core_ops = {
 	.s_power = mxr_s_power,
+	.s_ctrl = mxr_s_ctrl,
 };
 
 static const struct v4l2_subdev_video_ops mxr_sd_video_ops = {
