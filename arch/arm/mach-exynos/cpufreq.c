@@ -132,12 +132,12 @@ static int exynos_target(struct cpufreq_policy *policy,
 	if ((freqs.new > freqs.old) && !safe_arm_volt) {
 		/* Firstly, voltage up to increase frequency */
 		regulator_set_voltage(arm_regulator, arm_volt,
-				arm_volt + 25000);
+				     arm_volt + 25000);
 	}
 
 	if (safe_arm_volt)
 		regulator_set_voltage(arm_regulator, safe_arm_volt,
-				      safe_arm_volt + 25000);
+				     safe_arm_volt + 25000);
 	if (freqs.new != freqs.old)
 		exynos_info->set_freq(old_index, index);
 
@@ -148,7 +148,7 @@ static int exynos_target(struct cpufreq_policy *policy,
 	   ((freqs.new > freqs.old) && safe_arm_volt)) {
 		/* down the voltage after frequency change */
 		regulator_set_voltage(arm_regulator, arm_volt,
-				arm_volt + 25000);
+				     arm_volt + 25000);
 	}
 
 out:
@@ -247,11 +247,11 @@ int exynos_cpufreq_lock(unsigned int nId,
 		safe_arm_volt = exynos_get_safe_armvolt(old_idx, cpufreq_level);
 		if (safe_arm_volt)
 			regulator_set_voltage(arm_regulator, safe_arm_volt,
-							safe_arm_volt);
+					     safe_arm_volt + 25000);
 
 		arm_volt = volt_table[cpufreq_level];
 		regulator_set_voltage(arm_regulator, arm_volt,
-				arm_volt + 25000);
+				     arm_volt + 25000);
 
 		exynos_info->set_freq(old_idx, cpufreq_level);
 		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
@@ -339,10 +339,10 @@ int exynos_cpufreq_upper_limit(unsigned int nId,
 		safe_arm_volt = exynos_get_safe_armvolt(old_idx, cpufreq_level);
 		if (safe_arm_volt)
 			regulator_set_voltage(arm_regulator, safe_arm_volt,
-							safe_arm_volt);
+					     safe_arm_volt + 25000);
 
 		arm_volt = volt_table[cpufreq_level];
-		regulator_set_voltage(arm_regulator, arm_volt, arm_volt);
+		regulator_set_voltage(arm_regulator, arm_volt, arm_volt + 25000);
 
 		cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 	}
