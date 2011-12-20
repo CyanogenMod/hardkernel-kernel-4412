@@ -116,6 +116,7 @@ void __init s3c_fimc1_set_platdata(struct s3c_platform_fimc *pd)
 			npd->clk_off = s3c_fimc_clk_off;
 
 		npd->hw_ver = 0x51;
+		npd->use_cam = false;
 		s3c_device_fimc1.dev.platform_data = npd;
 	}
 }
