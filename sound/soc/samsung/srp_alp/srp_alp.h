@@ -24,6 +24,7 @@
 #define OBUF_OFFSET	(0x4)
 #define IBUF_NUM	(0x2)
 #define OBUF_NUM	(0x2)
+#define START_THRESHOLD	(IBUF_SIZE * 3)
 
 /* Commbox & Etc information */
 #define COMMBOX_SIZE	(0x2000)
@@ -103,7 +104,6 @@ struct srp_info {
 	unsigned char	*wbuf;			/* Temporatry BUF VA */
 	unsigned long	wbuf_pos;		/* Write pointer */
 	unsigned long	wbuf_fill_size;		/* Total size by user write() */
-	unsigned int	wbuf_ready;
 
 	unsigned int ibuf_next;
 	unsigned int ibuf_empty[2];

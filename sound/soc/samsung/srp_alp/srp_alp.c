@@ -181,7 +181,6 @@ static void srp_reset(void)
 
 	srp.wbuf_pos = 0;
 	srp.wbuf_fill_size = 0;
-	srp.wbuf_ready = 0;
 
 	srp.set_bitstream_size = 0;
 	srp.stop_after_eos = 0;
@@ -241,7 +240,7 @@ static void srp_fill_ibuf(void)
 static ssize_t srp_write(struct file *file, const char *buffer,
 					size_t size, loff_t *pos)
 {
-	unsigned long bufferred_size = 0;
+	unsigned long start_threshold = 0;
 	unsigned int pending_off = 0;
 	ssize_t ret = 0;
 
@@ -251,6 +250,7 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 		&& srp.obuf_copy_done[srp.obuf_ready]) {
 		srp.obuf_fill_done[srp.obuf_ready] = 0;
 		srp.obuf_copy_done[srp.obuf_ready] = 0;
+
 		srp_debug("Decoding start for filling OBUF[%d]\n", srp.obuf_ready);
 
 		srp.obuf_ready = srp.obuf_ready ? 0 : 1;
@@ -273,18 +273,13 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 	srp.wbuf_pos += size;
 	srp.wbuf_fill_size += size;
 
-	if (!srp.wbuf_ready)
-		bufferred_size = srp.ibuf_size * 3;
-	else
-		bufferred_size = srp.ibuf_size;
+	start_threshold = srp.decoding_started
+			? srp.ibuf_size : START_THRESHOLD;
 
-	if (srp.wbuf_pos < bufferred_size) {
+	if (srp.wbuf_pos < start_threshold) {
 		ret = size;
 		goto exit_func;
 	}
-
-	if (!srp.wbuf_ready)
-		srp.wbuf_ready = 1;
 
 	mutex_lock(&srp_mutex);
 	if (srp.save_ibuf_empty) {
@@ -303,7 +298,8 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 exit_func:
 	if (pending_off) {
 		srp_pending_ctrl(RUN);
-		srp.decoding_started = 1;
+		if (!srp.decoding_started)
+			srp.decoding_started = 1;
 	}
 
 	return ret;
