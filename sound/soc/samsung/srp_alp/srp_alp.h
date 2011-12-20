@@ -109,6 +109,7 @@ struct srp_info {
 	unsigned int ibuf_empty[2];
 
 	unsigned int obuf_fill_done[2];
+	unsigned int obuf_copy_done[2];
 	unsigned int obuf_ready;
 	unsigned int obuf_next;
 

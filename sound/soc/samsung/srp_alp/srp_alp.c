@@ -176,6 +176,8 @@ static void srp_reset(void)
 	srp.obuf_ready = 0;
 	srp.obuf_fill_done[0] = 0;
 	srp.obuf_fill_done[1] = 0;
+	srp.obuf_copy_done[0] = 0;
+	srp.obuf_copy_done[1] = 0;
 
 	srp.wbuf_pos = 0;
 	srp.wbuf_fill_size = 0;
@@ -245,8 +247,10 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 
 	srp_debug("Write(%d bytes)\n", size);
 
-	if (srp.obuf_fill_done[srp.obuf_ready]) {
+	if (srp.obuf_fill_done[srp.obuf_ready]
+		&& srp.obuf_copy_done[srp.obuf_ready]) {
 		srp.obuf_fill_done[srp.obuf_ready] = 0;
+		srp.obuf_copy_done[srp.obuf_ready] = 0;
 		srp_debug("Decoding start for filling OBUF[%d]\n", srp.obuf_ready);
 
 		srp.obuf_ready = srp.obuf_ready ? 0 : 1;
@@ -364,6 +368,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	if (srp.is_pending == STALL)
 		writel(0x0, srp.commbox + SRP_PCM_DUMP_ADDR);
 
+	srp.obuf_copy_done[srp.obuf_ready] = 1;
 	srp.old_pcm_size = srp.pcm_info.size;
 	srp.pcm_info.size = 0;
 	srp.wakeup_read_wq = 0;
