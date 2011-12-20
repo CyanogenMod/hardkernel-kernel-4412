@@ -468,6 +468,23 @@ unsigned int exynos5250_get_int_volt(unsigned long index)
 	return exynos5250_int_volt[asv_group_index][index];
 }
 
+struct opp *exynos5250_monitor(struct busfreq_data *data)
+{
+	struct opp *opp = data->curr_opp;
+	unsigned long lockfreq;
+	unsigned long newfreq = opp_get_freq(data->max_opp);
+
+	ppmu_update(data->dev);
+
+	lockfreq = dev_max_freq(data->dev);
+
+	newfreq = max(lockfreq, newfreq);
+
+	opp = opp_find_freq_ceil(data->dev, &newfreq);
+
+	return opp;
+}
+
 int exynos5250_init(struct device *dev, struct busfreq_data *data)
 {
 	unsigned int i;

@@ -57,6 +57,7 @@ struct busfreq_data {
 	struct notifier_block exynos_request_notifier;
 	struct attribute_group busfreq_attr_group;
 	int (*init)	(struct device *dev, struct busfreq_data *data);
+	struct opp *(*monitor)(struct busfreq_data *data);
 	unsigned int (*target)	(unsigned int index);
 	unsigned int (*get_int_volt) (unsigned long freq);
 	unsigned int (*get_table_index) (struct opp *opp);
@@ -72,12 +73,14 @@ struct busfreq_table {
 };
 
 void exynos_request_apply(unsigned long freq, struct device *dev);
+struct opp *step_down(struct busfreq_data *data, int step);
 
 #if defined(CONFIG_ARCH_EXYNOS5)
 int exynos5250_init(struct device *dev, struct busfreq_data *data);
 unsigned int exynos5250_target(unsigned int index);
 unsigned int exynos5250_get_int_volt(unsigned long freq);
 unsigned int exynos5250_get_table_index(struct opp *opp);
+struct opp *exynos5250_monitor(struct busfreq_data *data);
 static inline int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 {
 	return 0;
@@ -96,6 +99,10 @@ static inline unsigned int exynos4x12_get_int_volt(unsigned long freq)
 static inline unsigned int exynos4x12_get_table_index(struct opp *opp)
 {
 	return 0;
+}
+static inline struct opp *exynos4x12_monitor(struct busfreq_data *data)
+{
+	return NULL;
 }
 #elif defined(CONFIG_ARCH_EXYNOS4)
 static inline int exynos5250_init(struct device *dev, struct busfreq_data *data)
@@ -118,9 +125,14 @@ static inline unsigned int exynos5250_get_table_index(struct opp *opp)
 	return 0;
 }
 
+static inline struct opp *exynos5250_monitor(struct busfreq_data *data)
+{
+	return NULL;
+}
 int exynos4x12_init(struct device *dev, struct busfreq_data *data);
 unsigned int exynos4x12_target(unsigned int index);
 unsigned int exynos4x12_get_int_volt(unsigned long freq);
 unsigned int exynos4x12_get_table_index(struct opp *opp);
+struct opp *exynos4x12_monitor(struct busfreq_data *data);
 #endif
 #endif /* __ASM_ARCH_BUSFREQ_H */

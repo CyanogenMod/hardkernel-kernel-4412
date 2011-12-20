@@ -87,7 +87,7 @@ static struct opp __maybe_unused *step_up(struct busfreq_data *data, int step)
 	return opp;
 }
 
-static struct opp *step_down(struct busfreq_data *data, int step)
+struct opp *step_down(struct busfreq_data *data, int step)
 {
 	int i;
 	struct opp *opp = data->curr_opp;
@@ -107,75 +107,6 @@ static struct opp *step_down(struct busfreq_data *data, int step)
 	return opp;
 }
 
-static struct opp *busfreq_monitor(struct busfreq_data *data)
-{
-	struct opp *opp = data->curr_opp;
-	int i;
-	unsigned int cpu_load_average = 0;
-	unsigned int dmc0_load_average = 0;
-	unsigned int dmc1_load_average = 0;
-	unsigned long lockfreq;
-	unsigned long dmc0freq;
-	unsigned long dmc1freq;
-	unsigned long newfreq;
-	unsigned long currfreq = opp_get_freq(data->curr_opp) / 1000;
-	unsigned long maxfreq = opp_get_freq(data->max_opp) / 1000;
-	unsigned long cpu_load;
-	unsigned long dmc0_load;
-	unsigned long dmc1_load;
-
-	ppmu_update(data->dev);
-
-	/* Convert from base xxx to base maxfreq */
-	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * currfreq, maxfreq);
-	dmc0_load = div64_u64(ppmu_load[PPMU_DMC0] * currfreq, maxfreq);
-	dmc1_load = div64_u64(ppmu_load[PPMU_DMC1] * currfreq, maxfreq) - cpu_load;
-
-	data->load_history[PPMU_CPU][data->index] = cpu_load;
-	data->load_history[PPMU_DMC0][data->index] = dmc0_load;
-	data->load_history[PPMU_DMC1][data->index++] = dmc1_load;
-
-	if (data->index >= LOAD_HISTORY_SIZE)
-		data->index = 0;
-
-	for (i = 0; i < LOAD_HISTORY_SIZE; i++) {
-		cpu_load_average += data->load_history[PPMU_CPU][i];
-		dmc0_load_average += data->load_history[PPMU_DMC0][i];
-		dmc1_load_average += data->load_history[PPMU_DMC1][i];
-	}
-
-	/* Calculate average Load */
-	cpu_load_average /= LOAD_HISTORY_SIZE;
-	dmc0_load_average /= LOAD_HISTORY_SIZE;
-	dmc1_load_average /= LOAD_HISTORY_SIZE;
-
-	if (dmc0_load >= DMC0_MAX_THRESHOLD || dmc1_load >= DMC1_MAX_THRESHOLD) {
-		newfreq = opp_get_freq(data->max_opp);
-	} else if (dmc0_load < IDLE_THRESHOLD
-			&& dmc1_load < IDLE_THRESHOLD) {
-		if (dmc0_load_average < IDLE_THRESHOLD &&  dmc1_load_average < IDLE_THRESHOLD)
-			opp = step_down(data, 1);
-		else
-			opp = data->curr_opp;
-		newfreq = opp_get_freq(opp);
-	} else {
-		dmc0freq = div64_u64(opp_get_freq(data->max_opp) * dmc0_load, DMC0_MAX_THRESHOLD);
-		dmc1freq = div64_u64(opp_get_freq(data->max_opp) * dmc1_load, DMC1_MAX_THRESHOLD);
-		newfreq = max(dmc0freq, dmc1freq);
-	}
-
-	lockfreq = dev_max_freq(data->dev);
-
-	newfreq = max(lockfreq, newfreq);
-
-	opp = opp_find_freq_ceil(data->dev, &newfreq);
-
-	if (bus_ctrl.opp_lock)
-		opp = bus_ctrl.opp_lock;
-
-	return opp;
-}
-
 static void exynos_busfreq_timer(struct work_struct *work)
 {
 	struct delayed_work *delayed_work = to_delayed_work(work);
@@ -187,7 +118,10 @@ static void exynos_busfreq_timer(struct work_struct *work)
 	unsigned long newfreq;
 	unsigned int index = 0;
 
-	opp = busfreq_monitor(data);
+	opp = data->monitor(data);
+
+	if (bus_ctrl.opp_lock)
+		opp = bus_ctrl.opp_lock;
 
 	ppmu_start(data->dev);
 
@@ -460,11 +394,13 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 		data->target = exynos5250_target;
 		data->get_int_volt = exynos5250_get_int_volt;
 		data->get_table_index = exynos5250_get_table_index;
+		data->monitor = exynos5250_monitor;
 	} else {
 		data->init = exynos4x12_init;
 		data->target = exynos4x12_target;
 		data->get_int_volt = exynos4x12_get_int_volt;
 		data->get_table_index = exynos4x12_get_table_index;
+		data->monitor = exynos4x12_monitor;
 	}
 
 	data->dev = &pdev->dev;
