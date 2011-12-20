@@ -378,29 +378,25 @@ unsigned int exynos4x12_get_table_index(struct opp *opp)
 
 void exynos4x12_prepare(unsigned int index)
 {
-	unsigned int timing0, timing1;
+	unsigned int timing0;
 
 	timing0 = __raw_readl(S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	timing1 = __raw_readl(S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	timing0 |= exynos4x12_timingrow[index];
-	timing1 |= exynos4x12_timingrow[index];
 	__raw_writel(timing0, S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	__raw_writel(timing1, S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC0 + TIMINGROW_OFFSET);
+	__raw_writel(timing0, S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
 }
 
 void exynos4x12_post(unsigned int index)
 {
-	unsigned int timing0, timing1;
+	unsigned int timing0;
 
 	timing0 = __raw_readl(S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	timing1 = __raw_readl(S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	timing0 |= exynos4x12_timingrow[index];
-	timing1 |= exynos4x12_timingrow[index];
 	__raw_writel(timing0, S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	__raw_writel(timing1, S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC0 + TIMINGROW_OFFSET);
+	__raw_writel(timing0, S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
 }
 

@@ -147,7 +147,7 @@ static inline struct opp *exynos5250_monitor(struct busfreq_data *data)
 	return NULL;
 }
 
-static inline void exynos5250_prepare(unsigned int index);
+static inline void exynos5250_prepare(unsigned int index)
 {
 	return;
 }
