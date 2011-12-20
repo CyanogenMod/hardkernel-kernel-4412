@@ -589,17 +589,9 @@ int fimc_release_subdev(struct fimc_control *ctrl)
 		ctrl->cam->initialized = 0;
 		ctrl->cam = NULL;
 		fimc->active_camera = -1;
-	} else if (ctrl->cam->sd) {
-		client = v4l2_get_subdevdata(ctrl->cam->sd);
-		i2c_unregister_device(client);
-		ctrl->cam->sd = NULL;
-
-		ctrl->cam->initialized = 0;
-		ctrl->cam = NULL;
-		fimc->active_camera = -1;
 	}
 
-	if (ctrl->flite_sd) {
+	if (ctrl->flite_sd && fimc_cam_use) {
 		ret = v4l2_subdev_call(ctrl->flite_sd, core, s_power, 0);
 		if (ret)
 			fimc_err("s_power failed: %d", ret);
@@ -899,10 +891,9 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 	    }
 	    /* fimc-is attatch */
 	    ctrl->is.sd = fimc_is_get_subdev(i);
-	    if (IS_ERR_OR_NULL(ctrl->is.sd)) {
-		    ctrl->is.sd = NULL;
+	    if (IS_ERR_OR_NULL(ctrl->is.sd))
 		    return -ENODEV;
-	    }
+
 	    ctrl->is.fmt.width = ctrl->cam->width;
 	    ctrl->is.fmt.height = ctrl->cam->height;
 	    ctrl->is.frame_count = 0;
@@ -1739,19 +1730,19 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		break;
 
 	case V4L2_CID_IS_LOAD_FW:
-		if (ctrl->is.sd)
+		if (ctrl->is.sd && fimc_cam_use)
 			ret = v4l2_subdev_call(ctrl->is.sd, core, s_power, c->value);
 		break;
 	case V4L2_CID_IS_RESET:
-		if (ctrl->is.sd)
+		if (ctrl->is.sd && fimc_cam_use)
 			ret = v4l2_subdev_call(ctrl->is.sd, core, reset, c->value);
 		break;
 	case V4L2_CID_IS_S_POWER:
-		if (ctrl->is.sd)
+		if (ctrl->is.sd && fimc_cam_use)
 			ret = v4l2_subdev_call(ctrl->is.sd, core, s_power, c->value);
 		break;
 	case V4L2_CID_IS_S_STREAM:
-		if (ctrl->is.sd)
+		if (ctrl->is.sd && fimc_cam_use)
 			ret = v4l2_subdev_call(ctrl->is.sd, video, s_stream, c->value);
 		break;
 	case V4L2_CID_CACHEABLE:
