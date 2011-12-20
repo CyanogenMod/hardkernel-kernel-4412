@@ -79,7 +79,7 @@ static void gsc_m2m_job_abort(void *priv)
 }
 
 void gsc_check_src_scale_info(struct gsc_variant *var, struct gsc_frame *s_frame,
-			      u32 *wratio, struct gsc_frame *d_frame, u32 *hratio)
+			      u32 *wratio, u32 tx, u32 ty, u32 *hratio)
 {
 	int remainder = 0, walign, halign;
 
@@ -97,8 +97,7 @@ void gsc_check_src_scale_info(struct gsc_variant *var, struct gsc_frame *s_frame
 	remainder = s_frame->crop.width % (*wratio * walign);
 	if (remainder) {
 		s_frame->crop.width -= remainder;
-		gsc_cal_prescaler_ratio(var, s_frame->crop.width,
-					d_frame->crop.width, wratio);
+		gsc_cal_prescaler_ratio(var, s_frame->crop.width, tx, wratio);
 		gsc_dbg("cropped src width size is recalculated from %d to %d",
 			s_frame->crop.width + remainder, s_frame->crop.width);
 	}
@@ -106,8 +105,7 @@ void gsc_check_src_scale_info(struct gsc_variant *var, struct gsc_frame *s_frame
 	remainder = s_frame->crop.height % (*hratio * halign);
 	if (remainder) {
 		s_frame->crop.height -= remainder;
-		gsc_cal_prescaler_ratio(var, s_frame->crop.height,
-					d_frame->crop.height, hratio);
+		gsc_cal_prescaler_ratio(var, s_frame->crop.height, ty, hratio);
 		gsc_dbg("cropped src height size is recalculated from %d to %d",
 			s_frame->crop.height + remainder, s_frame->crop.height);
 	}
@@ -119,6 +117,7 @@ int gsc_set_scaler_info(struct gsc_ctx *ctx)
 	struct gsc_frame *s_frame = &ctx->s_frame;
 	struct gsc_frame *d_frame = &ctx->d_frame;
 	struct gsc_variant *variant = ctx->gsc_dev->variant;
+	int tx, ty;
 	int ret;
 
 	ret = gsc_check_scale_size(ctx);
@@ -128,35 +127,46 @@ int gsc_set_scaler_info(struct gsc_ctx *ctx)
 	}
 
 	ret = gsc_check_scaler_ratio(variant, s_frame->crop.width,
-		s_frame->crop.height, d_frame->crop.width, d_frame->crop.height);
+		s_frame->crop.height, d_frame->crop.width, d_frame->crop.height,
+		ctx->ctrl_val.rot);
 	if (ret) {
 		gsc_err("out of scaler range");
 		return ret;
 	}
 
+	if (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270) {
+		ty = d_frame->crop.width;
+		tx = d_frame->crop.height;
+	} else {
+		tx = d_frame->crop.width;
+		ty = d_frame->crop.height;
+	}
+
 	ret = gsc_cal_prescaler_ratio(variant, s_frame->crop.width,
-				      d_frame->crop.width, &sc->pre_hratio);
+				      tx, &sc->pre_hratio);
 	if (ret) {
 		gsc_err("Horizontal scale ratio is out of range");
 		return ret;
 	}
 
 	ret = gsc_cal_prescaler_ratio(variant, s_frame->crop.height,
-				      d_frame->crop.height, &sc->pre_vratio);
+				      ty, &sc->pre_vratio);
 	if (ret) {
 		gsc_err("Vertical scale ratio is out of range");
 		return ret;
 	}
 
 	gsc_check_src_scale_info(variant, s_frame, &sc->pre_hratio,
-				 d_frame, &sc->pre_vratio);
+				 tx, ty, &sc->pre_vratio);
 
 	gsc_get_prescaler_shfactor(sc->pre_hratio, sc->pre_vratio,
 				   &sc->pre_shfactor);
 
-	sc->main_hratio = (s_frame->crop.width << 16 ) / d_frame->crop.width;
-	sc->main_vratio = (s_frame->crop.height << 16) / d_frame->crop.height;
+	sc->main_hratio = (s_frame->crop.width << 16) / tx;
+	sc->main_vratio = (s_frame->crop.height << 16) / ty;
 
+	gsc_dbg("scaler input/output size : sx = %d, sy = %d, tx = %d, ty = %d",
+		s_frame->crop.width, s_frame->crop.height, tx, ty);
 	gsc_dbg("scaler ratio info : pre_shfactor : %d, pre_h : %d, pre_v :%d,\
 		main_h : %d, main_v : %d", sc->pre_shfactor, sc->pre_hratio,
 		sc->pre_vratio, sc->main_hratio, sc->main_vratio);
@@ -541,11 +551,12 @@ static int gsc_m2m_s_crop(struct file *file, void *fh, struct v4l2_crop *cr)
 		if (cr->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 			ret = gsc_check_scaler_ratio(variant, cr->c.width,
 					cr->c.height, ctx->d_frame.crop.width,
-					ctx->d_frame.crop.height);
+					ctx->d_frame.crop.height,
+					ctx->ctrl_val.rot);
 		} else {
 			ret = gsc_check_scaler_ratio(variant, ctx->s_frame.crop.width,
 					ctx->s_frame.crop.height, cr->c.width,
-					cr->c.height);
+					cr->c.height, ctx->ctrl_val.rot);
 		}
 		if (ret) {
 			gsc_err("Out of scaler range");

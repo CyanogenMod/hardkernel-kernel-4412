@@ -446,8 +446,13 @@ void gsc_hw_set_out_size(struct gsc_ctx *ctx)
 	}
 
 	/* Set output scaled size */
-	cfg = GSC_SCALED_WIDTH(frame->crop.width);
-	cfg |= GSC_SCALED_HEIGHT(frame->crop.height);
+	if (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270) {
+		cfg = GSC_SCALED_WIDTH(frame->crop.height);
+		cfg |= GSC_SCALED_HEIGHT(frame->crop.width);
+	} else {
+		cfg = GSC_SCALED_WIDTH(frame->crop.width);
+		cfg |= GSC_SCALED_HEIGHT(frame->crop.height);
+	}
 	writel(cfg, dev->regs + GSC_SCALED_SIZE);
 }
 

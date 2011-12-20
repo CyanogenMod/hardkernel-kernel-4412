@@ -55,11 +55,21 @@ int gsc_out_hw_reset_off (struct gsc_dev *gsc)
 }
 
 int gsc_out_check_scaler_ratio(struct gsc_variant *var, int sw, int sh,
-			       int dw, int dh)
+			       int dw, int dh, int rot)
 {
-	if (((sw * sh) / (dw * dh)) > var->local_sc_down ||
-	    (dw / sw) > var->sc_up_max ||
-	    (dh / sh) > var->sc_up_max)
+	int tmp_w, tmp_h;
+
+	if (rot == 90 || rot == 270) {
+		tmp_w = dh;
+		tmp_h = dw;
+	} else {
+		tmp_w = dw;
+		tmp_h = dh;
+	}
+
+	if (((sw * sh) / (tmp_w * tmp_h)) > var->local_sc_down ||
+	    (tmp_w / sw) > var->sc_up_max ||
+	    (tmp_h / sh) > var->sc_up_max)
 		return -EINVAL;
 
 	return 0;
@@ -71,6 +81,7 @@ int gsc_out_set_scaler_info(struct gsc_ctx *ctx)
 	struct gsc_frame *s_frame = &ctx->s_frame;
 	struct gsc_frame *d_frame = &ctx->d_frame;
 	struct gsc_variant *variant = ctx->gsc_dev->variant;
+	int tx, ty;
 	int ret;
 
 	ret = gsc_check_scale_size(ctx);
@@ -81,17 +92,25 @@ int gsc_out_set_scaler_info(struct gsc_ctx *ctx)
 
 	ret = gsc_out_check_scaler_ratio(variant, s_frame->crop.width,
 					 s_frame->crop.height, d_frame->crop.width,
-					 d_frame->crop.height);
+					 d_frame->crop.height, ctx->ctrl_val.rot);
 	if (ret) {
 		gsc_err("Out of scaler range");
 		return ret;
 	}
 
+	if (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270) {
+		ty = d_frame->crop.width;
+		tx = d_frame->crop.height;
+	} else {
+		tx = d_frame->crop.width;
+		ty = d_frame->crop.height;
+	}
+
 	sc->pre_hratio = 1;
 	sc->pre_vratio = 1;
 	sc->pre_shfactor = 0;
-	sc->main_hratio = (s_frame->crop.width << 16 ) / d_frame->crop.width;
-	sc->main_vratio = (s_frame->crop.height << 16) / d_frame->crop.height;
+	sc->main_hratio = (s_frame->crop.width << 16 ) / tx;
+	sc->main_vratio = (s_frame->crop.height << 16) / ty;
 
 	return 0;
 }
@@ -132,7 +151,7 @@ void gsc_subdev_try_size(struct gsc_dev *gsc, struct v4l2_rect *cr,
 {
 	struct gsc_variant *variant = gsc->variant;
 	u32 max_width, max_height, min_w, min_h;
-	u32 *width, *height;
+	u32 tmp_w, tmp_h;
 
 	max_width = variant->pix_max->org_scaler_input_w;
 	max_height = variant->pix_max->org_scaler_input_h;
@@ -142,18 +161,31 @@ void gsc_subdev_try_size(struct gsc_dev *gsc, struct v4l2_rect *cr,
 	     min_w, min_h, max_width, max_height);
 
 	if (mf == NULL) {
-		width = &cr->width;
-		height = &cr->height;
+		if (gsc->out.ctx->ctrl_val.rot == 90 ||
+		    gsc->out.ctx->ctrl_val.rot == 270) {
+			tmp_w = cr->height;
+			tmp_h = cr->width;
+		} else {
+			tmp_w = cr->width;
+			tmp_h = cr->height;
+		}
 	} else {
-		width = &mf->width;
-		height = &mf->height;
+		tmp_w = mf->width;
+		tmp_h = mf->height;
 	}
 
-	v4l_bound_align_image(width, min_w, max_width, 0,
-		height, min_h, max_height, 0, 0);
+	v4l_bound_align_image(&tmp_w, min_w, max_width, 0,
+			      &tmp_h, min_h, max_height, 0, 0);
 
-	gsc_dbg("Aligned w: %d, h: %d", *width, *height);
-
+	if (mf == NULL) {
+		if (gsc->out.ctx->ctrl_val.rot == 90 ||
+		    gsc->out.ctx->ctrl_val.rot == 270)
+			gsc_check_crop_change(tmp_h, tmp_w, &cr->width, &cr->height);
+		else
+			gsc_check_crop_change(tmp_w, tmp_h, &cr->width, &cr->height);
+	} else {
+		gsc_check_crop_change(tmp_w, tmp_h, &mf->width, &mf->height);
+	}
 }
 
 static int gsc_subdev_get_fmt(struct v4l2_subdev *sd,
@@ -575,7 +607,8 @@ static int gsc_output_s_crop(struct file *file, void *fh, struct v4l2_crop *cr)
 	if ((ctx->state & (GSC_DST_FMT | GSC_SRC_FMT)) == mask) {
 		ret = gsc_out_check_scaler_ratio(variant, f->crop.width,
 				f->crop.height, ctx->d_frame.crop.width,
-				ctx->d_frame.crop.height);
+				ctx->d_frame.crop.height,
+				ctx->ctrl_val.rot);
 		if (ret) {
 			gsc_err("Out of scaler range");
 			return -EINVAL;
@@ -657,6 +690,8 @@ static int gsc_out_stop_streaming(struct vb2_queue *q)
 			return ret;
 	}
 	gsc_hw_set_input_buf_mask_all(gsc);
+	/* FIXME: Remove this code after modifying gscaler s_ctrl */
+	ctx->ctrl_val.rot = 0;
 
 	/* TODO: Add gscaler clock off function */
 	ret = gsc_out_video_s_stream(gsc, 0);

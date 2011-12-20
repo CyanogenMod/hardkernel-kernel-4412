@@ -417,6 +417,16 @@ int gsc_g_fmt_mplane(struct gsc_ctx *ctx, struct v4l2_format *f)
 	return 0;
 }
 
+void gsc_check_crop_change(u32 tmp_w, u32 tmp_h, u32 *w, u32 *h)
+{
+	if (tmp_w != *w || tmp_h != *h) {
+		gsc_info("Image cropped size has been modified from %dx%d to %dx%d",
+				*w, *h, tmp_w, tmp_h);
+		*w = tmp_w;
+		*h = tmp_h;
+	}
+}
+
 int gsc_g_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 {
 	struct gsc_frame *frame;
@@ -453,6 +463,8 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 
 	max_w = f->f_width;
 	max_h = f->f_height;
+	tmp_w = cr->c.width;
+	tmp_h = cr->c.height;
 
 	if (V4L2_TYPE_IS_OUTPUT(cr->type)) {
 		if ((is_yuv422(f->fmt->color) && f->fmt->nr_comp == 1) ||
@@ -475,27 +487,30 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 		if (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270) {
 			max_w = f->f_height;
 			max_h = f->f_width;
+			tmp_w = cr->c.height;
+			tmp_h = cr->c.width;
 		}
 	}
-	gsc_dbg("mod_x: %d, mod_y: %d, min_w: %d, min_h = %d",
-	     mod_x, mod_y, min_w, min_h);
-	/* To check if croppd image size is modified to adjust parameter\
-	   against hardware abilities */
-	tmp_w = cr->c.width;
-	tmp_h = cr->c.height;
+	gsc_dbg("mod_x: %d, mod_y: %d, min_w: %d, min_h = %d,\
+		tmp_w : %d, tmp_h : %d",
+		mod_x, mod_y, min_w, min_h, tmp_w, tmp_h);
 
-	v4l_bound_align_image(&cr->c.width, min_w, max_w, mod_x,
-			      &cr->c.height, min_h, max_h, mod_y, 0);
-	if (tmp_w != cr->c.width || tmp_h != cr->c.height)
-		gsc_info("Image cropped size has been modified from %dx%d to %dx%d",
-			 tmp_w, tmp_h, cr->c.width, cr->c.height);
+	v4l_bound_align_image(&tmp_w, min_w, max_w, mod_x,
+			      &tmp_h, min_h, max_h, mod_y, 0);
+
+	if (!V4L2_TYPE_IS_OUTPUT(cr->type) &&
+	   (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270)) {
+		gsc_check_crop_change(tmp_h, tmp_w, &cr->c.width, &cr->c.height);
+	} else {
+		gsc_check_crop_change(tmp_w, tmp_h, &cr->c.width, &cr->c.height);
+	}
 
 	/* adjust left/top if cropping rectangle is out of bounds */
 	/* Need to add code to algin left value with 2's multiple */
-	if (cr->c.left + cr->c.width > max_w)
-		cr->c.left = max_w - cr->c.width;
-	if (cr->c.top + cr->c.height > max_h)
-		cr->c.top = max_h - cr->c.height;
+	if (cr->c.left + tmp_w > max_w)
+		cr->c.left = max_w - tmp_w;
+	if (cr->c.top + tmp_h > max_h)
+		cr->c.top = max_h - tmp_h;
 
 	if (is_yuv420(f->fmt->color) || is_yuv422(f->fmt->color))
 		if (cr->c.left % 2)
@@ -507,12 +522,23 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 	return 0;
 }
 
-int gsc_check_scaler_ratio(struct gsc_variant *var, int sw, int sh, int dw, int dh)
+int gsc_check_scaler_ratio(struct gsc_variant *var, int sw, int sh, int dw,
+			   int dh, int rot)
 {
-	if ((sw / dw) > var->sc_down_max ||
-	    (sh / dh) > var->sc_down_max ||
-	    (dw / sw) > var->sc_up_max ||
-	    (dh / sh) > var->sc_up_max)
+	int tmp_w, tmp_h;
+
+	if (rot == 90 || rot == 270) {
+		tmp_w = dh;
+		tmp_h = dw;
+	} else {
+		tmp_w = dw;
+		tmp_h = dh;
+	}
+
+	if ((sw / tmp_w) > var->sc_down_max ||
+	    (sh / tmp_h) > var->sc_down_max ||
+	    (tmp_w / sw) > var->sc_up_max ||
+	    (tmp_h / sh) > var->sc_up_max)
 		return -EINVAL;
 
 	return 0;
@@ -538,7 +564,6 @@ int gsc_out_link_validate(const struct media_pad *source,
 	struct v4l2_subdev *sd;
 	struct gsc_dev *gsc;
 	struct gsc_frame *f;
-	int dst_width, dst_height;
 	int ret;
 
 	if (media_entity_type(source->entity) != MEDIA_ENT_T_V4L2_SUBDEV ||
@@ -566,16 +591,8 @@ int gsc_out_link_validate(const struct media_pad *source,
 		return -EPIPE;
 	}
 
-	if (gsc->out.ctx->ctrl_val.rot == 90 || gsc->out.ctx->ctrl_val.rot == 270) {
-		dst_width = dst_crop.rect.height;
-		dst_height = dst_crop.rect.width;
-	} else {
-		dst_width = dst_crop.rect.width;
-		dst_height = dst_crop.rect.height;
-	}
-
-	if (src_fmt.format.width != dst_width ||
-	    src_fmt.format.height != dst_height) {
+	if (src_fmt.format.width != dst_crop.rect.width ||
+	    src_fmt.format.height != dst_crop.rect.height) {
 		gsc_err("sink and source format is different\
 			src_fmt.w = %d, src_fmt.h = %d,\
 			dst_crop.w = %d, dst_crop.h = %d, rotation = %d",
