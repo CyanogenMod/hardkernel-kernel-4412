@@ -58,7 +58,6 @@ struct vb2_ion_buf {
 	struct vb2_vmarea_handler	handler;
 
 	struct ion_handle		*handle;	/* Kernel space */
-	int				fd;		/* User space */
 
 	dma_addr_t			kva;
 	dma_addr_t			dva;
@@ -279,17 +278,6 @@ static void *vb2_ion_alloc(void *alloc_ctx, unsigned long size)
 		}
 	}
 
-	/* Create fd for ion_buffer */
-	buf->fd = ion_share_fd(conf->client, buf->handle);
-	if (buf->fd < 0) {
-		if (conf->use_mmu)
-			iovmm_unmap(conf->dev, buf->dva);
-
-		pr_err("ion_share_fd: conf->name(%s)\n", conf->name);
-		ret = -EINVAL;
-		goto err_ion_share;
-	}
-
 	/* Set struct vb2_vmarea_handler */
 	buf->handler.refcount = &buf->ref;
 	buf->handler.put = vb2_ion_put;
@@ -299,7 +287,6 @@ static void *vb2_ion_alloc(void *alloc_ctx, unsigned long size)
 
 	return buf;
 
-err_ion_share:	/* fall through */
 err_ion_map_dva:
 	ion_unmap_dma(conf->client, buf->handle);
 
@@ -320,8 +307,6 @@ static void vb2_ion_put(void *buf_priv)
 	dbg(6, "released: buf_refcnt(%d)\n", atomic_read(&buf->ref) - 1);
 
 	if (atomic_dec_and_test(&buf->ref)) {
-		sys_close(buf->fd);
-
 		if (conf->use_mmu)
 			iovmm_unmap(conf->dev, buf->dva);
 
@@ -544,18 +529,6 @@ static void *vb2_ion_cookie(void *buf_priv)
 	return (void *)(buf->dva + buf->offset);
 }
 
-static void *vb2_ion_share(void *buf_priv)
-{
-	struct vb2_ion_buf *buf = buf_priv;
-
-	if (!buf) {
-		pr_err("failed to get buffer\n");
-		return NULL;
-	}
-
-	return (void *)(buf->fd);
-}
-
 static void *vb2_ion_vaddr(void *buf_priv)
 {
 	struct vb2_ion_buf *buf = buf_priv;
@@ -673,7 +646,6 @@ const struct vb2_mem_ops vb2_ion_memops = {
 	.alloc		= vb2_ion_alloc,
 	.put		= vb2_ion_put,
 	.cookie		= vb2_ion_cookie,
-	.share		= vb2_ion_share,
 	.vaddr		= vb2_ion_vaddr,
 	.mmap		= vb2_ion_mmap,
 	.get_userptr	= vb2_ion_get_userptr,
