@@ -424,6 +424,9 @@ choice
 	prompt "Busfreq Model"
 	default BUSFREQ
 
+config BUSFREQ_NONE
+	bool "No BUSFREQ"
+
 config BUSFREQ
 	bool "Busfreq with PPC/PPMU"
 	depends on EXYNOS4_CPUFREQ
