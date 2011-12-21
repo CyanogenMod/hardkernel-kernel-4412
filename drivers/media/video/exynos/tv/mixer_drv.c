@@ -207,12 +207,13 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 	if (mdev->n_streamer == 0) {
 		struct media_pad *pad;
 		int ret, i;
+		struct v4l2_subdev *hdmi_sd;
+#if defined(CONFIG_ARCH_EXYNOS5)
 		struct sub_mxr_device *sub_mxr;
 		struct mxr_layer *layer;
-		struct v4l2_subdev *hdmi_sd;
 		struct v4l2_subdev *gsc_sd;
 		struct exynos_entity_data *md_data;
-
+#endif
 		for (i = MXR_PAD_SOURCE_GSCALER; i < MXR_PADS_NUM; ++i) {
 			pad = &sd->entity.pads[i];
 
