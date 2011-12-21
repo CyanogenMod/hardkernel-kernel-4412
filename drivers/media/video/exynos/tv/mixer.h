@@ -351,9 +351,10 @@ struct mxr_device {
 	/** auxiliary resources used my mixer */
 	struct mxr_resources res;
 
+#if defined(CONFIG_ARCH_EXYNOS5)
 	/** start pipeline from graphic layer */
 	int from_graph_layer;
-
+#endif
 	/** count of sub-mixers */
 	struct sub_mxr_device sub_mxr[MXR_MAX_SUB_MIXERS];
 };

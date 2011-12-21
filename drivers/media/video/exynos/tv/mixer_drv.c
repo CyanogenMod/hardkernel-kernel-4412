@@ -103,6 +103,8 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 #endif
 		struct sub_mxr_device *sub_mxr;
 		struct mxr_layer *layer;
+
+#if defined(CONFIG_ARCH_EXYNOS5)
 		/* If pipeline is started from Gscaler input video device,
 		 * TV basic configuration must be set before running mixer */
 		if (!mdev->from_graph_layer) {
@@ -127,7 +129,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 				}
 			}
 		}
-
+#endif
 		pad = &sd->entity.pads[MXR_PAD_SINK_GSCALER];
 		pad = media_entity_remote_source(pad);
 		if (pad) {
@@ -236,6 +238,7 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 			return ret;
 		}
 
+#if defined(CONFIG_ARCH_EXYNOS5)
 		if (!mdev->from_graph_layer) {
 			pad = &sd->entity.pads[MXR_PAD_SINK_GSCALER];
 			pad = media_entity_remote_source(pad);
@@ -248,6 +251,7 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 				md_data->media_ops->power_off(gsc_sd);
 			}
 		}
+#endif
 
 		ret = v4l2_subdev_call(hdmi_sd, video, s_stream, 0);
 		if (ret) {
@@ -256,6 +260,7 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 			return ret;
 		}
 
+#if defined(CONFIG_ARCH_EXYNOS5)
 		/* turn off connected output device through link
 		 * with mixer */
 		if (!mdev->from_graph_layer) {
@@ -271,6 +276,7 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 			/* disable mixer clock */
 			mxr_power_put(mdev);
 		}
+#endif
 	}
 	WARN(mdev->n_streamer < 0, "negative number of streamers (%d)\n",
 		mdev->n_streamer);

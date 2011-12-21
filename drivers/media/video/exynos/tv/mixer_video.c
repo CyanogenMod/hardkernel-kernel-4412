@@ -900,8 +900,10 @@ static int start_streaming(struct vb2_queue *vq)
 		return -ENODEV;
 	}
 
+#if defined(CONFIG_ARCH_EXYNOS5)
 	/* start streaming from graphic layer */
 	mdev->from_graph_layer = 1;
+#endif
 	/* block any changes in output configuration */
 	mxr_output_get(mdev);
 
@@ -994,9 +996,10 @@ static int stop_streaming(struct vb2_queue *vq)
 	/* stop streaming all entities on the pipeline */
 	tv_graph_pipeline_stream(pipe, 0);
 
+#if defined(CONFIG_ARCH_EXYNOS5)
 	/* stop streaming from graphic layer */
 	mdev->from_graph_layer = 0;
-
+#endif
 	/* allow changes in output configuration */
 	mxr_output_put(mdev);
 
