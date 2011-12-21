@@ -134,9 +134,6 @@ int gsc_set_scaler_info(struct gsc_ctx *ctx)
 		return ret;
 	}
 
-	sc->main_hratio = (s_frame->crop.width << 16 ) / d_frame->crop.width;
-	sc->main_vratio = (s_frame->crop.height << 16) / d_frame->crop.height;
-
 	ret = gsc_cal_prescaler_ratio(variant, s_frame->crop.width,
 				      d_frame->crop.width, &sc->pre_hratio);
 	if (ret) {
@@ -156,6 +153,9 @@ int gsc_set_scaler_info(struct gsc_ctx *ctx)
 
 	gsc_get_prescaler_shfactor(sc->pre_hratio, sc->pre_vratio,
 				   &sc->pre_shfactor);
+
+	sc->main_hratio = (s_frame->crop.width << 16 ) / d_frame->crop.width;
+	sc->main_vratio = (s_frame->crop.height << 16) / d_frame->crop.height;
 
 	gsc_dbg("scaler ratio info : pre_shfactor : %d, pre_h : %d, pre_v :%d,\
 		main_h : %d, main_v : %d", sc->pre_shfactor, sc->pre_hratio,
