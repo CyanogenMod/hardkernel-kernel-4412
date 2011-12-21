@@ -68,6 +68,8 @@
 #define DEFAULT_ISP_PIXCODE	V4L2_MBUS_FMT_YUYV8_2X8
 
 #define CAM_SRC_CLOCK		"xusbxti"
+#define CLK_NAME_CAM0		"sclk_cam0"
+#define CLK_NAME_CAM1		"sclk_cam1"
 #define FIMC_CMA_NAME		"fimc"
 #define FIMC_CMA_NAME_SIZE	6
 #define WORKQUEUE_NAME_SIZE	32
@@ -82,8 +84,8 @@
 enum {
 	CLK_BUS,
 	CLK_GATE,
+	CLK_CAM0,
 	CLK_CAM1,
-	CLK_CAM2,
 };
 
 enum fimc_dev_flags {
@@ -399,7 +401,7 @@ struct fimc_vid_cap {
 	unsigned int			reqbufs_count;
 	int				input_index;
 	int				refcnt;
-	u16				mux_id;
+	int				mux_id;
 };
 
 /**

@@ -344,24 +344,25 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 	if (!isp_info)
 		return -EINVAL;
 
-	if (isp_info->clk_frequency) {
-		if (isp_info->mux_id == 0)
+	if (isp_info->clk_frequency && isp_info->use_cam) {
+		if (isp_info->mux_id == 0) {
+			fimc->vid_cap.mux_id = 0;
+			fimc->clock[CLK_CAM0] =
+				clk_get(&fimc->pdev->dev, CLK_NAME_CAM0);
+			ret = fimc_clk_setrate(fimc, CLK_CAM0, isp_info);
+			if (!ret)
+				clk_enable(fimc->clock[CLK_CAM0]);
+		} else {
+			fimc->vid_cap.mux_id = 1;
+			fimc->clock[CLK_CAM1] =
+				clk_get(&fimc->pdev->dev, CLK_NAME_CAM1);
 			ret = fimc_clk_setrate(fimc, CLK_CAM1, isp_info);
-		else
-			ret = fimc_clk_setrate(fimc, CLK_CAM2, isp_info);
+			if (!ret)
+				clk_enable(fimc->clock[CLK_CAM1]);
+		}
 		if (ret < 0)
 			return -EINVAL;
 	}
-
-	if (isp_info->mux_id == 0) {
-		fimc->vid_cap.mux_id = 0;
-		ret = clk_enable(fimc->clock[CLK_CAM1]);
-	} else {
-		fimc->vid_cap.mux_id = 1;
-		ret = clk_enable(fimc->clock[CLK_CAM2]);
-	}
-	if (ret)
-		return ret;
 
 	if (isp_info->use_cam) {
 		dbg("FIMC%d try to attatch sensor\n", fimc->id);
@@ -372,6 +373,7 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 	} else {
 		dbg("FIMC%d didn't try to attatch sensor\n", fimc->id);
 		fimc->vid_cap.input_index = index;
+		fimc->vid_cap.mux_id = -1;
 		if (isp_info->use_isp)
 			fimc->vid_cap.is.camcording = 1;
 		else
@@ -490,8 +492,9 @@ static int fimc_isp_subdev_init(struct fimc_dev *fimc, unsigned int index)
 		}
 	}
 
-	if (!ret)
+	if (!ret) {
 		return ret;
+    }
 
 	/* enabling power failed so unregister subdev */
 	fimc_subdev_unregister(fimc);
@@ -837,6 +840,7 @@ static int fimc_capture_open(struct file *file)
 
 	if (test_and_clear_bit(ST_PWR_ON, &fimc->state))
 		pm_runtime_put_sync(&fimc->pdev->dev);
+
 	return 0;
 }
 
@@ -866,10 +870,14 @@ static int fimc_capture_close(struct file *file)
 
 		if (fimc->vid_cap.mipi_sd)
 			v4l2_subdev_call(fimc->vid_cap.mipi_sd, core, s_power, 0);
-		if (fimc->vid_cap.mux_id == 0)
+
+		if (fimc->vid_cap.mux_id == 0) {
+			clk_put(fimc->clock[CLK_CAM0]);
+			clk_disable(fimc->clock[CLK_CAM0]);
+		} else if (fimc->vid_cap.mux_id == 1) {
+			clk_put(fimc->clock[CLK_CAM1]);
 			clk_disable(fimc->clock[CLK_CAM1]);
-		else
-			clk_disable(fimc->clock[CLK_CAM2]);
+		}
 		fimc_subdev_unregister(fimc);
 	}
 
@@ -1062,6 +1070,9 @@ static int fimc_cap_s_fmt_mplane(struct file *file, void *priv,
 
 	ctx->state |= (FIMC_PARAMS | FIMC_DST_FMT);
 
+	if (!test_and_set_bit(ST_PWR_ON, &fimc->state))
+		pm_runtime_get_sync(&fimc->pdev->dev);
+
 	/* for returning preview size for FIMC-Lite */
 	if (fimc->vid_cap.is.sd) {
 		fimc->vid_cap.is.mbus_fmt.code = V4L2_MBUS_FMT_SGRBG10_1X10;
@@ -1151,7 +1162,7 @@ static int fimc_cap_s_input(struct file *file, void *priv,
 		return -EBUSY;
 
 	if (i >= FIMC_MAX_CAMIF_CLIENTS || !pdata->isp_info[i]) {
-		printk(KERN_ERR "error max client or pdata\n");
+		err("error max client or pdata");
 		return -EINVAL;
 	}
 
@@ -1165,20 +1176,12 @@ static int fimc_cap_s_input(struct file *file, void *priv,
 		ret = v4l2_subdev_call(fimc->vid_cap.sd, core, s_power, 0);
 		if (ret)
 			err("s_power failed: %d", ret);
-		if (pdata->isp_info[i]->mux_id == 0)
-			clk_disable(fimc->clock[CLK_CAM1]);
-		else
-			clk_disable(fimc->clock[CLK_CAM2]);
 	}
 	/* FIMC-IS power of */
 	if (fimc->vid_cap.is.sd) {
 		ret = v4l2_subdev_call(fimc->vid_cap.is.sd, core, s_power, 0);
 		if (ret)
 			err("s_power failed: %d", ret);
-		if (pdata->isp_info[i]->mux_id == 0)
-			clk_disable(fimc->clock[CLK_CAM1]);
-		else
-			clk_disable(fimc->clock[CLK_CAM2]);
 	}
 
 	if (fimc->vid_cap.flite_sd) {
@@ -1199,8 +1202,6 @@ static int fimc_cap_s_input(struct file *file, void *priv,
 		err("subdev init failed");
 
 	fimc->vid_cap.refcnt++;
-	if (test_and_clear_bit(ST_PWR_ON, &fimc->state))
-		pm_runtime_put_sync(&fimc->pdev->dev);
 
 	return ret;
 }

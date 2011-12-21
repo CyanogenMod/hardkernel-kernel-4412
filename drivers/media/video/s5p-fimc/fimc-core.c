@@ -30,7 +30,7 @@
 #include "fimc-core.h"
 
 static char *fimc_clocks[MAX_FIMC_CLOCKS] = {
-	"sclk_fimc", "fimc", "sclk_cam0" , "sclk_cam1"
+	"sclk_fimc", "fimc"
 };
 
 static struct fimc_fmt fimc_formats[] = {
@@ -1810,14 +1810,29 @@ static void fimc_unregister_m2m_device(struct fimc_dev *fimc)
 	}
 }
 
+static void fimc_clk_disable(struct fimc_dev *fimc)
+{
+	int i;
+	for (i = 0; i < fimc->num_clocks; i++) {
+		if (fimc->clock[i])
+			clk_disable(fimc->clock[i]);
+	}
+}
+
+static void fimc_clk_enable(struct fimc_dev *fimc)
+{
+	int i;
+
+	for (i = 0; i < fimc->num_clocks; i++)
+		clk_enable(fimc->clock[i]);
+}
+
 static void fimc_clk_release(struct fimc_dev *fimc)
 {
 	int i;
 	for (i = 0; i < fimc->num_clocks; i++) {
-		if (fimc->clock[i]) {
-			clk_disable(fimc->clock[i]);
+		if (fimc->clock[i])
 			clk_put(fimc->clock[i]);
-		}
 	}
 }
 
@@ -1826,15 +1841,13 @@ static int fimc_clk_get(struct fimc_dev *fimc)
 	int i;
 	for (i = 0; i < fimc->num_clocks; i++) {
 		fimc->clock[i] = clk_get(&fimc->pdev->dev, fimc_clocks[i]);
-
-		if (!IS_ERR_OR_NULL(fimc->clock[i])) {
-			clk_enable(fimc->clock[i]);
-			continue;
+		if (IS_ERR_OR_NULL(fimc->clock[i])) {
+			dev_err(&fimc->pdev->dev, "failed to get fimc clock: %s\n",
+				fimc_clocks[i]);
+			return -ENXIO;
 		}
-		dev_err(&fimc->pdev->dev, "failed to get fimc clock: %s\n",
-			fimc_clocks[i]);
-		return -ENXIO;
 	}
+
 	return 0;
 }
 
@@ -1856,7 +1869,7 @@ int fimc_clk_setrate(struct fimc_dev *fimc, int clk_num, void *pdata)
 		clk_set_parent(fimc->clock[clk_num], srclk);
 		clk_put(srclk);
 		clk_set_rate(fimc->clock[clk_num], drv_data->lclk_frequency);
-	} else if ((clk_num == CLK_CAM1) || (clk_num == CLK_CAM2)) {
+	} else if ((clk_num == CLK_CAM0) || (clk_num == CLK_CAM1)) {
 		struct s5p_fimc_isp_info *isp_info =
 			(struct s5p_fimc_isp_info *)pdata;
 		srclk = clk_get(&fimc->pdev->dev, CAM_SRC_CLOCK);
@@ -1886,7 +1899,7 @@ static int fimc_runtime_suspend(struct device *dev)
 	}
 
 	fimc->m2m.ctx = NULL;
-	fimc_clk_release(fimc);
+	fimc_clk_disable(fimc);
 
 	return 0;
 }
@@ -1900,7 +1913,7 @@ static int fimc_runtime_resume(struct device *dev)
 	struct samsung_fimc_driverdata *drv_data;
 	int ret;
 
-	fimc_clk_get(fimc);
+	fimc_clk_enable(fimc);
 
 	if (fimc_capture_camera(fimc)) {
 		dbg("camera mode, allowed lock of power block\n");
@@ -1908,10 +1921,6 @@ static int fimc_runtime_resume(struct device *dev)
 	} else {
 		drv_data = (struct samsung_fimc_driverdata *)
 			platform_get_device_id(pdev)->driver_data;
-
-		ret = fimc_clk_setrate(fimc, CLK_BUS, drv_data);
-		if (ret < 0)
-			err("set clock rate failed");
 
 		fimc_hw_set_irq_level(fimc);
 		if (fimc->variant->out_buf_count > 4)
@@ -2012,20 +2021,19 @@ static int fimc_probe(struct platform_device *pdev)
 		goto err_req_region;
 	}
 
-	fimc->num_clocks = MAX_FIMC_CLOCKS - 1;
 	/*
 	 * Check if vide capture node needs to be registered for this device
 	 * instance.
 	 */
+	fimc->num_clocks = MAX_FIMC_CLOCKS - 2;
+
 	if (fimc->pdata) {
 		int i;
 		for (i = 0; i < FIMC_MAX_CAMIF_CLIENTS; ++i)
 			if (fimc->pdata->isp_info[i])
 				break;
-		if (i < FIMC_MAX_CAMIF_CLIENTS) {
+		if (i < FIMC_MAX_CAMIF_CLIENTS)
 			cap_input_index = i;
-			fimc->num_clocks++;
-		}
 	}
 
 	ret = fimc_clk_get(fimc);
@@ -2067,8 +2075,6 @@ static int fimc_probe(struct platform_device *pdev)
 		ret = fimc_register_capture_device(fimc);
 		if (ret)
 			goto err_m2m;
-		clk_disable(fimc->clock[CLK_CAM1]);
-		clk_disable(fimc->clock[CLK_CAM2]);
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -2221,7 +2227,7 @@ static int fimc_suspend(struct device *dev)
 	if (fimc_capture_writeback(fimc))
 		fimc_suspend_capture(fimc);
 
-	fimc_clk_release(fimc);
+	fimc_clk_disable(fimc);
 
 	return 0;
 }
@@ -2287,22 +2293,11 @@ static int fimc_resume(struct device *dev)
 	struct samsung_fimc_driverdata *drv_data;
 	struct fimc_dev *fimc;
 	struct fimc_ctx *ctx;
-	int ret;
 
 	pdev = to_platform_device(dev);
 	fimc = (struct fimc_dev *)platform_get_drvdata(pdev);
 	drv_data = (struct samsung_fimc_driverdata *)
 		platform_get_device_id(pdev)->driver_data;
-
-	ret = fimc_clk_get(fimc);
-	if (ret)
-		return -ENXIO;
-
-	ret = fimc_clk_setrate(fimc, CLK_BUS, drv_data);
-	if (ret < 0) {
-		err("set clock rate failed");
-		return -ENXIO;
-	}
 
 	set_bit(ST_PWR_ON, &fimc->state);
 	pm_runtime_get_sync(&fimc->pdev->dev);
