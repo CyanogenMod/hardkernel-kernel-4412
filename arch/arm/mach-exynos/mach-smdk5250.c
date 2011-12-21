@@ -68,6 +68,7 @@
 #include <mach/dev-sysmmu.h>
 #include <mach/spi-clocks.h>
 #include <mach/ppmu.h>
+#include <mach/dev.h>
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
@@ -1507,6 +1508,11 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 	},
 };
 
+#ifdef CONFIG_BUSFREQ_OPP
+/* BUSFREQ to control memory/bus*/
+static struct device_domain busfreq;
+#endif
+
 static struct platform_device exynos5_busfreq = {
 	.id = -1,
 	.name = "exynos-busfreq",
@@ -2319,6 +2325,12 @@ static void __init smdk5250_machine_init(void)
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
 	smdk5250_smsc911x_init();
+#ifdef CONFIG_BUSFREQ_OPP
+	dev_add(&busfreq, &exynos5_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_DDR_C], &exynos5_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_DDR_R1], &exynos5_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_DDR_L], &exynos5_busfreq.dev);
+#endif
 }
 
 #ifdef CONFIG_EXYNOS_C2C

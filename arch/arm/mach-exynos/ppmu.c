@@ -167,4 +167,25 @@ struct exynos4_ppmu_hw exynos_ppmu[] = {
 		.event[1] = WR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
+	[PPMU_DDR_C] = {
+		.id = PPMU_DDR_C,
+		.hw_base = S5P_VA_PPMU_DDR_C,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+	},
+	[PPMU_DDR_R1] = {
+		.id = PPMU_DDR_R1,
+		.hw_base = S5P_VA_PPMU_DDR_R1,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+	},
+	[PPMU_DDR_L] = {
+		.id = PPMU_DDR_L,
+		.hw_base = S5P_VA_PPMU_DDR_L,
+		.event[0] = RD_DATA_COUNT,
+		.event[1] = WR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+	},
 };

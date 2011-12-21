@@ -66,6 +66,9 @@ enum exynos4_ppmu {
 	PPMU_DMC0,
 	PPMU_DMC1,
 	PPMU_CPU,
+	PPMU_DDR_C,
+	PPMU_DDR_R1,
+	PPMU_DDR_L,
 	PPMU_END,
 };
 
