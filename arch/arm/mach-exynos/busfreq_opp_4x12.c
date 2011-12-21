@@ -412,6 +412,7 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	unsigned int cpu_load_average = 0;
 	unsigned int dmc0_load_average = 0;
 	unsigned int dmc1_load_average = 0;
+	unsigned long cpufreq = 0;
 	unsigned long lockfreq;
 	unsigned long dmc0freq;
 	unsigned long dmc1freq;
@@ -421,20 +422,24 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	unsigned long cpu_load;
 	unsigned long dmc0_load;
 	unsigned long dmc1_load;
+	int cpu_load_slope;
 
 	ppmu_update(data->dev);
 
 	/* Convert from base xxx to base maxfreq */
-	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * currfreq, maxfreq);
+	cpu_load = ppmu_load[PPMU_CPU];
 	dmc0_load = div64_u64(ppmu_load[PPMU_DMC0] * currfreq, maxfreq);
-	dmc1_load = div64_u64(ppmu_load[PPMU_DMC1] * currfreq, maxfreq) - cpu_load;
+	dmc1_load = div64_u64((ppmu_load[PPMU_DMC1] - cpu_load) * currfreq, maxfreq);
 
-	data->load_history[PPMU_CPU][data->index] = cpu_load;
-	data->load_history[PPMU_DMC0][data->index] = dmc0_load;
-	data->load_history[PPMU_DMC1][data->index++] = dmc1_load;
+	cpu_load_slope = cpu_load -
+		data->load_history[PPMU_CPU][data->index++];
 
 	if (data->index >= LOAD_HISTORY_SIZE)
 		data->index = 0;
+
+	data->load_history[PPMU_CPU][data->index] = cpu_load;
+	data->load_history[PPMU_DMC0][data->index] = dmc0_load;
+	data->load_history[PPMU_DMC1][data->index] = dmc1_load;
 
 	for (i = 0; i < LOAD_HISTORY_SIZE; i++) {
 		cpu_load_average += data->load_history[PPMU_CPU][i];
@@ -446,6 +451,18 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	cpu_load_average /= LOAD_HISTORY_SIZE;
 	dmc0_load_average /= LOAD_HISTORY_SIZE;
 	dmc1_load_average /= LOAD_HISTORY_SIZE;
+
+	if (cpu_load >= UP_CPU_THRESHOLD) {
+		cpufreq = opp_get_freq(data->max_opp);
+		if (cpu_load < MAX_CPU_THRESHOLD) {
+			opp = data->curr_opp;
+			if (cpu_load_slope > CPU_SLOPE_SIZE) {
+				cpufreq--;
+				opp = opp_find_freq_floor(data->dev, &cpufreq);
+			}
+			cpufreq = opp_get_freq(opp);
+		}
+	}
 
 	if (dmc0_load >= DMC0_MAX_THRESHOLD || dmc1_load >= DMC1_MAX_THRESHOLD) {
 		newfreq = opp_get_freq(data->max_opp);
@@ -469,7 +486,7 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 
 	lockfreq = dev_max_freq(data->dev);
 
-	newfreq = max(lockfreq, newfreq);
+	newfreq = max3(lockfreq, newfreq, cpufreq);
 
 	opp = opp_find_freq_ceil(data->dev, &newfreq);
 
