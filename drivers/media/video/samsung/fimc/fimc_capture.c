@@ -2223,6 +2223,10 @@ int fimc_streamoff_capture(void *fh)
 	if (fimc_cam_use) {
 		if (ctrl->is.sd)
 			v4l2_subdev_call(ctrl->is.sd, video, s_stream, 0);
+
+		if (ctrl->flite_sd)
+			v4l2_subdev_call(ctrl->flite_sd, video, s_stream, 0);
+
 		if (ctrl->cam->type == CAM_TYPE_MIPI) {
 			if (ctrl->cam->id == CAMERA_CSI_C)
 				s3c_csis_stop(CSI_CH_0);
@@ -2233,8 +2237,6 @@ int fimc_streamoff_capture(void *fh)
 
 		if (ctrl->cam->sd)
 			v4l2_subdev_call(ctrl->cam->sd, video, s_stream, 0);
-		if (ctrl->flite_sd)
-			v4l2_subdev_call(ctrl->flite_sd, video, s_stream, 0);
 	} else {
 		fimc_hwset_reset(ctrl);
 	}
