@@ -25,6 +25,7 @@
 #include <mach/map.h>
 #include <mach/gpio.h>
 #include <plat/tvout.h>
+#include <plat/cpu.h>
 
 struct platform_device; /* don't need the contents */
 
@@ -55,10 +56,20 @@ void s5p_cec_cfg_gpio(struct platform_device *pdev)
 void s5p_tv_setup(void)
 {
 	/* direct HPD to HDMI chip */
-	gpio_request(EXYNOS4_GPX3(7), "hpd-plug");
+	if (soc_is_exynos4412()) {
+		gpio_request(EXYNOS4_GPX3(7), "hpd-plug");
 
-	gpio_direction_input(EXYNOS4_GPX3(7));
-	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0x3));
-	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
+		gpio_direction_input(EXYNOS4_GPX3(7));
+		s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0x3));
+		s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
+	} else if (soc_is_exynos5250()) {
+		gpio_request(EXYNOS5_GPX3(7), "hpd-plug");
+
+		gpio_direction_input(EXYNOS5_GPX3(7));
+		s3c_gpio_cfgpin(EXYNOS5_GPX3(7), S3C_GPIO_SFN(0x3));
+		s3c_gpio_setpull(EXYNOS5_GPX3(7), S3C_GPIO_PULL_NONE);
+	} else {
+		printk(KERN_ERR "HPD GPIOs are not defined!\n");
+	}
 }
 #endif
