@@ -547,7 +547,7 @@ static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
 
 #ifdef CONFIG_S5P_DP
 static struct video_info smdk5250_dp_config = {
-	.name			= "2560x1920 LCD, for SMDK TEST",
+	.name			= "WQXGA(2560x1600) LCD, for SMDK TEST",
 
 	.h_total		= 2720,
 	.h_active		= 2560,
