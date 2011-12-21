@@ -30,4 +30,6 @@
 #define S5P_MIPI_DPHY_SRESETN			(1 << 1)
 #define S5P_MIPI_DPHY_MRESETN			(1 << 2)
 
+#define S5P_PMU_DEBUG						S5P_PMUREG(0x0A00)
+
 #endif /* __ASM_ARCH_REGS_PMU_5250_H */
