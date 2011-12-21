@@ -48,8 +48,18 @@ struct exynos4_platform_fimc_is {
 	int	(*clk_off)(struct platform_device *pdev);
 };
 
+struct exynos5_platform_fimc_is {
+	int	hw_ver;
+	struct exynos4_fimc_is_sensor_info
+		*sensor_info[FIMC_IS_MAX_CAMIF_CLIENTS];
+	void	(*cfg_gpio)(struct platform_device *pdev);
+	int	(*clk_cfg)(struct platform_device *pdev);
+	int	(*clk_on)(struct platform_device *pdev);
+	int	(*clk_off)(struct platform_device *pdev);
+};
 extern struct exynos4_platform_fimc_is exynos4_fimc_is_default_data;
 extern void exynos4_fimc_is_set_platdata(struct exynos4_platform_fimc_is *pd);
+extern void exynos5_fimc_is_set_platdata(struct exynos5_platform_fimc_is *pd);
 
 /* defined by architecture to configure gpio */
 extern void exynos_fimc_is_cfg_gpio(struct platform_device *pdev);
@@ -58,4 +68,12 @@ extern void exynos_fimc_is_cfg_gpio(struct platform_device *pdev);
 extern int exynos_fimc_is_cfg_clk(struct platform_device *pdev);
 extern int exynos_fimc_is_clk_on(struct platform_device *pdev);
 extern int exynos_fimc_is_clk_off(struct platform_device *pdev);
+
+/* defined by architecture to configure gpio */
+extern void exynos5_fimc_is_cfg_gpio(struct platform_device *pdev);
+
+/* platform specific clock functions */
+extern int exynos5_fimc_is_cfg_clk(struct platform_device *pdev);
+extern int exynos5_fimc_is_clk_on(struct platform_device *pdev);
+extern int exynos5_fimc_is_clk_off(struct platform_device *pdev);
 #endif /* EXYNOS_FIMC_IS_H_ */

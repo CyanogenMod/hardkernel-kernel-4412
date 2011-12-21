@@ -56,6 +56,13 @@ extern struct platform_device SYSMMU_PLATDEV(gsc0);
 extern struct platform_device SYSMMU_PLATDEV(gsc1);
 extern struct platform_device SYSMMU_PLATDEV(gsc2);
 extern struct platform_device SYSMMU_PLATDEV(gsc3);
+
+extern struct platform_device SYSMMU_PLATDEV(is_sclrc);
+extern struct platform_device SYSMMU_PLATDEV(is_sclrp);
+extern struct platform_device SYSMMU_PLATDEV(is_odc);
+extern struct platform_device SYSMMU_PLATDEV(is_dis0);
+extern struct platform_device SYSMMU_PLATDEV(is_dis1);
+extern struct platform_device SYSMMU_PLATDEV(is_3dnr);
 #endif
 
 static inline void sysmmu_set_owner(struct device *sysmmu, struct device *owner)

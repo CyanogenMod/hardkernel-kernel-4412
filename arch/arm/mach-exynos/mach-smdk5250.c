@@ -38,6 +38,7 @@
 #include <media/m5mols.h>
 #include <media/exynos_gscaler.h>
 #include <media/exynos_flite.h>
+#include <media/exynos_fimc_is.h>
 #include <plat/gpio-cfg.h>
 #include <plat/regs-serial.h>
 #include <plat/exynos5.h>
@@ -167,6 +168,11 @@ struct platform_device exynos_device_md0 = {
 struct platform_device exynos_device_md1 = {
 	.name = "exynos-mdev",
 	.id = 1,
+};
+
+struct platform_device exynos_device_md2 = {
+	.name = "exynos-mdev",
+	.id = 2,
 };
 #endif
 
@@ -1597,6 +1603,16 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&SYSMMU_PLATDEV(gsc2),
 	&SYSMMU_PLATDEV(gsc3),
 	&SYSMMU_PLATDEV(tv),
+	&SYSMMU_PLATDEV(is_isp),
+	&SYSMMU_PLATDEV(is_drc),
+	&SYSMMU_PLATDEV(is_fd),
+	&SYSMMU_PLATDEV(is_cpu),
+	&SYSMMU_PLATDEV(is_odc),
+	&SYSMMU_PLATDEV(is_sclrc),
+	&SYSMMU_PLATDEV(is_sclrp),
+	&SYSMMU_PLATDEV(is_dis0),
+	&SYSMMU_PLATDEV(is_dis1),
+	&SYSMMU_PLATDEV(is_3dnr),
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
 	&s5p_device_fimg2d,
@@ -1604,6 +1620,10 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS_MEDIA_DEVICE
 	&exynos_device_md0,
 	&exynos_device_md1,
+	&exynos_device_md2,
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS5_FIMC_IS
+	&exynos5_device_fimc_is,
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
 	&exynos5_device_gsc0,
@@ -1812,6 +1832,16 @@ static void __init exynos_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_VIDEO_EXYNOS5_FIMC_IS
+		{
+			.name = "fimc_is",
+			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS * SZ_1K,
+			{
+                .alignment = 1 << 26,
+            },
+			.start = 0
+		},
+#endif
 		{
 			.size = 0
 		},
@@ -1826,7 +1856,8 @@ static void __init exynos_reserve_mem(void)
 		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,fimd,fw,b1;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;"
-		"s5p-mixer=tv;";
+		"s5p-mixer=tv;"
+		"exynos5-fimc-is=fimc_is;";
 
 	cma_set_defaults(regions, map);
 
@@ -2049,6 +2080,24 @@ static void __init exynos_sysmmu_init(void)
 #ifdef CONFIG_VIDEO_FIMG2D
 	sysmmu_set_owner(&SYSMMU_PLATDEV(2d).dev, &s5p_device_fimg2d.dev);
 #endif
+#ifdef CONFIG_VIDEO_EXYNOS5_FIMC_IS
+/* TODO : after finish implementation of run-time PM, It will be enabled
+	ASSIGN_SYSMMU_POWERDOMAIN(is_isp, &exynos4_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_drc, &exynos4_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_fd, &exynos4_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_cpu, &exynos4_device_pd[PD_ISP].dev)
+*/
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_isp).dev, &exynos5_device_fimc_is.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_drc).dev, &exynos5_device_fimc_is.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_fd).dev, &exynos5_device_fimc_is.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_cpu).dev, &exynos5_device_fimc_is.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_odc).dev, &exynos5_device_fimc_is.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_sclrc).dev, &exynos5_device_fimc_is.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_sclrp).dev, &exynos5_device_fimc_is.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_dis0).dev, &exynos5_device_fimc_is.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_dis1).dev, &exynos5_device_fimc_is.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(is_3dnr).dev, &exynos5_device_fimc_is.dev);
+#endif
 }
 #else /* !CONFIG_S5P_SYSTEM_MMU */
 static inline void exynos_sysmmu_init(void)
@@ -2193,6 +2242,18 @@ static void __init smdk5250_machine_init(void)
 			sizeof(exynos_flite0_default_data), &exynos_device_flite0);
 	s3c_set_platdata(&exynos_flite1_default_data,
 			sizeof(exynos_flite1_default_data), &exynos_device_flite1);
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS5_FIMC_IS
+	dev_set_name(&exynos5_device_fimc_is.dev, "s5p-mipi-csis.0");
+	clk_add_alias("gscl_wrap", "exynos5-fimc-is", "gscl_wrap", &exynos5_device_fimc_is.dev);
+	clk_add_alias("sclk_gscl_wrap", "exynos5-fimc-is", "sclk_gscl_wrap", &exynos5_device_fimc_is.dev);
+	dev_set_name(&exynos5_device_fimc_is.dev, "exynos5-fimc-is");
+
+	dev_set_name(&exynos5_device_fimc_is.dev, "exynos-gsc.0");
+	clk_add_alias("gscl", "exynos5-fimc-is", "gscl", &exynos5_device_fimc_is.dev);
+	dev_set_name(&exynos5_device_fimc_is.dev, "exynos5-fimc-is");
+
+	exynos5_fimc_is_set_platdata(NULL);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
 #if defined(CONFIG_EXYNOS_DEV_PD)
