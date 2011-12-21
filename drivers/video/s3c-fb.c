@@ -1186,6 +1186,7 @@ struct s3c_fb_user_chroma {
 
 struct s3c_fb_user_ion_client {
 	int	fd;
+	int	offset;
 };
 
 int s3c_fb_set_window_position(struct fb_info *info,
@@ -1324,6 +1325,9 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	int ret;
 	u32 crtc;
 
+	struct fb_var_screeninfo *var = &info->var;
+	int offset;
+
 	union {
 		struct s3c_fb_user_window user_window;
 		struct s3c_fb_user_plane_alpha user_alpha;
@@ -1397,6 +1401,13 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			ret = -EFAULT;
 			break;
 		}
+
+		offset = var->xres_virtual * var->yoffset + var->xoffset;
+		offset *= var->bits_per_pixel / 8;
+		p.user_ion_client.offset = offset;
+
+		dev_dbg(sfb->dev, "Buffer offset: 0x%x\n",
+			p.user_ion_client.offset);
 
 		if (copy_to_user((struct s3c_fb_user_ion_client __user *)arg,
 				&p.user_ion_client,
