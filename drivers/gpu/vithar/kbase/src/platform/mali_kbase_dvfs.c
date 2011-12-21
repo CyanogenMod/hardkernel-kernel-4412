@@ -43,4 +43,106 @@
 #include <linux/clk.h>
 #include <mach/regs-clock.h>
 #include <asm/delay.h>
+#include <linux/regulator/consumer.h>
+#include <linux/regulator/driver.h>
+
+#ifdef CONFIG_REGULATOR
+struct regulator *g3d_regulator=NULL;
+int mali_gpu_vol = 1100000; /* 1.1V  */
+#endif
+
+int kbase_platform_regulator_init(struct device *dev)
+{
+#ifdef CONFIG_REGULATOR
+    g3d_regulator = regulator_get(NULL, "vdd_g3d");
+    if(IS_ERR(g3d_regulator))
+    {
+        printk("[kbase_platform_regulator_init] failed to get vithar regulator\n");
+	return -1;
+    }
+
+    if(regulator_enable(g3d_regulator) != 0)
+    {
+        printk("[kbase_platform_regulator_init] failed to enable vithar regulator\n");
+	return -1;
+    }
+
+    if(regulator_set_voltage(g3d_regulator, mali_gpu_vol, mali_gpu_vol) != 0)
+    {
+        printk("[kbase_platform_regulator_init] failed to set vithar operating voltage [%d]\n", mali_gpu_vol);
+	return -1;
+    }
+#endif
+    return 0;
+}
+
+int kbase_platform_regulator_disable(struct device *dev)
+{
+#ifdef CONFIG_REGULATOR
+    if(!g3d_regulator)
+    {
+        printk("[kbase_platform_regulator_disable] g3d_regulator is not initialized\n");
+	return -1;
+    }
+
+    if(regulator_disable(g3d_regulator) != 0)
+    {
+        printk("[kbase_platform_regulator_disable] failed to disable g3d regulator\n");
+	return -1;
+    }
+#endif
+    return 0;
+}
+
+int kbase_platform_regulator_enable(struct device *dev)
+{
+#ifdef CONFIG_REGULATOR
+    if(!g3d_regulator)
+    {
+        printk("[kbase_platform_regulator_enable] g3d_regulator is not initialized\n");
+	return -1;
+    }
+
+    if(regulator_enable(g3d_regulator) != 0)
+    {
+        printk("[kbase_platform_regulator_enable] failed to enable g3d regulator\n");
+	return -1;
+    }
+#endif
+    return 0;
+}
+
+int kbase_platform_get_voltage(struct device *dev, int *vol)
+{
+#ifdef CONFIG_REGULATOR
+    if(!g3d_regulator)
+    {
+        printk("[kbase_platform_get_voltage] g3d_regulator is not initialized\n");
+	return -1;
+    }
+
+    *vol = regulator_get_voltage(g3d_regulator);
+#else
+    *vol = 0;
+#endif
+    return 0;
+}
+
+int kbase_platform_set_voltage(struct device *dev, int vol)
+{
+#ifdef CONFIG_REGULATOR
+    if(!g3d_regulator)
+    {
+        printk("[kbase_platform_set_voltage] g3d_regulator is not initialized\n");
+	return -1;
+    }
+
+    if(regulator_set_voltage(g3d_regulator, vol, vol) != 0)
+    {
+        printk("[kbase_platform_set_voltage] failed to set voltage\n");
+	return -1;
+    }
+#endif
+    return 0;
+}
 

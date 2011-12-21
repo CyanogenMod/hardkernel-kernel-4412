@@ -45,6 +45,7 @@
 #include <mach/regs-clock.h>
 #include <asm/delay.h>
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
+#include <kbase/src/platform/mali_kbase_dvfs.h>
 
 static struct clk *mpll = NULL;
 static struct clk *sclk_g3d = NULL;
@@ -65,7 +66,7 @@ int kbase_platform_clock_on(struct device *dev)
 
     return 0;
 out:
-	return -EPERM;
+    return -EPERM;
 }
 
 int kbase_platform_clock_off(struct device *dev)
@@ -504,6 +505,121 @@ static ssize_t set_dtlb(struct device *dev, struct device_attribute *attr, const
 	return count;
 }
 
+static ssize_t show_vol(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+	int vol;
+
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	kbase_platform_get_voltage(dev, &vol);
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current operating voltage for vithar = %d", vol);
+
+	if (ret < PAGE_SIZE - 1)
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	else
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+
+static ssize_t set_vol(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	if (sysfs_streq("1100000", buf)) {
+	    kbase_platform_set_voltage(dev, 11000000);
+	} else if (sysfs_streq("1150000", buf)) {
+	    kbase_platform_set_voltage(dev, 1150000);
+	} else if (sysfs_streq("1200000", buf)) {
+	    kbase_platform_set_voltage(dev, 1200000);
+	} else {
+	    printk("invalid voltage\n");
+	}
+
+	return count;
+}
+
+static int get_clkout_cmu_top(int *val)
+{
+    *val = __raw_readl(EXYNOS5_CLKOUT_CMU_TOP);
+    if((*val & 0x1f) == 0xB) /* CLKOUT is ACLK_400 in CLKOUT_CMU_TOP */
+	return 1;
+    else
+	return 0;
+}
+
+static void set_clkout_for_3d(void)
+{
+    int tmp;
+
+    tmp = 0x0;
+    tmp |= 0x100B; // ACLK_400 selected
+    tmp |= 9 << 8; // divided by (9 + 1)
+    __raw_writel(tmp, EXYNOS5_CLKOUT_CMU_TOP);
+
+    tmp = 0x0;
+    tmp |= 7 << 8; // CLKOUT_CMU_TOP selected
+    __raw_writel(tmp, S5P_PMU_DEBUG);
+}
+
+static ssize_t show_clkout(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+	int val;
+
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	if(get_clkout_cmu_top(&val))
+	   ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current CLKOUT is g3d divided by 10, CLKOUT_CMU_TOP=0x%x", val);
+	else
+	   ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current CLKOUT is not g3d, CLKOUT_CMU_TOP=0x%x", val);
+
+	if (ret < PAGE_SIZE - 1)
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	else
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+
+static ssize_t set_clkout(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+	if (sysfs_streq("3d", buf)) {
+	    set_clkout_for_3d();
+	} else {
+	    printk("invalid val (only 3d is accepted\n");
+	}
+
+	return count;
+}
+
 /** The sysfs file @c clock, fbdev.
  *
  * This is used for obtaining information about the vithar operating clock & framebuffer address,
@@ -511,6 +627,8 @@ static ssize_t set_dtlb(struct device *dev, struct device_attribute *attr, const
 DEVICE_ATTR(clock, S_IRUGO|S_IWUSR, show_clock, set_clock);
 DEVICE_ATTR(fbdev, S_IRUGO, show_fbdev, NULL);
 DEVICE_ATTR(dtlb, S_IRUGO|S_IWUSR, show_dtlb, set_dtlb);
+DEVICE_ATTR(vol, S_IRUGO|S_IWUSR, show_vol, set_vol);
+DEVICE_ATTR(clkout, S_IRUGO|S_IWUSR, show_clkout, set_clkout);
 
 int kbase_platform_create_sysfs_file(struct device *dev)
 {
@@ -532,6 +650,18 @@ int kbase_platform_create_sysfs_file(struct device *dev)
 		goto out;
 	}
 
+	if (device_create_file(dev, &dev_attr_vol))
+	{
+		dev_err(dev, "Couldn't create sysfs file [vol]\n");
+		goto out;
+	}
+
+	if (device_create_file(dev, &dev_attr_clkout))
+	{
+		dev_err(dev, "Couldn't create sysfs file [clkout]\n");
+		goto out;
+	}
+
 	return 0;
 out:
 	return -ENOENT;
@@ -542,6 +672,8 @@ void kbase_platform_remove_sysfs_file(struct device *dev)
 	device_remove_file(dev, &dev_attr_clock);
 	device_remove_file(dev, &dev_attr_fbdev);
 	device_remove_file(dev, &dev_attr_dtlb);
+	device_remove_file(dev, &dev_attr_vol);
+	device_remove_file(dev, &dev_attr_clkout);
 }
 
 int kbase_platform_init(struct device *dev)
@@ -567,6 +699,10 @@ int kbase_platform_init(struct device *dev)
 	if(kbase_platform_clock_on(dev))
 	    goto out;
 
+#ifdef CONFIG_REGULATOR
+	if(kbase_platform_regulator_init(dev))
+	    goto out;
+#endif
 #ifdef CONFIG_VITHAR_RT_PM
 	kbase_device_runtime_init(dev);
 #endif

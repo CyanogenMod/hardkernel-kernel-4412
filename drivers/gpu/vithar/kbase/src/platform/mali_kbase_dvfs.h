@@ -18,6 +18,12 @@
 #ifndef _KBASE_DVFS_H_
 #define _KBASE_DVFS_H_
 
-/* All things that are needed for the Linux port. */
+
+struct regulator *kbase_platform_get_regulator(void);
+int kbase_platform_regulator_init(struct device *dev);
+int kbase_platform_regulator_disable(struct device *dev);
+int kbase_platform_regulator_enable(struct device *dev);
+int kbase_platform_get_voltage(struct device *dev, int *vol);
+int kbase_platform_set_voltage(struct device *dev, int vol);
 
 #endif /* _KBASE_DVFS_H_ */
