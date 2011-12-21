@@ -3216,8 +3216,6 @@ static void __init smdk4x12_subdev_config(void)
 	s3c_fimc0_default_data.isp_info[0]->use_cam = true;
 	s3c_fimc0_default_data.isp_info[1] = &isp_info[1];
 	s3c_fimc0_default_data.isp_info[1]->use_cam = true;
-	s3c_fimc0_default_data.isp_info[2] = &isp_info[2];
-	s3c_fimc0_default_data.isp_info[2]->use_cam = false;
 	/* support using two fimc as one sensore */
 	{
 		static struct s5p_fimc_isp_info camcording1;
