@@ -429,17 +429,17 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	/* Convert from base xxx to base maxfreq */
 	cpu_load = ppmu_load[PPMU_CPU];
 	dmc0_load = div64_u64(ppmu_load[PPMU_DMC0] * currfreq, maxfreq);
-	dmc1_load = div64_u64((ppmu_load[PPMU_DMC1] - cpu_load) * currfreq, maxfreq);
+	dmc1_load = div64_u64(ppmu_load[PPMU_DMC1] * currfreq, maxfreq);
 
 	cpu_load_slope = cpu_load -
-		data->load_history[PPMU_CPU][data->index++];
-
-	if (data->index >= LOAD_HISTORY_SIZE)
-		data->index = 0;
+		data->load_history[PPMU_CPU][data->index ? data->index - 1 : LOAD_HISTORY_SIZE - 1];
 
 	data->load_history[PPMU_CPU][data->index] = cpu_load;
 	data->load_history[PPMU_DMC0][data->index] = dmc0_load;
-	data->load_history[PPMU_DMC1][data->index] = dmc1_load;
+	data->load_history[PPMU_DMC1][data->index++] = dmc1_load;
+
+	if (data->index >= LOAD_HISTORY_SIZE)
+		data->index = 0;
 
 	for (i = 0; i < LOAD_HISTORY_SIZE; i++) {
 		cpu_load_average += data->load_history[PPMU_CPU][i];
@@ -464,7 +464,7 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 		}
 	}
 
-	if (dmc0_load >= DMC0_MAX_THRESHOLD || dmc1_load >= DMC1_MAX_THRESHOLD) {
+	if (dmc0_load >= DMC_MAX_THRESHOLD || dmc1_load >= DMC_MAX_THRESHOLD) {
 		newfreq = opp_get_freq(data->max_opp);
 	} else if (dmc0_load < IDLE_THRESHOLD
 			&& dmc1_load < IDLE_THRESHOLD) {
@@ -476,11 +476,11 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	} else {
 		if (dmc0_load < dmc0_load_average)
 			dmc0_load = dmc0_load_average;
-		dmc0freq = div64_u64(opp_get_freq(data->max_opp) * dmc0_load, DMC0_MAX_THRESHOLD);
+		dmc0freq = div64_u64(maxfreq * dmc0_load * 1000, DMC_MAX_THRESHOLD);
 
 		if (dmc1_load < dmc1_load_average)
 			dmc1_load = dmc1_load_average;
-		dmc1freq = div64_u64(opp_get_freq(data->max_opp) * dmc1_load, DMC1_MAX_THRESHOLD);
+		dmc1freq = div64_u64(maxfreq * dmc1_load * 1000, DMC_MAX_THRESHOLD);
 		newfreq = max(dmc0freq, dmc1freq);
 	}
 

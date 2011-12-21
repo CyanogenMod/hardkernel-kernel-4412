@@ -105,10 +105,10 @@ int dev_lock(struct device *device, struct device *dev, unsigned long freq)
 	lock->device = dev;
 	lock->freq = freq;
 	list_add(&lock->node, &domain->domain_list);
-	exynos_request_apply(freq, dev);
 
 out:
 	mutex_unlock(&domains_mutex);
+	exynos_request_apply(freq, dev);
 	return ret;
 }
 
