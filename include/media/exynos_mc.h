@@ -49,6 +49,7 @@
 enum mdev_node {
 	MDEV_OUTPUT,
 	MDEV_CAPTURE,
+	MDEV_ISP,
 };
 
 struct exynos_media_ops {
