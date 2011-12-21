@@ -122,6 +122,11 @@ config EXYNOS_MCT
 	help
 	  Use MCT (Multi Core Timer) as kernel timers
 
+config EXYNOS5_DEV_AHCI
+	bool
+	help
+	  Compile in platform device definitions for AHCI SATA3.0
+
 config EXYNOS4_DEV_AHCI
 	bool
 	help
@@ -505,6 +510,7 @@ config MACH_SMDKV310
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_USB_PHY
 	select EXYNOS4_SETUP_MFC
+	select EXYNOS4_DEV_AHCI
 	select SAMSUNG_DEV_PWM
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_KEYPAD
@@ -666,6 +672,7 @@ config MACH_SMDK5250
 	select EXYNOS4_SETUP_FIMD
 	select EXYNOS4_SETUP_USB_PHY
 	select EXYNOS4_SETUP_MFC
+	select EXYNOS5_DEV_AHCI
 	select EXYNOS_DEV_SS_UDC
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_PWM

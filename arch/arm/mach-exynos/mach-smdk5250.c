@@ -1671,6 +1671,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&exynos_device_spi2,
 #endif
 	&exynos5_busfreq,
+	&exynos5_device_ahci,
 };
 
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
