@@ -1796,6 +1796,26 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 		}
 	}
 
+	if (ctx->height > MAX_VER_SIZE) {
+		if (ctx->height > MAX_HOR_SIZE) {
+			mfc_err("Not support resolution: %dx%d\n",
+				ctx->width, ctx->height);
+			goto err_chk_res;
+		}
+
+		if (ctx->width > MAX_VER_SIZE) {
+			mfc_err("Not support resolution: %dx%d\n",
+				ctx->width, ctx->height);
+			goto err_chk_res;
+		}
+	} else {
+		if (ctx->width > MAX_HOR_SIZE) {
+			mfc_err("Not support resolution: %dx%d\n",
+				ctx->width, ctx->height);
+			goto err_chk_res;
+		}
+	}
+
 	if (ctx->c_ops->set_init_arg) {
 		if (ctx->c_ops->set_init_arg(ctx, (void *)init_arg) < 0) {
 			ret = MFC_DEC_INIT_FAIL;
@@ -1808,7 +1828,7 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 
 #ifdef CONFIG_BUSFREQ
 	/* Lock MFC & Bus FREQ for high resolution */
-	if (ctx->width >= 1920 || ctx->height >= 1080) {
+	if (ctx->width >= MAX_HOR_RES || ctx->height >= MAX_VER_RES) {
 		if (atomic_read(&ctx->dev->busfreq_lock_cnt) == 0) {
 			if (ctx->codecid == H264_DEC) {
 				exynos4_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L0);
@@ -1887,6 +1907,7 @@ err_codec_bufs:
 #endif
 
 err_set_arg:
+err_chk_res:
 err_post_seq:
 err_seq_start:
 #ifdef DUMP_STREAM
@@ -1942,7 +1963,27 @@ int mfc_change_resolution(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *exe_
 	if (ctx->c_ops->post_seq_start) {
 		if (ctx->c_ops->post_seq_start(ctx) < 0)
 			return MFC_DEC_INIT_FAIL;
+	}
+
+	if (ctx->height > MAX_VER_SIZE) {
+		if (ctx->height > MAX_HOR_SIZE) {
+			mfc_err("Not support resolution: %dx%d\n",
+				ctx->width, ctx->height);
+			return MFC_DEC_INIT_FAIL;
 		}
+
+		if (ctx->width > MAX_VER_SIZE) {
+			mfc_err("Not support resolution: %dx%d\n",
+				ctx->width, ctx->height);
+			return MFC_DEC_INIT_FAIL;
+		}
+	} else {
+		if (ctx->width > MAX_HOR_SIZE) {
+			mfc_err("Not support resolution: %dx%d\n",
+				ctx->width, ctx->height);
+			return MFC_DEC_INIT_FAIL;
+		}
+	}
 
 	exe_arg->out_img_width = ctx->width;
 	exe_arg->out_img_height = ctx->height;
@@ -2210,14 +2251,16 @@ int mfc_exec_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 
 	mfc_set_inst_state(ctx, INST_STATE_EXE_DONE);
 
-	if (ret == MFC_OK){
+	if (ret == MFC_OK) {
 		mfc_check_resolution_change(ctx, exe_arg);
 		if (ctx->resolution_status == RES_SET_CHANGE) {
 			ret = mfc_decoding_frame(ctx, exe_arg, &consumed);
 		} else if ((ctx->resolution_status == RES_WAIT_FRAME_DONE) &&
 			(exe_arg->out_display_status == DISP_S_FINISH)) {
-			exe_arg->out_display_status = 4;
-			mfc_change_resolution(ctx, exe_arg);
+			exe_arg->out_display_status = DISP_S_RES_CHANGE;
+			ret = mfc_change_resolution(ctx, exe_arg);
+			if (ret != MFC_OK)
+				return ret;
 			ctx->resolution_status = RES_NO_CHANGE;
 		}
 

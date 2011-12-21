@@ -14,6 +14,11 @@
 #ifndef __MFC_H_
 #define __MFC_H_ __FILE__
 
+#define MAX_HOR_SIZE	1920
+#define MAX_VER_SIZE	1088
+#define MAX_HOR_RES	1920
+#define MAX_VER_RES	1080
+
 #if defined(CONFIG_PM_RUNTIME) && (defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412))
 #define MFC_NO_POWER_GATING
 #endif

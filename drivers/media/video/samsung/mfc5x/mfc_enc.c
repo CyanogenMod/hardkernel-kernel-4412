@@ -1286,6 +1286,26 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	ctx->width = init_arg->cmn.in_width;
 	ctx->height = init_arg->cmn.in_height;
 
+	if (ctx->height > MAX_VER_SIZE) {
+		if (ctx->height > MAX_HOR_SIZE) {
+			mfc_err("Not support resolution: %dx%d\n",
+				ctx->width, ctx->height);
+			goto err_handling;
+		}
+
+		if (ctx->width > MAX_VER_SIZE) {
+			mfc_err("Not support resolutioni: %dx%d\n",
+				ctx->width, ctx->height);
+			goto err_handling;
+		}
+	} else {
+		if (ctx->width > MAX_HOR_SIZE) {
+			mfc_err("Not support resolution: %dx%d\n",
+				ctx->width, ctx->height);
+			goto err_handling;
+		}
+	}
+
 	enc_ctx = (struct mfc_enc_ctx *)ctx->c_priv;
 
 	enc_ctx->pixelcache = init_arg->cmn.in_pixelcache;
@@ -1439,7 +1459,7 @@ int mfc_init_encoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 
 #ifdef CONFIG_BUSFREQ
 	/* Fix MFC & Bus Frequency for High resolution for better performance */
-	if (ctx->width >= 1920 || ctx->height >= 1080) {
+	if (ctx->width >= MAX_HOR_RES || ctx->height >= MAX_VER_RES) {
 		if (atomic_read(&ctx->dev->busfreq_lock_cnt) == 0) {
 			/* For fixed MFC & Bus Freq to 200 & 400 MHz for 1080p Contents */
 			exynos4_busfreq_lock(DVFS_LOCK_ID_MFC, BUS_L0);
