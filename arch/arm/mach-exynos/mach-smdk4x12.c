@@ -52,6 +52,7 @@
 #include <plat/regs-fb-v4.h>
 #include <plat/backlight.h>
 #include <plat/gpio-cfg.h>
+#include <plat/regs-adc.h>
 #include <plat/adc.h>
 #include <plat/iic.h>
 #include <plat/pd.h>
@@ -83,6 +84,7 @@
 #include <video/platform_lcd.h>
 #include <media/m5mo_platform.h>
 #include <media/m5mols.h>
+#include <mach/board_rev.h>
 #include <mach/map.h>
 #include <mach/spi-clocks.h>
 #include <mach/exynos-ion.h>
@@ -3702,6 +3704,63 @@ static void __init exynos_sysmmu_init(void)
 #endif
 }
 
+#define SMDK4412_REV_0_0_ADC_VALUE 32768
+#define SMDK4412_REV_0_1_ADC_VALUE 33325
+
+int samsung_board_rev;
+
+static int get_samsung_board_rev(void)
+{
+	int 		adc_val = 0;
+	struct clk	*adc_clk;
+	struct resource	*res;
+	void __iomem	*adc_regs;
+	unsigned int	con;
+
+	if (soc_is_exynos4212() || samsung_rev() < EXYNOS4412_REV_1_0)
+		return SAMSUNG_BOARD_REV_0_0;
+
+	adc_clk = clk_get(NULL, "adc");
+	if (unlikely(IS_ERR(adc_clk)))
+		return SAMSUNG_BOARD_REV_0_0;
+
+	clk_enable(adc_clk);
+
+	res = platform_get_resource(&s3c_device_adc, IORESOURCE_MEM, 0);
+	if (unlikely(!res))
+		goto err_clk;
+
+	adc_regs = ioremap(res->start, resource_size(res));
+	if (unlikely(!adc_regs))
+		goto err_clk;
+
+	writel(S5PV210_ADCCON_SELMUX(3), adc_regs + S5PV210_ADCMUX);
+
+	con = readl(adc_regs + S3C2410_ADCCON);
+	con &= ~S3C2410_ADCCON_MUXMASK;
+	con &= ~S3C2410_ADCCON_STDBM;
+	con &= ~S3C2410_ADCCON_STARTMASK;
+	con |=  S3C2410_ADCCON_PRSCEN;
+
+	con |= S3C2410_ADCCON_ENABLE_START;
+	writel(con, adc_regs + S3C2410_ADCCON);
+
+	udelay (10);
+
+	adc_val = readl (adc_regs + S3C2410_ADCDAT0);
+	writel(0, adc_regs + S3C64XX_ADCCLRINT);
+
+	iounmap(adc_regs);
+err_clk:
+	clk_disable(adc_clk);
+	clk_put(adc_clk);
+
+	if (adc_val > (SMDK4412_REV_0_0_ADC_VALUE+SMDK4412_REV_0_1_ADC_VALUE)/2)
+		return SAMSUNG_BOARD_REV_0_1;
+
+	return SAMSUNG_BOARD_REV_0_0;
+}
+
 static void __init smdk4x12_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -3714,6 +3773,7 @@ static void __init smdk4x12_machine_init(void)
 #endif
 	struct device *spi2_dev = &exynos_device_spi2.dev;
 #endif
+	samsung_board_rev = get_samsung_board_rev();
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_disable(&exynos4_device_pd[PD_MFC].dev);
 	exynos_pd_disable(&exynos4_device_pd[PD_G3D].dev);
