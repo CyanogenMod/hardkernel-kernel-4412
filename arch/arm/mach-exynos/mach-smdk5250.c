@@ -1544,6 +1544,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&smdk5250_dp_lcd,
 #endif
 #endif
+	&s3c_device_wdt,
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
 	&s3c_device_i2c4,
