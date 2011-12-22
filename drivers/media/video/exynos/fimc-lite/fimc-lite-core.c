@@ -272,18 +272,10 @@ static int flite_s_power(struct v4l2_subdev *sd, int on)
 	int ret = 0;
 
 	if (on) {
-		ret = pm_runtime_get_sync(&flite->pdev->dev);
-		if (ret) {
-			v4l2_err(sd, "get_sync failed\n");
-			return ret;
-		}
+		pm_runtime_get_sync(&flite->pdev->dev);
 		set_bit(FLITE_ST_POWERED, &flite->state);
 	} else {
-		ret = pm_runtime_put_sync(&flite->pdev->dev);
-		if (ret) {
-			v4l2_err(sd, "put_sync failed\n");
-			return ret;
-		}
+		pm_runtime_put_sync(&flite->pdev->dev);
 		clear_bit(FLITE_ST_POWERED, &flite->state);
 	}
 
@@ -796,8 +788,6 @@ static int flite_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, &flite->sd);
 
 	pm_runtime_enable(&pdev->dev);
-
-	set_bit(FLITE_ST_SUSPENDED, &flite->state);
 
 	flite_info("fimc-lite%d probe success", pdev->id);
 
