@@ -1064,7 +1064,7 @@ static struct s3c_fb_pd_win smdk4x12_fb_win2 = {
 	.max_bpp		= 32,
 	.default_bpp		= 24,
 };
-#elif defined (CONFIG_LCD_LMS501KF03)
+#elif defined(CONFIG_LCD_LMS501KF03)
 static int lcd_power_on(struct lcd_device *ld, int enable)
 {
 	return 1;
@@ -1074,18 +1074,35 @@ static int reset_lcd(struct lcd_device *ld)
 {
 	int err = 0;
 
-	err = gpio_request_one(EXYNOS4_GPX1(5), GPIOF_OUT_INIT_HIGH, "GPX1");
-	if (err) {
-		printk(KERN_ERR "failed to request GPX1 for "
-				"lcd reset control\n");
-		return err;
+	if (samsung_board_rev_is_0_1()) {
+		err = gpio_request_one(EXYNOS4212_GPM3(6),
+				GPIOF_OUT_INIT_HIGH, "GPM3");
+		if (err) {
+			printk(KERN_ERR "failed to request GPM3 for "
+					"lcd reset control\n");
+			return err;
+		}
+		gpio_set_value(EXYNOS4212_GPM3(6), 0);
+		mdelay(1);
+
+		gpio_set_value(EXYNOS4212_GPM3(6), 1);
+
+		gpio_free(EXYNOS4212_GPM3(6));
+	} else {
+		err = gpio_request_one(EXYNOS4_GPX1(5),
+				GPIOF_OUT_INIT_HIGH, "GPX1");
+		if (err) {
+			printk(KERN_ERR "failed to request GPX1 for "
+					"lcd reset control\n");
+			return err;
+		}
+		gpio_set_value(EXYNOS4_GPX1(5), 0);
+		mdelay(1);
+
+		gpio_set_value(EXYNOS4_GPX1(5), 1);
+
+		gpio_free(EXYNOS4_GPX1(5));
 	}
-	gpio_set_value(EXYNOS4_GPX1(5), 0);
-	mdelay(1);
-
-	gpio_set_value(EXYNOS4_GPX1(5), 1);
-
-	gpio_free(EXYNOS4_GPX1(5));
 
 	return 1;
 }

@@ -23,6 +23,7 @@
 #include <mach/regs-gpio.h>
 #include <mach/map.h>
 #include <mach/gpio.h>
+#include <mach/board_rev.h>
 
 #include <plat/clock.h>
 #include <plat/gpio-cfg.h>
@@ -421,20 +422,39 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 	gpio_set_value(EXYNOS4_GPX0(6), 1);
 
 	gpio_free(EXYNOS4_GPX0(6));
-#elif defined (CONFIG_MACH_SMDK4X12)
-	err = gpio_request_one(EXYNOS4_GPX1(5), GPIOF_OUT_INIT_HIGH, "GPX0");
-	if (err) {
-		printk(KERN_ERR "failed to request GPX0 for "
-			"lcd reset control\n");
-		return err;
+#elif defined(CONFIG_MACH_SMDK4X12)
+	if (samsung_board_rev_is_0_1()) {
+		err = gpio_request_one(EXYNOS4212_GPM3(6),
+				GPIOF_OUT_INIT_HIGH, "GPM3");
+		if (err) {
+			printk(KERN_ERR "failed to request GPM3 for "
+				"lcd reset control\n");
+			return err;
+		}
+
+		gpio_set_value(EXYNOS4212_GPM3(6), 0);
+		mdelay(1);
+
+		gpio_set_value(EXYNOS4212_GPM3(6), 1);
+
+		gpio_free(EXYNOS4212_GPM3(6));
+
+	} else {
+		err = gpio_request_one(EXYNOS4_GPX1(5),
+				GPIOF_OUT_INIT_HIGH, "GPX0");
+		if (err) {
+			printk(KERN_ERR "failed to request GPX0 for "
+				"lcd reset control\n");
+			return err;
+		}
+
+		gpio_set_value(EXYNOS4_GPX1(5), 0);
+		mdelay(1);
+
+		gpio_set_value(EXYNOS4_GPX1(5), 1);
+
+		gpio_free(EXYNOS4_GPX1(5));
 	}
-
-	gpio_set_value(EXYNOS4_GPX1(5), 0);
-	mdelay(1);
-
-	gpio_set_value(EXYNOS4_GPX1(5), 1);
-
-	gpio_free(EXYNOS4_GPX1(5));
 #endif
 
 	return 0;
