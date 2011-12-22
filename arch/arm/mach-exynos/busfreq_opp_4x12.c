@@ -474,12 +474,18 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 			opp = data->curr_opp;
 		newfreq = opp_get_freq(opp);
 	} else {
-		if (dmc0_load < dmc0_load_average)
+		if (dmc0_load < dmc0_load_average) {
 			dmc0_load = dmc0_load_average;
+			if (dmc0_load >= DMC_MAX_THRESHOLD)
+				dmc0_load = DMC_MAX_THRESHOLD;
+		}
 		dmc0freq = div64_u64(maxfreq * dmc0_load * 1000, DMC_MAX_THRESHOLD);
 
-		if (dmc1_load < dmc1_load_average)
+		if (dmc1_load < dmc1_load_average) {
 			dmc1_load = dmc1_load_average;
+			if (dmc1_load >= DMC_MAX_THRESHOLD)
+				dmc1_load = DMC_MAX_THRESHOLD;
+		}
 		dmc1freq = div64_u64(maxfreq * dmc1_load * 1000, DMC_MAX_THRESHOLD);
 		newfreq = max(dmc0freq, dmc1freq);
 	}
