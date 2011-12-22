@@ -543,7 +543,7 @@ static ssize_t set_vol(struct device *dev, struct device_attribute *attr, const 
 		return -ENODEV;
 
 	if (sysfs_streq("1100000", buf)) {
-	    kbase_platform_set_voltage(dev, 11000000);
+	    kbase_platform_set_voltage(dev, 1100000);
 	} else if (sysfs_streq("1150000", buf)) {
 	    kbase_platform_set_voltage(dev, 1150000);
 	} else if (sysfs_streq("1200000", buf)) {
@@ -569,7 +569,7 @@ static void set_clkout_for_3d(void)
     int tmp;
 
     tmp = 0x0;
-    tmp |= 0x100B; // ACLK_400 selected
+    tmp |= 0x1000B; // ACLK_400 selected
     tmp |= 9 << 8; // divided by (9 + 1)
     __raw_writel(tmp, EXYNOS5_CLKOUT_CMU_TOP);
 
