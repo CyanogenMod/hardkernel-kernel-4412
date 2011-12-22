@@ -41,6 +41,7 @@
 #define DATA_SIZE_MAX	(0x20000)
 #define BITSTREAM_SIZE_MAX	(0x7FFFFFFF)
 
+/* F/W Endian Configuration */
 #ifdef USE_FW_ENDIAN_CONVERT
 #define ENDIAN_CHK_CONV(VAL)		\
 	(((VAL >> 24) & 0x000000FF) |	\
@@ -51,8 +52,9 @@
 #define ENDIAN_CHK_CONV(VAL)	(VAL)
 #endif
 
+/* For Debugging */
 #ifdef CONFIG_SND_SAMSUNG_RP_DEBUG
-#define srp_info(x... )	pr_info("SRP: " x)
+#define srp_info(x...)	pr_info("SRP: " x)
 #define srp_debug(x...)	pr_debug("SRP: " x)
 #define srp_err(x...)	pr_err("SRP_ERR: " x)
 #else
@@ -61,6 +63,22 @@
 #define srp_err(x...)
 #endif
 
+/* For SRP firmware */
+struct srp_fw_info {
+	unsigned char *vliw;		/* VLIW */
+	unsigned char *cga;		/* CGA */
+	unsigned char *data;		/* DATA */
+
+	unsigned int mem_base;		/* Physical address of base */
+	unsigned int vliw_pa;		/* Physical address of VLIW */
+	unsigned int cga_pa;		/* Physical address of CGA */
+	unsigned int data_pa;		/* Physical address of DATA */
+	unsigned long vliw_size;	/* Size of VLIW */
+	unsigned long cga_size;		/* Size of CGA */
+	unsigned long data_size;	/* Size of DATA */
+};
+
+/* OBUF/IBUF information */
 struct srp_buf_info {
 	void		*mmapped_addr;
 	void		*addr;
@@ -69,6 +87,7 @@ struct srp_buf_info {
 	int		num;
 };
 
+/* Decoding information */
 struct srp_dec_info {
 	unsigned int sample_rate;
 	unsigned int channels;
@@ -78,75 +97,68 @@ struct srp_info {
 	struct srp_buf_info	ibuf_info;
 	struct srp_buf_info	obuf_info;
 	struct srp_buf_info	pcm_info;
-	struct srp_dec_info	dec_info;
 
-	spinlock_t	lock;
-	int		state;
+	struct srp_fw_info	fw_info;
+	struct srp_dec_info	dec_info;
 
 	void __iomem	*iram;
 	void __iomem	*dmem;
 	void __iomem	*icache;
 	void __iomem	*commbox;
 
+	/* IBUF informaion */
 	unsigned char	*ibuf0;
 	unsigned char	*ibuf1;
-	unsigned char	*obuf0;
-	unsigned char	*obuf1;
-
 	unsigned int	ibuf0_pa;
 	unsigned int	ibuf1_pa;
+	unsigned int	ibuf_num;
+	unsigned long	ibuf_size;
+	unsigned long	ibuf_offset;
+	unsigned int	ibuf_next;
+	unsigned int	ibuf_empty[2];
+
+	/* OBUF informaion */
+	unsigned char	*obuf0;
+	unsigned char	*obuf1;
 	unsigned int	obuf0_pa;
 	unsigned int	obuf1_pa;
-	unsigned long	obuf_size;		/* OBUF size byte */
-	unsigned long	ibuf_size;		/* IBUF size byte */
-	unsigned long	ibuf_fill_size[2];	/* IBUF Fill size */
+	unsigned int	obuf_num;
+	unsigned long	obuf_size;
+	unsigned long	obuf_offset;
+	unsigned int	obuf_fill_done[2];
+	unsigned int	obuf_copy_done[2];
+	unsigned int	obuf_ready;
+	unsigned int	obuf_next;
 
-	unsigned char	*wbuf;			/* Temporatry BUF VA */
-	unsigned long	wbuf_pos;		/* Write pointer */
-	unsigned long	wbuf_fill_size;		/* Total size by user write() */
+	/* Temporary BUF informaion */
+	unsigned char	*wbuf;
+	unsigned long	wbuf_size;
+	unsigned long	wbuf_pos;
+	unsigned long	wbuf_fill_size;
 
-	unsigned int ibuf_next;
-	unsigned int ibuf_empty[2];
+	/* Decoding informaion */
+	unsigned long	frame_size;
+	unsigned long	set_bitstream_size;
+        unsigned long	old_pcm_size;
 
-	unsigned int obuf_fill_done[2];
-	unsigned int obuf_copy_done[2];
-	unsigned int obuf_ready;
-	unsigned int obuf_next;
+	/* SRP status information */
+	unsigned int	first_decoding;
+	unsigned int	decoding_started;
+	unsigned int	is_opened;
+	unsigned int	is_running;
+	unsigned int	is_pending;
+	unsigned int	block_mode;
+	unsigned int	stop_after_eos;
+	unsigned int	wait_for_eos;
+	unsigned int	prepare_for_eos;
+	unsigned int	play_done;
+	unsigned int	save_ibuf_empty;
 
-	unsigned long frame_size;
-	unsigned long frame_count;
-	unsigned long frame_count_base;
-	unsigned long set_bitstream_size;
-        unsigned long old_pcm_size;
+	/* Workqueue for reading pcm data and supplying decoding info */
+	unsigned int	wakeup_read_wq;
+	unsigned int	wakeup_decinfo_wq;
 
-	unsigned int first_decoding;
-	unsigned int decoding_started;
-	unsigned int wakeup_read_wq;
-	unsigned int wakeup_decinfo_wq;
-	unsigned int is_opened;			/* Running status of SRP */
-	unsigned int is_running;		/* Open status of SRP */
-	unsigned int is_pending;		/* Pending status of SRP */
-	unsigned int block_mode;		/* Block Mode */
-	unsigned int stop_after_eos;
-	unsigned int wait_for_eos;
-	unsigned int prepare_for_eos;
-	unsigned int play_done;
-	unsigned int save_ibuf_empty;
-
-	unsigned char *fw_code_vliw;		/* VLIW */
-	unsigned char *fw_code_cga;		/* CGA */
-	unsigned char *fw_data;			/* DATA */
-
-	dma_addr_t fw_mem_base;			/* Base memory for FW */
-	unsigned long vliw_rp;
-	unsigned long fw_mem_base_pa;		/* Physical address of base */
-	unsigned long fw_code_vliw_pa;		/* Physical address of VLIW */
-	unsigned long fw_code_cga_pa;		/* Physical address of CGA */
-	unsigned long fw_data_pa;		/* Physical address of DATA */
-	unsigned long fw_code_vliw_size;	/* Size of VLIW */
-	unsigned long fw_code_cga_size;		/* Size of CGA */
-	unsigned long fw_data_size;		/* Size of DATA */
-
+	/* Function pointer for clock control */
 	void	(*audss_clk_enable)(bool enable);
 };
 

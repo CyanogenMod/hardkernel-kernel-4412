@@ -13,12 +13,12 @@
 #ifndef _SRP_ALP_FW_H_
 #define _SRP_ALP_FW_H_
 
-extern unsigned long rp_fw_vliw[];
-extern unsigned long rp_fw_cga[];
-extern unsigned long rp_fw_data[];
+extern unsigned long srp_fw_vliw[];
+extern unsigned long srp_fw_cga[];
+extern unsigned long srp_fw_data[];
 
-extern unsigned long rp_fw_vliw_len;
-extern unsigned long rp_fw_cga_len;
-extern unsigned long rp_fw_data_len;
+extern unsigned long srp_fw_vliw_len;
+extern unsigned long srp_fw_cga_len;
+extern unsigned long srp_fw_data_len;
 
 #endif

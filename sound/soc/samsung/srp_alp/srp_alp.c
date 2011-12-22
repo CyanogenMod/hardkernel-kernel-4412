@@ -169,9 +169,6 @@ static void srp_reset(void)
 	srp.ibuf_empty[0] = 1;
 	srp.ibuf_empty[1] = 1;
 
-	srp.ibuf_fill_size[0] = 0;
-	srp.ibuf_fill_size[1] = 0;
-
 	srp.obuf_next = 1;
 	srp.obuf_ready = 0;
 	srp.obuf_fill_done[0] = 0;
@@ -224,13 +221,11 @@ static void srp_fill_ibuf(void)
 		srp_debug("Fill IBUF0 (%lu)\n", fill_size);
 		srp.ibuf_empty[0] = 0;
 		srp.ibuf_next = 1;
-		srp.ibuf_fill_size[0] = srp.ibuf_fill_size[1] + fill_size;
 	} else {
 		memcpy(srp.ibuf1, srp.wbuf, srp.ibuf_size);
 		srp_debug("Fill IBUF1 (%lu)\n", fill_size);
 		srp.ibuf_empty[1] = 0;
 		srp.ibuf_next = 0;
-		srp.ibuf_fill_size[1] = srp.ibuf_fill_size[0] + fill_size;
 	}
 
 	if (srp.wbuf_pos)
@@ -310,7 +305,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 {
 	struct srp_buf_info *argp = (struct srp_buf_info *)buffer;
 	void *obuf0 = srp.obuf_info.addr;
-	void *obuf1 = srp.obuf_info.addr + OBUF_SIZE;
+	void *obuf1 = srp.obuf_info.addr + srp.obuf_size;
 	int ret = 0;
 
 	srp_debug("Entered Get Obuf[%d] in PCM function\n", srp.obuf_ready);
@@ -352,7 +347,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	srp.pcm_info.size = readl(srp.commbox + SRP_PCM_DUMP_ADDR);
 	srp.pcm_info.num = srp.obuf_info.num;
 	if (srp.play_done && srp.pcm_info.size) {
-		if (srp.pcm_info.size < OBUF_SIZE &&
+		if (srp.pcm_info.size < srp.obuf_size &&
 			srp.pcm_info.size == srp.old_pcm_size)
 			srp.pcm_info.size = 0;
 	}
@@ -402,9 +397,9 @@ static void srp_commbox_init(void)
 	writel(BITSTREAM_SIZE_MAX, srp.commbox + SRP_BITSTREAM_SIZE);
 
 	/* Configure fw address */
-	writel(srp.vliw_rp, srp.commbox + SRP_CODE_START_ADDR);
-	writel(srp.fw_data_pa, srp.commbox + SRP_DATA_START_ADDR);
-	writel(srp.fw_code_cga_pa, srp.commbox + SRP_CONF_START_ADDR);
+	writel(srp.fw_info.vliw_pa, srp.commbox + SRP_CODE_START_ADDR);
+	writel(srp.fw_info.cga_pa, srp.commbox + SRP_CONF_START_ADDR);
+	writel(srp.fw_info.data_pa, srp.commbox + SRP_DATA_START_ADDR);
 }
 
 static void srp_commbox_deinit(void)
@@ -424,7 +419,7 @@ static void srp_fw_download(void)
 	unsigned int reg = 0;
 
 	/* Fill ICACHE with first 64KB area : ARM access I$ */
-	pval = (unsigned long *)srp.fw_code_vliw;
+	pval = (unsigned long *)srp.fw_info.vliw;
 	for (n = 0; n < 0x10000; n += 4, pval++)
 		writel(ENDIAN_CHK_CONV(*pval), srp.icache + n);
 
@@ -480,7 +475,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case SRP_GET_MMAP_SIZE:
-		srp.obuf_info.mmapped_size = OBUF_SIZE * OBUF_NUM + OBUF_OFFSET;
+		srp.obuf_info.mmapped_size = srp.obuf_size * srp.obuf_num + srp.obuf_offset;
 		val = srp.obuf_info.mmapped_size;
 		ret = copy_to_user((unsigned long *)arg,
 					&val, sizeof(unsigned long));
@@ -502,8 +497,8 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case SRP_GET_IBUF_INFO:
 		srp.ibuf_info.addr = (void *) srp.wbuf;
-		srp.ibuf_info.size = IBUF_SIZE * 2;
-		srp.ibuf_info.num  = IBUF_NUM;
+		srp.ibuf_info.size = srp.ibuf_size * 2;
+		srp.ibuf_info.num  = srp.ibuf_num;
 
 		ret = copy_to_user(argp, &srp.ibuf_info,
 						sizeof(struct srp_buf_info));
@@ -514,9 +509,9 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				sizeof(struct srp_buf_info));
 		if (!ret) {
 			srp.obuf_info.addr = srp.obuf_info.mmapped_addr
-							+ OBUF_OFFSET;
-			srp.obuf_info.size = OBUF_SIZE;
-			srp.obuf_info.num = OBUF_NUM;
+							+ srp.obuf_offset;
+			srp.obuf_info.size = srp.obuf_size;
+			srp.obuf_info.num = srp.obuf_num;
 		}
 
 		ret = copy_to_user(argp, &srp.obuf_info,
@@ -587,7 +582,7 @@ static int srp_open(struct inode *inode, struct file *file)
 	if (srp.is_opened) {
 		srp_err("Already opened.\n");
 		mutex_unlock(&srp_mutex);
-		return -1;
+		return -ENXIO;
 	}
 	srp.is_opened = 1;
 	mutex_unlock(&srp_mutex);
@@ -599,10 +594,19 @@ static int srp_open(struct inode *inode, struct file *file)
 	else
 		srp.block_mode = 0;
 
+	srp_set_default_fw();
+
+	srp.wbuf = kzalloc(srp.wbuf_size, GFP_KERNEL);
+	if (!srp.wbuf) {
+		srp_err("Failed to allocation for WBUF!\n");
+		return -ENOMEM;
+	}
+	srp_info("Allocation WBUF [%ld]Bytes\n", srp.wbuf_size);
+
+
 	srp.dec_info.channels = 0;
 	srp.dec_info.sample_rate = 0;
 	srp.frame_size = 0;
-	srp_set_default_fw();
 
 	return 0;
 }
@@ -612,6 +616,9 @@ static int srp_release(struct inode *inode, struct file *file)
 	srp_info("Released\n");
 
 	mutex_lock(&srp_mutex);
+
+	if (srp.wbuf)
+		kfree(srp.wbuf);
 
 	srp.is_opened = 0;
 
@@ -751,67 +758,26 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static int srp_prepare_fw_buff(struct device *dev)
+static void srp_prepare_buff(void)
 {
-	unsigned long mem_paddr;
-	struct cma_info mem_info;
-	int err;
-
-	err = cma_info(&mem_info, dev, 0);
-	if (err) {
-		srp_err("SRP: Failed to get cma info\n");
-		return -ENOMEM;
-	}
-	srp.fw_mem_base = cma_alloc(dev, "srp", BASE_MEM_SIZE, 0);
-	srp.fw_mem_base_pa = (unsigned long)srp.fw_mem_base;
-	if (IS_ERR_VALUE(srp.fw_mem_base_pa)) {
-		srp_err("SRP: Failed to cma alloc for srp\n");
-		return -ENOMEM;
-	}
-
-	mem_paddr = srp.fw_mem_base_pa;
-	srp.fw_code_vliw_pa = mem_paddr;
-	srp.fw_code_vliw = phys_to_virt(srp.fw_code_vliw_pa);
-	mem_paddr += VLIW_SIZE_MAX;
-
-	srp.fw_code_cga_pa = mem_paddr;
-	srp.fw_code_cga = phys_to_virt(srp.fw_code_cga_pa);
-	mem_paddr += CGA_SIZE_MAX;
-
-	srp.fw_data_pa = mem_paddr;
-	srp.fw_data = phys_to_virt(srp.fw_data_pa);
-	mem_paddr += DATA_SIZE_MAX;
-
-	srp.fw_code_vliw_size = rp_fw_vliw_len;
-	srp.fw_code_cga_size = rp_fw_cga_len;
-	srp.fw_data_size = rp_fw_data_len;
-
-	/* Clear Firmware memory & IBUF */
-	memset(srp.fw_code_vliw, 0, VLIW_SIZE);
-	memset(srp.fw_code_cga, 0, CGA_SIZE);
-	memset(srp.fw_data, 0, DATA_SIZE);
-
-	srp.vliw_rp = srp.fw_code_vliw_pa;
-
-	/* Copy Firmware */
-	memcpy(srp.fw_code_vliw, rp_fw_vliw,
-			srp.fw_code_vliw_size);
-	memcpy(srp.fw_code_cga, rp_fw_cga,
-			srp.fw_code_cga_size);
-	memcpy(srp.fw_data, rp_fw_data,
-			srp.fw_data_size);
-
-	srp.wbuf = kzalloc(WBUF_SIZE, GFP_KERNEL);
-	if (!srp.wbuf) {
-		srp_err("Failed to alloc WBUF!\n");
-		return -ENOMEM;
-	}
-
 	srp.ibuf_size = IBUF_SIZE;
 	srp.obuf_size = OBUF_SIZE;
+	srp.wbuf_size = WBUF_SIZE;
+	srp.ibuf_offset = IBUF_OFFSET;
+	srp.obuf_offset = OBUF_OFFSET;
 
-	memset(srp.ibuf0, 0xFF, srp.ibuf_size);
-	memset(srp.ibuf1, 0xFF, srp.ibuf_size);
+	srp.ibuf0 = srp.iram + srp.ibuf_offset;
+	srp.obuf0 = srp.dmem + srp.obuf_offset;
+	srp.ibuf1 = srp.ibuf0 + srp.ibuf_size;
+	srp.obuf1 = srp.obuf0 + srp.obuf_size;
+
+	srp.ibuf0_pa = SRP_IBUF_PHY_ADDR;
+	srp.obuf0_pa = SRP_OBUF_PHY_ADDR;
+	srp.ibuf1_pa = srp.ibuf0_pa + srp.ibuf_size;
+	srp.obuf1_pa = srp.obuf0_pa + srp.obuf_size;
+
+	srp.ibuf_num = IBUF_NUM;
+	srp.obuf_num = OBUF_NUM;
 
 	srp_info("[VA]IBUF0[0x%p], [PA]IBUF0[0x%x]\n",
 						srp.ibuf0, srp.ibuf0_pa);
@@ -821,20 +787,57 @@ static int srp_prepare_fw_buff(struct device *dev)
 						srp.obuf0, srp.obuf0_pa);
 	srp_info("[VA]OBUF1[0x%p], [PA]OBUF1[0x%x]\n",
 						srp.obuf1, srp.obuf1_pa);
-	srp_info("[VA]WBUF [0x%p]\n", srp.wbuf);
 	srp_info("IBUF SIZE [%ld]Bytes, OBUF SIZE [%ld]Bytes\n",
 						srp.ibuf_size, srp.obuf_size);
+}
+
+static int srp_prepare_fw_buff(struct device *dev)
+{
+	unsigned long mem_paddr;
+
+	srp.fw_info.mem_base = cma_alloc(dev, "srp", BASE_MEM_SIZE, 0);
+	if (IS_ERR_VALUE(srp.fw_info.mem_base)) {
+		srp_err("SRP: Failed to cma alloc for srp\n");
+		return -ENOMEM;
+	}
+
+	mem_paddr = srp.fw_info.mem_base;
+	srp.fw_info.vliw_pa = mem_paddr;
+	srp.fw_info.vliw = phys_to_virt(srp.fw_info.vliw_pa);
+	mem_paddr += VLIW_SIZE_MAX;
+
+	srp.fw_info.cga_pa = mem_paddr;
+	srp.fw_info.cga = phys_to_virt(srp.fw_info.cga_pa);
+	mem_paddr += CGA_SIZE_MAX;
+
+	srp.fw_info.data_pa = mem_paddr;
+	srp.fw_info.data = phys_to_virt(srp.fw_info.data_pa);
+	mem_paddr += DATA_SIZE_MAX;
+
+	srp.fw_info.vliw_size = srp_fw_vliw_len;
+	srp.fw_info.cga_size = srp_fw_cga_len;
+	srp.fw_info.data_size = srp_fw_data_len;
+
+	/* Clear Firmware memory & IBUF */
+	memset(srp.fw_info.vliw, 0, VLIW_SIZE);
+	memset(srp.fw_info.cga, 0, CGA_SIZE);
+	memset(srp.fw_info.data, 0, DATA_SIZE);
+
+	/* Copy Firmware */
+	memcpy(srp.fw_info.vliw, srp_fw_vliw, srp.fw_info.vliw_size);
+	memcpy(srp.fw_info.cga, srp_fw_cga, srp.fw_info.cga_size);
+	memcpy(srp.fw_info.data, srp_fw_data,	srp.fw_info.data_size);
 
 	return 0;
 }
 
 static int srp_remove_fw_buff(void)
 {
-	kfree(srp.wbuf);
+	cma_free(srp.fw_info.mem_base);
 
-	srp.fw_code_vliw_pa = 0;
-	srp.fw_code_cga_pa = 0;
-	srp.fw_data_pa = 0;
+	srp.fw_info.vliw_pa = 0;
+	srp.fw_info.cga_pa = 0;
+	srp.fw_info.data_pa = 0;
 	srp.ibuf0_pa = 0;
 	srp.ibuf1_pa = 0;
 	srp.obuf0_pa = 0;
@@ -905,18 +908,6 @@ static __devinit int srp_probe(struct platform_device *pdev)
 		goto err3;
 	}
 
-	srp.ibuf0 = srp.iram + IBUF_OFFSET;
-	srp.ibuf1 = srp.ibuf0 + IBUF_SIZE;
-
-	srp.obuf0 = srp.dmem + OBUF_OFFSET;
-	srp.obuf1 = srp.obuf0 + OBUF_SIZE;
-
-	srp.ibuf0_pa = SRP_IBUF_PHY_ADDR;
-	srp.obuf0_pa = SRP_OBUF_PHY_ADDR;
-
-	srp.ibuf1_pa = srp.ibuf0_pa + IBUF_SIZE;
-	srp.obuf1_pa = srp.obuf0_pa + OBUF_SIZE;
-
 	ret = srp_prepare_fw_buff(&pdev->dev);
 	if (ret) {
 		srp_err("SRP: Can't prepare memory for srp\n");
@@ -929,14 +920,15 @@ static __devinit int srp_probe(struct platform_device *pdev)
 		goto err5;
 	}
 
-	srp.audss_clk_enable = audss_clk_enable;
-
 	ret = misc_register(&srp_miscdev);
 	if (ret) {
 		srp_err("SRP: Cannot register miscdev on minor=%d\n",
 			SRP_DEV_MINOR);
 		goto err6;
 	}
+
+	srp_prepare_buff();
+	srp.audss_clk_enable = audss_clk_enable;
 
 	return 0;
 
