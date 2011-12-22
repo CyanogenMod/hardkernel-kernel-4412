@@ -27,6 +27,7 @@
 #include <linux/reboot.h>
 #include <linux/slab.h>
 #include <linux/opp.h>
+#include <linux/clk.h>
 #include <mach/busfreq.h>
 
 #include <asm/mach-types.h>
@@ -412,16 +413,17 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	unsigned int cpu_load_average = 0;
 	unsigned int dmc0_load_average = 0;
 	unsigned int dmc1_load_average = 0;
+	unsigned int dmc_load_average;
 	unsigned long cpufreq = 0;
 	unsigned long lockfreq;
-	unsigned long dmc0freq;
-	unsigned long dmc1freq;
+	unsigned long dmcfreq;
 	unsigned long newfreq;
 	unsigned long currfreq = opp_get_freq(data->curr_opp) / 1000;
 	unsigned long maxfreq = opp_get_freq(data->max_opp) / 1000;
 	unsigned long cpu_load;
 	unsigned long dmc0_load;
 	unsigned long dmc1_load;
+	unsigned long dmc_load;
 	int cpu_load_slope;
 
 	ppmu_update(data->dev);
@@ -452,6 +454,14 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	dmc0_load_average /= LOAD_HISTORY_SIZE;
 	dmc1_load_average /= LOAD_HISTORY_SIZE;
 
+	if (dmc0_load >= dmc1_load) {
+		dmc_load = dmc0_load;
+		dmc_load_average = dmc0_load_average;
+	} else {
+		dmc_load = dmc1_load;
+		dmc_load_average = dmc1_load_average;
+	}
+
 	if (cpu_load >= UP_CPU_THRESHOLD) {
 		cpufreq = opp_get_freq(data->max_opp);
 		if (cpu_load < MAX_CPU_THRESHOLD) {
@@ -464,35 +474,26 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 		}
 	}
 
-	if (dmc0_load >= DMC_MAX_THRESHOLD || dmc1_load >= DMC_MAX_THRESHOLD) {
-		newfreq = opp_get_freq(data->max_opp);
-	} else if (dmc0_load < IDLE_THRESHOLD
-			&& dmc1_load < IDLE_THRESHOLD) {
-		if (dmc0_load_average < IDLE_THRESHOLD &&  dmc1_load_average < IDLE_THRESHOLD)
+	if (dmc_load >= DMC_MAX_THRESHOLD) {
+		dmcfreq = opp_get_freq(data->max_opp);
+	} else if (dmc_load < IDLE_THRESHOLD) {
+		if (dmc_load_average < IDLE_THRESHOLD)
 			opp = step_down(data, 1);
 		else
 			opp = data->curr_opp;
-		newfreq = opp_get_freq(opp);
+		dmcfreq = opp_get_freq(opp);
 	} else {
-		if (dmc0_load < dmc0_load_average) {
-			dmc0_load = dmc0_load_average;
-			if (dmc0_load >= DMC_MAX_THRESHOLD)
-				dmc0_load = DMC_MAX_THRESHOLD;
+		if (dmc_load < dmc_load_average) {
+			dmc_load = dmc_load_average;
+			if (dmc_load >= DMC_MAX_THRESHOLD)
+				dmc_load = DMC_MAX_THRESHOLD;
 		}
-		dmc0freq = div64_u64(maxfreq * dmc0_load * 1000, DMC_MAX_THRESHOLD);
-
-		if (dmc1_load < dmc1_load_average) {
-			dmc1_load = dmc1_load_average;
-			if (dmc1_load >= DMC_MAX_THRESHOLD)
-				dmc1_load = DMC_MAX_THRESHOLD;
-		}
-		dmc1freq = div64_u64(maxfreq * dmc1_load * 1000, DMC_MAX_THRESHOLD);
-		newfreq = max(dmc0freq, dmc1freq);
+		dmcfreq = div64_u64(maxfreq * dmc_load * 1000, DMC_MAX_THRESHOLD);
 	}
 
 	lockfreq = dev_max_freq(data->dev);
 
-	newfreq = max3(lockfreq, newfreq, cpufreq);
+	newfreq = max3(lockfreq, dmcfreq, cpufreq);
 
 	opp = opp_find_freq_ceil(data->dev, &newfreq);
 
@@ -505,6 +506,8 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 	unsigned int tmp;
 	unsigned long maxfreq = ULONG_MAX;
 	unsigned long minfreq = 0;
+	unsigned long freq;
+	struct clk *sclk_dmc;
 	int ret;
 
 	/* Enable pause function for DREX2 DVFS */
@@ -552,6 +555,17 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 	/* Find max frequency */
 	data->max_opp = opp_find_freq_floor(dev, &maxfreq);
 	data->min_opp = opp_find_freq_ceil(dev, &minfreq);
+
+	sclk_dmc = clk_get(NULL, "sclk_dmc");
+
+	if (IS_ERR(sclk_dmc)) {
+		pr_err("Failed to get sclk_dmc.!\n");
+		data->curr_opp = data->max_opp;
+	} else {
+		freq = clk_get_rate(sclk_dmc) / 1000;
+		clk_put(sclk_dmc);
+		data->curr_opp = opp_find_freq_ceil(dev, &freq);
+	}
 
 	data->vdd_int = regulator_get(NULL, "vdd_int");
 	if (IS_ERR(data->vdd_int)) {

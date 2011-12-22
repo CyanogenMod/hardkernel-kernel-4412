@@ -305,8 +305,12 @@ static ssize_t show_level_lock(struct device *device,
 static ssize_t store_level_lock(struct device *device, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
+	struct platform_device *pdev = to_platform_device(bus_ctrl.dev);
+	struct busfreq_data *data = (struct busfreq_data *)platform_get_drvdata(pdev);
 	struct opp *opp;
 	unsigned long freq;
+	unsigned long maxfreq = opp_get_freq(data->max_opp);
+
 	sscanf(buf, "%lu", &freq);
 	if (freq == 0) {
 		pr_info("Release bus level lock.\n");
@@ -314,8 +318,8 @@ static ssize_t store_level_lock(struct device *device, struct device_attribute *
 		return count;
 	}
 
-	if (freq > 400200)
-		freq = 400200;
+	if (freq > maxfreq)
+		freq = maxfreq;
 
 	opp = opp_find_freq_ceil(bus_ctrl.dev, &freq);
 	bus_ctrl.opp_lock = opp;
@@ -368,8 +372,6 @@ void exynos_request_apply(unsigned long freq, struct device *dev)
 static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
-	struct clk *sclk_dmc;
-	unsigned long freq;
 	unsigned int val;
 
 	if (!soc_is_exynos5250()) {
@@ -431,18 +433,8 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 		goto err_busfreq;
 	}
 
-	sclk_dmc = clk_get(NULL, "sclk_dmc");
-
-	if (IS_ERR(sclk_dmc)) {
-		pr_err("Failed to get sclk_dmc.!\n");
-		freq = 400200;
-	} else {
-		freq = clk_get_rate(sclk_dmc) / 1000;
-		clk_put(sclk_dmc);
-	}
 
 	data->last_time = get_jiffies_64();
-	data->curr_opp = opp_find_freq_ceil(&pdev->dev, &freq);
 
 	data->busfreq_kobject = kobject_create_and_add("busfreq",
 				&cpu_sysdev_class.kset.kobj);

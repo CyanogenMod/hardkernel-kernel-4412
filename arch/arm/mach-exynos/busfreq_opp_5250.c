@@ -55,7 +55,9 @@ enum busfreq_level_idx {
 	LV_END
 };
 
-static struct busfreq_table exynos5_busfreq_table[] = {
+static struct busfreq_table *exynos5_busfreq_table;
+
+static struct busfreq_table exynos5_busfreq_table_for800[] = {
 	{LV_0, 800000, 1000000, 0, 0, 0},
 	{LV_1, 400000, 1000000, 0, 0, 0},
 	{LV_2, 267000, 1000000, 0, 0, 0},
@@ -64,6 +66,32 @@ static struct busfreq_table exynos5_busfreq_table[] = {
 	{LV_5, 100000, 1000000, 0, 0, 0},
 };
 
+static struct busfreq_table exynos5_busfreq_table_for667[] = {
+	{LV_0, 667000, 1000000, 0, 0, 0},
+	{LV_1, 334000, 1000000, 0, 0, 0},
+	{LV_2, 222000, 1000000, 0, 0, 0},
+	{LV_3, 167000, 1000000, 0, 0, 0},
+	{LV_4, 133000, 1000000, 0, 0, 0},
+	{LV_5, 83000, 1000000, 0, 0, 0},
+};
+
+static struct busfreq_table exynos5_busfreq_table_for533[] = {
+	{LV_0, 533000, 1000000, 0, 0, 0},
+	{LV_1, 267000, 1000000, 0, 0, 0},
+	{LV_2, 178000, 1000000, 0, 0, 0},
+	{LV_3, 133000, 1000000, 0, 0, 0},
+	{LV_4, 107000, 1000000, 0, 0, 0},
+	{LV_5, 67000, 1000000, 0, 0, 0},
+};
+
+static struct busfreq_table exynos5_busfreq_table_for400[] = {
+	{LV_0, 400000, 1000000, 0, 0, 0},
+	{LV_1, 267000, 1000000, 0, 0, 0},
+	{LV_2, 200000, 1000000, 0, 0, 0},
+	{LV_3, 160000, 1000000, 0, 0, 0},
+	{LV_4, 130000, 1000000, 0, 0, 0},
+	{LV_5, 100000, 1000000, 0, 0, 0},
+};
 #define ASV_GROUP	9
 static unsigned int asv_group_index;
 
@@ -504,18 +532,22 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		ret = PTR_ERR(clk);
 		return ret;
 	}
-	cdrexfreq = clk_get_rate(clk) / 1000000;
+	cdrexfreq = clk_get_rate(clk) / 1000;
 
 	clk_put(clk);
 
-	if (cdrexfreq == 800) {
+	if (cdrexfreq == 800000) {
 		clkdiv_cdrex = clkdiv_cdrex_for800;
-	} else if (cdrexfreq == 667) {
+		exynos5_busfreq_table = exynos5_busfreq_table_for800;
+	} else if (cdrexfreq == 667000) {
 		clkdiv_cdrex = clkdiv_cdrex_for667;
-	} else if (cdrexfreq == 533) {
+		exynos5_busfreq_table = exynos5_busfreq_table_for667;
+	} else if (cdrexfreq == 533000) {
 		clkdiv_cdrex = clkdiv_cdrex_for533;
-	} else if (cdrexfreq == 400) {
+		exynos5_busfreq_table = exynos5_busfreq_table_for533;
+	} else if (cdrexfreq == 400000) {
 		clkdiv_cdrex = clkdiv_cdrex_for400;
+		exynos5_busfreq_table = exynos5_busfreq_table_for400;
 	} else {
 		dev_err(dev, "Don't support cdrex table\n");
 		return -EINVAL;
@@ -538,6 +570,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	/* Find max frequency */
 	data->max_opp = opp_find_freq_floor(dev, &maxfreq);
 	data->min_opp = opp_find_freq_ceil(dev, &minfreq);
+	data->curr_opp = opp_find_freq_ceil(dev, &cdrexfreq);
 
 	data->vdd_int = regulator_get(NULL, "vdd_int");
 	if (IS_ERR(data->vdd_int)) {
