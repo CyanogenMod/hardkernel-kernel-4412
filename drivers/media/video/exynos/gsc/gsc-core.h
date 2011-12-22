@@ -226,20 +226,29 @@ struct gsc_addr {
 	dma_addr_t	cr;
 };
 
-/**
- * struct gsc_ctrl_val - the G-Scaler control value set
- * @rot: rotation degree
- * @global_alpha: the alpha value of current frame
+/* struct gsc_ctrls - the G-Scaler control set
+ * @rotate: rotation degree
  * @hflip: horizontal flip
  * @vflip: vertical flip
+ * @global_alpha: the alpha value of current frame
  * @cacheable: cacheability of current frame
+ * @layer_blend_en: enable mixer layer alpha blending
+ * @layer_alpha: set alpha value for mixer layer
+ * @pixel_blend_en: enable mixer pixel alpha blending
+ * $chroma_en: enable chromakey
+ * @chroma_val:	set value for chromakey
  */
-struct gsc_ctrl_val {
-	u16	rot;
-	u8	global_alpha;
-	bool	hflip;
-	bool	vflip;
-	bool	cacheable;
+struct gsc_ctrls {
+	struct v4l2_ctrl	*rotate;
+	struct v4l2_ctrl	*hflip;
+	struct v4l2_ctrl	*vflip;
+	struct v4l2_ctrl	*global_alpha;
+	struct v4l2_ctrl	*cacheable;
+	struct v4l2_ctrl	*layer_blend_en;
+	struct v4l2_ctrl	*layer_alpha;
+	struct v4l2_ctrl	*pixel_blend_en;
+	struct v4l2_ctrl	*chroma_en;
+	struct v4l2_ctrl	*chroma_val;
 };
 
 /**
@@ -362,8 +371,10 @@ struct gsc_m2m_device {
  *  @real_rot_dis_h: max pixel src croppped width with the rotator is off
  *  @real_rot_en_w: max pixel src cropped width with the rotator is on
  *  @real_rot_en_h: max pixel src cropped height with the rotator is on
- *  @target_w: max pixel dst scaled width with the rotator is on
- *  @target_h: max pixel dst scaled height with the rotator is on
+ *  @target_rot_dis_w: max pixel dst scaled width with the rotator is off
+ *  @target_rot_dis_h: max pixel dst scaled height with the rotator is off
+ *  @target_rot_en_w: max pixel dst scaled width with the rotator is on
+ *  @target_rot_en_h: max pixel dst scaled height with the rotator is on
  */
 struct gsc_pix_max {
 	u16 org_scaler_bypass_w;
@@ -374,8 +385,10 @@ struct gsc_pix_max {
 	u16 real_rot_dis_h;
 	u16 real_rot_en_w;
 	u16 real_rot_en_h;
-	u16 target_w;
-	u16 target_h;
+	u16 target_rot_dis_w;
+	u16 target_rot_dis_h;
+	u16 target_rot_en_w;
+	u16 target_rot_en_h;
 };
 
 /**
@@ -385,16 +398,20 @@ struct gsc_pix_max {
  *  @org_h: minimum source pixel height
  *  @real_w: minimum input crop pixel width
  *  @real_h: minimum input crop pixel height
- *  @target_w: minimum output scaled pixel height
- *  @target_h: minimum output scaled pixel height
+ *  @target_rot_dis_w: minimum output scaled pixel height when rotator is off
+ *  @target_rot_dis_h: minimum output scaled pixel height when rotator is off
+ *  @target_rot_en_w: minimum output scaled pixel height when rotator is on
+ *  @target_rot_en_h: minimum output scaled pixel height when rotator is on
  */
 struct gsc_pix_min {
 	u16 org_w;
 	u16 org_h;
 	u16 real_w;
 	u16 real_h;
-	u16 target_w;
-	u16 target_h;
+	u16 target_rot_dis_w;
+	u16 target_rot_dis_h;
+	u16 target_rot_en_w;
+	u16 target_rot_en_h;
 };
 
 struct gsc_pix_align {
@@ -511,7 +528,6 @@ struct gsc_dev {
  * @d_frame:		destination frame properties
  * @in_path:		input mode (DMA or camera)
  * @out_path:		output mode (DMA or FIFO)
- * @ctrl_val:		g-scaler control value
  * @scaler:		image scaler properties
  * @flags:		additional flags for image conversion
  * @state:		flags to keep track of user configuration
@@ -519,17 +535,8 @@ struct gsc_dev {
  * @m2m_ctx:		memory-to-memory device context
  * @fh:                 v4l2 file handle
  * @ctrl_handler:       v4l2 controls handler
- * @ctrl_rotate         image rotation control
- * @ctrl_hflip          horizontal flip control
- * @ctrl_vflip          vertical flip control
- * @ctrl_global_alpha:	alpha value when DMA-out is XRGB8888 control
- * @ctrl_cacheable:	frame's cacheable property
- * @ctrl_layer_blend_en	enable mixer layer alpha blending
- * @ctrl_layer_alpha:	set alpha value for mixer layer
- * @ctrl_pixel_blend_en	enable mixer pixel alpha blending
- * $ctrl_chroma_en:	enable chromakey
- * @ctrl_chroma_val:	set value for chromakey
  * @ctrls_rdy:          true if the control handler is initialized
+ * @gsc_ctrls		G-Scaler control set
  * @m2m_ctx:		memory-to-memory device context
  */
 struct gsc_ctx {
@@ -538,7 +545,6 @@ struct gsc_ctx {
 	struct gsc_frame	d_frame;
 	enum gsc_datapath	in_path;
 	enum gsc_datapath	out_path;
-	struct gsc_ctrl_val	ctrl_val;
 	struct gsc_scaler	scaler;
 	u32			flags;
 	u32			state;
@@ -546,16 +552,7 @@ struct gsc_ctx {
 	struct v4l2_m2m_ctx	*m2m_ctx;
 	struct v4l2_fh		fh;
 	struct v4l2_ctrl_handler ctrl_handler;
-	struct v4l2_ctrl	*ctrl_rotate;
-	struct v4l2_ctrl	*ctrl_hflip;
-	struct v4l2_ctrl	*ctrl_vflip;
-	struct v4l2_ctrl	*ctrl_global_alpha;
-	struct v4l2_ctrl	*ctrl_cacheable;
-	struct v4l2_ctrl	*ctrl_layer_blend_en;
-	struct v4l2_ctrl	*ctrl_layer_alpha;
-	struct v4l2_ctrl	*ctrl_pixel_blend_en;
-	struct v4l2_ctrl	*ctrl_chroma_en;
-	struct v4l2_ctrl	*ctrl_chroma_val;
+	struct gsc_ctrls	gsc_ctrls;
 	bool			ctrls_rdy;
 };
 
@@ -577,9 +574,8 @@ u32 get_plane_size(struct gsc_frame *fr, unsigned int plane);
 char gsc_total_fmts(void);
 struct gsc_fmt *get_format(int index);
 struct gsc_fmt *find_format(u32 *pixelformat, u32 *mbus_code, int index);
-int gsc_check_scale_size(struct gsc_ctx *ctx);
 int gsc_enum_fmt_mplane(struct v4l2_fmtdesc *f);
-int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f);
+int gsc_try_fmt_mplane(struct gsc_ctx *ctx, struct v4l2_format *f);
 void gsc_set_frame_size(struct gsc_frame *frame, int width, int height);
 int gsc_g_fmt_mplane(struct gsc_ctx *ctx, struct v4l2_format *f);
 void gsc_check_crop_change(u32 tmp_w, u32 tmp_h, u32 *w, u32 *h);
@@ -730,6 +726,11 @@ static inline struct gsc_dev *entity_to_gsc(struct media_entity *me)
 
 	sd = container_of(me, struct v4l2_subdev, entity);
 	return entity_data_to_gsc(v4l2_get_subdevdata(sd));
+}
+
+static inline void user_to_drv(struct v4l2_ctrl *ctrl, s32 value)
+{
+	ctrl->cur.val = ctrl->val = value;
 }
 
 void gsc_hw_set_sw_reset(struct gsc_dev *dev);

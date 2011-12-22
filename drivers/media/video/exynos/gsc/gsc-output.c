@@ -84,21 +84,17 @@ int gsc_out_set_scaler_info(struct gsc_ctx *ctx)
 	int tx, ty;
 	int ret;
 
-	ret = gsc_check_scale_size(ctx);
-	if (ret) {
-		gsc_err("Invalid size");
-		return ret;
-	}
-
 	ret = gsc_out_check_scaler_ratio(variant, s_frame->crop.width,
 					 s_frame->crop.height, d_frame->crop.width,
-					 d_frame->crop.height, ctx->ctrl_val.rot);
+					 d_frame->crop.height,
+					 ctx->gsc_ctrls.rotate->val);
 	if (ret) {
 		gsc_err("Out of scaler range");
 		return ret;
 	}
 
-	if (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270) {
+	if (ctx->gsc_ctrls.rotate->val == 90 ||
+	    ctx->gsc_ctrls.rotate->val == 270) {
 		ty = d_frame->crop.width;
 		tx = d_frame->crop.height;
 	} else {
@@ -146,46 +142,43 @@ int gsc_out_hw_set(struct gsc_ctx *ctx)
 	return 0;
 }
 
-void gsc_subdev_try_size(struct gsc_dev *gsc, struct v4l2_rect *cr,
-			 struct v4l2_mbus_framefmt *mf)
+static void gsc_subdev_try_crop(struct gsc_dev *gsc, struct v4l2_rect *cr)
 {
 	struct gsc_variant *variant = gsc->variant;
-	u32 max_width, max_height, min_w, min_h;
+	u32 max_w, max_h, min_w, min_h;
 	u32 tmp_w, tmp_h;
 
-	max_width = variant->pix_max->org_scaler_input_w;
-	max_height = variant->pix_max->org_scaler_input_h;
-	min_w = variant->pix_min->target_w;
-	min_h = variant->pix_min->target_h;
+	if (gsc->out.ctx->gsc_ctrls.rotate->val == 90 ||
+            gsc->out.ctx->gsc_ctrls.rotate->val == 270) {
+		max_w= variant->pix_max->target_rot_en_w;
+		max_h= variant->pix_max->target_rot_en_h;
+		min_w = variant->pix_min->target_rot_en_w;
+		min_h = variant->pix_min->target_rot_en_h;
+		tmp_w = cr->height;
+		tmp_h = cr->width;
+	} else {
+		max_w= variant->pix_max->target_rot_dis_w;
+		max_h= variant->pix_max->target_rot_dis_h;
+		min_w = variant->pix_min->target_rot_dis_w;
+		min_h = variant->pix_min->target_rot_dis_h;
+		tmp_w = cr->width;
+		tmp_h = cr->height;
+	}
+
 	gsc_dbg("min_w: %d, min_h: %d, max_w: %d, max_h = %d",
-	     min_w, min_h, max_width, max_height);
+	     min_w, min_h, max_w, max_h);
 
-	if (mf == NULL) {
-		if (gsc->out.ctx->ctrl_val.rot == 90 ||
-		    gsc->out.ctx->ctrl_val.rot == 270) {
-			tmp_w = cr->height;
-			tmp_h = cr->width;
-		} else {
-			tmp_w = cr->width;
-			tmp_h = cr->height;
-		}
-	} else {
-		tmp_w = mf->width;
-		tmp_h = mf->height;
-	}
+	v4l_bound_align_image(&tmp_w, min_w, max_w, 0,
+			      &tmp_h, min_h, max_h, 0, 0);
 
-	v4l_bound_align_image(&tmp_w, min_w, max_width, 0,
-			      &tmp_h, min_h, max_height, 0, 0);
+	if (gsc->out.ctx->gsc_ctrls.rotate->val == 90 ||
+	    gsc->out.ctx->gsc_ctrls.rotate->val == 270)
+		gsc_check_crop_change(tmp_h, tmp_w, &cr->width, &cr->height);
+	else
+		gsc_check_crop_change(tmp_w, tmp_h, &cr->width, &cr->height);
 
-	if (mf == NULL) {
-		if (gsc->out.ctx->ctrl_val.rot == 90 ||
-		    gsc->out.ctx->ctrl_val.rot == 270)
-			gsc_check_crop_change(tmp_h, tmp_w, &cr->width, &cr->height);
-		else
-			gsc_check_crop_change(tmp_w, tmp_h, &cr->width, &cr->height);
-	} else {
-		gsc_check_crop_change(tmp_w, tmp_h, &mf->width, &mf->height);
-	}
+	gsc_dbg("Aligned l:%d, t:%d, w:%d, h:%d", cr->left, cr->top,
+		cr->width, cr->height);
 }
 
 static int gsc_subdev_get_fmt(struct v4l2_subdev *sd,
@@ -232,8 +225,6 @@ static int gsc_subdev_set_fmt(struct v4l2_subdev *sd,
 		gsc_err("Sink pad set_fmt is not supported");
 		return 0;
 	}
-
-	gsc_subdev_try_size(gsc, NULL, &fmt->format);
 
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
 		mf = v4l2_subdev_get_try_format(fh, fmt->pad);
@@ -298,8 +289,6 @@ static int gsc_subdev_set_crop(struct v4l2_subdev *sd,
 		gsc_err("Sink pad set_fmt is not supported\n");
 		return 0;
 	}
-
-	gsc_subdev_try_size(gsc, &crop->rect, NULL);
 
 	if (crop->which == V4L2_SUBDEV_FORMAT_TRY) {
 		r = v4l2_subdev_get_try_crop(fh, crop->pad);
@@ -407,7 +396,7 @@ static int gsc_output_try_fmt_mplane(struct file *file, void *fh,
 		return -EINVAL;
 	}
 
-	return gsc_try_fmt_mplane(gsc, f);
+	return gsc_try_fmt_mplane(gsc->out.ctx, f);
 }
 
 static int gsc_output_s_fmt_mplane(struct file *file, void *fh,
@@ -476,10 +465,12 @@ static int gsc_output_reqbufs(struct file *file, void *priv,
 	if (reqbufs->count > gsc->variant->in_buf_cnt) {
 		gsc_err("Requested count exceeds maximun count of input buffer");
 		return -EINVAL;
-	}
+	} else if (reqbufs->count == 0)
+		gsc_ctx_state_lock_clear(GSC_SRC_FMT | GSC_DST_FMT,
+					 out->ctx);
 
 	frame = ctx_get_frame(out->ctx, reqbufs->type);
-	frame->cacheable = out->ctx->ctrl_val.cacheable;
+	frame->cacheable = out->ctx->gsc_ctrls.cacheable->val;
 	gsc->vb2->set_cacheable(gsc->alloc_ctx, frame->cacheable);
 	ret = vb2_reqbufs(&out->vbq, reqbufs);
 	if (ret)
@@ -608,11 +599,12 @@ static int gsc_output_s_crop(struct file *file, void *fh, struct v4l2_crop *cr)
 		ret = gsc_out_check_scaler_ratio(variant, f->crop.width,
 				f->crop.height, ctx->d_frame.crop.width,
 				ctx->d_frame.crop.height,
-				ctx->ctrl_val.rot);
+				ctx->gsc_ctrls.rotate->val);
 		if (ret) {
 			gsc_err("Out of scaler range");
 			return -EINVAL;
 		}
+		gsc_subdev_try_crop(gsc, &ctx->d_frame.crop);
 	}
 
 	f->crop.left = cr->c.left;
@@ -690,8 +682,6 @@ static int gsc_out_stop_streaming(struct vb2_queue *q)
 			return ret;
 	}
 	gsc_hw_set_input_buf_mask_all(gsc);
-	/* FIXME: Remove this code after modifying gscaler s_ctrl */
-	ctx->ctrl_val.rot = 0;
 
 	/* TODO: Add gscaler clock off function */
 	ret = gsc_out_video_s_stream(gsc, 0);

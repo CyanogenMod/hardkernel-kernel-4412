@@ -376,7 +376,7 @@ static int gsc_capture_try_fmt_mplane(struct file *file, void *fh,
 	if (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
 		return -EINVAL;
 
-	return gsc_try_fmt_mplane(gsc, f);
+	return gsc_try_fmt_mplane(gsc->cap.ctx, f);
 }
 
 static int gsc_capture_s_fmt_mplane(struct file *file, void *fh,
@@ -436,7 +436,7 @@ static int gsc_capture_reqbufs(struct file *file, void *priv,
 	int ret;
 
 	frame = ctx_get_frame(cap->ctx, reqbufs->type);
-	frame->cacheable = cap->ctx->ctrl_val.cacheable;
+	frame->cacheable = cap->ctx->gsc_ctrls.cacheable->val;
 	gsc->vb2->set_cacheable(gsc->alloc_ctx, frame->cacheable);
 
 	ret = vb2_reqbufs(&cap->vbq, reqbufs);
@@ -1015,8 +1015,9 @@ static void gsc_cap_check_limit_size(struct gsc_dev *gsc, unsigned int pad,
 
 	switch(pad) {
 		case GSC_PAD_SINK:
-			if (ctx->ctrl_val.rot == 90 ||
-			    ctx->ctrl_val.rot == 270) {
+			if (gsc_cap_opened(gsc) &&
+			    (ctx->gsc_ctrls.rotate->val == 90 ||
+			    ctx->gsc_ctrls.rotate->val == 270)) {
 				min_w = variant->pix_min->real_w;
 				min_h = variant->pix_min->real_h;
 				max_w = variant->pix_max->real_rot_en_w;
@@ -1030,10 +1031,10 @@ static void gsc_cap_check_limit_size(struct gsc_dev *gsc, unsigned int pad,
 			break;
 
 		case GSC_PAD_SOURCE:
-			min_w = variant->pix_min->target_w;
-			min_h = variant->pix_min->target_h;
-			max_w = variant->pix_max->target_w;
-			max_h = variant->pix_max->target_h;
+			min_w = variant->pix_min->target_rot_dis_w;
+			min_h = variant->pix_min->target_rot_dis_h;
+			max_w = variant->pix_max->target_rot_dis_w;
+			max_h = variant->pix_max->target_rot_dis_h;
 			break;
 	}
 
@@ -1145,8 +1146,8 @@ static void gsc_cap_try_crop(struct gsc_dev *gsc, struct v4l2_rect *crop)
 	struct gsc_ctx *ctx = gsc->cap.ctx;
 	struct gsc_frame *frame = &ctx->d_frame;
 
-	u32 crop_min_w = variant->pix_min->target_w;
-	u32 crop_min_h = variant->pix_min->target_h;
+	u32 crop_min_w = variant->pix_min->target_rot_dis_w;
+	u32 crop_min_h = variant->pix_min->target_rot_dis_h;
 	u32 crop_max_w = frame->f_width;
 	u32 crop_max_h = frame->f_height;
 

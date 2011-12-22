@@ -120,21 +120,16 @@ int gsc_set_scaler_info(struct gsc_ctx *ctx)
 	int tx, ty;
 	int ret;
 
-	ret = gsc_check_scale_size(ctx);
-	if (ret) {
-		gsc_err("Invalid size");
-		return ret;
-	}
-
 	ret = gsc_check_scaler_ratio(variant, s_frame->crop.width,
 		s_frame->crop.height, d_frame->crop.width, d_frame->crop.height,
-		ctx->ctrl_val.rot);
+		ctx->gsc_ctrls.rotate->val);
 	if (ret) {
 		gsc_err("out of scaler range");
 		return ret;
 	}
 
-	if (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270) {
+	if (ctx->gsc_ctrls.rotate->val == 90 ||
+	    ctx->gsc_ctrls.rotate->val == 270) {
 		ty = d_frame->crop.width;
 		tx = d_frame->crop.height;
 	} else {
@@ -387,9 +382,9 @@ static int gsc_m2m_try_fmt_mplane(struct file *file, void *fh,
 	    (f->type != V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE))
 		return -EINVAL;
 
-	return gsc_try_fmt_mplane(ctx->gsc_dev, f);
-
+	return gsc_try_fmt_mplane(ctx, f);
 }
+
 static int gsc_m2m_s_fmt_mplane(struct file *file, void *fh,
 				 struct v4l2_format *f)
 {
@@ -456,7 +451,7 @@ static int gsc_m2m_reqbufs(struct file *file, void *fh,
 	}
 
 	frame = ctx_get_frame(ctx, reqbufs->type);
-	frame->cacheable = ctx->ctrl_val.cacheable;
+	frame->cacheable = ctx->gsc_ctrls.cacheable->val;
 	gsc->vb2->set_cacheable(gsc->alloc_ctx, frame->cacheable);
 
 	return v4l2_m2m_reqbufs(file, ctx->m2m_ctx, reqbufs);
@@ -552,11 +547,11 @@ static int gsc_m2m_s_crop(struct file *file, void *fh, struct v4l2_crop *cr)
 			ret = gsc_check_scaler_ratio(variant, cr->c.width,
 					cr->c.height, ctx->d_frame.crop.width,
 					ctx->d_frame.crop.height,
-					ctx->ctrl_val.rot);
+					ctx->gsc_ctrls.rotate->val);
 		} else {
 			ret = gsc_check_scaler_ratio(variant, ctx->s_frame.crop.width,
 					ctx->s_frame.crop.height, cr->c.width,
-					cr->c.height, ctx->ctrl_val.rot);
+					cr->c.height, ctx->gsc_ctrls.rotate->val);
 		}
 		if (ret) {
 			gsc_err("Out of scaler range");

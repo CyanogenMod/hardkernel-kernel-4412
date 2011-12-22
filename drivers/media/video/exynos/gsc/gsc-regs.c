@@ -446,7 +446,8 @@ void gsc_hw_set_out_size(struct gsc_ctx *ctx)
 	}
 
 	/* Set output scaled size */
-	if (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270) {
+	if (ctx->gsc_ctrls.rotate->val == 90 ||
+	    ctx->gsc_ctrls.rotate->val == 270) {
 		cfg = GSC_SCALED_WIDTH(frame->crop.height);
 		cfg |= GSC_SCALED_HEIGHT(frame->crop.width);
 	} else {
@@ -566,7 +567,7 @@ void gsc_hw_set_rotation(struct gsc_ctx *ctx)
 	cfg = readl(dev->regs + GSC_IN_CON);
 	cfg &= ~GSC_IN_ROT_MASK;
 
-	switch (ctx->ctrl_val.rot) {
+	switch (ctx->gsc_ctrls.rotate->val) {
 	case 270:
 		cfg |= GSC_IN_ROT_270;
 		break;
@@ -574,17 +575,17 @@ void gsc_hw_set_rotation(struct gsc_ctx *ctx)
 		cfg |= GSC_IN_ROT_180;
 		break;
 	case 90:
-		if (ctx->ctrl_val.hflip)
+		if (ctx->gsc_ctrls.hflip->val)
 			cfg |= GSC_IN_ROT_90_XFLIP;
-		else if (ctx->ctrl_val.vflip)
+		else if (ctx->gsc_ctrls.vflip->val)
 			cfg |= GSC_IN_ROT_90_YFLIP;
 		else
 			cfg |= GSC_IN_ROT_90;
 		break;
 	case 0:
-		if (ctx->ctrl_val.hflip)
+		if (ctx->gsc_ctrls.hflip->val)
 			cfg |= GSC_IN_ROT_XFLIP;
-		else if (ctx->ctrl_val.vflip)
+		else if (ctx->gsc_ctrls.vflip->val)
 			cfg |= GSC_IN_ROT_YFLIP;
 	}
 
@@ -605,7 +606,7 @@ void gsc_hw_set_global_alpha(struct gsc_ctx *ctx)
 		return;
 	}
 
-	cfg |= GSC_OUT_GLOBAL_ALPHA(ctx->ctrl_val.global_alpha);
+	cfg |= GSC_OUT_GLOBAL_ALPHA(ctx->gsc_ctrls.global_alpha->val);
 	writel(cfg, dev->regs + GSC_OUT_CON);
 }
 

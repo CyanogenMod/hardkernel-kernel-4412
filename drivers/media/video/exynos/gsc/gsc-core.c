@@ -235,30 +235,6 @@ void gsc_set_frame_size(struct gsc_frame *frame, int width, int height)
 	frame->crop.top = 0;
 }
 
-int gsc_check_scale_size(struct gsc_ctx *ctx)
-{
-	struct gsc_pix_max *pix_max = ctx->gsc_dev->variant->pix_max;
-	struct gsc_pix_min *pix_min = ctx->gsc_dev->variant->pix_min;
-
-	if (ctx->s_frame.f_width < pix_min->org_w ||
-	    ctx->s_frame.f_height < pix_min->org_h ||
-	    ctx->d_frame.f_width < pix_min->org_w ||
-	    ctx->d_frame.f_height < pix_min->org_h) {
-		gsc_err("Original image size is under minimun size");
-		return -EINVAL;
-	}
-
-	if (ctx->s_frame.f_width > pix_max->org_scaler_input_w ||
-	    ctx->s_frame.f_height > pix_max->org_scaler_input_h ||
-	    ctx->d_frame.f_width > pix_max->target_w ||
-	    ctx->d_frame.f_height > pix_max->target_h) {
-		gsc_err("Orginal image size exceeds the maximun size");
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
 int gsc_cal_prescaler_ratio(struct gsc_variant *var, u32 src, u32 dst, u32 *ratio)
 {
 	if ((dst > src) || (dst >= src / var->poly_sc_down_max)) {
@@ -317,8 +293,9 @@ u32 get_plane_size(struct gsc_frame *frame, unsigned int plane)
 	return frame->payload[plane];
 }
 
-int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f)
+int gsc_try_fmt_mplane(struct gsc_ctx *ctx, struct v4l2_format *f)
 {
+	struct gsc_dev *gsc = ctx->gsc_dev;
 	struct gsc_variant *variant = gsc->variant;
 	struct v4l2_pix_format_mplane *pix_mp = &f->fmt.pix_mp;
 	struct gsc_fmt *fmt;
@@ -341,8 +318,8 @@ int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f)
 		return -EINVAL;
 	}
 
-	max_w = variant->pix_max->target_w;
-	max_h = variant->pix_max->target_h;
+	max_w = variant->pix_max->target_rot_dis_w;
+	max_h = variant->pix_max->target_rot_dis_h;
 	if (V4L2_TYPE_IS_OUTPUT(f->type)) {
 		mod_x = ffs(variant->pix_align->org_w) - 1;
 		if (is_yuv420(fmt->color))
@@ -357,8 +334,8 @@ int gsc_try_fmt_mplane(struct gsc_dev *gsc, struct v4l2_format *f)
 			mod_y = ffs(variant->pix_align->org_h) - 1;
 		else
 			mod_y = ffs(variant->pix_align->org_h) - 2;
-		min_w = variant->pix_min->target_w;
-		min_h = variant->pix_min->target_h;
+		min_w = variant->pix_min->target_rot_dis_w;
+		min_h = variant->pix_min->target_rot_dis_h;
 	}
 	gsc_dbg("mod_x: %d, mod_y: %d, max_w: %d, max_h = %d",
 	     mod_x, mod_y, max_w, max_h);
@@ -482,13 +459,17 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 			mod_x = ffs(variant->pix_align->target_w) - 1;
 		if (is_yuv420(f->fmt->color))
 			mod_y = ffs(variant->pix_align->target_h) - 1;
-		min_w = variant->pix_min->target_w;
-		min_h = variant->pix_min->target_h;
-		if (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270) {
+		if (ctx->gsc_ctrls.rotate->val == 90 ||
+		    ctx->gsc_ctrls.rotate->val == 270) {
 			max_w = f->f_height;
 			max_h = f->f_width;
+			min_w = variant->pix_min->target_rot_en_w;
+			min_h = variant->pix_min->target_rot_en_h;
 			tmp_w = cr->c.height;
 			tmp_h = cr->c.width;
+		} else {
+			min_w = variant->pix_min->target_rot_dis_w;
+			min_h = variant->pix_min->target_rot_dis_h;
 		}
 	}
 	gsc_dbg("mod_x: %d, mod_y: %d, min_w: %d, min_h = %d,\
@@ -499,7 +480,8 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 			      &tmp_h, min_h, max_h, mod_y, 0);
 
 	if (!V4L2_TYPE_IS_OUTPUT(cr->type) &&
-	   (ctx->ctrl_val.rot == 90 || ctx->ctrl_val.rot == 270)) {
+	    (ctx->gsc_ctrls.rotate->val == 90 ||
+	    ctx->gsc_ctrls.rotate->val == 270)) {
 		gsc_check_crop_change(tmp_h, tmp_w, &cr->c.width, &cr->c.height);
 	} else {
 		gsc_check_crop_change(tmp_w, tmp_h, &cr->c.width, &cr->c.height);
@@ -598,7 +580,7 @@ int gsc_out_link_validate(const struct media_pad *source,
 			dst_crop.w = %d, dst_crop.h = %d, rotation = %d",
 			src_fmt.format.width, src_fmt.format.height,
 			dst_crop.rect.width, dst_crop.rect.height,
-			gsc->out.ctx->ctrl_val.rot);
+			gsc->out.ctx->gsc_ctrls.rotate->val);
 		return -EINVAL;
 	}
 
@@ -658,29 +640,23 @@ static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_HFLIP:
-		if (ctrl->val)
-			ctx->ctrl_val.hflip = true;
-		else
-			ctx->ctrl_val.hflip = false;
+		user_to_drv(ctx->gsc_ctrls.hflip, ctrl->val);
 		break;
 
 	case V4L2_CID_VFLIP:
-		if (ctrl->val)
-			ctx->ctrl_val.vflip = true;
-		else
-			ctx->ctrl_val.vflip = false;
+		user_to_drv(ctx->gsc_ctrls.vflip, ctrl->val);
 		break;
 
 	case V4L2_CID_ROTATE:
-		ctx->ctrl_val.rot = ctrl->val;
+		user_to_drv(ctx->gsc_ctrls.rotate, ctrl->val);
 		break;
 
 	case V4L2_CID_GLOBAL_ALPHA:
-		ctx->ctrl_val.global_alpha = ctrl->val;
+		user_to_drv(ctx->gsc_ctrls.global_alpha, ctrl->val);
 		break;
 
 	case V4L2_CID_CACHEABLE:
-		ctx->ctrl_val.cacheable = ctrl->val;
+		user_to_drv(ctx->gsc_ctrls.cacheable, ctrl->val);
 		break;
 
 	default:
@@ -710,12 +686,15 @@ static const struct v4l2_ctrl_config gsc_custom_ctrl[] = {
 		.flags = V4L2_CTRL_FLAG_SLIDER,
 		.max = 255,
 		.step = 1,
+		.def = 0,
 	}, {
 		.ops = &gsc_ctrl_ops,
 		.id = V4L2_CID_CACHEABLE,
 		.name = "Set cacheable",
 		.type = V4L2_CTRL_TYPE_BOOLEAN,
 		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.max = 1,
+		.def = true,
 	}, {
 		.ops = &gsc_ctrl_ops,
 		.id = V4L2_CID_TV_LAYER_BLEND_ENABLE,
@@ -764,34 +743,34 @@ int gsc_ctrls_create(struct gsc_ctx *ctx)
 
 	v4l2_ctrl_handler_init(&ctx->ctrl_handler, GSC_MAX_CTRL_NUM);
 
-	ctx->ctrl_rotate = v4l2_ctrl_new_std(&ctx->ctrl_handler, &gsc_ctrl_ops,
-					V4L2_CID_HFLIP, 0, 1, 1, 0);
-	ctx->ctrl_hflip = v4l2_ctrl_new_std(&ctx->ctrl_handler, &gsc_ctrl_ops,
-					V4L2_CID_VFLIP, 0, 1, 1, 0);
-	ctx->ctrl_vflip = v4l2_ctrl_new_std(&ctx->ctrl_handler, &gsc_ctrl_ops,
-					V4L2_CID_ROTATE, 0, 270, 90, 0);
-	ctx->ctrl_global_alpha = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+	ctx->gsc_ctrls.rotate= v4l2_ctrl_new_std(&ctx->ctrl_handler,
+				&gsc_ctrl_ops, V4L2_CID_ROTATE, 0, 270, 90, 0);
+	ctx->gsc_ctrls.hflip = v4l2_ctrl_new_std(&ctx->ctrl_handler,
+				&gsc_ctrl_ops, V4L2_CID_HFLIP, 0, 1, 1, 0);
+	ctx->gsc_ctrls.vflip = v4l2_ctrl_new_std(&ctx->ctrl_handler,
+				&gsc_ctrl_ops, V4L2_CID_VFLIP, 0, 1, 1, 0);
+	ctx->gsc_ctrls.global_alpha = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[0], NULL);
-	ctx->ctrl_cacheable = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+	ctx->gsc_ctrls.cacheable = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[1], NULL);
 	/* for mixer control */
-	ctx->ctrl_layer_blend_en = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+	ctx->gsc_ctrls.layer_blend_en = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[2], NULL);
-	ctx->ctrl_layer_alpha = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+	ctx->gsc_ctrls.layer_alpha = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[3], NULL);
-	ctx->ctrl_pixel_blend_en = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+	ctx->gsc_ctrls.pixel_blend_en = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[4], NULL);
-	ctx->ctrl_chroma_en = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+	ctx->gsc_ctrls.chroma_en = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[5], NULL);
-	ctx->ctrl_chroma_val = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+	ctx->gsc_ctrls.chroma_val = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[6], NULL);
 
 	ctx->ctrls_rdy = ctx->ctrl_handler.error == 0;
 
 	if (ctx->ctrl_handler.error) {
 		int err = ctx->ctrl_handler.error;
-
 		v4l2_ctrl_handler_free(&ctx->ctrl_handler);
+		gsc_err("Failed to gscaler control hander create");
 		return err;
 	}
 
@@ -1225,8 +1204,10 @@ struct gsc_pix_max gsc_max_exynos5210 = {
 	.real_rot_dis_h		= 3344,
 	.real_rot_en_w		= 2047,
 	.real_rot_en_h		= 2047,
-	.target_w		= 4800,
-	.target_h		= 3344,
+	.target_rot_dis_w	= 4800,
+	.target_rot_dis_h	= 3344,
+	.target_rot_en_w	= 2016,
+	.target_rot_en_h	= 2016,
 };
 
 struct gsc_pix_min gsc_min_exynos5210 = {
@@ -1234,8 +1215,10 @@ struct gsc_pix_min gsc_min_exynos5210 = {
 	.org_h			= 32,
 	.real_w			= 64,
 	.real_h			= 32,
-	.target_w		= 64,
-	.target_h		= 32,
+	.target_rot_dis_w	= 64,
+	.target_rot_dis_h	= 32,
+	.target_rot_en_w	= 32,
+	.target_rot_en_h	= 16,
 };
 
 struct gsc_pix_align gsc_align_exynos5210 = {
