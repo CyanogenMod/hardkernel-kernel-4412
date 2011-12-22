@@ -160,7 +160,7 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 	ret += snprintf(buf+ret, PAGE_SIZE-ret, "Current sclk_g3d[G3D_BLK] = %dMhz", clkrate/1000000);
 
 	/* To be revised  */
-	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 400, 266, 200, 133, 100, 50Mhz");
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "\nPossible settings : 400, 266, 200, 160, 133, 100, 50Mhz");
 
 	if (ret < PAGE_SIZE - 1)
 		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
@@ -196,6 +196,9 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 	} else if (sysfs_streq("200", buf)) {
 	    cmd = 1;
 	    clk_set_rate(sclk_g3d, 200000000);
+	} else if (sysfs_streq("160", buf)) {
+	    cmd = 1;
+	    clk_set_rate(sclk_g3d, 160000000);
 	} else if (sysfs_streq("133", buf)) {
 	    cmd = 1;
 	    clk_set_rate(sclk_g3d, 134000000);
