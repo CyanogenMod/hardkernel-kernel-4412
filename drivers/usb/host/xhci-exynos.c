@@ -48,12 +48,6 @@ struct exynos_xhci_hcd {
 
 struct xhci_hcd *exynos_xhci_dbg;
 
-#define exynos_xhci_suspend	NULL
-#define exynos_xhci_resume	NULL
-
-#define exynos_xhci_runtime_suspend	NULL
-#define exynos_xhci_runtime_resume		NULL
-
 static const char hcd_name[] = "xhci_hcd";
 
 static inline void __orr32(void __iomem *ptr, u32 val)
@@ -162,6 +156,84 @@ static void exynos_xhci_phy_unset(struct platform_device *pdev)
 	if (plat && plat->phy_exit)
 		plat->phy_exit(pdev, S5P_USB_PHY_DRD);
 }
+
+#ifdef CONFIG_PM
+static int exynos_xhci_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct exynos_xhci_plat *plat = pdev->dev.platform_data;
+	struct exynos_xhci_hcd	*exynos_xhci;
+	struct usb_hcd		*hcd;
+	struct xhci_hcd		*xhci;
+	int			retval = 0;
+
+	exynos_xhci = dev_get_drvdata(dev);
+	if (!exynos_xhci)
+		return -EINVAL;
+
+	hcd = exynos_xhci->hcd;
+	if (!hcd)
+		return -EINVAL;
+
+	xhci = hcd_to_xhci(hcd);
+
+	if (hcd->state != HC_STATE_SUSPENDED ||
+			xhci->shared_hcd->state != HC_STATE_SUSPENDED)
+		return -EINVAL;
+
+	retval = xhci_suspend(xhci);
+
+	exynos_xhci_phy_unset(pdev);
+	clk_disable(exynos_xhci->clk);
+
+	return retval;
+}
+
+static int exynos_xhci_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct exynos_xhci_hcd	*exynos_xhci;
+	struct usb_hcd		*hcd;
+	struct xhci_hcd		*xhci;
+	int			retval = 0;
+
+	exynos_xhci = dev_get_drvdata(dev);
+	if (!exynos_xhci)
+		return -EINVAL;
+
+	hcd = exynos_xhci->hcd;
+	if (!hcd)
+		return -EINVAL;
+
+	clk_enable(exynos_xhci->clk);
+	exynos_xhci_phy_set(pdev);
+
+	exynos_xhci_change_mode(hcd);
+
+	xhci = hcd_to_xhci(hcd);
+	retval = xhci_resume(xhci, 0);
+
+	return retval;
+}
+#else
+#define exynos_xhci_suspend	NULL
+#define exynos_xhci_resume	NULL
+#endif
+
+#ifdef CONFIG_USB_SUSPEND
+static int exynos_xhci_runtime_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static int exynos_xhci_runtime_resume(struct device *dev)
+{
+	return 0;
+}
+#else
+#define exynos_xhci_runtime_suspend	NULL
+#define exynos_xhci_runtime_resume	NULL
+#endif
 
 static void exynos_xhci_quirks(struct device *dev, struct xhci_hcd *xhci)
 {
