@@ -810,10 +810,6 @@ static void buf_queue(struct vb2_buffer *vb)
 	spin_unlock_irqrestore(&layer->enq_slock, flags);
 	if (must_start) {
 		layer->ops.stream_set(layer, MXR_ENABLE);
-		/* mark all entities connected to a given entity
-		 * through enabled links
-		 * media_entity_pipeline_start(&layer->vfd.entity, &pipe->pipe);
-		 */
 		/* store starting entity ptr on the tv graphic pipeline */
 		pipe->layer = layer;
 		/* start streaming all entities on the tv graphic pipeline */
@@ -988,9 +984,6 @@ static int stop_streaming(struct vb2_queue *vq)
 	/* disabling layer in hardware */
 	layer->ops.stream_set(layer, MXR_DISABLE);
 
-	/* mark all entities connected to a given entity
-	 * through enabled link as not streaming */
-	media_entity_pipeline_stop(&layer->vfd.entity);
 	/* starting entity on the pipeline */
 	pipe->layer = layer;
 	/* stop streaming all entities on the pipeline */
