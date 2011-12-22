@@ -77,7 +77,6 @@ enum busfreq_level_idx {
 
 static unsigned int p_idx;
 static unsigned int curr_idx;
-static unsigned int minFreq = -1UL;
 static bool init_done;
 
 struct busfreq_table {
@@ -607,8 +606,6 @@ static int __init busfreq_mon_init(void)
 {
 	unsigned int i;
 	unsigned int tmp;
-	struct cpufreq_frequency_table *table;
-	unsigned int freq;
 	unsigned int val;
 
 	if (!soc_is_exynos4210())
@@ -624,18 +621,6 @@ static int __init busfreq_mon_init(void)
 	}
 
 	init_done = true;
-
-	table = cpufreq_frequency_get_table(0);
-
-	if (IS_ERR_OR_NULL(table))
-		return -ENODEV;
-
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) {
-		freq = table[i].frequency;
-
-		if (freq != CPUFREQ_ENTRY_INVALID && freq < minFreq)
-			minFreq = freq;
-	}
 
 	for (i = 0; i < DVFS_LOCK_ID_END; i++)
 		g_busfreq_lock_val[i] = BUS_LEVEL_END - 1;
