@@ -27,6 +27,7 @@
 #include <mach/asv.h>
 
 enum target_asv {
+	EXYNOS4210_1000,
 	EXYNOS4210_1200,
 	EXYNOS4210_1400,
 	EXYNOS4210_SINGLE_1200,
@@ -323,12 +324,12 @@ static int exynos4210_asv_store_result(struct samsung_asv *asv_info)
 	/* Support 1.4GHz */
 	case 5:
 		result_grp = exynos4210_find_group(asv_info, EXYNOS4210_1400);
-		result_grp |= SUPPORT_1200MHZ;
+		result_grp |= SUPPORT_1400MHZ;
 		support_freq = "1.4GHz";
 		break;
 	/* Defalut support 1.0GHz */
 	default:
-		result_grp = exynos4210_find_group(asv_info, EXYNOS4210_1200);
+		result_grp = exynos4210_find_group(asv_info, EXYNOS4210_1000);
 		result_grp |= SUPPORT_1000MHZ;
 		support_freq = "1.0GHz";
 		break;
