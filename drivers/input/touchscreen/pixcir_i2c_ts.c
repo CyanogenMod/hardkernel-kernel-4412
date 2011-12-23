@@ -30,14 +30,17 @@
 
 #include <plat/gpio-cfg.h>
 #include <mach/gpio.h>
+#include <mach/board_rev.h>
 
 #define	PIXCIR_DEBUG		0
 
-#define ATTB			EXYNOS4_GPX1(7)
+#define ATTB			samsung_board_rev_is_0_0() ? EXYNOS4_GPX1(7) : EXYNOS4_GPX2(6)
+#define RESET			samsung_board_rev_is_0_0() ? EXYNOS4_GPX1(6) : EXYNOS4212_GPM3(4)
+#define GPIO_NAME		samsung_board_rev_is_0_0() ? "GPX1" : "GPM3"
 #define get_attb_value		gpio_get_value
-#define	RESETPIN_CFG		s3c_gpio_cfgpin(EXYNOS4_GPX1(6),S3C_GPIO_OUTPUT)
-#define	RESETPIN_SET0		gpio_direction_output(EXYNOS4_GPX1(6),0)
-#define	RESETPIN_SET1		gpio_direction_output(EXYNOS4_GPX1(6),1)
+#define	RESETPIN_CFG		s3c_gpio_cfgpin(RESET, S3C_GPIO_OUTPUT)
+#define	RESETPIN_SET0		gpio_direction_output(RESET,0)
+#define	RESETPIN_SET1		gpio_direction_output(RESET,1)
 
 #define	SLAVE_ADDR		0x5c
 #define	BOOTLOADER_ADDR		0x5d
@@ -481,7 +484,7 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 		kfree(tsdata);
 	}
 
-	if (gpio_request(EXYNOS4_GPX1(6), "GPX1")) {
+	if (gpio_request(RESET, GPIO_NAME)) {
 		return error;
 	}
 	RESETPIN_CFG;
@@ -498,7 +501,7 @@ static int pixcir_i2c_ts_probe(struct i2c_client *client,
 		input = NULL;
 	}
 
-	s3c_gpio_setpull(EXYNOS4_GPX1(7), S3C_GPIO_PULL_NONE);
+	s3c_gpio_setpull(ATTB, S3C_GPIO_PULL_NONE);
 
 	device_init_wakeup(&client->dev, 0);
 
