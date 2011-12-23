@@ -1298,6 +1298,10 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 		WRITEL(ctx->img_width, S5P_FIMV_SI_FIMV1_HRESOL);
 		WRITEL(ctx->img_height, S5P_FIMV_SI_FIMV1_VRESOL);
 	}
+
+	/* sei parse */
+	s5p_mfc_write_info(ctx, dec->sei_parse, FRAME_PACK_SEI_ENABLE);
+
 	WRITEL(((S5P_FIMV_CH_SEQ_HEADER & S5P_FIMV_CH_MASK)
 			<< S5P_FIMV_CH_SHIFT)
 			| (ctx->inst_no), S5P_FIMV_SI_CH0_INST_ID);

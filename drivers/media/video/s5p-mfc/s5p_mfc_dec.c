@@ -282,6 +282,15 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value	= 1,
 	},
 #endif
+	{
+		.id = V4L2_CID_CODEC_FRAME_PACK_SEI_PARSE,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "Frame pack sei parse flag",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
 };
 
 #define NUM_CTRLS ARRAY_SIZE(controls)
@@ -409,6 +418,54 @@ static struct s5p_mfc_ctrl_cfg mfc_ctrl_list[] = {
 		.addr = S5P_FIMV_SI_DECODED_STATUS,
 		.mask = S5P_FIMV_DEC_CRC_GEN_MASK,
 		.shft = S5P_FIMV_DEC_CRC_GEN_SHIFT,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET_DST,
+		.id = V4L2_CID_CODEC_FRAME_PACK_SEI_AVAIL,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_CUSTOM,
+		.addr = S5P_FIMV_FRAME_PACK_SEI_AVAIL,
+		.mask = 0x1,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET_DST,
+		.id = V4L2_CID_CODEC_FRAME_PACK_ARRGMENT_ID,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_CUSTOM,
+		.addr = S5P_FIMV_FRAME_PACK_ARRGMENT_ID,
+		.mask = 0xFFFFFFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET_DST,
+		.id = V4L2_CID_CODEC_FRAME_PACK_SEI_INFO,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_CUSTOM,
+		.addr = S5P_FIMV_FRAME_PACK_SEI_INFO,
+		.mask = 0x3FFFF,
+		.shft = 0,
+		.flag_mode = MFC_CTRL_MODE_NONE,
+		.flag_addr = 0,
+		.flag_shft = 0,
+	},
+	{
+		.type = MFC_CTRL_TYPE_GET_DST,
+		.id = V4L2_CID_CODEC_FRAME_PACK_GRID_POS,
+		.is_volatile = 0,
+		.mode = MFC_CTRL_MODE_CUSTOM,
+		.addr = S5P_FIMV_FRAME_PACK_GRID_POS,
+		.mask = 0xFFFF,
+		.shft = 0,
 		.flag_mode = MFC_CTRL_MODE_NONE,
 		.flag_addr = 0,
 		.flag_shft = 0,
@@ -1370,11 +1427,9 @@ static int vidioc_queryctrl(struct file *file, void *priv,
 }
 
 /* Get ctrl */
-static int vidioc_g_ctrl(struct file *file, void *priv,
-			 struct v4l2_control *ctrl)
+static int get_ctrl_val(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 {
-	struct s5p_mfc_dev *dev = video_drvdata(file);
-	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
+	struct s5p_mfc_dev *dev = ctx->dev;
 	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	struct s5p_mfc_ctx_ctrl *ctx_ctrl;
 	int ret = 0;
@@ -1438,6 +1493,9 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 		ctrl->value = ctx->fd_ion;
 		break;
 #endif
+	case V4L2_CID_CODEC_FRAME_PACK_SEI_PARSE:
+		ctrl->value = dec->sei_parse;
+		break;
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			if ((ctx_ctrl->type & MFC_CTRL_TYPE_GET) == 0)
@@ -1464,6 +1522,20 @@ static int vidioc_g_ctrl(struct file *file, void *priv,
 	mfc_debug_leave();
 
 	return 0;
+}
+
+/* Get a ctrl */
+static int vidioc_g_ctrl(struct file *file, void *priv,
+			struct v4l2_control *ctrl)
+{
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
+	int ret = 0;
+
+	mfc_debug_enter();
+	ret = get_ctrl_val(ctx, ctrl);
+	mfc_debug_leave();
+
+	return ret;
 }
 
 /* Set a ctrl */
@@ -1532,6 +1604,14 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 		mfc_debug(2, "fd_ion : %d\n", ctx->fd_ion);
 		break;
 #endif
+	case V4L2_CID_CODEC_FRAME_PACK_SEI_PARSE:
+		/*if (stream_on)
+			return -EBUSY; */
+		if(ctrl->value == 0 || ctrl->value ==1)
+			dec->sei_parse = ctrl->value;
+		else
+			dec->sei_parse = 0;
+		break;
 	default:
 		list_for_each_entry(ctx_ctrl, &ctx->ctrls, list) {
 			if (ctx_ctrl->type != MFC_CTRL_TYPE_SET)
@@ -1599,6 +1679,37 @@ static int vidioc_g_crop(struct file *file, void *priv,
 	return 0;
 }
 
+static int vidioc_g_ext_ctrls(struct file *file, void *priv,
+			struct v4l2_ext_controls *f)
+{
+	struct s5p_mfc_ctx *ctx = fh_to_mfc_ctx(file->private_data);
+	struct v4l2_ext_control *ext_ctrl;
+	struct v4l2_control ctrl;
+	int i;
+	int ret = 0;
+
+	if (f->ctrl_class != V4L2_CTRL_CLASS_CODEC)
+		return -EINVAL;
+
+	for (i = 0; i < f->count; i++) {
+		ext_ctrl = (f->controls + i);
+
+		ctrl.id = ext_ctrl->id;
+
+		ret = get_ctrl_val(ctx, &ctrl);
+		if (ret == 0) {
+			ext_ctrl->value = ctrl.value;
+		} else {
+			f->error_idx = i;
+			break;
+		}
+
+		mfc_debug(2, "[%d] id: 0x%08x, value: %d", i, ext_ctrl->id, ext_ctrl->value);
+	}
+
+	return ret;
+}
+
 /* v4l2_ioctl_ops */
 static const struct v4l2_ioctl_ops s5p_mfc_dec_ioctl_ops = {
 	.vidioc_querycap = vidioc_querycap,
@@ -1622,6 +1733,7 @@ static const struct v4l2_ioctl_ops s5p_mfc_dec_ioctl_ops = {
 	.vidioc_g_ctrl = vidioc_g_ctrl,
 	.vidioc_s_ctrl = vidioc_s_ctrl,
 	.vidioc_g_crop = vidioc_g_crop,
+	.vidioc_g_ext_ctrls = vidioc_g_ext_ctrls,
 };
 
 static int s5p_mfc_queue_setup(struct vb2_queue *vq, unsigned int *buf_count,

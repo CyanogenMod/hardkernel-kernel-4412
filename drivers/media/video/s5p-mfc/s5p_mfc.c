@@ -379,6 +379,7 @@ static void s5p_mfc_handle_frame(struct s5p_mfc_ctx *ctx,
 				& S5P_FIMV_DEC_STATUS_RESOLUTION_MASK)
 				>> S5P_FIMV_DEC_STATUS_RESOLUTION_SHIFT;
 	mfc_debug(2, "Frame Status: %x\n", dst_frame_status);
+	mfc_debug(2, "frame packing sei available status: %x\n", s5p_mfc_get_sei_avail_status());
 
 	if (ctx->state == MFCINST_RES_CHANGE_INIT)
 		ctx->state = MFCINST_RES_CHANGE_FLUSH;

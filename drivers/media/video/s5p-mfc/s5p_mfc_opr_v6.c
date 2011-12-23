@@ -1228,6 +1228,9 @@ int s5p_mfc_init_decode(struct s5p_mfc_ctx *ctx)
 	else
 		WRITEL(0x0, S5P_FIMV_PIXEL_FORMAT);
 
+	/* sei parse */
+	WRITEL(dec->sei_parse, S5P_FIMV_D_SEI_ENABLE);
+
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);
 	s5p_mfc_cmd_host2risc(S5P_FIMV_CH_SEQ_HEADER, NULL);
 

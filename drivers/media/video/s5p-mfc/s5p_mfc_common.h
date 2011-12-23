@@ -295,6 +295,9 @@ struct s5p_mfc_h264_enc_params {
 	u32 hier_layer0_qp;
 	u32 hier_layer1_qp;
 	u32 hier_layer2_qp;
+	enum v4l2_codec_mfc5x_enc_switch sei_gen_enable;
+	u32 curr_frame_frm0_flag;
+	u32 frame_pack_arrgment_type;
 };
 
 /**
@@ -473,6 +476,8 @@ struct s5p_mfc_dec {
 	unsigned long consumed;
 	unsigned long dpb_status;
 	unsigned int dpb_flush;
+
+	int sei_parse;
 
 	/* For 6.x */
 	int remained;

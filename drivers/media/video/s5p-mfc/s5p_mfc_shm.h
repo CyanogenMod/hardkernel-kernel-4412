@@ -69,6 +69,9 @@ enum MFC_SHM_OFS
 	DBG_HISTORY_INPUT1	= 0xD4,	/* C */
 	DBG_HISTORY_OUTPUT	= 0xD8,	/* C */
 	HIERARCHICAL_P_QP	= 0xE0, /* E, H.264 */
+	FRAME_PACK_SEI_ENABLE	= 0x168, /* C */
+	FRAME_PACK_SEI_AVAIL	= 0x16c, /* D */
+	FRAME_PACK_SEI_INFO	= 0x17c, /* E */
 };
 
 int s5p_mfc_init_shm(struct s5p_mfc_ctx *ctx);
