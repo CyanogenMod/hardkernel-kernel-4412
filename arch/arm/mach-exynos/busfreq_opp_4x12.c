@@ -252,7 +252,7 @@ unsigned int exynos4x12_target(unsigned int div_index)
 
 	do {
 		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_DMC0);
-	} while (tmp & 0x11111111);
+	} while (tmp & 0x111111);
 
 	/* Change Divider - DMC1 */
 	tmp = __raw_readl(EXYNOS4_CLKDIV_DMC1);
@@ -269,7 +269,7 @@ unsigned int exynos4x12_target(unsigned int div_index)
 
 	do {
 		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_DMC1);
-	} while (tmp & 0x111111);
+	} while (tmp & 0x1011);
 
 	/* Change Divider - TOP */
 	tmp = __raw_readl(EXYNOS4_CLKDIV_TOP);
