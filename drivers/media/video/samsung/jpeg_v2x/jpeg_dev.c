@@ -797,7 +797,7 @@ static int jpeg_probe(struct platform_device *pdev)
 		v4l2_err(&dev->v4l2_dev,
 			 "%s(): failed to register video device\n", __func__);
 		video_device_release(vfd);
-		goto err_video_reg_enc;
+		goto err_vd_alloc_enc;
 	}
 	v4l2_info(&dev->v4l2_dev,
 		"JPEG driver is registered to /dev/video%d\n", vfd->num);
@@ -827,7 +827,7 @@ static int jpeg_probe(struct platform_device *pdev)
 		v4l2_err(&dev->v4l2_dev,
 			 "%s(): failed to register video device\n", __func__);
 		video_device_release(vfd);
-		goto err_video_reg_dec;
+		goto err_vd_alloc_dec;
 	}
 	v4l2_info(&dev->v4l2_dev,
 		"JPEG driver is registered to /dev/video%d\n", vfd->num);
@@ -877,13 +877,11 @@ err_video_reg:
 	video_unregister_device(dev->vfd_dec);
 err_m2m_init_dec:
 	v4l2_m2m_release(dev->m2m_dev_dec);
-err_video_reg_dec:
 	video_device_release(dev->vfd_dec);
 err_vd_alloc_dec:
 	video_unregister_device(dev->vfd_enc);
 err_m2m_init_enc:
 	v4l2_m2m_release(dev->m2m_dev_enc);
-err_video_reg_enc:
 	video_device_release(dev->vfd_enc);
 err_vd_alloc_enc:
 	v4l2_device_unregister(&dev->v4l2_dev);
