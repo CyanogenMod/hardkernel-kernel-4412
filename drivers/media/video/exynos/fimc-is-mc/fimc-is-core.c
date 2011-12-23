@@ -67,7 +67,6 @@ struct vb2_ion_buf {
 	struct vb2_vmarea_handler	handler;
 
 	struct ion_handle		*handle;	/* Kernel space */
-	int				fd;		/* User space */
 
 	dma_addr_t			kva;
 	dma_addr_t			dva;
