@@ -46,10 +46,17 @@
 
 #define MAX_CAMIF_CLIENTS	2
 
+#define MXR_SUBDEV_NAME		"s5p-mixer"
+
 enum mdev_node {
 	MDEV_OUTPUT,
 	MDEV_CAPTURE,
 	MDEV_ISP,
+};
+
+enum mxr_data_from {
+	FROM_GSC_SD,
+	FROM_MXR_VD,
 };
 
 struct exynos_media_ops {
@@ -58,6 +65,7 @@ struct exynos_media_ops {
 
 struct exynos_entity_data {
 	const struct exynos_media_ops *media_ops;
+	enum mxr_data_from mxr_data_from;
 };
 
 /**
