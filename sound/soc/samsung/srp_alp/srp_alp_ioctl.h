@@ -8,8 +8,6 @@
 #define SRP_SEND_EOS				(0x20005)
 #define SRP_GET_IBUF_INFO                       (0x20007)
 #define SRP_GET_OBUF_INFO                       (0x20008)
-#define SRP_IBUF_FLUSH                          (0x20010)
-#define SRP_OBUF_FLUSH                          (0x20011)
 #define SRP_STOP_EOS_STATE			(0x30007)
 #define SRP_GET_DEC_INFO			(0x30008)
 

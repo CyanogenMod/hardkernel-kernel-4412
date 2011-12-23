@@ -486,16 +486,13 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		srp_debug("OBUF_MMAP_SIZE = %ld\n", val);
 		break;
 
-	case SRP_IBUF_FLUSH:
+	case SRP_FLUSH:
 		srp_debug("SRP_FLUSH\n");
 		srp_stop();
 		srp_flush_ibuf();
 		srp_flush_obuf();
 		srp_set_default_fw();
 		srp_reset();
-		break;
-
-	case SRP_OBUF_FLUSH:
 		break;
 
 	case SRP_GET_IBUF_INFO:
