@@ -1065,8 +1065,10 @@ static irqreturn_t gsc_irq_handler(int irq, void *priv)
 			struct gsc_input_buf *done_buf;
 			done_buf = active_queue_pop(&gsc->out, gsc);
 			gsc_hw_set_input_buf_masking(gsc, done_buf->idx, true);
-			vb2_buffer_done(&done_buf->vb, VB2_BUF_STATE_DONE);
-			list_del(&done_buf->list);
+			if (!list_is_last(&done_buf->list, &gsc->out.active_buf_q)) {
+				vb2_buffer_done(&done_buf->vb, VB2_BUF_STATE_DONE);
+				list_del(&done_buf->list);
+			}
 		}
 	} else if (test_bit(ST_CAPT_PEND, &gsc->state)) {
 		gsc_cap_irq_handler(gsc);
