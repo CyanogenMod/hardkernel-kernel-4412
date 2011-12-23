@@ -166,8 +166,8 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	{ 0 },	/* L5 */
 	{ 0 },	/* L6 */
 	{ 0 },	/* L7 */
-	{ 0 },	/* L8 */
-	{ 0 },	/* L9 */
+	{ 1300000 },	/* L8 */
+	{ 1250000 },	/* L9 */
 	{ 1150000 },	/* L10 */
 	{ 1100000 },	/* L11 */
 	{ 1050000 },	/* L12 */
@@ -193,7 +193,7 @@ static void set_clkdiv(unsigned int div_index)
 
 	do {
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STATCPU0);
-	} while (tmp & 0x1111111);
+	} while (tmp & 0x11111111);
 
 #ifdef PRINT_DIV_VAL
 	tmp = __raw_readl(EXYNOS5_CLKDIV_CPU0);
@@ -322,10 +322,14 @@ static void __init set_volt_table(void)
 		exynos5250_freq_table[L5].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos5250_freq_table[L6].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos5250_freq_table[L7].frequency = CPUFREQ_ENTRY_INVALID;
+#ifdef CONFIG_EXYNOS5250_1400MHZ_SUPPORT
+		max_support_idx = L8;
+#else
 		exynos5250_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos5250_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
 
 		max_support_idx = L10;
+#endif
 	}
 
 	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", asv_group);
