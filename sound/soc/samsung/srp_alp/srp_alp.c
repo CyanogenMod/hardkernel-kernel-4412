@@ -334,8 +334,11 @@ static ssize_t srp_read(struct file *file, char *buffer,
 			ret = wait_event_interruptible_timeout(read_wq,
 							srp.wakeup_read_wq,
 							HZ / 2);
-			if (!ret)
+			if (!ret) {
 				srp_err("Couldn't start decoding!!!\n");
+				srp.pcm_info.size = 0;
+				return copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
+			}
 		}
 	} else {
 		srp_debug("not prepared not yet! OBUF[%d]\n", srp.obuf_ready);
