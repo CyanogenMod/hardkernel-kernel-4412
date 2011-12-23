@@ -91,56 +91,47 @@ static void mxr_set_alpha_blend(struct mxr_device *mdev)
 
 static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 {
+	int i, ret;
+	struct sub_mxr_device *sub_mxr;
+	struct mxr_layer *layer;
+	struct media_pad *pad;
+	struct v4l2_mbus_framefmt mbus_fmt;
+#if defined(CONFIG_CPU_EXYNOS4210)
+	struct mxr_resources *res = &mdev->res;
+#endif
+
 	mutex_lock(&mdev->s_mutex);
 	++mdev->n_streamer;
 	mxr_dbg(mdev, "%s(%d)\n", __func__, mdev->n_streamer);
-	if (mdev->n_streamer == 1) {
-		int ret, i;
-		struct media_pad *pad;
-		struct v4l2_mbus_framefmt mbus_fmt;
-#if defined(CONFIG_CPU_EXYNOS4210)
-		struct mxr_resources *res = &mdev->res;
-#endif
-		struct sub_mxr_device *sub_mxr;
-		struct mxr_layer *layer;
-
-#if defined(CONFIG_ARCH_EXYNOS5)
-		/* If pipeline is started from Gscaler input video device,
-		 * TV basic configuration must be set before running mixer */
-		if (!mdev->from_graph_layer) {
-			mxr_dbg(mdev, "%s: from graphic layer\n", __func__);
-			/* enable mixer clock */
-			ret = mxr_power_get(mdev);
-			if (ret) {
-				mxr_err(mdev, "power on failed\n");
-				return -ENODEV;
-			}
-
-			/* turn on connected output device through link
-			 * with mixer */
-			mxr_output_get(mdev);
-			for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
-				sub_mxr = &mdev->sub_mxr[i];
-				if (sub_mxr->local) {
-					layer = sub_mxr->layer[MXR_LAYER_VIDEO];
-					mxr_layer_geo_fix(layer);
-					layer->ops.format_set(layer);
-					layer->ops.stream_set(layer, 1);
-				}
-			}
+	/* If pipeline is started from Gscaler input video device,
+	 * TV basic configuration must be set before running mixer */
+	if (mdev->mxr_data_from == FROM_GSC_SD) {
+		mxr_dbg(mdev, "%s: from gscaler\n", __func__);
+		/* enable mixer clock */
+		ret = mxr_power_get(mdev);
+		if (ret) {
+			mxr_err(mdev, "power on failed\n");
+			return -ENODEV;
 		}
-#endif
-		pad = &sd->entity.pads[MXR_PAD_SINK_GSCALER];
-		pad = media_entity_remote_source(pad);
-		if (pad) {
-			if (media_entity_type(pad->entity)
-					== MEDIA_ENT_T_V4L2_SUBDEV) {
-				sub_mxr = sd_to_sub_mxr(sd);
+		/* turn on connected output device through link
+		 * with mixer */
+		mxr_output_get(mdev);
+		for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
+			sub_mxr = &mdev->sub_mxr[i];
+			if (sub_mxr->local) {
 				layer = sub_mxr->layer[MXR_LAYER_VIDEO];
+				mxr_layer_geo_fix(layer);
 				layer->ops.format_set(layer);
+				layer->ops.stream_set(layer, 1);
 			}
 		}
+	}
 
+	/* Alpha blending configuration always can be changed
+	 * whenever streaming */
+	mxr_set_alpha_blend(mdev);
+
+	if (mdev->n_streamer == 1) {
 		for (i = MXR_PAD_SOURCE_GSCALER; i < MXR_PADS_NUM; ++i) {
 			pad = &sd->entity.pads[i];
 
@@ -175,7 +166,6 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 			return ret;
 		}
 
-		mxr_set_alpha_blend(mdev);
 		mxr_reg_set_mbus_fmt(mdev, &mbus_fmt);
 		mxr_reg_streamon(mdev);
 
@@ -201,19 +191,18 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 
 static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 {
+	int ret, i;
+	struct media_pad *pad;
+	struct sub_mxr_device *sub_mxr;
+	struct mxr_layer *layer;
+	struct v4l2_subdev *hdmi_sd;
+	struct v4l2_subdev *gsc_sd;
+	struct exynos_entity_data *md_data;
+
 	mutex_lock(&mdev->s_mutex);
 	--mdev->n_streamer;
 	mxr_dbg(mdev, "%s(%d)\n", __func__, mdev->n_streamer);
 	if (mdev->n_streamer == 0) {
-		struct media_pad *pad;
-		int ret, i;
-		struct v4l2_subdev *hdmi_sd;
-#if defined(CONFIG_ARCH_EXYNOS5)
-		struct sub_mxr_device *sub_mxr;
-		struct mxr_layer *layer;
-		struct v4l2_subdev *gsc_sd;
-		struct exynos_entity_data *md_data;
-#endif
 		for (i = MXR_PAD_SOURCE_GSCALER; i < MXR_PADS_NUM; ++i) {
 			pad = &sd->entity.pads[i];
 
@@ -238,46 +227,44 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 					ret);
 			return ret;
 		}
-
-#if defined(CONFIG_ARCH_EXYNOS5)
-		if (!mdev->from_graph_layer) {
-			pad = &sd->entity.pads[MXR_PAD_SINK_GSCALER];
-			pad = media_entity_remote_source(pad);
-			if (pad) {
-				gsc_sd = media_entity_to_v4l2_subdev(
-						pad->entity);
-				mxr_dbg(mdev, "stop from %s\n", gsc_sd->name);
-				md_data = (struct exynos_entity_data *)
-					gsc_sd->dev_priv;
-				md_data->media_ops->power_off(gsc_sd);
-			}
+	}
+	/* When using local path between gscaler and mixer, below stop sequence
+	 * must be processed */
+	if (mdev->mxr_data_from == FROM_GSC_SD) {
+		pad = &sd->entity.pads[MXR_PAD_SINK_GSCALER];
+		pad = media_entity_remote_source(pad);
+		if (pad) {
+			gsc_sd = media_entity_to_v4l2_subdev(
+					pad->entity);
+			mxr_dbg(mdev, "stop from %s\n", gsc_sd->name);
+			md_data = (struct exynos_entity_data *)
+				gsc_sd->dev_priv;
+			md_data->media_ops->power_off(gsc_sd);
 		}
-#endif
+	}
 
+	if (mdev->n_streamer == 0) {
 		ret = v4l2_subdev_call(hdmi_sd, video, s_stream, 0);
 		if (ret) {
 			mxr_err(mdev, "stopping stream failed for output %s\n",
 					hdmi_sd->name);
 			return ret;
 		}
-
-#if defined(CONFIG_ARCH_EXYNOS5)
-		/* turn off connected output device through link
-		 * with mixer */
-		if (!mdev->from_graph_layer) {
-			for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
-				sub_mxr = &mdev->sub_mxr[i];
-				if (sub_mxr->local) {
-					layer = sub_mxr->layer[MXR_LAYER_VIDEO];
-					layer->ops.stream_set(layer, 0);
-				}
+	}
+	/* turn off connected output device through link
+	 * with mixer */
+	if (mdev->mxr_data_from == FROM_GSC_SD) {
+		for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
+			sub_mxr = &mdev->sub_mxr[i];
+			if (sub_mxr->local) {
+				layer = sub_mxr->layer[MXR_LAYER_VIDEO];
+				layer->ops.stream_set(layer, 0);
 			}
-			mxr_output_put(mdev);
-
-			/* disable mixer clock */
-			mxr_power_put(mdev);
 		}
-#endif
+		mxr_output_put(mdev);
+
+		/* disable mixer clock */
+		mxr_power_put(mdev);
 	}
 	WARN(mdev->n_streamer < 0, "negative number of streamers (%d)\n",
 		mdev->n_streamer);
@@ -674,7 +661,12 @@ static int mxr_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 static int mxr_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct mxr_device *mdev = sd_to_mdev(sd);
+	struct exynos_entity_data *md_data;
 	int ret;
+
+	/* It can be known which entity calls this function */
+	md_data = v4l2_get_subdevdata(sd);
+	mdev->mxr_data_from = md_data->mxr_data_from;
 
 	if (enable)
 		ret = mxr_streamer_get(mdev, sd);

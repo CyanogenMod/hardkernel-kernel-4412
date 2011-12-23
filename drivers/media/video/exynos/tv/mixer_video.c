@@ -111,6 +111,7 @@ static void tv_graph_pipeline_stream(struct tv_graph_pipeline *pipe, int on)
 	/* source pad of graphic layer entity */
 	struct media_pad *pad = &me->pads[0];
 	struct v4l2_subdev *sd;
+	struct exynos_entity_data md_data;
 
 	mxr_info(mdev, "%s TV graphic layer pipeline\n", on ? "start" : "stop");
 
@@ -122,6 +123,9 @@ static void tv_graph_pipeline_stream(struct tv_graph_pipeline *pipe, int on)
 
 	sd = media_entity_to_v4l2_subdev(pad->entity);
 	mxr_info(mdev, "s_stream of %s sub-device is called\n", sd->name);
+
+	md_data.mxr_data_from = FROM_MXR_VD;
+	v4l2_set_subdevdata(sd, &md_data);
 	v4l2_subdev_call(sd, video, s_stream, on);
 }
 
@@ -896,10 +900,6 @@ static int start_streaming(struct vb2_queue *vq)
 		return -ENODEV;
 	}
 
-#if defined(CONFIG_ARCH_EXYNOS5)
-	/* start streaming from graphic layer */
-	mdev->from_graph_layer = 1;
-#endif
 	/* block any changes in output configuration */
 	mxr_output_get(mdev);
 
@@ -989,10 +989,6 @@ static int stop_streaming(struct vb2_queue *vq)
 	/* stop streaming all entities on the pipeline */
 	tv_graph_pipeline_stream(pipe, 0);
 
-#if defined(CONFIG_ARCH_EXYNOS5)
-	/* stop streaming from graphic layer */
-	mdev->from_graph_layer = 0;
-#endif
 	/* allow changes in output configuration */
 	mxr_output_put(mdev);
 

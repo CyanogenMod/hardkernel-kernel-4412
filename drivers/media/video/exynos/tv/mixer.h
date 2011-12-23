@@ -24,6 +24,7 @@
 #include <linux/wait.h>
 #include <media/v4l2-device.h>
 #include <media/videobuf2-core.h>
+#include <media/exynos_mc.h>
 
 #include "regs-mixer.h"
 
@@ -351,10 +352,9 @@ struct mxr_device {
 	/** auxiliary resources used my mixer */
 	struct mxr_resources res;
 
-#if defined(CONFIG_ARCH_EXYNOS5)
-	/** start pipeline from graphic layer */
-	int from_graph_layer;
-#endif
+	/** entity info which transfers media data to mixer subdev */
+	enum mxr_data_from mxr_data_from;
+
 	/** count of sub-mixers */
 	struct sub_mxr_device sub_mxr[MXR_MAX_SUB_MIXERS];
 };
