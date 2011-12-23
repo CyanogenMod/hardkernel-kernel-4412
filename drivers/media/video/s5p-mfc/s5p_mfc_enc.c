@@ -595,6 +595,33 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 0,
 	},
 	{
+		.id = V4L2_CID_CODEC_FRAME_PACK_SEI_GEN,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "frame pack sei generation flag",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_FRAME_PACK_FRM0_FLAG,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Current frame is frame 0 flag",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_FRAME_PACK_ARRGMENT_TYPE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Frame packing arrangement type",
+		.minimum = 3,
+		.maximum = 5,
+		.step = 1,
+		.default_value = 3,
+	},
+	{
 		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "The number of B frames",
@@ -2262,6 +2289,15 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_H264_LAYER2_QP:
 		p->codec.h264.hier_layer2_qp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_FRAME_PACK_SEI_GEN:
+		p->codec.h264.sei_gen_enable = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_FRAME_PACK_FRM0_FLAG:
+		p->codec.h264.curr_frame_frm0_flag = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_FRAME_PACK_ARRGMENT_TYPE:
+		p->codec.h264.frame_pack_arrgment_type = ctrl->value;
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES:
 		p->codec.mpeg4.num_b_frame = ctrl->value;

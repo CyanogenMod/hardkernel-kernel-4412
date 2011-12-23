@@ -1088,6 +1088,30 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	}
 	s5p_mfc_write_info(ctx, shm, H264_I_PERIOD);
 
+	/* set frame pack sei generation */
+	if (p_264->sei_gen_enable == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
+		/* frame packing enable */
+		shm = s5p_mfc_read_info(ctx, FRAME_PACK_SEI_ENABLE);
+		shm |= (1 << 1);
+		s5p_mfc_write_info(ctx, shm, FRAME_PACK_SEI_ENABLE);
+		/* set current frame0 flag & arrangement type */
+		shm = 0;
+		/** current frame0 flag */
+		shm &= ~(0x1 << 2);
+		shm |= (p_264->curr_frame_frm0_flag << 2);
+		/** arrangement type
+		  *(spec. Table D-8. Definition of frame_packing_arrangement_type)
+		  */
+		shm &= ~(0x3);
+		if (p_264->frame_pack_arrgment_type == 3)
+			shm |= V4L2_CODEC_MFC5X_ENC_FRAME_PACK_SIDE_BY_SIDE;
+		else if (p_264->frame_pack_arrgment_type == 4)
+			shm |= V4L2_CODEC_MFC5X_ENC_FRAME_PACK_TOP_AND_BOT;
+		else
+			shm |= V4L2_CODEC_MFC5X_ENC_FRAME_PACK_TMP_INTER;
+		s5p_mfc_write_info(ctx, shm, FRAME_PACK_SEI_INFO);
+	}
+
 	mfc_debug_leave();
 
 	return 0;
