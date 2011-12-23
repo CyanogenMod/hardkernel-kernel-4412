@@ -36,6 +36,8 @@
 
 #include <plat/cpu.h>
 
+#include <mach/board_rev.h>
+
 #include "dw_mmc.h"
 
 /* Common flag combinations */
@@ -779,15 +781,21 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 		if (ios->bus_width == MMC_BUS_WIDTH_4) {
 			if (soc_is_exynos4412() && (samsung_rev() >=
-						EXYNOS4412_REV_1_0))
-				mci_writel(slot->host, CLKSEL, 0x00010002);
-			else
+						EXYNOS4412_REV_1_0)) {
+				if (samsung_board_rev_is_0_1())
+					mci_writel(slot->host, CLKSEL, 0x00020002);
+				else
+					mci_writel(slot->host, CLKSEL, 0x00010002);
+			} else
 				mci_writel(slot->host, CLKSEL, 0x00020001);
 		} else if (ios->bus_width == MMC_BUS_WIDTH_8) {
 			if (soc_is_exynos4412() && (samsung_rev() >=
-						EXYNOS4412_REV_1_0))
-				mci_writel(slot->host, CLKSEL, 0x00010002);
-			else
+						EXYNOS4412_REV_1_0)) {
+				if (samsung_board_rev_is_0_1())
+					mci_writel(slot->host, CLKSEL, 0x00020002);
+				else
+					mci_writel(slot->host, CLKSEL, 0x00010002);
+			} else
 				mci_writel(slot->host, CLKSEL, 0x00020001);
 		}
 	} else {
@@ -796,9 +804,12 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		regs &= ~(0x1 << slot->id) << 16;
 		mci_writel(slot->host, UHS_REG, regs);
 		if (soc_is_exynos4412() && (samsung_rev() >=
-					EXYNOS4412_REV_1_0))
-			mci_writel(slot->host, CLKSEL, 0x00010002);
-		else
+					EXYNOS4412_REV_1_0)) {
+			if (samsung_board_rev_is_0_1())
+				mci_writel(slot->host, CLKSEL, 0x00020001);
+			else
+				mci_writel(slot->host, CLKSEL, 0x00010001);
+		} else
 			mci_writel(slot->host, CLKSEL, 0x00010001);
 	}
 
