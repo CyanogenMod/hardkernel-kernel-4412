@@ -387,7 +387,15 @@ int gsc_try_fmt_mplane(struct gsc_ctx *ctx, struct v4l2_format *f)
 			 tmp_w, tmp_h, pix_mp->width, pix_mp->height);
 
 	pix_mp->num_planes = fmt->num_planes;
-	pix_mp->colorspace = V4L2_COLORSPACE_JPEG;
+
+	if (ctx->gsc_ctrls.csc_eq_mode->val)
+		ctx->gsc_ctrls.csc_eq->val =
+			(pix_mp->width >= 1280) ? 1 : 0;
+	if (ctx->gsc_ctrls.csc_eq->val) /* HD */
+		pix_mp->colorspace = V4L2_COLORSPACE_REC709;
+	else	/* SD */
+		pix_mp->colorspace = V4L2_COLORSPACE_SMPTE170M;
+
 
 	for (i = 0; i < pix_mp->num_planes; ++i) {
 		int bpl = (pix_mp->width * fmt->depth[i]) >> 3;
@@ -764,6 +772,18 @@ static int gsc_s_ctrl(struct v4l2_ctrl *ctrl)
 		user_to_drv(ctx->gsc_ctrls.cacheable, ctrl->val);
 		break;
 
+	case V4L2_CID_CSC_EQ_MODE:
+		user_to_drv(ctx->gsc_ctrls.csc_eq_mode, ctrl->val);
+		break;
+
+	case V4L2_CID_CSC_EQ:
+		user_to_drv(ctx->gsc_ctrls.csc_eq, ctrl->val);
+		break;
+
+	case V4L2_CID_CSC_RANGE:
+		user_to_drv(ctx->gsc_ctrls.csc_range, ctrl->val);
+		break;
+
 	default:
 		ret = gsc_s_ctrl_to_mxr(ctrl);
 		if (ret) {
@@ -836,6 +856,31 @@ static const struct v4l2_ctrl_config gsc_custom_ctrl[] = {
 		.min = 0,
 		.max = 255,
 		.step = 1,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_CSC_EQ_MODE,
+		.name = "Set CSC equation mode",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.max = DEFAULT_CSC_EQ,
+		.def = DEFAULT_CSC_EQ,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_CSC_EQ,
+		.name = "Set CSC equation",
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.step = 1,
+		.max = 8,
+		.def = V4L2_COLORSPACE_REC709,
+	}, {
+		.ops = &gsc_ctrl_ops,
+		.id = V4L2_CID_CSC_RANGE,
+		.name = "Set CSC range",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.flags = V4L2_CTRL_FLAG_SLIDER,
+		.max = DEFAULT_CSC_RANGE,
+		.def = DEFAULT_CSC_RANGE,
 	},
 };
 
@@ -869,6 +914,14 @@ int gsc_ctrls_create(struct gsc_ctx *ctx)
 					&gsc_custom_ctrl[5], NULL);
 	ctx->gsc_ctrls.chroma_val = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
 					&gsc_custom_ctrl[6], NULL);
+
+	/* for CSC equation */
+	ctx->gsc_ctrls.csc_eq_mode = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[7], NULL);
+	ctx->gsc_ctrls.csc_eq = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[8], NULL);
+	ctx->gsc_ctrls.csc_range = v4l2_ctrl_new_custom(&ctx->ctrl_handler,
+					&gsc_custom_ctrl[9], NULL);
 
 	ctx->ctrls_rdy = ctx->ctrl_handler.error == 0;
 

@@ -346,7 +346,17 @@ void gsc_hw_set_in_image_rgb(struct gsc_ctx *ctx)
 	u32 cfg;
 
 	cfg = readl(dev->regs + GSC_IN_CON);
-	cfg |= GSC_IN_RGB_HD_WIDE;
+	if (ctx->gsc_ctrls.csc_eq->val) {
+		if (ctx->gsc_ctrls.csc_range->val)
+			cfg |= GSC_IN_RGB_HD_WIDE;
+		else
+			cfg |= GSC_IN_RGB_HD_NARROW;
+	} else {
+		if (ctx->gsc_ctrls.csc_range->val)
+			cfg |= GSC_IN_RGB_SD_WIDE;
+		else
+			cfg |= GSC_IN_RGB_SD_NARROW;
+	}
 
 	if (frame->fmt->pixelformat == V4L2_PIX_FMT_RGB565X)
 		cfg |= GSC_IN_RGB565;
@@ -464,7 +474,17 @@ void gsc_hw_set_out_image_rgb(struct gsc_ctx *ctx)
 	u32 cfg;
 
 	cfg = readl(dev->regs + GSC_OUT_CON);
-	cfg |= GSC_OUT_RGB_HD_WIDE;
+	if (ctx->gsc_ctrls.csc_eq->val) {
+		if (ctx->gsc_ctrls.csc_range->val)
+			cfg |= GSC_OUT_RGB_HD_WIDE;
+		else
+			cfg |= GSC_OUT_RGB_HD_NARROW;
+	} else {
+		if (ctx->gsc_ctrls.csc_range->val)
+			cfg |= GSC_OUT_RGB_SD_WIDE;
+		else
+			cfg |= GSC_OUT_RGB_SD_NARROW;
+	}
 
 	if (frame->fmt->pixelformat == V4L2_PIX_FMT_RGB565X)
 		cfg |= GSC_OUT_RGB565;

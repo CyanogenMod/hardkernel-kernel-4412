@@ -79,7 +79,7 @@ extern int gsc_dbg;
 #define FIMD_NAME_SIZE			32
 #define GSC_M2M_BUF_NUM			0
 #define GSC_OUT_BUF_MAX			2
-#define GSC_MAX_CTRL_NUM		7
+#define GSC_MAX_CTRL_NUM		10
 #define GSC_OUT_MAX_MASK_NUM		7
 #define GSC_SC_ALIGN_4			4
 #define GSC_SC_ALIGN_2			2
@@ -89,6 +89,8 @@ extern int gsc_dbg;
 #define DEFAULT_GSC_SINK_HEIGHT		480
 #define DEFAULT_GSC_SOURCE_WIDTH	800
 #define DEFAULT_GSC_SOURCE_HEIGHT	480
+#define DEFAULT_CSC_EQ			1
+#define DEFAULT_CSC_RANGE		1
 
 #define GSC_LAST_DEV_ID			3
 #define GSC_PAD_SINK			0
@@ -252,8 +254,11 @@ struct gsc_addr {
  * @layer_blend_en: enable mixer layer alpha blending
  * @layer_alpha: set alpha value for mixer layer
  * @pixel_blend_en: enable mixer pixel alpha blending
- * $chroma_en: enable chromakey
+ * @chroma_en: enable chromakey
  * @chroma_val:	set value for chromakey
+ * @csc_eq_mode: mode to select csc equation of current frame
+ * @csc_eq: csc equation of current frame
+ * @csc_range: csc range of current frame
  */
 struct gsc_ctrls {
 	struct v4l2_ctrl	*rotate;
@@ -266,6 +271,9 @@ struct gsc_ctrls {
 	struct v4l2_ctrl	*pixel_blend_en;
 	struct v4l2_ctrl	*chroma_en;
 	struct v4l2_ctrl	*chroma_val;
+	struct v4l2_ctrl	*csc_eq_mode;
+	struct v4l2_ctrl	*csc_eq;
+	struct v4l2_ctrl	*csc_range;
 };
 
 /**
