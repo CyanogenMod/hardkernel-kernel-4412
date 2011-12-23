@@ -874,14 +874,14 @@ static int jpeg_probe(struct platform_device *pdev)
 	return 0;
 
 err_video_reg:
-	video_unregister_device(dev->vfd_dec);
-err_m2m_init_dec:
 	v4l2_m2m_release(dev->m2m_dev_dec);
+err_m2m_init_dec:
+	video_unregister_device(dev->vfd_dec);
 	video_device_release(dev->vfd_dec);
 err_vd_alloc_dec:
-	video_unregister_device(dev->vfd_enc);
-err_m2m_init_enc:
 	v4l2_m2m_release(dev->m2m_dev_enc);
+err_m2m_init_enc:
+	video_unregister_device(dev->vfd_enc);
 	video_device_release(dev->vfd_enc);
 err_vd_alloc_enc:
 	v4l2_device_unregister(&dev->v4l2_dev);
