@@ -849,12 +849,12 @@ static struct clk exynos5_init_clocks_off[] = {
 		.devname	= "s3c-mfc",
 		.enable		= exynos5_clk_ip_mfc_ctrl,
 		.ctrlbit	= (1 << 0),
-	},{
+	}, {
 		.name		= "isp",
 		.devname	= "exynos5-fimc-is",
 		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (0xFFFFFFFF << 0),
-	},{
+	}, {
 		.name		= "hdmi",
 		.devname	= "exynos5-hdmi",
 		.enable		= exynos5_clk_ip_disp1_ctrl,
@@ -986,47 +986,47 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_isp, 16),
-		.enable 	= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (1 << 8),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_drc, 17),
-		.enable 	= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (1 << 9),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_fd, 18),
-		.enable 	= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (1 << 10),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_cpu, 19),
-		.enable 	= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (1 << 13),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_sclrc, 24),
-		.enable 	= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (1 << 11),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_sclrp, 25),
-		.enable 	= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (1 << 12),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_odc, 26),
-		.enable 	= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (1 << 4),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_dis0, 27),
-		.enable 	= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (1 << 5),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_dis1, 28),
-		.enable 	= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_isp_ctrl,
 		.ctrlbit	= (1 << 6),
 	}, {
 		.name		= "usbhost",
@@ -1712,25 +1712,25 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 			.parent     = &exynos5_clk_isp_266.clk,
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_ISP0, .shift = 4, .size = 3 },
-	},{
+	}, {
 		.clk		= {
 			.name		= "aclk_isp_266_divmpwm",
 			.parent     = &exynos5_clk_isp_266.clk,
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_ISP2, .shift = 0, .size = 3 },
-	},{
+	}, {
 		.clk		= {
 			.name		= "aclk_isp_400_div0",
 			.parent     = &exynos5_clk_isp_400.clk,
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_ISP1, .shift = 0, .size = 3 },
-	},{
+	}, {
 		.clk		= {
 			.name		= "aclk_isp_400_div1",
 			.parent     = &exynos5_clk_isp_400.clk,
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_ISP1, .shift = 4, .size = 3 },
-	},{
+	}, {
 		.clk		= {
 			.name		= "sclk_uart_isp",
 			.parent     = &exynos5_clk_sclk_uart_isp.clk,
