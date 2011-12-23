@@ -167,7 +167,7 @@ static void exynos_busfreq_timer(struct work_struct *work)
 out:
 	update_busfreq_stat(data, index);
 	mutex_unlock(&busfreq_lock);
-	schedule_delayed_work(&data->worker, data->sampling_rate);
+	queue_delayed_work(system_freezable_wq, &data->worker, data->sampling_rate);
 }
 
 static int exynos_buspm_notifier_event(struct notifier_block *this,
@@ -459,7 +459,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, data);
 
-	schedule_delayed_work(&data->worker, data->sampling_rate);
+	queue_delayed_work(system_freezable_wq, &data->worker, data->sampling_rate);
 	return 0;
 
 err_pm_notifier:
