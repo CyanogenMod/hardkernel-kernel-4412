@@ -420,7 +420,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	bus_ctrl.opp_lock =  NULL;
 	bus_ctrl.dev =  data->dev;
 
-	INIT_DELAYED_WORK(&data->worker, exynos_busfreq_timer);
+	INIT_DELAYED_WORK_DEFERRABLE(&data->worker, exynos_busfreq_timer);
 
 	if (data->init(&pdev->dev, data)) {
 		pr_err("Failed to init busfreq.\n");
