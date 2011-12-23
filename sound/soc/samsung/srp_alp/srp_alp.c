@@ -852,7 +852,7 @@ static int srp_prepare_fw_buff(struct device *dev)
 	/* Copy Firmware */
 	memcpy(srp.fw_info.vliw, srp_fw_vliw, srp.fw_info.vliw_size);
 	memcpy(srp.fw_info.cga, srp_fw_cga, srp.fw_info.cga_size);
-	memcpy(srp.fw_info.data, srp_fw_data,	srp.fw_info.data_size);
+	memcpy(srp.fw_info.data, srp_fw_data, srp.fw_info.data_size);
 
 	return 0;
 }
