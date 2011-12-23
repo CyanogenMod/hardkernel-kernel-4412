@@ -2636,7 +2636,6 @@ static struct i2c_board_info i2c_devs3[] __initdata = {
 static struct i2c_board_info i2c_devs7[] __initdata = {
 	{
 		I2C_BOARD_INFO("pixcir-ts", 0x5C),
-		.irq		= IRQ_EINT(15),
 	},
 };
 
@@ -3829,6 +3828,7 @@ static void __init smdk4x12_machine_init(void)
 	s3c_i2c5_set_platdata(NULL);
 
 	s3c_i2c7_set_platdata(NULL);
+	i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
 #ifdef CONFIG_ANDROID_PMEM
