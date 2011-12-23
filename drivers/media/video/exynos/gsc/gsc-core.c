@@ -531,7 +531,16 @@ int gsc_check_scaler_ratio(struct gsc_variant *var, int sw, int sh, int dw,
 int gsc_pipeline_s_stream(struct gsc_dev *gsc, bool on)
 {
 	struct gsc_pipeline *p = &gsc->pipeline;
+	struct exynos_entity_data md_data;
 	int ret = 0;
+
+	/* If gscaler subdev calls the mixer's s_stream, the gscaler must
+	   inform the mixer subdev pipeline started from gscaler */
+	if (!strncmp(p->disp->name, MXR_SUBDEV_NAME,
+				sizeof(MXR_SUBDEV_NAME) - 1)) {
+		md_data.mxr_data_from = FROM_GSC_SD;
+		v4l2_set_subdevdata(p->disp, &md_data);
+	}
 
 	ret = v4l2_subdev_call(p->disp, video, s_stream, on);
 	if (ret)
