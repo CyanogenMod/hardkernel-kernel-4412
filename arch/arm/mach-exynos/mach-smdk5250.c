@@ -2251,8 +2251,8 @@ static void __init smdk5250_machine_init(void)
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
 #if defined(CONFIG_EXYNOS_DEV_PD)
-	exynos_device_flite0.dev.parent = &exynos5_device_pd[PD_ISP].dev;
-	exynos_device_flite1.dev.parent = &exynos5_device_pd[PD_ISP].dev;
+	exynos_device_flite0.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+	exynos_device_flite1.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
 #endif
 	smdk5250_camera_gpio_cfg();
 	smdk5250_set_camera_platdata();
