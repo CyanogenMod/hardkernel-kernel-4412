@@ -793,11 +793,12 @@ static void srp_prepare_buff(void)
 
 static int srp_prepare_fw_buff(struct device *dev)
 {
+#if defined(CONFIG_S5P_MEM_CMA)
 	unsigned long mem_paddr;
 
 	srp.fw_info.mem_base = cma_alloc(dev, "srp", BASE_MEM_SIZE, 0);
 	if (IS_ERR_VALUE(srp.fw_info.mem_base)) {
-		srp_err("SRP: Failed to cma alloc for srp\n");
+		srp_err("Failed to cma alloc for srp\n");
 		return -ENOMEM;
 	}
 
@@ -813,6 +814,28 @@ static int srp_prepare_fw_buff(struct device *dev)
 	srp.fw_info.data_pa = mem_paddr;
 	srp.fw_info.data = phys_to_virt(srp.fw_info.data_pa);
 	mem_paddr += DATA_SIZE_MAX;
+#else
+	srp.fw_info.vliw = dma_alloc_writecombine(dev, VLIW_SIZE,
+					&srp.fw_info.vliw_pa, GFP_KERNEL);
+	if (!srp.fw_info.vliw) {
+		srp_err("Failed to alloc for vliw\n");
+		return -ENOMEM;
+	}
+
+	srp.fw_info.cga = dma_alloc_writecombine(dev, CGA_SIZE,
+					&srp.fw_info.cga_pa, GFP_KERNEL);
+	if (!srp.fw_info.cga) {
+		srp_err("Failed to alloc for cga\n");
+		return -ENOMEM;
+	}
+
+	srp.fw_info.data = dma_alloc_writecombine(dev, DATA_SIZE,
+					&srp.fw_info.data_pa, GFP_KERNEL);
+	if (!srp.fw_info.data) {
+		srp_err("Failed to alloc for data\n");
+		return -ENOMEM;
+	}
+#endif
 
 	srp.fw_info.vliw_size = srp_fw_vliw_len;
 	srp.fw_info.cga_size = srp_fw_cga_len;
@@ -831,9 +854,21 @@ static int srp_prepare_fw_buff(struct device *dev)
 	return 0;
 }
 
-static int srp_remove_fw_buff(void)
+static int srp_remove_fw_buff(struct device *dev)
 {
+#if defined(CONFIG_S5P_MEM_CMA)
 	cma_free(srp.fw_info.mem_base);
+#else
+	dma_free_writecombine(dev, VLIW_SIZE, srp.fw_info.vliw,
+					srp.fw_info.vliw_pa);
+	dma_free_writecombine(dev, CGA_SIZE, srp.fw_info.cga,
+					srp.fw_info.cga_pa);
+	dma_free_writecombine(dev, DATA_SIZE, srp.fw_info.data,
+					srp.fw_info.data_pa);
+#endif
+	srp.fw_info.vliw = NULL;
+	srp.fw_info.cga = NULL;
+	srp.fw_info.data = NULL;
 
 	srp.fw_info.vliw_pa = 0;
 	srp.fw_info.cga_pa = 0;
@@ -935,7 +970,7 @@ static __devinit int srp_probe(struct platform_device *pdev)
 err6:
 	free_irq(IRQ_AUDIO_SS, pdev);
 err5:
-	srp_remove_fw_buff();
+	srp_remove_fw_buff(&pdev->dev);
 err4:
 	iounmap(srp.commbox);
 err3:
@@ -951,7 +986,7 @@ err1:
 static __devexit int srp_remove(struct platform_device *pdev)
 {
 	free_irq(IRQ_AUDIO_SS, pdev);
-	srp_remove_fw_buff();
+	srp_remove_fw_buff(&pdev->dev);
 
 	misc_deregister(&srp_miscdev);
 
