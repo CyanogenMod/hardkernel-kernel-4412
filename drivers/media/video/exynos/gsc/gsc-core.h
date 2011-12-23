@@ -760,6 +760,7 @@ void gsc_hw_set_global_alpha(struct gsc_ctx *ctx);
 void gsc_hw_set_sfr_update(struct gsc_ctx *ctx);
 void gsc_hw_set_local_dst(int id, bool on);
 void gsc_hw_set_sysreg_writeback(struct gsc_ctx *ctx);
+void gsc_hw_set_sysreg_camif(bool on);
 
 int gsc_hw_get_input_buf_mask_status(struct gsc_dev *dev);
 int gsc_hw_get_done_input_buf_index(struct gsc_dev *dev);

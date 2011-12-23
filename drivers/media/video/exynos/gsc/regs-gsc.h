@@ -20,6 +20,7 @@
 #define SYSREG_GSCBLK_CFG0		(S3C_VA_SYS + 0x0220)
 #define GSC_OUT_DST_SEL(x)		(1 << (8 + 2 *(x)))
 #define GSC_PXLASYNC_RST(x)		(1 << (x))
+#define GSC_PXLASYNC_CAMIF_TOP		(1 << 20)
 #define SYSREG_GSCBLK_CFG1		(S3C_VA_SYS + 0x0224)
 #define GSC_BLK_DISP1WB_DEST(x)		(x << 10)
 #define GSC_BLK_SW_RESET_WB_DEST(x)	(1 << (18 + x))

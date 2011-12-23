@@ -643,3 +643,15 @@ void gsc_hw_set_sysreg_writeback(struct gsc_ctx *ctx)
 
 	writel(cfg, SYSREG_GSCBLK_CFG1);
 }
+
+void gsc_hw_set_sysreg_camif(bool on)
+{
+	u32 cfg = readl(SYSREG_GSCBLK_CFG0);
+
+	if (on)
+		cfg |= GSC_PXLASYNC_CAMIF_TOP;
+	else
+		cfg &= ~(GSC_PXLASYNC_CAMIF_TOP);
+
+	writel(cfg, SYSREG_GSCBLK_CFG0);
+}
