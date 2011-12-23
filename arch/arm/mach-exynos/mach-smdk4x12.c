@@ -3704,9 +3704,8 @@ static void __init exynos_sysmmu_init(void)
 #endif
 }
 
-#define SMDK4412_REV_0_0_ADC_VALUE 32768
-#define SMDK4412_REV_0_1_ADC_VALUE 33325
-
+#define SMDK4412_REV_0_0_ADC_VALUE 0
+#define SMDK4412_REV_0_1_ADC_VALUE 443
 int samsung_board_rev;
 
 static int get_samsung_board_rev(void)
@@ -3716,6 +3715,7 @@ static int get_samsung_board_rev(void)
 	struct resource	*res;
 	void __iomem	*adc_regs;
 	unsigned int	con;
+	int		ret;
 
 	if (soc_is_exynos4212() || samsung_rev() < EXYNOS4412_REV_1_0)
 		return SAMSUNG_BOARD_REV_0_0;
@@ -3745,9 +3745,9 @@ static int get_samsung_board_rev(void)
 	con |= S3C2410_ADCCON_ENABLE_START;
 	writel(con, adc_regs + S3C2410_ADCCON);
 
-	udelay (10);
+	udelay (50);
 
-	adc_val = readl (adc_regs + S3C2410_ADCDAT0);
+	adc_val = readl(adc_regs + S3C2410_ADCDAT0) & 0xFFF;
 	writel(0, adc_regs + S3C64XX_ADCCLRINT);
 
 	iounmap(adc_regs);
@@ -3755,10 +3755,11 @@ err_clk:
 	clk_disable(adc_clk);
 	clk_put(adc_clk);
 
-	if (adc_val > (SMDK4412_REV_0_0_ADC_VALUE+SMDK4412_REV_0_1_ADC_VALUE)/2)
-		return SAMSUNG_BOARD_REV_0_1;
+	ret = (adc_val < SMDK4412_REV_0_1_ADC_VALUE/2) ?
+			SAMSUNG_BOARD_REV_0_0 : SAMSUNG_BOARD_REV_0_1;
 
-	return SAMSUNG_BOARD_REV_0_0;
+	pr_info ("SMDK MAIN Board Rev 0.%d (ADC value:%d)\n", ret, adc_val);
+	return ret;
 }
 
 static void __init smdk4x12_machine_init(void)
