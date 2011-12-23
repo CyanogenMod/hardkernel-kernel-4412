@@ -407,13 +407,12 @@ static int jpeg_dec_m2m_reqbufs(struct file *file, void *priv,
 	struct jpeg_ctx *ctx = priv;
 	struct vb2_queue *vq;
 
-	if (ctx->input_cacheable == 1 || ctx->output_cacheable == 1) {
-		vq = v4l2_m2m_get_vq(ctx->m2m_ctx, reqbufs->type);
-		if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
-			ctx->dev->vb2->set_cacheable(ctx->dev->alloc_ctx, ctx->input_cacheable);
-		else if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
-			ctx->dev->vb2->set_cacheable(ctx->dev->alloc_ctx, ctx->output_cacheable);
-	}
+	vq = v4l2_m2m_get_vq(ctx->m2m_ctx, reqbufs->type);
+	if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE)
+		ctx->dev->vb2->set_cacheable(ctx->dev->alloc_ctx, ctx->input_cacheable);
+	else if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE)
+		ctx->dev->vb2->set_cacheable(ctx->dev->alloc_ctx, ctx->output_cacheable);
+
 	return v4l2_m2m_reqbufs(file, ctx->m2m_ctx, reqbufs);
 }
 
