@@ -1983,6 +1983,61 @@ static struct clk_ops exynos5_fout_apll_ops = {
 	.get_rate = exynos5_fout_apll_get_rate,
 };
 
+static struct vpll_div_data exynos5_vpll_div[] = {
+	{268000000, 6, 268, 2, 41104, 0,  0, 0},
+};
+
+static unsigned long exynos5_vpll_get_rate(struct clk *clk)
+{
+	return clk->rate;
+}
+
+static int exynos5_vpll_set_rate(struct clk *clk, unsigned long rate)
+{
+	unsigned int vpll_con0, vpll_con1;
+	unsigned int i;
+
+	/* Return if nothing changed */
+	if (clk->rate == rate)
+		return 0;
+
+	vpll_con0 = __raw_readl(EXYNOS5_VPLL_CON0);
+	vpll_con0 &= ~(PLL90XX_MDIV_MASK << PLL90XX_MDIV_SHIFT |       \
+		       PLL90XX_PDIV_MASK << PLL90XX_PDIV_SHIFT |       \
+		       PLL90XX_SDIV_MASK << PLL90XX_SDIV_SHIFT);
+
+	vpll_con1 = __raw_readl(EXYNOS5_VPLL_CON1);
+	vpll_con1 &= ~(0xffff << 0);
+
+	for (i = 0; i < ARRAY_SIZE(exynos5_vpll_div); i++) {
+		if (exynos5_vpll_div[i].rate == rate) {
+			vpll_con0 |= exynos5_vpll_div[i].pdiv << PLL90XX_PDIV_SHIFT;
+			vpll_con0 |= exynos5_vpll_div[i].mdiv << PLL90XX_MDIV_SHIFT;
+			vpll_con0 |= exynos5_vpll_div[i].sdiv << PLL90XX_SDIV_SHIFT;
+			vpll_con1 |= exynos5_vpll_div[i].k << 0;
+			break;
+		}
+	}
+
+	if (i == ARRAY_SIZE(exynos5_vpll_div)) {
+		printk(KERN_ERR "%s: Invalid Clock VPLL Frequency\n",
+				__func__);
+		return -EINVAL;
+	}
+
+	__raw_writel(vpll_con0, EXYNOS5_VPLL_CON0);
+	__raw_writel(vpll_con1, EXYNOS5_VPLL_CON1);
+
+	clk->rate = rate;
+
+	return 0;
+}
+
+static struct clk_ops exynos5_vpll_ops = {
+	.get_rate = exynos5_vpll_get_rate,
+	.set_rate = exynos5_vpll_set_rate,
+};
+
 #ifdef CONFIG_PM
 static int exynos5_clock_suspend(void)
 {
@@ -2080,6 +2135,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 
 
 	clk_fout_epll.ops = &exynos5_epll_ops;
+	clk_fout_vpll.ops = &exynos5_vpll_ops;
 
 	if (clk_set_parent(&exynos5_clk_mout_audss.clk, &clk_fout_epll))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
