@@ -10,7 +10,7 @@
 #include <linux/err.h>
 #include <linux/input.h>
 #include <linux/platform_device.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <mach/regs-pmu.h>
 
 #define DEV_NAME "wakeup_assist"
@@ -39,7 +39,7 @@ static int __devinit wakeup_assist_probe(struct platform_device *pdev)
 	input_dev->keycodesize = sizeof(wakeup_assist_keycode[0]);
 	input_dev->keycodemax = ARRAY_SIZE(wakeup_assist_keycode);
 
-	__set_bit (wakeup_assist_keycode[0], input_dev->keybit);
+	__set_bit(wakeup_assist_keycode[0], input_dev->keybit);
 	__clear_bit(KEY_RESERVED, input_dev->keybit);
 
 	error = input_register_device(input_dev);
@@ -48,7 +48,7 @@ static int __devinit wakeup_assist_probe(struct platform_device *pdev)
 		return error;
 	}
 
-	platform_set_drvdata (pdev, input_dev);
+	platform_set_drvdata(pdev, input_dev);
 
 	return 0;
 }
