@@ -74,8 +74,7 @@ void __init exynos_c2c_set_platdata(struct exynos_c2c_platdata *pd)
 		writel(0x1, S5P_C2C_CTRL);
 		if (samsung_rev() < EXYNOS4412_REV_1_0)
 			npd->c2c_sysreg = S3C_VA_SYS + 0x010C;
-	}
-	else if (soc_is_exynos5250()) {
+	} else if (soc_is_exynos5250()) {
 		/* TODO : SysReg address will be changed at EVT1 */
 		/* Set C2C_CTRL Register */
 		writel(0x1, EXYNOS5_C2C_CTRL);
