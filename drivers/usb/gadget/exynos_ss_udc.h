@@ -181,6 +181,7 @@ struct exynos_ss_udc {
 
 	u32			*event_buff;
 	dma_addr_t		event_buff_dma;
+	u32			event_indx;
 
 	bool			eps_enabled;
 	enum ctrl_ep_state	ep0_state;
@@ -193,8 +194,7 @@ struct exynos_ss_udc {
 	struct usb_request	*ctrl_req;
 
 	struct usb_gadget	gadget;
-	struct exynos_ss_udc_ep	eps[];
-
+	struct exynos_ss_udc_ep	eps[EXYNOS_USB3_EPS];
 };
 
 /* conversion functions */

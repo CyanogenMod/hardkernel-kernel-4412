@@ -1509,7 +1509,6 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 */
 static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 {
-
 	switch (event & EXYNOS_USB3_DEVT_EVENT_MASK) {
 	case EXYNOS_USB3_DEVT_EVENT_ULStChng:
 		dev_dbg(udc->dev, "USB-Link State Change");
@@ -1555,7 +1554,7 @@ static void exynos_ss_udc_handle_gevt(struct exynos_ss_udc *udc, u32 event)
 static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
 {
 	struct exynos_ss_udc *udc = pw;
-	static int indx;
+	int indx = udc->event_indx;
 	int gevntcount;
 	u32 event;
 	u32 ecode1, ecode2;
@@ -1569,7 +1568,8 @@ static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
 	while (gevntcount) {
 		event = udc->event_buff[indx++];
 
-		dev_dbg(udc->dev, "event = 0x%08x\n", event);
+		dev_dbg(udc->dev, "event[%x] = 0x%08x\n",
+			(unsigned int) &udc->event_buff[indx - 1], event);
 
 		ecode1 = event & 0x01;
 
@@ -1611,6 +1611,7 @@ static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
 		gevntcount -= 4;
 	}
 
+	udc->event_indx = indx;
 	/* Do we need to read GEVENTCOUNT here and retry? */
 
 	return IRQ_HANDLED;
@@ -1994,6 +1995,7 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 	       udc->regs + EXYNOS_USB3_GSBUSCFG1);
 
 	/* Event buffer */
+	udc->event_indx = 0;
 	writel(0, udc->regs + EXYNOS_USB3_GEVNTADR_63_32(0));
 	writel(udc->event_buff_dma,
 		udc->regs + EXYNOS_USB3_GEVNTADR_31_0(0));
