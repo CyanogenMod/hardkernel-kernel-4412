@@ -19,6 +19,7 @@
 #include <plat/devs.h>
 #include <plat/ehci.h>
 #include <plat/usbgadget.h>
+
 #include <mach/regs-clock.h>
 
 #include "../gadget/s3c_udc.h"
@@ -48,7 +49,7 @@ static void exynos_host_port_power_off(void)
 	s5p_ohci_port_power_off(&s5p_device_ohci);
 }
 
-static void exynos_host_port_power_on(void)
+static void __maybe_unused exynos_host_port_power_on(void)
 {
 	s5p_ehci_port_power_on(&s5p_device_ehci);
 	s5p_ohci_port_power_on(&s5p_device_ohci);
@@ -62,6 +63,11 @@ static int is_host_detect(struct exynos_usb_switch *usb_switch)
 static int is_device_detect(struct exynos_usb_switch *usb_switch)
 {
 	return gpio_get_value(usb_switch->gpio_device_detect);
+}
+
+static void set_host_vbus(struct exynos_usb_switch *usb_switch, int value)
+{
+	gpio_set_value(usb_switch->gpio_host_vbus, value);
 }
 
 static int exynos_change_usb_mode(struct exynos_usb_switch *usb_switch,
@@ -96,6 +102,8 @@ static int exynos_change_usb_mode(struct exynos_usb_switch *usb_switch,
 	case USB_HOST_DETACHED:
 		pm_runtime_put(&s5p_device_ohci.dev);
 		pm_runtime_put(&s5p_device_ehci.dev);
+		if (usb_switch->gpio_host_vbus)
+			set_host_vbus(usb_switch, 0);
 
 		enable_irq(usb_switch->device_detect_irq);
 #if defined(CONFIG_BATTERY_SAMSUNG)
@@ -108,10 +116,11 @@ static int exynos_change_usb_mode(struct exynos_usb_switch *usb_switch,
 		exynos_usb_cable_connect();
 #endif
 		disable_irq(usb_switch->device_detect_irq);
+		if (usb_switch->gpio_host_vbus)
+			set_host_vbus(usb_switch, 1);
 
-		pm_runtime_get(&s5p_device_ehci.dev);
-		pm_runtime_get(&s5p_device_ohci.dev);
-		exynos_host_port_power_on();
+		pm_runtime_get_sync(&s5p_device_ehci.dev);
+		pm_runtime_get_sync(&s5p_device_ohci.dev);
 		atomic_set(&usb_switch->connect, 1);
 		break;
 	default:
@@ -186,7 +195,10 @@ static irqreturn_t exynos_device_detect_thread(int irq, void *data)
 	if (is_host_detect(usb_switch)) {
 		printk(KERN_ERR "Not expected situation\n");
 	} else if (is_device_detect(usb_switch)) {
-		queue_work(usb_switch->workqueue, &usb_switch->switch_work);
+		if (usb_switch->gpio_host_vbus)
+			exynos_change_usb_mode(usb_switch, USB_DEVICE_ATTACHED);
+		else
+			queue_work(usb_switch->workqueue, &usb_switch->switch_work);
 	} else {
 		/* VBUS PIN low */
 		exynos_change_usb_mode(usb_switch, USB_DEVICE_DETACHED);
@@ -203,9 +215,12 @@ static int exynos_usb_status_init(struct exynos_usb_switch *usb_switch)
 		printk(KERN_ERR "Already setting\n");
 	else if (is_host_detect(usb_switch))
 		exynos_change_usb_mode(usb_switch, USB_HOST_ATTACHED);
-	else if (is_device_detect(usb_switch))
-		queue_work(usb_switch->workqueue, &usb_switch->switch_work);
-	else
+	else if (is_device_detect(usb_switch)) {
+		if (usb_switch->gpio_host_vbus)
+			exynos_change_usb_mode(usb_switch, USB_DEVICE_ATTACHED);
+		else
+			queue_work(usb_switch->workqueue, &usb_switch->switch_work);
+	} else
 		atomic_set(&usb_switch->connect, 0);
 
 	return 0;
@@ -231,7 +246,7 @@ static int exynos_usbswitch_resume(struct device *dev)
 	printk(KERN_INFO "%s\n", __func__);
 	exynos_usb_status_init(usb_switch);
 
-	if (!atomic_read(&usb_switch->connect))
+	if (!atomic_read(&usb_switch->connect) && !usb_switch->gpio_host_vbus)
 		exynos_host_port_power_off();
 
 	return 0;
@@ -295,6 +310,7 @@ static int __devinit exynos_usbswitch_probe(struct platform_device *pdev)
 
 	usb_switch->gpio_host_detect = pdata->gpio_host_detect;
 	usb_switch->gpio_device_detect = pdata->gpio_device_detect;
+	usb_switch->gpio_host_vbus = pdata->gpio_host_vbus;
 
 	exynos_usb_status_init(usb_switch);
 

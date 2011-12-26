@@ -27,6 +27,7 @@ struct exynos_usb_switch {
 	unsigned int device_detect_irq;
 	unsigned int gpio_host_detect;
 	unsigned int gpio_device_detect;
+	unsigned int gpio_host_vbus;
 
 	struct workqueue_struct	*workqueue;
 	struct work_struct switch_work;
