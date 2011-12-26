@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 115  /* IS REGION VERSION 1.15 */
+#define IS_REGION_VER 116  /* IS REGION VERSION 1.16 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -28,6 +28,7 @@
 #define IS_PARAM_FD		(dev->is_p_region->parameter.fd)
 #define IS_HEADER		(dev->is_p_region->header)
 #define IS_FACE			(dev->is_p_region->face)
+#define IS_SHARED		(dev->is_shared_region)
 #define IS_PARAM_SIZE		(FIMC_IS_REGION_SIZE+1)
 
 /* Global control */
@@ -121,18 +122,18 @@
 		(dev->is_p_region->parameter.isp.aa.target = x)
 #define IS_ISP_SET_PARAM_AA_MODE(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.mode = x)
+#define IS_ISP_SET_PARAM_AA_SCENE(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.scene = x)
+#define IS_ISP_SET_PARAM_AA_SLEEP(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.sleep = x)
 #define IS_ISP_SET_PARAM_AA_FACE(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.face = x)
-#define IS_ISP_SET_PARAM_AA_CONTINUOUS(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.continuous = x)
-#define IS_ISP_SET_PARAM_AA_WIN_POS_X(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.win_pos_x = x)
-#define IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.win_pos_y = x)
-#define IS_ISP_SET_PARAM_AA_WIN_WIDTH(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.win_width = x)
-#define IS_ISP_SET_PARAM_AA_WIN_HEIGHT(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.win_height = x)
+#define IS_ISP_SET_PARAM_AA_TOUCH_X(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.touch_x = x)
+#define IS_ISP_SET_PARAM_AA_TOUCH_Y(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.touch_y = x)
+#define IS_ISP_SET_PARAM_AA_MANUAL_AF(dev, x) \
+		(dev->is_p_region->parameter.isp.aa.manual_af_setting = x)
 #define IS_ISP_SET_PARAM_AA_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.err = x)
 
@@ -878,6 +879,16 @@ enum isp_af_face {
 	ISP_AF_FACE_ENABLE		= 1
 };
 
+enum isp_af_scene {
+	ISP_AF_SCENE_NORMAL		= 0,
+	ISP_AF_SCENE_MACRO		= 1
+};
+
+enum isp_af_sleep {
+	ISP_AF_SLEEP_OFF		= 0,
+	ISP_AF_SLEEP_ON			= 1
+};
+
 enum isp_af_continuous {
 	ISP_AF_CONTINUOUS_DISABLE	= 0,
 	ISP_AF_CONTINUOUS_ENABLE	= 1
@@ -1182,14 +1193,13 @@ struct param_isp_aa {
 	u32	cmd;
 	u32	target;
 	u32	mode;
+	u32	scene;
+	u32	sleep;
 	u32	face;
-	u32	continuous;
-	u32	win_pos_x;
-	u32	win_pos_y;
-	u32	win_width;
-	u32	win_height;
+	u32	touch_x;
+	u32	touch_y;
 	u32	manual_af_setting;
-	u32	reserved[PARAMETER_MAX_MEMBER-11];
+	u32	reserved[PARAMETER_MAX_MEMBER-10];
 	u32	err;
 };
 
@@ -1543,10 +1553,19 @@ struct is_debug_frame_descriptor {
 	u32	sensor_frame_time;
 	u32	sensor_exposure_time;
 	u32	sensor_analog_gain;
+	/* monitor for AA */
 	u32	req_lei;
+
+	u32	next_next_lei_exp;
+	u32	next_next_lei_a_gain;
+	u32	next_next_lei_d_gain;
+	u32	next_next_lei_statlei;
+	u32	next_next_lei_lei;
+
+	u32	dummy0;
 };
 
-#define MAX_FRAMEDESCRIPTOR_CONTEXT_NUM	(30*30)	/* 30 sec */
+#define MAX_FRAMEDESCRIPTOR_CONTEXT_NUM	(30*10)	/* 10 sec */
 struct is_share_region {
 	u32	frame_time;
 	u32	exposure_time;
@@ -1558,12 +1577,21 @@ struct is_share_region {
 
 	u32	af_position;
 	u32	af_status;
+	/* 0 : SIRC_ISP_CAMERA_AUTOFOCUSMESSAGE_NOMESSAGE */
+	/* 1 : SIRC_ISP_CAMERA_AUTOFOCUSMESSAGE_REACHED */
+	/* 2 : SIRC_ISP_CAMERA_AUTOFOCUSMESSAGE_UNABLETOREACH */
+	/* 3 : SIRC_ISP_CAMERA_AUTOFOCUSMESSAGE_LOST */
+	/* default : unknown */
+	u32	af_scene_type;
 
 	u32	frame_descp_onoff_control;
 	u32	frame_descp_update_done;
 	u32	frame_descp_idx;
 	struct is_debug_frame_descriptor
 		dbg_frame_descp_ctx[MAX_FRAMEDESCRIPTOR_CONTEXT_NUM];
+
+	u32	chip_id;
+	u32	chip_rev_no;
 };
 
 #endif

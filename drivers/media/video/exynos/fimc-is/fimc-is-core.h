@@ -52,21 +52,22 @@
 #define FIMC_IS_SHUTDOWN_TIMEOUT	(8*HZ)
 #define FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR	(3*HZ)
 
-#define FIMC_IS_A5_MEM_SIZE	0x00A00000
-#define FIMC_IS_REGION_SIZE	0x5000
-#define ISP_SETFILE_SIZE	0xc0d8
-#define DRC_SETFILE_SIZE	0x140
-#define FD_SETFILE_SIZE		(0x88*2)
+#define FIMC_IS_A5_MEM_SIZE		0x00A00000
+#define FIMC_IS_REGION_SIZE		0x5000
+#define ISP_SETFILE_SIZE		0xc0d8
+#define DRC_SETFILE_SIZE		0x140
+#define FD_SETFILE_SIZE			(0x88*2)
+#define FIMC_IS_DEBUG_REGION_ADDR	0x00840000
+#define FIMC_IS_SHARED_REGION_ADDR	0x008C0000
 
-#define GED_FD_RANGE	1000
+#define GED_FD_RANGE			1000
+
 #define BUS_LOCK_FREQ_L0	400200
 #define BUS_LOCK_FREQ_L1	267200
 #define BUS_LOCK_FREQ_L2	267160
 #define BUS_LOCK_FREQ_L3	160160
 #define BUS_LOCK_FREQ_L4	133133
 #define BUS_LOCK_FREQ_L5	100100
-
-#define DEBUG
 
 #define SDCARD_FW
 
@@ -185,6 +186,8 @@ struct is_fw {
 	const struct firmware	*info;
 	int			state;
 	int			ver;
+	char			fw_info[23];
+	char			fw_version[6];
 };
 
 struct is_setfile {
@@ -232,11 +235,8 @@ struct is_af_info {
 	u32 af_lock_state;
 	u32 ae_lock_state;
 	u32 awb_lock_state;
-	u16 lock;
 	u16 pos_x;
 	u16 pos_y;
-	u16 width;
-	u16 height;
 	u16 use_af;
 };
 
@@ -280,6 +280,7 @@ struct fimc_is_dev {
 	unsigned long			p_region_index1;
 	unsigned long			p_region_index2;
 	struct is_region		*is_p_region;
+	struct is_share_region		*is_shared_region;
 };
 
 struct fimc_is_ctx {

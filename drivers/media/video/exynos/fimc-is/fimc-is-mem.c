@@ -57,6 +57,7 @@ struct vb2_ion_buf {
 	struct vb2_vmarea_handler	handler;
 
 	struct ion_handle		*handle;	/* Kernel space */
+	int				fd;		/* User space */
 
 	dma_addr_t			kva;
 	dma_addr_t			dva;
@@ -115,6 +116,9 @@ int fimc_is_init_mem_mgr(struct fimc_is_dev *dev)
 	dev->is_p_region =
 		(struct is_region *)(phys_to_virt(dev->mem.base +
 				FIMC_IS_A5_MEM_SIZE - FIMC_IS_REGION_SIZE));
+	dev->is_shared_region =
+		(struct is_share_region *)(phys_to_virt(dev->mem.base +
+				FIMC_IS_SHARED_REGION_ADDR));
 	memset((void *)dev->is_p_region, 0,
 		(unsigned long)sizeof(struct is_region));
 	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);

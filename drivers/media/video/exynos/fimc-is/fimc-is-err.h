@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_ERR_H_
 #define FIMC_IS_ERR_H_
 
-#define IS_ERROR_VER 007 /* IS ERROR VERSION 0.07 */
+#define IS_ERROR_VER 008 /* IS ERROR VERSION 0.08 */
 
 #define IS_ERROR_SUCCESS		0
 /* General 1 ~ 100 */
@@ -36,6 +36,7 @@
 #define IS_ERROR_ISP_MSG_FAIL		(IS_ERROR_SENSOR_MSG_FAIL + 1)
 #define IS_ERROR_DRC_MSG_FAIL		(IS_ERROR_ISP_MSG_FAIL + 1)
 #define IS_ERROR_LHFD_MSG_FAIL		(IS_ERROR_DRC_MSG_FAIL + 1)
+#define IS_ERROR_LHFD_INTERNAL_STOP	(IS_ERROR_LHFD_MSG_FAIL + 1)
 #define IS_ERROR_UNKNOWN		1000
 
 /* Sensor 100 ~ 200 */
@@ -95,8 +96,10 @@ enum error {
 	ERROR_COMMON_INPUT_PATH		= 5,
 	/* IP can not start if input path is not set */
 	ERROR_COMMON_INPUT_INIT		= 6,
+	/* Output path can be changed in ready state (stop) */
+	ERROR_COMMON_OUTPUT_PATH	= 7,
 	/* IP can not start if output path is not set */
-	ERROR_COMMON_OUTPUT_INIT	= 7,
+	ERROR_COMMON_OUTPUT_INIT	= 8,
 
 	ERROR_CONTROL_NO		= ERROR_COMMON_NO,
 	ERROR_CONTROL_BYPASS		= 11,	/* Enable or Disable */
