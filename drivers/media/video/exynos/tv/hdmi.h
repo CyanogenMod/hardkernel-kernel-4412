@@ -307,6 +307,7 @@ irqreturn_t hdmi_irq_handler(int irq, void *dev_data);
 int hdmi_conf_apply(struct hdmi_device *hdmi_dev);
 int is_hdmiphy_ready(struct hdmi_device *hdev);
 void hdmi_enable(struct hdmi_device *hdev, int on);
+void hdmi_hpd_enable(struct hdmi_device *hdev, int on);
 void hdmi_tg_enable(struct hdmi_device *hdev, int on);
 void hdmi_reg_infoframe(struct hdmi_device *hdev,
 		struct hdmi_infoframe *infoframe);

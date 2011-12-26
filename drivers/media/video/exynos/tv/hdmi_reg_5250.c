@@ -2679,6 +2679,13 @@ void hdmi_enable(struct hdmi_device *hdev, int on)
 		hdmi_write_mask(hdev, HDMI_CON_0, 0, HDMI_EN);
 }
 
+void hdmi_hpd_enable(struct hdmi_device *hdev, int on)
+{
+	/* enable HPD interrupts */
+	hdmi_write_mask(hdev, HDMI_INTC_CON_0, ~0, HDMI_INTC_EN_GLOBAL |
+			HDMI_INTC_EN_HPD_PLUG | HDMI_INTC_EN_HPD_UNPLUG);
+}
+
 void hdmi_tg_enable(struct hdmi_device *hdev, int on)
 {
 	u32 mask;

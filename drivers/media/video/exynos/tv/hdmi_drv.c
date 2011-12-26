@@ -638,6 +638,10 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 	if (ret)
 		goto fail_vdev;
 
+#if !defined(CONFIG_ARCH_EXYNOS4)
+	hdmi_hpd_enable(hdmi_dev, 1);
+#endif
+
 	dev_info(dev, "probe sucessful\n");
 
 	return 0;
