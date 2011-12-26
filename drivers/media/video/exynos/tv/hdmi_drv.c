@@ -10,6 +10,8 @@
  * by the Free Software Foundiation. either version 2 of the License,
  * or (at your option) any later version
  */
+#include "hdmi.h"
+
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/io.h>
@@ -29,8 +31,6 @@
 #include <media/v4l2-dev.h>
 #include <media/v4l2-device.h>
 #include <media/exynos_mc.h>
-
-#include "hdmi.h"
 
 MODULE_AUTHOR("Tomasz Stanislawski, <t.stanislaws@samsung.com>");
 MODULE_DESCRIPTION("Samsung HDMI");
@@ -267,6 +267,18 @@ static int hdmi_s_power(struct v4l2_subdev *sd, int on)
 #endif
 }
 
+int hdmi_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+{
+	struct hdmi_device *hdev = sd_to_hdmi_dev(sd);
+	struct device *dev = hdev->dev;
+
+	ctrl->value = hdmi_hpd_status(hdev);
+	dev_dbg(dev, "HDMI cable is %s\n", ctrl->value ?
+			"connected" : "disconnected");
+
+	return 0;
+}
+
 static int hdmi_s_dv_preset(struct v4l2_subdev *sd,
 	struct v4l2_dv_preset *preset)
 {
@@ -315,6 +327,7 @@ static int hdmi_enum_dv_presets(struct v4l2_subdev *sd,
 
 static const struct v4l2_subdev_core_ops hdmi_sd_core_ops = {
 	.s_power = hdmi_s_power,
+	.s_ctrl = hdmi_s_ctrl,
 };
 
 static const struct v4l2_subdev_video_ops hdmi_sd_video_ops = {
