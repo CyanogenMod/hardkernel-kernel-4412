@@ -163,7 +163,7 @@ int gsc_set_scaler_info(struct gsc_ctx *ctx)
 	gsc_dbg("scaler input/output size : sx = %d, sy = %d, tx = %d, ty = %d",
 		s_frame->crop.width, s_frame->crop.height, tx, ty);
 	gsc_dbg("scaler ratio info : pre_shfactor : %d, pre_h : %d, pre_v :%d,\
-		main_h : %d, main_v : %d", sc->pre_shfactor, sc->pre_hratio,
+		main_h : %ld, main_v : %ld", sc->pre_shfactor, sc->pre_hratio,
 		sc->pre_vratio, sc->main_hratio, sc->main_vratio);
 
 	return 0;
@@ -206,7 +206,7 @@ static void gsc_m2m_device_run(void *priv)
 	spin_lock_irqsave(&ctx->slock, flags);
 	/* Reconfigure hardware if the context has changed. */
 	if (gsc->m2m.ctx != ctx) {
-		gsc_dbg("gsc->m2m.ctx = 0x%08x, current_ctx = 0x%08x",
+		gsc_dbg("gsc->m2m.ctx = 0x%p, current_ctx = 0x%p",
 			  gsc->m2m.ctx, ctx);
 		ctx->state |= GSC_PARAMS;
 		gsc->m2m.ctx = ctx;
@@ -674,7 +674,7 @@ static int gsc_m2m_open(struct file *file)
 	if (gsc->m2m.refcnt++ == 0)
 		set_bit(ST_M2M_OPEN, &gsc->state);
 
-	gsc_dbg("gsc m2m driver is opened, ctx(0x%08x)", ctx);
+	gsc_dbg("gsc m2m driver is opened, ctx(0x%p)", ctx);
 	return 0;
 
 error_fh:

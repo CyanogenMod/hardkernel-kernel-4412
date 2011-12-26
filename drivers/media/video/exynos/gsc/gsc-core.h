@@ -13,7 +13,6 @@
 #ifndef GSC_CORE_H_
 #define GSC_CORE_H_
 
-/* #define DEBUG */
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
@@ -37,18 +36,35 @@
 #include <media/videobuf2-ion.h>
 #endif
 
-#define gsc_info(fmt, args...) \
-	printk(KERN_INFO "[INFO]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
-#define gsc_err(fmt, args...) \
-	printk(KERN_ERR "[ERROR]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
-#define gsc_warn(fmt, args...) \
-	printk(KERN_WARNING "[WARNNING]%s:%d: "fmt "\n", __func__, __LINE__, ##args)
-#ifdef DEBUG
-#define gsc_dbg(fmt, args...) \
-	printk(KERN_DEBUG "[DEBUG]%s:%d: " fmt "\n", __func__, __LINE__, ##args)
-#else
-#define gsc_dbg(fmt, args...)
-#endif
+static int dbg = 4;
+
+#define gsc_info(fmt, args...)						\
+	do {								\
+		if (dbg >= 6)						\
+			printk(KERN_INFO "[INFO]%s:%d: "fmt "\n",	\
+				__func__, __LINE__, ##args);		\
+	} while (0)
+
+#define gsc_err(fmt, args...)						\
+	do {								\
+		if (dbg >= 3)						\
+			printk(KERN_ERR "[ERROR]%s:%d: "fmt "\n",	\
+				__func__, __LINE__, ##args);		\
+	} while (0)
+
+#define gsc_warn(fmt, args...)						\
+	do {								\
+		if (dbg >= 4)						\
+			printk(KERN_WARNING "[WARN]%s:%d: "fmt "\n",	\
+				__func__, __LINE__, ##args);		\
+	} while (0)
+
+#define gsc_dbg(fmt, args...)						\
+	do {								\
+		if (dbg >= 7)						\
+			printk(KERN_DEBUG "[DEBUG]%s:%d: "fmt "\n",	\
+				__func__, __LINE__, ##args);		\
+	} while (0)
 
 #define GSC_MAX_CLOCKS			3
 #define GSC_SHUTDOWN_TIMEOUT		((100*HZ)/1000)
