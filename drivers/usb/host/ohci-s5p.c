@@ -91,6 +91,8 @@ static int ohci_hcd_s5p_drv_suspend(struct device *dev)
 	if (pdata && pdata->phy_exit)
 		pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
 
+	clk_disable(s5p_ohci->clk);
+
 	return rc;
 }
 
@@ -102,6 +104,7 @@ static int ohci_hcd_s5p_drv_resume(struct device *dev)
 	struct usb_hcd *hcd = s5p_ohci->hcd;
 	int rc = 0;
 
+	clk_enable(s5p_ohci->clk);
 	pm_runtime_resume(&pdev->dev);
 
 	if (pdata->phy_init)
