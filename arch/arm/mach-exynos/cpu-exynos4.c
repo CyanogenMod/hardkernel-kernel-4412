@@ -292,6 +292,12 @@ void __init exynos4_init_clocks(int xtal)
 	exynos4_setup_clocks();
 }
 
+#define COMBINER_MAP(x)	((x < 16) ? IRQ_SPI(x) :	\
+			(x == 16) ? IRQ_SPI(107) :	\
+			(x == 17) ? IRQ_SPI(108) :	\
+			(x == 18) ? IRQ_SPI(48) :	\
+			(x == 19) ? IRQ_SPI(49) : 0)
+
 void __init exynos4_init_irq(void)
 {
 	int irq;
@@ -301,10 +307,18 @@ void __init exynos4_init_irq(void)
 	gic_init(0, IRQ_PPI_MCT_L, S5P_VA_GIC_DIST, S5P_VA_GIC_CPU);
 	gic_arch_extn.irq_set_wake = s3c_irq_wake;
 
-	for (irq = 0; irq < MAX_COMBINER_NR; irq++) {
+	for (irq = 0; irq < COMMON_COMBINER_NR; irq++) {
 		combiner_init(irq, (void __iomem *)S5P_VA_COMBINER(irq),
 				COMBINER_IRQ(irq, 0));
-		combiner_cascade_irq(irq, IRQ_SPI(irq));
+		combiner_cascade_irq(irq, COMBINER_MAP(irq));
+	}
+
+	if (soc_is_exynos4412() && (samsung_rev() >= EXYNOS4412_REV_1_0)) {
+		for (irq = COMMON_COMBINER_NR; irq < MAX_COMBINER_NR; irq++) {
+			combiner_init(irq, (void __iomem *)S5P_VA_COMBINER(irq),
+					COMBINER_IRQ(irq, 0));
+			combiner_cascade_irq(irq, COMBINER_MAP(irq));
+		}
 	}
 
 	/* The parameters of s5p_init_irq() are for VIC init.
