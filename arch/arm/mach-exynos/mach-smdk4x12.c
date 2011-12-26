@@ -2821,6 +2821,20 @@ static void __init smdk4x12_usbswitch_init(void)
 	s3c_gpio_setpull(pdata->gpio_device_detect, S3C_GPIO_PULL_NONE);
 	gpio_free(pdata->gpio_device_detect);
 
+	if (samsung_board_rev_is_0_0())
+		pdata->gpio_host_vbus = 0;
+	else if (samsung_board_rev_is_0_1()) {
+		pdata->gpio_host_vbus = EXYNOS4_GPL2(0);
+		err = gpio_request_one(pdata->gpio_host_vbus, GPIOF_OUT_INIT_LOW, "HOST_VBUS_CONTROL");
+		if (err) {
+			printk(KERN_ERR "failed to request gpio_host_vbus\n");
+			return;
+		}
+
+		s3c_gpio_setpull(pdata->gpio_host_vbus, S3C_GPIO_PULL_NONE);
+		gpio_free(pdata->gpio_host_vbus);
+	}
+
 	s5p_usbswitch_set_platdata(pdata);
 }
 #endif
