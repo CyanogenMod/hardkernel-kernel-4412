@@ -127,14 +127,14 @@ static void exynos_busfreq_timer(struct work_struct *work)
 
 	newfreq = opp_get_freq(opp);
 
+	index = data->get_table_index(opp);
+
 	mutex_lock(&busfreq_lock);
 
 	if (opp == data->curr_opp || newfreq == 0 || data->use == false)
 		goto out;
 
 	currfreq = opp_get_freq(data->curr_opp);
-
-	index = data->get_table_index(opp);
 
 	voltage = opp_get_voltage(opp);
 	if (newfreq > currfreq) {
