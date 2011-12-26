@@ -126,7 +126,8 @@ static int ion_exynos_heap_allocate(struct ion_heap *heap,
 			continue;
 		}
 
-		page = alloc_pages(GFP_KERNEL | __GFP_COMP | __GFP_NOWARN,
+		page = alloc_pages(GFP_HIGHUSER | __GFP_COMP |
+						__GFP_NOWARN | __GFP_NORETRY,
 						*cur_order - PAGE_SHIFT);
 		if (!page) {
 			cur_order++;
