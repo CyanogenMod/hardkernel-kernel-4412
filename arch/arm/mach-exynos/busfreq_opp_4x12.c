@@ -93,7 +93,7 @@ static unsigned int exynos4x12_int_volt[ASV_GROUP][LV_END] = {
 };
 
 static unsigned int exynos4x12_timingrow[LV_END] = {
-	0x34498691, 0x2336544C, 0x2336544C, 0x152432C7, 0x152432C7, 0x0D233206
+	0x34498691, 0x24488490, 0x24488490, 0x154882D0, 0x154882D0, 0x0D488210
 };
 
 static unsigned int clkdiv_dmc0[LV_END][6] = {
