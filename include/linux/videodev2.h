@@ -1216,15 +1216,16 @@ enum v4l2_colorfx {
 
 #define V4L2_CID_SET_SHAREABLE			(V4L2_CID_BASE+43)
 
-/* TV alpha blending configuration */
+/* TV configuration */
 #define V4L2_CID_TV_LAYER_BLEND_ENABLE		(V4L2_CID_BASE+44)
 #define V4L2_CID_TV_LAYER_BLEND_ALPHA		(V4L2_CID_BASE+45)
 #define V4L2_CID_TV_PIXEL_BLEND_ENABLE		(V4L2_CID_BASE+46)
 #define V4L2_CID_TV_CHROMA_ENABLE		(V4L2_CID_BASE+47)
 #define V4L2_CID_TV_CHROMA_VALUE		(V4L2_CID_BASE+48)
+#define V4L2_CID_TV_HPD_STATUS			(V4L2_CID_BASE+49)
 
 /* last CID + 1 */
-#define V4L2_CID_LASTP1				(V4L2_CID_BASE+49)
+#define V4L2_CID_LASTP1				(V4L2_CID_BASE+50)
 
 /*  MPEG-class control IDs defined by V4L2 */
 #define V4L2_CID_MPEG_BASE 			(V4L2_CTRL_CLASS_MPEG | 0x900)
