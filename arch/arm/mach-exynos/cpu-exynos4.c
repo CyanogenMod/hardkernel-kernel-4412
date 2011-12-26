@@ -401,6 +401,8 @@ static void exynos4_sw_reset(void)
 int __init exynos4_init(void)
 {
 	unsigned int value;
+	unsigned int tmp;
+	unsigned int i;
 
 	printk(KERN_INFO "EXYNOS4: Initializing architecture\n");
 
@@ -409,6 +411,13 @@ int __init exynos4_init(void)
 
 	/* set sw_reset function */
 	s5p_reset_hook = exynos4_sw_reset;
+
+	/* Disable auto wakeup from power off mode */
+	for (i = 0; i < num_possible_cpus(); i++) {
+		tmp = __raw_readl(S5P_ARM_CORE_OPTION(i));
+		tmp &= ~S5P_CORE_OPTION_DIS;
+		__raw_writel(tmp, S5P_ARM_CORE_OPTION(i));
+	}
 
 	if (soc_is_exynos4212() || soc_is_exynos4412()) {
 		value = __raw_readl(S5P_AUTOMATIC_WDT_RESET_DISABLE);

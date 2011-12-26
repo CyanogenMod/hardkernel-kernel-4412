@@ -623,9 +623,7 @@ static int exynos4_enter_lowpower(struct cpuidle_device *dev,
 	dev->last_state = new_state;
 
 	if (!soc_is_exynos4210()) {
-		tmp = __raw_readl(S5P_CENTRAL_SEQ_OPTION);
-		tmp &= ~(S5P_USE_STANDBYWFI_ISP_ARM |
-			 S5P_USE_STANDBYWFE_ISP_ARM);
+		tmp = S5P_USE_STANDBY_WFI0 | S5P_USE_STANDBY_WFE0;
 		__raw_writel(tmp, S5P_CENTRAL_SEQ_OPTION);
 	}
 

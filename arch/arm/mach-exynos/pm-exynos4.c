@@ -297,9 +297,7 @@ static int exynos4_pm_suspend(void)
 	exynos4_reset_assert_ctrl(0);
 
 	if (!soc_is_exynos4210()) {
-		tmp = __raw_readl(S5P_CENTRAL_SEQ_OPTION);
-		tmp &= ~(S5P_USE_STANDBYWFI_ISP_ARM |
-			 S5P_USE_STANDBYWFE_ISP_ARM);
+		tmp = S5P_USE_STANDBY_WFI0 | S5P_USE_STANDBY_WFE0;
 		__raw_writel(tmp, S5P_CENTRAL_SEQ_OPTION);
 
 		if (exynos4_is_c2c_use()) {
