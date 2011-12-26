@@ -16,11 +16,13 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 
-#include <mach/regs-pmu.h>
-#include <mach/regs-usb-host.h>
 #include <plat/cpu.h>
 #include <plat/ehci.h>
 #include <plat/usb-phy.h>
+
+#include <mach/regs-pmu.h>
+#include <mach/regs-usb-host.h>
+#include <mach/board_rev.h>
 
 struct s5p_ehci_hcd {
 	struct device *dev;
@@ -184,14 +186,16 @@ static int s5p_ehci_runtime_suspend(struct device *dev)
 		pdata->phy_suspend(pdev, S5P_USB_PHY_HOST);
 
 #ifdef CONFIG_USB_EXYNOS_SWITCH
-	(void) ehci_hub_control(hcd,
+	if (samsung_board_rev_is_0_0()) {
+		ehci_hub_control(hcd,
 			ClearPortFeature,
 			USB_PORT_FEAT_POWER,
 			1, NULL, 0);
-	/* Flush those writes */
-	ehci_readl(ehci, &ehci->regs->command);
+		/* Flush those writes */
+		ehci_readl(ehci, &ehci->regs->command);
 
-	msleep(20);
+		msleep(20);
+	}
 #endif
 	return 0;
 }
@@ -232,13 +236,15 @@ static int s5p_ehci_runtime_resume(struct device *dev)
 		hcd->state = HC_STATE_SUSPENDED;
 #ifdef CONFIG_USB_EXYNOS_SWITCH
 	} else {
-		(void) ehci_hub_control(ehci_to_hcd(ehci),
-				SetPortFeature,
-				USB_PORT_FEAT_POWER,
-				1, NULL, 0);
-		/* Flush those writes */
-		ehci_readl(ehci, &ehci->regs->command);
-		msleep(20);
+		if (samsung_board_rev_is_0_0()) {
+			ehci_hub_control(ehci_to_hcd(ehci),
+					SetPortFeature,
+					USB_PORT_FEAT_POWER,
+					1, NULL, 0);
+			/* Flush those writes */
+			ehci_readl(ehci, &ehci->regs->command);
+			msleep(20);
+		}
 #endif
 	}
 
@@ -306,6 +312,8 @@ static ssize_t store_ehci_power(struct device *dev,
 		return -EINVAL;
 
 	device_lock(dev);
+
+	pm_runtime_get_sync(dev);
 	if (!power_on && s5p_ehci->power_on) {
 		printk(KERN_DEBUG "%s: EHCI turns off\n", __func__);
 		s5p_ehci->power_on = 0;
@@ -334,6 +342,7 @@ static ssize_t store_ehci_power(struct device *dev,
 		s5p_ehci->power_on = 1;
 	}
 exit:
+	pm_runtime_put_sync(dev);
 	device_unlock(dev);
 	return count;
 }
@@ -445,10 +454,11 @@ static int __devinit s5p_ehci_probe(struct platform_device *pdev)
 	s5p_ehci->power_on = 1;
 
 #ifdef CONFIG_USB_EXYNOS_SWITCH
-	(void) ehci_hub_control(ehci_to_hcd(ehci),
-			ClearPortFeature,
-			USB_PORT_FEAT_POWER,
-			1, NULL, 0);
+	if (samsung_board_rev_is_0_0())
+		ehci_hub_control(ehci_to_hcd(ehci),
+				ClearPortFeature,
+				USB_PORT_FEAT_POWER,
+				1, NULL, 0);
 #endif
 #ifdef CONFIG_USB_SUSPEND
 	pm_runtime_set_active(&pdev->dev);

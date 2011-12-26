@@ -22,6 +22,8 @@
 #include <plat/ehci.h>
 #include <plat/usb-phy.h>
 
+#include <mach/board_rev.h>
+
 struct s5p_ohci_hcd {
 	struct device *dev;
 	struct usb_hcd *hcd;
@@ -139,22 +141,23 @@ static int ohci_hcd_s5p_drv_runtime_suspend(struct device *dev)
 	 */
 	spin_lock_irqsave(&ohci->lock, flags);
 	if (hcd->state != HC_STATE_SUSPENDED && hcd->state != HC_STATE_HALT) {
+		spin_unlock_irqrestore(&ohci->lock, flags);
 		err("Not ready %s", hcd->self.bus_name);
-		goto fail;
+		return rc;
 	}
 
 	ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
 	(void)ohci_readl(ohci, &ohci->regs->intrdisable);
 
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+	spin_unlock_irqrestore(&ohci->lock, flags);
 
 #ifdef CONFIG_USB_EXYNOS_SWITCH
-	ohci_writel (ohci, RH_HS_LPS, &ohci->regs->roothub.status);
+	if (samsung_board_rev_is_0_0())
+		ohci_writel (ohci, RH_HS_LPS, &ohci->regs->roothub.status);
 #endif
 	if (pdata->phy_suspend)
 		pdata->phy_suspend(pdev, S5P_USB_PHY_HOST);
-fail:
-	spin_unlock_irqrestore(&ohci->lock, flags);
 
 	return rc;
 }
@@ -177,7 +180,8 @@ static int ohci_hcd_s5p_drv_runtime_resume(struct device *dev)
 	set_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
 
 #ifdef CONFIG_USB_EXYNOS_SWITCH
-	ohci_writel (ohci, RH_HS_LPSC, &ohci->regs->roothub.status);
+	if (samsung_board_rev_is_0_0())
+		ohci_writel (ohci, RH_HS_LPSC, &ohci->regs->roothub.status);
 #endif
 
 	ohci_finish_controller_resume(hcd);
@@ -377,7 +381,8 @@ static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 	ohci = hcd_to_ohci(hcd);
 	ohci_hcd_init(ohci);
 #ifdef CONFIG_USB_EXYNOS_SWITCH
-	ohci->flags |= OHCI_QUIRK_SUPERIO;
+	if (samsung_board_rev_is_0_0())
+		ohci->flags |= OHCI_QUIRK_SUPERIO;
 #endif
 
 	err = usb_add_hcd(hcd, irq,
@@ -394,10 +399,12 @@ static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 	s5p_ohci->power_on = 1;
 
 #ifdef CONFIG_USB_EXYNOS_SWITCH
-	ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
-	(void)ohci_readl(ohci, &ohci->regs->intrdisable);
+	if (samsung_board_rev_is_0_0()) {
+		ohci_writel(ohci, OHCI_INTR_MIE, &ohci->regs->intrdisable);
+		(void)ohci_readl(ohci, &ohci->regs->intrdisable);
 
-	ohci_writel (ohci, RH_HS_LPS, &ohci->regs->roothub.status);
+		ohci_writel (ohci, RH_HS_LPS, &ohci->regs->roothub.status);
+	}
 #endif
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
