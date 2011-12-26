@@ -255,8 +255,8 @@ void mfc_clock_off(void)
 int mfc_power_on(void)
 {
 #ifdef CONFIG_PM_RUNTIME
-	/* MFC_NO_POWER_GATING */
-	if (soc_is_exynos4212() || soc_is_exynos4412())
+	if (soc_is_exynos4212() ||
+		(soc_is_exynos4412() && (samsung_rev() < EXYNOS4412_REV_1_1)))
 		return 0;
 	else
 		return pm_runtime_get_sync(pm->device);
@@ -270,8 +270,8 @@ int mfc_power_on(void)
 int mfc_power_off(void)
 {
 #ifdef CONFIG_PM_RUNTIME
-	/* MFC_NO_POWER_GATING */
-	if (soc_is_exynos4212() || soc_is_exynos4412())
+	if (soc_is_exynos4212() ||
+		(soc_is_exynos4412() && (samsung_rev() < EXYNOS4412_REV_1_1)))
 		return 0;
 	else
 		return pm_runtime_put_sync(pm->device);

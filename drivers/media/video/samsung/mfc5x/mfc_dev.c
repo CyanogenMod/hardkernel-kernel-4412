@@ -1176,9 +1176,9 @@ static int __devinit mfc_probe(struct platform_device *pdev)
 		goto err_misc_reg;
 	}
 
-#ifdef MFC_NO_POWER_GATING
-	mfc_pd_enable();
-#endif
+	if (soc_is_exynos4212() ||
+		(soc_is_exynos4412() && (samsung_rev() < EXYNOS4412_REV_1_1)))
+		mfc_pd_enable();
 
 	mfc_info("MFC(Multi Function Codec - FIMV v5.x) registered successfully\n");
 
