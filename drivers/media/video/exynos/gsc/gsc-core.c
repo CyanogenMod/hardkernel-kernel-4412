@@ -1117,6 +1117,24 @@ static int gsc_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static void gsc_pm_runtime_enable(struct device *dev)
+{
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_enable(dev);
+#else
+	gsc_runtime_resume(dev);
+#endif
+}
+
+static void gsc_pm_runtime_disable(struct device *dev)
+{
+#ifdef CONFIG_PM_RUNTIME
+	pm_runtime_disable(dev);
+#else
+	gsc_runtime_suspend(dev);
+#endif
+}
+
 static int gsc_probe(struct platform_device *pdev)
 {
 	struct gsc_dev *gsc;
@@ -1233,7 +1251,6 @@ static int gsc_probe(struct platform_device *pdev)
 		if (ret)
 			goto err_irq;
 	}
-	pm_runtime_enable(&pdev->dev);
 
 	sprintf(workqueue_name, "gsc%d_irq_wq_name", gsc->id);
 	gsc->irq_workqueue = create_singlethread_workqueue(workqueue_name);
@@ -1248,6 +1265,7 @@ static int gsc_probe(struct platform_device *pdev)
 		ret = PTR_ERR(gsc->alloc_ctx);
 		goto err_wq;
 	}
+	gsc_pm_runtime_enable(&pdev->dev);
 
 	gsc_info("gsc-%d registered successfully", gsc->id);
 
@@ -1279,12 +1297,9 @@ static int __devexit gsc_remove(struct platform_device *pdev)
 	gsc_unregister_output_device(gsc);
 	gsc_unregister_capture_device(gsc);
 
-	/* Add clock disable function */
-
 	gsc->vb2->cleanup(gsc->alloc_ctx);
+	gsc_pm_runtime_disable(&pdev->dev);
 
-	clk_disable(gsc->clock);
-	clk_put(gsc->clock);
 	iounmap(gsc->regs);
 	release_resource(gsc->regs_res);
 	kfree(gsc->regs_res);
@@ -1349,10 +1364,8 @@ static int gsc_resume(struct device *dev)
 static const struct dev_pm_ops gsc_pm_ops = {
 	.suspend		= gsc_suspend,
 	.resume			= gsc_resume,
-#ifdef CONFIG_PM_RUNTIME
 	.runtime_suspend	= gsc_runtime_suspend,
 	.runtime_resume		= gsc_runtime_resume,
-#endif
 };
 
 struct gsc_pix_max gsc_max_exynos5210 = {
