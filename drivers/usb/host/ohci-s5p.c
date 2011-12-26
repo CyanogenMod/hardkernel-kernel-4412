@@ -429,6 +429,9 @@ static int ohci_hcd_s5p_drv_remove(struct platform_device *pdev)
 	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = s5p_ohci->hcd;
 
+	if (pdata && pdata->phy_resume)
+		pdata->phy_resume(pdev, S5P_USB_PHY_HOST);
+
 	usb_remove_hcd(hcd);
 
 	s5p_ohci->power_on = 0;
@@ -451,8 +454,12 @@ static int ohci_hcd_s5p_drv_remove(struct platform_device *pdev)
 
 static void ohci_hcd_s5p_drv_shutdown(struct platform_device *pdev)
 {
+	struct s5p_ohci_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = s5p_ohci->hcd;
+
+	if (pdata && pdata->phy_resume)
+		pdata->phy_resume(pdev, S5P_USB_PHY_HOST);
 
 	if (hcd->driver->shutdown)
 		hcd->driver->shutdown(hcd);
