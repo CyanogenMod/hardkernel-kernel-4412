@@ -19,6 +19,7 @@
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/regs-pmu.h>
+#include <mach/regs-pmu-5250.h>
 #include <mach/cpufreq.h>
 
 #include <plat/clock.h>
@@ -181,6 +182,8 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	{ 900000 },	/* L20 */
 };
 
+#define INT_VOLT	1150000	/* 1.15v */
+
 static void set_clkdiv(unsigned int div_index)
 {
 	unsigned int tmp;
@@ -267,10 +270,35 @@ bool exynos5250_pms_change(unsigned int old_index, unsigned int new_index)
 	return (old_pm == new_pm) ? 0 : 1;
 }
 
+static void exynos5250_set_abbg(unsigned int new_index)
+{
+	unsigned int setbits = 8;
+	unsigned int new_volt, diff_volt;
+	unsigned int tmp;
+
+	new_volt = asv_voltage[new_index][0];
+
+	if (new_volt >= INT_VOLT) {
+		diff_volt = new_volt - INT_VOLT;
+		setbits += diff_volt / 50000;
+	} else {
+		diff_volt = INT_VOLT - new_volt;
+		setbits -= diff_volt / 50000;
+	}
+	pr_debug("%s: index:%d NEW_VOLT:%d, ABBG:%d\n", __func__,
+		new_index, new_volt, setbits);
+	tmp = __raw_readl(EXYNOS5_ABBG_CONTROL);
+	tmp &= ~(0x1f | (1 << 31) | (1 << 7));
+	tmp |= (setbits | (1 << 31) | (1 << 7));
+	__raw_writel(tmp, EXYNOS5_ABBG_CONTROL);
+}
+
 static void exynos5250_set_frequency(unsigned int old_index,
 				  unsigned int new_index)
 {
 	unsigned int tmp;
+
+	exynos5250_set_abbg(new_index);
 
 	if (old_index > new_index) {
 		if (!exynos5250_pms_change(old_index, new_index)) {
