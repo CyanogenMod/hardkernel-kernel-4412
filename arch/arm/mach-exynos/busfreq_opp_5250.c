@@ -520,11 +520,17 @@ struct opp *exynos5250_monitor(struct busfreq_data *data)
 int exynos5250_init(struct device *dev, struct busfreq_data *data)
 {
 	unsigned int i;
+	unsigned int tmp;
 	unsigned long maxfreq = ULONG_MAX;
 	unsigned long minfreq = 0;
 	unsigned long cdrexfreq;
 	struct clk *clk;
 	int ret;
+
+	/* Enable pause function for DREX2 DVFS */
+	tmp = __raw_readl(EXYNOS5_DMC_PAUSE_CTRL);
+	tmp |= DMC_PAUSE_ENABLE;
+	__raw_writel(tmp, EXYNOS5_DMC_PAUSE_CTRL);
 
 	clk = clk_get(NULL, "mout_cdrex");
 	if (IS_ERR(clk)) {
