@@ -20,57 +20,65 @@
 #include <plat/devs.h>
 #include <plat/s5p-tmu.h>
 
-static struct resource s5p_tmu_resource[] = {
+static struct resource tmu_resource[] = {
 	[0] = {
 		.start	= S5P_PA_TMU,
 		.end	= S5P_PA_TMU + 0xFFFF - 1,
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
-		.start	= IRQ_TMU_TRIG0,
-		.end	= IRQ_TMU_TRIG0,
+		.start	= IRQ_TMU,
+		.end	= IRQ_TMU,
 		.flags	= IORESOURCE_IRQ,
-	}
+	},
 };
 
-struct platform_device s5p_device_tmu = {
+struct platform_device exynos_device_tmu = {
 	.name	= "s5p-tmu",
 	.id		= -1,
-	.num_resources	= ARRAY_SIZE(s5p_tmu_resource),
-	.resource	= s5p_tmu_resource,
+	.num_resources	= ARRAY_SIZE(tmu_resource),
+	.resource	= tmu_resource,
 };
 
 static struct tmu_data default_tmu_data __initdata = {
-	.te1 = 0,
-	.te2 = 0,
-	.cooling = 82,			/* cooling temperature */
-	.tmu_flag = 0,
-	.mode = 0,				/* 0: 1point compensation, 1: 2point compensation. */
-	};
+	.ts = {
+		.stop_throttle  = 0,
+		.start_throttle = 0,
+		.stop_warning  = 0,
+		.start_warning = 0,
+		.start_tripping = 0,
+	},
+	.cpulimit = {
+		.throttle_freq = 0,
+		.warning_freq = 0,
+	},
+	.efuse_value = 0,
+	.slope = 0,
+	.mode = 0,
+};
 
 int s5p_tmu_get_irqno(int num)
 {
-	return platform_get_irq(&s5p_device_tmu, num);
+	return platform_get_irq(&exynos_device_tmu, num);
 }
 
-struct s5p_tmu *s5p_tmu_get_platdata(void)
+struct tmu_info *s5p_tmu_get_platdata(void)
 {
-	return platform_get_drvdata(&s5p_device_tmu);
+	return platform_get_drvdata(&exynos_device_tmu);
 }
 
 void __init s5p_tmu_set_platdata(struct tmu_data *pd)
 {
-	struct s5p_tmu *npd;
+	struct tmu_data *npd;
 
-	npd = kmalloc(sizeof(struct s5p_tmu), GFP_KERNEL);
+	npd = kmalloc(sizeof(struct tmu_data), GFP_KERNEL);
 	if (!npd) {
 		printk(KERN_ERR "%s: no memory for platform data\n", __func__);
 	} else {
-		if (!pd)
-			memcpy(&npd->data, &default_tmu_data, sizeof(struct tmu_data));
+		if (!pd->ts.stop_throttle)
+			memcpy(&npd->ts, &default_tmu_data.ts, sizeof(struct temperature_params));
 		else
-			memcpy(&npd->data, pd, sizeof(struct tmu_data));
+			memcpy(&npd->ts, &pd->ts, sizeof(struct tmu_data));
 	}
-
-	platform_set_drvdata(&s5p_device_tmu, npd);
+	exynos_device_tmu.dev.platform_data = npd;
 }

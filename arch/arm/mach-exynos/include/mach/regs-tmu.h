@@ -15,19 +15,17 @@
 
 #define TRIMINFO		(0x0)
 
-#define TMU_CON0		(0x20)
+#define TMU_CON			(0x20)
 #define TMU_STATUS		(0x28)
 #define SAMPLING_INTERNAL	(0x2C)
 #define CNT_VALUE0		(0x30)
 #define CNT_VALUE1		(0x34)
 
 #define CURRENT_TEMP		(0x40)
-#define THRESHOLD_TEMP		(0x44)
 
-#define TRG_LEV0		(0x50)
-#define TRG_LEV1		(0x54)
-#define TRG_LEV2		(0x58)
-#define TRG_LEV3		(0x5C)
+#define TRIMINFO_CON		(0x14)
+#define THD_TEMP_RISE		(0x50)
+#define THD_TEMP_FALL		(0x54)
 
 #define PAST_TMEP0		(0x60)
 #define PAST_TMEP1		(0x64)
@@ -38,23 +36,43 @@
 #define INTSTAT			(0x74)
 #define INTCLEAR		(0x78)
 
-#define INTEN0			(1)
-#define INTEN1			(1<<4)
-#define INTEN2			(1<<8)
-#define INTEN3			(1<<12)
+#define EMUL_CON		(0x80)
 
-#define INTSTAT0		(1)
-#define INTSTAT1		(1<<4)
-#define INTSTAT2		(1<<8)
-#define INTSTAT3		(1<<12)
+#define TRIMINFO_RELOAD		(1)
 
-#define TRIM_TEMP_MASK		(0xFF)
+#define CORE_EN			(1)
+#define TRIP_EN			(1<<12)
+#define TRIP_ONLYCURRENT	(0<<13)
+#define TRIP_CUR_PAST3_0	(4<<13)
+#define TRIP_CUR_PAST7_0	(5<<13)
+#define TRIP_CUR_PAST11_0	(6<<13)
+#define TRIP_CUR_PAST15_0	(7<<13)
 
-#define INTCLEAR0		(1)
-#define INTCLEAR1		(1<<4)
-#define INTCLEAR2		(1<<8)
-#define INTCLEAR3		(1<<12)
-#define INTCLEARALL		(INTCLEAR0 | INTCLEAR1 | \
-				 INTCLEAR2 | INTCLEAR2)
+#define INTEN_RISE0		(1)
+#define INTEN_RISE1		(1<<4)
+#define INTEN_RISE2		(1<<8)
+#define INTEN_FALL0		(1<<16)
+#define INTEN_FALL1		(1<<20)
+#define INTEN_FALL2		(1<<24)
 
+#define INTSTAT_RISE0		(1)
+#define INTSTAT_RISE1		(1<<4)
+#define INTSTAT_RISE2		(1<<8)
+#define INTSTAT_FALL0		(1<<16)
+#define INTSTAT_FALL1		(1<<20)
+#define INTSTAT_FALL2		(1<<24)
+
+#define TRIM_INFO_MASK		(0xFF)
+
+#define INTCLEAR_RISE0		(1)
+#define INTCLEAR_RISE1		(1<<4)
+#define INTCLEAR_RISE2		(1<<8)
+#define INTCLEAR_FALL0		(1<<16)
+#define INTCLEAR_FALL1		(1<<20)
+#define INTCLEAR_FALL2		(1<<24)
+#define INTCLEARALL		(INTCLEAR_RISE0 | INTCLEAR_RISE1 | \
+				 INTCLEAR_RISE2 | INTCLEAR_FALL0 | \
+				 INTCLEAR_FALL1 | INTCLEAR_FALL2)
+
+#define EMUL_EN		(1)
 #endif
