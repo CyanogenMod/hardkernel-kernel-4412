@@ -93,28 +93,41 @@ static struct sysmmu_drvdata *get_sysmmu_data_rollback(struct device *owner,
 	return NULL;
 }
 
-static bool set_sysmmu_active(struct sysmmu_drvdata *mmudata)
+static int set_sysmmu_active(struct sysmmu_drvdata *mmudata)
 {
-	/* return true if the System MMU was not active previously
-	   and it needs to be initialized */
+#ifndef CONFIG_S5P_SYSTEM_MMU_REFCOUNT
+	if (WARN_ON(mmudata->activations == 1))
+		return -EBUSY;
+#endif
 	mmudata->activations++;
-	return mmudata->activations == 1;
-}
 
-static bool set_sysmmu_inactive(struct sysmmu_drvdata *mmudata)
-{
-	/* return true if the System MMU is needed to be disabled */
-	mmudata->activations--;
-
-	WARN_ON(mmudata->activations < 0);
-
-	return mmudata->activations == 0;
+	return 0;
 }
 
 static bool is_sysmmu_active(struct sysmmu_drvdata *mmudata)
 {
 	return mmudata->activations != 0;
 }
+
+static bool set_sysmmu_inactive(struct sysmmu_drvdata *mmudata)
+{
+	/* return true if the System MMU is needed to be disabled */
+	if (WARN_ON(!is_sysmmu_active(mmudata)))
+		return false;
+
+	mmudata->activations--;
+
+	return !is_sysmmu_active(mmudata);
+}
+
+#ifdef CONFIG_S5P_SYSTEM_MMU_REFCOUNT
+static bool need_sysmmu_initialize(struct sysmmu_drvdata *mmudata)
+{
+	return mmudata->activations == 1;
+}
+#else
+#define need_sysmmu_initialize is_sysmmu_active
+#endif
 
 static void sysmmu_block(void __iomem *sfrbase)
 {
@@ -328,7 +341,10 @@ static bool __sysmmu_disable(struct sysmmu_drvdata *data)
 
 	write_unlock_irqrestore(&data->lock, flags);
 
-	pm_runtime_put_sync(data->dev);
+#ifndef CONFIG_S5P_SYSTEM_MMU_REFCOUNT
+	if (disabled)
+#endif
+		pm_runtime_put_sync(data->dev);
 
 	return disabled;
 }
@@ -349,7 +365,8 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 
 		write_lock_irqsave(&mmudata->lock, flags);
 
-		if (set_sysmmu_active(mmudata)) {
+		ret = set_sysmmu_active(mmudata);
+		if (!ret && need_sysmmu_initialize(mmudata)) {
 			if (mmudata->clk)
 				clk_enable(mmudata->clk);
 
@@ -373,6 +390,9 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 		}
 
 		write_unlock_irqrestore(&mmudata->lock, flags);
+
+		if (ret) /* already enabled and no refcount */
+			pm_runtime_put_sync(mmudata->dev);
 	}
 
 	if (ret < 0) {
