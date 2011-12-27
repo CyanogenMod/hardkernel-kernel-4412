@@ -168,11 +168,35 @@ static int default_fault_handler(enum S5P_SYSMMU_INTERRUPT_TYPE itype,
 			     unsigned long pgtable_base,
 			     unsigned long fault_addr)
 {
+	unsigned long *ent;
+
 	if ((itype >= SYSMMU_FAULTS_NUM) || (itype < SYSMMU_PAGEFAULT))
 		itype = SYSMMU_FAULT_UNKNOWN;
 
 	pr_err("%s occured at 0x%lx(Page table base: 0x%lx)\n",
 			sysmmu_fault_name[itype], fault_addr, pgtable_base);
+
+	pgtable_base += ((fault_addr & 0xFFF00000) >> 20) * 4;
+
+	ent = page_address(phys_to_page(pgtable_base));
+	ent += offset_in_page(pgtable_base) / sizeof(unsigned long) ;
+
+	if (likely(ent != NULL)) {
+		pr_err("\tLv1 entry: 0x%lx\n", *ent);
+
+		if ((*ent & 0x3) == 0x1) {
+			pgtable_base = *ent & ~0x3FF;
+			ent = page_address(phys_to_page(pgtable_base));
+
+			if (likely(ent != NULL)) {
+				ent += offset_in_page(pgtable_base) /
+						sizeof(unsigned long);
+				ent += (fault_addr & 0xFF000) >> 12;
+				pr_err("\tLv2 entry: 0x%lx\n", *ent);
+			}
+		}
+	}
+
 	pr_err("\t\tGenerating Kernel OOPS... because it is unrecoverable.\n");
 
 	BUG();
@@ -201,6 +225,9 @@ static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 
 		base = __raw_readl(mmudata->sfrbase + S5P_PT_BASE_ADDR);
 		addr = __raw_readl(mmudata->sfrbase + fault_reg_offset[itype]);
+
+		dev_warn(mmudata->dev, "System MMU fault occurred by %s\n",
+						dev_name(mmudata->owner));
 
 		if (mmudata->fault_handler(itype, base, addr) != 0) {
 
