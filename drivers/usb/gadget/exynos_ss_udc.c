@@ -835,6 +835,11 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 		case USB_REQ_SET_SEL:
 			ret = exynos_ss_udc_process_set_sel(udc);
 			break;
+		case USB_REQ_SET_CONFIGURATION:
+			/* Workaround : DRD Host PHY OFF */
+			__bic32(udc->regs + 0x420, (0x1 << 9));
+			__bic32(udc->regs + 0x430, (0x1 << 9));
+			break;
 		}
 	}
 
@@ -1317,6 +1322,10 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 	else
 		__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
 			EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
+
+	/* Workaround : DRD Host PHY OFF */
+	__bic32(udc->regs + 0x420, (0x1 << 9));
+	__bic32(udc->regs + 0x430, (0x1 << 9));
 
 	switch (speed) {
 	/* High-speed */
@@ -2036,6 +2045,10 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 		udc->regs + EXYNOS_USB3_DEVTEN);
 
 	exynos_ss_udc_ep0_activate(udc);
+
+	/* Workaround : DRD Host PHY OFF */
+	__bic32(udc->regs + 0x420, (0x1 << 9));
+	__bic32(udc->regs + 0x430, (0x1 << 9));
 
 	/* Start the device controller operation */
 	__orr32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_Run_Stop);
