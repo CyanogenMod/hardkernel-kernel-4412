@@ -140,9 +140,14 @@ static int check_power_domain(void)
 	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
 		return 1;
 
-	tmp = __raw_readl(S5P_PMU_MFC_CONF);
-	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
-		return 1;
+	/*
+	 * from REV 1.1, MFC power domain can turn off
+	 */
+	if ((soc_is_exynos4412()) && (samsung_rev() >= EXYNOS4412_REV_1_1)) {
+		tmp = __raw_readl(S5P_PMU_MFC_CONF);
+		if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
+			return 1;
+	}
 
 	tmp = __raw_readl(S5P_PMU_G3D_CONF);
 	if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
@@ -293,7 +298,7 @@ static struct sleep_save exynos4_aftr_save[] = {
 static struct sleep_save exynos4_set_clksrc[] = {
 	{ .reg = EXYNOS4_CLKSRC_MASK_TOP			, .val = 0x00000001, },
 	{ .reg = EXYNOS4_CLKSRC_MASK_CAM			, .val = 0x11111111, },
-	{ .reg = EXYNOS4_CLKSRC_MASK_TV			, .val = 0x00000111, },
+	{ .reg = EXYNOS4_CLKSRC_MASK_TV				, .val = 0x00000111, },
 	{ .reg = EXYNOS4_CLKSRC_MASK_LCD0			, .val = 0x00001111, },
 	{ .reg = EXYNOS4_CLKSRC_MASK_MAUDIO			, .val = 0x00000001, },
 	{ .reg = EXYNOS4_CLKSRC_MASK_FSYS			, .val = 0x01011111, },
