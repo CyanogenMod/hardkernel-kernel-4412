@@ -129,6 +129,10 @@
 #include <linux/mfd/s5m87xx/s5m-pmic.h>
 #endif
 
+#if defined(CONFIG_EXYNOS_SETUP_THERMAL)
+#include <plat/s5p-tmu.h>
+#endif
+
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK4X12_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -3071,11 +3075,30 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 #endif
 	&exynos_device_spi2,
 #endif
+#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+	&exynos_device_tmu,
+#endif
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
 #endif
 	&exynos4_busfreq,
 };
+
+#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+/* below temperature base on the celcius degree */
+struct tmu_data exynos_tmu_data __initdata = {
+	.ts = {
+		.stop_throttle  = 82,
+		.start_throttle = 85,
+		.stop_warning  = 95,
+		.start_warning = 103,
+		.start_tripping = 110, /* temp to do tripping */
+	},
+	.efuse_value = 55,
+	.slope = 0x10008802,
+	.mode = 0,
+};
+#endif
 
 #if defined(CONFIG_VIDEO_TVOUT)
 static struct s5p_platform_hpd hdmi_hpd_data __initdata = {
@@ -3973,6 +3996,9 @@ static void __init smdk4x12_machine_init(void)
 	exynos_device_flite0.dev.parent = &exynos4_device_pd[PD_ISP].dev;
 	exynos_device_flite1.dev.parent = &exynos4_device_pd[PD_ISP].dev;
 #endif
+#endif
+#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+	s5p_tmu_set_platdata(&exynos_tmu_data);
 #endif
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);
