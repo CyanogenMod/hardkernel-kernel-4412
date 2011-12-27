@@ -30,32 +30,27 @@
 #define	PMU_SATA_PHY_CTRL		0x724
 #define	SATA_PHY_I2C_SLAVE_ADDRS	0x70
 
-#define	SATA_SFR_ID			0x0
-#define	SFR_IDb_ID_NUM			(1<<16)
-#define	SFR_IDb_REV_CODE		(1<<0)
-
 #define	SATA_RESET			0x4
-#define	RESETb_CMN_RST_N		(1<<1)
+#define	RESET_CMN_RST_N		(1<<1)
 #define	LINK_RESET			0xF0000
 
 #define	SATA_MODE0			0x10
-#define	MODE0b_P0_PHY_SPDMODE(x)	(x<<0)
 
 #define	SATA_CTRL0			0x14
-#define	CTRL0b_P0_PHY_CALIBRATED_SEL	(1<<9)
-#define	CTRL0b_P0_PHY_CALIBRATED	(1<<8)
+#define	CTRL0_P0_PHY_CALIBRATED_SEL	(1<<9)
+#define	CTRL0_P0_PHY_CALIBRATED		(1<<8)
 
 #define	SATA_STAT0			0x18
 
 #define	SATA_TBD			0x9C
 #define	SATA_PHSATA_CTRLM		0xE0
-#define	PHCTRLMb_REF_RATE		(1<<1)
-#define	PHCTRLMb_HIGH_SPEED		(1<<0)
+#define	PHCTRLM_REF_RATE		(1<<1)
+#define	PHCTRLM_HIGH_SPEED		(1<<0)
 
 #define	SATA_PHSATA_CTRL0		0xE4
 
 #define	SATA_PHSATA_STATM		0xF0
-#define	PHSTATMb_PLL_LOCKED		(1<<0)
+#define	PHSTATM_PLL_LOCKED		(1<<0)
 
 #define	SATA_PHSATA_STAT0		0xF4
 
@@ -68,19 +63,19 @@
 #define	SATA_I2C_LC			0x10
 
 /* I2CCON reg */
-#define	CONb_ACKEN			(1<<7)
-#define	CONb_CLK512			(1<<6)
-#define	CONb_CLK16			(~CONb_CLK512)
-#define	CONb_INTEN			(1<<5)
-#define	CONb_INTPND			(1<<4)
-#define	CONb_TXCLK_PS			(0xF)
+#define	CON_ACKEN			(1<<7)
+#define	CON_CLK512			(1<<6)
+#define	CON_CLK16			(~CON_CLK512)
+#define	CON_INTEN			(1<<5)
+#define	CON_INTPND			(1<<4)
+#define	CON_TXCLK_PS			(0xF)
 
 /* I2CSTAT reg */
-#define	STAb_MSTR			(0x2<<6)
-#define	STAb_MSTT			(0x3<<6)
-#define	STAb_BSYST			(1<<5)
-#define	STAb_RTEN			(1<<4)
-#define	STAb_LAST			(1<<0)
+#define	STAT_MSTR			(0x2<<6)
+#define	STAT_MSTT			(0x3<<6)
+#define	STAT_BSYST			(1<<5)
+#define	STAT_RTEN			(1<<4)
+#define	STAT_LAST			(1<<0)
 
 #define	LC_FLTR_EN			(1<<2)
 
@@ -147,7 +142,7 @@ void sata_i2c_start(void)
 {
 	u32 val;
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  |= STAb_BSYST;
+	val  |= STAT_BSYST;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 }
 
@@ -155,13 +150,13 @@ void sata_i2c_stop(void)
 {
 	u32 val;
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  &= ~STAb_BSYST;
+	val  &= ~STAT_BSYST;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 }
 
 bool sata_i2c_get_int_status(void)
 {
-	if ((__raw_readl(phy_i2c_base + SATA_I2C_CON)) & CONb_INTPND)
+	if ((__raw_readl(phy_i2c_base + SATA_I2C_CON)) & CON_INTPND)
 		return true;
 	else
 		return false;
@@ -169,7 +164,7 @@ bool sata_i2c_get_int_status(void)
 
 bool sata_i2c_is_tx_ack(void)
 {
-	if ((__raw_readl(phy_i2c_base +  SATA_I2C_STAT)) & STAb_LAST)
+	if ((__raw_readl(phy_i2c_base +  SATA_I2C_STAT)) & STAT_LAST)
 		return false;
 	else
 		return true;
@@ -177,7 +172,7 @@ bool sata_i2c_is_tx_ack(void)
 
 bool sata_i2c_is_bus_ready(void)
 {
-	if ((__raw_readl(phy_i2c_base +  SATA_I2C_STAT)) & STAb_BSYST)
+	if ((__raw_readl(phy_i2c_base +  SATA_I2C_STAT)) & STAT_BSYST)
 		return false;
 	else
 		return true;
@@ -222,7 +217,7 @@ void sata_i2c_clear_int_status(void)
 {
 	u32 val;
 	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val  &= ~CONb_INTPND;
+	val  &= ~CON_INTPND;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 }
 
@@ -231,11 +226,11 @@ void sata_i2c_set_ack_gen(bool enable)
 {
 	u32 val;
 	if (enable) {
-		val = (__raw_readl(phy_i2c_base + SATA_I2C_CON))  | CONb_ACKEN;
+		val = (__raw_readl(phy_i2c_base + SATA_I2C_CON))  | CON_ACKEN;
 		__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 	} else {
 		val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-		val  &= ~CONb_ACKEN;
+		val  &= ~CON_ACKEN;
 		__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 	}
 
@@ -246,32 +241,32 @@ void sata_i2c_set_master_tx(void)
 	u32 val;
 	/* Disable I2C */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  &= ~STAb_RTEN;
+	val  &= ~STAT_RTEN;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 	/* Clear Mode */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  &= ~STAb_MSTT;
+	val  &= ~STAT_MSTT;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 
 	sata_i2c_clear_int_status();
 	/* interrupt disable */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val  &= ~CONb_INTEN;
+	val  &= ~CON_INTEN;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 
 	/* Master, Send mode */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  |=	STAb_MSTT;
+	val  |=	STAT_MSTT;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 
 	/* interrupt enable */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val  |=	CONb_INTEN;
+	val  |=	CON_INTEN;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 
 	/* Enable I2C */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  |= STAb_RTEN;
+	val  |= STAT_RTEN;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 }
 void sata_i2c_set_master_rx(void)
@@ -279,32 +274,32 @@ void sata_i2c_set_master_rx(void)
 	u32 val;
 	/* Disable I2C */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  &= ~STAb_RTEN;
+	val  &= ~STAT_RTEN;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 
 	/* Clear Mode */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  &= ~STAb_MSTT;
+	val  &= ~STAT_MSTT;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 
 	sata_i2c_clear_int_status();
 	/* interrupt disable */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val  &= ~CONb_INTEN;
+	val  &= ~CON_INTEN;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 
 	/* Master, Received mode */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  |= STAb_MSTR;
+	val  |= STAT_MSTR;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 
 	/* interrupt enable */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val   |= CONb_INTEN;
+	val   |= CON_INTEN;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 	/* Enable I2C */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val   |= STAb_RTEN;
+	val   |= STAT_RTEN;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 }
 
@@ -313,15 +308,15 @@ void sata_i2c_init(void)
 	u32 val;
 
 	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val  &= CONb_CLK16;
+	val  &= CON_CLK16;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 
 	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val  &= ~(CONb_TXCLK_PS);
+	val  &= ~(CON_TXCLK_PS);
 	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 
 	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val  |= (2 & CONb_TXCLK_PS);
+	val  |= (2 & CON_TXCLK_PS);
 	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
 
 	val = __raw_readl(phy_i2c_base + SATA_I2C_LC);
@@ -511,16 +506,16 @@ static int exynos5_ahci_init(struct device *dev, void __iomem *mmio)
 	__raw_writel(val, phy_ctrl + SATA_RESET);
 
 	val = __raw_readl(phy_ctrl + SATA_RESET);
-	val  |= RESETb_CMN_RST_N;
+	val  |= RESET_CMN_RST_N;
 	__raw_writel(val, phy_ctrl + SATA_RESET);
 
 	val = __raw_readl(phy_ctrl + SATA_PHSATA_CTRLM);
-	val  &= ~PHCTRLMb_REF_RATE;
+	val  &= ~PHCTRLM_REF_RATE;
 	__raw_writel(val, phy_ctrl + SATA_PHSATA_CTRLM);
 
 	/* High speed enable for Gen3 */
 	val = __raw_readl(phy_ctrl + SATA_PHSATA_CTRLM);
-	val   |= PHCTRLMb_HIGH_SPEED;
+	val   |= PHCTRLM_HIGH_SPEED;
 	__raw_writel(val, phy_ctrl + SATA_PHSATA_CTRLM);
 
 	/* Port0 is available */
@@ -529,21 +524,21 @@ static int exynos5_ahci_init(struct device *dev, void __iomem *mmio)
 	ret = ahci_phy_init(mmio);
 
 	val = __raw_readl(phy_ctrl + SATA_CTRL0);
-	val |= CTRL0b_P0_PHY_CALIBRATED_SEL|CTRL0b_P0_PHY_CALIBRATED;
+	val |= CTRL0_P0_PHY_CALIBRATED_SEL|CTRL0_P0_PHY_CALIBRATED;
 	__raw_writel(val, phy_ctrl + SATA_CTRL0);
 	sata_set_gen(GEN3);
 
 	/* release cmu reset */
 	val = __raw_readl(phy_ctrl + SATA_RESET);
-	val  &= ~RESETb_CMN_RST_N;
+	val  &= ~RESET_CMN_RST_N;
 	__raw_writel(val, phy_ctrl + SATA_RESET);
 
 	val = __raw_readl(phy_ctrl + SATA_RESET);
-	val  |= RESETb_CMN_RST_N;
+	val  |= RESET_CMN_RST_N;
 	__raw_writel(val, phy_ctrl + SATA_RESET);
 
 	if (wait_for_reg_status(phy_ctrl, SATA_PHSATA_STATM,
-				PHSTATMb_PLL_LOCKED, 1)) {
+				PHSTATM_PLL_LOCKED, 1)) {
 		return ret;
 	}
 	dev_err(dev, " ahci_phy_init FAIL\n");
