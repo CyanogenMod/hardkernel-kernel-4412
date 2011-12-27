@@ -2843,7 +2843,7 @@ static void __init smdk4x12_usbswitch_init(void)
 
 	if (samsung_board_rev_is_0_0())
 		pdata->gpio_host_vbus = 0;
-	else if (samsung_board_rev_is_0_1()) {
+	else {
 		pdata->gpio_host_vbus = EXYNOS4_GPL2(0);
 		err = gpio_request_one(pdata->gpio_host_vbus, GPIOF_OUT_INIT_LOW, "HOST_VBUS_CONTROL");
 		if (err) {
