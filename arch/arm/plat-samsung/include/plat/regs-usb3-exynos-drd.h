@@ -356,9 +356,11 @@
 #define EXYNOS_USB3_GEVNTCOUNTx_EVNTCount(_x)		((_x) << 0)
 
 /* Event Buffer Content for Device Endpoint-Specific Events (DEPEVT) */
-#define EXYNOS_USB3_DEPEVT_EventParam_MASK		(0xffff << 16)
+#define EXYNOS_USB3_DEPEVT_EventParam_MASK		(0xf << 16)
 #define EXYNOS_USB3_DEPEVT_EventParam_SHIFT		(16)
-#define EXYNOS_USB3_DEPEVT_EventParam_LIMIT		(0xffff)
+#define EXYNOS_USB3_DEPEVT_EventParam_LIMIT		(0xf)
+#define EXYNOS_USB3_DEPEVT_EventParam_SS		(1 << 23)
+#define EXYNOS_USB3_DEPEVT_EventParam(_x)		((_x) << 16)
 
 #define EXYNOS_USB3_DEPEVT_EventStatus_MASK		(0xf << 12)
 #define EXYNOS_USB3_DEPEVT_EventStatus_SHIFT		(12)
@@ -486,6 +488,18 @@
 #define EXYNOS_USB3_DSTS_USBLnkSt_SHIFT			(18)
 #define EXYNOS_USB3_DSTS_USBLnkSt_LIMIT			(0xf)
 #define EXYNOS_USB3_DSTS_USBLnkSt(_x)			((_x) << 18)
+#define EXYNOS_USB3_LnkSt_LPBK				(0xb)
+#define EXYNOS_USB3_LnkSt_CMPLY				(0xa)
+#define EXYNOS_USB3_LnkSt_HRESET			(0x9)
+#define EXYNOS_USB3_LnkSt_RECOV				(0x8)
+#define EXYNOS_USB3_LnkSt_POLL				(0x7)
+#define EXYNOS_USB3_LnkSt_SS_INACT			(0x6)
+#define EXYNOS_USB3_LnkSt_RX_DET			(0x5)
+#define EXYNOS_USB3_LnkSt_SS_DIS			(0x4)
+#define EXYNOS_USB3_LnkSt_U3				(0x3)
+#define EXYNOS_USB3_LnkSt_U2				(0x2)
+#define EXYNOS_USB3_LnkSt_U1				(0x1)
+#define EXYNOS_USB3_LnkSt_U0				(0x0)
 
 #define EXYNOS_USB3_DSTS_RxFIFOEmpty			(1 << 17)
 
