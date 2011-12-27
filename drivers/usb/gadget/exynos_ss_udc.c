@@ -1523,15 +1523,20 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 	case EXYNOS_USB3_DEVT_EVENT_ULStChng:
 		dev_dbg(udc->dev, "USB-Link State Change");
 
-		event_info = event & EXYNOS_USB3_DEPEVT_EventParam_MASK;
-		if (event_info == EXYNOS_USB3_DEPEVT_EventParam(0x3)) {
+		event_info = event & EXYNOS_USB3_DEVT_EventParam_MASK;
+		if (event_info == EXYNOS_USB3_DEVT_EventParam(0x3) ||
+			event_info == EXYNOS_USB3_DEVT_EventParam(0x4)) {
 			call_gadget(udc, disconnect);
 #ifdef CONFIG_BATTERY_SAMSUNG
 			exynos_ss_udc_cable_disconnect(udc);
 #endif
 			dev_dbg(udc->dev," Disconnect %x %s speed", event_info,
-				event & EXYNOS_USB3_DEPEVT_EventParam_SS ?
+				event & EXYNOS_USB3_DEVT_EventParam_SS ?
 				"Super" : "High");
+
+			/* Workaround : DRD Host PHY OFF */
+			__bic32(udc->regs + 0x420, (0x1 << 9));
+			__bic32(udc->regs + 0x430, (0x1 << 9));
 		}
 		break;
 
@@ -1550,6 +1555,14 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 
 	case EXYNOS_USB3_DEVT_EVENT_DisconnEvt:
 		dev_info(udc->dev, "Disconnection Detected");
+		call_gadget(udc, disconnect);
+#ifdef CONFIG_BATTERY_SAMSUNG
+		exynos_ss_udc_cable_disconnect(udc);
+#endif
+
+		/* Workaround : DRD Host PHY OFF */
+		__bic32(udc->regs + 0x420, (0x1 << 9));
+		__bic32(udc->regs + 0x430, (0x1 << 9));
 		break;
 
 	default:

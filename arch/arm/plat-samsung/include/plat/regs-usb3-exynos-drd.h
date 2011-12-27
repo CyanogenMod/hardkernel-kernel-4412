@@ -356,10 +356,9 @@
 #define EXYNOS_USB3_GEVNTCOUNTx_EVNTCount(_x)		((_x) << 0)
 
 /* Event Buffer Content for Device Endpoint-Specific Events (DEPEVT) */
-#define EXYNOS_USB3_DEPEVT_EventParam_MASK		(0xf << 16)
+#define EXYNOS_USB3_DEPEVT_EventParam_MASK		(0xffff << 16)
 #define EXYNOS_USB3_DEPEVT_EventParam_SHIFT		(16)
-#define EXYNOS_USB3_DEPEVT_EventParam_LIMIT		(0xf)
-#define EXYNOS_USB3_DEPEVT_EventParam_SS		(1 << 23)
+#define EXYNOS_USB3_DEPEVT_EventParam_LIMIT		(0xffff)
 #define EXYNOS_USB3_DEPEVT_EventParam(_x)		((_x) << 16)
 
 #define EXYNOS_USB3_DEPEVT_EventStatus_MASK		(0xf << 12)
@@ -382,6 +381,12 @@
 #define EXYNOS_USB3_DEPEVT_EPNUM(_x)			((_x) << 1)
 
 /* Event Buffer Content for Device-Specific Events (DEVT) */
+#define EXYNOS_USB3_DEVT_EventParam_MASK		(0xf << 16)
+#define EXYNOS_USB3_DEVT_EventParam_SHIFT		(16)
+#define EXYNOS_USB3_DEVT_EventParam_LIMIT		(0xf)
+#define EXYNOS_USB3_DEVT_EventParam_SS			(1 << 20)
+#define EXYNOS_USB3_DEVT_EventParam(_x)			((_x) << 16)
+
 #define EXYNOS_USB3_DEVT_EVENT_MASK			(0xf << 8)
 #define EXYNOS_USB3_DEVT_EVENT_SHIFT			(8)
 #define EXYNOS_USB3_DEVT_EVENT_LIMIT			(0xf)
