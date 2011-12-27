@@ -44,7 +44,7 @@
 #define IRQ_IIC6		IRQ_SPI(62)
 #define IRQ_IIC7		IRQ_SPI(63)
 #define IRQ_IIC_HDMIPHY		IRQ_SPI(64)
-
+#define IRQ_TMU			IRQ_SPI(65)
 #define IRQ_SPI0		IRQ_SPI(68)
 #define IRQ_SPI1		IRQ_SPI(69)
 #define IRQ_SPI2		IRQ_SPI(70)

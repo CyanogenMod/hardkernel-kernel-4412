@@ -88,6 +88,10 @@
 #include <linux/mfd/s5m87xx/s5m-pmic.h>
 #endif
 
+#if defined(CONFIG_EXYNOS_SETUP_THERMAL)
+#include <plat/s5p-tmu.h>
+#endif
+
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK5250_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -1851,6 +1855,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_WAKEUP_ASSIST
 	&wakeup_assist_device,
 #endif
+#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+	&exynos_device_tmu,
+#endif
 #ifdef CONFIG_S5P_DEV_ACE
 	&s5p_device_ace,
 #endif
@@ -1866,6 +1873,21 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&exynos5_device_ahci,
 };
 
+#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+/* below temperature base on the celcius degree */
+struct tmu_data exynos_tmu_data __initdata = {
+	.ts = {
+		.stop_throttle  = 82,
+		.start_throttle = 85,
+		.stop_warning  = 95,
+		.start_warning = 103,
+		.start_tripping = 110, /* temp to do tripping */
+	},
+	.efuse_value = 55,
+	.slope = 0x10008802,
+	.mode = 0,
+};
+#endif
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
 static struct s5p_platform_cec hdmi_cec_data __initdata = {
 
@@ -2425,6 +2447,9 @@ static void __init smdk5250_machine_init(void)
 	dev_set_name(&exynos5_device_fimc_is.dev, "exynos5-fimc-is");
 
 	exynos5_fimc_is_set_platdata(NULL);
+#endif
+#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+	s5p_tmu_set_platdata(&exynos_tmu_data);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_GSCALER
 #if defined(CONFIG_EXYNOS_DEV_PD)
