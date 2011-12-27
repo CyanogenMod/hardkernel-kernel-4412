@@ -94,6 +94,7 @@ extern struct platform_device exynos4_device_pd[];
 
 mali_io_address clk_register_map=0;
 
+static _mali_osk_lock_t *mali_dvfs_lock;
 
 #ifdef CONFIG_REGULATOR
 int mali_regulator_get_usecount(void)
@@ -136,6 +137,9 @@ void mali_regulator_enable(void)
 void mali_regulator_set_voltage(int min_uV, int max_uV)
 {
 	int voltage;
+
+	_mali_osk_lock_wait(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
+
 	if( IS_ERR_OR_NULL(g3d_regulator) )
 	{
 		MALI_DEBUG_PRINT(1, ("error on mali_regulator_set_voltage : g3d_regulator is null\n"));
@@ -146,6 +150,8 @@ void mali_regulator_set_voltage(int min_uV, int max_uV)
 	voltage = regulator_get_voltage(g3d_regulator);
 	mali_gpu_vol = voltage;
 	MALI_DEBUG_PRINT(1, ("= regulator_get_voltage: %d \n",mali_gpu_vol));
+
+	_mali_osk_lock_signal(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
 }
 #endif
 
@@ -297,6 +303,8 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 	bis_vpll = MALI_TRUE;
 #endif
 
+	_mali_osk_lock_wait(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
+
 	if (mali_clk_get(bis_vpll) == MALI_FALSE)
 		return MALI_FALSE;
 
@@ -324,11 +332,17 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 	clk_set_rate(mali_clock, rate);
 	rate = clk_get_rate(mali_clock);
 
-	mali_gpu_clk = (int) (rate/mhz);
+	if (bis_vpll)
+		mali_gpu_clk = (int)(rate / mhz);
+	else
+		mali_gpu_clk = (int)((rate + 500000) / mhz);
+
 	GPU_MHZ = mhz;
 	MALI_PRINT(("= clk_get_rate: %d \n",mali_gpu_clk));
 
 	mali_clk_put(MALI_FALSE);
+
+	_mali_osk_lock_signal(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
 
 	return MALI_TRUE;
 }
@@ -342,6 +356,10 @@ static mali_bool init_mali_clock(void)
 	if (mali_clock != 0)
 		return ret; // already initialized
 
+	mali_dvfs_lock = _mali_osk_lock_init(_MALI_OSK_LOCKFLAG_NONINTERRUPTABLE
+			| _MALI_OSK_LOCKFLAG_ONELOCK, 0, 0);
+	if (mali_dvfs_lock == NULL)
+		return _MALI_OSK_ERR_FAULT;
 
 	if (mali_clk_set_rate(mali_gpu_clk, GPU_MHZ) == MALI_FALSE)
 	{
@@ -411,16 +429,27 @@ static mali_bool deinit_mali_clock(void)
 	return MALI_TRUE;
 }
 
-
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
+extern unsigned int mali_runtime_resume_clk;
+extern unsigned int mali_runtime_resume_vol;
+#endif
 static _mali_osk_errcode_t enable_mali_clocks(void)
 {
 	int err;
 	err = clk_enable(mali_clock);
 	MALI_DEBUG_PRINT(3,("enable_mali_clocks mali_clock %p error %d \n", mali_clock, err));
 
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 	// set clock rate
-	clk_set_rate(mali_clock, (unsigned int)mali_gpu_clk * GPU_MHZ);
-
+	if (mali_gpu_clk > mali_runtime_resume_clk)
+		mali_clk_set_rate(mali_gpu_clk, GPU_MHZ);
+	else {
+		mali_clk_set_rate(mali_runtime_resume_clk, GPU_MHZ);
+		mali_regulator_set_voltage(mali_runtime_resume_vol, mali_runtime_resume_vol);
+	}
+#else
+	mali_clk_set_rate(mali_gpu_clk, GPU_MHZ);
+#endif
 	MALI_SUCCESS;
 }
 
@@ -536,8 +565,6 @@ _mali_osk_errcode_t mali_platform_powerdown(u32 cores)
 		{
 			MALI_DEBUG_PRINT( 3,("disable clock\n"));
 			disable_mali_clocks();
-
-			g3d_power_domain_control(0);
 		}
 	}
 	else
@@ -558,7 +585,6 @@ _mali_osk_errcode_t mali_platform_powerup(u32 cores)
 
 		if (gpu_power_state != 0)
 		{
-			g3d_power_domain_control(1);
 			MALI_DEBUG_PRINT(4,("enable clock \n"));
 			enable_mali_clocks();
 		}

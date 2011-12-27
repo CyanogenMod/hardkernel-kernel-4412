@@ -31,7 +31,6 @@
 #include "mali_device_pause_resume.h"
 #include <linux/workqueue.h>
 
-#define MALI_DVFS_STEPS 2
 #define MALI_DVFS_WATING 10 // msec
 
 static int bMaliDvfsRun=0;
@@ -198,7 +197,7 @@ static unsigned int decideNextStatus(unsigned int utilization)
 		else
 			level = maliDvfsStatus.currentStep;
 	} else	{
-		if ((1 == mali_dvfs_control)||(( mali_dvfs_control > 2) && (mali_dvfs_control < mali_dvfs[0].clock+1)))
+		if ((mali_dvfs_control > 0) && (mali_dvfs_control < mali_dvfs[1].clock))
 			level=0;
 		else
 			level=1;

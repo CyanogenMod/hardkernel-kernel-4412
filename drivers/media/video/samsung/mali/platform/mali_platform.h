@@ -17,6 +17,11 @@
 #define __MALI_PLATFORM_H__
 
 #include "mali_osk.h"
+#ifdef CONFIG_CPU_EXYNOS4210
+#define MALI_DVFS_STEPS 2
+#else
+#define MALI_DVFS_STEPS 4
+#endif
 
 #if !USING_MALI_PMM
 /* @brief System power up/down cores that can be passed into mali_platform_powerdown/up() */
@@ -103,6 +108,12 @@ void mali_regulator_set_voltage(int min_uV, int max_uV);
 mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz);
 unsigned long mali_clk_get_rate(void);
 void mali_clk_put(mali_bool binc_mali_clk);
+
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
+_mali_osk_errcode_t mali_platform_powerdown(u32 cores);
+_mali_osk_errcode_t mali_platform_powerup(u32 cores);
+#endif
+
 
 #if USING_MALI_PMM
 #if MALI_POWER_MGMT_TEST_SUITE

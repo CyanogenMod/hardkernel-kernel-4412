@@ -649,6 +649,11 @@ _mali_osk_errcode_t malipmm_powerup( u32 cores )
 #if USING_MALI_PMU
         err = mali_pmm_pmu_powerup( cores );
 #endif
+
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
+		mali_platform_powerup(cores);
+#endif
+
         return err;
 }
 
@@ -656,6 +661,11 @@ _mali_osk_errcode_t malipmm_powerdown( u32 cores, mali_power_mode power_mode )
 {
         _mali_osk_errcode_t err = _MALI_OSK_ERR_OK;
         _mali_pmm_internal_state_t *pmm = GET_PMM_STATE_PTR;
+
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
+		mali_platform_powerdown(cores);
+#endif
+
 #if USING_MALI_PMU
         err = mali_pmm_pmu_powerdown( cores );
 #endif
@@ -757,6 +767,7 @@ void malipmm_core_unregister( mali_pmm_core_id core )
 #if MALI_PMM_TRACE
 		mali_pmm_core_mask old_power = pmm->cores_powered;
 #endif
+
 		/* Remove the core from the system */
 		pmm->cores_idle &= (~core);
 		pmm->cores_powered &= (~core);
