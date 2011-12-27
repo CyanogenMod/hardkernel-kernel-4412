@@ -31,6 +31,7 @@
 
 #include <mach/regs-irq.h>
 #include <mach/regs-pmu.h>
+#include <mach/regs-pmu5.h>
 #include <mach/smc.h>
 
 unsigned int gic_bank_offset __read_mostly;
@@ -297,6 +298,7 @@ static void exynos5_sw_reset(void)
 
 int __init exynos5_init(void)
 {
+	unsigned int value;
 	printk(KERN_INFO "EXYNOS5: Initializing architecture\n");
 
 	/* set idle function */
@@ -304,6 +306,13 @@ int __init exynos5_init(void)
 
 	/* set sw_reset function */
 	s5p_reset_hook = exynos5_sw_reset;
+
+	value = __raw_readl(EXYNOS5_AUTOMATIC_WDT_RESET_DISABLE);
+	value &= ~EXYNOS5_SYS_WDTRESET;
+	__raw_writel(value, EXYNOS5_AUTOMATIC_WDT_RESET_DISABLE);
+	value = __raw_readl(EXYNOS5_MASK_WDT_RESET_REQUEST);
+	value &= ~EXYNOS5_SYS_WDTRESET;
+	__raw_writel(value, EXYNOS5_MASK_WDT_RESET_REQUEST);
 
 	return sysdev_register(&exynos5_sysdev);
 }
