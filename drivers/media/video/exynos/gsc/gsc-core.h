@@ -598,10 +598,13 @@ int gsc_g_fmt_mplane(struct gsc_ctx *ctx, struct v4l2_format *f);
 void gsc_check_crop_change(u32 tmp_w, u32 tmp_h, u32 *w, u32 *h);
 int gsc_g_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr);
 int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr);
-int gsc_check_scaler_ratio(struct gsc_variant *var, int sw, int sh, int dw,
-			   int dh, int rot);
 int gsc_cal_prescaler_ratio(struct gsc_variant *var, u32 src, u32 dst, u32 *ratio);
 void gsc_get_prescaler_shfactor(u32 hratio, u32 vratio, u32 *sh);
+void gsc_check_src_scale_info(struct gsc_variant *var, struct gsc_frame *s_frame,
+			      u32 *wratio, u32 tx, u32 ty, u32 *hratio);
+int gsc_check_scaler_ratio(struct gsc_variant *var, int sw, int sh, int dw,
+			   int dh, int rot, int out_path);
+int gsc_set_scaler_info(struct gsc_ctx *ctx);
 int gsc_ctrls_create(struct gsc_ctx *ctx);
 void gsc_ctrls_delete(struct gsc_ctx *ctx);
 int gsc_out_hw_set(struct gsc_ctx *ctx);

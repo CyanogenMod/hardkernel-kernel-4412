@@ -54,69 +54,12 @@ int gsc_out_hw_reset_off (struct gsc_dev *gsc)
 	return 0;
 }
 
-int gsc_out_check_scaler_ratio(struct gsc_variant *var, int sw, int sh,
-			       int dw, int dh, int rot)
-{
-	int tmp_w, tmp_h;
-
-	if (rot == 90 || rot == 270) {
-		tmp_w = dh;
-		tmp_h = dw;
-	} else {
-		tmp_w = dw;
-		tmp_h = dh;
-	}
-
-	if (((sw * sh) / (tmp_w * tmp_h)) > var->local_sc_down ||
-	    (tmp_w / sw) > var->sc_up_max ||
-	    (tmp_h / sh) > var->sc_up_max)
-		return -EINVAL;
-
-	return 0;
-}
-
-int gsc_out_set_scaler_info(struct gsc_ctx *ctx)
-{
-	struct gsc_scaler *sc = &ctx->scaler;
-	struct gsc_frame *s_frame = &ctx->s_frame;
-	struct gsc_frame *d_frame = &ctx->d_frame;
-	struct gsc_variant *variant = ctx->gsc_dev->variant;
-	int tx, ty;
-	int ret;
-
-	ret = gsc_out_check_scaler_ratio(variant, s_frame->crop.width,
-					 s_frame->crop.height, d_frame->crop.width,
-					 d_frame->crop.height,
-					 ctx->gsc_ctrls.rotate->val);
-	if (ret) {
-		gsc_err("Out of scaler range");
-		return ret;
-	}
-
-	if (ctx->gsc_ctrls.rotate->val == 90 ||
-	    ctx->gsc_ctrls.rotate->val == 270) {
-		ty = d_frame->crop.width;
-		tx = d_frame->crop.height;
-	} else {
-		tx = d_frame->crop.width;
-		ty = d_frame->crop.height;
-	}
-
-	sc->pre_hratio = 1;
-	sc->pre_vratio = 1;
-	sc->pre_shfactor = 0;
-	sc->main_hratio = (s_frame->crop.width << 16 ) / tx;
-	sc->main_vratio = (s_frame->crop.height << 16) / ty;
-
-	return 0;
-}
-
 int gsc_out_hw_set(struct gsc_ctx *ctx)
 {
 	struct gsc_dev *gsc = ctx->gsc_dev;
 	int ret = 0;
 
-	ret = gsc_out_set_scaler_info(ctx);
+	ret = gsc_set_scaler_info(ctx);
 	if (ret) {
 		gsc_err("Scaler setup error");
 		return ret;
@@ -596,10 +539,10 @@ static int gsc_output_s_crop(struct file *file, void *fh, struct v4l2_crop *cr)
 
 	/* Check to see if scaling ratio is within supported range */
 	if ((ctx->state & (GSC_DST_FMT | GSC_SRC_FMT)) == mask) {
-		ret = gsc_out_check_scaler_ratio(variant, f->crop.width,
+		ret = gsc_check_scaler_ratio(variant, f->crop.width,
 				f->crop.height, ctx->d_frame.crop.width,
 				ctx->d_frame.crop.height,
-				ctx->gsc_ctrls.rotate->val);
+				ctx->gsc_ctrls.rotate->val, ctx->out_path);
 		if (ret) {
 			gsc_err("Out of scaler range");
 			return -EINVAL;

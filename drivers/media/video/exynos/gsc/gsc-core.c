@@ -271,6 +271,39 @@ void gsc_get_prescaler_shfactor(u32 hratio, u32 vratio, u32 *sh)
 		*sh = 1;
 }
 
+void gsc_check_src_scale_info(struct gsc_variant *var, struct gsc_frame *s_frame,
+			      u32 *wratio, u32 tx, u32 ty, u32 *hratio)
+{
+	int remainder = 0, walign, halign;
+
+	if (is_yuv420(s_frame->fmt->color)) {
+		walign = GSC_SC_ALIGN_4;
+		halign = GSC_SC_ALIGN_4;
+	} else if (is_yuv422(s_frame->fmt->color)) {
+		walign = GSC_SC_ALIGN_4;
+		halign = GSC_SC_ALIGN_2;
+	} else {
+		walign = GSC_SC_ALIGN_2;
+		halign = GSC_SC_ALIGN_2;
+	}
+
+	remainder = s_frame->crop.width % (*wratio * walign);
+	if (remainder) {
+		s_frame->crop.width -= remainder;
+		gsc_cal_prescaler_ratio(var, s_frame->crop.width, tx, wratio);
+		gsc_info("cropped src width size is recalculated from %d to %d",
+			s_frame->crop.width + remainder, s_frame->crop.width);
+	}
+
+	remainder = s_frame->crop.height % (*hratio * halign);
+	if (remainder) {
+		s_frame->crop.height -= remainder;
+		gsc_cal_prescaler_ratio(var, s_frame->crop.height, ty, hratio);
+		gsc_info("cropped src height size is recalculated from %d to %d",
+			s_frame->crop.height + remainder, s_frame->crop.height);
+	}
+}
+
 int gsc_enum_fmt_mplane(struct v4l2_fmtdesc *f)
 {
 	struct gsc_fmt *fmt;
@@ -507,9 +540,11 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 }
 
 int gsc_check_scaler_ratio(struct gsc_variant *var, int sw, int sh, int dw,
-			   int dh, int rot)
+			   int dh, int rot, int out_path)
 {
-	int tmp_w, tmp_h;
+	int tmp_w, tmp_h, sc_down_max;
+	sc_down_max =
+		(out_path == GSC_DMA) ? var->sc_down_max : var->local_sc_down;
 
 	if (rot == 90 || rot == 270) {
 		tmp_w = dh;
@@ -519,11 +554,69 @@ int gsc_check_scaler_ratio(struct gsc_variant *var, int sw, int sh, int dw,
 		tmp_h = dh;
 	}
 
-	if ((sw / tmp_w) > var->sc_down_max ||
-	    (sh / tmp_h) > var->sc_down_max ||
+	if ((sw / tmp_w) > sc_down_max ||
+	    (sh / tmp_h) > sc_down_max ||
 	    (tmp_w / sw) > var->sc_up_max ||
 	    (tmp_h / sh) > var->sc_up_max)
 		return -EINVAL;
+
+	return 0;
+}
+
+int gsc_set_scaler_info(struct gsc_ctx *ctx)
+{
+	struct gsc_scaler *sc = &ctx->scaler;
+	struct gsc_frame *s_frame = &ctx->s_frame;
+	struct gsc_frame *d_frame = &ctx->d_frame;
+	struct gsc_variant *variant = ctx->gsc_dev->variant;
+	int tx, ty;
+	int ret;
+
+	ret = gsc_check_scaler_ratio(variant, s_frame->crop.width,
+		s_frame->crop.height, d_frame->crop.width, d_frame->crop.height,
+		ctx->gsc_ctrls.rotate->val, ctx->out_path);
+	if (ret) {
+		gsc_err("out of scaler range");
+		return ret;
+	}
+
+	if (ctx->gsc_ctrls.rotate->val == 90 ||
+	    ctx->gsc_ctrls.rotate->val == 270) {
+		ty = d_frame->crop.width;
+		tx = d_frame->crop.height;
+	} else {
+		tx = d_frame->crop.width;
+		ty = d_frame->crop.height;
+	}
+
+	ret = gsc_cal_prescaler_ratio(variant, s_frame->crop.width,
+				      tx, &sc->pre_hratio);
+	if (ret) {
+		gsc_err("Horizontal scale ratio is out of range");
+		return ret;
+	}
+
+	ret = gsc_cal_prescaler_ratio(variant, s_frame->crop.height,
+				      ty, &sc->pre_vratio);
+	if (ret) {
+		gsc_err("Vertical scale ratio is out of range");
+		return ret;
+	}
+
+	gsc_check_src_scale_info(variant, s_frame, &sc->pre_hratio,
+				 tx, ty, &sc->pre_vratio);
+
+	gsc_get_prescaler_shfactor(sc->pre_hratio, sc->pre_vratio,
+				   &sc->pre_shfactor);
+
+	sc->main_hratio = (s_frame->crop.width << 16) / tx;
+	sc->main_vratio = (s_frame->crop.height << 16) / ty;
+
+	gsc_dbg("scaler input/output size : sx = %d, sy = %d, tx = %d, ty = %d",
+		s_frame->crop.width, s_frame->crop.height, tx, ty);
+	gsc_dbg("scaler ratio info : pre_shfactor : %d, pre_h : %d, pre_v :%d,\
+		main_h : %ld, main_v : %ld", sc->pre_shfactor, sc->pre_hratio,
+		sc->pre_vratio, sc->main_hratio, sc->main_vratio);
 
 	return 0;
 }
