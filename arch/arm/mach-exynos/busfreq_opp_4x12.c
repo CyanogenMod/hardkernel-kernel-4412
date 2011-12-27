@@ -44,6 +44,9 @@
 #include <plat/gpio-cfg.h>
 #include <plat/cpu.h>
 
+/* To save/restore DMC_PAUSE_CTRL register */
+static unsigned int dmc_pause_ctrl;
+
 enum busfreq_level_idx {
 	LV_0,
 	LV_1,
@@ -401,6 +404,16 @@ void exynos4x12_post(unsigned int index)
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
 }
 
+void exynos4x12_suspend(void)
+{
+	/* Nothing to do */
+}
+
+void exynos4x12_resume(void)
+{
+	__raw_writel(dmc_pause_ctrl, EXYNOS4_DMC_PAUSE_CTRL);
+}
+
 unsigned int exynos4x12_get_int_volt(unsigned long index)
 {
 	return exynos4x12_int_volt[asv_group_index][index];
@@ -511,9 +524,9 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 	int ret;
 
 	/* Enable pause function for DREX2 DVFS */
-	tmp = __raw_readl(EXYNOS4_DMC_PAUSE_CTRL);
-	tmp |= DMC_PAUSE_ENABLE;
-	__raw_writel(tmp, EXYNOS4_DMC_PAUSE_CTRL);
+	dmc_pause_ctrl = __raw_readl(EXYNOS4_DMC_PAUSE_CTRL);
+	dmc_pause_ctrl |= DMC_PAUSE_ENABLE;
+	__raw_writel(dmc_pause_ctrl, EXYNOS4_DMC_PAUSE_CTRL);
 
 	tmp = __raw_readl(EXYNOS4_CLKDIV_DMC0);
 

@@ -45,6 +45,9 @@
 #include <plat/cpu.h>
 #include <plat/clock.h>
 
+/* To save/restore DMC_PAUSE_CTRL register */
+static unsigned int dmc_pause_ctrl;
+
 enum busfreq_level_idx {
 	LV_0,
 	LV_1,
@@ -494,6 +497,15 @@ unsigned int exynos5250_get_table_index(struct opp *opp)
 	return index;
 }
 
+void exynos5250_suspend(void)
+{
+	/* Nothing to do */
+}
+
+void exynos5250_resume(void)
+{
+	__raw_writel(dmc_pause_ctrl, EXYNOS5_DMC_PAUSE_CTRL);
+}
 
 unsigned int exynos5250_get_int_volt(unsigned long index)
 {
@@ -520,7 +532,6 @@ struct opp *exynos5250_monitor(struct busfreq_data *data)
 int exynos5250_init(struct device *dev, struct busfreq_data *data)
 {
 	unsigned int i;
-	unsigned int tmp;
 	unsigned long maxfreq = ULONG_MAX;
 	unsigned long minfreq = 0;
 	unsigned long cdrexfreq;
@@ -528,9 +539,9 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	int ret;
 
 	/* Enable pause function for DREX2 DVFS */
-	tmp = __raw_readl(EXYNOS5_DMC_PAUSE_CTRL);
-	tmp |= DMC_PAUSE_ENABLE;
-	__raw_writel(tmp, EXYNOS5_DMC_PAUSE_CTRL);
+	dmc_pause_ctrl = __raw_readl(EXYNOS5_DMC_PAUSE_CTRL);
+	dmc_pause_ctrl |= DMC_PAUSE_ENABLE;
+	__raw_writel(dmc_pause_ctrl, EXYNOS5_DMC_PAUSE_CTRL);
 
 	clk = clk_get(NULL, "mout_cdrex");
 	if (IS_ERR(clk)) {

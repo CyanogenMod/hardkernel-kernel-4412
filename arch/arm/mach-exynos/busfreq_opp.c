@@ -405,6 +405,8 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 		data->get_int_volt = exynos5250_get_int_volt;
 		data->get_table_index = exynos5250_get_table_index;
 		data->monitor = exynos5250_monitor;
+		data->busfreq_suspend = exynos5250_suspend;
+		data->busfreq_resume = exynos5250_resume;
 	} else {
 		data->init = exynos4x12_init;
 		data->target = exynos4x12_target;
@@ -413,6 +415,8 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 		data->monitor = exynos4x12_monitor;
 		data->busfreq_prepare = exynos4x12_prepare;
 		data->busfreq_post = exynos4x12_post;
+		data->busfreq_suspend = exynos4x12_suspend;
+		data->busfreq_resume = exynos4x12_resume;
 	}
 
 	data->dev = &pdev->dev;
@@ -491,13 +495,29 @@ static __devexit int exynos_busfreq_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int exynos_busfreq_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct busfreq_data *data = (struct busfreq_data *)platform_get_drvdata(pdev);
+
+	if (data->busfreq_suspend)
+		data->busfreq_suspend();
+	return 0;
+}
+
 static int exynos_busfreq_resume(struct device *dev)
 {
+	struct platform_device *pdev = to_platform_device(dev);
+	struct busfreq_data *data = (struct busfreq_data *)platform_get_drvdata(pdev);
 	ppmu_reset(dev);
+
+	if (data->busfreq_resume)
+		data->busfreq_resume();
 	return 0;
 }
 
 static const struct dev_pm_ops exynos_busfreq_pm = {
+	.suspend = exynos_busfreq_suspend,
 	.resume = exynos_busfreq_resume,
 };
 
