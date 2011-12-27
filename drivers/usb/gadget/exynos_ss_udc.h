@@ -86,7 +86,6 @@ struct exynos_ss_udc_trb {
  * @dir_in: Set to true if this endpoint is of the IN direction, which
  *	    means that it is sending data to the Host.
  * @halted: Set if the endpoint has been halted.
- * @sent_zlp: Set if we've sent a zero-length packet.
  * @not_ready: Set to true if a command for the endpoint hasn't completed
  *	       during timeout interval.
  * @name: The driver generated name for the endpoint.
@@ -114,7 +113,6 @@ struct exynos_ss_udc_ep {
 	unsigned int		dir_in:1;
 
 	unsigned int		halted:1;
-	unsigned int		sent_zlp:1;
 
 	bool			not_ready;
 
@@ -164,7 +162,6 @@ struct exynos_ss_udc_ep_command {
  * @clk: The clock we are using.
  * @event_buff: Event buffer.
  * @event_buff_dma: DMA address of event buffer
- * @ep0_reply: Request used for ep0 reply.
  * @ctrl_req: Request for EP0 control packets.
  * @gadget: Represents USB slave device.
  * @eps: The endpoints being supplied to the gadget framework
@@ -190,7 +187,6 @@ struct exynos_ss_udc {
 	dma_addr_t		ep0_buff_dma;
 	u8			*ctrl_buff;
 	dma_addr_t		ctrl_buff_dma;
-	struct usb_request	*ep0_reply;
 	struct usb_request	*ctrl_req;
 
 	struct usb_gadget	gadget;

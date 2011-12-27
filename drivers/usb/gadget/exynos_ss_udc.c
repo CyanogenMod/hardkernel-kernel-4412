@@ -796,8 +796,6 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
 
 	/* if we've no data with this request, then the last part of the
 	 * transaction is going to implicitly be IN. */
-	ep0->sent_zlp = 0;
-
 	if (ctrl->wLength == 0) {
 		ep0->dir_in = 1;
 		udc->ep0_three_stage = 0;
