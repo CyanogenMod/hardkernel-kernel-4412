@@ -30,7 +30,8 @@
 #include "gsc-core.h"
 #define GSC_CLOCK_GATE_NAME		"gscl"
 
-module_param(dbg, int, 0644);
+int gsc_dbg = 6;
+module_param(gsc_dbg, int, 0644);
 
 static struct gsc_fmt gsc_formats[] = {
 	{

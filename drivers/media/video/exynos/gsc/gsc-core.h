@@ -36,32 +36,32 @@
 #include <media/videobuf2-ion.h>
 #endif
 
-static int dbg = 4;
+extern int gsc_dbg;
 
 #define gsc_info(fmt, args...)						\
 	do {								\
-		if (dbg >= 6)						\
+		if (gsc_dbg >= 6)						\
 			printk(KERN_INFO "[INFO]%s:%d: "fmt "\n",	\
 				__func__, __LINE__, ##args);		\
 	} while (0)
 
 #define gsc_err(fmt, args...)						\
 	do {								\
-		if (dbg >= 3)						\
+		if (gsc_dbg >= 3)						\
 			printk(KERN_ERR "[ERROR]%s:%d: "fmt "\n",	\
 				__func__, __LINE__, ##args);		\
 	} while (0)
 
 #define gsc_warn(fmt, args...)						\
 	do {								\
-		if (dbg >= 4)						\
+		if (gsc_dbg >= 4)						\
 			printk(KERN_WARNING "[WARN]%s:%d: "fmt "\n",	\
 				__func__, __LINE__, ##args);		\
 	} while (0)
 
 #define gsc_dbg(fmt, args...)						\
 	do {								\
-		if (dbg >= 7)						\
+		if (gsc_dbg >= 7)						\
 			printk(KERN_DEBUG "[DEBUG]%s:%d: "fmt "\n",	\
 				__func__, __LINE__, ##args);		\
 	} while (0)
