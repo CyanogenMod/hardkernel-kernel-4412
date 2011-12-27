@@ -304,11 +304,17 @@ config EXYNOS4_SETUP_TVOUT
 	help
 	  Common setup code for TVOUT
 
-config EXYNOS4_SETUP_THERMAL
+config EXYNOS_SETUP_THERMAL
 	bool "Use thermal management"
 	depends on CPU_FREQ
 	help
 	  Common setup code for TMU
+
+config TMU_DEBUG
+	bool "Thermal management Debug"
+	depends on EXYNOS_SETUP_THERMAL
+	help
+	  TMU debugging message on
 
 config EXYNOS4_SETUP_MIPI_DSI
 	bool
@@ -612,6 +618,7 @@ config MACH_SMDK4X12
 	select S5P_DEV_USB_EHCI
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_USB_SWITCH
+	select S5P_DEV_THERMAL
 	select S5P_SYSTEM_MMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_SDHCI
@@ -682,6 +689,7 @@ config MACH_SMDK5250
 	select S5P_DEV_FIMG2D
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_I2C_HDMIPHY
+	select S5P_DEV_THERMAL
 	select EXYNOS_DEV_PD
 	select EXYNOS4_DEV_FIMC_LITE
 	select EXYNOS4_SETUP_I2C1
