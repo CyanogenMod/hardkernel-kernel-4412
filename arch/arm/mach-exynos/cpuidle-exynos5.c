@@ -176,11 +176,6 @@ static int exynos5_enter_idle(struct cpuidle_device *dev,
 	return idle_time;
 }
 
-void exynos5_flush_cache(void *addr, phys_addr_t phy_ttb_base)
-{
-	flush_cache_all();
-}
-
 static void exynos5_set_wakeupmask(void)
 {
 	__raw_writel(0x0000ff3e, EXYNOS5_WAKEUP_MASK);
