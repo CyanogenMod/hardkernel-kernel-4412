@@ -16,7 +16,11 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
+#include <linux/highmem.h>
+#include <linux/dma-mapping.h>
 #include <asm/cacheflush.h>
+
+#include <plat/cpu.h>
 
 #include <linux/exynos_mem.h>
 
@@ -57,23 +61,84 @@ int exynos_mem_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static void exynos_mem_paddr_cache_flush(dma_addr_t start, size_t length)
+enum cacheop { EM_CLEAN, EM_INV, EM_FLUSH };
+
+static void cache_maint_inner(void *vaddr, size_t size, enum cacheop op)
 {
-	if (length > (size_t) L2_FLUSH_ALL) {
-		flush_cache_all();		/* L1 */
-		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
-		outer_flush_all();		/* L2 */
-	} else if (length > (size_t) L1_FLUSH_ALL) {
-		dma_addr_t end = start + length - 1;
+	switch (op) {
+		case EM_CLEAN:
+			dmac_map_area(vaddr, size, DMA_TO_DEVICE);
+			break;
+		case EM_INV:
+			dmac_unmap_area(vaddr, size, DMA_TO_DEVICE);
+			break;
+		case EM_FLUSH:
+			dmac_flush_range(vaddr, vaddr + size);
+	}
+}
 
-		flush_cache_all();		/* L1 */
-		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
-		outer_flush_range(start, end);  /* L2 */
-	} else {
-		dma_addr_t end = start + length - 1;
+static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
+{
+	size_t left = length;
+	phys_addr_t begin = start;
+	struct page *page;
 
-		dmac_flush_range(phys_to_virt(start), phys_to_virt(end));
-		outer_flush_range(start, end);	/* L2 */
+	if (!soc_is_exynos5250() && !soc_is_exynos5210()) {
+		if (length > (size_t) L1_FLUSH_ALL) {
+			flush_cache_all();
+			smp_call_function(
+					(smp_call_func_t)__cpuc_flush_kern_all,
+					NULL, 1);
+
+			goto outer_cache_ops;
+		}
+	}
+
+	do {
+		size_t len = left;
+		void *vaddr;
+		off_t offset = offset_in_page(offset);
+
+		page = phys_to_page(begin);
+
+		len = PAGE_SIZE - offset;
+
+		if (left < len)
+			len = left;
+
+		if (PageHighMem(page)) {
+			vaddr = kmap_high_get(page);
+			if (vaddr) {
+				cache_maint_inner(vaddr + offset, len, op);
+				kunmap_high(page);
+			} else {
+				vaddr = kmap_atomic(page);
+				cache_maint_inner(vaddr + offset, len, op);
+				kunmap_atomic(vaddr);
+			}
+		} else {
+			vaddr = page_address(page) + offset;
+			cache_maint_inner(vaddr, len, op);
+		}
+		offset = 0;
+		left -= len;
+		begin += len;
+	} while (left);
+
+outer_cache_ops:
+	switch (op) {
+	case EM_CLEAN:
+		outer_clean_range(start, start + length);
+		break;
+	case EM_INV:
+		if (length <= L2_FLUSH_ALL) {
+			outer_inv_range(start, start + length);
+			break;
+		}
+		/* else FALL THROUGH */
+	case EM_FLUSH:
+		outer_flush_range(start, start + length);
+		break;
 	}
 }
 
@@ -104,7 +169,21 @@ long exynos_mem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			return -EFAULT;
 		}
 
-		exynos_mem_paddr_cache_flush(range.start, range.length);
+		cache_maint_phys(range.start, range.length, EM_FLUSH);
+		break;
+	}
+	case EXYNOS_MEM_PADDR_CACHE_CLEAN:
+	{
+		struct exynos_mem_flush_range range;
+		if (copy_from_user(&range,
+				   (struct exynos_mem_flush_range __user *)arg,
+				   sizeof(range))) {
+			pr_err("[%s:%d] err: EXYNOS_MEM_PADDR_CACHE_FLUSH\n",
+				__func__, __LINE__);
+			return -EFAULT;
+		}
+
+		cache_maint_phys(range.start, range.length, EM_CLEAN);
 		break;
 	}
 
