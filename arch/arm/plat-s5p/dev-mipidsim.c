@@ -145,7 +145,7 @@ static struct mipi_dsim_config dsim_info = {
 	/* D-PHY PLL stable time spec :min = 200usec ~ max 400usec */
 	.pll_stable_time = 500,
 
-	.esc_clk = 0.5 * 1000000,	/* escape clk : 10MHz */
+	.esc_clk = 0.1 * 1000000,	/* escape clk : 10MHz */
 
 	/* stop state holding counter after bta change count 0 ~ 0xfff */
 	.stop_holding_cnt = 0x0f,

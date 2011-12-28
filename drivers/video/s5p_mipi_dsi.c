@@ -642,17 +642,20 @@ static void s5p_mipi_dsi_late_resume(struct early_suspend *handler)
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
 #if defined(CONFIG_LCD_MIPI_TC358764)
-	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
 	s5p_mipi_dsi_set_hs_enable(dsim);
 	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+	dsim->dsim_lcd_drv->resume(dsim);
+	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
+	mdelay(1000);
+	s5p_mipi_dsi_func_reset(dsim);
 #else
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-#endif
 	/* lcd init */
 	dsim->dsim_lcd_drv->resume(dsim);
-
 	s5p_mipi_dsi_set_hs_enable(dsim);
+#endif
 }
 #else
 static int s5p_mipi_dsi_suspend(struct platform_device *pdev,
@@ -793,16 +796,19 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 	dsim->dsim_lcd_drv->probe(dsim);
 
 #if defined(CONFIG_LCD_MIPI_TC358764)
-	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
 	s5p_mipi_dsi_set_hs_enable(dsim);
 	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+	dsim->dsim_lcd_drv->displayon(dsim);
+	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
+	mdelay(2000);
+	s5p_mipi_dsi_func_reset(dsim);
 #else
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-#endif
 	dsim->dsim_lcd_drv->displayon(dsim);
 	s5p_mipi_dsi_set_hs_enable(dsim);
-
+#endif
 	dev_info(&pdev->dev, "mipi-dsi driver(%s mode) has been probed.\n",
 		(dsim_config->e_interface == DSIM_COMMAND) ?
 			"CPU" : "RGB");

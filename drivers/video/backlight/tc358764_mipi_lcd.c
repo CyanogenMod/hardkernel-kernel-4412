@@ -90,7 +90,7 @@ void init_lcd(struct mipi_dsim_device *dsim)
 		(unsigned int) initcode_0464, sizeof(initcode_0464));
 	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
 		(unsigned int) initcode_04a0_1, sizeof(initcode_04a0_1));
-	mdelay(2);
+	mdelay(5);
 	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
 		(unsigned int) initcode_04a0_2, sizeof(initcode_04a0_2));
 	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
@@ -98,7 +98,7 @@ void init_lcd(struct mipi_dsim_device *dsim)
 	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
 		(unsigned int) initcode_049c, sizeof(initcode_049c));
 
-	mdelay(600);
+	mdelay(800);
 }
 
 void tc358764_mipi_lcd_off(struct mipi_dsim_device *dsim)
