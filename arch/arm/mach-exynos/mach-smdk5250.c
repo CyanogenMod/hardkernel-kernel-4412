@@ -213,6 +213,7 @@ static void mipi_lcd_set_power(struct plat_lcd_data *pd,
 		gpio_free(EXYNOS5_GPX3(0));
 	}
 
+#ifndef CONFIG_BACKLIGHT_PWM
 	/* backlight */
 	gpio_request_one(EXYNOS5_GPB2(0), GPIOF_OUT_INIT_LOW, "GPB2");
 	if (power) {
@@ -224,6 +225,7 @@ static void mipi_lcd_set_power(struct plat_lcd_data *pd,
 		gpio_set_value(EXYNOS5_GPB2(0), 0);
 		gpio_free(EXYNOS5_GPB2(0));
 	}
+#endif
 }
 
 static struct plat_lcd_data smdk5250_mipi_lcd_data = {
@@ -328,6 +330,7 @@ static void mipi_lcd_set_power(struct plat_lcd_data *pd,
 		gpio_free(EXYNOS5_GPX3(0));
 	}
 
+#ifndef CONFIG_BACKLIGHT_PWM
 	/* backlight */
 	gpio_request_one(EXYNOS5_GPB2(0), GPIOF_OUT_INIT_LOW, "GPB2");
 	if (power) {
@@ -339,6 +342,7 @@ static void mipi_lcd_set_power(struct plat_lcd_data *pd,
 		gpio_set_value(EXYNOS5_GPB2(0), 0);
 		gpio_free(EXYNOS5_GPB2(0));
 	}
+#endif
 }
 
 static struct plat_lcd_data smdk5250_mipi_lcd_data = {
