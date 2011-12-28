@@ -160,7 +160,7 @@ static bool exynos_ss_udc_issue_cmd(struct exynos_ss_udc *udc,
 
 /**
  * get_ep_head - return the first request on the endpoint
- * @udc_ep: The controller endpoint to get
+ * @udc_ep: The endpoint to get request from.
  *
  * Get the first request on the endpoint.
 */
@@ -1436,7 +1436,6 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 	int index = (event & EXYNOS_USB3_DEPEVT_EPNUM_MASK) >> 1;
 	int dir_in = index & 1;
 	int epnum = get_usb_epnum(index);
-	/* We will need it in future */
 	struct exynos_ss_udc_ep *udc_ep = &udc->eps[epnum];
 	struct exynos_ss_udc_ep_command *epcmd, *tepcmd;
 	struct exynos_ss_udc_req *udc_req;

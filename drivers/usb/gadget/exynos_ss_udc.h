@@ -80,6 +80,7 @@ struct exynos_ss_udc_trb {
  *	 awaiting an ack from the core all the data has been completed).
  * @lock: State lock to protect contents of endpoint.
  * @trb: Transfer Request Block.
+ * @trb_dma: Transfer Request Block DMA address.
  * @tri: Transfer resource index.
  * @epnum: The USB endpoint number.
  * @type: The endpoint type.
@@ -161,7 +162,15 @@ struct exynos_ss_udc_ep_command {
  * @irq: The IRQ number we are using.
  * @clk: The clock we are using.
  * @event_buff: Event buffer.
- * @event_buff_dma: DMA address of event buffer
+ * @event_buff_dma: Event buffer DMA address.
+ * @event_indx: Event buffer index.
+ * @eps_enabled: Set if new configuration for physical endpoints > 1 started.
+ * @ep0_state: State of EP0.
+ * @ep0_three_stage: Set if control transfer has three stages.
+ * @ep0_buff: Buffer for EP0 data.
+ * @ep0_buff_dma: EP0 data buffer DMA address.
+ * @ctrl_buff: Buffer for EP0 control requests.
+ * @ctrl_buff_dma: EP0 control request buffer DMA address.
  * @ctrl_req: Request for EP0 control packets.
  * @gadget: Represents USB slave device.
  * @eps: The endpoints being supplied to the gadget framework
