@@ -357,6 +357,7 @@ static void exynos5250_set_bus_volt(void)
 unsigned int exynos5250_target(unsigned int div_index)
 {
 	unsigned int tmp;
+	unsigned int tmp2;
 
 	/* Temporary value */
 	div_index = 0;
@@ -437,11 +438,8 @@ unsigned int exynos5250_target(unsigned int div_index)
 
 	do {
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP1);
-	} while (tmp & 0x1110000);
-
-	do {
-		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
-	} while (tmp & 0x80000);
+		tmp2 = __raw_readl(EXYNOS5_CLKDIV_STAT_TOP0);
+	} while ((tmp & 0x1110000) && (tmp2 & 0x80000));
 
 	/* Change Divider - LEX */
 	tmp = __raw_readl(EXYNOS5_CLKDIV_LEX);
