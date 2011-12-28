@@ -1950,14 +1950,18 @@ static int is_scale_up(struct fimc_control *ctrl)
 		return -EINVAL;
 	}
 
-	if (pix->width > mbus_fmt->width) {
-		fimc_err("%s: Horizontal ScaleUp isn't supported.\n", __func__);
-		return -EINVAL;
-	}
-
-	if (pix->height > mbus_fmt->height) {
-		fimc_err("%s: Vertical ScaleUp isn't supported.\n", __func__);
-		return -EINVAL;
+	if (ctrl->cap->rotate == 90 || ctrl->cap->rotate == 270) {
+		if (pix->width > mbus_fmt->height ||
+			pix->height > mbus_fmt->width) {
+			fimc_err("%s: ScaleUp isn't supported.\n", __func__);
+			return -EINVAL;
+		}
+	} else {
+		if (pix->width > mbus_fmt->width ||
+			pix->height > mbus_fmt->height) {
+			fimc_err("%s: ScaleUp isn't supported.\n", __func__);
+			return -EINVAL;
+		}
 	}
 
 	return 0;
