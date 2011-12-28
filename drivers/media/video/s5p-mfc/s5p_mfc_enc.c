@@ -429,7 +429,7 @@ static struct v4l2_queryctrl controls[] = {
 		.minimum = 0,
 		.maximum = 51,
 		.step = 1,
-		.default_value = 1,
+		.default_value = 0,
 	},
 	{
 		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_RC_MIN_QP,
@@ -438,7 +438,7 @@ static struct v4l2_queryctrl controls[] = {
 		.minimum = 0,
 		.maximum = 51,
 		.step = 1,
-		.default_value = 1,
+		.default_value = 0,
 	},
 	{
 		/* FIXME: MAX_QP must be greater than or equal to MIN_QP */
@@ -448,7 +448,7 @@ static struct v4l2_queryctrl controls[] = {
 		.minimum = 0,
 		.maximum = 51,
 		.step = 1,
-		.default_value = 1,
+		.default_value = 0,
 	},
 	{
 		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_RC_MB_DARK,
@@ -493,7 +493,7 @@ static struct v4l2_queryctrl controls[] = {
 		.minimum = 0,
 		.maximum = 51,
 		.step = 1,
-		.default_value = 1,
+		.default_value = 0,
 	},
 	{
 		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_RC_B_FRAME_QP,
@@ -502,7 +502,7 @@ static struct v4l2_queryctrl controls[] = {
 		.minimum = 0,
 		.maximum = 51,
 		.step = 1,
-		.default_value = 1,
+		.default_value = 0,
 	},
 	{
 		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_AR_VUI_ENABLE,
@@ -572,7 +572,7 @@ static struct v4l2_queryctrl controls[] = {
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "QP value for hier P layer0",
 		.minimum = 0,
-		.maximum = (1 << 30) - 1,
+		.maximum = 51,
 		.step = 1,
 		.default_value = 0,
 	},
@@ -581,7 +581,7 @@ static struct v4l2_queryctrl controls[] = {
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "QP value for hier P layer1",
 		.minimum = 0,
-		.maximum = (1 << 30) - 1,
+		.maximum = 51,
 		.step = 1,
 		.default_value = 0,
 	},
@@ -590,7 +590,7 @@ static struct v4l2_queryctrl controls[] = {
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "QP value for hier P layer2",
 		.minimum = 0,
-		.maximum = (1 << 30) - 1,
+		.maximum = 51,
 		.step = 1,
 		.default_value = 0,
 	},
