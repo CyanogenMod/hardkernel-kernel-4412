@@ -1589,7 +1589,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #ifdef CONFIG_SND_SAMSUNG_SPDIF
 	&exynos_device_spdif,
 #endif
-#ifdef CONFIG_SND_SAMSUNG_RP
+#if defined(CONFIG_SND_SAMSUNG_RP) || defined(CONFIG_SND_SAMSUNG_ALP)
 	&exynos_device_srp,
 #endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
@@ -1831,6 +1831,13 @@ static void __init exynos_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP
+		{
+			.name = "srp",
+			.size = CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP * SZ_1K,
+			.start = 0,
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
 		{
 			.name		= "fw",
@@ -1871,6 +1878,7 @@ static void __init exynos_reserve_mem(void)
 #endif
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0=fimd;"
+		"samsung-rp=srp;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
 		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,fimd,fw,b1;"
 		"s5p-mfc-v6/f=fw;"
