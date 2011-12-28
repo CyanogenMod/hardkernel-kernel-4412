@@ -516,7 +516,7 @@ struct opp *exynos5250_monitor(struct busfreq_data *data)
 	unsigned long lockfreq;
 	unsigned long newfreq = opp_get_freq(data->max_opp);
 
-	ppmu_update(data->dev);
+	ppmu_update(data->dev, 3);
 
 	lockfreq = dev_max_freq(data->dev);
 

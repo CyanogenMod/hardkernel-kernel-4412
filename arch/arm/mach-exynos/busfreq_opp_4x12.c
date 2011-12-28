@@ -439,7 +439,7 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	unsigned long dmc_load;
 	int cpu_load_slope;
 
-	ppmu_update(data->dev);
+	ppmu_update(data->dev, 3);
 
 	/* Convert from base xxx to base maxfreq */
 	cpu_load = ppmu_load[PPMU_CPU];

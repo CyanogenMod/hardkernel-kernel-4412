@@ -61,10 +61,9 @@ void exynos4_ppmu_stop(struct exynos4_ppmu_hw *ppmu)
 	__raw_writel(0x0, ppmu_base);
 }
 
-unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu)
+unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu, int ch)
 {
 	void __iomem *ppmu_base = ppmu->hw_base;
-	unsigned int i;
 	unsigned long long total = 0;
 
 	ppmu->ccnt = __raw_readl(ppmu_base + PPMU_CCNT);
@@ -72,16 +71,14 @@ unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu)
 	if (ppmu->ccnt == 0)
 		ppmu->ccnt = MAX_CCNT;
 
-	for (i = 0; i < NUMBER_OF_COUNTER; i++) {
-		if (ppmu->event[i] == 0)
-			continue;
+	if (ch >= NUMBER_OF_COUNTER || ppmu->event[ch] == 0)
+		return 0;
 
-		if (i == 3)
-			total += (((u64)__raw_readl(ppmu_base + PMCNT_OFFSET(i)) << 8) |
-				__raw_readl(ppmu_base + PMCNT_OFFSET(i + 1)));
-		else
-			total += __raw_readl(ppmu_base + PMCNT_OFFSET(i));
-	}
+	if (ch == 3)
+		total = (((u64)__raw_readl(ppmu_base + PMCNT_OFFSET(ch)) << 8) |
+				__raw_readl(ppmu_base + PMCNT_OFFSET(ch + 1)));
+	else
+		total = __raw_readl(ppmu_base + PMCNT_OFFSET(ch));
 
 	if (total > ppmu->ccnt)
 		total = ppmu->ccnt;
@@ -98,14 +95,14 @@ void ppmu_start(struct device *dev)
 			exynos4_ppmu_start(ppmu);
 }
 
-void ppmu_update(struct device *dev)
+void ppmu_update(struct device *dev, int ch)
 {
 	struct exynos4_ppmu_hw *ppmu;
 
 	list_for_each_entry(ppmu, &ppmu_list, node)
 		if (ppmu->dev == dev) {
 			exynos4_ppmu_stop(ppmu);
-			ppmu_load[ppmu->id] = exynos4_ppmu_update(ppmu);
+			ppmu_load[ppmu->id] = exynos4_ppmu_update(ppmu, ch);
 			exynos4_ppmu_reset(ppmu);
 		}
 }
@@ -149,43 +146,37 @@ struct exynos4_ppmu_hw exynos_ppmu[] = {
 	[PPMU_DMC0] = {
 		.id = PPMU_DMC0,
 		.hw_base = S5P_VA_PPMU_DMC0,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
+		.event[3] = RDWR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
 	[PPMU_DMC1] = {
 		.id = PPMU_DMC1,
 		.hw_base = S5P_VA_PPMU_DMC1,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
+		.event[3] = RDWR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
 	[PPMU_CPU] = {
 		.id = PPMU_CPU,
 		.hw_base = S5P_VA_PPMU_CPU,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
+		.event[3] = RDWR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
 	[PPMU_DDR_C] = {
 		.id = PPMU_DDR_C,
 		.hw_base = S5P_VA_PPMU_DDR_C,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
+		.event[3] = RDWR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
 	[PPMU_DDR_R1] = {
 		.id = PPMU_DDR_R1,
 		.hw_base = S5P_VA_PPMU_DDR_R1,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
+		.event[3] = RDWR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
 	[PPMU_DDR_L] = {
 		.id = PPMU_DDR_L,
 		.hw_base = S5P_VA_PPMU_DDR_L,
-		.event[0] = RD_DATA_COUNT,
-		.event[1] = WR_DATA_COUNT,
+		.event[3] = RDWR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
 };

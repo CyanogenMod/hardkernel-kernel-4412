@@ -46,6 +46,7 @@
 /* For event */
 #define RD_DATA_COUNT		0x00000005
 #define WR_DATA_COUNT		0x00000006
+#define RDWR_DATA_COUNT		0x00000007
 
 #define PMCNT_OFFSET(i)		(PPMU_PMCNT0 + (PPMU_PMCNT_OFFSET * i))
 
@@ -98,11 +99,11 @@ void exynos4_ppmu_start(struct exynos4_ppmu_hw *ppmu);
 void exynos4_ppmu_stop(struct exynos4_ppmu_hw *ppmu);
 void exynos4_ppmu_setevent(struct exynos4_ppmu_hw *ppmu,
 				   unsigned int evt_num);
-unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu);
+unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu, int ch);
 
 void ppmu_init(struct exynos4_ppmu_hw *ppmu, struct device *dev);
 void ppmu_start(struct device *dev);
-void ppmu_update(struct device *dev);
+void ppmu_update(struct device *dev, int ch);
 void ppmu_reset(struct device *dev);
 
 extern struct exynos4_ppmu_hw exynos_ppmu[];
