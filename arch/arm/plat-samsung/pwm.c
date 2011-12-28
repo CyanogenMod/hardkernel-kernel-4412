@@ -39,6 +39,8 @@ struct pwm_device {
 	unsigned char		 running;
 	unsigned char		 use_count;
 	unsigned char		 pwm_id;
+
+	unsigned long		 tcfg0;
 };
 
 #define pwm_dbg(_pwm, msg...) dev_dbg(&(_pwm)->pdev->dev, msg)
@@ -366,11 +368,25 @@ static int s3c_pwm_suspend(struct platform_device *pdev, pm_message_t state)
 	pwm->period_ns = 0;
 	pwm->duty_ns = 0;
 
+	clk_enable(pwm->clk);
+
+	pwm->tcfg0 = __raw_readl(S3C2410_TCFG0);
+
+	clk_disable(pwm->clk);
+
 	return 0;
 }
 
 static int s3c_pwm_resume(struct platform_device *pdev)
 {
+	struct pwm_device *pwm = platform_get_drvdata(pdev);
+
+	clk_enable(pwm->clk);
+
+	__raw_writel(pwm->tcfg0, S3C2410_TCFG0);
+
+	clk_disable(pwm->clk);
+
 	return 0;
 }
 
