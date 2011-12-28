@@ -2247,6 +2247,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.regulators = max77686_regulators,
 	.irq_gpio	= 0,
 	.irq_base	= 0,
+	.wakeup		= 0,
 
 	.buck1_voltage[0] = 1250000,	/* 1.25V */
 	.buck1_voltage[1] = 1100000,	/* 1.1V */

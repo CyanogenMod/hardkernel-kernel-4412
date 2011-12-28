@@ -23,17 +23,20 @@
 
 #include <linux/slab.h>
 #include <linux/i2c.h>
+#include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
 #include <linux/mutex.h>
 #include <linux/mfd/core.h>
 #include <linux/mfd/max77686.h>
 #include <linux/mfd/max77686-private.h>
 
-#define I2C_ADDR_RTC	(0x0E >> 1)
+#define I2C_ADDR_RTC	(0x0C >> 1)
 
 static struct mfd_cell max77686_devs[] = {
 	{ .name = "max77686-pmic", },
+#ifdef CONFIG_RTC_DRV_MAX77686
 	{ .name = "max77686-rtc", },
+#endif
 };
 
 int max77686_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
@@ -137,9 +140,10 @@ static int max77686_i2c_probe(struct i2c_client *i2c,
 
 	mutex_init(&max77686->iolock);
 
+#ifdef CONFIG_RTC_DRV_MAX77686
 	max77686->rtc = i2c_new_dummy(i2c->adapter, I2C_ADDR_RTC);
 	i2c_set_clientdata(max77686->rtc, max77686);
-
+#endif
 	max77686_irq_init(max77686);
 
 	mfd_add_devices(max77686->dev, -1, max77686_devs,
@@ -153,7 +157,9 @@ static int max77686_i2c_probe(struct i2c_client *i2c,
 
 err_mfd:
 	mfd_remove_devices(max77686->dev);
+#ifdef CONFIG_RTC_DRV_MAX77686
 	i2c_unregister_device(max77686->rtc);
+#endif
 err:
 	kfree(max77686);
 	return ret;
@@ -164,7 +170,9 @@ static int max77686_i2c_remove(struct i2c_client *i2c)
 	struct max77686_dev *max77686 = i2c_get_clientdata(i2c);
 
 	mfd_remove_devices(max77686->dev);
+#ifdef CONFIG_RTC_DRV_MAX77686
 	i2c_unregister_device(max77686->rtc);
+#endif
 	kfree(max77686);
 
 	return 0;
@@ -176,10 +184,47 @@ static const struct i2c_device_id max77686_i2c_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, max77686_i2c_id);
 
+#ifdef CONFIG_PM
+static int max77686_suspend(struct device *dev)
+{
+	struct i2c_client *i2c = container_of(dev, struct i2c_client, dev);
+	struct max77686_dev *max77686 = i2c_get_clientdata(i2c);
+
+	if (max77686->wakeup)
+		enable_irq_wake(max77686->irq);
+
+	disable_irq(max77686->irq);
+
+	return 0;
+}
+
+static int max77686_resume(struct device *dev)
+{
+	struct i2c_client *i2c = container_of(dev, struct i2c_client, dev);
+	struct max77686_dev *max77686 = i2c_get_clientdata(i2c);
+
+	if (max77686->wakeup)
+		disable_irq_wake(max77686->irq);
+
+	enable_irq(max77686->irq);
+
+	return 0;
+}
+#else
+#define max77686_suspend       NULL
+#define max77686_resume                NULL
+#endif /* CONFIG_PM */
+
+const struct dev_pm_ops max77686_pm = {
+	.suspend = max77686_suspend,
+	.resume = max77686_resume,
+};
+
 static struct i2c_driver max77686_i2c_driver = {
 	.driver = {
-		   .name = "max77686",
-		   .owner = THIS_MODULE,
+		.name = "max77686",
+		.owner = THIS_MODULE,
+		.pm = &max77686_pm,
 	},
 	.probe = max77686_i2c_probe,
 	.remove = max77686_i2c_remove,

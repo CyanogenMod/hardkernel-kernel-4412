@@ -185,7 +185,7 @@ static irqreturn_t max77686_irq_thread(int irq, void *data)
 	if (irq_src == MAX77686_IRQSRC_PMIC) {
 		ret = max77686_bulk_read(max77686->i2c, MAX77686_REG_INT1, 2, irq_reg);
 		if (ret < 0) {
-			dev_err(max77686->dev, "Failed to read interrupt source: %d\n",
+			dev_err(max77686->dev, "Failed to read pmic interrupt: %d\n",
 					ret);
 			return IRQ_NONE;
 		}
@@ -198,7 +198,7 @@ static irqreturn_t max77686_irq_thread(int irq, void *data)
 	if (irq_src & MAX77686_IRQSRC_RTC) {
 		ret = max77686_read_reg(max77686->rtc, MAX77686_RTC_INT, &irq_reg[RTC_INT]);
 		if (ret < 0) {
-			dev_err(max77686->dev, "Failed to read interrupt source: %d\n",
+			dev_err(max77686->dev, "Failed to read rtc interrupt: %d\n",
 					ret);
 			return IRQ_NONE;
 		}
@@ -276,9 +276,8 @@ int max77686_irq_init(struct max77686_dev *max77686)
 		return IRQ_NONE;
 	}
 
-	for (i = 0; i < 6; i++) {
+	for (i = 0; i < 6; i++)
 		pr_info("%s: i[%d]=0x%x\n", __func__, i, irq_reg[i]);
-	}
 #endif /* MAX77686_IRQ_TEST */
 
 	/* Mask individual interrupt sources */

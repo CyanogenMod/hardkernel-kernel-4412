@@ -329,7 +329,7 @@ static int max77686_rtc_start_alarm(struct max77686_rtc_info *info)
 	data[RTC_SEC] |= (1 << ALARM_ENABLE_SHIFT);
 	data[RTC_MIN] |= (1 << ALARM_ENABLE_SHIFT);
 	data[RTC_HOUR] |= (1 << ALARM_ENABLE_SHIFT);
-	data[RTC_WEEKDAY] &= ~ALARM_ENABLE_MASK;
+	data[RTC_WEEKDAY] |= (1 << ALARM_ENABLE_SHIFT)
 	if (data[RTC_MONTH] & 0xf)
 		data[RTC_MONTH] |= (1 << ALARM_ENABLE_SHIFT);
 	if (data[RTC_YEAR] & 0x7f)
