@@ -3485,6 +3485,13 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
+		{
+			.name = "fimc1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
+			.start = 0
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC2
 		{
 			.name = "fimc2",
@@ -3492,18 +3499,11 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
+#if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
+	defined(CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3)
 		{
 			.name = "fimc3",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3 * SZ_1K,
-			.start = 0
-		},
-#endif
-#if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
-	defined(CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1)
-		{
-			.name = "fimc1",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
 		},
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1
@@ -3570,10 +3570,10 @@ static void __init exynos4_reserve_mem(void)
 	};
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	static struct cma_region regions_secure[] = {
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
 		{
-			.name = "fimc1",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
+			.name = "fimc3",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3 * SZ_1K,
 		},
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
