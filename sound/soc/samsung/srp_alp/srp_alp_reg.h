@@ -13,19 +13,6 @@
 #ifndef _SRP_ALP_REG_H_
 #define _SRP_ALP_REG_H_
 
-#define SRP_IRAM_BASE		(0x02020000)
-#define SRP_DMEM_BASE		(0x03000000)
-#define SRP_ASSCLK_BASE		(0x03810000)
-#define SRP_COMMBOX_BASE	(0x03820000)
-
-/* SRAM & Commbox base address */
-#define SRP_ICACHE_ADDR		(SRP_DMEM_BASE + 0x00020000)
-#define SRP_CMEM_ADDR		(SRP_DMEM_BASE + 0x00030000)
-
-/* SRP Input/Output buffer physical address */
-#define SRP_IBUF_PHY_ADDR      (SRP_IRAM_BASE + 0x30000)
-#define SRP_OBUF_PHY_ADDR      (SRP_DMEM_BASE + 0x4)
-
 /* Commbox Offset */
 #define SRP_CONT		(0x0000)
 #define SRP_CFGR		(0x0004)

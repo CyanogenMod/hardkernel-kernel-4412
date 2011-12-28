@@ -18,6 +18,7 @@
 #include <sound/soc.h>
 
 #include <mach/map.h>
+#include <plat/cpu.h>
 
 #include "i2s.h"
 #include "idma.h"

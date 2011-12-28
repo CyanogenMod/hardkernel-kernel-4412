@@ -35,6 +35,7 @@
 #include <mach/hardware.h>
 #include <mach/irqs.h>
 #include <mach/map.h>
+#include <plat/cpu.h>
 
 #include "../srp-types.h"
 #include "srp_alp.h"
@@ -394,9 +395,11 @@ static void srp_commbox_init(void)
 	writel(reg, srp.commbox + SRP_ARM_INTERRUPT_CODE);
 
 	/* Init Ibuf information */
-	writel(srp.ibuf0_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR0);
-	writel(srp.ibuf1_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR1);
-	writel(srp.ibuf_size, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_SIZE);
+	if (!soc_is_exynos5250()) {
+		writel(srp.ibuf0_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR0);
+		writel(srp.ibuf1_pa, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_ADDR1);
+		writel(srp.ibuf_size, srp.commbox + SRP_BITSTREAM_BUFF_DRAM_SIZE);
+	}
 
 	/* Output PCM control : 16bit */
 	writel(SRP_CFGR_OUTPUT_PCM_16BIT, srp.commbox + SRP_CFGR);
@@ -807,13 +810,16 @@ static void srp_prepare_buff(void)
 	srp.ibuf_offset = IBUF_OFFSET;
 	srp.obuf_offset = OBUF_OFFSET;
 
-	srp.ibuf0 = srp.iram + srp.ibuf_offset;
-	srp.obuf0 = srp.dmem + srp.obuf_offset;
+	srp.ibuf0 = soc_is_exynos5250() ? srp.dmem + srp.ibuf_offset
+					: srp.iram + srp.ibuf_offset;
+	srp.obuf0 = srp.dmem + OBUF_OFFSET;
+
 	srp.ibuf1 = srp.ibuf0 + srp.ibuf_size;
 	srp.obuf1 = srp.obuf0 + srp.obuf_size;
 
 	srp.ibuf0_pa = SRP_IBUF_PHY_ADDR;
 	srp.obuf0_pa = SRP_OBUF_PHY_ADDR;
+
 	srp.ibuf1_pa = srp.ibuf0_pa + srp.ibuf_size;
 	srp.obuf1_pa = srp.obuf0_pa + srp.obuf_size;
 

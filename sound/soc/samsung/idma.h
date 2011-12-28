@@ -13,6 +13,8 @@
 #ifndef __S3C_IDMA_H_
 #define __S3C_IDMA_H_
 
+#include "srp_alp/srp_alp.h"
+
 #define I2SAHB			0x20
 #define I2SSTR0			0x24
 #define I2SSIZE			0x28
@@ -46,19 +48,21 @@
 #define I2SSIZE_TRNMSK		(0xffff)
 #define I2SSIZE_SHIFT		(16)
 
-#if defined(CONFIG_ARCH_EXYNOS)
+/* If enabled ALP Audio */
 #if defined(CONFIG_SND_SAMSUNG_ALP)
-#if defined(CONFIG_CPU_EXYNOS4210)
-#define LP_TXBUFF_OFFSET       (0x18000)
-#else
-#define LP_TXBUFF_OFFSET       (0x38000)
+#if defined(CONFIG_ARCH_EXYNOS4)
+#define LP_TXBUFF_OFFSET	(soc_is_exynos4412() ? \
+				(0x38000) : (0x18000))
+#elif defined(CONFIG_ARCH_EXYNOS5)
+#define LP_TXBUFF_OFFSET	(0x4)
 #endif
-#define LP_TXBUFF_ADDR		(0x02020000 + LP_TXBUFF_OFFSET)
-#else
-#define LP_TXBUFF_ADDR		(0x03000000)
-#endif
-#else
-#define LP_TXBUFF_ADDR		(0xC0000000)
+
+#define LP_TXBUFF_ADDR		(soc_is_exynos5250() ? \
+				(SRP_DMEM_BASE + LP_TXBUFF_OFFSET) : \
+				(SRP_IRAM_BASE + LP_TXBUFF_OFFSET))
+/* If only enabled LP Audio */
+#elif defined(CONFIG_SND_SAMSUNG_LP)
+#define LP_TXBUFF_ADDR		(SRP_DMEM_BASE)
 #endif
 
 /* idma_state */

@@ -3,25 +3,53 @@
 
 #define SRP_DEV_MINOR	(250)
 
-/* SRAM information */
-#if defined(CONFIG_CPU_EXYNOS4210)
-#define IRAM_SIZE	(0x20000)
-#else
-#define IRAM_SIZE	(0x40000)
-#endif
-#define DMEM_SIZE	(0x20000)
-#define ICACHE_SIZE	(0x10000)
+/* Base address */
+#define SRP_IRAM_BASE		(0x02020000)
+#define SRP_DMEM_BASE		(0x03000000)
+#define SRP_COMMBOX_BASE	(0x03820000)
 
-/* Buffer information */
+/* SRAM information */
+#define IRAM_SIZE	(soc_is_exynos4412() ? \
+			(0x40000) : (0x20000))
+#define DMEM_SIZE	(soc_is_exynos5250() ? \
+			(0x28000) : (0x20000))
+#define ICACHE_SIZE	(soc_is_exynos5250() ? \
+			(0x18000) : (0x10000))
+
+/* SRAM & Commbox base address */
+#define SRP_ICACHE_ADDR		(SRP_DMEM_BASE + DMEM_SIZE)
+#define SRP_CMEM_ADDR		(SRP_DMEM_BASE + ICACHE_SIZE)
+
+/* IBUF/OBUF Size */
 #define IBUF_SIZE	(0x4000)
-#define OBUF_SIZE	(0x8000)
 #define WBUF_SIZE	(IBUF_SIZE * 4)
-#if defined(CONFIG_CPU_EXYNOS4210)
-#define IBUF_OFFSET	(0x10000)
-#else
-#define IBUF_OFFSET	(0x30000)
+#define OBUF_SIZE	(soc_is_exynos5250() ? \
+			(0x4000) : (0x8000))
+
+/* IBUF Offset */
+#if defined(CONFIG_ARCH_EXYNOS4)
+#define IBUF_OFFSET	(soc_is_exynos4412() ? \
+			(0x30000) : (0x10000))
+#elif defined(CONFIG_ARCH_EXYNOS5)
+#define IBUF_OFFSET	(0x8004)
 #endif
+
+/* OBUF Offset */
+#if defined(CONFIG_ARCH_EXYNOS4)
 #define OBUF_OFFSET	(0x4)
+#elif defined(CONFIG_ARCH_EXYNOS5)
+#define OBUF_OFFSET	(0x10004)
+#endif
+
+/* SRP Input/Output buffer physical address */
+#if defined(CONFIG_ARCH_EXYNOS4)
+#define SRP_IBUF_PHY_ADDR	(SRP_IRAM_BASE + IBUF_OFFSET)
+#elif defined(CONFIG_ARCH_EXYNOS5)
+#define SRP_IBUF_PHY_ADDR	(SRP_DMEM_BASE + IBUF_OFFSET)
+#endif
+#define SRP_OBUF_PHY_ADDR      (SRP_DMEM_BASE + OBUF_OFFSET)
+
+/* IBUF/OBUF NUM */
 #define IBUF_NUM	(0x2)
 #define OBUF_NUM	(0x2)
 #define START_THRESHOLD	(IBUF_SIZE * 3)
@@ -31,14 +59,22 @@
 
 /* F/W code size */
 #define VLIW_SIZE	(0x20000)	/* 128KBytes */
-#define DATA_SIZE	(0x20000)	/* 128KBytes */
 #define CGA_SIZE	(0x9000)	/* 36KBytes */
+#if defined(CONFIG_ARCH_EXYNOS4)
+#define DATA_SIZE	(0x20000)	/* 128KBytes */
+#elif defined(CONFIG_ARCH_EXYNOS5)
+#define DATA_SIZE	(0x28000)	/* 160KBytes */
+#endif
 
 /* Reserved memory on DRAM */
 #define BASE_MEM_SIZE	(CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP << 10)
 #define VLIW_SIZE_MAX	(0x20000)
 #define CGA_SIZE_MAX	(0x10000)
+#if defined(CONFIG_ARCH_EXYNOS4)
 #define DATA_SIZE_MAX	(0x20000)
+#elif defined(CONFIG_ARCH_EXYNOS5)
+#define DATA_SIZE_MAX	(0x28000)
+#endif
 #define BITSTREAM_SIZE_MAX	(0x7FFFFFFF)
 
 /* F/W Endian Configuration */
@@ -94,7 +130,7 @@ struct srp_dec_info {
 };
 
 struct srp_for_suspend {
-	unsigned char	*mem;
+	unsigned char	*dmem;
 	unsigned char	*obuf;
 	unsigned char	*wbuf;
 	unsigned long	wbuf_pos;
