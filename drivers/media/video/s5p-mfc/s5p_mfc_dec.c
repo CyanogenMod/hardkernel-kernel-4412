@@ -2005,7 +2005,7 @@ static int s5p_mfc_stop_streaming(struct vb2_queue *q)
 		dec->dpb_status = 0;
 
 		INIT_LIST_HEAD(&dec->dpb_queue);
-		dec->dpb_queue_cnt++;
+		dec->dpb_queue_cnt = 0;
 	}
 
 	if (q->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
