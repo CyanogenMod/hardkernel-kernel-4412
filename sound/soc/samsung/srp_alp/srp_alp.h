@@ -93,6 +93,20 @@ struct srp_dec_info {
 	unsigned int channels;
 };
 
+struct srp_for_suspend {
+	unsigned char	*mem;
+	unsigned char	*obuf;
+	unsigned char	*wbuf;
+	unsigned long	wbuf_pos;
+	unsigned int	obuf_fill_done[2];
+	unsigned int	ibuf_saved;
+	unsigned int	obuf_saved;
+	unsigned int	obuf_restored;
+	unsigned int	wait_for_eos;
+	unsigned int	prepare_for_eos;
+	unsigned int	resume_after_suspend;
+};
+
 struct srp_info {
 	struct srp_buf_info	ibuf_info;
 	struct srp_buf_info	obuf_info;
@@ -100,6 +114,7 @@ struct srp_info {
 
 	struct srp_fw_info	fw_info;
 	struct srp_dec_info	dec_info;
+	struct srp_for_suspend  sp_data;
 
 	void __iomem	*iram;
 	void __iomem	*dmem;

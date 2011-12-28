@@ -308,7 +308,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	void *obuf1 = srp.obuf_info.addr + srp.obuf_size;
 	int ret = 0;
 
-	srp_debug("Entered Get Obuf[%d] in PCM function\n", srp.obuf_ready);
+	srp_debug("Entered Get Obuf in PCM function\n");
 
 	if (srp.prepare_for_eos) {
 		srp.obuf_fill_done[srp.obuf_ready] = 0;
@@ -335,7 +335,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 							srp.wakeup_read_wq,
 							HZ / 2);
 			if (!ret) {
-				srp_err("Couldn't start decoding!!!\n");
+				srp_err("Couldn't start decoding by OBUF[%d]!!!\n", srp.obuf_ready);
 				srp.pcm_info.size = 0;
 				return copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
 			}
@@ -353,6 +353,11 @@ static ssize_t srp_read(struct file *file, char *buffer,
 		if (srp.pcm_info.size < srp.obuf_size &&
 			srp.pcm_info.size == srp.old_pcm_size)
 			srp.pcm_info.size = 0;
+	}
+
+	if (srp.sp_data.obuf_restored) {
+		srp.sp_data.obuf_restored = 0;
+		memcpy(srp.obuf1, srp.sp_data.obuf, srp.obuf_size);
 	}
 
 	ret = copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
@@ -603,10 +608,32 @@ static int srp_open(struct inode *inode, struct file *file)
 	}
 	srp_info("Allocation WBUF [%ld]Bytes\n", srp.wbuf_size);
 
+	srp.sp_data.dmem = kzalloc(DMEM_SIZE, GFP_KERNEL);
+	if (!srp.sp_data.dmem) {
+		srp_err("Failed to alloc dmem for suspend/resume!\n");
+		return -ENOMEM;
+	}
+
+	srp.sp_data.wbuf = kzalloc(WBUF_SIZE * 2, GFP_KERNEL);
+	if (!srp.sp_data.wbuf) {
+		srp_err("Failed to alloc WBUF for suspend/resume!\n");
+		return -ENOMEM;
+	}
+
+	srp.sp_data.obuf = kzalloc(OBUF_SIZE, GFP_KERNEL);
+	if (!srp.sp_data.obuf) {
+		srp_err("Failed to alloc OBUF for suspend/resume\n");
+		return -ENOMEM;
+	}
 
 	srp.dec_info.channels = 0;
 	srp.dec_info.sample_rate = 0;
 	srp.frame_size = 0;
+
+	srp.sp_data.ibuf_saved = 0;
+	srp.sp_data.obuf_saved = 0;
+	srp.sp_data.obuf_restored = 0;
+	srp.sp_data.resume_after_suspend = 0;
 
 	return 0;
 }
@@ -619,6 +646,15 @@ static int srp_release(struct inode *inode, struct file *file)
 
 	if (srp.wbuf)
 		kfree(srp.wbuf);
+
+	if (srp.sp_data.dmem)
+		kfree(srp.sp_data.dmem);
+
+	if (srp.sp_data.wbuf)
+		kfree(srp.sp_data.wbuf);
+
+	if (srp.sp_data.obuf)
+		kfree(srp.sp_data.obuf);
 
 	srp.is_opened = 0;
 
@@ -683,6 +719,11 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			break;
 
 		case SRP_INTR_CODE_IBUF_REQUEST:
+			if (srp.sp_data.resume_after_suspend) {
+				srp.sp_data.resume_after_suspend = 0;
+				break;
+			}
+
 			if ((irq_code & SRP_INTR_CODE_IBUF_MASK)
 				== SRP_INTR_CODE_IBUF0_EMPTY) {
 				srp_debug("IBUF0 empty\n");
@@ -897,17 +938,183 @@ static struct miscdevice srp_miscdev = {
 	.fops		= &srp_fops,
 };
 
-static int srp_resume(struct platform_device *pdev)
+#ifdef CONFIG_PM
+static void srp_ibuf_save(void)
 {
-	/* TODO: Restore ibuf and wbuf */
-	return 0;
+	unsigned long read_bitstream_size = readl(srp.commbox + SRP_READ_BITSTREAM_SIZE);
+	unsigned long read_size = read_bitstream_size % srp.ibuf_size;
+	unsigned long remain_size = srp.ibuf_size - read_size;
+	unsigned long ibuf_div = read_bitstream_size / srp.ibuf_size;
+	unsigned long current_ibuf = ibuf_div % 2 ? 1 : 0;
+
+	srp_info("WBUF_POS = %lu\n", srp.wbuf_pos);
+
+	/* Backup IBUF */
+	if (!srp.sp_data.ibuf_saved) {
+		if (!current_ibuf) {
+			if (!srp.ibuf_empty[0]) {
+				srp_info("SRP: IBUF0 Copy size = %lu\n", remain_size);
+				memcpy(srp.sp_data.wbuf, &srp.ibuf0[read_size], remain_size);
+				srp.sp_data.wbuf_pos += remain_size;
+			}
+
+			if (!srp.ibuf_empty[1]) {
+				srp_info("SRP: IBUF1 Copy size = %lu\n", srp.ibuf_size);
+				memcpy(&srp.sp_data.wbuf[srp.sp_data.wbuf_pos],
+							srp.ibuf1, srp.ibuf_size);
+				srp.sp_data.wbuf_pos += srp.ibuf_size;
+			}
+		} else {
+			if (!srp.ibuf_empty[1]) {
+				srp_info("SRP: IBUF1 Copy size = %lu\n", remain_size);
+				memcpy(srp.sp_data.wbuf, &srp.ibuf1[read_size],	remain_size);
+				srp.sp_data.wbuf_pos += remain_size;
+			}
+
+			if (!srp.ibuf_empty[0]) {
+				srp_info("SRP: IBUF0 Copy size = %lu\n", srp.ibuf_size);
+				memcpy(&srp.sp_data.wbuf[srp.sp_data.wbuf_pos], srp.ibuf0, srp.ibuf_size);
+				srp.sp_data.wbuf_pos += srp.ibuf_size;
+			}
+		}
+
+		if (srp.wbuf_pos) {
+			memcpy(&srp.sp_data.wbuf[srp.sp_data.wbuf_pos], srp.wbuf,
+								srp.wbuf_pos);
+			srp.sp_data.wbuf_pos += srp.wbuf_pos;
+		}
+
+		srp_info("SRP: Backup WBUF_POS = %lu\n", srp.sp_data.wbuf_pos);
+		srp.sp_data.ibuf_saved = 1;
+	}
+}
+
+static void srp_obuf_save(void)
+{
+	if (!srp.sp_data.obuf_saved) {
+		if (srp.obuf_fill_done[srp.obuf_next]) {
+			if (!srp.obuf_next) {
+				srp_info("Backup OBUF0\n");
+				memcpy(srp.sp_data.obuf, srp.obuf0, srp.obuf_size);
+			} else {
+				srp_info("Backup OBUF1\n");
+				memcpy(srp.sp_data.obuf, srp.obuf1, srp.obuf_size);
+			}
+
+			srp.sp_data.obuf_fill_done[srp.obuf_ready] = 0;
+			srp.sp_data.obuf_fill_done[srp.obuf_next] = 1;
+			srp.sp_data.obuf_saved = 1;
+		}
+	}
+}
+
+static void srp_ibuf_restore(void)
+{
+	unsigned long copy_pos;
+
+	if (srp.sp_data.ibuf_saved) {
+		srp.wbuf_pos = srp.sp_data.wbuf_pos;
+		srp.wbuf_fill_size = srp.wbuf_pos;
+		memset(srp.wbuf, 0x0, srp.wbuf_size);
+
+		srp_info("Restore WBUF Total Size[%lu]\n", srp.wbuf_pos);
+		if (srp.wbuf_pos >= srp.ibuf_size * 2) {
+			memcpy(srp.wbuf, srp.sp_data.wbuf, srp.ibuf_size * 2);
+			copy_pos += srp.ibuf_size * 2;
+			srp_fill_ibuf();
+		} else if (srp.wbuf_pos >= srp.ibuf_size) {
+			memcpy(srp.wbuf, srp.sp_data.wbuf, srp.ibuf_size);
+			copy_pos += srp.ibuf_size;
+		} else {
+			memcpy(srp.wbuf, srp.sp_data.wbuf, srp.wbuf_pos);
+			copy_pos += srp.wbuf_pos;
+		}
+
+		srp_fill_ibuf();
+
+		srp_info("Remain Wbuf pos %lu\n", srp.wbuf_pos);
+		if (srp.wbuf_pos)
+			memcpy(srp.wbuf, &srp.sp_data.wbuf[copy_pos], srp.wbuf_pos);
+
+		srp.sp_data.ibuf_saved = 0;
+		srp.sp_data.wbuf_pos = 0;
+	}
+}
+
+static void srp_obuf_restore(void)
+{
+	/* Restore Obuf */
+	if (srp.sp_data.obuf_saved) {
+		srp_info("Restore Obuf[%d]\n", srp.sp_data.obuf_fill_done[0] ? 0 : 1);
+		memcpy(srp.obuf1, srp.sp_data.obuf, srp.obuf_size);
+		srp.sp_data.obuf_saved = 0;
+		srp.sp_data.obuf_restored = 1;
+
+		srp.obuf_fill_done[0] = 1;
+		srp.obuf_fill_done[1] = 1;
+		srp.obuf_copy_done[0] = 1;
+		srp.obuf_copy_done[1] = 1;
+		writel(srp.obuf_size, srp.commbox + SRP_PCM_DUMP_ADDR);
+	}
+
+	if (srp.wait_for_eos) {
+		srp.obuf_ready = 1;
+		srp.obuf_next = 0;
+	}
 }
 
 static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	/* TODO: Backup ibuf and wbuf */
+	srp_info("Suspend\n");
+
+	if (srp.is_opened) {
+		memcpy(srp.sp_data.dmem, srp.dmem, DMEM_SIZE);
+		srp_ibuf_save();
+		srp_obuf_save();
+
+		if (srp.wait_for_eos) {
+			srp.sp_data.wait_for_eos = srp.wait_for_eos;
+			srp.sp_data.prepare_for_eos = srp.prepare_for_eos;
+		}
+		srp.audss_clk_enable(false);
+	}
+
 	return 0;
 }
+
+static int srp_resume(struct platform_device *pdev)
+{
+	srp_info("Resume\n");
+
+	if (srp.is_opened) {
+		srp.audss_clk_enable(true);
+
+		srp_set_default_fw();
+		srp_flush_ibuf();
+		srp_flush_obuf();
+		srp_reset();
+
+		if (srp.sp_data.wait_for_eos) {
+			srp.sp_data.wait_for_eos = 0;
+			srp.wait_for_eos = 1;
+			srp.prepare_for_eos = 1;
+		}
+
+		memcpy(srp.dmem, srp.sp_data.dmem, DMEM_SIZE);
+		srp_ibuf_restore();
+		srp_obuf_restore();
+
+		srp.decoding_started = 1;
+		srp.sp_data.resume_after_suspend = 1;
+	}
+
+	return 0;
+}
+
+#else
+#define srp_suspend NULL
+#define srp_resume  NULL
+#endif
 
 static __devinit int srp_probe(struct platform_device *pdev)
 {
