@@ -44,8 +44,8 @@ static void exynos_ss_udc_enqueue_setup(struct exynos_ss_udc *udc);
 static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 			      gfp_t gfp_flags);
 static void exynos_ss_udc_kill_all_requests(struct exynos_ss_udc *udc,
-			      struct exynos_ss_udc_ep *ep,
-			      int result, bool force);
+					    struct exynos_ss_udc_ep *udc_ep,
+					    int result);
 static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 				      struct exynos_ss_udc_ep *udc_ep);
 static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
@@ -368,7 +368,7 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 	spin_unlock_irqrestore(&udc_ep->lock, flags);
 
 	/* terminate all requests with shutdown */
-	exynos_ss_udc_kill_all_requests(udc, udc_ep, -ESHUTDOWN, false);
+	exynos_ss_udc_kill_all_requests(udc, udc_ep, -ESHUTDOWN);
 
 	return 0;
 }
@@ -1179,29 +1179,27 @@ static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
  * @udc: The device state.
  * @ep: The endpoint the requests may be on.
  * @result: The result code to use.
- * @force: Force removal of any current requests
  *
  * Go through the requests on the given endpoint and mark them
  * completed with the given result code.
  */
 static void exynos_ss_udc_kill_all_requests(struct exynos_ss_udc *udc,
-			      struct exynos_ss_udc_ep *ep,
-			      int result, bool force)
+					    struct exynos_ss_udc_ep *udc_ep,
+					    int result)
 {
-	struct exynos_ss_udc_req *req, *treq;
+	struct exynos_ss_udc_req *udc_req, *treq;
 	unsigned long flags;
 
-	dev_dbg(udc->dev, "%s: ep%d\n", __func__, ep->epnum);
+	dev_dbg(udc->dev, "%s: ep%d\n", __func__, udc_ep->epnum);
 
-	spin_lock_irqsave(&ep->lock, flags);
+	spin_lock_irqsave(&udc_ep->lock, flags);
 
-	list_for_each_entry_safe(req, treq, &ep->queue, queue) {
+	list_for_each_entry_safe(udc_req, treq, &udc_ep->queue, queue) {
 
-		exynos_ss_udc_complete_request(udc, ep, req,
-					   result);
+		exynos_ss_udc_complete_request(udc, udc_ep, udc_req, result);
 	}
 
-	spin_unlock_irqrestore(&ep->lock, flags);
+	spin_unlock_irqrestore(&udc_ep->lock, flags);
 }
 
 /**
@@ -1414,7 +1412,7 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 			ep->tri = 0;
 		}
 
-		exynos_ss_udc_kill_all_requests(udc, ep, -ECONNRESET, true);
+		exynos_ss_udc_kill_all_requests(udc, ep, -ECONNRESET);
 
 		if (ep->halted)
 			exynos_ss_udc_ep_sethalt(&ep->ep, 0);
