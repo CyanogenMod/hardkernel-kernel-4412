@@ -256,24 +256,8 @@ void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size)
 	offset = start_addr - buf_start;
 
 	buf = (struct vb2_ion_buf *)is_vb->planes[0].mem_priv;
-	for_each_sg(buf->sg, sg, buf->nents, i) {
-		phys_addr_t start, end;
-
-		if (offset >= sg_dma_len(sg)) {
-			offset -= sg_dma_len(sg);
-			continue;
-		}
-
-		start = sg_phys(sg);
-		end = start + sg_dma_len(sg);
-
-		dmac_flush_range(phys_to_virt(start),
-				 phys_to_virt(end));
-		outer_flush_range(start, end);	/* L2 */
-
-		if (size == 0)
-			break;
-	}
+	dma_sync_sg_for_device(buf->conf->dev, buf->sg, buf->nents,
+                                                       DMA_BIDIRECTIONAL);
 }
 
 void fimc_is_mem_cache_inv(const void *start_addr, unsigned long size)
