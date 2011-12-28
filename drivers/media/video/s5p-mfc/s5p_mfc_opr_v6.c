@@ -498,6 +498,9 @@ int s5p_mfc_set_enc_stream_buffer(struct s5p_mfc_ctx *ctx,
 	WRITEL(addr, S5P_FIMV_E_STREAM_BUFFER_ADDR); /* 16B align */
 	WRITEL(size, S5P_FIMV_E_STREAM_BUFFER_SIZE);
 
+	mfc_debug(2, "stream buf addr: 0x%08lx, size: 0x%d",
+		addr, size);
+
 	return 0;
 }
 
@@ -508,6 +511,9 @@ void s5p_mfc_set_enc_frame_buffer(struct s5p_mfc_ctx *ctx,
 
 	WRITEL(y_addr, S5P_FIMV_E_SOURCE_LUMA_ADDR); /* 256B align */
 	WRITEL(c_addr, S5P_FIMV_E_SOURCE_CHROMA_ADDR);
+
+	mfc_debug(2, "enc src y buf addr: 0x%08lx", y_addr);
+	mfc_debug(2, "enc src c buf addr: 0x%08lx", c_addr);
 }
 
 void s5p_mfc_get_enc_frame_buffer(struct s5p_mfc_ctx *ctx,
