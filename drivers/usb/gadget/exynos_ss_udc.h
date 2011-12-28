@@ -55,6 +55,20 @@ enum ctrl_ep_state {
 };
 
 /**
+ * Types of TRB
+ */
+enum trb_control {
+	NORMAL = 1,
+	CONTROL_SETUP,
+	CONTROL_STATUS_2,
+	CONTROL_STATUS_3,
+	CONTROL_DATA,
+	ISOCHRONOUS_FIRST,
+	ISOCHRONOUS,
+	LINK_TRB,
+};
+
+/**
  * struct exynos_ss_udc_trb - transfer request block (TRB)
  * @buff_ptr_low: Buffer pointer low.
  * @buff_ptr_high: Buffer pointer high.

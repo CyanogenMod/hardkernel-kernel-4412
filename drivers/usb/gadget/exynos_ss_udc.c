@@ -481,7 +481,7 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 {
 	struct exynos_ss_udc_ep_command epcmd;
 	struct usb_request *ureq = &udc_req->req;
-	int trb_type = 1;
+	enum trb_control trb_type = NORMAL;
 	int epnum = udc_ep->epnum;
 	int xfer_length;
 	bool res;
@@ -501,19 +501,19 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 	if (epnum == 0 && !continuing)
 		switch (udc->ep0_state) {
 		case EP0_SETUP_PHASE:
-			trb_type = 2;
+			trb_type = CONTROL_SETUP;
 			break;
 
 		case EP0_DATA_PHASE:
-			trb_type = 5;
+			trb_type = CONTROL_DATA;
 			break;
 
 		case EP0_STATUS_PHASE_2:
-			trb_type = 3;
+			trb_type = CONTROL_STATUS_2;
 			break;
 
 		case EP0_STATUS_PHASE_3:
-			trb_type = 4;
+			trb_type = CONTROL_STATUS_3;
 			break;
 		default:
 			dev_warn(udc->dev, "%s: Erroneous EP0 state (%d)",
@@ -522,7 +522,7 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 			break;
 		}
 	else
-		trb_type = 1;
+		trb_type = NORMAL;
 
 	/* Get transfer length */
 	if (udc_ep->dir_in)
