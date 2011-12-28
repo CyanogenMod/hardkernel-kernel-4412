@@ -406,6 +406,12 @@ config EXYNOS5250_1200MHZ_SUPPORT
 	help
 	  Max 1.2Ghz support for EXYNOS5250
 
+config EXYNOS5250_1000MHZ_SUPPORT
+	bool "Max 1000MHz CPUFREQ LEVEL"
+	depends on EXYNOS5_CPUFREQ && CPU_EXYNOS5250
+	help
+	  Max 1.0Ghz support for EXYNOS5250
+
 endchoice
 
 menu "Support dynamic CPU Hotplug"

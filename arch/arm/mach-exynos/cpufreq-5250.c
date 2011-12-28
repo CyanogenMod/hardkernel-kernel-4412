@@ -352,11 +352,18 @@ static void __init set_volt_table(void)
 		exynos5250_freq_table[L7].frequency = CPUFREQ_ENTRY_INVALID;
 #ifdef CONFIG_EXYNOS5250_1400MHZ_SUPPORT
 		max_support_idx = L8;
-#else
+#elif defined(CONFIG_EXYNOS5250_1200MHZ_SUPPORT)
 		exynos5250_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
 		exynos5250_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
 
 		max_support_idx = L10;
+#else
+		exynos5250_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos5250_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos5250_freq_table[L10].frequency = CPUFREQ_ENTRY_INVALID;
+		exynos5250_freq_table[L11].frequency = CPUFREQ_ENTRY_INVALID;
+
+		max_support_idx = L12;
 #endif
 	}
 
