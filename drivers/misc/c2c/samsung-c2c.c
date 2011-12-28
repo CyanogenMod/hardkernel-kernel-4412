@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/sched.h>
 #include <linux/cma.h>
+#include <linux/sysfs.h>
 #ifdef ENABLE_C2CSTATE_TIMER
 #include <linux/timer.h>
 #endif
@@ -94,6 +95,93 @@ void c2c_reset_ops(void)
 	/* Last phase - Set clock gating */
 	c2c_set_clock_gating(C2C_SET);
 }
+
+static ssize_t c2c_ctrl_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	int ret = 0;
+	ret = sprintf(buf, "C2C State");
+	ret += sprintf(&buf[ret], "SysReg : 0x%x\n",
+			readl(c2c_con.c2c_sysreg));
+	ret += sprintf(&buf[ret], "Port Config : 0x%x\n",
+			c2c_readl(EXYNOS_C2C_PORTCONFIG));
+	ret += sprintf(&buf[ret], "FCLK_FREQ : %d\n",
+			c2c_readl(EXYNOS_C2C_FCLK_FREQ));
+	ret += sprintf(&buf[ret], "RX_MAX_FREQ : %d\n",
+			c2c_readl(EXYNOS_C2C_RX_MAX_FREQ));
+	ret += sprintf(&buf[ret], "IRQ_EN_SET1 : 0x%x\n",
+			c2c_readl(EXYNOS_C2C_IRQ_EN_SET1));
+	ret += sprintf(&buf[ret], "Get C2C sclk rate : %ld\n",
+			clk_get_rate(c2c_con.c2c_sclk));
+	ret += sprintf(&buf[ret], "Get C2C aclk rate : %ld\n",
+			clk_get_rate(c2c_con.c2c_aclk));
+
+	return ret;
+}
+
+static ssize_t c2c_ctrl_store(struct device *dev, struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	int ops_num, opp_val, req_clk;
+	sscanf(buf, "%d", &ops_num);
+
+	switch (ops_num) {
+	case 1:
+		c2c_reset_ops();
+		break;
+	case 2:
+	case 3:
+	case 4:
+		opp_val = ops_num - 1;
+		req_clk = 0;
+		dev_info(c2c_con.c2c_dev, "Set current OPP mode (%d)\n", opp_val);
+
+		if (opp_val == C2C_OPP100)
+			req_clk = c2c_con.clk_opp100;
+		else if (opp_val == C2C_OPP50)
+			req_clk = c2c_con.clk_opp50;
+		else if (opp_val == C2C_OPP25)
+			req_clk = c2c_con.clk_opp25;
+
+		if (opp_val == 0 || req_clk == 1) {
+			dev_info(c2c_con.c2c_dev, "This mode is not reserved in OPP mode.\n");
+		} else {
+			c2c_set_clock_gating(C2C_CLEAR);
+			if (c2c_con.opp_mode > opp_val) { /* increase case */
+				clk_set_rate(c2c_con.c2c_sclk, (req_clk +1) * MHZ);
+				c2c_writel(req_clk, EXYNOS_C2C_FCLK_FREQ);
+				c2c_set_func_clk(req_clk);
+				c2c_writel(req_clk, EXYNOS_C2C_RX_MAX_FREQ);
+			} else if (c2c_con.opp_mode < opp_val) { /* decrease case */
+				c2c_writel(req_clk, EXYNOS_C2C_RX_MAX_FREQ);
+				clk_set_rate(c2c_con.c2c_sclk, (req_clk +1) * MHZ);
+				c2c_writel(req_clk, EXYNOS_C2C_FCLK_FREQ);
+				c2c_set_func_clk(req_clk);
+			} else{
+				dev_info(c2c_con.c2c_dev, "Requested same OPP mode\n");
+			}
+			c2c_con.opp_mode = opp_val;
+			c2c_set_clock_gating(C2C_SET);
+		}
+
+		dev_info(c2c_con.c2c_dev, "Get C2C sclk rate : %ld\n",
+					clk_get_rate(c2c_con.c2c_sclk));
+		dev_info(c2c_con.c2c_dev, "Get C2C aclk rate : %ld\n",
+					clk_get_rate(c2c_con.c2c_aclk));
+		break;
+	default:
+		dev_info(c2c_con.c2c_dev, "Wrong C2C operation number\n");
+		dev_info(c2c_con.c2c_dev, "---C2C Operation Number---\n");
+		dev_info(c2c_con.c2c_dev, "1. C2C Reset\n");
+		dev_info(c2c_con.c2c_dev, "2. Set OPP25\n");
+		dev_info(c2c_con.c2c_dev, "3. Set OPP50\n");
+		dev_info(c2c_con.c2c_dev, "4. Set OPP100\n");
+	}
+
+	return count;
+}
+
+static DEVICE_ATTR(c2c_ctrl, 0644, c2c_ctrl_show, c2c_ctrl_store);
 
 int c2c_open(struct inode *inode, struct file *filp)
 {
@@ -518,7 +606,17 @@ static int __devinit samsung_c2c_probe(struct platform_device *pdev)
 	add_timer(&c2c_status_timer);
 #endif
 
+	/* Create sysfs file for C2C debug */
+	err = device_create_file(&pdev->dev, &dev_attr_c2c_ctrl);
+	if (err) {
+		dev_err(&pdev->dev, "Failed to create sysfs for C2C\n");
+		goto release_sscm_irq1;
+	}
+
 	return 0;
+
+release_sscm_irq1:
+	free_irq(sscm_irq1, pdev);
 
 release_sscm_irq0:
 	free_irq(sscm_irq0, pdev);
