@@ -32,7 +32,7 @@
 #define ALIGN_H		32
 
 /* System */					/* Size, Port, Align */
-#define MFC_FW_SYSTEM_SIZE	(0x200000)	/* 2MB, A, N(4KB for VMEM) */
+#define MFC_FW_SYSTEM_SIZE	(0x80000)	/* 512KB, A, N(4KB for VMEM) */
 
 /* Instance */
 #define MFC_CTX_SIZE_L		(0x96000)	/* 600KB, N, 2KB, H.264 Decoding only */
