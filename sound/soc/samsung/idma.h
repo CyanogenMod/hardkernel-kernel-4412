@@ -61,7 +61,7 @@
 				(SRP_DMEM_BASE + LP_TXBUFF_OFFSET) : \
 				(SRP_IRAM_BASE + LP_TXBUFF_OFFSET))
 /* If only enabled LP Audio */
-#elif defined(CONFIG_SND_SAMSUNG_LP)
+#else
 #define LP_TXBUFF_ADDR		(SRP_DMEM_BASE)
 #endif
 
