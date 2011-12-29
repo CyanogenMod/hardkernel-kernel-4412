@@ -2741,21 +2741,40 @@ static void __init smdk4x12_gpio_power_init(void)
 	gpio_free(EXYNOS4_GPX0(0));
 }
 
-static uint32_t smdk4x12_keymap[] __initdata = {
+static uint32_t smdk4x12_keymap0[] __initdata = {
 	/* KEY(row, col, keycode) */
 	KEY(1, 0, KEY_D), KEY(1, 1, KEY_A), KEY(1, 2, KEY_B),
 	KEY(1, 3, KEY_E), KEY(1, 4, KEY_C)
 };
 
-static struct matrix_keymap_data smdk4x12_keymap_data __initdata = {
-	.keymap		= smdk4x12_keymap,
-	.keymap_size	= ARRAY_SIZE(smdk4x12_keymap),
+static struct matrix_keymap_data smdk4x12_keymap_data0 __initdata = {
+	.keymap		= smdk4x12_keymap0,
+	.keymap_size	= ARRAY_SIZE(smdk4x12_keymap0),
 };
 
-static struct samsung_keypad_platdata smdk4x12_keypad_data __initdata = {
-	.keymap_data	= &smdk4x12_keymap_data,
+static struct samsung_keypad_platdata smdk4x12_keypad_data0 __initdata = {
+	.keymap_data	= &smdk4x12_keymap_data0,
 	.rows		= 2,
 	.cols		= 5,
+};
+
+static uint32_t smdk4x12_keymap1[] __initdata = {
+	/* KEY(row, col, keycode) */
+	KEY(1, 3, KEY_1), KEY(1, 4, KEY_2), KEY(1, 5, KEY_3),
+	KEY(1, 6, KEY_4), KEY(1, 7, KEY_5),
+	KEY(2, 5, KEY_D), KEY(2, 6, KEY_A), KEY(2, 7, KEY_B),
+	KEY(0, 7, KEY_E), KEY(0, 5, KEY_C)
+};
+
+static struct matrix_keymap_data smdk4x12_keymap_data1 __initdata = {
+	.keymap		= smdk4x12_keymap1,
+	.keymap_size	= ARRAY_SIZE(smdk4x12_keymap1),
+};
+
+static struct samsung_keypad_platdata smdk4x12_keypad_data1 __initdata = {
+	.keymap_data	= &smdk4x12_keymap_data1,
+	.rows		= 3,
+	.cols		= 8,
 };
 
 #ifdef CONFIG_WAKEUP_ASSIST
@@ -4096,7 +4115,10 @@ static void __init smdk4x12_machine_init(void)
 #ifdef CONFIG_VIDEO_FIMG2D
 	s5p_fimg2d_set_platdata(&fimg2d_data);
 #endif
-	samsung_keypad_set_platdata(&smdk4x12_keypad_data);
+	if (samsung_board_rev_is_0_0())
+		samsung_keypad_set_platdata(&smdk4x12_keypad_data0);
+	else
+		samsung_keypad_set_platdata(&smdk4x12_keypad_data1);
 	smdk4x12_smsc911x_init();
 #ifdef CONFIG_EXYNOS_C2C
 	exynos_c2c_set_platdata(&smdk4x12_c2c_pdata);
