@@ -45,6 +45,18 @@ extern const struct fimc_is_vb2 fimc_is_vb2_ion;
 struct vb2_buffer *is_vb;
 void *buf_start;
 
+extern const struct v4l2_file_operations fimc_is_scalerc_video_fops;
+extern const struct v4l2_ioctl_ops fimc_is_scalerc_video_ioctl_ops;
+extern const struct vb2_ops fimc_is_scalerc_qops;
+
+extern const struct v4l2_file_operations fimc_is_scalerp_video_fops;
+extern const struct v4l2_ioctl_ops fimc_is_scalerp_video_ioctl_ops;
+extern const struct vb2_ops fimc_is_scalerp_qops;
+
+extern const struct v4l2_file_operations fimc_is_3dnr_video_fops;
+extern const struct v4l2_ioctl_ops fimc_is_3dnr_video_ioctl_ops;
+extern const struct vb2_ops fimc_is_3dnr_qops;
+
 struct vb2_ion_conf {
 	struct device		*dev;
 	const char		*name;
@@ -202,7 +214,7 @@ int fimc_is_alloc_firmware(struct fimc_is_dev *dev)
 	dbg("Allocating memory for FIMC-IS firmware.\n");
 
 	fimc_is_bitproc_buf =
-		dev->vb2->ops->alloc(dev->video[FIMC_IS_VIDEO_NUM_SCALERP].alloc_ctx, FIMC_IS_A5_MEM_SIZE);
+		dev->vb2->ops->alloc(dev->alloc_ctx, FIMC_IS_A5_MEM_SIZE+FIMC_IS_TDNR_MEM_SIZE);
 	if (IS_ERR(fimc_is_bitproc_buf)) {
 		fimc_is_bitproc_buf = 0;
 		printk(KERN_ERR "Allocating bitprocessor buffer failed\n");
@@ -243,8 +255,6 @@ int fimc_is_alloc_firmware(struct fimc_is_dev *dev)
 void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size)
 {
 	struct vb2_ion_buf *buf;
-	struct scatterlist *sg;
-	int i;
 	off_t offset;
 
 	if (start_addr < buf_start) {
@@ -304,12 +314,17 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 		err("Couldn't alloc for FIMC-IS firmware\n");
 		return -EINVAL;
 	}
-	printk("fimc_is_init_mem111\n");
-	memset(dev->mem.kvaddr, 0, FIMC_IS_A5_MEM_SIZE);
+
+	memset(dev->mem.kvaddr, 0, FIMC_IS_A5_MEM_SIZE+FIMC_IS_TDNR_MEM_SIZE);
 	dev->is_p_region =
 		(struct is_region *)(dev->mem.kvaddr +
 			FIMC_IS_A5_MEM_SIZE - FIMC_IS_REGION_SIZE);
-	printk("fimc_is_init_mem2\n");
+
+	dev->mem.dvaddr_shared = (unsigned char *)dev->mem.dvaddr +
+			((unsigned char *)&dev->is_p_region->shared[0] - dev->mem.kvaddr);
+	dev->mem.kvaddr_shared = dev->mem.kvaddr +
+			((unsigned char *)&dev->is_p_region->shared[0] - dev->mem.kvaddr);
+
 	if (fimc_is_cache_flush(&dev->mem.vb2_buf,
 			(void *)dev->is_p_region, IS_PARAM_SIZE)) {
 		err("fimc_is_cache_flush-Err\n");
@@ -355,11 +370,9 @@ static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 	return ret;
 }
 
-static int fimc_is_load_fw(struct v4l2_subdev *sd)
+int fimc_is_load_fw(struct  fimc_is_dev *dev)
 {
 	int ret;
-	struct fimc_is_front_dev *front_dev = to_fimc_is_front_dev(sd);
-	struct fimc_is_dev *dev = to_fimc_is_dev_from_front_dev(front_dev);
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	if (test_bit(IS_ST_IDLE, &dev->state)) {
@@ -429,11 +442,9 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 	return ret;
 }
 
-static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
+int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 {
 	int ret;
-	struct fimc_is_front_dev *front_dev = to_fimc_is_front_dev(sd);
-	struct fimc_is_dev *dev = to_fimc_is_dev_from_front_dev(front_dev);
 
 	fimc_is_hw_diable_wdt(dev);
 	dev->sensor.sensor_type = val;
@@ -455,8 +466,9 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 			return -EBUSY;
 		}
 
-		/* Init sequence 2: Load setfile */
-		clear_bit(IS_ST_SET_FILE, &dev->state);
+		if(dev->is_p_region->shared[MAX_SHARED_COUNT-1]  != MAGIC_NUMBER)
+			dev_err(&dev->pdev->dev,	"MAGIC NUMBER error\n");
+
 		ret = wait_event_timeout(dev->irq_queue,
 			test_bit(IS_ST_SET_FILE, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
@@ -465,8 +477,12 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 				"wait timeout:%s\n", __func__);
 			return -EBUSY;
 		}
+
+		dbg(" Load setfile received\n");
 		fimc_is_load_setfile(dev);
+		dbg(" fimc_is_load_setfile end\n");
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
+		dbg(" fimc_is_hw_wait_intmsr0_intmsd0 end\n");
 		fimc_is_hw_set_load_setfile(dev);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		dbg("v4l2 : Load set file end\n");
@@ -475,8 +491,8 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 			virt_to_phys(dev->is_p_region));
 		dbg("ISP region addr = 0x%08x\n",
 			virt_to_phys(&dev->is_p_region->parameter.isp));
-		dbg("drc.otf_output region addr = 0x%08x\n",
-			virt_to_phys(&dev->is_p_region->parameter.drc.otf_output));
+		dbg("scalerc region addr = 0x%08x\n",
+			virt_to_phys(&dev->is_p_region->parameter.scalerc));
 		dbg("FN[0] addr = 0x%x\n",
 			virt_to_phys(&dev->is_p_region->header[0]
 							.frame_number));
@@ -511,6 +527,13 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+
+		dbg(" phy :: &dev->is_p_region->shared[447]= 0x%08x\n",
+			virt_to_phys( &dev->is_p_region->shared[447]));
+
+
+#if 0 /* FW restrction, will be updated */
+		/* 1 */
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue,
 			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state),
@@ -521,8 +544,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 			return -EBUSY;
 		}
 
-/* TODO : after firmware upgrade this function will be enable*/
-#if 0
+
 		/* 2. */
 		dbg("Default setting : preview_video\n");
 		dev->scenario_id = ISS_PREVIEW_VIDEO;
@@ -585,44 +607,9 @@ static int fimc_is_front_s_stream(struct v4l2_subdev *sd, int enable)
 	int ret;
 
 	if (enable) {
-		isp->sensor_num = 1;
-
-		fimc_is_load_fw(sd);
-		fimc_is_init_set(sd, SENSOR_S5K4E5_CSI_A);
-		if (test_bit(IS_ST_RUN, &isp->state)) {
-			dbg("IS change mode\n");
-			clear_bit(IS_ST_RUN, &isp->state);
-			set_bit(IS_ST_CHANGE_MODE, &isp->state);
-			fimc_is_hw_change_mode(isp, ISS_PREVIEW_STILL);
-			ret = wait_event_timeout(isp->irq_queue,
-					test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
-					FIMC_IS_SHUTDOWN_TIMEOUT);
-			if (!ret) {
-				dev_err(&isp->pdev->dev,
-					"Mode change timeout:%s\n", __func__);
-				return -EBUSY;
-			}
-		}
-
-		if (test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state) &&
-				!test_bit(IS_ST_STREAM_ON, &isp->state)) {
-			dbg("IS Stream On");
-			fimc_is_hw_set_stream(isp, 1);
-
-			ret = wait_event_timeout(isp->irq_queue,
-			test_bit(IS_ST_STREAM_ON, &isp->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-			if (!ret) {
-				dev_err(&isp->pdev->dev,
-					"wait timeout : %s\n", __func__);
-				return -EBUSY;
-			}
-
-		} else {
-			dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
-			return -EINVAL;
-		}
+		printk(KERN_INFO "fimc_is_front_s_stream : ON\n");
 	} else {
+		printk(KERN_INFO "fimc_is_front_s_stream : OFF\n");
 		fimc_is_hw_subip_poweroff(isp);
 		ret = wait_event_timeout(isp->irq_queue,
 			test_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power),
@@ -840,228 +827,6 @@ static struct v4l2_subdev_ops fimc_is_back_subdev_ops = {
 	.pad	= &fimc_is_back_pad_ops,
 	.video	= &fimc_is_back_video_ops,
 	.core	= &fimc_is_back_core_ops,
-};
-
-/*************************************************************************/
-/* video file opertation														 */
-/************************************************************************/
-
-static int fimc_is_video_open(struct file *file)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_SCALERP];
-	return 0;
-
-}
-
-static int fimc_is_video_close(struct file *file)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	vb2_queue_release(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq);
-	return 0;
-
-}
-
-static unsigned int fimc_is_video_poll(struct file *file,
-				      struct poll_table_struct *wait)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	return vb2_poll(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq, file, wait);
-
-}
-
-static int fimc_is_video_mmap(struct file *file, struct vm_area_struct *vma)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	return vb2_mmap(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq, vma);
-
-}
-
-/*************************************************************************/
-/* video ioctl operation														 */
-/************************************************************************/
-
-static int fimc_is_video_querycap(struct file *file, void *fh, struct v4l2_capability *cap)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	strncpy(cap->driver, isp->pdev->name, sizeof(cap->driver) - 1);
-
-	printk(KERN_DEBUG "%s(devname : %s)\n", __func__, cap->driver);
-	strncpy(cap->card, isp->pdev->name, sizeof(cap->card) - 1);
-	cap->bus_info[0] = 0;
-	cap->version = KERNEL_VERSION(1, 0, 0);
-	cap->capabilities = V4L2_CAP_STREAMING | V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_CAPTURE_MPLANE;
-
-	return 0;
-}
-
-static int fimc_is_video_enum_fmt_mplane(struct file *file, void *priv,
-				    struct v4l2_fmtdesc *f)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_video_get_format_mplane(struct file *file, void *fh, struct v4l2_format *format)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_video_set_format_mplane(struct file *file, void *fh, struct v4l2_format *format)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_video_try_format_mplane(struct file *file, void *fh, struct v4l2_format *format)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_video_cropcap(struct file *file, void *fh, struct v4l2_cropcap *cropcap)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_video_get_crop(struct file *file, void *fh, struct v4l2_crop *crop)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_video_set_crop(struct file *file, void *fh, struct v4l2_crop *crop)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_video_reqbufs(struct file *file, void *priv, struct v4l2_requestbuffers *buf)
-{
-	int ret;
-	struct fimc_is_video_dev *video = file->private_data;
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	ret = vb2_reqbufs(&video->vbq, buf);
-	return ret;
-}
-
-static int fimc_is_video_querybuf(struct file *file, void *priv, struct v4l2_buffer *buf)
-{
-	int ret;
-	struct fimc_is_video_dev *video = file->private_data;
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	ret = vb2_querybuf(&video->vbq, buf);
-
-	return ret;
-}
-
-static int fimc_is_video_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
-{
-	int ret;
-	struct fimc_is_video_dev *video = file->private_data;
-
-	printk(KERN_DEBUG "%s :: buf->index(%d)\n", __func__, buf->index);
-	ret = vb2_qbuf(&video->vbq, buf);
-	return ret;
-}
-
-static int fimc_is_video_dqbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
-{
-	int ret;
-	struct fimc_is_video_dev *video = file->private_data;
-	struct fimc_is_dev	*isp = video->dev;
-	struct vb2_buffer *vb;
-	dma_addr_t phy_addr;
-	char *vir_addr;
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	ret = vb2_dqbuf(&video->vbq, buf, file->f_flags & O_NONBLOCK);
-	vb = video->vbq.bufs[buf->index];
-	phy_addr = isp->vb2->plane_addr(vb, 0);
-
-#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
-	vir_addr = (char *)isp->vb2->ops->vaddr(vb->planes[0].mem_priv);
-#elif defined(CONFIG_VIDEOBUF2_ION)
-	vir_addr = (char *)isp->vb2->get_kvaddr(vb, 0);
-#endif
-
-	return ret;
-}
-
-static int fimc_is_video_streamon(struct file *file, void *priv, enum v4l2_buf_type type)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	return vb2_streamon(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq, type);
-}
-
-static int fimc_is_video_streamoff(struct file *file, void *priv, enum v4l2_buf_type type)
-{
-	struct fimc_is_dev *isp = video_drvdata(file);
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	return vb2_streamoff(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq, type);
-}
-
-static int fimc_is_video_enum_input(struct file *file, void *priv, struct v4l2_input *input)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_video_g_input(struct file *file, void *priv, unsigned int *input)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static int fimc_is_video_s_input(struct file *file, void *priv, unsigned int input)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return 0;
-}
-
-static const struct v4l2_file_operations fimc_is_video_fops = {
-	.owner		= THIS_MODULE,
-	.open		= fimc_is_video_open,
-	.release	= fimc_is_video_close,
-	.poll		= fimc_is_video_poll,
-	.unlocked_ioctl	= video_ioctl2,
-	.mmap		= fimc_is_video_mmap,
-};
-
-static const struct v4l2_ioctl_ops fimc_is_front_video_ioctl_ops = {
-	.vidioc_querycap		= fimc_is_video_querycap,
-	.vidioc_enum_fmt_vid_cap_mplane		= fimc_is_video_enum_fmt_mplane,
-	.vidioc_g_fmt_vid_cap_mplane		= fimc_is_video_get_format_mplane,
-	.vidioc_s_fmt_vid_cap_mplane		= fimc_is_video_set_format_mplane,
-	.vidioc_try_fmt_vid_cap_mplane		= fimc_is_video_try_format_mplane,
-	.vidioc_cropcap			= fimc_is_video_cropcap,
-	.vidioc_g_crop			= fimc_is_video_get_crop,
-	.vidioc_s_crop			= fimc_is_video_set_crop,
-	.vidioc_reqbufs			= fimc_is_video_reqbufs,
-	.vidioc_querybuf		= fimc_is_video_querybuf,
-	.vidioc_qbuf			= fimc_is_video_qbuf,
-	.vidioc_dqbuf			= fimc_is_video_dqbuf,
-	.vidioc_streamon		= fimc_is_video_streamon,
-	.vidioc_streamoff		= fimc_is_video_streamoff,
-	.vidioc_enum_input		= fimc_is_video_enum_input,
-	.vidioc_g_input			= fimc_is_video_g_input,
-	.vidioc_s_input			= fimc_is_video_s_input,
 };
 
 static int fimc_is_sensor_init_formats(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
@@ -1292,7 +1057,7 @@ static const struct media_entity_operations fimc_is_back_media_ops = {
 	.link_setup = fimc_is_back_link_setup,
 };
 
-static int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, int on)
+int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, int on)
 {
 	struct media_pad *pad = &start_entity->pads[0];
 	struct v4l2_subdev *back_sd;
@@ -1354,108 +1119,6 @@ static int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, 
 	return ret == -ENOIOCTLCMD ? 0 : ret;
 }
 
-static int queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
-		       unsigned int *num_planes, unsigned long sizes[],
-		       void *allocators[])
-{
-
-	struct fimc_is_video_dev *video = vq->drv_priv;
-
-	*num_planes = 1;
-
-	sizes[0] = PREVIEW_WIDTH*PREVIEW_HEIGHT*3/2;
-	allocators[0] = video->alloc_ctx;
-
-	printk(KERN_DEBUG "--%s(num_buffers : %d)(size : %d)\n", __func__, (int)*num_buffers, (int)sizes[0]);
-
-	return 0;
-}
-static int buffer_prepare(struct vb2_buffer *vb)
-{
-	printk(KERN_DEBUG "--%s\n", __func__);
-	return 0;
-}
-
-static void buffer_queue(struct vb2_buffer *vb)
-{
-	struct fimc_is_video_dev *video = vb->vb2_queue->drv_priv;
-	struct fimc_is_dev	*isp = video->dev;
-	struct media_entity *start_entity = &video->vd.entity;
-	dma_addr_t phy_addr;
-	int i;
-
-	printk(KERN_DEBUG "%s\n", __func__);
-	if(!test_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state)){
-		phy_addr = isp->vb2->plane_addr(vb, 0);
-
-		isp->phy_buf[vb->v4l2_buf.index] = phy_addr;
-		printk("index(%d) deviceVaddr(0x%08x)\n", vb->v4l2_buf.index, phy_addr);
-
-		for(i=0; i < 4; i++)
-			if(isp->phy_buf[i] == 0) return;
-
-		set_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state);
-		printk("FIMC_IS_STATE_BUFFER_PREPARED\n");
-	}
-
-	if(test_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state) &&
-		!test_bit(FIMC_IS_STATE_PREVIEW_PIPE_DONE, &isp->pipe_state)){
-		set_bit(IS_ST_IDLE, &isp->state);
-		fimc_is_pipeline_s_stream_preview(start_entity, 1);
-		set_bit(FIMC_IS_STATE_PREVIEW_PIPE_DONE, &isp->pipe_state);
-	}
-	return;
-}
-
-static inline void fimc_is_lock(struct vb2_queue *vq)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-}
-
-static inline void fimc_is_unlock(struct vb2_queue *vq)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-}
-
-static int start_streaming(struct vb2_queue *q)
-{
-	struct fimc_is_video_dev *video = q->drv_priv;
-	struct fimc_is_dev	*isp = video->dev;
-	struct media_entity *start_entity = &video->vd.entity;
-
-	printk(KERN_DEBUG "%s(pipe_state : %d)\n", __func__, (int)isp->pipe_state);
-
-	if(test_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state)){
-		fimc_is_pipeline_s_stream_preview(start_entity, 1);
-		set_bit(FIMC_IS_STATE_PREVIEW_PIPE_DONE, &isp->pipe_state);
-	}
-
-	return 0;
-}
-
-static int stop_streaming(struct vb2_queue *q)
-{
-	struct fimc_is_video_dev *video = q->drv_priv;
-	struct fimc_is_dev	*isp = video->dev;
-	struct media_entity *start_entity = &video->vd.entity;
-
-	fimc_is_pipeline_s_stream_preview(start_entity, 0);
-	set_bit(FIMC_IS_STATE_IDLE, &isp->pipe_state);
-	clear_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state);
-	clear_bit(FIMC_IS_STATE_PREVIEW_PIPE_DONE, &isp->pipe_state);
-
-	return 0;
-}
-
-static struct vb2_ops fimc_is_capture_qops = {
-	.queue_setup		= queue_setup,
-	.buf_prepare		= buffer_prepare,
-	.buf_queue			= buffer_queue,
-	.wait_prepare		= fimc_is_unlock,
-	.wait_finish		= fimc_is_lock,
-	.start_streaming	= start_streaming,
-	.stop_streaming		= stop_streaming,
-};
 
 static int fimc_is_suspend(struct device *dev)
 {
@@ -1512,161 +1175,205 @@ static struct exynos_md *fimc_is_get_md(enum mdev_node node)
 
 }
 
+static unsigned int fimc_is_get_intr_position(unsigned int intr_status)
+{
+	int i;
+
+	for(i=0; i < 5; i++)
+		if(intr_status &(1<<i))
+			return i;
+
+	return 0;
+}
+
 static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 {
 	struct fimc_is_dev *dev = dev_id;
 	int buf_index;
+	unsigned int intr_status, intr_pos;
 
-	dev->i2h_cmd.cmd = readl(dev->regs + ISSR10);
+	intr_status = readl(dev->regs + INTSR1);
+	intr_pos = fimc_is_get_intr_position(intr_status);
 
-	/* Read ISSR10 ~ ISSR15 */
-	switch (dev->i2h_cmd.cmd) {
-	case IHC_GET_SENSOR_NUMBER:
-		dbg("IHC_GET_SENSOR_NUMBER\n");
-		fimc_is_hw_get_param(dev, 1);
-		dbg("ISP - FW version - %d\n", dev->i2h_cmd.arg[0]);
-		dev->fw.ver = dev->i2h_cmd.arg[0];
-		fimc_is_hw_wait_intmsr0_intmsd0(dev);
-		fimc_is_hw_set_sensor_num(dev);
-		break;
-	case IHC_LOAD_SET_FILE:
-		fimc_is_hw_get_param(dev, 2);
-	case IHC_SET_SHOT_MARK:
-		fimc_is_hw_get_param(dev, 3);
-		break;
-	case IHC_SET_FACE_MARK:
-		fimc_is_hw_get_param(dev, 2);
-		break;
-	case IHC_FRAME_DONE:
-		fimc_is_hw_get_param(dev, 2);
-		break;
-	case IHC_NOT_READY:
-		break;
-	case IHC_AA_DONE:
-		fimc_is_hw_get_param(dev, 3);
-		break;
-	case ISR_DONE:
-		fimc_is_hw_get_param(dev, 3);
-		break;
-	case ISR_NDONE:
-		fimc_is_hw_get_param(dev, 4);
-		/* fimc_is_fw_clear_insr1(dev); */
-		break;
-	}
-	/* Just clear the interrupt pending bits. */
-	fimc_is_fw_clear_irq1(dev);
+	if(intr_pos == INTR_GENERAL){
+		dev->i2h_cmd.cmd = readl(dev->regs + ISSR10);
 
-	switch (dev->i2h_cmd.cmd) {
-	case IHC_GET_SENSOR_NUMBER:
-		fimc_is_hw_set_intgr0_gd0(dev);
-		set_bit(IS_ST_FW_DOWNLOADED, &dev->state);
-		break;
-	case IHC_LOAD_SET_FILE:
-		dev->setfile.base = dev->i2h_cmd.arg[0];
-		dev->setfile.size = dev->i2h_cmd.arg[1];
-		set_bit(IS_ST_SET_FILE, &dev->state);
-		break;
-	case IHC_SET_SHOT_MARK:
-		break;
-	case IHC_SET_FACE_MARK:
-		dev->fd_header.count = dev->i2h_cmd.arg[0];
-		dev->fd_header.index = dev->i2h_cmd.arg[1];
-		break;
-	case IHC_FRAME_DONE:
-		buf_index = (dev->i2h_cmd.arg[1] - 1) % 4;
-		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq.bufs[buf_index], VB2_BUF_STATE_DONE);
-		break;
-	case IHC_AA_DONE:
-		dbg("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
-			dev->i2h_cmd.arg[1], dev->i2h_cmd.arg[2]);
-		if (dev->af.af_state == FIMC_IS_AF_RUNNING)
-			dev->af.af_state = FIMC_IS_AF_LOCK;
-		dev->af.af_lock_state = dev->i2h_cmd.arg[0];
-		dev->af.ae_lock_state = dev->i2h_cmd.arg[1];
-		dev->af.awb_lock_state = dev->i2h_cmd.arg[2];
-		break;
-	case IHC_NOT_READY:
-		err("Init Sequnce Error- IS will be turned off!!");
-		break;
-	case ISR_DONE:
-		dbg("ISR_DONE - %d\n", dev->i2h_cmd.arg[0]);
-		switch (dev->i2h_cmd.arg[0]) {
-		case HIC_PREVIEW_STILL:
-		case HIC_PREVIEW_VIDEO:
-		case HIC_CAPTURE_STILL:
-		case HIC_CAPTURE_VIDEO:
-			if (test_and_clear_bit(IS_ST_CHANGE_MODE,
-				&dev->state)) {
-				dev->sensor.offset_x = dev->i2h_cmd.arg[1];
-				dev->sensor.offset_y = dev->i2h_cmd.arg[2];
-				set_bit(IS_ST_CHANGE_MODE_DONE, &dev->state);
-			}
+		/* Read ISSR10 ~ ISSR15 */
+		switch (dev->i2h_cmd.cmd) {
+		case IHC_GET_SENSOR_NUMBER:
+			dbg("IHC_GET_SENSOR_NUMBER\n");
+			fimc_is_hw_get_param(dev, 1);
+			dbg("ISP - FW version - %d\n", dev->i2h_cmd.arg[0]);
+			dev->fw.ver = dev->i2h_cmd.arg[0];
+			fimc_is_hw_wait_intmsr0_intmsd0(dev);
+			fimc_is_hw_set_sensor_num(dev);
 			break;
-		case HIC_STREAM_ON:
-			clear_bit(IS_ST_CHANGE_MODE_DONE, &dev->state);
-			set_bit(IS_ST_STREAM_ON, &dev->state);
+		case IHC_LOAD_SET_FILE:
+			fimc_is_hw_get_param(dev, 2);
+		case IHC_SET_SHOT_MARK:
+			fimc_is_hw_get_param(dev, 3);
 			break;
-		case HIC_STREAM_OFF:
-			set_bit(IS_ST_STREAM_OFF, &dev->state);
-			set_bit(IS_ST_RUN, &dev->state);
+		case IHC_SET_FACE_MARK:
+			fimc_is_hw_get_param(dev, 2);
 			break;
-		case HIC_SET_PARAMETER:
-			dev->p_region_index1 = 0;
-			dev->p_region_index2 = 0;
-			atomic_set(&dev->p_region_num, 0);
-			if (test_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state))
+		case IHC_NOT_READY:
+			break;
+		case IHC_AA_DONE:
+			fimc_is_hw_get_param(dev, 3);
+			break;
+		case ISR_DONE:
+			fimc_is_hw_get_param(dev, 3);
+			break;
+		case ISR_NDONE:
+			fimc_is_hw_get_param(dev, 4);
+			/* fimc_is_fw_clear_insr1(dev); */
+			break;
+		}
+		/* Just clear the interrupt pending bits. */
+		fimc_is_fw_clear_irq1(dev, intr_pos);
+
+		switch (dev->i2h_cmd.cmd) {
+		case IHC_GET_SENSOR_NUMBER:
+			fimc_is_hw_set_intgr0_gd0(dev);
+			set_bit(IS_ST_FW_DOWNLOADED, &dev->state);
+			break;
+		case IHC_LOAD_SET_FILE:
+			dev->setfile.base = dev->i2h_cmd.arg[0];
+			dev->setfile.size = dev->i2h_cmd.arg[1];
+			set_bit(IS_ST_SET_FILE, &dev->state);
+			dbg("IHC_LOAD_SET_FILE\n");
+			break;
+		case IHC_SET_SHOT_MARK:
+			break;
+		case IHC_SET_FACE_MARK:
+			dev->fd_header.count = dev->i2h_cmd.arg[0];
+			dev->fd_header.index = dev->i2h_cmd.arg[1];
+			break;
+		case IHC_AA_DONE:
+			dbg("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
+				dev->i2h_cmd.arg[1], dev->i2h_cmd.arg[2]);
+			if (dev->af.af_state == FIMC_IS_AF_RUNNING)
+				dev->af.af_state = FIMC_IS_AF_LOCK;
+			dev->af.af_lock_state = dev->i2h_cmd.arg[0];
+			dev->af.ae_lock_state = dev->i2h_cmd.arg[1];
+			dev->af.awb_lock_state = dev->i2h_cmd.arg[2];
+			break;
+		case IHC_NOT_READY:
+			err("Init Sequnce Error- IS will be turned off!!");
+			break;
+		case ISR_DONE:
+			dbg("ISR_DONE - %d\n", dev->i2h_cmd.arg[0]);
+			switch (dev->i2h_cmd.arg[0]) {
+			case HIC_PREVIEW_STILL:
+			case HIC_PREVIEW_VIDEO:
+			case HIC_CAPTURE_STILL:
+			case HIC_CAPTURE_VIDEO:
+				if (test_and_clear_bit(IS_ST_CHANGE_MODE,
+					&dev->state)) {
+					dev->sensor.offset_x = dev->i2h_cmd.arg[1];
+					dev->sensor.offset_y = dev->i2h_cmd.arg[2];
+					set_bit(IS_ST_CHANGE_MODE_DONE, &dev->state);
+				}
+				break;
+			case HIC_STREAM_ON:
+				clear_bit(IS_ST_CHANGE_MODE_DONE, &dev->state);
+				set_bit(IS_ST_STREAM_ON, &dev->state);
+				break;
+			case HIC_STREAM_OFF:
+				set_bit(IS_ST_STREAM_OFF, &dev->state);
 				set_bit(IS_ST_RUN, &dev->state);
-			else if (test_bit(IS_ST_INIT_CAPTURE_STILL,
-				&dev->state))
+				break;
+			case HIC_SET_PARAMETER:
+				dev->p_region_index1 = 0;
+				dev->p_region_index2 = 0;
+				atomic_set(&dev->p_region_num, 0);
+				if (test_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state))
+					set_bit(IS_ST_RUN, &dev->state);
+				else if (test_bit(IS_ST_INIT_CAPTURE_STILL,
+					&dev->state))
+					set_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state);
+				else if (test_bit(IS_ST_INIT_PREVIEW_VIDEO,
+					&dev->state))
+					set_bit(IS_ST_INIT_CAPTURE_STILL, &dev->state);
+				else if (test_bit(IS_ST_INIT_PREVIEW_STILL,
+					&dev->state))
+					set_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state);
+				else {
+					clear_bit(IS_ST_SET_PARAM, &dev->state);
+					set_bit(IS_ST_RUN, &dev->state);
+				}
+
+				if (dev->af.af_state == FIMC_IS_AF_SETCONFIG)
+					dev->af.af_state = FIMC_IS_AF_RUNNING;
+				else if (dev->af.af_state == FIMC_IS_AF_ABORT)
+					dev->af.af_state = FIMC_IS_AF_IDLE;
+				break;
+			case HIC_GET_PARAMETER:
+				break;
+			case HIC_SET_TUNE:
+				break;
+			case HIC_GET_STATUS:
+				break;
+			case HIC_OPEN_SENSOR:
+				set_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
+				dbg("reply HIC_OPEN_SENSOR");
+				break;
+			case HIC_CLOSE_SENSOR:
 				set_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state);
-			else if (test_bit(IS_ST_INIT_PREVIEW_VIDEO,
-				&dev->state))
-				set_bit(IS_ST_INIT_CAPTURE_STILL, &dev->state);
-			else if (test_bit(IS_ST_INIT_PREVIEW_STILL,
-				&dev->state))
-				set_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state);
-			else {
-				clear_bit(IS_ST_SET_PARAM, &dev->state);
-				set_bit(IS_ST_RUN, &dev->state);
+				dev->sensor.id = 0;
+				break;
+			case HIC_POWER_DOWN:
+				clear_bit(FIMC_IS_PWR_ST_POWERED, &dev->power);
+				set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
+				break;
+			}
+			break;
+		case ISR_NDONE:
+			err("ISR_NDONE - %d: %d\n", dev->i2h_cmd.arg[0],
+				dev->i2h_cmd.arg[1]);
+
+			switch (dev->i2h_cmd.arg[1]) {
+			case IS_ERROR_SET_PARAMETER:
+				fimc_is_mem_cache_inv((void *)dev->is_p_region,
+					IS_PARAM_SIZE);
+				break;
 			}
 
-			if (dev->af.af_state == FIMC_IS_AF_SETCONFIG)
-				dev->af.af_state = FIMC_IS_AF_RUNNING;
-			else if (dev->af.af_state == FIMC_IS_AF_ABORT)
-				dev->af.af_state = FIMC_IS_AF_IDLE;
-			break;
-		case HIC_GET_PARAMETER:
-			break;
-		case HIC_SET_TUNE:
-			break;
-		case HIC_GET_STATUS:
-			break;
-		case HIC_OPEN_SENSOR:
-			set_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
-			dbg("reply HIC_OPEN_SENSOR");
-			break;
-		case HIC_CLOSE_SENSOR:
-			set_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state);
-			dev->sensor.id = 0;
-			break;
-		case HIC_POWER_DOWN:
-			clear_bit(FIMC_IS_PWR_ST_POWERED, &dev->power);
-			set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
 			break;
 		}
-		break;
-	case ISR_NDONE:
-		err("ISR_NDONE - %d: %d\n", dev->i2h_cmd.arg[0],
-			dev->i2h_cmd.arg[1]);
+	}
+	else if(intr_pos == INTR_FRAME_DONE_SCALERC){
+		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR24);
+		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR25);
+		fimc_is_fw_clear_irq1(dev, intr_pos);
 
-		switch (dev->i2h_cmd.arg[1]) {
-		case IS_ERROR_SET_PARAMETER:
-			fimc_is_mem_cache_inv((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			break;
-		}
+		buf_index = (dev->i2h_cmd.arg[1] - 1)
+					% dev->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf;
+		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_SCALERC].vbq.bufs[buf_index],
+						VB2_BUF_STATE_DONE);
+	}
+	else if(intr_pos == INTR_FRAME_DONE_TDNR){
+		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR28);
+		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR29);
+		fimc_is_fw_clear_irq1(dev, intr_pos);
+		/* FW restriction
+		buf_index = (dev->i2h_cmd.arg[1] - 1)
+					% dev->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf;
+		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_3DNR].vbq.bufs[buf_index],
+						VB2_BUF_STATE_DONE);
+		*/
+	}
+	else if(intr_pos == INTR_FRAME_DONE_SCALERP){
+		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR32);
+		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR33);
+		fimc_is_fw_clear_irq1(dev, intr_pos);
+		/* FW restriction
+		buf_index = (dev->i2h_cmd.arg[1] - 1)
+					% dev->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf;
+		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq.bufs[buf_index],
+						VB2_BUF_STATE_DONE);
+		*/
 
-		break;
 	}
 	wake_up(&dev->irq_queue);
 
@@ -1679,7 +1386,9 @@ static int fimc_is_probe(struct platform_device *pdev)
 	struct resource *regs_res;
 	struct fimc_is_dev *isp;
 	int ret = -ENODEV;
-	struct vb2_queue *q;
+	struct vb2_queue *scalerc_q;
+	struct vb2_queue *scalerp_q;
+	struct vb2_queue *dnr_q;
 
 	printk(KERN_DEBUG "fimc_is_front_probe\n");
 
@@ -1691,6 +1400,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	isp->pdata = pdev->dev.platform_data;
 	isp->id = pdev->id;
 	set_bit(FIMC_IS_STATE_IDLE, &isp->pipe_state);
+	set_bit(IS_ST_IDLE , &isp->state);
 
 	init_waitqueue_head(&isp->irq_queue);
 	spin_lock_init(&isp->slock);
@@ -1823,16 +1533,27 @@ static int fimc_is_probe(struct platform_device *pdev)
 	snprintf(isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.name, sizeof(isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.name),
 			"%s", FIMC_IS_VIDEO_SCALERC_NAME);
 
-	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.fops	= &fimc_is_video_fops;
-	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.ioctl_ops	= &fimc_is_front_video_ioctl_ops;
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.fops	= &fimc_is_scalerc_video_fops;
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.ioctl_ops	= &fimc_is_scalerc_video_ioctl_ops;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.v4l2_dev	= &isp->mdev->v4l2_dev;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.minor	= -1;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.release	= video_device_release;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.lock	= &isp->lock;
 	video_set_drvdata(&isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd, isp);
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].dev = isp;
+
+	scalerc_q = &isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vbq;
+	memset(scalerc_q, 0, sizeof(*scalerc_q));
+	scalerc_q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+	scalerc_q->io_modes = VB2_MMAP | VB2_USERPTR;
+	scalerc_q->drv_priv = &isp->video[FIMC_IS_VIDEO_NUM_SCALERC];
+	scalerc_q->ops = &fimc_is_scalerc_qops;
+	scalerc_q->mem_ops = isp->vb2->ops;;
+
+	vb2_queue_init(scalerc_q);
 
 	ret = video_register_device(&isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd, VFL_TYPE_GRABBER,
-					FIMC_IS_VIDEO_NUM_SCALERC+FIMC_IS_VIDEO_NUM_OFFSET);
+					FIMC_IS_VIDEO_NUM_SCALERC+EXYNOS_VIDEONODE_FIMC_IS);
 	printk(KERN_DEBUG "VIDEO NODE :: scalerC minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vd.minor);
 	if (ret) {
 		printk(KERN_ERR "%s : Failed to register ScalerC video device\n", __func__);
@@ -1849,8 +1570,8 @@ static int fimc_is_probe(struct platform_device *pdev)
 	snprintf(isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.name, sizeof(isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.name),
 			"%s", FIMC_IS_VIDEO_SCALERP_NAME);
 
-	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.fops	= &fimc_is_video_fops;
-	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.ioctl_ops	= &fimc_is_front_video_ioctl_ops;
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.fops	= &fimc_is_scalerp_video_fops;
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.ioctl_ops	= &fimc_is_scalerp_video_ioctl_ops;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.v4l2_dev	= &isp->mdev->v4l2_dev;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.minor	= -1;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.release	= video_device_release;
@@ -1858,18 +1579,18 @@ static int fimc_is_probe(struct platform_device *pdev)
 	video_set_drvdata(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd, isp);
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].dev = isp;
 
-	q = &isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq;
-	memset(q, 0, sizeof(*q));
-	q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
-	q->io_modes = VB2_MMAP | VB2_USERPTR;
-	q->drv_priv = &isp->video[FIMC_IS_VIDEO_NUM_SCALERP];
-	q->ops = &fimc_is_capture_qops;
-	q->mem_ops = isp->vb2->ops;;
+	scalerp_q = &isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq;
+	memset(scalerp_q, 0, sizeof(*scalerp_q));
+	scalerp_q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+	scalerp_q->io_modes = VB2_MMAP | VB2_USERPTR;
+	scalerp_q->drv_priv = &isp->video[FIMC_IS_VIDEO_NUM_SCALERP];
+	scalerp_q->ops = &fimc_is_scalerp_qops;
+	scalerp_q->mem_ops = isp->vb2->ops;;
 
-	vb2_queue_init(q);
+	vb2_queue_init(scalerp_q);
 
 	ret = video_register_device(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd, VFL_TYPE_GRABBER,
-					FIMC_IS_VIDEO_NUM_SCALERP+FIMC_IS_VIDEO_NUM_OFFSET);
+					FIMC_IS_VIDEO_NUM_SCALERP+EXYNOS_VIDEONODE_FIMC_IS);
 	printk(KERN_DEBUG "VIDEO NODE :: scalerP minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vd.minor);
 	if (ret) {
 		printk(KERN_ERR "%s : Failed to register ScalerP video device\n", __func__);
@@ -1886,16 +1607,27 @@ static int fimc_is_probe(struct platform_device *pdev)
 	snprintf(isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.name, sizeof(isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.name),
 			"%s", FIMC_IS_VIDEO_3DNR_NAME);
 
-	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.fops	= &fimc_is_video_fops;
-	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.ioctl_ops	= &fimc_is_front_video_ioctl_ops;
+	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.fops	= &fimc_is_3dnr_video_fops;
+	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.ioctl_ops	= &fimc_is_3dnr_video_ioctl_ops;
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.v4l2_dev	= &isp->mdev->v4l2_dev;
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.minor	= -1;
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.release	= video_device_release;
 	isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.lock	= &isp->lock;
 	video_set_drvdata(&isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd, isp);
+	isp->video[FIMC_IS_VIDEO_NUM_3DNR].dev = isp;
+
+	dnr_q = &isp->video[FIMC_IS_VIDEO_NUM_3DNR].vbq;
+	memset(dnr_q, 0, sizeof(*dnr_q));
+	dnr_q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
+	dnr_q->io_modes = VB2_MMAP | VB2_USERPTR;
+	dnr_q->drv_priv = &isp->video[FIMC_IS_VIDEO_NUM_3DNR];
+	dnr_q->ops = &fimc_is_3dnr_qops;
+	dnr_q->mem_ops = isp->vb2->ops;;
+
+	vb2_queue_init(dnr_q);
 
 	ret = video_register_device(&isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd, VFL_TYPE_GRABBER,
-					FIMC_IS_VIDEO_NUM_3DNR+FIMC_IS_VIDEO_NUM_OFFSET);
+					FIMC_IS_VIDEO_NUM_3DNR+EXYNOS_VIDEONODE_FIMC_IS);
 	printk(KERN_DEBUG "VIDEO NODE :: 3DNR minor : %d\n", isp->video[FIMC_IS_VIDEO_NUM_3DNR].vd.minor);
 	if (ret) {
 		printk(KERN_ERR "%s : Failed to register 3DNR video device\n", __func__);
@@ -1960,9 +1692,9 @@ static int fimc_is_probe(struct platform_device *pdev)
 		printk(KERN_ERR "v4l2_device_register_subdev_nodes failed\n");
 
 	/* init vb2*/
-	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].alloc_ctx = isp->vb2->init(isp);
-	if (IS_ERR(isp->video[FIMC_IS_VIDEO_NUM_SCALERP].alloc_ctx)) {
-		ret = PTR_ERR(isp->video[FIMC_IS_VIDEO_NUM_SCALERP].alloc_ctx);
+	isp->alloc_ctx = isp->vb2->init(isp);
+	if (IS_ERR(isp->alloc_ctx)) {
+		ret = PTR_ERR(isp->alloc_ctx);
 		goto p_err1;
 	}
 
@@ -1983,8 +1715,8 @@ static int fimc_is_probe(struct platform_device *pdev)
 	}
 
 #if defined(CONFIG_VIDEOBUF2_ION)
-	if (isp->video[FIMC_IS_VIDEO_NUM_SCALERP].alloc_ctx)
-		fimc_is_mem_resume(isp->video[FIMC_IS_VIDEO_NUM_SCALERP].alloc_ctx);
+	if (isp->alloc_ctx)
+		fimc_is_mem_resume(isp->alloc_ctx);
 #endif
 	printk(KERN_DEBUG "%s : fimc_is_front_%d probe success\n", __func__, pdev->id);
 	printk("probe2\n");

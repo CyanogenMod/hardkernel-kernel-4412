@@ -17,64 +17,27 @@
 /*
 Default setting values
 */
-#if 0 /*TODO: after upgrade firmware this function will be enable*/
-#ifndef CONFIG_VIDEO_S5K6A3
-#ifdef CONFIG_VIDEO_S5K3H1
-#define PREVIEW_WIDTH		640
-#define PREVIEW_HEIGHT		480
-#define CAPTURE_WIDTH		3232
-#define CAPTURE_HEIGHT		2424
-#define CAMCORDING_WIDTH	1920
-#define CAMCORDING_HEIGHT	1080
-#define PREVIEW_FRAMERATE	15
-#define CAPTURE_FRAMERATE	15
-#define CAMCORDING_FRAMERATE	15
-#endif
-#endif
-#ifndef CONFIG_VIDEO_S5K6A3
-#ifdef CONFIG_VIDEO_S5K3H2
-#define PREVIEW_WIDTH		640
-#define PREVIEW_HEIGHT		480
-#define CAPTURE_WIDTH		3232
-#define CAPTURE_HEIGHT		2424
-#define CAMCORDING_WIDTH	1920
-#define CAMCORDING_HEIGHT	1080
-#define PREVIEW_FRAMERATE	15
-#define CAPTURE_FRAMERATE	15
-#define CAMCORDING_FRAMERATE	15
-#endif
-#endif
-#ifdef CONFIG_VIDEO_S5K6A3
-#define PREVIEW_WIDTH		640
-#define PREVIEW_HEIGHT		480
-#define CAPTURE_WIDTH		1392
-#define CAPTURE_HEIGHT		1392
-#define CAMCORDING_WIDTH	1280
-#define CAMCORDING_HEIGHT	720
-#ifndef FIX_FRAMERATE
-#define PREVIEW_FRAMERATE	30
-#define CAPTURE_FRAMERATE	15
-#define CAMCORDING_FRAMERATE	30
+#if 0
+#define DEFAULT_PREVIEW_STILL_WIDTH	2576	/* (2592-16) */
+#define DEFAULT_PREVIEW_STILL_HEIGHT	1948	/* (1960-12) */
 #else
-#define PREVIEW_FRAMERATE	30
-#define CAPTURE_FRAMERATE	30
-#define CAMCORDING_FRAMERATE	30
+#define DEFAULT_PREVIEW_STILL_WIDTH	1920	/* (2592-16) */
+#define DEFAULT_PREVIEW_STILL_HEIGHT  1080	/* (1960-12) */
 #endif
-#endif
-#else
-#define PREVIEW_WIDTH		2576	/* (2592-16) */
-#define PREVIEW_HEIGHT		1948	/* (1960-12) */
-#define CAPTURE_WIDTH		640
-#define CAPTURE_HEIGHT		480
-#define CAMCORDING_WIDTH	640
-#define CAMCORDING_HEIGHT	480
-#define PREVIEW_FRAMERATE	15
-#define CAPTURE_FRAMERATE	15
-#define CAMCORDING_FRAMERATE	15
-#endif
+#define DEFAULT_CAPTURE_STILL_WIDTH	640
+#define DEFAULT_CAPTURE_STILL_HEIGHT	480
+#define DEFAULT_PREVIEW_VIDEO_WIDTH	640
+#define DEFAULT_PREVIEW_VIDEO_HEIGHT	480
+#define DEFAULT_CAPTURE_VIDEO_WIDTH	640
+#define DEFAULT_CAPTURE_VIDEO_HEIGHT	480
+
+#define DEFAULT_PREVIEW_STILL_FRAMERATE	15
+#define DEFAULT_CAPTURE_STILL_FRAMERATE	15
+#define DEFAULT_PREVIEW_VIDEO_FRAMERATE	30
+#define DEFAULT_CAPTURE_VIDEO_FRAMERATE	30
 
 int fimc_is_fw_clear_irq2(struct fimc_is_dev *dev);
-int fimc_is_fw_clear_irq1(struct fimc_is_dev *dev);
+int fimc_is_fw_clear_irq1(struct fimc_is_dev *dev, unsigned int intr_pos);
 void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev);
 void fimc_is_hw_set_load_setfile(struct fimc_is_dev *dev);
 int fimc_is_hw_get_sensor_num(struct fimc_is_dev *dev);

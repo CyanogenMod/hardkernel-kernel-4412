@@ -46,7 +46,6 @@
 #define FIMC_IS_VIDEO_SCALERP_NAME			"exynos5-fimc-is-scalerp"
 
 #define MAX_I2H_ARG							(4)
-#define FIMC_IS_VIDEO_NUM_OFFSET				(10)
 
 #define FIMC_IS_FW								"fimc_is_fw.bin"
 #define FIMC_IS_SETFILE							"setfile.bin"
@@ -60,6 +59,10 @@
 #define DRC_SETFILE_SIZE						(0x140)
 #define FD_SETFILE_SIZE							(0x88*2)
 #define FIMC_IS_FW_BASE_MASK					((1 << 26) - 1)
+#define FIMC_IS_TDNR_MEM_SIZE					(1920*1080*4)
+
+#define FIMC_IS_MAX_BUF_NUM					8
+#define FIMC_IS_MAX_BUf_PLANE_NUM			3
 
 #define FIMC_IS_SENSOR_MAX_ENTITIES			1
 #define FIMC_IS_SENSOR_PAD_SOURCE_FRONT		0
@@ -132,15 +135,12 @@ enum fimc_is_video_dev_num {
 };
 
 enum fimc_is_pipe_state {
-	FIMC_IS_STATE_IDLE					= (1<<0),
-	FIMC_IS_STATE_FW_DOWNLOADED 		= (1<<1),
-	FIMC_IS_STATE_STILLSHOT_PIPE_DONE	= (1<<2),
-	FIMC_IS_STATE_STILLSHOT_STREAM_ON	= (1<<3),
-	FIMC_IS_STATE_PREVIEW_PIPE_DONE		= (1<<4),
-	FIMC_IS_STATE_PREVIEW_STREAM_ON		= (1<<5),
-	FIMC_IS_STATE_RECORDING_PIPE_DONE	= (1<<6),
-	FIMC_IS_STATE_RECORDING_STREAM_ON	= (1<<7),
-	FIMC_IS_STATE_BUFFER_PREPARED 		= (1<<8),
+	FIMC_IS_STATE_IDLE					= 0,
+	FIMC_IS_STATE_FW_DOWNLOADED,
+	FIMC_IS_STATE_SCALERC_STREAM_ON,
+	FIMC_IS_STATE_SCALERP_STREAM_ON,
+	FIMC_IS_STATE_3DNR_STREAM_ON,
+	FIMC_IS_STATE_BUFFER_PREPARED,
 };
 
 enum fimc_is_state {
@@ -160,7 +160,7 @@ enum fimc_is_state {
 	IS_ST_PEND,
 	IS_ST_BLOCKED,
 	IS_ST_CHANGE_MODE_DONE,
-	IS_ST_END
+	IS_ST_END,
 };
 
 enum af_state {
@@ -278,9 +278,11 @@ struct fimc_is_back_dev {
 struct fimc_is_video_dev {
 	struct video_device		vd;
 	struct media_pad		pads;
-	struct vb2_alloc_ctx		*alloc_ctx;
 	struct vb2_queue		vbq;
 	struct fimc_is_dev			*dev;
+	unsigned int			num_buf;
+	unsigned int			num_plane;
+	dma_addr_t buf[FIMC_IS_MAX_BUF_NUM][FIMC_IS_MAX_BUf_PLANE_NUM];
 };
 
 struct is_meminfo {
@@ -290,7 +292,9 @@ struct is_meminfo {
 	dma_addr_t	vaddr_curr;	/* current addr */
 	void		*bitproc_buf;
 	size_t		dvaddr;
+	unsigned char	*dvaddr_shared;
 	unsigned char	*kvaddr;
+	unsigned char	*kvaddr_shared;
 	struct vb2_buffer	vb2_buf;
 
 };
@@ -360,6 +364,7 @@ struct fimc_is_dev {
 	struct fimc_is_back_dev			back;
 	/* 0-bayer, 1-scalerC, 2-3DNR, 3-scalerP */
 	struct fimc_is_video_dev			video[FIMC_IS_VIDEO_MAX_NUM];
+	struct vb2_alloc_ctx				*alloc_ctx;
 
 	struct resource					*regs_res;
 	void __iomem						*regs;
@@ -386,8 +391,12 @@ struct fimc_is_dev {
 	struct is_af_info					af;
 
 	const struct fimc_is_vb2				*vb2;
-	dma_addr_t						phy_buf[4];
 };
 
 void fimc_is_mem_resume(void *alloc_ctxes);
+void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size);
+int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, int on);
+int fimc_is_init_set(struct fimc_is_dev *dev , u32 val);
+int fimc_is_load_fw(struct fimc_is_dev *dev);
+
 #endif /* FIMC_IS_CORE_H_ */

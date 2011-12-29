@@ -13,7 +13,7 @@
 #ifndef FIMC_IS_CMD_H
 #define FIMC_IS_CMD_H
 
-#define IS_COMMAND_VER 106 /* IS COMMAND VERSION 1.05 */
+#define IS_COMMAND_VER 107 /* IS COMMAND VERSION 1.07 */
 
 enum is_cmd {
 	/* HOST -> IS */
@@ -106,7 +106,23 @@ struct is_common_reg {
 	u32 ihc_param3;
 	u32 ihc_param4;
 
-	u32 reserved2[48];
+	u32 reserved2[4];
+
+	u32 isp_sensor_id;
+	u32 isp_param1;
+	u32 reserved3[2];
+
+	u32 scc_sensor_id;
+	u32 scc_param1;
+	u32 reserved4[2];
+
+	u32 dnr_sensor_id;
+	u32 dnr_param1;
+	u32 reserved5[2];
+
+	u32 scp_sensor_id;
+	u32 scp_param1;
+	u32 reserved6[30];
 };
 
 struct is_mcuctl_reg {
