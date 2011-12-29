@@ -131,6 +131,9 @@ struct s3c_pcm_info {
 
 	struct s3c_dma_params	*dma_playback;
 	struct s3c_dma_params	*dma_capture;
+
+	u32	suspend_pcmctl;
+	u32	suspend_pcmclkctl;
 };
 
 static struct s3c2410_dma_client s3c_pcm_dma_client_out = {
@@ -329,7 +332,6 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 	/* Set the SCLK divider */
 	sclk_div = clk_get_rate(clk) / pcm->sclk_per_fs /
 					params_rate(params) / 2 - 1;
-
 	if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
 		clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
 
@@ -474,6 +476,33 @@ static int s3c_pcm_set_sysclk(struct snd_soc_dai *cpu_dai,
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int s3c_pcm_suspend(struct snd_soc_dai *dai)
+{
+	struct s3c_pcm_info *pcm = snd_soc_dai_get_drvdata(dai);
+	void __iomem *regs = pcm->regs;
+
+	pcm->suspend_pcmctl = readl(regs + S3C_PCM_CTL);
+	pcm->suspend_pcmclkctl = readl(regs + S3C_PCM_CLKCTL);
+
+	return 0;
+}
+
+static int s3c_pcm_resume(struct snd_soc_dai *dai)
+{
+	struct s3c_pcm_info *pcm = snd_soc_dai_get_drvdata(dai);
+	void __iomem *regs = pcm->regs;
+
+	writel(pcm->suspend_pcmctl, regs + S3C_PCM_CTL);
+	writel(pcm->suspend_pcmclkctl, regs + S3C_PCM_CLKCTL);
+
+	return 0;
+}
+#else
+#define s3c_pcm_suspend NULL
+#define s3c_pcm_resume  NULL
+#endif
+
 static struct snd_soc_dai_ops s3c_pcm_dai_ops = {
 	.set_sysclk	= s3c_pcm_set_sysclk,
 	.set_clkdiv	= s3c_pcm_set_clkdiv,
@@ -503,10 +532,14 @@ static struct snd_soc_dai_ops s3c_pcm_dai_ops = {
 struct snd_soc_dai_driver s3c_pcm_dai[] = {
 	[0] = {
 		.name	= "samsung-pcm.0",
+		.suspend = s3c_pcm_suspend,
+		.resume = s3c_pcm_resume,
 		S3C_PCM_DAI_DECLARE,
 	},
 	[1] = {
 		.name	= "samsung-pcm.1",
+		.suspend = s3c_pcm_suspend,
+		.resume = s3c_pcm_resume,
 		S3C_PCM_DAI_DECLARE,
 	},
 };
