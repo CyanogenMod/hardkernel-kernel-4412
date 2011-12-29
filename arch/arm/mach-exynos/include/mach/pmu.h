@@ -37,15 +37,6 @@ static inline int exynos4_is_c2c_use(void)
 	return ret;
 }
 
-static inline int exynos5_is_c2c_use(void)
-{
-	unsigned int ret;
-
-	ret = __raw_readl(EXYNOS5_C2C_CTRL);
-
-	return ret;
-}
-
 enum sys_powerdown {
 	SYS_AFTR,
 	SYS_LPA,

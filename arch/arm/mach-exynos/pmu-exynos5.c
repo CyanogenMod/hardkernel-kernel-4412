@@ -208,7 +208,7 @@ void exynos5_sys_powerdown_conf(enum sys_powerdown mode)
 		__raw_writel(exynos5_pmu_config[count - 1].val[mode],
 				exynos5_pmu_config[count - 1].reg);
 
-	if ((mode != SYS_AFTR) && (exynos5_is_c2c_use())) {
+	if ((mode != SYS_AFTR) && (exynos4_is_c2c_use())) {
 
 		pr_info("%s power mode enter with C2C Enabling\n"
 				, (mode == SYS_LPA) ? "LPA" : "SLEEP");
