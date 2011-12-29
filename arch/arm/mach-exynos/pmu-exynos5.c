@@ -14,8 +14,8 @@
 #include <linux/kernel.h>
 
 #include <mach/regs-clock.h>
-#include <mach/pmu.h>
 #include <mach/regs-pmu5.h>
+#include <mach/pmu.h>
 
 #include <plat/cpu.h>
 
@@ -129,6 +129,18 @@ static struct exynos4_pmu_conf exynos52xx_pmu_config[] = {
 	{ EXYNOS5_CMU_RESET_GPS_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
 };
 
+static struct exynos4_pmu_conf exynos52xx_pmu_c2c_config[] = {
+	/* { .reg = address, .val = { AFTR, LPA, SLEEP } */
+	{ EXYNOS5_CMU_RESET_SYSMEM_SYS_PWR_REG,			{ 0x1, 0x1, 0x1} },
+	{ EXYNOS5_DDRPHY_DLLLOCK_SYS_PWR_REG,			{ 0x1, 0x0, 0x0} },
+	{ EXYNOS5_TOP_RETENTION_SYSMEM_SYS_PWR_REG,		{ 0x1, 0x0, 0x0} },
+	{ EXYNOS5_TOP_PWR_SYSMEM_SYS_PWR_REG,			{ 0x3, 0x0, 0x0} },
+	{ EXYNOS5_LOGIC_RESET_SYSMEM_SYS_PWR_REG,		{ 0x1, 0x1, 0x1} },
+	{ EXYNOS5_OSCCLK_GATE_SYSMEM_SYS_PWR_REG,		{ 0x1, 0x0, 0x0} },
+	{ EXYNOS5_TOP_ASB_RESET_SYS_PWR_REG,			{ 0x1, 0x1, 0x0} },
+	{ EXYNOS5_TOP_ASB_ISOLATION_SYS_PWR_REG,		{ 0x1, 0x0, 0x0} },
+};
+
 void __iomem *list_both_cnt_feed[] = {
 	EXYNOS5_ARM_CORE0_OPTION,
 	EXYNOS5_ARM_CORE1_OPTION,
@@ -188,12 +200,24 @@ static void exynos5_init_pmu(void)
 void exynos5_sys_powerdown_conf(enum sys_powerdown mode)
 {
 	unsigned int count = entry_cnt;
+	unsigned int i;
 
 	exynos5_init_pmu();
 
 	for (; count > 0; count--)
 		__raw_writel(exynos5_pmu_config[count - 1].val[mode],
 				exynos5_pmu_config[count - 1].reg);
+
+	if ((mode != SYS_AFTR) && (exynos5_is_c2c_use())) {
+
+		pr_info("%s power mode enter with C2C Enabling\n"
+				, (mode == SYS_LPA) ? "LPA" : "SLEEP");
+
+		for (i = 0; i < ARRAY_SIZE(exynos52xx_pmu_c2c_config); i++) {
+			__raw_writel(exynos52xx_pmu_c2c_config[i].val[mode],
+					exynos52xx_pmu_c2c_config[i].reg);
+		}
+	}
 }
 
 static int __init exynos5_pmu_init(void)

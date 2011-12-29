@@ -200,6 +200,12 @@ static void exynos5_pm_prepare(void)
 
 	/* ensure at least INFORM0 has the resume address */
 	__raw_writel(virt_to_phys(s3c_cpu_resume), REG_INFORM0);
+
+	if (exynos5_is_c2c_use()) {
+		tmp = __raw_readl(EXYNOS5_INTRAM_MEM_OPTION);
+		tmp &= ~EXYNOS5_OPTION_USE_RETENTION;
+		__raw_writel(tmp, EXYNOS5_INTRAM_MEM_OPTION);
+	}
 }
 
 static int exynos5_pm_add(struct sys_device *sysdev)
