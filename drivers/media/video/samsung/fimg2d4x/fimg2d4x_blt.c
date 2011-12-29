@@ -22,13 +22,27 @@
 #include <plat/devs.h>
 #include <linux/pm_runtime.h>
 #endif
-
 #include "fimg2d.h"
 #include "fimg2d_clk.h"
 #include "fimg2d4x.h"
+#include "fimg2d_ctx.h"
+#include "fimg2d_cache.h"
+#include "fimg2d_helper.h"
 
-#undef PERF
-#undef POST_BLIT
+#define BLIT_TIMEOUT	msecs_to_jiffies(1000)
+
+static inline void fimg2d4x_blit_wait(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
+{
+	if (wait_event_timeout(info->wait_q, !atomic_read(&info->busy), BLIT_TIMEOUT)) {
+		fimg2d_debug("blitter wake up\n");
+	} else {
+		printk(KERN_ERR "[%s] bitblt wait timeout\n", __func__);
+		fimg2d_dump_command(cmd);
+
+		if (!fimg2d4x_blit_done_status(info))
+			info->err = true; /* device error */
+	}
+}
 
 static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
@@ -70,25 +84,11 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 #endif
 }
 
-#ifdef POST_BLIT
-static void fimg2d4x_post_bitblt(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
-{
-	/* TODO */
-	return;
-}
-#endif
-
-/**
- * blitter
- */
 void fimg2d4x_bitblt(struct fimg2d_control *info)
 {
 	struct fimg2d_context *ctx;
 	struct fimg2d_bltcmd *cmd;
 	unsigned long *pgd;
-#ifdef PERF
-	struct timeval start, end;
-#endif
 
 	fimg2d_debug("enter blitter\n");
 
@@ -118,32 +118,16 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		}
 
 		fimg2d4x_pre_bitblt(info, cmd);
-#ifdef PERF
-		do_gettimeofday(&start);
-#endif
+
 		/* start bitblt */
 		info->run(info);
 
-		if (wait_event_timeout(info->wait_q, !atomic_read(&info->busy),
-				msecs_to_jiffies(1000))) {
-			fimg2d_debug("blitter wake up\n");
-		} else {
-			printk(KERN_ERR "[%s] bitblt wait timeout\n", __func__);
-			fimg2d_dump_command(cmd);
-
-			if (!fimg2d4x_blit_done_status(info))
-				info->err = true; /* device error */
-		}
-#ifdef PERF
-		do_gettimeofday(&end);
-		elapsed_microsec(&start, &end, "BitBLT PERF");
-#endif
+		fimg2d4x_blit_wait(info, cmd);
 
 		if (cmd->dst.addr.type != ADDR_PHYS) {
 			s5p_sysmmu_disable(info->dev);
 			fimg2d_debug("sysmmu disable\n");
 		}
-
 blitend:
 		spin_lock(&info->bltlock);
 		fimg2d_dequeue(&cmd->node);
@@ -169,9 +153,6 @@ blitend:
 	fimg2d_debug("exit blitter\n");
 }
 
-/**
- * configure hardware
- */
 static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
 	enum image_sel srcsel, dstsel;
@@ -265,9 +246,6 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 		fimg2d4x_enable_dithering(info);
 }
 
-/**
- * enable irq and start bitblt
- */
 static void fimg2d4x_run(struct fimg2d_control *info)
 {
 	fimg2d_debug("start bitblt\n");
@@ -276,9 +254,6 @@ static void fimg2d4x_run(struct fimg2d_control *info)
 	fimg2d4x_start_blit(info);
 }
 
-/**
- * disable irq and wake up thread
- */
 static void fimg2d4x_stop(struct fimg2d_control *info)
 {
 	if (fimg2d4x_is_blit_done(info)) {

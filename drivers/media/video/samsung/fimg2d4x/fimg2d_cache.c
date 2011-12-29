@@ -15,6 +15,7 @@
 #include <linux/dma-mapping.h>
 
 #include "fimg2d.h"
+#include "fimg2d_cache.h"
 
 #define LV1_SHIFT		20
 #define LV1_PT_SIZE		SZ_1M

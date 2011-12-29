@@ -35,6 +35,8 @@
 #endif
 #include "fimg2d.h"
 #include "fimg2d_clk.h"
+#include "fimg2d_ctx.h"
+#include "fimg2d_helper.h"
 
 static struct fimg2d_control *info;
 

@@ -19,7 +19,6 @@
 
 #undef SOFT_RESET_ENABLED
 #undef FIMG2D_RESET_WA
-#undef PERF
 
 static const int a8_rgbcolor		= (int)0x0;
 static const int msk_oprmode		= (int)MSK_ARGB;
@@ -30,10 +29,6 @@ static const int blend_round_mode	= (int)BLEND_ROUND_0;	/* (A+1)*B) >> 8 */
 void fimg2d4x_reset(struct fimg2d_control *info)
 {
 #ifdef SOFT_RESET_ENABLED
-#ifdef PERF
-	unsigned long long start, end;
-	start = sched_clock();
-#endif
 #ifdef FIMG2D_RESET_WA
 	fimg2d_clk_save(info);
 #endif
@@ -41,24 +36,8 @@ void fimg2d4x_reset(struct fimg2d_control *info)
 #ifdef FIMG2D_RESET_WA
 	fimg2d_clk_restore(info);
 #endif
-#ifdef PERF
-	end = sched_clock();
-#ifdef FIMG2D_RESET_WA
-	elapsed_nanosec(start, end, "FIMG2D SOFT_RESET WA");
 #else
-	elapsed_nanosec(start, end, "FIMG2D SOFT_RESET");
-#endif
-#endif
-#else
-#ifdef PERF
-	unsigned long long start, end;
-	start = sched_clock();
-#endif
 	writel(FIMG2D_SFR_CLEAR, info->regs + FIMG2D_SOFT_RESET_REG);
-#ifdef PERF
-	end = sched_clock();
-	elapsed_nanosec(start, end, "FIMG2D SFR_CLEAR");
-#endif
 #endif
 	/* remove wince option */
 	writel(0x0, info->regs + FIMG2D_BLEND_FUNCTION_REG);
