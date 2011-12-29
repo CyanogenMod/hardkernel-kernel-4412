@@ -133,9 +133,11 @@ void deinit_mali_dvfs_status(void);
 mali_bool mali_dvfs_handler(u32 utilization);
 int mali_dvfs_is_running(void);
 void mali_dvfs_late_resume(void);
-#endif
+int get_mali_dvfs_control_status(void);
+mali_bool set_mali_dvfs_current_step(unsigned int step);
 void mali_default_step_set(int step, mali_bool boostup);
 int change_dvfs_tableset(int change_clk, int change_step);
+#endif
 
 #ifdef __cplusplus
 }

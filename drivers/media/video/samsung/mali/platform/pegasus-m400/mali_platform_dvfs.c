@@ -116,11 +116,6 @@ int step3_down = 75;
 #endif
 #endif
 
-#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
-unsigned int mali_runtime_resume_clk;
-unsigned int mali_runtime_resume_vol;
-#endif
-
 mali_dvfs_table mali_dvfs_all[MAX_MALI_DVFS_STEPS]={
 	{160   ,1000000   ,  900000},
 	{266   ,1000000   ,  900000},
@@ -180,6 +175,8 @@ static void mali_dvfs_work_handler(struct work_struct *w);
 
 static struct workqueue_struct *mali_dvfs_wq = 0;
 extern mali_io_address clk_register_map;
+extern _mali_osk_lock_t *mali_dvfs_lock;
+
 
 static DECLARE_WORK(mali_dvfs_work, mali_dvfs_work_handler);
 
@@ -187,7 +184,20 @@ static unsigned int get_mali_dvfs_status(void)
 {
 	return maliDvfsStatus.currentStep;
 }
+#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
+int get_mali_dvfs_control_status(void)
+{
+	return mali_dvfs_control;
+}
 
+mali_bool set_mali_dvfs_current_step(unsigned int step)
+{
+	_mali_osk_lock_wait(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
+	maliDvfsStatus.currentStep = step;
+	_mali_osk_lock_signal(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
+	return MALI_TRUE;
+}
+#endif
 static mali_bool set_mali_dvfs_status(u32 step,mali_bool boostup)
 {
 	u32 validatedStep=step;
@@ -215,7 +225,7 @@ static mali_bool set_mali_dvfs_status(u32 step,mali_bool boostup)
 #endif
 	}
 
-	maliDvfsStatus.currentStep = validatedStep;
+	set_mali_dvfs_current_step(validatedStep);
 	/*for future use*/
 	maliDvfsStatus.pCurrentDvfs = &mali_dvfs[validatedStep];
 
@@ -512,11 +522,8 @@ mali_bool init_mali_dvfs_status(int step)
 		mali_dvfs_wq = create_singlethread_workqueue("mali_dvfs");
 
 	/*add a error handling here*/
-	maliDvfsStatus.currentStep = step;
-#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
-	mali_runtime_resume_clk = mali_dvfs[1].clock;
-	mali_runtime_resume_vol = mali_dvfs[1].vol;
-#endif
+	set_mali_dvfs_current_step(step);
+
 	return MALI_TRUE;
 }
 

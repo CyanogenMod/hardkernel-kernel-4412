@@ -47,6 +47,13 @@
 #define CLK_DIV_STAT_G3D 	0x1003C62C
 #define CLK_DESC 			"clk-divider-status"
 
+typedef struct mali_runtime_resumeTag{
+	int clk;
+	int vol;
+}mali_runtime_resume_table;
+
+mali_runtime_resume_table mali_runtime_resume = {266, 900000};
+
 static struct clk  *ext_xtal_clock = 0;
 static struct clk  *vpll_src_clock = 0;
 static struct clk  *fout_vpll_clock = 0;
@@ -94,7 +101,7 @@ extern struct platform_device exynos4_device_pd[];
 
 mali_io_address clk_register_map=0;
 
-static _mali_osk_lock_t *mali_dvfs_lock;
+_mali_osk_lock_t *mali_dvfs_lock = 0;
 
 #ifdef CONFIG_REGULATOR
 int mali_regulator_get_usecount(void)
@@ -428,11 +435,6 @@ static mali_bool deinit_mali_clock(void)
 
 	return MALI_TRUE;
 }
-
-#if MALI_PMM_RUNTIME_JOB_CONTROL_ON
-extern unsigned int mali_runtime_resume_clk;
-extern unsigned int mali_runtime_resume_vol;
-#endif
 static _mali_osk_errcode_t enable_mali_clocks(void)
 {
 	int err;
@@ -440,13 +442,19 @@ static _mali_osk_errcode_t enable_mali_clocks(void)
 	MALI_DEBUG_PRINT(3,("enable_mali_clocks mali_clock %p error %d \n", mali_clock, err));
 
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON
+#if MALI_DVFS_ENABLED
 	// set clock rate
-	if (mali_gpu_clk > mali_runtime_resume_clk)
+	if (get_mali_dvfs_control_status() != 0 || mali_gpu_clk >= mali_runtime_resume.clk)
 		mali_clk_set_rate(mali_gpu_clk, GPU_MHZ);
 	else {
-		mali_clk_set_rate(mali_runtime_resume_clk, GPU_MHZ);
-		mali_regulator_set_voltage(mali_runtime_resume_vol, mali_runtime_resume_vol);
+		mali_regulator_set_voltage(mali_runtime_resume.vol, mali_runtime_resume.vol);
+		mali_clk_set_rate(mali_runtime_resume.clk, GPU_MHZ);
+		set_mali_dvfs_current_step(1);
 	}
+#else
+	mali_regulator_set_voltage(mali_runtime_resume.vol, mali_runtime_resume.vol);
+	mali_clk_set_rate(mali_runtime_resume.clk, GPU_MHZ);
+#endif
 #else
 	mali_clk_set_rate(mali_gpu_clk, GPU_MHZ);
 #endif

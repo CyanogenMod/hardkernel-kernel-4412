@@ -24,8 +24,10 @@
 
 #include <asm/io.h>
 
-#ifdef CONFIG_S5PV310_ASV
-#include <mach/cpufreq.h>
+#ifdef CONFIG_CPU_FREQ
+#include <mach/asv.h>
+#include <mach/regs-pmu.h>
+#define EXYNOS4_ASV_ENABLED
 #endif
 
 #include "mali_device_pause_resume.h"
@@ -71,38 +73,34 @@ int mali_dvfs_control=0;
 
 /*dvfs table*/
 mali_dvfs_table mali_dvfs[MALI_DVFS_STEPS]={
-#ifdef CONFIG_S5PV310_ASV
 	/*step 0*/{160  ,1000000    , 950000},
 	/*step 1*/{267  ,1000000    ,1000000} };
-#else
-	/*step 0*/{160  ,1000000    , 950000},
-	/*step 1*/{267  ,1000000    ,1000000} };
-#endif
 
-#ifdef CONFIG_S5PV310_ASV
+#ifdef EXYNOS4_ASV_ENABLED
 
 #define ASV_8_LEVEL	8
 #define ASV_5_LEVEL	5
+#define ASV_LEVEL_SUPPORT 0
 
 static unsigned int asv_3d_volt_5_table[ASV_5_LEVEL][MALI_DVFS_STEPS] = {
-	/* L3(160MHz), L2(266MHz), L1(300MHz) */
-	{1000000, 1100000, 1150000},	/* S */
-	{1000000, 1100000, 1150000},	/* A */
-	{ 950000, 1000000, 1100000},	/* B */
-	{ 950000, 1000000, 1050000},	/* C */
-	{ 950000,  950000, 1000000},	/* D */
+	/* L3(160MHz), L2(266MHz) */
+	{1000000, 1100000},	/* S */
+	{1000000, 1100000},	/* A */
+	{ 950000, 1000000},	/* B */
+	{ 950000, 1000000},	/* C */
+	{ 950000,  950000},	/* D */
 };
 
 static unsigned int asv_3d_volt_8_table[ASV_8_LEVEL][MALI_DVFS_STEPS] = {
-	/* L3(160MHz), L2(266MHz)), L1(300MHz) */
-	{1000000, 1100000, 1150000},	/* SS */
-	{1000000, 1100000, 1150000},	/* A1 */
-	{1000000, 1100000, 1150000},	/* A2 */
-	{ 950000, 1000000, 1100000},	/* B1 */
-	{ 950000, 1000000, 1100000},	/* B2 */
-	{ 950000, 1000000, 1050000},	/* C1 */
-	{ 950000, 1000000, 1050000},	/* C2 */
-	{ 950000,  950000, 1000000},	/* D1 */
+	/* L3(160MHz), L2(266MHz)) */
+	{1000000, 1100000},	/* SS */
+	{1000000, 1100000},	/* A1 */
+	{1000000, 1100000},	/* A2 */
+	{ 950000, 1000000},	/* B1 */
+	{ 950000, 1000000},	/* B2 */
+	{ 950000, 1000000},	/* C1 */
+	{ 950000, 1000000},	/* C2 */
+	{ 950000,  950000},	/* D1 */
 };
 #endif
 
@@ -206,24 +204,23 @@ static unsigned int decideNextStatus(unsigned int utilization)
 	return level;
 }
 
-#ifdef CONFIG_S5PV310_ASV
-extern struct s5pv310_asv_info asv_info;
-
+#ifdef EXYNOS4_ASV_ENABLED
 static mali_bool mali_dvfs_table_update(void)
 {
+	unsigned int exynos_result_of_asv;
 	unsigned int i;
+	exynos_result_of_asv = (__raw_readl(S5P_INFORM2)) & 0xf;
+	MALI_PRINT(("exynos_result_of_asv = 0x%x\n", exynos_result_of_asv));
 
-	if (asv_info.level == ASV_5_LEVEL) {
+	if (ASV_LEVEL_SUPPORT) { //asv level information will be added.
 		for (i = 0; i < MALI_DVFS_STEPS; i++) {
-			mali_dvfs[i].vol = asv_3d_volt_5_table[asv_info.group][i];
-
-			printk(KERN_INFO "mali_dvfs[%d].vol = %d\n", i, mali_dvfs[i].vol);
+			mali_dvfs[i].vol = asv_3d_volt_5_table[exynos_result_of_asv][i];
+			MALI_PRINT(("mali_dvfs[%d].vol = %d\n", i, mali_dvfs[i].vol));
 		}
 	} else {
 		for (i = 0; i < MALI_DVFS_STEPS; i++) {
-			mali_dvfs[i].vol = asv_3d_volt_8_table[asv_info.group][i];
-
-			printk(KERN_INFO "mali_dvfs[%d].vol = %d\n", i, mali_dvfs[i].vol);
+			mali_dvfs[i].vol = asv_3d_volt_8_table[exynos_result_of_asv][i];
+			MALI_PRINT(("mali_dvfs[%d].vol = %d\n", i, mali_dvfs[i].vol));
 		}
 	}
 
@@ -237,22 +234,19 @@ static mali_bool mali_dvfs_status(u32 utilization)
 	unsigned int nextStatus = 0;
 	unsigned int curStatus = 0;
 	mali_bool boostup = MALI_FALSE;
-#ifdef CONFIG_S5PV310_ASV
+#ifdef EXYNOS4_ASV_ENABLED
 	static mali_bool asv_applied = MALI_FALSE;
 #endif
 	static int stay_count = 0; // to prevent frequent switch
 
 	MALI_DEBUG_PRINT(1, ("> mali_dvfs_status: %d \n",utilization));
-#ifdef CONFIG_S5PV310_ASV
+#ifdef EXYNOS4_ASV_ENABLED
 	if (asv_applied == MALI_FALSE) {
-		if (asv_info.asv_init_done == 1) {
-			mali_dvfs_table_update();
-			change_mali_dvfs_status(0,0);
-			asv_applied = MALI_TRUE;
-			return MALI_TRUE; // first 3D DVFS with ASV -> just change the table and base setting.
-		} else {
-			return MALI_TRUE; // ignore 3D DVFS until ASV group number is ready.
-		}
+		mali_dvfs_table_update();
+		change_mali_dvfs_status(0,0);
+		asv_applied = MALI_TRUE;
+
+		return MALI_TRUE;
 	}
 #endif
 
