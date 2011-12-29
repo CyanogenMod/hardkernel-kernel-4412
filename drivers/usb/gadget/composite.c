@@ -321,14 +321,23 @@ static int config_desc(struct usb_composite_dev *cdev, unsigned w_value)
 		case USB_SPEED_SUPER:
 			if (!c->superspeed)
 				continue;
+			/* USB 3.0 Max power < 900 mA */
+			if (c->bMaxPower > 0x70) /* 896mA = 0x70 * 8mA */
+				c->bMaxPower = 0x70; /* 896 mA */
 			break;
 		case USB_SPEED_HIGH:
 			if (!c->highspeed)
 				continue;
+			/* USB 2.0 Max power < 500 mA */
+			if (c->bMaxPower > 0xFA) /* 500mA = 0xFA * 2mA */
+				c->bMaxPower = 0xFA; /* 500 mA */
 			break;
 		default:
 			if (!c->fullspeed)
 				continue;
+			/* USB 2.0 Max power < 500 mA */
+			if (c->bMaxPower > 0xFA) /* 500mA = 0xFA * 2mA */
+				c->bMaxPower = 0xFA; /* 500 mA */
 		}
 
 		if (w_value == 0)
