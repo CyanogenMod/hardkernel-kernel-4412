@@ -1541,7 +1541,6 @@ static struct platform_device exynos5_busfreq = {
 
 static struct platform_device *smdk5250_devices[] __initdata = {
 	/* Samsung Power Domain */
-	&exynos5_device_pd[PD_MFC],
 	&exynos5_device_pd[PD_G3D],
 	&exynos5_device_pd[PD_ISP],
 	&exynos5_device_pd[PD_GSCL],
@@ -2084,8 +2083,6 @@ static void __init exynos_sysmmu_init(void)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(jpeg).dev, &s5p_device_jpeg.dev);
 #endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
-	ASSIGN_SYSMMU_POWERDOMAIN(mfc_l, &exynos5_device_pd[PD_MFC].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(mfc_r, &exynos5_device_pd[PD_MFC].dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_l).dev, &s5p_device_mfc.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_r).dev, &s5p_device_mfc.dev);
 #endif
@@ -2220,9 +2217,6 @@ static void __init smdk5250_machine_init(void)
 	smdk5250_xhci_init();
 #endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
-#if defined(CONFIG_EXYNOS_DEV_PD)
-	s5p_device_mfc.dev.parent = &exynos5_device_pd[PD_MFC].dev;
-#endif
 	exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 300 * MHZ);
 
 	dev_set_name(&s5p_device_mfc.dev, "s3c-mfc");
