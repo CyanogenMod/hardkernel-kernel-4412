@@ -293,20 +293,56 @@ int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
 	return vb2_sdvmm_cache_flush(vb, plane_no);
 }
 #elif defined(CONFIG_S5P_MFC_VB2_ION)
-void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
+struct vb2_ion_conf {
+	struct device		*dev;
+	const char		*name;
+
+	struct ion_client	*client;
+
+	unsigned long		align;
+	bool			contig;
+	bool			sharable;
+	bool			cacheable;
+	bool			use_mmu;
+	atomic_t		mmu_enable;
+
+	spinlock_t		slock;
+};
+
+struct vb2_ion_buf {
+	struct vm_area_struct		*vma;
+	struct vb2_ion_conf		*conf;
+	struct vb2_vmarea_handler	handler;
+
+	struct ion_handle		*handle;	/* Kernel space */
+
+	dma_addr_t			kva;
+	dma_addr_t			dva;
+	size_t				offset;
+	unsigned long			size;
+
+	struct scatterlist		*sg;
+	int				nents;
+
+	atomic_t			ref;
+
+	bool				cacheable;
+};
+
+void s5p_mfc_cache_clean(void *alloc_ctx)
 {
-	/* TODO : to be changed to cache clean */
-	flush_cache_all();	/* L1 */
-	outer_flush_all();	/* L2 */
+	struct vb2_ion_buf *buf = (struct vb2_ion_buf *)alloc_ctx;
+
+	dma_sync_sg_for_device(buf->conf->dev, buf->sg, buf->nents,
+		DMA_TO_DEVICE);
 }
 
-void s5p_mfc_cache_inv(const void *start_addr, unsigned long size)
+void s5p_mfc_cache_inv(void *alloc_ctx)
 {
-	unsigned long paddr;
+	struct vb2_ion_buf *buf = (struct vb2_ion_buf *)alloc_ctx;
 
-	paddr = __pa((unsigned long)start_addr);
-	outer_inv_range(paddr, paddr + size);
-	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
+	dma_sync_sg_for_cpu(buf->conf->dev, buf->sg, buf->nents,
+		DMA_FROM_DEVICE);
 }
 
 void s5p_mfc_mem_suspend(void *alloc_ctx)

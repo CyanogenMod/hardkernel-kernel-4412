@@ -319,7 +319,7 @@ int s5p_mfc_load_firmware(struct s5p_mfc_dev *dev)
 					     FIRMWARE_CODE_SIZE,
 					     DMA_TO_DEVICE);
 	*/
-	s5p_mfc_cache_clean(s5p_mfc_bitproc_virt, firmware_size);
+	s5p_mfc_cache_clean(s5p_mfc_bitproc_buf);
 	release_firmware(fw_blob);
 	mfc_debug_leave();
 	return 0;

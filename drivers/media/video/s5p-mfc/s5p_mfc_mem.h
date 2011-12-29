@@ -175,8 +175,8 @@ struct vb2_mem_ops *s5p_mfc_mem_ops(void);
 void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num);
 void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes);
 
-void s5p_mfc_cache_clean(const void *start_addr, unsigned long size);
-void s5p_mfc_cache_inv(const void *start_addr, unsigned long size);
+void s5p_mfc_cache_clean(void *alloc_ctx);
+void s5p_mfc_cache_inv(void *alloc_ctx);
 
 void s5p_mfc_mem_suspend(void *alloc_ctx);
 void s5p_mfc_mem_resume(void *alloc_ctx);
