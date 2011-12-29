@@ -576,7 +576,8 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	/* Reset the timeout watchdog */
 	atomic_set(&dev->watchdog_cnt, 0);
 	ctx = dev->ctx[dev->curr_ctx];
-	dec = ctx->dec_priv;
+	if (ctx)
+		dec = ctx->dec_priv;
 
 	/* Get the reason of interrupt and the error code */
 	reason = s5p_mfc_get_int_reason();
