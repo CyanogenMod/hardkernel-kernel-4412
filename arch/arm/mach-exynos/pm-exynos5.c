@@ -293,6 +293,7 @@ static void exynos5_pm_resume(void)
 	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_MMCB_OPTION);
 	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_EBIA_OPTION);
 	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_EBIB_OPTION);
+	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_SPI_OPTION);
 
 	s3c_pm_do_restore_core(exynos5_core_save, ARRAY_SIZE(exynos5_core_save));
 
