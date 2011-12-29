@@ -779,9 +779,9 @@ static int h264_set_dpbs(struct mfc_inst_ctx *ctx)
 			return -1;
 		}
 
-		/* clear first DPB chroma buffer, referrence buffer for
+		/* clear last DPB chroma buffer, referrence buffer for
 		   vectors starting with p-frame */
-		if (i == 0) {
+		if (i == (dec_ctx->numtotaldpb - 1)) {
 			memset((void *)alloc->addr, 0x80, alloc->size);
 			mfc_mem_cache_clean((void *)alloc->addr, alloc->size);
 		}
@@ -802,9 +802,9 @@ static int h264_set_dpbs(struct mfc_inst_ctx *ctx)
 			return -1;
 		}
 
-		/* clear first DPB luma buffer, referrence buffer for
+		/* clear last DPB luma buffer, referrence buffer for
 		   vectors starting with p-frame */
-		if (i == 0) {
+		if (i == (dec_ctx->numtotaldpb - 1)) {
 			memset((void *)alloc->addr, 0x0, alloc->size);
 			mfc_mem_cache_clean((void *)alloc->addr, alloc->size);
 		}
