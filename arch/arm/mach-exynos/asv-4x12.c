@@ -96,9 +96,9 @@ struct asv_judge_table exynos4x12_limit[] = {
 	{15, 15},
 	{16, 16},
 	{17, 19},
-	{18, 20},
-	{18, 30},
-	{19, 40},
+	{18, 29},
+	{18, 39},
+	{19, 100},
 };
 
 static int exynos4x12_fuse_get_hpm(struct samsung_asv *asv_info)
