@@ -52,7 +52,7 @@ static int hdmiphy_s_dv_preset(struct v4l2_subdev *sd,
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct device *dev = &client->dev;
 
-	dev_info(dev, "s_dv_preset(preset = %d)\n", preset->preset);
+	dev_dbg(dev, "s_dv_preset(preset = %d)\n", preset->preset);
 	data = hdmiphy_preset2conf(preset->preset);
 	if (!data) {
 		dev_err(dev, "format not supported\n");
@@ -63,11 +63,11 @@ static int hdmiphy_s_dv_preset(struct v4l2_subdev *sd,
 
 	i2c_master_recv(client, recv_buffer, 32);
 	for (i = 0; i < 32; i++) {
-		printk("[%x]", recv_buffer[i]);
+		dev_dbg(dev, "[%x]", recv_buffer[i]);
 		if (!(i % 8) && i)
-			printk("\n");
+			dev_dbg(dev, "\n");
 	}
-	printk("\n");
+	dev_dbg(dev, "\n");
 
 	/* storing configuration to the device */
 	memcpy(buffer, data, 32);
@@ -79,11 +79,11 @@ static int hdmiphy_s_dv_preset(struct v4l2_subdev *sd,
 
 	i2c_master_recv(client, recv_buffer, 32);
 	for (i = 0; i < 32; i++) {
-		printk("[%x]", recv_buffer[i]);
+		dev_dbg(dev, "[%x]", recv_buffer[i]);
 		if (!(i % 8) && i)
-			printk("\n");
+			dev_dbg(dev, "\n");
 	}
-	printk("\n");
+	dev_dbg(dev, "\n");
 
 	return 0;
 }
@@ -95,7 +95,7 @@ static int hdmiphy_s_stream(struct v4l2_subdev *sd, int enable)
 	u8 buffer[2];
 	int ret;
 
-	dev_info(dev, "s_stream(%d)\n", enable);
+	dev_dbg(dev, "s_stream(%d)\n", enable);
 	/* going to/from configuration from/to operation mode */
 	buffer[0] = 0x1f;
 	buffer[1] = enable ? 0x80 : 0x00;

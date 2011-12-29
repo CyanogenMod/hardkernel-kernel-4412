@@ -113,7 +113,7 @@ static void tv_graph_pipeline_stream(struct tv_graph_pipeline *pipe, int on)
 	struct v4l2_subdev *sd;
 	struct exynos_entity_data md_data;
 
-	mxr_info(mdev, "%s TV graphic layer pipeline\n", on ? "start" : "stop");
+	mxr_dbg(mdev, "%s TV graphic layer pipeline\n", on ? "start" : "stop");
 
 	/* find remote pad through enabled link */
 	pad = media_entity_remote_source(pad);
@@ -122,7 +122,7 @@ static void tv_graph_pipeline_stream(struct tv_graph_pipeline *pipe, int on)
 		mxr_warn(mdev, "cannot find remote pad\n");
 
 	sd = media_entity_to_v4l2_subdev(pad->entity);
-	mxr_info(mdev, "s_stream of %s sub-device is called\n", sd->name);
+	mxr_dbg(mdev, "s_stream of %s sub-device is called\n", sd->name);
 
 	md_data.mxr_data_from = FROM_MXR_VD;
 	v4l2_set_subdevdata(sd, &md_data);
