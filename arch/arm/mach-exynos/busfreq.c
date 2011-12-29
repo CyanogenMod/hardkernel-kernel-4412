@@ -287,8 +287,7 @@ static void busfreq_mon_reset(void)
 
 	exynos4_ppmu_reset(&cpu);
 
-	exynos4_ppmu_setevent(&cpu, 0);
-	exynos4_ppmu_setevent(&cpu, 1);
+	exynos4_ppmu_setevent(&cpu, 3);
 
 	exynos4_ppmu_start(&cpu);
 }
@@ -305,7 +304,7 @@ static unsigned int busfreq_monitor(void)
 	}
 
 	exynos4_ppmu_stop(&cpu);
-	ppmuload = exynos4_ppmu_update(&cpu);
+	ppmuload = exynos4_ppmu_update(&cpu, 3);
 
 	ppcload = max(bus_utilization[0], bus_utilization[1]);
 	index = p_idx;
@@ -581,8 +580,7 @@ static int __init busfreq_mon_init(void)
 
 	cpu.hw_base = S5P_VA_PPMU_CPU;
 	cpu.weight = 1;
-	cpu.event[0] = 0x5;
-	cpu.event[1] = 0x6;
+	cpu.event[3] = 0x7;
 
 	dmc[DMC0].hw_base = S5P_VA_DMC0;
 	dmc[DMC0].weight = 1;
