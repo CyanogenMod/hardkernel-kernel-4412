@@ -387,6 +387,26 @@ struct fimg2d_blit {
 
 #ifdef __KERNEL__
 
+/* enables definition to estimate performance */
+#undef PERF_PROFILE
+
+enum perf_desc {
+	PERF_L1CC_FLUSH,
+	PERF_WORKQUE,
+	PERF_L2CC_FLUSH,
+	PERF_SFR,
+	PERF_BLIT,
+	PERF_KERN,	/* a whole driver */
+	PERF_END
+};
+#define MAX_PERF_DESCS		PERF_END
+
+struct fimg2d_perf {
+	int valid;
+	struct timeval start;
+	struct timeval end;
+};
+
 /**
  * @pgd: base address of arm mmu pagetable
  * @ncmd: request count in blit command queue
@@ -396,6 +416,7 @@ struct fimg2d_context {
 	struct mm_struct *mm;
 	atomic_t ncmd;
 	wait_queue_head_t wait_q;
+	struct fimg2d_perf perf[MAX_PERF_DESCS];
 };
 
 /**

@@ -65,6 +65,23 @@ int width_to_bytes(int width, enum color_format cf)
 	}
 }
 
+void perf_print(struct fimg2d_context *ctx, int seq_no)
+{
+	int i;
+	long time;
+	struct fimg2d_perf *perf;
+
+	for (i = 0; i < MAX_PERF_DESCS; i++) {
+		perf = &ctx->perf[i];
+		if (perf->valid != 0x11)
+			continue;
+		time = elapsed_usec(&perf->start, &perf->end);
+		printk(KERN_INFO "[FIMG2D PERF %02d] ctx(0x%08x) seq(%d) %8ld   usec\n",
+				i, (unsigned int)ctx, seq_no, time);
+	}
+	printk(KERN_INFO "[FIMG2D PERF **]\n");
+}
+
 void fimg2d_print_params(struct fimg2d_blit __user *u)
 {
 	struct fimg2d_image *image;

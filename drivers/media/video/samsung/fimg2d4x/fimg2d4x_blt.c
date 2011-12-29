@@ -56,7 +56,9 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 	cdst = &cmd->dst_cache;
 	cmsk = &cmd->msk_cache;
 
-	/* outercache flush */
+#ifdef PERF_PROFILE
+	perf_start(cmd->ctx, PERF_L2CC_FLUSH);
+#endif
 	if (cmd->size_all >= L2_CACHE_SIZE) {
 		fimg2d_debug("outercache all\n");
 		outer_flush_all();
@@ -119,6 +121,10 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 			}
 		}
 	}
+#ifdef PERF_PROFILE
+	perf_end(cmd->ctx, PERF_L2CC_FLUSH);
+#endif
+
 #endif
 }
 
@@ -138,16 +144,22 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 	while ((cmd = fimg2d_get_first_command(info))) {
 		ctx = cmd->ctx;
-
+#ifdef PERF_PROFILE
+		perf_end(ctx, PERF_WORKQUE);
+#endif
 		if (info->err) {
 			printk(KERN_ERR "[%s] device error\n", __func__);
 			goto blitend;
 		}
 
 		atomic_set(&info->busy, 1);
-
+#ifdef PERF_PROFILE
+		perf_start(cmd->ctx, PERF_SFR);
+#endif
 		info->configure(info, cmd);
-
+#ifdef PERF_PROFILE
+		perf_end(cmd->ctx, PERF_SFR);
+#endif
 		if (cmd->dst.addr.type != ADDR_PHYS) {
 			pgd = (unsigned long *)ctx->mm->pgd;
 			s5p_sysmmu_enable(info->dev, (unsigned long)virt_to_phys(pgd));
@@ -157,11 +169,16 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 		fimg2d4x_pre_bitblt(info, cmd);
 
+#ifdef PERF_PROFILE
+		perf_start(cmd->ctx, PERF_BLIT);
+#endif
 		/* start bitblt */
 		info->run(info);
 
 		fimg2d4x_blit_wait(info, cmd);
-
+#ifdef PERF_PROFILE
+		perf_end(cmd->ctx, PERF_BLIT);
+#endif
 		if (cmd->dst.addr.type != ADDR_PHYS) {
 			s5p_sysmmu_disable(info->dev);
 			fimg2d_debug("sysmmu disable\n");

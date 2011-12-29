@@ -29,8 +29,7 @@ static inline char *imagename(enum image_object image)
 	}
 }
 
-static inline long elapsed_microsec(struct timeval *start,
-				struct timeval *end, char *msg)
+static inline long elapsed_usec(struct timeval *start, struct timeval *end)
 {
 	long sec, usec, time;
 
@@ -42,23 +41,46 @@ static inline long elapsed_microsec(struct timeval *start,
 		sec--;
 	}
 	time = sec * 1000000 + usec;
-	printk(KERN_INFO "[%s] %ld usec elapsed\n", msg, time);
 
 	return time; /* microseconds */
 }
 
-static inline unsigned long long elapsed_nanosec(unsigned long long start,
-					unsigned long long end, char *msg)
+static inline void perf_start(struct fimg2d_context *ctx,
+				enum perf_desc desc)
 {
-	unsigned long long time;
+	struct timeval time;
+	struct fimg2d_perf *perf = &ctx->perf[desc];
 
-	time = end - start;
-	printk(KERN_INFO "[%s] %llu nsec elapsed\n", msg, time);
-	return time; /* nanoseconds */
+	if (!(perf->valid & 0x01)) {
+		do_gettimeofday(&time);
+		perf->start = time;
+		perf->valid = 0x01;
+	}
+}
+
+static inline void perf_end(struct fimg2d_context *ctx,
+				enum perf_desc desc)
+{
+	struct timeval time;
+	struct fimg2d_perf *perf = &ctx->perf[desc];
+
+	if (!(perf->valid & 0x10)) {
+		do_gettimeofday(&time);
+		perf->end = time;
+		perf->valid |= 0x10;
+	}
+}
+
+static inline void perf_clear(struct fimg2d_context *ctx)
+{
+	int i;
+	for (i = 0; i < MAX_PERF_DESCS; i++)
+		ctx->perf[i].valid = 0;
 }
 
 int point_to_offset(int point, enum color_format cf);
 int width_to_bytes(int pixels, enum color_format cf);
+void perf_print(struct fimg2d_context *ctx, int seq_no);
 void fimg2d_print_params(struct fimg2d_blit __user *u);
 void fimg2d_dump_command(struct fimg2d_bltcmd *cmd);
 
