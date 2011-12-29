@@ -850,6 +850,7 @@ static int s5p_mfc_open(struct file *file)
 #ifndef CONFIG_PM_RUNTIME
 		s5p_mfc_mem_resume(dev->alloc_ctx[0]);
 #endif
+		dev->curr_ctx = ctx->num;
 
 		/* Init the FW */
 		ret = s5p_mfc_init_hw(dev);
