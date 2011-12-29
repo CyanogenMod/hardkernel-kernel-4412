@@ -49,6 +49,8 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 #ifdef CONFIG_OUTER_CACHE
 	struct mm_struct *mm = cmd->ctx->mm;
 	struct fimg2d_cache *csrc, *cdst, *cmsk;
+	int clip_x, clip_w, clip_h;
+	int clip_size, clip_start, y;
 
 	csrc = &cmd->src_cache;
 	cdst = &cmd->dst_cache;
@@ -63,22 +65,58 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 		if (cmd->srcen) {
 			if (cmd->src.addr.type == ADDR_USER)
 				fimg2d_clean_outer_pagetable(mm, csrc->addr, csrc->size);
-			if (cmd->src.addr.cacheable)
-				fimg2d_dma_sync_outer(mm, csrc->addr, csrc->size, CACHE_CLEAN);
+			if (cmd->src.addr.cacheable) {
+				clip_x = point_to_offset(cmd->src_rect.x1, cmd->src.fmt);
+				clip_w = width_to_bytes(cmd->src_rect.x2 - cmd->src_rect.x1, cmd->src.fmt);
+				clip_h = cmd->src_rect.y2 - cmd->src_rect.y1;
+				clip_size = clip_w * clip_h;
+				if ((clip_size * 100 > csrc->size * 80) || (csrc->size < SZ_32K)) {
+					fimg2d_dma_sync_outer(mm, csrc->addr, csrc->size, CACHE_CLEAN);
+				} else {
+					for (y = 0; y < clip_h; y++) {
+						clip_start = csrc->addr + (cmd->src.stride * y) + clip_x;
+						fimg2d_dma_sync_outer(mm, clip_start, clip_w, CACHE_CLEAN);
+					}
+				}
+			}
 		}
 
 		if (cmd->msken) {
 			if (cmd->msk.addr.type == ADDR_USER)
 				fimg2d_clean_outer_pagetable(mm, cmsk->addr, cmsk->size);
-			if (cmd->msk.addr.cacheable)
-				fimg2d_dma_sync_outer(mm, cmsk->addr, cmsk->size, CACHE_CLEAN);
+			if (cmd->msk.addr.cacheable) {
+				clip_x = point_to_offset(cmd->msk_rect.x1, cmd->msk.fmt);
+				clip_w = width_to_bytes(cmd->msk_rect.x2 - cmd->msk_rect.x1, cmd->msk.fmt);
+				clip_h = cmd->msk_rect.y2 - cmd->msk_rect.y1;
+				clip_size = clip_w * clip_h;
+				if ((clip_size * 100 > cmsk->size * 80) || (cmsk->size < SZ_32K)) {
+					fimg2d_dma_sync_outer(mm, cmsk->addr, cmsk->size, CACHE_CLEAN);
+				} else {
+					for (y = 0; y < clip_h; y++) {
+						clip_start = cmsk->addr + (cmd->msk.stride * y) + clip_x;
+						fimg2d_dma_sync_outer(mm, clip_start, clip_w, CACHE_CLEAN);
+					}
+				}
+			}
 		}
 
 		if (cmd->dsten) {
 			if (cmd->dst.addr.type == ADDR_USER)
 				fimg2d_clean_outer_pagetable(mm, cdst->addr, cdst->size);
-			if (cmd->dst.addr.cacheable)
-				fimg2d_dma_sync_outer(mm, cdst->addr, cdst->size, CACHE_FLUSH);
+			if (cmd->dst.addr.cacheable) {
+				clip_x = point_to_offset(cmd->dst_rect.x1, cmd->dst.fmt);
+				clip_w = width_to_bytes(cmd->dst_rect.x2 - cmd->dst_rect.x1, cmd->dst.fmt);
+				clip_h = cmd->dst_rect.y2 - cmd->dst_rect.y1;
+				clip_size = clip_w * clip_h;
+				if ((clip_size * 100 > cdst->size * 80) || (cdst->size < SZ_32K)) {
+					fimg2d_dma_sync_outer(mm, cdst->addr, cdst->size, CACHE_FLUSH);
+				} else {
+					for (y = 0; y < clip_h; y++) {
+						clip_start = cdst->addr + (cmd->dst.stride * y) + clip_x;
+						fimg2d_dma_sync_outer(mm, clip_start, clip_w, CACHE_FLUSH);
+					}
+				}
+			}
 		}
 	}
 #endif

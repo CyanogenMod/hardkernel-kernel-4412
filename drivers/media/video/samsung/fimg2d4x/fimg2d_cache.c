@@ -59,24 +59,35 @@ static inline unsigned long virt2phys(struct mm_struct *mm, unsigned long vaddr)
 void fimg2d_dma_sync_outer(struct mm_struct *mm, unsigned long vaddr,
 					size_t size, enum cache_opr opr)
 {
-	unsigned long paddr, cur_addr, end_addr;
+	int len;
+	unsigned long cur, end, next, paddr;
 
-	cur_addr = vaddr & PAGE_MASK;
-	end_addr = PAGE_ALIGN(vaddr + size);
+	cur = vaddr;
+	end = vaddr + size;
 
 	if (opr == CACHE_CLEAN) {
-		while (cur_addr < end_addr) {
-			paddr = virt2phys(mm, cur_addr);
+		while (cur < end) {
+			next = (cur + PAGE_SIZE) & PAGE_MASK;
+			if (next > end)
+				next = end;
+			len = next - cur;
+
+			paddr = virt2phys(mm, cur);
 			if (paddr)
-				outer_clean_range(paddr, paddr + PAGE_SIZE);
-			cur_addr += PAGE_SIZE;
+				outer_clean_range(paddr, paddr + len);
+			cur += len;
 		}
 	} else if (opr == CACHE_FLUSH) {
-		while (cur_addr < end_addr) {
-			paddr = virt2phys(mm, cur_addr);
+		while (cur < end) {
+			next = (cur + PAGE_SIZE) & PAGE_MASK;
+			if (next > end)
+				next = end;
+			len = next - cur;
+
+			paddr = virt2phys(mm, cur);
 			if (paddr)
-				outer_flush_range(paddr, paddr + PAGE_SIZE);
-			cur_addr += PAGE_SIZE;
+				outer_flush_range(paddr, paddr + len);
+			cur += len;
 		}
 	}
 }
