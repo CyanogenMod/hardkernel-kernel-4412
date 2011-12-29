@@ -3813,7 +3813,6 @@ err_clk:
 static void __init smdk4x12_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
-	unsigned int gpio;
 	struct clk *sclk = NULL;
 	struct clk *prnt = NULL;
 	struct device *spi0_dev = &exynos_device_spi0.dev;
@@ -4159,9 +4158,6 @@ static void __init smdk4x12_machine_init(void)
 			ARRAY_SIZE(spi0_csi));
 	}
 
-	for (gpio = EXYNOS4_GPB(0); gpio < EXYNOS4_GPB(4); gpio++)
-		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV3);
-
 	spi_register_board_info(spi0_board_info, ARRAY_SIZE(spi0_board_info));
 
 #ifndef CONFIG_FB_S5P_LMS501KF03
@@ -4187,9 +4183,6 @@ static void __init smdk4x12_machine_init(void)
 			ARRAY_SIZE(spi1_csi));
 	}
 
-	for (gpio = EXYNOS4_GPB(4); gpio < EXYNOS4_GPB(8); gpio++)
-		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV3);
-
 	spi_register_board_info(spi1_board_info, ARRAY_SIZE(spi1_board_info));
 #endif
 
@@ -4214,9 +4207,6 @@ static void __init smdk4x12_machine_init(void)
 		exynos_spi_set_info(2, EXYNOS_SPI_SRCCLK_SCLK,
 			ARRAY_SIZE(spi2_csi));
 	}
-
-	for (gpio = EXYNOS4_GPC1(1); gpio < EXYNOS4_GPC1(5); gpio++)
-		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV3);
 
 	spi_register_board_info(spi2_board_info, ARRAY_SIZE(spi2_board_info));
 #endif
