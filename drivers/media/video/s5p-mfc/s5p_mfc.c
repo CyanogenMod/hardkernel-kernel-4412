@@ -1319,15 +1319,8 @@ static int s5p_mfc_runtime_suspend(struct device *dev)
 	pre_power = atomic_read(&m_dev->pm.power);
 	atomic_set(&m_dev->pm.power, 0);
 
-#if PWR_GATING_DISABLE
-	if (pre_power == 1) {
-		s5p_mfc_mem_suspend(m_dev->alloc_ctx[0]);
-		s5p_mfc_mem_suspend(m_dev->alloc_ctx[1]);
-	}
-#else
 	if (pre_power == 1)
 		s5p_mfc_mem_suspend(m_dev->alloc_ctx[0]);
-#endif
 
 	return 0;
 }
@@ -1349,15 +1342,8 @@ static int s5p_mfc_runtime_resume(struct device *dev)
 	pre_power = atomic_read(&m_dev->pm.power);
 	atomic_set(&m_dev->pm.power, 1);
 
-#if PWR_GATING_DISABLE
-	if (pre_power == 0) {
-		s5p_mfc_mem_resume(m_dev->alloc_ctx[0]);
-		s5p_mfc_mem_resume(m_dev->alloc_ctx[1]);
-	}
-#else
 	if (pre_power == 0)
 		s5p_mfc_mem_resume(m_dev->alloc_ctx[0]);
-#endif
 
 	return 0;
 }

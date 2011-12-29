@@ -615,11 +615,9 @@ struct s5p_mfc_fmt {
 #include "regs-mfc-v5.h"
 #include "s5p_mfc_opr_v5.h"
 #include "s5p_mfc_shm.h"
-#define PWR_GATING_DISABLE	0
 #elif defined(CONFIG_S5P_MFC_V6)
 #include "regs-mfc-v6.h"
 #include "s5p_mfc_opr_v6.h"
-#define PWR_GATING_DISABLE	1
 #endif
 
 #endif /* S5P_MFC_COMMON_H_ */
