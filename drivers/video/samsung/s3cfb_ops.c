@@ -198,7 +198,11 @@ int s3cfb_map_video_memory(struct s3cfb_global *fbdev, struct fb_info *fb)
 
 #ifdef CONFIG_S5P_MEM_CMA
 	fix->smem_start = (dma_addr_t)cma_alloc
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+		(fbdev->dev, "fimd_video", (size_t)fix->smem_len, 0);
+#else
 		(fbdev->dev, "fimd", (size_t)fix->smem_len, 0);
+#endif
 	fb->screen_base = cma_get_virt(fix->smem_start, PAGE_ALIGN(fix->smem_len), 1);
 #else
 	fb->screen_base = dma_alloc_writecombine(fbdev->dev,

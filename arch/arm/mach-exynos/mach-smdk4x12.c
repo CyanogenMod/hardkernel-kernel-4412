@@ -3589,6 +3589,12 @@ static void __init exynos4_reserve_mem(void)
 	};
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	static struct cma_region regions_secure[] = {
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD_VIDEO
+		{
+			.name = "fimd_video",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD_VIDEO * SZ_1K,
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
 		{
 			.name = "fimc3",
@@ -3638,6 +3644,7 @@ static void __init exynos4_reserve_mem(void)
 		"s5p-fimg2d=fimg2d;"
 		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;"
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+		"s5p-smem/fimd_video=fimd_video;"
 		"s5p-smem/sectbl=sectbl;"
 #endif
 		"s5p-smem/mfc=mfc0;"
