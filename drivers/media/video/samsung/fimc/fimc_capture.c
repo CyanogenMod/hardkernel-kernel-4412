@@ -887,12 +887,16 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 	    ret = fimc_subdev_attatch(ctrl);
 	    if (ret) {
 		    fimc_err("subdev_attatch failed\n");
+		    mutex_unlock(&ctrl->v4l2_lock);
 		    return -ENODEV;
 	    }
 	    /* fimc-is attatch */
 	    ctrl->is.sd = fimc_is_get_subdev(i);
-	    if (IS_ERR_OR_NULL(ctrl->is.sd))
-		    return -ENODEV;
+	    if (IS_ERR_OR_NULL(ctrl->is.sd)) {
+	    fimc_err("fimc-is subdev_attatch failed\n");
+		mutex_unlock(&ctrl->v4l2_lock);
+		return -ENODEV;
+	    }
 
 	    ctrl->is.fmt.width = ctrl->cam->width;
 	    ctrl->is.fmt.height = ctrl->cam->height;
@@ -901,21 +905,25 @@ int fimc_s_input(struct file *file, void *fh, unsigned int i)
 		ret = fimc_is_init_cam(ctrl);
 		if (ret < 0) {
 			fimc_dbg("FIMC-IS init clock failed");
+			mutex_unlock(&ctrl->v4l2_lock);
 			return -ENODEV;
 		}
 		ret = v4l2_subdev_call(ctrl->is.sd, core, s_power, 1);
 		if (ret < 0) {
 			fimc_dbg("FIMC-IS init failed");
+			mutex_unlock(&ctrl->v4l2_lock);
 			return -ENODEV;
 		}
 		ret = v4l2_subdev_call(ctrl->is.sd, core, load_fw);
 		if (ret < 0) {
 			fimc_dbg("FIMC-IS init failed");
+			mutex_unlock(&ctrl->v4l2_lock);
 			return -ENODEV;
 		}
 		ret = v4l2_subdev_call(ctrl->is.sd, core, init, ctrl->cam->sensor_index);
 		if (ret < 0) {
 			fimc_dbg("FIMC-IS init failed");
+			mutex_unlock(&ctrl->v4l2_lock);
 			return -ENODEV;
 		}
 	    }

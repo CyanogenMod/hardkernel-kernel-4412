@@ -1980,27 +1980,10 @@ int fimc_resume_pd(struct device *dev)
 #define fimc_resume_pd		NULL
 #endif
 
-static int fimc_runtime_suspend_out(struct fimc_control *ctrl)
-{
-	struct s3c_platform_fimc *pdata;
-	int ret;
-
-	pdata = to_fimc_plat(ctrl->dev);
-
-	if (pdata->clk_off) {
-		ret = pdata->clk_off(to_platform_device(ctrl->dev), &ctrl->clk);
-		if (ret == 0)
-			ctrl->power_status = FIMC_POWER_OFF;
-	}
-
-	return 0;
-}
 static int fimc_runtime_suspend_cap(struct fimc_control *ctrl)
 {
-	struct s3c_platform_fimc *pdata	= to_fimc_plat(ctrl->dev);
 	struct platform_device *pdev = to_platform_device(ctrl->dev);
 	struct clk *pxl_async = NULL;
-	int ret = 0;
 	fimc_dbg("%s FIMC%d\n", __func__, ctrl->id);
 
 	ctrl->power_status = FIMC_POWER_SUSPEND;
@@ -2009,13 +1992,6 @@ static int fimc_runtime_suspend_cap(struct fimc_control *ctrl)
 		fimc_streamoff_capture((void *)ctrl);
 		ctrl->status = FIMC_STREAMOFF;
 	}
-
-	if (pdata->clk_off) {
-		ret = pdata->clk_off(pdev, &ctrl->clk);
-		if (ret == 0)
-			ctrl->power_status = FIMC_POWER_OFF;
-	}
-
 	fimc_dbg("%s\n", __func__);
 
 	if (!ctrl->cam) {
@@ -2045,29 +2021,36 @@ static int fimc_runtime_suspend_cap(struct fimc_control *ctrl)
 		clk_put(pxl_async);
 	}
 
-
 	return 0;
 }
 static int fimc_runtime_suspend(struct device *dev)
 {
 	struct fimc_control *ctrl;
 	struct platform_device *pdev;
+	struct s3c_platform_fimc *pdata;
 	int id;
+	int ret;
 
 	pdev = to_platform_device(dev);
 	id = pdev->id;
 	ctrl = get_fimc_ctrl(id);
+	pdata = to_fimc_plat(ctrl->dev);
 
 	fimc_dbg("%s FIMC%d\n", __func__, ctrl->id);
 
 	if (ctrl->out) {
 		fimc_info1("%s: fimc m2m\n", __func__);
-		fimc_runtime_suspend_out(ctrl);
 	} else if (ctrl->cap) {
 		fimc_info1("%s: fimc capture\n", __func__);
 		fimc_runtime_suspend_cap(ctrl);
 	} else
 		fimc_err("%s : invalid fimc control\n", __func__);
+
+	if (pdata->clk_off) {
+		ret = pdata->clk_off(pdev, &ctrl->clk);
+		if (ret == 0)
+			ctrl->power_status = FIMC_POWER_OFF;
+	}
 
 	return 0;
 }
