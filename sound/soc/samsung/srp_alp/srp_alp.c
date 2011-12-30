@@ -368,9 +368,6 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	srp_debug("Return OBUF Num[%d] fill size %d\n",
 			srp.obuf_ready, srp.pcm_info.size);
 
-	if (srp.is_pending == STALL)
-		writel(0x0, srp.commbox + SRP_PCM_DUMP_ADDR);
-
 	srp.obuf_copy_done[srp.obuf_ready] = 1;
 	srp.wakeup_read_wq[srp.obuf_ready] = 0;
 	srp.old_pcm_size = srp.pcm_info.size;
@@ -784,6 +781,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	if (irq_code & SRP_INTR_CODE_PLAYDONE) {
 		srp_info("Play Done interrupt!! Decoded Size[%d]\n",
 				readl(srp.commbox + SRP_PCM_DUMP_ADDR));
+
 		srp.play_done = 1;
 		srp.wakeup_read_wq[0] = 1;
 		srp.wakeup_read_wq[1] = 1;
