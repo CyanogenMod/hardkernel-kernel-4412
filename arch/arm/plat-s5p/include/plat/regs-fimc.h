@@ -195,7 +195,7 @@
 #define S3C_CISTATUS_GET_FRAME_END(x)		(((x) >> 17) & 0x1)
 #define S3C_CISTATUS_GET_LAST_CAPTURE_END(x)	(((x) >> 16) & 0x1)
 #define S3C_CISTATUS_GET_LCD_STATUS(x)		(((x) >> 9) & 0x1)
-#define S3C_CISTATUS_GET_ENVID_STATUS(x)	((x) & 0x1)
+#define S3C_CISTATUS_GET_ENVID_STATUS(x)	(((x) >> 8) & 0x1)
 
 #define S3C_CISTATUS2_GET_FRAMECOUNT_BEFORE(x)	(((x) >> 7) & 0x3f)
 #define S3C_CISTATUS2_GET_FRAMECOUNT_PRESENT(x)	((x) & 0x3f)

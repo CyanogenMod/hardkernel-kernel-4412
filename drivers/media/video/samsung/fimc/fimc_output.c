@@ -1323,6 +1323,7 @@ int fimc_outdev_set_ctx_param(struct fimc_control *ctrl, struct fimc_ctx *ctx)
 	memset(&dst, 0, sizeof(dst));
 #endif
 
+	fimc_hwset_reset(ctrl);
 	if ((ctrl->status == FIMC_READY_ON) ||
 			(ctrl->status == FIMC_STREAMON_IDLE))
 		fimc_hwset_enable_irq(ctrl, 0, 1);
