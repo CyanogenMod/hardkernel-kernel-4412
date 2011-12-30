@@ -97,7 +97,7 @@ static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
 	do {
 		size_t len = left;
 		void *vaddr;
-		off_t offset = offset_in_page(offset);
+		off_t offset = offset_in_page(begin);
 
 		page = phys_to_page(begin);
 
