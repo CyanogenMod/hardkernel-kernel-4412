@@ -80,8 +80,6 @@ static void cache_maint_inner(void *vaddr, size_t size, enum cacheop op)
 static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
 {
 	size_t left = length;
-	phys_addr_t begin = start;
-	struct page *page;
 
 	if (!soc_is_exynos5250() && !soc_is_exynos5210()) {
 		if (length > (size_t) L1_FLUSH_ALL) {
@@ -94,8 +92,11 @@ static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
 		}
 	}
 
+#ifdef CONFIG_HIGHMEM
 	do {
 		size_t len = left;
+		phys_addr_t begin = start;
+		struct page *page;
 		void *vaddr;
 		off_t offset = offset_in_page(begin);
 
@@ -107,15 +108,9 @@ static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
 			len = left;
 
 		if (PageHighMem(page)) {
-			vaddr = kmap_high_get(page);
-			if (vaddr) {
-				cache_maint_inner(vaddr + offset, len, op);
-				kunmap_high(page);
-			} else {
-				vaddr = kmap_atomic(page);
-				cache_maint_inner(vaddr + offset, len, op);
-				kunmap_atomic(vaddr);
-			}
+			vaddr = kmap(page);
+			cache_maint_inner(vaddr + offset, len, op);
+			kunmap(page);
 		} else {
 			vaddr = page_address(page) + offset;
 			cache_maint_inner(vaddr, len, op);
@@ -124,6 +119,9 @@ static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
 		left -= len;
 		begin += len;
 	} while (left);
+#else
+	cache_maint_inner(phys_to_virt(start), left, op);
+#endif
 
 outer_cache_ops:
 	switch (op) {
