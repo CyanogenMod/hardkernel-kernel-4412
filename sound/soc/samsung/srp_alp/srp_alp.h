@@ -206,7 +206,7 @@ struct srp_info {
 	unsigned int	save_ibuf_empty;
 
 	/* Workqueue for reading pcm data and supplying decoding info */
-	unsigned int	wakeup_read_wq;
+	unsigned int	wakeup_read_wq[2];
 	unsigned int	wakeup_decinfo_wq;
 
 	/* Function pointer for clock control */
