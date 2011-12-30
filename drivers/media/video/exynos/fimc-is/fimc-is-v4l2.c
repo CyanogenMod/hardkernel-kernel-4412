@@ -4157,7 +4157,7 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 	struct v4l2_mbus_framefmt *mf)
 {
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
-	int ret = 0;
+	int tmp, ret = 0;
 
 	dbg("fimc_is_s_mbus_fmt- %d,%d", mf->width, mf->height);
 
@@ -4167,6 +4167,10 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 		dev->scenario_id = ISS_PREVIEW_STILL;
 		dev->sensor.width_prev = mf->width;
 		dev->sensor.height_prev = mf->height;
+		tmp = fimc_is_hw_get_sensor_max_framerate(dev);
+		IS_SENSOR_SET_FRAME_RATE(dev, tmp);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
 		break;
 	case 1:
 		dev->scenario_id = ISS_PREVIEW_VIDEO;
