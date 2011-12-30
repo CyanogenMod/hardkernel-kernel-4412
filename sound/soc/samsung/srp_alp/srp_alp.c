@@ -753,9 +753,12 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 				==  SRP_INTR_CODE_OBUF0_FULL) {
 				srp_debug("OBUF0 FULL\n");
 				srp.obuf_fill_done[0] = 1;
+
 				if (srp.first_decoding && !srp.wait_for_eos) {
-					srp_debug("Decoding Start for filling both OBUF\n");
-					pending_off = 1;
+					if (!srp.obuf_fill_done[1]) {
+						srp_debug("Decoding Start for filling both OBUF\n");
+						pending_off = 1;
+					}
 				} else
 					srp.wakeup_read_wq[0] = 1;
 			} else {
