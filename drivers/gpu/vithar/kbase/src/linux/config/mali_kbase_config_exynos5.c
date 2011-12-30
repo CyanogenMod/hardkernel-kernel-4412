@@ -35,7 +35,7 @@ static kbase_io_resources io_resources =
 static kbase_attribute config_attributes[] = {
 	{
 		KBASE_CONFIG_ATTR_MEMORY_PER_PROCESS_LIMIT,
-		512 * 1024 * 1024UL /* 512MB */
+		1024 * 1024 * 1024UL /* 1024MB */
 	},
 	{
 		KBASE_CONFIG_ATTR_UMP_DEVICE,
@@ -61,7 +61,10 @@ static kbase_attribute config_attributes[] = {
 		KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MIN,
 		130
 	},
-
+	{
+		KBASE_CONFIG_ATTR_JS_RESET_TIMEOUT_MS,
+		500 /* 500ms before cancelling stuck jobs */
+	},
 	{
 		KBASE_CONFIG_ATTR_END,
 		0
