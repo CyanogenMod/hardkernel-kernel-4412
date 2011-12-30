@@ -990,6 +990,25 @@ enum isp_afc_manual {
 	ISP_AFC_MANUAL_60HZ		= 60
 };
 
+/* ------------------------  SCENE MODE--------------------------------- */
+enum isp_scene_mode {
+	ISP_SCENE_NONE			= 0,
+	ISP_SCENE_PORTRAIT		= 1,
+	ISP_SCENE_LANDSCAPE		= 2,
+	ISP_SCENE_SPORTS		= 3,
+	ISP_SCENE_PARTYINDOOR		= 4,
+	ISP_SCENE_BEACHSNOW		= 5,
+	ISP_SCENE_SUNSET		= 6,
+	ISP_SCENE_DAWN			= 7,
+	ISP_SCENE_FALL			= 8,
+	ISP_SCENE_NIGHT			= 9,
+	ISP_SCENE_AGAINSTLIGHTWLIGHT	= 10,
+	ISP_SCENE_AGAINSTLIGHTWOLIGHT	= 11,
+	ISP_SCENE_FIRE			= 12,
+	ISP_SCENE_TEXT			= 13,
+	ISP_SCENE_CANDLE		= 14
+};
+
 enum isp_afc_error {
 	ISP_AFC_ERROR_NO	= 0 /* AFC setting is done */
 };
@@ -1529,6 +1548,7 @@ struct is_face_marker {
 	struct is_fd_rect right_eye;
 	struct is_fd_rect mouth;
 	u32	roll_angle;
+	u32	yaw_angle;
 	u32	confidence;
 	u32	smile_level;
 	u32	blink_level;
@@ -1552,7 +1572,7 @@ struct is_region {
 struct is_debug_frame_descriptor {
 	u32	sensor_frame_time;
 	u32	sensor_exposure_time;
-	u32	sensor_analog_gain;
+	s32	sensor_analog_gain;
 	/* monitor for AA */
 	u32	req_lei;
 

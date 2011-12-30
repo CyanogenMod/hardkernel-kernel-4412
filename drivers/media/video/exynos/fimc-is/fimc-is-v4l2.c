@@ -39,7 +39,6 @@
 
 #include <linux/firmware.h>
 #include <linux/dma-mapping.h>
-
 #include <linux/vmalloc.h>
 
 #include "fimc-is-core.h"
@@ -171,7 +170,7 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 	set_fs(KERNEL_DS);
 	fp = filp_open(FIMC_IS_SETFILE_SDCARD, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
-		dbg("failed to open %s\n", FIMC_IS_SETFILE_SDCARD);
+		err("failed to open %s\n", FIMC_IS_SETFILE_SDCARD);
 		goto request_fw;
 	}
 	fw_requested = 0;
@@ -292,7 +291,12 @@ static int fimc_is_load_fw(struct v4l2_subdev *sd)
 				"failed to init GPIO config\n");
 			return -EINVAL;
 		}
-		/* 3. A5 power on */
+		/* 3. Chip ID and Revision */
+		dev->is_shared_region->chip_id = 0xe4412;
+		dev->is_shared_region->chip_rev_no = 1;
+		fimc_is_mem_cache_clean((void *)IS_SHARED,
+			(unsigned long)(sizeof(struct is_share_region)));
+		/* 4. A5 power on */
 		clear_bit(IS_ST_FW_DOWNLOADED, &dev->state);
 		fimc_is_hw_a5_power(dev, 1);
 		ret = wait_event_timeout(dev->irq_queue1,
@@ -328,11 +332,11 @@ static int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 		fimc_is_hw_subip_poweroff(is_dev);
 		ret = wait_event_timeout(is_dev->irq_queue1,
 			test_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
+			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
 		if (!ret) {
 			dev_err(&is_dev->pdev->dev,
 				"wait timeout : %s\n", __func__);
-			return -EBUSY;
+			return -EINVAL;
 		}
 		fimc_is_hw_a5_power(is_dev, 0);
 		dbg("A5 power off\n");
@@ -357,10 +361,27 @@ static int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 
 static int fimc_is_reset(struct v4l2_subdev *sd, u32 val)
 {
+	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
+	struct device *dev = &is_dev->pdev->dev;
+	int ret = 0;
+
 	dbg("fimc_is_reset\n");
 	if (val) {
 		dbg("hard reset start\n");
-		fimc_is_s_power(sd, 0);
+		fimc_is_hw_a5_power(is_dev, 0);
+		dbg("A5 power off\n");
+		ret = pm_runtime_put_sync(dev);
+
+		is_dev->sensor.id = 0;
+		is_dev->p_region_index1 = 0;
+		is_dev->p_region_index2 = 0;
+		atomic_set(&is_dev->p_region_num, 0);
+		is_dev->state = 0;
+		set_bit(IS_ST_IDLE, &is_dev->state);
+		is_dev->power = 0;
+		is_dev->af.af_state = FIMC_IS_AF_IDLE;
+		set_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
+		clear_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
 	} else {
 		return -EINVAL;
 	}
@@ -384,8 +405,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 			test_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
 		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout:%s\n", __func__);
+			err("wait timeout - open sensor :%s\n", __func__);
 			return -EBUSY;
 		}
 		/* Init sequence 2: Load setfile */
@@ -395,8 +415,8 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		if (!ret) {
 			dev_err(&dev->pdev->dev,
-				"wait timeout:%s\n", __func__);
-			ret = fimc_is_s_power(sd, 0);
+				"wait timeout - load setfile :%s\n", __func__);
+			ret = fimc_is_reset(sd, 1);
 			if (!ret)
 				err("s_power off failed!!\n");
 			return -EBUSY;
@@ -433,7 +453,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		if (!ret) {
 			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
+				"wait timeout - stream off : %s\n", __func__);
 			ret = fimc_is_s_power(sd, 0);
 			if (!ret)
 				err("s_power off failed!!\n");
@@ -3300,6 +3320,10 @@ static int fimc_is_g_ext_ctrls_handler(struct fimc_is_dev *dev,
 		ctrl->value = dev->is_p_region->face[dev->fd_header.index
 				+ dev->fd_header.offset].roll_angle;
 		break;
+	case V4L2_CID_IS_FD_GET_YAW_ANGLE:
+		ctrl->value = dev->is_p_region->face[dev->fd_header.index
+				+ dev->fd_header.offset].yaw_angle;
+		break;
 	/* 7. Update next face information */
 	case V4L2_CID_IS_FD_GET_NEXT:
 		dev->fd_header.offset++;
@@ -4133,7 +4157,7 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 	struct v4l2_mbus_framefmt *mf)
 {
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
-	int tmp, ret = 0;
+	int ret = 0;
 
 	dbg("fimc_is_s_mbus_fmt- %d,%d", mf->width, mf->height);
 
@@ -4143,10 +4167,6 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 		dev->scenario_id = ISS_PREVIEW_STILL;
 		dev->sensor.width_prev = mf->width;
 		dev->sensor.height_prev = mf->height;
-		tmp = fimc_is_hw_get_sensor_max_framerate(dev);
-		IS_SENSOR_SET_FRAME_RATE(dev, tmp);
-		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
-		IS_INC_PARAM_NUM(dev);
 		break;
 	case 1:
 		dev->scenario_id = ISS_PREVIEW_VIDEO;

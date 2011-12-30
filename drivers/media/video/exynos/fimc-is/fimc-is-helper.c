@@ -259,7 +259,7 @@ static const struct fd_param init_val_fd_preview_still = {
 			FD_CONFIG_COMMAND_ORIENTATION_VALUE,
 		.max_number = 5,
 		.roll_angle = FD_CONFIG_ROLL_ANGLE_FULL,
-		.yaw_angle = FD_CONFIG_YAW_ANGLE_45,
+		.yaw_angle = FD_CONFIG_YAW_ANGLE_45_90,
 		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
 		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
 		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
@@ -670,7 +670,7 @@ static const struct fd_param init_val_fd_preview_video = {
 			FD_CONFIG_COMMAND_ORIENTATION_VALUE,
 		.max_number = 5,
 		.roll_angle = FD_CONFIG_ROLL_ANGLE_FULL,
-		.yaw_angle = FD_CONFIG_YAW_ANGLE_45,
+		.yaw_angle = FD_CONFIG_YAW_ANGLE_45_90,
 		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
 		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
 		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
@@ -885,7 +885,7 @@ static const struct fd_param init_val_fd_camcording = {
 			FD_CONFIG_COMMAND_ORIENTATION_VALUE,
 		.max_number = 5,
 		.roll_angle = FD_CONFIG_ROLL_ANGLE_FULL,
-		.yaw_angle = FD_CONFIG_YAW_ANGLE_45,
+		.yaw_angle = FD_CONFIG_YAW_ANGLE_45_90,
 		.smile_mode = FD_CONFIG_SMILE_MODE_DISABLE,
 		.blink_mode = FD_CONFIG_BLINK_MODE_DISABLE,
 		.eye_detect = FD_CONFIG_EYES_DETECT_ENABLE,
@@ -1049,6 +1049,8 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 	u32 timeout;
 
 	if (on) {
+		/* watchdog disable */
+		writel(0x0, dev->regs + WDT);
 		/* 1. A5 start address setting */
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 		cfg = dev->mem.base;
@@ -1056,10 +1058,10 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 		cfg = dev->mem.dvaddr;
 #endif
 		writel(cfg, dev->regs + BBOAR);
-		/* 2. enable A5 */
-		writel(0x00018000, PMUREG_ISP_ARM_OPTION);
-		/* 3. A5 power on*/
+		/* 2. A5 power on*/
 		writel(0x1, PMUREG_ISP_ARM_CONFIGURATION);
+		/* 3. enable A5 */
+		writel(0x00018000, PMUREG_ISP_ARM_OPTION);
 	} else {
 		/* 1. disable A5 */
 		writel(0x00010000, PMUREG_ISP_ARM_OPTION);
