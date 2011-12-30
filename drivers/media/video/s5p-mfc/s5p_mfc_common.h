@@ -304,6 +304,8 @@ struct s5p_mfc_h264_enc_params {
 	u32 fmo_run_length[4];
 	u32 fmo_sg_dir;
 	u32 fmo_sg_rate;
+	u32 aso_enable;
+	u32 aso_slice_order[8];
 };
 
 /**

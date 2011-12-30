@@ -1002,9 +1002,12 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 	reg &= ~(0x1 << 14);
 	WRITEL(reg, S5P_FIMV_E_H264_OPTIONS);
 
-	/* initialize for '0' only setting*/
+	/* ASO enable */
 	reg = READL(S5P_FIMV_E_H264_OPTIONS);
-	reg &= ~(0x1 << 6);	/* ASO */
+	if (p_264->aso_enable)
+		reg |= (0x1 << 6);
+	else
+		reg &= ~(0x1 << 6);
 	WRITEL(reg, S5P_FIMV_E_H264_OPTIONS);
 
 	if (p->codec.h264.hier_p_enable == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
@@ -1372,6 +1375,22 @@ int s5p_mfc_init_encode(struct s5p_mfc_ctx *ctx)
 	return 0;
 }
 
+int s5p_mfc_h264_set_aso_slice_order(struct s5p_mfc_ctx *ctx)
+{
+	struct s5p_mfc_dev *dev = ctx->dev;
+	struct s5p_mfc_enc *enc = ctx->enc_priv;
+	struct s5p_mfc_enc_params *p = &enc->params;
+	struct s5p_mfc_h264_enc_params *p_264 = &p->codec.h264;
+	int i;
+
+	if (p_264->aso_enable) {
+		for (i = 0; i < 8; i++)
+			WRITEL(p_264->aso_slice_order[i],
+				S5P_FIMV_E_H264_ASO_SLICE_ORDER_0 + i * 4);
+	}
+	return 0;
+}
+
 /* Encode a single frame */
 int s5p_mfc_encode_one_frame(struct s5p_mfc_ctx *ctx)
 {
@@ -1386,6 +1405,9 @@ int s5p_mfc_encode_one_frame(struct s5p_mfc_ctx *ctx)
 	else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12MT)
 		WRITEL(3, S5P_FIMV_ENC_MAP_FOR_CUR);
 	*/
+	if (ctx->codec_mode == S5P_FIMV_CODEC_H264_ENC)
+		s5p_mfc_h264_set_aso_slice_order(ctx);
+
 	s5p_mfc_set_slice_mode(ctx);
 
 	WRITEL(ctx->inst_no, S5P_FIMV_INSTANCE_ID);

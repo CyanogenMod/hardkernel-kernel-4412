@@ -703,6 +703,87 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 1,
 	},
 	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_ENABLE,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "ASO flag",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_0,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Slice order No.1",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_1,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Slice order No.2",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_2,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Slice order No.3",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_3,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Slice order No.4",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_4,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Slice order No.5",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_5,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Slice order No.6",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_6,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Slice order No.7",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_7,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Slice order No.8",
+		.minimum = 0,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
 		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "The number of B frames",
@@ -2406,6 +2487,33 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_SG_RATE:
 		p->codec.h264.fmo_sg_rate = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_ENABLE:
+		p->codec.h264.aso_enable = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_0:
+		p->codec.h264.aso_slice_order[0] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_1:
+		p->codec.h264.aso_slice_order[1] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_2:
+		p->codec.h264.aso_slice_order[2] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_3:
+		p->codec.h264.aso_slice_order[3] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_4:
+		p->codec.h264.aso_slice_order[4] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_5:
+		p->codec.h264.aso_slice_order[5] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_6:
+		p->codec.h264.aso_slice_order[6] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_ASO_SL_ORDER_7:
+		p->codec.h264.aso_slice_order[7] = ctrl->value;
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES:
 		p->codec.mpeg4.num_b_frame = ctrl->value;
