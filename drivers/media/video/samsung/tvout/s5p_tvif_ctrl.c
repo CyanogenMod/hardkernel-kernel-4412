@@ -2376,8 +2376,8 @@ static void s5p_hdmi_set_avi(
 
 static void s5p_hdmi_set_aui(struct s5p_hdmi_audio *audio, u8 *aui)
 {
-	aui[0] = (0 << 4) | audio->channel;
-	aui[1] = ((audio->type == HDMI_60958_AUDIO) ? 0 : audio->freq << 2) | 0;
+	aui[0] = audio->channel;
+	aui[1] = 0x09;
 	aui[2] = 0;
 	aui[3] = 0x0b;
 }

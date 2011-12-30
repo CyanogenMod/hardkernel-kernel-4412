@@ -994,10 +994,11 @@ static void s5p_hdmi_audio_i2s_config(
 	/* Configuration I2S input ports. Configure I2S_PIN_SEL_0~4 */
 	writeb(S5P_HDMI_I2S_SEL_SCLK(5) | S5P_HDMI_I2S_SEL_LRCK(6),
 		hdmi_base + S5P_HDMI_I2S_PIN_SEL_0);
-	writeb(S5P_HDMI_I2S_SEL_SDATA1(1) | S5P_HDMI_I2S_SEL_SDATA2(4),
-		hdmi_base + S5P_HDMI_I2S_PIN_SEL_1);
+
+	writeb(S5P_HDMI_I2S_SEL_SDATA1(3) | S5P_HDMI_I2S_SEL_SDATA2(4),
+			hdmi_base + S5P_HDMI_I2S_PIN_SEL_1);
 	writeb(S5P_HDMI_I2S_SEL_SDATA3(1) | S5P_HDMI_I2S_SEL_SDATA2(2),
-		hdmi_base + S5P_HDMI_I2S_PIN_SEL_2);
+			hdmi_base + S5P_HDMI_I2S_PIN_SEL_2);
 	writeb(S5P_HDMI_I2S_SEL_DSD(0), hdmi_base + S5P_HDMI_I2S_PIN_SEL_3);
 
 	/* I2S_CON_1 & 2 */
@@ -1020,8 +1021,8 @@ static void s5p_hdmi_audio_i2s_config(
 		hdmi_base + S5P_HDMI_I2S_CH_ST_1);
 
 	/* Audio channel to 5.1 */
-	writeb(S5P_HDMI_I2S_SET_SOURCE_NUM(6) |
-		S5P_HDMI_I2S_SET_CHANNEL_NUM(6),
+	writeb(S5P_HDMI_I2S_SET_SOURCE_NUM(0) |
+		S5P_HDMI_I2S_SET_CHANNEL_NUM(0x6),
 		hdmi_base + S5P_HDMI_I2S_CH_ST_2);
 
 	writeb(S5P_HDMI_I2S_CLK_ACCUR_LEVEL_2 |
@@ -1300,8 +1301,8 @@ void s5p_hdmi_reg_acr(u8 *acr)
 
 void s5p_hdmi_reg_asp(u8 *asp)
 {
-	writeb(S5P_HDMI_AUD_NO_DST_DOUBLE | S5P_HDMI_AUD_TYPE_SAMPLE |
-		S5P_HDMI_AUD_MODE_TWO_CH | S5P_HDMI_AUD_SP_ALL_DIS,
+	writeb(S5P_HDMI_AUD_MODE_MULTI_CH | S5P_HDMI_AUD_SP_AUD2_EN |
+			S5P_HDMI_AUD_SP_AUD1_EN | S5P_HDMI_AUD_SP_AUD0_EN,
 		hdmi_base + S5P_HDMI_ASP_CON);
 
 	writeb(S5P_HDMI_ASP_SP_FLAT_AUD_SAMPLE,
@@ -1309,11 +1310,11 @@ void s5p_hdmi_reg_asp(u8 *asp)
 
 	writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
 		hdmi_base + S5P_HDMI_ASP_CHCFG0);
-	writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
+	writeb(S5P_HDMI_SPK0R_SEL_I_PCM1L | S5P_HDMI_SPK0L_SEL_I_PCM1R,
 		hdmi_base + S5P_HDMI_ASP_CHCFG1);
-	writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
+	writeb(S5P_HDMI_SPK0R_SEL_I_PCM2R | S5P_HDMI_SPK0L_SEL_I_PCM2L,
 		hdmi_base + S5P_HDMI_ASP_CHCFG2);
-	writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
+	writeb(S5P_HDMI_SPK0R_SEL_I_PCM3R | S5P_HDMI_SPK0L_SEL_I_PCM3L,
 		hdmi_base + S5P_HDMI_ASP_CHCFG3);
 }
 
@@ -1473,7 +1474,6 @@ void s5p_hdmi_reg_infoframe(struct s5p_hdmi_infoframe *info, u8 *data, u8 type_3
 
 	/* write checksum */
 	writeb(sum, hdmi_base + sum_addr);
-
 	/* write data */
 	hdmi_write_l(data, hdmi_base, start_addr, info->length);
 }
