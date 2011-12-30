@@ -113,8 +113,7 @@ static void exynos_ss_udc_run_stop(struct exynos_ss_udc *udc, int is_on)
 		res = exynos_ss_udc_poll_bit_clear(udc->regs + EXYNOS_USB3_DSTS,
 						   EXYNOS_USB3_DSTS_DevCtrlHlt,
 						   1000);
-	}
-	else {
+	} else {
 		__bic32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_Run_Stop);
 		res = exynos_ss_udc_poll_bit_set(udc->regs + EXYNOS_USB3_DSTS,
 						   EXYNOS_USB3_DSTS_DevCtrlHlt,
@@ -122,7 +121,7 @@ static void exynos_ss_udc_run_stop(struct exynos_ss_udc *udc, int is_on)
 	}
 
 	if (!res)
-		dev_err(udc->dev, "Failed %sConnect by software\n", is_on ? "":"dis-");
+		dev_err(udc->dev, "Failed %sConnect by software\n", is_on ? "" : "dis-");
 }
 
 static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on)
@@ -1420,7 +1419,6 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 
 	/* Set device address to 0 */
 	__bic32(udc->regs + EXYNOS_USB3_DCFG, EXYNOS_USB3_DCFG_DevAddr_MASK);
-
 }
 
 /**
@@ -1503,7 +1501,6 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 
 		break;
 	}
-
 }
 
 /**
@@ -1527,7 +1524,7 @@ static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 #ifdef CONFIG_BATTERY_SAMSUNG
 			exynos_ss_udc_cable_disconnect(udc);
 #endif
-			dev_dbg(udc->dev," Disconnect %x %s speed", event_info,
+			dev_dbg(udc->dev, " Disconnect %x %s speed", event_info,
 				event & EXYNOS_USB3_DEVT_EventParam_SS ?
 				"Super" : "High");
 
@@ -2345,10 +2342,9 @@ err_mem:
 	if (udc->event_buff)
 		dma_free_coherent(NULL, EXYNOS_USB3_EVENT_BUFF_BSIZE,
 				  udc->event_buff, udc->event_buff_dma);
-	if (udc)
-		kfree(udc);
-	return ret;
+	kfree(udc);
 
+	return ret;
 }
 
 static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
