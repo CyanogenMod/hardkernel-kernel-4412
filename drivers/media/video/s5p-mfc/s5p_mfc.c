@@ -1434,7 +1434,7 @@ static struct platform_device_id mfc_driver_ids[] = {
 };
 MODULE_DEVICE_TABLE(platform, mfc_driver_ids);
 
-static struct platform_driver s5p_mfc_pdrv = {
+static struct platform_driver s5p_mfc_driver = {
 	.probe	= s5p_mfc_probe,
 	.remove	= __devexit_p(s5p_mfc_remove),
 	.id_table = mfc_driver_ids,
@@ -1451,7 +1451,7 @@ static char banner[] __initdata =
 static int __init s5p_mfc_init(void)
 {
 	pr_info("%s", banner);
-	if (platform_driver_register(&s5p_mfc_pdrv) != 0) {
+	if (platform_driver_register(&s5p_mfc_driver) != 0) {
 		pr_err("Platform device registration failed..\n");
 		return -1;
 	}
@@ -1460,7 +1460,7 @@ static int __init s5p_mfc_init(void)
 
 static void __devexit s5p_mfc_exit(void)
 {
-	platform_driver_unregister(&s5p_mfc_pdrv);
+	platform_driver_unregister(&s5p_mfc_driver);
 }
 
 module_init(s5p_mfc_init);
