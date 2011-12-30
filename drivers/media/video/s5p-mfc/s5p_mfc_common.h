@@ -298,6 +298,12 @@ struct s5p_mfc_h264_enc_params {
 	enum v4l2_codec_mfc5x_enc_switch sei_gen_enable;
 	u32 curr_frame_frm0_flag;
 	u32 frame_pack_arrgment_type;
+	u32 fmo_enable;
+	u32 fmo_slice_map_type;
+	u32 fmo_slice_num_grp;
+	u32 fmo_run_length[4];
+	u32 fmo_sg_dir;
+	u32 fmo_sg_rate;
 };
 
 /**

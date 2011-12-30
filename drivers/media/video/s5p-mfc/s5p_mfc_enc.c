@@ -622,6 +622,87 @@ static struct v4l2_queryctrl controls[] = {
 		.default_value = 3,
 	},
 	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_ENABLE,
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.name = "FMO flag",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_MAP_TYPE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Map type for FMO",
+		.minimum = 0,
+		.maximum = 5,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_SLICE_NUM,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Number of slice groups for FMO",
+		.minimum = 1,
+		.maximum = 4,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_RUN_LEN1,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Consecutive macroblocks No.1",
+		.minimum = 1,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_RUN_LEN2,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Consecutive macroblocks No.2",
+		.minimum = 1,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_RUN_LEN3,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Consecutive macroblocks No.3",
+		.minimum = 1,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_RUN_LEN4,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Consecutive macroblocks No.4",
+		.minimum = 1,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_SG_DIR,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Direction of the slice group",
+		.minimum = 0,
+		.maximum = 1,
+		.step = 1,
+		.default_value = 0,
+	},
+	{
+		.id = V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_SG_RATE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Size of the first slice group",
+		.minimum = 1,
+		.maximum = (1 << 30) - 1,
+		.step = 1,
+		.default_value = 1,
+	},
+	{
 		.id = V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES,
 		.type = V4L2_CTRL_TYPE_INTEGER,
 		.name = "The number of B frames",
@@ -2298,6 +2379,33 @@ static int set_enc_param(struct s5p_mfc_ctx *ctx, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CODEC_FRAME_PACK_ARRGMENT_TYPE:
 		p->codec.h264.frame_pack_arrgment_type = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_ENABLE:
+		p->codec.h264.fmo_enable = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_MAP_TYPE:
+		p->codec.h264.fmo_slice_map_type = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_SLICE_NUM:
+		p->codec.h264.fmo_slice_num_grp = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_RUN_LEN1:
+		p->codec.h264.fmo_run_length[0] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_RUN_LEN2:
+		p->codec.h264.fmo_run_length[1] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_RUN_LEN3:
+		p->codec.h264.fmo_run_length[2] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_RUN_LEN4:
+		p->codec.h264.fmo_run_length[3] = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_SG_DIR:
+		p->codec.h264.fmo_sg_dir = ctrl->value;
+		break;
+	case V4L2_CID_CODEC_MFC5X_ENC_H264_FMO_SG_RATE:
+		p->codec.h264.fmo_sg_rate = ctrl->value;
 		break;
 	case V4L2_CID_CODEC_MFC5X_ENC_MPEG4_B_FRAMES:
 		p->codec.mpeg4.num_b_frame = ctrl->value;

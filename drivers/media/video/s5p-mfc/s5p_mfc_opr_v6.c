@@ -1045,6 +1045,33 @@ static int s5p_mfc_set_enc_params_h264(struct s5p_mfc_ctx *ctx)
 		WRITEL(reg, S5P_FIMV_E_H264_FRAME_PACKING_SEI_INFO);
 	}
 
+	if (p_264->fmo_enable == V4L2_CODEC_MFC5X_ENC_SW_ENABLE) {
+		switch(p_264->fmo_slice_map_type) {
+		case 0:
+			WRITEL(p_264->fmo_run_length[0] - 1, S5P_FIMV_E_H264_FMO_RUN_LENGTH_MINUS1_0);
+			WRITEL(p_264->fmo_run_length[1] - 1, S5P_FIMV_E_H264_FMO_RUN_LENGTH_MINUS1_1);
+			WRITEL(p_264->fmo_run_length[2] - 1, S5P_FIMV_E_H264_FMO_RUN_LENGTH_MINUS1_2);
+			WRITEL(p_264->fmo_run_length[3] - 1, S5P_FIMV_E_H264_FMO_RUN_LENGTH_MINUS1_3);
+			break;
+		case 1:
+			break;
+		case 4:
+		case 5:
+			WRITEL(p_264->fmo_sg_dir, S5P_FIMV_E_H264_FMO_SLICE_GRP_CHANGE_DIR);
+			WRITEL(p_264->fmo_sg_rate, S5P_FIMV_E_H264_FMO_SLICE_GRP_CHANGE_RATE_MINUS1);
+			break;
+		default:
+			mfc_err("Wrong map type for FMO (%d)\n", p_264->fmo_slice_map_type);
+			p_264->fmo_slice_map_type = 0;
+			p_264->fmo_slice_num_grp = 1;
+			break;
+		}
+		WRITEL(p_264->fmo_slice_map_type, S5P_FIMV_E_H264_FMO_SLICE_GRP_MAP_TYPE);
+		WRITEL(p_264->fmo_slice_num_grp - 1, S5P_FIMV_E_H264_FMO_NUM_SLICE_GRP_MINUS1);
+	} else {
+		WRITEL(p_264->fmo_slice_num_grp - 1, S5P_FIMV_E_H264_FMO_NUM_SLICE_GRP_MINUS1);
+	}
+
 	mfc_debug_leave();
 
 	return 0;
