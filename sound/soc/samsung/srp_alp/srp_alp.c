@@ -804,7 +804,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 		}
 	}
 
-	srp_info("IRQ Exited!\n");
+	srp_debug("IRQ Exited!\n");
 
 	return IRQ_HANDLED;
 }
