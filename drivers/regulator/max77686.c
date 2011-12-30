@@ -201,7 +201,7 @@ static int max77686_get_enable_register(struct regulator_dev *rdev,
 	case MAX77686_BUCK4:
 		*reg = MAX77686_REG_BUCK4CTRL1;
 		*mask = 0x30;
-		*pattern = 0x30;
+		*pattern = 0x10;
 		break;
 	case MAX77686_BUCK5 ... MAX77686_BUCK9:
 		*reg = MAX77686_REG_BUCK5CTRL + (rid - MAX77686_BUCK5)*2;
@@ -303,7 +303,7 @@ static int max77686_get_voltage_register(struct regulator_dev *rdev,
 		mask = 0xff;
 		break;
 	case MAX77686_BUCK5 ... MAX77686_BUCK9:
-		reg = MAX77686_REG_BUCK5OUT + (rid - MAX77686_BUCK5);
+		reg = MAX77686_REG_BUCK5OUT + (rid - MAX77686_BUCK5) * 2;
 		break;
 	default:
 		return -EINVAL;

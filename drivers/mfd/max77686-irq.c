@@ -56,8 +56,6 @@ static struct i2c_client *max77686_get_i2c(struct max77686_dev *max77686,
 	default:
 		return ERR_PTR(-EINVAL);
 	}
-
-	return ERR_PTR(-EINVAL);
 }
 
 struct max77686_irq_data {
@@ -230,7 +228,7 @@ int max77686_irq_init(struct max77686_dev *max77686)
 	int ret;
 	int val;
 #ifdef MAX77686_IRQ_TEST
-	u8 irq_reg[6] = {};
+	u8 irq_reg[6] = { };
 	u8 irq_src;
 #endif
 
@@ -251,7 +249,14 @@ int max77686_irq_init(struct max77686_dev *max77686)
 	mutex_init(&max77686->irqlock);
 
 	max77686->irq = gpio_to_irq(max77686->irq_gpio);
-	gpio_request(max77686->irq_gpio, "pmic_irq");
+	ret = gpio_request(max77686->irq_gpio, "pmic_irq");
+	if (ret < 0) {
+		dev_err(max77686->dev,
+			"Failed to request gpio %d with ret: %d\n",
+			max77686->irq_gpio, ret);
+		return IRQ_NONE;
+	}
+
 	gpio_direction_input(max77686->irq_gpio);
 	val = gpio_get_value(max77686->irq_gpio);
 	gpio_free(max77686->irq_gpio);
@@ -263,7 +268,7 @@ int max77686_irq_init(struct max77686_dev *max77686)
 	ret = max77686_read_reg(max77686->i2c, MAX77686_REG_INTSRC, &irq_src);
 	if (ret < 0) {
 		dev_err(max77686->dev, "Failed to read interrupt source: %d\n",
-				ret);
+			ret);
 		return IRQ_NONE;
 	}
 
@@ -272,7 +277,7 @@ int max77686_irq_init(struct max77686_dev *max77686)
 	ret = max77686_bulk_read(max77686->i2c, MAX77686_REG_INT1, 6, irq_reg);
 	if (ret < 0) {
 		dev_err(max77686->dev, "Failed to read interrupt source: %d\n",
-				ret);
+			ret);
 		return IRQ_NONE;
 	}
 
@@ -301,7 +306,7 @@ int max77686_irq_init(struct max77686_dev *max77686)
 		cur_irq = i + max77686->irq_base;
 		irq_set_chip_data(cur_irq, max77686);
 		irq_set_chip_and_handler(cur_irq, &max77686_irq_chip,
-				handle_edge_irq);
+					 handle_edge_irq);
 		irq_set_nested_thread(cur_irq, 1);
 #ifdef CONFIG_ARM
 		set_irq_flags(cur_irq, IRQF_VALID);
@@ -311,12 +316,12 @@ int max77686_irq_init(struct max77686_dev *max77686)
 	}
 
 	ret = request_threaded_irq(max77686->irq, NULL, max77686_irq_thread,
-			IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-			"max77686-irq", max77686);
+				   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+				   "max77686-irq", max77686);
 
 	if (ret) {
 		dev_err(max77686->dev, "Failed to request IRQ %d: %d\n",
-				max77686->irq, ret);
+			max77686->irq, ret);
 		return ret;
 	}
 

@@ -116,10 +116,11 @@ int max77686_update_reg(struct i2c_client *i2c, u8 reg, u8 val, u8 mask)
 EXPORT_SYMBOL_GPL(max77686_update_reg);
 
 static int max77686_i2c_probe(struct i2c_client *i2c,
-			    const struct i2c_device_id *id)
+			      const struct i2c_device_id *id)
 {
 	struct max77686_dev *max77686;
 	struct max77686_platform_data *pdata = i2c->dev.platform_data;
+	u8 data;
 	int ret = 0;
 
 	max77686 = kzalloc(sizeof(struct max77686_dev), GFP_KERNEL);
@@ -131,8 +132,10 @@ static int max77686_i2c_probe(struct i2c_client *i2c,
 	max77686->i2c = i2c;
 	max77686->type = id->driver_data;
 
-	if (!pdata)
+	if (!pdata) {
+		ret = -EIO;
 		goto err;
+	}
 
 	max77686->wakeup = pdata->wakeup;
 	max77686->irq_gpio = pdata->irq_gpio;
@@ -140,15 +143,22 @@ static int max77686_i2c_probe(struct i2c_client *i2c,
 
 	mutex_init(&max77686->iolock);
 
+	if (max77686_read_reg(i2c, MAX77686_REG_DEVICE_ID, &data) < 0) {
+		dev_err(max77686->dev,
+			"device not found on this channel (this is not an error)\n");
+		ret = -ENODEV;
+		goto err;
+	} else
+		dev_info(max77686->dev, "device found\n");
+
 #ifdef CONFIG_RTC_DRV_MAX77686
 	max77686->rtc = i2c_new_dummy(i2c->adapter, I2C_ADDR_RTC);
 	i2c_set_clientdata(max77686->rtc, max77686);
 #endif
 	max77686_irq_init(max77686);
 
-	mfd_add_devices(max77686->dev, -1, max77686_devs,
-			ARRAY_SIZE(max77686_devs),
-			NULL, 0);
+	ret = mfd_add_devices(max77686->dev, -1, max77686_devs,
+			      ARRAY_SIZE(max77686_devs), NULL, 0);
 
 	if (ret < 0)
 		goto err_mfd;
