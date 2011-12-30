@@ -567,7 +567,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 	struct s5p_mfc_dev *dev = priv;
 	struct s5p_mfc_buf *src_buf;
 	struct s5p_mfc_ctx *ctx;
-	struct s5p_mfc_dec *dec;
+	struct s5p_mfc_dec *dec = NULL;
 	unsigned int reason;
 	unsigned int err;
 	unsigned long flags;
@@ -704,7 +704,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 					}
 					spin_unlock_irqrestore(&dev->irqlock, flags);
 				} else {
-					if (dec->dpb_flush)
+					if (dec && dec->dpb_flush)
 						dec->dpb_flush = 0;
 				}
 			} else {
