@@ -53,14 +53,10 @@ static int import_ion_client_create(void** custom_session_data)
 	ion_client = (struct ion_client**)custom_session_data;
 	*ion_client = ion_client_create(ion_device_get(), ion_heap_mask_get(), "ump");
 
-	if (*ion_client)
-	{
-		return 0;
-	}
-	else
-	{
-		return -ENOMEM;
-	}
+	if (IS_ERR(*ion_client))
+		return PTR_ERR(*ion_client);
+
+	return 0;
 }
 
 
@@ -72,9 +68,6 @@ static void import_ion_client_destroy(void* custom_session_data)
 	BUG_ON(!ion_client);
 
 	ion_client_destroy(ion_client);
-	ion_client = NULL;
-
-	return;
 }
 
 
@@ -156,7 +149,7 @@ static ump_dd_handle import_ion_import(void * custom_session_data, void * pfd, u
 
 	for_each_sg(ion_info->sglist, sg, num_dma_blocks, i)
 	{
-		phys_blocks[i].addr = sg_dma_address(sg);
+		phys_blocks[i].addr = sg_phys(sg);
 		phys_blocks[i].size = sg_dma_len(sg);
 	}
 
