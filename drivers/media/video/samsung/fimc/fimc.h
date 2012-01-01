@@ -403,6 +403,8 @@ struct fimc_is {
 	u32 bad_mark;
 	u32 offset_x;
 	u32 offset_y;
+	u32 zoom_in_width;
+	u32 zoom_in_height;
 };
 
 /* fimc controller abstration */
@@ -580,7 +582,7 @@ extern int fimc_enum_framesizes(struct file *filp, void *fh, struct v4l2_frmsize
 extern int fimc_enum_frameintervals(struct file *filp, void *fh, struct v4l2_frmivalenum *fival);
 extern int fimc_release_subdev(struct fimc_control *ctrl);
 extern int fimc_is_release_subdev(struct fimc_control *ctrl);
-
+extern int fimc_is_set_zoom(struct fimc_control *ctrl, struct v4l2_control *c);
 /* output device */
 extern void fimc_outdev_set_src_addr(struct fimc_control *ctrl, dma_addr_t *base);
 extern int fimc_outdev_set_ctx_param(struct fimc_control *ctrl, struct fimc_ctx *ctx);
@@ -624,6 +626,7 @@ extern int fimc_s_fbuf(struct file *filp, void *fh, struct v4l2_framebuffer *fb)
 
 /* Register access file */
 extern int fimc_hwset_camera_source(struct fimc_control *ctrl);
+extern int fimc_hwset_camera_change_source(struct fimc_control *ctrl);
 extern int fimc_hwset_enable_irq(struct fimc_control *ctrl, int overflow, int level);
 extern int fimc_hwset_disable_irq(struct fimc_control *ctrl);
 extern int fimc_hwset_clear_irq(struct fimc_control *ctrl);
