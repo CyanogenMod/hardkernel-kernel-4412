@@ -104,6 +104,7 @@ enum fimc_is_state_flag {
 	IS_ST_STREAM_OFF,
 	IS_ST_CHANGE_MODE,
 	IS_ST_SET_PARAM,
+	IS_ST_SET_ZOOM,
 	IS_ST_PEND,
 	IS_ST_BLOCKED,
 	IS_ST_END
@@ -218,6 +219,8 @@ struct is_sensor {
 	u32 height_cam;
 	u32 offset_x;
 	u32 offset_y;
+	u32 zoom_out_width;
+	u32 zoom_out_height;
 };
 
 struct is_fd_result_header {

@@ -1250,18 +1250,22 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_still.otf_input.width);
 		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
 			init_val_isp_preview_still.otf_input.height);
-		dev->sensor.width_prev =
-			init_val_isp_preview_still.otf_input.width;
-		dev->sensor.height_prev =
-			init_val_isp_preview_still.otf_input.height;
 		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev,
 			init_val_isp_preview_still.otf_input.format);
 		IS_ISP_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
 			init_val_isp_preview_still.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
 			init_val_isp_preview_still.otf_input.order);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, 0);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_preview_still.otf_input.err);
+		dev->sensor.width_prev =
+			init_val_isp_preview_still.otf_input.width;
+		dev->sensor.height_prev =
+			init_val_isp_preview_still.otf_input.height;
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -1619,18 +1623,22 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_video.otf_input.width);
 		IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev,
 			init_val_isp_preview_video.otf_input.height);
-		dev->sensor.width_prev_cam =
-			init_val_isp_preview_video.otf_input.width;
-		dev->sensor.height_prev_cam =
-			init_val_isp_preview_video.otf_input.height;
 		IS_ISP_SET_PARAM_OTF_INPUT_FORMAT(dev,
 			init_val_isp_preview_video.otf_input.format);
 		IS_ISP_SET_PARAM_OTF_INPUT_BITWIDTH(dev,
 			init_val_isp_preview_video.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
 			init_val_isp_preview_video.otf_input.order);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, 0);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_preview_video.otf_input.err);
+		dev->sensor.width_prev_cam =
+			init_val_isp_preview_video.otf_input.width;
+		dev->sensor.height_prev_cam =
+			init_val_isp_preview_video.otf_input.height;
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -1995,8 +2003,16 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_capture.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
 			init_val_isp_capture.otf_input.order);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, 0);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_capture.otf_input.err);
+		dev->sensor.width_cap =
+			init_val_isp_capture.otf_input.width;
+		dev->sensor.height_cap =
+			init_val_isp_capture.otf_input.height;
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,
@@ -2352,8 +2368,16 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_camcording.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
 			init_val_isp_camcording.otf_input.order);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, 0);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_camcording.otf_input.err);
+		dev->sensor.width_cam =
+			init_val_isp_camcording.otf_input.width;
+		dev->sensor.height_cam =
+			init_val_isp_camcording.otf_input.height;
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 		IS_INC_PARAM_NUM(dev);
 		IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev,

@@ -61,6 +61,14 @@
 		(dev->is_p_region->parameter.isp.otf_input.bitwidth = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.order = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.crop_offset_x = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.crop_offset_y = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.crop_width = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.crop_height = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.err = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED0(dev, x) \

@@ -533,7 +533,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	int ret = 0;
-	int i, max;
+	int i, max, tmp = 0;
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 
 	switch (ctrl->id) {
@@ -704,10 +704,188 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			}
 		}
 		break;
+	case V4L2_CID_IS_ZOOM_STATE:
+		if (test_bit(IS_ST_SET_ZOOM, &dev->state))
+			ctrl->value = 1;
+		else
+			ctrl->value  = 0;
+		break;
+	case V4L2_CID_IS_ZOOM_MAX_LEVEL:
+		switch (dev->scenario_id) {
+		case ISS_PREVIEW_STILL:
+			tmp = dev->sensor.width_prev;
+			break;
+		case ISS_PREVIEW_VIDEO:
+			tmp = dev->sensor.width_prev_cam;
+			break;
+		case ISS_CAPTURE_STILL:
+			tmp = dev->sensor.width_cap;
+			break;
+		case ISS_CAPTURE_VIDEO:
+			tmp = dev->sensor.width_cam;
+			break;
+		}
+		i = 0;
+		while ((tmp - (16*i)) > (tmp/4) && (tmp - (16*i)) > 200)
+			i++;
+		ctrl->value = i;
+		break;
 	default:
 		return -EINVAL;
 	}
 	return ret;
+}
+
+static int fimc_is_v4l2_digital_zoom(struct fimc_is_dev *dev, int zoom_factor)
+{
+	u32 ori_width = 0, ori_height = 0;
+	u32 crop_offset_x = 0, crop_offset_y = 0;
+	u32 crop_width = 0, crop_height = 0;
+	u32 mode;
+	int tmp, ret = 0;
+
+	clear_bit(IS_ST_SET_ZOOM, &dev->state);
+
+	/* 1. Get current width and height */
+	switch (dev->scenario_id) {
+	case ISS_PREVIEW_STILL:
+		mode = IS_MODE_PREVIEW_STILL;
+		ori_width = dev->sensor.width_prev;
+		ori_height = dev->sensor.height_prev;
+		tmp = fimc_is_hw_get_sensor_max_framerate(dev);
+		IS_SENSOR_SET_FRAME_RATE(dev, tmp);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		break;
+	case ISS_PREVIEW_VIDEO:
+		mode = IS_MODE_PREVIEW_VIDEO;
+		ori_width = dev->sensor.width_prev_cam;
+		ori_height = dev->sensor.height_prev_cam;
+		break;
+	case ISS_CAPTURE_STILL:
+		mode = IS_MODE_CAPTURE_STILL;
+		ori_width = dev->sensor.width_cap;
+		ori_height = dev->sensor.height_cap;
+		break;
+	case ISS_CAPTURE_VIDEO:
+		mode = IS_MODE_CAPTURE_VIDEO;
+		ori_width = dev->sensor.width_cam;
+		ori_height = dev->sensor.height_cam;
+		break;
+	}
+
+	/* calculate the offset and size */
+	if (!zoom_factor) {
+		crop_offset_x = 0;
+		crop_offset_y = 0;
+		crop_width = 0;
+		crop_height = 0;
+		dev->sensor.zoom_out_width = ori_width;
+		dev->sensor.zoom_out_height = ori_height;
+	} else {
+		crop_width = ori_width - (16 * zoom_factor); 
+		crop_height = (crop_width * ori_height) / ori_width;
+		/* bayer crop contraint */
+		switch (crop_height%4) {
+		case 1:
+			crop_height--;
+			break;
+		case 2:
+			crop_height += 2;
+			break;
+		case 3:
+			crop_height++;
+			break;
+		}
+		if ((crop_height < (ori_height / 4)) ||
+			(crop_width < (ori_width / 4))) {
+			crop_width = ori_width/4;
+			crop_height = ori_height/4;
+		}
+		crop_offset_x = (ori_width - crop_width)/2;
+		crop_offset_y = (ori_height - crop_height)/2;
+		dev->sensor.zoom_out_width = crop_width;
+		dev->sensor.zoom_out_height = crop_height;
+	}
+
+	dbg("Zoom out offset = %d, %d\n", crop_offset_x, crop_offset_y);
+	dbg("Zoom out = %d, %d\n", dev->sensor.zoom_out_width,
+					dev->sensor.zoom_out_height);
+
+	/* 2. stream off */
+	clear_bit(IS_ST_STREAM_ON, &dev->state);
+	fimc_is_hw_set_stream(dev, 0);
+	ret = wait_event_timeout(dev->irq_queue1,
+		test_bit(IS_ST_STREAM_OFF, &dev->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&dev->pdev->dev, "wait timeout : %s\n", __func__);
+		return -EBUSY;
+	}
+	clear_bit(IS_ST_STREAM_OFF, &dev->state);
+
+	/* 3. update input and output size of ISP,DRC and FD */
+	IS_ISP_SET_PARAM_OTF_INPUT_CMD(dev, OTF_INPUT_COMMAND_ENABLE);
+	IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, ori_width);
+	IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev, ori_height);
+	IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, crop_offset_x);
+	IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, crop_offset_y);
+	IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, crop_width);
+	IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, crop_height);
+	IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
+	IS_INC_PARAM_NUM(dev);
+	IS_ISP_SET_PARAM_OTF_OUTPUT_CMD(dev, OTF_OUTPUT_COMMAND_ENABLE);
+	IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev, dev->sensor.zoom_out_width);
+	IS_ISP_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, dev->sensor.zoom_out_height);
+	IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_OUTPUT);
+	IS_INC_PARAM_NUM(dev);
+	IS_ISP_SET_PARAM_DMA_OUTPUT1_WIDTH(dev, dev->sensor.zoom_out_width);
+	IS_ISP_SET_PARAM_DMA_OUTPUT1_HEIGHT(dev, dev->sensor.zoom_out_height);
+	IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
+	IS_INC_PARAM_NUM(dev);
+	IS_ISP_SET_PARAM_DMA_OUTPUT2_WIDTH(dev, dev->sensor.zoom_out_width);
+	IS_ISP_SET_PARAM_DMA_OUTPUT2_HEIGHT(dev, dev->sensor.zoom_out_height);
+	IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
+	IS_INC_PARAM_NUM(dev);
+	/* DRC input / output*/
+	IS_DRC_SET_PARAM_OTF_INPUT_WIDTH(dev, dev->sensor.zoom_out_width);
+	IS_DRC_SET_PARAM_OTF_INPUT_HEIGHT(dev, dev->sensor.zoom_out_height);
+	IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_INPUT);
+	IS_INC_PARAM_NUM(dev);
+	IS_DRC_SET_PARAM_OTF_OUTPUT_WIDTH(dev, dev->sensor.zoom_out_width);
+	IS_DRC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, dev->sensor.zoom_out_height);
+	IS_SET_PARAM_BIT(dev, PARAM_DRC_OTF_OUTPUT);
+	IS_INC_PARAM_NUM(dev);
+	/* FD input / output*/
+	IS_FD_SET_PARAM_OTF_INPUT_WIDTH(dev, dev->sensor.zoom_out_width);
+	IS_FD_SET_PARAM_OTF_INPUT_HEIGHT(dev, dev->sensor.zoom_out_height);
+	IS_SET_PARAM_BIT(dev, PARAM_FD_OTF_INPUT);
+	IS_INC_PARAM_NUM(dev);
+	/* 4. Set parameter */
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
+	clear_bit(IS_ST_RUN, &dev->state);
+	fimc_is_hw_set_param(dev);
+	ret = wait_event_timeout(dev->irq_queue1,
+		test_bit(IS_ST_RUN, &dev->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&dev->pdev->dev, "wait timeout : %s\n", __func__);
+		return -EBUSY;
+	}
+	/* 5. Mode change for getting CAC margin */
+	clear_bit(IS_ST_RUN, &dev->state);
+	set_bit(IS_ST_CHANGE_MODE, &dev->state);
+	fimc_is_hw_change_mode(dev, mode);
+	ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_RUN, &dev->state),
+				FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&dev->pdev->dev,
+			"Mode change timeout:%s\n", __func__);
+		return -EBUSY;
+	}
+	set_bit(IS_ST_SET_ZOOM, &dev->state);
+	return 0;
 }
 
 static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
@@ -3154,6 +3332,9 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			break;
 		}
 		break;
+	case V4L2_CID_CAMERA_ZOOM:
+		fimc_is_v4l2_digital_zoom(dev, ctrl->value);
+		break;
 	case V4L2_CID_CAMERA_VT_MODE:
 		break;
 	case V4L2_CID_CAMERA_VGA_BLUR:
@@ -4192,6 +4373,10 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 	/* 1. ISP input / output*/
 	IS_ISP_SET_PARAM_OTF_INPUT_WIDTH(dev, mf->width);
 	IS_ISP_SET_PARAM_OTF_INPUT_HEIGHT(dev, mf->height);
+	IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, 0);
+	IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, 0);
+	IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, 0);
+	IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, 0);
 	IS_SET_PARAM_BIT(dev, PARAM_ISP_OTF_INPUT);
 	IS_INC_PARAM_NUM(dev);
 	IS_ISP_SET_PARAM_OTF_OUTPUT_WIDTH(dev, mf->width);
@@ -4254,6 +4439,10 @@ static int fimc_is_s_stream(struct v4l2_subdev *sd, int enable)
 			if (!ret) {
 				dev_err(&dev->pdev->dev,
 					"wait timeout : %s\n", __func__);
+				fimc_is_hw_set_stream(dev, 0);
+				ret = fimc_is_s_power(sd, 0);
+				if (!ret)
+					err("s_power off failed!!\n");
 				return -EBUSY;
 			}
 		} else {
