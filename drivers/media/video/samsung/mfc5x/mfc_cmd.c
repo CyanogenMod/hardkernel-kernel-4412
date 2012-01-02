@@ -339,6 +339,11 @@ int mfc_cmd_seq_start(struct mfc_inst_ctx *ctx)
 		return MFC_DEC_INIT_FAIL;
 	}
 
+	if ((r2h_args.arg[1] & 0xFFFF) == 175) {
+		mfc_err("Non compliant feature detected\n");
+		return MFC_DEC_INIT_FAIL;
+	}
+
 	return MFC_OK;
 }
 
