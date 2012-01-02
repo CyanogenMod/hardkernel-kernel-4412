@@ -452,9 +452,6 @@ int h264_get_init_arg(struct mfc_inst_ctx *ctx, void *arg)
 	/** num of ref. pictures of P */
 	reg &= ~(0x3 << 5);
 	reg |= ((init_h264_arg->in_ref_num_p & 0x3) << 5);
-	/** max number of ref. pictures */
-	reg &= ~(0x1F << 0);
-	reg |= ((init_h264_arg->in_reference_num & 0x1F) << 0);
 	write_reg(reg, MFC_ENC_H264_NUM_OF_REF);
 
 	/* 8x8 transform enable */
