@@ -1173,7 +1173,7 @@ static __devinit int srp_probe(struct platform_device *pdev)
 		goto err4;
 	}
 
-	ret = request_irq(IRQ_AUDIO_SS, srp_irq, 0, "samsung-rp", pdev);
+	ret = request_irq(IRQ_AUDIO_SS, srp_irq, IRQF_DISABLED, "samsung-rp", pdev);
 	if (ret < 0) {
 		srp_err("SRP: Fail to claim SRP(AUDIO_SS) irq\n");
 		goto err5;
