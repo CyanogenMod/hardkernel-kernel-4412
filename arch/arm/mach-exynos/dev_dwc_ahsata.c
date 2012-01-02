@@ -201,18 +201,6 @@ bool sata_i2c_wait_for_tx_ack(u32 time_out)
 	return false;
 }
 
-bool sata_i2c_wait_for_tx_noack(u32 time_out)
-{
-	while (--time_out) {
-		if (sata_i2c_get_int_status())
-			return true;
-
-		udelay(100);
-	}
-	printk(KERN_ERR "SATA I2C wait fail for transfer no ack...\n");
-	return false;
-}
-
 void sata_i2c_clear_int_status(void)
 {
 	u32 val;
@@ -267,39 +255,6 @@ void sata_i2c_set_master_tx(void)
 	/* Enable I2C */
 	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
 	val  |= STAT_RTEN;
-	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
-}
-void sata_i2c_set_master_rx(void)
-{
-	u32 val;
-	/* Disable I2C */
-	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  &= ~STAT_RTEN;
-	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
-
-	/* Clear Mode */
-	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  &= ~STAT_MSTT;
-	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
-
-	sata_i2c_clear_int_status();
-	/* interrupt disable */
-	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val  &= ~CON_INTEN;
-	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
-
-	/* Master, Received mode */
-	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val  |= STAT_MSTR;
-	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
-
-	/* interrupt enable */
-	val = __raw_readl(phy_i2c_base + SATA_I2C_CON);
-	val   |= CON_INTEN;
-	__raw_writel(val, phy_i2c_base + SATA_I2C_CON);
-	/* Enable I2C */
-	val = __raw_readl(phy_i2c_base + SATA_I2C_STAT);
-	val   |= STAT_RTEN;
 	__raw_writel(val, phy_i2c_base + SATA_I2C_STAT);
 }
 
@@ -363,52 +318,6 @@ STOP:
 	return ret;
 }
 
-bool sata_i2c_recv(u8 slave_addrs, u8 addrs, u8 *data)
-{
-	s32 ret = 0;
-	if (!sata_i2c_wait_for_busready(SATA_TIME_LIMIT))
-		return false;
-
-	sata_i2c_init();
-	sata_i2c_set_master_tx();
-
-	sata_i2c_write_addrs(slave_addrs);
-	sata_i2c_start();
-	if (!sata_i2c_wait_for_tx_ack(SATA_TIME_LIMIT)) {
-		ret = false;
-		goto STOP;
-	}
-	sata_i2c_write_data(addrs);
-	sata_i2c_clear_int_status();
-	if (!sata_i2c_wait_for_tx_ack(SATA_TIME_LIMIT)) {
-		ret = false;
-		goto STOP;
-	}
-	sata_i2c_set_master_rx();
-	sata_i2c_write_addrs(slave_addrs);
-	sata_i2c_start();
-	if (!sata_i2c_wait_for_tx_ack(SATA_TIME_LIMIT)) {
-		ret = false;
-		goto STOP;
-	}
-	sata_i2c_set_ack_gen(false);
-	sata_i2c_clear_int_status();
-	if (!sata_i2c_wait_for_tx_noack(SATA_TIME_LIMIT)) {
-		ret = false;
-		goto STOP;
-	}
-
-	*data = sata_i2c_read_data();
-	ret = true;
-
-STOP:
-	sata_i2c_stop();
-	sata_i2c_clear_int_status();
-	sata_i2c_wait_for_busready(SATA_TIME_LIMIT);
-
-	return ret;
-}
-
 static int ahci_phy_init(void __iomem *mmio)
 {
 	u8 uCount, i = 0;
@@ -416,21 +325,11 @@ static int ahci_phy_init(void __iomem *mmio)
 	u8 reg_addrs[] = {0x22, 0x21, 0x3A};
 	/* 0x0B for 40bit I/F */
 	u8 default_setting_value[] = {0x30, 0x4f, 0x0B};
-	u8 ucReadData[20];
-
-	memset(ucReadData, 0, sizeof(ucReadData)/sizeof(u8));
 
 	uCount = sizeof(reg_addrs)/sizeof(u8);
 	while (i < uCount) {
 		if (!sata_i2c_send(SATA_PHY_I2C_SLAVE_ADDRS, reg_addrs[i],
 					default_setting_value[i]))
-			return false;
-
-		if (!sata_i2c_recv(SATA_PHY_I2C_SLAVE_ADDRS, reg_addrs[i],
-					&ucReadData[i]))
-			return false;
-
-		if (ucReadData[i] != default_setting_value[i])
 			return false;
 		i++;
 	}
