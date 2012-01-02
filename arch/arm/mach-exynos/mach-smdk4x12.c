@@ -4109,7 +4109,10 @@ static void __init smdk4x12_machine_init(void)
 #ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 #endif
-	exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 267 * MHZ);
+	if (soc_is_exynos4412() && samsung_rev() >= EXYNOS4412_REV_1_0)
+		exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 200 * MHZ);
+	else
+		exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 267 * MHZ);
 #endif
 
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
