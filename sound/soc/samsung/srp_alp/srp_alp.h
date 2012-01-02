@@ -190,7 +190,7 @@ struct srp_info {
 	/* Decoding informaion */
 	unsigned long	frame_size;
 	unsigned long	set_bitstream_size;
-        unsigned long	old_pcm_size;
+        unsigned long   pcm_size;
 
 	/* SRP status information */
 	unsigned int	first_decoding;

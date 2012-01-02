@@ -148,6 +148,7 @@ static void srp_reset(void)
 
 	srp.wakeup_read_wq[0] = 1;
 	srp.wakeup_read_wq[1] = 1;
+
 	if (waitqueue_active(&read_wq))
 		wake_up_interruptible(&read_wq);
 
@@ -188,7 +189,7 @@ static void srp_reset(void)
 	srp.prepare_for_eos = 0;
 	srp.play_done = 0;
 	srp.save_ibuf_empty = 0;
-	srp.old_pcm_size = 0;
+	srp.pcm_size = 0;
 }
 
 static void srp_stop(void)
@@ -344,6 +345,8 @@ static ssize_t srp_read(struct file *file, char *buffer,
 				srp.obuf_fill_done[srp.obuf_ready] = 1;
 			}
 		}
+
+		srp.wakeup_read_wq[srp.obuf_ready] = 0;
 	} else {
 		srp_debug("not prepared not yet! OBUF[%d]\n", srp.obuf_ready);
 		srp.pcm_info.size = 0;
@@ -351,12 +354,13 @@ static ssize_t srp_read(struct file *file, char *buffer,
 	}
 
 	srp.pcm_info.addr = srp.obuf_ready ? obuf1 : obuf0;
-	srp.pcm_info.size = readl(srp.commbox + SRP_PCM_DUMP_ADDR);
+	srp.pcm_info.size = srp.pcm_size;
 	srp.pcm_info.num = srp.obuf_info.num;
-	if (srp.play_done && srp.pcm_info.size) {
-		if (srp.pcm_info.size < srp.obuf_size &&
-			srp.pcm_info.size == srp.old_pcm_size)
-			srp.pcm_info.size = 0;
+
+	if (srp.play_done && !srp.pcm_info.size) {
+		srp_info("Stop EOS by play done\n");
+		srp.pcm_info.size = 0;
+		srp.stop_after_eos = 1;
 	}
 
 	if (srp.sp_data.obuf_restored) {
@@ -369,15 +373,6 @@ static ssize_t srp_read(struct file *file, char *buffer,
 			srp.obuf_ready, srp.pcm_info.size);
 
 	srp.obuf_copy_done[srp.obuf_ready] = 1;
-	srp.wakeup_read_wq[srp.obuf_ready] = 0;
-	srp.old_pcm_size = srp.pcm_info.size;
-	srp.pcm_info.size = 0;
-
-	/* For End-Of-Stream */
-	if (srp.wait_for_eos && srp.play_done) {
-		srp_info("Stop EOS by play done\n");
-		srp.stop_after_eos = 1;
-	}
 
 	return ret;
 }
@@ -706,6 +701,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned int irq_info = readl(srp.commbox + SRP_INFORMATION);
 	unsigned int irq_code_req;
 	unsigned int pending_off = 0;
+	unsigned int obuf_full = 0;
 
 	srp_debug("IRQ: Code [0x%x], Pending [%s], CFGR [0x%x]", irq_code,
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN",
@@ -745,7 +741,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 
 		case SRP_INTR_CODE_OBUF_FULL:
 			srp.is_pending = STALL;
-
+			obuf_full = 1;
 			if ((irq_code & SRP_INTR_CODE_OBUF_MASK)
 				==  SRP_INTR_CODE_OBUF0_FULL) {
 				srp_debug("OBUF0 FULL\n");
@@ -762,11 +758,14 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 				srp_debug("OBUF1 FULL\n");
 				srp.obuf_fill_done[1] = 1;
 				srp.wakeup_read_wq[1] = 1;
-				if (srp.first_decoding) {
+				if (srp.first_decoding && !srp.wait_for_eos) {
 					srp.first_decoding = 0;
 					srp.wakeup_read_wq[0] = 1;
 				}
 			}
+
+			srp.pcm_size = readl(srp.commbox + SRP_PCM_DUMP_ADDR);
+			writel(0, srp.commbox + SRP_PCM_DUMP_ADDR);
 
 			break;
 
@@ -779,12 +778,15 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 		srp_check_obuf_info();
 
 	if (irq_code & SRP_INTR_CODE_PLAYDONE) {
-		srp_info("Play Done interrupt!! Decoded Size[%d]\n",
-				readl(srp.commbox + SRP_PCM_DUMP_ADDR));
-
+		srp_info("Play Done interrupt!!\n");
+		srp.pcm_size = 0;
 		srp.play_done = 1;
+
 		srp.wakeup_read_wq[0] = 1;
 		srp.wakeup_read_wq[1] = 1;
+
+		if (waitqueue_active(&read_wq))
+			wake_up_interruptible(&read_wq);
 	}
 
 	if (irq_code & SRP_INTR_CODE_UART_OUTPUT) {
@@ -798,7 +800,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	if (pending_off)
 		srp_pending_ctrl(RUN);
 
-	if (srp.wakeup_read_wq[0] || srp.wakeup_read_wq[1]) {
+	if (obuf_full) {
 		if (waitqueue_active(&read_wq)) {
 			wake_up_interruptible(&read_wq);
 			srp_debug("Wake up by Obuf INT\n");
