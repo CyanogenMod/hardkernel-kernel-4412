@@ -1071,12 +1071,12 @@ static void srp_obuf_restore(void)
 		writel(srp.obuf_size, srp.commbox + SRP_PCM_DUMP_ADDR);
 	}
 
-	srp.obuf_fill_done[0] = 1;
-	srp.obuf_copy_done[0] = 1;
-
 	if (srp.wait_for_eos) {
 		srp.obuf_ready = 1;
 		srp.obuf_next = 0;
+	} else {
+		srp.obuf_fill_done[0] = 1;
+		srp.obuf_copy_done[0] = 1;
 	}
 }
 
