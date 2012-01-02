@@ -22,90 +22,88 @@
 static int fimg2d_check_params(struct fimg2d_blit __user *u)
 {
 	int w, h;
-	struct fimg2d_rect *sr, *dr, *mr;
-	struct fimg2d_clip *ur;
+	struct fimg2d_rect *r;
+	struct fimg2d_clip *c;
 
 	/* DST op makes no effect */
-	if (u->op < 0 || u->op == BLIT_OP_DST || u->op >= BLIT_OP_END)
-		goto err_op;
+	if (u->op < 0 || u->op == BLIT_OP_DST || u->op >= BLIT_OP_END) {
+		printk(KERN_ERR "%s: invalid op\n", __func__);
+		return -1;
+	}
 
 	if (u->src) {
 		w = u->src->width;
 		h = u->src->height;
-		sr = u->src_rect;
+		r = u->src_rect;
 
-		if (!sr ||
-			sr->x1 < 0 || sr->x2 > w ||
-			sr->y1 < 0 || sr->y2 > h ||
-			sr->x1 == sr->x2 || sr->y1 == sr->y2)
-			goto err_src_rect;
+		if (!r) {
+			printk(KERN_ERR "%s: missing src rect\n", __func__);
+			return -1;
+		}
 
 		/* 8000: max width & height */
-		if (w > 8000 || h > 8000)
-			goto err_src_rect;
+		if (w > 8000 || h > 8000 ||
+			r->x1 < 0 || r->x2 > w ||
+			r->y1 < 0 || r->y2 > h ||
+			r->x1 == r->x2 || r->y1 == r->y2) {
+			printk(KERN_ERR "%s: invalid src rect LT(%d,%d) RB(%d,%d)\n",
+					__func__, r->x1, r->y1, r->x2, r->y2);
+			return -1;
+		}
 	}
 
 	if (u->msk) {
 		w = u->msk->width;
 		h = u->msk->height;
-		mr = u->msk_rect;
+		r = u->msk_rect;
 
-		if (!mr ||
-			mr->x1 < 0 || mr->x2 > w ||
-			mr->y1 < 0 || mr->y2 > h ||
-			mr->x1 == mr->x2 || mr->y1 == mr->y2)
-			goto err_msk_rect;
+		if (!r) {
+			printk(KERN_ERR "%s: missing msk rect\n", __func__);
+			return -1;
+		}
 
-		/* 8000: max width & height */
-		if (w > 8000 || h > 8000)
-			goto err_msk_rect;
+		if (w > 8000 || h > 8000 ||
+			r->x1 < 0 || r->x2 > w ||
+			r->y1 < 0 || r->y2 > h ||
+			r->x1 == r->x2 || r->y1 == r->y2) {
+			printk(KERN_ERR "%s: invalid msk rect, LT(%d,%d) RB(%d,%d)\n",
+					__func__, r->x1, r->y1, r->x2, r->y2);
+			return -1;
+		}
 	}
 
 	if (u->dst) {
 		w = u->dst->width;
 		h = u->dst->height;
-		dr = u->dst_rect;
+		r = u->dst_rect;
 
-		if (!dr ||
-			dr->x1 < 0 || dr->x1 >= w ||
-			dr->y1 < 0 || dr->y1 >= h ||
-			dr->x1 == dr->x2 || dr->y1 == dr->y2)
-			goto err_dst_rect;
+		if (!r) {
+			printk(KERN_ERR "%s: missing dst rect\n", __func__);
+			return -1;
+		}
 
-		/* 8000: max width & height */
-		if (w > 8000 || h > 8000)
-			goto err_src_rect;
+		if (w > 8000 || h > 8000 ||
+			r->x1 < 0 || r->x1 >= w ||
+			r->y1 < 0 || r->y1 >= h ||
+			r->x1 == r->x2 || r->y1 == r->y2) {
+			printk(KERN_ERR "%s: invalid dst rect, LT(%d,%d) RB(%d,%d)\n",
+					__func__, r->x1, r->y1, r->x2, r->y2);
+			return -1;
+		}
 
 		/* out of dst_rect */
 		if (u->clipping && u->clipping->enable) {
-			ur = u->clipping;
-			if (ur->x1 >= dr->x2 || ur->x2 <= dr->x1 ||
-				ur->y1 >= dr->y2 || ur->y2 <= dr->y1)
-				goto err_clip_rect;
+			c = u->clipping;
+			if (c->x1 >= r->x2 || c->x2 <= r->x1 ||
+				c->y1 >= r->y2 || c->y2 <= r->y1) {
+				printk(KERN_ERR "%s: invalid clip rect, LT(%d,%d) RB(%d,%d)\n",
+						__func__, c->x1, c->y1, c->x2, c->y2);
+				return -1;
+			}
 		}
 	}
 
 	return 0;
-
-err_op:
-	printk(KERN_ERR "%s: invalid op\n", __func__);
-	return -1;
-err_src_rect:
-	printk(KERN_ERR "%s: invalid src rect LT(%d,%d) RB(%d,%d)\n",
-			__func__, sr->x1, sr->y1, sr->x2, sr->y2);
-	return -1;
-err_msk_rect:
-	printk(KERN_ERR "%s: invalid msk rect, LT(%d,%d) RB(%d,%d)\n",
-			__func__, mr->x1, mr->y1, mr->x2, mr->y2);
-	return -1;
-err_dst_rect:
-	printk(KERN_ERR "%s: invalid dst rect, LT(%d,%d) RB(%d,%d)\n",
-			__func__, dr->x1, dr->y1, dr->x2, dr->y2);
-	return -1;
-err_clip_rect:
-	printk(KERN_ERR "%s: invalid clip rect, LT(%d,%d) RB(%d,%d)\n",
-			__func__, ur->x1, ur->y1, ur->x2, ur->y2);
-	return -1;
 }
 
 static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
