@@ -26,6 +26,9 @@
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf-core.h>
 #include <media/v4l2-mediabus.h>
+#ifdef CONFIG_BUSFREQ_OPP
+#include <mach/dev.h>
+#endif
 #include <plat/media.h>
 #include <plat/fimc.h>
 #include <plat/cpu.h>
@@ -40,6 +43,7 @@
 
 #define FIMC_CORE_CLK		"sclk_fimc"
 #define FIMC_CLK_RATE		166750000
+#define EXYNOS_BUSFREQ_NAME	"exynos-busfreq"
 
 #if defined(CONFIG_ARCH_EXYNOS4)
 #define FIMC_DEVICES		4
@@ -425,6 +429,9 @@ struct fimc_control {
 	spinlock_t			outq_lock;
 	wait_queue_head_t		wq;
 	struct device			*dev;
+#ifdef CONFIG_BUSFREQ_OPP
+	struct device			*bus_dev;
+#endif
 	int				irq;
 
 	/* v4l2 related */

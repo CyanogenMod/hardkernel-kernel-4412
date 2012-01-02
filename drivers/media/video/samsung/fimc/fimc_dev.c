@@ -1704,6 +1704,10 @@ static int __devinit fimc_probe(struct platform_device *pdev)
 	ctrl->power_status = FIMC_POWER_OFF;
 	pm_runtime_enable(&pdev->dev);
 #endif
+#ifdef CONFIG_BUSFREQ_OPP
+	/* To lock bus frequency in OPP mode */
+	ctrl->bus_dev = dev_get(EXYNOS_BUSFREQ_NAME);
+#endif
 
 	return 0;
 

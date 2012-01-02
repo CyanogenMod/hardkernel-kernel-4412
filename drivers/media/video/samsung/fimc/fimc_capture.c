@@ -1860,6 +1860,16 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 	case V4L2_CID_CAMERA_ZOOM:
 		fimc_is_set_zoom(ctrl, c);
 		break;
+#ifdef CONFIG_BUSFREQ_OPP
+	case V4L2_CID_CAMERA_BUSFREQ_LOCK:
+		/* lock bus frequency */
+		dev_lock(ctrl->bus_dev, ctrl->dev, (unsigned long)c->value);
+		break;
+	case V4L2_CID_CAMERA_BUSFREQ_UNLOCK:
+		/* unlock bus frequency */
+		dev_unlock(ctrl->bus_dev, ctrl->dev);
+		break;
+#endif
 	default:
 		/* try on subdev */
 		/* WriteBack doesn't have subdev_call */
