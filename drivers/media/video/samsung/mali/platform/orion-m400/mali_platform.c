@@ -311,7 +311,7 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 		return MALI_FALSE;
 	
 	rate = (unsigned long)clk * (unsigned long)mhz;
-	MALI_PRINT(("= clk_set_rate : %d , %d \n",clk, mhz ));
+	MALI_DEBUG_PRINT(3,("= clk_set_rate : %d , %d \n",clk, mhz ));
 
 	if (bis_vpll)
 	{
@@ -340,7 +340,7 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 		mali_gpu_clk = (int)((rate + 500000) / mhz);
 
 	GPU_MHZ = mhz;
-	MALI_PRINT(("= clk_get_rate: %d \n",mali_gpu_clk));
+	MALI_DEBUG_PRINT(3,("= clk_get_rate: %d \n",mali_gpu_clk));
 
 	mali_clk_put(MALI_FALSE);
 
