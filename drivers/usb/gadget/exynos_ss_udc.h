@@ -175,6 +175,7 @@ struct exynos_ss_udc_ep_command {
  * @regs_res: The resource that was allocated when claiming register space.
  * @irq: The IRQ number we are using.
  * @clk: The clock we are using.
+ * @release: The core release number.
  * @event_buff: Event buffer.
  * @event_buff_dma: Event buffer DMA address.
  * @event_indx: Event buffer index.
@@ -198,6 +199,8 @@ struct exynos_ss_udc {
 	struct resource		*regs_res;
 	int			irq;
 	struct clk		*clk;
+
+	u16			release;
 
 	u32			*event_buff;
 	dma_addr_t		event_buff_dma;
