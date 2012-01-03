@@ -132,7 +132,7 @@ void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num)
 	ion.dev = dev;
 	ion.cacheable = true;
 	ion.align = IS_MFCV6(m_dev) ? SZ_4K : SZ_128K;
-	ion.contig = true;
+	ion.contig = false;
 
 	vb2_drv.use_mmu = true;
 
