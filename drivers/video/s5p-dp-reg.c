@@ -1105,15 +1105,14 @@ int s5p_dp_init_video(struct s5p_dp_device *dp)
 	reg = 0x0;
 	writel(reg, dp->reg_base + S5P_DP_SYS_CTL_1);
 
-	reg = VID_HRES_TH(2) | VID_VRES_TH(0);
-	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_8);
-
-	reg = CHA_CRI(15);
+	reg = CHA_CRI(4) | CHA_CTRL;
 	writel(reg, dp->reg_base + S5P_DP_SYS_CTL_2);
 
-	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_3);
-	reg &= ~(STRM_VALID | VALID_CTRL);
+	reg = 0x0;
 	writel(reg, dp->reg_base + S5P_DP_SYS_CTL_3);
+
+	reg = VID_HRES_TH(2) | VID_VRES_TH(0);
+	writel(reg, dp->reg_base + S5P_DP_VIDEO_CTL_8);
 
 	return 0;
 }
@@ -1312,11 +1311,8 @@ int s5p_dp_is_slave_video_stream_clock_on(struct s5p_dp_device *dp)
 {
 	u32 reg;
 
-	/* Update Video stream clk detect status */
-	reg = DET_STA;
+	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_1);
 	writel(reg, dp->reg_base + S5P_DP_SYS_CTL_1);
-
-	dev_dbg(dp->dev, "wait SYS_CTL_1.\n");
 
 	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_1);
 
@@ -1325,23 +1321,15 @@ int s5p_dp_is_slave_video_stream_clock_on(struct s5p_dp_device *dp)
 		return -EINVAL;
 	}
 
-	/* To check whether input stream clock is stable. */
-	/* To do that clear it first. */
-	/* Update Video stream clock change status */
-	if (soc_is_exynos5250()) {
-		reg = CHA_CTRL;
-		writel(reg, dp->reg_base + S5P_DP_SYS_CTL_2);
-	} else {
-		reg = CHA_STA;
-		writel(reg, dp->reg_base + S5P_DP_SYS_CTL_2);
+	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_2);
+	writel(reg, dp->reg_base + S5P_DP_SYS_CTL_2);
 
-		reg = readl(dp->reg_base + S5P_DP_SYS_CTL_2);
-		dev_dbg(dp->dev, "wait SYS_CTL_2.\n");
+	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_2);
+	dev_dbg(dp->dev, "wait SYS_CTL_2.\n");
 
-		if (reg & CHA_STA) {
-			dev_dbg(dp->dev, "Input stream clk is changing\n");
-			return -EINVAL;
-		}
+	if (reg & CHA_STA) {
+		dev_dbg(dp->dev, "Input stream clk is changing\n");
+		return -EINVAL;
 	}
 
 	return 0;
@@ -1428,8 +1416,7 @@ int s5p_dp_is_video_stream_on(struct s5p_dp_device *dp)
 {
 	u32 reg;
 
-	/* Update STRM_VALID */
-	reg = F_VALID | VALID_CTRL;
+	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_3);
 	writel(reg, dp->reg_base + S5P_DP_SYS_CTL_3);
 
 	reg = readl(dp->reg_base + S5P_DP_SYS_CTL_3);
