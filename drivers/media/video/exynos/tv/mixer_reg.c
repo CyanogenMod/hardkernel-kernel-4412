@@ -543,6 +543,31 @@ done:
 	spin_unlock(&layer->enq_slock);
 }
 
+u32 mxr_irq_underrun_handle(struct mxr_device *mdev, u32 val)
+{
+	if (val & MXR_INT_STATUS_MX0_VIDEO) {
+		mxr_warn(mdev, "mixer0 video layer underrun occur\n");
+		val |= MXR_INT_STATUS_MX0_VIDEO;
+	} else if (val & MXR_INT_STATUS_MX0_GRP0) {
+		mxr_warn(mdev, "mixer0 graphic0 layer underrun occur\n");
+		val |= MXR_INT_STATUS_MX0_GRP0;
+	} else if (val & MXR_INT_STATUS_MX0_GRP1) {
+		mxr_warn(mdev, "mixer0 graphic1 layer underrun occur\n");
+		val |= MXR_INT_STATUS_MX0_GRP1;
+	} else if (val & MXR_INT_STATUS_MX1_VIDEO) {
+		mxr_warn(mdev, "mixer1 video layer underrun occur\n");
+		val |= MXR_INT_STATUS_MX1_VIDEO;
+	} else if (val & MXR_INT_STATUS_MX1_GRP0) {
+		mxr_warn(mdev, "mixer1 graphic0 layer underrun occur\n");
+		val |= MXR_INT_STATUS_MX1_GRP0;
+	} else if (val & MXR_INT_STATUS_MX1_GRP1) {
+		mxr_warn(mdev, "mixer1 graphic1 layer underrun occur\n");
+		val |= MXR_INT_STATUS_MX1_GRP1;
+	}
+
+	return val;
+}
+
 irqreturn_t mxr_irq_handler(int irq, void *dev_data)
 {
 	struct mxr_device *mdev = dev_data;
@@ -563,6 +588,7 @@ irqreturn_t mxr_irq_handler(int irq, void *dev_data)
 		val &= ~MXR_INT_EN_VSYNC;
 		val |= MXR_INT_CLEAR_VSYNC;
 	}
+	val = mxr_irq_underrun_handle(mdev, val);
 	mxr_write(mdev, MXR_INT_STATUS, val);
 
 	spin_unlock(&mdev->reg_slock);

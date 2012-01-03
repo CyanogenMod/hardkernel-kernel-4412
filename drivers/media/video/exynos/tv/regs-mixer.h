@@ -172,7 +172,13 @@
 #define MXR_INT_EN_ALL			(0x38b80)
 
 /* bit for MXR_INT_STATUS */
+#define MXR_INT_STATUS_MX1_GRP1		(1 << 17)
+#define MXR_INT_STATUS_MX1_GRP0		(1 << 16)
+#define MXR_INT_STATUS_MX1_VIDEO	(1 << 15)
 #define MXR_INT_CLEAR_VSYNC		(1 << 11)
+#define MXR_INT_STATUS_MX0_GRP1		(1 << 9)
+#define MXR_INT_STATUS_MX0_GRP0		(1 << 8)
+#define MXR_INT_STATUS_MX0_VIDEO	(1 << 7)
 #define MXR_INT_STATUS_VSYNC		(1 << 0)
 
 /* bit for MXR_LAYER_CFG */
