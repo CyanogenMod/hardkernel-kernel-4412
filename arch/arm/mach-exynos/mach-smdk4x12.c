@@ -3672,7 +3672,7 @@ static void __init exynos4_reserve_mem(void)
 		"s5p-smem/sectbl=sectbl;"
 #endif
 		"s5p-smem/mfc=mfc0;"
-		"s5p-smem/fimc=fimc1;"
+		"s5p-smem/fimc=fimc3;"
 		"s5p-smem/mfc-shm=mfc1;";
 
 	cma_set_defaults(NULL, map);
