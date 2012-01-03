@@ -465,12 +465,11 @@ static struct platform_device smdk5250_dp_lcd = {
 
 static struct s3c_fb_pd_win smdk5250_fb_win2 = {
 	.win_mode = {
-		.refresh	= 20,
-		.left_margin	= 40,
-		.right_margin	= 24,
-		.upper_margin	= 20,
+		.left_margin	= 80,
+		.right_margin	= 48,
+		.upper_margin	= 37,
 		.lower_margin	= 3,
-		.hsync_len	= 16,
+		.hsync_len	= 32,
 		.vsync_len	= 6,
 		.xres		= 2560,
 		.yres		= 1600,
@@ -506,9 +505,9 @@ static void exynos_fimd_gpio_setup_24bpp(void)
 	__raw_writel(reg, S3C_VA_SYS + 0x0214);
 
 #if defined(CONFIG_S5P_DP)
-	/* Reference clcok selection for DPTX_PHY: pad_osc_clk_24M */
+	/* Reference clcok selection for DPTX_PHY: PAD_OSC_IN */
 	reg = __raw_readl(S3C_VA_SYS + 0x04d4);
-	reg |= (1 << 0);
+	reg &= ~(1 << 0);
 	__raw_writel(reg, S3C_VA_SYS + 0x04d4);
 
 	/* DPTX_PHY: XXTI */
@@ -551,17 +550,17 @@ static struct video_info smdk5250_dp_config = {
 
 	.h_total		= 2720,
 	.h_active		= 2560,
-	.h_sync_width		= 16,
-	.h_back_porch		= 40,
-	.h_front_porch		= 24,
+	.h_sync_width		= 32,
+	.h_back_porch		= 80,
+	.h_front_porch		= 48,
 
 	.v_total		= 1646,
 	.v_active		= 1600,
 	.v_sync_width		= 6,
-	.v_back_porch		= 20,
+	.v_back_porch		= 37,
 	.v_front_porch		= 3,
 
-	.v_sync_rate		= 20,
+	.v_sync_rate		= 60,
 
 	.mvid			= 0,
 	.nvid			= 0,
@@ -581,7 +580,7 @@ static struct video_info smdk5250_dp_config = {
 	.refresh_denominator	= REFRESH_DENOMINATOR_1,
 
 	.test_pattern		= COLORBAR_32,
-	.link_rate		= LINK_RATE_1_62GBPS,
+	.link_rate		= LINK_RATE_2_70GBPS,
 	.lane_count		= LANE_COUNT4,
 
 	.video_mute_on		= 0,
@@ -2418,8 +2417,13 @@ static void __init smdk5250_machine_init(void)
 	platform_add_devices(smdk5250_devices, ARRAY_SIZE(smdk5250_devices));
 
 #ifdef CONFIG_FB_S3C
+#if defined(CONFIG_S5P_DP)
+	exynos4_fimd_setup_clock(&s5p_device_fimd1.dev, "sclk_fimd", "mout_mpll_user",
+				267 * MHZ);
+#else
 	exynos4_fimd_setup_clock(&s5p_device_fimd1.dev, "sclk_fimd", "mout_mpll_user",
 				800 * MHZ);
+#endif
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_MIPI_CSIS
 #if defined(CONFIG_EXYNOS_DEV_PD)
