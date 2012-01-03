@@ -89,8 +89,13 @@ static unsigned int mshci_s3c_get_max_clk(struct mshci_host *host)
 
 		rate = clk_get_rate(busclk);
 		/* It should be checked later ############# */
-		if (rate > max)
-			max = rate >> 1;
+		if (rate > max) {
+			if (soc_is_exynos4412() &&
+				(samsung_rev() >= EXYNOS4412_REV_1_0))
+				max = rate >> 2;
+			else
+				max = rate >> 1;
+		}
 	}
 
 	return max;
