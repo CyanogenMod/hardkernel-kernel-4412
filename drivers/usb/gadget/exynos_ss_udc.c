@@ -2194,9 +2194,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	udc = kzalloc(sizeof(struct exynos_ss_udc) +
-			sizeof(struct exynos_ss_udc_ep) * EXYNOS_USB3_EPS,
-			GFP_KERNEL);
+	udc = kzalloc(sizeof(struct exynos_ss_udc), GFP_KERNEL);
 	if (!udc) {
 		dev_err(dev, "cannot get memory\n");
 		ret = -ENOMEM;
