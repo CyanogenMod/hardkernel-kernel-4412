@@ -2051,7 +2051,7 @@ static void __init exynos_reserve_mem(void)
 		"samsung-c2c=c2c_shdmem;"
 #endif
 		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
-		"s3cfb.0=fimd;"
+		"s3cfb.0=fimd;exynos5-fb.1=fimd;"
 		"samsung-rp=srp;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
 		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,fimd,fw,b1;"
