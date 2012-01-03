@@ -20,6 +20,7 @@
 #include <linux/mm.h>
 #include <linux/cma.h>
 #include <linux/scatterlist.h>
+#include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/bitops.h>
@@ -499,6 +500,102 @@ static void ion_exynos_contig_heap_destroy(struct ion_heap *heap)
 	kfree(heap);
 }
 
+struct exynos_user_heap_data {
+	struct sg_table sgt;
+	bool is_pfnmap; /* The region has VM_PFNMAP property */
+};
+
+static int pfnmap_digger(struct sg_table *sgt, unsigned long addr, int nr_pages)
+{
+	/* If the given user address is not normal mapping,
+	   It must be contiguous physical mapping */
+	struct vm_area_struct *vma;
+	unsigned long *pfns;
+	int i, ipfn, pi, ret;
+	struct scatterlist *sg;
+	unsigned int contigs;
+	unsigned long pfn;
+
+
+	down_read(&current->mm->mmap_sem);
+	vma = find_vma(current->mm, addr);
+	up_read(&current->mm->mmap_sem);
+
+	if ((vma == NULL) || (vma->vm_end < (addr + (nr_pages << PAGE_SHIFT))))
+		return -EINVAL;
+
+	pfns = kmalloc(sizeof(*pfns) * nr_pages, GFP_KERNEL);
+	if (!pfns)
+		return -ENOMEM;
+
+	ret = follow_pfn(vma, addr, &pfns[0]); /* no side effect */
+	if (ret)
+		goto err_follow_pfn;
+
+	if (!pfn_valid(pfns[0])) {
+		ret = -EINVAL;
+		goto err_follow_pfn;
+	}
+
+	addr += PAGE_SIZE;
+
+	/* An element of pfns consists of
+	 * - higher 20 bits: page frame number (pfn)
+	 * - lower  12 bits: number of contiguous pages from the pfn
+	 * Maximum size of a contiguous chunk: 16MB (4096 pages)
+	 * contigs = 0 indicates no adjacent page is found yet.
+	 * Thus, contigs = x means (x + 1) pages are contiguous.
+	 */
+	for (i = 1, pi = 0, ipfn = 0, contigs = 0; i < nr_pages; i++) {
+		ret = follow_pfn(vma, addr, &pfn);
+		if (ret)
+			break;
+
+		if (pfns[ipfn] == (pfn - (i - pi))) {
+			contigs++;
+		} else {
+			if (contigs & PAGE_MASK) {
+				ret = -EOVERFLOW;
+				break;
+			}
+
+			pfns[ipfn] <<= PAGE_SHIFT;
+			pfns[ipfn] |= contigs;
+			ipfn++;
+			pi = i;
+			contigs = 0;
+			pfns[ipfn] = pfn;
+		}
+
+		addr += PAGE_SIZE;
+	}
+
+	if (i == nr_pages) {
+		if (contigs & PAGE_MASK) {
+			ret = -EOVERFLOW;
+			goto err_follow_pfn;
+		}
+
+		pfns[ipfn] <<= PAGE_SHIFT;
+		pfns[ipfn] |= contigs;
+
+		nr_pages = ipfn + 1;
+	} else {
+		goto err_follow_pfn;
+	}
+
+	ret = sg_alloc_table(sgt, nr_pages, GFP_KERNEL);
+	if (ret)
+		goto err_follow_pfn;
+
+	for_each_sg(sgt->sgl, sg, nr_pages, i)
+		sg_set_page(sg, phys_to_page(pfns[i]),
+			((pfns[i] & ~PAGE_MASK) + 1) << PAGE_SHIFT, 0);
+err_follow_pfn:
+	kfree(pfns);
+	return ret;
+}
+
 static int ion_exynos_user_heap_allocate(struct ion_heap *heap,
 					   struct ion_buffer *buffer,
 					   unsigned long len,
@@ -511,7 +608,7 @@ static int ion_exynos_user_heap_allocate(struct ion_heap *heap,
 	int nr_pages;
 	int ret = 0, i;
 	off_t start_off;
-	struct sg_table *sgtable;
+	struct exynos_user_heap_data *privdata = NULL;
 	struct scatterlist *sgl;
 
 	last_size = (start + len) & ~PAGE_MASK;
@@ -528,29 +625,41 @@ static int ion_exynos_user_heap_allocate(struct ion_heap *heap,
 	if (!pages)
 		return -ENOMEM;
 
+	privdata = kmalloc(sizeof(*privdata), GFP_KERNEL);
+	if (!privdata) {
+		ret = -ENOMEM;
+		goto err_privdata;
+	}
+
+	buffer->priv_virt = privdata;
+	buffer->flags = flags;
+
 	ret = get_user_pages_fast(start, nr_pages,
 				flags & ION_EXYNOS_WRITE_MASK, pages);
 
-	if (ret < 0)
-		goto err_get_pages;
+	if (ret < 0) {
+		kfree(pages);
+
+		ret = pfnmap_digger(&privdata->sgt, start, nr_pages);
+		if (ret)
+			goto err_pfnmap;
+
+		privdata->is_pfnmap = true;
+
+		return 0;
+	}
 
 	if (ret != nr_pages) {
 		nr_pages = ret;
 		ret = -EFAULT;
-		goto err_smaller_pages;
+		goto err_alloc_sg;
 	}
 
-	sgtable = kmalloc(sizeof(*sgtable), GFP_KERNEL);
-	if (!sgtable) {
-		ret = -ENOMEM;
-		goto err_alloc_sgtable;
-	}
-
-	ret = sg_alloc_table(sgtable, nr_pages, GFP_KERNEL);
+	ret = sg_alloc_table(&privdata->sgt, nr_pages, GFP_KERNEL);
 	if (ret)
-		goto err_alloc_sglist;
+		goto err_alloc_sg;
 
-	sgl = sgtable->sgl;
+	sgl = privdata->sgt.sgl;
 
 	sg_set_page(sgl, pages[0],
 			(nr_pages == 1) ? len : PAGE_SIZE - start_off,
@@ -567,22 +676,18 @@ static int ion_exynos_user_heap_allocate(struct ion_heap *heap,
 	if (sgl)
 		sg_set_page(sgl, pages[i], last_size, 0);
 
-	buffer->priv_virt = sgtable;
-	buffer->flags = flags;
+	privdata->is_pfnmap = false;
 
 	kfree(pages);
-	return 0;
 
-err_alloc_sglist:
-	sg_free_table(sgtable);
-	kfree(sgtable);
-err_alloc_sgtable:
-err_smaller_pages:
+	return 0;
+err_alloc_sg:
 	for (i = 0; i < nr_pages; i++)
 		put_page(pages[i]);
-err_get_pages:
+err_pfnmap:
+	kfree(privdata);
+err_privdata:
 	kfree(pages);
-
 	return ret;
 }
 
@@ -590,20 +695,24 @@ static void ion_exynos_user_heap_free(struct ion_buffer *buffer)
 {
 	struct scatterlist *sg;
 	int i;
-	struct sg_table *sgtable = buffer->priv_virt;
+	struct exynos_user_heap_data *privdata = buffer->priv_virt;
 
-	if (buffer->flags & ION_EXYNOS_WRITE_MASK) {
-		for_each_sg(sgtable->sgl, sg, sgtable->orig_nents, i) {
-			set_page_dirty_lock(sg_page(sg));
-			put_page(sg_page(sg));
+	if (!privdata->is_pfnmap) {
+		if (buffer->flags & ION_EXYNOS_WRITE_MASK) {
+			for_each_sg(privdata->sgt.sgl, sg,
+						privdata->sgt.orig_nents, i) {
+				set_page_dirty_lock(sg_page(sg));
+				put_page(sg_page(sg));
+			}
+		} else {
+			for_each_sg(privdata->sgt.sgl, sg,
+						privdata->sgt.orig_nents, i)
+				put_page(sg_page(sg));
 		}
-	} else {
-		for_each_sg(sgtable->sgl, sg, sgtable->orig_nents, i)
-			put_page(sg_page(sg));
 	}
 
-	sg_free_table(sgtable);
-	kfree(sgtable);
+	sg_free_table(&privdata->sgt);
+	kfree(privdata);
 }
 
 static struct ion_heap_ops user_heap_ops = {
