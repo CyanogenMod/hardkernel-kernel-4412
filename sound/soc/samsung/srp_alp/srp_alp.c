@@ -240,16 +240,24 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 					size_t size, loff_t *pos)
 {
 	unsigned long start_threshold = 0;
+	unsigned int prepare_next = 0;
 	unsigned int pending_off = 0;
 	ssize_t ret = 0;
 
 	srp_debug("Write(%d bytes)\n", size);
 
-	if (srp.obuf_fill_done[srp.obuf_ready]
-		&& srp.obuf_copy_done[srp.obuf_ready]) {
+	if (srp.obuf_fill_done[srp.obuf_ready] &&
+		srp.obuf_copy_done[srp.obuf_ready]) {
 		srp.obuf_fill_done[srp.obuf_ready] = 0;
 		srp.obuf_copy_done[srp.obuf_ready] = 0;
+		prepare_next = 1;
+	} else if (srp.sp_data.obuf_restored) {
+		srp.obuf_fill_done[srp.obuf_ready] = 0;
+		srp.obuf_fill_done[srp.obuf_next] = 1;
+		prepare_next = 1;
+	}
 
+	if (prepare_next) {
 		if (srp.is_pending == STALL)
 			pending_off = 1;
 
@@ -628,7 +636,6 @@ static int srp_open(struct inode *inode, struct file *file)
 	srp.dec_info.sample_rate = 0;
 	srp.frame_size = 0;
 
-	srp.sp_data.ibuf_saved = 0;
 	srp.sp_data.obuf_saved = 0;
 	srp.sp_data.obuf_restored = 0;
 	srp.sp_data.resume_after_suspend = 0;
@@ -966,94 +973,86 @@ static void srp_ibuf_save(void)
 	srp_info("WBUF_POS = %lu\n", srp.wbuf_pos);
 
 	/* Backup IBUF */
-	if (!srp.sp_data.ibuf_saved) {
-		if (!current_ibuf) {
-			if (!srp.ibuf_empty[0]) {
-				srp_info("SRP: IBUF0 Copy size = %lu\n", remain_size);
-				memcpy(srp.sp_data.wbuf, &srp.ibuf0[read_size], remain_size);
-				srp.sp_data.wbuf_pos += remain_size;
-			}
-
-			if (!srp.ibuf_empty[1]) {
-				srp_info("SRP: IBUF1 Copy size = %lu\n", srp.ibuf_size);
-				memcpy(&srp.sp_data.wbuf[srp.sp_data.wbuf_pos],
-							srp.ibuf1, srp.ibuf_size);
-				srp.sp_data.wbuf_pos += srp.ibuf_size;
-			}
-		} else {
-			if (!srp.ibuf_empty[1]) {
-				srp_info("SRP: IBUF1 Copy size = %lu\n", remain_size);
-				memcpy(srp.sp_data.wbuf, &srp.ibuf1[read_size],	remain_size);
-				srp.sp_data.wbuf_pos += remain_size;
-			}
-
-			if (!srp.ibuf_empty[0]) {
-				srp_info("SRP: IBUF0 Copy size = %lu\n", srp.ibuf_size);
-				memcpy(&srp.sp_data.wbuf[srp.sp_data.wbuf_pos], srp.ibuf0, srp.ibuf_size);
-				srp.sp_data.wbuf_pos += srp.ibuf_size;
-			}
+	if (!current_ibuf) {
+		if (!srp.ibuf_empty[0]) {
+			srp_info("SRP: IBUF0 Copy size = %lu\n", remain_size);
+			memcpy(srp.sp_data.wbuf, &srp.ibuf0[read_size], remain_size);
+			srp.sp_data.wbuf_pos += remain_size;
 		}
 
-		if (srp.wbuf_pos) {
-			memcpy(&srp.sp_data.wbuf[srp.sp_data.wbuf_pos], srp.wbuf,
-								srp.wbuf_pos);
-			srp.sp_data.wbuf_pos += srp.wbuf_pos;
+		if (!srp.ibuf_empty[1]) {
+			srp_info("SRP: IBUF1 Copy size = %lu\n", srp.ibuf_size);
+			memcpy(&srp.sp_data.wbuf[srp.sp_data.wbuf_pos],
+						srp.ibuf1, srp.ibuf_size);
+			srp.sp_data.wbuf_pos += srp.ibuf_size;
+		}
+	} else {
+		if (!srp.ibuf_empty[1]) {
+			srp_info("SRP: IBUF1 Copy size = %lu\n", remain_size);
+			memcpy(srp.sp_data.wbuf, &srp.ibuf1[read_size],	remain_size);
+			srp.sp_data.wbuf_pos += remain_size;
 		}
 
-		srp_info("SRP: Backup WBUF_POS = %lu\n", srp.sp_data.wbuf_pos);
-		srp.sp_data.ibuf_saved = 1;
-	}
-}
-
-static void srp_obuf_save(void)
-{
-	if (!srp.sp_data.obuf_saved) {
-		if (srp.obuf_fill_done[srp.obuf_next]) {
-			if (!srp.obuf_next) {
-				srp_info("Backup OBUF0\n");
-				memcpy(srp.sp_data.obuf, srp.obuf0, srp.obuf_size);
-			} else {
-				srp_info("Backup OBUF1\n");
-				memcpy(srp.sp_data.obuf, srp.obuf1, srp.obuf_size);
-			}
-
-			srp.sp_data.obuf_fill_done[srp.obuf_ready] = 0;
-			srp.sp_data.obuf_fill_done[srp.obuf_next] = 1;
-			srp.sp_data.obuf_saved = 1;
+		if (!srp.ibuf_empty[0]) {
+			srp_info("SRP: IBUF0 Copy size = %lu\n", srp.ibuf_size);
+			memcpy(&srp.sp_data.wbuf[srp.sp_data.wbuf_pos], srp.ibuf0, srp.ibuf_size);
+			srp.sp_data.wbuf_pos += srp.ibuf_size;
 		}
 	}
+
+	if (srp.wbuf_pos) {
+		memcpy(&srp.sp_data.wbuf[srp.sp_data.wbuf_pos], srp.wbuf,
+							srp.wbuf_pos);
+		srp.sp_data.wbuf_pos += srp.wbuf_pos;
+	}
+
+	srp_info("SRP: Backup WBUF_POS = %lu\n", srp.sp_data.wbuf_pos);
 }
 
 static void srp_ibuf_restore(void)
 {
 	unsigned long copy_pos;
 
-	if (srp.sp_data.ibuf_saved) {
-		srp.wbuf_pos = srp.sp_data.wbuf_pos;
-		srp.wbuf_fill_size = srp.wbuf_pos;
-		memset(srp.wbuf, 0x0, srp.wbuf_size);
+	if (!srp.sp_data.wbuf_pos)
+		return;
 
-		srp_info("Restore WBUF Total Size[%lu]\n", srp.wbuf_pos);
-		if (srp.wbuf_pos >= srp.ibuf_size * 2) {
-			memcpy(srp.wbuf, srp.sp_data.wbuf, srp.ibuf_size * 2);
-			copy_pos += srp.ibuf_size * 2;
-			srp_fill_ibuf();
-		} else if (srp.wbuf_pos >= srp.ibuf_size) {
-			memcpy(srp.wbuf, srp.sp_data.wbuf, srp.ibuf_size);
-			copy_pos += srp.ibuf_size;
-		} else {
-			memcpy(srp.wbuf, srp.sp_data.wbuf, srp.wbuf_pos);
-			copy_pos += srp.wbuf_pos;
-		}
+	srp.wbuf_pos = srp.sp_data.wbuf_pos;
+	srp.wbuf_fill_size = srp.wbuf_pos;
+	memset(srp.wbuf, 0xFF, srp.wbuf_size);
 
+	srp_info("Restore WBUF Total Size[%lu]\n", srp.wbuf_pos);
+	if (srp.wbuf_pos >= srp.ibuf_size * 2) {
+		memcpy(srp.wbuf, srp.sp_data.wbuf, srp.ibuf_size * 2);
+		copy_pos += srp.ibuf_size * 2;
 		srp_fill_ibuf();
+	} else if (srp.wbuf_pos >= srp.ibuf_size) {
+		memcpy(srp.wbuf, srp.sp_data.wbuf, srp.ibuf_size);
+		copy_pos += srp.ibuf_size;
+	} else {
+		memcpy(srp.wbuf, srp.sp_data.wbuf, srp.wbuf_pos);
+		copy_pos += srp.wbuf_pos;
+	}
 
-		srp_info("Remain Wbuf pos %lu\n", srp.wbuf_pos);
-		if (srp.wbuf_pos)
-			memcpy(srp.wbuf, &srp.sp_data.wbuf[copy_pos], srp.wbuf_pos);
+	srp_fill_ibuf();
+	srp_info("Remain Wbuf pos %lu\n", srp.wbuf_pos);
 
-		srp.sp_data.ibuf_saved = 0;
-		srp.sp_data.wbuf_pos = 0;
+	if (srp.wbuf_pos)
+		memcpy(srp.wbuf, &srp.sp_data.wbuf[copy_pos], srp.wbuf_pos);
+
+	srp.sp_data.wbuf_pos = 0;
+}
+
+static void srp_obuf_save(void)
+{
+	if (srp.obuf_fill_done[srp.obuf_next]) {
+		if (!srp.obuf_next) {
+			srp_info("Backup OBUF0\n");
+			memcpy(srp.sp_data.obuf, srp.obuf0, srp.obuf_size);
+		} else {
+			srp_info("Backup OBUF1\n");
+			memcpy(srp.sp_data.obuf, srp.obuf1, srp.obuf_size);
+		}
+		srp.sp_data.obuf_saved = 1;
 	}
 }
 
@@ -1061,22 +1060,16 @@ static void srp_obuf_restore(void)
 {
 	/* Restore Obuf */
 	if (srp.sp_data.obuf_saved) {
-		srp_info("Restore Obuf[%d]\n", srp.sp_data.obuf_fill_done[0] ? 0 : 1);
+		srp_info("Restore Obuf\n");
 		memcpy(srp.obuf1, srp.sp_data.obuf, srp.obuf_size);
 		srp.sp_data.obuf_saved = 0;
 		srp.sp_data.obuf_restored = 1;
-
-		srp.obuf_fill_done[1] = 1;
-		srp.obuf_copy_done[1] = 1;
-		writel(srp.obuf_size, srp.commbox + SRP_PCM_DUMP_ADDR);
+		srp.pcm_size = srp.obuf_size;
 	}
 
 	if (srp.wait_for_eos) {
 		srp.obuf_ready = 1;
 		srp.obuf_next = 0;
-	} else {
-		srp.obuf_fill_done[0] = 1;
-		srp.obuf_copy_done[0] = 1;
 	}
 }
 
@@ -1089,10 +1082,9 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 		srp_ibuf_save();
 		srp_obuf_save();
 
-		if (srp.wait_for_eos) {
+		if (srp.wait_for_eos)
 			srp.sp_data.wait_for_eos = srp.wait_for_eos;
-			srp.sp_data.prepare_for_eos = srp.prepare_for_eos;
-		}
+
 		srp.audss_clk_enable(false);
 	}
 
@@ -1121,6 +1113,7 @@ static int srp_resume(struct platform_device *pdev)
 		srp_ibuf_restore();
 		srp_obuf_restore();
 
+		srp.first_decoding = srp.sp_data.obuf_restored ? 0 : 1;
 		srp.decoding_started = 1;
 		srp.sp_data.resume_after_suspend = 1;
 	}

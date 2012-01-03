@@ -134,8 +134,6 @@ struct srp_for_suspend {
 	unsigned char	*obuf;
 	unsigned char	*wbuf;
 	unsigned long	wbuf_pos;
-	unsigned int	obuf_fill_done[2];
-	unsigned int	ibuf_saved;
 	unsigned int	obuf_saved;
 	unsigned int	obuf_restored;
 	unsigned int	wait_for_eos;
