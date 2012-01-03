@@ -129,14 +129,16 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_MPLLUSER_SYSCLK_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_GPS_ALIVE_SYS,	{ 1, 0, 0 } },
 	{ S5P_CMU_RESET_GPSALIVE_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_CAM_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_TV_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_MFC_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_G3D_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_LCD0_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_ISP_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_MAUDIO_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_GPS_SYS,		{ 1, 0, 0 } },
+
+	{ S5P_CMU_CLKSTOP_CAM_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_TV_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_MFC_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_G3D_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_LCD0_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_ISP_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_MAUDIO_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_GPS_SYS,		{ 0, 0, 0 } },
+
 	{ S5P_CMU_RESET_CAM_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_RESET_TV_SYS,			{ 1, 0, 0 } },
 	{ S5P_CMU_RESET_MFC_SYS,		{ 1, 0, 0 } },
@@ -236,14 +238,16 @@ static struct exynos4_pmu_conf exynos4412_pmu_config[] = {
 	{ S5P_CMU_CLKSTOP_ISP_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_MAUDIO_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_GPS_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_CAM_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_TV_SYS,			{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_MFC_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_G3D_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_LCD0_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_ISP_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_MAUDIO_SYS,		{ 1, 1, 0 } },
-	{ S5P_CMU_RESET_GPS_SYS,		{ 1, 0, 0 } },
+
+	{ S5P_CMU_RESET_CAM_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_RESET_TV_SYS,			{ 0, 0, 0 } },
+	{ S5P_CMU_RESET_MFC_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_RESET_G3D_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_RESET_LCD0_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_RESET_ISP_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_RESET_MAUDIO_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_RESET_GPS_SYS,		{ 0, 0, 0 } },
+
 	{ S5P_TOP_BUS_SYS,			{ 3, 0, 0 } },
 	{ S5P_TOP_RETENTION_SYS,		{ 1, 0, 1 } },
 	{ S5P_TOP_PWR_SYS,			{ 3, 0, 3 } },
@@ -317,13 +321,23 @@ static struct exynos4_pmu_conf exynos4212_c2c_pmu_conf[] = {
 	{ S5P_LPDDR_PHY_DLL_LOCK_SYS,		{ 1, 0, 0 } },
 };
 
-
 static struct exynos4_c2c_pmu_conf exynos4_config_for_c2c[] = {
 	/* Register Address	       Value */
 	{ S5P_TOP_BUS_COREBLK_SYS,	0x0},
 	{ S5P_TOP_PWR_COREBLK_SYS,	0x0},
 	{ S5P_MPLL_SYSCLK_SYS,		0x0},
 	{ S5P_XUSBXTI_SYS,		0x0},
+};
+
+static void __iomem *exynos4_pmu_init_zero[] = {
+	S5P_CMU_RESET_CAM_SYS,
+	S5P_CMU_RESET_TV_SYS,
+	S5P_CMU_RESET_MFC_SYS,
+	S5P_CMU_RESET_G3D_SYS,
+	S5P_CMU_RESET_LCD0_SYS,
+	S5P_CMU_RESET_ISP_SYS,
+	S5P_CMU_RESET_MAUDIO_SYS,
+	S5P_CMU_RESET_GPS_SYS,
 };
 
 void exynos4_sys_powerdown_conf(enum sys_powerdown mode)
@@ -377,7 +391,17 @@ void exynos4_c2c_request_pwr_mode(enum c2c_pwr_mode mode)
 
 static int __init exynos4_pmu_init(void)
 {
+	unsigned int i;
+
 	exynos4_reset_assert_ctrl(1);
+
+	/*
+	 * on exynos4x12, CMU reset system power register should to be set 0x0
+	 */
+	if (!soc_is_exynos4210()) {
+		for (i = 0; i < ARRAY_SIZE(exynos4_pmu_init_zero); i++)
+			__raw_writel(0x0, exynos4_pmu_init_zero[i]);
+	}
 
 	if (soc_is_exynos4210()) {
 		exynos4_pmu_config = exynos4210_pmu_config;
