@@ -1056,6 +1056,11 @@ static int vidioc_s_fmt(struct file *file, void *priv, struct v4l2_format *f)
 				mfc_err("Not supported format.\n");
 				return -EINVAL;
 			}
+		} else if (IS_MFCV6(dev)) {
+			if (fmt->fourcc == V4L2_PIX_FMT_NV12MT) {
+				mfc_err("Not supported format.\n");
+				return -EINVAL;
+			}
 		}
 		ctx->dst_fmt = fmt;
 		mfc_debug_leave();

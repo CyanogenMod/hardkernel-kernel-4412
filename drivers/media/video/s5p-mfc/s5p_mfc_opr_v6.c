@@ -690,7 +690,7 @@ static int s5p_mfc_set_enc_params(struct s5p_mfc_ctx *ctx)
 		/* 0: NV12(CbCr), 1: NV21(CrCb) */
 		WRITEL(0x1, S5P_FIMV_PIXEL_FORMAT);
 	}
-	else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12MT) {
+	else if (ctx->src_fmt->fourcc == V4L2_PIX_FMT_NV12MT_16X16) {
 		/* 0: Linear, 1: 2D tiled*/
 		reg = READL(S5P_FIMV_E_ENC_OPTIONS);
 		reg |= (0x1 << 7);
