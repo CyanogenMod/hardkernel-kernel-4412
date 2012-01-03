@@ -1934,12 +1934,6 @@ static struct s5p_tvif_ctrl_private_data s5p_tvif_ctrl_private = {
 	.running = false
 };
 
-
-
-
-
-
-
 /****************************************
  * Functions for sdo ctrl class
  ***************************************/
@@ -2357,9 +2351,13 @@ static void s5p_hdmi_set_avi(
 	struct s5p_hdmi_v_frame			frame;
 
 	frame = s5p_hdmi_v_fmt[mode].frame;
-
 	avi[0] = param.reg.pxl_fmt;
-	avi[0] |= (0x1 << 4);
+
+	/* RGB or YCbCr */
+	if (s5p_tvif_ctrl_private.curr_if == TVOUT_HDMI_RGB)
+		avi[0] |= (0x1 << 4);
+	else
+		avi[0] |= (0x5 << 4);
 
 	avi[1] = video->colorimetry;
 	avi[1] |= video->aspect << 4;
@@ -3015,6 +3013,9 @@ int s5p_tvif_ctrl_start(
 		goto cannot_change;
 	}
 
+	s5p_tvif_ctrl_private.curr_std = std;
+	s5p_tvif_ctrl_private.curr_if = inf;
+
 	switch (inf) {
 	case TVOUT_COMPOSITE:
 	case TVOUT_HDMI:
@@ -3040,8 +3041,6 @@ int s5p_tvif_ctrl_start(
 	}
 
 	s5p_tvif_ctrl_private.running = true;
-	s5p_tvif_ctrl_private.curr_std = std;
-	s5p_tvif_ctrl_private.curr_if = inf;
 
 	return 0;
 
