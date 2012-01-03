@@ -37,9 +37,6 @@
 extern void exynos_secondary_startup(void);
 extern unsigned int gic_bank_offset;
 
-#define CPU1_BOOT_REG	(samsung_rev() == EXYNOS4210_REV_1_1 ? \
-			 S5P_INFORM5 : S5P_VA_SYSRAM)
-
 struct _cpu_boot_info {
 	void __iomem *power_base;
 	void __iomem *boot_base;
@@ -275,7 +272,10 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 #ifdef CONFIG_ARM_TRUSTZONE
 		cpu_boot_info[i].boot_base = S5P_VA_SYSRAM_NS + 0x1C;
 #else
-		cpu_boot_info[i].boot_base = CPU1_BOOT_REG;
+		if (soc_is_exynos4210() && (samsung_rev() >= EXYNOS4210_REV_1_1))
+			cpu_boot_info[i].boot_base = S5P_INFORM5;
+		else
+			cpu_boot_info[i].boot_base = S5P_VA_SYSRAM;
 #endif
 		if (soc_is_exynos4412())
 			cpu_boot_info[i].boot_base += (0x4 * i);
