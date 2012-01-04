@@ -12,6 +12,7 @@
 
 #include <linux/dma-mapping.h>
 #include <media/videobuf2-core.h>
+#include <media/videobuf2-memops.h>
 #include <asm/cacheflush.h>
 
 #include "s5p_mfc_common.h"
@@ -118,7 +119,77 @@ void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes)
 }
 #endif
 
-#if defined(CONFIG_S5P_MFC_VB2_SDVMM)
+#if defined(CONFIG_S5P_MFC_VB2_CMA)
+struct vb2_cma_phys_conf {
+	struct device		*dev;
+	const char		*type;
+	unsigned long		alignment;
+	bool			cacheable;
+};
+
+struct vb2_cma_phys_buf {
+	struct vb2_cma_phys_conf		*conf;
+	dma_addr_t			paddr;
+	unsigned long			size;
+	struct vm_area_struct		*vma;
+	atomic_t			refcount;
+	struct vb2_vmarea_handler	handler;
+	bool				cacheable;
+};
+void s5p_mfc_cache_clean(void *alloc_ctx)
+{
+	struct vb2_cma_phys_buf *buf = (struct vb2_cma_phys_buf *)alloc_ctx;
+	void *start_addr;
+	unsigned long size;
+	unsigned long paddr = (dma_addr_t)buf->paddr;
+
+	start_addr = (dma_addr_t *)phys_to_virt(buf->paddr);
+	size = buf->size;
+
+	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
+	outer_clean_range(paddr, paddr + size);
+}
+
+void s5p_mfc_cache_inv(void *alloc_ctx)
+{
+	struct vb2_cma_phys_buf *buf = (struct vb2_cma_phys_buf *)alloc_ctx;
+	void *start_addr;
+	unsigned long size;
+	unsigned long paddr = (dma_addr_t)buf->paddr;
+
+	start_addr = (dma_addr_t *)phys_to_virt(buf->paddr);
+	size = buf->size;
+
+	outer_inv_range(paddr, paddr + size);
+	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
+}
+
+void s5p_mfc_mem_suspend(void *alloc_ctx)
+{
+	/* NOP */
+}
+
+void s5p_mfc_mem_resume(void *alloc_ctx)
+{
+	/* NOP */
+}
+
+void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
+{
+	vb2_cma_phys_set_cacheable(alloc_ctx, cacheable);
+}
+
+void s5p_mfc_mem_get_cacheable(void *alloc_ctx)
+{
+	/* NOP */
+}
+
+int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
+{
+	vb2_cma_phys_cache_flush(vb, plane_no);
+	return 0;
+}
+#elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
 void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
 {
 	unsigned long paddr;
@@ -340,49 +411,5 @@ void s5p_mfc_mem_get_cacheable(void *alloc_ctx)
 int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
 {
 	return vb2_ion_cache_flush(vb, plane_no);
-}
-#else
-void s5p_mfc_cache_clean(const void *start_addr, unsigned long size)
-{
-	unsigned long paddr;
-
-	dmac_map_area(start_addr, size, DMA_TO_DEVICE);
-	paddr = __pa((unsigned long)start_addr);
-	outer_clean_range(paddr, paddr + size);
-}
-
-void s5p_mfc_cache_inv(const void *start_addr, unsigned long size)
-{
-	unsigned long paddr;
-
-	paddr = __pa((unsigned long)start_addr);
-	outer_inv_range(paddr, paddr + size);
-	dmac_unmap_area(start_addr, size, DMA_FROM_DEVICE);
-}
-
-void s5p_mfc_mem_suspend(void *alloc_ctx)
-{
-	/* NOP */
-}
-
-void s5p_mfc_mem_resume(void *alloc_ctx)
-{
-	/* NOP */
-}
-
-void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
-{
-	vb2_cma_phys_set_cacheable(alloc_ctx, cacheable);
-}
-
-void s5p_mfc_mem_get_cacheable(void *alloc_ctx)
-{
-	/* NOP */
-}
-
-int s5p_mfc_mem_cache_flush(struct vb2_buffer *vb, u32 plane_no)
-{
-	vb2_cma_phys_cache_flush(vb, plane_no);
-	return 0;
 }
 #endif
