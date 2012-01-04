@@ -357,6 +357,7 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 	switch (udc_ep->type) {
 	case USB_ENDPOINT_XFER_ISOC:
 		dev_err(udc->dev, "no current ISOC support\n");
+		spin_unlock_irqrestore(&udc_ep->lock, flags);
 		return -EINVAL;
 
 	case USB_ENDPOINT_XFER_BULK:
@@ -550,6 +551,7 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 	res = exynos_ss_udc_issue_cmd(udc, &epcmd);
 	if (res < 0) {
 		dev_err(udc->dev, "Failed to set/clear stall\n");
+		spin_unlock_irqrestore(&udc_ep->lock, irqflags);
 		return res;
 	}
 
