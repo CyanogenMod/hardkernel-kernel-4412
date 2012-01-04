@@ -287,14 +287,41 @@ static int idma_mmap(struct snd_pcm_substream *substream,
 static irqreturn_t iis_irq(int irqno, void *dev_id)
 {
 	struct idma_ctrl *prtd = (struct idma_ctrl *)dev_id;
-	u32 iisahb, val, addr;
+	u32 iiscon = readl(idma.regs + I2SCON);
+	u32 iisahb = readl(idma.regs + I2SAHB);
+	u32 addr = 0;
+	u32 val = 0;
 
-	iisahb  = readl(idma.regs + I2SAHB);
+	/* Check RX Overflow INT */
+	if (iiscon & CON_FRXOFSTATUS) {
+		pr_err("RX overflow occurs!! I2SCON[0x%08x])\n", iiscon);
+		iiscon |= CON_FRXOFSTATUS;
+		writel(iiscon, idma.regs + I2SCON);
+	}
 
+	/* Check TX_P Underrun INT */
+	if (iiscon & CON_FTXURSTATUS) {
+		pr_err("Tx_P underrun occurs!! I2SCON[0x%08x])\n", iiscon);
+		iiscon |= CON_FTXURSTATUS;
+		writel(iiscon, idma.regs + I2SCON);
+	}
+
+	/* Check TX_S Underrun INT */
+	if (iiscon & CON_FTXSURSTAT) {
+		pr_err("Tx_S underrun occurs!! I2SCON[0x%08x])\n", iiscon);
+		iiscon |= CON_FTXSURSTAT;
+		writel(iiscon, idma.regs + I2SCON);
+	}
+
+	/* Check I2SAHB Level[0~3] INT */
 	if (iisahb & AHB_LVL0INT)
 		val = AHB_CLRLVL0INT;
-	else
-		val = 0;
+	else if (iisahb & AHB_LVL1INT)
+		val = AHB_CLRLVL1INT;
+	else if (iisahb & AHB_LVL2INT)
+		val = AHB_CLRLVL2INT;
+	else if (iisahb & AHB_LVL3INT)
+		val = AHB_CLRLVL3INT;
 
 	if (val) {
 		iisahb |= val;
@@ -327,6 +354,9 @@ static int idma_open(struct snd_pcm_substream *substream)
 	pr_debug("Entered %s\n", __func__);
 
 	snd_soc_set_runtime_hwparams(substream, &idma_hardware);
+
+	/* Clear AHB register */
+	writel(0, idma.regs + I2SAHB);
 
 	prtd = kzalloc(sizeof(struct idma_ctrl), GFP_KERNEL);
 	if (prtd == NULL)
