@@ -127,9 +127,8 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_VPLL_SYSCLK_SYS,			{ 1, 0, 0 } },
 	{ S5P_EPLL_SYSCLK_SYS,			{ 1, 1, 0 } },
 	{ S5P_MPLLUSER_SYSCLK_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_GPS_ALIVE_SYS,	{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_GPSALIVE_SYS,		{ 1, 0, 0 } },
-
+	{ S5P_CMU_CLKSTOP_GPS_ALIVE_SYS,	{ 0, 0, 0 } },
+	{ S5P_CMU_RESET_GPSALIVE_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_CAM_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_TV_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_MFC_SYS,		{ 0, 0, 0 } },
@@ -138,7 +137,6 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_CMU_CLKSTOP_ISP_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_MAUDIO_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_CLKSTOP_GPS_SYS,		{ 0, 0, 0 } },
-
 	{ S5P_CMU_RESET_CAM_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_RESET_TV_SYS,			{ 1, 0, 0 } },
 	{ S5P_CMU_RESET_MFC_SYS,		{ 1, 0, 0 } },
@@ -202,8 +200,8 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_MAUDIO_SYS,			{ 7, 7, 0 } },
 	{ S5P_GPS_SYS,				{ 7, 0, 0 } },
 	{ S5P_GPS_ALIVE_SYS,			{ 7, 0, 0 } },
-	{ S5P_CMU_SYSCLK_ISP_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_SYSCLK_GPS_SYS,		{ 1, 0, 0 } },
+	{ S5P_CMU_SYSCLK_ISP_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_SYSCLK_GPS_SYS,		{ 0, 0, 0 } },
 };
 
 static struct exynos4_pmu_conf exynos4412_pmu_config[] = {
@@ -228,17 +226,16 @@ static struct exynos4_pmu_conf exynos4412_pmu_config[] = {
 	{ S5P_VPLL_SYSCLK_SYS,			{ 1, 0, 0 } },
 	{ S5P_EPLL_SYSCLK_SYS,			{ 1, 1, 0 } },
 	{ S5P_MPLLUSER_SYSCLK_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_GPS_ALIVE_SYS,	{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_GPSALIVE_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_CAM_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_TV_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_MFC_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_G3D_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_LCD0_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_ISP_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_MAUDIO_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_CLKSTOP_GPS_SYS,		{ 1, 0, 0 } },
-
+	{ S5P_CMU_CLKSTOP_GPS_ALIVE_SYS,	{ 0, 0, 0 } },
+	{ S5P_CMU_RESET_GPSALIVE_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_CAM_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_TV_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_MFC_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_G3D_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_LCD0_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_ISP_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_MAUDIO_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_CLKSTOP_GPS_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_RESET_CAM_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_RESET_TV_SYS,			{ 0, 0, 0 } },
 	{ S5P_CMU_RESET_MFC_SYS,		{ 0, 0, 0 } },
@@ -247,7 +244,6 @@ static struct exynos4_pmu_conf exynos4412_pmu_config[] = {
 	{ S5P_CMU_RESET_ISP_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_RESET_MAUDIO_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_RESET_GPS_SYS,		{ 0, 0, 0 } },
-
 	{ S5P_TOP_BUS_SYS,			{ 3, 0, 0 } },
 	{ S5P_TOP_RETENTION_SYS,		{ 1, 0, 1 } },
 	{ S5P_TOP_PWR_SYS,			{ 3, 0, 3 } },
@@ -301,8 +297,8 @@ static struct exynos4_pmu_conf exynos4412_pmu_config[] = {
 	{ S5P_MAUDIO_SYS,			{ 7, 7, 0 } },
 	{ S5P_GPS_SYS,				{ 7, 0, 0 } },
 	{ S5P_GPS_ALIVE_SYS,			{ 7, 0, 0 } },
-	{ S5P_CMU_SYSCLK_ISP_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_SYSCLK_GPS_SYS,		{ 1, 0, 0 } },
+	{ S5P_CMU_SYSCLK_ISP_SYS,		{ 0, 0, 0 } },
+	{ S5P_CMU_SYSCLK_GPS_SYS,		{ 0, 0, 0 } },
 };
 
 static struct exynos4_pmu_conf exynos4x12_c2c_pmu_conf[] = {
@@ -330,6 +326,16 @@ static struct exynos4_c2c_pmu_conf exynos4_config_for_c2c[] = {
 };
 
 static void __iomem *exynos4_pmu_init_zero[] = {
+	S5P_CMU_CLKSTOP_GPS_ALIVE_SYS,
+	S5P_CMU_RESET_GPSALIVE_SYS,
+	S5P_CMU_CLKSTOP_CAM_SYS,
+	S5P_CMU_CLKSTOP_TV_SYS,
+	S5P_CMU_CLKSTOP_MFC_SYS,
+	S5P_CMU_CLKSTOP_G3D_SYS,
+	S5P_CMU_CLKSTOP_LCD0_SYS,
+	S5P_CMU_CLKSTOP_ISP_SYS,
+	S5P_CMU_CLKSTOP_MAUDIO_SYS,
+	S5P_CMU_CLKSTOP_GPS_SYS,
 	S5P_CMU_RESET_CAM_SYS,
 	S5P_CMU_RESET_TV_SYS,
 	S5P_CMU_RESET_MFC_SYS,
@@ -338,6 +344,8 @@ static void __iomem *exynos4_pmu_init_zero[] = {
 	S5P_CMU_RESET_ISP_SYS,
 	S5P_CMU_RESET_MAUDIO_SYS,
 	S5P_CMU_RESET_GPS_SYS,
+	S5P_CMU_SYSCLK_ISP_SYS,
+	S5P_CMU_SYSCLK_GPS_SYS,
 };
 
 void exynos4_sys_powerdown_conf(enum sys_powerdown mode)
