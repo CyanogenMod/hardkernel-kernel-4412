@@ -596,6 +596,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 {
 	struct i2s_dai *i2s = to_info(dai);
 	u32 mod = readl(i2s->addr + I2SMOD);
+	u32 con = readl(i2s->addr + I2SCON);
 	u32 stream = substream->stream;
 
 	if (!is_secondary(i2s))
@@ -666,10 +667,13 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	if (is_idma_enabled(i2s, stream) || is_srp_enabled(i2s, stream))
+	if (is_idma_enabled(i2s, stream) || is_srp_enabled(i2s, stream)) {
 		mod |= MOD_TXS_IDMA;
+		con &= ~CON_FRXORINTEN | ~CON_FTXSURINTEN | ~CON_FTXURINTEN;
+	}
 
 	writel(mod, i2s->addr + I2SMOD);
+	writel(con, i2s->addr + I2SCON);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		snd_soc_dai_set_dma_data(dai, substream,
