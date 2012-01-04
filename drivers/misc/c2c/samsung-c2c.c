@@ -364,10 +364,8 @@ static void set_c2c_device(struct platform_device *pdev)
 
 	if (soc_is_exynos4212() || soc_is_exynos4412()) {
 		exynos_c2c_request_pwr_mode = exynos4_c2c_request_pwr_mode;
-		if (samsung_rev() >= EXYNOS4412_REV_1_0) {
-			c2c_set_reset(C2C_SET);
-			c2c_set_rtrst(C2C_SET);
-		}
+		if (samsung_rev() >= EXYNOS4412_REV_1_0)
+			writel(C2C_SYSREG_DEFAULT, c2c_con.c2c_sysreg);
 	} else if (soc_is_exynos5250())
 		exynos_c2c_request_pwr_mode = NULL;
 
