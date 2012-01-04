@@ -673,8 +673,9 @@ static int srp_mmap(struct file *filep, struct vm_area_struct *vma)
 	unsigned long size = vma->vm_end - vma->vm_start;
 	unsigned int pfn;
 
-	vma->vm_flags |= VM_RESERVED | VM_IO;
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	vma->vm_flags |= VM_IO;
+	vma->vm_flags |= VM_RESERVED;
+	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	pfn = __phys_to_pfn(SRP_DMEM_BASE);
 
