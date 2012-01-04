@@ -437,7 +437,7 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	/*
 	 * Unmasking all wakeup source.
 	 */
-	__raw_writel(0x0, S5P_WAKEUP_MASK);
+	__raw_writel(0x3ff0000, S5P_WAKEUP_MASK);
 
 	/* Configure GPIO Power down control register */
 	exynos4_gpio_conpdn_reg();
