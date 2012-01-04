@@ -52,6 +52,7 @@ struct exynos_usb_phy {
 static struct exynos_usb_phy usb_phy_control;
 static atomic_t host_usage;
 static DEFINE_SPINLOCK(phy_lock);
+static struct clk *phy_clk = NULL;
 
 static void exynos_usb_mux_change(struct platform_device *pdev, int val)
 {
@@ -99,40 +100,39 @@ static int exynos5_usb_host_phy20_is_on(void)
 
 static int exynos_usb_phy_clock_enable(struct platform_device *pdev)
 {
-	struct clk *phy_clk;
 	int err;
 
-	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
-		phy_clk = clk_get(&pdev->dev, "usbotg");
-	else
-		phy_clk = clk_get(&pdev->dev, "usbhost");
+	if (!phy_clk) {
+		if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
+			phy_clk = clk_get(&pdev->dev, "usbotg");
+		else
+			phy_clk = clk_get(&pdev->dev, "usbhost");
 
-	if (IS_ERR(phy_clk)) {
-		dev_err(&pdev->dev, "Failed to get phy clock\n");
-		return PTR_ERR(phy_clk);
+		if (IS_ERR(phy_clk)) {
+			dev_err(&pdev->dev, "Failed to get phy clock\n");
+			return PTR_ERR(phy_clk);
+		}
 	}
 
 	err = clk_enable(phy_clk);
-	clk_put(phy_clk);
 
 	return err;
 }
 
 static int exynos_usb_phy_clock_disable(struct platform_device *pdev)
 {
-	struct clk *phy_clk;
-
-	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
-		phy_clk = clk_get(&pdev->dev, "usbotg");
-	else
-		phy_clk = clk_get(&pdev->dev, "usbhost");
-	if (IS_ERR(phy_clk)) {
-		dev_err(&pdev->dev, "Failed to get phy clock\n");
-		return PTR_ERR(phy_clk);
+	if (!phy_clk) {
+		if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
+			phy_clk = clk_get(&pdev->dev, "usbotg");
+		else
+			phy_clk = clk_get(&pdev->dev, "usbhost");
+		if (IS_ERR(phy_clk)) {
+			dev_err(&pdev->dev, "Failed to get phy clock\n");
+			return PTR_ERR(phy_clk);
+		}
 	}
 
 	clk_disable(phy_clk);
-	clk_put(phy_clk);
 
 	return 0;
 }
@@ -347,20 +347,14 @@ static int exynos4_usb_phy0_exit(struct platform_device *pdev)
 
 int exynos4_check_usb_op(void)
 {
-	static struct clk *otg_clk;
-	unsigned long flags;
 	u32 phypwr;
 	u32 op = 1;
+	unsigned long flags;
+	int ret;
 
-	if (!otg_clk) {
-		otg_clk = clk_get(NULL, "usbotg");
-		if (IS_ERR(otg_clk)) {
-			printk(KERN_ERR"Failed to get otg clock\n");
-			otg_clk = NULL;
-			return 0;
-		}
-	}
-	clk_enable(otg_clk);
+	ret = clk_enable(phy_clk);
+	if (ret)
+		return 0;
 
 	local_irq_save(flags);
 	phypwr = readl(EXYNOS4_PHYPWR);
@@ -410,7 +404,7 @@ int exynos4_check_usb_op(void)
 	}
 done:
 	local_irq_restore(flags);
-	clk_disable(otg_clk);
+	clk_disable(phy_clk);
 
 	return op;
 }
