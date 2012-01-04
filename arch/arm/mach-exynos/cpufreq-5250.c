@@ -431,8 +431,8 @@ int exynos5250_cpufreq_init(struct exynos_dvfs_info *info)
 	}
 
 	info->mpll_freq_khz = rate;
-	/* 800Mhz */
-	info->pm_lock_idx = L14;
+	/* 1000Mhz */
+	info->pm_lock_idx = L12;
 	/* 800Mhz */
 	info->pll_safe_idx = L14;
 	info->max_support_idx = max_support_idx;
