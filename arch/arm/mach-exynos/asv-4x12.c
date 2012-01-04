@@ -25,7 +25,6 @@
 #define NR_SS_CASE	3
 
 unsigned int rev_lid;
-unsigned int exynos_result_of_asv;
 
 unsigned int not_ss_lid[NR_SS_CASE][2] = {
 	/* lid, wno */

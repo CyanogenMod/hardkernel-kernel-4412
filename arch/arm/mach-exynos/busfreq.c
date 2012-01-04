@@ -36,6 +36,7 @@
 #include <mach/gpio.h>
 #include <mach/regs-mem.h>
 #include <mach/cpufreq.h>
+#include <mach/asv.h>
 
 #include <plat/map-s5p.h>
 #include <plat/gpio-cfg.h>
@@ -461,7 +462,7 @@ static void __init exynos4_set_bus_volt(void)
 	unsigned int asv_group;
 	unsigned int i;
 
-	asv_group = __raw_readl(S5P_INFORM2) & 0xF;
+	asv_group = exynos_result_of_asv & 0xF;
 
 	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group);
 

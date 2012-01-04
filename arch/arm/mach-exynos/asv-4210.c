@@ -335,10 +335,10 @@ static int exynos4210_asv_store_result(struct samsung_asv *asv_info)
 	}
 
 set_reg:
-	__raw_writel(result_grp, S5P_INFORM2);
+	exynos_result_of_asv = result_grp;
 
 	pr_info(KERN_INFO "Support %s\n", support_freq);
-	pr_info(KERN_INFO "ASV Group for This Exynos4210 is 0x%x\n", result_grp);
+	pr_info(KERN_INFO "ASV Group for This Exynos4210 is 0x%x\n", exynos_result_of_asv);
 
 	return 0;
 }
@@ -346,6 +346,8 @@ set_reg:
 int exynos4210_asv_init(struct samsung_asv *asv_info)
 {
 	pr_info("EXYNOS4210: Adaptive Support Voltage init\n");
+
+	exynos_result_of_asv = 0;
 
 	asv_info->ids_offset = 24;
 	asv_info->ids_mask = 0xFF;

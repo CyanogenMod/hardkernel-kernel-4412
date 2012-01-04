@@ -24,6 +24,7 @@
 #include <mach/asv.h>
 
 static struct samsung_asv *exynos_asv;
+unsigned int exynos_result_of_asv;
 
 static int __init exynos4_asv_init(void)
 {

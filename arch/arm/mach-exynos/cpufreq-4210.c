@@ -19,6 +19,7 @@
 #include <mach/map.h>
 #include <mach/regs-clock.h>
 #include <mach/cpufreq.h>
+#include <mach/asv.h>
 
 #include <plat/clock.h>
 
@@ -294,7 +295,7 @@ static void __init set_volt_table(void)
 	unsigned int tmp;
 	unsigned int i;
 
-	tmp = __raw_readl(S5P_INFORM2);
+	tmp = exynos_result_of_asv;
 
 	asv_group = (tmp & 0xF);
 
