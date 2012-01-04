@@ -192,12 +192,22 @@ int exynos_cpufreq_lock(unsigned int nId,
 {
 	int ret = 0, i, old_idx = 0;
 	unsigned int freq_old, freq_new, arm_volt, safe_arm_volt;
-	unsigned int *volt_table = exynos_info->volt_table;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
-	struct cpufreq_frequency_table *freq_table = exynos_info->freq_table;
+	unsigned int *volt_table;
+	struct cpufreq_policy *policy;
+	struct cpufreq_frequency_table *freq_table;
 
 	if (!exynos_cpufreq_init_done)
-		return 0;
+		return -EPERM;
+
+	if (!exynos_info)
+		return -EPERM;
+
+	policy = cpufreq_cpu_get(0);
+	if (!policy)
+		return -EPERM;
+
+	volt_table = exynos_info->volt_table;
+	freq_table = exynos_info->freq_table;
 
 	if (g_cpufreq_lock_id & (1 << nId)) {
 		printk(KERN_ERR "%s:Device [%d] already locked cpufreq\n",
@@ -288,12 +298,22 @@ int exynos_cpufreq_upper_limit(unsigned int nId,
 {
 	int ret = 0, old_idx = 0, i;
 	unsigned int freq_old, freq_new, arm_volt, safe_arm_volt;
-	unsigned int *volt_table = exynos_info->volt_table;
-	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
-	struct cpufreq_frequency_table *freq_table = exynos_info->freq_table;
+	unsigned int *volt_table;
+	struct cpufreq_policy *policy;
+	struct cpufreq_frequency_table *freq_table;
 
 	if (!exynos_cpufreq_init_done)
-		return 0;
+		return -EPERM;
+
+	if (!exynos_info)
+		return -EPERM;
+
+	policy = cpufreq_cpu_get(0);
+	if (!policy)
+		return -EPERM;
+
+	volt_table = exynos_info->volt_table;
+	freq_table = exynos_info->freq_table;
 
 	if (g_cpufreq_limit_id & (1 << nId)) {
 		pr_err("[CPUFREQ]This device [%d] already limited cpufreq\n", nId);
