@@ -1336,9 +1336,6 @@ static int fimc_alloc_buffers(struct fimc_control *ctrl,
 	int i, j;
 	int plane_length[4] = {0, };
 
-	if (plane < 1 || plane > 3)
-		return -ENOMEM;
-
 	switch (plane) {
 	case 1:
 		if (align) {
@@ -2104,12 +2101,19 @@ int fimc_streamon_capture(void *fh)
 	cam_frmsize.discrete.width = 0;
 	cam_frmsize.discrete.height = 0;
 
+	if (!ctrl->cam) {
+		fimc_err("%s: ctrl->cam is null\n", __func__);
+		return -EINVAL;
+	} else {
+		cam = ctrl->cam;
+	}
+
 	if (fimc_check_capture_source(ctrl)) {
 		fimc_err("%s: No capture device.\n", __func__);
 		return -ENODEV;
 	}
 
-	if (ctrl->cam->sd) {
+	if (cam->sd) {
 		if (is_scale_up(ctrl))
 			return -EINVAL;
 	}
@@ -2123,12 +2127,9 @@ int fimc_streamon_capture(void *fh)
 
 	fimc_hwset_enable_irq(ctrl, 0, 1);
 
-	/* csi control position change because runtime pm */
-	if (ctrl->cam)
-		cam = ctrl->cam;
-	if ((ctrl->cam->id != CAMERA_WB) && (ctrl->cam->id != CAMERA_WB_B)) {
-		if (fimc_cam_use && ctrl->cam->sd) {
-			ret = v4l2_subdev_call(ctrl->cam->sd, video, enum_framesizes,
+	if ((cam->id != CAMERA_WB) && (cam->id != CAMERA_WB_B)) {
+		if (fimc_cam_use && cam->sd) {
+			ret = v4l2_subdev_call(cam->sd, video, enum_framesizes,
 					&cam_frmsize);
 			if (ret < 0) {
 				dev_err(ctrl->dev, "%s: enum_framesizes failed\n",
@@ -2138,21 +2139,21 @@ int fimc_streamon_capture(void *fh)
 			} else {
 				if (cam_frmsize.discrete.width > 0
 					&& cam_frmsize.discrete.height > 0) {
-					ctrl->cam->window.left = 0;
-					ctrl->cam->window.top = 0;
-					ctrl->cam->width = ctrl->cam->window.width
+					cam->window.left = 0;
+					cam->window.top = 0;
+					cam->width = cam->window.width
 						= cam_frmsize.discrete.width;
-					ctrl->cam->height
-						= ctrl->cam->window.height
+					cam->height
+						= cam->window.height
 						= cam_frmsize.discrete.height;
 					fimc_info2("enum_framesizes width = %d,\
-						height = %d\n", ctrl->cam->width,
-						ctrl->cam->height);
+						height = %d\n", cam->width,
+						cam->height);
 				}
 			}
 
 			if (cap->fmt.priv == V4L2_PIX_FMT_MODE_CAPTURE) {
-				ret = v4l2_subdev_call(ctrl->cam->sd, video, s_stream, 1);
+				ret = v4l2_subdev_call(cam->sd, video, s_stream, 1);
 				if (ret < 0) {
 					dev_err(ctrl->dev, "%s: s_stream failed\n",
 							__func__);
@@ -2173,7 +2174,7 @@ int fimc_streamon_capture(void *fh)
 					cap->fmt.pixelformat);
 			}
 			if (cap->fmt.priv != V4L2_PIX_FMT_MODE_CAPTURE) {
-				ret = v4l2_subdev_call(ctrl->cam->sd, video, s_stream, 1);
+				ret = v4l2_subdev_call(cam->sd, video, s_stream, 1);
 				if (ret < 0) {
 					dev_err(ctrl->dev, "%s: s_stream failed\n",
 							__func__);
@@ -2188,13 +2189,18 @@ int fimc_streamon_capture(void *fh)
 		}
 	}
 	/* Set FIMD to write back */
-	if ((ctrl->cam->id == CAMERA_WB) || (ctrl->cam->id == CAMERA_WB_B)) {
-		if (ctrl->cam->id == CAMERA_WB)
+	if ((cam->id == CAMERA_WB) || (cam->id == CAMERA_WB_B)) {
+		if (cam->id == CAMERA_WB)
 			fimc_hwset_sysreg_camblk_fimd0_wb(ctrl);
 		else
 			fimc_hwset_sysreg_camblk_fimd1_wb(ctrl);
 
-		s3cfb_direct_ioctl(0, S3CFB_SET_WRITEBACK, 1);
+		ret = s3cfb_direct_ioctl(0, S3CFB_SET_WRITEBACK, 1);
+		if (ret) {
+			fimc_err("failed set writeback\n");
+			return ret;
+		}
+
 	}
 
 	if (ctrl->is.sd && fimc_cam_use) {
@@ -2217,13 +2223,13 @@ int fimc_streamon_capture(void *fh)
 				s_mbus_fmt, &ctrl->is.mbus_fmt);
 		}
 
-		if (ctrl->cam->id == CAMERA_CSI_C)
+		if (cam->id == CAMERA_CSI_C)
 			s3c_csis_start(CSI_CH_0, cam->mipi_lanes,
 			cam->mipi_settle, cam->mipi_align,
 			ctrl->is.fmt.width + ctrl->is.offset_x,
 			ctrl->is.fmt.height + ctrl->is.offset_y,
 			V4L2_PIX_FMT_SGRBG10);
-		else if (ctrl->cam->id == CAMERA_CSI_D)
+		else if (cam->id == CAMERA_CSI_D)
 			s3c_csis_start(CSI_CH_1, cam->mipi_lanes,
 			cam->mipi_settle, cam->mipi_align,
 			ctrl->is.fmt.width + ctrl->is.offset_x,
@@ -2326,6 +2332,7 @@ int fimc_streamoff_capture(void *fh)
 	struct fimc_capinfo *cap = ctrl->cap;
 
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
+	int ret = 0;
 
 	if (fimc_check_capture_source(ctrl)) {
 		fimc_err("%s: No capture device.\n", __func__);
@@ -2366,8 +2373,13 @@ int fimc_streamoff_capture(void *fh)
 	}
 
 	/* Set FIMD to write back */
-	if ((ctrl->cam->id == CAMERA_WB) || (ctrl->cam->id == CAMERA_WB_B))
-		s3cfb_direct_ioctl(0, S3CFB_SET_WRITEBACK, 0);
+	if ((ctrl->cam->id == CAMERA_WB) || (ctrl->cam->id == CAMERA_WB_B)) {
+		ret = s3cfb_direct_ioctl(0, S3CFB_SET_WRITEBACK, 0);
+		if (ret) {
+			fimc_err("failed set writeback\n");
+			return ret;
+		}
+	}
 	/* disable camera power */
 	/* cam power off should call in the subdev release function */
 	if (fimc_cam_use) {
