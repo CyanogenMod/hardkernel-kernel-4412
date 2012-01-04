@@ -622,7 +622,7 @@ static int s3c24xx_i2c_xfer(struct i2c_adapter *adap,
 	if (i2c->suspended) {
 		dev_err(i2c->dev, "I2C is not initialzed.\n");
 		dump_i2c_register(i2c);
-		return -EREMOTEIO;
+		return -EIO;
 	}
 
 	clk_enable(i2c->clk);
