@@ -207,19 +207,19 @@ static unsigned int decideNextStatus(unsigned int utilization)
 #ifdef EXYNOS4_ASV_ENABLED
 static mali_bool mali_dvfs_table_update(void)
 {
-	unsigned int exynos_result_of_asv;
+	unsigned int exynos_result_of_asv_group;
 	unsigned int i;
-	exynos_result_of_asv = (__raw_readl(S5P_INFORM2)) & 0xf;
-	MALI_PRINT(("exynos_result_of_asv = 0x%x\n", exynos_result_of_asv));
+	exynos_result_of_asv_group = exynos_result_of_asv & 0xf;
+	MALI_PRINT(("exynos_result_of_asv_group = 0x%x\n", exynos_result_of_asv_group));
 
 	if (ASV_LEVEL_SUPPORT) { //asv level information will be added.
 		for (i = 0; i < MALI_DVFS_STEPS; i++) {
-			mali_dvfs[i].vol = asv_3d_volt_5_table[exynos_result_of_asv][i];
+			mali_dvfs[i].vol = asv_3d_volt_5_table[exynos_result_of_asv_group][i];
 			MALI_PRINT(("mali_dvfs[%d].vol = %d\n", i, mali_dvfs[i].vol));
 		}
 	} else {
 		for (i = 0; i < MALI_DVFS_STEPS; i++) {
-			mali_dvfs[i].vol = asv_3d_volt_8_table[exynos_result_of_asv][i];
+			mali_dvfs[i].vol = asv_3d_volt_8_table[exynos_result_of_asv_group][i];
 			MALI_PRINT(("mali_dvfs[%d].vol = %d\n", i, mali_dvfs[i].vol));
 		}
 	}
