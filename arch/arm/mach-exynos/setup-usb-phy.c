@@ -376,7 +376,7 @@ int exynos4_check_usb_op(void)
 			writel(readl(EXYNOS4_PHYPWR)
 				| PHY1_STD_ANALOG_POWERDOWN,
 				EXYNOS4_PHYPWR);
-			exynos_usb_phy_control(USB_PHY1, PHY_DISABLE);
+			writel(PHY_DISABLE, S5P_USBHOST_PHY_CONTROL);
 
 			op = 0;
 		}
@@ -394,10 +394,9 @@ int exynos4_check_usb_op(void)
 			writel((readl(EXYNOS4_PHYPWR) | PHY0_NORMAL_MASK),
 					EXYNOS4_PHYPWR);
 
-			exynos_usb_phy_control(USB_PHY
-				| USB_PHY_HSIC0
-				| USB_PHY_HSIC1,
-				PHY_DISABLE);
+			writel(PHY_DISABLE, S5P_HSIC_1_PHY_CONTROL);
+			writel(PHY_DISABLE, S5P_HSIC_2_PHY_CONTROL);
+			writel(PHY_DISABLE, S5P_USB_PHY_CONTROL);
 
 			op = 0;
 		}
@@ -455,7 +454,7 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 		phypwr = readl(EXYNOS4_PHYPWR);
 		/* set to normal HSIC 0 and 1 of PHY1 */
 		if (soc_is_exynos4210()) {
-			exynos_usb_phy_control(USB_PHY1, PHY_ENABLE);
+			writel(PHY_ENABLE, S5P_USBHOST_PHY_CONTROL);
 
 			phypwr &= ~(PHY1_STD_NORMAL_MASK
 				| EXYNOS4210_HSIC0_NORMAL_MASK
@@ -473,10 +472,9 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| EXYNOS4210_PHY1_SWRST_MASK);
 			writel(rstcon, EXYNOS4_RSTCON);
 		} else {
-			exynos_usb_phy_control(USB_PHY
-				| USB_PHY_HSIC0
-				| USB_PHY_HSIC1,
-				PHY_ENABLE);
+			writel(PHY_ENABLE, S5P_USB_PHY_CONTROL);
+			writel(PHY_ENABLE, S5P_HSIC_1_PHY_CONTROL);
+			writel(PHY_ENABLE, S5P_HSIC_2_PHY_CONTROL);
 
 			/* set to normal of Device */
 			phypwr = readl(EXYNOS4_PHYPWR) & ~PHY0_NORMAL_MASK;
