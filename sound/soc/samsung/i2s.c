@@ -603,7 +603,8 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 
 	switch (params_channels(params)) {
 	case 6:
-		mod |= MOD_DC2_EN;
+		mod |= MOD_DC1_EN | MOD_DC2_EN;
+		break;
 	case 4:
 		mod |= MOD_DC1_EN;
 		break;
