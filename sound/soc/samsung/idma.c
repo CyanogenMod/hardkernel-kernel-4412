@@ -65,8 +65,6 @@ struct idma_ctrl {
 static struct idma_info {
 	spinlock_t	lock;
 	void		__iomem	*regs;
-	dma_addr_t	buf_addr;
-	unsigned int	buf_size;
 	int		trigger_stat;
 } idma;
 
