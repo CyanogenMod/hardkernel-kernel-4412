@@ -236,8 +236,8 @@
 #define S3C_ORGOSIZE_VERTICAL(x)		((x) << 16)
 #define S3C_ORGOSIZE_HORIZONTAL(x)		((x) << 0)
 
-#define S3C_CIEXTEN_TARGETH_EXT(x)		(((x) & 0x2000) << 26)
-#define S3C_CIEXTEN_TARGETV_EXT(x)		(((x) & 0x2000) << 24)
+#define S3C_CIEXTEN_TARGETH_EXT(x)		((((x) & 0x2000) >> 13) << 26)
+#define S3C_CIEXTEN_TARGETV_EXT(x)		((((x) & 0x2000) >> 13) << 24)
 #define S3C_CIEXTEN_MAINHORRATIO_EXT(x)		(((x) & 0x3F) << 10)
 #define S3C_CIEXTEN_MAINVERRATIO_EXT(x)		((x) & 0x3F)
 
