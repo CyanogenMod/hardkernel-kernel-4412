@@ -532,6 +532,7 @@
 #define EXYNOS_USB3_DGCMD_CmdTyp_LIMIT			(0xff)
 #define EXYNOS_USB3_DGCMD_CmdTyp(_x)			((_x) << 0)
 /* TODO: add device generic command descriptions */
+#define EXYNOS_USB3_DGCMD_CmdTyp_SetPerParams		(0x2 << 0)
 
 /* TODO: not finished */
 #define EXYNOS_USB3_DALEPENA		EXYNOS_USB3_REG(0xC720)

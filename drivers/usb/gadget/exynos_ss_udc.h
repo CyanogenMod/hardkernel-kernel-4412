@@ -36,6 +36,9 @@
 #define EXYNOS_USB3_CTRL_BUFF_SIZE	8
 #define EXYNOS_USB3_EP0_BUFF_SIZE	512
 
+#define EXYNOS_USB3_U1_DEV_EXIT_LAT	0
+#define EXYNOS_USB3_U2_DEV_EXIT_LAT	0x20
+
 #define call_gadget(_udc, _entry)				\
 	if ((_udc)->gadget.speed != USB_SPEED_UNKNOWN &&	\
 	    (_udc)->driver && (_udc)->driver->_entry)		\

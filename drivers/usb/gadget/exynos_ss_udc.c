@@ -26,6 +26,8 @@
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 
+#include <asm/byteorder.h>
+
 #include <mach/map.h>
 
 #include <plat/regs-usb3-exynos-drd-phy.h>
@@ -39,7 +41,9 @@
 
 
 static int exynos_ss_udc_enqueue_data(struct exynos_ss_udc *udc,
-				       void *buff, int length);
+				      void *buff, int length,
+				      void (* complete) (struct usb_ep *ep,
+						struct usb_request *req));
 static void exynos_ss_udc_enqueue_setup(struct exynos_ss_udc *udc);
 static int exynos_ss_udc_ep_queue(struct usb_ep *ep, struct usb_request *req,
 			      gfp_t gfp_flags);
@@ -59,8 +63,15 @@ static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on);
 
 static struct exynos_ss_udc *our_udc;
 
+void exynos_ss_udc_get_config_params(struct usb_dcd_config_params *params)
+{
+	params->bU1devExitLat = EXYNOS_USB3_U1_DEV_EXIT_LAT;
+	params->bU2DevExitLat = cpu_to_le16(EXYNOS_USB3_U2_DEV_EXIT_LAT);
+}
+
 static struct usb_gadget_ops exynos_ss_udc_gadget_ops = {
 	.pullup = exynos_ss_udc_pullup,
+	.get_config_params = exynos_ss_udc_get_config_params,
 };
 
 #ifdef CONFIG_BATTERY_SAMSUNG
@@ -555,6 +566,41 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 }
 
 /**
+ * exynos_ss_udc_complete_set_sel - completion of SET_SEL request data stage
+ * @ep: The endpoint the request was on.
+ * @req: The request completed.
+ */
+static void exynos_ss_udc_complete_set_sel(struct usb_ep *ep,
+					   struct usb_request *req)
+{
+	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
+	struct exynos_ss_udc *udc = udc_ep->parent;
+	u8 *sel = req->buf;
+	u32 param;
+	u32 dgcmd;
+	bool res;
+
+	/* Our device is U1/U2 enabled, so we will use U2PEL */
+	param = sel[5] << 8 | sel[4];
+	/* Documentation says "If the value is greater than 125us, then
+	 * software must program a value of zero into this register */
+	if (param > 125)
+		param = 0;
+
+	dev_dbg(udc->dev, "%s: dgcmd_param = 0x%08x\n", __func__, param);
+
+	dgcmd = EXYNOS_USB3_DGCMD_CmdAct | EXYNOS_USB3_DGCMD_CmdTyp_SetPerParams;
+
+	writel(param, udc->regs + EXYNOS_USB3_DGCMDPAR);
+	writel(dgcmd, udc->regs + EXYNOS_USB3_DGCMD);
+	res = exynos_ss_udc_poll_bit_clear(udc->regs + EXYNOS_USB3_DGCMD,
+					   EXYNOS_USB3_DGCMD_CmdAct,
+					   1000);
+	if (!res)
+		dev_err(udc->dev, "Failed to set periodic parameters\n");
+}
+
+/**
  * exynos_ss_udc_process_set_sel - process request SET_SEL
  * @udc: The device state
  */
@@ -565,7 +611,8 @@ static int exynos_ss_udc_process_set_sel(struct exynos_ss_udc *udc)
 	dev_dbg(udc->dev, "%s\n", __func__);
 
 	ret = exynos_ss_udc_enqueue_data(udc, udc->ep0_buff,
-					 EXYNOS_USB3_EP0_BUFF_SIZE);
+					 EXYNOS_USB3_EP0_BUFF_SIZE,
+					 exynos_ss_udc_complete_set_sel);
 	if (ret < 0) {
 		dev_err(udc->dev, "%s: failed to become ready for SEL data\n",
 				   __func__);
@@ -759,7 +806,7 @@ static int exynos_ss_udc_process_get_status(struct exynos_ss_udc *udc,
 		return 0;
 	}
 
-	ret = exynos_ss_udc_enqueue_data(udc, reply, 2);
+	ret = exynos_ss_udc_enqueue_data(udc, reply, 2, NULL);
 	if (ret) {
 		dev_err(udc->dev, "%s: failed to send reply\n", __func__);
 		return ret;
@@ -1019,7 +1066,9 @@ static void exynos_ss_udc_enqueue_status(struct exynos_ss_udc *udc)
  * @length: Length of data.
  */
 static int exynos_ss_udc_enqueue_data(struct exynos_ss_udc *udc,
-				       void *buff, int length)
+				      void *buff, int length,
+				      void (* complete) (struct usb_ep *ep,
+						struct usb_request *req))
 {
 	struct usb_request *req = udc->ctrl_req;
 	struct exynos_ss_udc_req *udc_req = our_req(req);
@@ -1035,7 +1084,7 @@ static int exynos_ss_udc_enqueue_data(struct exynos_ss_udc *udc,
 	else
 		req->buf = buff;
 
-	req->complete = NULL;
+	req->complete = complete;
 
 	if (!list_empty(&udc_req->queue)) {
 		dev_info(udc->dev, "%s: already queued???\n", __func__);
