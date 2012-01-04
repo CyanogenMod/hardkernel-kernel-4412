@@ -472,6 +472,8 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 	u32 is_fn;
 
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
+	is_ctrl.id = 0;
+	is_ctrl.value = 0;
 #ifdef DEBUG
 	static struct timeval curr_time, before_time;
 	if (!fimc_cam_use) {
@@ -503,10 +505,12 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 		buf_index = pp - 1;
 		if (ctrl->cam->use_isp && fimc_cam_use) {
 			is_ctrl.id = V4L2_CID_IS_GET_FRAME_NUMBER;
+			is_ctrl.value = 0;
 			v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
 			is_fn = is_ctrl.value;
 			if (ctrl->is.frame_count == is_fn) {
 				is_ctrl.id = V4L2_CID_IS_GET_FRAME_VALID;
+				is_ctrl.value = 0;
 				v4l2_subdev_call(ctrl->is.sd, core, g_ctrl,
 					&is_ctrl);
 				if (is_ctrl.value) {
@@ -529,6 +533,7 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 			/* Frame lost case */
 				is_ctrl.id =
 					V4L2_CID_IS_GET_LOSTED_FRAME_NUMBER;
+				is_ctrl.value = 0;
 				v4l2_subdev_call(ctrl->is.sd,
 					core, g_ctrl, &is_ctrl);
 				fimc_info2("%d Frame lost - %d,%d",

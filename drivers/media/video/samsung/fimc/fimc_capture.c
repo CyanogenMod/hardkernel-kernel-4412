@@ -1224,7 +1224,8 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 	int ret = 0;
 	int depth;
 	struct v4l2_control is_ctrl;
-
+	is_ctrl.id = 0;
+	is_ctrl.value = 0;
 	fimc_dbg("%s\n", __func__);
 
 	/*
@@ -1306,10 +1307,12 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 	if (ctrl->is.sd && fimc_cam_use) {
 		ctrl->is.mbus_fmt.code = V4L2_MBUS_FMT_SGRBG10_1X10;
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_WIDTH;
+		is_ctrl.value = 0;
 		v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
 		ctrl->is.fmt.width = ctrl->is.mbus_fmt.width = is_ctrl.value;
 
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_HEIGHT;
+		is_ctrl.value = 0;
 		v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
 		ctrl->is.fmt.height = ctrl->is.mbus_fmt.height = is_ctrl.value;
 		/* default offset values */
@@ -2100,6 +2103,8 @@ int fimc_streamon_capture(void *fh)
 	fimc_dbg("%s\n", __func__);
 	cam_frmsize.discrete.width = 0;
 	cam_frmsize.discrete.height = 0;
+	is_ctrl.id = 0;
+	is_ctrl.value = 0;
 
 	if (!ctrl->cam) {
 		fimc_err("%s: ctrl->cam is null\n", __func__);
@@ -2207,9 +2212,11 @@ int fimc_streamon_capture(void *fh)
 		struct platform_device *pdev = to_platform_device(ctrl->dev);
 		struct clk *pxl_async = NULL;
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_OFFSET_X;
+		is_ctrl.value = 0;
 		v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
 		ctrl->is.offset_x = is_ctrl.value;
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_OFFSET_Y;
+		is_ctrl.value = 0;
 		v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
 		ctrl->is.offset_y = is_ctrl.value;
 		fimc_dbg("CSI setting width = %d, height = %d\n",
@@ -2399,14 +2406,22 @@ int fimc_is_set_zoom(struct fimc_control *ctrl, struct v4l2_control *c)
 	struct v4l2_control is_ctrl;
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 	struct s3c_platform_camera *cam = NULL;
-	int ret;
+	int ret = 0;
+
+	is_ctrl.id = 0;
+	is_ctrl.value = 0;
+
+	if (ctrl->cam)
+		cam = ctrl->cam;
+	else
+		return -ENODEV;
 
 	/* 0. Check zoom width and height */
 	if (!c->value) {
 		ctrl->is.zoom_in_width = ctrl->is.fmt.width;
 		ctrl->is.zoom_in_height = ctrl->is.fmt.height;
 	} else {
-		ctrl->is.zoom_in_width = ctrl->is.fmt.width - (16 * c->value); 
+		ctrl->is.zoom_in_width = ctrl->is.fmt.width - (16 * c->value);
 		ctrl->is.zoom_in_height =
 			(ctrl->is.zoom_in_width * ctrl->is.fmt.height)
 			/ ctrl->is.fmt.width;
@@ -2454,13 +2469,13 @@ int fimc_is_set_zoom(struct fimc_control *ctrl, struct v4l2_control *c)
 		}
 	}
 	/* 4. Set FIMC-Lite and MIPI size with new CAC margin */
-	if (ctrl->cam)
-		cam = ctrl->cam;
 	if (ctrl->is.sd && fimc_cam_use) {
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_OFFSET_X;
+		is_ctrl.value = 0;
 		v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
 		ctrl->is.offset_x = is_ctrl.value;
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_OFFSET_Y;
+		is_ctrl.value = 0;
 		v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
 		ctrl->is.offset_y = is_ctrl.value;
 		fimc_dbg("CSI setting width = %d, height = %d\n",
