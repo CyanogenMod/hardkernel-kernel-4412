@@ -1011,7 +1011,7 @@ static void srp_ibuf_save(void)
 
 static void srp_ibuf_restore(void)
 {
-	unsigned long copy_pos;
+	unsigned long copy_pos = 0;
 
 	if (!srp.sp_data.wbuf_pos)
 		return;
