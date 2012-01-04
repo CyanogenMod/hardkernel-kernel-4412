@@ -163,8 +163,6 @@ int mfc_set_inst_cfg(struct mfc_inst_ctx *ctx, int type, void *arg)
 			return MFC_SET_CONF_FAIL;
 		}
 
-		memset(precfg, 0x00, sizeof(precfg));
-
 		precfg->type = type;
 		memcpy(precfg->values, usercfg->basic.values, sizeof(precfg->values));
 
