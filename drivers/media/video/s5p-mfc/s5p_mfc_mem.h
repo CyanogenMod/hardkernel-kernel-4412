@@ -23,8 +23,6 @@
 
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 #include <media/videobuf2-cma-phys.h>
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-#include <media/videobuf2-dma-pool.h>
 #elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
 #include <media/videobuf2-sdvmm.h>
 #elif defined(CONFIG_S5P_MFC_VB2_ION)
@@ -69,37 +67,6 @@ static inline void s5p_mfc_mem_put(void *a, void *b)
 static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
 {
 	return vb2_cma_phys_memops.vaddr(b);
-}
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-#define MFC_ALLOC_CTX_NUM	2
-
-#define MFC_BANK_A_ALLOC_CTX	0
-#define MFC_BANK_B_ALLOC_CTX	1
-
-#define MFC_CMA_BANK1_ALLOC_CTX MFC_BANK_A_ALLOC_CTX
-#define MFC_CMA_BANK2_ALLOC_CTX MFC_BANK_B_ALLOC_CTX
-#define MFC_CMA_FW_ALLOC_CTX	MFC_BANK_A_ALLOC_CTX
-
-#define mfc_plane_cookie(v, n)	vb2_dma_pool_plane_paddr(v, n)
-
-static inline void *s5p_mfc_mem_alloc(void *a, unsigned int s)
-{
-	return vb2_dma_pool_memops.alloc(a, s);
-}
-
-static inline size_t s5p_mfc_mem_cookie(void *a, void *b)
-{
-	return (size_t)vb2_dma_pool_memops.cookie(b);
-}
-
-static inline void s5p_mfc_mem_put(void *a, void *b)
-{
-	vb2_dma_pool_memops.put(b);
-}
-
-static inline void *s5p_mfc_mem_vaddr(void *a, void *b)
-{
-	return vb2_dma_pool_memops.vaddr(b);
 }
 #elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
 #define MFC_ALLOC_CTX_NUM	2

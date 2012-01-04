@@ -38,9 +38,6 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 	int err;
 	struct cma_info mem_info_f, mem_info_a, mem_info_b;
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	void *b_base;
-	size_t b_base_phys;
 #endif
 	unsigned int base_align = dev->variant->buf_align->mfc_base_align;
 	unsigned int firmware_size = dev->variant->buf_size->firmware_code;
@@ -133,63 +130,6 @@ int s5p_mfc_alloc_firmware(struct s5p_mfc_dev *dev)
 				dev->port_a, s5p_mfc_bitproc_phys,
 						firmware_size);
 	}
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-	mfc_debug(2, "Allocating memory for firmware.\n");
-	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(
-		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], firmware_size);
-	if (IS_ERR(s5p_mfc_bitproc_buf)) {
-		s5p_mfc_bitproc_buf = 0;
-		printk(KERN_ERR "Allocating bitprocessor buffer failed\n");
-		return -ENOMEM;
-	}
-
-	s5p_mfc_bitproc_phys = s5p_mfc_mem_cookie(
-		dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX], s5p_mfc_bitproc_buf);
-	if (s5p_mfc_bitproc_phys & ((1 << base_align) - 1)) {
-		mfc_err("The base memory is not aligned to %dBytes.\n",
-				(1 << base_align));
-		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
-							s5p_mfc_bitproc_buf);
-		s5p_mfc_bitproc_phys = 0;
-		s5p_mfc_bitproc_buf = 0;
-		return -EIO;
-	}
-
-	s5p_mfc_bitproc_virt = s5p_mfc_mem_vaddr(
-			dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
-			s5p_mfc_bitproc_buf);
-	mfc_debug(2, "Virtual address for FW: %08lx\n",
-			(long unsigned int)s5p_mfc_bitproc_virt);
-	if (!s5p_mfc_bitproc_virt) {
-		mfc_err("Bitprocessor memory remap failed\n");
-		s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
-				s5p_mfc_bitproc_buf);
-		s5p_mfc_bitproc_phys = 0;
-		s5p_mfc_bitproc_buf = 0;
-		return -EIO;
-	}
-
-	dev->port_a = s5p_mfc_bitproc_phys;
-
-	b_base = s5p_mfc_mem_alloc(
-		dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX], 4096);
-	if (IS_ERR(b_base)) {
-		printk(KERN_ERR "Allocating Port B base failed\n");
-		return -ENOMEM;
-	}
-
-	b_base_phys = s5p_mfc_mem_cookie(
-		dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX], b_base);
-
-	s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],
-				b_base);
-
-	dev->port_b = b_base_phys;
-
-	mfc_debug(2, "Port A: %08x Port B: %08x (FW: %08x size: %08x)\n",
-			dev->port_a, dev->port_b,
-			s5p_mfc_bitproc_phys,
-			firmware_size);
 #elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
 	mfc_debug(2, "Allocating memory for firmware.\n");
 	s5p_mfc_bitproc_buf = s5p_mfc_mem_alloc(

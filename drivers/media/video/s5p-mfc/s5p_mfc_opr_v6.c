@@ -38,8 +38,6 @@
 
 #if defined(CONFIG_S5P_MFC_VB2_CMA)
 #include <media/videobuf2-cma-phys.h>
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-#include <media/videobuf2-dma-pool.h>
 #endif
 
 /* #define S5P_MFC_DEBUG_REGWRITE  */

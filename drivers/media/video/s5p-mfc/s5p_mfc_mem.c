@@ -51,38 +51,6 @@ void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes)
 {
 	vb2_cma_phys_cleanup_multi(alloc_ctxes);
 }
-#elif defined(CONFIG_S5P_MFC_VB2_DMA_POOL)
-static unsigned long s5p_mem_base_align[] = {
-	MFC_BASE_ALIGN_ORDER,
-	MFC_BASE_ALIGN_ORDER,
-};
-static unsigned long s5p_mem_bank_align[] = {
-	MFC_BANK_A_ALIGN_ORDER,
-	MFC_BANK_B_ALIGN_ORDER,
-};
-
-static unsigned long s5p_mem_sizes[] = {
-	3 << 20,
-	3 << 20,
-};
-
-struct vb2_mem_ops *s5p_mfc_mem_ops(void)
-{
-	return (struct vb2_mem_ops *)&vb2_dma_pool_memops;
-}
-
-void **s5p_mfc_mem_init_multi(struct device *dev, unsigned int ctx_num)
-{
-	return (void **)vb2_dma_pool_init_multi(dev, ctx_num,
-						s5p_mem_base_align,
-						s5p_mem_bank_align,
-						s5p_mem_sizes);
-}
-
-void s5p_mfc_mem_cleanup_multi(void **alloc_ctxes)
-{
-	vb2_dma_pool_cleanup_multi(alloc_ctxes, MFC_ALLOC_CTX_NUM);
-}
 #elif defined(CONFIG_S5P_MFC_VB2_SDVMM)
 struct vb2_mem_ops *s5p_mfc_mem_ops(void)
 {
