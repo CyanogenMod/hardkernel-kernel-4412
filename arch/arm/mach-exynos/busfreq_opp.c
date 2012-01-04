@@ -310,9 +310,10 @@ static ssize_t store_level_lock(struct device *device, struct device_attribute *
 	struct opp *opp;
 	unsigned long freq;
 	unsigned long maxfreq = opp_get_freq(data->max_opp);
+	int ret;
 
-	sscanf(buf, "%lu", &freq);
-	if (freq == 0) {
+	ret = sscanf(buf, "%lu", &freq);
+	if ((freq == 0) || (ret == 0)) {
 		pr_info("Release bus level lock.\n");
 		bus_ctrl.opp_lock = NULL;
 		return count;
