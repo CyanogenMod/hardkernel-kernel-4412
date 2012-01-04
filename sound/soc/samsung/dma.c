@@ -131,9 +131,7 @@ static void audio_buffdone(struct s3c2410_dma_chan *channel,
 	if (result == S3C2410_RES_ABORT || result == S3C2410_RES_ERR)
 		return;
 
-	if (substream)
-		if (substream->runtime)
-			prtd = substream->runtime->private_data;
+	prtd = substream->runtime->private_data;
 
 	snd_pcm_period_elapsed(substream);
 
