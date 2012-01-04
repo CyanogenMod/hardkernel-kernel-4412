@@ -808,7 +808,7 @@ bksv_start_err:
 
 static int s5p_hdcp_second_auth(void)
 {
-	int reg = 0, ret = 0;
+	int ret = 0;
 
 	tvout_dbg("second auth : start\n");
 
@@ -820,55 +820,17 @@ static int s5p_hdcp_second_auth(void)
 		goto second_auth_err;
 
 	ret = s5p_hdmi_check_repeater();
-
-	if (!ret) {
-		hdcp_info.auth_status = SECOND_AUTHENTICATION_DONE;
-		s5p_hdmi_start_encryption();
-	} else if (ret < 0)
-		goto second_auth_err;
-	else {
-		switch (ret) {
-
-		case REPEATER_ILLEGAL_DEVICE_ERROR:
-			writeb(0x01, hdmi_base + S5P_HDMI_HDCP_CTRL2);
-			mdelay(1);
-			writeb(0x0, hdmi_base + S5P_HDMI_HDCP_CTRL2);
-
-			tvout_dbg("repeater : illegal device\n");
-			break;
-		case REPEATER_TIMEOUT_ERROR:
-			reg = readb(hdmi_base + S5P_HDMI_HDCP_CTRL1);
-
-			reg |= S5P_HDMI_HDCP_SET_REPEATER_TIMEOUT;
-			writeb(reg, hdmi_base + S5P_HDMI_HDCP_CTRL1);
-
-			reg &= ~S5P_HDMI_HDCP_SET_REPEATER_TIMEOUT;
-			writeb(reg, hdmi_base + S5P_HDMI_HDCP_CTRL1);
-
-			tvout_dbg("repeater : timeout\n");
-			break;
-		case MAX_CASCADE_EXCEEDED_ERROR:
-
-			tvout_dbg("repeater : exceeded MAX_CASCADE\n");
-			break;
-		case MAX_DEVS_EXCEEDED_ERROR:
-
-			tvout_dbg("repeater : exceeded MAX_DEVS\n");
-			break;
-		default:
-			break;
-		}
-
-		hdcp_info.auth_status = NOT_AUTHENTICATED;
-
+	if (ret)
 		goto second_auth_err;
 
-	}
+	hdcp_info.auth_status = SECOND_AUTHENTICATION_DONE;
+	s5p_hdmi_start_encryption();
 
 	tvout_dbg("second auth : OK\n");
 	return 0;
 
 second_auth_err:
+	hdcp_info.auth_status = NOT_AUTHENTICATED;
 	tvout_err("second auth : failed\n");
 	return -1;
 }
