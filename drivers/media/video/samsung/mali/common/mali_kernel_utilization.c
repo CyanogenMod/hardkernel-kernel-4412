@@ -19,7 +19,6 @@
 /* LOAD normalisation */
 #define LOAD_NORMALISATION_FACTOR 2
 
-static _mali_osk_lock_t *time_data_lock;
 static _mali_osk_timer_t *send_utilization_timer;
 static _mali_osk_timer_t *sampling_timer;
 
@@ -35,7 +34,6 @@ static void check_GPU_core_activity_status(void *arg)
 {
 	flag_total += active_flag;
 
-	_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 	sampling_timer_running = MALI_FALSE;
 
 	/* MALI_PRINT(("#",flag_total)); */
@@ -44,7 +42,6 @@ static void check_GPU_core_activity_status(void *arg)
 		_mali_osk_time_mstoticks(CHECK_GPU_ACTIVITY_TIMEOUT));
 		sampling_timer_running = MALI_TRUE;
 	}
-	_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 }
 
 static void send_gpu_utilization_info(void *arg)
@@ -61,11 +58,9 @@ static void send_gpu_utilization_info(void *arg)
 		return;
 	}
 
-	_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 	_mali_osk_timer_add(send_utilization_timer,
 			_mali_osk_time_mstoticks(SEND_GPU_UTILIZATION_TIMEOUT));
 	utilization_timer_running = MALI_TRUE;
-	_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
 	mali_gpu_utilization_handler(flag_total * LOAD_NORMALISATION_FACTOR);
 	flag_total = 0;
@@ -92,11 +87,6 @@ void mali_utilization_suspend(void)
 _mali_osk_errcode_t mali_utilization_init(void)
 {
 	_mali_osk_atomic_init(&num_running_cores, 0);
-
-	time_data_lock = _mali_osk_lock_init(_MALI_OSK_LOCKFLAG_SPINLOCK_IRQ
-				| _MALI_OSK_LOCKFLAG_NONINTERRUPTABLE, 0, 0);
-	if (NULL == time_data_lock)
-		return _MALI_OSK_ERR_FAULT;
 
 	send_utilization_timer = _mali_osk_timer_init();
 	if (NULL == send_utilization_timer)
@@ -130,9 +120,6 @@ void mali_utilization_term(void)
 		sampling_timer = NULL;
 	}
 
-	if (NULL != time_data_lock)
-		_mali_osk_lock_term(time_data_lock);
-
 	_mali_osk_atomic_term(&num_running_cores);
 }
 
@@ -144,7 +131,6 @@ void mali_utilization_core_start(void)
 		 * we now consider the entire GPU for being busy
 		 */
 
-		_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 		if (utilization_timer_running == MALI_FALSE) {
 			_mali_osk_timer_add(send_utilization_timer,
 			_mali_osk_time_mstoticks(SEND_GPU_UTILIZATION_TIMEOUT));
@@ -156,7 +142,6 @@ void mali_utilization_core_start(void)
 			sampling_timer_running = MALI_TRUE;
 		}
 
-		_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 		active_flag = 1;
 	}
 }
