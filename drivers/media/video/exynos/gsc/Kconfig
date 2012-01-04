@@ -7,7 +7,7 @@ config VIDEO_EXYNOS_GSCALER
 	help
 	  This is a v4l2 driver for exynos G-Scaler device.
 
-if VIDEO_EXYNOS_GSCALER
+if VIDEO_EXYNOS_GSCALER && VIDEOBUF2_CMA_PHYS
 comment "Reserved memory configurations"
 config VIDEO_SAMSUNG_MEMSIZE_GSC0
 	int "Memory size in kbytes for GSC0"
