@@ -165,13 +165,14 @@ bool s5p_mfc_power_chk(void)
 #include <linux/pm_runtime.h>
 #endif
 
-#define MFC_PARENT_CLK_NAME	"mout_mfc0"
+#define MFC_PARENT_CLK_NAME	"mout_aclk_333"
 #define MFC_CLKNAME		"sclk_mfc"
 #define MFC_GATE_CLK_NAME	"mfc"
 
 #define CLK_DEBUG
 
 static struct s5p_mfc_pm *pm;
+extern int mfc_clk_rate;
 
 #ifdef CLK_DEBUG
 atomic_t clk_ref;
@@ -179,10 +180,10 @@ atomic_t clk_ref;
 
 int s5p_mfc_init_pm(struct s5p_mfc_dev *dev)
 {
+	struct clk *parent_clk;
 	int ret = 0;
 
 	pm = &dev->pm;
-
 
 	/* FIXME : move to platform resource NAME */
 	/* clock for gating */
@@ -192,6 +193,14 @@ int s5p_mfc_init_pm(struct s5p_mfc_dev *dev)
 		ret = PTR_ERR(pm->clock);
 		goto err_g_clk;
 	}
+
+	parent_clk = clk_get(&dev->plat_dev->dev, MFC_PARENT_CLK_NAME);
+	if (IS_ERR(parent_clk)) {
+		printk(KERN_ERR "failed to get parent clock %s.\n", MFC_PARENT_CLK_NAME);
+		ret = PTR_ERR(parent_clk);
+		goto err_p_clk;
+	}
+	clk_set_rate(parent_clk, mfc_clk_rate);
 
 	atomic_set(&pm->power, 0);
 
@@ -204,9 +213,12 @@ int s5p_mfc_init_pm(struct s5p_mfc_dev *dev)
 #ifdef CLK_DEBUG
 	atomic_set(&clk_ref, 0);
 #endif
+	clk_put(parent_clk);
 
 	return 0;
 
+err_p_clk:
+	clk_put(pm->clock);
 err_g_clk:
 	return ret;
 }
