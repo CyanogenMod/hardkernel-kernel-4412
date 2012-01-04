@@ -165,6 +165,7 @@ struct s5p_tvout_status {
 	struct clk *sclk_pixel;
 	struct clk *sclk_dac;
 	struct clk *sclk_hdmi;
+	spinlock_t tvout_lock;
 };
 
 struct reg_mem_info {

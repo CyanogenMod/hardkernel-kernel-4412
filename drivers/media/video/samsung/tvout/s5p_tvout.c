@@ -148,6 +148,7 @@ static int __devinit s5p_tvout_probe(struct platform_device *pdev)
 		goto err;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
+	spin_lock_init(&s5ptv_status.tvout_lock);
 	s5ptv_early_suspend.suspend = s5p_tvout_early_suspend;
 	s5ptv_early_suspend.resume = s5p_tvout_late_resume;
 	s5ptv_early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 4;
@@ -206,28 +207,30 @@ static int s5p_tvout_remove(struct platform_device *pdev)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void s5p_tvout_early_suspend(struct early_suspend *h)
 {
+	unsigned long spin_flags;
 	tvout_dbg("\n");
-	mutex_lock(&s5p_tvout_mutex);
+	spin_lock_irqsave(&s5ptv_status.tvout_lock, spin_flags);
 	s5p_vp_ctrl_suspend();
 	s5p_mixer_ctrl_suspend();
 	s5p_tvif_ctrl_suspend();
 	suspend_status = 1;
 	tvout_dbg("suspend_status is true\n");
-	mutex_unlock(&s5p_tvout_mutex);
+	spin_unlock_irqrestore(&s5ptv_status.tvout_lock, spin_flags);
 
 	return;
 }
 
 static void s5p_tvout_late_resume(struct early_suspend *h)
 {
+	unsigned long spin_flags;
 	tvout_dbg("\n");
-	mutex_lock(&s5p_tvout_mutex);
+	spin_lock_irqsave(&s5ptv_status.tvout_lock, spin_flags);
 	suspend_status = 0;
 	tvout_dbg("suspend_status is false\n");
 	s5p_tvif_ctrl_resume();
 	s5p_mixer_ctrl_resume();
 	s5p_vp_ctrl_resume();
-	mutex_unlock(&s5p_tvout_mutex);
+	spin_unlock_irqrestore(&s5ptv_status.tvout_lock, spin_flags);
 
 	return;
 }
