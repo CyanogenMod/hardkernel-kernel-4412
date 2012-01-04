@@ -476,7 +476,6 @@ void fimg2d4x_set_msk_repeat(struct fimg2d_control *info, struct fimg2d_repeat *
 	unsigned long cfg;
 
 	if (r->mode == NO_REPEAT)
-	if (r->mode == REPEAT_NORMAL || r->mode == NO_REPEAT)
 		return;
 
 	cfg = (r->mode - REPEAT_NORMAL) << FIMG2D_MSK_REPEAT_SHIFT;

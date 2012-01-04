@@ -253,6 +253,19 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 	if (cmd->srcen) {
 		fimg2d4x_set_src_image(info, &cmd->src);
 		fimg2d4x_set_src_rect(info, &cmd->src_rect);
+		fimg2d4x_set_src_repeat(info, &cmd->repeat);
+		if (cmd->scaling.mode != NO_SCALING)
+			fimg2d4x_set_src_scaling(info, &cmd->scaling);
+	}
+
+	/* mask */
+	if (cmd->msken) {
+		fimg2d4x_enable_msk(info);
+		fimg2d4x_set_msk_image(info, &cmd->msk);
+		fimg2d4x_set_msk_rect(info, &cmd->msk_rect);
+		fimg2d4x_set_msk_repeat(info, &cmd->repeat);
+		if (cmd->scaling.mode != NO_SCALING)
+			fimg2d4x_set_msk_scaling(info, &cmd->scaling);
 	}
 
 	/* dst */
@@ -261,32 +274,9 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 		fimg2d4x_set_dst_rect(info, &cmd->dst_rect);
 	}
 
-	/* mask */
-	if (cmd->msken) {
-		fimg2d4x_enable_msk(info);
-		fimg2d4x_set_msk_image(info, &cmd->msk);
-		fimg2d4x_set_msk_rect(info, &cmd->msk_rect);
-	}
-
 	/* bluescreen */
 	if (cmd->bluscr.mode != OPAQUE)
 		fimg2d4x_set_bluescreen(info, &cmd->bluscr);
-
-	/* scaling */
-	if (cmd->scaling.mode != NO_SCALING) {
-		if (cmd->srcen)
-			fimg2d4x_set_src_scaling(info, &cmd->scaling);
-		if (cmd->msken)
-			fimg2d4x_set_msk_scaling(info, &cmd->scaling);
-	}
-
-	/* repeat */
-	if (cmd->repeat.mode != NO_REPEAT) {
-		if (cmd->srcen)
-			fimg2d4x_set_src_repeat(info, &cmd->repeat);
-		if (cmd->msken)
-			fimg2d4x_set_msk_repeat(info, &cmd->repeat);
-	}
 
 	/* rotation */
 	if (cmd->rotate != ORIGIN)
