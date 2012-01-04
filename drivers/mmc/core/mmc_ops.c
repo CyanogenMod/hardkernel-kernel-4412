@@ -17,6 +17,8 @@
 #include <linux/mmc/card.h>
 #include <linux/mmc/mmc.h>
 
+#include <plat/cpu.h>
+
 #include "core.h"
 #include "mmc_ops.h"
 
@@ -401,6 +403,10 @@ int mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 
 	/* Must check status to be sure of no errors */
 	do {
+#if defined(CONFIG_MACH_SMDKC210) || defined(CONFIG_MACH_SMDKV310)
+		/* HACK: in case of smdkc210, smdkv310 has problem at inand */
+		mmc_delay(1);
+#endif
 		err = mmc_send_status(card, &status);
 		if (err)
 			return err;
