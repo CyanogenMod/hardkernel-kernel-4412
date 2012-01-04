@@ -144,6 +144,10 @@ void mali_regulator_enable(void)
 void mali_regulator_set_voltage(int min_uV, int max_uV)
 {
 	int voltage;
+#if !MALI_DVFS_ENABLED
+	min_uV = mali_gpu_vol;
+	max_uV = mali_gpu_vol;
+#endif
 
 	_mali_osk_lock_wait(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
 
@@ -308,6 +312,10 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 
 #ifndef CONFIG_VPLL_USE_FOR_TVENC
 	bis_vpll = MALI_TRUE;
+#endif
+
+#if !MALI_DVFS_ENABLED
+	clk = mali_gpu_clk;
 #endif
 
 	_mali_osk_lock_wait(mali_dvfs_lock, _MALI_OSK_LOCKMODE_RW);
