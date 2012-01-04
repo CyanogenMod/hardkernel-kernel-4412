@@ -333,6 +333,9 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 	/* not to be called for EP0 */
 	WARN_ON(udc_ep->epnum == 0);
 
+	if (udc_ep->enabled)
+		return -EINVAL;
+
 	epnum = (desc->bEndpointAddress & USB_ENDPOINT_NUMBER_MASK);
 	if (epnum != udc_ep->epnum) {
 		dev_err(udc->dev, "%s: EP number mismatch!\n", __func__);
@@ -370,7 +373,7 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 	}
 
 	exynos_ss_udc_ep_activate(udc, udc_ep);
-
+	udc_ep->enabled = 1;
 	spin_unlock_irqrestore(&udc_ep->lock, flags);
 
 	return 0;
@@ -394,6 +397,7 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 
 	spin_lock_irqsave(&udc_ep->lock, flags);
 	exynos_ss_udc_ep_deactivate(udc, udc_ep);
+	udc_ep->enabled = 0;
 	spin_unlock_irqrestore(&udc_ep->lock, flags);
 
 	/* terminate all requests with shutdown */

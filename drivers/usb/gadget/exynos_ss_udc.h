@@ -137,6 +137,7 @@ struct exynos_ss_udc_req {
  * @dir_in: Set to true if this endpoint is of the IN direction, which
  *	    means that it is sending data to the Host.
  * @halted: Set if the endpoint has been halted.
+ * @enabled: Set to true if endpoint is enabled.
  * @not_ready: Set to true if a command for the endpoint hasn't completed
  *	       during timeout interval.
  * @name: The driver generated name for the endpoint.
@@ -163,7 +164,9 @@ struct exynos_ss_udc_ep {
 	unsigned int		type;
 	unsigned int		dir_in:1;
 	unsigned int		halted:1;
+	unsigned int		enabled:1;
 	bool			not_ready;
+
 	char			name[10];
 };
 
