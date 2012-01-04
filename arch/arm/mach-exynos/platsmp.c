@@ -124,7 +124,6 @@ static int exynos_power_up_cpu(unsigned int cpu)
 
 		if (timeout == 0) {
 			printk(KERN_ERR "cpu%d power up failed", cpu);
-			spin_unlock(&boot_lock);
 			return -ETIMEDOUT;
 		}
 	}
@@ -154,8 +153,10 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	spin_lock(&boot_lock);
 
 	ret = exynos_power_up_cpu(cpu);
-	if (ret)
+	if (ret) {
+		spin_unlock(&boot_lock);
 		return ret;
+	}
 
 	/*
 	* Enable write full line for zeros mode
