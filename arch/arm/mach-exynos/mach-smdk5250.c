@@ -1918,6 +1918,10 @@ static void __init exynos_cma_region_reserve(
 			if (paddr) {
 				reg->start = paddr;
 				reg->reserved = 1;
+				if (reg->size & (reg->alignment - 1))
+					memblock_free(paddr + reg->size,
+						ALIGN(reg->size, reg->alignment)
+						- reg->size);
 			}
 		}
 	}
