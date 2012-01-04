@@ -65,7 +65,7 @@ static struct busfreq_table exynos5_busfreq_table_for800[] = {
 	{LV_1, 400000, 1000000, 0, 0, 0},
 	{LV_2, 267000, 1000000, 0, 0, 0},
 	{LV_3, 200000, 1000000, 0, 0, 0},
-	{LV_4, 160000, 1000000, 0, 0, 0},
+	{LV_4, 100000, 1000000, 0, 0, 0},
 	{LV_5, 100000, 1000000, 0, 0, 0},
 };
 
@@ -75,7 +75,7 @@ static struct busfreq_table exynos5_busfreq_table_for667[] = {
 	{LV_2, 222000, 1000000, 0, 0, 0},
 	{LV_3, 167000, 1000000, 0, 0, 0},
 	{LV_4, 133000, 1000000, 0, 0, 0},
-	{LV_5, 83000, 1000000, 0, 0, 0},
+	{LV_5, 133000, 1000000, 0, 0, 0},
 };
 
 static struct busfreq_table exynos5_busfreq_table_for533[] = {
@@ -237,22 +237,22 @@ static unsigned int __maybe_unused clkdiv_cdrex_for800[LV_END][9] = {
 		DIVPCLK_CDREX, DIVC2C, DIVC2C_ACLK, DIVMCLK_EFPHY, DIVACLK_EFCON }
 	 */
 
-	/* ACLK_CDREX L0: 800MHz */
+	/* MCLK_CDREX L0: 800MHz */
 	{0, 0, 1, 0, 5, 1, 1, 4, 1},
 
-	/* ACLK_CDREX L1: 400MHz */
+	/* MCLK_CDREX L1: 400MHz */
 	{0, 1, 1, 1, 5, 2, 1, 5, 1},
 
-	/* ACLK_CDREX L2: 267MHz */
+	/* MCLK_CDREX L2: 267MHz */
 	{0, 2, 1, 2, 5, 3, 1, 6, 1},
 
-	/* ACLK_CDREX L3: 200MHz */
+	/* MCLK_CDREX L3: 200MHz */
 	{0, 3, 1, 3, 5, 4, 1, 7, 1},
 
-	/* ACLK_CDREX L4: 160MHz */
-	{0, 4, 1, 4, 5, 5, 1, 8, 1},
+	/* MCLK_CDREX L4: 100MHz */
+	{0, 7, 1, 5, 7, 7, 1, 15, 1},
 
-	/* ACLK_CDREX L5: 100MHz */
+	/* MCLK_CDREX L5: 100MHz */
 	{0, 7, 1, 5, 7, 7, 1, 15, 1},
 };
 
@@ -263,23 +263,23 @@ static unsigned int __maybe_unused clkdiv_cdrex_for667[LV_END][9] = {
 		DIVPCLK_CDREX, DIVC2C, DIVC2C_ACLK, DIVMCLK_EFPHY, DIVACLK_EFCON }
 	 */
 
-	/* ACLK_CDREX L0: 800MHz */
+	/* MCLK_CDREX L0: 667MHz */
 	{0, 0, 1, 0, 4, 1, 1, 4, 1},
 
-	/* ACLK_CDREX L1: 400MHz */
+	/* MCLK_CDREX L1: 334MHz */
 	{0, 1, 1, 1, 4, 2, 1, 5, 1},
 
-	/* ACLK_CDREX L2: 267MHz */
+	/* MCLK_CDREX L2: 222MHz */
 	{0, 2, 1, 2, 4, 3, 1, 6, 1},
 
-	/* ACLK_CDREX L3: 200MHz */
+	/* MCLK_CDREX L3: 167MHz */
 	{0, 3, 1, 3, 4, 4, 1, 7, 1},
 
-	/* ACLK_CDREX L4: 160MHz */
+	/* MCLK_CDREX L4: 133MHz */
 	{0, 4, 1, 4, 4, 5, 1, 8, 1},
 
-	/* ACLK_CDREX L5: 100MHz */
-	{0, 7, 1, 4, 7, 7, 1, 15, 1},
+	/* MCLK_CDREX L5: 133MHz */
+	{0, 4, 1, 4, 4, 5, 1, 8, 1},
 };
 
 static unsigned int clkdiv_cdrex_for533[LV_END][9] = {
@@ -289,22 +289,22 @@ static unsigned int clkdiv_cdrex_for533[LV_END][9] = {
 		DIVPCLK_CDREX, DIVC2C, DIVC2C_ACLK, DIVMCLK_EFPHY, DIVACLK_EFCON }
 	 */
 
-	/* ACLK_CDREX L0: 800MHz */
+	/* MCLK_CDREX L0: 533MHz */
 	{0, 0, 1, 0, 3, 1, 1, 4, 1},
 
-	/* ACLK_CDREX L1: 400MHz */
+	/* MCLK_CDREX L1: 267MHz */
 	{0, 1, 1, 1, 3, 2, 1, 5, 1},
 
-	/* ACLK_CDREX L2: 267MHz */
+	/* MCLK_CDREX L2: 178MHz */
 	{0, 2, 1, 2, 3, 3, 1, 6, 1},
 
-	/* ACLK_CDREX L3: 200MHz */
+	/* MCLK_CDREX L3: 133MHz */
 	{0, 3, 1, 3, 3, 4, 1, 7, 1},
 
-	/* ACLK_CDREX L4: 160MHz */
+	/* MCLK_CDREX L4: 107MHz */
 	{0, 4, 1, 4, 3, 5, 1, 8, 1},
 
-	/* ACLK_CDREX L5: 100MHz */
+	/* MCLK_CDREX L5: 67MHz */
 	{0, 7, 1, 3, 7, 7, 1, 15, 1},
 };
 
@@ -315,22 +315,22 @@ static unsigned int __maybe_unused clkdiv_cdrex_for400[LV_END][9] = {
 		DIVPCLK_CDREX, DIVC2C, DIVC2C_ACLK, DIVMCLK_EFPHY, DIVACLK_EFCON }
 	 */
 
-	/* ACLK_CDREX L0: 800MHz */
+	/* MCLK_CDREX L0: 400MHz */
 	{1, 1, 1, 0, 5, 1, 1, 4, 1},
 
-	/* ACLK_CDREX L1: 400MHz */
+	/* MCLK_CDREX L1: 267MHz */
 	{1, 2, 1, 2, 2, 2, 1, 5, 1},
 
-	/* ACLK_CDREX L2: 267MHz */
+	/* MCLK_CDREX L2: 200MHz */
 	{1, 3, 1, 3, 2, 3, 1, 6, 1},
 
-	/* ACLK_CDREX L3: 200MHz */
+	/* MCLK_CDREX L3: 160MHz */
 	{1, 4, 1, 4, 2, 4, 1, 7, 1},
 
-	/* ACLK_CDREX L4: 160MHz */
+	/* MCLK_CDREX L4: 133MHz */
 	{1, 5, 1, 5, 2, 5, 1, 8, 1},
 
-	/* ACLK_CDREX L5: 100MHz */
+	/* MCLK_CDREX L5: 100MHz */
 	{1, 7, 1, 2, 7, 7, 1, 15, 1},
 };
 
