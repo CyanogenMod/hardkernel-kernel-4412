@@ -50,7 +50,8 @@
 #define FIMC_IS_SENSOR_NUM	1
 
 #define FIMC_IS_SHUTDOWN_TIMEOUT	(8*HZ)
-#define FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR	(3*HZ)
+#define FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR	(HZ)
+#define FIMC_IS_SHUTDOWN_TIMEOUT_AF	(3*HZ)
 
 #define FIMC_IS_A5_MEM_SIZE		0x00A00000
 #define FIMC_IS_REGION_SIZE		0x5000
@@ -187,7 +188,8 @@ struct is_fw {
 	const struct firmware	*info;
 	int			state;
 	int			ver;
-	char			fw_info[23];
+	char			fw_info[25];
+	char			setfile_info[32];
 	char			fw_version[6];
 };
 

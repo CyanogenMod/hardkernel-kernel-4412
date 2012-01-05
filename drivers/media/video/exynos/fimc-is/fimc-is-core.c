@@ -221,6 +221,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	mutex_init(&dev->lock);
 	spin_lock_init(&dev->slock);
 	init_waitqueue_head(&dev->irq_queue1);
+
 	dev->pdev = pdev;
 	if (!dev->pdev) {
 		dev_err(&pdev->dev, "No platform data specified\n");

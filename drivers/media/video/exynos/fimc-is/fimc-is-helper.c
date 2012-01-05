@@ -1000,6 +1000,30 @@ void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 		writel(SENSOR_NAME_S5K6A3, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
 		break;
+	case SENSOR_S5K3H7_CSI_A:
+		dev->af.use_af = 1;
+		dev->sensor.sensor_type = SENSOR_S5K3H7_CSI_A;
+		writel(SENSOR_NAME_S5K3H7, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
+		break;
+	case SENSOR_S5K3H7_CSI_B:
+		dev->af.use_af = 1;
+		dev->sensor.sensor_type = SENSOR_S5K3H7_CSI_B;
+		writel(SENSOR_NAME_S5K3H7, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
+		break;
+	case SENSOR_S5K4E5_CSI_A:
+		dev->af.use_af = 1;
+		dev->sensor.sensor_type = SENSOR_S5K4E5_CSI_A;
+		writel(SENSOR_NAME_S5K4E5, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
+		break;
+	case SENSOR_S5K4E5_CSI_B:
+		dev->af.use_af = 1;
+		dev->sensor.sensor_type = SENSOR_S5K4E5_CSI_B;
+		writel(SENSOR_NAME_S5K4E5, dev->regs + ISSR2);
+		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
+		break;
 	}
 	/* Parameter3 : Scenario ID(Initial Scenario) */
 	writel(ISS_PREVIEW_STILL, dev->regs + ISSR4);
