@@ -74,8 +74,6 @@ struct s3c_sdhci_platdata {
 
 	char		**clocks;	/* set of clock sources */
 
-	char vmmc_name[MAX_VMMC_NAME];	/* name for regulator */
-
 	int		ext_cd_gpio;
 	bool		ext_cd_gpio_invert;
 	int	(*ext_cd_init)(void (*notify_func)(struct platform_device *,
