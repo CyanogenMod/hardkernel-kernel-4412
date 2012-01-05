@@ -402,7 +402,7 @@ static int ump_file_mmap(struct file * filp, struct vm_area_struct * vma)
 
 	/* Validate the session data */
 	session_data = (struct ump_session_data *)filp->private_data;
-	if (NULL == session_data)
+	if (NULL == session_data || NULL == session_data->cookies_map->table->mappings)
 	{
 		MSG_ERR(("mmap() called without any session data available\n"));
 		return -EFAULT;
