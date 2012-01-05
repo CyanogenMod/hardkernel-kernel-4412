@@ -56,7 +56,7 @@ void *fimc_is_ion_init(struct fimc_is_dev *isp)
 	vb2_ion.dev = &isp->pdev->dev;
 	sprintf(ion_name, "exynos5-fimc-is");
 	vb2_ion.name = ion_name;
-	vb2_ion.contig = false;
+	vb2_ion.contig = true;
 	vb2_ion.cacheable = true;
 	vb2_ion.align = SZ_4K;
 

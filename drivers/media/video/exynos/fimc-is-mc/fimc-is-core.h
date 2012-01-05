@@ -140,7 +140,10 @@ enum fimc_is_pipe_state {
 	FIMC_IS_STATE_SCALERC_STREAM_ON,
 	FIMC_IS_STATE_SCALERP_STREAM_ON,
 	FIMC_IS_STATE_3DNR_STREAM_ON,
-	FIMC_IS_STATE_BUFFER_PREPARED,
+	FIMC_IS_STATE_SCALERC_BUFFER_PREPARED,
+	FIMC_IS_STATE_SCALERP_BUFFER_PREPARED,
+	FIMC_IS_STATE_3DNR_BUFFER_PREPARED,
+
 };
 
 enum fimc_is_state {
@@ -282,6 +285,7 @@ struct fimc_is_video_dev {
 	struct fimc_is_dev			*dev;
 	unsigned int			num_buf;
 	unsigned int			num_plane;
+	unsigned int			buf_ref_cnt;
 	dma_addr_t buf[FIMC_IS_MAX_BUF_NUM][FIMC_IS_MAX_BUf_PLANE_NUM];
 };
 

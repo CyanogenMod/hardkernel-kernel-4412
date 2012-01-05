@@ -122,16 +122,10 @@
 		(dev->is_p_region->parameter.isp.aa.mode = x)
 #define IS_ISP_SET_PARAM_AA_FACE(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.face = x)
-#define IS_ISP_SET_PARAM_AA_CONTINUOUS(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.continuous = x)
 #define IS_ISP_SET_PARAM_AA_WIN_POS_X(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.win_pos_x = x)
 #define IS_ISP_SET_PARAM_AA_WIN_POS_Y(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.win_pos_y = x)
-#define IS_ISP_SET_PARAM_AA_WIN_WIDTH(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.win_width = x)
-#define IS_ISP_SET_PARAM_AA_WIN_HEIGHT(dev, x) \
-		(dev->is_p_region->parameter.isp.aa.win_height = x)
 #define IS_ISP_SET_PARAM_AA_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.aa.err = x)
 
@@ -411,6 +405,82 @@
 	(dev->is_p_region->parameter.scalerc.dma_output.reserved[0] = x)
 #define IS_SCALERC_SET_PARAM_DMA_OUTPUT_ERR(dev, x) \
 	(dev->is_p_region->parameter.scalerc.dma_output.err = x)
+
+/* ODC Macros */
+#define IS_ODC_SET_PARAM_CONTROL_CMD(dev, x) \
+	(dev->is_p_region->parameter.odc.control.cmd = x)
+#define IS_ODC_SET_PARAM_CONTROL_BYPASS(dev, x) \
+	(dev->is_p_region->parameter.odc.control.bypass = x)
+#define IS_ODC_SET_PARAM_CONTROL_ERR(dev, x) \
+	(dev->is_p_region->parameter.odc.control.err = x)
+
+#define IS_ODC_SET_PARAM_OTF_INPUT_CMD(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.cmd = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.width = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.height = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_FORMAT(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.format = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_BITWIDTH(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.bitwidth = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_ORDER(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.order = x)
+#define IS_ODC_SET_PARAM_OTF_INPUT_ERR(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_input.err = x)
+
+#define IS_ODC_SET_PARAM_OTF_OUTPUT_CMD(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_output.cmd = x)
+#define IS_ODC_SET_PARAM_OTF_OUTPUT_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_output.width = x)
+#define IS_ODC_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_output.height = x)
+#define IS_ODC_SET_PARAM_OTF_OUTPUT_FORMAT(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_output.format = x)
+#define IS_ODC_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_output.bitwidth = x)
+#define IS_ODC_SET_PARAM_OTF_OUTPUT_ORDER(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_output.order = x)
+#define IS_ODC_SET_PARAM_OTF_OUTPUT_ERR(dev, x) \
+	(dev->is_p_region->parameter.odc.otf_output.err = x)
+
+/* DIS Macros */
+#define IS_DIS_SET_PARAM_CONTROL_CMD(dev, x) \
+	(dev->is_p_region->parameter.dis.control.cmd = x)
+#define IS_DIS_SET_PARAM_CONTROL_BYPASS(dev, x) \
+	(dev->is_p_region->parameter.dis.control.bypass = x)
+#define IS_DIS_SET_PARAM_CONTROL_ERR(dev, x) \
+	(dev->is_p_region->parameter.dis.control.err = x)
+
+#define IS_DIS_SET_PARAM_OTF_INPUT_CMD(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_input.cmd = x)
+#define IS_DIS_SET_PARAM_OTF_INPUT_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_input.width = x)
+#define IS_DIS_SET_PARAM_OTF_INPUT_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_input.height = x)
+#define IS_DIS_SET_PARAM_OTF_INPUT_FORMAT(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_input.format = x)
+#define IS_DIS_SET_PARAM_OTF_INPUT_BITWIDTH(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_input.bitwidth = x)
+#define IS_DIS_SET_PARAM_OTF_INPUT_ORDER(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_input.order = x)
+#define IS_DIS_SET_PARAM_OTF_INPUT_ERR(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_input.err = x)
+
+#define IS_DIS_SET_PARAM_OTF_OUTPUT_CMD(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_output.cmd = x)
+#define IS_DIS_SET_PARAM_OTF_OUTPUT_WIDTH(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_output.width = x)
+#define IS_DIS_SET_PARAM_OTF_OUTPUT_HEIGHT(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_output.height = x)
+#define IS_DIS_SET_PARAM_OTF_OUTPUT_FORMAT(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_output.format = x)
+#define IS_DIS_SET_PARAM_OTF_OUTPUT_BITWIDTH(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_output.bitwidth = x)
+#define IS_DIS_SET_PARAM_OTF_OUTPUT_ORDER(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_output.order = x)
+#define IS_DIS_SET_PARAM_OTF_OUTPUT_ERR(dev, x) \
+	(dev->is_p_region->parameter.dis.otf_output.err = x)
 
 /* TDNR Macros */
 #define IS_TDNR_SET_PARAM_CONTROL_CMD(dev, x) \
@@ -1441,6 +1511,7 @@ struct param_sensor_framerate {
 	u32	err;
 };
 
+#if 0
 struct param_isp_aa {
 	u32	cmd;
 	u32	target;
@@ -1455,7 +1526,18 @@ struct param_isp_aa {
 	u32	reserved[PARAMETER_MAX_MEMBER-11];
 	u32	err;
 };
-
+#else
+struct param_isp_aa {
+	u32	cmd;
+	u32	target;
+	u32	mode;
+	u32	face;
+	u32	win_pos_x;
+	u32	win_pos_y;
+	u32	reserved[PARAMETER_MAX_MEMBER-7];
+	u32	err;
+};
+#endif
 struct param_isp_flash {
 	u32	cmd;
 	u32	redeye;
@@ -1634,7 +1716,7 @@ struct odc_param {
 
 struct dis_param {
 	struct param_control		control;
-	struct param_otf_output		otf_input;
+	struct param_otf_input		otf_input;
 	struct param_otf_output		otf_output;
 };
 

@@ -1,7 +1,7 @@
 /*
  * Samsung Exynos5 SoC series FIMC-IS driver
  *
- * exynos5 fimc-is core functions
+ * exynos5 fimc-is video functions
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd
  * Contact: Jiyoung Shin<idon.shin@samsung.com>
@@ -28,6 +28,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <linux/scatterlist.h>
+#include <linux/videodev2.h>
+#include <linux/videodev2_samsung.h>
 
 #include "fimc-is-core.h"
 #include "fimc-is-helper.h"
@@ -44,22 +46,24 @@
 static int fimc_is_scalerc_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
+	int ret;
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_SCALERC];
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf = 0;
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf_ref_cnt = 0;
 
 	if(!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
 		isp->sensor_num = 1;
 
 		fimc_is_load_fw(isp);
-#if 0 /* FW restrction, will be updated */
+
 		fimc_is_init_set(isp, SENSOR_S5K4E5_CSI_A);
 		if (test_bit(IS_ST_RUN, &isp->state)) {
 			dbg("IS change mode\n");
 			clear_bit(IS_ST_RUN, &isp->state);
 			set_bit(IS_ST_CHANGE_MODE, &isp->state);
-			fimc_is_hw_change_mode(isp, ISS_PREVIEW_STILL);
+			fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
 			ret = wait_event_timeout(isp->irq_queue,
 					test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
 					FIMC_IS_SHUTDOWN_TIMEOUT);
@@ -69,7 +73,27 @@ static int fimc_is_scalerc_video_open(struct file *file)
 				return -EBUSY;
 			}
 		}
-#endif
+
+		if (test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state) &&
+				!test_bit(IS_ST_STREAM_ON, &isp->state)) {
+			dbg("IS Stream On");
+			fimc_is_hw_set_stream(isp, 1);
+
+			ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_ON, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"wait timeout : %s\n", __func__);
+				return -EBUSY;
+			}
+			clear_bit(IS_ST_STREAM_ON, &isp->state);
+
+		} else {
+			dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
+			return -EINVAL;
+		}
+
 		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 	}
 
@@ -121,7 +145,9 @@ static int fimc_is_scalerc_video_querycap(struct file *file, void *fh, struct v4
 	strncpy(cap->card, isp->pdev->name, sizeof(cap->card) - 1);
 	cap->bus_info[0] = 0;
 	cap->version = KERNEL_VERSION(1, 0, 0);
-	cap->capabilities = V4L2_CAP_STREAMING | V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_CAPTURE_MPLANE;
+	cap->capabilities = V4L2_CAP_STREAMING
+					| V4L2_CAP_VIDEO_CAPTURE
+					| V4L2_CAP_VIDEO_CAPTURE_MPLANE;
 
 	return 0;
 }
@@ -173,9 +199,18 @@ static int fimc_is_scalerc_video_reqbufs(struct file *file, void *priv, struct v
 {
 	int ret;
 	struct fimc_is_video_dev *video = file->private_data;
+	struct fimc_is_dev *isp = video_drvdata(file);
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	ret = vb2_reqbufs(&video->vbq, buf);
+	if (!ret)
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf = buf->count;
+
+	if(buf->count == 0)
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf_ref_cnt = 0;
+	printk(KERN_INFO "%s(num_buf : %d)\n", __func__,
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf);
+
 	return ret;
 }
 
@@ -282,20 +317,16 @@ static int fimc_is_scalerc_queue_setup(struct vb2_queue *vq, unsigned int *num_b
 	struct fimc_is_dev	*isp = video->dev;
 	int i;
 
-	sizes[0] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT*3/2;
-	allocators[0] = isp->alloc_ctx;
 
-	*num_planes = 3;
+	*num_planes = 1;
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_plane = *num_planes;
 
-	sizes[0] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT;
-	sizes[1] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT/4;
-	sizes[2] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT/4;
+	sizes[0] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT*2;
 
 	for (i = 0; i < *num_planes; i++)
 		allocators[i] =  isp->alloc_ctx;
 
-	printk(KERN_DEBUG "--%s(num_buffers : %d)(size : %d)\n", __func__, (int)*num_buffers, (int)sizes[0]);
+	printk(KERN_DEBUG "%s(num_planes : %d)(size : %d)\n", __func__, (int)*num_planes, (int)sizes[0]);
 
 	return 0;
 }
@@ -326,11 +357,9 @@ static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
 
 	printk(KERN_DEBUG "%s(pipe_state : %d)\n", __func__, (int)isp->pipe_state);
 
-	if(test_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state) &&
+	if(test_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED, &isp->pipe_state) &&
 		!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
 		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
-
-		fimc_is_init_set(isp, SENSOR_S5K4E5_CSI_A);
 
 		/* buffer addr setting */
 		for(i=0; i<isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf; i++)
@@ -338,12 +367,27 @@ static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
 			buf_index = i*isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_plane + j;
 			printk(KERN_DEBUG "(%d)set buf(%d:%d) = 0x%08x\n", buf_index, i, j,
 				 isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf[i][j]);
-			isp->is_p_region->shared[447+buf_index] = isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf[i][j];
+			isp->is_p_region->shared[447+buf_index]
+				= isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf[i][j];
 		}
 
-		printk(KERN_DEBUG "buf_num:%d buf_plane:%d\n",
+		printk(KERN_DEBUG "buf_num:%d buf_plane:%d shared[447] : 0x%08x\n",
 			isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf,
-			isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_plane);
+			isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_plane,
+			virt_to_phys(isp->mem.kvaddr_shared) + 447*sizeof(u32));
+
+		clear_bit(IS_ST_STREAM_OFF, &isp->state);
+		fimc_is_hw_set_stream(isp, 0); /*stream off */
+		ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_OFF, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			if (!ret)
+				err("s_power off failed!!\n");
+			return -EBUSY;
+		}
 
 		IS_SCALERC_SET_PARAM_DMA_OUTPUT_CMD(isp,
 			DMA_OUTPUT_COMMAND_ENABLE);
@@ -352,10 +396,15 @@ static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
 		IS_SCALERC_SET_PARAM_DMA_OUTPUT_BUFFERADDR(isp,
 			(u32)isp->mem.dvaddr_shared + 447*sizeof(u32));
 
-		isp->scenario_id = ISS_PREVIEW_STILL;
+		IS_SET_PARAM_BIT(isp, PARAM_SCALERC_DMA_OUTPUT);
+		IS_INC_PARAM_NUM(isp);
+
 		fimc_is_mem_cache_clean((void *)isp->is_p_region,
 			IS_PARAM_SIZE);
 
+		isp->scenario_id = ISS_PREVIEW_STILL;
+		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
+		clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
 		fimc_is_hw_set_param(isp);
 		ret = wait_event_timeout(isp->irq_queue,
 			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
@@ -365,64 +414,44 @@ static int fimc_is_scalerc_start_streaming(struct vb2_queue *q)
 				"wait timeout : %s\n", __func__);
 			return -EBUSY;
 		}
+
 		if (test_bit(IS_ST_RUN, &isp->state)) {
-				dbg("IS change mode\n");
-				clear_bit(IS_ST_RUN, &isp->state);
-				set_bit(IS_ST_CHANGE_MODE, &isp->state);
-				fimc_is_hw_change_mode(isp, ISS_PREVIEW_STILL);
-				ret = wait_event_timeout(isp->irq_queue,
-						test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
-						FIMC_IS_SHUTDOWN_TIMEOUT);
-				if (!ret) {
-					dev_err(&isp->pdev->dev,
-						"Mode change timeout:%s\n", __func__);
-					return -EBUSY;
-				}
+			dbg("IS change mode\n");
+			clear_bit(IS_ST_RUN, &isp->state);
+			set_bit(IS_ST_CHANGE_MODE, &isp->state);
+			fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
+			ret = wait_event_timeout(isp->irq_queue,
+					test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"Mode change timeout:%s\n", __func__);
+				return -EBUSY;
+			}
 		}
 
-		if (test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state) &&
-					!test_bit(IS_ST_STREAM_ON, &isp->state)) {
-				dbg("IS Stream On");
-				fimc_is_hw_set_stream(isp, 1);
+		if (test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state) &&
+				!test_bit(IS_ST_STREAM_ON, &isp->state)) {
+			dbg("IS Stream On");
+			fimc_is_hw_set_stream(isp, 1);
 
-				ret = wait_event_timeout(isp->irq_queue,
-				test_bit(IS_ST_STREAM_ON, &isp->state),
-				FIMC_IS_SHUTDOWN_TIMEOUT);
-				if (!ret) {
-					dev_err(&isp->pdev->dev,
-						"wait timeout : %s\n", __func__);
-					return -EBUSY;
-				}
-
-			} else {
-				dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
-				return -EINVAL;
+			ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_ON, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"wait timeout : %s\n", __func__);
+				return -EBUSY;
+			}
+			clear_bit(IS_ST_STREAM_ON, &isp->state);
+		} else {
+			dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
+			return -EINVAL;
 		}
+
 		set_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state);
 	}
-	#if 0 /* FW restriction, will be updated */
-	else{
-		if (!test_bit(IS_ST_STREAM_ON, &isp->state)) {
-				dbg("IS Stream On");
-				fimc_is_hw_set_stream(isp, 1);
 
-				ret = wait_event_timeout(isp->irq_queue,
-				test_bit(IS_ST_STREAM_ON, &isp->state),
-				FIMC_IS_SHUTDOWN_TIMEOUT);
-				if (!ret) {
-					dev_err(&isp->pdev->dev,
-						"wait timeout : %s\n", __func__);
-					return -EBUSY;
-				}
-				set_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state);
-
-			} else {
-				dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
-				return -EINVAL;
-		}
-
-	}
-	#endif
 	return 0;
 }
 
@@ -432,8 +461,84 @@ static int fimc_is_scalerc_stop_streaming(struct vb2_queue *q)
 	struct fimc_is_dev	*isp = video->dev;
 	int ret;
 
+
+
+	clear_bit(IS_ST_STREAM_OFF, &isp->state);
+	fimc_is_hw_set_stream(isp, 0); /*stream off */
+	ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_STREAM_OFF, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&isp->pdev->dev,
+			"wait timeout : %s\n", __func__);
+		if (!ret)
+			err("s_power off failed!!\n");
+		return -EBUSY;
+	}
+
+	IS_SCALERC_SET_PARAM_DMA_OUTPUT_CMD(isp,
+		DMA_OUTPUT_COMMAND_DISABLE);
+	IS_SCALERC_SET_PARAM_DMA_OUTPUT_BUFFERNUM(isp,
+		0);
+	IS_SCALERC_SET_PARAM_DMA_OUTPUT_BUFFERADDR(isp,
+		0);
+
+	IS_SET_PARAM_BIT(isp, PARAM_SCALERC_DMA_OUTPUT);
+	IS_INC_PARAM_NUM(isp);
+
+	fimc_is_mem_cache_clean((void *)isp->is_p_region,
+		IS_PARAM_SIZE);
+
+	isp->scenario_id = ISS_PREVIEW_STILL;
+	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
+	clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
+	fimc_is_hw_set_param(isp);
+	ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&isp->pdev->dev,
+			"wait timeout : %s\n", __func__);
+		return -EBUSY;
+	}
+
+	if (test_bit(IS_ST_RUN, &isp->state)) {
+		dbg("IS change mode\n");
+		clear_bit(IS_ST_RUN, &isp->state);
+		set_bit(IS_ST_CHANGE_MODE, &isp->state);
+		fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
+		ret = wait_event_timeout(isp->irq_queue,
+				test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
+				FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"Mode change timeout:%s\n", __func__);
+			return -EBUSY;
+		}
+	}
+
+	if (test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state) &&
+			!test_bit(IS_ST_STREAM_ON, &isp->state)) {
+		dbg("IS Stream On");
+		fimc_is_hw_set_stream(isp, 1);
+
+		ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_STREAM_ON, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
+		clear_bit(IS_ST_STREAM_ON, &isp->state);
+	} else {
+		dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
+		return -EINVAL;
+	}
+
 	clear_bit(IS_ST_STREAM_OFF, &isp->state);
 	fimc_is_hw_set_stream(isp, 0);
+	dbg("IS Stream Off");
 	ret = wait_event_timeout(isp->irq_queue,
 		test_bit(IS_ST_STREAM_OFF, &isp->state),
 		FIMC_IS_SHUTDOWN_TIMEOUT);
@@ -442,9 +547,10 @@ static int fimc_is_scalerc_stop_streaming(struct vb2_queue *q)
 			"wait timeout : %s\n", __func__);
 		return -EBUSY;
 	}
+
 	clear_bit(IS_ST_RUN, &isp->state);
 	clear_bit(IS_ST_STREAM_ON, &isp->state);
-	clear_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state);
+	clear_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED, &isp->pipe_state);
 	clear_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state);
 
 	return 0;
@@ -460,7 +566,7 @@ static void fimc_is_scalerc_buffer_queue(struct vb2_buffer *vb)
 	printk(KERN_DEBUG "%s\n", __func__);
 	isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_plane = vb->num_planes;
 
-	if(!test_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state)){
+	if(!test_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED, &isp->pipe_state)){
 		for(i=0; i< vb->num_planes; i++){
 			isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf[vb->v4l2_buf.index][i] = isp->vb2->plane_addr(vb, i);
 			kvaddr = isp->vb2->get_kvaddr(vb, i);
@@ -469,13 +575,11 @@ static void fimc_is_scalerc_buffer_queue(struct vb2_buffer *vb)
 			printk(KERN_DEBUG"index(%d)(%d) KVaddr(0x%08x)\n", vb->v4l2_buf.index, i, kvaddr);
 		}
 
-		isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf++;
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf_ref_cnt++;
 
-		for(i=0; i < 4; i++)
-			if(isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf[i][0] == 0) return;
-
-		set_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state);
-		printk("FIMC_IS_STATE_BUFFER_PREPARED\n");
+		if(isp->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf
+			== isp->video[FIMC_IS_VIDEO_NUM_SCALERC].buf_ref_cnt)
+			set_bit(FIMC_IS_STATE_SCALERC_BUFFER_PREPARED, &isp->pipe_state);
 	}
 
 	if(!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state))
@@ -505,17 +609,20 @@ static int fimc_is_scalerp_video_open(struct file *file)
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_SCALERP];
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf = 0;
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf_ref_cnt = 0;
 
 	if(!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
 		isp->sensor_num = 1;
 
 		fimc_is_load_fw(isp);
+
 		fimc_is_init_set(isp, SENSOR_S5K4E5_CSI_A);
 		if (test_bit(IS_ST_RUN, &isp->state)) {
 			dbg("IS change mode\n");
 			clear_bit(IS_ST_RUN, &isp->state);
 			set_bit(IS_ST_CHANGE_MODE, &isp->state);
-			fimc_is_hw_change_mode(isp, ISS_PREVIEW_STILL);
+			fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
 			ret = wait_event_timeout(isp->irq_queue,
 					test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
 					FIMC_IS_SHUTDOWN_TIMEOUT);
@@ -525,6 +632,27 @@ static int fimc_is_scalerp_video_open(struct file *file)
 				return -EBUSY;
 			}
 		}
+
+		if (test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state) &&
+				!test_bit(IS_ST_STREAM_ON, &isp->state)) {
+			dbg("IS Stream On");
+			fimc_is_hw_set_stream(isp, 1);
+
+			ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_ON, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"wait timeout : %s\n", __func__);
+				return -EBUSY;
+			}
+			clear_bit(IS_ST_STREAM_ON, &isp->state);
+
+		} else {
+			dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
+			return -EINVAL;
+		}
+
 		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 	}
 
@@ -539,7 +667,6 @@ static int fimc_is_scalerp_video_close(struct file *file)
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	vb2_queue_release(&isp->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq);
-	clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
 	return 0;
 
 }
@@ -564,7 +691,7 @@ static int fimc_is_scalerp_video_mmap(struct file *file, struct vm_area_struct *
 }
 
 /*************************************************************************/
-/* video ioctl operation														 */
+/* video ioctl operation													*/
 /************************************************************************/
 
 static int fimc_is_scalerp_video_querycap(struct file *file, void *fh, struct v4l2_capability *cap)
@@ -577,7 +704,9 @@ static int fimc_is_scalerp_video_querycap(struct file *file, void *fh, struct v4
 	strncpy(cap->card, isp->pdev->name, sizeof(cap->card) - 1);
 	cap->bus_info[0] = 0;
 	cap->version = KERNEL_VERSION(1, 0, 0);
-	cap->capabilities = V4L2_CAP_STREAMING | V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_CAPTURE_MPLANE;
+	cap->capabilities = V4L2_CAP_STREAMING
+					| V4L2_CAP_VIDEO_CAPTURE
+					| V4L2_CAP_VIDEO_CAPTURE_MPLANE;
 
 	return 0;
 }
@@ -629,9 +758,19 @@ static int fimc_is_scalerp_video_reqbufs(struct file *file, void *priv, struct v
 {
 	int ret;
 	struct fimc_is_video_dev *video = file->private_data;
+	struct fimc_is_dev *isp = video_drvdata(file);
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	ret = vb2_reqbufs(&video->vbq, buf);
+	if (!ret)
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf = buf->count;
+
+	if(buf->count == 0)
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf_ref_cnt = 0;
+
+	printk(KERN_DEBUG "%s(num_buf | %d)\n", __func__,
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf);
+
 	return ret;
 }
 
@@ -663,7 +802,6 @@ static int fimc_is_scalerp_video_dqbuf(struct file *file, void *priv, struct v4l
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	ret = vb2_dqbuf(&video->vbq, buf, file->f_flags & O_NONBLOCK);
-
 	return ret;
 }
 
@@ -737,13 +875,21 @@ static int fimc_is_scalerp_queue_setup(struct vb2_queue *vq, unsigned int *num_b
 
 	struct fimc_is_video_dev *video = vq->drv_priv;
 	struct fimc_is_dev	*isp = video->dev;
+	int i;
 
-	*num_planes = 1;
 
-	sizes[0] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT*3/2;
-	allocators[0] = isp->alloc_ctx;
+	*num_planes = 3;
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_plane = *num_planes;
 
-	printk(KERN_DEBUG "--%s(num_buffers : %d)(size : %d)\n", __func__, (int)*num_buffers, (int)sizes[0]);
+	sizes[0] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT;
+	sizes[1] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT/4;
+	sizes[2] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT/4;
+
+	for (i = 0; i < *num_planes; i++)
+		allocators[i] =  isp->alloc_ctx;
+
+	printk(KERN_DEBUG "%s(num_planes : %d)(size : %d)\n",
+					__func__, (int)*num_planes, (int)sizes[0]);
 
 	return 0;
 }
@@ -768,8 +914,108 @@ static int fimc_is_scalerp_start_streaming(struct vb2_queue *q)
 {
 	struct fimc_is_video_dev *video = q->drv_priv;
 	struct fimc_is_dev	*isp = video->dev;
+	int ret;
+	int i, j;
+	int buf_index;
 
 	printk(KERN_DEBUG "%s(pipe_state : %d)\n", __func__, (int)isp->pipe_state);
+
+	if(test_bit(FIMC_IS_STATE_SCALERP_BUFFER_PREPARED, &isp->pipe_state) &&
+		!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
+
+		/* buffer addr setting */
+		for(i=0; i<isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf; i++)
+			for(j=0; j<isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_plane; j++){
+			buf_index = i*isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_plane + j;
+			printk(KERN_DEBUG "(%d)set buf(%d:%d) = 0x%08x\n", buf_index, i, j,
+				 isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf[i][j]);
+			isp->is_p_region->shared[400+buf_index]
+				= isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf[i][j];
+		}
+
+		printk(KERN_DEBUG "buf_num:%d buf_plane:%d shared[447] : 0x%08x\n",
+			isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf,
+			isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_plane,
+			virt_to_phys(isp->mem.kvaddr_shared) + 400*sizeof(u32));
+
+
+		IS_SCALERP_SET_PARAM_DMA_OUTPUT_CMD(isp,
+			DMA_OUTPUT_COMMAND_ENABLE);
+		IS_SCALERP_SET_PARAM_DMA_OUTPUT_BUFFERNUM(isp,
+			isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf);
+		IS_SCALERP_SET_PARAM_DMA_OUTPUT_BUFFERADDR(isp,
+			(u32)isp->mem.dvaddr_shared + 400*sizeof(u32));
+
+		IS_SET_PARAM_BIT(isp, PARAM_SCALERP_DMA_OUTPUT);
+		IS_INC_PARAM_NUM(isp);
+
+		fimc_is_mem_cache_clean((void *)isp->is_p_region,
+			IS_PARAM_SIZE);
+
+		clear_bit(IS_ST_STREAM_OFF, &isp->state);
+		fimc_is_hw_set_stream(isp, 0); /*stream off */
+		ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_OFF, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			if (!ret)
+				err("s_power off failed!!\n");
+			return -EBUSY;
+		}
+
+		isp->scenario_id = ISS_PREVIEW_STILL;
+		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
+		clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
+		fimc_is_hw_set_param(isp);
+		ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
+
+		if (test_bit(IS_ST_RUN, &isp->state)) {
+			dbg("IS change mode\n");
+			clear_bit(IS_ST_RUN, &isp->state);
+			set_bit(IS_ST_CHANGE_MODE, &isp->state);
+			fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
+			ret = wait_event_timeout(isp->irq_queue,
+					test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"Mode change timeout:%s\n", __func__);
+				return -EBUSY;
+			}
+		}
+
+		if (test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state) &&
+				!test_bit(IS_ST_STREAM_ON, &isp->state)) {
+			dbg("IS Stream On");
+			fimc_is_hw_set_stream(isp, 1);
+
+			ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_ON, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"wait timeout : %s\n", __func__);
+				return -EBUSY;
+			}
+			clear_bit(IS_ST_STREAM_ON, &isp->state);
+
+		} else {
+			dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
+			return -EINVAL;
+		}
+		set_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state);
+	}
+
 	return 0;
 }
 
@@ -778,6 +1024,79 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 	struct fimc_is_video_dev *video = q->drv_priv;
 	struct fimc_is_dev	*isp = video->dev;
 	int ret;
+
+	clear_bit(IS_ST_STREAM_OFF, &isp->state);
+	fimc_is_hw_set_stream(isp, 0); /*stream off */
+	ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_STREAM_OFF, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&isp->pdev->dev,
+			"wait timeout : %s\n", __func__);
+		if (!ret)
+			err("s_power off failed!!\n");
+		return -EBUSY;
+	}
+
+	IS_SCALERP_SET_PARAM_DMA_OUTPUT_CMD(isp,
+		DMA_OUTPUT_COMMAND_DISABLE);
+	IS_SCALERP_SET_PARAM_DMA_OUTPUT_BUFFERNUM(isp,
+		0);
+	IS_SCALERP_SET_PARAM_DMA_OUTPUT_BUFFERADDR(isp,
+		0);
+
+	IS_SET_PARAM_BIT(isp, PARAM_SCALERP_DMA_OUTPUT);
+	IS_INC_PARAM_NUM(isp);
+
+	fimc_is_mem_cache_clean((void *)isp->is_p_region,
+		IS_PARAM_SIZE);
+
+	isp->scenario_id = ISS_PREVIEW_STILL;
+	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
+	clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
+	fimc_is_hw_set_param(isp);
+	ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&isp->pdev->dev,
+			"wait timeout : %s\n", __func__);
+		return -EBUSY;
+	}
+
+	if (test_bit(IS_ST_RUN, &isp->state)) {
+		dbg("IS change mode\n");
+		clear_bit(IS_ST_RUN, &isp->state);
+		set_bit(IS_ST_CHANGE_MODE, &isp->state);
+		fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
+		ret = wait_event_timeout(isp->irq_queue,
+				test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
+				FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"Mode change timeout:%s\n", __func__);
+			return -EBUSY;
+		}
+	}
+
+	if (test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state) &&
+			!test_bit(IS_ST_STREAM_ON, &isp->state)) {
+		dbg("IS Stream On");
+		fimc_is_hw_set_stream(isp, 1);
+
+		ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_STREAM_ON, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
+		clear_bit(IS_ST_STREAM_ON, &isp->state);
+	} else {
+		dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
+		return -EINVAL;
+	}
 
 	clear_bit(IS_ST_STREAM_OFF, &isp->state);
 	fimc_is_hw_set_stream(isp, 0);
@@ -790,8 +1109,8 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 		return -EBUSY;
 	}
 	clear_bit(IS_ST_RUN, &isp->state);
-
-	clear_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state);
+	clear_bit(IS_ST_STREAM_ON, &isp->state);
+	clear_bit(FIMC_IS_STATE_SCALERP_BUFFER_PREPARED, &isp->pipe_state);
 	clear_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state);
 
 	return 0;
@@ -799,7 +1118,34 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 
 static void fimc_is_scalerp_buffer_queue(struct vb2_buffer *vb)
 {
+	struct fimc_is_video_dev *video = vb->vb2_queue->drv_priv;
+	struct fimc_is_dev	*isp = video->dev;
+	dma_addr_t kvaddr;
+	unsigned int i;
+
 	printk(KERN_DEBUG "%s\n", __func__);
+	isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_plane = vb->num_planes;
+
+	if(!test_bit(FIMC_IS_STATE_SCALERP_BUFFER_PREPARED, &isp->pipe_state)){
+		for(i=0; i< vb->num_planes; i++){
+			isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf[vb->v4l2_buf.index][i]
+				= isp->vb2->plane_addr(vb, i);
+			kvaddr = isp->vb2->get_kvaddr(vb, i);
+			printk(KERN_DEBUG"index(%d)(%d) deviceVaddr(0x%08x)\n", vb->v4l2_buf.index, i,
+				isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf[vb->v4l2_buf.index][i]);
+			printk(KERN_DEBUG"index(%d)(%d) KVaddr(0x%08x)\n", vb->v4l2_buf.index, i, kvaddr);
+		}
+
+		isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf_ref_cnt++;
+
+		if(isp->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf
+			== isp->video[FIMC_IS_VIDEO_NUM_SCALERP].buf_ref_cnt)
+			set_bit(FIMC_IS_STATE_SCALERP_BUFFER_PREPARED, &isp->pipe_state);
+	}
+
+	if(!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state))
+		fimc_is_scalerp_start_streaming(vb->vb2_queue);
+
 	return;
 }
 
@@ -813,6 +1159,7 @@ const struct vb2_ops fimc_is_scalerp_qops = {
 	.stop_streaming	= fimc_is_scalerp_stop_streaming,
 };
 
+
 /*************************************************************************/
 /* video file opertation														 */
 /************************************************************************/
@@ -820,9 +1167,58 @@ const struct vb2_ops fimc_is_scalerp_qops = {
 static int fimc_is_3dnr_video_open(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
+	int ret;
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	file->private_data = &isp->video[FIMC_IS_VIDEO_NUM_3DNR];
+	isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf = 0;
+	isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf_ref_cnt = 0;
+
+	if(!test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
+		isp->sensor_num = 1;
+
+		fimc_is_load_fw(isp);
+
+		fimc_is_init_set(isp, SENSOR_S5K4E5_CSI_A);
+		if (test_bit(IS_ST_RUN, &isp->state)) {
+			dbg("IS change mode\n");
+			clear_bit(IS_ST_RUN, &isp->state);
+			set_bit(IS_ST_CHANGE_MODE, &isp->state);
+			fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
+			ret = wait_event_timeout(isp->irq_queue,
+					test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"Mode change timeout:%s\n", __func__);
+				return -EBUSY;
+			}
+		}
+
+		if (test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state) &&
+				!test_bit(IS_ST_STREAM_ON, &isp->state)) {
+			dbg("IS Stream On");
+			fimc_is_hw_set_stream(isp, 1);
+
+			ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_ON, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"wait timeout : %s\n", __func__);
+				return -EBUSY;
+			}
+			clear_bit(IS_ST_STREAM_ON, &isp->state);
+
+		} else {
+			dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
+			return -EINVAL;
+		}
+
+		set_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
+	}
+
+	clear_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state);
 	return 0;
 
 }
@@ -857,7 +1253,7 @@ static int fimc_is_3dnr_video_mmap(struct file *file, struct vm_area_struct *vma
 }
 
 /*************************************************************************/
-/* video ioctl operation														 */
+/* video ioctl operation													*/
 /************************************************************************/
 
 static int fimc_is_3dnr_video_querycap(struct file *file, void *fh, struct v4l2_capability *cap)
@@ -870,7 +1266,9 @@ static int fimc_is_3dnr_video_querycap(struct file *file, void *fh, struct v4l2_
 	strncpy(cap->card, isp->pdev->name, sizeof(cap->card) - 1);
 	cap->bus_info[0] = 0;
 	cap->version = KERNEL_VERSION(1, 0, 0);
-	cap->capabilities = V4L2_CAP_STREAMING | V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_VIDEO_CAPTURE_MPLANE;
+	cap->capabilities = V4L2_CAP_STREAMING
+					| V4L2_CAP_VIDEO_CAPTURE
+					| V4L2_CAP_VIDEO_CAPTURE_MPLANE;
 
 	return 0;
 }
@@ -922,9 +1320,19 @@ static int fimc_is_3dnr_video_reqbufs(struct file *file, void *priv, struct v4l2
 {
 	int ret;
 	struct fimc_is_video_dev *video = file->private_data;
+	struct fimc_is_dev *isp = video_drvdata(file);
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	ret = vb2_reqbufs(&video->vbq, buf);
+	if (!ret)
+		isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf = buf->count;
+
+	if(buf->count == 0)
+		isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf_ref_cnt = 0;
+
+	printk(KERN_DEBUG "%s(num_buf | %d)\n", __func__,
+		isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf);
+
 	return ret;
 }
 
@@ -953,22 +1361,9 @@ static int fimc_is_3dnr_video_dqbuf(struct file *file, void *priv, struct v4l2_b
 {
 	int ret;
 	struct fimc_is_video_dev *video = file->private_data;
-	struct fimc_is_dev	*isp = video->dev;
-	struct vb2_buffer *vb;
-	dma_addr_t phy_addr;
-	char *vir_addr;
 
 	printk(KERN_DEBUG "%s\n", __func__);
 	ret = vb2_dqbuf(&video->vbq, buf, file->f_flags & O_NONBLOCK);
-	vb = video->vbq.bufs[buf->index];
-	phy_addr = isp->vb2->plane_addr(vb, 0);
-
-#if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
-	vir_addr = (char *)isp->vb2->ops->vaddr(vb->planes[0].mem_priv);
-#elif defined(CONFIG_VIDEOBUF2_ION)
-	vir_addr = (char *)isp->vb2->get_kvaddr(vb, 0);
-#endif
-
 	return ret;
 }
 
@@ -1042,26 +1437,28 @@ static int fimc_is_3dnr_queue_setup(struct vb2_queue *vq, unsigned int *num_buff
 
 	struct fimc_is_video_dev *video = vq->drv_priv;
 	struct fimc_is_dev	*isp = video->dev;
+	int i;
 
-	*num_planes = 1;
 
-	sizes[0] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT*3/2;
-	allocators[0] = isp->alloc_ctx;
+	*num_planes = 2;
+	isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_plane = *num_planes;
 
-	printk(KERN_DEBUG "--%s(num_buffers : %d)(size : %d)\n", __func__, (int)*num_buffers, (int)sizes[0]);
+	sizes[0] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT;
+	sizes[1] = DEFAULT_PREVIEW_STILL_WIDTH*DEFAULT_PREVIEW_STILL_HEIGHT/2;
+
+	for (i = 0; i < *num_planes; i++)
+		allocators[i] =  isp->alloc_ctx;
+
+	printk(KERN_DEBUG "--%s(num_planes : %d)(size : %d)\n",
+			__func__, (int)*num_planes, (int)sizes[0]);
 
 	return 0;
 }
+
 static int fimc_is_3dnr_buffer_prepare(struct vb2_buffer *vb)
 {
 	printk(KERN_DEBUG "--%s\n", __func__);
 	return 0;
-}
-
-static void fimc_is_3dnr_buffer_queue(struct vb2_buffer *vb)
-{
-	printk(KERN_DEBUG "%s\n", __func__);
-	return;
 }
 
 static inline void fimc_is_3dnr_lock(struct vb2_queue *vq)
@@ -1076,7 +1473,108 @@ static inline void fimc_is_3dnr_unlock(struct vb2_queue *vq)
 
 static int fimc_is_3dnr_start_streaming(struct vb2_queue *q)
 {
-	printk(KERN_DEBUG "%s\n", __func__);
+	struct fimc_is_video_dev *video = q->drv_priv;
+	struct fimc_is_dev	*isp = video->dev;
+	int ret;
+	int i, j;
+	int buf_index;
+
+	printk(KERN_DEBUG "%s(pipe_state : %d)\n", __func__, (int)isp->pipe_state);
+
+	if(test_bit(FIMC_IS_STATE_3DNR_BUFFER_PREPARED, &isp->pipe_state) &&
+		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state) &&
+		test_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state)){
+
+		/* buffer addr setting */
+		for(i=0; i<isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf; i++)
+			for(j=0; j<isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_plane; j++){
+			buf_index = i*isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_plane + j;
+			printk(KERN_DEBUG "(%d)set buf(%d:%d) = 0x%08x\n", buf_index, i, j,
+				 isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf[i][j]);
+			isp->is_p_region->shared[350+buf_index] = isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf[i][j];
+		}
+
+		printk(KERN_DEBUG "buf_num:%d buf_plane:%d shared[350] : 0x%08x\n",
+			isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf,
+			isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_plane,
+			virt_to_phys(isp->mem.kvaddr_shared) + 350*sizeof(u32));
+
+		clear_bit(IS_ST_STREAM_OFF, &isp->state);
+		fimc_is_hw_set_stream(isp, 0); /*stream off */
+		ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_OFF, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			if (!ret)
+				err("s_power off failed!!\n");
+			return -EBUSY;
+		}
+
+		IS_TDNR_SET_PARAM_DMA_OUTPUT_CMD(isp,
+			DMA_OUTPUT_COMMAND_ENABLE);
+		IS_TDNR_SET_PARAM_DMA_OUTPUT_BUFFERNUM(isp,
+			isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf);
+		IS_TDNR_SET_PARAM_DMA_OUTPUT_BUFFERADDR(isp,
+			(u32)isp->mem.dvaddr_shared + 350*sizeof(u32));
+
+		IS_SET_PARAM_BIT(isp, PARAM_TDNR_DMA_OUTPUT);
+		IS_INC_PARAM_NUM(isp);
+
+		fimc_is_mem_cache_clean((void *)isp->is_p_region,
+			IS_PARAM_SIZE);
+
+		isp->scenario_id = ISS_PREVIEW_STILL;
+		set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
+		clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
+		fimc_is_hw_set_param(isp);
+		ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
+
+		if (test_bit(IS_ST_RUN, &isp->state)) {
+			dbg("IS change mode\n");
+			clear_bit(IS_ST_RUN, &isp->state);
+			set_bit(IS_ST_CHANGE_MODE, &isp->state);
+			fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
+			ret = wait_event_timeout(isp->irq_queue,
+					test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"Mode change timeout:%s\n", __func__);
+				return -EBUSY;
+			}
+		}
+
+		if (test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state) &&
+				!test_bit(IS_ST_STREAM_ON, &isp->state)) {
+			dbg("IS Stream On");
+			fimc_is_hw_set_stream(isp, 1);
+
+			ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_ON, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				dev_err(&isp->pdev->dev,
+					"wait timeout : %s\n", __func__);
+				return -EBUSY;
+			}
+			clear_bit(IS_ST_STREAM_ON, &isp->state);
+		} else {
+			dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
+			return -EINVAL;
+		}
+
+		set_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state);
+	}
+
 	return 0;
 }
 
@@ -1084,10 +1582,134 @@ static int fimc_is_3dnr_stop_streaming(struct vb2_queue *q)
 {
 	struct fimc_is_video_dev *video = q->drv_priv;
 	struct fimc_is_dev	*isp = video->dev;
+	int ret;
 
-	set_bit(FIMC_IS_STATE_IDLE, &isp->pipe_state);
-	clear_bit(FIMC_IS_STATE_BUFFER_PREPARED, &isp->pipe_state);
+
+
+	clear_bit(IS_ST_STREAM_OFF, &isp->state);
+	fimc_is_hw_set_stream(isp, 0); /*stream off */
+	ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_STREAM_OFF, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&isp->pdev->dev,
+			"wait timeout : %s\n", __func__);
+		if (!ret)
+			err("s_power off failed!!\n");
+		return -EBUSY;
+	}
+
+	IS_TDNR_SET_PARAM_DMA_OUTPUT_CMD(isp,
+		DMA_OUTPUT_COMMAND_DISABLE);
+	IS_TDNR_SET_PARAM_DMA_OUTPUT_BUFFERNUM(isp,
+		0);
+	IS_TDNR_SET_PARAM_DMA_OUTPUT_BUFFERADDR(isp,
+		0);
+
+	IS_SET_PARAM_BIT(isp, PARAM_TDNR_DMA_OUTPUT);
+	IS_INC_PARAM_NUM(isp);
+
+	fimc_is_mem_cache_clean((void *)isp->is_p_region,
+		IS_PARAM_SIZE);
+
+	isp->scenario_id = ISS_PREVIEW_STILL;
+	set_bit(IS_ST_INIT_PREVIEW_STILL,	&isp->state);
+	clear_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state);
+	fimc_is_hw_set_param(isp);
+	ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&isp->pdev->dev,
+			"wait timeout : %s\n", __func__);
+		return -EBUSY;
+	}
+
+	if (test_bit(IS_ST_RUN, &isp->state)) {
+		dbg("IS change mode\n");
+		clear_bit(IS_ST_RUN, &isp->state);
+		set_bit(IS_ST_CHANGE_MODE, &isp->state);
+		fimc_is_hw_change_mode(isp, IS_MODE_PREVIEW_STILL);
+		ret = wait_event_timeout(isp->irq_queue,
+				test_bit(IS_ST_CHANGE_MODE_DONE, &isp->state),
+				FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"Mode change timeout:%s\n", __func__);
+			return -EBUSY;
+		}
+	}
+
+	if (test_bit(IS_ST_INIT_PREVIEW_VIDEO, &isp->state) &&
+			!test_bit(IS_ST_STREAM_ON, &isp->state)) {
+		dbg("IS Stream On");
+		fimc_is_hw_set_stream(isp, 1);
+
+		ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_STREAM_ON, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
+		clear_bit(IS_ST_STREAM_ON, &isp->state);
+	} else {
+		dev_err(&isp->pdev->dev, "ON : not stream-on condition\n");
+		return -EINVAL;
+	}
+
+	clear_bit(IS_ST_STREAM_OFF, &isp->state);
+	fimc_is_hw_set_stream(isp, 0);
+	dbg("IS Stream Off");
+	ret = wait_event_timeout(isp->irq_queue,
+		test_bit(IS_ST_STREAM_OFF, &isp->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&isp->pdev->dev,
+			"wait timeout : %s\n", __func__);
+		return -EBUSY;
+	}
+
+	clear_bit(IS_ST_RUN, &isp->state);
+	clear_bit(IS_ST_STREAM_ON, &isp->state);
+	clear_bit(FIMC_IS_STATE_3DNR_BUFFER_PREPARED, &isp->pipe_state);
+	clear_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state);
+
 	return 0;
+}
+
+static void fimc_is_3dnr_buffer_queue(struct vb2_buffer *vb)
+{
+	struct fimc_is_video_dev *video = vb->vb2_queue->drv_priv;
+	struct fimc_is_dev	*isp = video->dev;
+	dma_addr_t kvaddr;
+	unsigned int i;
+
+	printk(KERN_DEBUG "%s\n", __func__);
+	isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_plane = vb->num_planes;
+
+	if(!test_bit(FIMC_IS_STATE_3DNR_BUFFER_PREPARED, &isp->pipe_state)){
+		for(i=0; i< vb->num_planes; i++){
+			isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf[vb->v4l2_buf.index][i]
+				= isp->vb2->plane_addr(vb, i);
+			kvaddr = isp->vb2->get_kvaddr(vb, i);
+			printk(KERN_DEBUG"index(%d)(%d) deviceVaddr(0x%08x)\n", vb->v4l2_buf.index, i,
+				isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf[vb->v4l2_buf.index][i]);
+			printk(KERN_DEBUG"index(%d)(%d) KVaddr(0x%08x)\n", vb->v4l2_buf.index, i, kvaddr);
+		}
+
+		isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf_ref_cnt++;
+
+		if(isp->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf
+			== isp->video[FIMC_IS_VIDEO_NUM_3DNR].buf_ref_cnt)
+			set_bit(FIMC_IS_STATE_3DNR_BUFFER_PREPARED, &isp->pipe_state);
+	}
+
+	if(!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state))
+		fimc_is_3dnr_start_streaming(vb->vb2_queue);
+
+	return;
 }
 
 const struct vb2_ops fimc_is_3dnr_qops = {
@@ -1097,6 +1719,6 @@ const struct vb2_ops fimc_is_3dnr_qops = {
 	.wait_prepare		= fimc_is_3dnr_unlock,
 	.wait_finish		= fimc_is_3dnr_lock,
 	.start_streaming	= fimc_is_3dnr_start_streaming,
-	.stop_streaming		= fimc_is_3dnr_stop_streaming,
+	.stop_streaming	= fimc_is_3dnr_stop_streaming,
 };
 

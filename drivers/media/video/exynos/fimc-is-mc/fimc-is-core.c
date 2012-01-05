@@ -28,6 +28,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <linux/scatterlist.h>
+#include <linux/videodev2_samsung.h>
 
 #include "fimc-is-core.h"
 #include "fimc-is-helper.h"
@@ -493,6 +494,8 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 			virt_to_phys(&dev->is_p_region->parameter.isp));
 		dbg("scalerc region addr = 0x%08x\n",
 			virt_to_phys(&dev->is_p_region->parameter.scalerc));
+		dbg("tdnr region addr = 0x%08x\n",
+			virt_to_phys(&dev->is_p_region->parameter.tdnr));
 		dbg("FN[0] addr = 0x%x\n",
 			virt_to_phys(&dev->is_p_region->header[0]
 							.frame_number));
@@ -531,8 +534,6 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 		dbg(" phy :: &dev->is_p_region->shared[447]= 0x%08x\n",
 			virt_to_phys( &dev->is_p_region->shared[447]));
 
-
-#if 0 /* FW restrction, will be updated */
 		/* 1 */
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue,
@@ -543,7 +544,7 @@ int fimc_is_init_set(struct fimc_is_dev *dev , u32 val)
 				"wait timeout : %s\n", __func__);
 			return -EBUSY;
 		}
-
+#if 0 /* FW restrction, will be updated */
 
 		/* 2. */
 		dbg("Default setting : preview_video\n");
@@ -1356,23 +1357,23 @@ static irqreturn_t fimc_is_irq_handler(int irq, void *dev_id)
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR28);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR29);
 		fimc_is_fw_clear_irq1(dev, intr_pos);
-		/* FW restriction
+
 		buf_index = (dev->i2h_cmd.arg[1] - 1)
-					% dev->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf;
+					% dev->video[FIMC_IS_VIDEO_NUM_3DNR].num_buf;
 		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_3DNR].vbq.bufs[buf_index],
 						VB2_BUF_STATE_DONE);
-		*/
+
 	}
 	else if(intr_pos == INTR_FRAME_DONE_SCALERP){
 		dev->i2h_cmd.arg[0] = readl(dev->regs + ISSR32);
 		dev->i2h_cmd.arg[1] = readl(dev->regs + ISSR33);
 		fimc_is_fw_clear_irq1(dev, intr_pos);
-		/* FW restriction
+
 		buf_index = (dev->i2h_cmd.arg[1] - 1)
-					% dev->video[FIMC_IS_VIDEO_NUM_SCALERC].num_buf;
+					% dev->video[FIMC_IS_VIDEO_NUM_SCALERP].num_buf;
 		vb2_buffer_done(dev->video[FIMC_IS_VIDEO_NUM_SCALERP].vbq.bufs[buf_index],
 						VB2_BUF_STATE_DONE);
-		*/
+
 
 	}
 	wake_up(&dev->irq_queue);
