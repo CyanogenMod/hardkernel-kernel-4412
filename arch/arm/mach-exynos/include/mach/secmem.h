@@ -23,8 +23,23 @@ struct secchunk_info {
 
 extern struct miscdevice secmem;
 
+struct secmem_crypto_driver_ftn {
+	int (*lock) (void);
+	int (*release) (void);
+};
+
+#if defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION)
+void secmem_crypto_register(struct secmem_crypto_driver_ftn *ftn);
+void secmem_crypto_deregister(void);
+#else
+#define secmem_crypto_register(ftn)
+#define secmem_crypto_deregister()
+#endif
+
 #define SECMEM_IOC_CHUNKINFO		_IOWR('S', 1, struct secchunk_info)
 #define SECMEM_IOC_SET_DRM_ONOFF	_IOWR('S', 2, int)
 #define SECMEM_IOC_GET_DRM_ONOFF	_IOWR('S', 3, int)
+#define SECMEM_IOC_GET_CRYPTO_LOCK	_IOR('S', 4, int)
+#define SECMEM_IOC_RELEASE_CRYPTO_LOCK	_IOR('S', 5, int)
 
 #endif /* __ASM_ARCH_SECMEM_H */

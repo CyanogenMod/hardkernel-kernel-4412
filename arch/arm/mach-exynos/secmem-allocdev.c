@@ -21,6 +21,7 @@
 #include <mach/secmem.h>
 
 struct miscdevice secmem;
+struct secmem_crypto_driver_ftn *crypto_driver;
 
 static char *secmem_info[] = {
 	"mfc",		/* 0 */
@@ -97,12 +98,47 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 	}
 		break;
+	case SECMEM_IOC_GET_CRYPTO_LOCK:
+	{
+		int i;
+		int ret;
+
+		if (crypto_driver) {
+			for (i = 0; i < 100; i++) {
+				ret = crypto_driver->lock();
+				if (ret == 0)
+					break;
+				printk(KERN_ERR "%s : Retry to get sync lock.\n",
+					__func__);
+			}
+			return ret;
+		}
+		break;
+	}
+	case SECMEM_IOC_RELEASE_CRYPTO_LOCK:
+	{
+		if (crypto_driver)
+			return crypto_driver->release();
+		break;
+	}
 	default:
 		return -ENOTTY;
 	}
 
 	return 0;
 }
+
+void secmem_crypto_register(struct secmem_crypto_driver_ftn *ftn)
+{
+	crypto_driver = ftn;
+}
+EXPORT_SYMBOL(secmem_crypto_register);
+
+void secmem_crypto_deregister(void)
+{
+	crypto_driver = NULL;
+}
+EXPORT_SYMBOL(secmem_crypto_deregister);
 
 static struct file_operations secmem_fops = {
 	.unlocked_ioctl = &secmem_ioctl,
@@ -118,6 +154,8 @@ static int __init secmem_init(void)
 	ret = misc_register(&secmem);
 	if (ret)
 		return ret;
+
+	crypto_driver = NULL;
 
 	pm_runtime_enable(secmem.this_device);
 
