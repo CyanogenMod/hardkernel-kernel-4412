@@ -1550,6 +1550,14 @@ static struct i2c_board_info i2c_devs1[] __initdata = {
 	},
 };
 
+static struct i2c_board_info i2c_devs2[] __initdata = {
+#ifdef CONFIG_VIDEO_EXYNOS_TV
+	{
+		I2C_BOARD_INFO("exynos_hdcp", (0x74 >> 1)),
+	},
+#endif
+};
+
 #ifdef CONFIG_USB_EHCI_S5P
 static struct s5p_ehci_platdata smdk5250_ehci_pdata;
 
@@ -1709,6 +1717,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&s3c_device_wdt,
 	&s3c_device_i2c0,
 	&s3c_device_i2c1,
+	&s3c_device_i2c2,
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
 	&s3c_device_i2c7,
@@ -1884,6 +1893,7 @@ struct tmu_data exynos_tmu_data __initdata = {
 	.mode = 0,
 };
 #endif
+
 #ifdef CONFIG_VIDEO_EXYNOS_HDMI_CEC
 static struct s5p_platform_cec hdmi_cec_data __initdata = {
 
@@ -2313,6 +2323,9 @@ static void __init smdk5250_machine_init(void)
 
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
+
+	s3c_i2c2_set_platdata(NULL);
+	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
 #if defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME)
 	exynos_pd_enable(&exynos5_device_pd[PD_MFC].dev);
 	exynos_pd_enable(&exynos5_device_pd[PD_G3D].dev);
