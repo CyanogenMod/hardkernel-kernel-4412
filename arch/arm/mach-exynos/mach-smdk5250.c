@@ -2403,7 +2403,9 @@ static void __init smdk5250_machine_init(void)
 #ifdef CONFIG_FB_MIPI_DSIM
 	s5p_device_mipi_dsim.dev.parent = &exynos5_device_pd[PD_DISP1].dev;
 #endif
-
+#if defined(CONFIG_S5P_DP)
+	s5p_device_dp.dev.parent = &exynos5_device_pd[PD_DISP1].dev;
+#endif
 	s5p_device_fimd1.dev.parent = &exynos5_device_pd[PD_DISP1].dev;
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
