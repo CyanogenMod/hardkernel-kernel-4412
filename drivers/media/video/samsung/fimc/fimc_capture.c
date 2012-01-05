@@ -1857,7 +1857,7 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		ctrl->cap->cacheable = c->value;
 		ret = 0;
 		break;
-	case V4L2_CID_CAMERA_ZOOM:
+	case V4L2_CID_IS_ZOOM:
 		fimc_is_set_zoom(ctrl, c);
 		break;
 #ifdef CONFIG_BUSFREQ_OPP
