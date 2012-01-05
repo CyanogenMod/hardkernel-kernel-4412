@@ -1840,6 +1840,10 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 		s3c_fb_set_par(win->fbinfo);
 	}
 
+#ifdef CONFIG_S5P_DP
+	writel(DPCLKCON_ENABLE, sfb->regs + DPCLKCON);
+#endif
+
 	return;
 }
 #endif
@@ -2838,6 +2842,10 @@ static int s3c_fb_resume(struct device *dev)
 		dev_dbg(&pdev->dev, "resuming window %d\n", win_no);
 		s3c_fb_set_par(win->fbinfo);
 	}
+
+#ifdef CONFIG_S5P_DP
+	writel(DPCLKCON_ENABLE, sfb->regs + DPCLKCON);
+#endif
 
 	return 0;
 }
