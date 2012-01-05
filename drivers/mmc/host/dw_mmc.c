@@ -426,7 +426,7 @@ static int dw_mci_pre_dma_transfer(struct dw_mci *host,
 				   struct mmc_data *data,
 				   struct dw_mci_next *next)
 {
-	unsigned int sg_len;
+	int sg_len;
 
 	if (!next && data->host_cookie &&
 			data->host_cookie != host->next_data.cookie) {
@@ -512,7 +512,7 @@ static struct dw_mci_dma_ops dw_mci_idmac_ops = {
 static int dw_mci_submit_data_dma(struct dw_mci *host, struct mmc_data *data)
 {
 	struct scatterlist *sg;
-	unsigned int i, sg_len;
+	int i, sg_len;
 	u32 temp;
 
 	/* If we don't have a channel, we can't do DMA */
