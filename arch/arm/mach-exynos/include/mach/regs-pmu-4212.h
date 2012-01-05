@@ -41,6 +41,37 @@
 #define S5P_HSIC_1_PHY_ENABLE			(0x1 << 0)
 #define S5P_HSIC_2_PHY_ENABLE			(0x1 << 0)
 
+#define S5P_ABB_INT				S5P_PMUREG(0x0780)
+#define S5P_ABB_MIF				S5P_PMUREG(0x0784)
+#define S5P_ABB_G3D				S5P_PMUREG(0x0788)
+#define S5P_ABB_ARM				S5P_PMUREG(0x078C)
+
+#define ABB_MODE_060V				0
+#define ABB_MODE_065V				1
+#define ABB_MODE_070V				2
+#define ABB_MODE_075V				3
+#define ABB_MODE_080V				4
+#define ABB_MODE_085V				5
+#define ABB_MODE_090V				6
+#define ABB_MODE_095V				7
+#define ABB_MODE_100V				8
+#define ABB_MODE_105V				9
+#define ABB_MODE_110V				10
+#define ABB_MODE_115V				11
+#define ABB_MODE_120V				12
+#define ABB_MODE_125V				13
+#define ABB_MODE_130V				14
+#define ABB_MODE_135V				15
+#define ABB_MODE_140V				16
+#define ABB_MODE_145V				17
+#define ABB_MODE_150V				18
+#define ABB_MODE_155V				19
+#define ABB_MODE_160V				20
+#define ABB_MODE_BYPASS				255
+
+#define S5P_ABB_INIT				(0x80000080)
+#define S5P_ABB_INIT_BYPASS			(0x80000000)
+
 #define S5P_PMU_DEBUG				S5P_PMUREG(0x0A00)
 
 /* SYS_PWR registers */

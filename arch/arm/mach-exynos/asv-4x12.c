@@ -27,6 +27,25 @@
 #define HPM_OFFSET	12
 #define HPM_MASK	0x1F
 
+static void exynos4x12_set_abb(unsigned int abb_mode_value)
+{
+	unsigned int tmp;
+
+	pr_info("EXYNOS4X12 ABB MODE : %d(mV)\n", 600 + (abb_mode_value * 50));
+
+	if (abb_mode_value != ABB_MODE_BYPASS)
+		tmp = S5P_ABB_INIT;
+	else
+		tmp = S5P_ABB_INIT_BYPASS;
+
+	tmp |= abb_mode_value;
+
+	__raw_writel(tmp, S5P_ABB_INT);
+	__raw_writel(tmp, S5P_ABB_MIF);
+	__raw_writel(tmp, S5P_ABB_G3D);
+	__raw_writel(tmp, S5P_ABB_ARM);
+}
+
 struct asv_judge_table exynos4x12_limit[] = {
 	/* HPM, IDS */
 	{14, 9},
@@ -67,6 +86,17 @@ static int exynos4x12_fuse_asv_store_result(struct samsung_asv *asv_info)
 
 	pr_info("EXYNOS4X12: IDS : %d HPM : %d RESULT : %d\n",
 		asv_info->ids_result, asv_info->hpm_result, exynos_result_of_asv);
+
+	switch (exynos_result_of_asv) {
+	case 0:
+	case 1:
+		exynos4x12_set_abb(ABB_MODE_100V);
+		break;
+
+	default:
+		exynos4x12_set_abb(ABB_MODE_130V);
+		break;
+	}
 
 	return 0;
 }
