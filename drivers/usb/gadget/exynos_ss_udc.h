@@ -8,7 +8,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
-*/
+ */
 #ifndef __EXYNOS_SS_UDC_H__
 #define __EXYNOS_SS_UDC_H__
 
@@ -27,7 +27,7 @@
 #define EP0_SS_MPS	512
 #define EP_SS_MPS	1024
 
-#define EXYNOS_USB3_EPS	(9)
+#define EXYNOS_USB3_EPS	9
 
 /* Has to be multiple of four */
 #define EXYNOS_USB3_EVENT_BUFF_WSIZE	256
@@ -86,6 +86,39 @@ struct exynos_ss_udc_trb {
 };
 
 /**
+ * struct exynos_ss_udc_ep_command - endpoint command.
+ * @queue: The list of commands for the endpoint.
+ * @ep: physical endpoint number.
+ * @param0: Command parameter 0.
+ * @param1: Command parameter 1.
+ * @param2: Command parameter 2.
+ * @cmdtype: Command to issue.
+ * @cmdflags: Command flags.
+ */
+struct exynos_ss_udc_ep_command {
+	struct list_head	queue;
+
+	int ep;
+	u32 param0;
+	u32 param1;
+	u32 param2;
+	u32 cmdtyp;
+	u32 cmdflags;
+};
+
+/**
+ * struct exynos_ss_udc_req - data transfer request
+ * @req: The USB gadget request.
+ * @queue: The list of requests for the endpoint this is queued for.
+ * @mapped: DMA buffer for this request has been mapped via dma_map_single().
+ */
+struct exynos_ss_udc_req {
+	struct usb_request	req;
+	struct list_head	queue;
+	unsigned char		mapped;
+};
+
+/**
  * struct exynos_ss_udc_ep - driver endpoint definition.
  * @ep: The gadget layer representation of the endpoint.
  * @queue: Queue of requests for this endpoint.
@@ -114,59 +147,24 @@ struct exynos_ss_udc_trb {
  * for the host controller as much as possible.
  */
 struct exynos_ss_udc_ep {
-	struct usb_ep		ep;
-	struct list_head	queue;
-	struct list_head	cmd_queue;
-	struct exynos_ss_udc	*parent;
+	struct usb_ep			ep;
+	struct list_head		queue;
+	struct list_head		cmd_queue;
+	struct exynos_ss_udc		*parent;
 	struct exynos_ss_udc_req	*req;
-	spinlock_t		lock;
 
-	struct exynos_ss_udc_trb *trb;
-	dma_addr_t		trb_dma;
+	spinlock_t			lock;
 
-	u8			tri;
+	struct exynos_ss_udc_trb	*trb;
+	dma_addr_t			trb_dma;
+	u8				tri;
 
 	unsigned char		epnum;
 	unsigned int		type;
 	unsigned int		dir_in:1;
-
 	unsigned int		halted:1;
-
 	bool			not_ready;
-
 	char			name[10];
-};
-
-/**
- * struct exynos_ss_udc_req - data transfer request
- * @req: The USB gadget request.
- * @queue: The list of requests for the endpoint this is queued for.
- * @mapped: DMA buffer for this request has been mapped via dma_map_single().
- */
-struct exynos_ss_udc_req {
-	struct usb_request	req;
-	struct list_head	queue;
-	unsigned char		mapped;
-};
-
-/**
- * struct exynos_ss_udc_ep_command - endpoint command.
- * @queue: The list of commands for the endpoint.
- * @ep: physical endpoint number.
- * @param0: Command parameter 0.
- * @param1: Command parameter 1.
- * @param2: Command parameter 2.
- * @cmdtype: Command to issue.
- * @cmdflags: Command flags.
- */
-struct exynos_ss_udc_ep_command {
-	struct list_head	queue;
-	int ep;
-	u32 param0;
-	u32 param1;
-	u32 param2;
-	u32 cmdtyp;
-	u32 cmdflags;
 };
 
 /**
@@ -194,9 +192,9 @@ struct exynos_ss_udc_ep_command {
  * @eps: The endpoints being supplied to the gadget framework
  */
 struct exynos_ss_udc {
-	struct device		 *dev;
-	struct usb_gadget_driver *driver;
-	struct exynos_ss_udc_plat	 *plat;
+	struct device			*dev;
+	struct usb_gadget_driver	*driver;
+	struct exynos_ss_udc_plat	*plat;
 
 	void __iomem		*regs;
 	struct resource		*regs_res;
@@ -212,6 +210,7 @@ struct exynos_ss_udc {
 	bool			eps_enabled;
 	enum ctrl_ep_state	ep0_state;
 	int			ep0_three_stage;
+
 	u8			*ep0_buff;
 	dma_addr_t		ep0_buff_dma;
 	u8			*ctrl_buff;
@@ -221,6 +220,10 @@ struct exynos_ss_udc {
 	struct usb_gadget	gadget;
 	struct exynos_ss_udc_ep	eps[EXYNOS_USB3_EPS];
 };
+
+#ifdef CONFIG_BATTERY_SAMSUNG
+extern void samsung_cable_check_status(int flag);
+#endif
 
 /* conversion functions */
 static inline struct exynos_ss_udc_req *our_req(struct usb_request *req)
