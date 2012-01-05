@@ -405,7 +405,7 @@ int mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 	do {
 #if defined(CONFIG_MACH_SMDKC210) || defined(CONFIG_MACH_SMDKV310)
 		/* HACK: in case of smdkc210, smdkv310 has problem at inand */
-		mmc_delay(1);
+		mmc_delay(3);
 #endif
 		err = mmc_send_status(card, &status);
 		if (err)
