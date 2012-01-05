@@ -362,7 +362,9 @@ static void set_c2c_device(struct platform_device *pdev)
 	c2c_con.c2c_sclk = clk_get(&pdev->dev, "sclk_c2c");
 	c2c_con.c2c_aclk = clk_get(&pdev->dev, "aclk_c2c");
 
-	if (soc_is_exynos4212() || soc_is_exynos4412()) {
+	if (soc_is_exynos4212())
+		exynos_c2c_request_pwr_mode = exynos4_c2c_request_pwr_mode;
+	else if (soc_is_exynos4412()) {
 		exynos_c2c_request_pwr_mode = exynos4_c2c_request_pwr_mode;
 		if (samsung_rev() >= EXYNOS4412_REV_1_0)
 			writel(C2C_SYSREG_DEFAULT, c2c_con.c2c_sysreg);
