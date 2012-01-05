@@ -2010,6 +2010,8 @@ int fimc_start_capture(struct fimc_control *ctrl)
 {
 	fimc_dbg("%s\n", __func__);
 
+	fimc_reset_status_reg(ctrl);
+
 	if (!ctrl->sc.bypass)
 		fimc_hwset_start_scaler(ctrl);
 
@@ -2543,6 +2545,8 @@ int fimc_qbuf_capture(void *fh, struct v4l2_buffer *b)
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 	struct fimc_capinfo *cap = ctrl->cap;
 	int idx = b->index;
+	int framecnt_seq;
+	int available_bufnum;
 
 	if (!cap || !ctrl->cam) {
 		fimc_err("%s: No capture device.\n", __func__);
@@ -2564,8 +2568,14 @@ int fimc_qbuf_capture(void *fh, struct v4l2_buffer *b)
 			fimc_hwset_output_buf_sequence(ctrl, idx, FIMC_FRAMECNT_SEQ_ENABLE);
 			cap->bufs[idx].state = VIDEOBUF_QUEUED;
 			if (ctrl->status == FIMC_BUFFER_STOP) {
-				fimc_start_capture(ctrl);
-				ctrl->status = FIMC_STREAMON;
+				framecnt_seq = fimc_hwget_output_buf_sequence(ctrl);
+				available_bufnum =
+					fimc_hwget_number_of_bits(framecnt_seq);
+				if (available_bufnum >= 2) {
+					fimc_start_capture(ctrl);
+					ctrl->status = FIMC_STREAMON;
+					ctrl->restart = true;
+				}
 			}
 		}
 	} else {

@@ -457,6 +457,7 @@ struct fimc_control {
 	enum fimc_sysmmu_flag		sysmmu_flag;
 	enum fimc_power_status		power_status;
 	char 				cma_name[16];
+	bool				restart;
 };
 
 /* global */
@@ -551,6 +552,7 @@ extern u32 fimc_mapping_rot_flip(u32 rot, u32 flip);
 extern int fimc_get_scaler_factor(u32 src, u32 tar, u32 *ratio, u32 *shift);
 extern void fimc_get_nv12t_size(int img_hres, int img_vres,
 					int *y_size, int *cb_size);
+extern int fimc_hwget_number_of_bits(u32 framecnt_seq);
 
 /* camera */
 extern int fimc_select_camera(struct fimc_control *ctrl);
@@ -713,6 +715,7 @@ extern int fimc_hwset_sysreg_camblk_isp_wb(struct fimc_control *ctrl);
 extern int fimc_hwget_last_frame_end(struct fimc_control *ctrl);
 extern void fimc_hwset_enable_frame_end_irq(struct fimc_control *ctrl);
 extern void fimc_hwset_disable_frame_end_irq(struct fimc_control *ctrl);
+extern void fimc_reset_status_reg(struct fimc_control *ctrl);
 /* IPC related file */
 extern void ipc_start(void);
 

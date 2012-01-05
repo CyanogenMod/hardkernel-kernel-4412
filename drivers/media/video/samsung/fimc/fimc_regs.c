@@ -2051,3 +2051,8 @@ void fimc_hwset_disable_frame_end_irq(struct fimc_control *ctrl)
 	cfg &= ~S3C_CIGCTRL_IRQ_END_DISABLE;
 	writel(cfg, ctrl->regs + S3C_CIGCTRL);
 }
+
+void fimc_reset_status_reg(struct fimc_control *ctrl)
+{
+	writel(0x0, ctrl->regs + S3C_CISTATUS);
+}

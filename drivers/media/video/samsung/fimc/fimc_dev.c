@@ -427,7 +427,7 @@ static inline void fimc_irq_out(struct fimc_control *ctrl)
 		wake_up(&ctrl->wq);
 }
 
-static int fimc_hwget_number_of_bits(u32 framecnt_seq)
+int fimc_hwget_number_of_bits(u32 framecnt_seq)
 {
 	u32 bits = 0;
 	while (framecnt_seq) {
@@ -488,18 +488,19 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 		return;
 
 	if (pdata->hw_ver >= 0x51) {
-		if (is_frame_end_irq) {
+		if (is_frame_end_irq || ctrl->status == FIMC_BUFFER_STOP) {
 			pp = fimc_hwget_present_frame_count(ctrl);
 			is_frame_end_irq = 0;
 		} else {
 			pp = fimc_hwget_before_frame_count(ctrl);
 		}
 		fimc_info2("%s[%d]\n", __func__, pp);
-		if (pp == 0) {
+		if (pp == 0 || ctrl->restart) {
 			if (ctrl->cap->nr_bufs == 1) {
 				fimc_stop_capture(ctrl);
 				is_frame_end_irq = 1;
 			}
+			ctrl->restart = false;
 			return;
 		}
 		buf_index = pp - 1;
