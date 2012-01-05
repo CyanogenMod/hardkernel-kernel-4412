@@ -80,6 +80,7 @@ static void cache_maint_inner(void *vaddr, size_t size, enum cacheop op)
 static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
 {
 	size_t left = length;
+	phys_addr_t begin = start;
 
 	if (!soc_is_exynos5250() && !soc_is_exynos5210()) {
 		if (length > (size_t) L1_FLUSH_ALL) {
@@ -94,14 +95,13 @@ static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
 
 #ifdef CONFIG_HIGHMEM
 	do {
-		size_t len = left;
-		phys_addr_t begin = start;
+		size_t len;
 		struct page *page;
 		void *vaddr;
-		off_t offset = offset_in_page(begin);
+		off_t offset;
 
-		page = phys_to_page(begin);
-
+		page = phys_to_page(start);
+		offset = offset_in_page(start);
 		len = PAGE_SIZE - offset;
 
 		if (left < len)
@@ -115,27 +115,26 @@ static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
 			vaddr = page_address(page) + offset;
 			cache_maint_inner(vaddr, len, op);
 		}
-		offset = 0;
 		left -= len;
-		begin += len;
+		start += len;
 	} while (left);
 #else
-	cache_maint_inner(phys_to_virt(start), left, op);
+	cache_maint_inner(phys_to_virt(begin), left, op);
 #endif
 
 outer_cache_ops:
 	switch (op) {
 	case EM_CLEAN:
-		outer_clean_range(start, start + length);
+		outer_clean_range(begin, begin + length);
 		break;
 	case EM_INV:
 		if (length <= L2_FLUSH_ALL) {
-			outer_inv_range(start, start + length);
+			outer_inv_range(begin, begin + length);
 			break;
 		}
 		/* else FALL THROUGH */
 	case EM_FLUSH:
-		outer_flush_range(start, start + length);
+		outer_flush_range(begin, begin + length);
 		break;
 	}
 }
