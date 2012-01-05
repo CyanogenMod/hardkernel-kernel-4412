@@ -21,66 +21,6 @@
 #include <mach/map.h>
 #include <mach/regs-pmu.h>
 
-#define VA_LID		(S5P_VA_CHIPID + 0x14)
-#define NR_SS_CASE	3
-
-unsigned int rev_lid;
-
-unsigned int not_ss_lid[NR_SS_CASE][2] = {
-	/* lid, wno */
-	{0X00197EA7, 0x6},
-	{0X00197EA7, 0x7},
-	{0x00197EF9, 0xFFFFFFFF},
-};
-
-/* ASV function for Non-Fused Chip */
-
-static int exynos4x12_nonfuse_get_hpm(struct samsung_asv *asv_info)
-{
-	unsigned int wno;
-
-	wno = (rev_lid >> 6) & 0x1F;
-
-	asv_info->hpm_result = wno;
-
-	return 0;
-}
-
-static int exynos4x12_nonfuse_get_ids(struct samsung_asv *asv_info)
-{
-	unsigned int lid;
-
-	lid = (rev_lid >> 11) & 0x1FFFFF;
-
-	asv_info->ids_result = lid;
-
-	return 0;
-}
-
-static int exynos4x12_nonfuse_asv_store_result(struct samsung_asv *asv_info)
-{
-	unsigned int i;
-	unsigned int ret = 4;
-
-	for (i = 0; i < NR_SS_CASE; i++) {
-		if (asv_info->ids_result == not_ss_lid[i][0]) {
-			if (asv_info->hpm_result == not_ss_lid[i][1]) {
-				ret = 4;
-				break;
-			} else {
-				ret = 0xff;
-				break;
-			}
-		}
-	}
-
-	exynos_result_of_asv = ret;
-
-	pr_info("EXYNOS4X12: RESULT : %d\n", exynos_result_of_asv);
-
-	return 0;
-}
-
 /* ASV function for Fused Chip */
 #define IDS_ARM_OFFSET	24
 #define IDS_ARM_MASK	0xFF
@@ -133,9 +73,7 @@ static int exynos4x12_fuse_asv_store_result(struct samsung_asv *asv_info)
 
 int exynos4x12_asv_init(struct samsung_asv *asv_info)
 {
-	unsigned int lid_reg;
 	unsigned int tmp;
-	unsigned int i;
 
 	exynos_result_of_asv = 0;
 
@@ -145,25 +83,6 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 
 	/* Store PKG_ID */
 	asv_info->pkg_id = tmp;
-
-	/* If no fused Chip */
-	if (!((tmp >> IDS_ARM_OFFSET) & IDS_ARM_MASK) || !((tmp >> HPM_OFFSET) & HPM_MASK)) {
-		rev_lid = 0;
-
-		lid_reg = __raw_readl(VA_LID);
-
-		for (i = 0; i < 32; i++) {
-			tmp = (lid_reg >> i) & 0x1;
-			rev_lid += tmp << (31 - i);
-		}
-
-		asv_info->get_ids = exynos4x12_nonfuse_get_ids;
-		asv_info->get_hpm = exynos4x12_nonfuse_get_hpm;
-		asv_info->store_result = exynos4x12_nonfuse_asv_store_result;
-
-		return 0;
-	}
-
 	asv_info->get_ids = exynos4x12_fuse_get_ids;
 	asv_info->get_hpm = exynos4x12_fuse_get_hpm;
 	asv_info->store_result = exynos4x12_fuse_asv_store_result;
