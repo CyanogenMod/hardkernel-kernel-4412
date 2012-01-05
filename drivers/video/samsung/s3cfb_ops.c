@@ -15,7 +15,7 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 
-#if defined(CONFIG_S5P_MEM_CMA)
+#if defined(CONFIG_CMA)
 #include <linux/cma.h>
 #elif defined(CONFIG_S5P_MEM_BOOTMEM)
 #include <plat/media.h>
@@ -31,6 +31,12 @@
 #include "s3cfb.h"
 
 #define NOT_DEFAULT_WINDOW 99
+#define CMA_REGION_FIMD 	"fimd"
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+#define CMA_REGION_VIDEO	"video"
+#else
+#define CMA_REGION_VIDEO	"fimd"
+#endif
 
 struct s3c_platform_fb *to_fb_plat(struct device *dev)
 {
@@ -164,13 +170,13 @@ int s3cfb_unmap_video_memory(struct s3cfb_global *fbdev, struct fb_info *fb)
 	struct fb_fix_screeninfo *fix = &fb->fix;
 	struct s3cfb_window *win = fb->par;
 
-#ifdef CONFIG_S5P_MEM_CMA
+#ifdef CONFIG_CMA
 	struct cma_info mem_info;
 	int err;
 #endif
 
 	if (fix->smem_start) {
-#ifdef CONFIG_S5P_MEM_CMA
+#ifdef CONFIG_CMA
 		err = cma_info(&mem_info, fbdev->dev, 0);
 		if (ERR_PTR(err))
 			return -ENOMEM;
@@ -192,17 +198,23 @@ int s3cfb_map_video_memory(struct s3cfb_global *fbdev, struct fb_info *fb)
 {
 	struct fb_fix_screeninfo *fix = &fb->fix;
 	struct s3cfb_window *win = fb->par;
+#ifdef CONFIG_CMA
+	struct cma_info mem_info;
+	int err;
+#endif
 
 	if (win->owner == DMA_MEM_OTHER)
 		return 0;
 
-#ifdef CONFIG_S5P_MEM_CMA
+#ifdef CONFIG_CMA
+	err = cma_info(&mem_info, fbdev->dev, CMA_REGION_VIDEO);
+	if (err)
+		return err;
 	fix->smem_start = (dma_addr_t)cma_alloc
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
-		(fbdev->dev, "fimd_video", (size_t)fix->smem_len, 0);
-#else
-		(fbdev->dev, "fimd", (size_t)fix->smem_len, 0);
-#endif
+		(fbdev->dev, CMA_REGION_VIDEO, (size_t)fix->smem_len, 0);
+	if (IS_ERR_VALUE(fix->smem_start)) {
+		return -EBUSY;
+	}
 	fb->screen_base = cma_get_virt(fix->smem_start, PAGE_ALIGN(fix->smem_len), 1);
 #else
 	fb->screen_base = dma_alloc_writecombine(fbdev->dev,
@@ -230,8 +242,7 @@ int s3cfb_map_default_video_memory(struct s3cfb_global *fbdev,
 {
 	struct fb_fix_screeninfo *fix = &fb->fix;
 	struct s3cfb_window *win = fb->par;
-
-#ifdef CONFIG_S5P_MEM_CMA
+#ifdef CONFIG_CMA
 	struct cma_info mem_info;
 	int err;
 #endif
@@ -239,12 +250,15 @@ int s3cfb_map_default_video_memory(struct s3cfb_global *fbdev,
 	if (win->owner == DMA_MEM_OTHER)
 		return 0;
 
-#ifdef CONFIG_S5P_MEM_CMA
-	err = cma_info(&mem_info, fbdev->dev, 0);
-	if (ERR_PTR(err))
-		return -ENOMEM;
+#ifdef CONFIG_CMA
+	err = cma_info(&mem_info, fbdev->dev, CMA_REGION_FIMD);
+	if (err)
+		return err;
 	fix->smem_start = (dma_addr_t)cma_alloc
-		(fbdev->dev, "fimd", (size_t)fix->smem_len, 0);
+		(fbdev->dev, CMA_REGION_FIMD, (size_t)fix->smem_len, 0);
+	if (IS_ERR_VALUE(fix->smem_start)) {
+		return -EBUSY;
+	}
 	fb->screen_base = cma_get_virt(fix->smem_start, fix->smem_len, 1);
 #elif defined(CONFIG_S5P_MEM_BOOTMEM)
 	fix->smem_start = s5p_get_media_memory_bank(S5P_MDEV_FIMD, 1);
