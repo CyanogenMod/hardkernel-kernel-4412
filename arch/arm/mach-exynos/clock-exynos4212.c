@@ -419,7 +419,7 @@ static struct clksrc_clk exynos4212_clk_isp_srcs[] = {
 			.name		= "sclk_mcuisp_div1",
 			.parent = &exynos4212_clk_isp_srcs_div0.clk,
 		},
-		.reg_div = { .reg = EXYNOS4_CLKDIV_ISP1, .shift = 0, .size = 3 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_ISP1, .shift = 8, .size = 3 },
 	}, {
 		.clk		= {
 			.name		= "sclk_aclk_div0",
