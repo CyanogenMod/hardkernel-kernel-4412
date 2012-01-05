@@ -496,10 +496,10 @@ static struct s3c_platform_camera s5k3h7 = {
 #endif
 	.use_isp	= true,
 #ifdef CONFIG_S5K3H7_CSI_C
-	.sensor_index	= 1,
+	.sensor_index	= 4,
 #endif
 #ifdef CONFIG_S5K3H7_CSI_D
-	.sensor_index	= 101,
+	.sensor_index	= 104,
 #endif
 };
 #endif
@@ -544,10 +544,10 @@ static struct s3c_platform_camera s5k4e5 = {
 #endif
 	.use_isp	= true,
 #ifdef CONFIG_S5K4E5_CSI_C
-	.sensor_index	= 1,
+	.sensor_index	= 3,
 #endif
 #ifdef CONFIG_S5K4E5_CSI_D
-	.sensor_index	= 101,
+	.sensor_index	= 103,
 #endif
 };
 #endif
