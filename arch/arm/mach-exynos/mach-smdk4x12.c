@@ -2184,6 +2184,12 @@ REGULATOR_SUPPLY("vdd_int", NULL);
 static struct regulator_consumer_supply max77686_buck4 =
 REGULATOR_SUPPLY("vdd_g3d", NULL);
 
+static struct regulator_consumer_supply __initdata max77686_ldo11_consumer =
+REGULATOR_SUPPLY("vdd_ldo11", NULL);
+
+static struct regulator_consumer_supply __initdata max77686_ldo14_consumer =
+REGULATOR_SUPPLY("vdd_ldo14", NULL);
+
 static struct regulator_init_data max77686_buck1_data = {
 	.constraints = {
 		.name = "vdd_mif range",
@@ -2240,11 +2246,43 @@ static struct regulator_init_data max77686_buck4_data = {
 	.consumer_supplies = &max77686_buck4,
 };
 
+static struct regulator_init_data __initdata max77686_ldo11_data = {
+	.constraints	= {
+		.name		= "vdd_ldo11 range",
+		.min_uV		= 1900000,
+		.max_uV		= 1900000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max77686_ldo11_consumer,
+};
+
+static struct regulator_init_data __initdata max77686_ldo14_data = {
+	.constraints	= {
+		.name		= "vdd_ldo14 range",
+		.min_uV		= 1900000,
+		.max_uV		= 1900000,
+		.apply_uV	= 1,
+		.always_on	= 1,
+		.state_mem	= {
+			.enabled	= 1,
+		},
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max77686_ldo14_consumer,
+};
+
 static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_BUCK1, &max77686_buck1_data,},
 	{MAX77686_BUCK2, &max77686_buck2_data,},
 	{MAX77686_BUCK3, &max77686_buck3_data,},
 	{MAX77686_BUCK4, &max77686_buck4_data,},
+	{MAX77686_LDO11, &max77686_ldo11_data,},
+	{MAX77686_LDO14, &max77686_ldo14_data,},
 };
 
 static struct max77686_platform_data exynos4_max77686_info = {
