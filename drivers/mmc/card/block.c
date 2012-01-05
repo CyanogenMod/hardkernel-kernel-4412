@@ -302,7 +302,7 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 	struct mmc_data data = {0};
 	struct mmc_request mrq = {0};
 	struct scatterlist sg;
-	int err;
+	int err = 0;
 
 	/*
 	 * The caller must have CAP_SYS_RAWIO, and must be calling this on the
@@ -1434,7 +1434,7 @@ static int mmc_blk_chk_hdr_err(struct mmc_queue *mq, int status)
 {
 	struct mmc_blk_data *md = mq->data;
 	struct mmc_card *card = md->queue.card;
-	int type = MMC_BLK_WR_HDR, err;
+	int type = MMC_BLK_WR_HDR, err = 0;
 
 	switch (status) {
 	case MMC_BLK_PARTIAL:

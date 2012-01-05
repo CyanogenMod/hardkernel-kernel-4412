@@ -422,9 +422,9 @@ static int dw_mci_idmac_init(struct dw_mci *host)
 	return 0;
 }
 
-static unsigned int dw_mci_pre_dma_transfer(struct dw_mci *host,
-					    struct mmc_data *data,
-					    struct dw_mci_next *next)
+static int dw_mci_pre_dma_transfer(struct dw_mci *host,
+				   struct mmc_data *data,
+				   struct dw_mci_next *next)
 {
 	unsigned int sg_len;
 
