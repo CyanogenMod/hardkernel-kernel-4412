@@ -37,10 +37,16 @@
 #define I2STXDS		0x1c
 
 #define CON_RSTCLR		(1 << 31)
-#define CON_FRXOFSTATUS		(1 << 26)
-#define CON_FRXORINTEN		(1 << 25)
+#define CON_FRXOFSTATUS		(1 << 26)	/* ver5: i2s0 */
+#define CON_FRXOFINTEN		(1 << 25)	/* ver5: i2s0 */
+#define CON_FRXOFSTATUS_L	(1 << 19)	/* ver2: i2s1, i2s2 */
+#define CON_FRXOFINTEN_L	(1 << 18)	/* ver2: i2s1, i2s2 */
+
+/* Secondary TX FIFO only */
 #define CON_FTXSURSTAT		(1 << 24)
 #define CON_FTXSURINTEN		(1 << 23)
+#define CON_TXSFIFO_EMPTY       (1 << 22)
+#define CON_TXSFIFO_FULL        (1 << 21)
 #define CON_TXSDMA_PAUSE	(1 << 20)
 #define CON_TXSDMA_ACTIVE	(1 << 18)
 

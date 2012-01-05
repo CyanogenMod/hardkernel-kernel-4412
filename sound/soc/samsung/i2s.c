@@ -669,7 +669,7 @@ static int i2s_hw_params(struct snd_pcm_substream *substream,
 
 	if (is_idma_enabled(i2s, stream) || is_srp_enabled(i2s, stream)) {
 		mod |= MOD_TXS_IDMA;
-		con &= ~CON_FRXORINTEN | ~CON_FTXSURINTEN | ~CON_FTXURINTEN;
+		con &= ~CON_FRXOFINTEN | ~CON_FTXSURINTEN | ~CON_FTXURINTEN;
 	}
 
 	writel(mod, i2s->addr + I2SMOD);
