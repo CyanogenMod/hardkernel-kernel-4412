@@ -778,39 +778,13 @@ static void dw_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		regs = mci_readl(slot->host, UHS_REG);
 		regs |= (0x1 << slot->id) << 16;
 		mci_writel(slot->host, UHS_REG, regs);
-
-		if (ios->bus_width == MMC_BUS_WIDTH_4) {
-			if (soc_is_exynos4412() && (samsung_rev() >=
-						EXYNOS4412_REV_1_0)) {
-				if (samsung_board_rev_is_0_1())
-					mci_writel(slot->host, CLKSEL, 0x00020002);
-				else
-					mci_writel(slot->host, CLKSEL, 0x00010002);
-			} else
-				mci_writel(slot->host, CLKSEL, 0x00020001);
-		} else if (ios->bus_width == MMC_BUS_WIDTH_8) {
-			if (soc_is_exynos4412() && (samsung_rev() >=
-						EXYNOS4412_REV_1_0)) {
-				if (samsung_board_rev_is_0_1())
-					mci_writel(slot->host, CLKSEL, 0x00020002);
-				else
-					mci_writel(slot->host, CLKSEL, 0x00010002);
-			} else
-				mci_writel(slot->host, CLKSEL, 0x00020001);
-		}
+		mci_writel(slot->host, CLKSEL, slot->host->ddr_timing);
 	} else {
 		/* 1, 4, 8 Bit SDR */
 		regs = mci_readl(slot->host, UHS_REG);
 		regs &= ~(0x1 << slot->id) << 16;
 		mci_writel(slot->host, UHS_REG, regs);
-		if (soc_is_exynos4412() && (samsung_rev() >=
-					EXYNOS4412_REV_1_0)) {
-			if (samsung_board_rev_is_0_1())
-				mci_writel(slot->host, CLKSEL, 0x00020001);
-			else
-				mci_writel(slot->host, CLKSEL, 0x00010001);
-		} else
-			mci_writel(slot->host, CLKSEL, 0x00010001);
+		mci_writel(slot->host, CLKSEL, slot->host->sdr_timing);
 	}
 
 	if (ios->clock) {
@@ -1739,6 +1713,32 @@ static int dw_mci_probe(struct platform_device *pdev)
 	} else {
 		host->data_addr = 0x100;
 		host->hold_bit = SDMMC_USE_HOLD_REG;
+	}
+
+	/* Set Phase Shift Register */
+
+	if (soc_is_exynos4210()) {
+		host->sdr_timing = 0x00010001;
+		host->ddr_timing = 0x00020002;
+	} else if (soc_is_exynos4212()) {
+		host->sdr_timing = 0x00010001;
+		host->ddr_timing = 0x00010001;
+	} else if (soc_is_exynos4412()) {
+		if (samsung_rev() >= EXYNOS4412_REV_1_0) {
+				if (samsung_board_rev_is_0_1()) {
+					host->sdr_timing = 0x00020001;
+					host->ddr_timing = 0x00020002;
+				} else {
+					host->sdr_timing = 0x00010001;
+					host->ddr_timing = 0x00010002;
+				}
+		} else {
+			host->sdr_timing = 0x00010001;
+			host->ddr_timing = 0x00010001;
+		}
+	} else if (soc_is_exynos5250()) {
+		host->sdr_timing = 0x00010000;
+		host->ddr_timing = 0x00010000;
 	}
 
 	host->pdev = pdev;

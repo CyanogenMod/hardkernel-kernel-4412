@@ -156,6 +156,10 @@ struct dw_mci {
 	u32			data_addr;
 	u32			hold_bit;
 
+	/* Phase Shift Value */
+	u32			sdr_timing;
+	u32			ddr_timing;
+
 	/* FIFO push and pull */
 	int			data_shift;
 	void (*push_data)(struct dw_mci *host, void *buf, int cnt);
