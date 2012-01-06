@@ -110,6 +110,9 @@ static int mfc_open(struct inode *inode, struct file *file)
 	int ret;
 	enum mfc_ret_code retcode;
 	int inst_id;
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	struct mfc_alloc_buffer *alloc;
+#endif
 
 	/* prevent invalid reference */
 	file->private_data = NULL;
@@ -258,6 +261,22 @@ static int mfc_open(struct inode *inode, struct file *file)
 	mfc_ctx->id = inst_id;
 	mfc_ctx->dev = mfcdev;
 
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	if (mfcdev->drm_playback) {
+		alloc = _mfc_alloc_buf(mfc_ctx, MFC_CTX_SIZE_L, ALIGN_2KB, MBT_CTX | PORT_A);
+		if (alloc == NULL) {
+			mfc_err("failed to alloc context buffer\n");
+			ret = -ENOMEM;
+			goto err_drm_ctx;
+		}
+
+		mfc_ctx->ctxbufofs = mfc_mem_base_ofs(alloc->real) >> 11;
+		mfc_ctx->ctxbufsize = alloc->size;
+		memset((void *)alloc->addr, 0, alloc->size);
+		mfc_mem_cache_clean((void *)alloc->addr, alloc->size);
+	}
+#endif
+
 	file->private_data = (struct mfc_inst_ctx *)mfc_ctx;
 
 	mfc_info("MFC instance [%d:%d] opened", mfc_ctx->id,
@@ -267,6 +286,9 @@ static int mfc_open(struct inode *inode, struct file *file)
 
 	return 0;
 
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+err_drm_ctx:
+#endif
 err_inst_ctx:
 err_inst_id:
 err_inst_cnt:

@@ -780,7 +780,11 @@ static int h264_set_dpbs(struct mfc_inst_ctx *ctx)
 
 		/* clear last DPB chroma buffer, referrence buffer for
 		   vectors starting with p-frame */
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+		if ((i == (dec_ctx->numtotaldpb - 1)) && (!ctx->dev->drm_playback)) {
+#else
 		if (i == (dec_ctx->numtotaldpb - 1)) {
+#endif
 			memset((void *)alloc->addr, 0x80, alloc->size);
 			mfc_mem_cache_clean((void *)alloc->addr, alloc->size);
 		}
@@ -803,7 +807,11 @@ static int h264_set_dpbs(struct mfc_inst_ctx *ctx)
 
 		/* clear last DPB luma buffer, referrence buffer for
 		   vectors starting with p-frame */
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+		if ((i == (dec_ctx->numtotaldpb - 1)) && (!ctx->dev->drm_playback)) {
+#else
 		if (i == (dec_ctx->numtotaldpb - 1)) {
+#endif
 			memset((void *)alloc->addr, 0x0, alloc->size);
 			mfc_mem_cache_clean((void *)alloc->addr, alloc->size);
 		}
@@ -1739,7 +1747,11 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 	/*
 	 * allocate context buffer
 	 */
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	if ((!ctx->dev->drm_playback) && (ctx->c_ops->alloc_ctx_buf)) {
+#else
 	if (ctx->c_ops->alloc_ctx_buf) {
+#endif
 		if (ctx->c_ops->alloc_ctx_buf(ctx) < 0) {
 			ret = MFC_DEC_INIT_FAIL;
 			goto err_ctx_buf;
@@ -2030,21 +2042,26 @@ static int mfc_decoding_frame(struct mfc_inst_ctx *ctx, struct mfc_dec_exe_arg *
 	int display_frame_tag;
 	unsigned char *stream_vir;
 	int ret;
-
 	struct mfc_dec_ctx *dec_ctx = (struct mfc_dec_ctx *)ctx->c_priv;
-
 #ifdef CONFIG_VIDEO_MFC_VCM_UMP
 	void *ump_handle;
 #endif
-	/* Check Frame Start code */
-	stream_vir = phys_to_virt(exe_arg->in_strm_buf + start_ofs);
-	ret = CheckDecStartCode(stream_vir, exe_arg->in_strm_size,
-				 exe_arg->in_codec_type);
-	if (ret < 0) {
-		mfc_err("Frame Check start Code Failed\n");
-		/* FIXME: Need to define proper error */
-		return MFC_FRM_BUF_SIZE_FAIL;
+
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+	if (!ctx->dev->drm_playback) {
+#endif
+		/* Check Frame Start code */
+		stream_vir = phys_to_virt(exe_arg->in_strm_buf + start_ofs);
+		ret = CheckDecStartCode(stream_vir, exe_arg->in_strm_size,
+				exe_arg->in_codec_type);
+		if (ret < 0) {
+			mfc_err("Frame Check start Code Failed\n");
+			/* FIXME: Need to define proper error */
+			return MFC_FRM_BUF_SIZE_FAIL;
+		}
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	}
+#endif
 
 	/* Set Frame Tag */
 	write_shm(ctx, dec_ctx->frametag, SET_FRAME_TAG);
