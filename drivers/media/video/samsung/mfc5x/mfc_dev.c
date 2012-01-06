@@ -751,7 +751,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 #ifdef SYSMMU_MFC_ON
 #if (defined(CONFIG_VIDEO_MFC_VCM_UMP) || defined(CONFIG_S5P_VMEM))
 	vma->vm_flags |= VM_RESERVED | VM_IO;
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	vma->vm_ops = &mfc_vm_ops;
 	vma->vm_private_data = mfc_ctx;
 
@@ -763,7 +763,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 		remap_size = user_size;
 
 		vma->vm_flags |= VM_RESERVED | VM_IO;
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 		/*
 		 * Port 0 mapping for stream buf & frame buf (chroma + MV + luma)
@@ -789,7 +789,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 		remap_size = min((unsigned long)mfc_mem_data_size(0), user_size);
 
 		vma->vm_flags |= VM_RESERVED | VM_IO;
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 		/*
 		 * Port 0 mapping for stream buf & frame buf (chroma + MV)
@@ -816,7 +816,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 			user_size - remap_offset);
 
 		vma->vm_flags |= VM_RESERVED | VM_IO;
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 		/*
 		 * Port 1 mapping for frame buf (luma)
@@ -854,7 +854,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	vma->vm_flags |= VM_RESERVED | VM_IO;
 	if (mfc_ctx->buf_cache_type == NO_CACHE)
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	mfc_info("MFC buffers are %scacheable\n",
 			mfc_ctx->buf_cache_type ? "" : "non-");
@@ -908,7 +908,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 		vma->vm_flags |= VM_RESERVED | VM_IO;
 
 		if(mfc_ctx->buf_cache_type == NO_CACHE){
-			vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+			vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 			mfc_info("CONFIG_VIDEO_MFC_CACHE is not enabled\n");
 		}else
 			mfc_info("CONFIG_VIDEO_MFC_CACHE is enabled\n");
@@ -931,7 +931,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 		vma->vm_flags |= VM_RESERVED | VM_IO;
 
 		if(mfc_ctx->buf_cache_type == NO_CACHE){
-			vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+			vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 			mfc_info("CONFIG_VIDEO_MFC_CACHE is not enabled\n");
 		}else
 			mfc_info("CONFIG_VIDEO_MFC_CACHE is enabled\n");
@@ -956,7 +956,7 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 		vma->vm_flags |= VM_RESERVED | VM_IO;
 
 		if(mfc_ctx->buf_cache_type == NO_CACHE)
-			vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+			vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 
 		/*
