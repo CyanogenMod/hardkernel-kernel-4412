@@ -547,3 +547,18 @@ void s5p_mipi_dsi_wr_tx_data(struct mipi_dsim_device *dsim,
 {
 	writel(tx_data, dsim->reg_base + S5P_DSIM_PAYLOAD);
 }
+
+unsigned int s5p_mipi_dsi_get_int_status(struct mipi_dsim_device *dsim)
+{
+	return readl(dsim->reg_base + S5P_DSIM_INTSRC);
+}
+
+void s5p_mipi_dsi_clear_int_status(struct mipi_dsim_device *dsim, unsigned int intSrc)
+{
+	writel(intSrc, dsim->reg_base + S5P_DSIM_INTSRC);
+}
+
+unsigned int s5p_mipi_dsi_get_FIFOCTRL_status(struct mipi_dsim_device *dsim)
+{
+	return readl(dsim->reg_base + S5P_DSIM_FIFOCTRL);
+}

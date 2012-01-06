@@ -54,8 +54,42 @@ static unsigned int dpll_table[15] = {
 	320, 390, 450, 510, 560,
 	640, 690, 770, 870, 950 };
 
-static void s5p_mipi_dsi_long_data_wr(struct mipi_dsim_device *dsim,
-		unsigned int data0, unsigned int data1)
+#ifdef CONFIG_LCD_MIPI_TC358764
+int s5p_mipi_dsi_wait_int_status(struct mipi_dsim_device *dsim, unsigned int intSrc)
+{
+	while (1) {
+		if ((s5p_mipi_dsi_get_int_status(dsim) & intSrc)) {
+			s5p_mipi_dsi_clear_int_status(dsim, intSrc);
+			return 1;
+		}else if ((s5p_mipi_dsi_get_FIFOCTRL_status(dsim) & 0xf00000) == 0)
+			return 0;
+	}
+}
+
+static int s5p_mipi_dsi_fb_notifier_callback(struct notifier_block *self,
+		unsigned long event, void *data)
+{
+	struct mipi_dsim_device *dsim;
+
+	if (event != FB_EVENT_RESUME)
+		return 0;
+
+	dsim = container_of(self, struct mipi_dsim_device, fb_notif);
+	s5p_mipi_dsi_func_reset(dsim);
+
+	return 0;
+}
+
+static int s5p_mipi_dsi_register_fb(struct mipi_dsim_device *dsim)
+{
+	memset(&dsim->fb_notif, 0, sizeof(dsim->fb_notif));
+	dsim->fb_notif.notifier_call = s5p_mipi_dsi_fb_notifier_callback;
+
+	return fb_register_client(&dsim->fb_notif);
+}
+#endif
+
+static void s5p_mipi_dsi_long_data_wr(struct mipi_dsim_device *dsim, unsigned int data0, unsigned int data1)
 {
 	unsigned int data_cnt = 0, payload = 0;
 
@@ -199,6 +233,11 @@ int s5p_mipi_dsi_wr_data(struct mipi_dsim_device *dsim, unsigned int data_id,
 		s5p_mipi_dsi_wr_tx_header(dsim, data_id, data1 & 0xff,
 			(data1 & 0xff00) >> 8);
 	}
+#ifdef CONFIG_LCD_MIPI_TC358764
+	if (s5p_mipi_dsi_wait_int_status(dsim, INTSRC_SFR_FIFO_EMPTY) == 0)
+		return -1;
+#endif
+
 	if (check_rx_ack)
 		/* process response func should be implemented. */
 		return 0;
@@ -636,62 +675,84 @@ static void s5p_mipi_dsi_late_resume(struct early_suspend *handler)
 		container_of(handler, struct mipi_dsim_device, early_suspend);
 	struct platform_device *pdev = to_platform_device(dsim->dev);
 
+#if defined(CONFIG_LCD_MIPI_TC358764)
+	int again = 1;
+	while (again == 1) {
+		pm_runtime_get_sync(&pdev->dev);
+		clk_enable(dsim->clock);
+		s5p_mipi_dsi_init_dsim(dsim);
+		s5p_mipi_dsi_init_link(dsim);
+		s5p_mipi_dsi_enable_hs_clock(dsim, 1);
+		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+		s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+		s5p_mipi_dsi_clear_int_status(dsim, INTSRC_SFR_FIFO_EMPTY);
+		if (dsim->dsim_lcd_drv->displayon(dsim) == 0)
+			again = 1;
+		else
+			again = 0;
+		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
+		if (again == 1)
+			s5p_mipi_dsi_sw_reset(dsim);
+	}
+#else
 	pm_runtime_get_sync(&pdev->dev);
 	clk_enable(dsim->clock);
-
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
-#if defined(CONFIG_LCD_MIPI_TC358764)
-	s5p_mipi_dsi_set_hs_enable(dsim);
-	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
-	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-	dsim->dsim_lcd_drv->resume(dsim);
-	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
-	mdelay(1000);
-	s5p_mipi_dsi_func_reset(dsim);
-#else
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-	/* lcd init */
-	dsim->dsim_lcd_drv->resume(dsim);
+	dsim->dsim_lcd_drv->displayon(dsim);
 	s5p_mipi_dsi_set_hs_enable(dsim);
 #endif
 }
 #else
-static int s5p_mipi_dsi_suspend(struct platform_device *pdev,
-		pm_message_t state)
+static int s5p_mipi_dsi_suspend(struct device *dev)
 {
+	struct platform_device *pdev = to_platform_device(dev);
 	struct mipi_dsim_device *dsim = platform_get_drvdata(pdev);
 
 	dsim->dsim_lcd_drv->suspend(dsim);
 	s5p_mipi_dsi_d_phy_onoff(dsim, 0);
 	clk_disable(dsim->clock);
-	pm_runtime_put_sync(&pdev->dev);
+	pm_runtime_put_sync(dev);
 	return 0;
 }
 
-static int s5p_mipi_dsi_resume(struct platform_device *pdev)
+static int s5p_mipi_dsi_resume(struct device *dev)
 {
+	struct platform_device *pdev = to_platform_device(dev);
 	struct mipi_dsim_device *dsim = platform_get_drvdata(pdev);
 
-	pm_runtime_get_sync(&pdev->dev);
+#if defined(CONFIG_LCD_MIPI_TC358764)
+	int again = 1;
+	while (again == 1) {
+		pm_runtime_get_sync(dev);
+		clk_enable(dsim->clock);
+		s5p_mipi_dsi_init_dsim(dsim);
+		s5p_mipi_dsi_init_link(dsim);
+		s5p_mipi_dsi_enable_hs_clock(dsim, 1);
+		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+		s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+		s5p_mipi_dsi_clear_int_status(dsim, INTSRC_SFR_FIFO_EMPTY);
+		if (dsim->dsim_lcd_drv->displayon(dsim) == 0)
+			again = 1;
+		else
+			again = 0;
+		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
+		if (again == 1)
+			s5p_mipi_dsi_sw_reset(dsim);
+	}
+#else
+	pm_runtime_get_sync(dev);
 	clk_enable(dsim->clock);
-
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
-
-#if defined(CONFIG_LCD_MIPI_TC358764)
-	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-	s5p_mipi_dsi_set_hs_enable(dsim);
-	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
-#else
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-#endif
-	/* lcd init */
-	dsim->dsim_lcd_drv->resume(dsim);
-
+	dsim->dsim_lcd_drv->displayon(dsim);
 	s5p_mipi_dsi_set_hs_enable(dsim);
+#endif
+
 	return 0;
 }
 #endif
@@ -720,6 +781,10 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 	struct s5p_platform_mipi_dsim *dsim_pd;
 	int ret = -1;
 
+#ifdef CONFIG_LCD_MIPI_TC358764
+	int again = 1;
+#endif
+
 	if (!dsim)
 		dsim = kzalloc(sizeof(struct mipi_dsim_device),
 			GFP_KERNEL);
@@ -731,6 +796,14 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 	dsim->pd = to_dsim_plat(&pdev->dev);
 	dsim->dev = &pdev->dev;
 	dsim->id = pdev->id;
+
+#ifdef CONFIG_LCD_MIPI_TC358764
+	ret = s5p_mipi_dsi_register_fb(dsim);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to register fb notifier chain\n");
+		return -EFAULT;
+	}
+#endif
 
 	pm_runtime_enable(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
@@ -790,20 +863,29 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 		goto err_dsim_config;
 	}
 
+#if defined(CONFIG_LCD_MIPI_TC358764)
+	dsim->dsim_lcd_drv->probe(dsim);
+	while (again == 1) {
+		s5p_mipi_dsi_init_dsim(dsim);
+		s5p_mipi_dsi_init_link(dsim);
+		/* initialize mipi-dsi client(lcd panel). */
+		s5p_mipi_dsi_enable_hs_clock(dsim, 1);
+		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
+		s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
+		s5p_mipi_dsi_clear_int_status(dsim, INTSRC_SFR_FIFO_EMPTY);
+		if (dsim->dsim_lcd_drv->displayon(dsim) == 0)
+			again = 1;
+		else
+			again = 0;
+		s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
+		if (again == 1)
+			s5p_mipi_dsi_sw_reset(dsim);
+	}
+#else
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
 	/* initialize mipi-dsi client(lcd panel). */
 	dsim->dsim_lcd_drv->probe(dsim);
-
-#if defined(CONFIG_LCD_MIPI_TC358764)
-	s5p_mipi_dsi_set_hs_enable(dsim);
-	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 1);
-	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
-	dsim->dsim_lcd_drv->displayon(dsim);
-	s5p_mipi_dsi_set_cpu_transfer_mode(dsim, 0);
-	mdelay(2000);
-	s5p_mipi_dsi_func_reset(dsim);
-#else
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
 	dsim->dsim_lcd_drv->displayon(dsim);
@@ -816,9 +898,10 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	dsim->early_suspend.suspend = s5p_mipi_dsi_early_suspend;
 	dsim->early_suspend.resume = s5p_mipi_dsi_late_resume;
-	dsim->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
+	dsim->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1;
 	register_early_suspend(&(dsim->early_suspend));
 #endif
+	platform_set_drvdata(pdev, dsim);
 
 	return 0;
 
@@ -873,10 +956,6 @@ static const struct dev_pm_ops mipi_dsi_pm_ops = {
 static struct platform_driver s5p_mipi_dsi_driver = {
 	.probe = s5p_mipi_dsi_probe,
 	.remove = __devexit_p(s5p_mipi_dsi_remove),
-#ifndef CONFIG_HAS_EARLYSUSPEND
-	.suspend = s5p_mipi_dsi_suspend,
-	.resume = s5p_mipi_dsi_resume,
-#endif
 	.driver = {
 		   .name = "s5p-mipi-dsim",
 		   .owner = THIS_MODULE,

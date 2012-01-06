@@ -28,12 +28,12 @@
 #include <video/mipi_display.h>
 
 #include <plat/gpio-cfg.h>
-#include <plat/regs-dsim.h>
+#include <plat/regs-mipidsim.h>
 
 #include <plat/dsim.h>
 #include <plat/mipi_dsi.h>
 
-void init_lcd(struct mipi_dsim_device *dsim)
+static int init_lcd(struct mipi_dsim_device *dsim)
 {
 	unsigned char initcode_013c[6] = {0x3c, 0x01, 0x03, 0x00, 0x02, 0x00};
 	unsigned char initcode_0114[6] = {0x14, 0x01, 0x02, 0x00, 0x00, 0x00};
@@ -56,49 +56,88 @@ void init_lcd(struct mipi_dsim_device *dsim)
 	unsigned char initcode_0504[6] = {0x04, 0x05, 0x04, 0x00, 0x00, 0x00};
 	unsigned char initcode_049c[6] = {0x9c, 0x04, 0x0d, 0x00, 0x00, 0x00};
 
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_013c, sizeof(initcode_013c));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0114, sizeof(initcode_0114));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0164, sizeof(initcode_0164));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0168, sizeof(initcode_0168));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_016c, sizeof(initcode_016c));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0170, sizeof(initcode_0170));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0134, sizeof(initcode_0134));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0210, sizeof(initcode_0210));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0104, sizeof(initcode_0104));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0204, sizeof(initcode_0204));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0450, sizeof(initcode_0450));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0454, sizeof(initcode_0454));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0458, sizeof(initcode_0458));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_045c, sizeof(initcode_045c));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0460, sizeof(initcode_0460));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0464, sizeof(initcode_0464));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_04a0_1, sizeof(initcode_04a0_1));
-	mdelay(5);
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_04a0_2, sizeof(initcode_04a0_2));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_0504, sizeof(initcode_0504));
-	s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
-		(unsigned int) initcode_049c, sizeof(initcode_049c));
-
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_013c, sizeof(initcode_013c)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0114, sizeof(initcode_0114)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0164, sizeof(initcode_0164)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0168, sizeof(initcode_0168)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_016c, sizeof(initcode_016c)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0170, sizeof(initcode_0170)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0134, sizeof(initcode_0134)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0210, sizeof(initcode_0210)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0104, sizeof(initcode_0104)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0204, sizeof(initcode_0204)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0450, sizeof(initcode_0450)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0454, sizeof(initcode_0454)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0458, sizeof(initcode_0458)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_045c, sizeof(initcode_045c)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0460, sizeof(initcode_0460)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0464, sizeof(initcode_0464)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_04a0_1, sizeof(initcode_04a0_1)) == -1)
+		return 0;
+	mdelay(12);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_04a0_2, sizeof(initcode_04a0_2)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_0504, sizeof(initcode_0504)) == -1)
+		return 0;
+	mdelay(6);
+	if (s5p_mipi_dsi_wr_data(dsim, MIPI_DSI_GENERIC_LONG_WRITE,
+		(unsigned int) initcode_049c, sizeof(initcode_049c)) == -1)
+		return 0;
 	mdelay(800);
+
+	return 1;
 }
 
 void tc358764_mipi_lcd_off(struct mipi_dsim_device *dsim)
@@ -144,15 +183,12 @@ static int tc358764_mipi_lcd_suspend(struct mipi_dsim_device *dsim)
 
 static int tc358764_mipi_lcd_displayon(struct mipi_dsim_device *dsim)
 {
-	init_lcd(dsim);
-
-	return 0;
+	return init_lcd(dsim);
 }
 
 static int tc358764_mipi_lcd_resume(struct mipi_dsim_device *dsim)
 {
-	init_lcd(dsim);
-	return 0;
+	return init_lcd(dsim);
 }
 
 struct mipi_dsim_lcd_driver tc358764_mipi_lcd_driver = {

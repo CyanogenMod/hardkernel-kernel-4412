@@ -1839,6 +1839,9 @@ static void s3c_fb_late_resume(struct early_suspend *handler)
 		dev_dbg(dev, "late_resuming window %d\n", win_no);
 		s3c_fb_set_par(win->fbinfo);
 	}
+#ifdef CONFIG_LCD_MIPI_TC358764
+	fb_notifier_call_chain(FB_EVENT_RESUME, NULL);
+#endif
 
 #ifdef CONFIG_S5P_DP
 	writel(DPCLKCON_ENABLE, sfb->regs + DPCLKCON);
@@ -2667,6 +2670,10 @@ static int __devinit s3c_fb_probe(struct platform_device *pdev)
 #endif
 	platform_set_drvdata(pdev, sfb);
 
+#ifdef CONFIG_LCD_MIPI_TC358764
+	fb_notifier_call_chain(FB_EVENT_RESUME, NULL);
+#endif
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	sfb->early_suspend.suspend = s3c_fb_early_suspend;
 	sfb->early_suspend.resume = s3c_fb_late_resume;
@@ -2842,6 +2849,9 @@ static int s3c_fb_resume(struct device *dev)
 		dev_dbg(&pdev->dev, "resuming window %d\n", win_no);
 		s3c_fb_set_par(win->fbinfo);
 	}
+#ifdef CONFIG_LCD_MIPI_TC358764
+	fb_notifier_call_chain(FB_EVENT_RESUME, NULL);
+#endif
 
 #ifdef CONFIG_S5P_DP
 	writel(DPCLKCON_ENABLE, sfb->regs + DPCLKCON);
