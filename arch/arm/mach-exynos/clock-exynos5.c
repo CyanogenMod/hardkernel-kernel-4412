@@ -406,9 +406,30 @@ static struct clksrc_clk exynos5_clk_sclk_hdmi = {
 	.reg_src = { .reg = EXYNOS5_CLKSRC_DISP1_0, .shift = 20, .size = 1 },
 };
 
+static struct clk *exynos5_clkset_sclk_cec_list[] = {
+	[0] = &exynos5_clk_sclk_pixel.clk,
+	[1] = &exynos5_clk_sclk_hdmiphy,
+};
+
+static struct clksrc_sources exynos5_clkset_sclk_cec = {
+	.sources	= exynos5_clkset_sclk_cec_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_sclk_cec_list),
+};
+
+static struct clksrc_clk exynos5_clk_sclk_cec = {
+	.clk	= {
+		.name           = "sclk_cec",
+		.enable		= exynos5_clksrc_mask_disp1_0_ctrl,
+		.ctrlbit	= (1 << 20),
+	},
+	.sources = &exynos5_clkset_sclk_cec,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_DISP1_0, .shift = 20, .size = 1 },
+};
+
 static struct clksrc_clk *exynos5_sclk_tv[] = {
 	&exynos5_clk_sclk_pixel,
 	&exynos5_clk_sclk_hdmi,
+	&exynos5_clk_sclk_cec,
 };
 
 /* BPLL USER */
@@ -785,6 +806,10 @@ static struct clk exynos5_init_clocks_off[] = {
 		.name		= "watchdog",
 		.enable		= exynos5_clk_ip_peris_ctrl,
 		.ctrlbit	= (1 << 19),
+	}, {
+		.name		= "hdmicec",
+		.enable		= exynos5_clk_ip_peris_ctrl,
+		.ctrlbit	= (1 << 11),
 	}, {
 		.name		= "rtc",
 		.parent		= &exynos5_clk_aclk_66.clk,

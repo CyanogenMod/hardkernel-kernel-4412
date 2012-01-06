@@ -64,10 +64,16 @@ void s5p_tv_setup(void)
 		s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
 	} else if (soc_is_exynos5250()) {
 		gpio_request(EXYNOS5_GPX3(7), "hpd-plug");
-
 		gpio_direction_input(EXYNOS5_GPX3(7));
 		s3c_gpio_cfgpin(EXYNOS5_GPX3(7), S3C_GPIO_SFN(0x3));
 		s3c_gpio_setpull(EXYNOS5_GPX3(7), S3C_GPIO_PULL_NONE);
+
+		/* HDMI CEC */
+		gpio_request(EXYNOS5_GPX3(6), "hdmi-cec");
+		gpio_direction_input(EXYNOS5_GPX3(6));
+		s3c_gpio_cfgpin(EXYNOS5_GPX3(6), S3C_GPIO_SFN(0x3));
+		s3c_gpio_setpull(EXYNOS5_GPX3(6), S3C_GPIO_PULL_NONE);
+
 	} else {
 		printk(KERN_ERR "HPD GPIOs are not defined!\n");
 	}
