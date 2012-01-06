@@ -146,7 +146,7 @@ static int vb2_cma_phys_mmap(void *buf_priv, struct vm_area_struct *vma)
 	}
 
 	if (!buf->cacheable)
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	return vb2_cma_phys_mmap_pfn_range(vma, buf->paddr, buf->size,
 					   &vb2_common_vm_ops, &buf->handler);
