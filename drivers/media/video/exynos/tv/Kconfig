@@ -106,7 +106,7 @@ config VIDEO_EXYNOS_HDMI_CEC
 
 config VIDEO_SAMSUNG_MEMSIZE_TV
 	int "Memory size in kbytes for TV"
-	depends on VIDEO_EXYNOS_MIXER
+	depends on VIDEO_EXYNOS_MIXER && VIDEOBUF2_CMA_PHYS
 	default "16200"
 
 config VIDEO_EXYNOS_MIXER_DEBUG
