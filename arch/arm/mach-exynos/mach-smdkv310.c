@@ -29,7 +29,7 @@
 #include <linux/mfd/max8997.h>
 #include <linux/v4l2-mediabus.h>
 #include <linux/memblock.h>
-#if defined(CONFIG_S5P_MEM_CMA)
+#if defined(CONFIG_CMA)
 #include <linux/cma.h>
 #endif
 #ifdef CONFIG_ANDROID_PMEM
@@ -1760,7 +1760,7 @@ static struct platform_device pmem_gpu1_device = {
 
 static void __init android_pmem_set_platdata(void)
 {
-#if defined(CONFIG_S5P_MEM_CMA)
+#if defined(CONFIG_CMA)
 	pmem_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K;
 	pmem_gpu1_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K;
 #else
@@ -2146,65 +2146,7 @@ static void __init smdkv310_smsc911x_init(void)
 		     (0x1 << S5P_SROM_BCX__TACS__SHIFT), S5P_SROM_BC1);
 }
 
-#if defined(CONFIG_S5P_MEM_CMA)
-static void __init exynos4_cma_region_reserve(
-			struct cma_region *regions_normal,
-			struct cma_region *regions_secure)
-{
-	struct cma_region *reg;
-	size_t size_secure = 0, align_secure = 0;
-	phys_addr_t paddr = 0;
-
-	for (reg = regions_normal; reg->size != 0; reg++) {
-		if (WARN_ON(cma_early_region_register(reg)))
-			continue;
-
-		if ((reg->alignment & (reg->alignment - 1)) || reg->reserved)
-			continue;
-
-		if (reg->start) {
-			if (!memblock_is_region_reserved(reg->start, reg->size)
-			    && memblock_reserve(reg->start, reg->size) >= 0)
-				reg->reserved = 1;
-		} else {
-			paddr = __memblock_alloc_base(reg->size, reg->alignment,
-					MEMBLOCK_ALLOC_ACCESSIBLE);
-			if (paddr) {
-				reg->start = paddr;
-				reg->reserved = 1;
-				if (reg->size & (reg->alignment - 1))
-					memblock_free(paddr + reg->size,
-						ALIGN(reg->size, reg->alignment)
-						- reg->size);
-			}
-		}
-	}
-
-	if (regions_secure && regions_secure->size) {
-		for (reg = regions_secure; reg->size != 0; reg++)
-			size_secure += reg->size;
-
-		reg--;
-
-		align_secure = reg->alignment;
-		BUG_ON(align_secure & (align_secure - 1));
-
-		paddr -= size_secure;
-		paddr &= ~(align_secure - 1);
-
-		if (!memblock_reserve(paddr, size_secure)) {
-			do {
-				reg->start = paddr;
-				reg->reserved = 1;
-				paddr += reg->size;
-
-				if (WARN_ON(cma_early_region_register(reg)))
-					memblock_free(reg->start, reg->size);
-			} while (reg-- != regions_secure);
-		}
-	}
-}
-
+#if defined(CONFIG_CMA)
 static void __init exynos4_reserve_mem(void)
 {
 	static struct cma_region regions[] = {
@@ -2375,9 +2317,7 @@ static void __init exynos4_reserve_mem(void)
 		"s5p-smem/mfc-shm=mfc1;"
 		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;";
 
-	cma_set_defaults(NULL, map);
-
-	exynos4_cma_region_reserve(regions, regions_secure);
+	s5p_cma_region_reserve(regions, regions_secure, SZ_64M, map);
 }
 #endif
 
@@ -2402,7 +2342,7 @@ static void __init smdkv310_map_io(void)
 	s3c24xx_init_clocks(24000000);
 	s3c24xx_init_uarts(smdkv310_uartcfgs, ARRAY_SIZE(smdkv310_uartcfgs));
 
-#if defined(CONFIG_S5P_MEM_CMA)
+#if defined(CONFIG_CMA)
 	exynos4_reserve_mem();
 #else
 	s5p_reserve_mem(S5P_RANGE_MFC);
