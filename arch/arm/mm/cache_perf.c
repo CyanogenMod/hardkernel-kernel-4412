@@ -20,6 +20,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/types.h>
 #include <linux/math64.h>
+#include <linux/mm.h>
+#include <linux/vmalloc.h>
 
 #include <asm/outercache.h>
 #include <asm/cacheflush.h>
@@ -36,43 +38,37 @@ static bool l2 = 1;
 module_param(l2, bool, S_IRUGO);
 MODULE_PARM_DESC(l2, "Set for L2 check");
 
-static bool mset;
-module_param(mset, bool, S_IRUGO);
-MODULE_PARM_DESC(mset, "Set for Memset");
+static bool mcpy = 1;
+module_param(mcpy, bool, S_IRUGO);
+MODULE_PARM_DESC(mcpy, "Set for mcpy");
 
-static bool cops = 1;
-module_param(cops, bool, S_IRUGO);
-MODULE_PARM_DESC(cops, "Set for Clean");
+static unsigned int mcpy_size = SZ_4M;
+module_param(mcpy_size, uint, S_IRUGO);
+MODULE_PARM_DESC(mcpy_size, "Set for mcpy size");
 
-static bool iops = 1;
-module_param(iops, bool, S_IRUGO);
-MODULE_PARM_DESC(iops, "Set for Invalidate");
-
-static bool fops = 1;
-module_param(fops, bool, S_IRUGO);
-MODULE_PARM_DESC(fops, "Set for Flush");
-
-static bool all = 1;
-module_param(all, bool, S_IRUGO);
-MODULE_PARM_DESC(all, "Set for all flush");
+static bool cm = 1;
+module_param(cm, bool, S_IRUGO);
+MODULE_PARM_DESC(cm, "Set for cache maintenance");
 
 struct task_struct *cacheperf_task;
 static bool thread_running;
 
-#define START_SIZE (32)
-#define END_SIZE (SZ_2M)
+#define START_SIZE (64)
+#define END_SIZE (SZ_4M)
 
-static void print_result(u32 xfer_size, struct timespec lhs,
-			 struct timespec rhs)
-{
-	long us;
-	struct timespec ts;
+enum memtype {
+	MT_WBWA,
+	MT_NC,
+	MT_SO,
+	MT_MAX,
+};
 
-	ts = timespec_sub(rhs, lhs);
-	us = ts.tv_sec*USEC_PER_SEC + ts.tv_nsec/NSEC_PER_USEC;
-
-	printk(KERN_INFO "%u: %lu\n", xfer_size, us);
-}
+enum cachemaintenance {
+	CM_CLEAN,
+	CM_INV,
+	CM_FLUSH,
+	CM_FLUSHALL,
+};
 
 static long update_timeval(struct timespec lhs, struct timespec rhs)
 {
@@ -100,132 +96,176 @@ bool buf_compare(u32 src[], u32 dst[], unsigned int bytes)
 	return true;
 }
 
-static int cacheperf(void)
+static void *remap_vm(dma_addr_t phys, u32 size, pgprot_t pgprot)
 {
-	u32 xfer_size;
-	int i = 0;
-	void *vbuf;
-	phys_addr_t pbuf;
-	u32 bufend;
-	struct timespec beforets;
-	struct timespec afterts;
-	long timeval;
-	vbuf = kmalloc(END_SIZE, GFP_KERNEL);
-	pbuf = virt_to_phys(vbuf);
+	unsigned long num_pages, i;
+	struct page **pages;
+	void *virt;
 
-	if (mset) {
-		printk(KERN_INFO "## Memset perf (ns)\n");
+	num_pages = size >> PAGE_SHIFT;
+	pages = kmalloc(num_pages * sizeof(struct page *), GFP_KERNEL);
 
-		xfer_size = START_SIZE;
-		while (xfer_size <= END_SIZE) {
-			bufend = pbuf + xfer_size;
+	if (!pages)
+		return ERR_PTR(-ENOMEM);
 
-			getnstimeofday(&beforets);
-			for (i = 0; i < try_cnt; i++)
-				memset(vbuf, i, xfer_size);
-			getnstimeofday(&afterts);
-			print_result(xfer_size, beforets, afterts);
-			xfer_size *= 2;
-		}
+	for (i = 0; i < num_pages; i++)
+		pages[i] = pfn_to_page((phys >> PAGE_SHIFT) + i);
+
+	virt = vmap(pages, num_pages, VM_MAP, pgprot);
+
+	if (!virt) {
+		kfree(pages);
+		return ERR_PTR(-ENOMEM);
 	}
 
-	if (cops) {
-		printk(KERN_INFO "## Clean perf (ns)\n");
+	kfree(pages);
 
-		xfer_size = START_SIZE;
-		while (xfer_size <= END_SIZE) {
-			bufend = pbuf + xfer_size;
-			timeval = 0;
+	return virt;
+}
 
-			for (i = 0; i < try_cnt; i++) {
-				memset(vbuf, i, xfer_size);
-				getnstimeofday(&beforets);
+static void memcpyperf(void *src, void *dst, u32 size)
+{
+	struct timespec beforets;
+	struct timespec afterts;
+	u32 i;
+
+	getnstimeofday(&beforets);
+
+	for (i = 0; i < try_cnt; i++)
+		memcpy(dst, src, size);
+
+	getnstimeofday(&afterts);
+	printk(KERN_ERR "%lu\n", update_timeval(beforets, afterts)/try_cnt);
+}
+
+static void cacheperf(void *vbuf, enum cachemaintenance id)
+{
+	struct timespec beforets;
+	struct timespec afterts;
+	phys_addr_t pbuf = virt_to_phys(vbuf);
+	u32 pbufend, xfer_size, i;
+	long timeval;
+
+	xfer_size = START_SIZE;
+	while (xfer_size <= END_SIZE) {
+		pbufend = pbuf + xfer_size;
+		timeval = 0;
+
+		for (i = 0; i < try_cnt; i++) {
+			memset(vbuf, i, xfer_size);
+			getnstimeofday(&beforets);
+
+			switch (id) {
+			case CM_CLEAN:
 				if (l1)
 					dmac_map_area(vbuf, xfer_size,
 							DMA_TO_DEVICE);
 				if (l2)
-					outer_clean_range(pbuf, bufend);
-				getnstimeofday(&afterts);
-				timeval += update_timeval(beforets, afterts);
-				xfer_size *= 2;
-			}
-			printk(KERN_INFO "%lu\n", timeval);
-		}
-	}
-
-	if (iops) {
-		printk(KERN_INFO "## Invalidate perf (ns)\n");
-
-		xfer_size = START_SIZE;
-		while (xfer_size <= END_SIZE) {
-			bufend = pbuf + xfer_size;
-			timeval = 0;
-
-			for (i = 0; i < try_cnt; i++) {
-				memset(vbuf, i, xfer_size);
-				getnstimeofday(&beforets);
+					outer_clean_range(pbuf, pbufend);
+				break;
+			case CM_INV:
 				if (l2)
-					outer_inv_range(pbuf, bufend);
+					outer_inv_range(pbuf, pbufend);
 				if (l1)
 					dmac_unmap_area(vbuf, xfer_size,
 							DMA_FROM_DEVICE);
-				getnstimeofday(&afterts);
-				timeval += update_timeval(beforets, afterts);
-				xfer_size *= 2;
-			}
-			printk(KERN_INFO "%lu\n", timeval);
-		}
-	}
-
-	if (fops) {
-		printk(KERN_INFO "## Flush perf (ns)\n");
-
-		xfer_size = START_SIZE;
-		while (xfer_size <= END_SIZE) {
-			bufend = pbuf + xfer_size;
-			timeval = 0;
-
-			for (i = 0; i < try_cnt; i++) {
-				memset(vbuf, i, xfer_size);
-				getnstimeofday(&beforets);
+				break;
+			case CM_FLUSH:
 				if (l1)
 					dmac_flush_range(vbuf,
 					(void *)((u32) vbuf + xfer_size));
 				if (l2)
-					outer_flush_range(pbuf, bufend);
-				getnstimeofday(&afterts);
-				timeval += update_timeval(beforets, afterts);
-				xfer_size *= 2;
+					outer_flush_range(pbuf, pbufend);
+				break;
+			case CM_FLUSHALL:
+				if (l1)
+					flush_cache_all();
+				if (l2)
+					outer_flush_all();
+				break;
 			}
-			printk(KERN_INFO "%lu\n", timeval);
+			getnstimeofday(&afterts);
+			timeval += update_timeval(beforets, afterts);
 		}
+		printk(KERN_INFO "%lu\n", timeval/try_cnt);
+		xfer_size *= 2;
+	}
+}
+
+static int perfmain(void)
+{
+	phys_addr_t dmasrc, dmadst;
+	void *srcbuf[MT_MAX];
+	void *dstbuf[MT_MAX];
+	u32 xfer_size;
+
+	srcbuf[MT_WBWA] = kmalloc(END_SIZE, GFP_KERNEL);
+	dstbuf[MT_WBWA] = kmalloc(END_SIZE, GFP_KERNEL);
+	srcbuf[MT_NC] = dma_alloc_writecombine(
+			NULL, mcpy_size, &dmasrc, GFP_KERNEL);
+	dstbuf[MT_NC] = dma_alloc_writecombine(
+			NULL, mcpy_size, &dmadst, GFP_KERNEL);
+	if (!srcbuf[MT_WBWA] && !srcbuf[MT_NC] &&
+			!dstbuf[MT_WBWA] && !dstbuf[MT_NC]) {
+		printk(KERN_ERR "Memory allocation error!\n");
+		dma_free_coherent(NULL, mcpy_size, srcbuf[MT_NC], dmasrc);
+		dma_free_coherent(NULL, mcpy_size, dstbuf[MT_NC], dmadst);
+		kfree(srcbuf[MT_WBWA]);
+		kfree(dstbuf[MT_WBWA]);
+		return 0;
 	}
 
+	if (mcpy) {
+		printk(KERN_INFO "## Memcpy perf (ns, unit tr size: %dKB)\n",
+				mcpy_size/SZ_1K);
 
-	if (all) {
-		printk(KERN_INFO "## Flush all perf (ns)\n");
-
+		printk(KERN_INFO "1. SO type\n");
+		srcbuf[MT_SO] = remap_vm(dmasrc, mcpy_size,
+				pgprot_noncached(PAGE_KERNEL));
+		dstbuf[MT_SO] = remap_vm(dmadst, mcpy_size,
+				pgprot_noncached(PAGE_KERNEL));
 		xfer_size = START_SIZE;
 		while (xfer_size <= END_SIZE) {
-			bufend = pbuf + xfer_size;
-			timeval = 0;
+			memcpyperf(srcbuf[MT_SO], dstbuf[MT_SO], mcpy_size);
+			xfer_size *= 2;
+		}
+		vunmap(srcbuf[MT_SO]);
+		vunmap(dstbuf[MT_SO]);
 
-			for (i = 0; i < try_cnt; i++) {
-				memset(vbuf, i, xfer_size);
-				getnstimeofday(&beforets);
-					if (l1)
-						flush_cache_all();
-					if (l2)
-						outer_flush_all();
-				getnstimeofday(&afterts);
-				timeval += update_timeval(beforets, afterts);
-				xfer_size *= 2;
-			}
-			printk(KERN_INFO "%lu\n", timeval);
+		printk(KERN_INFO "2. Normal NCNB type\n");
+		while (xfer_size <= END_SIZE) {
+			memcpyperf(srcbuf[MT_NC], dstbuf[MT_NC], mcpy_size);
+			xfer_size *= 2;
+		}
+
+		printk(KERN_INFO "3. Cache memcpy\n");
+		xfer_size = START_SIZE;
+		while (xfer_size <= END_SIZE) {
+			memcpyperf(srcbuf[MT_WBWA], dstbuf[MT_WBWA], xfer_size);
+			xfer_size *= 2;
 		}
 	}
 
-	kfree(vbuf);
+	if (cm) {
+		printk(KERN_INFO "## Memcpy perf (ns)\n");
+
+		printk(KERN_INFO "1. Clean perf\n");
+		cacheperf(srcbuf[MT_WBWA], CM_CLEAN);
+
+		printk(KERN_INFO "2. Invalidate perf\n");
+		cacheperf(srcbuf[MT_WBWA], CM_INV);
+
+		printk(KERN_INFO "3. Flush perf\n");
+		cacheperf(srcbuf[MT_WBWA], CM_FLUSH);
+
+		printk(KERN_INFO "4. Flush all perf\n");
+		cacheperf(srcbuf[MT_WBWA], CM_FLUSHALL);
+	}
+
+	dma_free_coherent(NULL, mcpy_size, srcbuf[MT_NC], dmasrc);
+	dma_free_coherent(NULL, mcpy_size, dstbuf[MT_NC], dmadst);
+	kfree(srcbuf[MT_WBWA]);
+	kfree(dstbuf[MT_WBWA]);
 
 	return 0;
 }
@@ -233,7 +273,7 @@ static int cacheperf(void)
 static int thread_func(void *data)
 {
 	thread_running = 1;
-	cacheperf();
+	perfmain();
 	thread_running = 0;
 
 	return 0;
@@ -259,6 +299,8 @@ module_init(cacheperf_init)
 
 void cacheperf_exit(void)
 {
+	printk(KERN_ERR "Exit module: thread_running: %d\n", thread_running);
+
 	if (thread_running)
 		kthread_stop(cacheperf_task);
 
