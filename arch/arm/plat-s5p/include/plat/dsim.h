@@ -16,6 +16,7 @@
 
 #include <linux/device.h>
 #include <linux/fb.h>
+#include <linux/notifier.h>
 
 #include <linux/regulator/consumer.h>
 
@@ -260,6 +261,7 @@ struct mipi_dsim_device {
 	unsigned long escape_clk;
 	unsigned char freq_band;
 	unsigned char id;
+	struct notifier_block fb_notif;
 
 	struct mipi_dsim_lcd_driver	*dsim_lcd_drv;
 #ifdef CONFIG_HAS_EARLYSUSPEND

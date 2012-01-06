@@ -131,6 +131,7 @@ register1 */
 /* S5P_DSIM_INTSRC */
 #define INTSRC_FRAME_DONE		(1 << 24)
 #define INTSRC_PLL_STABLE		(1 << 31)
+#define INTSRC_SFR_FIFO_EMPTY		(1 << 29)
 
 /* S5P_DSIM_INTMSK */
 #define INTMSK_FRAME_DONE		(1 << 24)
