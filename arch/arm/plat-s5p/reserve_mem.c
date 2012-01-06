@@ -122,7 +122,7 @@ void s5p_reserve_mem(size_t boundary)
 						mdev->memsize, PAGE_SIZE);
 		}
 
-		ret = memblock_remove(mdev->paddr, mdev->memsize);
+		ret = memblock_reserve(mdev->paddr, mdev->memsize);
 		if (ret < 0)
 			pr_err("memblock_reserve(%x, %x) failed\n",
 				mdev->paddr, mdev->memsize);
