@@ -1273,6 +1273,7 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 	u32 timeout;
 	struct flite_frame f_frame;
 
+	printk(KERN_INFO "%s(%d)\n", __func__, on);
 	if (on) {
 		/* 2. enable ISP */
 		writel(0x7, PMUREG_ISP_CONFIGURATION);

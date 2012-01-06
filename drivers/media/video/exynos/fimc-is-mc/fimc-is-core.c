@@ -1400,6 +1400,8 @@ static int fimc_is_probe(struct platform_device *pdev)
 	isp->pdev = pdev;
 	isp->pdata = pdev->dev.platform_data;
 	isp->id = pdev->id;
+	isp->pipe_state = 0;
+
 	set_bit(FIMC_IS_STATE_IDLE, &isp->pipe_state);
 	set_bit(IS_ST_IDLE , &isp->state);
 

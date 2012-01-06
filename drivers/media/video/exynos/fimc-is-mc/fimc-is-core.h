@@ -85,7 +85,7 @@
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 
-#if DEBUG
+#ifdef DEBUG
 #define dbg(fmt, args...) \
 	printk("%s:%d: " fmt "\n", __func__, __LINE__, ##args)
 #else

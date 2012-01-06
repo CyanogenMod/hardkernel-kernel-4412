@@ -105,9 +105,24 @@ static int fimc_is_scalerc_video_open(struct file *file)
 static int fimc_is_scalerc_video_close(struct file *file)
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
+	int ret;
 
-	printk(KERN_DEBUG "%s\n", __func__);
+	printk(KERN_INFO "%s\n", __func__);
 	vb2_queue_release(&isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vbq);
+
+	clear_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power),
+	fimc_is_hw_subip_poweroff(isp);
+	ret = wait_event_timeout(isp->irq_queue,
+		test_bit(FIMC_IS_PWR_ST_POWEROFF, &isp->power),
+		FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+
+	if (!ret) {
+		err("wait timeout : %s\n", __func__);
+		ret = -EINVAL;
+	}
+
+	clear_bit(FIMC_IS_STATE_FW_DOWNLOADED, &isp->pipe_state);
+	fimc_is_hw_a5_power(isp, 0);
 	return 0;
 
 }
@@ -249,7 +264,7 @@ static int fimc_is_scalerc_video_streamon(struct file *file, void *priv, enum v4
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-	printk(KERN_DEBUG "%s\n", __func__);
+	printk(KERN_INFO "%s\n", __func__);
 	return vb2_streamon(&isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vbq, type);
 }
 
@@ -257,7 +272,7 @@ static int fimc_is_scalerc_video_streamoff(struct file *file, void *priv, enum v
 {
 	struct fimc_is_dev *isp = video_drvdata(file);
 
-	printk(KERN_DEBUG "%s\n", __func__);
+	printk(KERN_INFO "%s\n", __func__);
 	return vb2_streamoff(&isp->video[FIMC_IS_VIDEO_NUM_SCALERC].vbq, type);
 }
 
@@ -536,16 +551,20 @@ static int fimc_is_scalerc_stop_streaming(struct vb2_queue *q)
 		return -EINVAL;
 	}
 
-	clear_bit(IS_ST_STREAM_OFF, &isp->state);
-	fimc_is_hw_set_stream(isp, 0);
-	dbg("IS Stream Off");
-	ret = wait_event_timeout(isp->irq_queue,
-		test_bit(IS_ST_STREAM_OFF, &isp->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-	if (!ret) {
-		dev_err(&isp->pdev->dev,
-			"wait timeout : %s\n", __func__);
-		return -EBUSY;
+	if(!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state) &&
+		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state)){
+		clear_bit(IS_ST_STREAM_OFF, &isp->state);
+
+		fimc_is_hw_set_stream(isp, 0);
+		dbg("IS Stream Off");
+		ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_OFF, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
 	}
 
 	clear_bit(IS_ST_RUN, &isp->state);
@@ -1098,15 +1117,19 @@ static int fimc_is_scalerp_stop_streaming(struct vb2_queue *q)
 		return -EINVAL;
 	}
 
-	clear_bit(IS_ST_STREAM_OFF, &isp->state);
-	fimc_is_hw_set_stream(isp, 0);
-	ret = wait_event_timeout(isp->irq_queue,
-		test_bit(IS_ST_STREAM_OFF, &isp->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-	if (!ret) {
-		dev_err(&isp->pdev->dev,
-			"wait timeout : %s\n", __func__);
-		return -EBUSY;
+	if(!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
+		!test_bit(FIMC_IS_STATE_3DNR_STREAM_ON, &isp->pipe_state)){
+		clear_bit(IS_ST_STREAM_OFF, &isp->state);
+		dbg("IS Stream Off");
+		fimc_is_hw_set_stream(isp, 0);
+		ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_OFF, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
 	}
 	clear_bit(IS_ST_RUN, &isp->state);
 	clear_bit(IS_ST_STREAM_ON, &isp->state);
@@ -1659,16 +1682,19 @@ static int fimc_is_3dnr_stop_streaming(struct vb2_queue *q)
 		return -EINVAL;
 	}
 
-	clear_bit(IS_ST_STREAM_OFF, &isp->state);
-	fimc_is_hw_set_stream(isp, 0);
-	dbg("IS Stream Off");
-	ret = wait_event_timeout(isp->irq_queue,
-		test_bit(IS_ST_STREAM_OFF, &isp->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT);
-	if (!ret) {
-		dev_err(&isp->pdev->dev,
-			"wait timeout : %s\n", __func__);
-		return -EBUSY;
+	if(!test_bit(FIMC_IS_STATE_SCALERC_STREAM_ON, &isp->pipe_state) &&
+		!test_bit(FIMC_IS_STATE_SCALERP_STREAM_ON, &isp->pipe_state)){
+		clear_bit(IS_ST_STREAM_OFF, &isp->state);
+		fimc_is_hw_set_stream(isp, 0);
+		dbg("IS Stream Off");
+		ret = wait_event_timeout(isp->irq_queue,
+			test_bit(IS_ST_STREAM_OFF, &isp->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			dev_err(&isp->pdev->dev,
+				"wait timeout : %s\n", __func__);
+			return -EBUSY;
+		}
 	}
 
 	clear_bit(IS_ST_RUN, &isp->state);
