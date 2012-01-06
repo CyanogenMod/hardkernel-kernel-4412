@@ -23,7 +23,6 @@
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/mfd/max8997.h>
 #include <linux/mmc/host.h>
-#include <linux/cma.h>
 #include <linux/memblock.h>
 #include <linux/fb.h>
 #include <linux/smsc911x.h>
@@ -91,6 +90,7 @@
 #if defined(CONFIG_EXYNOS_SETUP_THERMAL)
 #include <plat/s5p-tmu.h>
 #endif
+#include <plat/media.h>
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK5250_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -1900,59 +1900,7 @@ static struct s5p_platform_cec hdmi_cec_data __initdata = {
 };
 #endif
 
-#if defined(CONFIG_S5P_MEM_CMA)
-static void __init exynos_cma_region_reserve(
-			struct cma_region *regions_normal,
-			struct cma_region *regions_secure)
-{
-	struct cma_region *reg;
-	size_t size_secure = 0, align_secure = 0;
-	phys_addr_t paddr = 0;
-
-	for (reg = regions_normal; reg->size != 0; reg++) {
-		if ((reg->alignment & (reg->alignment - 1)) || reg->reserved)
-			continue;
-
-		if (reg->start) {
-			if (!memblock_is_region_reserved(reg->start, reg->size)
-			    && memblock_reserve(reg->start, reg->size) >= 0)
-				reg->reserved = 1;
-		} else {
-			paddr = __memblock_alloc_base(reg->size, reg->alignment,
-					MEMBLOCK_ALLOC_ACCESSIBLE);
-			if (paddr) {
-				reg->start = paddr;
-				reg->reserved = 1;
-				if (reg->size & (reg->alignment - 1))
-					memblock_free(paddr + reg->size,
-						ALIGN(reg->size, reg->alignment)
-						- reg->size);
-			}
-		}
-	}
-
-	if (regions_secure && regions_secure->size) {
-		for (reg = regions_secure; reg->size != 0; reg++)
-			size_secure += reg->size;
-
-		reg--;
-
-		align_secure = reg->alignment;
-		BUG_ON(align_secure & (align_secure - 1));
-
-		paddr -= size_secure;
-		paddr &= ~(align_secure - 1);
-
-		if (!memblock_reserve(paddr, size_secure)) {
-			do {
-				reg->start = paddr;
-				reg->reserved = 1;
-				paddr += reg->size;
-			} while (reg-- != regions_secure);
-		}
-	}
-}
-
+#if defined(CONFIG_CMA)
 static void __init exynos_reserve_mem(void)
 {
 	static struct cma_region regions[] = {
@@ -2065,11 +2013,9 @@ static void __init exynos_reserve_mem(void)
 		"s5p-mixer=tv;"
 		"exynos5-fimc-is=fimc_is;";
 
-	cma_set_defaults(regions, map);
-
-	exynos_cma_region_reserve(regions, NULL);
+	s5p_cma_region_reserve(regions, NULL, 0, map);
 }
-#else /* !CONFIG_S5P_MEM_CMA */
+#else /* !CONFIG_CMA*/
 static inline void exynos_reserve_mem(void)
 {
 }
@@ -2605,15 +2551,18 @@ static void __init smdk5250_machine_init(void)
 #ifdef CONFIG_EXYNOS_C2C
 static void __init exynos_c2c_reserve(void)
 {
-	static struct cma_region region = {
+	static struct cma_region regions[] = {
+		{
 			.name = "c2c_shdmem",
 			.size = 64 * SZ_1M,
 			{ .alignment	= 64 * SZ_1M },
 			.start = C2C_SHAREDMEM_BASE
+		}, {
+			.size = 0,
+		}
 	};
 
-	BUG_ON(cma_early_region_register(&region));
-	BUG_ON(cma_early_region_reserve(&region));
+	s5p_cma_region_reserve(regions, NULL, 0, NULL);
 }
 #endif
 
