@@ -35,11 +35,6 @@ enum {
 
 struct mmc_data;
 
-struct dw_mci_next {
-	unsigned int	sg_len;
-	s32		cookie;
-};
-
 /**
  * struct dw_mci - MMC controller state shared between all slots
  * @lock: Spinlock protecting the queue and associated data.
@@ -169,7 +164,6 @@ struct dw_mci {
 	u32			quirks;
 
 	struct regulator	*vmmc;	/* Power regulator */
-	struct dw_mci_next	next_data;
 };
 
 /* DMA ops for Internal/External DMAC interface */
