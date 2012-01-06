@@ -18,6 +18,7 @@
 #include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <linux/io.h>
+#include <linux/delay.h>
 
 #include <asm/cacheflush.h>
 
@@ -262,7 +263,8 @@ static int exynos5_pm_suspend(void)
 
 static void exynos5_pm_resume(void)
 {
-	unsigned long tmp;
+	unsigned long tmp, srctmp;
+	u32 timeout;
 
 	/* If PMU failed while entering sleep mode, WFI will be
 	 * ignored by PMU and then exiting cpu_do_idle().
@@ -279,7 +281,49 @@ static void exynos5_pm_resume(void)
 	}
 
 	if (isp_pwr_off) {
+		srctmp = __raw_readl(EXYNOS5_CLKSRC_TOP3);
+		/*
+		 * To ISP power domain off,
+		 * first, ISP_ARM power domain be off.
+		 */
+		if (!(__raw_readl(EXYNOS5_ISP_ARM_STATUS) & 0x1)) {
+			/* Disable ISP_ARM */
+			timeout = __raw_readl(EXYNOS5_ISP_ARM_OPTION);
+			timeout &= ~EXYNOS5_ISP_ARM_ENABLE;
+			__raw_writel(timeout, EXYNOS5_ISP_ARM_OPTION);
+
+			/* ISP_ARM power off */
+			__raw_writel(0x0, EXYNOS5_ISP_ARM_CONFIGURATION);
+
+			timeout = 1000;
+
+			while (__raw_readl(EXYNOS5_ISP_ARM_STATUS) & 0x1) {
+				if (timeout == 0) {
+					printk(KERN_ERR "ISP_ARM power domain can not off\n");
+					return;
+				}
+				timeout--;
+				udelay(1);
+			}
+			/* CMU_RESET_ISP_ARM off */
+			__raw_writel(0x0, EXYNOS5_CMU_RESET_ISP_SYS_PWR_REG);
+		}
+
 		__raw_writel(0x0, EXYNOS5_ISP_CONFIGURATION);
+
+		/* Wait max 1ms */
+		timeout = 1000;
+		while (__raw_readl(EXYNOS5_ISP_CONFIGURATION + 0x4) & S5P_INT_LOCAL_PWR_EN) {
+			if (timeout == 0) {
+				printk(KERN_ERR "Power domain ISP disable failed.\n");
+				return;
+			}
+			timeout--;
+			udelay(1);
+		}
+
+		__raw_writel(srctmp, EXYNOS5_CLKSRC_TOP3);
+
 		isp_pwr_off = false;
 	}
 

@@ -80,7 +80,13 @@ int exynos_pd_enable(struct device *dev)
 int exynos_pd_disable(struct device *dev)
 {
 	struct samsung_pd_info *pdata =  dev->platform_data;
+	struct exynos_pd_data *data = (struct exynos_pd_data *) pdata->data;
 	u32 timeout;
+	u32 tmp = 0;
+
+	/*  save clock source register */
+	if (data->clksrc_base)
+		tmp = __raw_readl(data->clksrc_base);
 
 	/*
 	 * To ISP power domain off,
@@ -126,5 +132,8 @@ int exynos_pd_disable(struct device *dev)
 		udelay(1);
 	}
 
+	/* restore clock source register */
+	if (data->clksrc_base)
+		__raw_writel(tmp, data->clksrc_base);
 	return 0;
 }

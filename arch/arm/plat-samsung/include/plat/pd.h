@@ -35,6 +35,7 @@ enum exynos_pd_block {
 
 struct exynos_pd_data {
 	void __iomem *clk_base;
+	void __iomem *clksrc_base;
 	void __iomem *read_base;
 	unsigned long read_phy_addr;
 };

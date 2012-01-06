@@ -32,6 +32,7 @@ struct platform_device exynos5_device_pd[] = {
 				.base		= EXYNOS5_MFC_CONFIGURATION,
 				.data		= &(struct exynos_pd_data) {
 					.clk_base	= EXYNOS5_CLKGATE_IP_MFC,
+					.clksrc_base	= EXYNOS5_CLKSRC_TOP3,
 				},
 			},
 		},
@@ -47,6 +48,7 @@ struct platform_device exynos5_device_pd[] = {
 				.base		= EXYNOS5_G3D_CONFIGURATION,
 				.data		= &(struct exynos_pd_data) {
 					.clk_base	= EXYNOS5_CLKGATE_IP_G3D,
+					.clksrc_base	= EXYNOS5_CLKSRC_TOP3,
 				},
 			},
 		},
@@ -62,6 +64,7 @@ struct platform_device exynos5_device_pd[] = {
 				.base		= EXYNOS5_GPS_CONFIGURATION,
 				.data		= &(struct exynos_pd_data) {
 					.clk_base	= EXYNOS5_CLKGATE_IP_GPS,
+					.clksrc_base	= EXYNOS5_CLKSRC_TOP3,
 				},
 			},
 		},
@@ -77,6 +80,7 @@ struct platform_device exynos5_device_pd[] = {
 				.base		= EXYNOS5_ISP_CONFIGURATION,
 				.data		= &(struct exynos_pd_data) {
 					.clk_base	= NULL,
+					.clksrc_base	= EXYNOS5_CLKSRC_TOP3,
 				},
 			},
 		},
@@ -92,6 +96,7 @@ struct platform_device exynos5_device_pd[] = {
 				.base		= EXYNOS5_GSCL_CONFIGURATION,
 				.data		= &(struct exynos_pd_data) {
 					.clk_base	= EXYNOS5_CLKGATE_IP_GSCL,
+					.clksrc_base	= EXYNOS5_CLKSRC_TOP3,
 				},
 			},
 		},
@@ -107,6 +112,7 @@ struct platform_device exynos5_device_pd[] = {
 				.base		= EXYNOS5_DISP1_CONFIGURATION,
 				.data		= &(struct exynos_pd_data) {
 					.clk_base	= EXYNOS5_CLKGATE_IP_DISP1,
+					.clksrc_base	= EXYNOS5_CLKSRC_TOP3,
 				},
 			},
 		},
