@@ -5,7 +5,9 @@
 #
 # Licensed under GPLv2
 
+ifneq ($(CONFIG_CMA),y)
 obj-y				:= reserve_mem-exynos4.o
+endif
 obj-m				:=
 obj-n				:=
 obj-				:=

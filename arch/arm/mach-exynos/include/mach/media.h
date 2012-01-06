@@ -13,6 +13,7 @@
 #ifndef _EXYNOS4_MEDIA_H
 #define _EXYNOS4_MEDIA_H
 
+#ifdef CONFIG_CMA
 #define S5P_MDEV_FIMC0		0
 #define S5P_MDEV_FIMC1		1
 #define S5P_MDEV_FIMC2		2
@@ -27,4 +28,5 @@
 #define S5P_MDEV_PMEM_GPU1	10
 
 #define S5P_RANGE_MFC		SZ_256M
+#endif /* CONFIG_CMA */
 #endif
