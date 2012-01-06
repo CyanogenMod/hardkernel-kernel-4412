@@ -243,7 +243,6 @@ static struct plat_lcd_data smdk5250_mipi_lcd_data = {
 
 static struct platform_device smdk5250_mipi_lcd = {
 	.name			= "platform-lcd",
-	.dev.parent		= &s5p_device_fimd1.dev,
 	.dev.platform_data	= &smdk5250_mipi_lcd_data,
 };
 
@@ -360,7 +359,6 @@ static struct plat_lcd_data smdk5250_mipi_lcd_data = {
 
 static struct platform_device smdk5250_mipi_lcd = {
 	.name			= "platform-lcd",
-	.dev.parent		= &s5p_device_fimd1.dev,
 	.dev.platform_data	= &smdk5250_mipi_lcd_data,
 };
 
@@ -1699,12 +1697,10 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&exynos5_device_pd[PD_DISP1],
 #ifdef CONFIG_FB_S3C
 #ifdef CONFIG_FB_MIPI_DSIM
+	&smdk5250_mipi_lcd,
 	&s5p_device_mipi_dsim,
 #endif
 	&s5p_device_fimd1,
-#ifdef CONFIG_FB_MIPI_DSIM
-	&smdk5250_mipi_lcd,
-#endif
 #ifdef CONFIG_S5P_DP
 	&s5p_device_dp,
 	&smdk5250_dp_lcd,
