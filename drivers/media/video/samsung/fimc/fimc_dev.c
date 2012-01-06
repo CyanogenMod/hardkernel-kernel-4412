@@ -818,7 +818,7 @@ int fimc_mmap_out_src(struct file *filp, struct vm_area_struct *vma)
 	}
 
 	pri_data = (ctrl->id * 0x100) + (ctx_id * 0x10) + idx;
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	vma->vm_flags |= VM_RESERVED;
 	vma->vm_ops = &fimc_mmap_ops;
 	vma->vm_private_data = (void *)pri_data;
@@ -855,7 +855,7 @@ int fimc_mmap_out_dst(struct file *filp, struct vm_area_struct *vma, u32 idx)
 
 	size = vma->vm_end - vma->vm_start;
 
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	vma->vm_flags |= VM_RESERVED;
 
 	if (ctrl->out->ctx[ctx_id].dst[idx].base[0])
@@ -896,7 +896,7 @@ static inline int fimc_mmap_cap(struct file *filp, struct vm_area_struct *vma)
 	u32 pfn, idx = vma->vm_pgoff;
 
 	if (!ctrl->cap->cacheable)
-		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	vma->vm_flags |= VM_RESERVED;
 
