@@ -285,6 +285,9 @@ void fimc_is_param_err_checker(struct fimc_is_dev *dev)
 
 void fimc_is_print_err_number(u32 num_err)
 {
+	if ((num_err & IS_ERROR_TIME_OUT_FLAG))
+		printk(KERN_ERR "IS_ERROR_TIME_OUT !!\n");
+
 	switch (num_err) {
 	/* General */
 	case IS_ERROR_INVALID_PARAMETER:
@@ -313,9 +316,6 @@ void fimc_is_print_err_number(u32 num_err)
 		break;
 	case IS_ERROR_INVALID_PATH:
 		printk(KERN_ERR "IS_ERROR_INVALID_PATH !!\n");
-		break;
-	case IS_ERROR_TIME_OUT:
-		printk(KERN_ERR "IS_ERROR_TIME_OUT !!\n");
 		break;
 	case IS_ERROR_OPEN_SENSOR_FAIL:
 		printk(KERN_ERR "IS_ERROR_OPEN_SENSOR_FAIL !!\n");

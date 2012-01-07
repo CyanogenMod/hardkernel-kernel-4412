@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 116  /* IS REGION VERSION 1.16 */
+#define IS_REGION_VER 117  /* IS REGION VERSION 1.17 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -927,7 +927,8 @@ enum isp_flash_error {
 /* --------------------------  AWB  ------------------------------------ */
 enum isp_awb_command {
 	ISP_AWB_COMMAND_AUTO		= 0,
-	ISP_AWB_COMMAND_ILLUMINATION	= 1
+	ISP_AWB_COMMAND_ILLUMINATION	= 1,
+	ISP_AWB_COMMAND_MANUAL		= 2
 };
 
 enum isp_awb_illumination {
@@ -1593,7 +1594,8 @@ struct is_debug_frame_descriptor {
 	u32	dummy0;
 };
 
-#define MAX_FRAMEDESCRIPTOR_CONTEXT_NUM	(30*10)	/* 10 sec */
+#define MAX_FRAMEDESCRIPTOR_CONTEXT_NUM	(30*20)	/* 600 frames */
+
 struct is_share_region {
 	u32	frame_time;
 	u32	exposure_time;
@@ -1615,6 +1617,7 @@ struct is_share_region {
 	u32	frame_descp_onoff_control;
 	u32	frame_descp_update_done;
 	u32	frame_descp_idx;
+	u32	frame_descp_max_idx;
 	struct is_debug_frame_descriptor
 		dbg_frame_descp_ctx[MAX_FRAMEDESCRIPTOR_CONTEXT_NUM];
 

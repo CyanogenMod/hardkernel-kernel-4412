@@ -96,7 +96,7 @@ static const struct isp_param init_val_isp_preview_still = {
 		.err = 0,
 	},
 	.aa = {
-		.cmd = ISP_AA_COMMAND_STOP,
+		.cmd = ISP_AA_COMMAND_START,
 		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
 						ISP_AA_TARGET_AWB,
 		.mode = 0,
@@ -1101,7 +1101,6 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 			udelay(1);
 		}
 		/* 4. ISP Power down mode (LOWPWR) */
-		writel(0x0, PMUREG_CMU_RESET_ISP_SYS_PWR_REG);
 	}
 }
 
@@ -1196,6 +1195,7 @@ void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on)
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_STREAM_ON, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
+		writel(1, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	} else {
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);

@@ -2003,6 +2003,68 @@ static int fimc_is_v4l2_af_start_stop(struct fimc_is_dev *dev, int value)
 	return 0;
 }
 
+static int fimc_is_v4l2_ae_awb_lockunlock(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case AE_UNLOCK_AWB_UNLOCK:
+		IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_START);
+		IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AE |
+						ISP_AA_TARGET_AWB);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case AE_LOCK_AWB_UNLOCK:
+		IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_STOP);
+		IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AE);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_START);
+		IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AWB);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case AE_UNLOCK_AWB_LOCK:
+		IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_START);
+		IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AE);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_STOP);
+		IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AWB);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case AE_LOCK_AWB_LOCK:
+		IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_STOP);
+		IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AE |
+						ISP_AA_TARGET_AWB);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	default:
+		break;
+	}
+	return ret;
+}
+
 static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	int ret = 0;
@@ -2192,78 +2254,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	/* AWB, AE Lock/Unlock */
 	case V4L2_CID_CAMERA_AEAWB_LOCK_UNLOCK:
-		switch (ctrl->value) {
-		case AE_UNLOCK_AWB_UNLOCK:
-			IS_ISP_SET_PARAM_AA_CMD(dev,
-				ISP_AA_COMMAND_START);
-			IS_ISP_SET_PARAM_AA_TARGET(dev,
-				ISP_AA_TARGET_AE | ISP_AA_TARGET_AWB);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean(
-				(void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case AE_LOCK_AWB_UNLOCK:
-			IS_ISP_SET_PARAM_AA_CMD(dev,
-				ISP_AA_COMMAND_STOP);
-			IS_ISP_SET_PARAM_AA_TARGET(dev,
-				ISP_AA_TARGET_AE);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean(
-				(void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			IS_ISP_SET_PARAM_AA_CMD(dev,
-				ISP_AA_COMMAND_START);
-			IS_ISP_SET_PARAM_AA_TARGET(dev,
-				ISP_AA_TARGET_AWB);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean(
-				(void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case AE_UNLOCK_AWB_LOCK:
-			IS_ISP_SET_PARAM_AA_CMD(dev,
-				ISP_AA_COMMAND_START);
-			IS_ISP_SET_PARAM_AA_TARGET(dev,
-				ISP_AA_TARGET_AE);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean(
-				(void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			IS_ISP_SET_PARAM_AA_CMD(dev,
-				ISP_AA_COMMAND_STOP);
-			IS_ISP_SET_PARAM_AA_TARGET(dev,
-				ISP_AA_TARGET_AWB);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean(
-				(void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case AE_LOCK_AWB_LOCK:
-			IS_ISP_SET_PARAM_AA_CMD(dev,
-				ISP_AA_COMMAND_STOP);
-			IS_ISP_SET_PARAM_AA_TARGET(dev,
-				ISP_AA_TARGET_AE | ISP_AA_TARGET_AWB);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean(
-				(void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		default:
-			break;
-		}
+		fimc_is_v4l2_ae_awb_lockunlock(dev, ctrl->value);
 		break;
 	/* FLASH */
 	case V4L2_CID_CAMERA_FLASH_MODE:
@@ -4386,7 +4377,8 @@ static int fimc_is_s_stream(struct v4l2_subdev *sd, int enable)
 				return -EBUSY;
 			}
 		} else {
-			dev_err(&dev->pdev->dev, "ON : not stream-on condition\n");
+			dev_err(&dev->pdev->dev,
+					"ON : not stream-on condition\n");
 			return -EINVAL;
 		}
 	} else {
