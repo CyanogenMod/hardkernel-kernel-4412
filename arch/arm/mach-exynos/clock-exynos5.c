@@ -1386,7 +1386,7 @@ struct clksrc_sources exynos5_clkset_group = {
 /* Possible clock sources for aclk_266_gscl_sub Mux */
 static struct clk *clk_src_gscl_266_list[] = {
 	[0] = &clk_ext_xtal_mux,
-	[1] = &exynos5_clk_aclk_266,
+	[1] = &exynos5_clk_dout_aclk_266.clk,
 };
 
 static struct clksrc_sources clk_src_gscl_266 = {
