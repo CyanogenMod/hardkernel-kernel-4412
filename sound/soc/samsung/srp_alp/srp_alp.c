@@ -902,9 +902,13 @@ static int srp_prepare_fw_buff(struct device *dev)
 	}
 #endif
 
-	srp.fw_info.vliw_size = srp_fw_vliw_len;
-	srp.fw_info.cga_size = srp_fw_cga_len;
-	srp.fw_info.data_size = srp_fw_data_len;
+	srp.fw_info.vliw_size = sizeof(srp_fw_vliw);
+	srp.fw_info.cga_size = sizeof(srp_fw_cga);
+	srp.fw_info.data_size = sizeof(srp_fw_data);
+
+	srp_info("VLIW_SIZE[%lu]Bytes\n", srp.fw_info.vliw_size);
+	srp_info("CGA_SIZE[%lu]Bytes\n", srp.fw_info.cga_size);
+	srp_info("DATA_SIZE[%lu]Bytes\n", srp.fw_info.data_size);
 
 	/* Clear Firmware memory & IBUF */
 	memset(srp.fw_info.vliw, 0, VLIW_SIZE);
