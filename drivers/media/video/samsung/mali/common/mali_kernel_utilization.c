@@ -13,114 +13,133 @@
 #include "mali_platform.h"
 
 /* Define how often to calculate and report GPU utilization, in milliseconds */
-#define SEND_GPU_UTILIZATION_TIMEOUT 1000
-#define CHECK_GPU_ACTIVITY_TIMEOUT 5
+int util_interval = 1000;
 
-/* LOAD normalisation */
-#define LOAD_NORMALISATION_FACTOR 2
-
-static _mali_osk_timer_t *send_utilization_timer;
-static _mali_osk_timer_t *sampling_timer;
+static _mali_osk_lock_t *time_data_lock;
 
 static _mali_osk_atomic_t num_running_cores;
 
-static mali_bool utilization_timer_running; /*  MALI_FALSE */
-static mali_bool sampling_timer_running; /* MALI_FALSE */
+static u64 period_start_time = 0;
+static u64 work_start_time = 0;
+static u64 accumulated_work_time = 0;
 
-static unsigned int active_flag;
-static unsigned int flag_total;
+static _mali_osk_timer_t *utilization_timer = NULL;
+static mali_bool timer_running = MALI_FALSE;
 
-static void check_GPU_core_activity_status(void *arg)
+
+static void calculate_gpu_utilization(void *arg)
 {
-	flag_total += active_flag;
+	u64 time_now;
+	u64 time_period;
+	u32 leading_zeroes;
+	u32 shift_val;
+	u32 work_normalized;
+	u32 period_normalized;
+	u32 utilization;
 
-	sampling_timer_running = MALI_FALSE;
+	_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
-	/* MALI_PRINT(("#",flag_total)); */
-	if (active_flag) {
-		_mali_osk_timer_add(sampling_timer,
-		_mali_osk_time_mstoticks(CHECK_GPU_ACTIVITY_TIMEOUT));
-		sampling_timer_running = MALI_TRUE;
-	}
-}
+	if (accumulated_work_time == 0 && work_start_time == 0)	{
+		/* Don't reschedule timer, this will be started if new work arrives */
+		timer_running = MALI_FALSE;
 
-static void send_gpu_utilization_info(void *arg)
-{
-/* MALI_PRINT(("flag = %u\n", flag_total)); */
+		_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
-	if (flag_total == 0) {
-		/* Don't reschedule timer,
-			this will be started if new work arrives */
-		utilization_timer_running = MALI_FALSE;
-		/* No work done for this period, report zero usage */
+		/* No work done for this period. report zero usage */
 		mali_gpu_utilization_handler(0);
 
 		return;
 	}
 
-	_mali_osk_timer_add(send_utilization_timer,
-			_mali_osk_time_mstoticks(SEND_GPU_UTILIZATION_TIMEOUT));
-	utilization_timer_running = MALI_TRUE;
+	time_now = _mali_osk_time_get_ns();
+	time_period = time_now - period_start_time;
 
-	mali_gpu_utilization_handler(flag_total * LOAD_NORMALISATION_FACTOR);
-	flag_total = 0;
-}
-
-/* The timers need to deleted when going to suspend state.
- * When the GPU is started after the resume the timers are added in
- * the mali_utilization_core_start function.
-*/
-void mali_utilization_suspend(void)
-{
-/* MALI_PRINT(("mali_util_suspend"));*/
-	if (NULL != send_utilization_timer) {
-		_mali_osk_timer_del(send_utilization_timer);
-		utilization_timer_running = MALI_FALSE;
+	/* If we are currently busy, update working period up to now */
+	if (work_start_time != 0) {
+		accumulated_work_time += (time_now - work_start_time);
+		work_start_time = time_now;
 	}
 
-	if (NULL != sampling_timer) {
-		_mali_osk_timer_del(sampling_timer);
-		sampling_timer_running = MALI_FALSE;
+	/*
+	 * We have two 64-bit values, a dividend and a divisor.
+	 * To avoid dependencies to a 64-bit divider, we shift down the two values
+	 * equally first.
+	 * We shift the dividend up and possibly the divisor down, making the result X in 256.
+	 */
+
+	/* Shift the 64-bit values down so they fit inside a 32-bit integer */
+	leading_zeroes = _mali_osk_clz((u32)(time_period >> 32));
+	shift_val = 32 - leading_zeroes;
+	work_normalized = (u32)(accumulated_work_time >> shift_val);
+	period_normalized = (u32)(time_period >> shift_val);
+
+	/*
+	 * Now, we should report the usage in parts of 256
+	 * this means we must shift up the dividend or down the divisor by 8
+	 * (we could do a combination, but we just use one for simplicity.
+	 * but the end result should be good enough anyway)
+	 */
+	if (period_normalized > 0x00FFFFFF) {
+		/* The divisor is so big that it is safe to shift it down */
+		period_normalized >>= 8;
+	} else {
+		/* The divisor is so smll that we can shift up the dividend, without loosing any data.
+		 * (dividend is always smaller than the divisor)
+		 */
+		work_normalized <<= 8;
 	}
+
+	utilization = work_normalized / period_normalized;
+
+	accumulated_work_time = 0;
+	period_start_time = time_now; /* starting a new period */
+
+	_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
+
+	_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(util_interval));
+
+	mali_gpu_utilization_handler(utilization);
 }
 
 _mali_osk_errcode_t mali_utilization_init(void)
 {
+	time_data_lock = _mali_osk_lock_init( _MALI_OSK_LOCKFLAG_SPINLOCK_IRQ|_MALI_OSK_LOCKFLAG_NONINTERRUPTABLE, 0, 0 );
+	if (NULL == time_data_lock)
+		return _MALI_OSK_ERR_FAULT;
+
 	_mali_osk_atomic_init(&num_running_cores, 0);
 
-	send_utilization_timer = _mali_osk_timer_init();
-	if (NULL == send_utilization_timer)
+	utilization_timer = _mali_osk_timer_init();
+	if (NULL == utilization_timer) {
+		_mali_osk_lock_term(time_data_lock);
 		return _MALI_OSK_ERR_FAULT;
-	_mali_osk_timer_setcallback(send_utilization_timer,
-			send_gpu_utilization_info, NULL);
+	}
 
-	sampling_timer = _mali_osk_timer_init();
-	if (NULL == sampling_timer)
-		return _MALI_OSK_ERR_FAULT;
+	_mali_osk_timer_setcallback(utilization_timer, calculate_gpu_utilization, NULL);
 
-	_mali_osk_timer_setcallback(sampling_timer,
-			check_GPU_core_activity_status, NULL);
 	return _MALI_OSK_ERR_OK;
+}
+
+void mali_utilization_suspend(void)
+{
+	if (NULL != utilization_timer) {
+		_mali_osk_timer_del(utilization_timer);
+		timer_running = MALI_FALSE;
+	}
 }
 
 void mali_utilization_term(void)
 {
-	utilization_timer_running = MALI_FALSE;
-	sampling_timer_running  = MALI_FALSE;
-
-	if (NULL != send_utilization_timer) {
-		_mali_osk_timer_del(send_utilization_timer);
-		_mali_osk_timer_term(send_utilization_timer);
-		send_utilization_timer = NULL;
-	}
-
-	if (NULL != sampling_timer) {
-		_mali_osk_timer_del(sampling_timer);
-		_mali_osk_timer_term(sampling_timer);
-		sampling_timer = NULL;
+	if (NULL != utilization_timer) {
+		_mali_osk_timer_del(utilization_timer);
+		timer_running = MALI_FALSE;
+		_mali_osk_timer_term(utilization_timer);
+		utilization_timer = NULL;
 	}
 
 	_mali_osk_atomic_term(&num_running_cores);
+
+	_mali_osk_lock_term(time_data_lock);
 }
 
 void mali_utilization_core_start(void)
@@ -131,23 +150,37 @@ void mali_utilization_core_start(void)
 		 * we now consider the entire GPU for being busy
 		 */
 
-		if (utilization_timer_running == MALI_FALSE) {
-			_mali_osk_timer_add(send_utilization_timer,
-			_mali_osk_time_mstoticks(SEND_GPU_UTILIZATION_TIMEOUT));
-			utilization_timer_running = MALI_TRUE;
-		}
-		if (sampling_timer_running == MALI_FALSE) {
-			_mali_osk_timer_add(sampling_timer,
-			_mali_osk_time_mstoticks(CHECK_GPU_ACTIVITY_TIMEOUT));
-			sampling_timer_running = MALI_TRUE;
-		}
+		_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
-		active_flag = 1;
+		work_start_time = _mali_osk_time_get_ns();
+
+		if (timer_running != MALI_TRUE) {
+			timer_running = MALI_TRUE;
+			period_start_time = work_start_time; /* starting a new period */
+
+			_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
+
+			_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(util_interval));
+		} else {
+			_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
+		}
 	}
 }
 
 void mali_utilization_core_end(void)
 {
-	if (_mali_osk_atomic_dec_return(&num_running_cores) == 0)
-		active_flag = 0;
+	if (_mali_osk_atomic_dec_return(&num_running_cores) == 0) {
+		/*
+		 * No more cores are working, so accumulate the time we was busy.
+		 */
+		 u64 time_now;
+
+		_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
+
+		time_now = _mali_osk_time_get_ns();
+		accumulated_work_time += (time_now = work_start_time);
+		work_start_time = 0;
+
+		_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
+	}
 }

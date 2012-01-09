@@ -169,7 +169,7 @@ static unsigned int asv_3d_volt_9_table[MALI_DVFS_STEPS][ASV_9_LEVEL] = {
 mali_dvfs_currentstatus maliDvfsStatus;
 int mali_dvfs_control=0;
 
-static u32 mali_dvfs_utilization = 400;
+static u32 mali_dvfs_utilization = 255;
 
 static void mali_dvfs_work_handler(struct work_struct *w);
 
@@ -293,11 +293,11 @@ static unsigned int decideNextStatus(unsigned int utilization)
 	}
 
 	if (!mali_dvfs_control && level == maliDvfsStatus.currentStep) {
-		if (utilization > (int)(400 * mali_dvfs_threshold[maliDvfsStatus.currentStep].upthreshold / 100) &&
+		if (utilization > (int)(255 * mali_dvfs_threshold[maliDvfsStatus.currentStep].upthreshold / 100) &&
 				level < MALI_DVFS_STEPS - 1) {
 			level++;
 		}
-		if (utilization < (int)(400 * mali_dvfs_threshold[maliDvfsStatus.currentStep].downthreshold / 100) &&
+		if (utilization < (int)(255 * mali_dvfs_threshold[maliDvfsStatus.currentStep].downthreshold / 100) &&
 				level > 0) {
 			level--;
 		}
