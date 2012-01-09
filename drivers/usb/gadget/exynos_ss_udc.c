@@ -282,7 +282,7 @@ static void exynos_ss_udc_run_stop(struct exynos_ss_udc *udc, int is_on)
 	}
 
 	if (res < 0)
-		dev_err(udc->dev, "Failed %sConnect by software\n",
+		dev_dbg(udc->dev, "Failed %sConnect by software\n",
 				  is_on ? "" : "dis-");
 }
 
@@ -2233,6 +2233,7 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 
 	device_del(&udc->gadget.dev);
 
+	exynos_ss_udc_run_stop(udc, 0);
 	dev_info(udc->dev, "unregistered gadget driver '%s'\n",
 		 driver->driver.name);
 
