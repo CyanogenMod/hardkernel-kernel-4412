@@ -2582,6 +2582,7 @@ static void __init smdk5250_machine_init(void)
 	smdk5250_smsc911x_init();
 #ifdef CONFIG_BUSFREQ_OPP
 	dev_add(&busfreq, &exynos5_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_CPU], &exynos5_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_DDR_C], &exynos5_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_DDR_R1], &exynos5_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_DDR_L], &exynos5_busfreq.dev);

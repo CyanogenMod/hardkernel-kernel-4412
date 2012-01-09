@@ -513,16 +513,91 @@ unsigned int exynos5250_get_int_volt(unsigned long index)
 struct opp *exynos5250_monitor(struct busfreq_data *data)
 {
 	struct opp *opp = data->curr_opp;
+	int i;
+	unsigned int cpu_load_average = 0;
+	unsigned int dmc_c_load_average = 0;
+	unsigned int dmc_l_load_average = 0;
+	unsigned int dmc_r1_load_average = 0;
+	unsigned int dmc_load_average;
+	unsigned long cpufreq = 0;
 	unsigned long lockfreq;
-	unsigned long newfreq = opp_get_freq(data->max_opp);
+	unsigned long dmcfreq;
+	unsigned long newfreq;
+	unsigned long currfreq = opp_get_freq(data->curr_opp) / 1000;
+	unsigned long maxfreq = opp_get_freq(data->max_opp) / 1000;
+	unsigned long cpu_load;
+	unsigned long dmc_load;
+	unsigned long dmc_c_load;
+	unsigned long dmc_r1_load;
+	unsigned long dmc_l_load;
 
 	ppmu_update(data->dev, 3);
 
+	/* Convert from base xxx to base maxfreq */
+	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * currfreq, maxfreq);
+	dmc_c_load = div64_u64(ppmu_load[PPMU_DDR_C] * currfreq, maxfreq);
+	dmc_r1_load = div64_u64(ppmu_load[PPMU_DDR_R1] * currfreq, maxfreq);
+	dmc_l_load = div64_u64(ppmu_load[PPMU_DDR_L] * currfreq, maxfreq);
+
+	data->load_history[PPMU_CPU][data->index] = cpu_load;
+	data->load_history[PPMU_DDR_C][data->index] = dmc_c_load;
+	data->load_history[PPMU_DDR_R1][data->index] = dmc_r1_load;
+	data->load_history[PPMU_DDR_L][data->index++] = dmc_l_load;
+
+	if (data->index >= LOAD_HISTORY_SIZE)
+		data->index = 0;
+
+	for (i = 0; i < LOAD_HISTORY_SIZE; i++) {
+		cpu_load_average += data->load_history[PPMU_CPU][i];
+		dmc_c_load_average += data->load_history[PPMU_DDR_C][i];
+		dmc_r1_load_average += data->load_history[PPMU_DDR_R1][i];
+		dmc_l_load_average += data->load_history[PPMU_DDR_L][i];
+	}
+
+	/* Calculate average Load */
+	cpu_load_average /= LOAD_HISTORY_SIZE;
+	dmc_c_load_average /= LOAD_HISTORY_SIZE;
+	dmc_r1_load_average /= LOAD_HISTORY_SIZE;
+	dmc_l_load_average /= LOAD_HISTORY_SIZE;
+
+	if (dmc_c_load >= dmc_r1_load) {
+		dmc_load = dmc_c_load;
+		dmc_load_average = dmc_c_load_average;
+	} else {
+		dmc_load = dmc_r1_load;
+		dmc_load_average = dmc_r1_load_average;
+	}
+
+	if (dmc_l_load >= dmc_load) {
+		dmc_load = dmc_l_load;
+		dmc_load_average = dmc_l_load_average;
+	}
+
+	if (dmc_load >= DMC_MAX_THRESHOLD) {
+		dmcfreq = opp_get_freq(data->max_opp);
+	} else if (dmc_load < IDLE_THRESHOLD) {
+		if (dmc_load_average < IDLE_THRESHOLD)
+			opp = step_down(data, 1);
+		else
+			opp = data->curr_opp;
+		dmcfreq = opp_get_freq(opp);
+	} else {
+		if (dmc_load < dmc_load_average) {
+			dmc_load = dmc_load_average;
+			if (dmc_load >= DMC_MAX_THRESHOLD)
+				dmc_load = DMC_MAX_THRESHOLD;
+		}
+		dmcfreq = div64_u64(maxfreq * dmc_load * 1000, DMC_MAX_THRESHOLD);
+	}
+
 	lockfreq = dev_max_freq(data->dev);
 
-	newfreq = max(lockfreq, newfreq);
+	newfreq = max3(lockfreq, dmcfreq, cpufreq);
 
 	opp = opp_find_freq_ceil(data->dev, &newfreq);
+
+	/* Temporary use max freq */
+	opp = data->max_opp;
 
 	return opp;
 }
