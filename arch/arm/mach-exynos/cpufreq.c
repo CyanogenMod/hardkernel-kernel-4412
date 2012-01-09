@@ -36,6 +36,7 @@ static struct regulator *arm_regulator;
 static struct cpufreq_freqs freqs;
 
 static bool exynos_cpufreq_disable;
+static bool exynos_cpufreq_lock_disable;
 static bool exynos_cpufreq_init_done;
 static DEFINE_MUTEX(set_freq_lock);
 static DEFINE_MUTEX(set_cpu_freq_lock);
@@ -113,7 +114,7 @@ static int exynos_target(struct cpufreq_policy *policy,
 	}
 
 	/* Need to set performance limitation */
-	if (index > g_cpufreq_lock_level)
+	if (!exynos_cpufreq_lock_disable && (index > g_cpufreq_lock_level))
 		index = g_cpufreq_lock_level;
 
 	if (index < g_cpufreq_limit_level)
@@ -230,6 +231,12 @@ int exynos_cpufreq_lock(unsigned int nId,
 
 	if ((g_cpufreq_lock_level < g_cpufreq_limit_level)
 				&& (nId != DVFS_LOCK_ID_PM))
+		return 0;
+
+	/* Do not setting cpufreq lock frequency
+	 * because current governor doesn't support dvfs level lock
+	 * except DVFS_LOCK_ID_PM */
+	if (exynos_cpufreq_lock_disable && (nId != DVFS_LOCK_ID_PM))
 		return 0;
 
 	/* If current frequency is lower than requested freq,
@@ -458,6 +465,10 @@ static int exynos_cpufreq_notifier_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
 	int ret = 0;
+	unsigned int safe_arm_volt, arm_volt;
+	unsigned int *volt_table;
+
+	volt_table = exynos_info->volt_table;
 
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
@@ -474,7 +485,29 @@ static int exynos_cpufreq_notifier_event(struct notifier_block *this,
 	case PM_POST_SUSPEND:
 		pr_debug("PM_POST_SUSPEND for CPUFREQ: %d\n", ret);
 		exynos_cpufreq_lock_free(DVFS_LOCK_ID_PM);
+		/* In case of using performance governor,
+		 * max level should be used after sleep and wakeup */
+		if (exynos_cpufreq_lock_disable) {
+			mutex_lock(&set_freq_lock);
 
+			cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
+
+			/* get the voltage value */
+			safe_arm_volt = exynos_get_safe_armvolt(exynos_info->pm_lock_idx, exynos_info->max_support_idx);
+			if (safe_arm_volt)
+				regulator_set_voltage(arm_regulator, safe_arm_volt,
+					safe_arm_volt + 25000);
+
+			arm_volt = volt_table[exynos_info->max_support_idx];
+			regulator_set_voltage(arm_regulator, arm_volt,
+				arm_volt + 25000);
+
+			exynos_info->set_freq(exynos_info->pm_lock_idx, exynos_info->max_support_idx);
+
+			cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
+
+			mutex_unlock(&set_freq_lock);
+		}
 		exynos_cpufreq_disable = false;
 
 		return NOTIFY_OK;
@@ -485,6 +518,36 @@ static int exynos_cpufreq_notifier_event(struct notifier_block *this,
 static struct notifier_block exynos_cpufreq_notifier = {
 	.notifier_call = exynos_cpufreq_notifier_event,
 };
+
+static int exynos_cpufreq_policy_notifier_call(struct notifier_block *this,
+				unsigned long code, void *data)
+{
+	struct cpufreq_policy *policy = data;
+
+	switch (code) {
+	case CPUFREQ_ADJUST:
+		if ((!strnicmp(policy->governor->name, "powersave", CPUFREQ_NAME_LEN))
+		|| (!strnicmp(policy->governor->name, "performance", CPUFREQ_NAME_LEN))
+		|| (!strnicmp(policy->governor->name, "userspace", CPUFREQ_NAME_LEN))) {
+			printk(KERN_DEBUG "cpufreq governor is changed to %s\n",
+							policy->governor->name);
+			exynos_cpufreq_lock_disable = true;
+		} else
+			exynos_cpufreq_lock_disable = false;
+
+	case CPUFREQ_INCOMPATIBLE:
+	case CPUFREQ_NOTIFY:
+	default:
+		break;
+	}
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block exynos_cpufreq_policy_notifier = {
+	.notifier_call = exynos_cpufreq_policy_notifier_call,
+};
+
 
 static int exynos_cpufreq_cpu_init(struct cpufreq_policy *policy)
 {
@@ -578,6 +641,8 @@ static int __init exynos_cpufreq_init(void)
 
 	register_pm_notifier(&exynos_cpufreq_notifier);
 	register_reboot_notifier(&exynos_cpufreq_reboot_notifier);
+	cpufreq_register_notifier(&exynos_cpufreq_policy_notifier,
+						CPUFREQ_POLICY_NOTIFIER);
 
 	exynos_cpufreq_init_done = true;
 
