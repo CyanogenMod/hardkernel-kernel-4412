@@ -161,7 +161,6 @@ static void exynos_xhci_phy_unset(struct platform_device *pdev)
 static int exynos_xhci_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct exynos_xhci_plat *plat = pdev->dev.platform_data;
 	struct exynos_xhci_hcd	*exynos_xhci;
 	struct usb_hcd		*hcd;
 	struct xhci_hcd		*xhci;
@@ -494,7 +493,6 @@ dealloc_usb2_hcd:
 
 static int __devexit exynos_xhci_remove(struct platform_device *pdev)
 {
-	struct exynos_xhci_plat *pdata = pdev->dev.platform_data;
 	struct exynos_xhci_hcd *exynos_xhci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = exynos_xhci->hcd;
 	struct xhci_hcd *xhci;
