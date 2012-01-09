@@ -30,13 +30,7 @@ void exynos_fimc_is_cfg_gpio(struct platform_device *pdev)
 {
 	int ret;
 	/* 1. UART setting for FIMC-IS */
-	ret = gpio_request(EXYNOS4212_GPM3(4), "GPM3");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM3_4 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM3(4), (0x3<<16));
-	s3c_gpio_setpull(EXYNOS4212_GPM3(4), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM3(4));
-
+	/* GPM3[5] : TXD_UART_ISP */
 	ret = gpio_request(EXYNOS4212_GPM3(5), "GPM3");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPM3_5 ####\n");
@@ -44,13 +38,7 @@ void exynos_fimc_is_cfg_gpio(struct platform_device *pdev)
 	s3c_gpio_setpull(EXYNOS4212_GPM3(5), S3C_GPIO_PULL_NONE);
 	gpio_free(EXYNOS4212_GPM3(5));
 
-	ret = gpio_request(EXYNOS4212_GPM3(6), "GPM3");
-	if (ret)
-		printk(KERN_ERR "#### failed to request GPM3_6 ####\n");
-	s3c_gpio_cfgpin(EXYNOS4212_GPM3(6), (0x3<<24));
-	s3c_gpio_setpull(EXYNOS4212_GPM3(6), S3C_GPIO_PULL_NONE);
-	gpio_free(EXYNOS4212_GPM3(6));
-
+	/* GPM3[7] : RXD_UART_ISP */
 	ret = gpio_request(EXYNOS4212_GPM3(7), "GPM3");
 	if (ret)
 		printk(KERN_ERR "#### failed to request GPM3_7 ####\n");
