@@ -2488,7 +2488,7 @@ static void __init smdk5250_machine_init(void)
 			&exynos5_device_gsc3);
 	exynos5_gsc_set_parent_clock("mout_aclk_300_gscl_mid", "mout_mpll_user");
 	exynos5_gsc_set_parent_clock("mout_aclk_300_gscl", "sclk_vpll");
-	exynos5_gsc_set_parent_clock("aclk_300_gscl", "aclk_300_gscl_sub");
+	exynos5_gsc_set_parent_clock("aclk_300_gscl", "dout_aclk_300_gscl");
 	exynos5_gsc_set_clock_rate("dout_aclk_300_gscl", 310000000);
 #endif
 #ifdef CONFIG_EXYNOS_C2C

@@ -670,17 +670,10 @@ static struct clksrc_clk exynos5_clk_dout_aclk_300_gscl = {
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP1, .shift = 12, .size = 3 },
 };
 
-static struct clksrc_clk  exynos5_clk_aclk_300_gscl_sub = {
-	.clk	= {
-		.name		= "aclk_300_gscl_sub",
-		.parent		= &exynos5_clk_dout_aclk_300_gscl.clk,
-	},
-};
-
 /* Possible clock sources for aclk_300_gscl_sub Mux */
 static struct clk *clk_src_gscl_300_list[] = {
 	[0] = &clk_ext_xtal_mux,
-	[1] = &exynos5_clk_aclk_300_gscl_sub.clk,
+	[1] = &exynos5_clk_dout_aclk_300_gscl.clk,
 };
 
 static struct clksrc_sources clk_src_gscl_300 = {
@@ -1852,7 +1845,6 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_mout_aclk_300_disp1,
 	&exynos5_clk_mout_aclk_300_gscl_mid,
 	&exynos5_clk_mout_aclk_300_gscl,
-	&exynos5_clk_aclk_300_gscl_sub,
 	&exynos5_clk_dout_aclk_300_gscl,
 	&exynos5_clk_aclk_300_gscl,
 	&exynos5_clk_dout_aclk_266,
