@@ -948,7 +948,7 @@ static int exynos5_usb_phy30_exit(struct platform_device *pdev)
 
 int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 {
-	int ret = -EINVAL;
+	int ret = 0;
 
 	if (!strcmp(pdev->name, "s5p-ehci"))
 		clear_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
@@ -956,7 +956,7 @@ int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 		clear_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
 
 	if (usb_phy_control.flags)
-		return 0;
+		return ret;
 
 	ret = exynos_usb_phy_clock_enable(pdev);
 	if (ret)
@@ -972,7 +972,7 @@ int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 
 int s5p_usb_phy_resume(struct platform_device *pdev, int type)
 {
-	int ret = -EINVAL;
+	int ret = 0;
 
 	if (usb_phy_control.flags)
 		goto done;
