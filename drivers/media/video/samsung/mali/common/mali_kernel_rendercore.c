@@ -91,7 +91,7 @@ static void unlock_subsystem(struct mali_core_subsystem * subsys);
 struct mali_kernel_subsystem mali_subsystem_rendercore=
 {
 	rendercore_subsystem_startup,                  /* startup */
-	rendercore_subsystem_terminate,                /* shutdown */
+	NULL, /*rendercore_subsystem_terminate,*/                /* shutdown */
 	NULL,                                          /* load_complete */
 	NULL,                                          /* system_info_fill */
 	NULL,                                          /* session_begin */

@@ -385,7 +385,7 @@ static _MALI_OSK_LIST_HEAD(memory_banks_list);
 struct mali_kernel_subsystem mali_subsystem_memory =
 {
 	mali_memory_core_initialize,                /* startup */
-	mali_memory_core_terminate,                 /* shutdown */
+	NULL, /*mali_memory_core_terminate,*/                 /* shutdown */
     mali_memory_core_load_complete,             /* load_complete */
 	mali_memory_core_system_info_fill,          /* system_info_fill */
     mali_memory_core_session_begin,             /* session_begin */

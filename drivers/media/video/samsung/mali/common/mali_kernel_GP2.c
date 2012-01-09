@@ -145,7 +145,7 @@ static register_address_and_value default_mgmt_regs[] =
 struct mali_kernel_subsystem mali_subsystem_gp2=
 {
 	maligp_subsystem_startup,                   /* startup */
-	maligp_subsystem_terminate,                 /* shutdown */
+	NULL, /*maligp_subsystem_terminate,*/                 /* shutdown */
 #if USING_MMU
 	maligp_subsystem_mmu_connect,               /* load_complete */
 #else

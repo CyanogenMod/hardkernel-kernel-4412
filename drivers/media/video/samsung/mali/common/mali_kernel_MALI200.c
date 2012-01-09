@@ -126,7 +126,7 @@ static int subsystem_mali200_irq_handler_bottom_half(struct mali_core_renderunit
 struct mali_kernel_subsystem mali_subsystem_mali200=
 {
 	mali200_subsystem_startup,                  /* startup */
-	mali200_subsystem_terminate,                /* shutdown */
+	NULL, /*mali200_subsystem_terminate,*/                /* shutdown */
 #if USING_MMU
 	mali200_subsystem_mmu_connect,              /* load_complete */
 #else

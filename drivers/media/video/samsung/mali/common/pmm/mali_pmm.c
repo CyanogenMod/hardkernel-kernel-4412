@@ -76,7 +76,7 @@ u32 malipmm_subsystem_dump_state( char *buf, u32 size );
 struct mali_kernel_subsystem mali_subsystem_pmm=
 {
 	malipmm_kernel_subsystem_start,                     /* startup */
-	malipmm_kernel_subsystem_terminate,                 /* shutdown */
+	NULL, /*malipmm_kernel_subsystem_terminate,*/                 /* shutdown */
 	malipmm_kernel_load_complete,                       /* loaded all subsystems */
 	NULL,
 	NULL,
