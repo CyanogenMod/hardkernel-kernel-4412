@@ -2343,7 +2343,6 @@ static void __init smdk5250_map_io(void)
 static void __init exynos_sysmmu_init(void)
 {
 #ifdef CONFIG_VIDEO_JPEG_V2X
-	ASSIGN_SYSMMU_POWERDOMAIN(jpeg, &exynos5_device_pd[PD_GSCL].dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(jpeg).dev, &s5p_device_jpeg.dev);
 #endif
 #if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
@@ -2582,9 +2581,6 @@ static void __init smdk5250_machine_init(void)
 	exynos_c2c_set_platdata(&smdk5250_c2c_pdata);
 #endif
 #ifdef CONFIG_VIDEO_JPEG_V2X
-#ifdef CONFIG_EXYNOS_DEV_PD
-	s5p_device_jpeg.dev.parent = &exynos5_device_pd[PD_GSCL].dev;
-#endif
 	exynos5_jpeg_setup_clock(&s5p_device_jpeg.dev, 150000000);
 #endif
 
