@@ -74,7 +74,7 @@ unsigned long long exynos4_ppmu_update(struct exynos4_ppmu_hw *ppmu, int ch)
 	if (ch >= NUMBER_OF_COUNTER || ppmu->event[ch] == 0)
 		return 0;
 
-	if (ch == 3)
+	if (ch == 3 && !soc_is_exynos4210())
 		total = (((u64)__raw_readl(ppmu_base + PMCNT_OFFSET(ch)) << 8) |
 				__raw_readl(ppmu_base + PMCNT_OFFSET(ch + 1)));
 	else
