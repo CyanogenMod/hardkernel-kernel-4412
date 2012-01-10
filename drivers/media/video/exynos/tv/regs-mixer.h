@@ -52,7 +52,7 @@
 #define MXR_CM_COEFF_Y			0x0080
 #define MXR_CM_COEFF_CB			0x0084
 #define MXR_CM_COEFF_CR			0x0088
-/* after EXYNOS5210 for video layer transfered from Gscaler */
+/* after EXYNOS5250 for video layer transfered from Gscaler */
 #define MXR_VIDEO_LT			0x0090
 #define MXR_VIDEO_RB			0x0094
 
@@ -61,7 +61,7 @@
 #define MXR_3D_ACTIVE_VIDEO		0x0104
 #define MXR_3D_ACTIVE_SPACE		0x0108
 
-/* after EXYNOS5210, support 2 sub-mixers */
+/* after EXYNOS5250, support 2 sub-mixers */
 #define MXR1_LAYER_CFG			0x0110
 #define MXR1_VIDEO_CFG			0x0114
 #define MXR1_GRAPHIC0_CFG		0x0120
@@ -85,7 +85,7 @@
 #define MXR1_CM_COEFF_Y			0x0180
 #define MXR1_CM_COEFF_CB		0x0184
 #define MXR1_CM_COEFF_CR		0x0188
-/* after EXYNOS5210 for video layer transfered from Gscaler */
+/* after EXYNOS5250 for video layer transfered from Gscaler */
 #define MXR1_VIDEO_LT			0x0190
 #define MXR1_VIDEO_RB			0x0194
 
@@ -98,7 +98,7 @@
 #define MXR_GRAPHIC_DXY(i)		(0x0034 + (i) * 0x20)
 #define MXR_GRAPHIC_BLANK(i)		(0x0038 + (i) * 0x20)
 
-/* after EXYNOS5210, support 2 sub-mixers */
+/* after EXYNOS5250, support 2 sub-mixers */
 #define MXR1_GRAPHIC_CFG(i)		(0x0120 + (i) * 0x20)
 #define MXR1_GRAPHIC_BASE(i)		(0x0124 + (i) * 0x20)
 #define MXR1_GRAPHIC_SPAN(i)		(0x0128 + (i) * 0x20)

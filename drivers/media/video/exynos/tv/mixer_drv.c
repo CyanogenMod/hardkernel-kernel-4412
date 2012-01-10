@@ -1010,7 +1010,7 @@ static int mxr_link_setup(struct media_entity *entity,
 			sub_mxr->local = 1;
 		/* find a remote pad by interating over all links
 		 * until enabled link is found.
-		 * This will be remove. because Exynos5210 only supports
+		 * This will be remove. because Exynos5250 only supports
 		 * HDMI output */
 		pad = media_entity_remote_source((struct media_pad *)local);
 		if (pad) {

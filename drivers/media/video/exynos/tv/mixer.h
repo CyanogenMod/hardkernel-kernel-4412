@@ -31,7 +31,7 @@
 /** maximum number of output interfaces */
 #define MXR_MAX_OUTPUTS 2
 
-/** There are 2 mixers after EXYNOS5210 */
+/** There are 2 mixers after EXYNOS5250 */
 #define MXR_SUB_MIXER0		0
 #define MXR_SUB_MIXER1		1
 /** maximum number of sub-mixers */
