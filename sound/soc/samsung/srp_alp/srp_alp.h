@@ -191,7 +191,6 @@ struct srp_info {
         unsigned long   pcm_size;
 
 	/* SRP status information */
-	unsigned int	first_decoding;
 	unsigned int	decoding_started;
 	unsigned int	is_opened;
 	unsigned int	is_running;
@@ -201,10 +200,8 @@ struct srp_info {
 	unsigned int	wait_for_eos;
 	unsigned int	prepare_for_eos;
 	unsigned int	play_done;
-	unsigned int	save_ibuf_empty;
 
-	/* Workqueue for reading pcm data and supplying decoding info */
-	unsigned int	wakeup_read_wq[2];
+	/* Workqueue for supplying decoding info */
 	unsigned int	wakeup_decinfo_wq;
 
 	/* Function pointer for clock control */
