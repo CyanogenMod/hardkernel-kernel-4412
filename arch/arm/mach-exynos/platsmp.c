@@ -65,7 +65,7 @@ static void write_pen_release(int val)
 
 static void __iomem *scu_base_addr(void)
 {
-	if (soc_is_exynos5210() || soc_is_exynos5250())
+	if (soc_is_exynos5250())
 		return 0;
 
 	return (void __iomem *)(S5P_VA_SCU);

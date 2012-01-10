@@ -197,7 +197,7 @@ static struct s3c_pl330_platdata exynos4212_pdma0_pdata = {
 	},
 };
 
-static struct s3c_pl330_platdata exynos5210_pdma0_pdata = {
+static struct s3c_pl330_platdata exynos5250_pdma0_pdata = {
 	.peri = {
 		[0] = DMACH_PCM0_RX,
 		[1] = DMACH_PCM0_TX,
@@ -332,7 +332,7 @@ static struct s3c_pl330_platdata exynos4212_pdma1_pdata = {
 	},
 };
 
-static struct s3c_pl330_platdata exynos5210_pdma1_pdata = {
+static struct s3c_pl330_platdata exynos5250_pdma1_pdata = {
 	.peri = {
 		[0] = DMACH_PCM0_RX,
 		[1] = DMACH_PCM0_TX,
@@ -394,9 +394,9 @@ static int __init exynos_dma_init(void)
 	} else if (soc_is_exynos4212() || soc_is_exynos4412()) {
 		exynos_device_pdma0.dev.platform_data = &exynos4212_pdma0_pdata;
 		exynos_device_pdma1.dev.platform_data = &exynos4212_pdma1_pdata;
-	} else if (soc_is_exynos5210() || soc_is_exynos5250()) {
-		exynos_device_pdma0.dev.platform_data = &exynos5210_pdma0_pdata;
-		exynos_device_pdma1.dev.platform_data = &exynos5210_pdma1_pdata;
+	} else if (soc_is_exynos5250()) {
+		exynos_device_pdma0.dev.platform_data = &exynos5250_pdma0_pdata;
+		exynos_device_pdma1.dev.platform_data = &exynos5250_pdma1_pdata;
 	}
 
 	platform_add_devices(exynos_dmacs, ARRAY_SIZE(exynos_dmacs));

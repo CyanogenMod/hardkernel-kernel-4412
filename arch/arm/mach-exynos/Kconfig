@@ -53,28 +53,6 @@ config CPU_EXYNOS4412
 	help
 	  Enable EXYNOS4412 CPU support
 
-config CPU_EXYNOS5210
-	bool
-	select S3C_PL330_DMA
-	help
-	  Enable EXYNOS5210 CPU support
-
-choice
-	prompt "EXYNOS5210 core type"
-	depends on CPU_EXYNOS5210
-	default CPU_A15
-
-config CPU_EXYNOS5210_A15
-	bool "A15 core"
-	help
-	  A15 dual core CPU support
-
-config CPU_EXYNOS5210_A5_IOP
-	bool "A5 IOP core"
-	help
-	  A5 single core CPU support
-endchoice
-
 config CPU_EXYNOS5250
 	bool
 	select S3C_PL330_DMA
@@ -644,32 +622,6 @@ endmenu
 
 menu "EXYNOS5 Machines"
 	depends on ARCH_EXYNOS5
-
-config MACH_SMDK5210
-	bool "SMDK5210 board"
-	select CPU_EXYNOS5210
-	select S3C_DEV_HSMMC2
-	select S3C_DEV_HSMMC3
-	select S3C_DEV_I2C1
-	select S3C_DEV_I2C2
-	select S5P_DEV_DP
-	select S5P_DEV_FIMD1
-	select S5P_DEV_MFC
-	select S5P_DEV_USB_EHCI
-	select EXYNOS_DEV_PD
-	select EXYNOS4_SETUP_DP
-	select EXYNOS4_SETUP_FIMD
-	select EXYNOS4_SETUP_I2C1
-	select EXYNOS4_SETUP_I2C2
-	select EXYNOS4_SETUP_MFC
-	select EXYNOS4_SETUP_SDHCI
-	select EXYNOS4_SETUP_USB_PHY
-	select SAMSUNG_DEV_BACKLIGHT
-	select SAMSUNG_DEV_PWM
-	select S5P_DEV_I2C_HDMIPHY
-	select EXYNOS_DEV_SS_UDC
-	help
-	  Machine support for Samsung SMDK5210
 
 config MACH_SMDK5250
 	bool "SMDK5250 board"

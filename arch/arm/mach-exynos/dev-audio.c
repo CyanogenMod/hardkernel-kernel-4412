@@ -56,7 +56,7 @@ static int exynos_cfg_i2s_gpio(struct platform_device *pdev)
 	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
 		s3c_gpio_cfgpin_range(exynos4_cfg[pdev->id].addr,
 			exynos4_cfg[pdev->id].num, exynos4_cfg[pdev->id].bit);
-	else if (soc_is_exynos5210() || soc_is_exynos5250())
+	else if (soc_is_exynos5250())
 		s3c_gpio_cfgpin_range(exynos5_cfg[pdev->id].addr,
 			exynos5_cfg[pdev->id].num, exynos5_cfg[pdev->id].bit);
 
@@ -208,7 +208,7 @@ static int exynos_pcm_cfg_gpio(struct platform_device *pdev)
 	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
 		s3c_gpio_cfgpin_range(exynos4_cfg[pdev->id].addr,
 			exynos4_cfg[pdev->id].num, exynos4_cfg[pdev->id].bit);
-	else if (soc_is_exynos5210() || soc_is_exynos5250())
+	else if (soc_is_exynos5250())
 		s3c_gpio_cfgpin_range(exynos5_cfg[pdev->id].addr,
 			exynos5_cfg[pdev->id].num, exynos5_cfg[pdev->id].bit);
 
@@ -310,7 +310,7 @@ static int exynos_ac97_cfg_gpio(struct platform_device *pdev)
 	/* configure GPIO for ac97 port */
 	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
 		s3c_gpio_cfgpin_range(EXYNOS4_GPC0(0), 5, S3C_GPIO_SFN(4));
-	else if (soc_is_exynos5210() || soc_is_exynos5250())
+	else if (soc_is_exynos5250())
 		s3c_gpio_cfgpin_range(EXYNOS5_GPB0(0), 5, S3C_GPIO_SFN(4));
 
 	return 0;
@@ -369,7 +369,7 @@ static int exynos_spdif_cfg_gpio(struct platform_device *pdev)
 	/* configure GPIO for SPDIF port */
 	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
 		s3c_gpio_cfgpin_range(EXYNOS4_GPC1(0), 2, S3C_GPIO_SFN(4));
-	else if (soc_is_exynos5210() || soc_is_exynos5250())
+	else if (soc_is_exynos5250())
 		s3c_gpio_cfgpin_range(EXYNOS5_GPB1(0), 2, S3C_GPIO_SFN(4));
 
 	return 0;

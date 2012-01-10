@@ -251,8 +251,7 @@ void exynos5_setup_sdhci2_cfg_gpio(struct platform_device *dev, int width)
 		s3c_gpio_setpull(EXYNOS5_GPC2(2), S3C_GPIO_PULL_UP);
 		s5p_gpio_set_drvstr(gpio, S5P_GPIO_DRVSTR_LV4);
 
-		/* In SMDK5210 Rev0.0 Board, SD_CDn Pin connection have been changed by Jumper
-		Therfore, the following GPX2[0] configuration is requiered. */
+		/* Need to check */
 		s3c_gpio_cfgpin(EXYNOS5_GPX2(0), S3C_GPIO_SFN(0));
 		s3c_gpio_setpull(EXYNOS5_GPX2(0), S3C_GPIO_PULL_NONE);
 	}

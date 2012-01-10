@@ -328,8 +328,6 @@ static int s3c_get_gpio_max_nr (void)
 			gpio_max_nr = EXYNOS4210_GPIO_END;
 		else if (soc_is_exynos4212() || soc_is_exynos4412())
 			gpio_max_nr = EXYNOS4212_GPIO_END;
-		else if (soc_is_exynos5210())
-			gpio_max_nr = EXYNOS5210_GPIO_END;
 		else if (soc_is_exynos5250())
 			gpio_max_nr = EXYNOS5250_GPIO_END;
 		else

@@ -13,7 +13,6 @@
 #ifndef __ASM_ARCH_REGS_PMU5_H
 #define __ASM_ARCH_REGS_PMU5_H __FILE__
 
-#include "regs-pmu-5210.h"
 #include "regs-pmu-5250.h"
 
 #define S5P_PMUREG(x)						(S5P_VA_PMU + (x))
