@@ -82,7 +82,7 @@ static void cache_maint_phys(phys_addr_t start, size_t length, enum cacheop op)
 	size_t left = length;
 	phys_addr_t begin = start;
 
-	if (!soc_is_exynos5250() && !soc_is_exynos5210()) {
+	if (!soc_is_exynos5250()) {
 		if (length > (size_t) L1_FLUSH_ALL) {
 			flush_cache_all();
 			smp_call_function(
