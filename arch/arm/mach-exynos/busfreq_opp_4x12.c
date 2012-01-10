@@ -406,7 +406,7 @@ void exynos4x12_post(unsigned int index)
 
 void exynos4x12_suspend(void)
 {
-	/* Nothing to do */
+	exynos4x12_post(LV_0);
 }
 
 void exynos4x12_resume(void)
