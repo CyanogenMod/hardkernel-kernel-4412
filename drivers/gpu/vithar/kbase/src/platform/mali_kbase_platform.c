@@ -83,9 +83,6 @@ static inline int kbase_platform_is_power_on(void)
 
 int kbase_platform_power_on(struct device *dev)
 {
-#ifdef CONFIG_CPU_EXYNOS5210
-    return 0;
-#else
     int timeout;
 
     if(kbase_platform_is_power_on()) 
@@ -110,14 +107,10 @@ int kbase_platform_power_on(struct device *dev)
     return 0;
 out:
     return -ETIMEDOUT;
-#endif
 }
 
 int kbase_platform_power_off(struct device *dev)
 {
-#ifdef CONFIG_CPU_EXYNOS5210
-    return 0;
-#else
     int timeout;
 
     /* Turn off G3D  */
@@ -139,7 +132,6 @@ int kbase_platform_power_off(struct device *dev)
     return 0;
 out:
     return -ETIMEDOUT;
-#endif
 }
 
 static ssize_t show_clock(struct device *dev, struct device_attribute *attr, char *buf)
