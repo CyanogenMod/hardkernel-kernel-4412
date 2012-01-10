@@ -699,28 +699,31 @@ void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr_num, int gsc_num,
 		u32 flags)
 {
 	u32 val = 0;
-	int mxr0_use = mdev->sub_mxr[MXR_SUB_MIXER0].use;
-	int mxr1_use = mdev->sub_mxr[MXR_SUB_MIXER1].use;
+	int mxr0_local = mdev->sub_mxr[MXR_SUB_MIXER0].local;
+	int mxr1_local = mdev->sub_mxr[MXR_SUB_MIXER1].local;
 
-	if (mxr0_use && !mxr1_use) { /* 1-path : sub-mixer0 */
+	if (mxr0_local && !mxr1_local) { /* 1-path : sub-mixer0 */
 		val  = MXR_TVOUT_CFG_ONE_PATH;
 		val |= MXR_TVOUT_CFG_PATH_MIXER0;
-	} else if (!mxr0_use && mxr1_use) { /* 1-path : sub-mixer1 */
+	} else if (!mxr0_local && mxr1_local) { /* 1-path : sub-mixer1 */
 		val  = MXR_TVOUT_CFG_ONE_PATH;
 		val |= MXR_TVOUT_CFG_PATH_MIXER1;
-	} else if (mxr0_use && mxr1_use) /* 2-path */
+	} else if (mxr0_local && mxr1_local) { /* 2-path */
 		val  = MXR_TVOUT_CFG_TWO_PATH;
+		val |= MXR_TVOUT_CFG_STEREO_SCOPIC;
+	}
 
-	mxr_write_mask(mdev, MXR_TVOUT_CFG, val, MXR_TVOUT_CFG_PATH_MASK);
+	mxr_write(mdev, MXR_TVOUT_CFG, val);
 
 	/* set local path gscaler to mixer */
 	val = readl(SYSREG_DISP1BLK_CFG);
 	val |= DISP1BLK_CFG_FIFORST_DISP1;
 	if (flags & MEDIA_LNK_FL_ENABLED) {
-		if (mxr_num == MXR_SUB_MIXER0) {
+		if (mxr0_local) {
 			val |= DISP1BLK_CFG_MIXER0_VALID;
 			val |= DISP1BLK_CFG_MIXER0_SRC_GSC(gsc_num);
-		} else if (mxr_num == MXR_SUB_MIXER1) {
+		}
+		if (mxr1_local) {
 			val |= DISP1BLK_CFG_MIXER1_VALID;
 			val |= DISP1BLK_CFG_MIXER1_SRC_GSC(gsc_num);
 		}

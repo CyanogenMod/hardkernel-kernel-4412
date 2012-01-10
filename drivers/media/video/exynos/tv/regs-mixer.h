@@ -211,5 +211,6 @@
 #define MXR_TVOUT_CFG_ONE_PATH		(1 << 2)
 #define MXR_TVOUT_CFG_TWO_PATH		(0 << 2)
 #define MXR_TVOUT_CFG_PATH_MASK		(3 << 2)
+#define MXR_TVOUT_CFG_STEREO_SCOPIC	(1 << 0)
 
 #endif /* SAMSUNG_REGS_MIXER_H */
