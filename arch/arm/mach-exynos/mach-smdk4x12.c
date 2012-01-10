@@ -3841,7 +3841,8 @@ static int get_samsung_board_rev(void)
 	unsigned int	con;
 	int		ret;
 
-	if (soc_is_exynos4212() || samsung_rev() < EXYNOS4412_REV_1_0)
+	if ((soc_is_exynos4412() && samsung_rev() < EXYNOS4412_REV_1_0) ||
+		(soc_is_exynos4212() && samsung_rev() < EXYNOS4212_REV_1_0))
 		return SAMSUNG_BOARD_REV_0_0;
 
 	adc_clk = clk_get(NULL, "adc");
