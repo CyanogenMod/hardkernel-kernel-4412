@@ -532,9 +532,15 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 	unsigned long irqflags;
 	int res;
 
-	dev_info(udc->dev, "%s(ep %p %s, %d)\n", __func__, ep, ep->name, value);
+	dev_dbg(udc->dev, "%s(ep %p %s, %d)\n", __func__, ep, ep->name, value);
 
 	spin_lock_irqsave(&udc_ep->lock, irqflags);
+
+	if (value && udc_ep->dir_in && udc_ep->req) {
+		dev_dbg(udc->dev, "%s: transfer in progress!\n", __func__);
+		spin_unlock_irqrestore(&udc_ep->lock, irqflags);
+		return -EAGAIN;
+	}
 
 	if (udc_ep->epnum == 0)
 		/* Only OUT direction can be stalled */
@@ -618,13 +624,13 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 	dev_dbg(udc->dev, "%s: ep%d%s, req %p\n", __func__, epnum,
 			   udc_ep->dir_in ? "in" : "out", ureq);
 
-	udc_ep->req = udc_req;
-
 	/* If endpoint is stalled, we will restart request later */
 	if (udc_ep->halted) {
-		dev_warn(udc->dev, "%s: ep%d is stalled\n", __func__, epnum);
+		dev_dbg(udc->dev, "%s: ep%d is stalled\n", __func__, epnum);
 		return;
 	}
+
+	udc_ep->req = udc_req;
 
 	/* Get type of TRB */
 	if (epnum == 0 && !continuing)
