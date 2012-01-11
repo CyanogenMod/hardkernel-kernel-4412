@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos/dev-dwc_ahsata.c
+/* linux/arch/arm/mach-exynos/dev-dwc-ahsata.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  * http://www.samsung.com
