@@ -2155,7 +2155,9 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 	__bic32(udc->regs + 0x430, (0x1 << 9));
 
 	/* Start the device controller operation */
-	__orr32(udc->regs + EXYNOS_USB3_DCTL, EXYNOS_USB3_DCTL_Run_Stop);
+#ifndef CONFIG_USB_G_ANDROID
+	exynos_ss_udc_run_stop(udc, 1);
+#endif
 }
 
 int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
@@ -2252,7 +2254,9 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 
 	device_del(&udc->gadget.dev);
 
+#ifndef CONFIG_USB_G_ANDROID
 	exynos_ss_udc_run_stop(udc, 0);
+#endif
 	dev_info(udc->dev, "unregistered gadget driver '%s'\n",
 		 driver->driver.name);
 
