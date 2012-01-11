@@ -375,6 +375,7 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 
 	exynos_ss_udc_ep_activate(udc, udc_ep);
 	udc_ep->enabled = 1;
+	udc_ep->halted = udc_ep->wedged = 0;
 	spin_unlock_irqrestore(&udc_ep->lock, flags);
 
 	return 0;
@@ -559,11 +560,26 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 		udc->ep0_state = EP0_STALL;
 
 	/* If everything is Ok, we mark endpoint as halted */
-	udc_ep->halted = value ? 1 : 0;
+	if (value)
+		udc_ep->halted = 1;
+	else
+		udc_ep->halted = udc_ep->wedged = 0;
 
 	spin_unlock_irqrestore(&udc_ep->lock, irqflags);
 
 	return 0;
+}
+
+static int exynos_ss_udc_ep_setwedge(struct usb_ep *ep)
+{
+	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
+	unsigned long irqflags;
+
+	spin_lock_irqsave(&udc_ep->lock, irqflags);
+	udc_ep->wedged = 1;
+	spin_unlock_irqrestore(&udc_ep->lock, irqflags);
+
+	return exynos_ss_udc_ep_sethalt(ep, 1);
 }
 
 static struct usb_ep_ops exynos_ss_udc_ep_ops = {
@@ -574,6 +590,7 @@ static struct usb_ep_ops exynos_ss_udc_ep_ops = {
 	.queue		= exynos_ss_udc_ep_queue,
 	.dequeue	= exynos_ss_udc_ep_dequeue,
 	.set_halt	= exynos_ss_udc_ep_sethalt,
+	.set_wedge	= exynos_ss_udc_ep_setwedge,
 };
 
 /**
@@ -870,14 +887,16 @@ static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 
 		switch (le16_to_cpu(ctrl->wValue)) {
 		case USB_ENDPOINT_HALT:
-			exynos_ss_udc_ep_sethalt(&udc_ep->ep, 0);
+			if (!udc_ep->wedged) {
+				exynos_ss_udc_ep_sethalt(&udc_ep->ep, 0);
 
-			/* If we have pending request, then start it */
-			restart = !list_empty(&udc_ep->queue);
-			if (restart) {
-				udc_req = get_ep_head(udc_ep);
-				exynos_ss_udc_start_req(udc, udc_ep,
-							udc_req, false);
+				/* If we have pending request, then start it */
+				restart = !list_empty(&udc_ep->queue);
+				if (restart) {
+					udc_req = get_ep_head(udc_ep);
+					exynos_ss_udc_start_req(udc, udc_ep,
+								udc_req, false);
+				}
 			}
 			break;
 

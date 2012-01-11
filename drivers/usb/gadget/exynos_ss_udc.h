@@ -138,6 +138,7 @@ struct exynos_ss_udc_req {
  *	    means that it is sending data to the Host.
  * @halted: Set if the endpoint has been halted.
  * @enabled: Set to true if endpoint is enabled.
+ * @wedged: Set if the endpoint has been wedged.
  * @not_ready: Set to true if a command for the endpoint hasn't completed
  *	       during timeout interval.
  * @name: The driver generated name for the endpoint.
@@ -165,6 +166,7 @@ struct exynos_ss_udc_ep {
 	unsigned int		dir_in:1;
 	unsigned int		halted:1;
 	unsigned int		enabled:1;
+	unsigned int		wedged:1;
 	bool			not_ready;
 
 	char			name[10];
