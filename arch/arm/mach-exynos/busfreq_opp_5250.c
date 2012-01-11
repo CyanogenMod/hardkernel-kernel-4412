@@ -359,9 +359,6 @@ unsigned int exynos5250_target(unsigned int div_index)
 	unsigned int tmp;
 	unsigned int tmp2;
 
-	/* Temporary value */
-	div_index = 0;
-
 	/* Change Divider - CDREX */
 	tmp = __raw_readl(EXYNOS5_CLKDIV_CDREX);
 
@@ -394,6 +391,8 @@ unsigned int exynos5250_target(unsigned int div_index)
 	tmp &= ~EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_MASK;
 
 	tmp |= clkdiv_cdrex[div_index][7] << EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_SHIFT;
+
+	__raw_writel(tmp, EXYNOS5_CLKDIV_CDREX2);
 
 	do {
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX2);
@@ -596,9 +595,6 @@ struct opp *exynos5250_monitor(struct busfreq_data *data)
 
 	opp = opp_find_freq_ceil(data->dev, &newfreq);
 
-	/* Temporary use max freq */
-	opp = data->max_opp;
-
 	return opp;
 }
 
@@ -653,6 +649,9 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 			return ret;
 		}
 	}
+
+	opp_disable(dev, 107000);
+	opp_disable(dev, 67000);
 
 	data->table = exynos5_busfreq_table;
 	data->table_size = LV_END;
