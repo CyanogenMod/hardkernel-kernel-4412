@@ -1290,8 +1290,6 @@ static int s5p_mfc_suspend(struct device *dev)
 	/* FIXME: how about locking ? */
 	ret = s5p_mfc_sleep(m_dev);
 
-	s5p_mfc_mem_suspend(m_dev->alloc_ctx[0]);
-
 	return ret;
 }
 
@@ -1302,8 +1300,6 @@ static int s5p_mfc_resume(struct device *dev)
 
 	if (m_dev->num_inst == 0)
 		return 0;
-
-	s5p_mfc_mem_resume(m_dev->alloc_ctx[0]);
 
 	/* FIXME: how about locking ? */
 	ret = s5p_mfc_wakeup(m_dev);
@@ -1318,9 +1314,6 @@ static int s5p_mfc_runtime_suspend(struct device *dev)
 
 	pre_power = atomic_read(&m_dev->pm.power);
 	atomic_set(&m_dev->pm.power, 0);
-
-	if (pre_power == 1)
-		s5p_mfc_mem_suspend(m_dev->alloc_ctx[0]);
 
 	return 0;
 }
@@ -1341,9 +1334,6 @@ static int s5p_mfc_runtime_resume(struct device *dev)
 
 	pre_power = atomic_read(&m_dev->pm.power);
 	atomic_set(&m_dev->pm.power, 1);
-
-	if (pre_power == 0)
-		s5p_mfc_mem_resume(m_dev->alloc_ctx[0]);
 
 	return 0;
 }

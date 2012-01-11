@@ -386,16 +386,12 @@ void s5p_mfc_cache_inv(void *alloc_ctx)
 
 void s5p_mfc_mem_suspend(void *alloc_ctx)
 {
-	s5p_mfc_clock_on();
 	vb2_ion_suspend(alloc_ctx);
-	s5p_mfc_clock_off();
 }
 
 void s5p_mfc_mem_resume(void *alloc_ctx)
 {
-	s5p_mfc_clock_on();
 	vb2_ion_resume(alloc_ctx);
-	s5p_mfc_clock_off();
 }
 
 void s5p_mfc_mem_set_cacheable(void *alloc_ctx, bool cacheable)
