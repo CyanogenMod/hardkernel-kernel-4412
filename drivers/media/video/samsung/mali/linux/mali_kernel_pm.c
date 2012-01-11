@@ -123,6 +123,7 @@ unsigned int is_mali_pmu_present = 0;
 /* Function prototypes */
 static int mali_pm_probe(struct platform_device *pdev);
 static int mali_pm_remove(struct platform_device *pdev);
+static void mali_pm_shutdown(struct platform_device *pdev);
 
 /* Mali device suspend function */
 static int mali_pm_suspend(struct device *dev);
@@ -200,6 +201,7 @@ struct pm_ext_ops mali_pm_operations = {
 static struct platform_driver mali_plat_driver = {
 	.probe  = mali_pm_probe,
 	.remove = mali_pm_remove,
+	.shutdown = mali_pm_shutdown,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(LINUX_KERNEL_MAJOR_VERSION,LINUX_KERNEL_MINOR_VERSION,LINUX_KERNEL_DEVELOPMENT_VERSION))
 #ifndef CONFIG_PM_RUNTIME
 #if !MALI_PMM_RUNTIME_JOB_CONTROL_ON
@@ -570,6 +572,12 @@ static int mali_pm_remove(struct platform_device *pdev)
 #endif /* MALI_PMM_RUNTIME_JOB_CONTROL_ON */
 #endif /* CONFIG_PM_RUNTIME */
 	return 0;
+}
+
+static void mali_pm_shutdown(struct platform_device *pdev)
+{
+	_mali_osk_pmm_dev_activate();
+	return;
 }
 
 /** This function is called when the device is probed */
