@@ -66,6 +66,9 @@ struct check_device_op {
 };
 
 static struct check_device_op chk_sdhc_op[] = {
+#if defined(CONFIG_EXYNOS4_DEV_DWMCI)
+	{.base = 0, .pdev = &exynos_device_dwmci, .type = HC_MSHC},
+#endif
 #if defined(CONFIG_S5P_DEV_MSHC)
 	{.base = 0, .pdev = &s3c_device_mshci, .type = HC_MSHC},
 #endif
@@ -96,6 +99,7 @@ static struct check_device_op chk_usbotg_op = {
 #define MSHCI_CLKENA	(0x10)  /* Clock enable */
 #define MSHCI_STATUS	(0x48)  /* Status */
 #define MSHCI_DATA_BUSY	(0x1<<9)
+#define MSHCI_DATA_STAT_BUSY	(0x1<<10)
 #define MSHCI_ENCLK	(0x1)
 
 #define GPIO_OFFSET		0x20
@@ -209,11 +213,8 @@ static int check_sdmmc_op(unsigned int ch)
 		base_addr = chk_sdhc_op[ch].base;
 		/* Check STATUS [9] for data busy */
 		reg1 = readl(base_addr + MSHCI_STATUS);
-		/* Check CLKENA [0] for clock on/off */
-		reg2 = readl(base_addr + MSHCI_CLKENA);
-
 		return (reg1 & (MSHCI_DATA_BUSY)) ||
-		       (reg2 & (MSHCI_ENCLK));
+		       (reg1 & (MSHCI_DATA_STAT_BUSY));
 
 	}
 	/* should not be here */
