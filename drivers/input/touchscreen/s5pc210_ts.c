@@ -261,6 +261,11 @@ static void s5pv310_ts_config(unsigned char state)
 		wdata = 0x00;
 		s5pv310_ts_write(MODULE_INTMODE, &wdata, 1);
 
+		if (samsung_board_rev_is_0_1()) {
+			s5p_register_gpio_interrupt(TS_ATTB);
+			s3c_gpio_cfgpin(TS_ATTB, S3C_GPIO_SFN(0xf));
+		}
+
 		if (!request_irq(S5PV310_TS_IRQ, s5pv310_ts_irq,
 			IRQF_DISABLED, "s5pc210-Touch IRQ",
 					(void *)&s5pv310_ts))

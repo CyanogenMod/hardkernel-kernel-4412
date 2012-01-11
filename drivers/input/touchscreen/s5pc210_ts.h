@@ -17,6 +17,8 @@
 #include <linux/earlysuspend.h>
 #endif
 
+#include <mach/board_rev.h>
+
 #define S5PV310_TS_DEVICE_NAME	"s5pc210_ts"
 
 #define	TOUCH_PRESS             1
@@ -27,8 +29,8 @@
 /* Touch Interrupt define */
 #ifdef CONFIG_MACH_SMDK4X12
 
-#define	S5PV310_TS_IRQ          gpio_to_irq(EXYNOS4_GPX1(6))
-#define	TS_ATTB			(EXYNOS4_GPX1(6))
+#define TS_ATTB			samsung_board_rev_is_0_0() ? EXYNOS4_GPX1(6) : EXYNOS4212_GPM3(4)
+#define S5PV310_TS_IRQ		gpio_to_irq(TS_ATTB)
 
 /* Touch should be reset before using. In order to reset it, the reset pin
    should be set OUTPUT HIGH. The Reset pin is EXYNOS4_GPX1(5) (XEINT 13).
@@ -37,8 +39,8 @@
 
 #elif defined (CONFIG_MACH_SMDKV310)
 
-#define	S5PV310_TS_IRQ          gpio_to_irq(EXYNOS4_GPX3(5))
-#define	TS_ATTB			(EXYNOS4_GPX3(5))
+#define S5PV310_TS_IRQ		gpio_to_irq(EXYNOS4_GPX3(5))
+#define TS_ATTB			(EXYNOS4_GPX3(5))
 
 #else
 #error Unsupported board!
