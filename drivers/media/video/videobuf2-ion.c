@@ -724,6 +724,8 @@ static void _vb2_ion_cache_flush_range(struct vb2_ion_buf *buf,
 	} else {
 		dma_sync_sg_for_device(buf->conf->dev, buf->sg, buf->nents,
 							DMA_BIDIRECTIONAL);
+		dma_sync_sg_for_cpu(buf->conf->dev, buf->sg, buf->nents,
+							DMA_BIDIRECTIONAL);
 	}
 }
 
