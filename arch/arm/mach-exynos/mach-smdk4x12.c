@@ -2343,8 +2343,8 @@ static struct regulator_consumer_supply s5m8767_buck4_consumer =
 static struct regulator_init_data s5m8767_buck1_data = {
 	.constraints	= {
 		.name		= "vdd_mif range",
-		.min_uV		= 950000,
-		.max_uV		= 1100000,
+		.min_uV		= 850000,
+		.max_uV		= 1050000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
@@ -2358,8 +2358,8 @@ static struct regulator_init_data s5m8767_buck1_data = {
 static struct regulator_init_data s5m8767_buck2_data = {
 	.constraints	= {
 		.name		= "vdd_arm range",
-		.min_uV		=  925000,
-		.max_uV		= 1450000,
+		.min_uV		=  850000,
+		.max_uV		= 1350000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
@@ -2373,8 +2373,8 @@ static struct regulator_init_data s5m8767_buck2_data = {
 static struct regulator_init_data s5m8767_buck3_data = {
 	.constraints	= {
 		.name		= "vdd_int range",
-		.min_uV		=  900000,
-		.max_uV		= 1200000,
+		.min_uV		=  850000,
+		.max_uV		= 1037500,
 		.apply_uV	= 1,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
@@ -2391,8 +2391,8 @@ static struct regulator_init_data s5m8767_buck3_data = {
 static struct regulator_init_data s5m8767_buck4_data = {
 	.constraints	= {
 		.name		= "vdd_g3d range",
-		.min_uV		= 750000,
-		.max_uV		= 1500000,
+		.min_uV		= 850000,
+		.max_uV		= 1200000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
@@ -2449,7 +2449,7 @@ static struct s5m_platform_data exynos4_s5m8767_pdata = {
 	.buck_gpios[1]		= EXYNOS4_GPX2(4),
 	.buck_gpios[2]		= EXYNOS4_GPX2(5),
 
-	.buck_ramp_delay        = 50,
+	.buck_ramp_delay        = 10,
 	.buck2_ramp_enable      = true,
 	.buck3_ramp_enable      = true,
 	.buck4_ramp_enable      = true,
