@@ -148,6 +148,8 @@ static void reconfig_usbd(void);
 static void set_max_pktsize(struct s3c_udc *dev, enum usb_device_speed speed);
 static void nuke(struct s3c_ep *ep, int status);
 static int s3c_udc_set_halt(struct usb_ep *_ep, int value);
+static void s3c_udc_soft_connect(void);
+static void s3c_udc_soft_disconnect(void);
 
 static struct usb_ep_ops s3c_ep_ops = {
 	.enable = s3c_ep_enable,
@@ -357,10 +359,13 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		dev->gadget.dev.driver = 0;
 		return retval;
 	}
-#ifndef CONFIG_USB_EXYNOS_SWITCH
 	printk(KERN_INFO "Registered gadget driver '%s'\n",
 			driver->driver.name);
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 	udc_enable(dev);
+#endif
+#ifdef CONFIG_USB_G_ANDROID
+	s3c_udc_soft_disconnect();
 #endif
 	return 0;
 }
@@ -386,11 +391,11 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 
 	driver->unbind(&dev->gadget);
 	device_del(&dev->gadget.dev);
-#ifndef CONFIG_USB_EXYNOS_SWITCH
 
 	printk(KERN_INFO "Unregistered gadget driver '%s'\n",
 			driver->driver.name);
 
+#ifndef CONFIG_USB_EXYNOS_SWITCH
 	udc_disable(dev);
 #endif
 	return 0;
