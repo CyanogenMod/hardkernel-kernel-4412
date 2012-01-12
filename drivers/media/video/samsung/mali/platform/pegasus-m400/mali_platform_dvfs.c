@@ -64,13 +64,13 @@ typedef struct mali_dvfs_stepTag{
 }mali_dvfs_step;
 
 mali_dvfs_step step[MALI_DVFS_STEPS]={
-	/*step 0 clk*/ {160,   900000},
+	/*step 0 clk*/ {160,   875000},
 #if (MALI_DVFS_STEPS > 1)
 	/*step 1 clk*/ {266,   900000},
 #if (MALI_DVFS_STEPS > 2)
 	/*step 2 clk*/ {350,   950000},
 #if (MALI_DVFS_STEPS > 3)
-	/*step 3 clk*/ {440,  1000000}
+	/*step 3 clk*/ {440,  1025000}
 #endif
 #endif
 #endif
@@ -149,16 +149,16 @@ mali_dvfs_threshold_table mali_dvfs_threshold[MALI_DVFS_STEPS]={
 };
 
 #ifdef EXYNOS4_ASV_ENABLED
-#define ASV_9_LEVEL     9
+#define ASV_LEVEL     12	/* ASV0, 1, 11 is reserved */
 
-static unsigned int asv_3d_volt_9_table[MALI_DVFS_STEPS][ASV_9_LEVEL] = {
-	{ 900000,  900000,  875000,  875000,  875000,  875000,  850000,  850000,  850000},	/* L3(160Mhz) */
+static unsigned int asv_3d_volt_9_table[MALI_DVFS_STEPS][ASV_LEVEL] = {
+	{  950000,  925000,  900000,  900000,  875000,  875000,  875000,  875000,  875000,  875000,  875000,  850000},	/* L3(160Mhz) */
 #if (MALI_DVFS_STEPS > 1)
-	{ 925000,  925000,  925000,  900000,  900000,  875000,  875000,  875000,  875000},	/* L2(266Mhz) */
+	{  975000,  950000,  925000,  925000,  925000,  900000,  900000,  875000,  875000,  875000,  875000,  850000},	/* L2(266Mhz) */
 #if (MALI_DVFS_STEPS > 2)
-	{ 1000000,  1000000,  975000,  950000,  950000,  950000,  925000,  925000,  925000},	/* L1(350Mhz) */
+	{ 1050000, 1025000, 1000000, 1000000,  975000,  950000,  950000,  950000,  925000,  925000,  925000,  900000},	/* L1(350Mhz) */
 #if (MALI_DVFS_STEPS > 3)
-	{ 1050000, 1050000, 1050000, 1025000, 1025000, 1000000, 1000000, 1000000, 975000},	/* L0(440Mhz) */
+	{ 1100000, 1075000, 1050000, 1050000, 1050000, 1025000, 1025000, 1000000, 1000000, 1000000,  975000,  950000},	/* L0(440Mhz) */
 #endif
 #endif
 #endif
