@@ -95,42 +95,8 @@ static void srp_check_stream_info(void)
 	}
 
 	if (srp.dec_info.sample_rate && srp.dec_info.channels) {
-		if (!srp.wakeup_decinfo_wq) {
-			srp.wakeup_decinfo_wq = 1;
-			srp_info("Sample Rate[%d], Channels[%d]\n",
-						srp.dec_info.sample_rate,
-						srp.dec_info.channels);
-		}
-	}
-
-	if (!srp.frame_size) {
-		switch (readl(srp.commbox
-			+ SRP_ARM_INTERRUPT_CODE)
-			& SRP_ARM_INTR_CODE_FRAME_MASK) {
-		case SRP_ARM_INTR_CODE_FRAME_1152:
-			srp.frame_size = 1152;
-			break;
-		case SRP_ARM_INTR_CODE_FRAME_1024:
-			srp.frame_size = 1024;
-			break;
-		case SRP_ARM_INTR_CODE_FRAME_576:
-			srp.frame_size = 576;
-			break;
-		case SRP_ARM_INTR_CODE_FRAME_384:
-			srp.frame_size = 384;
-			break;
-		default:
-			srp.frame_size = 0;
-			break;
-		}
-		if (srp.frame_size)
-			srp_debug("Frame size = %lu\n", srp.frame_size);
-	}
-
-	if (srp.wakeup_decinfo_wq) {
-		if (waitqueue_active(&decinfo_wq))
-			wake_up_interruptible(&decinfo_wq);
-
+		srp_info("Sample Rate[%d], Channels[%d]\n", srp.dec_info.sample_rate,
+								srp.dec_info.channels);
 	}
 }
 
@@ -163,7 +129,6 @@ static void srp_reset(void)
 
 	/* Store Total Count */
 	srp.decoding_started = 0;
-	srp.wakeup_decinfo_wq = 0;
 
 	/* Next IBUF is IBUF0 */
 	srp.ibuf_next = 0;
@@ -313,14 +278,17 @@ static ssize_t srp_read(struct file *file, char *buffer,
 			return copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
 		}
 
-		srp_debug("Waiting for filling OBUF[%d]\n", srp.obuf_ready);
-		ret = wait_event_interruptible_timeout(read_wq,
-						srp.obuf_fill_done[srp.obuf_ready] != 0,
-						HZ / 2);
-		if (!ret) {
-			srp_err("Couldn't occurred OBUF[%d] int!!!\n", srp.obuf_ready);
-			srp.pcm_info.size = 0;
-			return copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
+		if (srp.obuf_fill_done[srp.obuf_ready]) {
+			srp_debug("Already filled OBUF[%d]\n", srp.obuf_ready);
+		} else {
+			srp_debug("Waiting for filling OBUF[%d]\n", srp.obuf_ready);
+			ret = wait_event_interruptible_timeout(read_wq,
+				srp.obuf_fill_done[srp.obuf_ready], HZ / 2);
+			if (!ret) {
+				srp_err("Couldn't occurred OBUF[%d] int!!!\n", srp.obuf_ready);
+				srp.pcm_info.size = 0;
+				return copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
+			}
 		}
 	} else {
 		srp_debug("not prepared not yet! OBUF[%d]\n", srp.obuf_ready);
@@ -537,18 +505,19 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			srp.dec_info.sample_rate = 0;
 			srp.dec_info.channels = 0;
 		} else {
-			ret = wait_event_interruptible_timeout(decinfo_wq,
-							srp.wakeup_decinfo_wq,
-							HZ / 2);
-			if (!ret) {
-				srp_err("Couldn't Get Decoding info!!!\n");
-				ret = SRP_ERROR_GETINFO_FAIL;
+			if (srp.dec_info.sample_rate && srp.dec_info.channels) {
+				srp_info("Already get dec info!\n");
+			} else {
+				ret = wait_event_interruptible_timeout(read_wq,
+						srp.dec_info.channels != 0, HZ / 2);
+				if (!ret) {
+					srp_err("Couldn't Get Decoding info!!!\n");
+					ret = SRP_ERROR_GETINFO_FAIL;
+				}
 			}
 		}
 		val = copy_to_user((struct srp_dec_info *)arg, &srp.dec_info,
 						sizeof(struct srp_dec_info));
-		if (ret)
-			srp.wakeup_decinfo_wq = 0;
 		break;
 	}
 
@@ -680,7 +649,8 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned int irq_code = readl(srp.commbox + SRP_INTERRUPT_CODE);
 	unsigned int irq_info = readl(srp.commbox + SRP_INFORMATION);
 	unsigned int irq_code_req;
-	unsigned int wakeup_req = 0;
+	unsigned int wakeup_read = 0;
+	unsigned int wakeup_decinfo = 0;
 
 	srp_debug("IRQ: Code [0x%x], Pending [%s], CFGR [0x%x]", irq_code,
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN",
@@ -693,7 +663,9 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 		irq_code_req = irq_code & SRP_INTR_CODE_REQUEST_MASK;
 		switch (irq_code_req) {
 		case SRP_INTR_CODE_NOTIFY_INFO:
+			srp_info("Notify SRP interrupt!\n");
 			srp_check_stream_info();
+			wakeup_decinfo = 1;
 			break;
 
 		case SRP_INTR_CODE_IBUF_REQUEST:
@@ -713,7 +685,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 
 			srp_fill_ibuf();
 			if (srp.decoding_started) {
-				if (srp.wait_for_eos & !srp.wbuf_pos)
+				if (srp.wait_for_eos && !srp.wbuf_pos)
 					srp_set_stream_size();
 			}
 			break;
@@ -728,7 +700,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 				srp.obuf_fill_done[1] = 1;
 			}
 
-			wakeup_req = 1;
+			wakeup_read = 1;
 			srp.pcm_size = readl(srp.commbox + SRP_PCM_DUMP_ADDR);
 			writel(0, srp.commbox + SRP_PCM_DUMP_ADDR);
 			break;
@@ -747,7 +719,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 		srp.play_done = 1;
 
 		srp.obuf_fill_done[srp.obuf_ready] = 1;
-		wakeup_req = 1;
+		wakeup_read = 1;
 	}
 
 	if (irq_code & SRP_INTR_CODE_UART_OUTPUT) {
@@ -758,9 +730,14 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	writel(0, srp.commbox + SRP_INTERRUPT_CODE);
 	writel(0, srp.commbox + SRP_INTERRUPT);
 
-	if (wakeup_req) {
+	if (wakeup_read) {
 		if (waitqueue_active(&read_wq))
 			wake_up_interruptible(&read_wq);
+	}
+
+	if (wakeup_decinfo) {
+		if (waitqueue_active(&decinfo_wq))
+			wake_up_interruptible(&decinfo_wq);
 	}
 
 	srp_debug("IRQ Exited!\n");

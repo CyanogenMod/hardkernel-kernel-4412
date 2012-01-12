@@ -201,9 +201,6 @@ struct srp_info {
 	unsigned int	prepare_for_eos;
 	unsigned int	play_done;
 
-	/* Workqueue for supplying decoding info */
-	unsigned int	wakeup_decinfo_wq;
-
 	/* Function pointer for clock control */
 	void	(*audss_clk_enable)(bool enable);
 };
