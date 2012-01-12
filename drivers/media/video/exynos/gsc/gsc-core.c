@@ -1368,7 +1368,7 @@ static const struct dev_pm_ops gsc_pm_ops = {
 	.runtime_resume		= gsc_runtime_resume,
 };
 
-struct gsc_pix_max gsc_max_exynos5210 = {
+struct gsc_pix_max gsc_v_100_max= {
 	.org_scaler_bypass_w	= 8192,
 	.org_scaler_bypass_h	= 8192,
 	.org_scaler_input_w	= 4800,
@@ -1383,7 +1383,7 @@ struct gsc_pix_max gsc_max_exynos5210 = {
 	.target_rot_en_h	= 2016,
 };
 
-struct gsc_pix_min gsc_min_exynos5210 = {
+struct gsc_pix_min gsc_v_100_min= {
 	.org_w			= 64,
 	.org_h			= 32,
 	.real_w			= 64,
@@ -1394,7 +1394,7 @@ struct gsc_pix_min gsc_min_exynos5210 = {
 	.target_rot_en_h	= 16,
 };
 
-struct gsc_pix_align gsc_align_exynos5210 = {
+struct gsc_pix_align gsc_v_100_align= {
 	.org_h			= 16,
 	.org_w			= 16, /* yuv420 : 16, others : 8 */
 	.offset_h		= 2,  /* yuv420/422 : 2, others : 1 */
@@ -1404,10 +1404,10 @@ struct gsc_pix_align gsc_align_exynos5210 = {
 	.target_h		= 2,  /* yuv420 : 2, others : 1 */
 };
 
-struct gsc_variant gsc_variant_exynos5210 = {
-	.pix_max		= &gsc_max_exynos5210,
-	.pix_min		= &gsc_min_exynos5210,
-	.pix_align		= &gsc_align_exynos5210,
+struct gsc_variant gsc_v_100_variant= {
+	.pix_max		= &gsc_v_100_max,
+	.pix_min		= &gsc_v_100_min,
+	.pix_align		= &gsc_v_100_align,
 	.in_buf_cnt		= 8,
 	.out_buf_cnt		= 16,
 	.sc_up_max		= 8,
@@ -1417,12 +1417,12 @@ struct gsc_variant gsc_variant_exynos5210 = {
 	.local_sc_down		= 2,
 };
 
-static struct gsc_driverdata gsc_drvdata_exynos5210 = {
+static struct gsc_driverdata gsc_v_100_drvdata= {
 	.variant = {
-		[0] = &gsc_variant_exynos5210,
-		[1] = &gsc_variant_exynos5210,
-		[2] = &gsc_variant_exynos5210,
-		[3] = &gsc_variant_exynos5210,
+		[0] = &gsc_v_100_variant,
+		[1] = &gsc_v_100_variant,
+		[2] = &gsc_v_100_variant,
+		[3] = &gsc_v_100_variant,
 	},
 	.num_entities = 4,
 	.lclk_frequency = 266000000UL,
@@ -1431,7 +1431,7 @@ static struct gsc_driverdata gsc_drvdata_exynos5210 = {
 static struct platform_device_id gsc_driver_ids[] = {
 	{
 		.name		= "exynos-gsc",
-		.driver_data	= (unsigned long)&gsc_drvdata_exynos5210,
+		.driver_data	= (unsigned long)&gsc_v_100_drvdata,
 	},
 	{},
 };
