@@ -1829,9 +1829,13 @@ void s5p_mfc_write_info(struct s5p_mfc_ctx *ctx, unsigned int data, unsigned int
 	struct s5p_mfc_dev *dev = ctx->dev;
 
 	/* MFC 6.x uses SFR for information */
-	s5p_mfc_clock_on();
-	WRITEL(data, ofs);
-	s5p_mfc_clock_off();
+	if (test_bit(0, &dev->clk_state) == 0) {
+		s5p_mfc_clock_on();
+		WRITEL(data, ofs);
+		s5p_mfc_clock_off();
+	} else {
+		WRITEL(data, ofs);
+	}
 }
 
 unsigned int s5p_mfc_read_info(struct s5p_mfc_ctx *ctx, unsigned int ofs)
@@ -1840,9 +1844,13 @@ unsigned int s5p_mfc_read_info(struct s5p_mfc_ctx *ctx, unsigned int ofs)
 	int ret;
 
 	/* MFC 6.x uses SFR for information */
-	s5p_mfc_clock_on();
-	ret = READL(ofs);
-	s5p_mfc_clock_off();
+	if (test_bit(0, &dev->clk_state) == 0) {
+		s5p_mfc_clock_on();
+		ret = READL(ofs);
+		s5p_mfc_clock_off();
+	} else {
+		ret = READL(ofs);
+	}
 
 	return ret;
 }
