@@ -69,7 +69,7 @@ static struct busfreq_table exynos4_busfreq_table[] = {
 #define ASV_GROUP	9
 static unsigned int asv_group_index;
 
-static unsigned int exynos4_asv_volt[ASV_GROUP][LV_END] = {
+static unsigned int exynos4_mif_volt[ASV_GROUP][LV_END] = {
 	/* 400      267      267      160     133     100 */
 	{1050000, 950000,  950000,  900000, 900000, 900000}, /* ASV0 */
 	{1050000, 950000,  950000,  900000, 900000, 900000}, /* ASV1 */
@@ -239,7 +239,7 @@ static void exynos4x12_set_bus_volt(void)
 
 	for (i = 0 ; i < LV_END ; i++)
 		exynos4_busfreq_table[i].volt =
-			exynos4_asv_volt[asv_group_index][i];
+			exynos4_mif_volt[asv_group_index][i];
 
 	return;
 }
