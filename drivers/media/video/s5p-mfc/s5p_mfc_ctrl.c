@@ -277,14 +277,12 @@ int s5p_mfc_release_firmware(struct s5p_mfc_dev *dev)
 		dma_unmap_single(dev->v4l2_dev.dev, s5p_mfc_bitproc_dma,
 				 FIRMWARE_CODE_SIZE, DMA_TO_DEVICE);
 	*/
-#if !defined(CONFIG_S5P_MFC_VB2_ION)
 	s5p_mfc_mem_put(dev->alloc_ctx[MFC_CMA_FW_ALLOC_CTX],
 			s5p_mfc_bitproc_buf);
 
 	s5p_mfc_bitproc_virt =  0;
 	s5p_mfc_bitproc_phys = 0;
 	s5p_mfc_bitproc_buf = 0;
-#endif
 	/*
 	s5p_mfc_bitproc_dma = 0;
 	*/
