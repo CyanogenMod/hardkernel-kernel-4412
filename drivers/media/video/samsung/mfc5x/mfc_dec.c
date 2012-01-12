@@ -301,6 +301,7 @@ static int post_seq_start(struct mfc_inst_ctx *ctx)
 	return 0;
 }
 
+#define MIN_H264_DPB 6
 static int h264_post_seq_start(struct mfc_inst_ctx *ctx)
 {
 	struct mfc_dec_ctx *dec_ctx = (struct mfc_dec_ctx *)ctx->c_priv;
@@ -315,6 +316,9 @@ static int h264_post_seq_start(struct mfc_inst_ctx *ctx)
 
 	dec_ctx->nummindpb = read_reg(MFC_SI_BUF_NUMBER);
 	dec_ctx->numtotaldpb = dec_ctx->nummindpb + dec_ctx->numextradpb;
+
+	if (dec_ctx->numtotaldpb < MIN_H264_DPB)
+		dec_ctx->numtotaldpb = MIN_H264_DPB;
 
 	mfc_dbg("nummindpb: %d, numextradpb: %d\n", dec_ctx->nummindpb,
 			dec_ctx->numextradpb);
