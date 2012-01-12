@@ -46,6 +46,8 @@
 #define S5P_ABB_G3D				S5P_PMUREG(0x0788)
 #define S5P_ABB_ARM				S5P_PMUREG(0x078C)
 
+#define S5P_ABB_MEMBER(_nr)			(S5P_ABB_INT + (_nr * 0x4))
+
 #define ABB_MODE_060V				0
 #define ABB_MODE_065V				1
 #define ABB_MODE_070V				2

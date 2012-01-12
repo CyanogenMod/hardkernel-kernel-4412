@@ -13,11 +13,54 @@
 #ifndef __ASM_ARCH_ASV_H
 #define __ASM_ARCH_ASV_H __FILE__
 
+#include <mach/regs-pmu.h>
+
 #define JUDGE_TABLE_END			NULL
 
 #define LOOP_CNT			10
 
 extern unsigned int exynos_result_of_asv;
+
+enum exynos4x12_abb_member {
+	ABB_INT,
+	ABB_MIF,
+	ABB_G3D,
+	ABB_ARM,
+};
+
+static inline void exynos4x12_set_abb_member(enum exynos4x12_abb_member abb_target,
+					     unsigned int abb_mode_value)
+{
+	unsigned int tmp;
+
+	if (abb_mode_value != ABB_MODE_BYPASS)
+		tmp = S5P_ABB_INIT;
+	else
+		tmp = S5P_ABB_INIT_BYPASS;
+
+	tmp |= abb_mode_value;
+
+	__raw_writel(tmp, S5P_ABB_MEMBER(abb_target));
+}
+
+static inline void exynos4x12_set_abb(unsigned int abb_mode_value)
+{
+	unsigned int tmp;
+
+	pr_info("EXYNOS4X12 ABB MODE : %d(mV)\n", 600 + (abb_mode_value * 50));
+
+	if (abb_mode_value != ABB_MODE_BYPASS)
+		tmp = S5P_ABB_INIT;
+	else
+		tmp = S5P_ABB_INIT_BYPASS;
+
+	tmp |= abb_mode_value;
+
+	__raw_writel(tmp, S5P_ABB_INT);
+	__raw_writel(tmp, S5P_ABB_MIF);
+	__raw_writel(tmp, S5P_ABB_G3D);
+	__raw_writel(tmp, S5P_ABB_ARM);
+}
 
 struct asv_judge_table {
 	unsigned int hpm_limit; /* HPM value to decide group of target */
