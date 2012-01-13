@@ -571,6 +571,7 @@ extern const struct gsc_vb2 gsc_vb2_cma;
 extern const struct gsc_vb2 gsc_vb2_ion;
 #endif
 
+void gsc_set_prefbuf(struct gsc_dev *gsc, struct gsc_frame frm);
 void gsc_clk_release(struct gsc_dev *gsc);
 int gsc_register_m2m_device(struct gsc_dev *gsc);
 void gsc_unregister_m2m_device(struct gsc_dev *gsc);

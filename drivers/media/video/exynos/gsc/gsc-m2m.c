@@ -98,7 +98,6 @@ int gsc_fill_addr(struct gsc_ctx *ctx)
 	return ret;
 }
 
-
 static void gsc_m2m_device_run(void *priv)
 {
 	struct gsc_ctx *ctx = priv;
@@ -136,6 +135,7 @@ static void gsc_m2m_device_run(void *priv)
 
 	pm_runtime_get_sync(&gsc->pdev->dev);
 
+	gsc_set_prefbuf(gsc, ctx->s_frame);
 	gsc_hw_set_input_addr(gsc, &ctx->s_frame.addr, GSC_M2M_BUF_NUM);
 	gsc_hw_set_output_addr(gsc, &ctx->d_frame.addr, GSC_M2M_BUF_NUM);
 

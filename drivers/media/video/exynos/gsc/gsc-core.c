@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <media/v4l2-ioctl.h>
+#include <plat/sysmmu.h>
 
 #include "gsc-core.h"
 #define GSC_CLOCK_GATE_NAME		"gscl"
@@ -327,6 +328,70 @@ u32 get_plane_size(struct gsc_frame *frame, unsigned int plane)
 	}
 
 	return frame->payload[plane];
+}
+
+u32 get_plane_info(struct gsc_frame frm, u32 addr, u32 *index)
+{
+	if (frm.addr.y == addr) {
+		*index = 0;
+		return frm.addr.y;
+	} else if (frm.addr.cb == addr) {
+		*index = 1;
+		return frm.addr.cb;
+	} else if (frm.addr.cr == addr) {
+		*index = 2;
+		return frm.addr.cr;
+	} else {
+		gsc_err("Plane address is wrong");
+		return -EINVAL;
+	}
+}
+
+void gsc_set_prefbuf(struct gsc_dev *gsc, struct gsc_frame frm)
+{
+	u32 f_chk_addr, f_chk_len, s_chk_addr, s_chk_len;
+	f_chk_addr = f_chk_len = s_chk_addr = s_chk_len = 0;
+
+	f_chk_addr = frm.addr.y;
+	f_chk_len = frm.payload[0];
+	if (frm.fmt->num_planes == 2) {
+		s_chk_addr = frm.addr.cb;
+		s_chk_len = frm.payload[1];
+	} else if (frm.fmt->num_planes == 3) {
+		u32 low_addr, low_plane, mid_addr, mid_plane, high_addr, high_plane;
+		u32 t_min, t_max;
+
+		t_min = min3(frm.addr.y, frm.addr.cb, frm.addr.cr);
+		low_addr = get_plane_info(frm, t_min, &low_plane);
+		t_max = max3(frm.addr.y, frm.addr.cb, frm.addr.cr);
+		high_addr = get_plane_info(frm, t_max, &high_plane);
+
+		mid_plane = 3 - (low_plane + high_plane);
+		if (mid_plane == 0)
+			mid_addr = frm.addr.y;
+		else if (mid_plane == 1)
+			mid_addr = frm.addr.cb;
+		else if (mid_plane == 2)
+			mid_addr = frm.addr.cr;
+		else
+			return;
+
+		f_chk_addr = low_addr;
+		if (mid_addr + frm.payload[mid_plane] - low_addr >
+		    high_addr + frm.payload[high_plane] - mid_addr) {
+			f_chk_len = frm.payload[low_plane];
+			s_chk_addr = mid_addr;
+			s_chk_len = high_addr + frm.payload[high_plane] - mid_addr;
+		} else {
+			f_chk_len = mid_addr + frm.payload[mid_plane] - low_addr;
+			s_chk_addr = high_addr;
+			s_chk_len = frm.payload[high_plane];
+		}
+	}
+	s5p_sysmmu_set_prefbuf(&gsc->pdev->dev, f_chk_addr, f_chk_len,
+			       s_chk_addr, s_chk_len);
+	gsc_dbg("f_addr = 0x%08x, f_len = %d, s_addr = 0x%08x, s_len = %d\n",
+		f_chk_addr, f_chk_len, s_chk_addr, s_chk_len);
 }
 
 int gsc_try_fmt_mplane(struct gsc_ctx *ctx, struct v4l2_format *f)
