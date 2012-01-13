@@ -8,6 +8,10 @@
  * published by the Free Software Foundation.
  */
 
+#ifdef CONFIG_S5P_SYSTEM_MMU_DEBUG
+#define DEBUG
+#endif
+
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>

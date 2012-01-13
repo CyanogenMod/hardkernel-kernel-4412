@@ -57,6 +57,12 @@ config S5P_SYSTEM_MMU_REFCOUNT
 	  Say Y here if you want to enable counting System MMU enabling and
 	  disabling.
 
+config S5P_SYSTEM_MMU_DEBUG
+	bool "Enables verbose debugging message about System MMU"
+	depends on S5P_SYSTEM_MMU
+	help
+	  Say Y here if you need detailed message while System MMU driver works
+
 config IOMMU_API
 	bool
 
