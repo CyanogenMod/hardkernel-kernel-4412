@@ -91,66 +91,6 @@ void s5p_dp_lane_swap(struct s5p_dp_device *dp, bool enable)
 	writel(reg, dp->reg_base + S5P_DP_LANE_MAP);
 }
 
-void s5p_dp_init_analog_param(struct s5p_dp_device *dp)
-{
-	u32 reg;
-
-	/*
-	 * Set termination
-	 * Normal bandgap, Normal swing, Tx terminal registor 61 ohm
-	 * 24M Phy clock, TX digital logic power is 100:1.0625V
-	 */
-	reg = SEL_BG_NEW_BANDGAP | TX_TERMINAL_CTRL_61_OHM |
-		SWING_A_30PER_G_NORMAL;
-	writel(reg, dp->reg_base + S5P_DP_ANALOG_CTL_1);
-	reg = SEL_24M | TX_DVDD_BIT_1_0625V;
-	writel(reg, dp->reg_base + S5P_DP_ANALOG_CTL_2);
-
-	/*
-	 * Set power source for internal clk driver to 1.0625v.
-	 * Select current reference of TX driver current to 00:Ipp/2+Ic/2.
-	 * Set VCO range of PLL +- 0uA
-	 */
-	reg = DRIVE_DVDD_BIT_1_0625V | SEL_CURRENT_DEFAULT |
-		VCO_BIT_000_MICRO;
-	writel(reg, dp->reg_base + S5P_DP_ANALOG_CTL_3);
-
-	/*
-	 * Set AUX TX terminal resistor to 102 ohm
-	 * Set AUX channel amplitude control
-	*/
-	reg = PD_RING_OSC | AUX_TERMINAL_CTRL_102_OHM |
-		TX_CUR1_2X | TX_CUR_4_MA;
-	writel(reg, dp->reg_base + S5P_DP_PLL_FILTER_CTL_1);
-
-	if (soc_is_exynos5250()) {
-		/* Output amplitude fine setting */
-		reg = CH3_AMP_0_MV | CH2_AMP_0_MV |
-			CH1_AMP_0_MV | CH0_AMP_0_MV;
-		writel(reg, dp->reg_base + S5P_DP_PLL_FILTER_CTL_2);
-
-		/*
-		 * PLL loop filter bandwidth
-		 * For 2.7Gbps: 175KHz, For 1.62Gbps: 234KHz
-		 * PLL digital power select: 1.2500V
-		 */
-		reg = DP_PLL_LOOP_BIT_DEFAULT | DP_PLL_REF_BIT_1_2500V;
-		writel(reg, dp->reg_base + S5P_DP_PLL_CTL);
-	} else {
-		/* Output amplitude fine setting */
-		reg = CH1_AMP_0_MV | CH0_AMP_0_MV;
-		writel(reg, dp->reg_base + S5P_DP_PLL_FILTER_CTL_2);
-
-		/*
-		 * PLL loop filter bandwidth
-		 * For 2.7Gbps: 175KHz, For 1.62Gbps: 234KHz
-		 * PLL digital power select: 1.1250V
-		 */
-		reg = DP_PLL_LOOP_BIT_DEFAULT | DP_PLL_REF_BIT_1_1250V;
-		writel(reg, dp->reg_base + S5P_DP_PLL_CTL);
-	}
-}
-
 void s5p_dp_init_interrupt(struct s5p_dp_device *dp)
 {
 	/* Set interrupt registers to initial states */
@@ -231,7 +171,6 @@ void s5p_dp_reset(struct s5p_dp_device *dp)
 
 	writel(0x00000101, dp->reg_base + S5P_DP_SOC_GENERAL_CTL);
 
-	s5p_dp_init_analog_param(dp);
 	s5p_dp_init_interrupt(dp);
 }
 
