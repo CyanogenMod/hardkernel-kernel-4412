@@ -3467,6 +3467,7 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0,
 		},
 #endif
+#ifndef CONFIG_VIDEOBUF2_ION
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_TV
 		{
 			.name = "tv",
@@ -3588,6 +3589,15 @@ static void __init exynos4_reserve_mem(void)
 			{ .alignment	= 128 << 10 },
 		},
 #endif
+#else /* !CONFIG_VIDEOBUF2_ION */
+#ifdef CONFIG_FB_S5P
+#error CONFIG_FB_S5P is defined. Select CONFIG_FB_S3C, instead
+#endif
+		{
+			.name	= "ion",
+			.size	= CONFIG_ION_EXYNOS_CONTIGHEAP_SIZE * SZ_1K,
+		},
+#endif /* !CONFIG_VIDEOBUF2_ION */
 		{
 			.size = 0
 		},
@@ -3647,7 +3657,7 @@ static void __init exynos4_reserve_mem(void)
 		"exynos4-fimc-is=fimc_is;"
 		"s5p-mixer=tv;"
 		"s5p-fimg2d=fimg2d;"
-		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;"
+		"ion-exynos=ion,fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;"
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 		"s5p-smem/video=video;"
 		"s5p-smem/sectbl=sectbl;"
