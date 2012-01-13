@@ -388,71 +388,61 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 
 	dev = &pdev->dev;
 
+	if (!dev_get_platdata(dev)) {
+		dev_dbg(dev, "Skipping probing - No owner device.\n");
+		return -ENODEV;
+	}
+
 	data = kzalloc(sizeof(*data), GFP_KERNEL);
 	if (!data) {
-		dev_err(dev, "Failed to probing System MMU: "
-							"Not enough memory");
+		dev_err(dev, "Not enough memory for private data.\n");
 		return -ENOMEM;
 	}
 
 	data->owner = dev_get_platdata(dev);
-	if (!data->owner) {
-		dev_err(dev, "Failed to probing system MMU: "
-						"Owner device is not set.");
-
-		ret = -ENODEV;
-		goto err_init;
-	}
 
 	ret = dev_set_drvdata(dev, data);
 	if (ret) {
-		dev_err(dev, "Failed to probing system MMU: "
-						"Unable to set driver data.");
+		dev_err(dev, "Unable to set driver's private data.\n");
 		goto err_init;
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
-		dev_err(dev,
-			"Failed probing system MMU: failed to get resource.");
-		return -ENOENT;
+		dev_err(dev, "Failed to get resource.\n");
+		goto err_init;
 	}
 
 	ioarea = request_mem_region(res->start, resource_size(res),
 								dev_name(dev));
 	if (ioarea == NULL) {
-		dev_err(dev, "Failed probing system MMU: "
-					"failed to request memory region.");
-		return -ENOMEM;
+		dev_err(dev, "Failed to request memory region.\n");
+		goto err_init;
 	}
 
 	sfr = ioremap(res->start, resource_size(res));
 	if (!sfr) {
-		dev_err(dev, "Failed probing system MMU: "
-						"failed to call ioremap().");
+		dev_err(dev, "Failed to map IO area\n");
 		ret = -ENOENT;
 		goto err_ioremap;
 	}
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq <= 0) {
-		dev_err(dev, "Failed probing system MMU: "
-						"failed to get irq resource.");
+		dev_err(dev, "Failed to get irq resource.\n");
 		ret = irq;
 		goto err_irq;
 	}
 
 	ret = request_irq(irq, s5p_sysmmu_irq, 0, dev_name(dev), data);
 	if (ret) {
-		dev_err(dev, "Failed probing system MMU: "
-						"failed to request irq.");
+		dev_err(dev, "Failed to request irq.\n");
 		goto err_irq;
 	}
 
 	data->clk = clk_get(dev, "sysmmu");
 	if (IS_ERR(data->clk)) {
-		dev_err(dev, "Failed to probing System MMU: "
-					"failed to get clock descriptor");
+		dev_err(dev, "Failed to get clock descriptor.\n");
 		ret = PTR_ERR(data->clk);
 		goto err_clk;
 	}
@@ -468,7 +458,13 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 	if (dev->parent)
 		pm_runtime_enable(dev);
 
-	dev_dbg(dev, "Initialized.\n");
+	if (to_platform_device(data->owner)->id == -1)
+		dev_info(dev, "Initialized for %s.\n",
+					to_platform_device(data->owner)->name);
+	else
+		dev_info(dev, "Initialized for %s.%d.\n",
+					to_platform_device(data->owner)->name,
+					to_platform_device(data->owner)->id);
 	return 0;
 err_clk:
 	free_irq(irq, data);
@@ -479,7 +475,7 @@ err_ioremap:
 	kfree(ioarea);
 err_init:
 	kfree(data);
-	dev_err(dev, "Probing system MMU failed.");
+	dev_err(dev, "Probing system MMU failed!");
 	return ret;
 }
 
