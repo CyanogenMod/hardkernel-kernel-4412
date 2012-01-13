@@ -54,7 +54,8 @@ struct vb2_ion_conf {
 };
 
 struct vb2_ion_buf {
-	struct vm_area_struct		*vma;
+	struct vm_area_struct		**vma;
+	int				vma_count;
 	struct vb2_ion_conf		*conf;
 	struct vb2_vmarea_handler	handler;
 
@@ -334,34 +335,59 @@ static void vb2_ion_put(void *buf_priv)
  *
  * Returns 0 on success.
  */
-static int _vb2_ion_get_vma(unsigned long vaddr, unsigned long size,
-			    struct vm_area_struct **res_vma)
+static struct vm_area_struct **_vb2_ion_get_vma(unsigned long vaddr,
+					unsigned long size, int *vma_num)
 {
 	struct mm_struct *mm = current->mm;
-	struct vm_area_struct *vma;
-	unsigned long start, end;
-	int ret = -EFAULT;
+	struct vm_area_struct *vma, *vma0;
+	struct vm_area_struct **vmas;
+	unsigned long prev_end = 0;
+	unsigned long end;
+	int i;
 
-	start = vaddr;
-	end = start + size;
+	end = vaddr + size;
 
 	down_read(&mm->mmap_sem);
-	vma = find_vma(mm, start);
-
-	if (vma == NULL || vma->vm_end < end)
-		goto done;
-
-	/* Lock vma and return to the caller */
-	*res_vma = vb2_get_vma(vma);
-	if (*res_vma == NULL) {
-		ret = -ENOMEM;
+	vma0 = find_vma(mm, vaddr);
+	if (!vma0) {
+		vmas = ERR_PTR(-EINVAL);
 		goto done;
 	}
-	ret = 0;
+
+	for (*vma_num = 1, vma = vma0->vm_next, prev_end = vma0->vm_end;
+		vma && (end > vma->vm_start) && (prev_end == vma->vm_start);
+				prev_end = vma->vm_end, vma = vma->vm_next) {
+		*vma_num += 1;
+	}
+
+	if (prev_end < end) {
+		vmas = ERR_PTR(-EINVAL);
+		goto done;
+	}
+
+	vmas = kmalloc(sizeof(*vmas) * *vma_num, GFP_KERNEL);
+	if (!vmas) {
+		vmas = ERR_PTR(-ENOMEM);
+		goto done;
+	}
+
+	for (i = 0; i < *vma_num; i++, vma0 = vma0->vm_next) {
+		vmas[i] = vb2_get_vma(vma0);
+		if (!vmas[i])
+			break;
+	}
+
+	if (i < *vma_num) {
+		while (i-- > 0)
+			vb2_put_vma(vmas[i]);
+
+		kfree(vmas);
+		vmas = ERR_PTR(-ENOMEM);
+	}
 
 done:
 	up_read(&mm->mmap_sem);
-	return ret;
+	return vmas;
 }
 
 static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
@@ -463,8 +489,8 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 			(u32)buf->dva, (u32)size, (u32)buf->offset);
 
 	/* Set vb2_ion_buf */
-	ret = _vb2_ion_get_vma(vaddr, size, &vma);
-	if (ret) {
+	buf->vma = _vb2_ion_get_vma(vaddr, size, &buf->vma_count);
+	if (IS_ERR(buf->vma)) {
 		pr_err("Failed acquiring VMA 0x%08lx\n", vaddr);
 
 		if (conf->use_mmu)
@@ -473,7 +499,6 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 		goto err_get_vma;
 	}
 
-	buf->vma = vma;
 	buf->conf = conf;
 	buf->size = size;
 	buf->cacheable = conf->cacheable;
@@ -497,6 +522,7 @@ static void vb2_ion_put_userptr(void *mem_priv)
 {
 	struct vb2_ion_buf *buf = mem_priv;
 	struct vb2_ion_conf *conf = buf->conf;
+	int i;
 
 	if (!buf) {
 		pr_err("No buffer to put\n");
@@ -513,7 +539,9 @@ static void vb2_ion_put_userptr(void *mem_priv)
 
 	ion_free(conf->client, buf->handle);
 
-	vb2_put_vma(buf->vma);
+	for (i = 0; i < buf->vma_count; i++)
+		vb2_put_vma(buf->vma[i]);
+	kfree(buf->vma);
 
 	kfree(buf);
 }
