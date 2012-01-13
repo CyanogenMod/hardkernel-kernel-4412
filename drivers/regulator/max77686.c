@@ -32,7 +32,7 @@
 #include <linux/mfd/max77686.h>
 #include <linux/mfd/max77686-private.h>
 
-#define PMIC_DEBUG KERN_INFO
+#define PMIC_DEBUG KERN_DEBUG
 
 struct max77686_data {
 	struct device *dev;
