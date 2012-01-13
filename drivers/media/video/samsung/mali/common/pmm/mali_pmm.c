@@ -642,7 +642,11 @@ _mali_osk_errcode_t malipmm_powerup( u32 cores )
                 mali_platform_power_mode_change(MALI_POWER_MODE_ON);
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 		/* Initiate the power up */
-                _mali_osk_pmm_dev_activate();
+                if (_mali_osk_pmm_dev_activate() < 0) {
+					MALI_PRINT(("PMM: Mali PMM device activate failed\n"));
+					err = _MALI_OSK_ERR_FAULT;
+					return err;
+				}
 #endif
         }
 

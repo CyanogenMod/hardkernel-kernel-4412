@@ -26,6 +26,8 @@
 #include <linux/suspend.h>
 
 #include <plat/cpu.h>
+#include <plat/pd.h>
+#include <plat/devs.h>
 
 #include "mali_platform.h"
 #include "mali_osk.h"
@@ -576,7 +578,8 @@ static int mali_pm_remove(struct platform_device *pdev)
 
 static void mali_pm_shutdown(struct platform_device *pdev)
 {
-	_mali_osk_pmm_dev_activate();
+	MALI_PRINT(("Mali shutdown!!\n"));
+	exynos_pd_enable(&exynos4_device_pd[PD_G3D].dev);
 	return;
 }
 

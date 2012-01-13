@@ -152,7 +152,7 @@ _mali_osk_errcode_t _mali_osk_pmm_dev_idle(void)
 
 /** This funtion is invoked when mali device needs to be activated.
 */
-void _mali_osk_pmm_dev_activate(void)
+int _mali_osk_pmm_dev_activate(void)
 {
 	
 #if MALI_LICENSE_IS_GPL
@@ -163,20 +163,22 @@ void _mali_osk_pmm_dev_activate(void)
 	{
 		pm_suspend_ignore_children(&(mali_gpu_device.dev), true);
 		pm_runtime_enable(&(mali_gpu_device.dev));
- 		pm_runtime_get_sync(&(mali_gpu_device.dev));
+		err = pm_runtime_get_sync(&(mali_gpu_device.dev));
 		is_runtime = 1;
 	}
 	else
 	{
 		err = pm_runtime_get_sync(&(mali_gpu_device.dev));
 	}
-	if(err)
-        {
-		MALI_DEBUG_PRINT(4, ("OSPMM: Error in _mali_osk_pmm_dev_activate\n" ));
-        }
+	if(err < 0)
+    {
+		MALI_PRINT(("OSPMM: Error in _mali_osk_pmm_dev_activate, err : %d\n",err ));
+    }
 #endif /* MALI_PMM_RUNTIME_JOB_CONTROL_ON */
 #endif /* CONFIG_PM_RUNTIME */
 #endif /* MALI_LICENSE_IS_GPL */
+
+	return err;
 }
 
 void _mali_osk_pmm_ospmm_cleanup( void )

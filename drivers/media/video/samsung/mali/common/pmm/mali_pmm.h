@@ -199,7 +199,7 @@ _mali_osk_errcode_t _mali_osk_pmm_dev_idle( void );
  *
  * @note inform the os that device needs to be activated
  */
-void _mali_osk_pmm_dev_activate( void );
+int _mali_osk_pmm_dev_activate( void );
 
 /** @brief Function to report OS PMM for cleanup
  *
