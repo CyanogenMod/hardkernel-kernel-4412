@@ -32,6 +32,13 @@ void __init s5p_cma_region_reserve(struct cma_region *regions_normal,
 	for (reg = regions_normal; reg->size != 0; reg++) {
 		phys_addr_t paddr;
 
+		if (!IS_ALIGNED(reg->size, PAGE_SIZE)) {
+			pr_debug("S5P/CMA: size of '%s' is NOT page-aligned\n",
+								reg->name);
+			reg->size = PAGE_ALIGN(reg->size);
+		}
+
+
 		if (reg->reserved) {
 			pr_err("S5P/CMA: '%s' alread reserved\n", reg->name);
 			continue;
