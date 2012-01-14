@@ -38,8 +38,9 @@ struct mfc_pm {
 	struct device	*device;
 #endif
 #ifdef CONFIG_CPU_FREQ
-	struct clk	*op_clk;
+	struct clk		*op_clk;
 	struct notifier_block	freq_transition;
+	atomic_t		cpufreq_lock_cnt; /* CPU frequency lock count */
 #endif
 #endif
 };

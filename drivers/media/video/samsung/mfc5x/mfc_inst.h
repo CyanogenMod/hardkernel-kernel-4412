@@ -154,6 +154,9 @@ struct mfc_inst_ctx {
 #ifdef CONFIG_BUSFREQ
 	int busfreq_flag;		/* context bus frequency flag */
 #endif
+#ifdef CONFIG_CPU_FREQ
+	int cpufreq_locked;		/* cpu frequency locked for instance */
+#endif
 };
 
 struct mfc_inst_ctx *mfc_create_inst(void);
