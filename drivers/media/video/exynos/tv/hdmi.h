@@ -67,7 +67,7 @@ enum HDMI_3D_EXT_DATA {
 	 * information for Side-by-side(half) 3D structure */
 
 	/** Horizontal sub-sampleing */
-	HDMI_H_SUB_SAMPLE = 0x10
+	HDMI_H_SUB_SAMPLE = 0x1
 };
 
 enum HDMI_PACKET_TYPE {

@@ -2699,22 +2699,17 @@ void hdmi_tg_enable(struct hdmi_device *hdev, int on)
 		hdmi_write_mask(hdev, HDMI_TG_CMD, 0, mask);
 }
 
-static u8 hdmi_chksum(struct hdmi_device *hdev, u32 start, u8 len)
+static u8 hdmi_chksum(struct hdmi_device *hdev, u32 start, u8 len, u32 hdr_sum)
 {
 	int i;
-	u32 chksum;
 
-	/* 0 ~ 2 : headers
-	 * 3 : data0 for storing checksum value
-	 * 4 ~ len+4 : data1 to data(len+1)
-	 */
-	for (i = 0; i < len + 4; ++i) {
-		if (len == 3) /* skip data0 register for storing checksum */
-			continue;
-		chksum += hdmi_read(hdev, start + i * 4);
-	}
+	/* hdr_sum : header0 + header1 + header2
+	 * start : start address of packet byte1
+	 * len : packet bytes - 1 */
+	for (i = 0; i < len; ++i)
+		hdr_sum += hdmi_read(hdev, start + i * 4);
 
-	return (u8)(0x100 - (chksum & 0xff));
+	return (u8)(0x100 - (hdr_sum & 0xff));
 }
 
 void hdmi_reg_infoframe(struct hdmi_device *hdev,
@@ -2722,6 +2717,8 @@ void hdmi_reg_infoframe(struct hdmi_device *hdev,
 {
 	struct device *dev = hdev->dev;
 	const struct hdmi_3d_info *info = hdmi_preset2info(hdev->cur_preset);
+	u32 hdr_sum;
+	u8 chksum;
 	dev_dbg(dev, "%s: InfoFrame type = 0x%x\n", __func__, infoframe->type);
 
 	switch (infoframe->type) {
@@ -2743,16 +2740,20 @@ void hdmi_reg_infoframe(struct hdmi_device *hdev,
 			(u8)HDMI_VSI_DATA06_3D_EXT_DATA(HDMI_H_SUB_SAMPLE));
 		}
 		hdmi_writeb(hdev, HDMI_VSI_HEADER2, infoframe->len);
-		hdmi_writeb(hdev, HDMI_VSI_DATA(0),
-			hdmi_chksum(hdev, HDMI_VSI_HEADER0, infoframe->len));
+		hdr_sum = infoframe->type + infoframe->ver + infoframe->len;
+		chksum = hdmi_chksum(hdev, HDMI_VSI_DATA(1), infoframe->len, hdr_sum);
+		dev_dbg(dev, "VSI checksum = 0x%x\n", chksum);
+		hdmi_writeb(hdev, HDMI_VSI_DATA(0), chksum);
 		break;
 	case HDMI_PACKET_TYPE_AVI:
 		hdmi_writeb(hdev, HDMI_AVI_CON, HDMI_AVI_CON_EVERY_VSYNC);
 		hdmi_writeb(hdev, HDMI_AVI_HEADER0, infoframe->type);
 		hdmi_writeb(hdev, HDMI_AVI_HEADER1, infoframe->ver);
 		hdmi_writeb(hdev, HDMI_AVI_HEADER2, infoframe->len);
-		hdmi_writeb(hdev, HDMI_AVI_CHECK_SUM,
-			hdmi_chksum(hdev, HDMI_AVI_HEADER0, infoframe->len));
+		hdr_sum = infoframe->type + infoframe->ver + infoframe->len;
+		chksum = hdmi_chksum(hdev, HDMI_AVI_BYTE(1), infoframe->len, hdr_sum);
+		dev_dbg(dev, "AVI checksum = 0x%x\n", chksum);
+		hdmi_writeb(hdev, HDMI_AVI_CHECK_SUM, chksum);
 		break;
 	default:
 		break;
