@@ -273,6 +273,11 @@ static int __devinit exynos_usbswitch_probe(struct platform_device *pdev)
 	mutex_init(&usb_switch->mutex);
 	usb_switch->workqueue = create_singlethread_workqueue("usb_switch");
 	INIT_WORK(&usb_switch->switch_work, exnos_usb_switch_worker);
+
+	usb_switch->gpio_host_detect = pdata->gpio_host_detect;
+	usb_switch->gpio_device_detect = pdata->gpio_device_detect;
+	usb_switch->gpio_host_vbus = pdata->gpio_host_vbus;
+
 	/* USB Device detect IRQ */
 	irq = platform_get_irq(pdev, 1);
 	if (!irq) {
@@ -307,10 +312,6 @@ static int __devinit exynos_usbswitch_probe(struct platform_device *pdev)
 		goto fail;
 	}
 	usb_switch->host_detect_irq = irq;
-
-	usb_switch->gpio_host_detect = pdata->gpio_host_detect;
-	usb_switch->gpio_device_detect = pdata->gpio_device_detect;
-	usb_switch->gpio_host_vbus = pdata->gpio_host_vbus;
 
 	exynos_usb_status_init(usb_switch);
 
