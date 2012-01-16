@@ -160,7 +160,7 @@ static void srp_stop(void)
 
 static void srp_fill_ibuf(void)
 {
-	unsigned long fill_size;
+	unsigned long fill_size = 0;
 
 	if (!srp.wbuf_pos)
 		return;
@@ -254,9 +254,10 @@ static ssize_t srp_read(struct file *file, char *buffer,
 				size_t size, loff_t *pos)
 {
 	struct srp_buf_info *argp = (struct srp_buf_info *)buffer;
-	void *obuf0 = srp.obuf_info.addr;
-	void *obuf1 = srp.obuf_info.addr + srp.obuf_size;
+	unsigned char *mmapped_obuf0 = srp.obuf_info.addr;
+	unsigned char *mmapped_obuf1 = srp.obuf_info.addr + srp.obuf_size;
 	int ret = 0;
+	int i;
 
 	srp_debug("Entered Get Obuf in PCM function\n");
 
@@ -273,7 +274,7 @@ static ssize_t srp_read(struct file *file, char *buffer,
 
 	if (srp.decoding_started) {
 		if (srp.obuf_copy_done[srp.obuf_ready] && !srp.wait_for_eos) {
-			srp_err("Wrong ordering read() OBUF[%d] int!!!\n", srp.obuf_ready);
+			srp_debug("Wrong ordering read() OBUF[%d] int!!!\n", srp.obuf_ready);
 			srp.pcm_info.size = 0;
 			return copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
 		}
@@ -296,7 +297,18 @@ static ssize_t srp_read(struct file *file, char *buffer,
 		return copy_to_user(argp, &srp.pcm_info, sizeof(struct srp_buf_info));
 	}
 
-	srp.pcm_info.addr = srp.obuf_ready ? obuf1 : obuf0;
+	/* For EVT0 : will be removed on EVT1 */
+	if (soc_is_exynos5250()) {
+		if (srp.obuf_ready == 0) {
+			for (i = 0; i < srp.obuf_size; i += 4)
+				memcpy(&srp.obuf0[i], &srp.pcm_obuf0[i], 0x4);
+		} else {
+			for (i = 0; i < srp.obuf_size; i += 4)
+				memcpy(&srp.obuf1[i], &srp.pcm_obuf1[i], 0x4);
+		}
+	}
+
+	srp.pcm_info.addr = srp.obuf_ready ? mmapped_obuf1 : mmapped_obuf0;
 	srp.pcm_info.size = srp.pcm_size;
 	srp.pcm_info.num = srp.obuf_info.num;
 
@@ -613,12 +625,17 @@ static int srp_mmap(struct file *filep, struct vm_area_struct *vma)
 {
 	unsigned long size = vma->vm_end - vma->vm_start;
 	unsigned int pfn;
+	unsigned int mmap_addr;
 
 	vma->vm_flags |= VM_IO;
 	vma->vm_flags |= VM_RESERVED;
 	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
-	pfn = __phys_to_pfn(SRP_DMEM_BASE);
+	/* For EVT0 : will be removed on EVT1 */
+	mmap_addr = soc_is_exynos5250() ? srp.obuf0_pa
+					: SRP_DMEM_BASE;
+
+	pfn = __phys_to_pfn(mmap_addr);
 
 	if (remap_pfn_range(vma, vma->vm_start, pfn, size, vma->vm_page_prot)) {
 		srp_err("failed to mmap for Obuf\n");
@@ -634,12 +651,16 @@ static void srp_check_obuf_info(void)
 	unsigned int buf1 = readl(srp.commbox + SRP_PCM_BUFF1);
 	unsigned int size = readl(srp.commbox + SRP_PCM_BUFF_SIZE);
 
-	if (srp.obuf0_pa != buf0)
-		srp_err("Wrong PCM BUF0[0x%x], OBUF0[0x%x]\n",
+	/* For EVT0 : will be removed on EVT1 */
+	if (!soc_is_exynos5250()) {
+		if (srp.obuf0_pa != buf0)
+			srp_err("Wrong PCM BUF0[0x%x], OBUF0[0x%x]\n",
 						buf0, srp.obuf0_pa);
-	if (srp.obuf1_pa != buf1)
-		srp_err("Wrong PCM BUF1[0x%x], OBUF1[0x%x]\n",
+		if (srp.obuf1_pa != buf1)
+			srp_err("Wrong PCM BUF1[0x%x], OBUF1[0x%x]\n",
 						buf1, srp.obuf1_pa);
+	}
+
 	if ((srp.obuf_size >> 2) != size)
 		srp_err("Wrong OBUF SIZE[%d]\n", size);
 }
@@ -745,7 +766,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static void srp_prepare_buff(void)
+static void srp_prepare_buff(struct device *dev)
 {
 	srp.ibuf_size = IBUF_SIZE;
 	srp.obuf_size = OBUF_SIZE;
@@ -755,13 +776,26 @@ static void srp_prepare_buff(void)
 
 	srp.ibuf0 = soc_is_exynos5250() ? srp.dmem + srp.ibuf_offset
 					: srp.iram + srp.ibuf_offset;
-	srp.obuf0 = srp.dmem + OBUF_OFFSET;
+
+	/* For EVT0 : will be removed on EVT1 */
+	if (soc_is_exynos5250()) {
+		srp.obuf0 = dma_alloc_writecombine(dev, srp.obuf_size * 2,
+						&srp.obuf0_pa, GFP_KERNEL);
+		srp.pcm_obuf0 = srp.dmem + srp.obuf_offset;
+		srp.pcm_obuf1 = srp.pcm_obuf0 + srp.obuf_size;
+		srp.obuf_offset = 0;
+	} else {
+		srp.obuf0 = srp.dmem + srp.obuf_offset;
+	}
 
 	srp.ibuf1 = srp.ibuf0 + srp.ibuf_size;
 	srp.obuf1 = srp.obuf0 + srp.obuf_size;
 
-	srp.ibuf0_pa = SRP_IBUF_PHY_ADDR;
-	srp.obuf0_pa = SRP_OBUF_PHY_ADDR;
+	if (!srp.ibuf0_pa)
+		srp.ibuf0_pa = SRP_IBUF_PHY_ADDR;
+
+	if (!srp.obuf0_pa)
+		srp.obuf0_pa = SRP_OBUF_PHY_ADDR;
 
 	srp.ibuf1_pa = srp.ibuf0_pa + srp.ibuf_size;
 	srp.obuf1_pa = srp.obuf0_pa + srp.obuf_size;
@@ -1111,7 +1145,7 @@ static __devinit int srp_probe(struct platform_device *pdev)
 		goto err6;
 	}
 
-	srp_prepare_buff();
+	srp_prepare_buff(&pdev->dev);
 	srp.audss_clk_enable = audss_clk_enable;
 
 	return 0;
