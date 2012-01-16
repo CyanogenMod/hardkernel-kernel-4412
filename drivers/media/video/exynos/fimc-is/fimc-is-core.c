@@ -189,7 +189,7 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		}
 		break;
 	case ISR_NDONE:
-		err("ISR_NDONE - %d: %d\n", dev->i2h_cmd.arg[0],
+		err("ISR_NDONE - %d: 0x%08x\n", dev->i2h_cmd.arg[0],
 			dev->i2h_cmd.arg[1]);
 		fimc_is_print_err_number(dev->i2h_cmd.arg[1]);
 		switch (dev->i2h_cmd.arg[1]) {

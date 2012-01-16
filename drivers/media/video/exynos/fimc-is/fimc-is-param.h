@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 117  /* IS REGION VERSION 1.17 */
+#define IS_REGION_VER 118  /* IS REGION VERSION 1.18 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -1450,6 +1450,13 @@ struct is_param_region {
 
 #define	NUMBER_OF_GAMMA_CURVE_POINTS	32
 
+struct is_tune_sensor {
+	u32 exposure;
+	u32 analog_gain;
+	u32 frame_rate;
+	u32 actuator_position;
+};
+
 struct is_tune_gammacurve {
 	u32 num_pts_x[NUMBER_OF_GAMMA_CURVE_POINTS];
 	u32 num_pts_y_r[NUMBER_OF_GAMMA_CURVE_POINTS];
@@ -1457,7 +1464,7 @@ struct is_tune_gammacurve {
 	u32 num_pts_y_b[NUMBER_OF_GAMMA_CURVE_POINTS];
 };
 
-struct is_tune_region {
+struct is_tune_isp {
 	/* Brightness level : range 0~100, default : 7 */
 	u32 brightness_level;
 	/* Contrast level : range -127~127, default : 0 */
@@ -1477,6 +1484,11 @@ struct is_tune_region {
 	/* Noise reduction : range -127~127, default : 0 */
 	s32 noise_reduction;
 	/* (32*4 + 9)*4 = 548 bytes */
+};
+
+struct is_tune_region {
+	struct is_tune_sensor sensor;
+	struct is_tune_isp isp;
 };
 
 struct rational_t {

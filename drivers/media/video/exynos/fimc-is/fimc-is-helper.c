@@ -310,7 +310,7 @@ static const struct isp_param init_val_isp_capture = {
 		.err = 0,
 	},
 	.aa = {
-		.cmd = ISP_AA_COMMAND_STOP,
+		.cmd = ISP_AA_COMMAND_START,
 		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
 						ISP_AA_TARGET_AWB,
 		.mode = 0,
@@ -507,7 +507,7 @@ static const struct isp_param init_val_isp_preview_video = {
 		.err = 0,
 	},
 	.aa = {
-		.cmd = ISP_AA_COMMAND_STOP,
+		.cmd = ISP_AA_COMMAND_START,
 		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
 						ISP_AA_TARGET_AWB,
 		.mode = 0,
@@ -722,7 +722,7 @@ static const struct isp_param init_val_isp_camcording = {
 		.err = 0,
 	},
 	.aa = {
-		.cmd = ISP_AA_COMMAND_STOP,
+		.cmd = ISP_AA_COMMAND_START,
 		.target = ISP_AA_TARGET_AF | ISP_AA_TARGET_AE |
 						ISP_AA_TARGET_AWB,
 		.mode = 0,

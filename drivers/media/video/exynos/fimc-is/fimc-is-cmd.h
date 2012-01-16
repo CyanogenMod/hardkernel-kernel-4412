@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_CMD_H_
 #define FIMC_IS_CMD_H_
 
-#define IS_COMMAND_VER 107 /* IS COMMAND VERSION 1.07 */
+#define IS_COMMAND_VER 108 /* IS COMMAND VERSION 1.08 */
 
 enum is_cmd {
 	/* HOST -> IS */
@@ -79,6 +79,16 @@ struct is_setfile_header {
 	struct is_setfile_header_element isp[ISS_END];
 	struct is_setfile_header_element drc[ISS_END];
 	struct is_setfile_header_element fd[ISS_END];
+};
+
+struct is_get_capability {
+	u32 support_af;
+	u32 iso_gain;
+	u32 aperture;
+	u32 min_exposure;
+	u32 max_exposure;
+	u32 min_gain;
+	u32 max_gain;
 };
 
 #define HOST_SET_INT_BIT	0x00000001
