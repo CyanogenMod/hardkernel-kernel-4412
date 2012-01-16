@@ -329,7 +329,7 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 10),
 	}, {
-		.name		= "ppmutv",
+		.name		= "ppmuisp",
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 20 | 1 << 21),
 	}, {
@@ -378,6 +378,51 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.ctrlbit	= (1 << 21 | 1 << 22 | 1 << 24),
 	},
 #endif
+	{
+		.name		= "mtcadc",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 27),
+	}, {
+		.name		= "i2c0_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 25),
+	}, {
+		.name		= "mpwm_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 24),
+	}, {
+		.name		= "qelite1",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 18),
+	}, {
+		.name		= "qelite0",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 17),
+	}, {
+		.name		= "qefd",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 16),
+	}, {
+		.name		= "qedrc",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 15),
+	}, {
+		.name		= "qeisp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 14),
+	}, {
+		.name		= "lite0",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 3),
+	}, {
+		.name		= "spi1_isp",
+		.enable		= exynos4212_clk_ip_isp1_ctrl,
+		.ctrlbit	= (1 << 13),
+	}, {
+		.name		= "spi0_isp",
+		.enable		= exynos4212_clk_ip_isp1_ctrl,
+		.ctrlbit	= (1 << 12),
+	},
 };
 
 static struct clksrc_clk exynos4212_clksrcs[] = {
