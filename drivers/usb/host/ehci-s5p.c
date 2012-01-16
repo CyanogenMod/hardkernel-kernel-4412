@@ -220,6 +220,8 @@ static int s5p_ehci_runtime_resume(struct device *dev)
 		rc = pdata->phy_resume(pdev, S5P_USB_PHY_HOST);
 
 	if (rc) {
+		s5p_ehci_configurate(hcd);
+
 		/* emptying the schedule aborts any urbs */
 		spin_lock_irq(&ehci->lock);
 		if (ehci->reclaim)
