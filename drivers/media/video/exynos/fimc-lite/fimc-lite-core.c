@@ -192,6 +192,9 @@ static int flite_s_stream(struct v4l2_subdev *sd, int enable)
 	unsigned long flags;
 	int ret = 0;
 
+	if (enable)
+		flite_hw_reset(flite);
+
 	spin_lock_irqsave(&flite->slock, flags);
 
 	if (test_bit(FLITE_ST_SUSPENDED, &flite->state))
@@ -225,7 +228,6 @@ static int flite_s_stream(struct v4l2_subdev *sd, int enable)
 				ret = -EBUSY;
 			}
 		}
-
 		return ret;
 	}
 s_stream_unlock:

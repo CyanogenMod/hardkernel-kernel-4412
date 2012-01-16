@@ -170,5 +170,5 @@ void flite_hw_set_window_offset(struct flite_dev *dev);
 void flite_hw_set_capture_start(struct flite_dev *dev);
 void flite_hw_set_capture_stop(struct flite_dev *dev);
 void flite_hw_set_last_capture_end_clear(struct flite_dev *dev);
-
+void flite_hw_reset(struct flite_dev *dev);
 #endif /* FLITE_CORE_H */
