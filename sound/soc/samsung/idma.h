@@ -51,7 +51,7 @@
 /* If enabled ALP Audio */
 #if defined(CONFIG_SND_SAMSUNG_ALP)
 #if defined(CONFIG_ARCH_EXYNOS4)
-#define LP_TXBUFF_OFFSET	(soc_is_exynos4412() ? \
+#define LP_TXBUFF_OFFSET	((soc_is_exynos4412() || soc_is_exynos4212()) ? \
 				(0x38000) : (0x18000))
 #elif defined(CONFIG_ARCH_EXYNOS5)
 #define LP_TXBUFF_OFFSET	(0x4)
