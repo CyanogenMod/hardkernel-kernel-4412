@@ -294,7 +294,8 @@ static int exynos4_pm_suspend(void)
 	__raw_writel(tmp, S5P_CENTRAL_SEQ_CONFIGURATION);
 
 	/* When enter sleep mode, USE_DELAYED_RESET_ASSERTION have to disable */
-	exynos4_reset_assert_ctrl(0);
+	if (!soc_is_exynos4210())
+		exynos4_reset_assert_ctrl(0);
 
 	if (!soc_is_exynos4210()) {
 		tmp = S5P_USE_STANDBY_WFI0 | S5P_USE_STANDBY_WFE0;
@@ -329,8 +330,6 @@ static void exynos4_pm_resume(void)
 		/* No need to perform below restore code */
 		goto early_wakeup;
 	}
-
-	exynos4_reset_assert_ctrl(1);
 
 	/* For release retention */
 
@@ -379,6 +378,9 @@ static void exynos4_pm_resume(void)
 #endif
 
 early_wakeup:
+	if (!soc_is_exynos4210())
+		exynos4_reset_assert_ctrl(1);
+
 	/* Clear Check mode */
 	__raw_writel(0x0, REG_INFORM1);
 

@@ -379,6 +379,9 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	/* Set value of power down register for aftr mode */
 	exynos4_sys_powerdown_conf(SYS_AFTR);
 
+	if (!soc_is_exynos4210())
+		exynos4_reset_assert_ctrl(0);
+
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
 		/*
@@ -399,6 +402,8 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	s3c_pm_do_restore_core(exynos4_aftr_save,
 			       ARRAY_SIZE(exynos4_aftr_save));
 early_wakeup:
+	if (!soc_is_exynos4210())
+		exynos4_reset_assert_ctrl(1);
 
 	/* Clear wakeup state register */
 	__raw_writel(0x0, S5P_WAKEUP_STAT);
@@ -452,7 +457,7 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	exynos4_sys_powerdown_conf(SYS_LPA);
 
 	/* Should be fixed on EVT1 */
-	if (soc_is_exynos4412())
+	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(0);
 
 	do {
@@ -488,7 +493,7 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
 
 early_wakeup:
-	if (soc_is_exynos4412())
+	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
 
 	/* Clear wakeup state register */
