@@ -1995,6 +1995,7 @@ static unsigned long exynos5_vpll_get_rate(struct clk *clk)
 static int exynos5_vpll_set_rate(struct clk *clk, unsigned long rate)
 {
 	unsigned int vpll_con0, vpll_con1;
+	unsigned int locktime;
 	unsigned int i;
 
 	/* Return if nothing changed */
@@ -2024,6 +2025,11 @@ static int exynos5_vpll_set_rate(struct clk *clk, unsigned long rate)
 				__func__);
 		return -EINVAL;
 	}
+
+	/* 3000 max_cycls : specification data */
+	locktime = 3000 * exynos5_vpll_div[i].pdiv + 1;
+
+	__raw_writel(locktime, EXYNOS5_VPLL_LOCK);
 
 	__raw_writel(vpll_con0, EXYNOS5_VPLL_CON0);
 	__raw_writel(vpll_con1, EXYNOS5_VPLL_CON1);
