@@ -207,30 +207,28 @@ static int s5p_tvout_remove(struct platform_device *pdev)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void s5p_tvout_early_suspend(struct early_suspend *h)
 {
-	unsigned long spin_flags;
 	tvout_dbg("\n");
-	spin_lock_irqsave(&s5ptv_status.tvout_lock, spin_flags);
+	mutex_lock(&s5p_tvout_mutex);
 	s5p_vp_ctrl_suspend();
 	s5p_mixer_ctrl_suspend();
 	s5p_tvif_ctrl_suspend();
 	suspend_status = 1;
 	tvout_dbg("suspend_status is true\n");
-	spin_unlock_irqrestore(&s5ptv_status.tvout_lock, spin_flags);
+	mutex_unlock(&s5p_tvout_mutex);
 
 	return;
 }
 
 static void s5p_tvout_late_resume(struct early_suspend *h)
 {
-	unsigned long spin_flags;
 	tvout_dbg("\n");
-	spin_lock_irqsave(&s5ptv_status.tvout_lock, spin_flags);
+	mutex_lock(&s5p_tvout_mutex);
 	suspend_status = 0;
 	tvout_dbg("suspend_status is false\n");
 	s5p_tvif_ctrl_resume();
 	s5p_mixer_ctrl_resume();
 	s5p_vp_ctrl_resume();
-	spin_unlock_irqrestore(&s5ptv_status.tvout_lock, spin_flags);
+	mutex_unlock(&s5p_tvout_mutex);
 
 	return;
 }
