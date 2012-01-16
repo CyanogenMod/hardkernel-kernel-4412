@@ -18,16 +18,8 @@
 #include <mach/ppmu.h>
 
 #define MAX_LOAD		100
-#define UP_THRESHOLD		30
-#define DMC_MAX_THRESHOLD	42
-#define DIVIDING_FACTOR		10000
-#define PPC_THRESHOLD		23
-#define PPMU_THRESHOLD		5
-#define IDLE_THRESHOLD		4
 #define LOAD_HISTORY_SIZE	5
-#define UP_CPU_THRESHOLD	11
-#define MAX_CPU_THRESHOLD	20
-#define CPU_SLOPE_SIZE		7
+#define DIVIDING_FACTOR		10000
 
 #define TIMINGROW_OFFSET	0x34
 

@@ -45,6 +45,14 @@
 #include <plat/cpu.h>
 #include <plat/clock.h>
 
+#define UP_THRESHOLD		30
+#define DMC_MAX_THRESHOLD	42
+#define PPMU_THRESHOLD		5
+#define IDLE_THRESHOLD		4
+#define UP_CPU_THRESHOLD	11
+#define MAX_CPU_THRESHOLD	20
+#define CPU_SLOPE_SIZE		7
+
 /* To save/restore DMC_PAUSE_CTRL register */
 static unsigned int dmc_pause_ctrl;
 
