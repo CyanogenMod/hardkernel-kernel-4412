@@ -141,7 +141,7 @@ static struct gsc_fmt gsc_formats[] = {
 		.depth		= { 12 },
 		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
-		.corder		= GSC_CBCR,
+		.corder		= GSC_CRCB,
 		.num_planes	= 1,
 		.nr_comp	= 3,
 
@@ -988,6 +988,13 @@ int gsc_prepare_addr(struct gsc_ctx *ctx, struct vb2_buffer *vb,
 
 		if (frame->fmt->num_planes == 3)
 			addr->cr = gsc->vb2->plane_addr(vb, 2);
+	}
+
+	if (frame->fmt->pixelformat == V4L2_PIX_FMT_YVU420 ||
+	    frame->fmt->pixelformat == V4L2_PIX_FMT_YVU420M) {
+		u32 t_cb = addr->cb;
+		addr->cb = addr->cr;
+		addr->cr = t_cb;
 	}
 
 	gsc_dbg("ADDR: y= 0x%X  cb= 0x%X cr= 0x%X ret= %d",
