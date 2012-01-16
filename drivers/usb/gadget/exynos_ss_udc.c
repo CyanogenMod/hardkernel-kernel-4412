@@ -2182,10 +2182,9 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		return -EINVAL;
 	}
 
-	if (driver->speed != USB_SPEED_SUPER &&
-	    driver->speed != USB_SPEED_HIGH &&
-	    driver->speed != USB_SPEED_FULL) {
+	if (driver->speed < USB_SPEED_FULL) {
 		dev_err(udc->dev, "%s: bad speed\n", __func__);
+		return -EINVAL;
 	}
 
 	if (!bind || !driver->setup) {
