@@ -480,18 +480,18 @@ static int exynos4212_vpll_set_rate(struct clk *clk, unsigned long rate)
 		return 0;
 
 	vpll_con0 = __raw_readl(EXYNOS4_VPLL_CON0);
-	vpll_con0 &= ~(PLL90XX_MDIV_MASK << PLL90XX_MDIV_SHIFT |	\
-		       PLL90XX_PDIV_MASK << PLL90XX_PDIV_SHIFT |	\
-		       PLL90XX_SDIV_MASK << PLL90XX_SDIV_SHIFT);
+	vpll_con0 &= ~(PLL36XX_MDIV_MASK << PLL36XX_MDIV_SHIFT |	\
+		       PLL36XX_PDIV_MASK << PLL36XX_PDIV_SHIFT |	\
+		       PLL36XX_SDIV_MASK << PLL36XX_SDIV_SHIFT);
 
 	vpll_con1 = __raw_readl(EXYNOS4_VPLL_CON1);
 	vpll_con1 &= ~(0xffff << 0);
 
 	for (i = 0; i < ARRAY_SIZE(vpll_div_4212); i++) {
 		if (vpll_div_4212[i].rate == rate) {
-			vpll_con0 |= vpll_div_4212[i].pdiv << PLL90XX_PDIV_SHIFT;
-			vpll_con0 |= vpll_div_4212[i].mdiv << PLL90XX_MDIV_SHIFT;
-			vpll_con0 |= vpll_div_4212[i].sdiv << PLL90XX_SDIV_SHIFT;
+			vpll_con0 |= vpll_div_4212[i].pdiv << PLL36XX_PDIV_SHIFT;
+			vpll_con0 |= vpll_div_4212[i].mdiv << PLL36XX_MDIV_SHIFT;
+			vpll_con0 |= vpll_div_4212[i].sdiv << PLL36XX_SDIV_SHIFT;
 			vpll_con1 |= vpll_div_4212[i].k << 0;
 			break;
 		}
