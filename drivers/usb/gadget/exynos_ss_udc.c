@@ -287,8 +287,8 @@ static void exynos_ss_udc_run_stop(struct exynos_ss_udc *udc, int is_on)
 	}
 
 	if (res < 0)
-		dev_dbg(udc->dev, "Failed %sConnect by software\n",
-				  is_on ? "" : "dis-");
+		dev_dbg(udc->dev, "Failed to %sconnect by software\n",
+				  is_on ? "" : "dis");
 }
 
 static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on)
@@ -296,10 +296,8 @@ static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on)
 	struct exynos_ss_udc *udc = container_of(gadget,
 					struct exynos_ss_udc, gadget);
 
-	if (is_on)
-		exynos_ss_udc_run_stop(udc, is_on);
-	else
-		exynos_ss_udc_run_stop(udc, is_on);
+	exynos_ss_udc_run_stop(udc, is_on);
+
 	return 0;
 }
 
@@ -310,8 +308,8 @@ void exynos_ss_udc_get_config_params(struct usb_dcd_config_params *params)
 }
 
 static struct usb_gadget_ops exynos_ss_udc_gadget_ops = {
-	.pullup = exynos_ss_udc_pullup,
-	.get_config_params = exynos_ss_udc_get_config_params,
+	.pullup			= exynos_ss_udc_pullup,
+	.get_config_params	= exynos_ss_udc_get_config_params,
 };
 
 /**
