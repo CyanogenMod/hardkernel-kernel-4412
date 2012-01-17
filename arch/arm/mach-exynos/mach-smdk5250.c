@@ -1775,6 +1775,7 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&SYSMMU_PLATDEV(gsc2),
 	&SYSMMU_PLATDEV(gsc3),
 	&SYSMMU_PLATDEV(tv),
+	&SYSMMU_PLATDEV(rot),
 	&SYSMMU_PLATDEV(is_isp),
 	&SYSMMU_PLATDEV(is_drc),
 	&SYSMMU_PLATDEV(is_fd),
@@ -1814,6 +1815,9 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 #endif
 #ifdef CONFIG_VIDEO_M5MOLS
 	&m5mols_fixed_voltage,
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
+	&exynos_device_rotator,
 #endif
 	&s3c_device_rtc,
 	&smdk5250_smsc911x,
@@ -1985,6 +1989,13 @@ static void __init exynos_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_ROT
+		{
+			.name = "rot",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_ROT * SZ_1K,
+			.start = 0,
+		},
+#endif
 #ifdef CONFIG_VIDEO_EXYNOS5_FIMC_IS
 		{
 			.name = "fimc_is",
@@ -2008,6 +2019,7 @@ static void __init exynos_reserve_mem(void)
 		"samsung-rp=srp;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
 		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,fimd,fw,b1;"
+		"exynos-rot=rot;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;"
 		"s5p-mixer=tv;"
@@ -2226,6 +2238,9 @@ static void __init exynos_sysmmu_init(void)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc1).dev, &exynos5_device_gsc1.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc2).dev, &exynos5_device_gsc2.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc3).dev, &exynos5_device_gsc3.dev);
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
+	sysmmu_set_owner(&SYSMMU_PLATDEV(rot).dev, &exynos_device_rotator.dev);
 #endif
 #ifdef CONFIG_VIDEO_FIMG2D
 	sysmmu_set_owner(&SYSMMU_PLATDEV(2d).dev, &s5p_device_fimg2d.dev);

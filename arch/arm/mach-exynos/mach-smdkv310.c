@@ -1965,6 +1965,9 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 #ifdef CONFIG_VIDEO_FIMG2D
 	&s5p_device_fimg2d,
 #endif
+#ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
+	&exynos_device_rotator,
+#endif
 #ifdef CONFIG_VIDEO_JPEG
 	&s5p_device_jpeg,
 #endif
@@ -2251,6 +2254,13 @@ static void __init exynos4_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_ROT
+		{
+			.name = "rot",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_ROT * SZ_1K,
+			.start = 0,
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
 		{
 			.name		= "b2",
@@ -2301,6 +2311,9 @@ static void __init exynos4_reserve_mem(void)
 		"s3cfb.0=fimd;exynos4-fb.0=fimd;"
 		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
 		"exynos4210-fimc.0=fimc0;exynos4210-fimc.1=fimc1;exynos4210-fimc.2=fimc2;exynos4210-fimc.3=fimc3;"
+#ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
+		"exynos-rot=rot;"
+#endif
 #ifdef CONFIG_VIDEO_MFC5X
 		"s3c-mfc=mfc,mfc0,mfc1;"
 #endif
@@ -2388,6 +2401,9 @@ static void __init exynos_sysmmu_init(void)
 #if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_l).dev, &s5p_device_mfc.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(mfc_r).dev, &s5p_device_mfc.dev);
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
+	sysmmu_set_owner(&SYSMMU_PLATDEV(rot).dev, &exynos_device_rotator.dev);
 #endif
 }
 
@@ -2633,6 +2649,11 @@ static void __init smdkv310_machine_init(void)
 	s5p_device_fimg2d.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
 #endif
 #endif
+
+#ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
+	exynos_device_rotator.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
+#endif
+
 #ifdef CONFIG_USB_EHCI_S5P
 	smdkv310_ehci_init();
 #endif
