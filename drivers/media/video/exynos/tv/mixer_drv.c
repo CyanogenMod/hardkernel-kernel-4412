@@ -174,6 +174,12 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 		}
 
 		mxr_reg_set_mbus_fmt(mdev, &mbus_fmt);
+		ret = v4l2_subdev_call(sd, video, s_mbus_fmt, &mbus_fmt);
+		if (ret) {
+			mxr_err(mdev, "failed to set mbus_fmt for output %s\n",
+					sd->name);
+			return ret;
+		}
 		mxr_reg_streamon(mdev);
 
 		ret = v4l2_subdev_call(sd, video, s_stream, 1);
@@ -792,8 +798,9 @@ static int mxr_try_format(struct mxr_device *mdev,
 	case MXR_PAD_SOURCE_GSCALER:
 	case MXR_PAD_SOURCE_GRP0:
 	case MXR_PAD_SOURCE_GRP1:
-		fmt->code = V4L2_MBUS_FMT_YUV8_1X24;
 		mxr_get_mbus_fmt(mdev, &mbus_fmt);
+		fmt->code = (fmt->code == V4L2_MBUS_FMT_YUV8_1X24) ?
+			V4L2_MBUS_FMT_YUV8_1X24 : V4L2_MBUS_FMT_XRGB8888_4X8_LE;
 		fmt->width = mbus_fmt.width;
 		fmt->height = mbus_fmt.height;
 		break;
@@ -808,8 +815,10 @@ static void mxr_apply_format(struct v4l2_subdev *sd,
 		enum v4l2_subdev_format_whence which)
 {
 	struct sub_mxr_device *sub_mxr;
-	int i;
+	struct mxr_device *mdev;
+	int i, j;
 	sub_mxr = sd_to_sub_mxr(sd);
+	mdev = sd_to_mdev(sd);
 
 	if (which == V4L2_SUBDEV_FORMAT_ACTIVE) {
 		if (pad == MXR_PAD_SINK_GRP0 || pad == MXR_PAD_SINK_GRP1) {
@@ -821,12 +830,18 @@ static void mxr_apply_format(struct v4l2_subdev *sd,
 			layer->ops.fix_geometry(layer);
 		} else if (pad == MXR_PAD_SOURCE_GSCALER
 				|| pad == MXR_PAD_SOURCE_GRP0
-				|| pad == MXR_PAD_SOURCE_GRP0) {
+				|| pad == MXR_PAD_SOURCE_GRP1) {
 			for (i = 0; i < MXR_MAX_LAYERS; ++i) {
 				struct mxr_layer *layer = sub_mxr->layer[i];
 				layer->geo.dst.full_width = fmt->width;
 				layer->geo.dst.full_height = fmt->height;
 				layer->ops.fix_geometry(layer);
+			}
+			for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
+				sub_mxr = &mdev->sub_mxr[i];
+				for (j = MXR_PAD_SOURCE_GSCALER;
+						j < MXR_PADS_NUM; ++j)
+					sub_mxr->mbus_fmt[j].code = fmt->code;
 			}
 		}
 	}

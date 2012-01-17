@@ -317,6 +317,21 @@ static int hdmi_g_mbus_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int hdmi_s_mbus_fmt(struct v4l2_subdev *sd,
+	  struct v4l2_mbus_framefmt *fmt)
+{
+	struct hdmi_device *hdev = sd_to_hdmi_dev(sd);
+	struct device *dev = hdev->dev;
+
+	dev_dbg(dev, "%s\n", __func__);
+	if (fmt->code == V4L2_MBUS_FMT_YUV8_1X24)
+		hdev->output_fmt = HDMI_OUTPUT_YUV444;
+	else
+		hdev->output_fmt = HDMI_OUTPUT_RGB888;
+
+	return 0;
+}
+
 static int hdmi_enum_dv_presets(struct v4l2_subdev *sd,
 	struct v4l2_dv_enum_preset *preset)
 {
@@ -335,6 +350,7 @@ static const struct v4l2_subdev_video_ops hdmi_sd_video_ops = {
 	.g_dv_preset = hdmi_g_dv_preset,
 	.enum_dv_presets = hdmi_enum_dv_presets,
 	.g_mbus_fmt = hdmi_g_mbus_fmt,
+	.s_mbus_fmt = hdmi_s_mbus_fmt,
 	.s_stream = hdmi_s_stream,
 };
 

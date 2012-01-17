@@ -155,7 +155,7 @@ void mxr_reg_reset(struct mxr_device *mdev)
 	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
 	/* set output in RGB888 mode */
-	mxr_write(mdev, MXR_CFG, MXR_CFG_OUT_YUV444);
+	mxr_write(mdev, MXR_CFG, MXR_CFG_OUT_RGB888);
 
 	/* 16 beat burst in DMA */
 	mxr_write_mask(mdev, MXR_STATUS, MXR_STATUS_16_BURST,
@@ -667,6 +667,16 @@ void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	spin_lock_irqsave(&mdev->reg_slock, flags);
 	mxr_vsync_set_update(mdev, MXR_DISABLE);
 
+	/* choosing between YUV444 and RGB888 as mixer output type */
+	if (mdev->sub_mxr[MXR_SUB_MIXER0].mbus_fmt[MXR_PAD_SOURCE_GRP0].code ==
+		V4L2_MBUS_FMT_YUV8_1X24) {
+		val = MXR_CFG_OUT_YUV444;
+		fmt->code = V4L2_MBUS_FMT_YUV8_1X24;
+	} else {
+		val = MXR_CFG_OUT_RGB888;
+		fmt->code = V4L2_MBUS_FMT_XRGB8888_4X8_LE;
+	}
+
 	/* choosing between interlace and progressive mode */
 	if (fmt->field == V4L2_FIELD_INTERLACED)
 		val |= MXR_CFG_SCAN_INTERLACE;
@@ -685,7 +695,8 @@ void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	else
 		WARN(1, "unrecognized mbus height %u!\n", fmt->height);
 
-	mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_SCAN_MASK);
+	mxr_write_mask(mdev, MXR_CFG, val, MXR_CFG_SCAN_MASK |
+			MXR_CFG_OUT_MASK);
 
 	val = (fmt->field == V4L2_FIELD_INTERLACED) ? ~0 : 0;
 	vp_write_mask(mdev, VP_MODE, val,

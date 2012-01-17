@@ -2251,8 +2251,9 @@ void hdmi_reg_init(struct hdmi_device *hdev)
 	hdmi_write_mask(hdev, HDMI_CON_0, 0, HDMI_BLUE_SCR_EN);
 	/* enable AVI packet every vsync, fixes purple line problem */
 	hdmi_writeb(hdev, HDMI_AVI_CON, 0x02);
-	/* force YUV444, look to CEA-861-D, table 7 for more detail */
-	hdmi_writeb(hdev, HDMI_AVI_BYTE(1), 2 << 5);
+	/* RGB888 is default output format of HDMI,
+	 * look to CEA-861-D, table 7 for more detail */
+	hdmi_writeb(hdev, HDMI_AVI_BYTE(1), 0 << 5);
 	hdmi_write_mask(hdev, HDMI_CON_1, 2, 3 << 5);
 }
 
@@ -2494,6 +2495,7 @@ void hdmi_reg_infoframe(struct hdmi_device *hdev,
 		hdmi_writeb(hdev, HDMI_AVI_HEADER0, infoframe->type);
 		hdmi_writeb(hdev, HDMI_AVI_HEADER1, infoframe->ver);
 		hdmi_writeb(hdev, HDMI_AVI_HEADER2, infoframe->len);
+		hdmi_writeb(hdev, HDMI_AVI_BYTE(1), hdev->output_fmt << 5);
 		hdr_sum = infoframe->type + infoframe->ver + infoframe->len;
 		chksum = hdmi_chksum(hdev, HDMI_AVI_BYTE(1), infoframe->len, hdr_sum);
 		dev_dbg(dev, "AVI checksum = 0x%x\n", chksum);
@@ -2894,6 +2896,7 @@ void hdmi_dumpregs(struct hdmi_device *hdev, char *prefix)
 	DUMPREG(HDMI_AVI_HEADER1);
 	DUMPREG(HDMI_AVI_HEADER2);
 	DUMPREG(HDMI_AVI_CHECK_SUM);
+	DUMPREG(HDMI_AVI_BYTE(1));
 	DUMPREG(HDMI_VSI_CON);
 	DUMPREG(HDMI_VSI_HEADER0);
 	DUMPREG(HDMI_VSI_HEADER1);
