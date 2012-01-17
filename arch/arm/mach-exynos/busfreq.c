@@ -322,7 +322,7 @@ static int busfreq_target(struct busfreq_table *freq_table,
 		}
 	}
 
-	if (ppmu_load > 5)
+	if ((idx > LV_1) && (ppmu_load > 5))
 		idx = LV_1;
 
 	if (idx > g_busfreq_lock_level)
