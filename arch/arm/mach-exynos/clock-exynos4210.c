@@ -201,7 +201,7 @@ void __init exynos4210_register_clocks(void)
 	exynos4_clk_aclk_200.reg_div.size = 3;
 
 	exynos4_clk_fimg2d.enable = exynos4_clk_ip_image_ctrl;
-	exynos4_clk_fimg2d.ctrlbit = (1 << 0);
+	exynos4_clk_fimg2d.ctrlbit = (1 << 3) | (1 << 0);
 
 	exynos4_clk_mout_g2d0.reg_src.reg = EXYNOS4_CLKSRC_IMAGE;
 	exynos4_clk_mout_g2d0.reg_src.shift = 0;
