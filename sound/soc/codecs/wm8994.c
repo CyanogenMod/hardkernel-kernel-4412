@@ -2377,7 +2377,7 @@ static struct snd_soc_dai_driver wm8994_dai[] = {
 		.playback = {
 			.stream_name = "AIF1 Playback",
 			.channels_min = 1,
-			.channels_max = 2,
+			.channels_max = 6,
 			.rates = WM8994_RATES,
 			.formats = WM8994_FORMATS,
 		},
