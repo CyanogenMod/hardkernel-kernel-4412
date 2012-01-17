@@ -364,6 +364,11 @@ static unsigned int busfreq_monitor(void)
 	exynos4_ppmu_stop(&cpu);
 	ppmuload = exynos4_ppmu_update(&cpu, 3);
 
+	if (ppmuload > 10) {
+		index = LV_0;
+		goto out;
+	}
+
 	ppcload = max(bus_utilization[0], bus_utilization[1]);
 	index = p_idx;
 
@@ -373,6 +378,7 @@ static unsigned int busfreq_monitor(void)
 	if (ret)
 		pr_err("%s: (%d)\n", __func__, ret);
 
+out:
 	pr_debug("Bus freq(%d-%d)\n", p_idx, index);
 
 	busfreq_mon_reset();
