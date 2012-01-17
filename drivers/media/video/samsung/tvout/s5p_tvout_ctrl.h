@@ -65,6 +65,7 @@ extern void s5p_mixer_ctrl_resume(void);
  * for TV interface control class
  ***************************************/
 extern int s5p_tvif_ctrl_set_audio(bool en);
+extern void s5p_tvif_audio_channel(int channel);
 extern int s5p_tvif_ctrl_set_av_mute(bool en);
 extern int s5p_tvif_ctrl_get_std_if(
 		enum s5p_tvout_disp_mode *std, enum s5p_tvout_o_mode *inf);

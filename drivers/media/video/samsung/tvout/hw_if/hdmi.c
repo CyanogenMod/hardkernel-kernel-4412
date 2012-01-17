@@ -955,7 +955,8 @@ static void s5p_hdmi_audio_irq_enable(u32 irq_en)
 static void s5p_hdmi_audio_i2s_config(
 		enum s5p_tvout_audio_codec_type audio_codec,
 		u32 sample_rate, u32 bits_per_sample,
-		u32 frame_size_code)
+		u32 frame_size_code,
+		struct s5p_hdmi_audio *audio)
 {
 	u32 data_num, bit_ch, sample_frq;
 
@@ -993,10 +994,16 @@ static void s5p_hdmi_audio_i2s_config(
 
 	/* Configuration I2S input ports. Configure I2S_PIN_SEL_0~4 */
 	writeb(S5P_HDMI_I2S_SEL_SCLK(5) | S5P_HDMI_I2S_SEL_LRCK(6),
-		hdmi_base + S5P_HDMI_I2S_PIN_SEL_0);
+			hdmi_base + S5P_HDMI_I2S_PIN_SEL_0);
+	if (audio->channel == 2)
+		/* I2S 2 channel */
+		writeb(S5P_HDMI_I2S_SEL_SDATA1(1) | S5P_HDMI_I2S_SEL_SDATA2(4),
+				hdmi_base + S5P_HDMI_I2S_PIN_SEL_1);
+	else
+		/* I2S 5.1 channel */
+		writeb(S5P_HDMI_I2S_SEL_SDATA1(3) | S5P_HDMI_I2S_SEL_SDATA2(4),
+				hdmi_base + S5P_HDMI_I2S_PIN_SEL_1);
 
-	writeb(S5P_HDMI_I2S_SEL_SDATA1(3) | S5P_HDMI_I2S_SEL_SDATA2(4),
-			hdmi_base + S5P_HDMI_I2S_PIN_SEL_1);
 	writeb(S5P_HDMI_I2S_SEL_SDATA3(1) | S5P_HDMI_I2S_SEL_SDATA2(2),
 			hdmi_base + S5P_HDMI_I2S_PIN_SEL_2);
 	writeb(S5P_HDMI_I2S_SEL_DSD(0), hdmi_base + S5P_HDMI_I2S_PIN_SEL_3);
@@ -1020,10 +1027,14 @@ static void s5p_hdmi_audio_i2s_config(
 	writeb(S5P_HDMI_I2S_CD_PLAYER,
 		hdmi_base + S5P_HDMI_I2S_CH_ST_1);
 
-	/* Audio channel to 5.1 */
-	writeb(S5P_HDMI_I2S_SET_SOURCE_NUM(0) |
-		S5P_HDMI_I2S_SET_CHANNEL_NUM(0x6),
-		hdmi_base + S5P_HDMI_I2S_CH_ST_2);
+	if (audio->channel == 2)
+		/* Audio channel to 5.1 */
+		writeb(S5P_HDMI_I2S_SET_SOURCE_NUM(0),
+				hdmi_base + S5P_HDMI_I2S_CH_ST_2);
+	else
+		writeb(S5P_HDMI_I2S_SET_SOURCE_NUM(0) |
+				S5P_HDMI_I2S_SET_CHANNEL_NUM(0x6),
+				hdmi_base + S5P_HDMI_I2S_CH_ST_2);
 
 	writeb(S5P_HDMI_I2S_CLK_ACCUR_LEVEL_2 |
 		S5P_HDMI_I2S_SET_SAMPLING_FREQ(sample_frq),
@@ -1299,23 +1310,39 @@ void s5p_hdmi_reg_acr(u8 *acr)
 	writeb(4, hdmi_base + S5P_HDMI_ACR_CON);
 }
 
-void s5p_hdmi_reg_asp(u8 *asp)
+void s5p_hdmi_reg_asp(u8 *asp, struct s5p_hdmi_audio *audio)
 {
-	writeb(S5P_HDMI_AUD_MODE_MULTI_CH | S5P_HDMI_AUD_SP_AUD2_EN |
+	if (audio->channel == 2)
+		writeb(S5P_HDMI_AUD_NO_DST_DOUBLE | S5P_HDMI_AUD_TYPE_SAMPLE |
+			S5P_HDMI_AUD_MODE_TWO_CH | S5P_HDMI_AUD_SP_ALL_DIS,
+			hdmi_base + S5P_HDMI_ASP_CON);
+	else
+		writeb(S5P_HDMI_AUD_MODE_MULTI_CH | S5P_HDMI_AUD_SP_AUD2_EN |
 			S5P_HDMI_AUD_SP_AUD1_EN | S5P_HDMI_AUD_SP_AUD0_EN,
-		hdmi_base + S5P_HDMI_ASP_CON);
+			hdmi_base + S5P_HDMI_ASP_CON);
 
 	writeb(S5P_HDMI_ASP_SP_FLAT_AUD_SAMPLE,
 		hdmi_base + S5P_HDMI_ASP_SP_FLAT);
 
-	writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
-		hdmi_base + S5P_HDMI_ASP_CHCFG0);
-	writeb(S5P_HDMI_SPK0R_SEL_I_PCM1L | S5P_HDMI_SPK0L_SEL_I_PCM1R,
-		hdmi_base + S5P_HDMI_ASP_CHCFG1);
-	writeb(S5P_HDMI_SPK0R_SEL_I_PCM2R | S5P_HDMI_SPK0L_SEL_I_PCM2L,
-		hdmi_base + S5P_HDMI_ASP_CHCFG2);
-	writeb(S5P_HDMI_SPK0R_SEL_I_PCM3R | S5P_HDMI_SPK0L_SEL_I_PCM3L,
-		hdmi_base + S5P_HDMI_ASP_CHCFG3);
+	if (audio->channel == 2) {
+		writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
+				hdmi_base + S5P_HDMI_ASP_CHCFG0);
+		writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
+				hdmi_base + S5P_HDMI_ASP_CHCFG1);
+		writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
+				hdmi_base + S5P_HDMI_ASP_CHCFG2);
+		writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
+				hdmi_base + S5P_HDMI_ASP_CHCFG3);
+	} else {
+		writeb(S5P_HDMI_SPK0R_SEL_I_PCM0R | S5P_HDMI_SPK0L_SEL_I_PCM0L,
+				hdmi_base + S5P_HDMI_ASP_CHCFG0);
+		writeb(S5P_HDMI_SPK0R_SEL_I_PCM1L | S5P_HDMI_SPK0L_SEL_I_PCM1R,
+				hdmi_base + S5P_HDMI_ASP_CHCFG1);
+		writeb(S5P_HDMI_SPK0R_SEL_I_PCM2R | S5P_HDMI_SPK0L_SEL_I_PCM2L,
+				hdmi_base + S5P_HDMI_ASP_CHCFG2);
+		writeb(S5P_HDMI_SPK0R_SEL_I_PCM3R | S5P_HDMI_SPK0L_SEL_I_PCM3L,
+				hdmi_base + S5P_HDMI_ASP_CHCFG3);
+	}
 }
 
 void s5p_hdmi_reg_gcp(u8 i_p, u8 *gcp)
@@ -1988,7 +2015,8 @@ void s5p_hdmi_reg_audio_enable(u8 en)
 
 int s5p_hdmi_audio_init(
 		enum s5p_tvout_audio_codec_type audio_codec,
-		u32 sample_rate, u32 bits, u32 frame_size_code)
+		u32 sample_rate, u32 bits, u32 frame_size_code,
+		struct s5p_hdmi_audio *audio)
 {
 #ifdef CONFIG_SND_SAMSUNG_SPDIF
 	s5p_hdmi_audio_set_config(audio_codec);
@@ -1997,7 +2025,7 @@ int s5p_hdmi_audio_init(
 	s5p_hdmi_audio_clock_enable();
 #else
 	s5p_hdmi_audio_i2s_config(audio_codec, sample_rate, bits,
-				frame_size_code);
+				frame_size_code, audio);
 #endif
 	return 0;
 }

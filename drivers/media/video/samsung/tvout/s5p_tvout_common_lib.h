@@ -105,6 +105,13 @@ enum s5p_mixer_burst_mode {
 	MIXER_BURST_16 = 1
 };
 
+enum s5ptv_audio_channel {
+	TVOUT_AUDIO_2CH = 0,
+	TVOUT_AUDIO_5_1CH = 1,
+	TVOUT_AUDIO_2CH_VAL = 2,
+	TVOUT_AUDIO_5_1CH_VAL = 5,
+};
+
 enum s5ptvfb_data_path_t {
 	DATA_PATH_FIFO = 0,
 	DATA_PATH_DMA = 1,

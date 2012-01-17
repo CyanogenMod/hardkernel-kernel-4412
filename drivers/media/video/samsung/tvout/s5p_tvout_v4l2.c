@@ -89,12 +89,9 @@ extern void *s5p_getaddress(unsigned int cookie);
 #define V4L2_STD_TVOUT_1080P_23_TB	((v4l2_std_id)0x17000000)
 #endif
 
-
-
 #define CVBS_S_VIDEO (V4L2_STD_NTSC_M | V4L2_STD_NTSC_M_JP| \
 	V4L2_STD_PAL | V4L2_STD_PAL_M | V4L2_STD_PAL_N | V4L2_STD_PAL_Nc | \
 	V4L2_STD_PAL_60 | V4L2_STD_NTSC_443)
-
 
 struct v4l2_vid_overlay_src {
 	void			*base_y;
@@ -571,7 +568,6 @@ static int s5p_tvout_tvif_s_output(
 		tv_std = TVOUT_1080P_23_TB;
 		break;
 #endif
-
 	default:
 		tvout_err("Invalid standard id(0x%08Lx)\n",
 			s5p_tvout_v4l2_private.tvif_standard_id);
@@ -726,6 +722,7 @@ const struct v4l2_ioctl_ops s5p_tvout_tvif_ioctl_ops = {
 #define VIDIOC_INIT_AUDIO	_IOR('V', 103, unsigned int)
 #define VIDIOC_AV_MUTE		_IOR('V', 104, unsigned int)
 #define VIDIOC_G_AVMUTE		_IOR('V', 105, unsigned int)
+#define VIDIOC_S_AUDIO_CHANNEL	_IOR('V', 106, unsigned int)
 
 long s5p_tvout_tvif_ioctl(
 		struct file *file, unsigned int cmd, unsigned long arg)
@@ -803,6 +800,18 @@ long s5p_tvout_tvif_ioctl(
 			sizeof(struct v4l2_standard));
 
 		goto end_tvif_ioctl;
+	}
+
+	case VIDIOC_S_AUDIO_CHANNEL: {
+		if (!arg)
+			s5p_tvif_audio_channel(TVOUT_AUDIO_2CH_VAL);
+		else
+			s5p_tvif_audio_channel(TVOUT_AUDIO_5_1CH_VAL);
+		/* TODO Runtime change
+		s5p_tvif_ctrl_stop();
+		if (s5p_tvif_ctrl_start(TVOUT_720P_60, TVOUT_HDMI) < 0)
+			goto end_tvif_ioctl; */
+		break;
 	}
 
 	default:
