@@ -90,7 +90,7 @@ static int poll_bit_clear(void __iomem *ptr, u32 val, int timeout)
 
 /**
  * ep_from_windex - convert control wIndex value to endpoint
- * @udc: The driver state.
+ * @udc: The device state.
  * @windex: The control request wIndex field (in host order).
  *
  * Convert the given wIndex into a pointer to an driver endpoint
@@ -201,7 +201,7 @@ dma_error:
 /**
  * exynos_ss_udc_unmap_dma - unmap the DMA memory being used for the request
  * @udc: The device state.
- * @udc_ep: The endpoint for the request
+ * @udc_ep: The endpoint for the request.
  * @udc_req: The request being processed.
  *
  * This is the reverse of exynos_ss_udc_map_dma(), called for the completion
@@ -268,6 +268,11 @@ void exynos_ss_udc_cable_disconnect(struct exynos_ss_udc *udc)
 }
 #endif
 
+/**
+ * exynos_ss_udc_run_stop - start/stop the device controller operation
+ * @udc: The device state.
+ * @is_on: The action to take (1 - start, 0 - stop).
+ */
 static void exynos_ss_udc_run_stop(struct exynos_ss_udc *udc, int is_on)
 {
 	int res;
@@ -291,6 +296,11 @@ static void exynos_ss_udc_run_stop(struct exynos_ss_udc *udc, int is_on)
 				  is_on ? "" : "dis");
 }
 
+/**
+ * exynos_ss_udc_pullup - software-controlled connect/disconnect to USB host
+ * @gadget: The peripheral being connected/disconnected.
+ * @is_on: The action to take (1 - connect, 0 - disconnect).
+ */
 static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on)
 {
 	struct exynos_ss_udc *udc = container_of(gadget,
@@ -301,6 +311,10 @@ static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on)
 	return 0;
 }
 
+/**
+ * exynos_ss_udc_get_config_params - get UDC configuration
+ * @params: The controller parameters being returned to the caller.
+ */
 void exynos_ss_udc_get_config_params(struct usb_dcd_config_params *params)
 {
 	params->bU1devExitLat = EXYNOS_USB3_U1_DEV_EXIT_LAT;
@@ -313,11 +327,9 @@ static struct usb_gadget_ops exynos_ss_udc_gadget_ops = {
 };
 
 /**
- * exynos_ss_udc_ep_enable - enable the given endpoint
- * @ep: The USB endpint to configure
- * @desc: The USB endpoint descriptor to configure with.
- *
- * This is called from the USB gadget code's usb_ep_enable().
+ * exynos_ss_udc_ep_enable - configure endpoint, making it usable
+ * @ep: The endpoint being configured.
+ * @desc: The descriptor for desired behavior.
  */
 static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 				   const struct usb_endpoint_descriptor *desc)
@@ -385,11 +397,8 @@ static int exynos_ss_udc_ep_enable(struct usb_ep *ep,
 }
 
 /**
- * exynos_ss_udc_ep_disable - disable the given endpoint
- * @ep: The USB endpint to configure
- * @desc: The USB endpoint descriptor to configure with.
- *
- * This is called from the USB gadget code's usb_ep_disable().
+ * exynos_ss_udc_ep_disable - endpoint is no longer usable
+ * @ep: The endpoint being unconfigured.
  */
 static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 {
@@ -413,10 +422,10 @@ static int exynos_ss_udc_ep_disable(struct usb_ep *ep)
 
 /**
  * exynos_ss_udc_ep_alloc_request - allocate a request object
- * @ep: USB endpoint to allocate request for.
- * @flags: Allocation flags
+ * @ep: The endpoint to be used with the request.
+ * @flags: Allocation flags.
  *
- * Allocate a new USB request structure appropriate for the specified endpoint
+ * Allocate a new USB request structure appropriate for the specified endpoint.
  */
 static struct usb_request *exynos_ss_udc_ep_alloc_request(struct usb_ep *ep,
 							  gfp_t flags)
@@ -437,6 +446,13 @@ static struct usb_request *exynos_ss_udc_ep_alloc_request(struct usb_ep *ep,
 	return &req->req;
 }
 
+/**
+ * exynos_ss_udc_ep_free_request - free a request object
+ * @ep: The endpoint associated with the request.
+ * @req: The request being freed.
+ *
+ * Reverse the effect of exynos_ss_udc_ep_alloc_request().
+ */
 static void exynos_ss_udc_ep_free_request(struct usb_ep *ep,
 					  struct usb_request *req)
 {
@@ -449,6 +465,14 @@ static void exynos_ss_udc_ep_free_request(struct usb_ep *ep,
 	kfree(udc_req);
 }
 
+/**
+ * exynos_ss_udc_ep_queue - queue (submit) an I/O request to an endpoint
+ * @ep: The endpoint associated with the request.
+ * @req: The request being submitted.
+ * @gfp_flags: Not used.
+ *
+ * Queue a request and start it if the first.
+ */
 static int exynos_ss_udc_ep_queue(struct usb_ep *ep,
 				  struct usb_request *req,
 				  gfp_t gfp_flags)
@@ -497,9 +521,9 @@ static int exynos_ss_udc_ep_queue(struct usb_ep *ep,
 }
 
 /**
- * exynos_ss_udc_ep_dequeue - dequeue a request from an endpoint
- * @ep: The endpoint the request was on.
- * @req: The request to dequeue.
+ * exynos_ss_udc_ep_dequeue - dequeue an I/O request from an endpoint
+ * @ep: The endpoint associated with the request.
+ * @req: The request being canceled.
  *
  * Dequeue a request and call its completion routine.
  */
@@ -526,6 +550,11 @@ static int exynos_ss_udc_ep_dequeue(struct usb_ep *ep, struct usb_request *req)
 	return 0;
 }
 
+/**
+ * exynos_ss_udc_ep_sethalt - set/clear the endpoint halt feature
+ * @ep: The endpoint being stalled/reset.
+ * @value: The action to take (1 - set stall, 0 - clear stall).
+ */
 static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 {
 	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
@@ -579,6 +608,10 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 	return 0;
 }
 
+/**
+ * exynos_ss_udc_ep_setwedge - set the halt feature and ignore clear requests
+ * @ep: The endpoint being wedged.
+ */
 static int exynos_ss_udc_ep_setwedge(struct usb_ep *ep)
 {
 	struct exynos_ss_udc_ep *udc_ep = our_ep(ep);
@@ -604,13 +637,13 @@ static struct usb_ep_ops exynos_ss_udc_ep_ops = {
 
 /**
  * exynos_ss_udc_start_req - start a USB request from an endpoint's queue
- * @udc: The controller state.
- * @udc_ep: The endpoint to process a request for
- * @udc_req: The request to start.
+ * @udc: The device state.
+ * @udc_ep: The endpoint to process a request for.
+ * @udc_req: The request being started.
  * @continuing: True if we are doing more for the current request.
  *
- * Start the given request running by setting the endpoint registers
- * appropriately, and writing any data to the FIFOs.
+ * Start the given request running by setting the TRB appropriately,
+ * and issuing Start Transfer endpoint command.
  */
 static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 				    struct exynos_ss_udc_ep *udc_ep,
@@ -695,7 +728,7 @@ static void exynos_ss_udc_start_req(struct exynos_ss_udc *udc,
 }
 
 /**
- * exynos_ss_udc_enqueue_data - start a request for EP0 status stage
+ * exynos_ss_udc_enqueue_status - start a request for EP0 status stage
  * @udc: The device state.
  */
 static void exynos_ss_udc_enqueue_status(struct exynos_ss_udc *udc)
@@ -724,9 +757,9 @@ static void exynos_ss_udc_enqueue_status(struct exynos_ss_udc *udc)
 /**
  * exynos_ss_udc_enqueue_data - start a request for EP0 data stage
  * @udc: The device state.
- * @buff: Buffer for request.
- * @length: Length of data.
- * @complete: Function called when request completes.
+ * @buff: The buffer used for data.
+ * @length: The length of data.
+ * @complete: The function called when request completes.
  */
 static int exynos_ss_udc_enqueue_data(struct exynos_ss_udc *udc,
 				      void *buff, int length,
@@ -768,8 +801,8 @@ static int exynos_ss_udc_enqueue_data(struct exynos_ss_udc *udc,
  * exynos_ss_udc_enqueue_setup - start a request for EP0 setup stage
  * @udc: The device state.
  *
- * Enqueue a request on EP0 if necessary to received any SETUP packets
- * received from the host.
+ * Enqueue a request on EP0 if necessary to receive any SETUP packets
+ * from the host.
  */
 static void exynos_ss_udc_enqueue_setup(struct exynos_ss_udc *udc)
 {
@@ -834,7 +867,7 @@ static void exynos_ss_udc_complete_set_sel(struct usb_ep *ep,
 
 /**
  * exynos_ss_udc_process_set_sel - process request SET_SEL
- * @udc: The device state
+ * @udc: The device state.
  */
 static int exynos_ss_udc_process_set_sel(struct exynos_ss_udc *udc)
 {
@@ -856,8 +889,8 @@ static int exynos_ss_udc_process_set_sel(struct exynos_ss_udc *udc)
 
 /**
  * exynos_ss_udc_process_clr_feature - process request CLEAR_FEATURE
- * @udc: The device state
- * @ctrl: USB control request
+ * @udc: The device state.
+ * @ctrl: The USB control request.
  */
 static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 					     struct usb_ctrlrequest *ctrl)
@@ -924,8 +957,8 @@ static int exynos_ss_udc_process_clr_feature(struct exynos_ss_udc *udc,
 
 /**
  * exynos_ss_udc_process_set_feature - process request SET_FEATURE
- * @udc: The device state
- * @ctrl: USB control request
+ * @udc: The device state.
+ * @ctrl: The USB control request.
  */
 static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 					     struct usb_ctrlrequest *ctrl)
@@ -986,8 +1019,8 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 
 /**
  * exynos_ss_udc_process_get_status - process request GET_STATUS
- * @udc: The device state
- * @ctrl: USB control request
+ * @udc: The device state.
+ * @ctrl: The USB control request.
  */
 static int exynos_ss_udc_process_get_status(struct exynos_ss_udc *udc,
 					    struct usb_ctrlrequest *ctrl)
@@ -1053,8 +1086,8 @@ static int exynos_ss_udc_process_get_status(struct exynos_ss_udc *udc,
 
 /**
  * exynos_ss_udc_process_control - process a control request
- * @udc: The device state
- * @ctrl: The control request received
+ * @udc: The device state.
+ * @ctrl: The control request received.
  *
  * The controller has received the SETUP phase of a control request, and
  * needs to work out what to do next (and whether to pass it on to the
@@ -1159,7 +1192,7 @@ static void exynos_ss_udc_process_control(struct exynos_ss_udc *udc,
  * @req: The request completed.
  *
  * Called on completion of any requests the driver itself submitted for
- * EP0 setup packets
+ * EP0 setup packets.
  */
 static void exynos_ss_udc_complete_setup(struct usb_ep *ep,
 					 struct usb_request *req)
@@ -1207,7 +1240,7 @@ static void exynos_ss_udc_kill_all_requests(struct exynos_ss_udc *udc,
  * exynos_ss_udc_complete_request - complete a request given to us
  * @udc: The device state.
  * @udc_ep: The endpoint the request was on.
- * @udc_req: The request to complete.
+ * @udc_req: The request being completed.
  * @result: The result code (0 => Ok, otherwise errno)
  *
  * The given request has finished, so call the necessary completion
@@ -1294,8 +1327,8 @@ static void exynos_ss_udc_complete_request(struct exynos_ss_udc *udc,
  * exynos_ss_udc_complete_request_lock - complete a request given to us (locked)
  * @udc: The device state.
  * @udc_ep: The endpoint the request was on.
- * @udc_req: The request to complete.
- * @result: The result code (0 => Ok, otherwise errno)
+ * @udc_req: The request being completed.
+ * @result: The result code (0 => Ok, otherwise errno).
  *
  * See exynos_ss_udc_complete_request(), but called with the endpoint's
  * lock held.
@@ -1352,8 +1385,11 @@ static void exynos_ss_udc_complete_in(struct exynos_ss_udc *udc,
 
 /**
  * exynos_ss_udc_complete_out - complete OUT transfer
- * @udc: The device instance.
+ * @udc: The device state.
  * @epnum: The endpoint that has just completed.
+ *
+ * An OUT transfer has been completed, update the transfer's state and then
+ * call the relevant completion routines.
  */
 static void exynos_ss_udc_complete_out(struct exynos_ss_udc *udc,
 				       struct exynos_ss_udc_ep *udc_ep)
@@ -1386,6 +1422,12 @@ static void exynos_ss_udc_complete_out(struct exynos_ss_udc *udc,
 	exynos_ss_udc_complete_request_lock(udc, udc_ep, udc_req, 0);
 }
 
+/**
+ * exynos_ss_udc_irq_connectdone - process event Connection Done
+ * @udc: The device state.
+ *
+ * Get the speed of connection and configure physical endpoints 0 & 1.
+ */
 static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 {
 	struct exynos_ss_udc_ep_command epcmd;
@@ -1465,6 +1507,10 @@ static void exynos_ss_udc_irq_connectdone(struct exynos_ss_udc *udc)
 		dev_err(udc->dev, "Failed to configure physical EP1\n");
 }
 
+/**
+ * exynos_ss_udc_irq_usbrst - process event USB Reset
+ * @udc: The device state.
+ */
 static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 {
 	struct exynos_ss_udc_ep_command epcmd;
@@ -1512,8 +1558,8 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 
 /**
  * exynos_ss_udc_handle_depevt - handle endpoint-specific event
- * @udc: The driver state
- * @event: event to handle
+ * @udc: The device state.
+ * @event: The event being handled.
  */
 static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 {
@@ -1594,8 +1640,8 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 
 /**
  * exynos_ss_udc_handle_devt - handle device-specific event
- * @udc: The driver state
- * @event: event to handle
+ * @udc: The driver state.
+ * @event: The event being handled.
  */
 static void exynos_ss_udc_handle_devt(struct exynos_ss_udc *udc, u32 event)
 {
@@ -1660,7 +1706,7 @@ static void exynos_ss_udc_handle_gevt(struct exynos_ss_udc *udc, u32 event)
 
 /**
  * exynos_ss_udc_irq - handle device interrupt
- * @irq: The IRQ number triggered
+ * @irq: The IRQ number triggered.
  * @pw: The pw value when registered the handler.
  */
 static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
@@ -1729,6 +1775,10 @@ static irqreturn_t exynos_ss_udc_irq(int irq, void *pw)
 	return IRQ_HANDLED;
 }
 
+/**
+ * exynos_ss_udc_free_all_trb - free all allocated TRBs
+ * @udc: The device state.
+ */
 static void exynos_ss_udc_free_all_trb(struct exynos_ss_udc *udc)
 {
 	int epnum;
@@ -1745,10 +1795,10 @@ static void exynos_ss_udc_free_all_trb(struct exynos_ss_udc *udc)
 }
 
 /**
- * exynos_ss_udc_initep - initialise a single endpoint
+ * exynos_ss_udc_initep - initialize a single endpoint
  * @udc: The device state.
- * @udc_ep: The endpoint to be initialised.
- * @epnum: The endpoint number
+ * @udc_ep: The endpoint being initialised.
+ * @epnum: The endpoint number.
  *
  * Initialise the given endpoint (as part of the probe and device state
  * creation) to give to the gadget driver. Setup the endpoint name, any
@@ -1806,6 +1856,10 @@ static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 	return 0;
 }
 
+/**
+ * exynos_ss_udc_phy_set - intitialize the controller PHY interface
+ * @pdev: The platform-level device instance.
+ */
 static void exynos_ss_udc_phy_set(struct platform_device *pdev)
 {
 	struct exynos_ss_udc_plat *plat = pdev->dev.platform_data;
@@ -1847,6 +1901,10 @@ static void exynos_ss_udc_phy_set(struct platform_device *pdev)
 			  readl(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0)));
 }
 
+/**
+ * exynos_ss_udc_phy_unset - disable the controller PHY interface
+ * @pdev: The platform-level device instance.
+ */
 static void exynos_ss_udc_phy_unset(struct platform_device *pdev)
 {
 	struct exynos_ss_udc_plat *plat = pdev->dev.platform_data;
@@ -1868,7 +1926,7 @@ static void exynos_ss_udc_phy_unset(struct platform_device *pdev)
 
 /**
  * exynos_ss_udc_corereset - issue softreset to the core
- * @udc: The device state
+ * @udc: The device state.
  *
  * Issue a soft reset to the core, and await the core finishing it.
  */
@@ -1890,7 +1948,7 @@ static int exynos_ss_udc_corereset(struct exynos_ss_udc *udc)
 
 /**
  * exynos_ss_udc_ep0_activate - activate USB endpoint 0
- * @udc: The device state
+ * @udc: The device state.
  *
  * Configure physical endpoints 0 & 1.
  */
@@ -1969,8 +2027,8 @@ static void exynos_ss_udc_ep0_activate(struct exynos_ss_udc *udc)
 
 /**
  * exynos_ss_udc_ep_activate - activate USB endpoint
- * @udc: The device state
- * @udc_ep: The endpoint to activate.
+ * @udc: The device state.
+ * @udc_ep: The endpoint being activated.
  *
  * Configure physical endpoints > 1.
  */
@@ -2060,7 +2118,7 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 /**
  * exynos_ss_udc_ep_deactivate - deactivate USB endpoint
  * @udc: The device state.
- * @udc_ep: The endpoint to deactivate.
+ * @udc_ep: The endpoint being deactivated.
  *
  * End any active transfer and disable endpoint.
  */
@@ -2095,6 +2153,13 @@ static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
 	__bic32(udc->regs + EXYNOS_USB3_DALEPENA, 1 << index);
 }
 
+/**
+ * exynos_ss_udc_init - initialize the controller
+ * @udc: The device state.
+ *
+ * Initialize the event buffer, enable events, activate USB EP0,
+ * and start the controller operation.
+ */
 static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 {
 	u32 reg;
