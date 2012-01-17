@@ -16,6 +16,8 @@
 #define S5P_VIDEONODE_MFC_DEC		6
 #define S5P_VIDEONODE_MFC_ENC		7
 
+#define EXYNOS_VIDEONODE_ROTATOR		21
+
 #define EXYNOS_VIDEONODE_GSC_M2M(x)		(23 + (x) * 3)
 #define EXYNOS_VIDEONODE_GSC_OUT(x)		(24 + (x) * 3)
 #define EXYNOS_VIDEONODE_GSC_CAP(x)		(25 + (x) * 3)
