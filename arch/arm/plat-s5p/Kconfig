@@ -134,6 +134,11 @@ config S5P_DEV_FIMG2D
 	help
 	  Compile in platform device definitions for FIMG2D controller
 
+config S5P_DEV_ROTATOR
+	bool
+	help
+	  Compile in platform device definitions for ROTATOR
+
 config S5P_DEV_ONENAND
 	bool
 	help

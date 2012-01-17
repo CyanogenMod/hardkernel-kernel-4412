@@ -677,6 +677,11 @@ static struct clk exynos4_init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_lcd1_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
+		.name		= "rotator",
+		.devname	= "exynos-rot",
+		.enable		= exynos4_clk_ip_image_ctrl,
+		.ctrlbit	= (1 << 1),
+	}, {
 		.name		= "hsmmc",
 		.devname	= "s3c-sdhci.0",
 		.enable		= exynos4_clk_ip_fsys_ctrl,
