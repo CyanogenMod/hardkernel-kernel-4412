@@ -75,6 +75,14 @@ static struct clk init_clocks_off[] = {
 		.enable		= exynos4_clk_ip_lcd1_ctrl,
 		.ctrlbit	= (1 << 4),
 	}, {
+		.name		= "pciephy",
+		.enable		= exynos4_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 2),
+	}, {
+		.name		= "pcie",
+		.enable		= exynos4_clk_ip_fsys_ctrl,
+		.ctrlbit	= (1 << 14),
+	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(pcie, 8),
 		.enable		= exynos4_clk_ip_fsys_ctrl,
@@ -84,7 +92,11 @@ static struct clk init_clocks_off[] = {
 		.devname	= SYSMMU_CLOCK_NAME(2d, 9),
 		.enable		= exynos4_clk_ip_image_ctrl,
 		.ctrlbit	= (1 << 3),
-	},
+	}, {
+		.name		= "modem",
+		.enable		= exynos4_clk_ip_peril_ctrl,
+		.ctrlbit	= (1 << 28),
+	}
 };
 
 static struct clksrc_clk clksrcs[] = {
