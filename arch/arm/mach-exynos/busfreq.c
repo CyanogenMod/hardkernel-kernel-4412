@@ -112,13 +112,13 @@ static unsigned int clkdiv_dmc0[LV_END][8] = {
 	 */
 
 	/* DMC L0: 400MHz */
-	{ 3, 1, 1, 1, 1, 1, 3, 1 },
+	{ 3, 2, 1, 1, 1, 1, 3, 1 },
 
 	/* DMC L1: 266.7MHz */
-	{ 4, 1, 1, 2, 1, 1, 3, 1 },
+	{ 4, 2, 1, 2, 1, 1, 3, 1 },
 
 	/* DMC L2: 133MHz */
-	{ 5, 1, 1, 5, 1, 1, 3, 1 },
+	{ 5, 2, 1, 5, 1, 1, 3, 1 },
 };
 
 static unsigned int clkdiv_top[LV_END][5] = {
