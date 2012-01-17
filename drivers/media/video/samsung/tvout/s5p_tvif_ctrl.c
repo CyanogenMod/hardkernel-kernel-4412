@@ -1477,7 +1477,11 @@ static struct s5p_hdmi_ctrl_private_data s5p_hdmi_ctrl_private = {
 		.bit	= 16,
 		.freq	= 44100,
 		/* Support audio 5.1Ch */
+#if defined(CONFIG_VIDEO_TVOUT_2CH_AUDIO)
+		.channel = 2,
+#else
 		.channel = 5,
+#endif
 	},
 
 	.av_mute	= false,

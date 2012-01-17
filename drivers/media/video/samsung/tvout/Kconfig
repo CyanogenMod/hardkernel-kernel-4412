@@ -9,6 +9,23 @@ config VIDEO_TVOUT
 	---help---
 	  This is a TVOUT driver for Samsung S5P platform
 
+choice
+depends on VIDEO_TVOUT
+prompt "Select default audio channel"
+default VIDEO_TVOUT_2CH_AUDIO
+config VIDEO_TVOUT_2CH_AUDIO
+	bool "2ch audio mode"
+	depends on VIDEO_TVOUT
+	---help---
+	  TV out supports 2 channel audio
+
+config VIDEO_TVOUT_5_1CH_AUDIO
+	bool "5.1ch audio mode"
+	depends on VIDEO_TVOUT
+	---help---
+	  TV out supports 5.1 channel audio
+endchoice
+
 config HDMI_CEC
 	bool "HDMI CEC driver support."
 	depends on VIDEO_TVOUT && ARCH_EXYNOS4
@@ -116,4 +133,3 @@ config HPD_DEBUG
 	bool "HPD debug message"
 	depends on TV_DEBUG
 	default n
-
