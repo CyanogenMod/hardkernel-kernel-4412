@@ -167,7 +167,7 @@ struct exynos_ss_udc_ep {
 	unsigned int		halted:1;
 	unsigned int		enabled:1;
 	unsigned int		wedged:1;
-	bool			not_ready;
+	unsigned int		not_ready:1;
 
 	char			name[10];
 };

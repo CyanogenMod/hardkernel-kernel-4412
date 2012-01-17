@@ -1540,7 +1540,7 @@ static void exynos_ss_udc_irq_usbrst(struct exynos_ss_udc *udc)
 			res = exynos_ss_udc_issue_epcmd(udc, &epcmd);
 			if (res < 0) {
 				dev_err(udc->dev, "Failed to end transfer\n");
-				ep->not_ready = true;
+				ep->not_ready = 1;
 			}
 
 			ep->tri = 0;
@@ -1608,7 +1608,7 @@ static void exynos_ss_udc_handle_depevt(struct exynos_ss_udc *udc, u32 event)
 		dev_dbg(udc->dev, "EP Cmd complete: ep%d%s\n",
 				  epnum, dir_in ? "in" : "out");
 
-		udc_ep->not_ready = false;
+		udc_ep->not_ready = 0;
 
 		/* Issue all pending commands for endpoint */
 		list_for_each_entry_safe(epcmd, tepcmd,
@@ -2062,7 +2062,7 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 		if (!epcmd) {
 			/* Will try to issue command immediately */
 			epcmd = &ep_command;
-			udc_ep->not_ready = false;
+			udc_ep->not_ready = 0;
 		}
 	}
 
@@ -2093,7 +2093,7 @@ static void exynos_ss_udc_ep_activate(struct exynos_ss_udc *udc,
 				GFP_ATOMIC);
 		if (!epcmd) {
 			epcmd = &ep_command;
-			udc_ep->not_ready = false;
+			udc_ep->not_ready = 0;
 		}
 	}
 
@@ -2144,7 +2144,7 @@ static void exynos_ss_udc_ep_deactivate(struct exynos_ss_udc *udc,
 		res = exynos_ss_udc_issue_epcmd(udc, &epcmd);
 		if (res < 0) {
 			dev_err(udc->dev, "Failed to end transfer\n");
-			udc_ep->not_ready = true;
+			udc_ep->not_ready = 1;
 		}
 
 		udc_ep->tri = 0;
