@@ -213,7 +213,7 @@ int exynos4_clk_ip_fsys_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_FSYS, clk, enable);
 }
 
-static int exynos4_clk_ip_peril_ctrl(struct clk *clk, int enable)
+int exynos4_clk_ip_peril_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS4_CLKGATE_IP_PERIL, clk, enable);
 }
