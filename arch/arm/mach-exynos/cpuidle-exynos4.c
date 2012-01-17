@@ -670,7 +670,7 @@ static struct notifier_block exynos4_cpuidle_notifier = {
 	.notifier_call = exynos4_cpuidle_notifier_event,
 };
 
-#ifdef CONFIG_EXYNOS4_ENBLE_CLOCK_DOWN
+#ifdef CONFIG_EXYNOS4_ENABLE_CLOCK_DOWN
 static void __init exynos4_core_down_clk(void)
 {
 	unsigned int tmp;

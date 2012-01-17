@@ -329,14 +329,14 @@ config EXYNOS5_SETUP_GSC
 	help
 	  Common setup code for GSC
 
-config EXYNOS4_ENBLE_CLOCK_DOWN
+config EXYNOS4_ENABLE_CLOCK_DOWN
 	bool "ARM core clock down feature enable"
 	depends on EXYNOS4_CPUIDLE
 	default n
 	help
 	  ARM core clock down in idle time.
 
-config EXYNOS5_ENBLE_CLOCK_DOWN
+config EXYNOS5_ENABLE_CLOCK_DOWN
 	bool "ARM core clock down feature enable"
 	depends on EXYNOS5_CPUIDLE
 	default n
