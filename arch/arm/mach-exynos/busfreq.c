@@ -153,9 +153,27 @@ static unsigned int clkdiv_lr_bus[LV_END][2] = {
 	{ 5, 1 },
 };
 
+static unsigned int clkdiv_ip_bus[LV_END][3] = {
+	/*
+	 * Clock divider value for following
+	 * { DIV_MFC, DIV_G2D, DIV_FIMC }
+	 */
+
+	/* L0: MFC 200MHz G2D 266MHz FIMC 160MHz */
+	{ 3, 2, 4 },
+
+	/* L1: MFC 200MHz G2D 160MHz FIMC 133MHz */
+	/* { 4, 4, 5 }, */
+	{ 3, 4, 5 },
+
+	/* L2: MFC 200MHz G2D 133MHz FIMC 100MHz */
+	/* { 5, 5, 7 }, */
+	{ 3, 5, 7 },
+};
+
 static void exynos4_set_busfreq(unsigned int div_index)
 {
-	unsigned int tmp;
+	unsigned int tmp, val;
 
 	/* Change Divider - DMC0 */
 	tmp = exynos4_busfreq_table[div_index].clk_dmcdiv;
@@ -203,6 +221,45 @@ static void exynos4_set_busfreq(unsigned int div_index)
 		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_RIGHTBUS);
 	} while (tmp & 0x11);
 
+	/* Change Divider - SCLK_MFC */
+	tmp = __raw_readl(EXYNOS4_CLKDIV_MFC);
+
+	tmp &= ~EXYNOS4_CLKDIV_MFC_MASK;
+
+	tmp |= (clkdiv_ip_bus[div_index][0] << EXYNOS4_CLKDIV_MFC_SHIFT);
+
+	__raw_writel(tmp, EXYNOS4_CLKDIV_MFC);
+
+	do {
+		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_MFC);
+	} while (tmp & 0x1);
+
+	/* Change Divider - SCLK_G2D */
+	tmp = __raw_readl(EXYNOS4_CLKDIV_IMAGE);
+
+	tmp &= ~EXYNOS4_CLKDIV_IMAGE_MASK;
+
+	tmp |= (clkdiv_ip_bus[div_index][1] << EXYNOS4_CLKDIV_IMAGE_SHIFT);
+
+	__raw_writel(tmp, EXYNOS4_CLKDIV_IMAGE);
+
+	do {
+		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_IMAGE);
+	} while (tmp & 0x1);
+
+	/* Change Divider - SCLK_FIMC */
+	tmp = __raw_readl(EXYNOS4_CLKDIV_CAM);
+
+	tmp &= ~EXYNOS4_CLKDIV_CAM_MASK;
+
+	val = clkdiv_ip_bus[div_index][2];
+	tmp |= ((val << 0) | (val << 4) | (val << 8) | (val << 12));
+
+	__raw_writel(tmp, EXYNOS4_CLKDIV_CAM);
+
+	do {
+		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_CAM);
+	} while (tmp & 0x1111);
 }
 
 static unsigned int calc_bus_utilization(struct exynos4_ppmu_hw *ppmu)
