@@ -39,10 +39,11 @@
 #define EXYNOS_USB3_U1_DEV_EXIT_LAT	0
 #define EXYNOS_USB3_U2_DEV_EXIT_LAT	0x20
 
-#define call_gadget(_udc, _entry)				\
+#define call_gadget(_udc, _entry)	do {			\
 	if ((_udc)->gadget.speed != USB_SPEED_UNKNOWN &&	\
 	    (_udc)->driver && (_udc)->driver->_entry)		\
-		(_udc)->driver->_entry(&(_udc)->gadget);
+		(_udc)->driver->_entry(&(_udc)->gadget);	\
+} while (0)
 
 /**
  * States of EP0
