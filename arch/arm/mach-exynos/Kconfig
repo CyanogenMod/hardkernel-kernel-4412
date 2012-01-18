@@ -429,12 +429,8 @@ config NR_RUNNING_POLICY
 endchoice
 endmenu
 
-choice
-	prompt "Busfreq Model"
-	default BUSFREQ
-
-config BUSFREQ_NONE
-	bool "No BUSFREQ"
+menu "Busfreq Model"
+	depends on EXYNOS4_CPUFREQ || EXYNOS5_CPUFREQ
 
 config BUSFREQ
 	bool "Busfreq with PPC/PPMU"
@@ -444,7 +440,7 @@ config BUSFREQ_OPP
 	bool "Busfreq with OPP"
 	depends on EXYNOS4_CPUFREQ || EXYNOS5_CPUFREQ
 
-endchoice
+endmenu
 
 # machine support
 
