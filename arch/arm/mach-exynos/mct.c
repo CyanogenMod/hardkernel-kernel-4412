@@ -314,7 +314,8 @@ static int exynos4_tick_set_next_event(unsigned long cycles,
 {
 	struct mct_clock_event_device *mevt = &mct_tick[smp_processor_id()];
 
-	exynos4_mct_tick_start(cycles, mevt);
+	if (cpu_online(smp_processor_id()))
+		exynos4_mct_tick_start(cycles, mevt);
 
 	return 0;
 }
