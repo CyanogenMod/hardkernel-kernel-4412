@@ -66,53 +66,53 @@ static struct cpufreq_frequency_table exynos4x12_freq_table[] = {
 
 static struct cpufreq_clkdiv exynos4x12_clkdiv_table[CPUFREQ_LEVEL_END];
 
-static unsigned int clkdiv_cpu0_4212[CPUFREQ_LEVEL_END][7] = {
+static unsigned int clkdiv_cpu0_4212[CPUFREQ_LEVEL_END][8] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVCORE, DIVCOREM0, DIVCOREM1, DIVPERIPH,
-	 *		DIVATB, DIVPCLK_DBG, DIVAPLL }
+	 *		DIVATB, DIVPCLK_DBG, DIVAPLL, DIVCORE2 }
 	 */
 	/* ARM L0: 1500Mhz */
-	{ 0, 6, 7, 0, 6, 1, 2 },
+	{ 0, 3, 7, 0, 6, 1, 2, 0 },
 
 	/* ARM L1: 1400Mhz */
-	{ 0, 6, 7, 0, 6, 1, 2 },
+	{ 0, 3, 7, 0, 6, 1, 2, 0 },
 
 	/* ARM L2: 1300Mhz */
-	{ 0, 5, 7, 0, 5, 1, 2 },
+	{ 0, 3, 7, 0, 6, 1, 2, 0 },
 
 	/* ARM L3: 1200Mhz */
-	{ 0, 5, 7, 0, 5, 1, 2 },
+	{ 0, 3, 7, 0, 5, 1, 2, 0 },
 
 	/* ARM L4: 1100MHz */
-	{ 0, 4, 7, 0, 4, 1, 2 },
+	{ 0, 3, 6, 0, 4, 1, 2, 0 },
 
 	/* ARM L5: 1000MHz */
-	{ 0, 4, 7, 0, 4, 1, 1 },
+	{ 0, 2, 5, 0, 4, 1, 1, 0 },
 
 	/* ARM L6: 900MHz */
-	{ 0 },
+	{ 0, 2, 5, 0, 3, 1, 1, 0 },
 
 	/* ARM L7: 800MHz */
-	{ 0, 3, 7, 0, 3, 1, 1 },
+	{ 0, 2, 5, 0, 3, 1, 1, 0 },
 
 	/* ARM L8: 700MHz */
-	{ 0 },
+	{ 0, 2, 4, 0, 3, 1, 1, 0 },
 
 	/* ARM L9: 600MHz */
-	{ 0 },
+	{ 0, 2, 4, 0, 3, 1, 1, 0 },
 
 	/* ARM L10: 500MHz */
-	{ 0, 2, 5, 0, 3, 1, 1 },
+	{ 0, 2, 4, 0, 3, 1, 1, 0 },
 
 	/* ARM L11: 400MHz */
-	{ 0 },
+	{ 0, 2, 4, 0, 3, 1, 1, 0 },
 
 	/* ARM L12: 300MHz */
-	{ 0 },
+	{ 0, 2, 4, 0, 2, 1, 1, 0 },
 
 	/* ARM L13: 200MHz */
-	{ 0, 1, 3, 0, 0, 1, 0 },
+	{ 0, 1, 3, 0, 1, 1, 1, 0 },
 };
 
 static unsigned int clkdiv_cpu0_4412[CPUFREQ_LEVEL_END][8] = {
@@ -187,28 +187,28 @@ static unsigned int clkdiv_cpu1_4212[CPUFREQ_LEVEL_END][2] = {
 	{ 4, 0 },
 
 	/* ARM L6: 900MHz */
-	{ 0 },
+	{ 3, 0 },
 
 	/* ARM L7: 800MHz */
 	{ 3, 0 },
 
 	/* ARM L8: 700MHz */
-	{ 0 },
+	{ 3, 0 },
 
 	/* ARM L9: 600MHz */
-	{ 0 },
+	{ 3, 0 },
 
 	/* ARM L10: 500MHz */
-	{ 2, 0 },
+	{ 3, 0 },
 
 	/* ARM L11: 400MHz */
-	{ 0 },
+	{ 3, 0 },
 
 	/* ARM L12: 300MHz */
-	{ 0 },
+	{ 3, 0 },
 
 	/* ARM L13: 200MHz */
-	{ 0, 0 },
+	{ 3, 0 },
 };
 
 static unsigned int clkdiv_cpu1_4412[CPUFREQ_LEVEL_END][3] = {
@@ -306,6 +306,11 @@ static unsigned int exynos4x12_apll_pms_table[CPUFREQ_LEVEL_END] = {
 /*
  * ASV group voltage table
  */
+
+static const unsigned int asv_voltage_4212[CPUFREQ_LEVEL_END] = {
+	1350000, 1300000, 1300000, 1225000, 1150000, 1100000, 1050000,
+	1012500,  987500,  975000,  962500,  950000,  925000,  900000
+};
 
 static const unsigned int asv_voltage_s[CPUFREQ_LEVEL_END] = {
 	1500000, 1375000, 1350000, 1250000, 1200000, 1175000, 1100000,
@@ -508,24 +513,25 @@ static void __init set_volt_table(void)
 		exynos4x12_freq_table[L0].frequency = CPUFREQ_ENTRY_INVALID;
 	}
 
-	if (soc_is_exynos4212()) {
-		exynos4x12_freq_table[L6].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4x12_freq_table[L8].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4x12_freq_table[L9].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4x12_freq_table[L11].frequency = CPUFREQ_ENTRY_INVALID;
-		exynos4x12_freq_table[L12].frequency = CPUFREQ_ENTRY_INVALID;
-	}
 #endif
 
 	pr_info("DVFS : VDD_ARM Voltage table set with %d Group\n", exynos_result_of_asv);
 
-	if (exynos_result_of_asv == 0xff) {
+	if (soc_is_exynos4212()) {
 		for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
-			exynos4x12_volt_table[i] = asv_voltage_s[i];
+			exynos4x12_volt_table[i] = asv_voltage_4212[i];
+
+	} else if (soc_is_exynos4412()) {
+		if (exynos_result_of_asv == 0xff) {
+			for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
+				exynos4x12_volt_table[i] = asv_voltage_s[i];
+		} else {
+			for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
+				exynos4x12_volt_table[i] =
+					asv_voltage_step_12_5[i][exynos_result_of_asv];
+		}
 	} else {
-		for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
-			exynos4x12_volt_table[i] =
-				asv_voltage_step_12_5[i][exynos_result_of_asv];
+		pr_err("%s: Can't find SoC type \n", __func__);
 	}
 }
 
