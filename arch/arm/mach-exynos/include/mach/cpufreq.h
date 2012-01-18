@@ -100,3 +100,10 @@ extern int exynos5250_cpufreq_init(struct exynos_dvfs_info *);
 #else
 	#warning "Should define CONFIG_ARCH_EXYNOS4(5)\n"
 #endif
+
+#if defined(CONFIG_EXYNOS5250_ABB_WA)
+/* These function and variables should be removed in EVT1 */
+void exynos5250_set_arm_abbg(unsigned int arm_volt, unsigned int int_volt);
+extern unsigned int exynos5250_arm_volt;
+extern unsigned int exynos5250_int_volt;
+#endif

@@ -759,3 +759,10 @@ config EXYNOS_DEV_C2C
 	bool
 	depends on EXYNOS_C2C
 	default y
+
+config EXYNOS5250_ABB_WA
+	bool "ARM/INT ABB errata workaround"
+	depends on CPU_EXYNOS5250 && CPU_FREQ && BUSFREQ_OPP
+	default y
+	help
+	 Add W/A to fix ARM/INT ABB errata in EVT0

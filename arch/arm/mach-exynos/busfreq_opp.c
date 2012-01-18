@@ -143,6 +143,11 @@ static void exynos_busfreq_timer(struct work_struct *work)
 					voltage + 25000);
 			voltage = data->get_int_volt(index);
 		}
+#if defined(CONFIG_EXYNOS5250_ABB_WA)
+		exynos5250_set_arm_abbg(exynos5250_arm_volt, voltage);
+		exynos5250_int_volt = voltage;
+		pr_info("%s: pre change VDD_INT[%d]\n", __func__, voltage);
+#endif
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
 		if (data->busfreq_prepare)
@@ -161,6 +166,11 @@ static void exynos_busfreq_timer(struct work_struct *work)
 		}
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
+#if defined(CONFIG_EXYNOS5250_ABB_WA)
+		exynos5250_set_arm_abbg(exynos5250_arm_volt, voltage);
+		exynos5250_int_volt = voltage;
+		pr_info("%s: post change VDD_INT[%d]\n", __func__, voltage);
+#endif
 	}
 	data->curr_opp = opp;
 

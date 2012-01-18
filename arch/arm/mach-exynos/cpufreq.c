@@ -133,6 +133,9 @@ static int exynos_target(struct cpufreq_policy *policy,
 		/* Firstly, voltage up to increase frequency */
 		regulator_set_voltage(arm_regulator, arm_volt,
 				     arm_volt + 25000);
+#if defined(CONFIG_EXYNOS5250_ABB_WA)
+		exynos5250_arm_volt = arm_volt;
+#endif
 	}
 
 	if (safe_arm_volt)
@@ -149,8 +152,10 @@ static int exynos_target(struct cpufreq_policy *policy,
 		/* down the voltage after frequency change */
 		regulator_set_voltage(arm_regulator, arm_volt,
 				     arm_volt + 25000);
+#if defined(CONFIG_EXYNOS5250_ABB_WA)
+		exynos5250_arm_volt = arm_volt;
+#endif
 	}
-
 out:
 	mutex_unlock(&set_freq_lock);
 

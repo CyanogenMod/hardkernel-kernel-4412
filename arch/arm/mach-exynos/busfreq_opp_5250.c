@@ -39,6 +39,7 @@
 #include <mach/regs-mem.h>
 #include <mach/dev.h>
 #include <mach/asv.h>
+#include <mach/regs-pmu-5250.h>
 
 #include <plat/map-s5p.h>
 #include <plat/gpio-cfg.h>
@@ -52,6 +53,8 @@
 #define UP_CPU_THRESHOLD	11
 #define MAX_CPU_THRESHOLD	20
 #define CPU_SLOPE_SIZE		7
+
+#define INT_RBB		6	/* +300mV */
 
 /* To save/restore DMC_PAUSE_CTRL register */
 static unsigned int dmc_pause_ctrl;
@@ -606,7 +609,7 @@ struct opp *exynos5250_monitor(struct busfreq_data *data)
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data)
 {
-	unsigned int i;
+	unsigned int i, tmp;
 	unsigned long maxfreq = ULONG_MAX;
 	unsigned long minfreq = 0;
 	unsigned long cdrexfreq;
@@ -679,6 +682,11 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		regulator_put(data->vdd_int);
 		return -ENODEV;
 	}
+
+	tmp = __raw_readl(EXYNOS5_ABBG_INT_CONTROL);
+	tmp &= ~(0x1f | (1 << 31) | (1 << 7));
+	tmp |= ((8 + INT_RBB) | (1 << 31) | (1 << 7));
+	__raw_writel(tmp, EXYNOS5_ABBG_INT_CONTROL);
 
 	return 0;
 }
