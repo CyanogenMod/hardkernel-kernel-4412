@@ -9,7 +9,7 @@
 #define SRP_COMMBOX_BASE	(0x03820000)
 
 /* SRAM information */
-#define IRAM_SIZE	(soc_is_exynos4412() ? \
+#define IRAM_SIZE	((soc_is_exynos4412() || soc_is_exynos4212()) ? \
 			(0x40000) : (0x20000))
 #define DMEM_SIZE	(soc_is_exynos5250() ? \
 			(0x28000) : (0x20000))
@@ -28,7 +28,7 @@
 
 /* IBUF Offset */
 #if defined(CONFIG_ARCH_EXYNOS4)
-#define IBUF_OFFSET	(soc_is_exynos4412() ? \
+#define IBUF_OFFSET	((soc_is_exynos4412() || soc_is_exynos4212()) ? \
 			(0x30000) : (0x10000))
 #elif defined(CONFIG_ARCH_EXYNOS5)
 #define IBUF_OFFSET	(0x8004)
