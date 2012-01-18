@@ -171,18 +171,20 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 	{ 1200000 },	/* L9 */
 	{ 1150000 },	/* L10 */
 	{ 1100000 },	/* L11 */
-	{ 1050000 },	/* L12 */
-	{ 1025000 },	/* L13 */
-	{ 1000000 },	/* L14 */
-	{ 950000 },	/* L15 */
-	{ 925000 },	/* L16 */
-	{ 875000 },	/* L17 */
-	{ 875000 },	/* L18 */
-	{ 850000 },	/* L19 */
-	{ 850000 },	/* L20 */
+	{ 1175000 },	/* L12 */
+	{ 1125000 },	/* L13 */
+	{ 1075000 },	/* L14 */
+	{ 1050000 },	/* L15 */
+	{ 1000000 },	/* L16 */
+	{ 950000 },	/* L17 */
+	{ 925000 },	/* L18 */
+	{ 925000 },	/* L19 */
+	{ 900000 },	/* L20 */
 };
 
-#define INT_VOLT	1150000	/* 1.15v */
+#define INT_VOLT	1075000	/* 1.075v */
+#define INT_RBB		6	/* +300mV */
+#define ARM_RBB		6	/* +300mV */
 
 static void set_clkdiv(unsigned int div_index)
 {
@@ -287,10 +289,10 @@ static void exynos5250_set_abbg(unsigned int new_index)
 	}
 	pr_debug("%s: index:%d NEW_VOLT:%d, ABBG:%d\n", __func__,
 		new_index, new_volt, setbits);
-	tmp = __raw_readl(EXYNOS5_ABBG_CONTROL);
+	tmp = __raw_readl(EXYNOS5_ABBG_ARM_CONTROL);
 	tmp &= ~(0x1f | (1 << 31) | (1 << 7));
-	tmp |= (setbits | (1 << 31) | (1 << 7));
-	__raw_writel(tmp, EXYNOS5_ABBG_CONTROL);
+	tmp |= ((setbits + ARM_RBB) | (1 << 31) | (1 << 7));
+	__raw_writel(tmp, EXYNOS5_ABBG_ARM_CONTROL);
 }
 
 static void exynos5250_set_frequency(unsigned int old_index,
@@ -455,6 +457,10 @@ int exynos5250_cpufreq_init(struct exynos_dvfs_info *info)
 	__raw_writel(tmp, S5P_PMU_DEBUG);
 
 #endif
+	tmp = __raw_readl(EXYNOS5_ABBG_INT_CONTROL);
+	tmp &= ~(0x1f | (1 << 31) | (1 << 7));
+	tmp |= ((8 + INT_RBB) | (1 << 31) | (1 << 7));
+	__raw_writel(tmp, EXYNOS5_ABBG_INT_CONTROL);
 
 	return 0;
 
