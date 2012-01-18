@@ -142,8 +142,8 @@ static void exnos_usb_switch_worker(struct work_struct *work)
 	if (!is_device_detect(usb_switch) || is_host_detect(usb_switch))
 		goto done;
 
-	while (s5p_device_ehci.dev.power.runtime_status != RPM_SUSPENDED ||
-		s5p_device_ohci.dev.power.runtime_status != RPM_SUSPENDED) {
+	while (!pm_runtime_suspended(&s5p_device_ehci.dev) ||
+		!pm_runtime_suspended(&s5p_device_ohci.dev)) {
 
 		mutex_unlock(&usb_switch->mutex);
 		msleep(SWITCH_WAIT_TIME);
