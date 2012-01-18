@@ -27,6 +27,7 @@
 #include <mach/smc.h>
 #include <mach/clock-domain.h>
 #include <mach/regs-audss.h>
+#include <mach/asv.h>
 
 #include <plat/regs-otg.h>
 #include <plat/exynos4.h>
@@ -464,6 +465,9 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	do {
 		/* Waiting for flushing UART fifo */
 	} while (exynos4_check_enter());
+
+	if (!soc_is_exynos4210())
+		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
 
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
