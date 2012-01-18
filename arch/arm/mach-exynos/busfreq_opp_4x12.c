@@ -44,13 +44,16 @@
 #include <plat/gpio-cfg.h>
 #include <plat/cpu.h>
 
-#define UP_THRESHOLD		30
-#define DMC_MAX_THRESHOLD	42
-#define PPMU_THRESHOLD		5
-#define IDLE_THRESHOLD		4
-#define UP_CPU_THRESHOLD	11
-#define MAX_CPU_THRESHOLD	20
-#define CPU_SLOPE_SIZE		7
+#define UP_THRESHOLD			30
+#define EXYNOS4412_DMC_MAX_THRESHOLD	42
+#define EXYNOS4212_DMC_MAX_THRESHOLD	32
+#define PPMU_THRESHOLD			5
+#define IDLE_THRESHOLD			4
+#define UP_CPU_THRESHOLD		11
+#define MAX_CPU_THRESHOLD		20
+#define CPU_SLOPE_SIZE			7
+
+static unsigned int dmc_max_threshold;
 
 /* To save/restore DMC_PAUSE_CTRL register */
 static unsigned int dmc_pause_ctrl;
@@ -524,7 +527,7 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 		}
 	}
 
-	if (dmc_load >= DMC_MAX_THRESHOLD) {
+	if (dmc_load >= dmc_max_threshold) {
 		dmcfreq = opp_get_freq(data->max_opp);
 	} else if (dmc_load < IDLE_THRESHOLD) {
 		if (dmc_load_average < IDLE_THRESHOLD)
@@ -535,10 +538,10 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	} else {
 		if (dmc_load < dmc_load_average) {
 			dmc_load = dmc_load_average;
-			if (dmc_load >= DMC_MAX_THRESHOLD)
-				dmc_load = DMC_MAX_THRESHOLD;
+			if (dmc_load >= dmc_max_threshold)
+				dmc_load = dmc_max_threshold;
 		}
-		dmcfreq = div64_u64(maxfreq * dmc_load * 1000, DMC_MAX_THRESHOLD);
+		dmcfreq = div64_u64(maxfreq * dmc_load * 1000, dmc_max_threshold);
 	}
 
 	lockfreq = dev_max_freq(data->dev);
@@ -563,9 +566,11 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 	if (soc_is_exynos4212()) {
 		exynos4_mif_volt = exynos4212_mif_volt;
 		exynos4_int_volt = exynos4212_int_volt;
+		dmc_max_threshold = EXYNOS4212_DMC_MAX_THRESHOLD;
 	} else if (soc_is_exynos4412()) {
 		exynos4_mif_volt = exynos4412_mif_volt;
 		exynos4_int_volt = exynos4412_int_volt;
+		dmc_max_threshold = EXYNOS4412_DMC_MAX_THRESHOLD;
 	} else {
 		pr_err("Unsupported model.\n");
 		return -EINVAL;
