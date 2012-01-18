@@ -1189,6 +1189,18 @@ int fimc_is_hw_get_param(struct fimc_is_dev *dev, u16 offset)
 	return 0;
 }
 
+void fimc_is_hw_set_debug_level(struct fimc_is_dev *dev, int level1, int level2)
+{
+	fimc_is_hw_wait_intmsr0_intmsd0(dev);
+	writel(HIC_MSG_CONFIG, dev->regs + ISSR0);
+	writel(dev->sensor.id, dev->regs + ISSR1);
+
+	writel(0, dev->regs + ISSR2);
+	writel(level1, dev->regs + ISSR3);
+	writel(level2, dev->regs + ISSR4);
+	fimc_is_hw_set_intgr0_gd0(dev);
+}
+
 void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on)
 {
 	if (on) {

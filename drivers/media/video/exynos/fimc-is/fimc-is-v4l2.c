@@ -536,6 +536,9 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		clear_bit(IS_ST_STREAM_OFF, &dev->state);
 		set_bit(IS_ST_RUN, &dev->state);
 		dbg("Init sequence completed!! Ready to use\n");
+#ifdef MSG_CONFIG_COTROL
+		fimc_is_hw_set_debug_level(dev, 0x3f, 3);
+#endif
 	}
 
 	return 0;
@@ -694,27 +697,10 @@ static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	/* AF result */
 	case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT:
-		if (!is_af_use(dev)) {
+		if (!is_af_use(dev))
 			ctrl->value = 0x02;
-		} else {
-			ctrl->value = 0;
-			fimc_is_mem_cache_inv((void *)IS_SHARED,
-			(unsigned long)(sizeof(struct is_share_region)));
-			dbg("AF position = %d\n",
-				dev->is_shared_region->af_position);
-			dbg("AF result = %d\n",
-				dev->is_shared_region->af_status);
-			dbg("AF scene type = %d\n",
-				dev->is_shared_region->af_scene_type);
-			switch (dev->is_shared_region->af_status) {
-			case 1:
-				ctrl->value = 0x02;
-				break;
-			default:
-				ctrl->value = 0;
-				break;
-			}
-		}
+		else
+			ctrl->value = dev->af.af_lock_state;
 		break;
 	case V4L2_CID_IS_ZOOM_STATE:
 		if (test_bit(IS_ST_SET_ZOOM, &dev->state))
@@ -900,8 +886,9 @@ static int fimc_is_v4l2_digital_zoom(struct fimc_is_dev *dev, int zoom_factor)
 	return 0;
 }
 
-static void fimc_is_v4l2_set_scene_mode(struct fimc_is_dev *dev, int mode)
+static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 {
+	int ret = 0;
 	switch (mode) {
 	case SCENE_MODE_NONE:
 		/* ISO */
@@ -1742,6 +1729,7 @@ static void fimc_is_v4l2_set_scene_mode(struct fimc_is_dev *dev, int mode)
 	default:
 		break;
 	}
+	return ret;
 }
 
 int fimc_is_wait_af_done(struct fimc_is_dev *dev)
@@ -1851,6 +1839,8 @@ static int fimc_is_v4l2_af_mode(struct fimc_is_dev *dev, int value)
 		dev->af.ae_lock_state = 0;
 		dev->af.awb_lock_state = 0;
 		break;
+	default:
+		return ret;
 	}
 	return ret;
 }
@@ -1929,7 +1919,6 @@ static int fimc_is_v4l2_af_start_stop(struct fimc_is_dev *dev, int value)
 			default:
 				/* If other AF mode, there is no
 				cancelation process*/
-				return 0;
 				break;
 			}
 			/* Wait 200 msec */
@@ -1992,7 +1981,6 @@ static int fimc_is_v4l2_af_start_stop(struct fimc_is_dev *dev, int value)
 				fimc_is_hw_set_param(dev);
 				break;
 			default:
-				return 0;
 				break;
 			}
 		}
@@ -2000,7 +1988,778 @@ static int fimc_is_v4l2_af_start_stop(struct fimc_is_dev *dev, int value)
 	default:
 		break;
 	}
-	return 0;
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_iso(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case ISO_AUTO:
+		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_AUTO);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
+		break;
+	case ISO_100:
+		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev, 100);
+		break;
+	case ISO_200:
+		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev, 200);
+		break;
+	case ISO_400:
+		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev, 400);
+		break;
+	case ISO_800:
+		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev, 800);
+		break;
+	case ISO_1600:
+		IS_ISP_SET_PARAM_ISO_CMD(dev, ISP_ISO_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ISO_VALUE(dev, 1600);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= ISO_AUTO && value < ISO_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_effect(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_IMAGE_EFFECT_DISABLE:
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_DISABLE);
+		break;
+	case IS_IMAGE_EFFECT_MONOCHROME:
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_MONOCHROME);
+		break;
+	case IS_IMAGE_EFFECT_NEGATIVE_MONO:
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev,
+			ISP_IMAGE_EFFECT_NEGATIVE_MONO);
+		break;
+	case IS_IMAGE_EFFECT_NEGATIVE_COLOR:
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev,
+			ISP_IMAGE_EFFECT_NEGATIVE_COLOR);
+		break;
+	case IS_IMAGE_EFFECT_SEPIA:
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_SEPIA);
+		break;
+	}
+	/* only ISP effect in Pegasus */
+	if (value >= 0 && value < 5) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_effect_legacy(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IMAGE_EFFECT_NONE:
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_DISABLE);
+		break;
+	case IMAGE_EFFECT_BNW:
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_MONOCHROME);
+		break;
+	case IMAGE_EFFECT_NEGATIVE:
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev,
+			ISP_IMAGE_EFFECT_NEGATIVE_COLOR);
+		break;
+	case IMAGE_EFFECT_SEPIA:
+		IS_ISP_SET_PARAM_EFFECT_CMD(dev, ISP_IMAGE_EFFECT_SEPIA);
+		break;
+	default:
+		return ret;
+	}
+	/* only ISP effect in Pegasus */
+	if (value > IMAGE_EFFECT_BASE && value < IMAGE_EFFECT_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_flash_mode(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case FLASH_MODE_OFF:
+		IS_ISP_SET_PARAM_FLASH_CMD(dev, ISP_FLASH_COMMAND_DISABLE);
+		IS_ISP_SET_PARAM_FLASH_REDEYE(dev, ISP_FLASH_REDEYE_DISABLE);
+		break;
+	case FLASH_MODE_AUTO:
+		IS_ISP_SET_PARAM_FLASH_CMD(dev, ISP_FLASH_COMMAND_AUTO);
+		IS_ISP_SET_PARAM_FLASH_REDEYE(dev, ISP_FLASH_REDEYE_ENABLE);
+		break;
+	case FLASH_MODE_ON:
+		IS_ISP_SET_PARAM_FLASH_CMD(dev, ISP_FLASH_COMMAND_MANUALON);
+		IS_ISP_SET_PARAM_FLASH_REDEYE(dev, ISP_FLASH_REDEYE_DISABLE);
+		break;
+	case FLASH_MODE_TORCH:
+		IS_ISP_SET_PARAM_FLASH_CMD(dev, ISP_FLASH_COMMAND_TORCH);
+		IS_ISP_SET_PARAM_FLASH_REDEYE(dev, ISP_FLASH_REDEYE_DISABLE);
+		break;
+	default:
+		return ret;
+	}
+	if (value > FLASH_MODE_BASE && value < FLASH_MODE_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_awb_mode(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_AWB_AUTO:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
+		break;
+	case IS_AWB_DAYLIGHT:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+		break;
+	case IS_AWB_CLOUDY:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_CLOUDY);
+		break;
+	case IS_AWB_TUNGSTEN:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+			ISP_AWB_ILLUMINATION_TUNGSTEN);
+		break;
+	case IS_AWB_FLUORESCENT:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+			ISP_AWB_ILLUMINATION_FLUORESCENT);
+		break;
+	}
+	if (value >= IS_AWB_AUTO && value < IS_AWB_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_awb_mode_legacy(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case WHITE_BALANCE_AUTO:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
+		break;
+	case WHITE_BALANCE_SUNNY:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_DAYLIGHT);
+		break;
+	case WHITE_BALANCE_CLOUDY:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+				ISP_AWB_ILLUMINATION_CLOUDY);
+		break;
+	case WHITE_BALANCE_TUNGSTEN:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+			ISP_AWB_ILLUMINATION_TUNGSTEN);
+		break;
+	case WHITE_BALANCE_FLUORESCENT:
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_ILLUMINATION);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
+			ISP_AWB_ILLUMINATION_FLUORESCENT);
+		break;
+	}
+	if (value > WHITE_BALANCE_BASE && value < WHITE_BALANCE_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_contrast(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_CONTRAST_AUTO:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_AUTO);
+		break;
+	case IS_CONTRAST_MINUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, -2);
+		break;
+	case IS_CONTRAST_MINUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, -1);
+		break;
+	case IS_CONTRAST_DEFAULT:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+		break;
+	case IS_CONTRAST_PLUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 1);
+		break;
+	case IS_CONTRAST_PLUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 2);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < IS_CONTRAST_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_contrast_legacy(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case CONTRAST_MINUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, -2);
+		break;
+	case CONTRAST_MINUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, -1);
+		break;
+	case CONTRAST_DEFAULT:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+		break;
+	case CONTRAST_PLUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 1);
+		break;
+	case CONTRAST_PLUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 2);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < CONTRAST_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_saturation(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case SATURATION_MINUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, -2);
+		break;
+	case SATURATION_MINUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, -1);
+		break;
+	case SATURATION_DEFAULT:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+		break;
+	case SATURATION_PLUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 1);
+		break;
+	case SATURATION_PLUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 2);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < SATURATION_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_sharpness(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+
+	switch (value) {
+	case SHARPNESS_MINUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, -2);
+		break;
+	case SHARPNESS_MINUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, -1);
+		break;
+	case SHARPNESS_DEFAULT:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+		break;
+	case SHARPNESS_PLUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 1);
+		break;
+	case SHARPNESS_PLUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 2);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < SHARPNESS_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_exposure(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_EXPOSURE_MINUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, -2);
+		break;
+	case IS_EXPOSURE_MINUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, -1);
+		break;
+	case IS_EXPOSURE_DEFAULT:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+		break;
+	case IS_EXPOSURE_PLUS1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 1);
+		break;
+	case IS_EXPOSURE_PLUS2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 2);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < IS_EXPOSURE_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_brightness(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	if (value >= -4 && value < 5) {
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_hue(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	if (value >= -4 && value < 5) {
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_ADJUST_HUE(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_metering(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_METERING_AVERAGE:
+		IS_ISP_SET_PARAM_METERING_CMD(dev,
+			ISP_METERING_COMMAND_AVERAGE);
+		break;
+	case IS_METERING_SPOT:
+		IS_ISP_SET_PARAM_METERING_CMD(dev, ISP_METERING_COMMAND_SPOT);
+		break;
+	case IS_METERING_MATRIX:
+		IS_ISP_SET_PARAM_METERING_CMD(dev, ISP_METERING_COMMAND_MATRIX);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < IS_METERING_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_metering_legacy(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case METERING_CENTER:
+		IS_ISP_SET_PARAM_METERING_CMD(dev,
+			ISP_METERING_COMMAND_AVERAGE);
+		break;
+	case METERING_SPOT:
+		IS_ISP_SET_PARAM_METERING_CMD(dev, ISP_METERING_COMMAND_SPOT);
+		break;
+	case METERING_MATRIX:
+		IS_ISP_SET_PARAM_METERING_CMD(dev, ISP_METERING_COMMAND_MATRIX);
+		break;
+	default:
+		return ret;
+	}
+	if (value > METERING_BASE && value < METERING_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_afc(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_AFC_DISABLE:
+		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_DISABLE);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
+		break;
+	case IS_AFC_AUTO:
+		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_AUTO);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
+		break;
+	case IS_AFC_MANUAL_50HZ:
+		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev, ISP_AFC_MANUAL_50HZ);
+		break;
+	case IS_AFC_MANUAL_60HZ:
+		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev, ISP_AFC_MANUAL_60HZ);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < IS_AFC_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_isp_afc_legacy(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case ANTI_BANDING_OFF:
+		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_DISABLE);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
+		break;
+	case ANTI_BANDING_AUTO:
+		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_AUTO);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
+		break;
+	case ANTI_BANDING_50HZ:
+		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev, ISP_AFC_MANUAL_50HZ);
+		break;
+	case ANTI_BANDING_60HZ:
+		IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_MANUAL);
+		IS_ISP_SET_PARAM_AFC_MANUAL(dev, ISP_AFC_MANUAL_60HZ);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= ANTI_BANDING_OFF && value <= ANTI_BANDING_60HZ) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_fd_angle_mode(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_FD_ROLL_ANGLE_BASIC:
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			FD_CONFIG_COMMAND_ROLL_ANGLE);
+		IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case V4L2_CID_IS_FD_SET_YAW_ANGLE:
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			FD_CONFIG_COMMAND_YAW_ANGLE);
+		IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case V4L2_CID_IS_FD_SET_SMILE_MODE:
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			FD_CONFIG_COMMAND_SMILE_MODE);
+		IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case V4L2_CID_IS_FD_SET_BLINK_MODE:
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			FD_CONFIG_COMMAND_BLINK_MODE);
+		IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case V4L2_CID_IS_FD_SET_EYE_DETECT_MODE:
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			FD_CONFIG_COMMAND_EYES_DETECT);
+		IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case V4L2_CID_IS_FD_SET_MOUTH_DETECT_MODE:
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			FD_CONFIG_COMMAND_MOUTH_DETECT);
+		IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case V4L2_CID_IS_FD_SET_ORIENTATION_MODE:
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			FD_CONFIG_COMMAND_ORIENTATION);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	case V4L2_CID_IS_FD_SET_ORIENTATION:
+		IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
+			FD_CONFIG_COMMAND_ORIENTATION_VALUE);
+		IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+		break;
+	default:
+		break;
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
+{
+	int i, ret = 0;
+
+	switch (value) {
+	case FRAME_RATE_AUTO: /* FRAME_RATE_AUTO */
+		i = fimc_is_hw_get_sensor_max_framerate(dev);
+		IS_SENSOR_SET_FRAME_RATE(dev, i);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		clear_bit(IS_ST_RUN, &dev->state);
+		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_RUN, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		break;
+	case FRAME_RATE_7: /* FRAME_RATE_7 */
+		IS_SENSOR_SET_FRAME_RATE(dev, 7);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		clear_bit(IS_ST_RUN, &dev->state);
+		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_RUN, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 124950);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		break;
+	case FRAME_RATE_15: /* FRAME_RATE_15 */
+		IS_SENSOR_SET_FRAME_RATE(dev, 15);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		clear_bit(IS_ST_RUN, &dev->state);
+		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_RUN, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		break;
+	case FRAME_RATE_20: /* FRAME_RATE_20 */
+		IS_SENSOR_SET_FRAME_RATE(dev, 20);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		clear_bit(IS_ST_RUN, &dev->state);
+		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_RUN, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 50000);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		break;
+	case FRAME_RATE_30: /* FRAME_RATE_30 */
+		IS_SENSOR_SET_FRAME_RATE(dev, 30);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		clear_bit(IS_ST_RUN, &dev->state);
+		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_RUN, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 33333);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		break;
+	case FRAME_RATE_60: /* FRAME_RATE_60 */
+		IS_SENSOR_SET_FRAME_RATE(dev, 60);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		clear_bit(IS_ST_RUN, &dev->state);
+		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_RUN, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 16666);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		break;
+	default:
+		IS_SENSOR_SET_FRAME_RATE(dev, value);
+		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		clear_bit(IS_ST_RUN, &dev->state);
+		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_RUN, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
+						(u32)(1000000/value));
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		break;
+	}
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
+	fimc_is_hw_set_param(dev);
+
+	return ret;
 }
 
 static int fimc_is_v4l2_ae_awb_lockunlock(struct fimc_is_dev *dev, int value)
@@ -2065,6 +2824,121 @@ static int fimc_is_v4l2_ae_awb_lockunlock(struct fimc_is_dev *dev, int value)
 	return ret;
 }
 
+static int fimc_is_v4l2_set_isp(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_ISP_BYPASS_DISABLE:
+		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_DISABLE);
+		break;
+	case IS_ISP_BYPASS_ENABLE:
+		IS_ISP_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < IS_ISP_BYPASS_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_set_drc(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_DRC_BYPASS_DISABLE:
+		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_DISABLE);
+		IS_DRC_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
+		break;
+	case IS_DRC_BYPASS_ENABLE:
+		IS_DRC_SET_PARAM_CONTROL_BYPASS(dev, CONTROL_BYPASS_ENABLE);
+		IS_DRC_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < IS_DRC_BYPASS_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_cmd_isp(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_ISP_COMMAND_STOP:
+		IS_ISP_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_STOP);
+		break;
+	case IS_ISP_COMMAND_START:
+		IS_ISP_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < IS_ISP_COMMAND_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_cmd_drc(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_DRC_COMMAND_STOP:
+		IS_DRC_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_STOP);
+		break;
+	case IS_DRC_COMMAND_START:
+		IS_DRC_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
+		break;
+	}
+	if (value >= 0 && value < IS_ISP_COMMAND_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
+static int fimc_is_v4l2_cmd_fd(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	switch (value) {
+	case IS_FD_COMMAND_STOP:
+		dbg("IS_FD_COMMAND_STOP\n");
+		IS_FD_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_STOP);
+		break;
+	case IS_FD_COMMAND_START:
+		dbg("IS_FD_COMMAND_START\n");
+		IS_FD_SET_PARAM_CONTROL_CMD(dev, CONTROL_COMMAND_START);
+		break;
+	}
+	if (value >= 0 && value < IS_ISP_COMMAND_MAX) {
+		IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+			IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
+	}
+	return ret;
+}
+
 static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	int ret = 0;
@@ -2114,108 +2988,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		fimc_is_hw_set_param(dev);
 		break;
 	case V4L2_CID_CAMERA_FRAME_RATE:
-		switch (ctrl->value) {
-		case FRAME_RATE_AUTO: /* FRAME_RATE_AUTO */
-			i = fimc_is_hw_get_sensor_max_framerate(dev);
-			IS_SENSOR_SET_FRAME_RATE(dev, i);
-			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-								IS_PARAM_SIZE);
-			clear_bit(IS_ST_RUN, &dev->state);
-			fimc_is_hw_set_param(dev);
-			ret = wait_event_timeout(dev->irq_queue1,
-				test_bit(IS_ST_RUN, &dev->state),
-				FIMC_IS_SHUTDOWN_TIMEOUT);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			break;
-		case FRAME_RATE_7: /* FRAME_RATE_7 */
-			IS_SENSOR_SET_FRAME_RATE(dev, 7);
-			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-								IS_PARAM_SIZE);
-			clear_bit(IS_ST_RUN, &dev->state);
-			fimc_is_hw_set_param(dev);
-			ret = wait_event_timeout(dev->irq_queue1,
-				test_bit(IS_ST_RUN, &dev->state),
-				FIMC_IS_SHUTDOWN_TIMEOUT);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 124950);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			break;
-		case FRAME_RATE_15: /* FRAME_RATE_15 */
-			IS_SENSOR_SET_FRAME_RATE(dev, 15);
-			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-								IS_PARAM_SIZE);
-			clear_bit(IS_ST_RUN, &dev->state);
-			fimc_is_hw_set_param(dev);
-			ret = wait_event_timeout(dev->irq_queue1,
-				test_bit(IS_ST_RUN, &dev->state),
-				FIMC_IS_SHUTDOWN_TIMEOUT);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			break;
-		case FRAME_RATE_20: /* FRAME_RATE_20 */
-			IS_SENSOR_SET_FRAME_RATE(dev, 20);
-			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-								IS_PARAM_SIZE);
-			clear_bit(IS_ST_RUN, &dev->state);
-			fimc_is_hw_set_param(dev);
-			ret = wait_event_timeout(dev->irq_queue1,
-				test_bit(IS_ST_RUN, &dev->state),
-				FIMC_IS_SHUTDOWN_TIMEOUT);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 50000);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			break;
-		case FRAME_RATE_30: /* FRAME_RATE_30 */
-			IS_SENSOR_SET_FRAME_RATE(dev, 30);
-			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-								IS_PARAM_SIZE);
-			clear_bit(IS_ST_RUN, &dev->state);
-			fimc_is_hw_set_param(dev);
-			ret = wait_event_timeout(dev->irq_queue1,
-				test_bit(IS_ST_RUN, &dev->state),
-				FIMC_IS_SHUTDOWN_TIMEOUT);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 33333);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			break;
-		case FRAME_RATE_60: /* FRAME_RATE_60 */
-			IS_SENSOR_SET_FRAME_RATE(dev, 60);
-			IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-								IS_PARAM_SIZE);
-			clear_bit(IS_ST_RUN, &dev->state);
-			fimc_is_hw_set_param(dev);
-			ret = wait_event_timeout(dev->irq_queue1,
-				test_bit(IS_ST_RUN, &dev->state),
-				FIMC_IS_SHUTDOWN_TIMEOUT);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
-			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 16666);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			break;
-		}
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
+		ret = fimc_is_v4l2_frame_rate(dev, ctrl->value);
 		break;
 	/* Focus */
 	case V4L2_CID_IS_CAMERA_OBJECT_POSITION_X:
@@ -2254,672 +3027,64 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	/* AWB, AE Lock/Unlock */
 	case V4L2_CID_CAMERA_AEAWB_LOCK_UNLOCK:
-		fimc_is_v4l2_ae_awb_lockunlock(dev, ctrl->value);
+		ret = fimc_is_v4l2_ae_awb_lockunlock(dev, ctrl->value);
 		break;
 	/* FLASH */
 	case V4L2_CID_CAMERA_FLASH_MODE:
-		switch (ctrl->value) {
-		case FLASH_MODE_OFF:
-			IS_ISP_SET_PARAM_FLASH_CMD(dev,
-				ISP_FLASH_COMMAND_DISABLE);
-			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-				ISP_FLASH_REDEYE_DISABLE);
-			break;
-		case FLASH_MODE_AUTO:
-			IS_ISP_SET_PARAM_FLASH_CMD(dev,
-				ISP_FLASH_COMMAND_AUTO);
-			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-				ISP_FLASH_REDEYE_ENABLE);
-			break;
-		case FLASH_MODE_ON:
-			IS_ISP_SET_PARAM_FLASH_CMD(dev,
-				ISP_FLASH_COMMAND_MANUALON);
-			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-				ISP_FLASH_REDEYE_DISABLE);
-			break;
-		case FLASH_MODE_TORCH:
-			IS_ISP_SET_PARAM_FLASH_CMD(dev,
-				ISP_FLASH_COMMAND_TORCH);
-			IS_ISP_SET_PARAM_FLASH_REDEYE(dev,
-				ISP_FLASH_REDEYE_DISABLE);
-			break;
-		}
-		if (ctrl->value > FLASH_MODE_BASE
-					&& ctrl->value < FLASH_MODE_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_FLASH);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
-		break;
-	case V4L2_CID_CAMERA_WHITE_BALANCE:
-		switch (ctrl->value) {
-		case WHITE_BALANCE_AUTO:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_AUTO);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
-			break;
-		case WHITE_BALANCE_SUNNY:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_ILLUMINATION);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-				ISP_AWB_ILLUMINATION_DAYLIGHT);
-			break;
-		case WHITE_BALANCE_CLOUDY:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_ILLUMINATION);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-				ISP_AWB_ILLUMINATION_CLOUDY);
-			break;
-		case WHITE_BALANCE_TUNGSTEN:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_ILLUMINATION);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-				ISP_AWB_ILLUMINATION_TUNGSTEN);
-			break;
-		case WHITE_BALANCE_FLUORESCENT:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_ILLUMINATION);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-				ISP_AWB_ILLUMINATION_FLUORESCENT);
-			break;
-		}
-		if (ctrl->value > WHITE_BALANCE_BASE
-				&& ctrl->value < WHITE_BALANCE_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_flash_mode(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_AWB_MODE:
-		switch (ctrl->value) {
-		case IS_AWB_AUTO:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_AUTO);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
-			break;
-		case IS_AWB_DAYLIGHT:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_ILLUMINATION);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-				ISP_AWB_ILLUMINATION_DAYLIGHT);
-			break;
-		case IS_AWB_CLOUDY:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_ILLUMINATION);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-				ISP_AWB_ILLUMINATION_CLOUDY);
-			break;
-		case IS_AWB_TUNGSTEN:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_ILLUMINATION);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-				ISP_AWB_ILLUMINATION_TUNGSTEN);
-			break;
-		case IS_AWB_FLUORESCENT:
-			IS_ISP_SET_PARAM_AWB_CMD(dev,
-				ISP_AWB_COMMAND_ILLUMINATION);
-			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev,
-				ISP_AWB_ILLUMINATION_FLUORESCENT);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_AWB_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_awb_mode(dev, ctrl->value);
+		break;
+	case V4L2_CID_CAMERA_WHITE_BALANCE:
+		ret = fimc_is_v4l2_awb_mode_legacy(dev, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_EFFECT:
-		switch (ctrl->value) {
-		case IMAGE_EFFECT_NONE:
-			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_DISABLE);
-			break;
-		case IMAGE_EFFECT_BNW:
-			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_MONOCHROME);
-			break;
-		case IMAGE_EFFECT_NEGATIVE:
-			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_NEGATIVE_COLOR);
-			break;
-		case IMAGE_EFFECT_SEPIA:
-			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_SEPIA);
-			break;
-		}
-		/* only ISP effect in Pegasus */
-		if (ctrl->value > IMAGE_EFFECT_BASE
-				&& ctrl->value < IMAGE_EFFECT_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_effect_legacy(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_IMAGE_EFFECT:
-		switch (ctrl->value) {
-		case IS_IMAGE_EFFECT_DISABLE:
-			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_DISABLE);
-			break;
-		case IS_IMAGE_EFFECT_MONOCHROME:
-			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_MONOCHROME);
-			break;
-		case IS_IMAGE_EFFECT_NEGATIVE_MONO:
-			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_NEGATIVE_MONO);
-			break;
-		case IS_IMAGE_EFFECT_NEGATIVE_COLOR:
-			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_NEGATIVE_COLOR);
-			break;
-		case IS_IMAGE_EFFECT_SEPIA:
-			IS_ISP_SET_PARAM_EFFECT_CMD(dev,
-				ISP_IMAGE_EFFECT_SEPIA);
-			break;
-		}
-		/* only ISP effect in Pegasus */
-		if (ctrl->value >= 0 && ctrl->value < 5) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_IMAGE_EFFECT);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
-		break;
-	case V4L2_CID_CAMERA_ISO:
-		switch (ctrl->value) {
-		case ISO_AUTO:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_AUTO);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
-			break;
-		case ISO_50:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 50);
-			break;
-		case ISO_100:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 100);
-			break;
-		case ISO_200:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 200);
-			break;
-		case ISO_400:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 400);
-			break;
-		case ISO_800:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 800);
-			break;
-		case ISO_1600:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 1600);
-			break;
-		}
-		if (ctrl->value >= ISO_AUTO && ctrl->value < ISO_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_effect(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_ISO:
-		switch (ctrl->value) {
-		case IS_ISO_AUTO:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_AUTO);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 0);
-			break;
-		case IS_ISO_50:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 50);
-			break;
-		case IS_ISO_100:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 100);
-			break;
-		case IS_ISO_200:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 200);
-			break;
-		case IS_ISO_400:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 400);
-			break;
-		case IS_ISO_800:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 800);
-			break;
-		case IS_ISO_1600:
-			IS_ISP_SET_PARAM_ISO_CMD(dev,
-				ISP_ISO_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ISO_VALUE(dev, 1600);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_ISO_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ISO);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+	case V4L2_CID_CAMERA_ISO:
+		ret = fimc_is_v4l2_isp_iso(dev, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_CONTRAST:
-		switch (ctrl->value) {
-		case CONTRAST_MINUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, -2);
-			break;
-		case CONTRAST_MINUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, -1);
-			break;
-		case CONTRAST_DEFAULT:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
-			break;
-		case CONTRAST_PLUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 1);
-			break;
-		case CONTRAST_PLUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 2);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < CONTRAST_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_contrast_legacy(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_CONTRAST:
-		switch (ctrl->value) {
-		case IS_CONTRAST_AUTO:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_AUTO);
-			break;
-		case IS_CONTRAST_MINUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, -2);
-			break;
-		case IS_CONTRAST_MINUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, -1);
-			break;
-		case IS_CONTRAST_DEFAULT:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
-			break;
-		case IS_CONTRAST_PLUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 1);
-			break;
-		case IS_CONTRAST_PLUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 2);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_CONTRAST_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
-		break;
-	case V4L2_CID_CAMERA_SATURATION:
-		switch (ctrl->value) {
-		case SATURATION_MINUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, -2);
-			break;
-		case SATURATION_MINUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, -1);
-			break;
-		case SATURATION_DEFAULT:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
-			break;
-		case SATURATION_PLUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 1);
-			break;
-		case SATURATION_PLUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 2);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < SATURATION_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_contrast(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_SATURATION:
-		switch (ctrl->value) {
-		case IS_SATURATION_MINUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, -2);
-			break;
-		case IS_SATURATION_MINUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, -1);
-			break;
-		case IS_SATURATION_DEFAULT:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
-			break;
-		case IS_SATURATION_PLUS1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 1);
-			break;
-		case IS_SATURATION_PLUS2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 2);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_SATURATION_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
-		break;
-	case V4L2_CID_CAMERA_SHARPNESS:
-		switch (ctrl->value) {
-		case SHARPNESS_MINUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, -2);
-			break;
-		case SHARPNESS_MINUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, -1);
-			break;
-		case SHARPNESS_DEFAULT:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
-			break;
-		case SHARPNESS_PLUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 1);
-			break;
-		case SHARPNESS_PLUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 2);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < SHARPNESS_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+	case V4L2_CID_CAMERA_SATURATION:
+		ret = fimc_is_v4l2_isp_saturation(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_SHARPNESS:
-		switch (ctrl->value) {
-		case IS_SHARPNESS_MINUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, -2);
-			break;
-		case IS_SHARPNESS_MINUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, -1);
-			break;
-		case IS_SHARPNESS_DEFAULT:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
-			break;
-		case IS_SHARPNESS_PLUS1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 1);
-			break;
-		case IS_SHARPNESS_PLUS2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 2);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_SHARPNESS_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+	case V4L2_CID_CAMERA_SHARPNESS:
+		ret = fimc_is_v4l2_isp_sharpness(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_EXPOSURE:
-		switch (ctrl->value) {
-		case IS_EXPOSURE_MINUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, -2);
-			break;
-		case IS_EXPOSURE_MINUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, -1);
-			break;
-		case IS_EXPOSURE_DEFAULT:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
-			break;
-		case IS_EXPOSURE_PLUS1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 1);
-			break;
-		case IS_EXPOSURE_PLUS2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 2);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_EXPOSURE_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_exposure(dev, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_BRIGHTNESS:
-		switch (ctrl->value) {
-		case EV_MINUS_4:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, EV_MINUS_4);
-			break;
-		case EV_MINUS_3:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, EV_MINUS_4);
-			break;
-		case EV_MINUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, EV_MINUS_4);
-			break;
-		case EV_MINUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, EV_MINUS_4);
-			break;
-		case EV_DEFAULT:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, EV_MINUS_4);
-			break;
-		case EV_PLUS_1:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, EV_MINUS_4);
-			break;
-		case EV_PLUS_2:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, EV_MINUS_4);
-			break;
-		case EV_PLUS_3:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, EV_MINUS_4);
-			break;
-		case EV_PLUS_4:
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, EV_MINUS_4);
-			break;
-		}
-		if (ctrl->value >= EV_MINUS_4 && ctrl->value < EV_MAX) {
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
-		break;
 	case V4L2_CID_IS_CAMERA_BRIGHTNESS:
-		if (ctrl->value >= -4 && ctrl->value < 5) {
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_brightness(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_HUE:
-		if (ctrl->value >= -4 && ctrl->value < 5) {
-			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-				ISP_ADJUST_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_ADJUST_HUE(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_hue(dev, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_METERING:
-		switch (ctrl->value) {
-		case METERING_CENTER:
-			IS_ISP_SET_PARAM_METERING_CMD(dev,
-				ISP_METERING_COMMAND_AVERAGE);
-			break;
-		case METERING_SPOT:
-			IS_ISP_SET_PARAM_METERING_CMD(dev,
-				ISP_METERING_COMMAND_SPOT);
-			break;
-		case METERING_MATRIX:
-			IS_ISP_SET_PARAM_METERING_CMD(dev,
-				ISP_METERING_COMMAND_MATRIX);
-			break;
-		}
-		if (ctrl->value > METERING_BASE && ctrl->value < METERING_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_metering_legacy(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_METERING:
-		switch (ctrl->value) {
-		case IS_METERING_AVERAGE:
-			IS_ISP_SET_PARAM_METERING_CMD(dev,
-				ISP_METERING_COMMAND_AVERAGE);
-			break;
-		case IS_METERING_SPOT:
-			IS_ISP_SET_PARAM_METERING_CMD(dev,
-				ISP_METERING_COMMAND_SPOT);
-			break;
-		case IS_METERING_MATRIX:
-			IS_ISP_SET_PARAM_METERING_CMD(dev,
-				ISP_METERING_COMMAND_MATRIX);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_METERING_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_METERING);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_metering(dev, ctrl->value);
 		break;
 	/* Ony valid at SPOT Mode */
 	case V4L2_CID_IS_CAMERA_METERING_POSITION_X:
 		IS_ISP_SET_PARAM_METERING_WIN_POS_X(dev, ctrl->value);
-		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, 10);
 		break;
 	case V4L2_CID_IS_CAMERA_METERING_POSITION_Y:
 		IS_ISP_SET_PARAM_METERING_WIN_POS_Y(dev, ctrl->value);
-		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, 10);
 		break;
 	case V4L2_CID_IS_CAMERA_METERING_WINDOW_X:
 		IS_ISP_SET_PARAM_METERING_WIN_WIDTH(dev, ctrl->value);
@@ -2928,59 +3093,10 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		IS_ISP_SET_PARAM_METERING_WIN_HEIGHT(dev, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_ANTI_BANDING:
-		switch (ctrl->value) {
-		case ANTI_BANDING_OFF:
-			IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_DISABLE);
-			IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
-			break;
-		case ANTI_BANDING_AUTO:
-			IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_AUTO);
-			IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
-			break;
-		case ANTI_BANDING_50HZ:
-			IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_AFC_MANUAL(dev, ISP_AFC_MANUAL_50HZ);
-			break;
-		case ANTI_BANDING_60HZ:
-			IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_AFC_MANUAL(dev, ISP_AFC_MANUAL_60HZ);
-			break;
-		}
-		if (ctrl->value >= ANTI_BANDING_OFF
-				&& ctrl->value <= ANTI_BANDING_60HZ) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_afc_legacy(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CAMERA_AFC_MODE:
-		switch (ctrl->value) {
-		case IS_AFC_DISABLE:
-			IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_DISABLE);
-			IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
-			break;
-		case IS_AFC_AUTO:
-			IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_AUTO);
-			IS_ISP_SET_PARAM_AFC_MANUAL(dev, 0);
-			break;
-		case IS_AFC_MANUAL_50HZ:
-			IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_AFC_MANUAL(dev, ISP_AFC_MANUAL_50HZ);
-			break;
-		case IS_AFC_MANUAL_60HZ:
-			IS_ISP_SET_PARAM_AFC_CMD(dev, ISP_AFC_COMMAND_MANUAL);
-			IS_ISP_SET_PARAM_AFC_MANUAL(dev, ISP_AFC_MANUAL_60HZ);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_AFC_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_AFC);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_isp_afc(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_FD_SET_MAX_FACE_NUMBER:
 		if (ctrl->value >= 0) {
@@ -2995,195 +3111,25 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_IS_FD_SET_ROLL_ANGLE:
-		switch (ctrl->value) {
-		case IS_FD_ROLL_ANGLE_BASIC:
-			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-				FD_CONFIG_COMMAND_ROLL_ANGLE);
-			IS_FD_SET_PARAM_FD_CONFIG_ROLL_ANGLE(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case V4L2_CID_IS_FD_SET_YAW_ANGLE:
-			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-				FD_CONFIG_COMMAND_YAW_ANGLE);
-			IS_FD_SET_PARAM_FD_CONFIG_YAW_ANGLE(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case V4L2_CID_IS_FD_SET_SMILE_MODE:
-			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-				FD_CONFIG_COMMAND_SMILE_MODE);
-			IS_FD_SET_PARAM_FD_CONFIG_SMILE_MODE(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case V4L2_CID_IS_FD_SET_BLINK_MODE:
-			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-				FD_CONFIG_COMMAND_BLINK_MODE);
-			IS_FD_SET_PARAM_FD_CONFIG_BLINK_MODE(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case V4L2_CID_IS_FD_SET_EYE_DETECT_MODE:
-			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-				FD_CONFIG_COMMAND_EYES_DETECT);
-			IS_FD_SET_PARAM_FD_CONFIG_EYE_DETECT(dev, ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case V4L2_CID_IS_FD_SET_MOUTH_DETECT_MODE:
-			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-				FD_CONFIG_COMMAND_MOUTH_DETECT);
-			IS_FD_SET_PARAM_FD_CONFIG_MOUTH_DETECT(dev,
-							ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case V4L2_CID_IS_FD_SET_ORIENTATION_MODE:
-			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-				FD_CONFIG_COMMAND_ORIENTATION);
-			IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION(dev,
-								ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		case V4L2_CID_IS_FD_SET_ORIENTATION:
-			IS_FD_SET_PARAM_FD_CONFIG_CMD(dev,
-				FD_CONFIG_COMMAND_ORIENTATION_VALUE);
-			IS_FD_SET_PARAM_FD_CONFIG_ORIENTATION_VALUE(dev,
-								ctrl->value);
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONFIG);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-			break;
-		}
+		ret = fimc_is_v4l2_fd_angle_mode(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_FD_SET_DATA_ADDRESS:
 		dev->fd_header.target_addr = ctrl->value;
 		break;
 	case V4L2_CID_IS_SET_ISP:
-		switch (ctrl->value) {
-		case IS_ISP_BYPASS_DISABLE:
-			IS_ISP_SET_PARAM_CONTROL_BYPASS(dev,
-				CONTROL_BYPASS_DISABLE);
-			break;
-		case IS_ISP_BYPASS_ENABLE:
-			IS_ISP_SET_PARAM_CONTROL_BYPASS(dev,
-				CONTROL_BYPASS_ENABLE);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_ISP_BYPASS_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_set_isp(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_SET_DRC:
-		switch (ctrl->value) {
-		case IS_DRC_BYPASS_DISABLE:
-			IS_DRC_SET_PARAM_CONTROL_BYPASS(dev,
-				CONTROL_BYPASS_DISABLE);
-			IS_DRC_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_START);
-			break;
-		case IS_DRC_BYPASS_ENABLE:
-			IS_DRC_SET_PARAM_CONTROL_BYPASS(dev,
-				CONTROL_BYPASS_ENABLE);
-			IS_DRC_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_START);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_DRC_BYPASS_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_set_drc(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CMD_ISP:
-		switch (ctrl->value) {
-		case IS_ISP_COMMAND_STOP:
-			IS_ISP_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_STOP);
-			break;
-		case IS_ISP_COMMAND_START:
-			IS_ISP_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_START);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_ISP_COMMAND_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_ISP_CONTROL);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_cmd_isp(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CMD_DRC:
-		switch (ctrl->value) {
-		case IS_DRC_COMMAND_STOP:
-			IS_DRC_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_STOP);
-			break;
-		case IS_DRC_COMMAND_START:
-			IS_DRC_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_START);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_ISP_COMMAND_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_DRC_CONTROL);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_cmd_drc(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_CMD_FD:
-		switch (ctrl->value) {
-		case IS_FD_COMMAND_STOP:
-			dbg("IS_FD_COMMAND_STOP\n");
-			IS_FD_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_STOP);
-			break;
-		case IS_FD_COMMAND_START:
-			dbg("IS_FD_COMMAND_START\n");
-			IS_FD_SET_PARAM_CONTROL_CMD(dev,
-				CONTROL_COMMAND_START);
-			break;
-		}
-		if (ctrl->value >= 0 && ctrl->value < IS_ISP_COMMAND_MAX) {
-			IS_SET_PARAM_BIT(dev, PARAM_FD_CONTROL);
-			IS_INC_PARAM_NUM(dev);
-			fimc_is_mem_cache_clean((void *)dev->is_p_region,
-				IS_PARAM_SIZE);
-			fimc_is_hw_set_param(dev);
-		}
+		ret = fimc_is_v4l2_cmd_fd(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_SET_FRAME_NUMBER:
 		dev->frame_count = ctrl->value + 1;
@@ -3237,34 +3183,11 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
 		break;
-	case V4L2_CID_IS_ISP_DMA_BUFFER_NUM:
-		dbg("Debug mode - ISP DMA write\n");
-		dev->is_p_region->parameter.isp.dma1_output.cmd
-			= DMA_OUTPUT_COMMAND_ENABLE;
-		dev->is_p_region->parameter.isp.dma1_output.buffer_number
-			= ctrl->value;
-		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA1_OUTPUT);
-		IS_INC_PARAM_NUM(dev);
-		dev->is_p_region->parameter.isp.dma2_output.cmd
-			= DMA_OUTPUT_COMMAND_ENABLE;
-		dev->is_p_region->parameter.isp.dma2_output.buffer_number
-			= ctrl->value;
-		IS_SET_PARAM_BIT(dev, PARAM_ISP_DMA2_OUTPUT);
-		IS_INC_PARAM_NUM(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		break;
-	case V4L2_CID_IS_ISP_DMA_BUFFER_ADDRESS:
-		dev->is_p_region->parameter.isp.dma1_output.buffer_address
-			= ctrl->value;
-		fimc_is_mem_cache_clean((void *)IS_HEADER, IS_PARAM_SIZE);
-		break;
 	case V4L2_CID_CAMERA_SCENE_MODE:
-		fimc_is_v4l2_set_scene_mode(dev, ctrl->value);
+		ret = fimc_is_v4l2_isp_scene_mode(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_ZOOM:
-		fimc_is_v4l2_digital_zoom(dev, ctrl->value);
+		ret = fimc_is_v4l2_digital_zoom(dev, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_VT_MODE:
 		break;

@@ -155,6 +155,7 @@ enum af_state {
 	FIMC_IS_AF_RUNNING	= 2,
 	FIMC_IS_AF_LOCK		= 3,
 	FIMC_IS_AF_ABORT	= 4,
+	FIMC_IS_AF_FAILED	= 5,
 };
 
 enum af_lock_state {
@@ -338,6 +339,8 @@ extern void fimc_is_hw_set_lite(struct fimc_is_dev *dev, u32 width, u32 height);
 extern void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev);
 extern void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_sensor_max_framerate(struct fimc_is_dev *dev);
+extern void fimc_is_hw_set_debug_level(struct fimc_is_dev *dev, int level1,
+								int level2);
 
 extern void fimc_is_param_err_checker(struct fimc_is_dev *dev);
 extern void fimc_is_print_err_number(u32 num_err);

@@ -112,13 +112,25 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	case IHC_FRAME_DONE:
 		break;
 	case IHC_AA_DONE:
-		dbg("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
+		err("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
 			dev->i2h_cmd.arg[1], dev->i2h_cmd.arg[2]);
-		if (dev->af.af_state == FIMC_IS_AF_RUNNING)
-			dev->af.af_state = FIMC_IS_AF_LOCK;
-		dev->af.af_lock_state = dev->i2h_cmd.arg[0];
-		dev->af.ae_lock_state = dev->i2h_cmd.arg[1];
-		dev->af.awb_lock_state = dev->i2h_cmd.arg[2];
+		switch (dev->i2h_cmd.arg[0]) {
+		/* SEARCH: Occurs when search is requested at continuous AF */
+		case 2:
+			break;
+		/* INFOCUS: Occurs when focus is found. */
+		case 3:
+			if (dev->af.af_state == FIMC_IS_AF_RUNNING)
+				dev->af.af_state = FIMC_IS_AF_LOCK;
+			dev->af.af_lock_state = 0x2;
+			break;
+		/* OUTOFFOCUS: Occurs when focus is not found. */
+		case 4:
+			if (dev->af.af_state == FIMC_IS_AF_RUNNING)
+				dev->af.af_state = FIMC_IS_AF_LOCK;
+			dev->af.af_lock_state = 0x1;
+			break;
+		}
 		break;
 	case IHC_NOT_READY:
 		err("Init Sequnce Error- IS will be turned off!!");
@@ -182,6 +194,9 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		case HIC_CLOSE_SENSOR:
 			set_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state);
 			dev->sensor.id = 0;
+			break;
+		case HIC_MSG_TEST:
+			dbg("Config MSG level was done\n");
 			break;
 		case HIC_POWER_DOWN:
 			set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
@@ -323,8 +338,8 @@ p_err_get_irq:
 p_err_req_region:
 	release_mem_region(regs_res->start, resource_size(regs_res));
 p_err_info:
-	kfree(dev);
 	dev_err(&dev->pdev->dev, "failed to install\n");
+	kfree(dev);
 	return ret;
 }
 
