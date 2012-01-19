@@ -93,6 +93,11 @@
 #endif
 #include <plat/media.h>
 
+#ifdef CONFIG_FB_MIPI_DSIM
+#include <plat/dsim.h>
+#include <plat/mipi_dsi.h>
+#endif
+
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK5250_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
 				 S3C2410_UCON_RXILEVEL |	\
@@ -540,6 +545,171 @@ static struct s3c_fb_platdata smdk5250_lcd1_pdata __initdata = {
 	.vidcon1	= 0,
 #endif
 	.setup_gpio	= exynos_fimd_gpio_setup_24bpp,
+};
+#endif
+
+#ifdef CONFIG_FB_MIPI_DSIM
+#if defined(CONFIG_LCD_MIPI_S6E8AB0)
+static struct mipi_dsim_config dsim_info = {
+       .e_interface	= DSIM_VIDEO,
+       .e_pixel_format	= DSIM_24BPP_888,
+       /* main frame fifo auto flush at VSYNC pulse */
+       .auto_flush		= false,
+       .eot_disable		= false,
+       .auto_vertical_cnt	= true,
+       .hse = false,
+       .hfp = false,
+       .hbp = false,
+       .hsa = false,
+
+       .e_no_data_lane	= DSIM_DATA_LANE_4,
+       .e_byte_clk	= DSIM_PLL_OUT_DIV8,
+       .e_burst_mode	= DSIM_BURST,
+
+       .p = 2,
+       .m = 57,
+       .s = 1,
+
+       /* D-PHY PLL stable time spec :min = 200usec ~ max 400usec */
+       .pll_stable_time = 500,
+
+       .esc_clk = 20 * 1000000,        /* escape clk : 10MHz */
+
+       /* stop state holding counter after bta change count 0 ~ 0xfff */
+       .stop_holding_cnt = 0x0fff,
+       .bta_timeout = 0xff,            /* bta timeout 0 ~ 0xff */
+       .rx_timeout = 0xffff,	       /* lp rx timeout 0 ~ 0xffff */
+
+       .dsim_ddi_pd = &s6e8ab0_mipi_lcd_driver,
+};
+
+static struct mipi_dsim_lcd_config dsim_lcd_info = {
+       .rgb_timing.left_margin	= 0xa,
+       .rgb_timing.right_margin	= 0xa,
+       .rgb_timing.upper_margin = 80,
+       .rgb_timing.lower_margin = 48,
+       .rgb_timing.hsync_len	= 5,
+       .rgb_timing.vsync_len	= 32,
+       .cpu_timing.cs_setup	= 0,
+       .cpu_timing.wr_setup	= 1,
+       .cpu_timing.wr_act	= 0,
+       .cpu_timing.wr_hold	= 0,
+       .lcd_size.width		= 1280,
+       .lcd_size.height		= 800,
+};
+#elif defined (CONFIG_LCD_MIPI_S6E63M0)
+static struct mipi_dsim_config dsim_info = {
+       .e_interface    = DSIM_VIDEO,
+       .e_pixel_format = DSIM_24BPP_888,
+       /* main frame fifo auto flush at VSYNC pulse */
+       .auto_flush = false,
+       .eot_disable = false,
+       .auto_vertical_cnt = true,
+       .hse = false,
+       .hfp = false,
+       .hbp = false,
+       .hsa = false,
+
+       .e_no_data_lane = DSIM_DATA_LANE_2,
+       .e_byte_clk = DSIM_PLL_OUT_DIV8,
+       .e_burst_mode = DSIM_NON_BURST_SYNC_PULSE,
+
+       .p = 3,
+       .m = 90,
+       .s = 1,
+
+       /* D-PHY PLL stable time spec :min = 200usec ~ max 400usec */
+       .pll_stable_time = 500,
+
+       .esc_clk = 10 * 1000000,       /* escape clk : 10MHz */
+
+       /* stop state holding counter after bta change count 0 ~ 0xfff */
+       .stop_holding_cnt	= 0x0fff,
+       .bta_timeout		= 0xff,        /* bta timeout 0 ~ 0xff */
+       .rx_timeout		= 0xffff,      /* lp rx timeout 0 ~ 0xffff */
+
+       .dsim_ddi_pd = &s6e63m0_mipi_lcd_driver,
+};
+
+static struct mipi_dsim_lcd_config dsim_lcd_info = {
+       .rgb_timing.left_margin	= 0x16,
+       .rgb_timing.right_margin = 0x16,
+       .rgb_timing.upper_margin = 0x28,
+       .rgb_timing.lower_margin = 0x1,
+       .rgb_timing.hsync_len	= 0x2,
+       .rgb_timing.vsync_len	= 0x3,
+       .cpu_timing.cs_setup	= 0,
+       .cpu_timing.wr_setup	= 1,
+       .cpu_timing.wr_act	= 0,
+       .cpu_timing.wr_hold	= 0,
+       .lcd_size.width		= 480,
+       .lcd_size.height		= 800,
+};
+#elif defined (CONFIG_LCD_MIPI_TC358764)
+static struct mipi_dsim_config dsim_info = {
+       .e_interface	= DSIM_VIDEO,
+       .e_pixel_format	= DSIM_24BPP_888,
+       /* main frame fifo auto flush at VSYNC pulse */
+       .auto_flush	= false,
+       .eot_disable	= false,
+       .auto_vertical_cnt = false,
+       .hse = false,
+       .hfp = false,
+       .hbp = false,
+       .hsa = false,
+
+       .e_no_data_lane	= DSIM_DATA_LANE_4,
+       .e_byte_clk	= DSIM_PLL_OUT_DIV8,
+       .e_burst_mode	= DSIM_BURST,
+
+       .p = 3,
+       .m = 115,
+       .s = 1,
+
+       /* D-PHY PLL stable time spec :min = 200usec ~ max 400usec */
+       .pll_stable_time = 500,
+
+       .esc_clk = 0.4 * 1000000,      /* escape clk : 10MHz */
+
+       /* stop state holding counter after bta change count 0 ~ 0xfff */
+       .stop_holding_cnt	= 0x0f,
+       .bta_timeout		= 0xff,          /* bta timeout 0 ~ 0xff */
+       .rx_timeout		= 0xffff,         /* lp rx timeout 0 ~ 0xffff */
+
+       .dsim_ddi_pd = &tc358764_mipi_lcd_driver,
+};
+
+static struct mipi_dsim_lcd_config dsim_lcd_info = {
+       .rgb_timing.left_margin  = 0x4,
+       .rgb_timing.right_margin = 0x4,
+       .rgb_timing.upper_margin = 0x4,
+       .rgb_timing.lower_margin = 0x4,
+       .rgb_timing.hsync_len	= 0x4,
+       .rgb_timing.vsync_len	= 0x4,
+       .cpu_timing.cs_setup	= 0,
+       .cpu_timing.wr_setup	= 1,
+       .cpu_timing.wr_act	= 0,
+       .cpu_timing.wr_hold	= 0,
+       .lcd_size.width		= 1280,
+       .lcd_size.height		= 800,
+};
+#endif
+
+static struct s5p_platform_mipi_dsim dsim_platform_data = {
+       .clk_name		= "dsim0",
+       .dsim_config		= &dsim_info,
+       .dsim_lcd_config		= &dsim_lcd_info,
+
+       .part_reset		= s5p_dsim_part_reset,
+       .init_d_phy		= s5p_dsim_init_d_phy,
+       .get_fb_frame_done	= NULL,
+       .trigger			= NULL,
+
+       /*
+        * the stable time of needing to write data on SFR
+        * when the mipi mode becomes LP mode.
+        */
+      .delay_for_stabilization = 600,
 };
 #endif
 
@@ -2455,6 +2625,10 @@ static void __init smdk5250_machine_init(void)
 
 #ifdef CONFIG_S5P_DP
 	s5p_dp_set_platdata(&smdk5250_dp_data);
+#endif
+
+#ifdef CONFIG_FB_MIPI_DSIM
+        s5p_dsim_set_platdata(&dsim_platform_data);
 #endif
 
 #ifdef CONFIG_SAMSUNG_DEV_BACKLIGHT
