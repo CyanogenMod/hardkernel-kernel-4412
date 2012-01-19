@@ -48,7 +48,7 @@
 
 #ifdef CONFIG_REGULATOR
 struct regulator *g3d_regulator=NULL;
-int mali_gpu_vol = 1100000; /* 1.1V  */
+int mali_gpu_vol = 1050000; /* 1.05V  */
 #endif
 
 int kbase_platform_regulator_init(struct device *dev)

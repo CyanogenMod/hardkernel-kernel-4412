@@ -534,7 +534,13 @@ static ssize_t set_vol(struct device *dev, struct device_attribute *attr, const 
 	if (!kbdev)
 		return -ENODEV;
 
-	if (sysfs_streq("1100000", buf)) {
+	if (sysfs_streq("950000", buf)) {
+	    kbase_platform_set_voltage(dev, 950000);
+	} else if (sysfs_streq("1000000", buf)) {
+	    kbase_platform_set_voltage(dev, 1000000);
+	} else if (sysfs_streq("1050000", buf)) {
+	    kbase_platform_set_voltage(dev, 1050000);
+	} else if (sysfs_streq("1100000", buf)) {
 	    kbase_platform_set_voltage(dev, 1100000);
 	} else if (sysfs_streq("1150000", buf)) {
 	    kbase_platform_set_voltage(dev, 1150000);
