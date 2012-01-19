@@ -509,6 +509,12 @@ static struct dw_mci_dma_ops dw_mci_idmac_ops = {
 	.cleanup = dw_mci_dma_cleanup,
 };
 #else
+static int dw_mci_pre_dma_transfer(struct dw_mci *host,
+				   struct mmc_data *data,
+				   bool next)
+{
+	return -ENOSYS;
+}
 #define dw_mci_pre_req	NULL
 #define dw_mci_post_req	NULL
 #endif /* CONFIG_MMC_DW_IDMAC */
