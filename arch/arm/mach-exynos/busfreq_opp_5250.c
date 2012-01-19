@@ -610,6 +610,23 @@ struct opp *exynos5250_monitor(struct busfreq_data *data)
 	return opp;
 }
 
+static void busfreq_early_suspend(struct early_suspend *h)
+{
+	unsigned long min;
+	struct busfreq_data *data = container_of(h, struct busfreq_data,
+			busfreq_early_suspend_handler);
+	min = opp_get_freq(data->min_opp);
+	dev_lock(data->dev, data->dev, min);
+}
+
+static void busfreq_late_resume(struct early_suspend *h)
+{
+	struct busfreq_data *data = container_of(h, struct busfreq_data,
+			busfreq_early_suspend_handler);
+	/* Request min 300MHz */
+	dev_lock(data->dev, data->dev, 300000);
+}
+
 int exynos5250_init(struct device *dev, struct busfreq_data *data)
 {
 	unsigned int i, tmp;
@@ -662,6 +679,18 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		}
 	}
 
+	if (cdrexfreq == 800000) {
+		/* Not yet */
+	} else if (cdrexfreq == 666857) {
+		/* Not yet */
+	} else if (cdrexfreq == 533000) {
+		opp_disable(dev, 133000);
+		opp_disable(dev, 107000);
+		opp_disable(dev, 67000);
+	} else if (cdrexfreq == 400000) {
+		/* Not yet */
+	}
+
 	data->table = exynos5_busfreq_table;
 	data->table_size = LV_END;
 
@@ -682,6 +711,14 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		regulator_put(data->vdd_int);
 		return -ENODEV;
 	}
+
+	data->busfreq_early_suspend_handler.suspend = &busfreq_early_suspend;
+	data->busfreq_early_suspend_handler.resume = &busfreq_late_resume;
+
+	/* Request min 300MHz */
+	dev_lock(dev, dev, 300000);
+
+	register_early_suspend(&data->busfreq_early_suspend_handler);
 
 	tmp = __raw_readl(EXYNOS5_ABBG_INT_CONTROL);
 	tmp &= ~(0x1f | (1 << 31) | (1 << 7));
