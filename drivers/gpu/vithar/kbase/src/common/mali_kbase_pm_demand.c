@@ -21,16 +21,23 @@
 #include <kbase/src/common/mali_kbase.h>
 #include <kbase/src/common/mali_kbase_pm.h>
 
+/* Forward declaration for state change function, as it is required by
+ * the power up and down functions */
+static void demand_state_changed(kbase_device *kbdev);
+
 /** Turns the cores on.
  *
  * This function turns all the cores of the GPU on.
  */
 static void demand_power_up(kbase_device *kbdev)
 {
+	/* Inform the system that the transition has started */
+	kbase_pm_power_transitioning(kbdev);
+
 	/* Turn clocks and interrupts on */
 	kbase_pm_clock_on(kbdev);
 	kbase_pm_enable_interrupts(kbdev);
-
+	
 	kbase_pm_check_transitions(kbdev);
 
 	kbdev->pm.policy_data.demand.state = KBASEP_PM_DEMAND_STATE_POWERING_UP;
@@ -54,9 +61,9 @@ static void demand_power_down(kbase_device *kbdev)
 	cores = kbase_pm_get_present_cores(kbdev, KBASE_PM_CORE_TILER);
 	kbase_pm_invoke_power_down(kbdev, KBASE_PM_CORE_TILER, cores);
 
-	kbase_pm_check_transitions(kbdev);
-
 	kbdev->pm.policy_data.demand.state = KBASEP_PM_DEMAND_STATE_POWERING_DOWN;
+
+	kbase_pm_check_transitions(kbdev);
 }
 
 /** Turn some cores on/off.
@@ -70,8 +77,6 @@ static void demand_change_gpu_state(kbase_device *kbdev)
 	kbdev->pm.desired_tiler_state = kbdev->tiler_needed_bitmap;
 
 	kbase_pm_check_transitions(kbdev);
-
-	kbdev->pm.policy_data.demand.state = KBASEP_PM_DEMAND_STATE_CHANGING;
 }
 
 /** Function to handle a GPU state change for the demand power policy
@@ -87,7 +92,6 @@ static void demand_state_changed(kbase_device *kbdev)
 		case KBASEP_PM_DEMAND_STATE_CHANGING_POLICY:
 		case KBASEP_PM_DEMAND_STATE_POWERING_UP:
 		case KBASEP_PM_DEMAND_STATE_POWERING_DOWN:
-		case KBASEP_PM_DEMAND_STATE_CHANGING:
 			if (kbase_pm_get_pwr_active(kbdev)) {
 				/* Cores are still transitioning - ignore the event */
 				return;
@@ -109,6 +113,8 @@ static void demand_state_changed(kbase_device *kbdev)
 		case KBASEP_PM_DEMAND_STATE_POWERING_UP:
 			data->state = KBASEP_PM_DEMAND_STATE_POWERED_UP;
 			kbase_pm_power_up_done(kbdev);
+			/* State changed, try to run jobs */
+			kbase_js_try_run_jobs(kbdev);
 			break;
 		case KBASEP_PM_DEMAND_STATE_POWERING_DOWN:
 			data->state = KBASEP_PM_DEMAND_STATE_POWERED_DOWN;
@@ -117,9 +123,8 @@ static void demand_state_changed(kbase_device *kbdev)
 			kbase_pm_clock_off(kbdev);
 			kbase_pm_power_down_done(kbdev);
 			break;
-		case KBASEP_PM_DEMAND_STATE_CHANGING:
-			data->state = KBASEP_PM_DEMAND_STATE_POWERED_UP;
-			/* State changed, try to run jobs */
+		case KBASEP_PM_DEMAND_STATE_POWERED_UP:
+			/* Core states may have been changed, try to run jobs */
 			kbase_js_try_run_jobs(kbdev);
 			break;
 		default:

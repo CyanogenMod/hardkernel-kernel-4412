@@ -69,8 +69,7 @@ typedef enum kbasep_pm_demand_state
 	KBASEP_PM_DEMAND_STATE_POWERED_UP,           /**< The GPU is powered up and jobs can execute */
 	KBASEP_PM_DEMAND_STATE_POWERING_DOWN,        /**< The GPU is powering down */
 	KBASEP_PM_DEMAND_STATE_POWERED_DOWN,         /**< The GPU is powered down */
-	KBASEP_PM_DEMAND_STATE_CHANGING_POLICY,      /**< The power policy is about to change */
-	KBASEP_PM_DEMAND_STATE_CHANGING              /**< Cores are powering up or down */
+	KBASEP_PM_DEMAND_STATE_CHANGING_POLICY       /**< The power policy is about to change */
 } kbasep_pm_demand_state;
 
 /** Private structure for policy instance data.
