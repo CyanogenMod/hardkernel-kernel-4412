@@ -219,8 +219,6 @@ static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
 
 	exynos5_sys_powerdown_conf(SYS_LPA);
 
-	exynos4_reset_assert_ctrl(1);
-
 	do {
 		/* Waiting for flushing UART fifo */
 	} while (exynos5_uart_fifo_check());
@@ -256,8 +254,6 @@ static int exynos5_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
 
 early_wakeup:
-	exynos4_reset_assert_ctrl(0);
-
 	/* Clear wakeup state register */
 	__raw_writel(0x0, EXYNOS5_WAKEUP_STAT);
 
@@ -291,8 +287,6 @@ static int exynos5_enter_core0_aftr(struct cpuidle_device *dev,
 	/* Set value of power down register for aftr mode */
 	exynos5_sys_powerdown_conf(SYS_AFTR);
 
-	exynos4_reset_assert_ctrl(1);
-
 	if (exynos5_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 		/*
 		 * Clear Central Sequence Register in exiting early wakeup
@@ -311,8 +305,6 @@ static int exynos5_enter_core0_aftr(struct cpuidle_device *dev,
 	vfp_enable(NULL);
 
 early_wakeup:
-	exynos4_reset_assert_ctrl(0);
-
 	/* Clear wakeup state register */
 	__raw_writel(0x0, EXYNOS5_WAKEUP_STAT);
 

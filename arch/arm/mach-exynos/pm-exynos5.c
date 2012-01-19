@@ -249,8 +249,6 @@ static int exynos5_pm_suspend(void)
 	tmp &= ~(EXYNOS5_CENTRAL_LOWPWR_CFG);
 	__raw_writel(tmp, EXYNOS5_CENTRAL_SEQ_CONFIGURATION);
 
-	exynos4_reset_assert_ctrl(0);
-
 	tmp = __raw_readl(EXYNOS5_CENTRAL_SEQ_OPTION);
 
 	tmp = (EXYNOS5_USE_STANDBYWFI_ARM_CORE0 |
@@ -326,8 +324,6 @@ static void exynos5_pm_resume(void)
 
 		isp_pwr_off = false;
 	}
-
-	exynos4_reset_assert_ctrl(1);
 
 	/* For release retention */
 	__raw_writel((1 << 28), EXYNOS5_PAD_RETENTION_MAU_OPTION);
