@@ -577,6 +577,8 @@
 #define EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_SHIFT	(0)
 #define EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_MASK	(0xf << EXYNOS5_CLKDIV_CDREX2_MCLK_EFPHY_SHIFT)
 
+#define EXYNOS5_VPLLCON0_LOCKED_SHIFT		(29)
+
 /* Compatibility defines and inclusion */
 
 #include <mach/regs-pmu.h>

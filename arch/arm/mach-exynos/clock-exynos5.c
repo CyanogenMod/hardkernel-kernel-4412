@@ -2006,6 +2006,7 @@ static int exynos5_vpll_set_rate(struct clk *clk, unsigned long rate)
 {
 	unsigned int vpll_con0, vpll_con1;
 	unsigned int locktime;
+	unsigned int tmp;
 	unsigned int i;
 
 	/* Return if nothing changed */
@@ -2043,6 +2044,10 @@ static int exynos5_vpll_set_rate(struct clk *clk, unsigned long rate)
 
 	__raw_writel(vpll_con0, EXYNOS5_VPLL_CON0);
 	__raw_writel(vpll_con1, EXYNOS5_VPLL_CON1);
+
+	do {
+		tmp = __raw_readl(EXYNOS5_VPLL_CON0);
+	} while (!(tmp & (0x1 << EXYNOS5_VPLLCON0_LOCKED_SHIFT)));
 
 	clk->rate = rate;
 
