@@ -864,7 +864,6 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 	}
 
 #if defined(CONFIG_LCD_MIPI_TC358764)
-	dsim->dsim_lcd_drv->probe(dsim);
 	while (again != 0 && again <= 1000) {
 		s5p_mipi_dsi_init_dsim(dsim);
 		s5p_mipi_dsi_init_link(dsim);
@@ -885,7 +884,6 @@ static int s5p_mipi_dsi_probe(struct platform_device *pdev)
 	s5p_mipi_dsi_init_dsim(dsim);
 	s5p_mipi_dsi_init_link(dsim);
 	/* initialize mipi-dsi client(lcd panel). */
-	dsim->dsim_lcd_drv->probe(dsim);
 	s5p_mipi_dsi_set_data_transfer_mode(dsim, 0);
 	s5p_mipi_dsi_set_display_mode(dsim, dsim->dsim_config);
 	dsim->dsim_lcd_drv->displayon(dsim);
