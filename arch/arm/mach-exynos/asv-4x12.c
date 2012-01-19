@@ -28,15 +28,18 @@
 
 struct asv_judge_table exynos4x12_limit[] = {
 	/* HPM, IDS */
-	{14, 9},
-	{16, 14},
-	{18, 17},
-	{20, 20},
-	{21, 24},
-	{22, 30},
-	{23, 34},
-	{24, 39},
+	{  0,   0},		/* Reserved Group */
+	{  0,   0},		/* Reserved Group */
+	{ 14,   9},
+	{ 16,  14},
+	{ 18,  17},
+	{ 20,  20},
+	{ 21,  24},
+	{ 22,  30},
+	{ 23,  34},
+	{ 24,  39},
 	{100, 100},
+	{999, 999},		/* Reserved Group */
 };
 
 static int exynos4x12_fuse_get_hpm(struct samsung_asv *asv_info)
