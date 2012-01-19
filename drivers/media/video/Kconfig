@@ -80,6 +80,7 @@ config VIDEOBUF2_CMA_PHYS
 
 config VIDEOBUF2_ION
 	bool "Android ION"
+	depends on ION_EXYNOS
 	select VIDEOBUF2_CORE
 	select VIDEOBUF2_MEMOPS
 	help
