@@ -58,11 +58,6 @@ struct check_reg_lpa {
 static struct check_reg_lpa exynos5_power_domain[] = {
 	{.check_reg = EXYNOS5_GSCL_STATUS,	.check_bit = 0x7},
 	{.check_reg = EXYNOS5_ISP_STATUS,	.check_bit = 0x7},
-	{.check_reg = EXYNOS5_MFC_STATUS,	.check_bit = 0x7},
-	{.check_reg = EXYNOS5_G3D_STATUS,	.check_bit = 0x7},
-	{.check_reg = EXYNOS5_DISP1_STATUS,	.check_bit = 0x7},
-	{.check_reg = EXYNOS5_MAU_STATUS,	.check_bit = 0x7},
-	{.check_reg = EXYNOS5_GPS_STATUS,	.check_bit = 0x7},
 };
 
 /*
