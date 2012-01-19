@@ -642,6 +642,86 @@ static int vb2_ion_mmap(void *buf_priv, struct vm_area_struct *vma)
 				&vb2_common_vm_ops, &buf->handler);
 }
 
+void vb2_ion_sync_to_dev(void *alloc_ctx[], void *privs[], int nplanes,
+							enum v4l2_buf_type type)
+{
+	struct vb2_ion_buf *buf;
+	struct vb2_ion_conf *conf;
+
+	if (soc_is_exynos4412() || soc_is_exynos4212() || soc_is_exynos4210()) {
+		int i;
+		unsigned long sz = 0;;
+
+		for (i = 0; i < nplanes; i++) {
+			buf = privs[i];
+			conf = alloc_ctx[i];
+			if (conf->cacheable)
+				sz += buf->size;
+		}
+
+		if (sz > SIZE_THRESHOLD) {
+			flush_cache_all();	/* L1 */
+			smp_call_function(
+				(void (*)(void *))__cpuc_flush_kern_all,
+								NULL, 1);
+			outer_flush_all();	/* L2 */
+			return;
+		}
+	}
+
+	while (nplanes-- > 0) {
+		buf = privs[nplanes];
+		conf = alloc_ctx[nplanes];
+
+		if (!conf->cacheable)
+			continue;
+
+		dma_sync_sg_for_device(conf->dev, buf->sg, buf->nents,
+				V4L2_TYPE_IS_OUTPUT(type) ?
+					DMA_TO_DEVICE : DMA_FROM_DEVICE);
+	}
+}
+
+void vb2_ion_sync_from_dev(void *alloc_ctx[], void *privs[], int nplanes,
+							enum v4l2_buf_type type)
+{
+	struct vb2_ion_buf *buf;
+	struct vb2_ion_conf *conf;
+
+	if (soc_is_exynos4412() || soc_is_exynos4212() || soc_is_exynos4210()) {
+		int i;
+		unsigned long sz = 0;;
+
+		for (i = 0; i < nplanes; i++) {
+			buf = privs[i];
+			conf = alloc_ctx[i];
+			if (conf->cacheable)
+				sz += buf->size;
+		}
+
+		if (!V4L2_TYPE_IS_OUTPUT(type) && (sz > SIZE_THRESHOLD)) {
+			flush_cache_all();
+			smp_call_function(
+				(void (*)(void *))__cpuc_flush_kern_all,
+								NULL, 1);
+			outer_flush_all();
+			return;
+		}
+	}
+
+	while (nplanes-- > 0) {
+		buf = privs[nplanes];
+		conf = alloc_ctx[nplanes];
+
+		if (!conf->cacheable)
+			continue;
+
+		dma_sync_sg_for_cpu(conf->dev, buf->sg, buf->nents,
+				V4L2_TYPE_IS_OUTPUT(type) ?
+					DMA_TO_DEVICE : DMA_FROM_DEVICE);
+	}
+}
+
 const struct vb2_mem_ops vb2_ion_memops = {
 	.alloc		= vb2_ion_alloc,
 	.put		= vb2_ion_put,
@@ -651,9 +731,10 @@ const struct vb2_mem_ops vb2_ion_memops = {
 	.get_userptr	= vb2_ion_get_userptr,
 	.put_userptr	= vb2_ion_put_userptr,
 	.num_users	= vb2_ion_num_users,
+	.sync_to_dev	= vb2_ion_sync_to_dev,
+	.sync_from_dev	= vb2_ion_sync_from_dev,
 };
 EXPORT_SYMBOL_GPL(vb2_ion_memops);
-
 
 void vb2_ion_set_sharable(void *alloc_ctx, bool sharable)
 {
@@ -670,115 +751,17 @@ bool vb2_ion_get_cacheable(void *alloc_ctx)
 	return ((struct vb2_ion_conf *)alloc_ctx)->cacheable;
 }
 
-#if 0
 int vb2_ion_cache_flush(struct vb2_buffer *vb, u32 num_planes)
 {
-	struct vb2_ion_conf *conf;
-	struct vb2_ion_buf *buf;
-	int i, ret;
-
-	for (i = 0; i < num_planes; i++) {
-		buf = vb->planes[i].mem_priv;
-		conf = buf->conf;
-
-		if (!buf->cacheable) {
-			pr_warning("This is non-cacheable buffer allocator\n");
-			return -EINVAL;
-		}
-
-		ret = dma_map_sg(conf->dev, buf->sg, buf->nents, DMA_TO_DEVICE);
-		if (ret) {
-			pr_err("flush sg cnt(%d)\n", ret);
-			return -EINVAL;
-		}
-	}
-
+	pr_warning("VB2-ION: Call to %s() is obsolete and has no effect\n",
+								__func__);
 	return 0;
 }
-#else
-static void _vb2_ion_cache_flush_all(void)
-{
-	flush_cache_all();	/* L1 */
-	smp_call_function((void (*)(void *))__cpuc_flush_kern_all, NULL, 1);
-	outer_flush_all();	/* L2 */
-}
-
-static void _vb2_ion_cache_flush_range(struct vb2_ion_buf *buf,
-				       unsigned long size)
-{
-	struct scatterlist *s;
-	phys_addr_t start, end;
-	int i;
-
-	/* sequentially traversal phys */
-	if (size > SZ_64K ) {
-		flush_cache_all();	/* L1 */
-		smp_call_function((void (*)(void *))__cpuc_flush_kern_all, NULL, 1);
-
-		for_each_sg(buf->sg, s, buf->nents, i) {
-			start = sg_phys(s);
-			end = start + sg_dma_len(s) - 1;
-
-			outer_flush_range(start, end);	/* L2 */
-		}
-	} else {
-		dma_sync_sg_for_device(buf->conf->dev, buf->sg, buf->nents,
-							DMA_BIDIRECTIONAL);
-		dma_sync_sg_for_cpu(buf->conf->dev, buf->sg, buf->nents,
-							DMA_BIDIRECTIONAL);
-	}
-}
-
-
-int vb2_ion_cache_flush(struct vb2_buffer *vb, u32 num_planes)
-{
-	struct vb2_ion_conf *conf;
-	struct vb2_ion_buf *buf;
-	unsigned long size = 0;
-	int i;
-
-	for (i = 0; i < num_planes; i++) {
-		buf = vb->planes[i].mem_priv;
-		conf = buf->conf;
-
-		if (!buf->cacheable) {
-			pr_warning("This is non-cacheable buffer allocator\n");
-			return -EINVAL;
-		}
-
-		size += buf->size;
-	}
-
-	if (size > (unsigned long)SIZE_THRESHOLD) {
-		_vb2_ion_cache_flush_all();
-	} else {
-		for (i = 0; i < num_planes; i++) {
-			buf = vb->planes[i].mem_priv;
-			_vb2_ion_cache_flush_range(buf, size);
-		}
-	}
-
-	return 0;
-}
-#endif
 
 int vb2_ion_cache_inv(struct vb2_buffer *vb, u32 num_planes)
 {
-	struct vb2_ion_conf *conf;
-	struct vb2_ion_buf *buf;
-	int i;
-
-	for (i = 0; i < num_planes; i++) {
-		buf = vb->planes[i].mem_priv;
-		conf = buf->conf;
-		if (!buf->cacheable) {
-			pr_warning("This is non-cacheable buffer allocator\n");
-			return -EINVAL;
-		}
-
-		dma_unmap_sg(conf->dev, buf->sg, buf->nents, DMA_FROM_DEVICE);
-	}
-
+	pr_warning("VB2-ION: Call to %s() is obsolete and has no effect\n",
+								__func__);
 	return 0;
 }
 
