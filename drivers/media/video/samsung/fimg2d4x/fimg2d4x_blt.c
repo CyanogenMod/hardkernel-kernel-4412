@@ -29,7 +29,7 @@
 #include "fimg2d_cache.h"
 #include "fimg2d_helper.h"
 
-#define BLIT_TIMEOUT	msecs_to_jiffies(1000)
+#define BLIT_TIMEOUT	msecs_to_jiffies(2000)
 
 static inline void fimg2d4x_blit_wait(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {

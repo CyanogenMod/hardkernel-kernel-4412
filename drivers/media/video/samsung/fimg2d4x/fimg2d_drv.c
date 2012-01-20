@@ -38,6 +38,8 @@
 #include "fimg2d_ctx.h"
 #include "fimg2d_helper.h"
 
+#define CTX_TIMEOUT	msecs_to_jiffies(5000)
+
 static struct fimg2d_control *info;
 
 static void fimg2d_worker(struct work_struct *work)
@@ -98,14 +100,10 @@ next:
 
 static void fimg2d_context_wait(struct fimg2d_context *ctx)
 {
-	int ret;
-
 	fimg2d_debug("ctx %p is waiting for bitblt complete\n", ctx);
 
 	while (atomic_read(&ctx->ncmd)) {
-		ret = wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd),
-				msecs_to_jiffies(1000));
-		if (ret) {
+		if (wait_event_timeout(ctx->wait_q, !atomic_read(&ctx->ncmd), CTX_TIMEOUT)) {
 			fimg2d_debug("ctx %p wake up\n", ctx);
 		} else {
 			if (info->err) {
