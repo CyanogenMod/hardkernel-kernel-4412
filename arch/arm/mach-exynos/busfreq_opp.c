@@ -38,6 +38,7 @@
 #include <mach/regs-clock.h>
 #include <mach/gpio.h>
 #include <mach/regs-mem.h>
+#include <mach/cpufreq.h>
 #include <mach/dev.h>
 #include <mach/busfreq.h>
 
