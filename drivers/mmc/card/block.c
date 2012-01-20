@@ -972,7 +972,8 @@ static int mmc_blk_err_check(struct mmc_card *card,
 		       (unsigned)blk_rq_sectors(req),
 		       brq->cmd.resp[0], brq->stop.resp[0]);
 
-		if (rq_data_dir(req) == READ) {
+		if (rq_data_dir(req) == READ &&
+				mq_mrq->packed_cmd != MMC_PACKED_WR_HDR) {
 			if (ecc_err)
 				return MMC_BLK_ECC_ERR;
 			return MMC_BLK_DATA_ERR;
@@ -1446,6 +1447,8 @@ static int mmc_blk_chk_hdr_err(struct mmc_queue *mq, int status)
 	case MMC_BLK_DATA_ERR:
 	case MMC_BLK_ECC_ERR:
 		err = mmc_blk_reset(md, card->host, type);
+		if (!err)
+			mmc_blk_reset_success(md, type);
 		break;
 	}
 
@@ -1531,16 +1534,18 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 				int idx = mq_rq->packed_fail_idx, i = 0;
 				while (!list_empty(&mq_rq->packed_list)) {
 					prq = list_entry_rq(mq_rq->packed_list.next);
+					list_del_init(&prq->queuelist);
 					if (idx == i) {
 						/* retry from error index */
 						mq_rq->packed_num -= idx;
-						if (mq_rq->packed_num == 1)
+						if (mq_rq->packed_num == 1) {
 							mq_rq->packed_cmd = MMC_PACKED_NONE;
+							mq_rq->packed_num = 0;
+						}
 						mq_rq->req = prq;
 						ret = 1;
 						break;
 					}
-					list_del_init(&prq->queuelist);
 					spin_lock_irq(&md->lock);
 					ret = __blk_end_request(prq, 0, blk_rq_bytes(prq));
 					spin_unlock_irq(&md->lock);
@@ -1668,11 +1673,15 @@ snd_packed_rd:
 				prq = list_entry_rq(mq->mqrq_cur->packed_list.prev);
 				if (prq->queuelist.prev != &mq->mqrq_cur->packed_list) {
 					list_del_init(&prq->queuelist);
+					spin_lock_irq(mq->queue->queue_lock);
 					blk_requeue_request(mq->queue, prq);
+					spin_unlock_irq(mq->queue->queue_lock);
 				} else {
 					list_del_init(&prq->queuelist);
 				}
 			}
+			mq->mqrq_cur->packed_cmd = MMC_PACKED_NONE;
+			mq->mqrq_cur->packed_num = 0;
 		}
 		mmc_blk_rw_rq_prep(mq->mqrq_cur, card, 0, mq);
 		mmc_start_req(card->host, &mq->mqrq_cur->mmc_active, NULL);
