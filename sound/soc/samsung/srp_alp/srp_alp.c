@@ -129,6 +129,7 @@ static void srp_reset(void)
 
 	/* Store Total Count */
 	srp.decoding_started = 0;
+	srp.first_decoding = 1;
 
 	/* Next IBUF is IBUF0 */
 	srp.ibuf_next = 0;
@@ -672,6 +673,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned int irq_code_req;
 	unsigned int wakeup_read = 0;
 	unsigned int wakeup_decinfo = 0;
+	unsigned int pending_off = 0;
 
 	srp_debug("IRQ: Code [0x%x], Pending [%s], CFGR [0x%x]", irq_code,
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN",
@@ -715,9 +717,18 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			if ((irq_code & SRP_INTR_CODE_OBUF_MASK)
 				==  SRP_INTR_CODE_OBUF0_FULL) {
 				srp_debug("OBUF0 FULL\n");
-				srp.obuf_fill_done[0] = 1;
+
+				if (srp.first_decoding)
+					pending_off = 1;
+				else
+					srp.obuf_fill_done[0] = 1;
 			} else {
 				srp_debug("OBUF1 FULL\n");
+				if (srp.first_decoding) {
+					srp.first_decoding = 0;
+					srp.obuf_fill_done[0] = 1;
+				}
+
 				srp.obuf_fill_done[1] = 1;
 			}
 
@@ -739,7 +750,8 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 		srp.pcm_size = 0;
 		srp.play_done = 1;
 
-		srp.obuf_fill_done[srp.obuf_ready] = 1;
+		srp.obuf_fill_done[0] = 1;
+		srp.obuf_fill_done[1] = 1;
 		wakeup_read = 1;
 	}
 
@@ -750,6 +762,11 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 
 	writel(0, srp.commbox + SRP_INTERRUPT_CODE);
 	writel(0, srp.commbox + SRP_INTERRUPT);
+
+	if (pending_off) {
+		srp_pending_ctrl(RUN);
+		wakeup_read = 0;
+	}
 
 	if (wakeup_read) {
 		if (waitqueue_active(&read_wq))
