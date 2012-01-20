@@ -285,7 +285,8 @@ static bool __sysmmu_disable(struct sysmmu_drvdata *data)
 
 	if (set_sysmmu_inactive(data)) {
 		__raw_writel(CTRL_DISABLE, data->sfrbase + S5P_MMU_CTRL);
-		clk_disable(data->clk);
+		if (data->clk)
+			clk_disable(data->clk);
 		disabled = true;
 	}
 
@@ -313,8 +314,8 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 		write_lock_irqsave(&mmudata->lock, flags);
 
 		if (set_sysmmu_active(mmudata)) {
-
-			clk_enable(mmudata->clk);
+			if (mmudata->clk)
+				clk_enable(mmudata->clk);
 
 			__sysmmu_set_ptbase(mmudata->sfrbase, pgd);
 
@@ -442,9 +443,9 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 
 	data->clk = clk_get(dev, "sysmmu");
 	if (IS_ERR(data->clk)) {
-		dev_err(dev, "Failed to get clock descriptor.\n");
-		ret = PTR_ERR(data->clk);
-		goto err_clk;
+		dev_dbg(dev, "Clock descriptor not found:"
+				" Skipping clock gating...\n");
+		data->clk = NULL;
 	}
 
 	data->dev = dev;
@@ -466,8 +467,6 @@ static int s5p_sysmmu_probe(struct platform_device *pdev)
 					to_platform_device(data->owner)->name,
 					to_platform_device(data->owner)->id);
 	return 0;
-err_clk:
-	free_irq(irq, data);
 err_irq:
 	iounmap(sfr);
 err_ioremap:
