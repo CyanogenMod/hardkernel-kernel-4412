@@ -408,12 +408,9 @@ static int max77686_set_voltage(struct regulator_dev *rdev,
 		/* If the voltage is increasing */
 		if (org < i)
 			udelay(DIV_ROUND_UP(desc->step * (i - org),
-						max77686->ramp_delay));
+						max77686->ramp_delay * 1000));
 	}
 
-/*	printk(PMIC_DEBUG "%s: id=%d, reg=%x, mask=%x, org=%x, val=%x\n",
-		__func__, max77686_get_rid(rdev), reg, mask, org, i);
-*/
 	return ret;
 }
 
