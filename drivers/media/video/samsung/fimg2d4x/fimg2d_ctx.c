@@ -13,6 +13,7 @@
 #include <linux/slab.h>
 #include <linux/sched.h>
 #include <linux/uaccess.h>
+#include <plat/cpu.h>
 #include <plat/fimg2d.h>
 #include "fimg2d.h"
 #include "fimg2d_ctx.h"
@@ -232,7 +233,8 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 #ifdef PERF_PROFILE
 	perf_start(cmd->ctx, PERF_L1CC_FLUSH);
 #endif
-	if (cmd->size_all >= L1_CACHE_SIZE) {
+	if ((soc_is_exynos5250() && cmd->size_all >= SZ_1M * 25) ||
+			(cmd->size_all >= L1_CACHE_SIZE)) {
 		fimg2d_debug("innercache all\n");
 		flush_all_cpu_caches();
 	} else {
