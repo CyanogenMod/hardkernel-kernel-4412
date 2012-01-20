@@ -186,11 +186,7 @@ static const unsigned int asv_voltage[CPUFREQ_LEVEL_END][NUM_ASV_GROUP] = {
 #define ARM_RBB		6	/* +300mV */
 unsigned int exynos5250_arm_volt;
 
-#if defined(CONFIG_BUSFREQ_OPP)
-unsigned int exynos5250_int_volt;
-#else
-#define INT_VOLT	1100000
-#endif
+#define INT_VOLT	1050000
 #endif
 
 static void set_clkdiv(unsigned int div_index)
@@ -313,11 +309,7 @@ static void exynos5250_set_frequency(unsigned int old_index,
 	unsigned int voltage;
 
 	voltage = asv_voltage[new_index][0];
-#if defined(CONFIG_BUSFREQ_OPP)
-	exynos5250_set_arm_abbg(voltage, exynos5250_int_volt);
-#else
 	exynos5250_set_arm_abbg(voltage, INT_VOLT);
-#endif
 #endif
 	if (old_index > new_index) {
 		if (!exynos5250_pms_change(old_index, new_index)) {
