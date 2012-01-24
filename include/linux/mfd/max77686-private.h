@@ -182,6 +182,11 @@ enum max77686_rtc_reg {
 #define MAX77686_IRQSRC_PMIC	(0)
 #define MAX77686_IRQSRC_RTC		(1 << 0)
 
+#define MAX77686_REG_RAMP_RATE_100MV	(0x3<<6)
+#define MAX77686_REG_RAMP_RATE_55MV		(0x2<<6)
+#define MAX77686_REG_RAMP_RATE_27MV		(0x1<<6)
+#define MAX77686_REG_RAMP_RATE_13MV		(0x0<<6)
+
 enum max77686_irq_source {
 	PMIC_INT1 = 0,
 	PMIC_INT2,
