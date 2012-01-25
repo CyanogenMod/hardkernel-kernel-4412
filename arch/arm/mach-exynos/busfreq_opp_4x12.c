@@ -200,7 +200,7 @@ static unsigned int clkdiv_top[LV_END][5] = {
 	{4, 7, 5, 7, 1},
 
 	/* ACLK_GDL/R L4: 133MHz */
-	{4, 7, 5, 7, 1},
+	{5, 7, 5, 7, 1},
 
 	/* ACLK_GDL/R L5: 100MHz */
 	{7, 7, 7, 7, 1},
