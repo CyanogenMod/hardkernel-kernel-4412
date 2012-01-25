@@ -2128,6 +2128,8 @@ static struct platform_device *smdk5250_devices[] __initdata = {
 	&SYSMMU_PLATDEV(gsc1),
 	&SYSMMU_PLATDEV(gsc2),
 	&SYSMMU_PLATDEV(gsc3),
+	&SYSMMU_PLATDEV(flite0),
+	&SYSMMU_PLATDEV(flite1),
 	&SYSMMU_PLATDEV(tv),
 	&SYSMMU_PLATDEV(rot),
 	&SYSMMU_PLATDEV(is_isp),
@@ -2295,6 +2297,20 @@ static void __init exynos_reserve_mem(void)
 			.start = 0
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FLITE0
+		{
+			.name = "flite0",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FLITE0 * SZ_1K,
+			.start = 0
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FLITE1
+		{
+			.name = "flite1",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FLITE1 * SZ_1K,
+			.start = 0
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD
 		{
 			.name = "fimd",
@@ -2357,7 +2373,8 @@ static void __init exynos_reserve_mem(void)
 		"s3cfb.0=fimd;exynos5-fb.1=fimd;"
 		"samsung-rp=srp;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"
-		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,fimd,fw,b1;"
+		"exynos-fimc-lite.0=flite0;exynos-fimc-lite.1=flite1;"
+		"ion-exynos=ion,gsc0,gsc1,gsc2,gsc3,flite0,flite1,fimd,fw,b1;"
 		"exynos-rot=rot;"
 		"s5p-mfc-v6/f=fw;"
 		"s5p-mfc-v6/a=b1;"
@@ -2395,11 +2412,11 @@ static void __init smdk5250_camera_gpio_cfg(void)
 
 #if defined(CONFIG_VIDEO_EXYNOS_GSCALER) && defined(CONFIG_VIDEO_EXYNOS_FIMC_LITE)
 #if defined(CONFIG_VIDEO_S5K4BA)
-static struct exynos_gscaler_isp_info s5k4ba = {
+static struct exynos_isp_info s5k4ba = {
 	.board_info	= &s5k4ba_info,
 	.cam_srclk_name	= "xxti",
 	.clk_frequency  = 24000000UL,
-	.bus_type	= GSC_ITU_601,
+	.bus_type	= CAM_TYPE_ITU,
 #ifdef CONFIG_ITU_A
 	.cam_clk_name	= "sclk_cam0",
 	.i2c_bus_num	= 4,
@@ -2410,7 +2427,7 @@ static struct exynos_gscaler_isp_info s5k4ba = {
 	.i2c_bus_num	= 5,
 	.cam_port	= CAM_PORT_B, /* A-Port : 0, B-Port : 1 */
 #endif
-	.flags		= GSC_CLK_INV_VSYNC,
+	.flags		= CAM_CLK_INV_VSYNC,
 };
 /* This is for platdata of fimc-lite */
 static struct s3c_platform_camera flite_s5k4ba = {
@@ -2423,11 +2440,11 @@ static struct s3c_platform_camera flite_s5k4ba = {
 };
 #endif
 #if defined(CONFIG_VIDEO_M5MOLS)
-static struct exynos_gscaler_isp_info m5mols = {
+static struct exynos_isp_info m5mols = {
 	.board_info	= &m5mols_board_info,
 	.cam_srclk_name	= "xxti",
 	.clk_frequency  = 24000000UL,
-	.bus_type	= GSC_MIPI_CSI2,
+	.bus_type	= CAM_TYPE_MIPI,
 #ifdef CONFIG_CSI_C
 	.cam_clk_name	= "sclk_cam0",
 	.i2c_bus_num	= 4,
@@ -2438,7 +2455,7 @@ static struct exynos_gscaler_isp_info m5mols = {
 	.i2c_bus_num	= 5,
 	.cam_port	= CAM_PORT_B, /* A-Port : 0, B-Port : 1 */
 #endif
-	.flags		= GSC_CLK_INV_PCLK | GSC_CLK_INV_VSYNC,
+	.flags		= CAM_CLK_INV_PCLK | CAM_CLK_INV_VSYNC,
 	.csi_data_align = 32,
 };
 /* This is for platdata of fimc-lite */
@@ -2477,20 +2494,14 @@ static void __init smdk5250_set_camera_platdata(void)
 #if defined(CONFIG_VIDEO_M5MOLS)
 	exynos_gsc0_default_data.isp_info[gsc_cam_index++] = &m5mols;
 #if defined(CONFIG_CSI_C)
-	exynos_flite0_default_data.cam[flite0_cam_index++] = &flite_m5mo;
+	exynos_flite0_default_data.cam[flite0_cam_index] = &flite_m5mo;
+	exynos_flite0_default_data.isp_info[flite0_cam_index] = &m5mols;
+	flite0_cam_index++;
 #endif
 #if defined(CONFIG_CSI_D)
-	exynos_flite1_default_data.cam[flite1_cam_index++] = &flite_m5mo;
-#endif
-#endif
-
-#if defined(CONFIG_VIDEO_S5K4BA)
-	exynos_gsc0_default_data.isp_info[gsc_cam_index++] = &s5k4ba;
-#if defined(CONFIG_ITU_A)
-	exynos_flite0_default_data.cam[flite0_cam_index++] = &flite_s5k4ba;
-#endif
-#if defined(CONFIG_ITU_B)
-	exynos_flite1_default_data.cam[flite1_cam_index++] = &flite_s5k4ba;
+	exynos_flite1_default_data.cam[flite1_cam_index] = &flite_m5mo;
+	exynos_flite1_default_data.isp_info[flite1_cam_index] = &m5mols;
+	flite1_cam_index++;
 #endif
 #endif
 	/* flite platdata register */
@@ -2576,6 +2587,12 @@ static void __init exynos_sysmmu_init(void)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc1).dev, &exynos5_device_gsc1.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc2).dev, &exynos5_device_gsc2.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(gsc3).dev, &exynos5_device_gsc3.dev);
+#endif
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_LITE
+	ASSIGN_SYSMMU_POWERDOMAIN(flite0, &exynos5_device_pd[PD_GSCL].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(flite1, &exynos5_device_pd[PD_GSCL].dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(flite0).dev, &exynos_device_flite0.dev);
+	sysmmu_set_owner(&SYSMMU_PLATDEV(flite1).dev, &exynos_device_flite1.dev);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_ROTATOR
 	sysmmu_set_owner(&SYSMMU_PLATDEV(rot).dev, &exynos_device_rotator.dev);
@@ -2763,6 +2780,16 @@ static void __init smdk5250_machine_init(void)
 			sizeof(exynos_flite0_default_data), &exynos_device_flite0);
 	s3c_set_platdata(&exynos_flite1_default_data,
 			sizeof(exynos_flite1_default_data), &exynos_device_flite1);
+/* In EVT0, for using camclk, gscaler clock should be enabled */
+	dev_set_name(&exynos_device_flite0.dev, "exynos-gsc.0");
+	clk_add_alias("gscl", "exynos-fimc-lite.0", "gscl",
+			&exynos_device_flite0.dev);
+	dev_set_name(&exynos_device_flite0.dev, "exynos-fimc-lite.0");
+
+	dev_set_name(&exynos_device_flite1.dev, "exynos-gsc.0");
+	clk_add_alias("gscl", "exynos-fimc-lite.1", "gscl",
+			&exynos_device_flite1.dev);
+	dev_set_name(&exynos_device_flite1.dev, "exynos-fimc-lite.1");
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS5_FIMC_IS
 	dev_set_name(&exynos5_device_fimc_is.dev, "s5p-mipi-csis.0");
