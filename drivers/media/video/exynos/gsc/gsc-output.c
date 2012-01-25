@@ -717,8 +717,10 @@ static void gsc_out_buffer_queue(struct vb2_buffer *vb)
 	}
 
 	if (!test_and_set_bit(ST_OUTPUT_STREAMON, &gsc->state)) {
-		gsc_disp_fifo_sw_reset(gsc);
-		gsc_pixelasync_sw_reset(gsc);
+		if (ctx->out_path == GSC_FIMD) {
+			gsc_disp_fifo_sw_reset(gsc);
+			gsc_pixelasync_sw_reset(gsc);
+		}
 		gsc_hw_enable_control(gsc, true);
 		ret = gsc_wait_operating(gsc);
 		if (ret < 0) {
