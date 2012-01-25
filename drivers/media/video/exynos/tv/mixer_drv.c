@@ -92,6 +92,7 @@ static void mxr_set_alpha_blend(struct mxr_device *mdev)
 static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 {
 	int i, ret;
+	int local = 1;
 	struct sub_mxr_device *sub_mxr;
 	struct mxr_layer *layer;
 	struct media_pad *pad;
@@ -107,6 +108,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 	 * TV basic configuration must be set before running mixer */
 	if (mdev->mxr_data_from == FROM_GSC_SD) {
 		mxr_dbg(mdev, "%s: from gscaler\n", __func__);
+		local = 0;
 		/* enable mixer clock */
 		ret = mxr_power_get(mdev);
 		if (ret) {
@@ -124,6 +126,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 				mxr_layer_geo_fix(layer);
 				layer->ops.format_set(layer);
 				layer->ops.stream_set(layer, 1);
+				local += sub_mxr->local;
 			}
 		}
 		/* Set the TVOUT register about gsc-mixer local path */
@@ -134,7 +137,8 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 	 * whenever streaming */
 	mxr_set_alpha_blend(mdev);
 
-	if (mdev->n_streamer == 1) {
+	if ((mdev->n_streamer == 1 && local == 1) ||
+	    (mdev->n_streamer == 2 && local == 2)) {
 		for (i = MXR_PAD_SOURCE_GSCALER; i < MXR_PADS_NUM; ++i) {
 			pad = &sd->entity.pads[i];
 
