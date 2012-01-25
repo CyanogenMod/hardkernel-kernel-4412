@@ -178,9 +178,11 @@ static int exynos_buspm_notifier_event(struct notifier_block *this,
 
 	unsigned long voltage = opp_get_voltage(data->max_opp);
 	unsigned long freq = opp_get_freq(data->max_opp);
+	unsigned int index;
 
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
+		mutex_lock(&busfreq_lock);
 		data->use = false;
 		if (!IS_ERR(data->vdd_mif)) {
 			regulator_set_voltage(data->vdd_mif, voltage,
@@ -188,6 +190,12 @@ static int exynos_buspm_notifier_event(struct notifier_block *this,
 			voltage = data->get_int_volt(freq);
 		}
 		regulator_set_voltage(data->vdd_int, voltage, voltage + 25000);
+		index = data->get_table_index(data->max_opp);
+		if (data->busfreq_prepare)
+			data->busfreq_prepare(index);
+		data->target(index);
+		data->curr_opp = data->max_opp;
+		mutex_unlock(&busfreq_lock);
 		return NOTIFY_OK;
 	case PM_POST_RESTORE:
 	case PM_POST_SUSPEND:
