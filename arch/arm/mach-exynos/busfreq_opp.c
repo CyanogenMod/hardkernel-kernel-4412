@@ -296,7 +296,7 @@ static ssize_t show_level_lock(struct device *device,
 
 	freq = bus_ctrl.opp_lock == NULL ? 0 : opp_get_freq(bus_ctrl.opp_lock);
 
-	len = sprintf(buf, "Current Freq(MIN/INT) : %lu\n", opp_get_freq(data->curr_opp));
+	len = sprintf(buf, "Current Freq(MIF/INT) : %lu\n", opp_get_freq(data->curr_opp));
 	len += sprintf(buf + len, "Current Lock Freq(MIF/INT) : %lu\n", freq);
 
 	return len;
