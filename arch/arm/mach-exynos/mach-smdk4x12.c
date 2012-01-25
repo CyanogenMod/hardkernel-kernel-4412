@@ -3530,6 +3530,13 @@ static void __init exynos4_reserve_mem(void)
 			},
 			.start = 0
 		},
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS_BAYER
+		{
+			.name = "fimc_is_isp",
+			.size = CONFIG_VIDEO_EXYNOS_MEMSIZE_FIMC_IS_ISP * SZ_1K,
+			.start = 0
+		},
+#endif
 #endif
 #if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
 	defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
@@ -3615,7 +3622,10 @@ static void __init exynos4_reserve_mem(void)
 #endif
 		"samsung-rp=srp;"
 		"s5p-jpeg=jpeg;"
-		"exynos4-fimc-is=fimc_is;"
+		"exynos4-fimc-is/f=fimc_is;"
+#ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS_BAYER
+		"exynos4-fimc-is/i=fimc_is_isp;"
+#endif
 		"s5p-mixer=tv;"
 		"s5p-fimg2d=fimg2d;"
 		"ion-exynos=ion,fimd,fimc0,fimc1,fimc2,fimc3,fw,b1,b2;"
