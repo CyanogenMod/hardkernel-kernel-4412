@@ -3483,12 +3483,13 @@ static void __init exynos4_reserve_mem(void)
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1
 		{
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+			.name = "mfc-normal",
+#else
 			.name = "mfc1",
+#endif
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1 * SZ_1K,
-			{
-				.alignment = 1 << 17,
-			},
-			.start = 0,
+			{ .alignment = 1 << 17 },
 		},
 #endif
 #if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
@@ -3496,19 +3497,14 @@ static void __init exynos4_reserve_mem(void)
 		{
 			.name = "mfc0",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
-			{
-				.alignment = 1 << 17,
-			}
+			{ .alignment = 1 << 17 },
 		},
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC
 		{
 			.name = "mfc",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC * SZ_1K,
-			{
-				.alignment = 1 << 17,
-			},
-			.start = 0
+			{ .alignment = 1 << 17 },
 		},
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
@@ -3568,7 +3564,7 @@ static void __init exynos4_reserve_mem(void)
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
 		{
-			.name = "mfc0",
+			.name = "mfc-secure",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
 		},
 #endif
@@ -3594,7 +3590,9 @@ static void __init exynos4_reserve_mem(void)
 		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
 		"exynos4210-fimc.0=fimc0;exynos4210-fimc.1=fimc1;exynos4210-fimc.2=fimc2;exynos4210-fimc.3=fimc3;"
 #ifdef CONFIG_VIDEO_MFC5X
-		"s3c-mfc=mfc,mfc0,mfc1;"
+		"s3c-mfc/A=mfc0,mfc-secure;"
+		"s3c-mfc/B=mfc1,mfc-normal;"
+		"s3c-mfc/AB=mfc;"
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
 		"s5p-mfc/f=fw;"
@@ -3606,14 +3604,14 @@ static void __init exynos4_reserve_mem(void)
 		"exynos4-fimc-is=fimc_is;"
 		"s5p-mixer=tv;"
 		"s5p-fimg2d=fimg2d;"
-		"ion-exynos=ion,fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;"
+		"ion-exynos=ion,fimd,fimc0,fimc1,fimc2,fimc3,fw,b1,b2;"
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 		"s5p-smem/video=video;"
 		"s5p-smem/sectbl=sectbl;"
 #endif
-		"s5p-smem/mfc=mfc0;"
+		"s5p-smem/mfc=mfc0,mfc-secure;"
 		"s5p-smem/fimc=fimc3;"
-		"s5p-smem/mfc-shm=mfc1;";
+		"s5p-smem/mfc-shm=mfc1,mfc-normal;";
 
 	s5p_cma_region_reserve(regions, regions_secure, SZ_64M, map);
 }
