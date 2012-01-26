@@ -384,6 +384,9 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(0);
 
+	if (!soc_is_exynos4210())
+		exynos4x12_set_abb(ABB_MODE_100V);
+
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
 		/*
@@ -404,6 +407,9 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	s3c_pm_do_restore_core(exynos4_aftr_save,
 			       ARRAY_SIZE(exynos4_aftr_save));
 early_wakeup:
+	if ((exynos_result_of_asv > 3) && !soc_is_exynos4210())
+		exynos4x12_set_abb(ABB_MODE_130V);
+
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
 
@@ -467,7 +473,8 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	} while (exynos4_check_enter());
 
 	if (!soc_is_exynos4210())
-		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
+		exynos4x12_set_abb(ABB_MODE_100V);
+
 
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
@@ -498,6 +505,9 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
 
 early_wakeup:
+	if ((exynos_result_of_asv > 3) && !soc_is_exynos4210())
+		exynos4x12_set_abb(ABB_MODE_130V);
+
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
 
