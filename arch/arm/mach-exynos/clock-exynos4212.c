@@ -363,7 +363,7 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.name		= "c2c",
 		.devname	= "samsung-c2c",
 		.enable		= exynos4_clk_ip_dmc_ctrl,
-		.ctrlbit	= (1 << 26 | 1 << 27 | 1 << 30 | 1 << 31),
+		.ctrlbit	= (1 << 26 | 1 << 27 | 1 << 30),
 	}, {
 		.name		= "sclk_c2c_off",
 		.enable		= exynos4212_clk_sclk_dmc_ctrl,
@@ -371,7 +371,7 @@ static struct clk exynos4212_init_clocks_off[] = {
 	}, {
 		.name		= "pclk_c2c_off",
 		.enable		= exynos4212_clk_bus_dmc1_ctrl,
-		.ctrlbit	= (1 << 27 | 1 << 30 | 1 << 31),
+		.ctrlbit	= (1 << 27 | 1 << 30),
 	}, {
 		.name		= "aclk_c2c_off",
 		.enable		= exynos4212_clk_bus_dmc0_ctrl,
