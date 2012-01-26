@@ -200,6 +200,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 {
 	int ret, i;
+	int local = 1;
 	struct media_pad *pad;
 	struct sub_mxr_device *sub_mxr;
 	struct mxr_layer *layer;
@@ -210,7 +211,20 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 	mutex_lock(&mdev->s_mutex);
 	--mdev->n_streamer;
 	mxr_dbg(mdev, "%s(%d)\n", __func__, mdev->n_streamer);
-	if (mdev->n_streamer == 0) {
+
+	/* distinction number of local path */
+	if (mdev->mxr_data_from == FROM_GSC_SD) {
+		local = 0;
+		for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
+			sub_mxr = &mdev->sub_mxr[i];
+			if (sub_mxr->local) {
+				local += sub_mxr->local;
+			}
+		}
+	}
+
+	if ((mdev->n_streamer == 0 && local == 1) ||
+	    (mdev->n_streamer == 1 && local == 2)) {
 		for (i = MXR_PAD_SOURCE_GSCALER; i < MXR_PADS_NUM; ++i) {
 			pad = &sd->entity.pads[i];
 
@@ -251,7 +265,8 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 		}
 	}
 
-	if (mdev->n_streamer == 0) {
+	if ((mdev->n_streamer == 0 && local == 1) ||
+	    (mdev->n_streamer == 1 && local == 2)) {
 		ret = v4l2_subdev_call(hdmi_sd, video, s_stream, 0);
 		if (ret) {
 			mxr_err(mdev, "stopping stream failed for output %s\n",
