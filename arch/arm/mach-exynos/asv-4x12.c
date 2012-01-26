@@ -73,6 +73,8 @@ static int exynos4x12_fuse_asv_store_result(struct samsung_asv *asv_info)
 	switch (exynos_result_of_asv) {
 	case 0:
 	case 1:
+	case 2:
+	case 3:
 		exynos4x12_set_abb(ABB_MODE_100V);
 		break;
 
