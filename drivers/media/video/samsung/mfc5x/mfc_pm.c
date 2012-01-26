@@ -42,85 +42,7 @@ atomic_t clk_ref;
 #endif
 
 #ifdef CONFIG_CPU_FREQ
-#include <linux/cpufreq.h>
 #include <mach/cpufreq.h>
-
-#define MFC0_BUS_CLK_NAME	"aclk_gdl"
-#define MFC1_BUS_CLK_NAME	"aclk_gdr"
-
-static struct clk *bus_clk;
-static unsigned int prev_bus_rate;
-
-static int mfc_cpufreq_transition(struct notifier_block *nb,
-					unsigned long val, void *data)
-{
-	unsigned long bus_rate;
-
-	if (val == CPUFREQ_PRECHANGE)
-		prev_bus_rate = clk_get_rate(bus_clk);
-
-	if (val == CPUFREQ_POSTCHANGE) {
-		bus_rate = clk_get_rate(bus_clk);
-
-		if (bus_rate != prev_bus_rate) {
-			mfc_dbg("MFC freq pre: %lu\n",
-				clk_get_rate(pm->op_clk));
-			if (clk_set_rate(pm->op_clk, bus_rate)) {
-				printk(KERN_ERR "%s rate change failed: %lu\n",
-						pm->op_clk->name, bus_rate);
-				return -EINVAL;
-			}
-			mfc_dbg("MFC freq post: %lu\n",
-				clk_get_rate(pm->op_clk));
-		}
-	}
-
-	return 0;
-}
-
-static inline int mfc_cpufreq_register(void)
-{
-	int ret;
-	unsigned long rate;
-
-	bus_clk = clk_get(pm->device, MFC0_BUS_CLK_NAME);
-
-	if (IS_ERR(bus_clk)) {
-		printk(KERN_ERR "failed to get bus clock\n");
-		ret = -ENOENT;
-		goto err_bus_clk;
-	}
-
-	prev_bus_rate = clk_get_rate(bus_clk);
-
-	rate = clk_get_rate(pm->clock);
-
-	if (rate != prev_bus_rate) {
-		if (clk_set_rate(pm->op_clk, prev_bus_rate)) {
-			printk(KERN_ERR "%s rate change failed: %u\n",
-					pm->op_clk->name, prev_bus_rate);
-			ret = -EINVAL;
-			goto err_bus_clk;
-		}
-	}
-
-	pm->freq_transition.notifier_call = mfc_cpufreq_transition;
-
-	return cpufreq_register_notifier(&pm->freq_transition,
-					 CPUFREQ_TRANSITION_NOTIFIER);
-err_bus_clk:
-	return ret;
-}
-
-static inline void mfc_cpufreq_deregister(void)
-{
-	clk_put(bus_clk);
-
-	prev_bus_rate = 0;
-
-	cpufreq_unregister_notifier(&pm->freq_transition,
-				    CPUFREQ_TRANSITION_NOTIFIER);
-}
 
 int mfc_cpufreq_lock(unsigned int freq)
 {
@@ -158,19 +80,6 @@ void mfc_cpufreq_lock_free(void)
 		mfc_dbg("CPU frequency lock free by MFC\n");
 	}
 }
-
-#else
-
-static inline int mfc_cpufreq_register(void)
-{
-	return 0;
-}
-
-static inline void mfc_cpufreq_deregister(void)
-{
-
-}
-
 #endif /* CONFIG_CPU_FREQ */
 
 int mfc_init_pm(struct mfc_dev *mfcdev)
@@ -218,11 +127,8 @@ int mfc_init_pm(struct mfc_dev *mfcdev)
 
 	atomic_set(&pm->power, 0);
 
-#if defined(CONFIG_PM_RUNTIME) || defined(CONFIG_CPU_FREQ)
-	pm->device = mfcdev->device;
-#endif
-
 #ifdef CONFIG_PM_RUNTIME
+	pm->device = mfcdev->device;
 	pm_runtime_enable(pm->device);
 #endif
 
@@ -230,21 +136,8 @@ int mfc_init_pm(struct mfc_dev *mfcdev)
 	atomic_set(&clk_ref, 0);
 #endif
 
-#ifdef CONFIG_CPU_FREQ
-	pm->op_clk = sclk;
-	ret = mfc_cpufreq_register();
-	if (ret < 0) {
-		dev_err(mfcdev->device, "Failed to register cpufreq\n");
-		goto err_cpufreq;
-	}
-#endif
-
 	return 0;
 
-#ifdef CONFIG_CPU_FREQ
-err_cpufreq:
-	clk_put(pm->clock);
-#endif
 err_gg_clk:
 err_ss_clk:
 err_sp_clk:
@@ -257,8 +150,6 @@ err_gp_clk:
 
 void mfc_final_pm(struct mfc_dev *mfcdev)
 {
-	clk_put(pm->clock);
-
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_disable(pm->device);
 #endif
@@ -271,11 +162,7 @@ int mfc_clock_on(void)
 	mfc_dbg("+ %d", atomic_read(&clk_ref));
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
 	return clk_enable(pm->clock);
-#else
-	return clk_enable(pm->clock);
-#endif
 }
 
 void mfc_clock_off(void)
@@ -285,11 +172,7 @@ void mfc_clock_off(void)
 	mfc_dbg("- %d", atomic_read(&clk_ref));
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
 	clk_disable(pm->clock);
-#else
-	clk_disable(pm->clock);
-#endif
 }
 
 int mfc_power_on(void)
