@@ -63,7 +63,6 @@ struct vb2_ion_buf {
 
 	dma_addr_t			kva;
 	dma_addr_t			dva;
-	size_t				offset;
 	unsigned long			size;
 
 	struct scatterlist		*sg;
@@ -265,7 +264,7 @@ static void *vb2_ion_alloc(void *alloc_ctx, unsigned long size)
 
 	/* Map DVA */
 	if (conf->use_mmu) {
-		buf->dva = iovmm_map(conf->dev, buf->sg);
+		buf->dva = iovmm_map(conf->dev, buf->sg, 0, size);
 		if (!buf->dva) {
 			pr_err("iovmm_map: conf->name(%s)\n", conf->name);
 			goto err_ion_map_dva;
@@ -395,12 +394,11 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 {
 	struct vb2_ion_conf *conf = alloc_ctx;
 	struct vb2_ion_buf *buf = NULL;
-	struct mm_struct *mm = current->mm;
-	struct vm_area_struct *vma = NULL;
 	size_t len;
 	int ret = 0;
 	bool malloced = false;
 	struct scatterlist *sg;
+	off_t offset;
 
 	/* Create vb2_ion_buf */
 	buf = kzalloc(sizeof *buf, GFP_KERNEL);
@@ -410,7 +408,7 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 	}
 
 	/* Getting handle, client from DVA */
-	buf->handle = ion_import_uva(conf->client, vaddr);
+	buf->handle = ion_import_uva(conf->client, vaddr, &offset);
 	if (IS_ERR(buf->handle)) {
 		if ((PTR_ERR(buf->handle) == -ENXIO) && conf->use_mmu) {
 			int flags = ION_HEAP_EXYNOS_USER_MASK;
@@ -435,6 +433,7 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 		}
 
 		malloced = true;
+		offset = 0;
 	}
 
 	/* TODO: Need to check whether already DVA is created or not */
@@ -453,7 +452,7 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 
 	/* Map DVA */
 	if (conf->use_mmu) {
-		buf->dva = iovmm_map(conf->dev, buf->sg);
+		buf->dva = iovmm_map(conf->dev, buf->sg, offset, size);
 		if (!buf->dva) {
 			pr_err("iovmm_map: conf->name(%s)\n", conf->name);
 			goto err_ion_map_dva;
@@ -466,27 +465,9 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 			pr_err("ion_phys: conf->name(%s)\n", conf->name);
 			goto err_ion_map_dva;
 		}
+
+		buf->dva += offset;
 	}
-
-	if (!malloced) {
-		/* Get offset from the start */
-		down_read(&mm->mmap_sem);
-		vma = find_vma(mm, vaddr);
-		if (vma == NULL) {
-			pr_err("Failed acquiring VMA to get offset 0x%08lx\n",
-					vaddr);
-			up_read(&mm->mmap_sem);
-
-			if (conf->use_mmu)
-				iovmm_unmap(conf->dev, buf->dva);
-
-			goto err_get_vma;
-		}
-		buf->offset = vaddr - vma->vm_start;
-		up_read(&mm->mmap_sem);
-	}
-	dbg(6, "dva(0x%x), size(0x%x), offset(0x%x)\n",
-			(u32)buf->dva, (u32)size, (u32)buf->offset);
 
 	/* Set vb2_ion_buf */
 	buf->vma = _vb2_ion_get_vma(vaddr, size, &buf->vma_count);
@@ -555,7 +536,7 @@ static void *vb2_ion_cookie(void *buf_priv)
 		return NULL;
 	}
 
-	return (void *)(buf->dva + buf->offset);
+	return (void *)buf->dva;
 }
 
 static void *vb2_ion_vaddr(void *buf_priv)

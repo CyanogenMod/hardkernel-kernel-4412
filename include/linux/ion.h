@@ -272,6 +272,7 @@ struct ion_handle *ion_import_fd(struct ion_client *client, int fd);
  *                    fd obtained via ION_IOCTL_SHARE ioctl, import it
  * @client:    this blocks client
  * @uva:       virtual address in userspace.
+ * @offset:	How many bytes are distant from the beginning of the ION buffer
  *
  * A helper function for drivers that will be recieving ion buffers shared
  * with them from userspace.  These buffers are represented by a virtual
@@ -279,7 +280,8 @@ struct ion_handle *ion_import_fd(struct ion_client *client, int fd);
  * ION_IOC_SHARE ioctl.
  * This function does same job with ion_import_fd().
  */
-struct ion_handle *ion_import_uva(struct ion_client *client, unsigned long uva);
+struct ion_handle *ion_import_uva(struct ion_client *client, unsigned long uva,
+								off_t *offset);
 
 #ifdef CONFIG_ION_EXYNOS
 struct ion_handle *ion_exynos_get_user_pages(struct ion_client *client,
