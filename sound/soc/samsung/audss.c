@@ -71,22 +71,19 @@ int audss_set_clk_div(u32 mode)
 
 	if (mode == AUDSS_ACTIVE) {
 		switch (srp_clk_rate) {
+		case 192000000:
+		case 180633600:
 		case 180000000:
 			rclk_shift = 1;
 			break;
 		case 96000000:
 			rclk_shift = 0;
 			break;
+		default:
+			pr_err("%s: Not supported src clk rate\n", __func__);
 		}
 	} else {
-		switch (srp_clk_rate) {
-		case 180000000:
-			rclk_shift = 8;
-			break;
-		case 96000000:
-			rclk_shift = 4;
-			break;
-		}
+		rclk_shift = 4;
 	}
 	pr_debug("%s: rclk shift [%d]\n", __func__, rclk_shift);
 
