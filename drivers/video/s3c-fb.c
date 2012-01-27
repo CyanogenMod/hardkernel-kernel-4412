@@ -1325,8 +1325,10 @@ static int s3c_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	int ret;
 	u32 crtc;
 
+#ifdef CONFIG_ION_EXYNOS
 	struct fb_var_screeninfo *var = &info->var;
 	int offset;
+#endif
 
 	union {
 		struct s3c_fb_user_window user_window;
