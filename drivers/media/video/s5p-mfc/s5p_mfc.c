@@ -632,8 +632,8 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 			else
 				ctx->state = MFCINST_HEAD_PARSED;
 
-			if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC
-					&& !list_empty(&ctx->src_queue)) {
+			if (ctx->codec_mode == S5P_FIMV_CODEC_H264_DEC &&
+					!list_empty(&ctx->src_queue)) {
 				struct s5p_mfc_buf *src_buf;
 				src_buf = list_entry(ctx->src_queue.next,
 						struct s5p_mfc_buf, list);
@@ -691,7 +691,8 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 		spin_unlock(&dev->condlock);
 		if (err == 0) {
 			ctx->state = MFCINST_RUNNING;
-			if (ctx->type == MFCINST_DECODER) {
+			if (ctx->type == MFCINST_DECODER &&
+				dec->dst_memtype == V4L2_MEMORY_MMAP) {
 				if (!dec->dpb_flush && !dec->remained) {
 					mfc_debug(2, "INIT_BUFFERS with dpb_flush - leaving image in src queue.\n");
 					spin_lock_irqsave(&dev->irqlock, flags);
@@ -707,7 +708,7 @@ static irqreturn_t s5p_mfc_irq(int irq, void *priv)
 					if (dec && dec->dpb_flush)
 						dec->dpb_flush = 0;
 				}
-			} else {
+			} else if (ctx->type == MFCINST_ENCODER) {
 				spin_lock_irqsave(&dev->irqlock, flags);
 				if (!list_empty(&ctx->src_queue)) {
 					src_buf = list_entry(ctx->src_queue.next,

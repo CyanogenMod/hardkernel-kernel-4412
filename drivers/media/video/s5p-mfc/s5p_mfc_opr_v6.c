@@ -415,6 +415,7 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 	int buf_size1;
 	int align_gap;
 	struct s5p_mfc_buf *buf;
+	struct list_head *buf_queue;
 
 	buf_addr1 = ctx->port_a_phys;
 	buf_size1 = ctx->port_a_size;
@@ -442,7 +443,11 @@ int s5p_mfc_set_dec_frame_buffer(struct s5p_mfc_ctx *ctx)
 								frame_size_mv);
 
 	i = 0;
-	list_for_each_entry(buf, &dec->dpb_queue, list) {
+	if (dec->dst_memtype == V4L2_MEMORY_USERPTR)
+		buf_queue = &ctx->dst_queue;
+	else
+		buf_queue = &dec->dpb_queue;
+	list_for_each_entry(buf, buf_queue, list) {
 		mfc_debug(2, "Luma %x\n", buf->cookie.raw.luma);
 		WRITEL(buf->cookie.raw.luma, S5P_FIMV_D_LUMA_DPB + i * 4);
 		mfc_debug(2, "\tChroma %x\n", buf->cookie.raw.chroma);

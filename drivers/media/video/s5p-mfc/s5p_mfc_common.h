@@ -485,6 +485,7 @@ struct s5p_mfc_dec {
 	unsigned long dpb_status;
 	unsigned int dpb_flush;
 
+	enum v4l2_memory dst_memtype;
 	int sei_parse;
 
 	/* For 6.x */

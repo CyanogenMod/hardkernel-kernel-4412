@@ -1199,8 +1199,9 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	mfc_debug_enter();
 	mfc_debug(2, "Memory type: %d\n", reqbufs->memory);
 
-	if (reqbufs->memory != V4L2_MEMORY_MMAP) {
-		mfc_err("Only V4L2_MEMORY_MAP is supported.\n");
+	if (reqbufs->memory == V4L2_MEMORY_USERPTR &&
+		reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
+		mfc_err("V4L2_MEMORY_USERPTR is not supported for source.\n");
 		return -EINVAL;
 	}
 
@@ -1238,6 +1239,8 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			ctx->output_state = QUEUE_BUFS_REQUESTED;
 		}
 	} else if (reqbufs->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		dec->dst_memtype = reqbufs->memory;
+
 		/* cacheable setting */
 		if (!IS_MFCV6(dev))
 			s5p_mfc_mem_set_cacheable(ctx->dev->alloc_ctx[MFC_CMA_BANK2_ALLOC_CTX],ctx->cacheable);
@@ -1280,14 +1283,16 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 			return -ENOMEM;
 		}
 
-		if (dec->dpb_queue_cnt == dec->total_dpb_count) {
-			ctx->capture_state = QUEUE_BUFS_MMAPED;
-		} else {
-			mfc_err("Not all buffers passed to buf_init.\n");
-			reqbufs->count = 0;
-			ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
-			s5p_mfc_release_codec_buffers(ctx);
-			return -ENOMEM;
+		if (dec->dst_memtype == V4L2_MEMORY_MMAP) {
+			if (dec->dpb_queue_cnt == dec->total_dpb_count) {
+				ctx->capture_state = QUEUE_BUFS_MMAPED;
+			} else {
+				mfc_err("Not all buffers passed to buf_init.\n");
+				reqbufs->count = 0;
+				ret = vb2_reqbufs(&ctx->vq_dst, reqbufs);
+				s5p_mfc_release_codec_buffers(ctx);
+				return -ENOMEM;
+			}
 		}
 
 		if (s5p_mfc_ctx_ready(ctx)) {
@@ -1297,8 +1302,11 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 		}
 
 		s5p_mfc_try_run(dev);
-		s5p_mfc_wait_for_done_ctx(ctx,
-				S5P_FIMV_R2H_CMD_INIT_BUFFERS_RET, 1);
+
+		if (dec->dst_memtype == V4L2_MEMORY_MMAP) {
+			s5p_mfc_wait_for_done_ctx(ctx,
+					S5P_FIMV_R2H_CMD_INIT_BUFFERS_RET, 1);
+		}
 	}
 
 	mfc_debug_leave();
@@ -1848,13 +1856,6 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 				return -EINVAL;
 			}
 		}
-		if (vb2_plane_size(vb, 0) < ctx->luma_size ||
-			vb2_plane_size(vb, 1) < ctx->chroma_size) {
-			mfc_err("Plane buffer (CAPTURE) is too small.\n");
-			return -EINVAL;
-		}
-		mfc_debug(2, "Size: 0=%lu 2=%lu\n", vb2_plane_size(vb, 0),
-							vb2_plane_size(vb, 1));
 
 		buf->cookie.raw.luma = mfc_plane_cookie(vb, 0);
 		buf->cookie.raw.chroma = mfc_plane_cookie(vb, 1);
@@ -1864,6 +1865,11 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 
 		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_DST, vb->v4l2_buf.index) < 0)
 			mfc_err("failed in init_buf_ctrls\n");
+
+		if (dec->dst_memtype == V4L2_MEMORY_USERPTR &&
+				dec->dpb_queue_cnt == dec->total_dpb_count) {
+			ctx->capture_state = QUEUE_BUFS_MMAPED;
+		}
 
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
 		if (mfc_plane_cookie(vb, 0)  == 0) {
@@ -1897,6 +1903,13 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 	unsigned int index = vb->v4l2_buf.index;
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+		if (vb2_plane_size(vb, 0) < ctx->luma_size ||
+			vb2_plane_size(vb, 1) < ctx->chroma_size) {
+			mfc_err("Plane buffer (CAPTURE) is too small.\n");
+			return -EINVAL;
+		}
+		mfc_debug(2, "Size: 0=%lu 2=%lu\n", vb2_plane_size(vb, 0),
+							vb2_plane_size(vb, 1));
 		if (ctx->cacheable)
 			s5p_mfc_mem_cache_flush(vb, 2);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
@@ -2036,6 +2049,9 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	unsigned long flags;
 	struct s5p_mfc_buf *buf = vb_to_mfc_buf(vb);
+	struct s5p_mfc_buf *dpb_buf, *tmp_buf;
+	int wait_flag = 0;
+	int remove_flag = 0;
 
 	mfc_debug_enter();
 
@@ -2058,6 +2074,21 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 					dec->dpb_status, vb->v4l2_buf.index);
 		/* Mark destination as available for use by MFC */
 		spin_lock_irqsave(&dev->irqlock, flags);
+		if (!list_empty(&dec->dpb_queue)) {
+			remove_flag = 0;
+			list_for_each_entry_safe(dpb_buf, tmp_buf, &dec->dpb_queue, list) {
+				if (dpb_buf == buf) {
+					list_del(&dpb_buf->list);
+					remove_flag = 1;
+					break;
+				}
+			}
+			if (remove_flag == 0) {
+				mfc_err("Can't find buf(0x%x)\n", buf->cookie.raw.luma);
+				spin_unlock_irqrestore(&dev->irqlock, flags);
+				return;
+			}
+		}
 		set_bit(vb->v4l2_buf.index, &dec->dpb_status);
 		mfc_debug(2, "ADDING Flag after: %lx\n", dec->dpb_status);
 		list_add_tail(&buf->list, &ctx->dst_queue);
@@ -2071,8 +2102,14 @@ static void s5p_mfc_buf_queue(struct vb2_buffer *vb)
 		spin_lock_irqsave(&dev->condlock, flags);
 		set_bit(ctx->num, &dev->ctx_work_bits);
 		spin_unlock_irqrestore(&dev->condlock, flags);
+		if (ctx->state == MFCINST_HEAD_PARSED)
+			wait_flag = 1;
 	}
 	s5p_mfc_try_run(dev);
+	if (wait_flag) {
+		s5p_mfc_wait_for_done_ctx(ctx,
+				S5P_FIMV_R2H_CMD_INIT_BUFFERS_RET, 1);
+	}
 
 	mfc_debug_leave();
 }
@@ -2150,7 +2187,7 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 	ctx->vq_dst.type = V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE;
 	ctx->vq_dst.drv_priv = ctx;
 	ctx->vq_dst.buf_struct_size = sizeof(struct s5p_mfc_buf);
-	ctx->vq_dst.io_modes = VB2_MMAP;
+	ctx->vq_dst.io_modes = VB2_MMAP | VB2_USERPTR;
 	ctx->vq_dst.ops = &s5p_mfc_dec_qops;
 	ctx->vq_dst.mem_ops = s5p_mfc_mem_ops();
 	ret = vb2_queue_init(&ctx->vq_dst);
