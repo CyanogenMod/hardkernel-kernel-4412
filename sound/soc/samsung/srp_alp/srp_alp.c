@@ -521,7 +521,7 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			if (srp.dec_info.sample_rate && srp.dec_info.channels) {
 				srp_info("Already get dec info!\n");
 			} else {
-				ret = wait_event_interruptible_timeout(read_wq,
+				ret = wait_event_interruptible_timeout(decinfo_wq,
 						srp.dec_info.channels != 0, HZ / 2);
 				if (!ret) {
 					srp_err("Couldn't Get Decoding info!!!\n");
