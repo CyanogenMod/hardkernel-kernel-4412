@@ -67,12 +67,13 @@ static void srp_pending_ctrl(int ctrl)
 {
 	unsigned int srp_ctrl = readl(srp.commbox + SRP_PENDING);
 
-	srp.is_pending = srp_ctrl ? STALL : RUN;
-	if (ctrl == srp.is_pending)
+	if (ctrl == srp_ctrl) {
+		srp_info("Already set SRP pending control[%d]\n", ctrl);
 		return;
+	}
 
+	writel(ctrl, srp.commbox + SRP_PENDING);
 	srp.is_pending = ctrl;
-	writel(srp.is_pending, srp.commbox + SRP_PENDING);
 
 	srp_debug("Current SRP Status[%s]\n",
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN");
@@ -118,8 +119,6 @@ static void srp_reset(void)
 
 	srp_debug("Reset\n");
 
-	srp_pending_ctrl(STALL);
-
 	writel(reg, srp.commbox + SRP_FRAME_INDEX);
 	writel(reg, srp.commbox + SRP_READ_BITSTREAM_SIZE);
 
@@ -129,7 +128,6 @@ static void srp_reset(void)
 
 	/* Store Total Count */
 	srp.decoding_started = 0;
-	srp.first_decoding = 1;
 
 	/* Next IBUF is IBUF0 */
 	srp.ibuf_next = 0;
@@ -152,11 +150,6 @@ static void srp_reset(void)
 	srp.prepare_for_eos = 0;
 	srp.play_done = 0;
 	srp.pcm_size = 0;
-}
-
-static void srp_stop(void)
-{
-	srp_pending_ctrl(STALL);
 }
 
 static void srp_fill_ibuf(void)
@@ -240,10 +233,10 @@ static ssize_t srp_write(struct file *file, const char *buffer,
 	mutex_lock(&srp_mutex);
 	if (!srp.decoding_started) {
 		srp_fill_ibuf();
-		srp_debug("First Start decoding!!\n");
 		srp_pending_ctrl(RUN);
-		if (!srp.decoding_started)
-			srp.decoding_started = 1;
+		srp_info("First Start decoding!![%d]\n",
+			readl(srp.commbox + SRP_PENDING));
+		srp.decoding_started = 1;
 	}
 	mutex_unlock(&srp_mutex);
 
@@ -374,7 +367,7 @@ static void srp_commbox_deinit(void)
 	unsigned int reg = 0;
 
 	/* Reset value */
-	srp_stop();
+	srp_pending_ctrl(STALL);
 	srp.decoding_started = 0;
 	writel(reg, srp.commbox + SRP_INTERRUPT);
 }
@@ -452,7 +445,6 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case SRP_FLUSH:
 		srp_debug("SRP_FLUSH\n");
-		srp_stop();
 		srp_flush_ibuf();
 		srp_flush_obuf();
 		srp_set_default_fw();
@@ -673,7 +665,6 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned int irq_code_req;
 	unsigned int wakeup_read = 0;
 	unsigned int wakeup_decinfo = 0;
-	unsigned int pending_off = 0;
 
 	srp_debug("IRQ: Code [0x%x], Pending [%s], CFGR [0x%x]", irq_code,
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN",
@@ -717,18 +708,9 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 			if ((irq_code & SRP_INTR_CODE_OBUF_MASK)
 				==  SRP_INTR_CODE_OBUF0_FULL) {
 				srp_debug("OBUF0 FULL\n");
-
-				if (srp.first_decoding)
-					pending_off = 1;
-				else
-					srp.obuf_fill_done[0] = 1;
+				srp.obuf_fill_done[0] = 1;
 			} else {
 				srp_debug("OBUF1 FULL\n");
-				if (srp.first_decoding) {
-					srp.first_decoding = 0;
-					srp.obuf_fill_done[0] = 1;
-				}
-
 				srp.obuf_fill_done[1] = 1;
 			}
 
@@ -763,12 +745,8 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	writel(0, srp.commbox + SRP_INTERRUPT_CODE);
 	writel(0, srp.commbox + SRP_INTERRUPT);
 
-	if (pending_off) {
-		srp_pending_ctrl(RUN);
-		wakeup_read = 0;
-	}
-
 	if (wakeup_read) {
+		srp.is_pending = 1;
 		if (waitqueue_active(&read_wq))
 			wake_up_interruptible(&read_wq);
 	}
