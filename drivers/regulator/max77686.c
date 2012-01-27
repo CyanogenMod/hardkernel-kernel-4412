@@ -228,7 +228,7 @@ static int max77686_get_enable_register(struct regulator_dev *rdev,
 	unsigned int mode;
 	struct max77686_data *max77686 = rdev_get_drvdata(rdev);
 
-	if (rid > ARRAY_SIZE(max77686_opmode_reg))
+	if (rid >= ARRAY_SIZE(max77686_opmode_reg))
 		return -EINVAL;
 
 	mode = max77686->opmode_data[rid].mode;
