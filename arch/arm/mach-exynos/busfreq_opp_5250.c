@@ -64,9 +64,8 @@ enum busfreq_level_idx {
 	LV_1,
 	LV_2,
 	LV_3,
-	LV_4,
-	LV_5,
-	LV_END
+	LV_INT_END,
+	LV_MIF_END = LV_3,
 };
 
 static struct busfreq_table *exynos5_busfreq_table;
@@ -74,69 +73,98 @@ static struct busfreq_table *exynos5_busfreq_table;
 static struct busfreq_table exynos5_busfreq_table_for800[] = {
 	{LV_0, 800000, 1000000, 0, 0, 0},
 	{LV_1, 400000, 1000000, 0, 0, 0},
-	{LV_2, 267000, 1000000, 0, 0, 0},
-	{LV_3, 200000, 1000000, 0, 0, 0},
-	{LV_4, 160000, 1000000, 0, 0, 0},
-	{LV_5, 100000, 1000000, 0, 0, 0},
+	{LV_2, 100000, 1000000, 0, 0, 0},
 };
 
 static struct busfreq_table exynos5_busfreq_table_for667[] = {
 	{LV_0, 667000, 1000000, 0, 0, 0},
 	{LV_1, 334000, 1000000, 0, 0, 0},
-	{LV_2, 222000, 1000000, 0, 0, 0},
-	{LV_3, 167000, 1000000, 0, 0, 0},
-	{LV_4, 111000, 1000000, 0, 0, 0},
-	{LV_5, 95000, 1000000, 0, 0, 0},
+	{LV_2, 111000, 1000000, 0, 0, 0},
 };
 
 static struct busfreq_table exynos5_busfreq_table_for533[] = {
 	{LV_0, 533000, 1000000, 0, 0, 0},
 	{LV_1, 267000, 1000000, 0, 0, 0},
-	{LV_2, 178000, 1000000, 0, 0, 0},
-	{LV_3, 133000, 1000000, 0, 0, 0},
-	{LV_4, 107000, 1000000, 0, 0, 0},
-	{LV_5, 67000, 1000000, 0, 0, 0},
+	{LV_2, 107000, 1000000, 0, 0, 0},
 };
 
 static struct busfreq_table exynos5_busfreq_table_for400[] = {
 	{LV_0, 400000, 1000000, 0, 0, 0},
 	{LV_1, 267000, 1000000, 0, 0, 0},
-	{LV_2, 200000, 1000000, 0, 0, 0},
-	{LV_3, 160000, 1000000, 0, 0, 0},
-	{LV_4, 130000, 1000000, 0, 0, 0},
-	{LV_5, 100000, 1000000, 0, 0, 0},
+	{LV_2, 100000, 1000000, 0, 0, 0},
 };
 #define ASV_GROUP	9
 static unsigned int asv_group_index;
 
-static unsigned int exynos5_mif_volt[ASV_GROUP][LV_END] = {
-	/* L0	     L1	      L2        L3	L4      L5 */
-	{1100000, 950000, 950000, 950000, 950000, 950000}, /* ASV0 */
-	{1100000, 950000, 950000, 950000, 950000, 950000}, /* ASV1 */
-	{1100000, 950000, 950000, 950000, 950000, 950000}, /* ASV2 */
-	{1100000, 950000, 950000, 950000, 950000, 950000}, /* ASV3 */
-	{1100000, 950000, 950000, 950000, 950000, 950000}, /* ASV4 */
-	{1100000, 950000, 950000, 950000, 950000, 950000}, /* ASV5 */
-	{1100000, 950000, 950000, 950000, 950000, 950000}, /* ASV6 */
-	{1100000, 950000, 950000, 950000, 950000, 950000}, /* ASV7 */
-	{1100000, 950000, 950000, 950000, 950000, 950000}, /* ASV8 */
+static unsigned int exynos5_mif_volt_for800[ASV_GROUP][LV_MIF_END] = {
+	/* L0	     L1	     L2 */
+	{1100000, 950000, 950000}, /* ASV0 */
+	{1100000, 950000, 950000}, /* ASV1 */
+	{1100000, 950000, 950000}, /* ASV2 */
+	{1100000, 950000, 950000}, /* ASV3 */
+	{1100000, 950000, 950000}, /* ASV4 */
+	{1100000, 950000, 950000}, /* ASV5 */
+	{1100000, 950000, 950000}, /* ASV6 */
+	{1100000, 950000, 950000}, /* ASV7 */
+	{1100000, 950000, 950000}, /* ASV8 */
 };
 
-static unsigned int exynos5250_int_volt[ASV_GROUP][LV_END] = {
-	/* L0	     L1	      L2        L3	L4      L5 */
-	{1050000, 1050000, 1050000, 1050000, 1050000, 1050000}, /* ASV0 */
-	{1050000, 1050000, 1050000, 1050000, 1050000, 1050000}, /* ASV1 */
-	{1050000, 1050000, 1050000, 1050000, 1050000, 1050000}, /* ASV2 */
-	{1050000, 1050000, 1050000, 1050000, 1050000, 1050000}, /* ASV3 */
-	{1050000, 1050000, 1050000, 1050000, 1050000, 1050000}, /* ASV4 */
-	{1050000, 1050000, 1050000, 1050000, 1050000, 1050000}, /* ASV5 */
-	{1050000, 1050000, 1050000, 1050000, 1050000, 1050000}, /* ASV6 */
-	{1050000, 1050000, 1050000, 1050000, 1050000, 1050000}, /* ASV7 */
-	{1050000, 1050000, 1050000, 1050000, 1050000, 1050000}, /* ASV8 */
+static unsigned int exynos5_mif_volt_for667[ASV_GROUP][LV_MIF_END] = {
+	/* L0	     L1	     L2 */
+	{1100000, 950000, 950000}, /* ASV0 */
+	{1100000, 950000, 950000}, /* ASV1 */
+	{1100000, 950000, 950000}, /* ASV2 */
+	{1100000, 950000, 950000}, /* ASV3 */
+	{1100000, 950000, 950000}, /* ASV4 */
+	{1100000, 950000, 950000}, /* ASV5 */
+	{1100000, 950000, 950000}, /* ASV6 */
+	{1100000, 950000, 950000}, /* ASV7 */
+	{1100000, 950000, 950000}, /* ASV8 */
+};
+
+static unsigned int exynos5_mif_volt_for533[ASV_GROUP][LV_MIF_END] = {
+	/* L0	     L1	     L2 */
+	{1050000, 950000, 950000}, /* ASV0 */
+	{1050000, 950000, 950000}, /* ASV1 */
+	{1050000, 950000, 950000}, /* ASV2 */
+	{1050000, 950000, 950000}, /* ASV3 */
+	{1050000, 950000, 950000}, /* ASV4 */
+	{1050000, 950000, 950000}, /* ASV5 */
+	{1050000, 950000, 950000}, /* ASV6 */
+	{1050000, 950000, 950000}, /* ASV7 */
+	{1050000, 950000, 950000}, /* ASV8 */
+};
+
+static unsigned int exynos5_mif_volt_for400[ASV_GROUP][LV_MIF_END] = {
+	/* L0	     L1	     L2 */
+	{1000000, 950000, 950000}, /* ASV0 */
+	{1000000, 950000, 950000}, /* ASV1 */
+	{1000000, 950000, 950000}, /* ASV2 */
+	{1000000, 950000, 950000}, /* ASV3 */
+	{1000000, 950000, 950000}, /* ASV4 */
+	{1000000, 950000, 950000}, /* ASV5 */
+	{1000000, 950000, 950000}, /* ASV6 */
+	{1000000, 950000, 950000}, /* ASV7 */
+	{1000000, 950000, 950000}, /* ASV8 */
+};
+
+static unsigned int (*exynos5_mif_volt)[LV_MIF_END];
+
+static unsigned int exynos5250_int_volt[ASV_GROUP][LV_INT_END] = {
+	/* L0	     L1	      L2       L3 */
+	{1050000, 1050000, 1050000, 1050000}, /* ASV0 */
+	{1050000, 1050000, 1050000, 1050000}, /* ASV1 */
+	{1050000, 1050000, 1050000, 1050000}, /* ASV2 */
+	{1050000, 1050000, 1050000, 1050000}, /* ASV3 */
+	{1050000, 1050000, 1050000, 1050000}, /* ASV4 */
+	{1050000, 1050000, 1050000, 1050000}, /* ASV5 */
+	{1050000, 1050000, 1050000, 1050000}, /* ASV6 */
+	{1050000, 1050000, 1050000, 1050000}, /* ASV7 */
+	{1050000, 1050000, 1050000, 1050000}, /* ASV8 */
 };
 
 /* For CMU_LEX */
-static unsigned int clkdiv_lex[LV_END][2] = {
+static unsigned int clkdiv_lex[LV_INT_END][2] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVATCLK_LEX, DIVPCLK_LEX }
@@ -145,24 +173,18 @@ static unsigned int clkdiv_lex[LV_END][2] = {
 	/* ATCLK_LEX L0 : 200MHz */
 	{0, 1},
 
-	/* ATCLK_LEX L1 : 200MHz */
+	/* ATCLK_LEX L1 : 166MHz */
 	{0, 1},
 
-	/* ATCLK_LEX L2 : 166MHz */
+	/* ATCLK_LEX L2 : 133MHz */
 	{0, 1},
 
-	/* ATCLK_LEX L3 : 133MHz */
-	{0, 1},
-
-	/* ATCLK_LEX L4 : 114MHz */
-	{0, 1},
-
-	/* ATCLK_LEX L5 : 100MHz */
+	/* ATCLK_LEX L3 : 114MHz */
 	{0, 1},
 };
 
 /* For CMU_R0X */
-static unsigned int clkdiv_r0x[LV_END][1] = {
+static unsigned int clkdiv_r0x[LV_INT_END][1] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVPCLK_R0X }
@@ -171,24 +193,18 @@ static unsigned int clkdiv_r0x[LV_END][1] = {
 	/* ACLK_PR0X L0 : 133MHz */
 	{1},
 
-	/* ACLK_PR0X L1 : 133MHz */
+	/* ACLK_DR0X L1 : 100MHz */
 	{1},
 
-	/* ACLK_DR0X L2 : 100MHz */
+	/* ACLK_PR0X L2 : 80MHz */
 	{1},
 
-	/* ACLK_PR0X L3 : 80MHz */
-	{1},
-
-	/* ACLK_PR0X L4 : 67MHz */
-	{1},
-
-	/* ACLK_PR0X L5 : 50MHz */
+	/* ACLK_PR0X L3 : 67MHz */
 	{1},
 };
 
 /* For CMU_R1X */
-static unsigned int clkdiv_r1x[LV_END][1] = {
+static unsigned int clkdiv_r1x[LV_INT_END][1] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVPCLK_R1X }
@@ -197,24 +213,18 @@ static unsigned int clkdiv_r1x[LV_END][1] = {
 	/* ACLK_PR1X L0 : 133MHz */
 	{1},
 
-	/* ACLK_PR1X L1 : 133MHz */
+	/* ACLK_DR1X L1 : 100MHz */
 	{1},
 
-	/* ACLK_DR1X L2 : 100MHz */
+	/* ACLK_PR1X L2 : 80MHz */
 	{1},
 
-	/* ACLK_PR1X L3 : 80MHz */
-	{1},
-
-	/* ACLK_PR1X L4 : 67MHz */
-	{1},
-
-	/* ACLK_PR1X L5 : 50MHz */
+	/* ACLK_PR1X L3 : 67MHz */
 	{1},
 };
 
 /* For CMU_TOP */
-static unsigned int clkdiv_top[LV_END][10] = {
+static unsigned int clkdiv_top[LV_INT_END][10] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVACLK400_ISP, DIVACLK400_IOP, DIVACLK266, DIVACLK_200, DIVACLK_66_PRE,
@@ -224,24 +234,18 @@ static unsigned int clkdiv_top[LV_END][10] = {
 	/* ACLK_400_ISP L0 : 400MHz */
 	{1, 1, 2, 3, 1, 5, 0, 1, 2, 2},
 
-	/* ACLK_400_ISP L1 : 400MHz */
-	{1, 1, 2, 3, 1, 5, 0, 1, 2, 2},
-
-	/* ACLK_400_ISP L2 : 267MHz */
+	/* ACLK_400_ISP L1 : 267MHz */
 	{2, 3, 3, 4, 1, 5, 1, 2, 2, 2},
 
-	/* ACLK_400_ISP L3 : 200MHz */
+	/* ACLK_400_ISP L2 : 200MHz */
 	{3, 3, 4, 5, 1, 5, 2, 3, 2, 2},
 
-	/* ACLK_400_ISP L4 : 160MHz */
+	/* ACLK_400_ISP L3 : 160MHz */
 	{4, 4, 5, 6, 1, 5, 3, 4, 5, 5},
-
-	/* ACLK_400_ISP L5 : 100MHz */
-	{7, 7, 7, 7, 1, 5, 7, 7, 7, 7},
 };
 
 /* For CMU_CDREX */
-static unsigned int __maybe_unused clkdiv_cdrex_for800[LV_END][9] = {
+static unsigned int __maybe_unused clkdiv_cdrex_for800[LV_MIF_END][9] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVMCLK_DPHY, DIVMCLK_CDREX2, DIVACLK_CDREX, DIVMCLK_CDREX,
@@ -254,20 +258,11 @@ static unsigned int __maybe_unused clkdiv_cdrex_for800[LV_END][9] = {
 	/* MCLK_CDREX L1: 400MHz */
 	{0, 1, 1, 1, 5, 2, 1, 5, 1},
 
-	/* MCLK_CDREX L2: 267MHz */
-	{0, 2, 1, 2, 5, 3, 1, 6, 1},
-
-	/* MCLK_CDREX L3: 200MHz */
-	{0, 3, 1, 3, 5, 4, 1, 7, 1},
-
-	/* MCLK_CDREX L4: 160MHz */
-	{0, 4, 1, 4, 5, 7, 1, 15, 1},
-
-	/* MCLK_CDREX L5: 100MHz */
+	/* MCLK_CDREX L2: 100MHz */
 	{0, 7, 1, 2, 7, 7, 1, 15, 1},
 };
 
-static unsigned int __maybe_unused clkdiv_cdrex_for667[LV_END][9] = {
+static unsigned int __maybe_unused clkdiv_cdrex_for667[LV_MIF_END][9] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVMCLK_DPHY, DIVMCLK_CDREX2, DIVACLK_CDREX, DIVMCLK_CDREX,
@@ -280,20 +275,11 @@ static unsigned int __maybe_unused clkdiv_cdrex_for667[LV_END][9] = {
 	/* MCLK_CDREX L1: 334MHz */
 	{0, 1, 1, 1, 4, 2, 1, 5, 1},
 
-	/* MCLK_CDREX L2: 222MHz */
-	{0, 2, 1, 2, 4, 3, 1, 6, 1},
-
-	/* MCLK_CDREX L3: 167MHz */
-	{0, 3, 1, 3, 4, 4, 1, 7, 1},
-
-	/* MCLK_CDREX L4: 111MHz */
+	/* MCLK_CDREX L2: 111MHz */
 	{0, 5, 1, 4, 4, 5, 1, 8, 1},
-
-	/* MCLK_CDREX L5: 95MHz */
-	{0, 6, 1, 5, 4, 5, 1, 8, 1},
 };
 
-static unsigned int clkdiv_cdrex_for533[LV_END][9] = {
+static unsigned int clkdiv_cdrex_for533[LV_MIF_END][9] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVMCLK_DPHY, DIVMCLK_CDREX2, DIVACLK_CDREX, DIVMCLK_CDREX,
@@ -306,20 +292,11 @@ static unsigned int clkdiv_cdrex_for533[LV_END][9] = {
 	/* MCLK_CDREX L1: 267MHz */
 	{0, 1, 1, 1, 3, 2, 1, 5, 1},
 
-	/* MCLK_CDREX L2: 178MHz */
-	{0, 2, 1, 2, 3, 3, 1, 6, 1},
-
-	/* MCLK_CDREX L3: 133MHz */
-	{0, 3, 1, 3, 3, 4, 1, 7, 1},
-
-	/* MCLK_CDREX L4: 107MHz */
+	/* MCLK_CDREX L2: 107MHz */
 	{0, 4, 1, 4, 3, 5, 1, 8, 1},
-
-	/* MCLK_CDREX L5: 67MHz */
-	{0, 7, 1, 3, 7, 7, 1, 15, 1},
 };
 
-static unsigned int __maybe_unused clkdiv_cdrex_for400[LV_END][9] = {
+static unsigned int __maybe_unused clkdiv_cdrex_for400[LV_MIF_END][9] = {
 	/*
 	 * Clock divider value for following
 	 * { DIVMCLK_DPHY, DIVMCLK_CDREX2, DIVACLK_CDREX, DIVMCLK_CDREX,
@@ -332,16 +309,7 @@ static unsigned int __maybe_unused clkdiv_cdrex_for400[LV_END][9] = {
 	/* MCLK_CDREX L1: 267MHz */
 	{1, 2, 1, 2, 2, 2, 1, 5, 1},
 
-	/* MCLK_CDREX L2: 200MHz */
-	{1, 3, 1, 3, 2, 3, 1, 6, 1},
-
-	/* MCLK_CDREX L3: 160MHz */
-	{1, 4, 1, 4, 2, 4, 1, 7, 1},
-
-	/* MCLK_CDREX L4: 133MHz */
-	{1, 5, 1, 5, 2, 5, 1, 8, 1},
-
-	/* MCLK_CDREX L5: 100MHz */
+	/* MCLK_CDREX L2: 100MHz */
 	{1, 7, 1, 2, 7, 7, 1, 15, 1},
 };
 
@@ -358,17 +326,16 @@ static void exynos5250_set_bus_volt(void)
 
 	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group_index);
 
-	for (i = 0 ; i < LV_END ; i++)
+	for (i = 0 ; i < LV_MIF_END ; i++)
 		exynos5_busfreq_table[i].volt =
 			exynos5_mif_volt[asv_group_index][i];
 
 	return;
 }
 
-unsigned int exynos5250_target(unsigned int div_index)
+static void exynos5250_target_for_mif(int div_index)
 {
 	unsigned int tmp;
-	unsigned int tmp2;
 
 	/* Change Divider - CDREX */
 	tmp = __raw_readl(EXYNOS5_CLKDIV_CDREX);
@@ -408,6 +375,12 @@ unsigned int exynos5250_target(unsigned int div_index)
 	do {
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_CDREX2);
 	} while (tmp & 0x1);
+}
+
+static void exynos5250_target_for_int(int div_index)
+{
+	unsigned int tmp;
+	unsigned int tmp2;
 
 	/* Change Divider - TOP */
 	tmp = __raw_readl(EXYNOS5_CLKDIV_TOP0);
@@ -458,7 +431,7 @@ unsigned int exynos5250_target(unsigned int div_index)
 	tmp &= ~(EXYNOS5_CLKDIV_LEX_ATCLK_LEX_MASK | EXYNOS5_CLKDIV_LEX_PCLK_LEX_MASK);
 
 	tmp |= ((clkdiv_lex[div_index][0] << EXYNOS5_CLKDIV_LEX_ATCLK_LEX_SHIFT) |
-		(clkdiv_lex[div_index][1] << EXYNOS5_CLKDIV_LEX_PCLK_LEX_SHIFT));
+			(clkdiv_lex[div_index][1] << EXYNOS5_CLKDIV_LEX_PCLK_LEX_SHIFT));
 
 	__raw_writel(tmp, EXYNOS5_CLKDIV_LEX);
 
@@ -491,15 +464,19 @@ unsigned int exynos5250_target(unsigned int div_index)
 	do {
 		tmp = __raw_readl(EXYNOS5_CLKDIV_STAT_R1X);
 	} while (tmp & 0x10);
+}
 
-	return div_index;
+void exynos5250_target(int mif_index, int int_index)
+{
+	exynos5250_target_for_mif(mif_index);
+	exynos5250_target_for_int(int_index);
 }
 
 unsigned int exynos5250_get_table_index(struct opp *opp)
 {
 	unsigned int index;
 
-	for (index = LV_0; index < LV_END; index++)
+	for (index = LV_0; index < LV_MIF_END; index++)
 		if (opp_get_freq(opp) == exynos5_busfreq_table[index].mem_clk)
 			break;
 
@@ -654,15 +631,19 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	if (cdrexfreq == 800000) {
 		clkdiv_cdrex = clkdiv_cdrex_for800;
 		exynos5_busfreq_table = exynos5_busfreq_table_for800;
+		exynos5_mif_volt = exynos5_mif_volt_for800;
 	} else if (cdrexfreq == 666857) {
 		clkdiv_cdrex = clkdiv_cdrex_for667;
 		exynos5_busfreq_table = exynos5_busfreq_table_for667;
+		exynos5_mif_volt = exynos5_mif_volt_for667;
 	} else if (cdrexfreq == 533000) {
 		clkdiv_cdrex = clkdiv_cdrex_for533;
 		exynos5_busfreq_table = exynos5_busfreq_table_for533;
+		exynos5_mif_volt = exynos5_mif_volt_for533;
 	} else if (cdrexfreq == 400000) {
 		clkdiv_cdrex = clkdiv_cdrex_for400;
 		exynos5_busfreq_table = exynos5_busfreq_table_for400;
+		exynos5_mif_volt = exynos5_mif_volt_for400;
 	} else {
 		dev_err(dev, "Don't support cdrex table\n");
 		return -EINVAL;
@@ -670,7 +651,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 
 	exynos5250_set_bus_volt();
 
-	for (i = 0; i < LV_END; i++) {
+	for (i = 0; i < LV_MIF_END; i++) {
 		ret = opp_add(dev, exynos5_busfreq_table[i].mem_clk,
 				exynos5_busfreq_table[i].volt);
 		if (ret) {
@@ -679,20 +660,8 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		}
 	}
 
-	if (cdrexfreq == 800000) {
-		/* Not yet */
-	} else if (cdrexfreq == 666857) {
-		/* Not yet */
-	} else if (cdrexfreq == 533000) {
-		opp_disable(dev, 133000);
-		opp_disable(dev, 107000);
-		opp_disable(dev, 67000);
-	} else if (cdrexfreq == 400000) {
-		/* Not yet */
-	}
-
 	data->table = exynos5_busfreq_table;
-	data->table_size = LV_END;
+	data->table_size = LV_MIF_END;
 
 	/* Find max frequency */
 	data->max_opp = opp_find_freq_floor(dev, &maxfreq);

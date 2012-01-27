@@ -149,7 +149,7 @@ static void exynos_busfreq_timer(struct work_struct *work)
 			data->busfreq_prepare(index);
 	}
 
-	data->target(index);
+	data->target(index, index);
 
 	if (newfreq < currfreq) {
 		if (data->busfreq_post)
@@ -193,7 +193,7 @@ static int exynos_buspm_notifier_event(struct notifier_block *this,
 		index = data->get_table_index(data->max_opp);
 		if (data->busfreq_prepare)
 			data->busfreq_prepare(index);
-		data->target(index);
+		data->target(index, index);
 		data->curr_opp = data->max_opp;
 		mutex_unlock(&busfreq_lock);
 		return NOTIFY_OK;
@@ -262,7 +262,7 @@ static int exynos_busfreq_request_event(struct notifier_block *this,
 			data->busfreq_prepare(index);
 	}
 
-	data->target(index);
+	data->target(index, index);
 
 	if (newfreq < curr_freq) {
 		if (data->busfreq_post)
