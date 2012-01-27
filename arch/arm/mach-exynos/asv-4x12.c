@@ -20,6 +20,8 @@
 #include <mach/asv.h>
 #include <mach/map.h>
 
+#include <plat/cpu.h>
+
 /* ASV function for Fused Chip */
 #define IDS_ARM_OFFSET	24
 #define IDS_ARM_MASK	0xFF
@@ -70,19 +72,20 @@ static int exynos4x12_fuse_asv_store_result(struct samsung_asv *asv_info)
 	pr_info("EXYNOS4X12: IDS : %d HPM : %d RESULT : %d\n",
 		asv_info->ids_result, asv_info->hpm_result, exynos_result_of_asv);
 
-	switch (exynos_result_of_asv) {
-	case 0:
-	case 1:
-	case 2:
-	case 3:
-		exynos4x12_set_abb(ABB_MODE_100V);
-		break;
+	if (soc_is_exynos4412()) {
+		switch (exynos_result_of_asv) {
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+			exynos4x12_set_abb(ABB_MODE_100V);
+			break;
 
-	default:
-		exynos4x12_set_abb(ABB_MODE_130V);
-		break;
+		default:
+			exynos4x12_set_abb(ABB_MODE_130V);
+			break;
+		}
 	}
-
 	return 0;
 }
 

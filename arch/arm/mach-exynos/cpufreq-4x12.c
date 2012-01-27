@@ -470,11 +470,13 @@ static void exynos4x12_set_frequency(unsigned int old_index,
 		}
 	}
 
-	if ((exynos_result_of_asv > 3) && (exynos_result_of_asv < 11)) {
-		if (new_index >= NO_ABB_LIMIT)
-			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
-		else
-			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_130V);
+	if (soc_is_exynos4412()) {
+		if ((exynos_result_of_asv > 3) && (exynos_result_of_asv < 11)) {
+			if (new_index >= NO_ABB_LIMIT)
+				exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
+			else
+				exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_130V);
+		}
 	}
 }
 
