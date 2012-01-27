@@ -25,6 +25,7 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 	int w, h;
 	struct fimg2d_rect *r;
 	struct fimg2d_clip *c;
+	struct fimg2d_scale *s;
 
 	/* DST op makes no effect */
 	if (u->op < 0 || u->op == BLIT_OP_DST || u->op >= BLIT_OP_END) {
@@ -104,6 +105,22 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 		}
 	}
 
+	if (u->scaling && u->scaling->mode != NO_SCALING) {
+		s = u->scaling;
+
+		if (s->factor == SCALING_PIXELS) {
+			if (!s->src_w || !s->src_h || !s->dst_w || !s->dst_h) {
+				printk(KERN_ERR "%s: invalid scale ratio in pixels\n", __func__);
+				return -1;
+			}
+		} else {
+			if (!s->scale_w || !s->scale_h) {
+				printk(KERN_ERR "%s: invalid scale ratio\n", __func__);
+				return -1;
+			}
+		}
+	}
+
 	return 0;
 }
 
@@ -111,16 +128,14 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 {
 	/* fix up scaling */
 	if (cmd->scaling.mode) {
-		if (cmd->scaling.factor == SCALING_PERCENTAGE) {
-			if ((!cmd->scaling.scale_w && !cmd->scaling.scale_h) ||
-				(cmd->scaling.scale_w == 100 && cmd->scaling.scale_h == 100)) {
-				cmd->scaling.mode = NO_SCALING;
-			}
-		} else if (cmd->scaling.factor == SCALING_PIXELS) {
+		if (cmd->scaling.factor == SCALING_PIXELS) {
 			if ((cmd->scaling.src_w == cmd->scaling.dst_w) &&
 				(cmd->scaling.src_h == cmd->scaling.dst_h)) {
 				cmd->scaling.mode = NO_SCALING;
 			}
+		} else {
+			if (cmd->scaling.scale_w == 100 && cmd->scaling.scale_h == 100)
+				cmd->scaling.mode = NO_SCALING;
 		}
 	}
 

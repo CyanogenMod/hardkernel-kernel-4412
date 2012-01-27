@@ -339,7 +339,8 @@ void fimg2d4x_enable_dithering(struct fimg2d_control *info)
 	writel(cfg, info->regs + FIMG2D_BITBLT_COMMAND_REG);
 }
 
-#define MAX_PRECISION 16
+#define MAX_PRECISION		16
+#define DEFAULT_SCALE_RATIO	0x10000
 
 /**
  * scale_factor_to_fixed16 - convert scale factor to fixed pint 16
@@ -350,6 +351,9 @@ inline static unsigned long scale_factor_to_fixed16(int n, int d)
 {
 	int i;
 	u32 fixed16;
+
+	if (!d)
+		return DEFAULT_SCALE_RATIO;
 
 	fixed16 = (n/d) << 16;
 	n %= d;
