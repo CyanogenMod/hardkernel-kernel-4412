@@ -384,12 +384,21 @@ static int i2c_s3c_irq_nextbyte(struct s3c24xx_i2c *i2c, unsigned long iicstat)
 					 * forces us to send a new START
 					 * when we change direction */
 
+					dev_warn(i2c->dev, "Cannot do this\n");
 					s3c24xx_i2c_stop(i2c, -EINVAL);
 				}
 
+				/* For multiple messages,
+				 * ex)
+				 * Msg[0]: Slave Addr + Write(Addr)
+				 * Msg[1]: Write(Data) */
 				goto retry_write;
 			} else {
 				/* send the new start */
+				/* For multiple messages,
+				 * ex)
+				 * Msg[0]: Slave Addr + Write(Addr)
+				 * Msg[1]: Slave Addr + Read/Write(Data) */
 				s3c24xx_i2c_message_start(i2c, i2c->msg);
 				i2c->state = STATE_START;
 			}
@@ -500,13 +509,6 @@ static int s3c24xx_i2c_set_master(struct s3c24xx_i2c *i2c)
 	unsigned long iicstat;
 	int timeout = 400;
 
-	/* if hang-up of HDMIPHY occured reduce timeout
-	 * The controller will work after reset, so waiting
-	 * 400 ms will cause unneccessary system hangup
-	 */
-	if (s3c24xx_i2c_is2440_hdmiphy(i2c))
-		timeout = 10;
-
 	while (timeout-- > 0) {
 		iicstat = readl(i2c->regs + S3C2410_IICSTAT);
 
@@ -514,15 +516,6 @@ static int s3c24xx_i2c_set_master(struct s3c24xx_i2c *i2c)
 			return 0;
 
 		msleep(1);
-	}
-
-	/* hang-up of bus dedicated for HDMIPHY occured, resetting */
-	if (s3c24xx_i2c_is2440_hdmiphy(i2c)) {
-		writel(0, i2c->regs + S3C2410_IICCON);
-		writel(0, i2c->regs + S3C2410_IICSTAT);
-		writel(0, i2c->regs + S3C2410_IICDS);
-
-		return 0;
 	}
 
 	return -ETIMEDOUT;
