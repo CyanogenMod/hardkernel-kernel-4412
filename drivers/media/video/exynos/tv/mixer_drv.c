@@ -116,6 +116,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 		/* turn on connected output device through link
 		 * with mixer */
 		mxr_output_get(mdev);
+
 		for (i = 0; i < MXR_MAX_SUB_MIXERS; ++i) {
 			sub_mxr = &mdev->sub_mxr[i];
 			if (sub_mxr->local) {
@@ -125,6 +126,8 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 				layer->ops.stream_set(layer, 1);
 			}
 		}
+		/* Set the TVOUT register about gsc-mixer local path */
+		mxr_reg_local_path_set(mdev, mdev->mxr0_gsc, mdev->mxr1_gsc, mdev->flags);
 	}
 
 	/* Alpha blending configuration always can be changed
@@ -183,6 +186,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 			return ret;
 		}
 	}
+
 	mutex_unlock(&mdev->s_mutex);
 	mxr_reg_dump(mdev);
 
@@ -998,7 +1002,6 @@ static int mxr_link_setup(struct media_entity *entity,
 	struct sub_mxr_device *sub_mxr = entity_to_sub_mxr(entity);
 	struct mxr_device *mdev = sub_mxr_to_mdev(sub_mxr);
 	int i;
-	int mxr_num = 0;
 	int gsc_num = 0;
 
 	/* difficult to get dev ptr */
@@ -1027,11 +1030,6 @@ static int mxr_link_setup(struct media_entity *entity,
 				sub_mxr->use = 1;
 	}
 
-	if (!strcmp(local->entity->name, "s5p-mixer0"))
-		mxr_num = MXR_SUB_MIXER0;
-	else if (!strcmp(local->entity->name, "s5p-mixer1"))
-		mxr_num = MXR_SUB_MIXER1;
-
 	if (!strcmp(remote->entity->name, "exynos-gsc-sd.0"))
 		gsc_num = 0;
 	else if (!strcmp(remote->entity->name, "exynos-gsc-sd.1"))
@@ -1041,7 +1039,13 @@ static int mxr_link_setup(struct media_entity *entity,
 	else if (!strcmp(remote->entity->name, "exynos-gsc-sd.3"))
 		gsc_num = 3;
 
-	mxr_reg_local_path_set(mdev, mxr_num, gsc_num, flags);
+	if (!strcmp(local->entity->name, "s5p-mixer0"))
+		mdev->mxr0_gsc = gsc_num;
+	else if (!strcmp(local->entity->name, "s5p-mixer1"))
+		mdev->mxr1_gsc = gsc_num;
+
+	/* deliver those variables to mxr_streamer_get() */
+	mdev->flags = flags;
 	return 0;
 }
 

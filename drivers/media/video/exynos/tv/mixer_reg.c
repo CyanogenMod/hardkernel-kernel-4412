@@ -695,7 +695,7 @@ void mxr_reg_set_mbus_fmt(struct mxr_device *mdev,
 	spin_unlock_irqrestore(&mdev->reg_slock, flags);
 }
 
-void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr_num, int gsc_num,
+void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr0_gsc, int mxr1_gsc,
 		u32 flags)
 {
 	u32 val = 0;
@@ -721,11 +721,11 @@ void mxr_reg_local_path_set(struct mxr_device *mdev, int mxr_num, int gsc_num,
 	if (flags & MEDIA_LNK_FL_ENABLED) {
 		if (mxr0_local) {
 			val |= DISP1BLK_CFG_MIXER0_VALID;
-			val |= DISP1BLK_CFG_MIXER0_SRC_GSC(gsc_num);
+			val |= DISP1BLK_CFG_MIXER0_SRC_GSC(mxr0_gsc);
 		}
 		if (mxr1_local) {
 			val |= DISP1BLK_CFG_MIXER1_VALID;
-			val |= DISP1BLK_CFG_MIXER1_SRC_GSC(gsc_num);
+			val |= DISP1BLK_CFG_MIXER1_SRC_GSC(mxr1_gsc);
 		}
 	}
 	mxr_dbg(mdev, "%s: SYSREG value = 0x%x\n", __func__, val);
