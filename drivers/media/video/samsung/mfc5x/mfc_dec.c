@@ -30,7 +30,6 @@
 #include "mfc_reg.h"
 #include "mfc_mem.h"
 #include "mfc_buf.h"
-#include "mfc_pm.h"
 
 #undef DUMP_STREAM
 
@@ -1857,18 +1856,6 @@ int mfc_init_decoding(struct mfc_inst_ctx *ctx, union mfc_args *args)
 
 		atomic_inc(&ctx->dev->busfreq_lock_cnt);
 		ctx->busfreq_flag = true;
-	}
-#endif
-
-#ifdef CONFIG_CPU_FREQ
-	if (ctx->width >= MAX_HOR_RES || ctx->height >= MAX_VER_RES) {
-		if (ctx->codecid == H264_DEC) {
-			if (mfc_cpufreq_lock(CPU_LOCK_FREQ) == 0)
-				ctx->cpufreq_locked = 1;
-			else
-				mfc_err("failed to lock cpufreq: %u KHz\n",
-						CPU_LOCK_FREQ);
-		}
 	}
 #endif
 

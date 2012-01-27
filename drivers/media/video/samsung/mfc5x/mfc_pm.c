@@ -41,47 +41,6 @@ static struct mfc_pm *pm;
 atomic_t clk_ref;
 #endif
 
-#ifdef CONFIG_CPU_FREQ
-#include <mach/cpufreq.h>
-
-int mfc_cpufreq_lock(unsigned int freq)
-{
-	int ret = 0;
-	unsigned int level;
-
-	ret = exynos_cpufreq_get_level(freq, &level);
-	if (ret < 0) {
-		printk(KERN_ERR "failed to get cpufreq level: %u KHz\n", freq);
-		return ret;
-	}
-
-	if (atomic_read(&pm->cpufreq_lock_cnt) == 0) {
-		ret = exynos_cpufreq_lock(DVFS_LOCK_ID_MFC, level);
-		if (ret < 0) {
-			printk(KERN_ERR "failed to lock cpufreq level: %d\n", level);
-			return ret;
-		}
-
-		mfc_dbg("CPU frequency locked by MFC [%u KHz(%d)]\n",
-				freq, level);
-	}
-
-	atomic_inc(&pm->cpufreq_lock_cnt);
-
-	return ret;
-}
-
-
-void mfc_cpufreq_lock_free(void)
-{
-	if (atomic_dec_and_test(&pm->cpufreq_lock_cnt)) {
-		exynos_cpufreq_lock_free(DVFS_LOCK_ID_MFC);
-
-		mfc_dbg("CPU frequency lock free by MFC\n");
-	}
-}
-#endif /* CONFIG_CPU_FREQ */
-
 int mfc_init_pm(struct mfc_dev *mfcdev)
 {
 	struct clk *parent, *sclk;

@@ -36,9 +36,6 @@ struct mfc_pm {
 #ifdef CONFIG_PM_RUNTIME
 	struct device	*device;
 #endif
-#ifdef CONFIG_CPU_FREQ
-	atomic_t		cpufreq_lock_cnt; /* CPU frequency lock count */
-#endif
 };
 
 #ifdef CONFIG_VIDEO_MFC_VCM_UMP

@@ -338,13 +338,6 @@ static int mfc_release(struct inode *inode, struct file *file)
 	}
 #endif
 
-#ifdef CONFIG_CPU_FREQ
-	if (mfc_ctx->cpufreq_locked) {
-		mfc_cpufreq_lock_free();
-		mfc_ctx->cpufreq_locked = 0;
-	}
-#endif
-
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	mfcdev->drm_playback = 0;
 

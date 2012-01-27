@@ -14,8 +14,6 @@
 #ifndef __MFC_PM_H
 #define __MFC_PM_H __FILE__
 
-#define CPU_LOCK_FREQ	500000
-
 int mfc_init_pm(struct mfc_dev *mfcdev);
 void mfc_final_pm(struct mfc_dev *mfcdev);
 
@@ -27,10 +25,5 @@ int mfc_power_off(void);
 bool mfc_power_chk(void);
 #endif
 void mfc_pd_enable(void);
-
-#ifdef CONFIG_CPU_FREQ
-int mfc_cpufreq_lock(unsigned int freq);
-void mfc_cpufreq_lock_free(void);
-#endif
 
 #endif /* __MFC_PM_H */
