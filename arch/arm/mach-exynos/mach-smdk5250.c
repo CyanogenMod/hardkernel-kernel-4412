@@ -2204,20 +2204,6 @@ static struct s5p_platform_cec hdmi_cec_data __initdata = {
 static void __init exynos_reserve_mem(void)
 {
 	static struct cma_region regions[] = {
-#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM
-		{
-			.name = "pmem",
-			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K,
-			.start = 0,
-		},
-#endif
-#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1
-		{
-			.name = "pmem_gpu1",
-			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K,
-			.start = 0,
-		},
-#endif
 		{
 			.name = "ion",
 			.size = 30 * SZ_1M,
@@ -2310,7 +2296,6 @@ static void __init exynos_reserve_mem(void)
 #ifdef CONFIG_EXYNOS_C2C
 		"samsung-c2c=c2c_shdmem;"
 #endif
-		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0=fimd;exynos5-fb.1=fimd;"
 		"samsung-rp=srp;"
 		"exynos-gsc.0=gsc0;exynos-gsc.1=gsc1;exynos-gsc.2=gsc2;exynos-gsc.3=gsc3;"

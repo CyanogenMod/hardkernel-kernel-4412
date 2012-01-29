@@ -32,9 +32,6 @@
 #if defined(CONFIG_CMA)
 #include <linux/cma.h>
 #endif
-#ifdef CONFIG_ANDROID_PMEM
-#include <linux/android_pmem.h>
-#endif
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -1725,53 +1722,6 @@ static struct s3c_hwmon_pdata smdkv310_hwmon_pdata __initdata = {
 };
 #endif
 
-#ifdef CONFIG_ANDROID_PMEM
-static struct android_pmem_platform_data pmem_pdata = {
-	.name		= "pmem",
-	.no_allocator	= 1,
-	.cached		= 0,
-	.start		= 0,
-	.size		= 0
-};
-
-static struct android_pmem_platform_data pmem_gpu1_pdata = {
-	.name		= "pmem_gpu1",
-	.no_allocator	= 1,
-	.cached		= 0,
-	.start		= 0,
-	.size		= 0,
-};
-
-static struct platform_device pmem_device = {
-	.name	= "android_pmem",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &pmem_pdata
-	},
-};
-
-static struct platform_device pmem_gpu1_device = {
-	.name	= "android_pmem",
-	.id	= 1,
-	.dev	= {
-		.platform_data = &pmem_gpu1_pdata
-	},
-};
-
-static void __init android_pmem_set_platdata(void)
-{
-#if defined(CONFIG_CMA)
-	pmem_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K;
-	pmem_gpu1_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K;
-#else
-	pmem_pdata.start = (u32)s5p_get_media_memory_bank(S5P_MDEV_PMEM, 0);
-	pmem_pdata.size = (u32)s5p_get_media_memsize_bank(S5P_MDEV_PMEM, 0);
-	pmem_gpu1_pdata.start = (u32)s5p_get_media_memory_bank(S5P_MDEV_PMEM_GPU1, 0);
-	pmem_gpu1_pdata.size = (u32)s5p_get_media_memsize_bank(S5P_MDEV_PMEM_GPU1, 0);
-#endif
-}
-#endif
-
 /* USB EHCI */
 #ifdef CONFIG_USB_EHCI_S5P
 static struct s5p_ehci_platdata smdkv310_ehci_pdata;
@@ -1817,10 +1767,6 @@ static struct platform_device exynos4_busfreq = {
 };
 
 static struct platform_device *smdkv310_devices[] __initdata = {
-#ifdef CONFIG_ANDROID_PMEM
-	&pmem_device,
-	&pmem_gpu1_device,
-#endif
 #ifdef CONFIG_S3C_DEV_HSMMC
 	&s3c_device_hsmmc0,
 #endif
@@ -2153,20 +2099,6 @@ static void __init smdkv310_smsc911x_init(void)
 static void __init exynos4_reserve_mem(void)
 {
 	static struct cma_region regions[] = {
-#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM
-		{
-			.name = "pmem",
-			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K,
-			.start = 0,
-		},
-#endif
-#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1
-		{
-			.name = "pmem_gpu1",
-			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K,
-			.start = 0,
-		},
-#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_JPEG
 		{
 			.name = "jpeg",
@@ -2307,7 +2239,6 @@ static void __init exynos4_reserve_mem(void)
 	struct cma_region *regions_secure = NULL;
 #endif
 	static const char map[] __initconst =
-		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0=fimd;exynos4-fb.0=fimd;"
 		"s3c-fimc.0=fimc0;s3c-fimc.1=fimc1;s3c-fimc.2=fimc2;s3c-fimc.3=fimc3;"
 		"exynos4210-fimc.0=fimc0;exynos4210-fimc.1=fimc1;exynos4210-fimc.2=fimc2;exynos4210-fimc.3=fimc3;"
@@ -2527,9 +2458,6 @@ static void __init smdkv310_machine_init(void)
 #ifdef CONFIG_S3C_DEV_ADC1
 	s3c24xx_ts1_set_platdata(&s3c_ts_platform);
 #endif
-#endif
-#ifdef CONFIG_ANDROID_PMEM
-	android_pmem_set_platdata();
 #endif
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);

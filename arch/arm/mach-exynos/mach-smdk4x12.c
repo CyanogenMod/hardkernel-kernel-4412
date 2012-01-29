@@ -29,9 +29,6 @@
 #include <linux/v4l2-mediabus.h>
 #include <linux/memblock.h>
 #include <linux/delay.h>
-#ifdef CONFIG_ANDROID_PMEM
-#include <linux/android_pmem.h>
-#endif
 #include <linux/smsc911x.h>
 
 #include <asm/mach/arch.h>
@@ -2680,48 +2677,6 @@ static struct i2c_board_info i2c_devs7[] __initdata = {
 	},
 };
 
-#ifdef CONFIG_ANDROID_PMEM
-static struct android_pmem_platform_data pmem_pdata = {
-	.name		= "pmem",
-	.no_allocator	= 1,
-	.cached		= 0,
-	.start		= 0,
-	.size		= 0
-};
-
-static struct android_pmem_platform_data pmem_gpu1_pdata = {
-	.name		= "pmem_gpu1",
-	.no_allocator	= 1,
-	.cached		= 0,
-	.start		= 0,
-	.size		= 0,
-};
-
-static struct platform_device pmem_device = {
-	.name	= "android_pmem",
-	.id	= 0,
-	.dev	= {
-		.platform_data = &pmem_pdata
-	},
-};
-
-static struct platform_device pmem_gpu1_device = {
-	.name	= "android_pmem",
-	.id	= 1,
-	.dev	= {
-		.platform_data = &pmem_gpu1_pdata
-	},
-};
-
-static void __init android_pmem_set_platdata(void)
-{
-#if defined(CONFIG_CMA)
-	pmem_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K;
-	pmem_gpu1_pdata.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K;
-#endif
-}
-#endif
-
 #ifdef CONFIG_BATTERY_SAMSUNG
 static struct platform_device samsung_device_battery = {
 	.name	= "samsung-fake-battery",
@@ -2914,10 +2869,6 @@ static struct platform_device *smdk4412_devices[] __initdata = {
 };
 
 static struct platform_device *smdk4x12_devices[] __initdata = {
-#ifdef CONFIG_ANDROID_PMEM
-	&pmem_device,
-	&pmem_gpu1_device,
-#endif
 	/* Samsung Power Domain */
 	&exynos4_device_pd[PD_MFC],
 	&exynos4_device_pd[PD_G3D],
@@ -3453,20 +3404,6 @@ static void __init smdk4x12_set_camera_flite_platdata(void)
 static void __init exynos4_reserve_mem(void)
 {
 	static struct cma_region regions[] = {
-#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM
-		{
-			.name = "pmem",
-			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM * SZ_1K,
-			.start = 0,
-		},
-#endif
-#ifdef CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1
-		{
-			.name = "pmem_gpu1",
-			.size = CONFIG_ANDROID_PMEM_MEMSIZE_PMEM_GPU1 * SZ_1K,
-			.start = 0,
-		},
-#endif
 #ifndef CONFIG_VIDEOBUF2_ION
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_TV
 		{
@@ -3637,7 +3574,6 @@ static void __init exynos4_reserve_mem(void)
 #ifdef CONFIG_EXYNOS_C2C
 		"samsung-c2c=c2c_shdmem;"
 #endif
-		"android_pmem.0=pmem;android_pmem.1=pmem_gpu1;"
 		"s3cfb.0/fimd=fimd;exynos4-fb.0/fimd=fimd;"
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 		"s3cfb.0/video=video;exynos4-fb.0/video=video;"
@@ -3887,9 +3823,6 @@ static void __init smdk4x12_machine_init(void)
 	i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
 	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
 
-#ifdef CONFIG_ANDROID_PMEM
-	android_pmem_set_platdata();
-#endif
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
 	mipi_fb_init();
 #endif
