@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_CMD_H_
 #define FIMC_IS_CMD_H_
 
-#define IS_COMMAND_VER 108 /* IS COMMAND VERSION 1.08 */
+#define IS_COMMAND_VER 109 /* IS COMMAND VERSION 1.09 */
 
 enum is_cmd {
 	/* HOST -> IS */
@@ -36,13 +36,12 @@ enum is_cmd {
 	HIC_SIMMIAN_WRITE,
 	HIC_SIMMIAN_READ,
 	HIC_POWER_DOWN,
+	HIC_GET_SET_FILE_ADDR,
+	HIC_LOAD_SET_FILE,
 	HIC_MSG_CONFIG,
 	HIC_MSG_TEST,
 	/* IS -> HOST */
 	IHC_GET_SENSOR_NUMBER = 0x1000,
-	IHC_LOAD_SET_FILE,
-	/* Parameter1 : Address of space to copy a setfile */
-	/* Parameter2 : Space szie */
 	IHC_SET_SHOT_MARK,
 	/* PARAM1 : a frame number */
 	/* PARAM2 : confidence level(smile 0~100) */

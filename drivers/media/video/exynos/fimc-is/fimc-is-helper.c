@@ -139,7 +139,7 @@ static const struct isp_param init_val_isp_preview_still = {
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
-		.cmd = ISP_METERING_COMMAND_MATRIX,
+		.cmd = ISP_METERING_COMMAND_CENTER,
 		.win_pos_x = 0, .win_pos_y = 0,
 		.win_width = DEFAULT_PREVIEW_STILL_WIDTH,
 		.win_height = DEFAULT_PREVIEW_STILL_HEIGHT,
@@ -159,35 +159,27 @@ static const struct isp_param init_val_isp_preview_still = {
 		.err = OTF_OUTPUT_ERROR_NO,
 	},
 	.dma1_output = {
-#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-#else
-		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
-#endif
 		.width = DEFAULT_PREVIEW_STILL_WIDTH,
 		.height = DEFAULT_PREVIEW_STILL_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_YUV422,
 		.bitwidth = DMA_OUTPUT_BIT_WIDTH_8BIT,
 		.plane = DMA_OUTPUT_PLANE_3,
 		.order = DMA_INPUT_ORDER_NO,
-		.buffer_number = 1,
-		.buffer_address = 0x50060400,
+		.buffer_number = 0,
+		.buffer_address = 0,
 		.err = DMA_OUTPUT_ERROR_NO,
 	},
 	.dma2_output = {
-#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-#else
-		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
-#endif
 		.width = DEFAULT_PREVIEW_STILL_WIDTH,
 		.height = DEFAULT_PREVIEW_STILL_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_BAYER,
 		.bitwidth = DMA_OUTPUT_BIT_WIDTH_10BIT,
 		.plane = DMA_OUTPUT_PLANE_1,
 		.order = DMA_OUTPUT_ORDER_GB_BG,
-		.buffer_number = 1,
-		.buffer_address = 0x501D0000,
+		.buffer_number = 0,
+		.buffer_address = 0,
 		.err = DMA_OUTPUT_ERROR_NO,
 	},
 };
@@ -353,7 +345,7 @@ static const struct isp_param init_val_isp_capture = {
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
-		.cmd = ISP_METERING_COMMAND_MATRIX,
+		.cmd = ISP_METERING_COMMAND_CENTER,
 		.win_pos_x = 0, .win_pos_y = 0,
 		.win_width = DEFAULT_CAPTURE_STILL_WIDTH,
 		.win_height = DEFAULT_CAPTURE_STILL_HEIGHT,
@@ -550,7 +542,7 @@ static const struct isp_param init_val_isp_preview_video = {
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
-		.cmd = ISP_METERING_COMMAND_MATRIX,
+		.cmd = ISP_METERING_COMMAND_CENTER,
 		.win_pos_x = 0, .win_pos_y = 0,
 		.win_width = DEFAULT_PREVIEW_VIDEO_WIDTH,
 		.win_height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
@@ -570,35 +562,27 @@ static const struct isp_param init_val_isp_preview_video = {
 		.err = OTF_OUTPUT_ERROR_NO,
 	},
 	.dma1_output = {
-#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-#else
-		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
-#endif
 		.width = DEFAULT_PREVIEW_VIDEO_WIDTH,
 		.height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_YUV422,
 		.bitwidth = DMA_OUTPUT_BIT_WIDTH_8BIT,
 		.plane = DMA_OUTPUT_PLANE_3,
 		.order = DMA_INPUT_ORDER_NO,
-		.buffer_number = 1,
-		.buffer_address = 0x50060400,
+		.buffer_number = 0,
+		.buffer_address = 0,
 		.err = DMA_OUTPUT_ERROR_NO,
 	},
 	.dma2_output = {
-#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-#else
-		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
-#endif
 		.width = DEFAULT_PREVIEW_VIDEO_WIDTH,
 		.height = DEFAULT_PREVIEW_VIDEO_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_BAYER,
 		.bitwidth = DMA_OUTPUT_BIT_WIDTH_10BIT,
 		.plane = DMA_OUTPUT_PLANE_1,
 		.order = DMA_OUTPUT_ORDER_GB_BG,
-		.buffer_number = 1,
-		.buffer_address = 0x501D0000,
+		.buffer_number = 0,
+		.buffer_address = 0,
 		.err = DMA_OUTPUT_ERROR_NO,
 	},
 };
@@ -765,7 +749,7 @@ static const struct isp_param init_val_isp_camcording = {
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
-		.cmd = ISP_METERING_COMMAND_MATRIX,
+		.cmd = ISP_METERING_COMMAND_CENTER,
 		.win_pos_x = 0, .win_pos_y = 0,
 		.win_width = DEFAULT_CAPTURE_VIDEO_WIDTH,
 		.win_height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
@@ -785,27 +769,19 @@ static const struct isp_param init_val_isp_camcording = {
 		.err = OTF_OUTPUT_ERROR_NO,
 	},
 	.dma1_output = {
-#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-#else
-		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
-#endif
 		.width = DEFAULT_CAPTURE_VIDEO_WIDTH,
 		.height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_YUV422,
 		.bitwidth = DMA_OUTPUT_BIT_WIDTH_8BIT,
 		.plane = DMA_OUTPUT_PLANE_3,
 		.order = DMA_INPUT_ORDER_NO,
-		.buffer_number = 1,
-		.buffer_address = 0x50060400,
+		.buffer_number = 0,
+		.buffer_address = 0,
 		.err = DMA_OUTPUT_ERROR_NO,
 	},
 	.dma2_output = {
-#ifndef ISP_DMA
 		.cmd = DMA_OUTPUT_COMMAND_DISABLE,
-#else
-		.cmd = DMA_OUTPUT_COMMAND_ENABLE,
-#endif
 		.width = DEFAULT_CAPTURE_VIDEO_WIDTH,
 		.height = DEFAULT_CAPTURE_VIDEO_HEIGHT,
 		.format = DMA_OUTPUT_FORMAT_BAYER,
@@ -1041,9 +1017,22 @@ void fimc_is_hw_close_sensor(struct fimc_is_dev *dev, u32 id)
 	}
 }
 
-void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev)
+void fimc_is_hw_get_setfile_addr(struct fimc_is_dev *dev)
 {
-	writel(0x00008000, dev->regs + WDT);
+	/* 1. Get FIMC-IS setfile address */
+	fimc_is_hw_wait_intmsr0_intmsd0(dev);
+	writel(HIC_GET_SET_FILE_ADDR, dev->regs + ISSR0);
+	writel(dev->sensor.id, dev->regs + ISSR1);
+	fimc_is_hw_set_intgr0_gd0(dev);
+}
+
+void fimc_is_hw_load_setfile(struct fimc_is_dev *dev)
+{
+	/* 1. Make FIMC-IS power-off state */
+	fimc_is_hw_wait_intmsr0_intmsd0(dev);
+	writel(HIC_LOAD_SET_FILE, dev->regs + ISSR0);
+	writel(dev->sensor.id, dev->regs + ISSR1);
+	fimc_is_hw_set_intgr0_gd0(dev);
 }
 
 int fimc_is_hw_io_init(struct fimc_is_dev *dev)
@@ -1116,7 +1105,7 @@ void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev)
 	cfg = dev->sensor_num;
 	writel(cfg, dev->regs + ISSR3);
 }
-
+#if 0
 void fimc_is_hw_set_load_setfile(struct fimc_is_dev *dev)
 {
 	u32 cfg;
@@ -1129,7 +1118,7 @@ void fimc_is_hw_set_load_setfile(struct fimc_is_dev *dev)
 	cfg = dev->sensor_num;
 	writel(cfg, dev->regs + ISSR3);
 }
-
+#endif
 int fimc_is_hw_get_sensor_num(struct fimc_is_dev *dev)
 {
 	u32 cfg = readl(dev->regs + ISSR11);
@@ -1223,8 +1212,6 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 	case IS_MODE_PREVIEW_STILL:
 		dev->scenario_id = ISS_PREVIEW_STILL;
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
-		clear_bit(IS_ST_RUN, &dev->state);
-		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_PREVIEW_STILL, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_set_intgr0_gd0(dev);
@@ -1232,8 +1219,6 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 	case IS_MODE_PREVIEW_VIDEO:
 		dev->scenario_id = ISS_PREVIEW_VIDEO;
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
-		clear_bit(IS_ST_RUN, &dev->state);
-		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_PREVIEW_VIDEO, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_set_intgr0_gd0(dev);
@@ -1241,8 +1226,6 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 	case IS_MODE_CAPTURE_STILL:
 		dev->scenario_id = ISS_CAPTURE_STILL;
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
-		clear_bit(IS_ST_RUN, &dev->state);
-		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_CAPTURE_STILL, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_set_intgr0_gd0(dev);
@@ -1250,8 +1233,6 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 	case IS_MODE_CAPTURE_VIDEO:
 		dev->scenario_id = ISS_CAPTURE_VIDEO;
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
-		clear_bit(IS_ST_RUN, &dev->state);
-		set_bit(IS_ST_CHANGE_MODE, &dev->state);
 		writel(HIC_CAPTURE_VIDEO, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
 		fimc_is_hw_set_intgr0_gd0(dev);

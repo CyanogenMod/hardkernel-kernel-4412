@@ -62,13 +62,10 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	case IHC_GET_SENSOR_NUMBER:
 		dbg("IHC_GET_SENSOR_NUMBER\n");
 		fimc_is_hw_get_param(dev, 1);
-		dbg("ISP - FW version - %d\n", dev->i2h_cmd.arg[0]);
 		dev->fw.ver = dev->i2h_cmd.arg[0];
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		fimc_is_hw_set_sensor_num(dev);
 		break;
-	case IHC_LOAD_SET_FILE:
-		fimc_is_hw_get_param(dev, 2);
 	case IHC_SET_SHOT_MARK:
 		fimc_is_hw_get_param(dev, 3);
 		break;
@@ -96,12 +93,7 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	switch (dev->i2h_cmd.cmd) {
 	case IHC_GET_SENSOR_NUMBER:
 		fimc_is_hw_set_intgr0_gd0(dev);
-		set_bit(IS_ST_FW_DOWNLOADED, &dev->state);
-		break;
-	case IHC_LOAD_SET_FILE:
-		dev->setfile.base = dev->i2h_cmd.arg[0];
-		dev->setfile.size = dev->i2h_cmd.arg[1];
-		set_bit(IS_ST_SET_FILE, &dev->state);
+		set_bit(IS_ST_FW_LOADED, &dev->state);
 		break;
 	case IHC_SET_SHOT_MARK:
 		break;
@@ -142,40 +134,24 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		case HIC_PREVIEW_VIDEO:
 		case HIC_CAPTURE_STILL:
 		case HIC_CAPTURE_VIDEO:
-			if (test_and_clear_bit(IS_ST_CHANGE_MODE,
-				&dev->state)) {
-				dev->sensor.offset_x = dev->i2h_cmd.arg[1];
-				dev->sensor.offset_y = dev->i2h_cmd.arg[2];
-				set_bit(IS_ST_RUN, &dev->state);
-			}
+			set_bit(IS_ST_CHANGE_MODE, &dev->state);
+			/* Get CAC margin */
+			dev->sensor.offset_x = dev->i2h_cmd.arg[1];
+			dev->sensor.offset_y = dev->i2h_cmd.arg[2];
 			break;
 		case HIC_STREAM_ON:
-			clear_bit(IS_ST_RUN, &dev->state);
+			clear_bit(IS_ST_STREAM_OFF, &dev->state);
 			set_bit(IS_ST_STREAM_ON, &dev->state);
 			break;
 		case HIC_STREAM_OFF:
+			clear_bit(IS_ST_STREAM_ON, &dev->state);
 			set_bit(IS_ST_STREAM_OFF, &dev->state);
-			set_bit(IS_ST_RUN, &dev->state);
 			break;
 		case HIC_SET_PARAMETER:
 			dev->p_region_index1 = 0;
 			dev->p_region_index2 = 0;
 			atomic_set(&dev->p_region_num, 0);
-			if (test_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state))
-				set_bit(IS_ST_RUN, &dev->state);
-			else if (test_bit(IS_ST_INIT_CAPTURE_STILL,
-				&dev->state))
-				set_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state);
-			else if (test_bit(IS_ST_INIT_PREVIEW_VIDEO,
-				&dev->state))
-				set_bit(IS_ST_INIT_CAPTURE_STILL, &dev->state);
-			else if (test_bit(IS_ST_INIT_PREVIEW_STILL,
-				&dev->state))
-				set_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state);
-			else {
-				clear_bit(IS_ST_SET_PARAM, &dev->state);
-				set_bit(IS_ST_RUN, &dev->state);
-			}
+			set_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 
 			if (dev->af.af_state == FIMC_IS_AF_SETCONFIG)
 				dev->af.af_state = FIMC_IS_AF_RUNNING;
@@ -189,17 +165,24 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 		case HIC_GET_STATUS:
 			break;
 		case HIC_OPEN_SENSOR:
-			set_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
+			set_bit(IS_ST_OPEN_SENSOR, &dev->state);
 			break;
 		case HIC_CLOSE_SENSOR:
-			set_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state);
+			clear_bit(IS_ST_OPEN_SENSOR, &dev->state);
 			dev->sensor.id = 0;
 			break;
 		case HIC_MSG_TEST:
 			dbg("Config MSG level was done\n");
 			break;
 		case HIC_POWER_DOWN:
-			set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
+			set_bit(IS_PWR_SUB_IP_POWER_OFF, &dev->power);
+			break;
+		case HIC_GET_SET_FILE_ADDR:
+			dev->setfile.base = dev->i2h_cmd.arg[1];
+			set_bit(IS_ST_SETFILE_LOADED, &dev->state);
+			break;
+		case HIC_LOAD_SET_FILE:
+			set_bit(IS_ST_SETFILE_LOADED, &dev->state);
 			break;
 		}
 		break;
@@ -325,7 +308,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	dev->p_region_index2 = 0;
 	atomic_set(&dev->p_region_num, 0);
 	set_bit(IS_ST_IDLE, &dev->state);
-	set_bit(FIMC_IS_PWR_ST_POWEROFF, &dev->power);
+	set_bit(IS_PWR_ST_POWEROFF, &dev->power);
 	dev->af.af_state = FIMC_IS_AF_IDLE;
 	dbg("FIMC-IS probe completed\n");
 	return 0;
@@ -360,10 +343,14 @@ static int fimc_is_suspend(struct device *dev)
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
+	printk(KERN_INFO "FIMC_IS suspend\n");
 	mutex_lock(&is_dev->lock);
-	clear_bit(FIMC_IS_PWR_ST_RESUMED, &is_dev->power);
-	set_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
+	if (!test_bit(IS_PWR_ST_POWEROFF, &is_dev->power)) {
+		err("not power off state\n");
+		fimc_is_s_power(sd, false);
+	}
 	mutex_unlock(&is_dev->lock);
+	printk(KERN_INFO "FIMC_IS suspend end\n");
 	return 0;
 }
 
@@ -373,10 +360,14 @@ static int fimc_is_resume(struct device *dev)
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
+	printk(KERN_INFO "FIMC_IS resume\n");
 	mutex_lock(&is_dev->lock);
-	clear_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
-	set_bit(FIMC_IS_PWR_ST_RESUMED, &is_dev->power);
+	if (!test_bit(IS_PWR_ST_POWERON, &is_dev->power)) {
+		err("not power on state\n");
+		fimc_is_s_power(sd, true);
+	}
 	mutex_unlock(&is_dev->lock);
+	printk(KERN_INFO "FIMC_IS resume end\n");
 	return 0;
 }
 
@@ -386,10 +377,8 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
-	dbg("fimc_is_runtime_suspend\n");
+	printk(KERN_INFO "FIMC_IS runtime suspend\n");
 	mutex_lock(&is_dev->lock);
-	clear_bit(FIMC_IS_PWR_ST_RESUMED, &is_dev->power);
-	set_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
 	if (is_dev->pdata->clk_off) {
 		is_dev->pdata->clk_off(pdev);
 	} else {
@@ -404,7 +393,10 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	if (is_dev->alloc_ctx)
 		fimc_is_mem_suspend(is_dev->alloc_ctx);
 #endif
+	clear_bit(IS_PWR_ST_POWERON, &is_dev->power);
+	set_bit(IS_PWR_ST_POWEROFF, &is_dev->power);
 	mutex_unlock(&is_dev->lock);
+	printk(KERN_INFO "FIMC_IS runtime suspend end\n");
 	return 0;
 }
 
@@ -414,10 +406,8 @@ static int fimc_is_runtime_resume(struct device *dev)
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
-	dbg("fimc_is_runtime_resume\n");
+	printk(KERN_INFO "FIMC_IS runtime resume\n");
 	mutex_lock(&is_dev->lock);
-	clear_bit(FIMC_IS_PWR_ST_SUSPENDED, &is_dev->power);
-	set_bit(FIMC_IS_PWR_ST_RESUMED, &is_dev->power);
 	if (is_dev->pdata->clk_cfg) {
 		is_dev->pdata->clk_cfg(pdev);
 	} else {
@@ -439,7 +429,11 @@ static int fimc_is_runtime_resume(struct device *dev)
 	if (is_dev->alloc_ctx)
 		fimc_is_mem_resume(is_dev->alloc_ctx);
 #endif
+	clear_bit(IS_PWR_ST_POWEROFF, &is_dev->power);
+	clear_bit(IS_PWR_SUB_IP_POWER_OFF, &is_dev->power);
+	set_bit(IS_PWR_ST_POWERON, &is_dev->power);
 	mutex_unlock(&is_dev->lock);
+	printk(KERN_INFO "FIMC_IS runtime resume end\n");
 	return 0;
 }
 

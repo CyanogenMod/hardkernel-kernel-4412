@@ -49,7 +49,7 @@
 
 #define FIMC_IS_SENSOR_NUM	1
 
-#define FIMC_IS_SHUTDOWN_TIMEOUT	(8*HZ)
+#define FIMC_IS_SHUTDOWN_TIMEOUT	(3*HZ)
 #define FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR	(HZ)
 #define FIMC_IS_SHUTDOWN_TIMEOUT_AF	(3*HZ)
 
@@ -70,6 +70,10 @@
 #define BUS_LOCK_FREQ_L4	133133
 #define BUS_LOCK_FREQ_L5	100100
 
+/* A5 debug message setting */
+#define FIMC_IS_DEBUG_MSG	0x3F
+#define FIMC_IS_DEBUG_LEVEL	3
+
 #define SDCARD_FW
 
 #ifdef SDCARD_FW
@@ -78,6 +82,8 @@
 #endif
 #define FIMC_IS_FW		"fimc_is_fw.bin"
 #define FIMC_IS_SETFILE		"setfile.bin"
+
+#define FIMC_IS_MSG_FILE	"/sdcard/fimc_is_msg_dump.txt"
 
 #define err(fmt, args...) \
 	printk(KERN_ERR "%s:%d: " fmt "\n", __func__, __LINE__, ##args)
@@ -93,30 +99,24 @@
 
 enum fimc_is_state_flag {
 	IS_ST_IDLE,
-	IS_ST_PWR_ON,
-	IS_ST_FW_DOWNLOADED,
-	IS_ST_SET_FILE,
-	IS_ST_INIT_PREVIEW_STILL,
-	IS_ST_INIT_PREVIEW_VIDEO,
-	IS_ST_INIT_CAPTURE_STILL,
-	IS_ST_INIT_CAPTURE_VIDEO,
-	IS_ST_RUN,
+	IS_ST_FW_LOADED,
+	IS_ST_A5_PWR_ON,
+	IS_ST_OPEN_SENSOR,
+	IS_ST_SETFILE_LOADED,
+	IS_ST_INIT_DONE,
 	IS_ST_STREAM_ON,
 	IS_ST_STREAM_OFF,
 	IS_ST_CHANGE_MODE,
-	IS_ST_SET_PARAM,
+	IS_ST_BLOCK_CMD_CLEARED,
 	IS_ST_SET_ZOOM,
-	IS_ST_PEND,
-	IS_ST_BLOCKED,
 	IS_ST_END
 };
 
 enum fimc_is_power {
-	FIMC_IS_PWR_ST_POWEROFF,
-	FIMC_IS_PWR_ST_POWERED,
-	FIMC_IS_PWR_ST_STREAMING,
-	FIMC_IS_PWR_ST_SUSPENDED,
-	FIMC_IS_PWR_ST_RESUMED,
+	IS_PWR_ST_POWEROFF,
+	IS_PWR_ST_POWERON,
+	IS_PWR_SUB_IP_POWER_OFF,
+	IS_PWR_END
 };
 
 enum fimc_is_clk {
@@ -321,8 +321,9 @@ extern struct is_region is_p_region;
 extern int fimc_is_fw_clear_irq2(struct fimc_is_dev *dev);
 extern int fimc_is_fw_clear_irq1(struct fimc_is_dev *dev);
 extern void fimc_is_hw_set_sensor_num(struct fimc_is_dev *dev);
-extern void fimc_is_hw_set_load_setfile(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_sensor_num(struct fimc_is_dev *dev);
+extern void fimc_is_hw_get_setfile_addr(struct fimc_is_dev *dev);
+extern void fimc_is_hw_load_setfile(struct fimc_is_dev *dev);
 extern int fimc_is_hw_set_param(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_param(struct fimc_is_dev *dev, u16 offset);
 extern void fimc_is_hw_set_intgr0_gd0(struct fimc_is_dev *dev);
@@ -336,11 +337,12 @@ extern void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on);
 extern void fimc_is_hw_set_init(struct fimc_is_dev *dev);
 extern void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val);
 extern void fimc_is_hw_set_lite(struct fimc_is_dev *dev, u32 width, u32 height);
-extern void fimc_is_hw_diable_wdt(struct fimc_is_dev *dev);
 extern void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_sensor_max_framerate(struct fimc_is_dev *dev);
 extern void fimc_is_hw_set_debug_level(struct fimc_is_dev *dev, int level1,
 								int level2);
+
+extern int fimc_is_s_power(struct v4l2_subdev *sd, int on);
 
 extern void fimc_is_param_err_checker(struct fimc_is_dev *dev);
 extern void fimc_is_print_err_number(u32 num_err);

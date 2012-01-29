@@ -1637,4 +1637,10 @@ struct is_share_region {
 	u32	chip_rev_no;
 };
 
+struct is_debug_control {
+	u32 write_point;	/* 0~ 500KB boundary */
+	u32 assert_flag;	/* 0: Not invoked, 1: Invoked */
+	u32 pabort_flag;	/* 0: Not invoked, 1: Invoked */
+	u32 dabort_flag;	/* 0: Not invoked, 1: Invoked */
+};
 #endif

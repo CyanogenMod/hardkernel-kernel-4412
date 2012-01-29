@@ -42,17 +42,21 @@ void fimc_is_print_param_err_name(u32 err)
 	case ERROR_COMMON_INPUT_PATH:
 		printk(KERN_ERR
 		"ERROR_COMMON_INPUT_PATH : Input path can be changed in ready state!!\n");
+		break;
 	case ERROR_COMMON_INPUT_INIT:
 		printk(KERN_ERR
 		"ERROR_COMMON_INPUT_INIT : IP can not start if input path is not set!!\n");
+		break;
 	case ERROR_COMMON_OUTPUT_INIT:
 		printk(KERN_ERR
 		"ERROR_COMMON_OUTPUT_INIT : IP can not start if output path is not set!!\n");
+		break;
 	case ERROR_CONTROL_BYPASS:
 		printk(KERN_ERR "ERROR_CONTROL_BYPASS!!\n");
 	case ERROR_OTF_INPUT_FORMAT:
 		printk(KERN_ERR
 		"ERROR_OTF_INPUT_FORMAT!! : invalid format  (DRC: YUV444, FD: YUV444, 422, 420)\n");
+		break;
 		break;
 	case ERROR_OTF_INPUT_WIDTH:
 		printk(KERN_ERR
@@ -285,8 +289,10 @@ void fimc_is_param_err_checker(struct fimc_is_dev *dev)
 
 void fimc_is_print_err_number(u32 num_err)
 {
-	if ((num_err & IS_ERROR_TIME_OUT_FLAG))
+	if ((num_err & IS_ERROR_TIME_OUT_FLAG)) {
 		printk(KERN_ERR "IS_ERROR_TIME_OUT !!\n");
+		num_err -= IS_ERROR_TIME_OUT_FLAG;
+	}
 
 	switch (num_err) {
 	/* General */
@@ -323,8 +329,29 @@ void fimc_is_print_err_number(u32 num_err)
 	case IS_ERROR_ENTRY_MSG_THREAD_DOWN:
 		printk(KERN_ERR "IS_ERROR_ENTRY_MSG_THREAD_DOWN !!\n");
 		break;
-	case IS_ERROR_ENTRY_MSG_IS_MISSING:
-		printk(KERN_ERR "IS_ERROR_ENTRY_MSG_IS_MISSING !!\n");
+	case IS_ERROR_ISP_FRAME_END_NOT_DONE:
+		printk(KERN_ERR "IS_ERROR_ISP_FRAME_END_NOT_DONE !!\n");
+		break;
+	case IS_ERROR_DRC_FRAME_END_NOT_DONE:
+		printk(KERN_ERR "IS_ERROR_DRC_FRAME_END_NOT_DONE !!\n");
+		break;
+	case IS_ERROR_SCALERC_FRAME_END_NOT_DONE:
+		printk(KERN_ERR "IS_ERROR_SCALERC_FRAME_END_NOT_DONE !!\n");
+		break;
+	case IS_ERROR_ODC_FRAME_END_NOT_DONE:
+		printk(KERN_ERR "IS_ERROR_ODC_FRAME_END_NOT_DONE !!\n");
+		break;
+	case IS_ERROR_DIS_FRAME_END_NOT_DONE:
+		printk(KERN_ERR "IS_ERROR_DIS_FRAME_END_NOT_DONE !!\n");
+		break;
+	case IS_ERROR_TDNR_FRAME_END_NOT_DONE:
+		printk(KERN_ERR "IS_ERROR_TDNR_FRAME_END_NOT_DONE !!\n");
+		break;
+	case IS_ERROR_SCALERP_FRAME_END_NOT_DONE:
+		printk(KERN_ERR "IS_ERROR_SCALERP_FRAME_END_NOT_DONE !!\n");
+		break;
+	case IS_ERROR_WAIT_STREAM_OFF_NOT_DONE:
+		printk(KERN_ERR "IS_ERROR_WAIT_STREAM_OFF_NOT_DONE !!\n");
 		break;
 	case IS_ERROR_NO_MSG_IS_RECEIVED:
 		printk(KERN_ERR "IS_ERROR_NO_MSG_IS_RECEIVED !!\n");

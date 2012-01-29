@@ -267,61 +267,56 @@ out:
 static int fimc_is_load_fw(struct v4l2_subdev *sd)
 {
 	u32 timeout;
-	int ret;
+	int ret = 0;
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
-	dbg("fimc_is_load_fw\n");
-	if (test_bit(IS_ST_IDLE, &dev->state)) {
-		/* 1. Load IS firmware */
-		dev->fw.state = 0;
-		ret = fimc_is_request_firmware(dev);
-		if (ret) {
-			dev_err(&dev->pdev->dev,
-			"failed to fimc_is_request_firmware (%d)\n", ret);
-			return -EINVAL;
-		}
-		timeout = 30;
-		while (!dev->fw.state) {
-			if (timeout == 0) {
-				dev_err(&dev->pdev->dev,
-				"Load firmware failed : %s\n", __func__);
-			}
-			timeout--;
-			mdelay(1);
-		}
-		set_bit(IS_ST_PWR_ON, &dev->state);
-		/* 2. Init GPIO (UART) */
-		ret = fimc_is_hw_io_init(dev);
-		if (ret) {
-			dev_err(&dev->pdev->dev,
-				"failed to init GPIO config\n");
-			return -EINVAL;
-		}
-		/* 3. Chip ID and Revision */
-		dev->is_shared_region->chip_id = 0xe4412;
-		dev->is_shared_region->chip_rev_no = 1;
-		fimc_is_mem_cache_clean((void *)IS_SHARED,
-			(unsigned long)(sizeof(struct is_share_region)));
-		/* 4. A5 power on */
-		clear_bit(IS_ST_FW_DOWNLOADED, &dev->state);
-		fimc_is_hw_a5_power(dev, 1);
-		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_FW_DOWNLOADED, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout A5 power on: %s\n", __func__);
-			return -EINVAL;
-		}
-		dbg("fimc_is_load_fw end\n");
-		printk(KERN_INFO "FIMC-IS FW info = %s\n", dev->fw.fw_info);
-		printk(KERN_INFO "FIMC-IS FW ver = %s\n", dev->fw.fw_version);
-	} else {
-		dbg("IS FW was loaded before\n");
+	dbg("+++ fimc_is_load_fw\n");
+	if (!test_bit(IS_ST_IDLE, &dev->state)) {
+		err("FW was already loaded!!\n");
+		return ret;
 	}
-	return 0;
+	/* 1. Load IS firmware */
+	dev->fw.state = 0;
+	ret = fimc_is_request_firmware(dev);
+	if (ret) {
+		err("failed to fimc_is_request_firmware (%d)\n", ret);
+		return -EINVAL;
+	}
+	timeout = 30;
+	while (!dev->fw.state) {
+		if (timeout == 0)
+			err("Load firmware failed\n");
+		timeout--;
+		mdelay(1);
+	}
+	/* 2. Init GPIO (UART) */
+	ret = fimc_is_hw_io_init(dev);
+	if (ret) {
+		dev_err(&dev->pdev->dev, "failed to init GPIO config\n");
+		return -EINVAL;
+	}
+	/* 3. Chip ID and Revision */
+	dev->is_shared_region->chip_id = 0xe4412;
+	dev->is_shared_region->chip_rev_no = 1;
+	fimc_is_mem_cache_clean((void *)IS_SHARED,
+		(unsigned long)(sizeof(struct is_share_region)));
+	/* 4. A5 power on */
+	fimc_is_hw_a5_power(dev, 1);
+	ret = wait_event_timeout(dev->irq_queue1,
+		test_bit(IS_ST_FW_LOADED, &dev->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		dev_err(&dev->pdev->dev,
+			"wait timeout A5 power on: %s\n", __func__);
+		return -EINVAL;
+	}
+	clear_bit(IS_ST_IDLE, &dev->state);
+	dbg("--- fimc_is_load_fw end\n");
+	printk(KERN_INFO "FIMC-IS FW info = %s\n", dev->fw.fw_info);
+	printk(KERN_INFO "FIMC-IS FW ver = %s\n", dev->fw.fw_version);
+	return ret;
 }
 
-static int fimc_is_s_power(struct v4l2_subdev *sd, int on)
+int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 {
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 	struct device *dev = &is_dev->pdev->dev;
@@ -329,18 +324,26 @@ static int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 
 	dbg("fimc_is_s_power\n");
 	if (on) {
-		clear_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
-		set_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
+		if (test_bit(IS_PWR_ST_POWERON, &is_dev->power)) {
+			err("FIMC-IS was already power on state!!\n");
+			return ret;
+		}
 		ret = pm_runtime_get_sync(dev);
+		set_bit(IS_ST_A5_PWR_ON, &is_dev->state);
 	} else {
-		clear_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
-		fimc_is_hw_subip_poweroff(is_dev);
-		ret = wait_event_timeout(is_dev->irq_queue1,
-			test_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power),
-			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
-		if (!ret) {
-			err("wait timeout : %s\n", __func__);
-			ret = -EINVAL;
+		if (!test_bit(IS_PWR_SUB_IP_POWER_OFF, &is_dev->power)) {
+			fimc_is_hw_subip_poweroff(is_dev);
+			ret = wait_event_timeout(is_dev->irq_queue1,
+				test_bit(IS_PWR_SUB_IP_POWER_OFF,
+				&is_dev->power), FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				err("wait timeout : %s\n", __func__);
+				ret = -EINVAL;
+			}
+		}
+		if (test_bit(IS_PWR_ST_POWEROFF, &is_dev->power)) {
+			err("FIMC-IS was already power off state!!\n");
+			return ret;
 		}
 		fimc_is_hw_a5_power(is_dev, 0);
 		dbg("A5 power off\n");
@@ -354,12 +357,8 @@ static int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 		set_bit(IS_ST_IDLE, &is_dev->state);
 		is_dev->power = 0;
 		is_dev->af.af_state = FIMC_IS_AF_IDLE;
-		set_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
+		set_bit(IS_PWR_ST_POWEROFF, &is_dev->power);
 	}
-
-	if ((!ret && !on) || (ret && on))
-		clear_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
-
 	return ret;
 }
 
@@ -384,8 +383,7 @@ static int fimc_is_reset(struct v4l2_subdev *sd, u32 val)
 		set_bit(IS_ST_IDLE, &is_dev->state);
 		is_dev->power = 0;
 		is_dev->af.af_state = FIMC_IS_AF_IDLE;
-		set_bit(FIMC_IS_PWR_ST_POWEROFF, &is_dev->power);
-		clear_bit(FIMC_IS_PWR_ST_POWERED, &is_dev->power);
+		set_bit(IS_PWR_ST_POWEROFF, &is_dev->power);
 	} else {
 		return -EINVAL;
 	}
@@ -394,154 +392,132 @@ static int fimc_is_reset(struct v4l2_subdev *sd, u32 val)
 
 static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 {
-	int ret;
+	int ret = 0;
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
-	fimc_is_hw_diable_wdt(dev);
 	dev->sensor.sensor_type = val;
 	dev->sensor.id = 0;
 	dbg("fimc_is_init\n");
-	if (test_bit(IS_ST_FW_DOWNLOADED, &dev->state)) {
-		/* Init sequence 1: Open sensor */
-		dbg("v4l2 : open sensor : %d\n", val);
-		clear_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state);
-		fimc_is_hw_open_sensor(dev, dev->sensor.id, val);
-		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_INIT_PREVIEW_STILL, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
-		if (!ret) {
-			err("wait timeout - open sensor :%s\n", __func__);
-			return -EBUSY;
-		}
-		/* Init sequence 2: Load setfile */
-		clear_bit(IS_ST_SET_FILE, &dev->state);
-		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_SET_FILE, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout - load setfile :%s\n", __func__);
-			ret = fimc_is_reset(sd, 1);
-			if (!ret)
-				err("s_power off failed!!\n");
-			return -EBUSY;
-		}
-		/* Check magic number */
-		if (dev->is_p_region->shared[MAX_SHARED_COUNT-1]
-							!= MAGIC_NUMBER)
-			err("!!! MAGIC NUMBER ERROR !!!\n");
-
-		fimc_is_load_setfile(dev);
-		fimc_is_hw_wait_intmsr0_intmsd0(dev);
-		fimc_is_hw_set_load_setfile(dev);
-		fimc_is_hw_set_intgr0_gd0(dev);
-		printk(KERN_INFO "FIMC-IS Setfile info = %s\n",
-						dev->fw.setfile_info);
-		dbg("v4l2 : Load set file end\n");
-		/* Debug only */
-		dbg("Parameter region addr = 0x%08x\n",
-			virt_to_phys(dev->is_p_region));
-		dbg("ISP region addr = 0x%08x\n",
-			virt_to_phys(&dev->is_p_region->parameter.isp));
-		dbg("FN[0] addr = 0x%x\n",
-			virt_to_phys(&dev->is_p_region->header[0]
-							.frame_number));
-		dbg("FN[1] addr = 0x%x\n",
-			virt_to_phys(&dev->is_p_region->header[1]
-							.frame_number));
-		dbg("FN[2] addr = 0x%x\n",
-			virt_to_phys(&dev->is_p_region->header[2]
-							.frame_number));
-		dbg("FN[3] addr = 0x%x\n",
-			virt_to_phys(&dev->is_p_region->header[3]
-							.frame_number));
-		dev->frame_count = 0;
-
-		dbg("Stream Off\n");
-		clear_bit(IS_ST_STREAM_OFF, &dev->state);
-		fimc_is_hw_set_stream(dev, 0); /*stream off */
-		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_STREAM_OFF, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout - stream off : %s\n", __func__);
-			ret = fimc_is_s_power(sd, 0);
-			if (!ret)
-				err("s_power off failed!!\n");
-			return -EBUSY;
-		}
-		clear_bit(IS_ST_RUN, &dev->state);
-
-		/* 1. */
-		dbg("Default setting : preview_still\n");
-		dev->scenario_id = ISS_PREVIEW_STILL;
-		fimc_is_hw_set_init(dev);
-
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_INIT_PREVIEW_VIDEO, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		/* 2. */
-		dbg("Default setting : preview_video\n");
-		dev->scenario_id = ISS_PREVIEW_VIDEO;
-		fimc_is_hw_set_init(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_INIT_CAPTURE_STILL, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		/* 3. */
-		dbg("Default setting : capture_still\n");
-		dev->scenario_id = ISS_CAPTURE_STILL;
-		fimc_is_hw_set_init(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_INIT_CAPTURE_VIDEO, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		/* 4. */
-		dbg("Default setting : capture_video\n");
-		dev->scenario_id = ISS_CAPTURE_VIDEO;
-		fimc_is_hw_set_init(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
-		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_RUN, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			dev_err(&dev->pdev->dev,
-				"wait timeout : %s\n", __func__);
-			return -EBUSY;
-		}
-		clear_bit(IS_ST_STREAM_OFF, &dev->state);
-		set_bit(IS_ST_RUN, &dev->state);
-		dbg("Init sequence completed!! Ready to use\n");
-#ifdef MSG_CONFIG_COTROL
-		fimc_is_hw_set_debug_level(dev, 0x3f, 3);
-#endif
+	if (!test_bit(IS_ST_A5_PWR_ON, &dev->state)) {
+		err("A5 is not power on state!!\n");
+		return -EINVAL;
 	}
-
-	return 0;
+	/* Init sequence 1: Open sensor */
+	dbg("v4l2 : open sensor : %d\n", val);
+	fimc_is_hw_open_sensor(dev, dev->sensor.id, val);
+	ret = wait_event_timeout(dev->irq_queue1,
+		test_bit(IS_ST_OPEN_SENSOR, &dev->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+	if (!ret) {
+		err("wait timeout - open sensor\n");
+		return -EINVAL;
+	}
+	/* Init sequence 2: Load setfile */
+	/* Get setfile address */
+	dbg("v4l2 : setfile address\n");
+	fimc_is_hw_get_setfile_addr(dev);
+	ret = wait_event_timeout(dev->irq_queue1,
+		test_bit(IS_ST_SETFILE_LOADED, &dev->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		err("wait timeout - get setfile address\n");
+		return -EINVAL;
+	}
+	dbg("v4l2 : load setfile\n");
+	fimc_is_load_setfile(dev);
+	clear_bit(IS_ST_SETFILE_LOADED, &dev->state);
+	fimc_is_hw_load_setfile(dev);
+	ret = wait_event_timeout(dev->irq_queue1,
+		test_bit(IS_ST_SETFILE_LOADED, &dev->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		err("wait timeout - get setfile address\n");
+		return -EINVAL;
+	}
+	printk(KERN_INFO "FIMC-IS Setfile info = %s\n", dev->fw.setfile_info);
+	dbg("v4l2 : Load set file end\n");
+	/* Check magic number */
+	if (dev->is_p_region->shared[MAX_SHARED_COUNT-1] != MAGIC_NUMBER)
+		err("!!! MAGIC NUMBER ERROR !!!\n");
+	/* Display region information (DEBUG only) */
+	dbg("Parameter region addr = 0x%08x\n", virt_to_phys(dev->is_p_region));
+	dbg("ISP region addr = 0x%08x\n",
+				virt_to_phys(&dev->is_p_region->parameter.isp));
+	dbg("Shared region addr = 0x%08x\n",
+				virt_to_phys(&dev->is_p_region->shared));
+	dev->frame_count = 0;
+	/* Init sequence 3: Stream off */
+	dbg("Stream Off\n");
+	clear_bit(IS_ST_STREAM_OFF, &dev->state);
+	fimc_is_hw_set_stream(dev, 0); /*stream off */
+	ret = wait_event_timeout(dev->irq_queue1,
+		test_bit(IS_ST_STREAM_OFF, &dev->state),
+		FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		err("wait timeout - stream off\n");
+		return -EINVAL;
+	}
+	/* Init sequence 4: Set init value - PREVIEW_STILL mode */
+	dbg("Default setting : preview_still\n");
+	dev->scenario_id = ISS_PREVIEW_STILL;
+	fimc_is_hw_set_init(dev);
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
+	clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state); /* BLOCK I/F Mode*/
+	fimc_is_hw_set_param(dev);
+	ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+	if (!ret) {
+		err("wait timeout : init values (PREVIEW_STILL)\n");
+		return -EINVAL;
+	}
+	/* Init sequence 5: Set init value - PREVIEW_VIDEO mode */
+	dbg("Default setting : preview_video\n");
+	dev->scenario_id = ISS_PREVIEW_VIDEO;
+	fimc_is_hw_set_init(dev);
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
+	clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state); /* BLOCK I/F Mode*/
+	fimc_is_hw_set_param(dev);
+	ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+	if (!ret) {
+		err("wait timeout : init values (PREVIEW_VIDEO)\n");
+		return -EINVAL;
+	}
+	/* Init sequence 6: Set init value - CAPTURE_STILL mode */
+	dbg("Default setting : capture_still\n");
+	dev->scenario_id = ISS_CAPTURE_STILL;
+	fimc_is_hw_set_init(dev);
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
+	clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state); /* BLOCK I/F Mode*/
+	fimc_is_hw_set_param(dev);
+	ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+	if (!ret) {
+		err("wait timeout : init values (CAPTURE_STILL)\n");
+		return -EINVAL;
+	}
+	/* Init sequence 6: Set init value - CAPTURE_VIDEO mode */
+	dbg("Default setting : capture_video\n");
+	dev->scenario_id = ISS_CAPTURE_VIDEO;
+	fimc_is_hw_set_init(dev);
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
+	clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state); /* BLOCK I/F Mode*/
+	fimc_is_hw_set_param(dev);
+	ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+			FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+	if (!ret) {
+		err("wait timeout : init values (CAPTURE_VIDEO)\n");
+		return -EINVAL;
+	}
+	set_bit(IS_ST_INIT_DONE, &dev->state);
+	dbg("Init sequence completed!! Ready to use\n");
+#ifdef MSG_CONFIG_COTROL
+	fimc_is_hw_set_debug_level(dev, FIMC_IS_DEBUG_MSG, FIMC_IS_DEBUG_LEVEL);
+#endif
+	return ret;
 }
 
 static int fimc_is_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
@@ -861,21 +837,20 @@ static int fimc_is_v4l2_digital_zoom(struct fimc_is_dev *dev, int zoom_factor)
 	IS_INC_PARAM_NUM(dev);
 	/* 4. Set parameter */
 	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
-	clear_bit(IS_ST_RUN, &dev->state);
+	clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 	fimc_is_hw_set_param(dev);
 	ret = wait_event_timeout(dev->irq_queue1,
-		test_bit(IS_ST_RUN, &dev->state),
+		test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
 		FIMC_IS_SHUTDOWN_TIMEOUT);
 	if (!ret) {
 		dev_err(&dev->pdev->dev, "wait timeout : %s\n", __func__);
 		return -EBUSY;
 	}
 	/* 5. Mode change for getting CAC margin */
-	clear_bit(IS_ST_RUN, &dev->state);
-	set_bit(IS_ST_CHANGE_MODE, &dev->state);
+	clear_bit(IS_ST_CHANGE_MODE, &dev->state);
 	fimc_is_hw_change_mode(dev, mode);
 	ret = wait_event_timeout(dev->irq_queue1,
-				test_bit(IS_ST_RUN, &dev->state),
+				test_bit(IS_ST_CHANGE_MODE, &dev->state),
 				FIMC_IS_SHUTDOWN_TIMEOUT);
 	if (!ret) {
 		dev_err(&dev->pdev->dev,
@@ -2440,6 +2415,9 @@ static int fimc_is_v4l2_isp_metering(struct fimc_is_dev *dev, int value)
 	case IS_METERING_MATRIX:
 		IS_ISP_SET_PARAM_METERING_CMD(dev, ISP_METERING_COMMAND_MATRIX);
 		break;
+	case IS_METERING_CENTER:
+		IS_ISP_SET_PARAM_METERING_CMD(dev, ISP_METERING_COMMAND_CENTER);
+		break;
 	default:
 		return ret;
 	}
@@ -2458,8 +2436,7 @@ static int fimc_is_v4l2_isp_metering_legacy(struct fimc_is_dev *dev, int value)
 	int ret = 0;
 	switch (value) {
 	case METERING_CENTER:
-		IS_ISP_SET_PARAM_METERING_CMD(dev,
-			ISP_METERING_COMMAND_AVERAGE);
+		IS_ISP_SET_PARAM_METERING_CMD(dev, ISP_METERING_COMMAND_CENTER);
 		break;
 	case METERING_SPOT:
 		IS_ISP_SET_PARAM_METERING_CMD(dev, ISP_METERING_COMMAND_SPOT);
@@ -2648,10 +2625,10 @@ static int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
-		clear_bit(IS_ST_RUN, &dev->state);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_RUN, &dev->state),
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
 					FIMC_IS_SHUTDOWN_TIMEOUT);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
@@ -2664,10 +2641,10 @@ static int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
-		clear_bit(IS_ST_RUN, &dev->state);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_RUN, &dev->state),
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 124950);
@@ -2680,10 +2657,10 @@ static int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
-		clear_bit(IS_ST_RUN, &dev->state);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_RUN, &dev->state),
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
@@ -2696,10 +2673,10 @@ static int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
-		clear_bit(IS_ST_RUN, &dev->state);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_RUN, &dev->state),
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 50000);
@@ -2712,10 +2689,10 @@ static int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
-		clear_bit(IS_ST_RUN, &dev->state);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_RUN, &dev->state),
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 33333);
@@ -2728,10 +2705,10 @@ static int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
-		clear_bit(IS_ST_RUN, &dev->state);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_RUN, &dev->state),
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 16666);
@@ -2744,10 +2721,10 @@ static int fimc_is_v4l2_frame_rate(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
-		clear_bit(IS_ST_RUN, &dev->state);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
 		ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_RUN, &dev->state),
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
 			FIMC_IS_SHUTDOWN_TIMEOUT);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
@@ -2947,19 +2924,21 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_IS_S_SCENARIO_MODE:
-		if (test_bit(IS_ST_RUN, &dev->state)) {
-			clear_bit(IS_ST_RUN, &dev->state);
-			set_bit(IS_ST_CHANGE_MODE, &dev->state);
-			fimc_is_hw_change_mode(dev, ctrl->value);
-			ret = wait_event_timeout(dev->irq_queue1,
-					test_bit(IS_ST_RUN, &dev->state),
-					FIMC_IS_SHUTDOWN_TIMEOUT);
-			if (!ret) {
-				dev_err(&dev->pdev->dev,
-					"Mode change timeout:%s\n", __func__);
-				return -EBUSY;
-			}
+		if (!test_bit(IS_ST_INIT_DONE, &dev->state)) {
+			err("Not init done state!!\n");
+			return -EINVAL;
 		}
+		clear_bit(IS_ST_CHANGE_MODE, &dev->state);
+		fimc_is_hw_change_mode(dev, ctrl->value);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_CHANGE_MODE, &dev->state),
+				FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			err("Mode change timeout !!\n");
+			return -EINVAL;
+		}
+		printk(KERN_INFO "CAC margin - %d, %d\n", dev->sensor.offset_x,
+							dev->sensor.offset_y);
 		break;
 	case V4L2_CID_IS_S_FORMAT_SCENARIO:
 		switch (ctrl->value) {
@@ -4194,8 +4173,7 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 	int tmp, ret = 0;
 
-	dbg("fimc_is_s_mbus_fmt- %d,%d", mf->width, mf->height);
-
+	printk(KERN_INFO "FIMC-IS s_fmt = %d,%d\n", mf->width, mf->height);
 	/* scenario ID setting */
 	switch (mf->field) {
 	case 0:
@@ -4261,68 +4239,58 @@ static int fimc_is_s_mbus_fmt(struct v4l2_subdev *sd,
 	IS_INC_PARAM_NUM(dev);
 
 	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
-	clear_bit(IS_ST_RUN, &dev->state);
+	clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 	fimc_is_hw_set_param(dev);
 	/* Below sequence is for preventing system hang
 		due to size mis-match */
 	ret = wait_event_timeout(dev->irq_queue1,
-		test_bit(IS_ST_RUN, &dev->state),
+		test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
 		FIMC_IS_SHUTDOWN_TIMEOUT);
 	if (!ret) {
-		dev_err(&dev->pdev->dev, "wait timeout : %s\n", __func__);
-		return -EBUSY;
+		err("wait timeout : Set format - %d, %d\n",
+						mf->width, mf->height);
+		return -EINVAL;
 	}
-	set_bit(IS_ST_RUN, &dev->state);
 	return 0;
 }
 
 static int fimc_is_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	int ret;
+	int ret = 0;
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 
 	if (enable) {
-		if (test_bit(IS_ST_RUN, &dev->state) &&
-				!test_bit(IS_ST_STREAM_ON, &dev->state)) {
-			dbg("IS Stream On\n");
-			clear_bit(IS_ST_RUN, &dev->state);
-			fimc_is_hw_set_stream(dev, enable);
-			ret = wait_event_timeout(dev->irq_queue1,
-			test_bit(IS_ST_STREAM_ON, &dev->state),
-			FIMC_IS_SHUTDOWN_TIMEOUT);
-			if (!ret) {
-				dev_err(&dev->pdev->dev,
-					"wait timeout : %s\n", __func__);
-				fimc_is_hw_set_stream(dev, 0);
-				ret = fimc_is_s_power(sd, 0);
-				if (!ret)
-					err("s_power off failed!!\n");
-				return -EBUSY;
-			}
-		} else {
-			dev_err(&dev->pdev->dev,
-					"ON : not stream-on condition\n");
+		dbg("IS Stream On\n");
+		if (!test_bit(IS_ST_INIT_DONE, &dev->state)) {
+			err("Not ready state!!\n");
+			return -EBUSY;
+		}
+		clear_bit(IS_ST_STREAM_ON, &dev->state);
+		fimc_is_hw_set_stream(dev, enable);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_STREAM_ON, &dev->state),
+				FIMC_IS_SHUTDOWN_TIMEOUT);
+		if (!ret) {
+			err("wait timeout : Stream on\n");
 			return -EINVAL;
 		}
 	} else {
 		dbg("IS Stream Off\n");
-		if (test_bit(IS_ST_STREAM_ON, &dev->state) &&
-				!test_bit(IS_ST_STREAM_OFF, &dev->state)) {
-			clear_bit(IS_ST_STREAM_ON, &dev->state);
-			fimc_is_hw_set_stream(dev, enable);
-			ret = wait_event_timeout(dev->irq_queue1,
+		if (!test_bit(IS_ST_INIT_DONE, &dev->state)) {
+			err("Not ready state!!\n");
+			return -EBUSY;
+		}
+		clear_bit(IS_ST_STREAM_OFF, &dev->state);
+		fimc_is_hw_set_stream(dev, enable);
+		ret = wait_event_timeout(dev->irq_queue1,
 				test_bit(IS_ST_STREAM_OFF, &dev->state),
 						FIMC_IS_SHUTDOWN_TIMEOUT);
-			if (!ret) {
-				err("wait timeout : %s\n", __func__);
-				return -EBUSY;
-			}
-			clear_bit(IS_ST_STREAM_OFF, &dev->state);
-		} else {
-			err("OFF : not stream-on condition\n");
+		if (!ret) {
+			err("wait timeout : Stream off\n");
+			return -EINVAL;
 		}
 	}
-	return 0;
+	return ret;
 }
 
 const struct v4l2_subdev_core_ops fimc_is_core_ops = {
