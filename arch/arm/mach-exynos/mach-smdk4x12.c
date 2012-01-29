@@ -573,7 +573,7 @@ static struct s3c_platform_camera s5k6a3 = {
 		.height	= 1080,
 	},
 	.srclk_name	= "xusbxti",
-	.clk_rate	= 12000000,
+	.clk_rate	= 24000000,
 	.mipi_lanes	= 1,
 	.mipi_settle	= 12,
 	.mipi_align	= 24,
