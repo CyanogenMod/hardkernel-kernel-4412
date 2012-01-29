@@ -403,6 +403,7 @@ static int jpeg_m2m_open(struct file *file)
 
 #ifdef CONFIG_PM_RUNTIME
 #if defined (CONFIG_CPU_EXYNOS5250)
+	dev->vb2->resume(dev->alloc_ctx);
 #ifdef CONFIG_BUSFREQ_OPP
 	/* lock bus frequency */
 	dev_lock(dev->bus_dev, &dev->plat_dev->dev, BUSFREQ_400MHZ);
@@ -433,6 +434,7 @@ static int jpeg_m2m_release(struct file *file)
 
 #ifdef CONFIG_PM_RUNTIME
 #if defined (CONFIG_CPU_EXYNOS5250)
+	ctx->dev->vb2->suspend(ctx->dev->alloc_ctx);
 #ifdef CONFIG_BUSFREQ_OPP
 	/* Unlock bus frequency */
 	dev_unlock(ctx->dev->bus_dev, &ctx->dev->plat_dev->dev);
