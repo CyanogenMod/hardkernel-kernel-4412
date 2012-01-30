@@ -1038,6 +1038,10 @@ static int jpeg_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct jpeg_dev *jpeg_drv = platform_get_drvdata(pdev);
+#ifdef CONFIG_BUSFREQ_OPP
+	/* lock bus frequency */
+	dev_lock(jpeg_drv->bus_dev, &jpeg_drv->plat_dev->dev, BUSFREQ_400MHZ);
+#endif
 	clk_enable(jpeg_drv->clk);
 	jpeg_drv->vb2->resume(jpeg_drv->alloc_ctx);
 	return 0;
