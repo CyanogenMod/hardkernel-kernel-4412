@@ -1198,7 +1198,7 @@ static int __devinit mfc_probe(struct platform_device *pdev)
 		goto err_misc_reg;
 	}
 
-	if (soc_is_exynos4212() ||
+	if ((soc_is_exynos4212() && (samsung_rev() < EXYNOS4212_REV_1_0)) ||
 		(soc_is_exynos4412() && (samsung_rev() < EXYNOS4412_REV_1_1)))
 		mfc_pd_enable();
 
