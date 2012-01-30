@@ -397,6 +397,7 @@ struct fimc_is_dev {
 	const struct fimc_is_vb2				*vb2;
 };
 
+void fimc_is_mem_suspend(void *alloc_ctxes);
 void fimc_is_mem_resume(void *alloc_ctxes);
 void fimc_is_mem_cache_clean(const void *start_addr, unsigned long size);
 int fimc_is_pipeline_s_stream_preview(struct media_entity *start_entity, int on);
