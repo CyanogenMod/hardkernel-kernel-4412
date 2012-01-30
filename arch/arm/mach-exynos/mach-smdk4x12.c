@@ -2422,6 +2422,7 @@ static struct s5m_platform_data exynos4_s5m8767_pdata = {
 	.num_regulators		= ARRAY_SIZE(pegasus_regulators),
 	.regulators		= pegasus_regulators,
 	.cfg_pmic_irq		= s5m_cfg_irq,
+	.wakeup			= 1,
 
 	.buck2_voltage[0]	= 1250000,
 	.buck2_voltage[1]	= 1200000,
