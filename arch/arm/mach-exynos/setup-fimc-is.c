@@ -101,8 +101,8 @@ int exynos_fimc_is_cfg_clk(struct platform_device *pdev)
 	aclk_mcuisp_div1 = clk_get(&pdev->dev, "sclk_mcuisp_div1");
 	if (IS_ERR(aclk_mcuisp_div1))
 		printk(KERN_ERR "failed to get aclk_mcuisp_div1\n");
-	clk_set_rate(aclk_mcuisp_div0, 400 * 1000000);
-	clk_set_rate(aclk_mcuisp_div1, 400 * 1000000);
+	clk_set_rate(aclk_mcuisp_div0, 100 * 1000000);
+	clk_set_rate(aclk_mcuisp_div1, 100 * 1000000);
 	clk_put(aclk_mcuisp_muxed);
 	clk_put(aclk_mcuisp_div0);
 	clk_put(aclk_mcuisp_div1);
