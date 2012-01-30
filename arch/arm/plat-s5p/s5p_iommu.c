@@ -302,7 +302,9 @@ static int s5p_iommu_map(struct iommu_domain *domain, unsigned long iova,
 		while (entry != end_entry) {
 			if (!write_lpage(entry, paddr)) {
 				pr_err("%s: Failed to allocate large page"
-						" entry.\n", __func__);
+						"for IOVA %#lx entry.\n",
+						__func__, iova);
+				ret = -EADDRINUSE;
 				break;
 			}
 
@@ -325,8 +327,9 @@ static int s5p_iommu_map(struct iommu_domain *domain, unsigned long iova,
 		}
 
 		if (entry != end_entry) {
-			pr_err("%s: Failed to allocate small page entry.\n",
-								__func__);
+			pr_err("%s: Failed to allocate small page entry"
+					" for IOVA %#lx.\n", __func__, iova);
+			ret = -EADDRINUSE;
 			goto mapping_error;
 		}
 	}
@@ -345,7 +348,7 @@ nomem_error:
 mapping_done:
 	spin_unlock_irqrestore(&s5p_domain->lock, flags);
 
-	return 0;
+	return ret;
 }
 
 static int s5p_iommu_unmap(struct iommu_domain *domain, unsigned long iova,
