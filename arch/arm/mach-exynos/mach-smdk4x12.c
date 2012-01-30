@@ -2279,6 +2279,15 @@ static struct max77686_regulator_data max77686_regulators[] = {
 	{MAX77686_LDO14, &max77686_ldo14_data,},
 };
 
+struct max77686_opmode_data max77686_opmode_data[MAX77686_REG_MAX] = {
+	[MAX77686_LDO11] = {MAX77686_LDO11, MAX77686_OPMODE_STANDBY},
+	[MAX77686_LDO14] = {MAX77686_LDO14, MAX77686_OPMODE_STANDBY},
+	[MAX77686_BUCK1] = {MAX77686_BUCK1, MAX77686_OPMODE_STANDBY},
+	[MAX77686_BUCK2] = {MAX77686_BUCK2, MAX77686_OPMODE_STANDBY},
+	[MAX77686_BUCK3] = {MAX77686_BUCK3, MAX77686_OPMODE_STANDBY},
+	[MAX77686_BUCK4] = {MAX77686_BUCK4, MAX77686_OPMODE_STANDBY},
+};
+
 static struct max77686_platform_data exynos4_max77686_info = {
 	.num_regulators = ARRAY_SIZE(max77686_regulators),
 	.regulators = max77686_regulators,
@@ -2286,16 +2295,10 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.irq_base	= 0,
 	.wakeup		= 0,
 
-	.buck1_voltage[0] = 1050000,	/* 1.05V */
-	.buck1_voltage[1] = 1050000,	/* 1.05V */
-	.buck1_voltage[2] = 1050000,	/* 1.05V */
-	.buck1_voltage[3] = 1050000,	/* 1.05V */
-	.buck1_voltage[4] = 1050000,	/* 1.05V */
-	.buck1_voltage[5] = 1050000,	/* 1.05V */
-	.buck1_voltage[6] = 1000000,	/* 1.0V */
-	.buck1_voltage[7] = 950000,	/* 0.95V */
+	.opmode_data = max77686_opmode_data,
+	.ramp_rate = MAX77686_RAMP_RATE_27MV,
 
-	.buck2_voltage[0] = 1300000,	/* 1.0V */
+	.buck2_voltage[0] = 1300000,	/* 1.3V */
 	.buck2_voltage[1] = 1000000,	/* 1.0V */
 	.buck2_voltage[2] = 950000,	/* 0.95V */
 	.buck2_voltage[3] = 900000,	/* 0.9V */
@@ -2304,14 +2307,23 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.buck2_voltage[6] = 950000,	/* 0.95V */
 	.buck2_voltage[7] = 900000,	/* 0.9V */
 
-	.buck5_voltage[0] = 1100000,	/* 1.1V */
-	.buck5_voltage[1] = 1100000,	/* 1.1V */
-	.buck5_voltage[2] = 1100000,	/* 1.1V */
-	.buck5_voltage[3] = 1100000,	/* 1.1V */
-	.buck5_voltage[4] = 1100000,	/* 1.1V */
-	.buck5_voltage[5] = 1100000,	/* 1.1V */
-	.buck5_voltage[6] = 1100000,	/* 1.1V */
-	.buck5_voltage[7] = 1100000,	/* 1.1V */
+	.buck3_voltage[0] = 1037500,	/* 1.0375V */
+	.buck3_voltage[1] = 1000000,	/* 1.0V */
+	.buck3_voltage[2] = 950000,	/* 0.95V */
+	.buck3_voltage[3] = 900000,	/* 0.9V */
+	.buck3_voltage[4] = 1000000,	/* 1.0V */
+	.buck3_voltage[5] = 1000000,	/* 1.0V */
+	.buck3_voltage[6] = 950000,	/* 0.95V */
+	.buck3_voltage[7] = 900000,	/* 0.9V */
+
+	.buck4_voltage[0] = 1100000,	/* 1.1V */
+	.buck4_voltage[1] = 1000000,	/* 1.0V */
+	.buck4_voltage[2] = 950000,	/* 0.95V */
+	.buck4_voltage[3] = 900000,	/* 0.9V */
+	.buck4_voltage[4] = 1000000,	/* 1.0V */
+	.buck4_voltage[5] = 1000000,	/* 1.0V */
+	.buck4_voltage[6] = 950000,	/* 0.95V */
+	.buck4_voltage[7] = 900000,	/* 0.9V */
 };
 #ifdef CONFIG_REGULATOR_S5M8767
 /* S5M8767 Regulator */
