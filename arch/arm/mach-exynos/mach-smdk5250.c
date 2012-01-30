@@ -2583,12 +2583,17 @@ static void __init exynos_sysmmu_init(void)
 	sysmmu_set_owner(&SYSMMU_PLATDEV(2d).dev, &s5p_device_fimg2d.dev);
 #endif
 #ifdef CONFIG_VIDEO_EXYNOS5_FIMC_IS
-/* TODO : after finish implementation of run-time PM, It will be enabled
-	ASSIGN_SYSMMU_POWERDOMAIN(is_isp, &exynos4_device_pd[PD_ISP].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(is_drc, &exynos4_device_pd[PD_ISP].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(is_fd, &exynos4_device_pd[PD_ISP].dev);
-	ASSIGN_SYSMMU_POWERDOMAIN(is_cpu, &exynos4_device_pd[PD_ISP].dev)
-*/
+	ASSIGN_SYSMMU_POWERDOMAIN(is_isp, &exynos5_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_drc, &exynos5_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_fd, &exynos5_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_cpu, &exynos5_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_odc, &exynos5_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_sclrc, &exynos5_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_sclrp, &exynos5_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_dis0, &exynos5_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_dis1, &exynos5_device_pd[PD_ISP].dev);
+	ASSIGN_SYSMMU_POWERDOMAIN(is_3dnr, &exynos5_device_pd[PD_ISP].dev);
+
 	sysmmu_set_owner(&SYSMMU_PLATDEV(is_isp).dev, &exynos5_device_fimc_is.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(is_drc).dev, &exynos5_device_fimc_is.dev);
 	sysmmu_set_owner(&SYSMMU_PLATDEV(is_fd).dev, &exynos5_device_fimc_is.dev);
@@ -2769,6 +2774,10 @@ static void __init smdk5250_machine_init(void)
 	dev_set_name(&exynos5_device_fimc_is.dev, "exynos5-fimc-is");
 
 	exynos5_fimc_is_set_platdata(NULL);
+#if defined(CONFIG_EXYNOS_DEV_PD)
+	exynos5_device_pd[PD_ISP].dev.parent = &exynos5_device_pd[PD_GSCL].dev;
+	exynos5_device_fimc_is.dev.parent = &exynos5_device_pd[PD_ISP].dev;
+#endif
 #endif
 #ifdef CONFIG_EXYNOS_SETUP_THERMAL
 	s5p_tmu_set_platdata(&exynos_tmu_data);

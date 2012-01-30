@@ -237,7 +237,9 @@ static int exynos5_clk_ip_acp_ctrl(struct clk *clk, int enable)
 
 static int exynos5_clk_ip_isp0_ctrl(struct clk *clk, int enable)
 {
-	return s5p_gatectrl(EXYNOS5_CLKGATE_ISP0, clk, enable);
+	s5p_gatectrl(EXYNOS5_CLKGATE_ISP0, clk, enable);
+	s5p_gatectrl(EXYNOS5_CLKGATE_ISP1, clk, enable);
+	return;
 }
 
 static int exynos5_clk_ip_isp1_ctrl(struct clk *clk, int enable)
