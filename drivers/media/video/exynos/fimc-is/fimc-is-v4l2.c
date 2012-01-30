@@ -4274,6 +4274,20 @@ static int fimc_is_s_stream(struct v4l2_subdev *sd, int enable)
 			err("wait timeout : Stream on\n");
 			return -EINVAL;
 		}
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_AUTO);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		fimc_is_hw_set_param(dev);
 	} else {
 		dbg("IS Stream Off\n");
 		if (!test_bit(IS_ST_INIT_DONE, &dev->state)) {

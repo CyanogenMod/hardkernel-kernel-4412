@@ -362,10 +362,6 @@ static int fimc_is_resume(struct device *dev)
 
 	printk(KERN_INFO "FIMC_IS resume\n");
 	mutex_lock(&is_dev->lock);
-	if (!test_bit(IS_PWR_ST_POWERON, &is_dev->power)) {
-		err("not power on state\n");
-		fimc_is_s_power(sd, true);
-	}
 	mutex_unlock(&is_dev->lock);
 	printk(KERN_INFO "FIMC_IS resume end\n");
 	return 0;

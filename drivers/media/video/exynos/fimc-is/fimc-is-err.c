@@ -57,7 +57,6 @@ void fimc_is_print_param_err_name(u32 err)
 		printk(KERN_ERR
 		"ERROR_OTF_INPUT_FORMAT!! : invalid format  (DRC: YUV444, FD: YUV444, 422, 420)\n");
 		break;
-		break;
 	case ERROR_OTF_INPUT_WIDTH:
 		printk(KERN_ERR
 		"ERROR_OTF_INPUT_WIDTH!! : invalid width (DRC: 128~8192, FD: 32~8190)\n");
