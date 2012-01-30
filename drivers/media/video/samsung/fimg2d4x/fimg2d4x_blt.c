@@ -29,7 +29,8 @@
 #include "fimg2d_cache.h"
 #include "fimg2d_helper.h"
 
-#define BLIT_TIMEOUT	msecs_to_jiffies(2000)
+#define LINE_FLUSH_THRESHOLD	SZ_1K
+#define BLIT_TIMEOUT		msecs_to_jiffies(2000)
 
 static inline void fimg2d4x_blit_wait(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
 {
@@ -72,7 +73,7 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 				clip_w = width_to_bytes(cmd->src_rect.x2 - cmd->src_rect.x1, cmd->src.fmt);
 				clip_h = cmd->src_rect.y2 - cmd->src_rect.y1;
 				clip_size = clip_w * clip_h;
-				if ((clip_size * 100 > csrc->size * 80) || (csrc->size < SZ_32K)) {
+				if ((cmd->src.stride - clip_w) < LINE_FLUSH_THRESHOLD) {
 					fimg2d_dma_sync_outer(mm, csrc->addr, csrc->size, CACHE_CLEAN);
 				} else {
 					for (y = 0; y < clip_h; y++) {
@@ -91,7 +92,7 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 				clip_w = width_to_bytes(cmd->msk_rect.x2 - cmd->msk_rect.x1, cmd->msk.fmt);
 				clip_h = cmd->msk_rect.y2 - cmd->msk_rect.y1;
 				clip_size = clip_w * clip_h;
-				if ((clip_size * 100 > cmsk->size * 80) || (cmsk->size < SZ_32K)) {
+				if ((cmd->msk.stride - clip_w) < LINE_FLUSH_THRESHOLD) {
 					fimg2d_dma_sync_outer(mm, cmsk->addr, cmsk->size, CACHE_CLEAN);
 				} else {
 					for (y = 0; y < clip_h; y++) {
@@ -106,11 +107,17 @@ static void fimg2d4x_pre_bitblt(struct fimg2d_control *info, struct fimg2d_bltcm
 			if (cmd->dst.addr.type == ADDR_USER)
 				fimg2d_clean_outer_pagetable(mm, cdst->addr, cdst->size);
 			if (cmd->dst.addr.cacheable) {
-				clip_x = point_to_offset(cmd->dst_rect.x1, cmd->dst.fmt);
-				clip_w = width_to_bytes(cmd->dst_rect.x2 - cmd->dst_rect.x1, cmd->dst.fmt);
-				clip_h = cmd->dst_rect.y2 - cmd->dst_rect.y1;
+				if (cmd->clipping.enable) {
+					clip_x = point_to_offset(cmd->clipping.x1, cmd->dst.fmt);
+					clip_w = width_to_bytes(cmd->clipping.x2 - cmd->clipping.x1, cmd->dst.fmt);
+					clip_h = cmd->clipping.y2 - cmd->clipping.y1;
+				} else {
+					clip_x = point_to_offset(cmd->dst_rect.x1, cmd->dst.fmt);
+					clip_w = width_to_bytes(cmd->dst_rect.x2 - cmd->dst_rect.x1, cmd->dst.fmt);
+					clip_h = cmd->dst_rect.y2 - cmd->dst_rect.y1;
+				}
 				clip_size = clip_w * clip_h;
-				if ((clip_size * 100 > cdst->size * 80) || (cdst->size < SZ_32K)) {
+				if ((cmd->dst.stride - clip_w) < LINE_FLUSH_THRESHOLD) {
 					fimg2d_dma_sync_outer(mm, cdst->addr, cdst->size, CACHE_FLUSH);
 				} else {
 					for (y = 0; y < clip_h; y++) {
