@@ -27,6 +27,7 @@ struct s5m8767_info {
 	struct s5m87xx_dev *iodev;
 	int num_regulators;
 	struct regulator_dev **rdev;
+	struct s5m_opmode_data *opmode_data;
 
 	int ramp_delay;
 	bool buck2_ramp;
@@ -145,9 +146,57 @@ static int s5m8767_list_voltage(struct regulator_dev *rdev,
 	return val;
 }
 
-static int s5m8767_get_register(struct regulator_dev *rdev, int *reg)
+unsigned int s5m8767_opmode_reg[][3] = {
+	/* LDO1 ... LDO28 */
+	/* {NORMAL, LP, STANDBY} */
+	{0x3, 0x2, 0x1}, /* LDO1 */
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x0, 0x0, 0x0},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1}, /* LDO11 */
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x0, 0x0, 0x0},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1}, /* LDO21 */
+	{0x3, 0x2, 0x1},
+	{0x0, 0x0, 0x0},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1},
+	{0x3, 0x2, 0x1}, /* LDO28 */
+	/* BUCK1 ... BUCK9 */
+	{0x3, 0x1, 0x1}, /* BUCK1 */
+	{0x3, 0x1, 0x1},
+	{0x3, 0x1, 0x1},
+	{0x3, 0x1, 0x1},
+	{0x3, 0x2, 0x1}, /* BUCK5 */
+	{0x3, 0x1, 0x1},
+	{0x3, 0x1, 0x1},
+	{0x3, 0x1, 0x1},
+	{0x3, 0x1, 0x1}, /* BUCK9 */
+	/* 32KHZ */
+	{0x1, 0x0, 0x0},
+	{0x1, 0x0, 0x0},
+};
+
+static int s5m8767_get_register(struct regulator_dev *rdev, int *reg, int *pmic_en)
 {
 	int reg_id = s5m8767_get_reg_id(rdev);
+	unsigned int mode;
+	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
 
 	switch (reg_id) {
 	case S5M8767_LDO1 ... S5M8767_LDO2:
@@ -172,6 +221,9 @@ static int s5m8767_get_register(struct regulator_dev *rdev, int *reg)
 		return -EINVAL;
 	}
 
+	mode = s5m8767->opmode_data[reg_id].mode;
+	*pmic_en = s5m8767_opmode_reg[reg_id][mode] << S5M8767_PMIC_EN_SHIFT;
+
 	return 0;
 }
 
@@ -180,10 +232,10 @@ static int s5m8767_reg_is_enabled(struct regulator_dev *rdev)
 	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = s5m8767->iodev->i2c;
 	int ret, reg;
-	int mask=0xc0, pattern=0xc0;
+	int mask = 0xc0, pmic_en;
 	u8 val;
 
-	ret = s5m8767_get_register(rdev, &reg);
+	ret = s5m8767_get_register(rdev, &reg, &pmic_en);
 	if (ret == -EINVAL)
 		return 1;
 	else if (ret)
@@ -193,7 +245,7 @@ static int s5m8767_reg_is_enabled(struct regulator_dev *rdev)
 	if (ret)
 		return ret;
 
-	return (val & mask) == pattern;
+	return (val & mask) == pmic_en;
 }
 
 static int s5m8767_reg_enable(struct regulator_dev *rdev)
@@ -201,13 +253,13 @@ static int s5m8767_reg_enable(struct regulator_dev *rdev)
 	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = s5m8767->iodev->i2c;
 	int ret, reg;
-	int mask=0xc0, pattern=0xc0;
+	int mask = 0xc0, pmic_en;
 
-	ret = s5m8767_get_register(rdev, &reg);
+	ret = s5m8767_get_register(rdev, &reg, &pmic_en);
 	if (ret)
 		return ret;
 
-	return s5m_reg_update(i2c, reg, pattern, mask);
+	return s5m_reg_update(i2c, reg, pmic_en, mask);
 }
 
 static int s5m8767_reg_disable(struct regulator_dev *rdev)
@@ -215,13 +267,13 @@ static int s5m8767_reg_disable(struct regulator_dev *rdev)
 	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = s5m8767->iodev->i2c;
 	int ret, reg;
-	int  mask=0xc0, pattern=0xc0;
+	int  mask = 0xc0, pmic_en;
 
-	ret = s5m8767_get_register(rdev, &reg);
+	ret = s5m8767_get_register(rdev, &reg, &pmic_en);
 	if (ret)
 		return ret;
 
-	return s5m_reg_update(i2c, reg, ~pattern, mask);
+	return s5m_reg_update(i2c, reg, ~pmic_en, mask);
 }
 
 static int s5m8767_get_voltage_register(struct regulator_dev *rdev, int *_reg)
@@ -267,7 +319,7 @@ static int s5m8767_get_voltage(struct regulator_dev *rdev)
 {
 	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = s5m8767->iodev->i2c;
-	int reg, mask=0xff, ret;
+	int reg, mask = 0xff, ret;
 	int reg_id = s5m8767_get_reg_id(rdev);
 	u8 val;
 
@@ -369,7 +421,7 @@ static int s5m8767_set_voltage(struct regulator_dev *rdev,
 	ret = s5m_reg_update(i2c, reg, i, mask);
 	*selector = i;
 
-	if (val < i){
+	if (val < i) {
 		udelay(DIV_ROUND_UP(desc->step * (i - val),
 			s5m8767->ramp_delay));
 	}
@@ -424,23 +476,23 @@ static int s5m8767_set_voltage_buck(struct regulator_dev *rdev,
 
 	switch (reg_id) {
 	case S5M8767_BUCK2:
-		if(s5m8767->buck2_gpiodvs){
-			while ( s5m8767->buck2_vol[i] != new_val )
+		if (s5m8767->buck2_gpiodvs) {
+			while (s5m8767->buck2_vol[i] != new_val)
 				i++;
 		}
 		else
 			return s5m8767_set_voltage(rdev, min_uV, max_uV, selector);
 		break;
 	case S5M8767_BUCK3:
-		if(s5m8767->buck3_gpiodvs){
-			while ( s5m8767->buck3_vol[i] != new_val )
+		if (s5m8767->buck3_gpiodvs) {
+			while (s5m8767->buck3_vol[i] != new_val)
 				i++;
 		} else
 			return s5m8767_set_voltage(rdev, min_uV, max_uV, selector);
 		break;
 	case S5M8767_BUCK4:
-		if(s5m8767->buck3_gpiodvs){
-			while ( s5m8767->buck4_vol[i] != new_val )
+		if (s5m8767->buck3_gpiodvs) {
+			while (s5m8767->buck4_vol[i] != new_val)
 				i++;
 		} else
 			return s5m8767_set_voltage(rdev, min_uV, max_uV, selector);
@@ -450,7 +502,7 @@ static int s5m8767_set_voltage_buck(struct regulator_dev *rdev,
 	old_val = s5m8767->buck_gpioindex;
 	s5m8767->buck_gpioindex = i;
 
-	if ( i > old_val)
+	if (i > old_val)
 		s5m8767_set_high(s5m8767);
 	else
 		s5m8767_set_low(s5m8767);
@@ -466,28 +518,7 @@ static int s5m8767_reg_enable_suspend(struct regulator_dev *rdev)
 
 static int s5m8767_reg_disable_suspend(struct regulator_dev *rdev)
 {
-	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
-	struct i2c_client *i2c = s5m8767->iodev->i2c;
-	int ret, reg;
-	int  mask=0, pattern=0;
-	int reg_id = s5m8767_get_reg_id(rdev);
-
-	switch (reg_id) {
-	case S5M8767_LDO1 ... S5M8767_LDO28:
-		mask = 0xc0;
-		pattern = 0xc0;
-		break;
-	case S5M8767_BUCK1 ... S5M8767_BUCK9:
-		mask = 0xc0;
-		pattern = 0xc0;
-		break;
-	}
-
-	ret = s5m8767_get_register(rdev, &reg);
-	if (ret)
-		return ret;
-
-	return s5m_reg_update(i2c, reg, ~pattern, mask);
+	return 0;
 }
 
 static struct regulator_ops s5m8767_ldo_ops = {
@@ -632,6 +663,7 @@ static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
 	s5m8767->buck2_ramp = pdata->buck2_ramp_enable;
 	s5m8767->buck3_ramp = pdata->buck3_ramp_enable;
 	s5m8767->buck4_ramp = pdata->buck4_ramp_enable;
+	s5m8767->opmode_data = pdata->opmode_data;
 
 	for (i = 0; i < 8; i++) {
 		if (s5m8767->buck2_gpiodvs) {
@@ -701,24 +733,24 @@ static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
 		}
 	}
 
-	if(pdata->buck2_gpiodvs){
-		if(pdata->buck3_gpiodvs||pdata->buck4_gpiodvs){
+	if (pdata->buck2_gpiodvs) {
+		if (pdata->buck3_gpiodvs || pdata->buck4_gpiodvs) {
 			dev_err(&pdev->dev, "S5M8767 GPIO DVS NOT VALID\n");
 			ret = -EINVAL;
 			goto err_alloc;
 		}
 	}
 
-	if(pdata->buck3_gpiodvs){
-		if(pdata->buck2_gpiodvs||pdata->buck4_gpiodvs){
+	if (pdata->buck3_gpiodvs) {
+		if (pdata->buck2_gpiodvs || pdata->buck4_gpiodvs) {
 			dev_err(&pdev->dev, "S5M8767 GPIO DVS NOT VALID\n");
 			ret = -EINVAL;
 			goto err_alloc;
 		}
 	}
 
-	if(pdata->buck4_gpiodvs){
-		if(pdata->buck2_gpiodvs||pdata->buck3_gpiodvs){
+	if (pdata->buck4_gpiodvs) {
+		if (pdata->buck2_gpiodvs || pdata->buck3_gpiodvs) {
 			dev_err(&pdev->dev, "S5M8767 GPIO DVS NOT VALID\n");
 			ret = -EINVAL;
 			goto err_alloc;
@@ -763,10 +795,10 @@ static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
 
 		s5m_reg_update(i2c, reg, ((val & 0x3f) | 0x40), 0xff);
 		reg++;
-		if (( reg == S5M8767_REG_LDO9CTRL) || ( reg == S5M8767_REG_LDO11CTRL)
-		|| ( reg == S5M8767_REG_LDO13CTRL) || ( reg == S5M8767_REG_LDO17CTRL))
+		if ((reg == S5M8767_REG_LDO9CTRL) || (reg == S5M8767_REG_LDO11CTRL)
+		|| (reg == S5M8767_REG_LDO13CTRL) || (reg == S5M8767_REG_LDO17CTRL))
 			reg++;
-	} while ( reg <= S5M8767_REG_LDO16CTRL);
+	} while (reg <= S5M8767_REG_LDO16CTRL);
 
 	if (s5m8767->buck2_ramp)
 		s5m_reg_update(i2c, S5M8767_REG_DVSRAMP, 0x08, 0x08);
