@@ -2154,12 +2154,13 @@ static void __init exynos4_reserve_mem(void)
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1
 		{
+#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
+			.name = "mfc-normal",
+#else
 			.name = "mfc1",
+#endif
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1 * SZ_1K,
-			{
-				.alignment = 1 << 17,
-			},
-			.start = 0,
+			{ .alignment = 1 << 17 },
 		},
 #endif
 #if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
@@ -2167,20 +2168,14 @@ static void __init exynos4_reserve_mem(void)
 		{
 			.name = "mfc0",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
-			{
-				.alignment = 1 << 17,
-			},
-			.start = 0,
+			{ .alignment = 1 << 17 },
 		},
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC
 		{
 			.name = "mfc",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC * SZ_1K,
-			{
-				.alignment = 1 << 17,
-			},
-			.start = 0
+			{ .alignment = 1 << 17 },
 		},
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_ROT
@@ -2221,7 +2216,7 @@ static void __init exynos4_reserve_mem(void)
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
 		{
-			.name = "mfc0",
+			.name = "mfc-secure",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
 			{
 				.alignment = SZ_64M,
@@ -2243,7 +2238,9 @@ static void __init exynos4_reserve_mem(void)
 		"exynos-rot=rot;"
 #endif
 #ifdef CONFIG_VIDEO_MFC5X
-		"s3c-mfc=mfc,mfc0,mfc1;"
+		"s3c-mfc/A=mfc0,mfc-secure;"
+		"s3c-mfc/B=mfc1,mfc-normal;"
+		"s3c-mfc/AB=mfc;"
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_S5P_MFC
 		"s5p-mfc/f=fw;"
@@ -2253,10 +2250,10 @@ static void __init exynos4_reserve_mem(void)
 		"samsung-rp=srp;"
 		"s5p-jpeg=jpeg;"
 		"s5p-fimg2d=fimg2d;"
-		"s5p-smem/mfc=mfc0;"
+		"s5p-smem/mfc=mfc0,mfc-secure;"
 		"s5p-smem/fimc=fimc1;"
-		"s5p-smem/mfc-shm=mfc1;"
-		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,mfc,mfc0,mfc1,fw,b1,b2;";
+		"s5p-smem/mfc-shm=mfc1,mfc-normal;"
+		"ion-exynos=fimd,fimc0,fimc1,fimc2,fimc3,fw,b1,b2;";
 
 	s5p_cma_region_reserve(regions, regions_secure, SZ_64M, map);
 }
