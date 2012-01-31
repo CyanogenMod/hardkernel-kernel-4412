@@ -25,6 +25,7 @@
 
 #include <media/videobuf2-ion.h>
 #include <plat/iovmm.h>
+#include <plat/cpu.h>
 
 static int vb2_ion_debug;
 module_param(vb2_ion_debug, int, 0644);
