@@ -384,7 +384,7 @@
 			#define CSTD_CPU_32BIT          1
 		#endif
 
-	#elif defined(__linux)
+	#elif defined(__KERNEL__) || defined(__linux)
 		#undef CSTD_OS_LINUX
 		#define CSTD_OS_LINUX           1
 		
