@@ -58,6 +58,9 @@ enum s5m8767_regulators {
 	S5M8767_REG_MAX,
 };
 
+
+#define S5M8767_PMIC_EN_SHIFT	6
+
 /* S5M8763 regulator ids */
 enum s5m8763_regulators {
 	S5M8763_LDO1,
@@ -95,6 +98,17 @@ enum s5m8763_regulators {
 struct s5m_regulator_data {
 	int				id;
 	struct regulator_init_data	*initdata;
+};
+
+struct s5m_opmode_data {
+	int id;
+	int mode;
+};
+
+enum s5m_opmode {
+	S5M_OPMODE_NORMAL,
+	S5M_OPMODE_LP,
+	S5M_OPMODE_STANDBY,
 };
 
 #endif /*  __LINUX_MFD_S5M_PMIC_H */

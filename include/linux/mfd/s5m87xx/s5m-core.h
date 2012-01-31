@@ -334,6 +334,8 @@ extern int s5m_reg_update(struct i2c_client *i2c, u8 reg, u8 val, u8 mask);
 
 struct s5m_platform_data {
 	struct s5m_regulator_data	*regulators;
+	struct s5m_opmode_data		*opmode_data;
+
 	int				device_type;
 	int				num_regulators;
 
