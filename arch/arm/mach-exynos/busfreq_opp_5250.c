@@ -28,7 +28,7 @@
 #include <linux/slab.h>
 #include <linux/opp.h>
 #include <linux/clk.h>
-#include <mach/busfreq.h>
+#include <mach/busfreq_exynos5.h>
 
 #include <asm/mach-types.h>
 
@@ -55,6 +55,8 @@
 #define CPU_SLOPE_SIZE		7
 
 #define INT_RBB		6	/* +300mV */
+
+static struct device busfreq_for_int;
 
 /* To save/restore DMC_PAUSE_CTRL register */
 static unsigned int dmc_pause_ctrl;
@@ -150,7 +152,14 @@ static unsigned int exynos5_mif_volt_for400[ASV_GROUP][LV_MIF_END] = {
 
 static unsigned int (*exynos5_mif_volt)[LV_MIF_END];
 
-static unsigned int exynos5250_int_volt[ASV_GROUP][LV_INT_END] = {
+static struct busfreq_table exynos5_busfreq_table_int[] = {
+	{LV_0, 267000, 1000000, 0, 0, 0},
+	{LV_1, 200000, 1000000, 0, 0, 0},
+	{LV_2, 160000, 1000000, 0, 0, 0},
+	{LV_3, 133000, 1000000, 0, 0, 0},
+};
+
+static unsigned int exynos5_int_volt[ASV_GROUP][LV_INT_END] = {
 	/* L0	     L1	      L2       L3 */
 	{1050000, 1050000, 1050000, 1050000}, /* ASV0 */
 	{1050000, 1050000, 1050000, 1050000}, /* ASV1 */
@@ -330,6 +339,9 @@ static void exynos5250_set_bus_volt(void)
 		exynos5_busfreq_table[i].volt =
 			exynos5_mif_volt[asv_group_index][i];
 
+	for (i = 0 ; i < LV_INT_END ; i++)
+		exynos5_busfreq_table_int[i].volt =
+			exynos5_int_volt[asv_group_index][i];
 	return;
 }
 
@@ -466,41 +478,48 @@ static void exynos5250_target_for_int(int div_index)
 	} while (tmp & 0x10);
 }
 
-void exynos5250_target(int mif_index, int int_index)
+static void exynos5250_target(int mif_index, int int_index)
 {
 	exynos5250_target_for_mif(mif_index);
 	exynos5250_target_for_int(int_index);
 }
 
-unsigned int exynos5250_get_table_index(struct opp *opp)
+static int exynos5250_get_table_index_for_mif(struct opp *opp)
 {
-	unsigned int index;
+	int index;
 
 	for (index = LV_0; index < LV_MIF_END; index++)
 		if (opp_get_freq(opp) == exynos5_busfreq_table[index].mem_clk)
-			break;
+			return index;
 
-	return index;
+	return -EINVAL;
 }
 
-void exynos5250_suspend(void)
+static int exynos5250_get_table_index_for_int(struct opp *opp)
+{
+	int index;
+
+	for (index = LV_0; index < LV_INT_END; index++)
+		if (opp_get_freq(opp) == exynos5_busfreq_table_int[index].mem_clk)
+			return index;
+
+	return -EINVAL;
+}
+
+static void exynos5250_suspend(void)
 {
 	/* Nothing to do */
 }
 
-void exynos5250_resume(void)
+static void exynos5250_resume(void)
 {
 	__raw_writel(dmc_pause_ctrl, EXYNOS5_DMC_PAUSE_CTRL);
 }
 
-unsigned int exynos5250_get_int_volt(unsigned long index)
+static void exynos5250_monitor(struct busfreq_data *data,
+			struct opp **mif_opp, struct opp **int_opp)
 {
-	return exynos5250_int_volt[asv_group_index][index];
-}
-
-struct opp *exynos5250_monitor(struct busfreq_data *data)
-{
-	struct opp *opp = data->curr_opp;
+	struct opp *mopp = data->mif_curr_opp;
 	int i;
 	unsigned int cpu_load_average = 0;
 	unsigned int dmc_c_load_average = 0;
@@ -511,21 +530,21 @@ struct opp *exynos5250_monitor(struct busfreq_data *data)
 	unsigned long lockfreq;
 	unsigned long dmcfreq;
 	unsigned long newfreq;
-	unsigned long currfreq = opp_get_freq(data->curr_opp) / 1000;
-	unsigned long maxfreq = opp_get_freq(data->max_opp) / 1000;
+	unsigned long mif_currfreq = opp_get_freq(data->mif_curr_opp) / 1000;
+	unsigned long mif_maxfreq = opp_get_freq(data->mif_max_opp) / 1000;
 	unsigned long cpu_load;
 	unsigned long dmc_load;
 	unsigned long dmc_c_load;
 	unsigned long dmc_r1_load;
 	unsigned long dmc_l_load;
 
-	ppmu_update(data->dev, 3);
+	ppmu_update(data->mif_dev, 3);
 
 	/* Convert from base xxx to base maxfreq */
-	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * currfreq, maxfreq);
-	dmc_c_load = div64_u64(ppmu_load[PPMU_DDR_C] * currfreq, maxfreq);
-	dmc_r1_load = div64_u64(ppmu_load[PPMU_DDR_R1] * currfreq, maxfreq);
-	dmc_l_load = div64_u64(ppmu_load[PPMU_DDR_L] * currfreq, maxfreq);
+	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * mif_currfreq, mif_maxfreq);
+	dmc_c_load = div64_u64(ppmu_load[PPMU_DDR_C] * mif_currfreq, mif_maxfreq);
+	dmc_r1_load = div64_u64(ppmu_load[PPMU_DDR_R1] * mif_currfreq, mif_maxfreq);
+	dmc_l_load = div64_u64(ppmu_load[PPMU_DDR_L] * mif_currfreq, mif_maxfreq);
 
 	data->load_history[PPMU_CPU][data->index] = cpu_load;
 	data->load_history[PPMU_DDR_C][data->index] = dmc_c_load;
@@ -562,38 +581,40 @@ struct opp *exynos5250_monitor(struct busfreq_data *data)
 	}
 
 	if (dmc_load >= DMC_MAX_THRESHOLD) {
-		dmcfreq = opp_get_freq(data->max_opp);
+		dmcfreq = opp_get_freq(data->mif_max_opp);
 	} else if (dmc_load < IDLE_THRESHOLD) {
 		if (dmc_load_average < IDLE_THRESHOLD)
-			opp = step_down(data, 1);
+			mopp = step_down_mif(data, 1);
 		else
-			opp = data->curr_opp;
-		dmcfreq = opp_get_freq(opp);
+			mopp = data->mif_curr_opp;
+		dmcfreq = opp_get_freq(mopp);
 	} else {
 		if (dmc_load < dmc_load_average) {
 			dmc_load = dmc_load_average;
 			if (dmc_load >= DMC_MAX_THRESHOLD)
 				dmc_load = DMC_MAX_THRESHOLD;
 		}
-		dmcfreq = div64_u64(maxfreq * dmc_load * 1000, DMC_MAX_THRESHOLD);
+		dmcfreq = div64_u64(mif_maxfreq * dmc_load * 1000, DMC_MAX_THRESHOLD);
 	}
 
-	lockfreq = dev_max_freq(data->dev);
+	lockfreq = dev_max_freq(data->mif_dev);
 
 	newfreq = max3(lockfreq, dmcfreq, cpufreq);
+	mopp = opp_find_freq_ceil(data->mif_dev, &newfreq);
 
-	opp = opp_find_freq_ceil(data->dev, &newfreq);
-
-	return opp;
+	*mif_opp = mopp;
+	/* temporary */
+	*int_opp = data->int_curr_opp;
 }
 
 static void busfreq_early_suspend(struct early_suspend *h)
 {
-	unsigned long min;
+	unsigned long mif_freq, int_freq;
 	struct busfreq_data *data = container_of(h, struct busfreq_data,
 			busfreq_early_suspend_handler);
-	min = opp_get_freq(data->min_opp);
-	dev_lock(data->dev, data->dev, min);
+	mif_freq = opp_get_freq(data->mif_min_opp);
+	int_freq = opp_get_freq(data->int_min_opp);
+	dev_lock(data->mif_dev, data->mif_dev, mif_freq);
 }
 
 static void busfreq_late_resume(struct early_suspend *h)
@@ -601,7 +622,7 @@ static void busfreq_late_resume(struct early_suspend *h)
 	struct busfreq_data *data = container_of(h, struct busfreq_data,
 			busfreq_early_suspend_handler);
 	/* Request min 300MHz */
-	dev_lock(data->dev, data->dev, 300000);
+	dev_lock(data->mif_dev, data->mif_dev, 300000);
 }
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data)
@@ -651,8 +672,11 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 
 	exynos5250_set_bus_volt();
 
+	data->mif_dev = dev;
+	data->int_dev = &busfreq_for_int;
+
 	for (i = 0; i < LV_MIF_END; i++) {
-		ret = opp_add(dev, exynos5_busfreq_table[i].mem_clk,
+		ret = opp_add(data->mif_dev, exynos5_busfreq_table[i].mem_clk,
 				exynos5_busfreq_table[i].volt);
 		if (ret) {
 			dev_err(dev, "Fail to add opp entries.\n");
@@ -660,13 +684,36 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		}
 	}
 
+	for (i = 0; i < LV_INT_END; i++) {
+		ret = opp_add(data->int_dev, exynos5_busfreq_table_int[i].mem_clk,
+				exynos5_busfreq_table_int[i].volt);
+		if (ret) {
+			dev_err(dev, "Fail to add opp entries.\n");
+			return ret;
+		}
+	}
+
+	data->target = exynos5250_target;
+	data->get_table_index_for_mif = exynos5250_get_table_index_for_mif;
+	data->get_table_index_for_int = exynos5250_get_table_index_for_int;
+	data->monitor = exynos5250_monitor;
+	data->busfreq_suspend = exynos5250_suspend;
+	data->busfreq_resume = exynos5250_resume;
+	data->sampling_rate = usecs_to_jiffies(100000);
+
 	data->table = exynos5_busfreq_table;
 	data->table_size = LV_MIF_END;
 
-	/* Find max frequency */
-	data->max_opp = opp_find_freq_floor(dev, &maxfreq);
-	data->min_opp = opp_find_freq_ceil(dev, &minfreq);
-	data->curr_opp = opp_find_freq_ceil(dev, &cdrexfreq);
+	/* Find max frequency for mif */
+	data->mif_max_opp = opp_find_freq_floor(data->mif_dev, &maxfreq);
+	data->mif_min_opp = opp_find_freq_ceil(data->mif_dev, &minfreq);
+	data->mif_curr_opp = opp_find_freq_ceil(data->mif_dev, &cdrexfreq);
+	/* Find max frequency for int */
+	maxfreq = ULONG_MAX;
+	minfreq = 0;
+	data->int_max_opp = opp_find_freq_floor(data->int_dev, &maxfreq);
+	data->int_min_opp = opp_find_freq_ceil(data->int_dev, &minfreq);
+	data->int_curr_opp = data->int_max_opp;
 
 	data->vdd_int = regulator_get(NULL, "vdd_int");
 	if (IS_ERR(data->vdd_int)) {

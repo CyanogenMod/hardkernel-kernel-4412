@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-exynos/busfreq_opp.c
+/* linux/arch/arm/mach-exynos/busfreq_opp_exynos4.c
  *
  * Copyright (c) 2011 Samsung Electronics Co., Ltd.
  *		http://www.samsung.com/
@@ -40,7 +40,7 @@
 #include <mach/regs-mem.h>
 #include <mach/cpufreq.h>
 #include <mach/dev.h>
-#include <mach/busfreq.h>
+#include <mach/busfreq_exynos4.h>
 
 #include <plat/map-s5p.h>
 #include <plat/cpu.h>
@@ -138,27 +138,23 @@ static void exynos_busfreq_timer(struct work_struct *work)
 
 	voltage = opp_get_voltage(opp);
 	if (newfreq > currfreq) {
-		if (!IS_ERR(data->vdd_mif)) {
-			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage + 25000);
-			voltage = data->get_int_volt(index);
-		}
+		regulator_set_voltage(data->vdd_mif, voltage,
+				voltage + 25000);
+		voltage = data->get_int_volt(index);
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
 		if (data->busfreq_prepare)
 			data->busfreq_prepare(index);
 	}
 
-	data->target(index, index);
+	data->target(index);
 
 	if (newfreq < currfreq) {
 		if (data->busfreq_post)
 			data->busfreq_post(index);
-		if (!IS_ERR(data->vdd_mif)) {
-			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage + 25000);
-			voltage = data->get_int_volt(index);
-		}
+		regulator_set_voltage(data->vdd_mif, voltage,
+				voltage + 25000);
+		voltage = data->get_int_volt(index);
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
 	}
@@ -184,16 +180,13 @@ static int exynos_buspm_notifier_event(struct notifier_block *this,
 	case PM_SUSPEND_PREPARE:
 		mutex_lock(&busfreq_lock);
 		data->use = false;
-		if (!IS_ERR(data->vdd_mif)) {
-			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage + 25000);
-			voltage = data->get_int_volt(freq);
-		}
+		regulator_set_voltage(data->vdd_mif, voltage, voltage + 25000);
+		voltage = data->get_int_volt(freq);
 		regulator_set_voltage(data->vdd_int, voltage, voltage + 25000);
 		index = data->get_table_index(data->max_opp);
 		if (data->busfreq_prepare)
 			data->busfreq_prepare(index);
-		data->target(index, index);
+		data->target(index);
 		data->curr_opp = data->max_opp;
 		mutex_unlock(&busfreq_lock);
 		return NOTIFY_OK;
@@ -215,11 +208,8 @@ static int exynos_busfreq_reboot_event(struct notifier_block *this,
 	unsigned long voltage = opp_get_voltage(data->max_opp);
 	unsigned long freq = opp_get_freq(data->max_opp);
 
-	if (!IS_ERR(data->vdd_mif)) {
-		regulator_set_voltage(data->vdd_mif, voltage,
-				voltage + 25000);
-		voltage = data->get_int_volt(freq);
-	}
+	regulator_set_voltage(data->vdd_mif, voltage, voltage + 25000);
+	voltage = data->get_int_volt(freq);
 	regulator_set_voltage(data->vdd_int, voltage, voltage + 25000);
 	data->use = false;
 
@@ -251,27 +241,23 @@ static int exynos_busfreq_request_event(struct notifier_block *this,
 
 	voltage = opp_get_voltage(opp);
 	if (newfreq > curr_freq) {
-		if (!IS_ERR(data->vdd_mif)) {
-			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage + 25000);
-			voltage = data->get_int_volt(index);
-		}
+		regulator_set_voltage(data->vdd_mif, voltage,
+				voltage + 25000);
+		voltage = data->get_int_volt(index);
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
 		if (data->busfreq_prepare)
 			data->busfreq_prepare(index);
 	}
 
-	data->target(index, index);
+	data->target(index);
 
 	if (newfreq < curr_freq) {
 		if (data->busfreq_post)
 			data->busfreq_post(index);
-		if (!IS_ERR(data->vdd_mif)) {
-			regulator_set_voltage(data->vdd_mif, voltage,
-					voltage + 25000);
-			voltage = data->get_int_volt(index);
-		}
+		regulator_set_voltage(data->vdd_mif, voltage,
+				voltage + 25000);
+		voltage = data->get_int_volt(index);
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
 	}
@@ -383,15 +369,13 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	struct busfreq_data *data;
 	unsigned int val;
 
-	if (!soc_is_exynos5250()) {
-		val = __raw_readl(S5P_VA_DMC0 + 0x4);
-		val = (val >> 8) & 0xf;
+	val = __raw_readl(S5P_VA_DMC0 + 0x4);
+	val = (val >> 8) & 0xf;
 
-		/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
-		if (val != 0x05) {
-			pr_err("[ %x ] Memory Type Undertermined.\n", val);
-			return -ENODEV;
-		}
+	/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
+	if (val != 0x05) {
+		pr_err("[ %x ] Memory Type Undertermined.\n", val);
+		return -ENODEV;
 	}
 
 	data = kzalloc(sizeof(struct busfreq_data), GFP_KERNEL);
@@ -408,15 +392,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	data->exynos_request_notifier.notifier_call =
 		exynos_busfreq_request_event;
 
-	if (soc_is_exynos5250()) {
-		data->init = exynos5250_init;
-		data->target = exynos5250_target;
-		data->get_int_volt = exynos5250_get_int_volt;
-		data->get_table_index = exynos5250_get_table_index;
-		data->monitor = exynos5250_monitor;
-		data->busfreq_suspend = exynos5250_suspend;
-		data->busfreq_resume = exynos5250_resume;
-	} else {
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
 		data->init = exynos4x12_init;
 		data->target = exynos4x12_target;
 		data->get_int_volt = exynos4x12_get_int_volt;
@@ -426,6 +402,9 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 		data->busfreq_post = exynos4x12_post;
 		data->busfreq_suspend = exynos4x12_suspend;
 		data->busfreq_resume = exynos4x12_resume;
+	} else {
+		pr_err("Unsupport device type.\n");
+		goto err_busfreq;
 	}
 
 	data->dev = &pdev->dev;
