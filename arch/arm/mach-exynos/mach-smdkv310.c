@@ -60,7 +60,7 @@
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 #include <plat/mipi_csis.h>
 #endif
-#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC) || defined(CONFIG_VIDEO_MFC5X)
 #include <plat/s5p-mfc.h>
 #endif
 #include <plat/gpio-cfg.h>
@@ -99,9 +99,6 @@
 #include <mach/secmem.h>
 #endif
 #include <mach/dev.h>
-#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC) || defined(CONFIG_VIDEO_MFC5X)
-#include <plat/s5p-mfc.h>
-#endif
 
 #include <media/s5k4ba_platform.h>
 #include <media/s5k4ea_platform.h>
