@@ -164,23 +164,21 @@ static void __sysmmu_set_ptbase(void __iomem *sfrbase,
 }
 
 static void __sysmmu_set_prefbuf(void __iomem *sfrbase, unsigned long base,
-							unsigned long size)
+						unsigned long size, int idx)
 {
-	unsigned long end = base + size - 1;
-
-	BUG_ON(end <= base);
-
-	__raw_writel(base, sfrbase + S5P_PB0_SADDR);
-	__raw_writel(end,  sfrbase + S5P_PB0_EADDR);
-	__raw_writel(base, sfrbase + S5P_PB1_SADDR);
-	__raw_writel(end,  sfrbase + S5P_PB1_EADDR);
+	__raw_writel(base, sfrbase + S5P_PB0_SADDR + idx * 8);
+	__raw_writel(size - 1 + base,  sfrbase + S5P_PB0_EADDR + idx * 8);
 }
 
-void s5p_sysmmu_set_prefbuf(struct device *owner, unsigned long base,
-							unsigned long size)
+void s5p_sysmmu_set_prefbuf(struct device *owner,
+				unsigned long base0, unsigned long size0,
+				unsigned long base1, unsigned long size1)
 {
 	struct sysmmu_drvdata *data = NULL;
 	unsigned long flags;
+
+	BUG_ON((base0 + (size0 - 1)) <= base0);
+	BUG_ON((base1 + (size1 - 1)) <= base1);
 
 	while ((data = get_sysmmu_data(owner, data))) {
 		if (WARN_ON(data->version != 3))
@@ -189,7 +187,22 @@ void s5p_sysmmu_set_prefbuf(struct device *owner, unsigned long base,
 		read_lock_irqsave(&data->lock, flags);
 		if (is_sysmmu_active(data)) {
 			sysmmu_block(data->sfrbase);
-			__sysmmu_set_prefbuf(data->sfrbase, base, size);
+
+			if (size1 == 0) {
+				if (size0 <= SZ_128K) {
+					base1 = base0;
+					size1 = size0;
+				} else {
+					size1 = size0 -
+						ALIGN(size0 / 2, SZ_64K);
+					size0 = size0 - size1;
+					base1 = base0 + size0;
+				}
+			}
+
+			__sysmmu_set_prefbuf(data->sfrbase, base0, size0, 0);
+			__sysmmu_set_prefbuf(data->sfrbase, base1, size1, 1);
+
 			sysmmu_unblock(data->sfrbase);
 		}
 		read_unlock_irqrestore(&data->lock, flags);
@@ -277,7 +290,7 @@ static irqreturn_t s5p_sysmmu_irq(int irq, void *dev_id)
 		base = __raw_readl(mmudata->sfrbase + S5P_PT_BASE_ADDR);
 		addr = __raw_readl(mmudata->sfrbase + fault_reg_offset[itype]);
 
-		dev_warn(mmudata->dev, "System MMU %s occurred by %s\n",
+		dev_dbg(mmudata->dev, "System MMU %s occurred by %s\n",
 			sysmmu_fault_name[itype], dev_name(mmudata->owner));
 
 		if ((mmudata->version == 3) && ((itype == SYSMMU_AR_MULTIHIT) ||
@@ -376,15 +389,22 @@ int s5p_sysmmu_enable(struct device *owner, unsigned long pgd)
 
 			__sysmmu_set_ptbase(mmudata->sfrbase, pgd);
 
-			mmudata->version = readl(
+			if (mmudata->version == 0) {
+
+				mmudata->version = readl(
 					mmudata->sfrbase + S5P_MMU_VERSION);
-			mmudata->version >>= 28;
+				mmudata->version >>= 28;
+			}
 
 			if (mmudata->version == 3) {
 				__raw_writel((1 << 12) | (2 << 28),
 						mmudata->sfrbase + S5P_MMU_CFG);
-				__sysmmu_set_prefbuf(mmudata->sfrbase, 0, 0);
+				__sysmmu_set_prefbuf(mmudata->sfrbase,
+								0, -1, 0);
+				__sysmmu_set_prefbuf(mmudata->sfrbase,
+								0, -1, 1);
 			}
+
 			__raw_writel(CTRL_ENABLE,
 					mmudata->sfrbase + S5P_MMU_CTRL);
 
