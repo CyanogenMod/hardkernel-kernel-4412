@@ -882,6 +882,54 @@ static int exynos_ss_udc_process_set_sel(struct exynos_ss_udc *udc)
 }
 
 /**
+ * exynos_ss_udc_process_set_test_mode - process request TEST_MODE
+ * @udc: The device state.
+ */
+static int exynos_ss_udc_process_set_test_mode(struct exynos_ss_udc *udc, u16 windex)
+{
+	u8 selector = (windex >> 8) & TEST_SELECTOR_MASK;
+	u32 reg;
+
+	reg = readl(udc->regs + EXYNOS_USB3_DCTL) & (~EXYNOS_USB3_DCTL_TstCtl_MASK);
+
+	switch (selector) {
+	case TEST_J:
+		dev_info(udc->dev, "Test mode selector is"
+			" TEST J\n");
+		reg |= EXYNOS_USB3_DCTL_TstCtl(0x1);
+		break;
+
+	case TEST_K:
+		dev_info(udc->dev, "Test mode selector is"
+			" TEST K\n");
+		reg |= EXYNOS_USB3_DCTL_TstCtl(0x2);
+		break;
+
+	case TEST_SE0_NAK:
+		dev_info(udc->dev, "Test mode selector is"
+			" TEST SE0 NAK\n");
+		reg |= EXYNOS_USB3_DCTL_TstCtl(0x3);
+		break;
+
+	case TEST_PACKET:
+		dev_info(udc->dev, "Test mode selector is"
+			" TEST PACKET\n");
+		reg |= EXYNOS_USB3_DCTL_TstCtl(0x4);
+		break;
+
+	case TEST_FORCE_EN:
+		dev_info(udc->dev, "Test mode selector is"
+			" TEST FORCE EN\n");
+		reg |= EXYNOS_USB3_DCTL_TstCtl(0x5);
+		break;
+	}
+
+	writel(reg, udc->regs + EXYNOS_USB3_DCTL);
+
+	return 1;
+}
+
+/**
  * exynos_ss_udc_process_clr_feature - process request CLEAR_FEATURE
  * @udc: The device state.
  * @ctrl: The USB control request.
@@ -964,6 +1012,9 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 	switch (ctrl->bRequestType & USB_RECIP_MASK) {
 	case USB_RECIP_DEVICE:
 		switch (le16_to_cpu(ctrl->wValue)) {
+		case USB_DEVICE_TEST_MODE:
+			exynos_ss_udc_process_set_test_mode(udc, le16_to_cpu(ctrl->wIndex));
+			break;
 		case USB_DEVICE_U1_ENABLE:
 			/* Temporarily disabled because of HW bug */
 #if 0

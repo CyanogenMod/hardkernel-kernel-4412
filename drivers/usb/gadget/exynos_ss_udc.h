@@ -233,6 +233,9 @@
 #define EXYNOS_USB3_TRB_HWO				(1 << 0)
 /*****************************************************************************/
 
+/* TEST MODE in set_feature request */
+#define TEST_SELECTOR_MASK	0xFF
+
 #define call_gadget(_udc, _entry)	do {			\
 	if ((_udc)->gadget.speed != USB_SPEED_UNKNOWN &&	\
 	    (_udc)->driver && (_udc)->driver->_entry)		\
