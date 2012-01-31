@@ -71,6 +71,10 @@
 #include <plat/regs-srom.h>
 #include <plat/sysmmu.h>
 #include <plat/tv-core.h>
+#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC) || defined(CONFIG_VIDEO_MFC5X)
+#include <plat/s5p-mfc.h>
+#endif
+
 #include <media/s5k4ba_platform.h>
 #include <media/s5k4ea_platform.h>
 #include <media/exynos_flite.h>
@@ -93,10 +97,6 @@
 #ifdef CONFIG_EXYNOS_C2C
 #include <mach/c2c.h>
 #endif
-#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC) || defined(CONFIG_VIDEO_MFC5X)
-#include <plat/s5p-mfc.h>
-#endif
-
 #ifdef CONFIG_FB_S5P_MIPI_DSIM
 #include <mach/mipi_ddi.h>
 #include <mach/dsim.h>
@@ -108,10 +108,6 @@
 #ifdef CONFIG_VIDEO_SAMSUNG_S5P_FIMC
 #include <plat/fimc-core.h>
 #include <media/s5p_fimc.h>
-#endif
-
-#if defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)
-#include <plat/s5p-mfc.h>
 #endif
 
 #ifdef CONFIG_VIDEO_JPEG_V2X
