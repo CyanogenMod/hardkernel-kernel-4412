@@ -2439,6 +2439,7 @@ static struct s5m_platform_data exynos4_s5m8767_pdata = {
 	.cfg_pmic_irq		= s5m_cfg_irq,
 	.wakeup			= 1,
 	.opmode_data		= s5m8767_opmode_data,
+	.wtsr_smpl		= 1,
 
 	.buck2_voltage[0]	= 1250000,
 	.buck2_voltage[1]	= 1200000,
