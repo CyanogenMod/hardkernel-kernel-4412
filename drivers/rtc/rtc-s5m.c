@@ -92,16 +92,12 @@ static inline int s5m8767_rtc_set_time_reg(struct s5m_rtc_info *info)
 	data |= RTC_UDR_MASK;
 
 	ret = s5m_reg_write(info->rtc, S5M87XX_RTC_UDR_CON, data);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(info->dev, "%s: fail to write update reg(%d)\n",
 				__func__, ret);
-	else {
+	} else {
 		msleep(20);
 	}
-
-	data &= ~RTC_TIME_EN_MASK;
-
-	ret = s5m_reg_write(info->rtc, S5M87XX_RTC_UDR_CON, data);
 
 	return ret;
 }
