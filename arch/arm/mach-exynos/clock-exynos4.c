@@ -2041,6 +2041,12 @@ static struct clk *exynos4_clks[] __initdata = {
 #ifdef CONFIG_PM
 static int exynos4_clock_suspend(void)
 {
+	unsigned int tmp;
+	tmp = __raw_readl(EXYNOS4_CLKSRC_TOP1);
+	tmp &= ~(0x1 << EXYNOS4_CLKDIV_TOP1_ACLK200_SUB_SHIFT |
+		0x1 << EXYNOS4_CLKDIV_TOP1_ACLK400_MCUISP_SUB_SHIFT);
+	__raw_writel(tmp, EXYNOS4_CLKSRC_TOP1);
+
 	s3c_pm_do_save(exynos4_clock_save, ARRAY_SIZE(exynos4_clock_save));
 	s3c_pm_do_save(exynos4_epll_save, ARRAY_SIZE(exynos4_epll_save));
 	s3c_pm_do_save(exynos4_vpll_save, ARRAY_SIZE(exynos4_vpll_save));
