@@ -2547,6 +2547,8 @@ int fimc_qbuf_capture(void *fh, struct v4l2_buffer *b)
 	int idx = b->index;
 	int framecnt_seq;
 	int available_bufnum;
+	size_t length = 0;
+	int i;
 
 	if (!cap || !ctrl->cam) {
 		fimc_err("%s: No capture device.\n", __func__);
@@ -2584,6 +2586,48 @@ int fimc_qbuf_capture(void *fh, struct v4l2_buffer *b)
 
 	mutex_unlock(&ctrl->v4l2_lock);
 
+	if (!cap->cacheable)
+		return 0;
+
+	for (i = 0; i < 3; i++) {
+		if (cap->bufs[b->index].base[i])
+			length += cap->bufs[b->index].length[i];
+		else
+			break;
+	}
+
+	if (length > (unsigned long) L2_FLUSH_ALL) {
+		flush_cache_all();      /* L1 */
+		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
+		outer_flush_all();      /* L2 */
+	} else if (length > (unsigned long) L1_FLUSH_ALL) {
+		flush_cache_all();      /* L1 */
+		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
+
+		for (i = 0; i < 3; i++) {
+			phys_addr_t start = cap->bufs[b->index].base[i];
+			phys_addr_t end   = cap->bufs[b->index].base[i] +
+					    cap->bufs[b->index].length[i] - 1;
+
+			if (!start)
+				break;
+
+			outer_flush_range(start, end);  /* L2 */
+		}
+	} else {
+		for (i = 0; i < 3; i++) {
+			phys_addr_t start = cap->bufs[b->index].base[i];
+			phys_addr_t end   = cap->bufs[b->index].base[i] +
+					    cap->bufs[b->index].length[i] - 1;
+
+			if (!start)
+				break;
+
+			dmac_flush_range(phys_to_virt(start), phys_to_virt(end));
+			outer_flush_range(start, end);  /* L2 */
+		}
+	}
+
 	return 0;
 }
 
@@ -2606,8 +2650,7 @@ int fimc_dqbuf_capture(void *fh, struct v4l2_buffer *b)
 	struct fimc_capinfo *cap = ctrl->cap;
 	struct fimc_buf_set *bs;
 	struct fimc_buf *buf = (struct fimc_buf *)b->m.userptr;
-	size_t length = 0;
-	int i, pp, ret = 0;
+	int pp, ret = 0;
 
 	struct s3c_platform_fimc *pdata = to_fimc_plat(ctrl->dev);
 
@@ -2647,48 +2690,6 @@ int fimc_dqbuf_capture(void *fh, struct v4l2_buffer *b)
 		if (ret) {
 			b->index = -1;
 			fimc_err("%s: no inqueue buffer\n", __func__);
-		}
-	}
-
-	if (!cap->cacheable)
-		return ret;
-
-	for (i = 0; i < 3; i++) {
-		if (cap->bufs[b->index].base[i])
-			length += cap->bufs[b->index].length[i];
-		else
-			break;
-	}
-
-	if (length > (unsigned long) L2_FLUSH_ALL) {
-		flush_cache_all();      /* L1 */
-		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
-		outer_flush_all();      /* L2 */
-	} else if (length > (unsigned long) L1_FLUSH_ALL) {
-		flush_cache_all();      /* L1 */
-		smp_call_function((smp_call_func_t)__cpuc_flush_kern_all, NULL, 1);
-
-		for (i = 0; i < 3; i++) {
-			phys_addr_t start = cap->bufs[b->index].base[i];
-			phys_addr_t end   = cap->bufs[b->index].base[i] +
-					    cap->bufs[b->index].length[i] - 1;
-
-			if (!start)
-				break;
-
-			outer_flush_range(start, end);  /* L2 */
-		}
-	} else {
-		for (i = 0; i < 3; i++) {
-			phys_addr_t start = cap->bufs[b->index].base[i];
-			phys_addr_t end   = cap->bufs[b->index].base[i] +
-					    cap->bufs[b->index].length[i] - 1;
-
-			if (!start)
-				break;
-
-			dmac_flush_range(phys_to_virt(start), phys_to_virt(end));
-			outer_flush_range(start, end);  /* L2 */
 		}
 	}
 
