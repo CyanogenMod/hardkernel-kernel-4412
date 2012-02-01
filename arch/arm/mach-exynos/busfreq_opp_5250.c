@@ -631,6 +631,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	unsigned long maxfreq = ULONG_MAX;
 	unsigned long minfreq = 0;
 	unsigned long cdrexfreq;
+	unsigned long lrbusfreq;
 	struct clk *clk;
 	int ret;
 
@@ -646,7 +647,15 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		return ret;
 	}
 	cdrexfreq = clk_get_rate(clk) / 1000;
+	clk_put(clk);
 
+	clk = clk_get(NULL, "aclk_266");
+	if (IS_ERR(clk)) {
+		dev_err(dev, "Fail to get aclk_266 clock");
+		ret = PTR_ERR(clk);
+		return ret;
+	}
+	lrbusfreq = clk_get_rate(clk) / 1000;
 	clk_put(clk);
 
 	if (cdrexfreq == 800000) {
@@ -684,6 +693,8 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		}
 	}
 
+	opp_disable(data->mif_dev, 107000);
+
 	for (i = 0; i < LV_INT_END; i++) {
 		ret = opp_add(data->int_dev, exynos5_busfreq_table_int[i].mem_clk,
 				exynos5_busfreq_table_int[i].volt);
@@ -713,7 +724,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	minfreq = 0;
 	data->int_max_opp = opp_find_freq_floor(data->int_dev, &maxfreq);
 	data->int_min_opp = opp_find_freq_ceil(data->int_dev, &minfreq);
-	data->int_curr_opp = data->int_max_opp;
+	data->int_curr_opp = opp_find_freq_ceil(data->int_dev, &lrbusfreq);
 
 	data->vdd_int = regulator_get(NULL, "vdd_int");
 	if (IS_ERR(data->vdd_int)) {
