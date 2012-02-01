@@ -224,11 +224,17 @@ void kbase_mem_usage_release_pages(kbasep_mem_usage * usage, u32 nr_pages)
 }
 
 #if BASE_HW_ISSUE_6367
+#ifdef CONFIG_VITHAR_RT_PM
+#include <linux/delay.h>
+#endif
 /**
  * @brief Wait for GPU write flush.
  *
  * Wait 1000 GPU clock cycles. This delay is known to give the GPU time to flush its write buffer.
  */
+#ifdef CONFIG_VITHAR_RT_PM
+static void kbase_wait_write_flush(struct kbase_context *kctx) { udelay(50); }
+#else
 #if MALI_NO_MALI
 static void kbase_wait_write_flush(struct kbase_context *kctx) { }
 #else
@@ -254,6 +260,7 @@ static void kbase_wait_write_flush(struct kbase_context *kctx)
 		}
 	}
 }
+#endif
 #endif
 #endif
 

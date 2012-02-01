@@ -26,6 +26,10 @@
 
 #include <kbase/src/common/mali_kbase_defs.h>
 
+#ifdef CONFIG_VITHAR_RT_PM
+#include <kbase/src/platform/mali_kbase_runtime_pm.h>
+#endif
+
 
 /*
  * Definitions:
@@ -439,6 +443,11 @@ void kbase_mmu_teardown_pages(struct kbase_context *kctx, u64 vpfn, u32 nr)
 
 			/* AS transaction begin */
 			osk_mutex_lock(&kbdev->as[kctx->as_nr].transaction_mutex);
+
+#ifdef CONFIG_VITHAR_RT_PM
+			//kbase_device_runtime_get_sync(kbdev->osdev.dev);
+			kbase_device_runtime_resume(kbdev->osdev.dev);
+#endif
 			kbase_reg_write(kctx->kbdev, MMU_AS_REG(kctx->as_nr, ASn_LOCKADDR_LO), lock_addr & 0xFFFFFFFFUL, kctx);
 			kbase_reg_write(kctx->kbdev, MMU_AS_REG(kctx->as_nr, ASn_LOCKADDR_HI), lock_addr >> 32, kctx);
 			kbase_reg_write(kctx->kbdev, MMU_AS_REG(kctx->as_nr, ASn_COMMAND), 2/*LOCK*/, kctx);

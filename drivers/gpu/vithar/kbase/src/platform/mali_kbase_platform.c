@@ -47,33 +47,108 @@
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
 #include <kbase/src/platform/mali_kbase_dvfs.h>
 
-static struct clk *mpll = NULL;
 static struct clk *sclk_g3d = NULL;
 #define VITHAR_DEFAULT_CLOCK 267000000
 static int vithar_clock = VITHAR_DEFAULT_CLOCK;
 #define EXYNOS5_PMU_G3D_CONF	    S5P_PMUREG(0x4060)
 #define EXYNOS5_PMU_G3D_STATUS	    S5P_PMUREG(0x4064)
 
+
+
+
+static int kbase_platform_power_clock_init(struct device *dev)
+{
+	int timeout;
+	struct clk *mpll = NULL;
+
+	/* Turn on G3D power */
+	__raw_writel(0x7, EXYNOS5_PMU_G3D_CONF);
+
+	/* Wait for G3D power stability for 1ms */
+	timeout = 10;
+	while((__raw_readl(EXYNOS5_PMU_G3D_STATUS) & 0x7) != 0x7) {
+		if(timeout == 0) {
+			/* need to call panic  */
+			dev_err(dev, "failed to turn on g3d via g3d_configuration\n");
+			goto out;
+		}
+		timeout--;
+		udelay(100);
+	}
+
+	/* Turn on G3D clock */
+
+	mpll = clk_get(dev, "mout_mpll_user");
+	if(IS_ERR(mpll)) {
+		goto out;
+	}
+
+	sclk_g3d = clk_get(dev, "sclk_g3d");
+	if(IS_ERR(sclk_g3d)) {
+		goto out;
+	}
+
+	clk_set_parent(sclk_g3d, mpll);
+	if(IS_ERR(sclk_g3d)) {
+		goto out;
+	}
+
+	clk_set_rate(sclk_g3d, vithar_clock);
+	if(IS_ERR(sclk_g3d)) {
+		dev_err(dev, "failed to clk_set_rate [sclk_g3d] = %d\n", vithar_clock);
+		goto out;
+	}
+
+	(void) clk_enable(sclk_g3d);
+
+	return 0;
+out:
+	return -EPERM;
+}
+
 int kbase_platform_clock_on(struct device *dev)
 {
-    (void) clk_enable(sclk_g3d);
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
 
-    clk_set_rate(sclk_g3d, vithar_clock);
-    if(IS_ERR(sclk_g3d)) {
-	dev_err(dev, "failed to clk_set_rate [sclk_g3d] = %d\n", vithar_clock);
-	goto out;
-    }
+	if (!kbdev)
+		goto nodev;
 
-    return 0;
-out:
-    return -EPERM;
+	osk_spinlock_irq_lock(&kbdev->pm.cmu_change_lock);
+	if(kbdev->pm.g3d_clock_status == 1)
+		goto success;
+
+	(void) clk_enable(sclk_g3d);
+	kbdev->pm.g3d_clock_status= 1;
+
+success:
+	osk_spinlock_irq_unlock(&kbdev->pm.cmu_change_lock);
+	return 0;
+nodev:
+	return -ENODEV;
 }
 
 int kbase_platform_clock_off(struct device *dev)
 {
-    clk_disable(sclk_g3d);
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
 
-    return 0;
+	if (!kbdev)
+		goto nodev;
+
+	osk_spinlock_irq_lock(&kbdev->pm.cmu_change_lock);
+
+	if(kbdev->pm.g3d_clock_status == 0)
+		goto success;
+
+	(void)clk_disable(sclk_g3d);
+	kbdev->pm.g3d_clock_status= 0;
+
+success:
+	osk_spinlock_irq_unlock(&kbdev->pm.cmu_change_lock);
+	return 0;
+nodev:
+	return -ENODEV;
 }
 
 static inline int kbase_platform_is_power_on(void)
@@ -83,56 +158,88 @@ static inline int kbase_platform_is_power_on(void)
 
 int kbase_platform_power_on(struct device *dev)
 {
-    int timeout;
+	int timeout;
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
 
-    if(kbase_platform_is_power_on()) 
-	return 0;
+	if (!kbdev)
+		goto nodev;
 
-    /* Turn on G3D  */
-    __raw_writel(0x7, EXYNOS5_PMU_G3D_CONF);
-    
-    /* Wait for G3D power stability for 1ms */
-    timeout = 10;
+	osk_spinlock_irq_lock(&kbdev->pm.pmu_change_lock);
 
-    while((__raw_readl(EXYNOS5_PMU_G3D_STATUS) & 0x7) != 0x7) {
-	if(timeout == 0) {
-	    /* need to call panic  */
-	    dev_err(dev, "failed to turn on g3d via g3d_configuration\n");
-	    goto out;
+	if(kbdev->pm.g3d_power_status)
+		goto success;
+
+	/* Turn on G3D  */
+	__raw_writel(0x7, EXYNOS5_PMU_G3D_CONF);
+
+	/* Wait for G3D power stability for 1ms */
+	timeout = 1000;
+
+	while((__raw_readl(EXYNOS5_PMU_G3D_STATUS) & 0x7) != 0x7) {
+		if(timeout == 0) {
+			/* need to call panic  */
+			panic("failed to turn on g3d via g3d_configuration\n");
+			goto out;
+		}
+		timeout--;
+		udelay(100);
 	}
-	timeout--;
-	udelay(100);
-    }
 
-    return 0;
+	kbdev->pm.g3d_power_status= 1;
+
+success:
+	osk_spinlock_irq_unlock(&kbdev->pm.pmu_change_lock);
+	return 0;
+nodev:
+	return -ENODEV;
 out:
-    return -ETIMEDOUT;
+	osk_spinlock_irq_unlock(&kbdev->pm.pmu_change_lock);
+	return -ETIMEDOUT;
 }
 
 int kbase_platform_power_off(struct device *dev)
 {
-    int timeout;
+	int timeout;
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
 
-    /* Turn off G3D  */
-    __raw_writel(0x0, EXYNOS5_PMU_G3D_CONF);
-    
-    /* Wait for G3D power stability for 1ms */
-    timeout = 10;
+	if (!kbdev)
+		goto nodev;
 
-    while(__raw_readl(EXYNOS5_PMU_G3D_STATUS) & 0x7) {
-	if(timeout == 0) {
-	    /* need to call panic  */
-	    dev_err(dev, "failed to turn off g3d via g3d_configuration\n");
-	    goto out;
+	osk_spinlock_irq_lock(&kbdev->pm.pmu_change_lock);
+
+	if(kbdev->pm.g3d_power_status == 0)
+		goto success;
+
+	/* Turn off G3D  */
+	__raw_writel(0x0, EXYNOS5_PMU_G3D_CONF);
+
+	/* Wait for G3D power stability for 1ms */
+	timeout = 1000;
+
+	while(__raw_readl(EXYNOS5_PMU_G3D_STATUS) & 0x7) {
+		if(timeout == 0) {
+			/* need to call panic */
+			panic( "failed to turn off g3d via g3d_configuration\n");
+			goto out;
+		}
+		timeout--;
+		udelay(100);
 	}
-	timeout--;
-	udelay(100);
-    }
 
-    return 0;
+	kbdev->pm.g3d_power_status= 0;
+
+success:
+	osk_spinlock_irq_unlock(&kbdev->pm.pmu_change_lock);
+	return 0;
+nodev:
+	return -ENODEV;
 out:
-    return -ETIMEDOUT;
+	osk_spinlock_irq_unlock(&kbdev->pm.pmu_change_lock);
+	return -ETIMEDOUT;
 }
+
 
 static ssize_t show_clock(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -165,6 +272,87 @@ static ssize_t show_clock(struct device *dev, struct device_attribute *attr, cha
 
 	return ret;
 }
+
+#ifdef CONFIG_VITHAR_DVFS
+
+void kbase_platform_dvfs_set_clock(int freq)
+{
+	static int _freq = -1;
+	unsigned long rate = 0;
+
+	if(!sclk_g3d)
+		return;
+
+	if (freq == _freq)
+		return;
+
+	switch(freq)
+	{
+	case 400:
+		rate = 400000000;
+		break;
+	case 266:
+		rate = 267000000;
+		break;
+	case 200:
+		rate = 200000000;
+		break;
+	case 160:
+		rate = 160000000;
+		break;
+	case 133:
+		rate = 134000000;
+		break;
+	case 100:
+		rate = 100000000;
+		break;
+	case 50:
+		rate = 50000000;
+		break;
+	default:
+		return;
+	}
+
+	_freq = freq;
+	clk_set_rate(sclk_g3d, rate);
+
+#if MALI_DVFS_DEBUG
+	printk("dvfs_set_clock %dMhz\n", freq);
+#endif
+	return;
+}
+
+void kbase_platform_dvfs_set_vol(int vol)
+{
+	static int _vol = -1;
+
+	if (_vol == vol)
+		return;
+
+
+	switch(vol)
+	{
+	case 1150000:
+	case 1050000:
+	case 1000000:
+	case 950000:
+	case 900000:
+		kbase_platform_set_voltage(NULL, vol);
+		break;
+	default:
+		return;
+	}
+
+	_vol = vol;
+
+#if MALI_DVFS_DEBUG
+	printk("dvfs_set_vol %dmV\n", vol);
+#endif
+	return;
+
+}
+#endif
+
 
 static ssize_t set_clock(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -200,18 +388,6 @@ static ssize_t set_clock(struct device *dev, struct device_attribute *attr, cons
 	} else if (sysfs_streq("50", buf)) {
 	    cmd = 1;
 	    clk_set_rate(sclk_g3d, 50000000);
-	} else if (sysfs_streq("on", buf)) {
-	    cmd = 2;
-	    kbase_platform_power_on(dev);
-	    clk_enable(sclk_g3d);
-	    kbase_pm_send_event(kbdev, KBASE_PM_EVENT_SYSTEM_RESUME);
-	    kbase_pm_wait_for_power_up(kbdev);
-	} else if (sysfs_streq("off", buf)) {
-	    cmd = 2;
-	    kbase_pm_send_event(kbdev, KBASE_PM_EVENT_SYSTEM_SUSPEND);
-	    kbase_pm_wait_for_power_down(kbdev);
-	    clk_disable(sclk_g3d);
-	    kbase_platform_power_off(dev);
 	} else {
 	    dev_err(dev, "set_clock: invalid value\n");
 	    return -ENOENT;
@@ -621,6 +797,76 @@ static ssize_t set_clkout(struct device *dev, struct device_attribute *attr, con
 	return count;
 }
 
+static ssize_t show_dvfs(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret = 0;
+
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+#ifdef CONFIG_VITHAR_DVFS
+	if(kbdev->pm.metrics.timer.active == MALI_FALSE )
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is off");
+	else
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is on");
+#else
+	ret += snprintf(buf+ret, PAGE_SIZE-ret, "G3D DVFS is disabled");
+#endif
+
+	if (ret < PAGE_SIZE - 1)
+		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	else
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+
+static ssize_t set_dvfs(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+#ifdef CONFIG_VITHAR_DVFS
+	osk_error ret;
+	int vol;
+#endif
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		return -ENODEV;
+
+#ifdef CONFIG_VITHAR_DVFS
+	if (sysfs_streq("off", buf)) {
+		if(kbdev->pm.metrics.timer.active == MALI_FALSE )
+			return count;
+		osk_timer_stop(&kbdev->pm.metrics.timer);
+		kbase_platform_get_default_voltage(dev, &vol);
+		if(vol != 0)
+			kbase_platform_set_voltage(dev, vol);
+		clk_set_rate(sclk_g3d, VITHAR_DEFAULT_CLOCK);
+	} else if (sysfs_streq("on", buf)) {
+		if(kbdev->pm.metrics.timer.active == MALI_TRUE )
+			return count;
+		ret = osk_timer_start(&kbdev->pm.metrics.timer, KBASE_PM_DVFS_FREQUENCY);
+		if (ret != OSK_ERR_NONE)
+		{
+			printk("osk_timer_start failed\n");
+		}
+	} else {
+		printk("invalid val -only [on, off] is accepted\n");
+	}
+#else
+	printk("G3D DVFS is disabled\n");
+#endif
+
+	return count;
+}
+
 /** The sysfs file @c clock, fbdev.
  *
  * This is used for obtaining information about the vithar operating clock & framebuffer address,
@@ -630,6 +876,7 @@ DEVICE_ATTR(fbdev, S_IRUGO, show_fbdev, NULL);
 DEVICE_ATTR(dtlb, S_IRUGO|S_IWUSR, show_dtlb, set_dtlb);
 DEVICE_ATTR(vol, S_IRUGO|S_IWUSR, show_vol, set_vol);
 DEVICE_ATTR(clkout, S_IRUGO|S_IWUSR, show_clkout, set_clkout);
+DEVICE_ATTR(dvfs, S_IRUGO|S_IWUSR, show_dvfs, set_dvfs);
 
 int kbase_platform_create_sysfs_file(struct device *dev)
 {
@@ -663,6 +910,12 @@ int kbase_platform_create_sysfs_file(struct device *dev)
 		goto out;
 	}
 
+	if (device_create_file(dev, &dev_attr_dvfs))
+	{
+		dev_err(dev, "Couldn't create sysfs file [dvfs]\n");
+		goto out;
+	}
+
 	return 0;
 out:
 	return -ENOENT;
@@ -675,41 +928,42 @@ void kbase_platform_remove_sysfs_file(struct device *dev)
 	device_remove_file(dev, &dev_attr_dtlb);
 	device_remove_file(dev, &dev_attr_vol);
 	device_remove_file(dev, &dev_attr_clkout);
+	device_remove_file(dev, &dev_attr_dvfs);
 }
 
 int kbase_platform_init(struct device *dev)
 {
-	mpll = clk_get(dev, "mout_mpll_user");
-	if(IS_ERR(mpll)) {
-	    goto out;
+	if(kbase_platform_power_clock_init(dev)){
+		goto out;
 	}
-
-	sclk_g3d = clk_get(dev, "sclk_g3d");
-	if(IS_ERR(sclk_g3d)) {
-	    goto out;
-	}
-
-	clk_set_parent(sclk_g3d, mpll);
-	if(IS_ERR(sclk_g3d)) {
-	    goto out;
-	}
-
-	if(kbase_platform_power_on(dev))
-	    goto out;
-
-	if(kbase_platform_clock_on(dev))
-	    goto out;
-
 #ifdef CONFIG_REGULATOR
-	if(kbase_platform_regulator_init(dev))
-	    goto out;
+	if(kbase_platform_regulator_init(dev)){
+		goto out;
+	}
 #endif
-#ifdef CONFIG_VITHAR_RT_PM
-	kbase_device_runtime_init(dev);
+#ifdef CONFIG_VITHAR_DVFS
+	kbase_platform_dvfs_init(2);
 #endif
-
 	return 0;
 out:
 	return -ENOENT;
 }
 
+void kbase_platform_term(struct device *dev)
+{
+#ifdef CONFIG_VITHAR_RT_PM
+		kbase_platform_clock_off(dev);
+		kbase_device_runtime_disable(dev);
+#endif
+
+#ifdef CONFIG_REGULATOR
+	kbase_platform_regulator_disable(dev);
+#endif
+
+#ifdef CONFIG_VITHAR_DVFS
+	kbase_platform_dvfs_term();
+#endif
+
+
+	return;
+}

@@ -217,6 +217,23 @@ typedef enum
 	 */
 	OSK_LOCK_ORDER_BASE_REG_QUEUE,
 
+#ifdef CONFIG_VITHAR
+	/**
+	 * System clock for mali-t604
+	 */
+	OSK_LOCK_ORDER_CMU_CLOCK,
+
+	/**
+	 * System power for mali-t604
+	 */
+	OSK_LOCK_ORDER_PMU_CLOCK,
+
+    /**
+     * System power for mali-t604
+     */
+    OSK_LOCK_ORDER_CMU_PMU,
+#endif
+
 	/**
 	 * Reserved mutex order, indicating that the mutex will be the first to be
 	 * locked, and all other OSK mutexes are obtained after this one.

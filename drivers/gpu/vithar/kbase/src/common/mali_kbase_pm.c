@@ -22,6 +22,9 @@
 #include <kbase/src/common/mali_midg_regmap.h>
 
 #include <kbase/src/common/mali_kbase_pm.h>
+#ifdef CONFIG_VITHAR_RT_PM
+#include <kbase/src/platform/mali_kbase_runtime_pm.h>
+#endif
 
 /* Policy operation structures */
 extern const kbase_pm_policy kbase_pm_always_on_policy_ops;
@@ -30,8 +33,13 @@ extern const kbase_pm_policy kbase_pm_demand_policy_ops;
 /** A list of the power policies available in the system */
 static const kbase_pm_policy * const policy_list[] =
 {
+#ifdef CONFIG_VITHAR_RT_PM
+	&kbase_pm_demand_policy_ops,
+	&kbase_pm_always_on_policy_ops
+#else
 	&kbase_pm_always_on_policy_ops,
 	&kbase_pm_demand_policy_ops
+#endif
 };
 
 /** The number of policies available in the system.
@@ -84,8 +92,40 @@ mali_error kbase_pm_init(kbase_device *kbdev)
 		goto active_count_lock_fail;
 	}
 
+#ifdef CONFIG_VITHAR_RT_PM
+	osk_err = osk_spinlock_irq_init(&kbdev->pm.cmu_change_lock, OSK_LOCK_ORDER_CMU_CLOCK);
+	if (OSK_ERR_NONE != osk_err)
+	{
+		goto cmu_change_lock_fail;
+	}
+
+	osk_err = osk_spinlock_irq_init(&kbdev->pm.pmu_change_lock, OSK_LOCK_ORDER_PMU_CLOCK);
+	if (OSK_ERR_NONE != osk_err)
+	{
+		goto pmu_change_lock_fail;
+	}
+
+	kbdev->pm.g3d_power_status= 1;
+	kbdev->pm.g3d_clock_status= 1;
+
+	osk_err = osk_spinlock_irq_init(&kbdev->pm.cmu_pmu_lock, OSK_LOCK_ORDER_CMU_PMU);
+	if (OSK_ERR_NONE != osk_err)
+	{
+		goto cmu_pmu_lock_fail;
+	}
+
+#endif
+
 	return MALI_ERROR_NONE;
 
+#ifdef CONFIG_VITHAR_RT_PM
+cmu_pmu_lock_fail:
+	osk_spinlock_irq_term(&kbdev->pm.pmu_change_lock);
+pmu_change_lock_fail:
+	osk_spinlock_irq_term(&kbdev->pm.cmu_change_lock);
+cmu_change_lock_fail:
+	osk_spinlock_irq_term(&kbdev->pm.active_count_lock);
+#endif
 active_count_lock_fail:
 	osk_spinlock_irq_term(&kbdev->pm.power_change_lock);
 power_change_lock_fail:

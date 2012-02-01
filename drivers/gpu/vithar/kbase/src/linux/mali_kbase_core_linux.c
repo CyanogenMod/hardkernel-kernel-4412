@@ -48,6 +48,7 @@
 #include <mach/map.h>
 #include <kbase/src/platform/mali_kbase_platform.h>
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
+#include <kbase/src/platform/mali_kbase_dvfs.h>
 #endif
 
 #define	JOB_IRQ_TAG	0
@@ -1219,6 +1220,7 @@ static int kbase_common_device_remove(struct kbase_device *kbdev)
 #endif
 #ifdef CONFIG_VITHAR
 	kbase_platform_remove_sysfs_file(kbdev->osdev.dev);
+	kbase_platform_term(kbdev->osdev.dev);
 #endif
 	kbasep_js_devdata_halt(kbdev);
 	kbase_job_slot_halt(kbdev);
@@ -1299,6 +1301,9 @@ static int kbase_device_suspend(struct device *dev)
 	/* Turn off Host clock & power to Vithar */
 	kbase_platform_clock_off(dev);
 	kbase_platform_power_off(dev);
+
+	/* Turn off PMIC input power! Using Regulator */
+	kbase_platform_regulator_disable(dev);
 #endif
 
 	return 0;
@@ -1320,6 +1325,9 @@ static int kbase_device_resume(struct device *dev)
 		return -ENODEV;
 
 #ifdef CONFIG_VITHAR
+	/* Turn on PMIC input power! Using Regulator */
+	kbase_platform_regulator_enable(dev);
+
 	/* Turn on Host clock & power to Vithar */
 	kbase_platform_power_on(dev);
 	kbase_platform_clock_on(dev);

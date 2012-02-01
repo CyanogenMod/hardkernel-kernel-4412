@@ -21,6 +21,12 @@
 
 #include <kbase/src/common/mali_kbase.h>
 #include <kbase/src/common/mali_kbase_pm.h>
+#include <kbase/src/platform/mali_kbase_dvfs.h>
+
+
+#ifdef CONFIG_VITHAR_DVFS
+int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev);
+#endif
 
 /* When VSync is being hit aim for utilisation between 70-90% */
 #define KBASE_PM_VSYNC_MIN_UTILISATION          70
@@ -29,18 +35,18 @@
 #define KBASE_PM_NO_VSYNC_MIN_UTILISATION       10
 #define KBASE_PM_NO_VSYNC_MAX_UTILISATION       40
 
-/* Frequency that DVFS clock frequency decisions should be made */
-#define KBASE_PM_DVFS_FREQUENCY                 500
-
 static void dvfs_callback(void *data)
 {
 	kbase_device *kbdev;
 	kbase_pm_dvfs_action action;
 	osk_error ret;
-
 	OSK_ASSERT(data != NULL);
 
 	kbdev = (kbase_device*)data;
+#ifdef CONFIG_VITHAR_DVFS
+	CSTD_UNUSED(action);
+	kbase_platform_dvfs_event(kbase_pm_get_dvfs_utilisation(kbdev));
+#else
 	action = kbase_pm_get_dvfs_action(kbdev);
 
 	switch(action) {
@@ -53,6 +59,7 @@ static void dvfs_callback(void *data)
 			/* Do whatever is required to decrease the clock frequency */
 			break;
 	}
+#endif
 
 	osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
 	if (kbdev->pm.metrics.timer_active)
@@ -249,3 +256,43 @@ out:
 
 	return action;
 }
+
+#ifdef CONFIG_VITHAR_DVFS
+int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev)
+{
+	int utilisation=0;
+	osk_ticks now = osk_time_now();
+
+	OSK_ASSERT(kbdev != NULL);
+
+	osk_spinlock_irq_lock(&kbdev->pm.metrics.lock);
+
+	if (kbdev->pm.metrics.gpu_active)
+	{
+		kbdev->pm.metrics.time_busy += osk_time_elapsed(kbdev->pm.metrics.time_period_start, now);
+		kbdev->pm.metrics.time_period_start = now;
+	}
+	else
+	{
+		kbdev->pm.metrics.time_idle += osk_time_elapsed(kbdev->pm.metrics.time_period_start, now);
+		kbdev->pm.metrics.time_period_start = now;
+	}
+
+	if (kbdev->pm.metrics.time_idle + kbdev->pm.metrics.time_busy == 0)
+	{
+		/* No data - so we return NOP */
+		goto out;
+	}
+
+	utilisation = (100*kbdev->pm.metrics.time_busy) / (kbdev->pm.metrics.time_idle + kbdev->pm.metrics.time_busy);
+
+out:
+
+	kbdev->pm.metrics.time_idle = 0;
+	kbdev->pm.metrics.time_busy = 0;
+
+	osk_spinlock_irq_unlock(&kbdev->pm.metrics.lock);
+
+	return utilisation;
+}
+#endif

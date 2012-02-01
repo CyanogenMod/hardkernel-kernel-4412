@@ -87,12 +87,26 @@ void kbase_device_runtime_stop_timer(void)
  */
 int kbase_device_runtime_suspend(struct device *dev)
 {
-    if(kbase_platform_clock_off(dev))
-	panic("failed to turn off sclk_g3d\n");
-    if(kbase_platform_power_off(dev))
-	panic("failed to turn off g3d power\n");
 
-    return 0;
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
+
+	if (!kbdev)
+		goto nodev;
+
+	osk_spinlock_irq_lock(&kbdev->pm.cmu_pmu_lock);
+
+	if(kbase_platform_clock_off(dev))
+		panic("failed to turn off sclk_g3d\n");
+#if 0 // TO DO
+	if(kbase_platform_power_off(dev))
+		panic("failed to turn off g3d power\n");
+#endif
+	osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);
+
+	return 0;
+nodev:
+	return -ENODEV;
 }
 
 /** Resume callback from the OS.
@@ -105,12 +119,26 @@ int kbase_device_runtime_suspend(struct device *dev)
  */
 int kbase_device_runtime_resume(struct device *dev)
 {
-    if(kbase_platform_clock_on(dev))
-	panic("failed to turn on sclk_g3d\n");
-    if(kbase_platform_power_on(dev))
-	panic("failed to turn on g3d power\n");
+	struct kbase_device *kbdev;
+	kbdev = dev_get_drvdata(dev);
 
-    return 0;
+	if (!kbdev)
+		goto nodev;
+
+	osk_spinlock_irq_lock(&kbdev->pm.cmu_pmu_lock);
+#if 0
+	if(kbase_platform_power_on(dev))
+		panic("failed to turn on g3d power\n");
+#endif
+	if(kbase_platform_clock_on(dev))
+		panic("failed to turn on sclk_g3d\n");
+
+	osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);
+
+	return 0;
+
+nodev:
+	return -ENODEV;
 }
 
 /** Enable runtiem pm
@@ -144,5 +172,36 @@ void kbase_device_runtime_disable(struct device *dev)
 void kbase_device_runtime_init(struct device *dev)
 {
     pm_runtime_enable(dev);
+}
+
+static int first = 1;
+void kbase_device_runtime_get_sync(struct device *dev)
+{
+	int result;
+
+	if(first)
+	{
+		pm_runtime_enable(dev);
+		first = 0;
+	}
+
+	//result = pm_runtime_resume(dev);
+	result = pm_runtime_get_sync(dev);
+	//printk( KERN_ERR "kbase_device_runtime_get_sync - usage_count : %d\n", atomic_read(&dev->power.usage_count));
+	if(result < 0)
+		printk(KERN_ERR "pm_runtime_get_sync failed (%d)\n", result);
+}
+
+void kbase_device_runtime_put_sync(struct device *dev)
+{
+	int result;
+
+	if(first) return;
+
+	//result = pm_runtime_suspend(dev);
+	result = pm_runtime_put_sync(dev);
+	//printk( KERN_ERR "kbase_device_runtime_put_sync - usage_count : %d\n", atomic_read(&dev->power.usage_count));
+	if(result < 0)
+		printk(KERN_ERR "pm_runtime_put_sync failed (%d)\n", result);
 }
 
