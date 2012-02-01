@@ -132,6 +132,7 @@ static int s5m87xx_i2c_probe(struct i2c_client *i2c,
 		s5m87xx->ono = pdata->ono;
 		s5m87xx->irq_base = pdata->irq_base;
 		s5m87xx->wakeup = pdata->wakeup;
+		s5m87xx->wtsr_smpl = pdata->wtsr_smpl;
 	}
 
 	mutex_init(&s5m87xx->iolock);

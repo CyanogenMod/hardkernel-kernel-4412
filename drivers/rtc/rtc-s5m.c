@@ -29,6 +29,7 @@ struct s5m_rtc_info {
 	int irq;
 	int device_type;
 	int rtc_24hr_mode;
+	bool wtsr_smpl
 };
 
 static inline int s5m8767_rtc_calculate_wday(u8 shifted)
@@ -437,6 +438,56 @@ static const struct rtc_class_ops s5m_rtc_ops = {
 	.alarm_irq_enable = s5m_rtc_alarm_irq_enable,
 };
 
+static void s5m_rtc_enable_wtsr(struct s5m_rtc_info *info, bool enable)
+{
+	int ret;
+	u8 val, mask;
+
+	if (enable)
+		val = WTSR_ENABLE_MASK;
+	else
+		val = 0;
+
+	mask = WTSR_ENABLE_MASK;
+
+	dev_info(info->dev, "%s: %s WTSR\n", __func__,
+		 enable ? "enable" : "disable");
+
+	ret = s5m_reg_update(info->rtc, S5M87XX_WTSR_SMPL_CNTL, val, mask);
+	if (ret < 0) {
+		dev_err(info->dev, "%s: fail to update WTSR reg(%d)\n",
+			__func__, ret);
+		return;
+	}
+}
+
+static void s5m_rtc_enable_smpl(struct s5m_rtc_info *info, bool enable)
+{
+	int ret;
+	u8 val, mask;
+
+	if (enable)
+		val = SMPL_ENABLE_MASK;
+	else
+		val = 0;
+
+	mask = SMPL_ENABLE_MASK;
+
+	dev_info(info->dev, "%s: %s SMPL\n", __func__,
+			enable ? "enable" : "disable");
+
+	ret = s5m_reg_update(info->rtc, S5M87XX_WTSR_SMPL_CNTL, val, mask);
+	if (ret < 0) {
+		dev_err(info->dev, "%s: fail to update SMPL reg(%d)\n",
+				__func__, ret);
+		return;
+	}
+
+	val = 0;
+	s5m_reg_read(info->rtc, S5M87XX_WTSR_SMPL_CNTL, &val);
+	pr_info("%s: WTSR_SMPL(0x%02x)\n", __func__, val);
+}
+
 static int s5m8767_rtc_init_reg(struct s5m_rtc_info *info)
 {
 	u8 data[2];
@@ -473,6 +524,7 @@ static int __devinit s5m_rtc_probe(struct platform_device *pdev)
 	info->s5m87xx = s5m87xx;
 	info->rtc = s5m87xx->rtc;
 	info->device_type = s5m87xx->device_type;
+	info->wtsr_smpl = s5m87xx->wtsr_smpl;
 
 	switch (pdata->device_type) {
 	case S5M8763X:
@@ -494,6 +546,11 @@ static int __devinit s5m_rtc_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, info);
 
 	ret = s5m8767_rtc_init_reg(info);
+
+	if (info->wtsr_smpl) {
+		s5m_rtc_enable_wtsr(info, true);
+		s5m_rtc_enable_smpl(info, true);
+	}
 
 	device_init_wakeup(&pdev->dev, 1);
 
@@ -536,6 +593,28 @@ static int __devexit s5m_rtc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void s5m_rtc_shutdown(struct platform_device *pdev)
+{
+	struct s5m_rtc_info *info = platform_get_drvdata(pdev);
+	int i;
+	u8 val = 0;
+	if (info->wtsr_smpl) {
+		for (i = 0; i < 3; i++) {
+			s5m_rtc_enable_wtsr(info, false);
+			s5m_reg_read(info->rtc, S5M87XX_WTSR_SMPL_CNTL, &val);
+			pr_info("%s: WTSR_SMPL reg(0x%02x)\n", __func__, val);
+			if (val & WTSR_ENABLE_MASK)
+				pr_emerg("%s: fail to disable WTSR\n", __func__);
+			else {
+				pr_info("%s: success to disable WTSR\n", __func__);
+				break;
+			}
+		}
+	}
+	/* Disable SMPL when power off */
+	s5m_rtc_enable_smpl(info, false);
+}
+
 static const struct platform_device_id s5m_rtc_id[] = {
 	{ "s5m-rtc", 0 },
 };
@@ -547,6 +626,7 @@ static struct platform_driver s5m_rtc_driver = {
 	},
 	.probe		= s5m_rtc_probe,
 	.remove		= __devexit_p(s5m_rtc_remove),
+	.shutdown	= s5m_rtc_shutdown,
 	.id_table	= s5m_rtc_id,
 };
 

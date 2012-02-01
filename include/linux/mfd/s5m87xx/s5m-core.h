@@ -320,6 +320,7 @@ struct s5m87xx_dev {
 	u8 irq_masks_cache[NUM_IRQ_REGS];
 	int type;
 	bool wakeup;
+	bool wtsr_smpl;
 };
 
 int s5m_irq_init(struct s5m87xx_dev *s5m87xx);
@@ -369,6 +370,8 @@ struct s5m_platform_data {
 	bool                            buck2_ramp_enable;
 	bool                            buck3_ramp_enable;
 	bool                            buck4_ramp_enable;
+
+	bool				wtsr_smpl;
 };
 
 #endif /*  __LINUX_MFD_S5M_CORE_H */
