@@ -1096,6 +1096,31 @@ static struct clk exynos5_init_clocks_off[] = {
 		.ctrlbit	= (1 << 18),
 	},
 #endif
+	{
+		.name		= "ppmufsys",
+		.enable		= exynos5_clk_ip_fsys_ctrl,
+		.ctrlbit	= ((1 << 29) | (1 << 28)),
+	}, {
+		.name		= "ppmudisp1",
+		.enable		= exynos5_clk_ip_disp1_ctrl,
+		.ctrlbit	= ((1 << 17) | (1 << 18)),
+	}, {
+		.name		= "ppmumfc",
+		.enable		= exynos5_clk_ip_mfc_ctrl,
+		.ctrlbit	= ((1 << 5) | (1 << 6)),
+	}, {
+		.name		= "ppmugen",
+		.enable		= exynos5_clk_ip_gen_ctrl,
+		.ctrlbit	= (1 << 15),
+	}, {
+		.name		= "ppmugscl",
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 19),
+	}, {
+		.name		= "ppmuacp",
+		.enable		= exynos5_clk_ip_acp_ctrl,
+		.ctrlbit	= (1 << 11),
+	},
 };
 
 static struct clk exynos5_i2cs_clocks[] = {
