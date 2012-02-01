@@ -538,6 +538,7 @@ static int srp_open(struct inode *inode, struct file *file)
 	mutex_lock(&srp_mutex);
 	if (srp.is_opened) {
 		srp_err("Already opened.\n");
+		srp.is_opened = 0;
 		mutex_unlock(&srp_mutex);
 		return -ENXIO;
 	}
