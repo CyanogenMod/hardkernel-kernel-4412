@@ -3953,7 +3953,7 @@ static void __init smdk4x12_machine_init(void)
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);
 	s3c_fimc1_set_platdata(&fimc_plat);
-	s3c_fimc2_set_platdata(NULL);
+	s3c_fimc2_set_platdata(&fimc_plat);
 	s3c_fimc3_set_platdata(NULL);
 #ifdef CONFIG_EXYNOS_DEV_PD
 	s3c_device_fimc0.dev.parent = &exynos4_device_pd[PD_CAM].dev;
