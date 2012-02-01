@@ -2841,6 +2841,7 @@ static void __init smdk5250_machine_init(void)
 	ppmu_init(&exynos_ppmu[PPMU_DDR_C], &exynos5_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_DDR_R1], &exynos5_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_DDR_L], &exynos5_busfreq.dev);
+	ppmu_init(&exynos_ppmu[PPMU_RIGHT0_BUS], &exynos5_busfreq.dev);
 #endif
 }
 

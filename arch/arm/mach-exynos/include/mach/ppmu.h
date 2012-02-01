@@ -70,6 +70,7 @@ enum exynos4_ppmu {
 	PPMU_DDR_C,
 	PPMU_DDR_R1,
 	PPMU_DDR_L,
+	PPMU_RIGHT0_BUS,
 	PPMU_END,
 };
 

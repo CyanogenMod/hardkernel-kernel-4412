@@ -179,4 +179,10 @@ struct exynos4_ppmu_hw exynos_ppmu[] = {
 		.event[3] = RDWR_DATA_COUNT,
 		.weight = DEFAULT_WEIGHT,
 	},
+	[PPMU_RIGHT0_BUS] = {
+		.id = PPMU_RIGHT0_BUS,
+		.hw_base = S5P_VA_PPMU_RIGHT0_BUS,
+		.event[3] = RDWR_DATA_COUNT,
+		.weight = DEFAULT_WEIGHT,
+	},
 };
