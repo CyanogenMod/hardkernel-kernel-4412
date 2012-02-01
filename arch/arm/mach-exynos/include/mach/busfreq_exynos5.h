@@ -30,17 +30,12 @@ struct busfreq_table;
 
 struct busfreq_data {
 	bool use;
-	struct device *mif_dev;
-	struct device *int_dev;
+	struct device *dev[PPMU_TYPE_END];
 	struct delayed_work worker;
-	struct opp *mif_curr_opp;
-	struct opp *int_curr_opp;
-	struct opp *mif_max_opp;
-	struct opp *int_max_opp;
-	struct opp *mif_min_opp;
-	struct opp *int_min_opp;
-	struct regulator *vdd_int;
-	struct regulator *vdd_mif;
+	struct opp *curr_opp[PPMU_TYPE_END];
+	struct opp *max_opp[PPMU_TYPE_END];
+	struct opp *min_opp[PPMU_TYPE_END];
+	struct regulator *vdd_reg[PPMU_TYPE_END];
 	unsigned int sampling_rate;
 	struct kobject *busfreq_kobject;
 	int table_size;
@@ -78,8 +73,7 @@ struct busfreq_table {
 };
 
 void exynos_request_apply(unsigned long freq, struct device *dev);
-struct opp *step_down_mif(struct busfreq_data *data, int step);
-struct opp *step_down_int(struct busfreq_data *data, int step);
+struct opp *step_down(struct busfreq_data *data, enum ppmu_type type, int step);
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data);
 #endif /* __ASM_ARCH_BUSFREQ_H */

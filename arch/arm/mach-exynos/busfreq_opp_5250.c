@@ -519,7 +519,7 @@ static void exynos5250_resume(void)
 static void exynos5250_monitor(struct busfreq_data *data,
 			struct opp **mif_opp, struct opp **int_opp)
 {
-	struct opp *mopp = data->mif_curr_opp;
+	struct opp *mopp = data->curr_opp[PPMU_MIF];
 	int i;
 	unsigned int cpu_load_average = 0;
 	unsigned int dmc_c_load_average = 0;
@@ -530,15 +530,15 @@ static void exynos5250_monitor(struct busfreq_data *data,
 	unsigned long lockfreq;
 	unsigned long dmcfreq;
 	unsigned long newfreq;
-	unsigned long mif_currfreq = opp_get_freq(data->mif_curr_opp) / 1000;
-	unsigned long mif_maxfreq = opp_get_freq(data->mif_max_opp) / 1000;
+	unsigned long mif_currfreq = opp_get_freq(data->curr_opp[PPMU_MIF]) / 1000;
+	unsigned long mif_maxfreq = opp_get_freq(data->max_opp[PPMU_MIF]) / 1000;
 	unsigned long cpu_load;
 	unsigned long dmc_load;
 	unsigned long dmc_c_load;
 	unsigned long dmc_r1_load;
 	unsigned long dmc_l_load;
 
-	ppmu_update(data->mif_dev, 3);
+	ppmu_update(data->dev[PPMU_MIF], 3);
 
 	/* Convert from base xxx to base maxfreq */
 	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * mif_currfreq, mif_maxfreq);
@@ -581,12 +581,12 @@ static void exynos5250_monitor(struct busfreq_data *data,
 	}
 
 	if (dmc_load >= DMC_MAX_THRESHOLD) {
-		dmcfreq = opp_get_freq(data->mif_max_opp);
+		dmcfreq = opp_get_freq(data->max_opp[PPMU_MIF]);
 	} else if (dmc_load < IDLE_THRESHOLD) {
 		if (dmc_load_average < IDLE_THRESHOLD)
-			mopp = step_down_mif(data, 1);
+			mopp = step_down(data, PPMU_MIF, 1);
 		else
-			mopp = data->mif_curr_opp;
+			mopp = data->curr_opp[PPMU_MIF];
 		dmcfreq = opp_get_freq(mopp);
 	} else {
 		if (dmc_load < dmc_load_average) {
@@ -597,14 +597,14 @@ static void exynos5250_monitor(struct busfreq_data *data,
 		dmcfreq = div64_u64(mif_maxfreq * dmc_load * 1000, DMC_MAX_THRESHOLD);
 	}
 
-	lockfreq = dev_max_freq(data->mif_dev);
+	lockfreq = dev_max_freq(data->dev[PPMU_MIF]);
 
 	newfreq = max3(lockfreq, dmcfreq, cpufreq);
-	mopp = opp_find_freq_ceil(data->mif_dev, &newfreq);
+	mopp = opp_find_freq_ceil(data->dev[PPMU_MIF], &newfreq);
 
 	*mif_opp = mopp;
 	/* temporary */
-	*int_opp = data->int_curr_opp;
+	*int_opp = data->curr_opp[PPMU_INT];
 }
 
 static void busfreq_early_suspend(struct early_suspend *h)
@@ -612,9 +612,9 @@ static void busfreq_early_suspend(struct early_suspend *h)
 	unsigned long mif_freq, int_freq;
 	struct busfreq_data *data = container_of(h, struct busfreq_data,
 			busfreq_early_suspend_handler);
-	mif_freq = opp_get_freq(data->mif_min_opp);
-	int_freq = opp_get_freq(data->int_min_opp);
-	dev_lock(data->mif_dev, data->mif_dev, mif_freq);
+	mif_freq = opp_get_freq(data->min_opp[PPMU_MIF]);
+	int_freq = opp_get_freq(data->min_opp[PPMU_INT]);
+	dev_lock(data->dev[PPMU_MIF], data->dev[PPMU_MIF], mif_freq);
 }
 
 static void busfreq_late_resume(struct early_suspend *h)
@@ -622,7 +622,7 @@ static void busfreq_late_resume(struct early_suspend *h)
 	struct busfreq_data *data = container_of(h, struct busfreq_data,
 			busfreq_early_suspend_handler);
 	/* Request min 300MHz */
-	dev_lock(data->mif_dev, data->mif_dev, 300000);
+	dev_lock(data->dev[PPMU_MIF], data->dev[PPMU_MIF], 300000);
 }
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data)
@@ -681,11 +681,11 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 
 	exynos5250_set_bus_volt();
 
-	data->mif_dev = dev;
-	data->int_dev = &busfreq_for_int;
+	data->dev[PPMU_MIF] = dev;
+	data->dev[PPMU_INT] = &busfreq_for_int;
 
 	for (i = 0; i < LV_MIF_END; i++) {
-		ret = opp_add(data->mif_dev, exynos5_busfreq_table[i].mem_clk,
+		ret = opp_add(data->dev[PPMU_MIF], exynos5_busfreq_table[i].mem_clk,
 				exynos5_busfreq_table[i].volt);
 		if (ret) {
 			dev_err(dev, "Fail to add opp entries.\n");
@@ -693,10 +693,10 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 		}
 	}
 
-	opp_disable(data->mif_dev, 107000);
+	opp_disable(data->dev[PPMU_MIF], 107000);
 
 	for (i = 0; i < LV_INT_END; i++) {
-		ret = opp_add(data->int_dev, exynos5_busfreq_table_int[i].mem_clk,
+		ret = opp_add(data->dev[PPMU_INT], exynos5_busfreq_table_int[i].mem_clk,
 				exynos5_busfreq_table_int[i].volt);
 		if (ret) {
 			dev_err(dev, "Fail to add opp entries.\n");
@@ -716,26 +716,26 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	data->table_size = LV_MIF_END;
 
 	/* Find max frequency for mif */
-	data->mif_max_opp = opp_find_freq_floor(data->mif_dev, &maxfreq);
-	data->mif_min_opp = opp_find_freq_ceil(data->mif_dev, &minfreq);
-	data->mif_curr_opp = opp_find_freq_ceil(data->mif_dev, &cdrexfreq);
+	data->max_opp[PPMU_MIF] = opp_find_freq_floor(data->dev[PPMU_MIF], &maxfreq);
+	data->min_opp[PPMU_MIF] = opp_find_freq_ceil(data->dev[PPMU_MIF], &minfreq);
+	data->curr_opp[PPMU_MIF] = opp_find_freq_ceil(data->dev[PPMU_MIF], &cdrexfreq);
 	/* Find max frequency for int */
 	maxfreq = ULONG_MAX;
 	minfreq = 0;
-	data->int_max_opp = opp_find_freq_floor(data->int_dev, &maxfreq);
-	data->int_min_opp = opp_find_freq_ceil(data->int_dev, &minfreq);
-	data->int_curr_opp = opp_find_freq_ceil(data->int_dev, &lrbusfreq);
+	data->max_opp[PPMU_INT] = opp_find_freq_floor(data->dev[PPMU_INT], &maxfreq);
+	data->min_opp[PPMU_INT] = opp_find_freq_ceil(data->dev[PPMU_INT], &minfreq);
+	data->curr_opp[PPMU_INT] = opp_find_freq_ceil(data->dev[PPMU_INT], &lrbusfreq);
 
-	data->vdd_int = regulator_get(NULL, "vdd_int");
-	if (IS_ERR(data->vdd_int)) {
+	data->vdd_reg[PPMU_INT] = regulator_get(NULL, "vdd_int");
+	if (IS_ERR(data->vdd_reg[PPMU_INT])) {
 		pr_err("failed to get resource %s\n", "vdd_int");
 		return -ENODEV;
 	}
 
-	data->vdd_mif = regulator_get(NULL, "vdd_mif");
-	if (IS_ERR(data->vdd_mif)) {
+	data->vdd_reg[PPMU_MIF] = regulator_get(NULL, "vdd_mif");
+	if (IS_ERR(data->vdd_reg[PPMU_MIF])) {
 		pr_err("failed to get resource %s\n", "vdd_mif");
-		regulator_put(data->vdd_int);
+		regulator_put(data->vdd_reg[PPMU_INT]);
 		return -ENODEV;
 	}
 
