@@ -149,15 +149,6 @@ static struct clksrc_clk exynos4212_clk_aclk_gdr_user = {
 	.reg_src = { .reg = EXYNOS4_CLKSRC_RIGHTBUS, .shift = 4, .size = 1 },
 };
 
-static struct clksrc_clk exynos4212_clk_mout_aclk_400 = {
-	.clk	= {
-		.name		= "mout_aclk_400",
-	},
-	.sources = &exynos4_clkset_aclk,
-	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP1, .shift = 8, .size = 1 },
-	.reg_div = { .reg = EXYNOS4_CLKDIV_TOP, .shift = 24, .size = 3 },
-};
-
 static struct clksrc_clk exynos4212_clk_mout_aclk_266 = {
 	.clk	= {
 		.name		= "mout_aclk_266",
@@ -173,24 +164,32 @@ static struct clksrc_clk exynos4212_clk_mout_aclk_200 = {
 	},
 	.sources = &exynos4_clkset_aclk,
 	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP0, .shift = 12, .size = 1 },
-	.reg_div = { .reg = EXYNOS4_CLKDIV_TOP, .shift = 0, .size = 3 },
 };
 
-static struct clk *exynos4212_clk_aclk_400_list[] = {
-	[0] = &clk_fin_mpll,
-	[1] = &exynos4212_clk_mout_aclk_400.clk,
-};
-
-static struct clksrc_sources exynos4212_clkset_aclk_400 = {
-	.sources	= exynos4212_clk_aclk_400_list,
-	.nr_sources	= ARRAY_SIZE(exynos4212_clk_aclk_400_list),
-};
-
-struct clksrc_clk exynos4212_clk_aclk_400 = {
+static struct clksrc_clk exynos4212_clk_mout_aclk_400_mcuisp = {
 	.clk	= {
-		.name		= "aclk_400",
+		.name		= "mout_aclk_400_mcuisp",
 	},
-	.sources = &exynos4212_clkset_aclk_400,
+	.sources = &exynos4_clkset_aclk,
+	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP1, .shift = 8, .size = 1 },
+};
+
+static struct clk *exynos4212_clk_aclk_400_mcuisp_list[] = {
+	[0] = &clk_fin_mpll,
+	[1] = &exynos4212_clk_mout_aclk_400_mcuisp.clk,
+};
+
+static struct clksrc_sources exynos4212_clkset_aclk_400_mcuisp = {
+	.sources	= exynos4212_clk_aclk_400_mcuisp_list,
+	.nr_sources	= ARRAY_SIZE(exynos4212_clk_aclk_400_mcuisp_list),
+};
+
+struct clksrc_clk exynos4212_clk_aclk_400_mcuisp = {
+	.clk	= {
+		.name		= "aclk_400_mcuisp",
+	},
+	.sources = &exynos4212_clkset_aclk_400_mcuisp,
+	.reg_div = { .reg = EXYNOS4_CLKDIV_TOP, .shift = 24, .size = 3 },
 	.reg_src = { .reg = EXYNOS4_CLKSRC_TOP1, .shift = 24, .size = 1 },
 };
 
@@ -310,10 +309,10 @@ static struct clksrc_clk *exynos4212_sysclks[] = {
 	&exynos4212_clk_mout_mpll_user,
 	&exynos4212_clk_aclk_gdl_user,
 	&exynos4212_clk_aclk_gdr_user,
-	&exynos4212_clk_mout_aclk_400,
+	&exynos4212_clk_mout_aclk_400_mcuisp,
 	&exynos4212_clk_mout_aclk_266,
 	&exynos4212_clk_mout_aclk_200,
-	&exynos4212_clk_aclk_400,
+	&exynos4212_clk_aclk_400_mcuisp,
 	&exynos4212_clk_aclk_266,
 	&exynos4212_clk_mout_jpeg0,
 	&exynos4212_clk_mout_jpeg1,
@@ -440,8 +439,8 @@ static struct clksrc_clk exynos4212_clksrcs[] = {
 
 static struct clk exynos4212_clk_isp[] = {
 	{
-		.name	= "aclk_400_muxed",
-		.parent = &exynos4212_clk_aclk_400.clk,
+		.name	= "aclk_400_mcuisp_muxed",
+		.parent = &exynos4212_clk_aclk_400_mcuisp.clk,
 	}, {
 		.name	= "aclk_200_muxed",
 		.parent	= &exynos4_clk_aclk_200.clk,
@@ -451,7 +450,7 @@ static struct clk exynos4212_clk_isp[] = {
 static struct clksrc_clk exynos4212_clk_isp_srcs_div0 = {
 	.clk		= {
 		.name		= "sclk_mcuisp_div0",
-		.parent		= &exynos4212_clk_aclk_400.clk,
+		.parent		= &exynos4212_clk_aclk_400_mcuisp.clk,
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
 		.ctrlbit	= (0xFFFFFFFF << 0),
 	},
@@ -601,6 +600,9 @@ void __init exynos4212_register_clocks(void)
 	exynos4_clk_aclk_200.reg_src.reg = EXYNOS4_CLKSRC_TOP1;
 	exynos4_clk_aclk_200.reg_src.shift = 20;
 	exynos4_clk_aclk_200.reg_src.size = 1;
+	exynos4_clk_aclk_200.reg_div.reg = EXYNOS4_CLKDIV_TOP;
+	exynos4_clk_aclk_200.reg_div.shift = 0;
+	exynos4_clk_aclk_200.reg_div.size = 3;
 
 	exynos4_clk_fimg2d.enable = exynos4_clk_ip_dmc_ctrl;
 	exynos4_clk_fimg2d.ctrlbit = (1 << 23);

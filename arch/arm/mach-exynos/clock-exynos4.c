@@ -1977,7 +1977,7 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 			aclk_160, aclk_133, aclk_100);
 #ifdef CONFIG_CPU_EXYNOS4212
 	printk(KERN_INFO "EXYNOS4: ACLK400=%ld ACLK266=%ld\n",
-			clk_get_rate(&exynos4212_clk_aclk_400.clk), clk_get_rate(&exynos4212_clk_aclk_266.clk));
+			clk_get_rate(&exynos4212_clk_aclk_400_mcuisp.clk), clk_get_rate(&exynos4212_clk_aclk_266.clk));
 #endif
 
 	clk_f.rate = armclk;
