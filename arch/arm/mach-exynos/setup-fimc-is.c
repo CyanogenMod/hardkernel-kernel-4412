@@ -489,11 +489,11 @@ int exynos5_fimc_is_cfg_clk(struct platform_device *pdev)
 	if (IS_ERR(aclk_mcuisp))
 		return PTR_ERR(aclk_mcuisp);
 
-	aclk_mcuisp_div0 = clk_get(&pdev->dev, "aclk_isp_400_div0");
+	aclk_mcuisp_div0 = clk_get(&pdev->dev, "aclk_400_isp_div0");
 	if (IS_ERR(aclk_mcuisp_div0))
 		return PTR_ERR(aclk_mcuisp_div0);
 
-	aclk_mcuisp_div1 = clk_get(&pdev->dev, "aclk_isp_400_div1");
+	aclk_mcuisp_div1 = clk_get(&pdev->dev, "aclk_400_isp_div1");
 	if (IS_ERR(aclk_mcuisp_div1))
 		return PTR_ERR(aclk_mcuisp_div1);
 
@@ -517,13 +517,13 @@ int exynos5_fimc_is_cfg_clk(struct platform_device *pdev)
 	aclk_266 = clk_get(&pdev->dev, "aclk_266_isp");
 	if (IS_ERR(aclk_266))
 		return PTR_ERR(aclk_266);
-	aclk_266_div0 = clk_get(&pdev->dev, "aclk_isp_266_div0");
+	aclk_266_div0 = clk_get(&pdev->dev, "aclk_266_isp_div0");
 	if (IS_ERR(aclk_266_div0))
 		return PTR_ERR(aclk_266_div0);
-	aclk_266_div1 = clk_get(&pdev->dev, "aclk_isp_266_div1");
+	aclk_266_div1 = clk_get(&pdev->dev, "aclk_266_isp_div1");
 	if (IS_ERR(aclk_266_div1))
 		return PTR_ERR(aclk_266_div1);
-	aclk_266_mpwm = clk_get(&pdev->dev, "aclk_isp_266_divmpwm");
+	aclk_266_mpwm = clk_get(&pdev->dev, "aclk_266_isp_divmpwm");
 	if (IS_ERR(aclk_266_mpwm))
 		return PTR_ERR(aclk_266_mpwm);
 

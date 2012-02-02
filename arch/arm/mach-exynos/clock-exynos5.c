@@ -318,7 +318,6 @@ static struct clksrc_clk exynos5_clk_mout_cpll = {
 static struct clksrc_clk exynos5_clk_mout_epll = {
 	.clk	= {
 		.name		= "mout_epll",
-		.parent		= &clk_fout_epll,
 	},
 	.sources = &clk_src_epll,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP2, .shift = 12, .size = 1 },
@@ -575,39 +574,49 @@ static struct clksrc_clk exynos5_clk_aclk_400 = {
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 24, .size = 3 },
 };
 
-static struct clksrc_clk exynos5_clk_mout_aclk_400_isp = {
-	.clk	= {
-		.name		= "mout_aclk_400_isp",
-		.parent		= &exynos5_clk_mout_mpll_user.clk,
-	},
-	.sources = &exynos5_clkset_aclk,
-	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP1, .shift = 24, .size = 1 },
-	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP1, .shift = 20, .size = 3 },
-};
-
 /* For ACLK_333 */
-struct clk *exynos5_clkset_aclk_333_166_list[] = {
+struct clk *exynos5_clkset_mout_aclk_333_166_list[] = {
 	[0] = &exynos5_clk_mout_cpll.clk,
 	[1] = &exynos5_clk_mout_mpll_user.clk,
 };
 
-struct clksrc_sources exynos5_clkset_aclk_333_166 = {
-	.sources	= exynos5_clkset_aclk_333_166_list,
-	.nr_sources	= ARRAY_SIZE(exynos5_clkset_aclk_333_166_list),
+struct clksrc_sources exynos5_clkset_mout_aclk_333_166 = {
+	.sources	= exynos5_clkset_mout_aclk_333_166_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_mout_aclk_333_166_list),
 };
 
 static struct clksrc_clk exynos5_clk_mout_aclk_333 = {
 	.clk	= {
 		.name		= "mout_aclk_333",
 	},
-	.sources = &exynos5_clkset_aclk_333_166,
+	.sources = &exynos5_clkset_mout_aclk_333_166,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 16, .size = 1 },
+};
+
+static struct clksrc_clk exynos5_clk_dout_aclk_333 = {
+	.clk	= {
+		.name		= "dout_aclk_333",
+		.parent		= &exynos5_clk_mout_aclk_333.clk,
+	},
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 20, .size = 3 },
 };
 
-static struct clk exynos5_clk_aclk_333 = {
-	.name		= "aclk_333",
-	.parent		= &exynos5_clk_mout_aclk_333.clk,
+struct clk *exynos5_clkset_aclk_333_sub_list[] = {
+	[0] = &clk_ext_xtal_mux,
+	[1] = &exynos5_clk_dout_aclk_333.clk,
+};
+
+struct clksrc_sources exynos5_clkset_aclk_333_sub = {
+	.sources	= exynos5_clkset_aclk_333_sub_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_aclk_333_sub_list),
+};
+
+static struct clksrc_clk exynos5_clk_aclk_333 = {
+	.clk	= {
+		.name		= "aclk_333",
+	},
+	.sources = &exynos5_clkset_aclk_333_sub,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 24, .size = 1 },
 };
 
 /* For ACLK_300_disp1_mid */
@@ -620,23 +629,48 @@ static struct clksrc_clk exynos5_clk_mout_aclk_300_disp1_mid = {
 };
 
 /* For ACLK_300_disp1 */
-struct clk *exynos5_clkset_aclk_300_disp1_list[] = {
+struct clk *exynos5_clkset_mout_aclk_300_disp1_list[] = {
 	[0] = &exynos5_clk_mout_aclk_300_disp1_mid.clk,
 	[1] = &exynos5_clk_sclk_vpll.clk,
 };
 
-struct clksrc_sources exynos5_clkset_aclk_300_disp1 = {
-	.sources	= exynos5_clkset_aclk_300_disp1_list,
-	.nr_sources	= ARRAY_SIZE(exynos5_clkset_aclk_300_disp1_list),
+struct clksrc_sources exynos5_clkset_mout_aclk_300_disp1 = {
+	.sources	= exynos5_clkset_mout_aclk_300_disp1_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_mout_aclk_300_disp1_list),
 };
 
 static struct clksrc_clk exynos5_clk_mout_aclk_300_disp1 = {
 	.clk	= {
 		.name		= "mout_aclk_300_disp1",
 	},
-	.sources = &exynos5_clkset_aclk_300_disp1,
+	.sources = &exynos5_clkset_mout_aclk_300_disp1,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 15, .size = 1 },
+};
+
+static struct clksrc_clk exynos5_clk_dout_aclk_300_disp1 = {
+	.clk	= {
+		.name		= "dout_aclk_300_disp1",
+		.parent		= &exynos5_clk_mout_aclk_300_disp1.clk,
+	},
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 28, .size = 3 },
+};
+
+static struct clk *clk_src_aclk_300_disp1_list[] = {
+	[0] = &clk_ext_xtal_mux,
+	[1] = &exynos5_clk_dout_aclk_300_disp1.clk,
+};
+
+static struct clksrc_sources exynos5_clkset_aclk_300_disp1 = {
+	.sources	= clk_src_aclk_300_disp1_list,
+	.nr_sources	= ARRAY_SIZE(clk_src_aclk_300_disp1_list),
+};
+
+static struct clksrc_clk exynos5_clk_aclk_300_disp1 = {
+	.clk	= {
+		.name		= "aclk_300_disp1",
+	},
+	.sources = &exynos5_clkset_aclk_300_disp1,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 6, .size = 1 },
 };
 
 /* For ACLK_300_gscl_mid */
@@ -718,7 +752,7 @@ static struct clksrc_clk exynos5_clk_aclk_166 = {
 	.clk	= {
 		.name		= "aclk_166",
 	},
-	.sources = &exynos5_clkset_aclk_333_166,
+	.sources = &exynos5_clkset_mout_aclk_333_166,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP0, .shift = 8, .size = 1 },
 	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP0, .shift = 8, .size = 3 },
 };
@@ -1454,39 +1488,56 @@ static struct clksrc_sources clk_src_gscl_266 = {
 	.nr_sources	= ARRAY_SIZE(clk_src_gscl_266_list),
 };
 
-static struct clk *clk_src_isp_400_list[] = {
+/* For ACLK_400_ISP */
+static struct clksrc_clk exynos5_clk_mout_aclk_400_isp = {
+       .clk    = {
+		.name		= "mout_aclk_400_isp",
+       },
+       .sources = &exynos5_clkset_aclk,
+       .reg_src = { .reg = EXYNOS5_CLKSRC_TOP1, .shift = 24, .size = 1 },
+};
+
+static struct clksrc_clk exynos5_clk_dout_aclk_400_isp = {
+	.clk	= {
+		.name		= "dout_aclk_400_isp",
+		.parent		= &exynos5_clk_mout_aclk_400_isp.clk,
+	},
+	.reg_div = { .reg = EXYNOS5_CLKDIV_TOP1, .shift = 20, .size = 3 },
+};
+
+static struct clk *exynos5_clkset_aclk_400_isp_list[] = {
 	[0] = &clk_ext_xtal_mux,
-	[1] = &exynos5_clk_mout_aclk_400_isp.clk,
+	[1] = &exynos5_clk_dout_aclk_400_isp.clk,
 };
 
-static struct clksrc_sources clk_src_isp_400 = {
-	.sources	= clk_src_isp_400_list,
-	.nr_sources	= ARRAY_SIZE(clk_src_isp_400_list),
+static struct clksrc_sources exynos5_clkset_aclk_400_isp = {
+	.sources	= exynos5_clkset_aclk_400_isp_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_aclk_400_isp_list),
 };
 
-static struct clksrc_clk exynos5_clk_isp_266 = {
+static struct clksrc_clk exynos5_clk_aclk_400_isp = {
+	.clk	= {
+		.name		= "aclk_400_isp",
+	},
+	.sources = &exynos5_clkset_aclk_400_isp,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 20, .size = 1 },
+};
+
+static struct clksrc_clk exynos5_clk_sclk_uart_isp = {
+	.clk	= {
+		.name		= "sclk_uart_src_isp",
+	},
+	.sources = &exynos5_clkset_group,
+	.reg_src = { .reg = EXYNOS5_SCLK_SRC_ISP, .shift = 8, .size = 4 },
+};
+
+static struct clksrc_clk exynos5_clk_aclk_266_isp = {
 	.clk	= {
 		.name		= "aclk_266_isp",
 
 	},
 	.sources = &clk_src_gscl_266,
 	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 16, .size = 1 },
-};
-
-static struct clksrc_clk exynos5_clk_isp_400 = {
-	.clk	= {
-		.name       = "aclk_400_isp",
-	},
-	.sources = &clk_src_isp_400,
-	.reg_src = { .reg = EXYNOS5_CLKSRC_TOP3, .shift = 20, .size = 1 },
-};
-
-static struct clksrc_clk exynos5_clk_sclk_uart_isp = {
-	.clk	= {
-		.name       = "sclk_uart_src_isp",
-	},
-	.sources = &exynos5_clkset_group,
-	.reg_src = { .reg = EXYNOS5_SCLK_SRC_ISP, .shift = 8, .size = 4 },
 };
 
 static struct clksrc_clk exynos5_clk_dout_mmc0 = {
@@ -1769,33 +1820,33 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 		.reg_div = { .reg = EXYNOS5_CLKDIV_GEN, .shift = 4, .size = 3 },
 	}, {
 		.clk		= {
-			.name		= "aclk_isp_266_div0",
-			.parent     = &exynos5_clk_isp_266.clk,
+			.name		= "aclk_266_isp_div0",
+			.parent     = &exynos5_clk_aclk_266_isp.clk,
 
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_ISP0, .shift = 0, .size = 3 },
 	}, {
 		.clk		= {
-			.name		= "aclk_isp_266_div1",
-			.parent     = &exynos5_clk_isp_266.clk,
+			.name		= "aclk_266_isp_div1",
+			.parent     = &exynos5_clk_aclk_266_isp.clk,
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_ISP0, .shift = 4, .size = 3 },
 	}, {
 		.clk		= {
-			.name		= "aclk_isp_266_divmpwm",
-			.parent     = &exynos5_clk_isp_266.clk,
+			.name		= "aclk_266_isp_divmpwm",
+			.parent     = &exynos5_clk_aclk_266_isp.clk,
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_ISP2, .shift = 0, .size = 3 },
 	}, {
 		.clk		= {
-			.name		= "aclk_isp_400_div0",
-			.parent     = &exynos5_clk_isp_400.clk,
+			.name		= "aclk_400_isp_div0",
+			.parent     = &exynos5_clk_aclk_400_isp.clk,
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_ISP1, .shift = 0, .size = 3 },
 	}, {
 		.clk		= {
-			.name		= "aclk_isp_400_div1",
-			.parent     = &exynos5_clk_isp_400.clk,
+			.name		= "aclk_400_isp_div1",
+			.parent     = &exynos5_clk_aclk_400_isp.clk,
 		},
 		.reg_div = { .reg = EXYNOS5_CLKDIV_ISP1, .shift = 4, .size = 3 },
 	}, {
@@ -1883,8 +1934,12 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_dout_aclk_cdrex,
 	&exynos5_clk_aclk_400,
 	&exynos5_clk_mout_aclk_333,
+	&exynos5_clk_dout_aclk_333,
+	&exynos5_clk_aclk_333,
 	&exynos5_clk_mout_aclk_300_disp1_mid,
 	&exynos5_clk_mout_aclk_300_disp1,
+	&exynos5_clk_dout_aclk_300_disp1,
+	&exynos5_clk_aclk_300_disp1,
 	&exynos5_clk_mout_aclk_300_gscl_mid,
 	&exynos5_clk_mout_aclk_300_gscl,
 	&exynos5_clk_dout_aclk_300_gscl,
@@ -1894,6 +1949,8 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_aclk_166,
 	&exynos5_clk_dout_aclk_66_pre,
 	&exynos5_clk_mout_aclk_400_isp,
+	&exynos5_clk_dout_aclk_400_isp,
+	&exynos5_clk_aclk_400_isp,
 	&exynos5_clk_aclk_66,
 	&exynos5_clk_dout_mmc0,
 	&exynos5_clk_dout_mmc1,
@@ -1910,8 +1967,7 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_sclk_spdif,
 	&exynos5_clk_aclk_acp,
 	&exynos5_clk_pclk_acp,
-	&exynos5_clk_isp_266,
-	&exynos5_clk_isp_400,
+	&exynos5_clk_aclk_266_isp,
 	&exynos5_clk_sclk_uart_isp,
 	&exynos5_clk_sclk_c2c,
 	&exynos5_clk_aclk_c2c,
@@ -2173,7 +2229,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	mout_cdrex = clk_get_rate(&exynos5_clk_mclk_cdrex);
 
 	aclk_400 = clk_get_rate(&exynos5_clk_aclk_400.clk);
-	aclk_333 = clk_get_rate(&exynos5_clk_aclk_333);
+	aclk_333 = clk_get_rate(&exynos5_clk_aclk_333.clk);
 	aclk_266 = clk_get_rate(&exynos5_clk_aclk_266.clk);
 	aclk_200 = clk_get_rate(&exynos5_clk_aclk_200.clk);
 	aclk_166 = clk_get_rate(&exynos5_clk_aclk_166.clk);
@@ -2215,12 +2271,12 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	if (clk_set_parent(&exynos5_clk_mout_aclk_400_isp.clk, &exynos5_clk_mout_mpll_user.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 			exynos5_clk_mout_mpll_user.clk.name, exynos5_clk_mout_aclk_400_isp.clk.name);
-	if (clk_set_parent(&exynos5_clk_isp_266.clk, &exynos5_clk_aclk_266.clk))
+	if (clk_set_parent(&exynos5_clk_aclk_266_isp.clk, &exynos5_clk_aclk_266.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
-			exynos5_clk_aclk_266.clk.name, exynos5_clk_isp_266.clk.name);
-	if (clk_set_parent(&exynos5_clk_isp_400.clk, &exynos5_clk_mout_aclk_400_isp.clk))
+			exynos5_clk_aclk_266.clk.name, exynos5_clk_aclk_266_isp.clk.name);
+	if (clk_set_parent(&exynos5_clk_aclk_400_isp.clk, &exynos5_clk_mout_aclk_400_isp.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
-			exynos5_clk_mout_aclk_400_isp.clk.name, exynos5_clk_isp_400.clk.name);
+			exynos5_clk_mout_aclk_400_isp.clk.name, exynos5_clk_aclk_400_isp.clk.name);
 	if (clk_set_parent(&exynos5_clk_sclk_uart_isp.clk, &exynos5_clk_mout_mpll_user.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 			exynos5_clk_mout_mpll_user.clk.name, exynos5_clk_sclk_uart_isp.clk.name);
