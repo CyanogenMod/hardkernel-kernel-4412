@@ -140,6 +140,11 @@ static int exynos5_clk_ip_core_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_CORE, clk, enable);
 }
 
+static int exynos5_clk_ip_cpu_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_CPU, clk, enable);
+}
+
 static int exynos5_clk_ip_gps_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_GPS, clk, enable);
@@ -1121,6 +1126,14 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_acp_ctrl,
 		.ctrlbit	= (1 << 11),
 	},
+#ifndef CONFIG_SAMSUNG_C2C
+	{
+		.name		= "c2c",
+		.devname	= "samsung-c2c",
+		.enable		= exynos5_clk_ip_cpu_ctrl,
+		.ctrlbit	= (1 << 11),
+	},
+#endif
 };
 
 static struct clk exynos5_i2cs_clocks[] = {
