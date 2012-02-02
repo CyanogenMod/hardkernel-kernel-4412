@@ -75,6 +75,8 @@ struct i2s_dai {
 	bool	reg_saved;
 
 	void	(*audss_clk_enable)(bool enable);
+	void	(*audss_suspend)(void);
+	void	(*audss_resume)(void);
 };
 
 /* Lock for cross i/f checks */
@@ -466,7 +468,6 @@ static int i2s_set_sysclk(struct snd_soc_dai *dai,
 			if (i2s->op_clk) {
 				if ((clk_id && !(mod & MOD_IMS_SYSMUX)) ||
 					(!clk_id && (mod & MOD_IMS_SYSMUX))) {
-					clk_disable(i2s->op_clk);
 					clk_put(i2s->op_clk);
 				} else {
 					i2s->rclk_srcrate =
@@ -482,7 +483,6 @@ static int i2s_set_sysclk(struct snd_soc_dai *dai,
 					"failed to get i2s opclk\n");
 				return PTR_ERR(i2s->op_clk);
 			}
-			clk_enable(i2s->op_clk);
 			i2s->rclk_srcrate = clk_get_rate(i2s->op_clk);
 
 			/* Over-ride the other's */
@@ -1021,8 +1021,10 @@ static int i2s_suspend(struct snd_soc_dai *dai)
 {
 	struct i2s_dai *i2s = to_info(dai);
 
-	if (!i2s->reg_saved)
+	if (!i2s->reg_saved) {
+		i2s->audss_suspend();
 		i2s_reg_save(dai);
+	}
 
 	return 0;
 }
@@ -1031,8 +1033,10 @@ static int i2s_resume(struct snd_soc_dai *dai)
 {
 	struct i2s_dai *i2s = to_info(dai);
 
-	if (i2s->reg_saved)
+	if (i2s->reg_saved) {
 		i2s_reg_restore(dai);
+		i2s->audss_resume();
+	}
 
 	return 0;
 }
@@ -1248,8 +1252,11 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 	pri_dai->dma_capture.dma_size = 4;
 	pri_dai->base = regs_base;
 	pri_dai->quirks = quirks;
-	if (pdev->id == 0)
+	if (pdev->id == 0) {
 		pri_dai->audss_clk_enable = audss_clk_enable;
+		pri_dai->audss_suspend = audss_suspend;
+		pri_dai->audss_resume = audss_resume;
+	}
 
 	if (quirks & QUIRK_PRI_6CHAN)
 		pri_dai->i2s_dai_drv.playback.channels_max = 6;
@@ -1273,8 +1280,11 @@ static __devinit int samsung_i2s_probe(struct platform_device *pdev)
 
 		sec_dai->pri_dai = pri_dai;
 		pri_dai->sec_dai = sec_dai;
-		if (pdev->id == 0)
+		if (pdev->id == 0) {
 			sec_dai->audss_clk_enable = audss_clk_enable;
+			sec_dai->audss_suspend = audss_suspend;
+			sec_dai->audss_resume = audss_resume;
+		}
 	}
 
 	if (i2s_pdata->cfg_gpio && i2s_pdata->cfg_gpio(pdev)) {
