@@ -133,8 +133,8 @@ static void exynos_busfreq_timer(struct work_struct *work)
 
 	mif_newfreq = opp_get_freq(mif_opp);
 	int_newfreq = opp_get_freq(int_opp);
-	mif_index = data->get_table_index_for_mif(mif_opp);
-	int_index = data->get_table_index_for_int(int_opp);
+	mif_index = data->get_table_index(mif_opp, PPMU_MIF);
+	int_index = data->get_table_index(int_opp, PPMU_INT);
 
 	mutex_lock(&busfreq_lock);
 
@@ -148,9 +148,8 @@ static void exynos_busfreq_timer(struct work_struct *work)
 	mif_voltage = opp_get_voltage(mif_opp);
 	int_voltage = opp_get_voltage(int_opp);
 	if (mif_newfreq > mif_currfreq || int_newfreq > int_currfreq) {
-		if (!IS_ERR(data->vdd_reg[PPMU_MIF]))
-			regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage,
-					mif_voltage + 25000);
+		regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage,
+				mif_voltage + 25000);
 
 		regulator_set_voltage(data->vdd_reg[PPMU_INT], int_voltage,
 				int_voltage + 25000);
@@ -163,9 +162,8 @@ static void exynos_busfreq_timer(struct work_struct *work)
 	if (mif_newfreq < mif_currfreq || int_newfreq < int_currfreq) {
 		if (data->busfreq_post)
 			data->busfreq_post(mif_index);
-		if (!IS_ERR(data->vdd_reg[PPMU_MIF]))
-			regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage,
-					mif_voltage + 25000);
+		regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage,
+				mif_voltage + 25000);
 
 		regulator_set_voltage(data->vdd_reg[PPMU_INT], int_voltage,
 				int_voltage + 25000);
@@ -193,13 +191,10 @@ static int exynos_buspm_notifier_event(struct notifier_block *this,
 	case PM_SUSPEND_PREPARE:
 		mutex_lock(&busfreq_lock);
 		data->use = false;
-		if (!IS_ERR(data->vdd_reg[PPMU_MIF]))
-			regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage,
-					mif_voltage + 25000);
-
+		regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage, mif_voltage + 25000);
 		regulator_set_voltage(data->vdd_reg[PPMU_INT], int_voltage, int_voltage + 25000);
-		mif_index = data->get_table_index_for_mif(data->max_opp[PPMU_MIF]);
-		int_index = data->get_table_index_for_int(data->max_opp[PPMU_INT]);
+		mif_index = data->get_table_index(data->max_opp[PPMU_MIF], PPMU_MIF);
+		int_index = data->get_table_index(data->max_opp[PPMU_INT], PPMU_INT);
 		if (data->busfreq_prepare)
 			data->busfreq_prepare(mif_index);
 		data->target(mif_index, int_index);
@@ -245,8 +240,8 @@ static int exynos_busfreq_request_event(struct notifier_block *this,
 	unsigned int mif_index, int_index;
 	unsigned int mif_voltage, int_voltage;
 
-	mif_index = data->get_table_index_for_mif(mif_opp);
-	int_index = data->get_table_index_for_int(int_opp);
+	mif_index = data->get_table_index(mif_opp, PPMU_MIF);
+	int_index = data->get_table_index(int_opp, PPMU_INT);
 
 	if (newfreq == 0 || data->use == false)
 		return -EINVAL;

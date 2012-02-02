@@ -55,8 +55,7 @@ struct busfreq_data {
 			struct opp **int_opp);
 	void (*target)	(int mif_index, int int_index);
 	unsigned int (*get_int_volt) (unsigned long freq);
-	int (*get_table_index_for_mif) (struct opp *opp);
-	int (*get_table_index_for_int) (struct opp *opp);
+	int (*get_table_index) (struct opp *opp, enum ppmu_type type);
 	void (*busfreq_prepare) (int index);
 	void (*busfreq_post) (int index);
 	void (*busfreq_suspend) (void);

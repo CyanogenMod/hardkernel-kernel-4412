@@ -70,8 +70,6 @@ enum busfreq_level_idx {
 	LV_MIF_END = LV_3,
 };
 
-static struct busfreq_table *exynos5_busfreq_table;
-
 static struct busfreq_table exynos5_busfreq_table_for800[] = {
 	{LV_0, 800000, 1000000, 0, 0, 0},
 	{LV_1, 400000, 1000000, 0, 0, 0},
@@ -149,6 +147,8 @@ static unsigned int exynos5_mif_volt_for400[ASV_GROUP][LV_MIF_END] = {
 	{1000000, 950000, 950000}, /* ASV7 */
 	{1000000, 950000, 950000}, /* ASV8 */
 };
+
+static struct busfreq_table *exynos5_busfreq_table_mif;
 
 static unsigned int (*exynos5_mif_volt)[LV_MIF_END];
 
@@ -336,7 +336,7 @@ static void exynos5250_set_bus_volt(void)
 	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group_index);
 
 	for (i = 0 ; i < LV_MIF_END ; i++)
-		exynos5_busfreq_table[i].volt =
+		exynos5_busfreq_table_mif[i].volt =
 			exynos5_mif_volt[asv_group_index][i];
 
 	for (i = 0 ; i < LV_INT_END ; i++)
@@ -484,25 +484,19 @@ static void exynos5250_target(int mif_index, int int_index)
 	exynos5250_target_for_int(int_index);
 }
 
-static int exynos5250_get_table_index_for_mif(struct opp *opp)
+static int exynos5250_get_table_index(struct opp *opp, enum ppmu_type type)
 {
 	int index;
 
-	for (index = LV_0; index < LV_MIF_END; index++)
-		if (opp_get_freq(opp) == exynos5_busfreq_table[index].mem_clk)
-			return index;
-
-	return -EINVAL;
-}
-
-static int exynos5250_get_table_index_for_int(struct opp *opp)
-{
-	int index;
-
-	for (index = LV_0; index < LV_INT_END; index++)
-		if (opp_get_freq(opp) == exynos5_busfreq_table_int[index].mem_clk)
-			return index;
-
+	if (type == PPMU_MIF) {
+		for (index = LV_0; index < LV_MIF_END; index++)
+			if (opp_get_freq(opp) == exynos5_busfreq_table_mif[index].mem_clk)
+				return index;
+	} else {
+		for (index = LV_0; index < LV_INT_END; index++)
+			if (opp_get_freq(opp) == exynos5_busfreq_table_int[index].mem_clk)
+				return index;
+	}
 	return -EINVAL;
 }
 
@@ -660,19 +654,19 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 
 	if (cdrexfreq == 800000) {
 		clkdiv_cdrex = clkdiv_cdrex_for800;
-		exynos5_busfreq_table = exynos5_busfreq_table_for800;
+		exynos5_busfreq_table_mif = exynos5_busfreq_table_for800;
 		exynos5_mif_volt = exynos5_mif_volt_for800;
 	} else if (cdrexfreq == 666857) {
 		clkdiv_cdrex = clkdiv_cdrex_for667;
-		exynos5_busfreq_table = exynos5_busfreq_table_for667;
+		exynos5_busfreq_table_mif = exynos5_busfreq_table_for667;
 		exynos5_mif_volt = exynos5_mif_volt_for667;
 	} else if (cdrexfreq == 533000) {
 		clkdiv_cdrex = clkdiv_cdrex_for533;
-		exynos5_busfreq_table = exynos5_busfreq_table_for533;
+		exynos5_busfreq_table_mif = exynos5_busfreq_table_for533;
 		exynos5_mif_volt = exynos5_mif_volt_for533;
 	} else if (cdrexfreq == 400000) {
 		clkdiv_cdrex = clkdiv_cdrex_for400;
-		exynos5_busfreq_table = exynos5_busfreq_table_for400;
+		exynos5_busfreq_table_mif = exynos5_busfreq_table_for400;
 		exynos5_mif_volt = exynos5_mif_volt_for400;
 	} else {
 		dev_err(dev, "Don't support cdrex table\n");
@@ -685,8 +679,8 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	data->dev[PPMU_INT] = &busfreq_for_int;
 
 	for (i = 0; i < LV_MIF_END; i++) {
-		ret = opp_add(data->dev[PPMU_MIF], exynos5_busfreq_table[i].mem_clk,
-				exynos5_busfreq_table[i].volt);
+		ret = opp_add(data->dev[PPMU_MIF], exynos5_busfreq_table_mif[i].mem_clk,
+				exynos5_busfreq_table_mif[i].volt);
 		if (ret) {
 			dev_err(dev, "Fail to add opp entries.\n");
 			return ret;
@@ -705,14 +699,13 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	}
 
 	data->target = exynos5250_target;
-	data->get_table_index_for_mif = exynos5250_get_table_index_for_mif;
-	data->get_table_index_for_int = exynos5250_get_table_index_for_int;
+	data->get_table_index = exynos5250_get_table_index;
 	data->monitor = exynos5250_monitor;
 	data->busfreq_suspend = exynos5250_suspend;
 	data->busfreq_resume = exynos5250_resume;
 	data->sampling_rate = usecs_to_jiffies(100000);
 
-	data->table = exynos5_busfreq_table;
+	data->table = exynos5_busfreq_table_mif;
 	data->table_size = LV_MIF_END;
 
 	/* Find max frequency for mif */
