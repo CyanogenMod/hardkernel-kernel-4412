@@ -23,6 +23,7 @@
 #include <plat/map-s5p.h>
 #include <plat/cpu.h>
 #include <mach/map.h>
+#include <mach/regs-clock.h>
 
 struct platform_device; /* don't need the contents */
 
@@ -88,13 +89,15 @@ int exynos_fimc_is_cfg_clk(struct platform_device *pdev)
 	struct clk *sclk_uart_isp_src = NULL;
 	struct clk *sclk_pwm_isp = NULL;
 	struct clk *sclk_pwm_isp_src = NULL;
+	unsigned int tmp;
+
 	/*
 	 * initialize Clocks
 	*/
 	/* 1. MCUISP */
-	aclk_mcuisp_muxed = clk_get(&pdev->dev, "aclk_400_muxed");
+	aclk_mcuisp_muxed = clk_get(&pdev->dev, "aclk_400_mcuisp_muxed");
 	if (IS_ERR(aclk_mcuisp_muxed))
-		printk(KERN_ERR "failed to get aclk_mcuisp_muxed\n");
+		printk(KERN_ERR "failed to get aclk_400_mcuisp_muxed\n");
 	aclk_mcuisp_div0 = clk_get(&pdev->dev, "sclk_mcuisp_div0");
 	if (IS_ERR(aclk_mcuisp_div0))
 		printk(KERN_ERR "failed to get aclk_mcuisp_div0\n");
@@ -121,6 +124,19 @@ int exynos_fimc_is_cfg_clk(struct platform_device *pdev)
 	clk_put(aclk_200);
 	clk_put(aclk_200_div0);
 	clk_put(aclk_200_div1);
+
+	tmp = __raw_readl(EXYNOS4_CLKSRC_TOP1);
+	tmp |= (0x1 << EXYNOS4_CLKDIV_TOP1_ACLK200_SUB_SHIFT |
+		0x1 << EXYNOS4_CLKDIV_TOP1_ACLK400_MCUISP_SUB_SHIFT);
+	__raw_writel(tmp, EXYNOS4_CLKSRC_TOP1);
+
+	printk(KERN_INFO "FIMC-IS MUX TOP1 = 0x%08x\n",
+					__raw_readl(EXYNOS4_CLKSRC_TOP1));
+	printk(KERN_INFO "FIMC-IS DIV0 = 0x%08x\n",
+					__raw_readl(EXYNOS4_CLKDIV_ISP0));
+	printk(KERN_INFO "FIMC-IS DIV1 = 0x%08x\n",
+					__raw_readl(EXYNOS4_CLKDIV_ISP1));
+
 	/* 3. UART-ISP */
 	sclk_uart_isp = clk_get(&pdev->dev, "sclk_uart_isp");
 	if (IS_ERR(sclk_uart_isp))
@@ -158,9 +174,9 @@ int exynos_fimc_is_clk_on(struct platform_device *pdev)
 	struct clk *sclk_pwm_isp = NULL;
 
 	/* 1. MCUISP */
-	aclk_mcuisp_muxed = clk_get(&pdev->dev, "aclk_400_muxed");
+	aclk_mcuisp_muxed = clk_get(&pdev->dev, "aclk_400_mcuisp_muxed");
 	if (IS_ERR(aclk_mcuisp_muxed))
-		printk(KERN_ERR "failed to get aclk_mcuisp_muxed\n");
+		printk(KERN_ERR "failed to get aclk_400_mcuisp_muxed\n");
 	aclk_mcuisp_div0 = clk_get(&pdev->dev, "sclk_mcuisp_div0");
 	if (IS_ERR(aclk_mcuisp_div0))
 		printk(KERN_ERR "failed to get aclk_mcuisp_div0\n");
@@ -216,9 +232,9 @@ int exynos_fimc_is_clk_off(struct platform_device *pdev)
 	struct clk *sclk_pwm_isp = NULL;
 
 	/* 1. MCUISP */
-	aclk_mcuisp_muxed = clk_get(&pdev->dev, "aclk_400_muxed");
+	aclk_mcuisp_muxed = clk_get(&pdev->dev, "aclk_400_mcuisp_muxed");
 	if (IS_ERR(aclk_mcuisp_muxed))
-		printk(KERN_ERR "failed to get aclk_mcuisp_muxed\n");
+		printk(KERN_ERR "failed to get aclk_400_mcuisp_muxed\n");
 	aclk_mcuisp_div0 = clk_get(&pdev->dev, "sclk_mcuisp_div0");
 	if (IS_ERR(aclk_mcuisp_div0))
 		printk(KERN_ERR "failed to get aclk_mcuisp_div0\n");

@@ -53,6 +53,7 @@ void fimc_is_print_param_err_name(u32 err)
 		break;
 	case ERROR_CONTROL_BYPASS:
 		printk(KERN_ERR "ERROR_CONTROL_BYPASS!!\n");
+		break;
 	case ERROR_OTF_INPUT_FORMAT:
 		printk(KERN_ERR
 		"ERROR_OTF_INPUT_FORMAT!! : invalid format  (DRC: YUV444, FD: YUV444, 422, 420)\n");
