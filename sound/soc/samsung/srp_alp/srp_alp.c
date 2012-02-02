@@ -831,7 +831,7 @@ static int srp_prepare_fw_buff(struct device *dev)
 
 	srp.wbuf = kzalloc(srp.wbuf_size, GFP_KERNEL);
 	if (!srp.wbuf) {
-	        srp_err("Failed to allocation for WBUF!\n");
+		srp_err("Failed to allocation for WBUF!\n");
 		return -ENOMEM;
 	}
 
@@ -850,7 +850,7 @@ static int srp_prepare_fw_buff(struct device *dev)
 	srp.sp_data.obuf = kzalloc(OBUF_SIZE, GFP_KERNEL);
 	if (!srp.sp_data.obuf) {
 		srp_err("Failed to alloc OBUF for suspend/resume\n");
-	        return -ENOMEM;
+		return -ENOMEM;
 	}
 #endif
 	srp_info("Allocation WBUF [%ld]Bytes\n", srp.wbuf_size);
@@ -888,17 +888,10 @@ static int srp_remove_fw_buff(struct device *dev)
 					srp.fw_info.cga_pa);
 	dma_free_writecombine(dev, DATA_SIZE, srp.fw_info.data,
 					srp.fw_info.data_pa);
-	if (srp.wbuf)
-		kfree(srp.wbuf);
-
-	if (srp.sp_data.dmem)
-		kfree(srp.sp_data.dmem);
-
-	if (srp.sp_data.wbuf)
-		kfree(srp.sp_data.wbuf);
-
-	if (srp.sp_data.obuf)
-		kfree(srp.sp_data.obuf);
+	kfree(srp.wbuf);
+	kfree(srp.sp_data.dmem);
+	kfree(srp.sp_data.wbuf);
+	kfree(srp.sp_data.obuf);
 #endif
 	srp.fw_info.vliw = NULL;
 	srp.fw_info.cga = NULL;
