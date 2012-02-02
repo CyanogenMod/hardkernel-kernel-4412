@@ -1264,6 +1264,10 @@ struct clk exynos5_init_dmaclocks[] = {
 		.devname	= "s3c-pl330.2",
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 1),
+	}, {
+		.name		= "pdma",
+		.enable		= exynos5_clk_ip_acp_ctrl,
+		.ctrlbit	= (1 << 1),
 	},
 };
 
