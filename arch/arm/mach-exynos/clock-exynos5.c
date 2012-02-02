@@ -235,9 +235,14 @@ static int exynos5_clk_ip_acp_ctrl(struct clk *clk, int enable)
 	return s5p_gatectrl(EXYNOS5_CLKGATE_IP_ACP, clk, enable);
 }
 
-static int exynos5_clk_isp_ctrl(struct clk *clk, int enable)
+static int exynos5_clk_ip_isp0_ctrl(struct clk *clk, int enable)
 {
 	return s5p_gatectrl(EXYNOS5_CLKGATE_ISP0, clk, enable);
+}
+
+static int exynos5_clk_ip_isp1_ctrl(struct clk *clk, int enable)
+{
+	return s5p_gatectrl(EXYNOS5_CLKGATE_ISP1, clk, enable);
 }
 
 /* BPLL clock output
@@ -858,7 +863,7 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "isp",
 		.devname	= "exynos5-fimc-is",
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (0xFFFFFFFF << 0),
 	}, {
 		.name		= "hdmi",
@@ -1002,52 +1007,52 @@ static struct clk exynos5_init_clocks_off[] = {
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_isp, 16),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 8),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_drc, 17),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 9),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_fd, 18),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 10),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_cpu, 19),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 13),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_sclrc, 24),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 11),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_sclrp, 25),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 12),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_odc, 26),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 4),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_dis0, 27),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 5),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_dis1, 28),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 6),
 	}, {
 		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(is_3dnr, 29),
-		.enable		= exynos5_clk_isp_ctrl,
+		.enable		= exynos5_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 7),
 	}, {
 		.name		= "usbhost",
@@ -1134,6 +1139,55 @@ static struct clk exynos5_init_clocks_off[] = {
 		.ctrlbit	= (1 << 11),
 	},
 #endif
+	{
+		.name		= "mtcadc",
+		.enable		= exynos5_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 27),
+	}, {
+		.name		= "mpwm_isp",
+		.enable		= exynos5_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 24),
+	}, {
+		.name		= "ppmuisp",
+		.enable		= exynos5_clk_ip_isp0_ctrl,
+		.ctrlbit	= ((1 << 20) | (1 << 21)),
+	}, {
+		.name		= "scaler",
+		.enable		= exynos5_clk_ip_isp0_ctrl,
+		.ctrlbit	= ((1 << 18) | (1 << 17)),
+	}, {
+		.name		= "fd",
+		.enable		= exynos5_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 16),
+	}, {
+		.name		= "drc",
+		.enable		= exynos5_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 15),
+	}, {
+		.name		= "isp",
+		.enable		= exynos5_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 14),
+	}, {
+		.name		= "arm9s_mice",
+		.enable		= exynos5_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 6),
+	}, {
+		.name		= "spi_isp",
+		.enable		= exynos5_clk_ip_isp1_ctrl,
+		.ctrlbit	= ((1 << 13) | (1 << 12)),
+	}, {
+		.name		= "3dnr",
+		.enable		= exynos5_clk_ip_isp1_ctrl,
+		.ctrlbit	= (1 << 11),
+	}, {
+		.name		= "dis",
+		.enable		= exynos5_clk_ip_isp1_ctrl,
+		.ctrlbit	= ((1 << 10) | (1 << 9)),
+	}, {
+		.name		= "odc",
+		.enable		= exynos5_clk_ip_isp1_ctrl,
+		.ctrlbit	= (1 << 8),
+	},
 };
 
 static struct clk exynos5_i2cs_clocks[] = {
