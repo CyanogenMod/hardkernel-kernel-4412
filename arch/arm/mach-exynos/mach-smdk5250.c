@@ -1485,6 +1485,8 @@ static struct regulator_init_data s5m8767_buck1_data = {
 		.max_uV		= 1200000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
+		.always_on = 1,
+		.boot_on = 1,
 		.state_mem	= {
 			.disabled	= 1,
 		},
@@ -1500,6 +1502,8 @@ static struct regulator_init_data s5m8767_buck2_data = {
 		.max_uV		= 1500000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				  REGULATOR_CHANGE_STATUS,
+		.always_on = 1,
+		.boot_on = 1,
 		.state_mem	= {
 			.disabled	= 1,
 		},
@@ -1516,6 +1520,8 @@ static struct regulator_init_data s5m8767_buck3_data = {
 		.apply_uV	= 1,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
+		.always_on = 1,
+		.boot_on = 1,
 		.state_mem	= {
 			.uV		= 1100000,
 			.mode		= REGULATOR_MODE_NORMAL,
@@ -1533,6 +1539,8 @@ static struct regulator_init_data s5m8767_buck4_data = {
 		.max_uV		= 1200000,
 		.valid_ops_mask	= REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS,
+		.always_on = 1,
+		.boot_on = 1,
 		.state_mem	= {
 			.disabled	= 1,
 		},
@@ -1548,12 +1556,22 @@ static struct s5m_regulator_data gaia_regulators[] = {
 	{ S5M8767_BUCK4, &s5m8767_buck4_data },
 };
 
+struct s5m_opmode_data s5m8767_opmode_data[S5M8767_REG_MAX] = {
+	[S5M8767_BUCK1] = {S5M8767_BUCK1, S5M_OPMODE_STANDBY},
+	[S5M8767_BUCK2] = {S5M8767_BUCK2, S5M_OPMODE_STANDBY},
+	[S5M8767_BUCK3] = {S5M8767_BUCK3, S5M_OPMODE_STANDBY},
+	[S5M8767_BUCK4] = {S5M8767_BUCK4, S5M_OPMODE_STANDBY},
+};
+
 static struct s5m_platform_data exynos5_s5m8767_pdata = {
 	.device_type		= S5M8767X,
 	.irq_base		= IRQ_BOARD_START,
 	.num_regulators		= ARRAY_SIZE(gaia_regulators),
 	.regulators		= gaia_regulators,
 	.cfg_pmic_irq		= s5m_cfg_irq,
+	.wakeup			= 1,
+	.opmode_data		= s5m8767_opmode_data,
+	.wtsr_smpl		= 1,
 
 	.buck2_voltage[0]	= 1250000,
 	.buck2_voltage[1]	= 1200000,
