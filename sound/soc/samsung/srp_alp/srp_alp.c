@@ -554,31 +554,6 @@ static int srp_open(struct inode *inode, struct file *file)
 
 	srp_set_default_fw();
 
-	srp.wbuf = kzalloc(srp.wbuf_size, GFP_KERNEL);
-	if (!srp.wbuf) {
-		srp_err("Failed to allocation for WBUF!\n");
-		return -ENOMEM;
-	}
-	srp_info("Allocation WBUF [%ld]Bytes\n", srp.wbuf_size);
-
-	srp.sp_data.dmem = kzalloc(DMEM_SIZE, GFP_KERNEL);
-	if (!srp.sp_data.dmem) {
-		srp_err("Failed to alloc dmem for suspend/resume!\n");
-		return -ENOMEM;
-	}
-
-	srp.sp_data.wbuf = kzalloc(WBUF_SIZE * 2, GFP_KERNEL);
-	if (!srp.sp_data.wbuf) {
-		srp_err("Failed to alloc WBUF for suspend/resume!\n");
-		return -ENOMEM;
-	}
-
-	srp.sp_data.obuf = kzalloc(OBUF_SIZE, GFP_KERNEL);
-	if (!srp.sp_data.obuf) {
-		srp_err("Failed to alloc OBUF for suspend/resume\n");
-		return -ENOMEM;
-	}
-
 	srp.dec_info.channels = 0;
 	srp.dec_info.sample_rate = 0;
 	srp.frame_size = 0;
@@ -595,21 +570,7 @@ static int srp_release(struct inode *inode, struct file *file)
 	srp_info("Released\n");
 
 	mutex_lock(&srp_mutex);
-
-	if (srp.wbuf)
-		kfree(srp.wbuf);
-
-	if (srp.sp_data.dmem)
-		kfree(srp.sp_data.dmem);
-
-	if (srp.sp_data.wbuf)
-		kfree(srp.sp_data.wbuf);
-
-	if (srp.sp_data.obuf)
-		kfree(srp.sp_data.obuf);
-
 	srp.is_opened = 0;
-
 	mutex_unlock(&srp_mutex);
 
 	return 0;
@@ -834,6 +795,18 @@ static int srp_prepare_fw_buff(struct device *dev)
 	srp.fw_info.data_pa = mem_paddr;
 	srp.fw_info.data = phys_to_virt(srp.fw_info.data_pa);
 	mem_paddr += DATA_SIZE_MAX;
+
+	srp.wbuf = phys_to_virt(mem_paddr);
+	mem_paddr += WBUF_SIZE;
+
+	srp.sp_data.dmem = phys_to_virt(mem_paddr);
+	mem_paddr += DMEM_SIZE;
+
+	srp.sp_data.wbuf = phys_to_virt(mem_paddr);
+	mem_paddr += WBUF_SIZE * 2;
+
+	srp.sp_data.obuf = phys_to_virt(mem_paddr);
+	mem_paddr += OBUF_SIZE;
 #else
 	srp.fw_info.vliw = dma_alloc_writecombine(dev, VLIW_SIZE,
 				&srp.fw_info.vliw_pa, GFP_KERNEL);
@@ -855,7 +828,32 @@ static int srp_prepare_fw_buff(struct device *dev)
 		srp_err("Failed to alloc for data\n");
 		return -ENOMEM;
 	}
+
+	srp.wbuf = kzalloc(srp.wbuf_size, GFP_KERNEL);
+	if (!srp.wbuf) {
+	        srp_err("Failed to allocation for WBUF!\n");
+		return -ENOMEM;
+	}
+
+	srp.sp_data.dmem = kzalloc(DMEM_SIZE, GFP_KERNEL);
+	if (!srp.sp_data.dmem) {
+		srp_err("Failed to alloc dmem for suspend/resume!\n");
+		return -ENOMEM;
+	}
+
+	srp.sp_data.wbuf = kzalloc(WBUF_SIZE * 2, GFP_KERNEL);
+	if (!srp.sp_data.wbuf) {
+		srp_err("Failed to alloc WBUF for suspend/resume!\n");
+		return -ENOMEM;
+	}
+
+	srp.sp_data.obuf = kzalloc(OBUF_SIZE, GFP_KERNEL);
+	if (!srp.sp_data.obuf) {
+		srp_err("Failed to alloc OBUF for suspend/resume\n");
+	        return -ENOMEM;
+	}
 #endif
+	srp_info("Allocation WBUF [%ld]Bytes\n", srp.wbuf_size);
 
 	srp.fw_info.vliw_size = sizeof(srp_fw_vliw);
 	srp.fw_info.cga_size = sizeof(srp_fw_cga);
@@ -864,6 +862,7 @@ static int srp_prepare_fw_buff(struct device *dev)
 	srp_info("VLIW_SIZE[%lu]Bytes\n", srp.fw_info.vliw_size);
 	srp_info("CGA_SIZE[%lu]Bytes\n", srp.fw_info.cga_size);
 	srp_info("DATA_SIZE[%lu]Bytes\n", srp.fw_info.data_size);
+	srp_info("Total used memory space[%ld]\n", mem_paddr);
 
 	/* Clear Firmware memory & IBUF */
 	memset(srp.fw_info.vliw, 0, VLIW_SIZE);
@@ -889,6 +888,17 @@ static int srp_remove_fw_buff(struct device *dev)
 					srp.fw_info.cga_pa);
 	dma_free_writecombine(dev, DATA_SIZE, srp.fw_info.data,
 					srp.fw_info.data_pa);
+	if (srp.wbuf)
+		kfree(srp.wbuf);
+
+	if (srp.sp_data.dmem)
+		kfree(srp.sp_data.dmem);
+
+	if (srp.sp_data.wbuf)
+		kfree(srp.sp_data.wbuf);
+
+	if (srp.sp_data.obuf)
+		kfree(srp.sp_data.obuf);
 #endif
 	srp.fw_info.vliw = NULL;
 	srp.fw_info.cga = NULL;
