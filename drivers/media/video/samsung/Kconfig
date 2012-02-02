@@ -13,14 +13,13 @@ config VIDEO_SAMSUNG_V4L2
 	help
 	  This feature is for new V4L2 APIs all about digital camera
 
-if CPU_EXYNOS4210 || CPU_EXYNOS4212
+if CPU_EXYNOS4210 || CPU_EXYNOS4212 || CPU_EXYNOS4412
 	source "drivers/media/video/samsung/fimc/Kconfig"
 	source "drivers/media/video/samsung/tvout/Kconfig"
 	source "drivers/media/video/samsung/mfc5x/Kconfig"
 	source "drivers/media/video/samsung/ump/Kconfig"
 	source "drivers/media/video/samsung/mali/Kconfig"
 endif
-
 
 config VIDEO_FIMG2D
 	bool
@@ -40,7 +39,7 @@ if CPU_EXYNOS4210
 	source "drivers/media/video/samsung/jpeg/Kconfig"
 endif
 
-if CPU_EXYNOS4212 || CPU_EXYNOS5250
+if CPU_EXYNOS4212 || CPU_EXYNOS4412 || CPU_EXYNOS5250
 	source "drivers/media/video/samsung/jpeg_v2x/Kconfig"
 endif
 
@@ -83,7 +82,7 @@ config VIDEO_SAMSUNG_MEMSIZE_MFC1
 
 config VIDEO_SAMSUNG_MEMSIZE_JPEG
 	int "Memory size in kbytes for JPEG"
-	depends on VIDEO_JPEG || (VIDEO_JPEG_V2X && CPU_EXYNOS4212)
+	depends on VIDEO_JPEG || (VIDEO_JPEG_V2X && (CPU_EXYNOS4212 || CPU_EXYNOS4412))
 	default "40960"
 endif
 
