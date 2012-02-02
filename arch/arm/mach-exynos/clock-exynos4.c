@@ -1040,6 +1040,7 @@ static struct clksrc_sources exynos4_clkset_sclk_audss = {
 static struct clksrc_clk exynos4_clk_sclk_audss_i2s = {
 	.clk		= {
 		.name		= "i2sclk",
+		.parent		= &exynos4_clk_mout_audss.clk,
 		.enable		= exynos4_clk_audss_ctrl,
 		.ctrlbit	= S5P_AUDSS_CLKGATE_I2SSPECIAL,
 	},
