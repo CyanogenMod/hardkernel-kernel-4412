@@ -325,10 +325,6 @@ static struct exynos4_c2c_pmu_conf exynos4_config_for_c2c[] = {
 	{ S5P_XUSBXTI_SYS,		0x0},
 };
 
-static void __iomem *exynos4_pmu_init_zero[] = {
-	S5P_CMU_RESET_ISP_SYS,
-};
-
 void exynos4_sys_powerdown_conf(enum sys_powerdown mode)
 {
 	unsigned int count = entry_cnt;
@@ -383,14 +379,6 @@ static int __init exynos4_pmu_init(void)
 	unsigned int i;
 
 	exynos4_reset_assert_ctrl(1);
-
-	/*
-	 * on exynos4x12, CMU reset system power register should to be set 0x0
-	 */
-	if (!soc_is_exynos4210()) {
-		for (i = 0; i < ARRAY_SIZE(exynos4_pmu_init_zero); i++)
-			__raw_writel(0x0, exynos4_pmu_init_zero[i]);
-	}
 
 	if (soc_is_exynos4210()) {
 		exynos4_pmu_config = exynos4210_pmu_config;
