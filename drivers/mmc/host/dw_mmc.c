@@ -1716,9 +1716,32 @@ static int dw_mci_probe(struct platform_device *pdev)
 	if (soc_is_exynos4210()) {
 		host->sdr_timing = 0x00010001;
 		host->ddr_timing = 0x00020002;
-	} else if (soc_is_exynos4212() || soc_is_exynos4412()) {
-		host->sdr_timing = 0x00010001;
-		host->ddr_timing = 0x00010001;
+	} else if (soc_is_exynos4212()) {
+		if (samsung_rev() >= EXYNOS4212_REV_1_0) {
+			if (samsung_board_rev_is_0_1()) {
+				host->sdr_timing = 0x00020001;
+				host->ddr_timing = 0x00020002;
+			} else {
+				host->sdr_timing = 0x00010001;
+				host->ddr_timing = 0x00010002;
+			}
+		} else {
+			host->sdr_timing = 0x00010001;
+			host->ddr_timing = 0x00010001;
+		}
+	} else if (soc_is_exynos4412()) {
+		if (samsung_rev() >= EXYNOS4412_REV_1_0) {
+			if (samsung_board_rev_is_0_1()) {
+				host->sdr_timing = 0x00020001;
+				host->ddr_timing = 0x00020002;
+			} else {
+				host->sdr_timing = 0x00010001;
+				host->ddr_timing = 0x00010002;
+			}
+		} else {
+			host->sdr_timing = 0x00010001;
+			host->ddr_timing = 0x00010001;
+		}
 	} else if (soc_is_exynos5250()) {
 		host->sdr_timing = 0x00010000;
 		host->ddr_timing = 0x00010000;
