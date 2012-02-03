@@ -47,8 +47,6 @@ static inline void exynos4x12_set_abb(unsigned int abb_mode_value)
 {
 	unsigned int tmp;
 
-	pr_info("EXYNOS4X12 ABB MODE : %d(mV)\n", 600 + (abb_mode_value * 50));
-
 	if (abb_mode_value != ABB_MODE_BYPASS)
 		tmp = S5P_ABB_INIT;
 	else
