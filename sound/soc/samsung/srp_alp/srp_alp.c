@@ -1043,13 +1043,14 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 	srp_info("Suspend\n");
 
 	if (srp.is_opened) {
-		memcpy(srp.sp_data.dmem, srp.dmem, DMEM_SIZE);
-		srp_ibuf_save();
-		srp_obuf_save();
+		if (srp.decoding_started) {
+			memcpy(srp.sp_data.dmem, srp.dmem, DMEM_SIZE);
+			srp_ibuf_save();
+			srp_obuf_save();
 
-		if (srp.wait_for_eos)
-			srp.sp_data.wait_for_eos = srp.wait_for_eos;
-
+			if (srp.wait_for_eos)
+				srp.sp_data.wait_for_eos = srp.wait_for_eos;
+		}
 		srp.audss_clk_enable(false);
 	}
 
@@ -1058,9 +1059,14 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int srp_resume(struct platform_device *pdev)
 {
+	int decoding_started = 0;
+
 	srp_info("Resume\n");
 
 	if (srp.is_opened) {
+		if (srp.decoding_started)
+			decoding_started = 1;
+
 		srp.audss_clk_enable(true);
 
 		srp_set_default_fw();
@@ -1068,18 +1074,19 @@ static int srp_resume(struct platform_device *pdev)
 		srp_flush_obuf();
 		srp_reset();
 
-		if (srp.sp_data.wait_for_eos) {
-			srp.sp_data.wait_for_eos = 0;
-			srp.wait_for_eos = 1;
-			srp.prepare_for_eos = 1;
+		if (decoding_started) {
+			if (srp.sp_data.wait_for_eos) {
+				srp.sp_data.wait_for_eos = 0;
+				srp.wait_for_eos = 1;
+				srp.prepare_for_eos = 1;
+			}
+
+			memcpy(srp.dmem, srp.sp_data.dmem, DMEM_SIZE);
+			srp_ibuf_restore();
+			srp_obuf_restore();
+			srp.decoding_started = 1;
+			srp.sp_data.resume_after_suspend = 1;
 		}
-
-		memcpy(srp.dmem, srp.sp_data.dmem, DMEM_SIZE);
-		srp_ibuf_restore();
-		srp_obuf_restore();
-
-		srp.decoding_started = 1;
-		srp.sp_data.resume_after_suspend = 1;
 	}
 
 	return 0;
