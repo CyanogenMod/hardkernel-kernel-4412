@@ -34,8 +34,6 @@
 #endif
 #include "fimc-is-param.h"
 
-#define DEBUG	1
-
 #define FIMC_IS_MODULE_NAME					"exynos5-fimc-is"
 #define FIMC_IS_SENSOR_ENTITY_NAME			"exynos5-fimc-is-sensor"
 #define FIMC_IS_FRONT_ENTITY_NAME				"exynos5-fimc-is-front"

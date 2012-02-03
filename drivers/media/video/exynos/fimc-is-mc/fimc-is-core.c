@@ -157,7 +157,7 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 	printk(KERN_DEBUG "fimc_is_init_mem - ION\n");
 	sprintf(cma_name, "%s%d", "fimc_is", 0);
 	err = cma_info(&mem_info, &dev->pdev->dev, 0);
-	printk(KERN_INFO "%s : [cma_info] start_addr : 0x%x, end_addr : 0x%x, "
+	printk(KERN_DEBUG "%s : [cma_info] start_addr : 0x%x, end_addr : 0x%x, "
 			"total_size : 0x%x, free_size : 0x%x\n",
 			__func__, mem_info.lower_bound, mem_info.upper_bound,
 			mem_info.total_size, mem_info.free_size);
@@ -175,8 +175,8 @@ int fimc_is_init_mem(struct fimc_is_dev *dev)
 		(unsigned long)sizeof(struct is_region));
 	fimc_is_mem_cache_clean((void *)dev->is_p_region, FIMC_IS_REGION_SIZE+1);
 
-	printk(KERN_INFO "ctrl->mem.size = 0x%x\n", dev->mem.size);
-	printk(KERN_INFO "ctrl->mem.base = 0x%x\n", dev->mem.base);
+	printk(KERN_DEBUG "ctrl->mem.size = 0x%x\n", dev->mem.size);
+	printk(KERN_DEBUG "ctrl->mem.base = 0x%x\n", dev->mem.base);
 
 	return 0;
 }
@@ -1137,7 +1137,7 @@ static int fimc_is_resume(struct device *dev)
 
 static int fimc_is_runtime_suspend(struct device *dev)
 {
-	printk(KERN_INFO "%s\n", __func__);
+	printk(KERN_DEBUG "%s\n", __func__);
 	return 0;
 }
 
@@ -1149,7 +1149,7 @@ static int fimc_is_runtime_resume(struct device *dev)
 	u32 cfg;
 	u32 timeout;
 
-	printk(KERN_INFO "%s\n", __func__);
+	printk(KERN_DEBUG "%s\n", __func__);
 
 	enable_mipi();
 	/* set mipi & fimclite */
@@ -1189,8 +1189,8 @@ static int fimc_is_runtime_resume(struct device *dev)
 	fimc_is_mem_resume(isp->alloc_ctx);
 #endif
 
-	printk("mem.base(dvaddr) : 0x%08x\n", cfg);
-	printk("mem.base(kvaddr) : 0x%08x\n", isp->mem.kvaddr);
+	printk(KERN_DEBUG "mem.base(dvaddr) : 0x%08x\n", cfg);
+	printk(KERN_DEBUG "mem.base(kvaddr) : 0x%08x\n", isp->mem.kvaddr);
 	writel(cfg, isp->regs + BBOAR);
 
 	/* 2. A5 power on*/
