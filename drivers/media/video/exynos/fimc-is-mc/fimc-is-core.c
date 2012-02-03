@@ -75,7 +75,8 @@ struct vb2_ion_conf {
 };
 
 struct vb2_ion_buf {
-	struct vm_area_struct		*vma;
+	struct vm_area_struct		**vma;
+	int				vma_count;
 	struct vb2_ion_conf		*conf;
 	struct vb2_vmarea_handler	handler;
 
