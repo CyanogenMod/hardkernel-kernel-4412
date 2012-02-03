@@ -394,6 +394,7 @@ static void *vb2_ion_get_userptr(void *alloc_ctx, unsigned long vaddr,
 {
 	struct vb2_ion_conf *conf = alloc_ctx;
 	struct vb2_ion_buf *buf = NULL;
+	struct vm_area_struct *vma = NULL;
 	size_t len;
 	int ret = 0;
 	bool malloced = false;
