@@ -11,6 +11,7 @@
 #include <linux/io.h>
 #include <media/exynos_flite.h>
 #include <mach/map.h>
+#include <plat/cpu.h>
 
 #include "fimc-lite-core.h"
 
@@ -88,6 +89,9 @@ void flite_hw_set_capture_stop(struct flite_dev *dev)
 	cfg &= ~FLITE_REG_CIIMGCPT_IMGCPTEN;
 
 	writel(cfg, dev->regs + FLITE_REG_CIIMGCPT);
+
+	if (soc_is_exynos4212() || soc_is_exynos4412())
+		clear_bit(FLITE_ST_STREAM, &dev->state);
 }
 
 int flite_hw_set_source_format(struct flite_dev *dev)

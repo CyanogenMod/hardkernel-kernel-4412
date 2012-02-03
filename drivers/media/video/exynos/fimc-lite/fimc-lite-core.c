@@ -1842,9 +1842,6 @@ static int flite_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct flite_dev *flite = v4l2_get_subdevdata(sd);
-	unsigned long flags;
-
-	spin_lock_irqsave(&flite->slock, flags);
 
 	if (test_bit(FLITE_ST_STREAM, &flite->state))
 		flite_s_stream(sd, false);
@@ -1852,8 +1849,6 @@ static int flite_suspend(struct device *dev)
 		flite_s_power(sd, false);
 
 	set_bit(FLITE_ST_SUSPEND, &flite->state);
-
-	spin_unlock_irqrestore(&flite->slock, flags);
 
 	return 0;
 }
@@ -1863,9 +1858,6 @@ static int flite_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct flite_dev *flite = v4l2_get_subdevdata(sd);
-	unsigned long flags;
-
-	spin_lock_irqsave(&flite->slock, flags);
 
 	if (test_bit(FLITE_ST_POWER, &flite->state))
 		flite_s_power(sd, true);
@@ -1873,8 +1865,6 @@ static int flite_resume(struct device *dev)
 		flite_s_stream(sd, true);
 
 	clear_bit(FLITE_ST_SUSPEND, &flite->state);
-
-	spin_unlock_irqrestore(&flite->slock, flags);
 
 	return 0;
 }
