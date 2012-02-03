@@ -1070,6 +1070,7 @@ static struct clksrc_clk exynos4_clk_sclk_audss_bus = {
 static struct clk exynos4_init_audss_clocks[] = {
 	{
 		.name		= "srpclk",
+		.enable		= exynos4_clk_audss_ctrl,
 		.parent		= &exynos4_clk_dout_audss_srp.clk,
 		.ctrlbit	= S5P_AUDSS_CLKGATE_RP | S5P_AUDSS_CLKGATE_UART
 				| S5P_AUDSS_CLKGATE_TIMER,
