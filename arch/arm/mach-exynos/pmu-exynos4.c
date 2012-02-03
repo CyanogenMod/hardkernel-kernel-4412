@@ -210,6 +210,8 @@ static struct exynos4_pmu_conf exynos4412_pmu_config[] = {
 	{ S5P_ARM_CORE2_SYS,			{ 0, 0, 2 } },
 	{ S5P_ARM_CORE3_SYS,			{ 0, 0, 2 } },
 	{ S5P_ISP_ARM_SYS,			{ 1, 0, 0 } },
+	{ S5P_DIS_IRQ_ISP_ARM_LOCAL_SYS,	{ 0, 0, 0 } },
+	{ S5P_DIS_IRQ_ISP_ARM_CENTRAL_SYS,	{ 1, 0, 0 } },
 	{ S5P_ARM_COMMON_SYS,			{ 0, 0, 2 } },
 	{ S5P_ARM_L2_0_SYS,			{ 0, 0, 3 } },
 	{ S5P_ARM_L2_0_OPTION,			{ 0x10, 0x10, 0 } },
