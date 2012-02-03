@@ -82,5 +82,6 @@ int mfc_cmd_inst_close(struct mfc_inst_ctx *ctx);
 int mfc_cmd_seq_start(struct mfc_inst_ctx *ctx);
 int mfc_cmd_init_buffers(struct mfc_inst_ctx *ctx);
 int mfc_cmd_frame_start(struct mfc_inst_ctx *ctx);
+int mfc_cmd_slice_start(struct mfc_inst_ctx *ctx);
 
 #endif /* __MFC_CMD_H */
