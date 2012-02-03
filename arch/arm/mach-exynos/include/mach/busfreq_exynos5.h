@@ -32,9 +32,9 @@ struct busfreq_data {
 	bool use;
 	struct device *dev[PPMU_TYPE_END];
 	struct delayed_work worker;
-	struct opp *curr_opp[PPMU_TYPE_END];
-	struct opp *max_opp[PPMU_TYPE_END];
-	struct opp *min_opp[PPMU_TYPE_END];
+	unsigned long curr_freq[PPMU_TYPE_END];
+	unsigned long max_freq[PPMU_TYPE_END];
+	unsigned long min_freq[PPMU_TYPE_END];
 	struct regulator *vdd_reg[PPMU_TYPE_END];
 	unsigned int sampling_rate;
 	struct kobject *busfreq_kobject;
@@ -53,9 +53,9 @@ struct busfreq_data {
 	int (*init)	(struct device *dev, struct busfreq_data *data);
 	void (*monitor) (struct busfreq_data *data, struct opp **mif_opp,
 			struct opp **int_opp);
-	void (*target)	(int mif_index, int int_index);
+	void (*target)	(enum ppmu_type type, int index);
 	unsigned int (*get_int_volt) (unsigned long freq);
-	int (*get_table_index) (struct opp *opp, enum ppmu_type type);
+	int (*get_table_index) (unsigned long freq, enum ppmu_type type);
 	void (*busfreq_prepare) (int index);
 	void (*busfreq_post) (int index);
 	void (*busfreq_suspend) (void);
@@ -72,7 +72,7 @@ struct busfreq_table {
 };
 
 void exynos_request_apply(unsigned long freq, struct device *dev);
-struct opp *step_down(struct busfreq_data *data, enum ppmu_type type, int step);
+unsigned long step_down(struct busfreq_data *data, enum ppmu_type type, int step);
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data);
 #endif /* __ASM_ARCH_BUSFREQ_H */

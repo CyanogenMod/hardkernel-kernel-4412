@@ -58,7 +58,8 @@ struct busfreq_control {
 
 static struct busfreq_control bus_ctrl;
 
-void update_busfreq_stat(struct busfreq_data *data, unsigned int index)
+void update_busfreq_stat(struct busfreq_data *data,
+		enum ppmu_type type, unsigned int index)
 {
 #ifdef BUSFREQ_DEBUG
 	unsigned long long cur_time = get_jiffies_64();
@@ -68,46 +69,46 @@ void update_busfreq_stat(struct busfreq_data *data, unsigned int index)
 }
 
 
-static struct opp __maybe_unused *step_up_int(struct busfreq_data *data,
+unsigned long __maybe_unused step_up_int(struct busfreq_data *data,
 				enum ppmu_type type, int step)
 {
 	int i;
-	struct opp *opp = data->curr_opp[type];
-	unsigned long newfreq;
+	struct opp *opp;
+	unsigned long newfreq = data->curr_freq[type];
 
-	if (data->max_opp[type] == data->curr_opp[type])
-		return data->curr_opp[type];
+	if (data->max_freq[type] == data->curr_freq[type])
+		return newfreq;
 
 	for (i = 0; i < step; i++) {
-		newfreq = opp_get_freq(opp) + 1;
+		newfreq += 1;
 		opp = opp_find_freq_ceil(data->dev[type], &newfreq);
 
-		if (opp == data->max_opp[type])
+		if (opp_get_freq(opp) == data->max_freq[type])
 			break;
 	}
 
-	return opp;
+	return newfreq;
 }
 
-struct opp *step_down(struct busfreq_data *data,
+unsigned long step_down(struct busfreq_data *data,
 			enum ppmu_type type, int step)
 {
 	int i;
-	struct opp *opp = data->curr_opp[type];
-	unsigned long newfreq;
+	struct opp *opp;
+	unsigned long newfreq = data->curr_freq[type];
 
-	if (data->min_opp[type] == data->curr_opp[type])
-		return data->curr_opp[type];
+	if (data->min_freq[type] == data->curr_freq[type])
+		return newfreq;
 
 	for (i = 0; i < step; i++) {
-		newfreq = opp_get_freq(opp) - 1;
+		newfreq -= 1;
 		opp = opp_find_freq_floor(data->dev[type], &newfreq);
 
-		if (opp == data->min_opp[type])
+		if (opp_get_freq(opp) == data->min_freq[type])
 			break;
 	}
 
-	return opp;
+	return newfreq;
 }
 
 static void exynos_busfreq_timer(struct work_struct *work)
@@ -115,64 +116,53 @@ static void exynos_busfreq_timer(struct work_struct *work)
 	struct delayed_work *delayed_work = to_delayed_work(work);
 	struct busfreq_data *data = container_of(delayed_work, struct busfreq_data,
 			worker);
-	struct opp *mif_opp, *int_opp;
-	unsigned int mif_voltage, int_voltage;
-	unsigned long mif_currfreq, int_currfreq;
-	unsigned long mif_newfreq, int_newfreq;
-	int mif_index, int_index;
+	int i;
+	struct opp *opp[PPMU_TYPE_END];
+	unsigned int voltage[PPMU_TYPE_END];
+	unsigned long newfreq[PPMU_TYPE_END];
+	int index;
 
-	data->monitor(data, &mif_opp, &int_opp);
-
-	if (bus_ctrl.lock[PPMU_MIF])
-		mif_opp = bus_ctrl.lock[PPMU_MIF];
-
-	if (bus_ctrl.lock[PPMU_INT])
-		int_opp = bus_ctrl.lock[PPMU_INT];
+	data->monitor(data, &opp[PPMU_MIF], &opp[PPMU_INT]);
 
 	ppmu_start(data->dev[PPMU_MIF]);
 
-	mif_newfreq = opp_get_freq(mif_opp);
-	int_newfreq = opp_get_freq(int_opp);
-	mif_index = data->get_table_index(mif_opp, PPMU_MIF);
-	int_index = data->get_table_index(int_opp, PPMU_INT);
-
 	mutex_lock(&busfreq_lock);
 
-	if ((mif_opp == data->curr_opp[PPMU_MIF] && int_opp == data->curr_opp[PPMU_INT]) ||
-			mif_newfreq == 0 || int_newfreq == 0 || data->use == false)
-		goto out;
+	for (i = 0; i < PPMU_TYPE_END; i++) {
+		if (bus_ctrl.lock[i])
+			opp[i] = bus_ctrl.lock[i];
 
-	mif_currfreq = opp_get_freq(data->curr_opp[PPMU_MIF]);
-	int_currfreq = opp_get_freq(data->curr_opp[PPMU_INT]);
+		newfreq[i] = opp_get_freq(opp[i]);
+		index = data->get_table_index(newfreq[i], i);
 
-	mif_voltage = opp_get_voltage(mif_opp);
-	int_voltage = opp_get_voltage(int_opp);
-	if (mif_newfreq > mif_currfreq || int_newfreq > int_currfreq) {
-		regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage,
-				mif_voltage + 25000);
+		if ((newfreq[i] == data->curr_freq[i]) || newfreq[i] == 0
+				|| data->use == false) {
+			update_busfreq_stat(data, i, index);
+			continue;
+		}
 
-		regulator_set_voltage(data->vdd_reg[PPMU_INT], int_voltage,
-				int_voltage + 25000);
-		if (data->busfreq_prepare)
-			data->busfreq_prepare(mif_index);
+		voltage[i] = opp_get_voltage(opp[i]);
+
+		if (newfreq[i] > data->curr_freq[i]) {
+			regulator_set_voltage(data->vdd_reg[i], voltage[i],
+					voltage[i] + 25000);
+			if (i == PPMU_MIF && data->busfreq_prepare)
+				data->busfreq_prepare(index);
+		}
+
+		data->target(i, index);
+
+		if (newfreq[i] < data->curr_freq[i]) {
+			if (i == PPMU_MIF && data->busfreq_post)
+				data->busfreq_post(index);
+			regulator_set_voltage(data->vdd_reg[i], voltage[i],
+					voltage[i] + 25000);
+		}
+		data->curr_freq[i] = newfreq[i];
+
+		update_busfreq_stat(data, i, index);
 	}
 
-	data->target(mif_index, int_index);
-
-	if (mif_newfreq < mif_currfreq || int_newfreq < int_currfreq) {
-		if (data->busfreq_post)
-			data->busfreq_post(mif_index);
-		regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage,
-				mif_voltage + 25000);
-
-		regulator_set_voltage(data->vdd_reg[PPMU_INT], int_voltage,
-				int_voltage + 25000);
-	}
-	data->curr_opp[PPMU_MIF] = mif_opp;
-	data->curr_opp[PPMU_INT] = int_opp;
-
-out:
-	update_busfreq_stat(data, mif_index);
 	mutex_unlock(&busfreq_lock);
 	queue_delayed_work(system_freezable_wq, &data->worker, data->sampling_rate);
 }
@@ -182,24 +172,24 @@ static int exynos_buspm_notifier_event(struct notifier_block *this,
 {
 	struct busfreq_data *data = container_of(this, struct busfreq_data,
 			exynos_buspm_notifier);
-
-	unsigned long mif_voltage = opp_get_voltage(data->max_opp[PPMU_MIF]);
-	unsigned long int_voltage = opp_get_voltage(data->max_opp[PPMU_INT]);
-	int mif_index, int_index;
+	int i;
+	struct opp *opp;
+	unsigned int voltage[PPMU_TYPE_END];
+	int index[PPMU_TYPE_END];
 
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
-		mutex_lock(&busfreq_lock);
 		data->use = false;
-		regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage, mif_voltage + 25000);
-		regulator_set_voltage(data->vdd_reg[PPMU_INT], int_voltage, int_voltage + 25000);
-		mif_index = data->get_table_index(data->max_opp[PPMU_MIF], PPMU_MIF);
-		int_index = data->get_table_index(data->max_opp[PPMU_INT], PPMU_INT);
+		mutex_lock(&busfreq_lock);
+		for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
+			opp = opp_find_freq_exact(data->dev[i], data->max_freq[i], true);
+			voltage[i] = opp_get_voltage(opp);
+			regulator_set_voltage(data->vdd_reg[i], voltage[i], voltage[i] + 25000);
+			index[i] = data->get_table_index(data->max_freq[i], i);
+			data->curr_freq[i] = data->max_freq[i];
+		}
 		if (data->busfreq_prepare)
-			data->busfreq_prepare(mif_index);
-		data->target(mif_index, int_index);
-		data->curr_opp[PPMU_MIF] = data->max_opp[PPMU_MIF];
-		data->curr_opp[PPMU_INT] = data->max_opp[PPMU_INT];
+			data->busfreq_prepare(index[PPMU_MIF]);
 		mutex_unlock(&busfreq_lock);
 		return NOTIFY_OK;
 	case PM_POST_RESTORE:
@@ -207,7 +197,6 @@ static int exynos_buspm_notifier_event(struct notifier_block *this,
 		data->use = true;
 		return NOTIFY_OK;
 	}
-
 	return NOTIFY_DONE;
 }
 
@@ -216,12 +205,15 @@ static int exynos_busfreq_reboot_event(struct notifier_block *this,
 {
 	struct busfreq_data *data = container_of(this, struct busfreq_data,
 			exynos_reboot_notifier);
+	int i;
+	struct opp *opp;
+	unsigned int voltage[PPMU_TYPE_END];
+	for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
+		opp = opp_find_freq_exact(data->dev[i], data->max_freq[i], true);
+		voltage[i] = opp_get_voltage(opp);
 
-	unsigned long mif_voltage = opp_get_voltage(data->max_opp[PPMU_MIF]);
-	unsigned long int_voltage = opp_get_voltage(data->max_opp[PPMU_MIF]);
-
-	regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage, mif_voltage + 25000);
-	regulator_set_voltage(data->vdd_reg[PPMU_INT], int_voltage, int_voltage + 25000);
+		regulator_set_voltage(data->vdd_reg[i], voltage[i], voltage[i] + 25000);
+	}
 	data->use = false;
 
 	printk(KERN_INFO "REBOOT Notifier for BUSFREQ\n");
@@ -229,59 +221,50 @@ static int exynos_busfreq_reboot_event(struct notifier_block *this,
 }
 
 static int exynos_busfreq_request_event(struct notifier_block *this,
-		unsigned long newfreq, void *device)
+		unsigned long req_newfreq, void *device)
 {
 	struct busfreq_data *data = container_of(this, struct busfreq_data,
 			exynos_request_notifier);
-	struct opp *mif_opp = opp_find_freq_ceil(data->dev[PPMU_MIF], &newfreq);
-	struct opp *int_opp = opp_find_freq_ceil(data->dev[PPMU_INT], &newfreq);
-	unsigned long mif_curr_freq, int_curr_freq;
-	unsigned long mif_newfreq, int_newfreq;
-	unsigned int mif_index, int_index;
-	unsigned int mif_voltage, int_voltage;
+	int i;
+	struct opp *opp[PPMU_TYPE_END];
+	unsigned long newfreq[PPMU_TYPE_END];
+	unsigned int voltage[PPMU_TYPE_END];
+	unsigned int index;
 
-	mif_index = data->get_table_index(mif_opp, PPMU_MIF);
-	int_index = data->get_table_index(int_opp, PPMU_INT);
-
-	if (newfreq == 0 || data->use == false)
+	if (req_newfreq == 0 || data->use == false)
 		return -EINVAL;
 
 	mutex_lock(&busfreq_lock);
 
-	mif_newfreq = (newfreq / 1000) * 1000;
-	int_newfreq = (newfreq % 1000) * 1000;
+	newfreq[PPMU_MIF] = (req_newfreq / 1000) * 1000;
+	newfreq[PPMU_INT] = (req_newfreq % 1000) * 1000;
 
-	/* FIXME LATER */
-	int_newfreq = opp_get_freq(data->max_opp[PPMU_INT]);
+	for (i = 0; i < PPMU_TYPE_END; i++) {
+		index = data->get_table_index(newfreq[i], i);
 
-	mif_curr_freq = opp_get_freq(data->curr_opp[PPMU_MIF]);
-	int_curr_freq = opp_get_freq(data->curr_opp[PPMU_INT]);
+		opp[i] = opp_find_freq_ceil(data->dev[i], &newfreq[i]);
 
-	mif_voltage = opp_get_voltage(mif_opp);
-	int_voltage = opp_get_voltage(int_opp);
-	if (mif_newfreq > mif_curr_freq || int_newfreq > int_curr_freq) {
-		regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage,
-				mif_voltage + 25000);
-		regulator_set_voltage(data->vdd_reg[PPMU_INT], int_voltage,
-				int_voltage + 25000);
-		if (data->busfreq_prepare)
-			data->busfreq_prepare(mif_index);
+		voltage[i] = opp_get_voltage(opp[i]);
+
+		if (newfreq[i] > data->curr_freq[i]) {
+			regulator_set_voltage(data->vdd_reg[i], voltage[i],
+					voltage[i] + 25000);
+			if (i == PPMU_MIF && data->busfreq_prepare)
+				data->busfreq_prepare(index);
+		}
+
+		data->target(i, index);
+
+		if (newfreq[i] < data->curr_freq[i]) {
+			if (i == PPMU_MIF && data->busfreq_post)
+				data->busfreq_post(index);
+			regulator_set_voltage(data->vdd_reg[i], voltage[i],
+					voltage[i] + 25000);
+		}
+		data->curr_freq[i] = newfreq[i];
+
+		update_busfreq_stat(data, i, index);
 	}
-
-	data->target(mif_index, int_index);
-
-	if (mif_newfreq < mif_curr_freq || int_newfreq < int_curr_freq) {
-		if (data->busfreq_post)
-			data->busfreq_post(mif_index);
-		regulator_set_voltage(data->vdd_reg[PPMU_MIF], mif_voltage,
-				mif_voltage + 25000);
-		regulator_set_voltage(data->vdd_reg[PPMU_INT], int_voltage,
-				int_voltage + 25000);
-	}
-	data->curr_opp[PPMU_MIF] = mif_opp;
-	data->curr_opp[PPMU_INT] = int_opp;
-
-	update_busfreq_stat(data, mif_index);
 
 	mutex_unlock(&busfreq_lock);
 	printk(KERN_INFO "REQUEST Notifier for BUSFREQ\n");
@@ -310,7 +293,7 @@ static ssize_t show_level_lock(struct device *device,
 	int_freq = bus_ctrl.lock[PPMU_INT] == NULL ? 0 : opp_get_freq(bus_ctrl.lock[PPMU_INT]);
 
 	len = sprintf(buf, "Current Freq(MIF/INT) : (%lu - %lu)\n",
-			opp_get_freq(data->curr_opp[PPMU_MIF]), opp_get_freq(data->curr_opp[PPMU_INT]));
+			data->curr_freq[PPMU_MIF], data->curr_freq[PPMU_INT]);
 	len += sprintf(buf + len, "Current Lock Freq(MIF/INT) : (%lu - %lu\n)", mif_freq, int_freq);
 
 	return len;
@@ -321,31 +304,27 @@ static ssize_t store_level_lock(struct device *device, struct device_attribute *
 {
 	struct platform_device *pdev = to_platform_device(bus_ctrl.dev[PPMU_MIF]);
 	struct busfreq_data *data = (struct busfreq_data *)platform_get_drvdata(pdev);
-	struct opp *mif_opp, *int_opp;
-	unsigned long mif_freq, int_freq;
-	unsigned long mif_maxfreq = opp_get_freq(data->max_opp[PPMU_MIF]);
-	unsigned long int_maxfreq = opp_get_freq(data->max_opp[PPMU_INT]);
+	struct opp *opp[PPMU_TYPE_END];
+	unsigned long freq[PPMU_TYPE_END];
+	int i;
 	int ret;
 
-	ret = sscanf(buf, "%lu %lu", &mif_freq, &int_freq);
-	if (mif_freq == 0 || int_freq == 0 || ret != 2) {
+	ret = sscanf(buf, "%lu %lu", &freq[PPMU_MIF], &freq[PPMU_INT]);
+	if (freq[PPMU_MIF] == 0 || freq[PPMU_INT] == 0 || ret != 2) {
 		pr_info("Release bus level lock.\n");
 		bus_ctrl.lock[PPMU_MIF] = NULL;
 		bus_ctrl.lock[PPMU_INT] = NULL;
 		return count;
 	}
 
-	if (mif_freq > mif_maxfreq)
-		mif_freq = mif_maxfreq;
+	for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
+		if (freq[i] > data->max_freq[i])
+			freq[i] = data->max_freq[i];
 
-	if (int_freq > int_maxfreq)
-		int_freq = int_maxfreq;
-
-	mif_opp = opp_find_freq_ceil(bus_ctrl.dev[PPMU_MIF], &mif_freq);
-	int_opp = opp_find_freq_ceil(bus_ctrl.dev[PPMU_INT], &int_freq);
-	bus_ctrl.lock[PPMU_MIF] = mif_opp;
-	bus_ctrl.lock[PPMU_INT] = int_opp;
-	pr_info("Lock Freq : MIF/INT(%lu - %lu)\n", opp_get_freq(mif_opp), opp_get_freq(int_opp));
+		opp[i] = opp_find_freq_ceil(bus_ctrl.dev[i], &freq[i]);
+		bus_ctrl.lock[i] = opp[i];
+	}
+	pr_info("Lock Freq : MIF/INT(%lu - %lu)\n", opp_get_freq(opp[PPMU_MIF]), opp_get_freq(opp[PPMU_INT]));
 	return count;
 }
 

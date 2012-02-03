@@ -478,23 +478,25 @@ static void exynos5250_target_for_int(int div_index)
 	} while (tmp & 0x10);
 }
 
-static void exynos5250_target(int mif_index, int int_index)
+static void exynos5250_target(enum ppmu_type type, int index)
 {
-	exynos5250_target_for_mif(mif_index);
-	exynos5250_target_for_int(int_index);
+	if (type == PPMU_MIF)
+		exynos5250_target_for_mif(index);
+	else
+		exynos5250_target_for_int(index);
 }
 
-static int exynos5250_get_table_index(struct opp *opp, enum ppmu_type type)
+static int exynos5250_get_table_index(unsigned long freq, enum ppmu_type type)
 {
 	int index;
 
 	if (type == PPMU_MIF) {
 		for (index = LV_0; index < LV_MIF_END; index++)
-			if (opp_get_freq(opp) == exynos5_busfreq_table_mif[index].mem_clk)
+			if (freq == exynos5_busfreq_table_mif[index].mem_clk)
 				return index;
 	} else {
 		for (index = LV_0; index < LV_INT_END; index++)
-			if (opp_get_freq(opp) == exynos5_busfreq_table_int[index].mem_clk)
+			if (freq == exynos5_busfreq_table_int[index].mem_clk)
 				return index;
 	}
 	return -EINVAL;
@@ -513,7 +515,6 @@ static void exynos5250_resume(void)
 static void exynos5250_monitor(struct busfreq_data *data,
 			struct opp **mif_opp, struct opp **int_opp)
 {
-	struct opp *mopp = data->curr_opp[PPMU_MIF];
 	int i;
 	unsigned int cpu_load_average = 0;
 	unsigned int dmc_c_load_average = 0;
@@ -523,22 +524,21 @@ static void exynos5250_monitor(struct busfreq_data *data,
 	unsigned long cpufreq = 0;
 	unsigned long lockfreq;
 	unsigned long dmcfreq;
-	unsigned long newfreq;
-	unsigned long mif_currfreq = opp_get_freq(data->curr_opp[PPMU_MIF]) / 1000;
-	unsigned long mif_maxfreq = opp_get_freq(data->max_opp[PPMU_MIF]) / 1000;
 	unsigned long cpu_load;
 	unsigned long dmc_load;
 	unsigned long dmc_c_load;
 	unsigned long dmc_r1_load;
 	unsigned long dmc_l_load;
+	struct opp *opp[PPMU_TYPE_END];
+	unsigned long newfreq[PPMU_TYPE_END];
 
 	ppmu_update(data->dev[PPMU_MIF], 3);
 
 	/* Convert from base xxx to base maxfreq */
-	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * mif_currfreq, mif_maxfreq);
-	dmc_c_load = div64_u64(ppmu_load[PPMU_DDR_C] * mif_currfreq, mif_maxfreq);
-	dmc_r1_load = div64_u64(ppmu_load[PPMU_DDR_R1] * mif_currfreq, mif_maxfreq);
-	dmc_l_load = div64_u64(ppmu_load[PPMU_DDR_L] * mif_currfreq, mif_maxfreq);
+	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
+	dmc_c_load = div64_u64(ppmu_load[PPMU_DDR_C] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
+	dmc_r1_load = div64_u64(ppmu_load[PPMU_DDR_R1] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
+	dmc_l_load = div64_u64(ppmu_load[PPMU_DDR_L] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
 
 	data->load_history[PPMU_CPU][data->index] = cpu_load;
 	data->load_history[PPMU_DDR_C][data->index] = dmc_c_load;
@@ -575,40 +575,39 @@ static void exynos5250_monitor(struct busfreq_data *data,
 	}
 
 	if (dmc_load >= DMC_MAX_THRESHOLD) {
-		dmcfreq = opp_get_freq(data->max_opp[PPMU_MIF]);
+		dmcfreq = data->max_freq[PPMU_MIF];
 	} else if (dmc_load < IDLE_THRESHOLD) {
 		if (dmc_load_average < IDLE_THRESHOLD)
-			mopp = step_down(data, PPMU_MIF, 1);
+			dmcfreq = step_down(data, PPMU_MIF, 1);
 		else
-			mopp = data->curr_opp[PPMU_MIF];
-		dmcfreq = opp_get_freq(mopp);
+			dmcfreq = data->curr_freq[PPMU_MIF];
 	} else {
 		if (dmc_load < dmc_load_average) {
 			dmc_load = dmc_load_average;
 			if (dmc_load >= DMC_MAX_THRESHOLD)
 				dmc_load = DMC_MAX_THRESHOLD;
 		}
-		dmcfreq = div64_u64(mif_maxfreq * dmc_load * 1000, DMC_MAX_THRESHOLD);
+		dmcfreq = div64_u64(data->max_freq[PPMU_MIF] * dmc_load, DMC_MAX_THRESHOLD);
 	}
 
 	lockfreq = dev_max_freq(data->dev[PPMU_MIF]);
 
-	newfreq = max3(lockfreq, dmcfreq, cpufreq);
-	mopp = opp_find_freq_ceil(data->dev[PPMU_MIF], &newfreq);
+	newfreq[PPMU_MIF] = max3(lockfreq, dmcfreq, cpufreq);
+	opp[PPMU_MIF] = opp_find_freq_ceil(data->dev[PPMU_MIF], &newfreq[PPMU_MIF]);
+	opp[PPMU_INT] = opp_find_freq_ceil(data->dev[PPMU_INT], &data->max_freq[PPMU_INT]);
 
-	*mif_opp = mopp;
+	*mif_opp = opp[PPMU_MIF];
 	/* temporary */
-	*int_opp = data->curr_opp[PPMU_INT];
+	*int_opp = opp[PPMU_INT];
 }
 
 static void busfreq_early_suspend(struct early_suspend *h)
 {
-	unsigned long mif_freq, int_freq;
+	unsigned long freq;
 	struct busfreq_data *data = container_of(h, struct busfreq_data,
 			busfreq_early_suspend_handler);
-	mif_freq = opp_get_freq(data->min_opp[PPMU_MIF]);
-	int_freq = opp_get_freq(data->min_opp[PPMU_INT]);
-	dev_lock(data->dev[PPMU_MIF], data->dev[PPMU_MIF], mif_freq);
+	freq = data->min_freq[PPMU_MIF] + data->min_freq[PPMU_INT] / 1000;
+	dev_lock(data->dev[PPMU_MIF], data->dev[PPMU_MIF], freq);
 }
 
 static void busfreq_late_resume(struct early_suspend *h)
@@ -709,15 +708,21 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	data->table_size = LV_MIF_END;
 
 	/* Find max frequency for mif */
-	data->max_opp[PPMU_MIF] = opp_find_freq_floor(data->dev[PPMU_MIF], &maxfreq);
-	data->min_opp[PPMU_MIF] = opp_find_freq_ceil(data->dev[PPMU_MIF], &minfreq);
-	data->curr_opp[PPMU_MIF] = opp_find_freq_ceil(data->dev[PPMU_MIF], &cdrexfreq);
+	data->max_freq[PPMU_MIF] =
+			opp_get_freq(opp_find_freq_floor(data->dev[PPMU_MIF], &maxfreq));
+	data->min_freq[PPMU_MIF] =
+			opp_get_freq(opp_find_freq_ceil(data->dev[PPMU_MIF], &minfreq));
+	data->curr_freq[PPMU_MIF] =
+			opp_get_freq(opp_find_freq_ceil(data->dev[PPMU_MIF], &cdrexfreq));
 	/* Find max frequency for int */
 	maxfreq = ULONG_MAX;
 	minfreq = 0;
-	data->max_opp[PPMU_INT] = opp_find_freq_floor(data->dev[PPMU_INT], &maxfreq);
-	data->min_opp[PPMU_INT] = opp_find_freq_ceil(data->dev[PPMU_INT], &minfreq);
-	data->curr_opp[PPMU_INT] = opp_find_freq_ceil(data->dev[PPMU_INT], &lrbusfreq);
+	data->max_freq[PPMU_INT] =
+			opp_get_freq(opp_find_freq_floor(data->dev[PPMU_INT], &maxfreq));
+	data->min_freq[PPMU_INT] =
+			opp_get_freq(opp_find_freq_ceil(data->dev[PPMU_INT], &minfreq));
+	data->curr_freq[PPMU_INT] =
+			opp_get_freq(opp_find_freq_ceil(data->dev[PPMU_INT], &lrbusfreq));
 
 	data->vdd_reg[PPMU_INT] = regulator_get(NULL, "vdd_int");
 	if (IS_ERR(data->vdd_reg[PPMU_INT])) {
