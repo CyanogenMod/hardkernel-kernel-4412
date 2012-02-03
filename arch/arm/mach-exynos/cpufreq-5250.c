@@ -296,7 +296,6 @@ void exynos5250_set_arm_abbg(unsigned int arm_volt, unsigned int int_volt)
 	tmp |= ((setbits + ARM_RBB) | (1 << 31) | (1 << 7));
 	__raw_writel(tmp, EXYNOS5_ABBG_ARM_CONTROL);
 	spin_unlock_irqrestore(&abb_lock, flag);
-	pr_info("%s: ARM ABB[%d]\n", __func__, (setbits + ARM_RBB));
 }
 EXPORT_SYMBOL(exynos5250_set_arm_abbg);
 #endif
