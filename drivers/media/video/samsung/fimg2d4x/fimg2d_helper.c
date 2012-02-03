@@ -14,31 +14,10 @@
 #include "fimg2d_cache.h"
 #include "fimg2d_helper.h"
 
-#define MAX_COLOR_FORMAT	(MSK_FORMAT_END+1)
-
-static int cf2bpp[MAX_COLOR_FORMAT] = {
-	32,	/* CF_XRGB_8888 */
-	32,	/* CF_ARGB_8888 */
-	16,	/* CF_RGB_565 */
-	16,	/* CF_XRGB_1555 */
-	16,	/* CF_ARGB_1555 */
-	16,	/* CF_XRGB_4444 */
-	16,	/* CF_ARGB_4444 */
-	24,	/* CF_RGB_888 */
-	8,	/* CF_YCBCR_444 */
-	8,	/* CF_YCBCR_422 */
-	8,	/* CF_YCBCR_420 */
-	8,	/* CF_A8 */
-	8,	/* CF_L8 */
-	0,	/* SRC_DST_FORMAT_END */
-	1,	/* CF_MSK_1BIT */
-	4,	/* CF_MSK_4BIT */
-	8,	/* CF_MSK_8BIT */
-	16,	/* CF_MSK_16BIT_565 */
-	16,	/* CF_MSK_16BIT_1555 */
-	16,	/* CF_MSK_16BIT_4444 */
-	32,	/* CF_MSK_32BIT_8888 */
-	0,	/* MSK_FORMAT_END */
+static int cf2bpp[MSK_FORMAT_END+1] = {
+	32, 32,	16, 16, 16, 16, 16, 24,	/* rgb */
+	8, 8, 8, 8, 8, 0,		/* yuv */
+	1, 4, 8, 16, 16, 16, 32, 0,	/* msk */
 };
 
 int point_to_offset(int point, enum color_format cf)

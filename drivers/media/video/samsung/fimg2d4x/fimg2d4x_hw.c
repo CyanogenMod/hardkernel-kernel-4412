@@ -22,7 +22,6 @@
 
 static const int a8_rgbcolor		= (int)0x0;
 static const int msk_oprmode		= (int)MSK_ARGB;
-static const int alpha_oprmode		= (int)ALPHA_PERPIXEL_MUL_GLOBAL;
 static const int premult_round_mode	= (int)PREMULT_ROUND_1;	/* (A+1)*B) >> 8 */
 static const int blend_round_mode	= (int)BLEND_ROUND_0;	/* (A+1)*B) >> 8 */
 
@@ -757,6 +756,7 @@ static struct fimg2d_blend_coeff const ga_coeff_table[MAX_FIMG2D_BLIT_OP] = {
 void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 		enum blit_op op, unsigned char g_alpha)
 {
+	int alphamode;
 	unsigned long cfg = 0;
 	struct fimg2d_blend_coeff const *tbl;
 
@@ -775,16 +775,19 @@ void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 		/* TODO */
 		return;
 	default:
-		if (g_alpha < 0xff)	/* with global alpha */
+		if (g_alpha < 0xff) {	/* with global alpha */
 			tbl = &ga_coeff_table[op];
-		else
+			alphamode = ALPHA_PERPIXEL_MUL_GLOBAL;
+		} else {
 			tbl = &coeff_table[op];
+			alphamode = ALPHA_PERPIXEL;
+		}
 
 		/* src coefficient */
 		cfg |= tbl->s_coeff << FIMG2D_SRC_COEFF_SHIFT;
 
-		cfg |= alpha_oprmode << FIMG2D_SRC_COEFF_SA_SHIFT;
-		cfg |= alpha_oprmode << FIMG2D_SRC_COEFF_DA_SHIFT;
+		cfg |= alphamode << FIMG2D_SRC_COEFF_SA_SHIFT;
+		cfg |= alphamode << FIMG2D_SRC_COEFF_DA_SHIFT;
 
 		if (tbl->s_coeff_inv)
 			cfg |= FIMG2D_INV_SRC_COEFF;
@@ -792,8 +795,8 @@ void fimg2d4x_set_alpha_composite(struct fimg2d_control *info,
 		/* dst coefficient */
 		cfg |= tbl->d_coeff << FIMG2D_DST_COEFF_SHIFT;
 
-		cfg |= alpha_oprmode << FIMG2D_DST_COEFF_DA_SHIFT;
-		cfg |= alpha_oprmode << FIMG2D_DST_COEFF_SA_SHIFT;
+		cfg |= alphamode << FIMG2D_DST_COEFF_DA_SHIFT;
+		cfg |= alphamode << FIMG2D_DST_COEFF_SA_SHIFT;
 
 		if (tbl->d_coeff_inv)
 			cfg |= FIMG2D_INV_DST_COEFF;

@@ -215,66 +215,68 @@ blitend:
 	fimg2d_debug("exit blitter\n");
 }
 
-static int adjust_op(struct fimg2d_bltcmd *cmd)
+static int fast_op(struct fimg2d_bltcmd *cmd)
 {
-	int adj_op = cmd->op;
+	int sa, da, ga;
+	int fop = cmd->op;
 
-	if (!cmd->srcen || !cmd->dsten)
-		return cmd->op;
+	if (!cmd->srcen)
+		sa = (cmd->solid_color >> 24) & 0xff;
+	else
+		sa = is_opaque(cmd->src.fmt) ? 0xff : 0;
+
+	da = is_opaque(cmd->dst.fmt) ? 0xff : 0;
+	ga = cmd->g_alpha;
 
 	switch (cmd->op) {
-	case BLIT_OP_SOLID_FILL:
-	case BLIT_OP_CLR:
-	case BLIT_OP_SRC:
-	case BLIT_OP_DST:
-		break;
 	case BLIT_OP_SRC_OVER:
 		/* if Sa=0xff and Ga=0xff, Sc + (1-Sa)*Dc = Sc */
-		if (is_opaque(cmd->src.fmt) && cmd->g_alpha == 0xff)
-			adj_op = BLIT_OP_SRC;
+		if (sa == 0xff && ga == 0xff)
+			fop = BLIT_OP_SRC;
 		break;
 	case BLIT_OP_DST_OVER:
 		/* if Da=0xff, (1-Da)*Sc + Dc = Dc */
-		if (is_opaque(cmd->dst.fmt))
-			adj_op = BLIT_OP_DST;
+		if (da == 0xff)
+			fop = BLIT_OP_DST;
 		break;
 	case BLIT_OP_SRC_IN:
 		/* if Da=0xff, Da*Sc = Sc */
-		if (is_opaque(cmd->dst.fmt))
-			adj_op = BLIT_OP_SRC;
+		if (da == 0xff)
+			fop = BLIT_OP_SRC;
 		break;
 	case BLIT_OP_DST_IN:
 		/* if Sa=0xff and Ga=0xff, Sa*Dc = Dc */
-		if (is_opaque(cmd->src.fmt) && cmd->g_alpha == 0xff)
-			adj_op = BLIT_OP_DST;
+		if (sa == 0xff && ga == 0xff)
+			fop = BLIT_OP_DST;
 		break;
 	case BLIT_OP_SRC_OUT:
 		/* if Da=0xff, (1-Da)*Sc = 0 */
-		if (is_opaque(cmd->dst.fmt))
-			adj_op = BLIT_OP_CLR;
+		if (da == 0xff)
+			fop = BLIT_OP_CLR;
 		break;
 	case BLIT_OP_DST_OUT:
 		/* if Sa=0xff and Ga=0xff, (1-Sa)*Dc = 0 */
-		if (is_opaque(cmd->src.fmt) && cmd->g_alpha == 0xff)
-			adj_op = BLIT_OP_CLR;
+		if (sa == 0xff && ga == 0xff)
+			fop = BLIT_OP_CLR;
 		break;
 	case BLIT_OP_SRC_ATOP:
 		/* if Da=0xff and Sa=0xff and Ga=0xff, Da*Sc + (1-Sa)*Dc = Sc */
-		if (is_opaque(cmd->src.fmt) && is_opaque(cmd->dst.fmt)
-				&& cmd->g_alpha == 0xff)
-			adj_op = BLIT_OP_SRC;
+		if (sa == 0xff && da == 0xff && ga == 0xff)
+			fop = BLIT_OP_SRC;
 		break;
 	case BLIT_OP_DST_ATOP:
 		/* if Da=0xff and Sa=0xff and Ga=0xff, (1-Da)*Sc + Sa*Dc = Dc */
-		if (is_opaque(cmd->src.fmt) && is_opaque(cmd->dst.fmt)
-				&& cmd->g_alpha == 0xff)
-			adj_op = BLIT_OP_DST;
+		if (sa == 0xff && da == 0xff && ga == 0xff)
+			fop = BLIT_OP_DST;
 		break;
 	default:
 		break;
 	}
 
-	return adj_op;
+	if (fop == BLIT_OP_SRC && !cmd->srcen && sa == 0xff && ga == 0xff)
+		fop = BLIT_OP_SOLID_FILL;
+
+	return fop;
 }
 
 static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
@@ -290,7 +292,7 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 	/* src and dst select */
 	srcsel = dstsel = IMG_MEMORY;
 
-	op = adjust_op(cmd);
+	op = fast_op(cmd);
 
 	switch (op) {
 	case BLIT_OP_SOLID_FILL:
@@ -305,12 +307,14 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 		srcsel = IMG_FGCOLOR;
 		break;
 	default:
-		if (op == BLIT_OP_SRC)
-			dstsel = IMG_FGCOLOR;
 		if (!cmd->srcen) {
 			srcsel = IMG_FGCOLOR;
 			fimg2d4x_set_fgcolor(info, cmd->solid_color);
 		}
+
+		if (op == BLIT_OP_SRC)
+			dstsel = IMG_FGCOLOR;
+
 		fimg2d4x_enable_alpha(info, cmd->g_alpha);
 		fimg2d4x_set_alpha_composite(info, op, cmd->g_alpha);
 		if (cmd->premult == NON_PREMULTIPLIED)
