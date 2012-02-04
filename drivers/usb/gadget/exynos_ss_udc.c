@@ -2507,19 +2507,25 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 
 	usb_gadget_unregister_driver(udc->driver);
 
-	free_irq(udc->irq, udc);
-	iounmap(udc->regs);
-
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	release_mem_region(res->start, resource_size(res));
-
 	exynos_ss_udc_phy_unset(pdev);
 
 	clk_disable(udc->clk);
 	clk_put(udc->clk);
 
+	free_irq(udc->irq, udc);
+
+	iounmap(udc->regs);
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	release_mem_region(res->start, resource_size(res));
+
+	device_unregister(&udc->gadget.dev);
+
+	platform_set_drvdata(pdev, NULL);
+
 	exynos_ss_udc_ep_free_request(&udc->eps[0].ep, udc->ctrl_req);
 	exynos_ss_udc_free_all_trb(udc);
+
 	dma_free_coherent(NULL, EXYNOS_USB3_EP0_BUFF_SIZE,
 			  udc->ep0_buff, udc->ep0_buff_dma);
 	dma_free_coherent(NULL, EXYNOS_USB3_CTRL_BUFF_SIZE,
