@@ -179,7 +179,6 @@ struct exynos_ss_udc_ep {
  * @driver: USB gadget driver
  * @plat: The platform specific configuration data.
  * @regs: The memory area mapped for accessing registers.
- * @regs_res: The resource that was allocated when claiming register space.
  * @irq: The IRQ number we are using.
  * @clk: The clock we are using.
  * @release: The core release number.
@@ -203,7 +202,6 @@ struct exynos_ss_udc {
 	struct exynos_ss_udc_plat	*plat;
 
 	void __iomem		*regs;
-	struct resource		*regs_res;
 	int			irq;
 	struct clk		*clk;
 
