@@ -1847,8 +1847,15 @@ static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
 
 	memset(udc_ep->trb, 0, sizeof(struct exynos_ss_udc_trb));
 
-	if (epnum == 0)
+	if (epnum == 0) {
+		/* allocate EP0 control request */
+		udc->ctrl_req = exynos_ss_udc_ep_alloc_request(&udc->eps[0].ep,
+							       GFP_KERNEL);
+		if (!udc->ctrl_req)
+			return -ENOMEM;
+
 		udc->ep0_state = EP0_UNCONNECTED;
+	}
 
 	return 0;
 }
@@ -2454,15 +2461,6 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&udc->gadget.ep_list);
 	udc->gadget.ep0 = &udc->eps[0].ep;
 
-	/* allocate EP0 request */
-
-	udc->ctrl_req = exynos_ss_udc_ep_alloc_request(&udc->eps[0].ep,
-						       GFP_KERNEL);
-	if (!udc->ctrl_req) {
-		dev_err(dev, "failed to allocate ctrl req\n");
-		goto err_regs;
-	}
-
 	clk_enable(udc->clk);
 	exynos_ss_udc_phy_set(pdev);
 
@@ -2479,6 +2477,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	return 0;
 
 err_ep:
+	exynos_ss_udc_ep_free_request(&udc->eps[0].ep, udc->ctrl_req);
 	exynos_ss_udc_free_all_trb(udc);
 err_regs:
 	iounmap(udc->regs);
@@ -2520,6 +2519,7 @@ static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 	clk_disable(udc->clk);
 	clk_put(udc->clk);
 
+	exynos_ss_udc_ep_free_request(&udc->eps[0].ep, udc->ctrl_req);
 	exynos_ss_udc_free_all_trb(udc);
 	dma_free_coherent(NULL, EXYNOS_USB3_EP0_BUFF_SIZE,
 			  udc->ep0_buff, udc->ep0_buff_dma);
