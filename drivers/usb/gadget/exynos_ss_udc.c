@@ -2483,8 +2483,7 @@ err_regs:
 	iounmap(udc->regs);
 
 err_regs_res:
-	release_resource(udc->regs_res);
-	kfree(udc->regs_res);
+	release_mem_region(res->start, resource_size(res));
 err_clk:
 	clk_put(udc->clk);
 err_mem:
@@ -2505,14 +2504,15 @@ err_mem:
 static int __devexit exynos_ss_udc_remove(struct platform_device *pdev)
 {
 	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
+	struct resource *res;
 
 	usb_gadget_unregister_driver(udc->driver);
 
 	free_irq(udc->irq, udc);
 	iounmap(udc->regs);
 
-	release_resource(udc->regs_res);
-	kfree(udc->regs_res);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	release_mem_region(res->start, resource_size(res));
 
 	exynos_ss_udc_phy_unset(pdev);
 
