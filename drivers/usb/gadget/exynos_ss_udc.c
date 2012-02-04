@@ -2362,6 +2362,9 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 		goto err_mem;
 	}
 
+	udc->dev = dev;
+	udc->plat = plat;
+
 	udc->event_buff = dma_alloc_coherent(NULL,
 					     EXYNOS_USB3_EVENT_BUFF_BSIZE,
 					     &udc->event_buff_dma,
@@ -2395,23 +2398,11 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	}
 	memset(udc->ep0_buff, 0, EXYNOS_USB3_EP0_BUFF_SIZE);
 
-	udc->dev = dev;
-	udc->plat = plat;
-
-	udc->clk = clk_get(&pdev->dev, "usbdev30");
-	if (IS_ERR(udc->clk)) {
-		dev_err(dev, "cannot get UDC clock\n");
-		ret = -EINVAL;
-		goto err_mem;
-	}
-
-	platform_set_drvdata(pdev, udc);
-
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(dev, "cannot find register resource 0\n");
 		ret = -EINVAL;
-		goto err_clk;
+		goto err_mem;
 	}
 
 	udc->regs_res = request_mem_region(res->start, resource_size(res),
@@ -2419,20 +2410,20 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	if (!udc->regs_res) {
 		dev_err(dev, "cannot reserve registers\n");
 		ret = -ENOENT;
-		goto err_clk;
+		goto err_mem;
 	}
 
 	udc->regs = ioremap(res->start, resource_size(res));
 	if (!udc->regs) {
 		dev_err(dev, "cannot map registers\n");
 		ret = -ENXIO;
-		goto err_regs_res;
+		goto err_remap;
 	}
 
 	ret = platform_get_irq(pdev, 0);
 	if (ret < 0) {
 		dev_err(dev, "cannot find irq\n");
-		goto err_regs;
+		goto err_irq;
 	}
 
 	udc->irq = ret;
@@ -2440,10 +2431,17 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	ret = request_irq(ret, exynos_ss_udc_irq, 0, dev_name(dev), udc);
 	if (ret < 0) {
 		dev_err(dev, "cannot claim IRQ\n");
-		goto err_regs;
+		goto err_irq;
 	}
 
 	dev_info(dev, "regs %p, irq %d\n", udc->regs, udc->irq);
+
+	udc->clk = clk_get(&pdev->dev, "usbdev30");
+	if (IS_ERR(udc->clk)) {
+		dev_err(dev, "cannot get UDC clock\n");
+		ret = -EINVAL;
+		goto err_clk;
+	}
 
 	device_initialize(&udc->gadget.dev);
 
@@ -2461,9 +2459,6 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&udc->gadget.ep_list);
 	udc->gadget.ep0 = &udc->eps[0].ep;
 
-	clk_enable(udc->clk);
-	exynos_ss_udc_phy_set(pdev);
-
 	/* initialise the endpoints now the core has been initialised */
 	for (epnum = 0; epnum < EXYNOS_USB3_EPS; epnum++) {
 		ret = exynos_ss_udc_initep(udc, &udc->eps[epnum], epnum);
@@ -2473,19 +2468,24 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 		}
 	}
 
+	platform_set_drvdata(pdev, udc);
+
+	clk_enable(udc->clk);
+	exynos_ss_udc_phy_set(pdev);
+
 	our_udc = udc;
 	return 0;
 
 err_ep:
 	exynos_ss_udc_ep_free_request(&udc->eps[0].ep, udc->ctrl_req);
 	exynos_ss_udc_free_all_trb(udc);
-err_regs:
-	iounmap(udc->regs);
-
-err_regs_res:
-	release_mem_region(res->start, resource_size(res));
-err_clk:
 	clk_put(udc->clk);
+err_clk:
+	free_irq(udc->irq, udc);
+err_irq:
+	iounmap(udc->regs);
+err_remap:
+	release_mem_region(res->start, resource_size(res));
 err_mem:
 	if (udc->ep0_buff)
 		dma_free_coherent(NULL, EXYNOS_USB3_EP0_BUFF_SIZE,
