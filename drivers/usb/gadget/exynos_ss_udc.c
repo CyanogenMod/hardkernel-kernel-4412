@@ -591,7 +591,7 @@ static int exynos_ss_udc_ep_sethalt(struct usb_ep *ep, int value)
 		return res;
 	}
 
-	if (udc_ep->epnum == 0)
+	if (udc_ep->epnum == 0 && value)
 		udc->ep0_state = EP0_STALL;
 
 	/* If everything is Ok, we mark endpoint as halted */
