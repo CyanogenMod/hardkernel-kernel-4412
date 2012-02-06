@@ -149,7 +149,7 @@ static int check_power_domain(void)
 	 * from REV 1.1, MFC power domain can turn off
 	 */
 	if (((soc_is_exynos4412()) && (samsung_rev() >= EXYNOS4412_REV_1_1)) ||
-	    ((soc_is_exynos4212()) && (samsung_rev() >= EXYNOS4412_REV_1_0)) ||
+	    ((soc_is_exynos4212()) && (samsung_rev() >= EXYNOS4212_REV_1_0)) ||
 	     soc_is_exynos4210()) {
 		tmp = __raw_readl(S5P_PMU_MFC_CONF);
 		if ((tmp & S5P_INT_LOCAL_PWR_EN) == S5P_INT_LOCAL_PWR_EN)
