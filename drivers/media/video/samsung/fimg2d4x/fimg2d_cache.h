@@ -12,10 +12,12 @@
 
 #include <asm/cacheflush.h>
 #include <linux/dma-mapping.h>
+#include <plat/cpu.h>
 #include "fimg2d.h"
 
-#define L1_CACHE_SIZE	SZ_64K
-#define L2_CACHE_SIZE	SZ_1M
+#define L1_CACHE_SIZE		SZ_64K
+#define L2_CACHE_SIZE		SZ_1M
+#define LINE_FLUSH_THRESHOLD	SZ_1K
 
 /**
  * cache_opr - [kernel] cache operation mode
@@ -41,6 +43,19 @@ enum pt_status {
 	PT_NORMAL,
 	PT_FAULT,
 };
+
+static inline bool is_inner_flushall(unsigned int size)
+{
+	if (soc_is_exynos5250())
+		return (size >= SZ_1M * 25) ? true : false;
+	else
+		return (size >= L1_CACHE_SIZE) ? true : false;
+}
+
+static inline bool is_outer_flushall(unsigned int size)
+{
+	return (size >= L2_CACHE_SIZE) ? true : false;
+}
 
 static inline void fimg2d_dma_sync_inner(unsigned long addr, size_t size, int dir)
 {

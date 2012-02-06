@@ -315,7 +315,7 @@ void fimg2d4x_set_bluescreen(struct fimg2d_control *info,
 /**
  * @c: destination clipping region
  */
-void fimg2d4x_enable_clipping(struct fimg2d_control *info, struct fimg2d_clip *c)
+void fimg2d4x_enable_clipping(struct fimg2d_control *info, struct fimg2d_rect *c)
 {
 	unsigned long cfg;
 
@@ -371,9 +371,24 @@ inline static unsigned long scale_factor_to_fixed16(int n, int d)
 
 void fimg2d4x_set_src_scaling(struct fimg2d_control *info, struct fimg2d_scale *s)
 {
-	int src_w, src_h, dst_w, dst_h;
 	unsigned long wcfg, hcfg;
 	unsigned long mode;
+
+	/*
+	 * scaling ratio in pixels
+	 * e.g scale-up: src(1,1)-->dst(2,2), src factor: 0.5 (0x000080000)
+	 *     scale-down: src(2,2)-->dst(1,1), src factor: 2.0 (0x000200000)
+	 */
+
+	/* inversed scaling factor: src is numerator */
+	wcfg = scale_factor_to_fixed16(s->src_w, s->dst_w);
+	hcfg = scale_factor_to_fixed16(s->src_h, s->dst_h);
+
+	if (wcfg == DEFAULT_SCALE_RATIO && hcfg == DEFAULT_SCALE_RATIO)
+		return;
+
+	writel(wcfg, info->regs + FIMG2D_SRC_XSCALE_REG);
+	writel(hcfg, info->regs + FIMG2D_SRC_YSCALE_REG);
 
 	/* scaling algorithm */
 	if (s->mode == SCALING_NEAREST)
@@ -383,43 +398,28 @@ void fimg2d4x_set_src_scaling(struct fimg2d_control *info, struct fimg2d_scale *
 
 	writel(mode, info->regs + FIMG2D_SRC_SCALE_CTRL_REG);
 
-	if (s->factor == SCALING_PERCENTAGE) {
-		/*
-		 * percental scaling factor
-		 * e.g scale-up: 200% --> src scaling factor: 0.5 (0x000080000)
-		 * e.g scale-down: 50% --> src scaling factor: 2.0 (0x00020000)
-		 */
-		src_w = 100;
-		src_h = 100;
-
-		dst_w = s->scale_w;
-		dst_h = s->scale_h;
-	} else {
-		/*
-		 * pixels scaling factor
-		 * e.g scale-up: src(1,1)-->dst(2,2), src scaling factor: 0.5 (0x000080000)
-		 * e.g scale-down: src(2,2)-->dst(1,1), src scaling factor: 2.0 (0x000200000)
-		 */
-		src_w = s->src_w * 100;
-		src_h = s->src_h * 100;
-
-		dst_w = s->dst_w * 100;
-		dst_h = s->dst_h * 100;
-	}
-
-	/* inversed scaling factor: src is numerator */
-	wcfg = scale_factor_to_fixed16(src_w, dst_w);
-	hcfg = scale_factor_to_fixed16(src_h, dst_h);
-
-	writel(wcfg, info->regs + FIMG2D_SRC_XSCALE_REG);
-	writel(hcfg, info->regs + FIMG2D_SRC_YSCALE_REG);
 }
 
 void fimg2d4x_set_msk_scaling(struct fimg2d_control *info, struct fimg2d_scale *s)
 {
-	int src_w, src_h, dst_w, dst_h;
 	unsigned long wcfg, hcfg;
 	unsigned long mode;
+
+	/*
+	 * scaling ratio in pixels
+	 * e.g scale-up: src(1,1)-->dst(2,2), msk factor: 0.5 (0x000080000)
+	 *     scale-down: src(2,2)-->dst(1,1), msk factor: 2.0 (0x000200000)
+	 */
+
+	/* inversed scaling factor: src is numerator */
+	wcfg = scale_factor_to_fixed16(s->src_w, s->dst_w);
+	hcfg = scale_factor_to_fixed16(s->src_h, s->dst_h);
+
+	if (wcfg == DEFAULT_SCALE_RATIO && hcfg == DEFAULT_SCALE_RATIO)
+		return;
+
+	writel(wcfg, info->regs + FIMG2D_MSK_XSCALE_REG);
+	writel(hcfg, info->regs + FIMG2D_MSK_YSCALE_REG);
 
 	/* scaling algorithm */
 	if (s->mode == SCALING_NEAREST)
@@ -428,37 +428,6 @@ void fimg2d4x_set_msk_scaling(struct fimg2d_control *info, struct fimg2d_scale *
 		mode = FIMG2D_SCALE_MODE_BILINEAR;
 
 	writel(mode, info->regs + FIMG2D_MSK_SCALE_CTRL_REG);
-
-	if (s->factor == SCALING_PERCENTAGE) {
-		/*
-		 * percental scaling factor
-		 * e.g scale-up: 200% --> msk scaling factor: 0.5 (0x000080000)
-		 * e.g scale-down: 50% --> msk scaling factor: 2.0 (0x00020000)
-		 */
-		src_w = 100;
-		src_h = 100;
-
-		dst_w = s->scale_w;
-		dst_h = s->scale_h;
-	} else {
-		/*
-		 * pixels scaling factor
-		 * e.g scale-up: src(1,1)-->dst(2,2), msk scaling factor: 0.5 (0x000080000)
-		 * e.g scale-down: src(2,2)-->dst(1,1), msk scaling factor: 2.0 (0x000200000)
-		 */
-		src_w = s->src_w * 100;
-		src_h = s->src_h * 100;
-
-		dst_w = s->dst_w * 100;
-		dst_h = s->dst_h * 100;
-	}
-
-	/* inversed scaling factor: src is numerator */
-	wcfg = scale_factor_to_fixed16(src_w, dst_w);
-	hcfg = scale_factor_to_fixed16(src_h, dst_h);
-
-	writel(wcfg, info->regs + FIMG2D_MSK_XSCALE_REG);
-	writel(hcfg, info->regs + FIMG2D_MSK_YSCALE_REG);
 }
 
 void fimg2d4x_set_src_repeat(struct fimg2d_control *info, struct fimg2d_repeat *r)
