@@ -28,6 +28,7 @@
 #include <mach/clock-domain.h>
 #include <mach/regs-audss.h>
 #include <mach/asv.h>
+#include <mach/regs-usb-phy.h>
 
 #include <plat/regs-otg.h>
 #include <plat/exynos4.h>
@@ -87,9 +88,11 @@ static struct check_device_op chk_sdhc_op[] = {
 #endif
 };
 
+#if defined(CONFIG_USB_S3C_OTGD) && !defined(CONFIG_USB_EXYNOS_SWITCH)
 static struct check_device_op chk_usbotg_op = {
 	.base = 0, .pdev = &s3c_device_usbgadget, .type = 0
 };
+#endif
 
 #define S3C_HSMMC_PRNSTS	(0x24)
 #define S3C_HSMMC_CLKCON	(0x2c)
@@ -245,6 +248,7 @@ static int loop_sdmmc_check(void)
  * BSesVld =	1b : B-session is valid
  *		0b : B-session is not valid
  */
+#if defined(CONFIG_USB_S3C_OTGD) && !defined(CONFIG_USB_EXYNOS_SWITCH)
 static int check_usbotg_op(void)
 {
 	void __iomem *base_addr;
@@ -255,6 +259,7 @@ static int check_usbotg_op(void)
 
 	return val & (A_SESSION_VALID | B_SESSION_VALID);
 }
+#endif
 
 #ifdef CONFIG_SND_SAMSUNG_RP
 extern int srp_get_op_level(void);	/* By srp driver */
@@ -268,11 +273,18 @@ static int exynos4_check_operation(void)
 	if (clock_domain_enabled(LPA_DOMAIN))
 		return 1;
 
-	if (loop_sdmmc_check() || check_usbotg_op())
+	if (loop_sdmmc_check())
 		return 1;
 
 #ifdef CONFIG_SND_SAMSUNG_RP
 	if (srp_get_op_level())
+		return 1;
+#endif
+#if defined(CONFIG_USB_S3C_OTGD) && !defined(CONFIG_USB_EXYNOS_SWITCH)
+	if (check_usbotg_op())
+		return 1;
+#elif defined(CONFIG_USB_EXYNOS_SWITCH)
+	if (exynos4_check_usb_op())
 		return 1;
 #endif
 
@@ -793,6 +805,7 @@ static int __init exynos4_init_cpuidle(void)
 		}
 	}
 
+#if defined(CONFIG_USB_S3C_OTGD) && !defined(CONFIG_USB_EXYNOS_SWITCH)
 	pdev = chk_usbotg_op.pdev;
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
@@ -806,7 +819,7 @@ static int __init exynos4_init_cpuidle(void)
 		printk(KERN_ERR "failed to map io region\n");
 		return -EINVAL;
 	}
-
+#endif
 	register_pm_notifier(&exynos4_cpuidle_notifier);
 	sys_pwr_conf_addr = (unsigned long)S5P_CENTRAL_SEQ_CONFIGURATION;
 
