@@ -574,7 +574,14 @@ int exynos5_fimc_is_clk_on(struct platform_device *pdev)
 	clk_enable(gsc_ctrl);
 	clk_put(gsc_ctrl);
 
-	isp_ctrl = clk_get(&pdev->dev, "isp");
+	isp_ctrl = clk_get(&pdev->dev, "isp0");
+	if (IS_ERR(isp_ctrl))
+		return PTR_ERR(isp_ctrl);
+
+	clk_enable(isp_ctrl);
+	clk_put(isp_ctrl);
+
+	isp_ctrl = clk_get(&pdev->dev, "isp1");
 	if (IS_ERR(isp_ctrl))
 		return PTR_ERR(isp_ctrl);
 
@@ -614,7 +621,14 @@ int exynos5_fimc_is_clk_off(struct platform_device *pdev)
 	clk_disable(gsc_ctrl);
 	clk_put(gsc_ctrl);
 
-	isp_ctrl = clk_get(&pdev->dev, "isp");
+	isp_ctrl = clk_get(&pdev->dev, "isp0");
+	if (IS_ERR(isp_ctrl))
+		return PTR_ERR(isp_ctrl);
+
+	clk_disable(isp_ctrl);
+	clk_put(isp_ctrl);
+
+	isp_ctrl = clk_get(&pdev->dev, "isp1");
 	if (IS_ERR(isp_ctrl))
 		return PTR_ERR(isp_ctrl);
 
