@@ -489,16 +489,6 @@ static irqreturn_t s3c_udc_irq(int irq, void *_dev)
 
 			dev->driver->suspend(&dev->gadget);
 		}
-		/* report disconnect; the driver is already quiesced */
-		if (dev->driver) {
-			spin_unlock(&dev->lock);
-			dev->driver->disconnect(&dev->gadget);
-			spin_lock(&dev->lock);
-		}
-
-#if defined(CONFIG_BATTERY_SAMSUNG)
-		s3c_udc_cable_disconnect(dev);
-#endif
 	}
 
 	if (intr_status & INT_RESUME) {
@@ -532,6 +522,16 @@ static irqreturn_t s3c_udc_irq(int irq, void *_dev)
 		} else {
 			reset_available = 1;
 			DEBUG_ISR("\t\tRESET handling skipped\n");
+			/* report disconnect; the driver is already quiesced */
+			if (dev->driver) {
+				spin_unlock(&dev->lock);
+				dev->driver->disconnect(&dev->gadget);
+				spin_lock(&dev->lock);
+			}
+
+#if defined(CONFIG_BATTERY_SAMSUNG)
+			s3c_udc_cable_disconnect(dev);
+#endif
 		}
 	}
 
