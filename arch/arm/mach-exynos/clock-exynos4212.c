@@ -400,9 +400,25 @@ static struct clk exynos4212_init_clocks_off[] = {
 	},
 #endif
 	{
+		.name		= "uart_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 31),
+	}, {
+		.name		= "wdt_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 30),
+	}, {
+		.name		= "pwm_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 28),
+	}, {
 		.name		= "mtcadc",
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 27),
+	}, {
+		.name		= "i2c1_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 26),
 	}, {
 		.name		= "i2c0_isp",
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
@@ -411,6 +427,10 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.name		= "mpwm_isp",
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 24),
+	}, {
+		.name		= "mcuctl_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 23),
 	}, {
 		.name		= "qelite1",
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
@@ -432,9 +452,41 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 14),
 	}, {
+		.name		= "sysmmu_lite1",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 12),
+	}, {
+		.name		= "sysmmu_lite0",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 11),
+	}, {
+		.name		= "gic_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 7),
+	}, {
+		.name		= "mcu_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 5),
+	}, {
+		.name		= "lite1",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 4),
+	}, {
 		.name		= "lite0",
 		.enable		= exynos4212_clk_ip_isp0_ctrl,
 		.ctrlbit	= (1 << 3),
+	}, {
+		.name		= "fd",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 2),
+	}, {
+		.name		= "drc",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 1),
+	}, {
+		.name		= "isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 0),
 	}, {
 		.name		= "spi1_isp",
 		.enable		= exynos4212_clk_ip_isp1_ctrl,
@@ -443,6 +495,26 @@ static struct clk exynos4212_init_clocks_off[] = {
 		.name		= "spi0_isp",
 		.enable		= exynos4212_clk_ip_isp1_ctrl,
 		.ctrlbit	= (1 << 12),
+	}, {
+		.name		= "aync_caxim",
+		.enable		= exynos4212_clk_ip_isp1_ctrl,
+		.ctrlbit	= (1 << 0),
+	}, {
+		.name		= "sysmmu_fd",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 10),
+	}, {
+		.name		= "sysmmu_drc",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 9),
+	}, {
+		.name		= "sysmmu_isp",
+		.enable		= exynos4212_clk_ip_isp0_ctrl,
+		.ctrlbit	= (1 << 8),
+	}, {
+		.name		= "sysmmu_ispcx",
+		.enable		= exynos4212_clk_ip_isp1_ctrl,
+		.ctrlbit	= (1 << 4),
 	},
 };
 
@@ -473,8 +545,6 @@ static struct clksrc_clk exynos4212_clk_isp_srcs_div0 = {
 	.clk		= {
 		.name		= "sclk_mcuisp_div0",
 		.parent		= &exynos4212_clk_aclk_400_mcuisp.clk,
-		.enable		= exynos4212_clk_ip_isp0_ctrl,
-		.ctrlbit	= (0xFFFFFFFF << 0),
 	},
 	.reg_div = { .reg = EXYNOS4_CLKDIV_ISP1, .shift = 4, .size = 3 },
 };
@@ -507,6 +577,24 @@ static struct clksrc_clk exynos4212_clk_isp_srcs[] = {
 		.sources = &exynos4_clkset_group,
 		.reg_src = { .reg = EXYNOS4_CLKSRC_ISP, .shift = 12, .size = 4 },
 		.reg_div = { .reg = EXYNOS4_CLKDIV_ISP, .shift = 28, .size = 4 },
+	}, {
+		.clk		= {
+			.name		= "sclk_spi1_isp",
+			.enable		= exynos4212_clk_ip_isp_ctrl,
+			.ctrlbit	= (1 << 2),
+		},
+		.sources = &exynos4_clkset_group,
+		.reg_src = { .reg = EXYNOS4_CLKSRC_ISP, .shift = 8, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_ISP, .shift = 16, .size = 12 },
+	}, {
+		.clk		= {
+			.name		= "sclk_spi0_isp",
+			.enable		= exynos4212_clk_ip_isp_ctrl,
+			.ctrlbit	= (1 << 1),
+		},
+		.sources = &exynos4_clkset_group,
+		.reg_src = { .reg = EXYNOS4_CLKSRC_ISP, .shift = 4, .size = 4 },
+		.reg_div = { .reg = EXYNOS4_CLKDIV_ISP, .shift = 4, .size = 12 },
 	}, {
 		.clk		= {
 			.name		= "sclk_pwm_isp",
@@ -655,6 +743,10 @@ void __init exynos4212_register_clocks(void)
 	s3c_register_clksrc(&exynos4212_clk_isp_srcs_div0, 1);
 	s3c_register_clksrc(exynos4212_clk_isp_srcs, ARRAY_SIZE(exynos4212_clk_isp_srcs));
 	s3c_register_clocks(exynos4212_clk_isp, ARRAY_SIZE(exynos4212_clk_isp));
+	s3c_disable_clocks(&exynos4212_clk_isp_srcs[3].clk, 1);
+	s3c_disable_clocks(&exynos4212_clk_isp_srcs[4].clk, 1);
+	s3c_disable_clocks(&exynos4212_clk_isp_srcs[5].clk, 1);
+	s3c_disable_clocks(&exynos4212_clk_isp_srcs[6].clk, 1);
 
 	register_syscore_ops(&exynos4212_clock_syscore_ops);
 }
