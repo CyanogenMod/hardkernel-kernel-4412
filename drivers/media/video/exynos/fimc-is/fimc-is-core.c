@@ -376,6 +376,15 @@ static int fimc_is_probe(struct platform_device *pdev)
 	}
 	dbg("Parameter region = 0x%08x\n", (unsigned int)dev->is_p_region);
 
+	/*
+	 * Get related clock for FIMC-IS
+	*/
+	if (dev->pdata->clk_get) {
+		dev->pdata->clk_get(pdev);
+	} else {
+		err("#### failed to Get Clock####\n");
+		goto p_err_init_mem;
+	}
 	/* Init v4l2 sub device */
 	v4l2_subdev_init(&dev->sd, &fimc_is_subdev_ops);
 	dev->sd.owner = THIS_MODULE;
@@ -424,6 +433,12 @@ static int fimc_is_remove(struct platform_device *pdev)
 {
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
+
+	if (dev->pdata->clk_put)
+		dev->pdata->clk_put(pdev);
+	else
+		err("#### failed to Put Clock####\n");
+
 #if defined(CONFIG_VIDEOBUF2_ION)
 	fimc_is_mem_init_mem_cleanup(dev->alloc_ctx);
 #endif
