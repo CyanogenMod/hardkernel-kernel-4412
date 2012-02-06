@@ -174,6 +174,15 @@ static struct gsc_fmt gsc_formats[] = {
 		.num_planes	= 2,
 		.nr_comp	= 2,
 	}, {
+		.name		= "YVU 4:2:0 non-contiguous 2-planar, Y/CrCb",
+		.pixelformat	= V4L2_PIX_FMT_NV21M,
+		.depth		= { 8, 4 },
+		.color		= GSC_YUV420,
+		.yorder		= GSC_LSB_Y,
+		.corder		= GSC_CRCB,
+		.num_planes	= 2,
+		.nr_comp	= 2,
+	}, {
 		.name		= "YUV 4:2:0 non-contiguous 3-planar, Y/Cb/Cr",
 		.pixelformat	= V4L2_PIX_FMT_YUV420M,
 		.depth		= { 8, 2, 2 },
