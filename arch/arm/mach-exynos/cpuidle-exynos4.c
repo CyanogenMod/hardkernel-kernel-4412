@@ -392,9 +392,10 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	vfp_enable(NULL);
 
 early_wakeup:
+#ifdef CONFIG_EXYNOS4_CPUFREQ
 	if ((exynos_result_of_asv > 3) && !soc_is_exynos4210())
 		exynos4x12_set_abb(ABB_MODE_130V);
-
+#endif
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
 
@@ -490,9 +491,10 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 	__raw_writel((1 << 28), S5P_PAD_RET_EBIB_OPTION);
 
 early_wakeup:
+#ifdef CONFIG_EXYNOS4_CPUFREQ
 	if ((exynos_result_of_asv > 3) && !soc_is_exynos4210())
 		exynos4x12_set_abb(ABB_MODE_130V);
-
+#endif
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
 
