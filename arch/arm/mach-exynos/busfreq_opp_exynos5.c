@@ -69,7 +69,7 @@ void update_busfreq_stat(struct busfreq_data *data,
 }
 
 
-unsigned long __maybe_unused step_up_int(struct busfreq_data *data,
+static unsigned long __maybe_unused step_up(struct busfreq_data *data,
 				enum ppmu_type type, int step)
 {
 	int i;
