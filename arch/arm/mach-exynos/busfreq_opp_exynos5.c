@@ -128,7 +128,7 @@ static void exynos_busfreq_timer(struct work_struct *work)
 
 	mutex_lock(&busfreq_lock);
 
-	for (i = 0; i < PPMU_TYPE_END; i++) {
+	for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
 		if (bus_ctrl.lock[i])
 			opp[i] = bus_ctrl.lock[i];
 
@@ -239,7 +239,7 @@ static int exynos_busfreq_request_event(struct notifier_block *this,
 	newfreq[PPMU_MIF] = (req_newfreq / 1000) * 1000;
 	newfreq[PPMU_INT] = (req_newfreq % 1000) * 1000;
 
-	for (i = 0; i < PPMU_TYPE_END; i++) {
+	for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
 		index = data->get_table_index(newfreq[i], i);
 
 		opp[i] = opp_find_freq_ceil(data->dev[i], &newfreq[i]);

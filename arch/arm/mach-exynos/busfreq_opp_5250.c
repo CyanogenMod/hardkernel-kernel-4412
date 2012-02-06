@@ -335,11 +335,11 @@ static void exynos5250_set_bus_volt(void)
 
 	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group_index);
 
-	for (i = 0 ; i < LV_MIF_END ; i++)
+	for (i = LV_0; i < LV_MIF_END; i++)
 		exynos5_busfreq_table_mif[i].volt =
 			exynos5_mif_volt[asv_group_index][i];
 
-	for (i = 0 ; i < LV_INT_END ; i++)
+	for (i = LV_0; i < LV_INT_END; i++)
 		exynos5_busfreq_table_int[i].volt =
 			exynos5_int_volt[asv_group_index][i];
 	return;
@@ -677,7 +677,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	data->dev[PPMU_MIF] = dev;
 	data->dev[PPMU_INT] = &busfreq_for_int;
 
-	for (i = 0; i < LV_MIF_END; i++) {
+	for (i = LV_0; i < LV_MIF_END; i++) {
 		ret = opp_add(data->dev[PPMU_MIF], exynos5_busfreq_table_mif[i].mem_clk,
 				exynos5_busfreq_table_mif[i].volt);
 		if (ret) {
@@ -688,7 +688,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 
 	opp_disable(data->dev[PPMU_MIF], 107000);
 
-	for (i = 0; i < LV_INT_END; i++) {
+	for (i = LV_0; i < LV_INT_END; i++) {
 		ret = opp_add(data->dev[PPMU_INT], exynos5_busfreq_table_int[i].mem_clk,
 				exynos5_busfreq_table_int[i].volt);
 		if (ret) {
