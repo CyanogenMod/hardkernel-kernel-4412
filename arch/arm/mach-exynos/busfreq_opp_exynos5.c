@@ -240,9 +240,12 @@ static int exynos_busfreq_request_event(struct notifier_block *this,
 	newfreq[PPMU_INT] = (req_newfreq % 1000) * 1000;
 
 	for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
-		index = data->get_table_index(newfreq[i], i);
-
 		opp[i] = opp_find_freq_ceil(data->dev[i], &newfreq[i]);
+
+		if (data->curr_freq[i] >= newfreq[i])
+			continue;
+
+		index = data->get_table_index(opp_get_freq(opp[i]), i);
 
 		voltage[i] = opp_get_voltage(opp[i]);
 
