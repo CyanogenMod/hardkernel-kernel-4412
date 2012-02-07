@@ -624,7 +624,7 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	dmc_pause_ctrl |= DMC_PAUSE_ENABLE;
 	__raw_writel(dmc_pause_ctrl, EXYNOS5_DMC_PAUSE_CTRL);
 
-	clk = clk_get(NULL, "mout_cdrex");
+	clk = clk_get(NULL, "mclk_cdrex");
 	if (IS_ERR(clk)) {
 		dev_err(dev, "Fail to get mclk_cdrex clock");
 		ret = PTR_ERR(clk);
