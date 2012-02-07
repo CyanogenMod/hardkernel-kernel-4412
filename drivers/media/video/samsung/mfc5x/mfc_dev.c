@@ -908,34 +908,28 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 	remap_size = min((unsigned long)mfc_mem_data_size(1),
 			user_size - remap_offset);
 	/*
-	 * Chunk 1 mapping
+	 * Chunk 1 mapping if it's available
 	 */
-	if (remap_size <= 0) {
-		mfc_err("invalid remap size of chunk 1\n");
-		return -EINVAL;
-	}
+	if (remap_size > 0) {
+		pfn = __phys_to_pfn(mfc_mem_data_base(1));
+		if (remap_pfn_range(vma, vma->vm_start + remap_offset, pfn,
+					remap_size, vma->vm_page_prot)) {
 
-	pfn = __phys_to_pfn(mfc_mem_data_base(1));
-	if (remap_pfn_range(vma, vma->vm_start + remap_offset, pfn,
-				remap_size, vma->vm_page_prot)) {
-
-		mfc_err("failed to remap chunk 1\n");
-		return -EINVAL;
+			mfc_err("failed to remap chunk 1\n");
+			return -EINVAL;
+		}
 	}
 #else
+	vma->vm_flags |= VM_RESERVED | VM_IO;
+	if (mfc_ctx->buf_cache_type == NO_CACHE)
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+
+	mfc_info("MFC buffers are %scacheable\n",
+			mfc_ctx->buf_cache_type ? "" : "non-");
+
 	if (dev->mem_ports == 1) {
 		remap_offset = 0;
-		remap_size = user_size;
-
-		vma->vm_flags |= VM_RESERVED | VM_IO;
-
-		if(mfc_ctx->buf_cache_type == NO_CACHE){
-			vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
-			mfc_info("CONFIG_VIDEO_MFC_CACHE is not enabled\n");
-		}else
-			mfc_info("CONFIG_VIDEO_MFC_CACHE is enabled\n");
-
-
+		remap_size = min((unsigned long)mfc_mem_data_size(0), user_size);
 		/*
 		 * Port 0 mapping for stream buf & frame buf (chroma + MV + luma)
 		 */
@@ -949,17 +943,6 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 	} else {
 		remap_offset = 0;
 		remap_size = min((unsigned long)mfc_mem_data_size(0), user_size);
-
-		vma->vm_flags |= VM_RESERVED | VM_IO;
-
-		if(mfc_ctx->buf_cache_type == NO_CACHE){
-			vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
-			mfc_info("CONFIG_VIDEO_MFC_CACHE is not enabled\n");
-		}else
-			mfc_info("CONFIG_VIDEO_MFC_CACHE is enabled\n");
-
-
-
 		/*
 		 * Port 0 mapping for stream buf & frame buf (chroma + MV)
 		 */
@@ -974,13 +957,6 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 		remap_offset = remap_size;
 		remap_size = min((unsigned long)mfc_mem_data_size(1),
 			user_size - remap_offset);
-
-		vma->vm_flags |= VM_RESERVED | VM_IO;
-
-		if(mfc_ctx->buf_cache_type == NO_CACHE)
-			vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
-
-
 		/*
 		 * Port 1 mapping for frame buf (luma)
 		 */
@@ -993,7 +969,6 @@ static int mfc_mmap(struct file *file, struct vm_area_struct *vma)
 		}
 	}
 #endif
-
 	mfc_ctx->userbase = vma->vm_start;
 
 	mfc_dbg("user request mem = %ld, available data mem = %ld\n",
@@ -1185,14 +1160,17 @@ static int __devinit mfc_probe(struct platform_device *pdev)
 	/*
 	 * initialize buffer manager
 	 */
-	mfc_init_buf();
+	ret = mfc_init_buf();
+	if (ret < 0) {
+		printk(KERN_ERR "failed to init. MFC buffer manager\n");
+		goto err_buf_mgr;
+	}
 
 	/* FIXME: final dec & enc */
 	mfc_init_decoders();
 	mfc_init_encoders();
 
 	ret = misc_register(&mfc_miscdev);
-
 	if (ret) {
 		mfc_err("MFC can't misc register on minor=%d\n", MFC_MINOR);
 		goto err_misc_reg;
@@ -1209,6 +1187,7 @@ static int __devinit mfc_probe(struct platform_device *pdev)
 err_misc_reg:
 	mfc_final_buf();
 
+err_buf_mgr:
 #ifdef SYSMMU_MFC_ON
 #ifdef CONFIG_VIDEO_MFC_VCM_UMP
 	mfc_clock_on();
