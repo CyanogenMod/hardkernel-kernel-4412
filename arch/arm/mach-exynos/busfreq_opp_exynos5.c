@@ -63,8 +63,9 @@ void update_busfreq_stat(struct busfreq_data *data,
 {
 #ifdef BUSFREQ_DEBUG
 	unsigned long long cur_time = get_jiffies_64();
-	data->time_in_state[index] = cputime64_add(data->time_in_state[index], cputime_sub(cur_time, data->last_time));
-	data->last_time = cur_time;
+	data->time_in_state[type][index] =
+		cputime64_add(data->time_in_state[type][index], cputime_sub(cur_time, data->last_time[type]));
+	data->last_time[type] = cur_time;
 #endif
 }
 
@@ -342,13 +343,21 @@ static ssize_t show_time_in_state(struct device *device,
 {
 	struct platform_device *pdev = to_platform_device(bus_ctrl.dev[PPMU_MIF]);
 	struct busfreq_data *data = (struct busfreq_data *)platform_get_drvdata(pdev);
+	struct busfreq_table *table;
 	ssize_t len = 0;
 	int i;
 
-	for (i = 0; i < data->table_size; i++)
-		len += sprintf(buf + len, "%u %llu\n", data->table[i].mem_clk,
-				(unsigned long long)cputime64_to_clock_t(data->time_in_state[i]));
+	table = data->table[PPMU_MIF];
+	len += sprintf(buf, "%s\n", "MIF stat");
+	for (i = LV_0; i < LV_MIF_END; i++)
+		len += sprintf(buf + len, "%u %llu\n", table[i].mem_clk,
+				(unsigned long long)cputime64_to_clock_t(data->time_in_state[PPMU_MIF][i]));
 
+	table = data->table[PPMU_INT];
+	len += sprintf(buf + len, "\n%s\n", "INT stat");
+	for (i = LV_0; i < LV_INT_END; i++)
+		len += sprintf(buf + len, "%u %llu\n", table[i].mem_clk,
+				(unsigned long long)cputime64_to_clock_t(data->time_in_state[PPMU_INT][i]));
 	return len;
 }
 
@@ -408,14 +417,8 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	bus_ctrl.dev[PPMU_MIF] =  data->dev[PPMU_MIF];
 	bus_ctrl.dev[PPMU_INT] =  data->dev[PPMU_INT];
 
-	data->time_in_state = kzalloc(sizeof(cputime64_t) * data->table_size, GFP_KERNEL);
-	if (!data->time_in_state) {
-		pr_err("Unable to create time_in_state.\n");
-		goto err_busfreq;
-	}
-
-
-	data->last_time = get_jiffies_64();
+	data->last_time[PPMU_MIF] = get_jiffies_64();
+	data->last_time[PPMU_INT] = get_jiffies_64();
 
 	data->busfreq_kobject = kobject_create_and_add("busfreq",
 				&cpu_sysdev_class.kset.kobj);
@@ -427,7 +430,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 
 	if (register_pm_notifier(&data->exynos_buspm_notifier)) {
 		pr_err("Failed to setup buspm notifier\n");
-		goto err_pm_notifier;
+		goto err_busfreq;
 	}
 
 	data->use = true;
@@ -442,9 +445,6 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 
 	queue_delayed_work(system_freezable_wq, &data->worker, data->sampling_rate);
 	return 0;
-
-err_pm_notifier:
-	kfree(data->time_in_state);
 
 err_busfreq:
 	if (!IS_ERR(data->vdd_reg[PPMU_INT]))
@@ -466,7 +466,6 @@ static __devexit int exynos_busfreq_remove(struct platform_device *pdev)
 	regulator_put(data->vdd_reg[PPMU_INT]);
 	regulator_put(data->vdd_reg[PPMU_MIF]);
 	sysfs_remove_group(data->busfreq_kobject, &data->busfreq_attr_group);
-	kfree(data->time_in_state);
 	kfree(data);
 
 	return 0;

@@ -24,6 +24,15 @@
 
 #define TIMINGROW_OFFSET	0x34
 
+enum busfreq_level_idx {
+	LV_0,
+	LV_1,
+	LV_2,
+	LV_3,
+	LV_INT_END,
+	LV_MIF_END = LV_3,
+};
+
 struct opp;
 struct device;
 struct busfreq_table;
@@ -38,10 +47,9 @@ struct busfreq_data {
 	struct regulator *vdd_reg[PPMU_TYPE_END];
 	unsigned int sampling_rate;
 	struct kobject *busfreq_kobject;
-	int table_size;
-	struct busfreq_table *table;
-	unsigned long long *time_in_state;
-	unsigned long long last_time;
+	struct busfreq_table *table[PPMU_TYPE_END];
+	unsigned long long time_in_state[PPMU_TYPE_END][LV_INT_END];
+	unsigned long long last_time[PPMU_TYPE_END];
 	unsigned int load_history[PPMU_END][LOAD_HISTORY_SIZE];
 	int index;
 

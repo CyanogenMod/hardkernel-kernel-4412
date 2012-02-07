@@ -61,15 +61,6 @@ static struct device busfreq_for_int;
 /* To save/restore DMC_PAUSE_CTRL register */
 static unsigned int dmc_pause_ctrl;
 
-enum busfreq_level_idx {
-	LV_0,
-	LV_1,
-	LV_2,
-	LV_3,
-	LV_INT_END,
-	LV_MIF_END = LV_3,
-};
-
 static struct busfreq_table exynos5_busfreq_table_for800[] = {
 	{LV_0, 800000, 1000000, 0, 0, 0},
 	{LV_1, 400000, 1000000, 0, 0, 0},
@@ -704,8 +695,8 @@ int exynos5250_init(struct device *dev, struct busfreq_data *data)
 	data->busfreq_resume = exynos5250_resume;
 	data->sampling_rate = usecs_to_jiffies(100000);
 
-	data->table = exynos5_busfreq_table_mif;
-	data->table_size = LV_MIF_END;
+	data->table[PPMU_MIF] = exynos5_busfreq_table_mif;
+	data->table[PPMU_INT] = exynos5_busfreq_table_int;
 
 	/* Find max frequency for mif */
 	data->max_freq[PPMU_MIF] =
