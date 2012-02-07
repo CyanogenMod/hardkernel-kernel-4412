@@ -1199,12 +1199,6 @@ static int vidioc_reqbufs(struct file *file, void *priv,
 	mfc_debug_enter();
 	mfc_debug(2, "Memory type: %d\n", reqbufs->memory);
 
-	if (reqbufs->memory == V4L2_MEMORY_USERPTR &&
-		reqbufs->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		mfc_err("V4L2_MEMORY_USERPTR is not supported for source.\n");
-		return -EINVAL;
-	}
-
 #if defined(CONFIG_S5P_MFC_VB2_ION)
 	if (ctx->fd_ion < 0) {
 		mfc_err("ION file descriptor is not set.\n");
@@ -1876,12 +1870,6 @@ static int s5p_mfc_buf_init(struct vb2_buffer *vb)
 			mfc_err("Plane memory not allocated.\n");
 			return -EINVAL;
 		}
-		mfc_debug(2, "Plane size: %ld, ctx->dec_src_buf_size: %d\n",
-				vb2_plane_size(vb, 0), dec->src_buf_size);
-		if (vb2_plane_size(vb, 0) < dec->src_buf_size) {
-			mfc_err("Plane buffer (OUTPUT) is too small.\n");
-			return -EINVAL;
-		}
 		buf->cookie.stream = mfc_plane_cookie(vb, 0);
 
 		if (call_cop(ctx, init_buf_ctrls, ctx, MFC_CTRL_TYPE_SRC, vb->v4l2_buf.index) < 0)
@@ -1900,6 +1888,7 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 {
 	struct vb2_queue *vq = vb->vb2_queue;
 	struct s5p_mfc_ctx *ctx = vq->drv_priv;
+	struct s5p_mfc_dec *dec = ctx->dec_priv;
 	unsigned int index = vb->v4l2_buf.index;
 
 	if (vq->type == V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
@@ -1913,11 +1902,14 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 		if (ctx->cacheable)
 			s5p_mfc_mem_cache_flush(vb, 2);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		/* FIXME: Cacheable option is not applied to source buffer */
-		/*
 		if (ctx->cacheable)
 			s5p_mfc_mem_cache_flush(vb, 1);
-		*/
+		mfc_debug(2, "Plane size: %ld, ctx->dec_src_buf_size: %d\n",
+				vb2_plane_size(vb, 0), dec->src_buf_size);
+		if (vb2_plane_size(vb, 0) < dec->src_buf_size) {
+			mfc_err("Plane buffer (OUTPUT) is too small.\n");
+			return -EINVAL;
+		}
 		if (call_cop(ctx, to_buf_ctrls, ctx, &ctx->src_ctrls[index]) < 0)
 			mfc_err("failed in to_buf_ctrls\n");
 	}
@@ -2175,7 +2167,7 @@ int s5p_mfc_init_dec_ctx(struct s5p_mfc_ctx *ctx)
 	ctx->vq_src.type = V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE;
 	ctx->vq_src.drv_priv = ctx;
 	ctx->vq_src.buf_struct_size = sizeof(struct s5p_mfc_buf);
-	ctx->vq_src.io_modes = VB2_MMAP;
+	ctx->vq_src.io_modes = VB2_MMAP | VB2_USERPTR;
 	ctx->vq_src.ops = &s5p_mfc_dec_qops;
 	ctx->vq_src.mem_ops = s5p_mfc_mem_ops();
 	ret = vb2_queue_init(&ctx->vq_src);
