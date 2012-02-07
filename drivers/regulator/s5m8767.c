@@ -188,8 +188,9 @@ unsigned int s5m8767_opmode_reg[][3] = {
 	{0x3, 0x1, 0x1},
 	{0x3, 0x1, 0x1}, /* BUCK9 */
 	/* 32KHZ */
-	{0x1, 0x0, 0x0},
-	{0x1, 0x0, 0x0},
+	{0x1, 0x1, 0x1},
+	{0x2, 0x2, 0x2},
+	{0x4, 0x4, 0x4},
 };
 
 static int s5m8767_get_register(struct regulator_dev *rdev, int *reg, int *pmic_en)
@@ -217,6 +218,9 @@ static int s5m8767_get_register(struct regulator_dev *rdev, int *reg, int *pmic_
 	case S5M8767_BUCK6 ... S5M8767_BUCK9:
 		*reg = S5M8767_REG_BUCK6CTRL1 + (reg_id - S5M8767_BUCK6) * 2;
 		break;
+	case S5M8767_AP_EN32KHZ ... S5M8767_BT_EN32KHZ:
+		*reg = S5M8767_REG_CTRL1;
+		break;
 	default:
 		return -EINVAL;
 	}
@@ -231,6 +235,7 @@ static int s5m8767_reg_is_enabled(struct regulator_dev *rdev)
 {
 	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = s5m8767->iodev->i2c;
+	int reg_id = s5m8767_get_reg_id(rdev);
 	int ret, reg;
 	int mask = 0xc0, pmic_en;
 	u8 val;
@@ -245,6 +250,23 @@ static int s5m8767_reg_is_enabled(struct regulator_dev *rdev)
 	if (ret)
 		return ret;
 
+	switch (reg_id) {
+	case S5M8767_LDO1 ... S5M8767_BUCK9:
+		mask = 0xc0;
+		break;
+	case S5M8767_AP_EN32KHZ:
+		mask = 0x01;
+		break;
+	case S5M8767_CP_EN32KHZ:
+		mask = 0x02;
+		break;
+	case S5M8767_BT_EN32KHZ:
+		mask = 0x04;
+		break;
+	default:
+		return -EINVAL;
+	}
+
 	return (val & mask) == pmic_en;
 }
 
@@ -252,12 +274,30 @@ static int s5m8767_reg_enable(struct regulator_dev *rdev)
 {
 	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = s5m8767->iodev->i2c;
+	int reg_id = s5m8767_get_reg_id(rdev);
 	int ret, reg;
-	int mask = 0xc0, pmic_en;
+	int mask, pmic_en;
 
 	ret = s5m8767_get_register(rdev, &reg, &pmic_en);
 	if (ret)
 		return ret;
+
+	switch (reg_id) {
+	case S5M8767_LDO1 ... S5M8767_BUCK9:
+		mask = 0xc0;
+		break;
+	case S5M8767_AP_EN32KHZ:
+		mask = 0x01;
+		break;
+	case S5M8767_CP_EN32KHZ:
+		mask = 0x02;
+		break;
+	case S5M8767_BT_EN32KHZ:
+		mask = 0x04;
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	return s5m_reg_update(i2c, reg, pmic_en, mask);
 }
@@ -266,12 +306,30 @@ static int s5m8767_reg_disable(struct regulator_dev *rdev)
 {
 	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = s5m8767->iodev->i2c;
+	int reg_id = s5m8767_get_reg_id(rdev);
 	int ret, reg;
-	int  mask = 0xc0, pmic_en;
+	int  mask, pmic_en;
 
 	ret = s5m8767_get_register(rdev, &reg, &pmic_en);
 	if (ret)
 		return ret;
+
+	switch (reg_id) {
+	case S5M8767_LDO1 ... S5M8767_BUCK9:
+		mask = 0xc0;
+		break;
+	case S5M8767_AP_EN32KHZ:
+		mask = 0x01;
+		break;
+	case S5M8767_CP_EN32KHZ:
+		mask = 0x02;
+		break;
+	case S5M8767_BT_EN32KHZ:
+		mask = 0x04;
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	return s5m_reg_update(i2c, reg, ~pmic_en, mask);
 }
@@ -613,6 +671,12 @@ static struct regulator_desc regulators[] = {
 	}, {
 		.name	= "EN32KHz CP",
 		.id	= S5M8767_CP_EN32KHZ,
+		.ops	= &s5m8767_others_ops,
+		.type	= REGULATOR_VOLTAGE,
+		.owner	= THIS_MODULE,
+	}, {
+		.name	= "EN32KHz BT",
+		.id	= S5M8767_BT_EN32KHZ,
 		.ops	= &s5m8767_others_ops,
 		.type	= REGULATOR_VOLTAGE,
 		.owner	= THIS_MODULE,
