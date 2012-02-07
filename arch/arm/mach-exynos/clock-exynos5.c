@@ -525,31 +525,18 @@ static struct clk *exynos5_clkset_cdrex_list[] = {
 	[1] = &exynos5_clk_mout_bpll.clk,
 };
 
-static struct clksrc_sources exynos5_clkset_mout_cdrex = {
+static struct clksrc_sources exynos5_clkset_mclk_cdrex = {
 	.sources	= exynos5_clkset_cdrex_list,
 	.nr_sources	= ARRAY_SIZE(exynos5_clkset_cdrex_list),
 };
 
-static struct clksrc_clk exynos5_clk_mout_cdrex = {
+static struct clksrc_clk exynos5_clk_mclk_cdrex = {
 	.clk	= {
-		.name		= "mout_cdrex",
+		.name		= "mclk_cdrex",
 	},
-	.sources = &exynos5_clkset_mout_cdrex,
-	.reg_src = { .reg = EXYNOS5_CLKSRC_CDREX, .shift = 4, .size = 1 },
-	.reg_div = { .reg = EXYNOS5_CLKDIV_CDREX, .shift = 16, .size = 3 },
-};
-
-static struct clksrc_clk __maybe_unused exynos5_clk_dout_aclk_cdrex = {
-	.clk	= {
-		.name		= "dout_aclk_cdrex",
-		.parent		= &exynos5_clk_mout_cdrex.clk,
-	},
-	.reg_div = { .reg = EXYNOS5_CLKDIV_CDREX, .shift = 0, .size = 3 },
-};
-
-static struct clk exynos5_clk_mclk_cdrex = {
-	.name		= "mclk_cdrex",
-	.parent		= &exynos5_clk_mout_cdrex.clk,
+	.sources = &exynos5_clkset_mclk_cdrex,
+	.reg_src = { .reg = EXYNOS5_CLKSRC_CDREX, .shift = 8, .size = 1 },
+	.reg_div = { .reg = EXYNOS5_CLKDIV_CDREX, .shift = 28, .size = 3 },
 };
 
 /* Core list of CMU_TOP side */
@@ -1930,8 +1917,7 @@ static struct clksrc_clk *exynos5_sysclks[] = {
 	&exynos5_clk_mout_cpu,
 	&exynos5_clk_dout_armclk,
 	&exynos5_clk_dout_arm2clk,
-	&exynos5_clk_mout_cdrex,
-	&exynos5_clk_dout_aclk_cdrex,
+	&exynos5_clk_mclk_cdrex,
 	&exynos5_clk_aclk_400,
 	&exynos5_clk_mout_aclk_333,
 	&exynos5_clk_dout_aclk_333,
@@ -2181,7 +2167,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	unsigned long vpllsrc;
 	unsigned long xtal;
 	unsigned long armclk;
-	unsigned long mout_cdrex;
+	unsigned long mclk_cdrex;
 	unsigned long aclk_400;
 	unsigned long aclk_333;
 	unsigned long aclk_266;
@@ -2226,7 +2212,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 			apll, bpll, cpll, mpll, epll, vpll);
 
 	armclk = clk_get_rate(&exynos5_clk_armclk);
-	mout_cdrex = clk_get_rate(&exynos5_clk_mclk_cdrex);
+	mclk_cdrex = clk_get_rate(&exynos5_clk_mclk_cdrex.clk);
 
 	aclk_400 = clk_get_rate(&exynos5_clk_aclk_400.clk);
 	aclk_333 = clk_get_rate(&exynos5_clk_aclk_333.clk);
@@ -2238,7 +2224,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	printk(KERN_INFO "EXYNOS5: ARMCLK=%ld, CDREX=%ld, ACLK400=%ld\n"
 			"ACLK333=%ld, ACLK266=%ld, ACLK200=%ld\n"
 			"ACLK166=%ld, ACLK66=%ld\n",
-			armclk, mout_cdrex, aclk_400,
+			armclk, mclk_cdrex, aclk_400,
 			aclk_333, aclk_266, aclk_200,
 			aclk_166, aclk_66);
 
@@ -2274,7 +2260,7 @@ void __init_or_cpufreq exynos5_setup_clocks(void)
 	if (clk_set_parent(&exynos5_clk_aclk_266_isp.clk, &exynos5_clk_aclk_266.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 			exynos5_clk_aclk_266.clk.name, exynos5_clk_aclk_266_isp.clk.name);
-	if (clk_set_parent(&exynos5_clk_aclk_400_isp.clk, &exynos5_clk_mout_aclk_400_isp.clk))
+	if (clk_set_parent(&exynos5_clk_aclk_400_isp.clk, &exynos5_clk_dout_aclk_400_isp.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 			exynos5_clk_mout_aclk_400_isp.clk.name, exynos5_clk_aclk_400_isp.clk.name);
 	if (clk_set_parent(&exynos5_clk_sclk_uart_isp.clk, &exynos5_clk_mout_mpll_user.clk))
