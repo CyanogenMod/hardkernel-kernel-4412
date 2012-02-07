@@ -196,6 +196,9 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 	struct s5p_vm_region *region;
 	struct s5p_iovmm *vmm;
 	int order;
+#ifdef CONFIG_S5P_SYSTEM_MMU_WA5250ERR
+	size_t iova_size = 0;
+#endif
 
 	BUG_ON(!sg);
 
@@ -212,7 +215,13 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 	size = PAGE_ALIGN(size + start_off);
 
 	order = __fls(min(size, (size_t)SZ_1M));
+#ifdef CONFIG_S5P_SYSTEM_MMU_WA5250ERR
+	iova_size = ALIGN(size, SZ_64K);
+	start = (dma_addr_t)gen_pool_alloc_aligned(vmm->vmm_pool, iova_size,
+									order);
+#else
 	start = (dma_addr_t)gen_pool_alloc_aligned(vmm->vmm_pool, size, order);
+#endif
 	if (!start)
 		goto err_map_nomem_lock;
 
@@ -259,6 +268,21 @@ dma_addr_t iovmm_map(struct device *dev, struct scatterlist *sg, off_t offset,
 	if (mapped_size < size)
 		goto err_map_map;
 
+#ifdef CONFIG_S5P_SYSTEM_MMU_WA5250ERR
+	if (iova_size != size) {
+		/* System MMU v3 support in SMDK5250 EVT0 */
+		addr = start + size;
+		size = iova_size;
+
+		for (; addr < start + size; addr += PAGE_SIZE) {
+			if (iommu_map(vmm->domain, addr,
+					page_to_phys(ZERO_PAGE(0)), 0, 0)) {
+				goto err_map_map;
+			}
+			mapped_size += PAGE_SIZE;
+		}
+	}
+#endif
 	region = kmalloc(sizeof(*region), GFP_KERNEL);
 	if (!region)
 		goto err_map_map;

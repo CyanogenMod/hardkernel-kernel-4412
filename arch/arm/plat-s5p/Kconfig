@@ -63,6 +63,16 @@ config S5P_SYSTEM_MMU_DEBUG
 	help
 	  Say Y here if you need detailed message while System MMU driver works
 
+config S5P_SYSTEM_MMU_WA5250ERR
+	bool "Ensure 64KB-aligned mapping for DMA I/O buffers"
+	depends on S5P_SYSTEM_MMU && CPU_EXYNOS5250
+	default y
+	help
+	  Select this to avoid unexpected fault occurred by System MMU v3.0.
+	  This is just a makeshift option for those problems.
+
+	  If unsure, n here.
+
 config IOMMU_API
 	bool
 
