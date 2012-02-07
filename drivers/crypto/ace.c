@@ -1723,11 +1723,16 @@ static void sha1_export_ctx_to_sw(struct shash_desc *desc)
 	struct sha1_state *sw_ctx = shash_desc_ctx(&sctx->sw_desc);
 	int i;
 
+	if (sctx->prelen_low == 0 && sctx->prelen_high == 0)
+		crypto_shash_alg(&sw_tfm[sctx->type])
+				->init(&sctx->sw_desc);
+	else {
+		for (i = 0; i < SHA1_DIGEST_SIZE/4; i++)
+			sw_ctx->state[i] = be32_to_cpu(sctx->state[i]);
+	}
+
 	sw_ctx->count = (((u64)sctx->prelen_high << 29) |
 			(sctx->prelen_low >> 3)) + sctx->buflen;
-
-	for (i = 0; i < SHA1_DIGEST_SIZE/4; i++)
-		sw_ctx->state[i] = be32_to_cpu(sctx->state[i]);
 
 	if (sctx->buflen)
 		memcpy(sw_ctx->buffer, sctx->buffer, sctx->buflen);
@@ -1739,11 +1744,16 @@ static void sha256_export_ctx_to_sw(struct shash_desc *desc)
 	struct sha256_state *sw_ctx = shash_desc_ctx(&sctx->sw_desc);
 	int i;
 
+	if (sctx->prelen_low == 0 && sctx->prelen_high == 0)
+		crypto_shash_alg(&sw_tfm[sctx->type])
+				->init(&sctx->sw_desc);
+	else {
+		for (i = 0; i < SHA256_DIGEST_SIZE/4; i++)
+			sw_ctx->state[i] = be32_to_cpu(sctx->state[i]);
+	}
+
 	sw_ctx->count = (((u64)sctx->prelen_high << 29) |
 			(sctx->prelen_low >> 3)) + sctx->buflen;
-
-	for (i = 0; i < SHA256_DIGEST_SIZE/4; i++)
-		sw_ctx->state[i] = be32_to_cpu(sctx->state[i]);
 
 	if (sctx->buflen)
 		memcpy(sw_ctx->buf, sctx->buffer, sctx->buflen);
