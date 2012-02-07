@@ -662,18 +662,10 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 
 	hdmi_entity_info_print(hdmi_dev);
 
-#if defined(CONFIG_ARCH_EXYNOS4)
-	ret = pm_runtime_get_sync(dev);
-	if (ret)
-		goto fail_vdev;
-#endif
-
 	/* initialize hdcp resource */
 	ret = hdcp_prepare(hdmi_dev);
 	if (ret)
 		goto fail_vdev;
-
-	hdmi_hpd_enable(hdmi_dev, 1);
 
 	dev_info(dev, "probe sucessful\n");
 
