@@ -2833,12 +2833,9 @@ void s5p_tvif_ctrl_destructor(void)
 
 void s5p_tvif_ctrl_suspend(void)
 {
-	unsigned long spin_flags;
 	tvout_dbg("\n");
 	if (s5p_tvif_ctrl_private.running) {
-		spin_lock_irqsave(&s5ptv_status.tvout_lock, spin_flags);
 		s5p_tvif_ctrl_internal_stop();
-		spin_unlock_irqrestore(&s5ptv_status.tvout_lock, spin_flags);
 #ifdef CONFIG_VCM
 		s5p_tvout_vcm_deactivate();
 #endif
