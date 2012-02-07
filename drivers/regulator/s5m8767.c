@@ -331,7 +331,7 @@ static int s5m8767_reg_disable(struct regulator_dev *rdev)
 		return -EINVAL;
 	}
 
-	return s5m_reg_update(i2c, reg, ~pmic_en, mask);
+	return s5m_reg_update(i2c, reg, ~mask, mask);
 }
 
 static int s5m8767_get_voltage_register(struct regulator_dev *rdev, int *_reg)
