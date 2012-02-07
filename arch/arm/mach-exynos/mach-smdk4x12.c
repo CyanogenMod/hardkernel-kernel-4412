@@ -3571,16 +3571,16 @@ static void __init exynos4_reserve_mem(void)
 	};
 #ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
 	static struct cma_region regions_secure[] = {
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD_VIDEO
-		{
-			.name = "video",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD_VIDEO * SZ_1K,
-		},
-#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3
 		{
 			.name = "fimc3",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC3 * SZ_1K,
+		},
+#endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD_VIDEO
+		{
+			.name = "video",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMD_VIDEO * SZ_1K,
 		},
 #endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
