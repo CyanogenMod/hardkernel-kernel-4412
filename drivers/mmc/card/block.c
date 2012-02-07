@@ -1191,9 +1191,11 @@ static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
 			!card->ext_csd.packed_event_en)
 		goto no_packed;
 
-	if (rq_data_dir(cur) == READ)
+	if (rq_data_dir(cur) == READ &&
+			(card->host->caps2 & MMC_CAP2_PACKED_RD))
 		max_packed_rw = card->ext_csd.max_packed_reads;
-	else
+	else if ((rq_data_dir(cur) == WRITE) &&
+			(card->host->caps2 & MMC_CAP2_PACKED_WR))
 		max_packed_rw = card->ext_csd.max_packed_writes;
 
 	if (max_packed_rw == 0)
