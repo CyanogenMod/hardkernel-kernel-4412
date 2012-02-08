@@ -1071,7 +1071,7 @@ void gsc_cap_irq_handler(struct gsc_dev *gsc)
 	int done_index;
 
 	done_index = gsc_hw_get_done_output_buf_index(gsc);
-	gsc_info("done_index : %d", done_index);
+	gsc_dbg("done_index : %d", done_index);
 	if (done_index < 0)
 		gsc_err("All buffers are masked\n");
 	test_bit(ST_CAPT_RUN, &gsc->state) ? :

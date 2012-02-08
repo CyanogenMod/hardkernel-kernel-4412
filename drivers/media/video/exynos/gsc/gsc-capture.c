@@ -150,6 +150,7 @@ static void gsc_capture_buf_queue(struct vb2_buffer *vb)
 	struct gsc_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
 	struct gsc_dev *gsc = ctx->gsc_dev;
 	struct gsc_capture_device *cap = &gsc->cap;
+	struct exynos_md *mdev = gsc->mdev[MDEV_CAPTURE];
 	int min_bufs, ret;
 	unsigned long flags;
 
@@ -159,7 +160,7 @@ static void gsc_capture_buf_queue(struct vb2_buffer *vb)
 		gsc_err("Failed to prepare output addr");
 
 	if (!test_bit(ST_CAPT_SUSPENDED, &gsc->state)) {
-		gsc_info("buf_index : %d", vb->v4l2_buf.index);
+		gsc_dbg("buf_index : %d", vb->v4l2_buf.index);
 		gsc_hw_set_output_buf_masking(gsc, vb->v4l2_buf.index, 0);
 	}
 
@@ -170,7 +171,11 @@ static void gsc_capture_buf_queue(struct vb2_buffer *vb)
 		!test_bit(ST_CAPT_STREAM, &gsc->state)) {
 		if (!test_and_set_bit(ST_CAPT_PIPE_STREAM, &gsc->state)) {
 			spin_unlock_irqrestore(&gsc->slock, flags);
-			gsc_cap_pipeline_s_stream(gsc, 1);
+			if (!mdev->is_flite_on)
+				gsc_cap_pipeline_s_stream(gsc, 1);
+			else
+				v4l2_subdev_call(gsc->cap.sd_cap, video,
+							s_stream, 1);
 			return;
 		}
 
@@ -262,7 +267,6 @@ static int gsc_capture_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 	set_bit(ST_CAPT_STREAM, &gsc->state);
 
 	return 0;
-
 }
 
 static int gsc_capture_start_streaming(struct vb2_queue *q)
@@ -270,6 +274,7 @@ static int gsc_capture_start_streaming(struct vb2_queue *q)
 	struct gsc_ctx *ctx = q->drv_priv;
 	struct gsc_dev *gsc = ctx->gsc_dev;
 	struct gsc_capture_device *cap = &gsc->cap;
+	struct exynos_md *mdev = gsc->mdev[MDEV_CAPTURE];
 	int min_bufs;
 
 	gsc_hw_set_sw_reset(gsc);
@@ -281,7 +286,11 @@ static int gsc_capture_start_streaming(struct vb2_queue *q)
 		!test_bit(ST_CAPT_STREAM, &gsc->state)) {
 		if (!test_and_set_bit(ST_CAPT_PIPE_STREAM, &gsc->state)) {
 			gsc_info("");
-			gsc_cap_pipeline_s_stream(gsc, 1);
+			if (!mdev->is_flite_on)
+				gsc_cap_pipeline_s_stream(gsc, 1);
+			else
+				v4l2_subdev_call(gsc->cap.sd_cap, video,
+							s_stream, 1);
 		}
 	}
 
@@ -290,6 +299,7 @@ static int gsc_capture_start_streaming(struct vb2_queue *q)
 
 static int gsc_capture_state_cleanup(struct gsc_dev *gsc)
 {
+	struct exynos_md *mdev = gsc->mdev[MDEV_CAPTURE];
 	unsigned long flags;
 	bool streaming;
 
@@ -302,10 +312,15 @@ static int gsc_capture_state_cleanup(struct gsc_dev *gsc)
 	set_bit(ST_CAPT_SUSPENDED, &gsc->state);
 	spin_unlock_irqrestore(&gsc->slock, flags);
 
-	if (streaming)
-		return gsc_cap_pipeline_s_stream(gsc, 0);
-	else
+	if (streaming) {
+		if (mdev->is_flite_on)
+			return gsc_cap_pipeline_s_stream(gsc, 0);
+		else
+			return v4l2_subdev_call(gsc->cap.sd_cap, video,
+							s_stream, 0);
+	} else {
 		return 0;
+	}
 }
 
 static int gsc_cap_stop_capture(struct gsc_dev *gsc)
@@ -650,17 +665,19 @@ static void gsc_set_cam_clock(struct gsc_dev *gsc, bool on)
 static int __gsc_cap_pipeline_initialize(struct gsc_dev *gsc,
 					 struct media_entity *me, bool prep)
 {
+	struct exynos_md *mdev = gsc->mdev[MDEV_CAPTURE];
 	int ret = 0;
 
-	if (prep)
+	if (prep) {
 		gsc_cap_pipeline_prepare(gsc, me);
-	if ((!gsc->pipeline.sensor || !gsc->pipeline.flite) &&
-			!gsc->pipeline.disp)
-		return -EINVAL;
+		if ((!gsc->pipeline.sensor || !gsc->pipeline.flite) &&
+				!gsc->pipeline.disp)
+			return -EINVAL;
+	}
 
 	gsc_set_cam_clock(gsc, true);
 
-	if (gsc->pipeline.sensor && gsc->pipeline.flite)
+	if (!mdev->is_flite_on && gsc->pipeline.sensor && gsc->pipeline.flite)
 		ret = gsc_cap_pipeline_s_power(gsc, 1);
 
 	return ret;
@@ -720,9 +737,10 @@ err:
 
 int __gsc_cap_pipeline_shutdown(struct gsc_dev *gsc)
 {
+	struct exynos_md *mdev = gsc->mdev[MDEV_CAPTURE];
 	int ret = 0;
 
-	if (gsc->pipeline.sensor && gsc->pipeline.flite)
+	if (!mdev->is_flite_on && gsc->pipeline.sensor && gsc->pipeline.flite)
 		ret = gsc_cap_pipeline_s_power(gsc, 0);
 
 	if (ret && ret != -ENXIO)
@@ -863,14 +881,10 @@ static int gsc_capture_streamon(struct file *file, void *priv,
 	if (gsc_cap_active(gsc))
 		return -EBUSY;
 
-	if (p->disp) {
+	if (p->disp)
 		media_entity_pipeline_start(&p->disp->entity, p->pipe);
-	} else if (p->sensor) {
+	else if (p->sensor)
 		media_entity_pipeline_start(&p->sensor->entity, p->pipe);
-	} else {
-		gsc_err("Error pipeline");
-		return -EPIPE;
-	}
 
 	ret = gsc_cap_link_validate(gsc);
 	if (ret)
@@ -897,8 +911,13 @@ static int gsc_capture_streamoff(struct file *file, void *priv,
 	}
 
 	ret = vb2_streamoff(&gsc->cap.vbq, type);
-	if (ret == 0)
-		media_entity_pipeline_stop(&sd->entity);
+	if (ret == 0) {
+		if (p->disp)
+			media_entity_pipeline_stop(&p->disp->entity);
+		else if (p->sensor)
+			media_entity_pipeline_stop(&p->sensor->entity);
+	}
+
 	return ret;
 }
 
