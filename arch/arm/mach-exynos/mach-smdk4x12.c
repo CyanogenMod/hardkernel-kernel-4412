@@ -705,7 +705,7 @@ static struct s3c_platform_fimc fimc_plat = {
 #ifdef CONFIG_VIDEO_S5K3H7
 		&s5k3h7,
 #endif
-#ifdef CONFIG_VIDEO_S5K4e5
+#ifdef CONFIG_VIDEO_S5K4E5
 		&s5k4e5,
 #endif
 #ifdef CONFIG_VIDEO_S5K6A3
