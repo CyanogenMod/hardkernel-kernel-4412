@@ -59,6 +59,7 @@ static void s5m8767_data_to_tm(u8 *data, struct rtc_time *tm,
 	tm->tm_mday = data[RTC_DATE] & 0x1f;
 	tm->tm_mon = (data[RTC_MONTH] & 0x0f) - 1;
 	tm->tm_year = (data[RTC_YEAR1] & 0x7f) + (bcd2bin(data[RTC_YEAR2]) * 100);
+	tm->tm_year -= 1900;
 	tm->tm_yday = 0;
 	tm->tm_isdst = 0;
 }
@@ -77,7 +78,7 @@ static void s5m8767_tm_to_data(struct rtc_time *tm, u8 *data)
 	data[RTC_DATE] = tm->tm_mday;
 	data[RTC_MONTH] = tm->tm_mon + 1;
 	data[RTC_YEAR1] = tm->tm_year % 100;
-	data[RTC_YEAR2] = bin2bcd((tm->tm_year) / 100);
+	data[RTC_YEAR2] = bin2bcd((tm->tm_year + 1900) / 100);
 }
 
 static inline int s5m8767_rtc_set_time_reg(struct s5m_rtc_info *info)
@@ -209,7 +210,7 @@ static int s5m_rtc_set_time(struct device *dev, struct rtc_time *tm)
 		tm->tm_hour, tm->tm_min, tm->tm_sec, tm->tm_wday);
 
 	ret = s5m_bulk_write(info->rtc, S5M87XX_RTC_SEC, 8, data);
-        if (ret)
+        if (ret < 0)
                 return ret;
 
 	ret = s5m8767_rtc_set_time_reg(info);
@@ -494,10 +495,12 @@ static int s5m8767_rtc_init_reg(struct s5m_rtc_info *info)
 	int ret;
 	struct rtc_time tm;
 
-
-	ret = s5m_reg_read(info->rtc, S5M87XX_RTC_YEAR1, &tp_read);
-	if (ret < 0)
+	ret = s5m_reg_read(info->rtc, S5M87XX_RTC_UDR_CON, &tp_read);
+	if (ret < 0) {
+		dev_err(info->dev, "%s: fail to read control reg(%d)\n",
+			__func__, ret);
 		return ret;
+	}
 
 	/* Set RTC control register : Binary mode, 24hour mdoe */
 	data[0] = (1 << BCD_EN_SHIFT) | (1 << MODEL24_SHIFT);
@@ -512,7 +515,7 @@ static int s5m8767_rtc_init_reg(struct s5m_rtc_info *info)
 	}
 
 	/* In first boot time, Set rtc time to 1/1/2012 00:00:00(SUN) */
-	if (tp_read == 0) {
+	if ((tp_read & RTC_TCON_MASK) == 0) {
 		dev_info(info->dev, "rtc init\n");
 		tm.tm_sec = 0;
 		tm.tm_min = 0;
@@ -524,6 +527,14 @@ static int s5m8767_rtc_init_reg(struct s5m_rtc_info *info)
 		tm.tm_yday = 0;
 		tm.tm_isdst = 0;
 		ret = s5m_rtc_set_time(info->dev, &tm);
+	}
+
+	ret = s5m_reg_update(info->rtc, S5M87XX_RTC_UDR_CON,
+			     tp_read | RTC_TCON_MASK, RTC_TCON_MASK);
+	if (ret < 0) {
+		dev_err(info->dev, "%s: fail to update TCON reg(%d)\n",
+			__func__, ret);
+		return ret;
 	}
 
 	return ret;
@@ -552,9 +563,7 @@ static int __devinit s5m_rtc_probe(struct platform_device *pdev)
 		break;
 
 	case S5M8767X:
-		info->rtc_24hr_mode = 1;
 		info->irq = s5m87xx->irq_base + S5M8767_IRQ_RTCA1;
-
 		break;
 
 	default:

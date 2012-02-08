@@ -63,6 +63,8 @@ enum s5m87xx_rtc_reg {
 /* RTC Update Register1 */
 #define RTC_UDR_SHIFT		0
 #define RTC_UDR_MASK		(1 << RTC_UDR_SHIFT)
+#define RTC_TCON_SHIFT		1
+#define RTC_TCON_MASK		(1 << RTC_TCON_SHIFT)
 #define RTC_TIME_EN_SHIFT	3
 #define RTC_TIME_EN_MASK	(1 << RTC_TIME_EN_SHIFT)
 
