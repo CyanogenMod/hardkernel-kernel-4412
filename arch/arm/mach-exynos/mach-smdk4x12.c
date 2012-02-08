@@ -3637,7 +3637,7 @@ static void __init exynos4_reserve_mem(void)
 		"s5p-smem/fimc=fimc3;"
 		"s5p-smem/mfc-shm=mfc1,mfc-normal;";
 
-	s5p_cma_region_reserve(regions, regions_secure, SZ_64M, map);
+	s5p_cma_region_reserve(regions, regions_secure, 0, map);
 }
 #else
 static inline void exynos4_reserve_mem(void)
