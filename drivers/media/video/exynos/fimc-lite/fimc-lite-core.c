@@ -361,8 +361,8 @@ static irqreturn_t flite_irq_handler(int irq, void *priv)
 			clear_bit(FLITE_ST_RUN, &flite->state);
 		}
 	}
-#endif
 unlock:
+#endif
 	spin_unlock(&flite->slock);
 
 	return IRQ_HANDLED;
