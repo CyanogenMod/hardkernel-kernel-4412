@@ -349,11 +349,12 @@ static irqreturn_t flite_irq_handler(int irq, void *priv)
 		if (!list_empty(&flite->active_buf_q)) {
 			buf = active_queue_pop(flite);
 			if (!test_bit(FLITE_ST_RUN, &flite->state)) {
+				flite_info("error interrupt");
 				vb2_buffer_done(&buf->vb, VB2_BUF_STATE_ERROR);
 				goto unlock;
 			}
 			vb2_buffer_done(&buf->vb, VB2_BUF_STATE_DONE);
-			flite_info("done_index : %d", buf->vb.v4l2_buf.index);
+			flite_dbg("done_index : %d", buf->vb.v4l2_buf.index);
 		}
 		if (!list_empty(&flite->pending_buf_q)) {
 			buf = pending_queue_pop(flite);
@@ -361,9 +362,8 @@ static irqreturn_t flite_irq_handler(int irq, void *priv)
 					buf->vb.v4l2_buf.index);
 			active_queue_add(flite, buf);
 		}
-		if (flite->active_buf_cnt == 0) {
+		if (flite->active_buf_cnt == 0)
 			clear_bit(FLITE_ST_RUN, &flite->state);
-		}
 	}
 unlock:
 #endif
@@ -997,6 +997,7 @@ static int flite_start_streaming(struct vb2_queue *q)
 	flite->active_buf_cnt = 0;
 	flite->pending_buf_cnt = 0;
 
+	flite->mdev->is_flite_on= true;
 	return 0;
 }
 
@@ -1039,6 +1040,8 @@ static int flite_stop_streaming(struct vb2_queue *q)
 
 	if (!flite_active(flite))
 		return -EINVAL;
+
+	flite->mdev->is_flite_on= false;
 
 	return flite_stop_capture(flite);
 }
@@ -1107,7 +1110,7 @@ int flite_prepare_addr(struct flite_dev *flite, struct vb2_buffer *vb,
 
 	addr->y = flite->vb2->plane_addr(vb, 0);
 
-	flite_info("ADDR: y= 0x%X", addr->y);
+	flite_dbg("ADDR: y= 0x%X", addr->y);
 
 	return 0;
 }
@@ -2057,6 +2060,7 @@ static int flite_probe(struct platform_device *pdev)
 		flite_err("failed to get flite.%d clock", flite->id);
 		goto err_entity;
 	}
+	flite->mdev->is_flite_on= false;
 #endif
 	platform_set_drvdata(flite->pdev, flite->sd_flite);
 	pm_runtime_enable(&pdev->dev);

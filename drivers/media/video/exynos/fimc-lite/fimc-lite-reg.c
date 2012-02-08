@@ -291,7 +291,7 @@ void flite_hw_set_dma_offset(struct flite_dev *dev)
 void flite_hw_set_output_addr(struct flite_dev *dev,
 			     struct flite_addr *addr, int index)
 {
-	flite_info("dst_buf[%d]: 0x%X", index, addr->y);
+	flite_dbg("dst_buf[%d]: 0x%X", index, addr->y);
 
 	writel(addr->y, dev->regs + FLITE_REG_CIOSA);
 }
