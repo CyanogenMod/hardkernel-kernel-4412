@@ -417,7 +417,7 @@ static void exynos5250_target_for_int(int div_index)
 
 	tmp |= ((clkdiv_top[div_index][0] << EXYNOS5_CLKDIV_TOP1_ACLK400_ISP_SHIFT) |
 		(clkdiv_top[div_index][1] << EXYNOS5_CLKDIV_TOP1_ACLK400_IOP_SHIFT) |
-		(clkdiv_top[div_index][2] << EXYNOS5_CLKDIV_TOP1_ACLK66_PRE_SHIFT) |
+		(clkdiv_top[div_index][4] << EXYNOS5_CLKDIV_TOP1_ACLK66_PRE_SHIFT) |
 		(clkdiv_top[div_index][9] << EXYNOS5_CLKDIV_TOP1_ACLK300_GSCL_SHIFT));
 
 
