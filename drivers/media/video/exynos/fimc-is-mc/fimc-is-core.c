@@ -84,7 +84,6 @@ struct vb2_ion_buf {
 
 	dma_addr_t			kva;
 	dma_addr_t			dva;
-	size_t				offset;
 	unsigned long			size;
 
 	struct scatterlist		*sg;
