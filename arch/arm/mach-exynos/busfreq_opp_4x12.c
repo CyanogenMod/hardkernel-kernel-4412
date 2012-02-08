@@ -28,6 +28,7 @@
 #include <linux/slab.h>
 #include <linux/opp.h>
 #include <linux/clk.h>
+#include <linux/cpufreq.h>
 #include <mach/busfreq_exynos4.h>
 
 #include <asm/mach-types.h>
@@ -541,6 +542,28 @@ struct opp *exynos4x12_monitor(struct busfreq_data *data)
 	return opp;
 }
 
+#define ARM_INT_CORRECTION 160160
+
+static int exynos4x12_busfreq_cpufreq_transition(struct notifier_block *nb,
+					    unsigned long val, void *data)
+{
+	struct cpufreq_freqs *freqs = (struct cpufreq_freqs *)data;
+	struct busfreq_data *bus_data = container_of(nb, struct busfreq_data,
+			exynos_cpufreq_notifier);
+
+	switch (val) {
+	case CPUFREQ_PRECHANGE:
+		if (freqs->new > 900000 && freqs->old < 1000000)
+			dev_lock(bus_data->dev, bus_data->dev, ARM_INT_CORRECTION);
+		break;
+	case CPUFREQ_POSTCHANGE:
+		if (freqs->old > 900000 && freqs->new < 1000000)
+			dev_unlock(bus_data->dev, bus_data->dev);
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
 int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 {
 	unsigned int i;
@@ -633,6 +656,13 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 		regulator_put(data->vdd_int);
 		return -ENODEV;
 	}
+
+	data->exynos_cpufreq_notifier.notifier_call =
+				exynos4x12_busfreq_cpufreq_transition;
+
+	if (cpufreq_register_notifier(&data->exynos_cpufreq_notifier,
+	   CPUFREQ_TRANSITION_NOTIFIER))
+		pr_err("Falied to register cpufreq notifier\n");
 
 	return 0;
 }

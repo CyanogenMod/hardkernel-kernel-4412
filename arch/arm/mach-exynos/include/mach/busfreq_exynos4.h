@@ -49,6 +49,7 @@ struct busfreq_data {
 	struct notifier_block exynos_buspm_notifier;
 	struct notifier_block exynos_reboot_notifier;
 	struct notifier_block exynos_request_notifier;
+	struct notifier_block exynos_cpufreq_notifier;
 	struct early_suspend busfreq_early_suspend_handler;
 	struct attribute_group busfreq_attr_group;
 	int (*init)	(struct device *dev, struct busfreq_data *data);
