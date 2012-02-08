@@ -2153,19 +2153,21 @@ static void __init exynos4_reserve_mem(void)
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
 		},
 #endif
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC_NORMAL
+		{
+			.name = "mfc-normal",
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC_NORMAL * SZ_1K,
+			{ .alignment = 1 << 17 },
+		},
+#endif
 #ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1
 		{
-#ifdef CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION
-			.name = "mfc-normal",
-#else
 			.name = "mfc1",
-#endif
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC1 * SZ_1K,
 			{ .alignment = 1 << 17 },
 		},
 #endif
-#if !defined(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) && \
-	defined(CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0)
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
 		{
 			.name = "mfc0",
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
@@ -2215,10 +2217,10 @@ static void __init exynos4_reserve_mem(void)
 			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_FIMC1 * SZ_1K,
 		},
 #endif
-#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0
+#ifdef CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC_SECURE
 		{
 			.name = "mfc-secure",
-			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC0 * SZ_1K,
+			.size = CONFIG_VIDEO_SAMSUNG_MEMSIZE_MFC_SECURE * SZ_1K,
 			{
 				.alignment = SZ_64M,
 			},
