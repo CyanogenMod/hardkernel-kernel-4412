@@ -874,25 +874,32 @@ static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
 		s5m_reg_update(i2c, S5M8767_REG_DVSRAMP, 0x02, 0x02);
 
 	if (s5m8767->buck2_ramp || s5m8767->buck3_ramp
-		|| s5m8767->buck4_ramp) {
-		if (s5m8767->ramp_delay < 10)
+	    || s5m8767->buck4_ramp) {
+		switch (s5m8767->ramp_delay) {
+		case 5:
 			s5m_reg_update(i2c, S5M8767_REG_DVSRAMP,
 					0x40, 0xf0);
-		else if (s5m8767->ramp_delay == 10)
+			break;
+		case 10:
 			s5m_reg_update(i2c, S5M8767_REG_DVSRAMP,
 					0x90, 0xf0);
-		else if (s5m8767->ramp_delay == 25)
+			break;
+		case 25:
 			s5m_reg_update(i2c, S5M8767_REG_DVSRAMP,
 					0xd0, 0xf0);
-		else if (s5m8767->ramp_delay == 50)
+			break;
+		case 50:
 			s5m_reg_update(i2c, S5M8767_REG_DVSRAMP,
 					0xe0, 0xf0);
-		else if (s5m8767->ramp_delay == 100)
+			break;
+		case 100:
 			s5m_reg_update(i2c, S5M8767_REG_DVSRAMP,
 					0xf0, 0xf0);
-		else
+			break;
+		default:
 			s5m_reg_update(i2c, S5M8767_REG_DVSRAMP,
 					0x90, 0xf0);
+		}
 	}
 
 	for (i = 0; i < pdata->num_regulators; i++) {
