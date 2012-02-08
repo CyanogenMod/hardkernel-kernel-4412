@@ -67,17 +67,27 @@ config VIDEO_SAMSUNG_MEMSIZE_FIMC3
 
 config VIDEO_SAMSUNG_MEMSIZE_MFC
 	int "Memory size in kbytes for MFC"
-	depends on ((VIDEO_MFC5X) && (VIDEO_MFC_MEM_PORT_COUNT = 1))
+	depends on VIDEO_MFC5X && (VIDEO_MFC_MEM_PORT_COUNT = 1) && (!EXYNOS4_CONTENT_PATH_PROTECTION)
 	default "65536"
 
 config VIDEO_SAMSUNG_MEMSIZE_MFC0
 	int "Memory size in kbytes for MFC port0"
-	depends on ((VIDEO_MFC5X) && (!VIDEO_MFC_MEM_PORT_COUNT = 1))
+	depends on VIDEO_MFC5X && (VIDEO_MFC_MEM_PORT_COUNT = 2) && (!EXYNOS4_CONTENT_PATH_PROTECTION)
 	default "41984"
 
 config VIDEO_SAMSUNG_MEMSIZE_MFC1
 	int "Memory size in kbytes for MFC port1"
-	depends on ((VIDEO_MFC5X) && (!VIDEO_MFC_MEM_PORT_COUNT = 1))
+	depends on VIDEO_MFC5X && (VIDEO_MFC_MEM_PORT_COUNT = 2) && (!EXYNOS4_CONTENT_PATH_PROTECTION)
+	default "41984"
+
+config VIDEO_SAMSUNG_MEMSIZE_MFC_SECURE
+	int "Memory size in kbytes for MFC Secure"
+	depends on VIDEO_MFC5X && EXYNOS4_CONTENT_PATH_PROTECTION
+	default "41984"
+
+config VIDEO_SAMSUNG_MEMSIZE_MFC_NORMAL
+	int "Memory size in kbytes for MFC Normal"
+	depends on VIDEO_MFC5X && EXYNOS4_CONTENT_PATH_PROTECTION
 	default "41984"
 
 config VIDEO_SAMSUNG_MEMSIZE_JPEG
