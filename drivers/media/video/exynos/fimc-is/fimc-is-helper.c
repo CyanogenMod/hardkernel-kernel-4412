@@ -1193,6 +1193,7 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_PREVIEW_STILL, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
+		writel(dev->setfile.sub_index, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IS_MODE_PREVIEW_VIDEO:
@@ -1200,6 +1201,7 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_PREVIEW_VIDEO, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
+		writel(dev->setfile.sub_index, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IS_MODE_CAPTURE_STILL:
@@ -1207,6 +1209,7 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_CAPTURE_STILL, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
+		writel(dev->setfile.sub_index, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	case IS_MODE_CAPTURE_VIDEO:
@@ -1214,6 +1217,7 @@ void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val)
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_CAPTURE_VIDEO, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
+		writel(dev->setfile.sub_index, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 		break;
 	}

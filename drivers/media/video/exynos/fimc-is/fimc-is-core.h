@@ -234,7 +234,7 @@ struct is_fw {
 struct is_setfile {
 	const struct firmware	*info;
 	int			state;
-	int			ver;
+	u32			sub_index;
 	u32			base;
 	u32			size;
 };

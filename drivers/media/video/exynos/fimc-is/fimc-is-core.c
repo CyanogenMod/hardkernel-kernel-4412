@@ -104,7 +104,7 @@ static void fimc_is_irq_handler_general(struct fimc_is_dev *dev)
 	case IHC_FRAME_DONE:
 		break;
 	case IHC_AA_DONE:
-		err("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
+		dbg("AA_DONE - %d, %d, %d\n", dev->i2h_cmd.arg[0],
 			dev->i2h_cmd.arg[1], dev->i2h_cmd.arg[2]);
 		switch (dev->i2h_cmd.arg[0]) {
 		/* SEARCH: Occurs when search is requested at continuous AF */
@@ -317,16 +317,11 @@ static int fimc_is_probe(struct platform_device *pdev)
 	dev->vb2 = &fimc_is_vb2_ion;
 #endif
 
-	/* Init v4l2 sub device */
-	v4l2_subdev_init(&dev->sd, &fimc_is_subdev_ops);
-	dev->sd.owner = THIS_MODULE;
-	strcpy(dev->sd.name, MODULE_NAME);
-	v4l2_set_subdevdata(&dev->sd, pdev);
-
-	platform_set_drvdata(pdev, &dev->sd);
-
 	/* Init and register V4L2 device */
 	v4l2_dev = &dev->video[FIMC_IS_VIDEO_NUM_BAYER].v4l2_dev;
+	if (!v4l2_dev->name[0])
+		snprintf(v4l2_dev->name, sizeof(v4l2_dev->name),
+			 "%s.isp", dev_name(&dev->pdev->dev));
 	ret = v4l2_device_register(NULL, v4l2_dev);
 
 	snprintf(dev->video[FIMC_IS_VIDEO_NUM_BAYER].vd.name,
@@ -361,7 +356,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 		goto err_vd_reg;
 	}
 
-	dbg("VIDEO NODE :: ISP %d minor : %d\n",
+	printk(KERN_INFO "FIMC-IS Video node :: ISP %d minor : %d\n",
 		dev->video[FIMC_IS_VIDEO_NUM_BAYER].vd.num,
 		dev->video[FIMC_IS_VIDEO_NUM_BAYER].vd.minor);
 #endif
@@ -405,6 +400,8 @@ static int fimc_is_probe(struct platform_device *pdev)
 	dev->sensor.id = 0;
 	dev->p_region_index1 = 0;
 	dev->p_region_index2 = 0;
+	dev->sensor.offset_x = 16;
+	dev->sensor.offset_y = 12;
 	atomic_set(&dev->p_region_num, 0);
 	set_bit(IS_ST_IDLE, &dev->state);
 	set_bit(IS_PWR_ST_POWEROFF, &dev->power);

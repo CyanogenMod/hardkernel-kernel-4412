@@ -446,6 +446,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 	dbg("Shared region addr = 0x%08x\n",
 				virt_to_phys(&dev->is_p_region->shared));
 	dev->frame_count = 0;
+	dev->setfile.sub_index = 0;
 	/* Init sequence 3: Stream off */
 	dbg("Stream Off\n");
 	clear_bit(IS_ST_STREAM_OFF, &dev->state);
@@ -2917,6 +2918,38 @@ static int fimc_is_v4l2_cmd_fd(struct fimc_is_dev *dev, int value)
 	return ret;
 }
 
+static int fimc_is_v4l2_shot_mode(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, value);
+	IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
+	IS_INC_PARAM_NUM(dev);
+	fimc_is_mem_cache_clean((void *)dev->is_p_region, IS_PARAM_SIZE);
+	fimc_is_hw_set_param(dev);
+	return ret;
+}
+
+static int fimc_is_v4l2_mode_change(struct fimc_is_dev *dev, int value)
+{
+	int ret = 0;
+	if (!test_bit(IS_ST_INIT_DONE, &dev->state)) {
+		err("Not init done state!!\n");
+		return -EINVAL;
+	}
+	clear_bit(IS_ST_CHANGE_MODE, &dev->state);
+	fimc_is_hw_change_mode(dev, value);
+	ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_CHANGE_MODE, &dev->state),
+						FIMC_IS_SHUTDOWN_TIMEOUT);
+	if (!ret) {
+		err("Mode change timeout !!\n");
+		return -EINVAL;
+	}
+	printk(KERN_INFO "CAC margin - %d, %d\n", dev->sensor.offset_x,
+							dev->sensor.offset_y);
+	return ret;
+}
+
 static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	int ret = 0;
@@ -2925,21 +2958,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	switch (ctrl->id) {
 	case V4L2_CID_IS_S_SCENARIO_MODE:
-		if (!test_bit(IS_ST_INIT_DONE, &dev->state)) {
-			err("Not init done state!!\n");
-			return -EINVAL;
-		}
-		clear_bit(IS_ST_CHANGE_MODE, &dev->state);
-		fimc_is_hw_change_mode(dev, ctrl->value);
-		ret = wait_event_timeout(dev->irq_queue1,
-				test_bit(IS_ST_CHANGE_MODE, &dev->state),
-				FIMC_IS_SHUTDOWN_TIMEOUT);
-		if (!ret) {
-			err("Mode change timeout !!\n");
-			return -EINVAL;
-		}
-		printk(KERN_INFO "CAC margin - %d, %d\n", dev->sensor.offset_x,
-							dev->sensor.offset_y);
+		ret = fimc_is_v4l2_mode_change(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_S_FORMAT_SCENARIO:
 		switch (ctrl->value) {
@@ -2960,12 +2979,7 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 		break;
 	case V4L2_CID_IS_CAMERA_SHOT_MODE_NORMAL:
-		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, ctrl->value);
-		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
-		IS_INC_PARAM_NUM(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-			IS_PARAM_SIZE);
-		fimc_is_hw_set_param(dev);
+		ret = fimc_is_v4l2_shot_mode(dev, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_FRAME_RATE:
 		ret = fimc_is_v4l2_frame_rate(dev, ctrl->value);
@@ -3170,6 +3184,9 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ret = fimc_is_v4l2_digital_zoom(dev, ctrl->value);
 		break;
 	case V4L2_CID_CAMERA_VT_MODE:
+		dev->setfile.sub_index = 1;
+		printk(KERN_INFO "VT mode is set - %d\n",
+						dev->setfile.sub_index);
 		break;
 	case V4L2_CID_CAMERA_VGA_BLUR:
 		break;
@@ -3629,7 +3646,10 @@ static int fimc_is_s_stream(struct v4l2_subdev *sd, int enable)
 		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
 		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, 0);
-		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
+		if (dev->scenario_id == ISS_PREVIEW_VIDEO)
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 33333);
+		else
+			IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, 66666);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
@@ -3650,6 +3670,7 @@ static int fimc_is_s_stream(struct v4l2_subdev *sd, int enable)
 			err("wait timeout : Stream off\n");
 			return -EINVAL;
 		}
+		dev->setfile.sub_index = 0;
 	}
 	return ret;
 }
