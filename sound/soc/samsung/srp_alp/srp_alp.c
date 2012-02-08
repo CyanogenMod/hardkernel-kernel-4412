@@ -50,7 +50,6 @@
 static struct srp_info srp;
 static DEFINE_MUTEX(srp_mutex);
 static DECLARE_WAIT_QUEUE_HEAD(read_wq);
-static DECLARE_WAIT_QUEUE_HEAD(decinfo_wq);
 
 int srp_get_status(int cmd)
 {
@@ -93,11 +92,6 @@ static void srp_check_stream_info(void)
 				+ SRP_ARM_INTERRUPT_CODE);
 		srp.dec_info.sample_rate >>= SRP_ARM_INTR_CODE_SRINF_SHIFT;
 		srp.dec_info.sample_rate &= SRP_ARM_INTR_CODE_SRINF_MASK;
-	}
-
-	if (srp.dec_info.sample_rate && srp.dec_info.channels) {
-		srp_info("Sample Rate[%d], Channels[%d]\n", srp.dec_info.sample_rate,
-								srp.dec_info.channels);
 	}
 }
 
@@ -506,21 +500,15 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case SRP_GET_DEC_INFO:
-		if (!srp.decoding_started) {
+		if (!srp.dec_info.sample_rate || !srp.dec_info.channels) {
 			srp.dec_info.sample_rate = 0;
 			srp.dec_info.channels = 0;
 		} else {
-			if (srp.dec_info.sample_rate && srp.dec_info.channels) {
-				srp_info("Already get dec info!\n");
-			} else {
-				ret = wait_event_interruptible_timeout(decinfo_wq,
-						srp.dec_info.channels != 0, HZ / 2);
-				if (!ret) {
-					srp_err("Couldn't Get Decoding info!!!\n");
-					ret = SRP_ERROR_GETINFO_FAIL;
-				}
-			}
+			srp_info("Sample Rate[%d], Channels[%d]\n",
+					srp.dec_info.sample_rate,
+					srp.dec_info.channels);
 		}
+
 		val = copy_to_user((struct srp_dec_info *)arg, &srp.dec_info,
 						sizeof(struct srp_dec_info));
 		break;
@@ -625,7 +613,6 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned int irq_info = readl(srp.commbox + SRP_INFORMATION);
 	unsigned int irq_code_req;
 	unsigned int wakeup_read = 0;
-	unsigned int wakeup_decinfo = 0;
 
 	srp_debug("IRQ: Code [0x%x], Pending [%s], CFGR [0x%x]", irq_code,
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN",
@@ -640,7 +627,6 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 		case SRP_INTR_CODE_NOTIFY_INFO:
 			srp_info("Notify SRP interrupt!\n");
 			srp_check_stream_info();
-			wakeup_decinfo = 1;
 			break;
 
 		case SRP_INTR_CODE_IBUF_REQUEST:
@@ -710,11 +696,6 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 		srp.is_pending = 1;
 		if (waitqueue_active(&read_wq))
 			wake_up_interruptible(&read_wq);
-	}
-
-	if (wakeup_decinfo) {
-		if (waitqueue_active(&decinfo_wq))
-			wake_up_interruptible(&decinfo_wq);
 	}
 
 	srp_debug("IRQ Exited!\n");
