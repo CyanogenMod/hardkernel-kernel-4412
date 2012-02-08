@@ -554,7 +554,7 @@ static int exynos4x12_busfreq_cpufreq_transition(struct notifier_block *nb,
 	switch (val) {
 	case CPUFREQ_PRECHANGE:
 		if (freqs->new > 900000 && freqs->old < 1000000)
-			dev_lock(bus_data->dev, bus_data->dev, ARM_INT_CORRECTION);
+			dev_lock_sync(bus_data->dev, bus_data->dev, ARM_INT_CORRECTION);
 		break;
 	case CPUFREQ_POSTCHANGE:
 		if (freqs->old > 900000 && freqs->new < 1000000)

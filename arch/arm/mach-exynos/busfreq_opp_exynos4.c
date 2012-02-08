@@ -54,6 +54,7 @@ BLOCKING_NOTIFIER_HEAD(exynos_busfreq_notifier_list);
 struct busfreq_control {
 	struct opp *opp_lock;
 	struct device *dev;
+	struct busfreq_data *data;
 };
 
 static struct busfreq_control bus_ctrl;
@@ -107,36 +108,22 @@ struct opp *step_down(struct busfreq_data *data, int step)
 	return opp;
 }
 
-static void exynos_busfreq_timer(struct work_struct *work)
+static unsigned int _target(struct busfreq_data *data, struct opp *new)
 {
-	struct delayed_work *delayed_work = to_delayed_work(work);
-	struct busfreq_data *data = container_of(delayed_work, struct busfreq_data,
-			worker);
-	struct opp *opp;
+	unsigned int index;
 	unsigned int voltage;
-	unsigned long currfreq;
 	unsigned long newfreq;
-	unsigned int index = 0;
+	unsigned long currfreq;
 
-	opp = data->monitor(data);
-
-	if (bus_ctrl.opp_lock)
-		opp = bus_ctrl.opp_lock;
-
-	ppmu_start(data->dev);
-
-	newfreq = opp_get_freq(opp);
-
-	index = data->get_table_index(opp);
-
-	mutex_lock(&busfreq_lock);
-
-	if (opp == data->curr_opp || newfreq == 0 || data->use == false)
-		goto out;
-
+	newfreq = opp_get_freq(new);
 	currfreq = opp_get_freq(data->curr_opp);
 
-	voltage = opp_get_voltage(opp);
+	index = data->get_table_index(new);
+
+	if (newfreq == 0 || newfreq == currfreq || data->use == false)
+		return data->get_table_index(data->curr_opp);
+
+	voltage = opp_get_voltage(new);
 	if (newfreq > currfreq) {
 		regulator_set_voltage(data->vdd_mif, voltage,
 				voltage + 25000);
@@ -158,9 +145,33 @@ static void exynos_busfreq_timer(struct work_struct *work)
 		regulator_set_voltage(data->vdd_int, voltage,
 				voltage + 25000);
 	}
-	data->curr_opp = opp;
+	data->curr_opp = new;
 
-out:
+	return index;
+}
+
+static void exynos_busfreq_timer(struct work_struct *work)
+{
+	struct delayed_work *delayed_work = to_delayed_work(work);
+	struct busfreq_data *data = container_of(delayed_work, struct busfreq_data,
+			worker);
+	struct opp *opp;
+	unsigned int index;
+
+	opp = data->monitor(data);
+
+	ppmu_start(data->dev);
+
+	mutex_lock(&busfreq_lock);
+
+	if (data->force_opp)
+		opp = data->force_opp;
+
+	if (bus_ctrl.opp_lock)
+		opp = bus_ctrl.opp_lock;
+
+	index = _target(data, opp);
+
 	update_busfreq_stat(data, index);
 	mutex_unlock(&busfreq_lock);
 	queue_delayed_work(system_freezable_wq, &data->worker, data->sampling_rate);
@@ -172,23 +183,12 @@ static int exynos_buspm_notifier_event(struct notifier_block *this,
 	struct busfreq_data *data = container_of(this, struct busfreq_data,
 			exynos_buspm_notifier);
 
-	unsigned long voltage = opp_get_voltage(data->max_opp);
-	unsigned long freq = opp_get_freq(data->max_opp);
-	unsigned int index;
-
 	switch (event) {
 	case PM_SUSPEND_PREPARE:
 		mutex_lock(&busfreq_lock);
-		data->use = false;
-		regulator_set_voltage(data->vdd_mif, voltage, voltage + 25000);
-		voltage = data->get_int_volt(freq);
-		regulator_set_voltage(data->vdd_int, voltage, voltage + 25000);
-		index = data->get_table_index(data->max_opp);
-		if (data->busfreq_prepare)
-			data->busfreq_prepare(index);
-		data->target(index);
-		data->curr_opp = data->max_opp;
+		_target(data, data->max_opp);
 		mutex_unlock(&busfreq_lock);
+		data->use = false;
 		return NOTIFY_OK;
 	case PM_POST_RESTORE:
 	case PM_POST_SUSPEND:
@@ -223,45 +223,17 @@ static int exynos_busfreq_request_event(struct notifier_block *this,
 	struct busfreq_data *data = container_of(this, struct busfreq_data,
 			exynos_request_notifier);
 	struct opp *opp = opp_find_freq_ceil(data->dev, &newfreq);
-	unsigned long curr_freq;
-	unsigned int index, voltage;
-
-	index = data->get_table_index(opp);
-
-	if (newfreq == 0 || data->use == false)
-		return -EINVAL;
+	unsigned int index;
 
 	mutex_lock(&busfreq_lock);
 
-	curr_freq = opp_get_freq(data->curr_opp);
-	if (curr_freq >= newfreq) {
-		mutex_unlock(&busfreq_lock);
-		return NOTIFY_DONE;
-	}
+	if (data->force_opp)
+		opp = data->force_opp;
 
-	voltage = opp_get_voltage(opp);
-	if (newfreq > curr_freq) {
-		regulator_set_voltage(data->vdd_mif, voltage,
-				voltage + 25000);
-		voltage = data->get_int_volt(index);
-		regulator_set_voltage(data->vdd_int, voltage,
-				voltage + 25000);
-		if (data->busfreq_prepare)
-			data->busfreq_prepare(index);
-	}
+	if (bus_ctrl.opp_lock)
+		opp = bus_ctrl.opp_lock;
 
-	data->target(index);
-
-	if (newfreq < curr_freq) {
-		if (data->busfreq_post)
-			data->busfreq_post(index);
-		regulator_set_voltage(data->vdd_mif, voltage,
-				voltage + 25000);
-		voltage = data->get_int_volt(index);
-		regulator_set_voltage(data->vdd_int, voltage,
-				voltage + 25000);
-	}
-	data->curr_opp = opp;
+	index = _target(data, opp);
 
 	update_busfreq_stat(data, index);
 
@@ -359,9 +331,18 @@ int exynos_request_register(struct notifier_block *n)
 	return blocking_notifier_chain_register(&exynos_busfreq_notifier_list, n);
 }
 
-void exynos_request_apply(unsigned long freq, struct device *dev)
+void exynos_request_apply(unsigned long freq, struct device *dev, bool sync)
 {
-	blocking_notifier_call_chain(&exynos_busfreq_notifier_list, freq, dev);
+	struct opp *opp = opp_find_freq_ceil(bus_ctrl.data->dev, &freq);
+	unsigned long newfreq;
+	newfreq = opp_get_freq(opp);
+
+	if (sync) {
+		_target(bus_ctrl.data, opp);
+	//	bus_ctrl.data->force_opp = opp; FOR FIX LOCK */
+	} else {
+		blocking_notifier_call_chain(&exynos_busfreq_notifier_list, newfreq, dev);
+	}
 }
 
 static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
@@ -411,6 +392,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	data->sampling_rate = usecs_to_jiffies(100000);
 	bus_ctrl.opp_lock =  NULL;
 	bus_ctrl.dev =  data->dev;
+	bus_ctrl.data =  data;
 
 	INIT_DELAYED_WORK(&data->worker, exynos_busfreq_timer);
 
