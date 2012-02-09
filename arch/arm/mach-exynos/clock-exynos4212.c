@@ -334,6 +334,7 @@ static struct clksrc_clk *exynos4212_sysclks[] = {
 	&exynos4212_clk_mout_aclk_400_mcuisp,
 	&exynos4212_clk_mout_aclk_266,
 	&exynos4212_clk_mout_aclk_200,
+	&exynos4212_clk_dout_aclk_200,
 	&exynos4212_clk_aclk_400_mcuisp,
 	&exynos4212_clk_aclk_266,
 	&exynos4212_clk_mout_jpeg0,
