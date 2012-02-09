@@ -26,6 +26,11 @@ static struct resource s5p_hdmi_resources[] = {
 		.flags	= IORESOURCE_MEM,
 	},
 	[1] = {
+		.start	= IRQ_TVOUT_HPD,
+		.end	= IRQ_TVOUT_HPD,
+		.flags	= IORESOURCE_IRQ,
+	},
+	[2] = {
 		.start	= IRQ_HDMI,
 		.end	= IRQ_HDMI,
 		.flags	= IORESOURCE_IRQ,
