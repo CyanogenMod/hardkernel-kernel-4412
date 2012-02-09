@@ -2109,6 +2109,29 @@ int fimc_streamoff_output(void *fh)
 	return 0;
 }
 
+static int fimc_outdev_start_operation(struct fimc_control *ctrl,
+				       struct fimc_ctx *ctx, int idx)
+{
+	int ret = 0;
+	unsigned long spin_flags;
+
+	spin_lock_irqsave(&ctrl->out->slock, spin_flags);
+	ret = fimc_outdev_start_camif(ctrl);
+	if (ret < 0) {
+		fimc_err("Fail: fimc_start_camif\n");
+		return -EINVAL;
+	}
+
+	ctrl->out->idxs.active.idx = idx;
+	ctrl->out->idxs.active.ctx = ctx->ctx_num;
+
+	ctrl->status = FIMC_STREAMON;
+	ctx->status = FIMC_STREAMON;
+	spin_unlock_irqrestore(&ctrl->out->slock, spin_flags);
+
+	return ret;
+}
+
 static int fimc_qbuf_output_single_buf(struct fimc_control *ctrl,
 				       struct fimc_ctx *ctx,
 				       int idx)
@@ -2160,17 +2183,11 @@ static int fimc_qbuf_output_single_buf(struct fimc_control *ctrl,
 			fimc_hwset_output_address(ctrl, &buf_set, i);
 	}
 
-	ret = fimc_outdev_start_camif(ctrl);
+	ret = fimc_outdev_start_operation(ctrl, ctx, idx);
 	if (ret < 0) {
-		fimc_err("Fail: fimc_start_camif\n");
+		fimc_err("Fail: fimc_start_operation\n");
 		return -EINVAL;
 	}
-
-	ctrl->out->idxs.active.idx = idx;
-	ctrl->out->idxs.active.ctx = ctx->ctx_num;
-
-	ctrl->status = FIMC_STREAMON;
-	ctx->status = FIMC_STREAMON;
 
 	return 0;
 }
@@ -2215,17 +2232,11 @@ static int fimc_qbuf_output_multi_buf(struct fimc_control *ctrl,
 			fimc_hwset_output_address(ctrl, &buf_set, i);
 	}
 
-	ret = fimc_outdev_start_camif(ctrl);
+	ret = fimc_outdev_start_operation(ctrl, ctx, idx);
 	if (ret < 0) {
-		fimc_err("Fail: fimc_start_camif\n");
+		fimc_err("Fail: fimc_start_operation\n");
 		return -EINVAL;
 	}
-
-	ctrl->out->idxs.active.idx = idx;
-	ctrl->out->idxs.active.ctx = ctx->ctx_num;
-
-	ctrl->status = FIMC_STREAMON;
-	ctx->status = FIMC_STREAMON;
 
 	return 0;
 }
@@ -2313,18 +2324,11 @@ static int fimc_qbuf_output_dma_auto(struct fimc_control *ctrl,
 				fimc_hwset_output_address(ctrl, &buf_set, i);
 		}
 
-		ret = fimc_outdev_start_camif(ctrl);
+		ret = fimc_outdev_start_operation(ctrl, ctx, idx);
 		if (ret < 0) {
-			fimc_err("Fail: fimc_start_camif\n");
+			fimc_err("Fail: fimc_start_operation\n");
 			return -EINVAL;
 		}
-
-		ctrl->out->idxs.active.idx = idx;
-		ctrl->out->idxs.active.ctx = ctx->ctx_num;
-
-		ctrl->status = FIMC_STREAMON;
-		ctx->status = FIMC_STREAMON;
-
 		break;
 
 	default:
@@ -2571,6 +2575,7 @@ int fimc_g_fmt_vid_out(struct file *filp, void *fh, struct v4l2_format *f)
 
 		spin_lock_init(&ctrl->out->lock_in);
 		spin_lock_init(&ctrl->out->lock_out);
+		spin_lock_init(&ctrl->out->slock);
 
 		for (i = 0; i < FIMC_INQUEUES; i++) {
 			ctrl->out->inq[i].ctx = -1;

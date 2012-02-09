@@ -325,6 +325,7 @@ struct fimc_outinfo {
 	int			last_ctx;
 	spinlock_t		lock_in;
 	spinlock_t		lock_out;
+	spinlock_t		slock;
 	struct fimc_idx		inq[FIMC_INQUEUES];
 	struct fimc_ctx		ctx[FIMC_MAX_CTXS];
 	bool			ctx_used[FIMC_MAX_CTXS];
