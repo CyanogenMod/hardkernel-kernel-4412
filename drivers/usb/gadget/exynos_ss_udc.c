@@ -24,13 +24,11 @@
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
 
+#include <linux/platform_data/exynos_usb3_drd.h>
+
 #include <asm/byteorder.h>
 
-#include <mach/map.h>
-
 #include <plat/regs-usb3-exynos-drd.h>
-#include <plat/udc-ss.h>
-#include <plat/usb-phy.h>
 
 #include "exynos_ss_udc.h"
 
@@ -1866,7 +1864,7 @@ static int __devinit exynos_ss_udc_initep(struct exynos_ss_udc *udc,
  */
 static void exynos_ss_udc_phy_set(struct platform_device *pdev)
 {
-	struct exynos_ss_udc_plat *plat = pdev->dev.platform_data;
+	struct exynos_usb3_drd_pdata *pdata = pdev->dev.platform_data;
 	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
 	/* The reset values:
 	 *	GUSB2PHYCFG(0)	= 0x00002400
@@ -1880,8 +1878,8 @@ static void exynos_ss_udc_phy_set(struct platform_device *pdev)
 		EXYNOS_USB3_GUSB3PIPECTLx_PHYSoftRst);
 
 	/* PHY initialization */
-	if (plat && plat->phy_init)
-		plat->phy_init(pdev, S5P_USB_PHY_DRD);
+	if (pdata && pdata->phy_init)
+		pdata->phy_init(pdev, pdata->phy_type);
 
 	__bic32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
 		EXYNOS_USB3_GUSB2PHYCFGx_PHYSoftRst);
@@ -1911,7 +1909,7 @@ static void exynos_ss_udc_phy_set(struct platform_device *pdev)
  */
 static void exynos_ss_udc_phy_unset(struct platform_device *pdev)
 {
-	struct exynos_ss_udc_plat *plat = pdev->dev.platform_data;
+	struct exynos_usb3_drd_pdata *pdata = pdev->dev.platform_data;
 	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
 
 	__orr32(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
@@ -1920,8 +1918,8 @@ static void exynos_ss_udc_phy_unset(struct platform_device *pdev)
 	__orr32(udc->regs + EXYNOS_USB3_GUSB3PIPECTL(0),
 		EXYNOS_USB3_GUSB3PIPECTLx_SuspSSPhy);
 
-	if (plat && plat->phy_exit)
-		plat->phy_exit(pdev, S5P_USB_PHY_DRD);
+	if (pdata && pdata->phy_exit)
+		pdata->phy_exit(pdev, pdata->phy_type);
 
 	dev_dbg(udc->dev, "GUSB2PHYCFG(0)=0x%08x, GUSB3PIPECTL(0)=0x%08x",
 			  readl(udc->regs + EXYNOS_USB3_GUSB2PHYCFG(0)),

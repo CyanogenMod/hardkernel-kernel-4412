@@ -30,11 +30,8 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/dma-mapping.h>
+#include <linux/platform_data/exynos_usb3_drd.h>
 
-#include <mach/regs-pmu.h>
-#include <plat/cpu.h>
-#include <plat/udc-ss.h>
-#include <plat/usb-phy.h>
 #include <plat/regs-usb3-exynos-drd.h>
 
 #include "xhci.h"
@@ -83,7 +80,7 @@ static u32 exynos_xhci_change_mode(struct usb_hcd *hcd)
 
 static void exynos_xhci_phy_set(struct platform_device *pdev)
 {
-	struct exynos_xhci_plat *plat = pdev->dev.platform_data;
+	struct exynos_usb3_drd_pdata *pdata = pdev->dev.platform_data;
 	struct exynos_xhci_hcd *exynos_xhci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = exynos_xhci->hcd;
 	/* The reset values:
@@ -98,8 +95,8 @@ static void exynos_xhci_phy_set(struct platform_device *pdev)
 			    EXYNOS_USB3_GUSB3PIPECTLx_PHYSoftRst);
 
 	/* PHY initialization */
-	if (plat && plat->phy_init)
-		plat->phy_init(pdev, S5P_USB_PHY_DRD);
+	if (pdata && pdata->phy_init)
+		pdata->phy_init(pdev, pdata->phy_type);
 
 	__bic32(hcd->regs + EXYNOS_USB3_GUSB2PHYCFG(0),
 			    EXYNOS_USB3_GUSB2PHYCFGx_PHYSoftRst);
@@ -137,7 +134,7 @@ static void exynos_xhci_phy_set(struct platform_device *pdev)
 
 static void exynos_xhci_phy_unset(struct platform_device *pdev)
 {
-	struct exynos_xhci_plat *plat = pdev->dev.platform_data;
+	struct exynos_usb3_drd_pdata *pdata = pdev->dev.platform_data;
 	struct exynos_xhci_hcd *exynos_xhci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = exynos_xhci->hcd;
 
@@ -152,9 +149,9 @@ static void exynos_xhci_phy_unset(struct platform_device *pdev)
 		readl(hcd->regs + EXYNOS_USB3_GUSB2PHYCFG(0)),
 		readl(hcd->regs + EXYNOS_USB3_GUSB3PIPECTL(0)));
 
-	/* PHY initialization */
-	if (plat && plat->phy_exit)
-		plat->phy_exit(pdev, S5P_USB_PHY_DRD);
+	/* PHY shutdown */
+	if (pdata && pdata->phy_exit)
+		pdata->phy_exit(pdev, pdata->phy_type);
 }
 
 #ifdef CONFIG_PM

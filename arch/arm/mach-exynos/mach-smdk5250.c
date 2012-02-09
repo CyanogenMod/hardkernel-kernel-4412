@@ -28,6 +28,7 @@
 #include <linux/fb.h>
 #include <linux/smsc911x.h>
 #include <linux/delay.h>
+#include <linux/platform_data/exynos_usb3_drd.h>
 
 #include <video/platform_lcd.h>
 
@@ -57,7 +58,6 @@
 #include <plat/backlight.h>
 #include <plat/ehci.h>
 #include <plat/usbgadget.h>
-#include <plat/udc-ss.h>
 #include <plat/s5p-mfc.h>
 #include <plat/fimg2d.h>
 #include <plat/tv-core.h>
@@ -1947,22 +1947,22 @@ static void __init smdk5250_usbgadget_init(void)
 #endif
 
 #ifdef CONFIG_EXYNOS_DEV_SS_UDC
-static struct exynos_ss_udc_plat smdk5250_ss_udc_pdata;
+static struct exynos_usb3_drd_pdata smdk5250_ss_udc_pdata;
 
 static void __init smdk5250_ss_udc_init(void)
 {
-	struct exynos_ss_udc_plat *pdata = &smdk5250_ss_udc_pdata;
+	struct exynos_usb3_drd_pdata *pdata = &smdk5250_ss_udc_pdata;
 
 	exynos_ss_udc_set_platdata(pdata);
 }
 #endif
 
 #ifdef CONFIG_USB_XHCI_EXYNOS
-static struct exynos_xhci_plat smdk5250_xhci_pdata;
+static struct exynos_usb3_drd_pdata smdk5250_xhci_pdata;
 
 static void __init smdk5250_xhci_init(void)
 {
-	struct exynos_xhci_plat *pdata = &smdk5250_xhci_pdata;
+	struct exynos_usb3_drd_pdata *pdata = &smdk5250_xhci_pdata;
 
 	exynos_xhci_set_platdata(pdata);
 }
