@@ -52,6 +52,11 @@ int s5p_hpd_read_gpio(struct platform_device *pdev)
 	return gpio_get_value(HDMI_GPX(7));
 }
 
+int s5p_v4l2_hpd_read_gpio(void)
+{
+	return gpio_get_value(HDMI_GPX(7));
+}
+
 void s5p_cec_cfg_gpio(struct platform_device *pdev)
 {
 	s3c_gpio_cfgpin(HDMI_GPX(6), S3C_GPIO_SFN(0x3));
