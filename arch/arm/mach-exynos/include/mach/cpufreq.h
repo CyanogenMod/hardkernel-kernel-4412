@@ -57,6 +57,14 @@ int exynos_cpufreq_upper_limit(unsigned int nId,
 			enum cpufreq_level_index cpufreq_level);
 void exynos_cpufreq_upper_limit_free(unsigned int nId);
 
+/*
+ * This level fix API set highset priority level lock.
+ * Please use this carefully, with other lock API
+ */
+int exynos_cpufreq_level_fix(unsigned int freq);
+void exynos_cpufreq_level_unfix(void);
+int exynos_cpufreq_is_fixed(void);
+
 #define MAX_INDEX	10
 
 struct exynos_dvfs_info {

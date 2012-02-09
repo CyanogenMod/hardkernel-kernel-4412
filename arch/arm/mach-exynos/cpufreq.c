@@ -201,6 +201,11 @@ int exynos_cpufreq_lock(unsigned int nId,
 	if (!exynos_info)
 		return -EPERM;
 
+	if (exynos_cpufreq_disable) {
+		pr_info("CPUFreq is already fixed\n");
+		return -EPERM;
+	}
+
 	policy = cpufreq_cpu_get(0);
 	if (!policy)
 		return -EPERM;
@@ -307,6 +312,11 @@ int exynos_cpufreq_upper_limit(unsigned int nId,
 	if (!exynos_info)
 		return -EPERM;
 
+	if (exynos_cpufreq_disable) {
+		pr_info("CPUFreq is already fixed\n");
+		return -EPERM;
+	}
+
 	policy = cpufreq_cpu_get(0);
 	if (!policy)
 		return -EPERM;
@@ -391,6 +401,46 @@ void exynos_cpufreq_upper_limit_free(unsigned int nId)
 	}
 	mutex_unlock(&set_cpu_freq_lock);
 }
+
+/* This API serve highest priority level locking */
+int exynos_cpufreq_level_fix(unsigned int freq)
+{
+	struct cpufreq_policy *policy;
+	int ret = 0;
+
+	if (!exynos_cpufreq_init_done)
+		return -EPERM;
+
+	policy = cpufreq_cpu_get(0);
+	if (!policy)
+		return -EPERM;
+
+	if (exynos_cpufreq_disable) {
+		pr_info("CPUFreq is already fixed\n");
+		return -EPERM;
+	}
+	ret = exynos_target(policy, freq, CPUFREQ_RELATION_L);
+
+	exynos_cpufreq_disable = true;
+	return ret;
+
+}
+EXPORT_SYMBOL_GPL(exynos_cpufreq_level_fix);
+
+void exynos_cpufreq_level_unfix(void)
+{
+	if (!exynos_cpufreq_init_done)
+		return;
+
+	exynos_cpufreq_disable = false;
+}
+EXPORT_SYMBOL_GPL(exynos_cpufreq_level_unfix);
+
+int exynos_cpufreq_is_fixed(void)
+{
+	return exynos_cpufreq_disable;
+}
+EXPORT_SYMBOL_GPL(exynos_cpufreq_is_fixed);
 
 #ifdef CONFIG_PM
 static int exynos_cpufreq_suspend(struct cpufreq_policy *policy)
