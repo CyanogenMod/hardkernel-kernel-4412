@@ -24,6 +24,9 @@
 #include <plat/pd.h>
 
 #include <mach/secmem.h>
+#include <mach/cpufreq.h>
+
+#define DRM_CPU_FREQ	400000
 
 struct miscdevice secmem;
 struct secmem_crypto_driver_ftn *crypto_driver;
@@ -105,10 +108,15 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case SECMEM_IOC_SET_DRM_ONOFF:
 	{
 		int val = 0;
+		unsigned int cpufreq;
+
 		if (copy_from_user(&val, (int __user *)arg, sizeof(int)))
 			return -EFAULT;
 
 		if (val) {
+			exynos_cpufreq_get_level(DRM_CPU_FREQ, &cpufreq);
+			exynos_cpufreq_lock(DVFS_LOCK_ID_DRM, cpufreq);
+
 			if (drm_onoff == false) {
 				drm_onoff = true;
 				pm_runtime_forbid((*(secmem.this_device)).parent);
@@ -116,6 +124,8 @@ static long secmem_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			} else
 				printk(KERN_ERR "%s: DRM is already on\n", __func__);
 		} else {
+			exynos_cpufreq_lock_free(DVFS_LOCK_ID_DRM);
+
 			if (drm_onoff == true) {
 				drm_onoff = false;
 				pm_runtime_allow((*(secmem.this_device)).parent);
