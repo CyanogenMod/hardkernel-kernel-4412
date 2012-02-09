@@ -597,7 +597,8 @@ static int __devinit hdmi_probe(struct platform_device *pdev)
 		goto fail_regs;
 	}
 
-	ret = request_irq(res->start, hdmi_irq_handler, 0, "hdmi", hdmi_dev);
+	ret = request_irq(res->start, hdmi_irq_handler,
+			IRQ_TYPE_EDGE_BOTH, "hdmi", hdmi_dev);
 	if (ret) {
 		dev_err(dev, "request interrupt failed.\n");
 		goto fail_regs;
