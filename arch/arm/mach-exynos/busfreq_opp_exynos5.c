@@ -121,8 +121,10 @@ static void _target(struct busfreq_data *data,
 
 	opp = opp_find_freq_exact(data->dev[type], newfreq, true);
 
-	if (bus_ctrl.lock[type])
+	if (bus_ctrl.lock[type]) {
 		opp = bus_ctrl.lock[type];
+		newfreq = opp_get_freq(opp);
+	}
 
 	index = data->get_table_index(newfreq, type);
 
@@ -352,9 +354,9 @@ int exynos_request_register(struct notifier_block *n)
 	return blocking_notifier_chain_register(&exynos_busfreq_notifier_list, n);
 }
 
-void exynos_request_apply(unsigned long freq, struct device *dev, bool sync)
+void exynos_request_apply(unsigned long freq, bool fix, bool disable)
 {
-	blocking_notifier_call_chain(&exynos_busfreq_notifier_list, freq, dev);
+	blocking_notifier_call_chain(&exynos_busfreq_notifier_list, freq, NULL);
 }
 
 static __devinit int exynos_busfreq_probe(struct platform_device *pdev)

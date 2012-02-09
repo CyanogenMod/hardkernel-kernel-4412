@@ -79,7 +79,7 @@ struct busfreq_table {
 	unsigned int clk_dmc1div;
 };
 
-void exynos_request_apply(unsigned long freq, struct device *dev, bool sync);
+void exynos_request_apply(unsigned long freq, bool fix, bool disable);
 unsigned long step_down(struct busfreq_data *data, enum ppmu_type type, int step);
 
 int exynos5250_init(struct device *dev, struct busfreq_data *data);

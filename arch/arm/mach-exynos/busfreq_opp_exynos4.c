@@ -49,7 +49,6 @@
 #define BUSFREQ_DEBUG	1
 
 static DEFINE_MUTEX(busfreq_lock);
-BLOCKING_NOTIFIER_HEAD(exynos_busfreq_notifier_list);
 
 struct busfreq_control {
 	struct opp *opp_lock;
@@ -217,31 +216,6 @@ static int exynos_busfreq_reboot_event(struct notifier_block *this,
 	return NOTIFY_DONE;
 }
 
-static int exynos_busfreq_request_event(struct notifier_block *this,
-		unsigned long newfreq, void *device)
-{
-	struct busfreq_data *data = container_of(this, struct busfreq_data,
-			exynos_request_notifier);
-	struct opp *opp = opp_find_freq_ceil(data->dev, &newfreq);
-	unsigned int index;
-
-	mutex_lock(&busfreq_lock);
-
-	if (data->force_opp)
-		opp = data->force_opp;
-
-	if (bus_ctrl.opp_lock)
-		opp = bus_ctrl.opp_lock;
-
-	index = _target(data, opp);
-
-	update_busfreq_stat(data, index);
-
-	mutex_unlock(&busfreq_lock);
-	printk(KERN_INFO "REQUEST Notifier for BUSFREQ\n");
-	return NOTIFY_DONE;
-}
-
 int exynos_busfreq_lock(unsigned int nId,
 	enum busfreq_level_request busfreq_level)
 {
@@ -326,23 +300,37 @@ static struct attribute *busfreq_attributes[] = {
 	NULL
 };
 
-int exynos_request_register(struct notifier_block *n)
-{
-	return blocking_notifier_chain_register(&exynos_busfreq_notifier_list, n);
-}
-
-void exynos_request_apply(unsigned long freq, struct device *dev, bool sync)
+void exynos_request_apply(unsigned long freq, bool fix, bool disable)
 {
 	struct opp *opp = opp_find_freq_ceil(bus_ctrl.data->dev, &freq);
-	unsigned long newfreq;
-	newfreq = opp_get_freq(opp);
+	unsigned int index;
 
-	if (sync) {
-		_target(bus_ctrl.data, opp);
-	//	bus_ctrl.data->force_opp = opp; FOR FIX LOCK */
-	} else {
-		blocking_notifier_call_chain(&exynos_busfreq_notifier_list, newfreq, dev);
+	mutex_lock(&busfreq_lock);
+
+	if (bus_ctrl.data->force_opp && fix) {
+		pr_err("Already fix lock existed.\n");
+		goto out;
 	}
+
+	if (fix && disable) {
+		bus_ctrl.data->force_opp = NULL;
+		goto out;
+	}
+
+	if (bus_ctrl.data->force_opp)
+		opp = bus_ctrl.data->force_opp;
+
+	if (bus_ctrl.opp_lock)
+		opp = bus_ctrl.opp_lock;
+
+	index = _target(bus_ctrl.data, opp);
+
+	update_busfreq_stat(bus_ctrl.data, index);
+
+	if (fix)
+		bus_ctrl.data->force_opp = opp;
+out:
+	mutex_unlock(&busfreq_lock);
 }
 
 static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
@@ -370,8 +358,6 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	data->exynos_reboot_notifier.notifier_call =
 		exynos_busfreq_reboot_event;
 	data->busfreq_attr_group.attrs = busfreq_attributes;
-	data->exynos_request_notifier.notifier_call =
-		exynos_busfreq_request_event;
 
 	if (soc_is_exynos4212() || soc_is_exynos4412()) {
 		data->init = exynos4x12_init;
@@ -427,9 +413,6 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 
 	if (register_reboot_notifier(&data->exynos_reboot_notifier))
 		pr_err("Failed to setup reboot notifier\n");
-
-	if (exynos_request_register(&data->exynos_request_notifier))
-		pr_err("Failed to setup request notifier\n");
 
 	platform_set_drvdata(pdev, data);
 
