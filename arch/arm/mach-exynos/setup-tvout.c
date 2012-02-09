@@ -27,55 +27,50 @@
 #include <plat/tvout.h>
 #include <plat/cpu.h>
 
+#if defined(CONFIG_ARCH_EXYNOS4)
+#define HDMI_GPX(_nr)	EXYNOS4_GPX3(_nr)
+#elif defined(CONFIG_ARCH_EXYNOS5)
+#define HDMI_GPX(_nr)	EXYNOS5_GPX3(_nr)
+#endif
+
 struct platform_device; /* don't need the contents */
 
 void s5p_int_src_hdmi_hpd(struct platform_device *pdev)
 {
-	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0x3));
-	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_DOWN);
+	s3c_gpio_cfgpin(HDMI_GPX(7), S3C_GPIO_SFN(0x3));
+	s3c_gpio_setpull(HDMI_GPX(7), S3C_GPIO_PULL_DOWN);
 }
 
 void s5p_int_src_ext_hpd(struct platform_device *pdev)
 {
-	s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0xf));
-	s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_DOWN);
+	s3c_gpio_cfgpin(HDMI_GPX(7), S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(HDMI_GPX(7), S3C_GPIO_PULL_DOWN);
 }
 
 int s5p_hpd_read_gpio(struct platform_device *pdev)
 {
-	return gpio_get_value(EXYNOS4_GPX3(7));
+	return gpio_get_value(HDMI_GPX(7));
 }
 
 void s5p_cec_cfg_gpio(struct platform_device *pdev)
 {
-	s3c_gpio_cfgpin(EXYNOS4_GPX3(6), S3C_GPIO_SFN(0x3));
-	s3c_gpio_setpull(EXYNOS4_GPX3(6), S3C_GPIO_PULL_NONE);
+	s3c_gpio_cfgpin(HDMI_GPX(6), S3C_GPIO_SFN(0x3));
+	s3c_gpio_setpull(HDMI_GPX(6), S3C_GPIO_PULL_NONE);
 }
 
 #ifdef CONFIG_VIDEO_EXYNOS_TV
 void s5p_tv_setup(void)
 {
 	/* direct HPD to HDMI chip */
-	if (soc_is_exynos4412()) {
-		gpio_request(EXYNOS4_GPX3(7), "hpd-plug");
+	gpio_request(HDMI_GPX(7), "hpd-plug");
+	gpio_direction_input(HDMI_GPX(7));
+	s3c_gpio_cfgpin(HDMI_GPX(7), S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(HDMI_GPX(7), S3C_GPIO_PULL_NONE);
 
-		gpio_direction_input(EXYNOS4_GPX3(7));
-		s3c_gpio_cfgpin(EXYNOS4_GPX3(7), S3C_GPIO_SFN(0x3));
-		s3c_gpio_setpull(EXYNOS4_GPX3(7), S3C_GPIO_PULL_NONE);
-	} else if (soc_is_exynos5250()) {
-		gpio_request(EXYNOS5_GPX3(7), "hpd-plug");
-		gpio_direction_input(EXYNOS5_GPX3(7));
-		s3c_gpio_cfgpin(EXYNOS5_GPX3(7), S3C_GPIO_SFN(0x3));
-		s3c_gpio_setpull(EXYNOS5_GPX3(7), S3C_GPIO_PULL_NONE);
-
-		/* HDMI CEC */
-		gpio_request(EXYNOS5_GPX3(6), "hdmi-cec");
-		gpio_direction_input(EXYNOS5_GPX3(6));
-		s3c_gpio_cfgpin(EXYNOS5_GPX3(6), S3C_GPIO_SFN(0x3));
-		s3c_gpio_setpull(EXYNOS5_GPX3(6), S3C_GPIO_PULL_NONE);
-
-	} else {
-		printk(KERN_ERR "HPD GPIOs are not defined!\n");
-	}
+	/* HDMI CEC */
+	gpio_request(HDMI_GPX(6), "hdmi-cec");
+	gpio_direction_input(HDMI_GPX(6));
+	s3c_gpio_cfgpin(HDMI_GPX(6), S3C_GPIO_SFN(0x3));
+	s3c_gpio_setpull(HDMI_GPX(6), S3C_GPIO_PULL_NONE);
 }
 #endif
