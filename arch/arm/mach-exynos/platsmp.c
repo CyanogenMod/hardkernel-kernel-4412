@@ -131,6 +131,7 @@ static int exynos_power_up_cpu(unsigned int cpu)
 	return 0;
 }
 
+#ifdef CONFIG_CACHE_L2X0
 static void enable_foz(void)
 {
 	u32 val;
@@ -146,6 +147,7 @@ static void enable_foz(void)
 	asm volatile("mcr p15, 0, %0, c1, c0, 1" : : "r" (val));
 #endif
 }
+#endif
 
 int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
@@ -167,10 +169,12 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	/*
 	* Enable write full line for zeros mode
 	*/
+#ifdef CONFIG_CACHE_L2X0
 	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412()) {
 		enable_foz();
 		smp_call_function((void (*)(void *))enable_foz, NULL, 0);
 	}
+#endif
 
 	/*
 	 * The secondary processor is waiting to be released from
