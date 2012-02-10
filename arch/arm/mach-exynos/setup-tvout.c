@@ -57,6 +57,18 @@ int s5p_v4l2_hpd_read_gpio(void)
 	return gpio_get_value(HDMI_GPX(7));
 }
 
+void s5p_v4l2_int_src_hdmi_hpd(void)
+{
+	s3c_gpio_cfgpin(HDMI_GPX(7), S3C_GPIO_SFN(0x3));
+	s3c_gpio_setpull(HDMI_GPX(7), S3C_GPIO_PULL_DOWN);
+}
+
+void s5p_v4l2_int_src_ext_hpd(void)
+{
+	s3c_gpio_cfgpin(HDMI_GPX(7), S3C_GPIO_SFN(0xf));
+	s3c_gpio_setpull(HDMI_GPX(7), S3C_GPIO_PULL_DOWN);
+}
+
 void s5p_cec_cfg_gpio(struct platform_device *pdev)
 {
 	s3c_gpio_cfgpin(HDMI_GPX(6), S3C_GPIO_SFN(0x3));
