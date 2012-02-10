@@ -30,9 +30,8 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/dma-mapping.h>
+#include <linux/usb/exynos_usb3_drd.h>
 #include <linux/platform_data/exynos_usb3_drd.h>
-
-#include <plat/regs-usb3-exynos-drd.h>
 
 #include "xhci.h"
 

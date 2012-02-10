@@ -23,12 +23,11 @@
 
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
+#include <linux/usb/exynos_usb3_drd.h>
 
 #include <linux/platform_data/exynos_usb3_drd.h>
 
 #include <asm/byteorder.h>
-
-#include <plat/regs-usb3-exynos-drd.h>
 
 #include "exynos_ss_udc.h"
 
