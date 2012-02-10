@@ -238,6 +238,9 @@ void fimg2d4x_set_color_fill(struct fimg2d_control *info, unsigned long color)
 
 	/* sf color */
 	writel(color, info->regs + FIMG2D_SF_COLOR_REG);
+
+	/* set 16 burst for performance */
+	fimg2d4x_set_max_burst_length(info, MAX_BURST_16);
 }
 
 /**
