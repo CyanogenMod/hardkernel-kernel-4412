@@ -155,6 +155,7 @@ int dev_unlock(struct device *device, struct device *dev)
 
 void dev_unlock_fix(struct device *device, struct device *dev)
 {
+	dev_unlock(device, dev);
 	exynos_request_apply(1, true, true);
 }
 
