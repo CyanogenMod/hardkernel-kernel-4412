@@ -244,7 +244,8 @@ static int exynos_busfreq_request_event(struct notifier_block *this,
 	for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
 		opp[i] = opp_find_freq_ceil(data->dev[i], &newfreq[i]);
 		freq = opp_get_freq(opp[i]);
-		_target(data, i, freq);
+		if (freq > data->curr_freq[i])
+			_target(data, i, freq);
 	}
 
 	mutex_unlock(&busfreq_lock);
