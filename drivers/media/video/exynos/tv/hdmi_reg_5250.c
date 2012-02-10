@@ -12,6 +12,8 @@
  */
 
 #include <linux/delay.h>
+#include <linux/pm_runtime.h>
+#include <plat/tvout.h>
 
 #include "hdmi.h"
 #include "regs-hdmi-5250.h"
@@ -2209,29 +2211,34 @@ irqreturn_t hdmi_irq_handler(int irq, void *dev_data)
 	struct hdmi_device *hdev = dev_data;
 	u32 intc_flag;
 
-	(void)irq;
-	intc_flag = hdmi_read(hdev, HDMI_INTC_FLAG_0);
-	/* clearing flags for HPD plug/unplug */
-	if (intc_flag & HDMI_INTC_FLAG_HPD_UNPLUG) {
-		printk(KERN_INFO "unplugged\n");
-		if (hdev->hdcp_info.hdcp_enable)
-			hdcp_stop(hdev);
-
-		hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
-			HDMI_INTC_FLAG_HPD_UNPLUG);
-		atomic_set(&hdev->hpd_state, HPD_LOW);
-	}
-	if (intc_flag & HDMI_INTC_FLAG_HPD_PLUG) {
-		printk(KERN_INFO "plugged\n");
-		hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
-			HDMI_INTC_FLAG_HPD_PLUG);
-		atomic_set(&hdev->hpd_state, HPD_HIGH);
-	}
-	if (intc_flag & HDMI_INTC_FLAG_HDCP) {
-		printk(KERN_INFO "hdcp interrupt occur\n");
-		hdcp_irq_handler(hdev);
-		hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
-			HDMI_INTC_FLAG_HDCP);
+	if (!pm_runtime_suspended(hdev->dev)) {
+		intc_flag = hdmi_read(hdev, HDMI_INTC_FLAG_0);
+		/* clearing flags for HPD plug/unplug */
+		if (intc_flag & HDMI_INTC_FLAG_HPD_UNPLUG) {
+			printk(KERN_INFO "unplugged\n");
+			if (hdev->hdcp_info.hdcp_enable)
+				hdcp_stop(hdev);
+			hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
+					HDMI_INTC_FLAG_HPD_UNPLUG);
+			atomic_set(&hdev->hpd_state, HPD_LOW);
+		}
+		if (intc_flag & HDMI_INTC_FLAG_HPD_PLUG) {
+			printk(KERN_INFO "plugged\n");
+			hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
+					HDMI_INTC_FLAG_HPD_PLUG);
+			atomic_set(&hdev->hpd_state, HPD_HIGH);
+		}
+		if (intc_flag & HDMI_INTC_FLAG_HDCP) {
+			printk(KERN_INFO "hdcp interrupt occur\n");
+			hdcp_irq_handler(hdev);
+			hdmi_write_mask(hdev, HDMI_INTC_FLAG_0, ~0,
+					HDMI_INTC_FLAG_HDCP);
+		}
+	} else{
+		if (s5p_v4l2_hpd_read_gpio())
+			atomic_set(&hdev->hpd_state, HPD_HIGH);
+		else
+			atomic_set(&hdev->hpd_state, HPD_LOW);
 	}
 
 	queue_work(hdev->hpd_wq, &hdev->hpd_work);
