@@ -404,6 +404,10 @@ static struct s3c_platform_camera writeback = {
 
 #ifdef CONFIG_VIDEO_EXYNOS_FIMC_IS
 #ifdef CONFIG_VIDEO_S5K3H2
+static struct i2c_board_info s5k3h2_sensor_info = {
+	.type = "S5K3H2",
+};
+
 static struct s3c_platform_camera s5k3h2 = {
 #ifdef CONFIG_S5K3H2_CSI_C
 	.id		= CAMERA_CSI_C,
@@ -417,6 +421,7 @@ static struct s3c_platform_camera s5k3h2 = {
 #endif
 	.type		= CAM_TYPE_MIPI,
 	.fmt		= MIPI_CSI_RAW10,
+	.info		= &s5k3h2_sensor_info,
 	.order422	= CAM_ORDER422_8BIT_YCBYCR,
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.line_length	= 1920,
@@ -452,6 +457,10 @@ static struct s3c_platform_camera s5k3h2 = {
 #endif
 
 #ifdef CONFIG_VIDEO_S5K3H7
+static struct i2c_board_info s5k3h7_sensor_info = {
+	.type = "S5K3H7",
+};
+
 static struct s3c_platform_camera s5k3h7 = {
 #ifdef CONFIG_S5K3H7_CSI_C
 	.id		= CAMERA_CSI_C,
@@ -465,6 +474,7 @@ static struct s3c_platform_camera s5k3h7 = {
 #endif
 	.type		= CAM_TYPE_MIPI,
 	.fmt		= MIPI_CSI_RAW10,
+	.info		= &s5k3h7_sensor_info,
 	.order422	= CAM_ORDER422_8BIT_YCBYCR,
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.line_length	= 1920,
@@ -500,6 +510,10 @@ static struct s3c_platform_camera s5k3h7 = {
 #endif
 
 #ifdef CONFIG_VIDEO_S5K4E5
+static struct i2c_board_info s5k4e5_sensor_info = {
+	.type = "S5K4E5",
+};
+
 static struct s3c_platform_camera s5k4e5 = {
 #ifdef CONFIG_S5K4E5_CSI_C
 	.id		= CAMERA_CSI_C,
@@ -513,6 +527,7 @@ static struct s3c_platform_camera s5k4e5 = {
 #endif
 	.type		= CAM_TYPE_MIPI,
 	.fmt		= MIPI_CSI_RAW10,
+	.info		= &s5k4e5_sensor_info,
 	.order422	= CAM_ORDER422_8BIT_YCBYCR,
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.line_length	= 1920,
@@ -549,6 +564,10 @@ static struct s3c_platform_camera s5k4e5 = {
 
 
 #ifdef CONFIG_VIDEO_S5K6A3
+static struct i2c_board_info s5k6a3_sensor_info = {
+	.type = "S5K6A3",
+};
+
 static struct s3c_platform_camera s5k6a3 = {
 #ifdef CONFIG_S5K6A3_CSI_C
 	.id		= CAMERA_CSI_C,
@@ -562,6 +581,7 @@ static struct s3c_platform_camera s5k6a3 = {
 #endif
 	.type		= CAM_TYPE_MIPI,
 	.fmt		= MIPI_CSI_RAW10,
+	.info		= &s5k6a3_sensor_info,
 	.order422	= CAM_ORDER422_8BIT_YCBYCR,
 	.pixelformat	= V4L2_PIX_FMT_UYVY,
 	.line_length	= 1920,
