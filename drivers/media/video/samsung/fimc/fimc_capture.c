@@ -622,7 +622,7 @@ int fimc_enum_input(struct file *file, void *fh, struct v4l2_input *inp)
 		return -EINVAL;
 	mutex_lock(&ctrl->v4l2_lock);
 
-	if (fimc->camera[inp->index]->use_isp)
+	if (fimc->camera[inp->index]->use_isp && !(fimc->camera[inp->index]->info))
 		strcpy(inp->name, "ISP Camera");
 	else
 		strcpy(inp->name, fimc->camera[inp->index]->info->type);
