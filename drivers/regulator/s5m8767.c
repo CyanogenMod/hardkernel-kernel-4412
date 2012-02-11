@@ -373,7 +373,7 @@ static int s5m8767_get_voltage_register(struct regulator_dev *rdev, int *_reg)
 	return 0;
 }
 
-static int s5m8767_get_voltage(struct regulator_dev *rdev)
+static int s5m8767_get_voltage_sel(struct regulator_dev *rdev)
 {
 	struct s5m8767_info *s5m8767 = rdev_get_drvdata(rdev);
 	struct i2c_client *i2c = s5m8767->iodev->i2c;
@@ -409,10 +409,7 @@ static int s5m8767_get_voltage(struct regulator_dev *rdev)
 
 	val &= mask;
 
-	if (rdev->desc && rdev->desc->ops && rdev->desc->ops->list_voltage)
-		return rdev->desc->ops->list_voltage(rdev, val);
-
-	return s5m8767_list_voltage(rdev, val);
+	return val;
 }
 
 static inline int s5m8767_convert_voltage(
@@ -513,7 +510,7 @@ static int s5m8767_set_voltage_buck(struct regulator_dev *rdev,
 	int new_val, old_val, i = 0;
 	int min_vol = min_uV, max_vol = max_uV;
 
-	if (reg_id < S5M8767_BUCK1 || reg_id > S5M8767_BUCK6)
+	if (reg_id < S5M8767_BUCK1 || reg_id > S5M8767_BUCK9)
 		return -EINVAL;
 
 	switch (reg_id) {
@@ -584,7 +581,7 @@ static struct regulator_ops s5m8767_ldo_ops = {
 	.is_enabled		= s5m8767_reg_is_enabled,
 	.enable			= s5m8767_reg_enable,
 	.disable		= s5m8767_reg_disable,
-	.get_voltage		= s5m8767_get_voltage,
+	.get_voltage_sel	= s5m8767_get_voltage_sel,
 	.set_voltage		= s5m8767_set_voltage,
 	.set_suspend_enable	= s5m8767_reg_enable_suspend,
 	.set_suspend_disable	= s5m8767_reg_disable_suspend,
@@ -595,7 +592,7 @@ static struct regulator_ops s5m8767_buck_ops = {
 	.is_enabled		= s5m8767_reg_is_enabled,
 	.enable			= s5m8767_reg_enable,
 	.disable		= s5m8767_reg_disable,
-	.get_voltage		= s5m8767_get_voltage,
+	.get_voltage_sel	= s5m8767_get_voltage_sel,
 	.set_voltage		= s5m8767_set_voltage_buck,
 	.set_suspend_enable	= s5m8767_reg_enable_suspend,
 	.set_suspend_disable	= s5m8767_reg_disable_suspend,
