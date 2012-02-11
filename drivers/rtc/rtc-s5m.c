@@ -215,9 +215,6 @@ static int s5m_rtc_set_time(struct device *dev, struct rtc_time *tm)
 
 	ret = s5m8767_rtc_set_time_reg(info);
 
-	ret = s5m_bulk_read(info->rtc, S5M87XX_RTC_SEC, 8, data);
-	s5m8767_data_to_tm(data, tm, info->rtc_24hr_mode);
-
 	return ret;
 }
 
@@ -227,6 +224,10 @@ static int s5m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 	u8 data[8];
 	u8 val;
 	int ret, i;
+
+	ret = s5m_bulk_read(info->rtc, S5M87XX_ALARM0_SEC, 8, data);
+	if (ret < 0)
+		return ret;
 
 	switch (info->device_type) {
 	case S5M8763X:
@@ -244,10 +245,6 @@ static int s5m_rtc_read_alarm(struct device *dev, struct rtc_wkalrm *alrm)
 		break;
 
 	case S5M8767X:
-		ret = s5m_bulk_read(info->rtc, S5M87XX_ALARM0_SEC, 8, data);
-		if (ret < 0)
-			return ret;
-
 		s5m8767_data_to_tm(data, &alrm->time, info->rtc_24hr_mode);
 		printk(KERN_INFO "%s: %d/%d/%d %d:%d:%d(%d)\n", __func__,
 			1900 + alrm->time.tm_year, 1 + alrm->time.tm_mon,
