@@ -133,11 +133,6 @@ static void sata_i2c_write_data(u8 data)
 	__raw_writeb((data), phy_i2c_base + SATA_I2C_DS);
 }
 
-static u8 sata_i2c_read_data(void)
-{
-	return __raw_readb(phy_i2c_base + SATA_I2C_DS);
-}
-
 static void sata_i2c_start(void)
 {
 	u32 val;
