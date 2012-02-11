@@ -995,6 +995,11 @@ static struct clk exynos5_init_clocks_off[] = {
 		.ctrlbit	= (1 << 2),
 	}, {
 		.name		= "sysmmu",
+		.devname	= SYSMMU_CLOCK_NAME(sss, 0),
+		.enable		= exynos5_clk_ip_acp_ctrl,
+		.ctrlbit	= (1 << 6),
+	}, {
+		.name		= "sysmmu",
 		.devname	= SYSMMU_CLOCK_NAME(2d, 9),
 		.enable		= exynos5_clk_ip_acp_ctrl,
 		.ctrlbit	= (1 << 7),
