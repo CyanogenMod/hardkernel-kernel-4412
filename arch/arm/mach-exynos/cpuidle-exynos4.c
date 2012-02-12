@@ -367,7 +367,7 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 {
 	struct timeval before, after;
 	int idle_time;
-	unsigned long tmp;
+	unsigned long tmp, abb_val;
 
 	local_irq_disable();
 	do_gettimeofday(&before);
@@ -383,9 +383,10 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(0);
 
-	if (!soc_is_exynos4210())
-		exynos4x12_set_abb(ABB_MODE_100V);
-
+	if (!soc_is_exynos4210()) {
+		abb_val = exynos4x12_get_abb_member(ABB_ARM);
+		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_085V);
+	}
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
 		/*
@@ -405,8 +406,8 @@ static int exynos4_enter_core0_aftr(struct cpuidle_device *dev,
 
 early_wakeup:
 #ifdef CONFIG_EXYNOS4_CPUFREQ
-	if ((exynos_result_of_asv > 3) && !soc_is_exynos4210())
-		exynos4x12_set_abb(ABB_MODE_130V);
+	if ((exynos_result_of_asv > 1) && !soc_is_exynos4210())
+		exynos4x12_set_abb_member(ABB_ARM, abb_val);
 #endif
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
@@ -428,7 +429,7 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 {
 	struct timeval before, after;
 	int idle_time;
-	unsigned long tmp;
+	unsigned long tmp, abb_val;
 
 	s3c_pm_do_save(exynos4_lpa_save, ARRAY_SIZE(exynos4_lpa_save));
 
@@ -470,9 +471,10 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 		/* Waiting for flushing UART fifo */
 	} while (exynos4_check_enter());
 
-	if (!soc_is_exynos4210())
-		exynos4x12_set_abb(ABB_MODE_100V);
-
+	if (!soc_is_exynos4210()) {
+		abb_val = exynos4x12_get_abb_member(ABB_ARM);
+		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_085V);
+	}
 
 	if (exynos4_enter_lp(0, PLAT_PHYS_OFFSET - PAGE_OFFSET) == 0) {
 
@@ -504,8 +506,8 @@ static int exynos4_enter_core0_lpa(struct cpuidle_device *dev,
 
 early_wakeup:
 #ifdef CONFIG_EXYNOS4_CPUFREQ
-	if ((exynos_result_of_asv > 3) && !soc_is_exynos4210())
-		exynos4x12_set_abb(ABB_MODE_130V);
+	if ((exynos_result_of_asv > 1) && !soc_is_exynos4210())
+		exynos4x12_set_abb_member(ABB_ARM, abb_val);
 #endif
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
