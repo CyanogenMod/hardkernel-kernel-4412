@@ -469,6 +469,14 @@ static void exynos4x12_set_frequency(unsigned int old_index,
 			set_clkdiv(new_index);
 		}
 	}
+
+	/* ABB value is changed in below case */
+	if (soc_is_exynos4412() && (exynos_result_of_asv > 3)) {
+		if (new_index == L13)
+			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
+		else
+			exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_130V);
+	}
 }
 
 static void __init set_volt_table(void)
