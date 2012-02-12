@@ -60,6 +60,11 @@ static inline void exynos4x12_set_abb(unsigned int abb_mode_value)
 	__raw_writel(tmp, S5P_ABB_ARM);
 }
 
+static inline int exynos4x12_get_abb_member(enum exynos4x12_abb_member abb_target)
+{
+	return (__raw_readl(S5P_ABB_MEMBER(abb_target)) & 0x1f);
+}
+
 struct asv_judge_table {
 	unsigned int hpm_limit; /* HPM value to decide group of target */
 	unsigned int ids_limit; /* IDS value to decide group of target */
