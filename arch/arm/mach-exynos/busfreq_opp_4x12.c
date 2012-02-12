@@ -396,6 +396,16 @@ void exynos4x12_target(int index)
 	do {
 		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_CAM1);
 	} while (tmp & 0x1111);
+
+	if (soc_is_exynos4412() && (exynos_result_of_asv > 3)) {
+		if (index == LV_5) { /* MIF:100 / INT:100 */
+			exynos4x12_set_abb_member(ABB_INT, ABB_MODE_100V);
+			exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_100V);
+		} else {
+			exynos4x12_set_abb_member(ABB_INT, ABB_MODE_130V);
+			exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_130V);
+		}
+	}
 }
 
 unsigned int exynos4x12_get_table_index(struct opp *opp)
