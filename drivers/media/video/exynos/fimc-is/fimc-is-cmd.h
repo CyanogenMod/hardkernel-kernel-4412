@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_CMD_H_
 #define FIMC_IS_CMD_H_
 
-#define IS_COMMAND_VER 109 /* IS COMMAND VERSION 1.09 */
+#define IS_COMMAND_VER 110 /* IS COMMAND VERSION 1.10 */
 
 enum is_cmd {
 	/* HOST -> IS */
@@ -69,15 +69,13 @@ enum is_scenario_id {
 	ISS_END
 };
 
-struct is_setfile_header_element {
-	u32 binary_addr;
-	u32 binary_size;
-};
-
-struct is_setfile_header {
-	struct is_setfile_header_element isp[ISS_END];
-	struct is_setfile_header_element drc[ISS_END];
-	struct is_setfile_header_element fd[ISS_END];
+enum is_sub_scenario_id {
+	ISS_SUB_SCENARIO_DEFAULT = 0,
+	ISS_SUB_PS_VTCALL = 1,
+	ISS_SUB_CS_VTCALL = 2,
+	ISS_SUB_PV_VTCALL = 3,
+	ISS_SUB_CV_VTCALL = 4,
+	ISS_SUB_END
 };
 
 struct is_get_capability {

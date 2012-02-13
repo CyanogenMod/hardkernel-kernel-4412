@@ -100,6 +100,15 @@ static void fimc_is_irq_handler_general(struct fimc_is_dev *dev)
 	case IHC_SET_FACE_MARK:
 		dev->fd_header.count = dev->i2h_cmd.arg[0];
 		dev->fd_header.index = dev->i2h_cmd.arg[1];
+		/* Implementation of AF with face */
+		if (dev->af.mode == IS_FOCUS_MODE_CONTINUOUS &&
+				dev->af.af_state == FIMC_IS_AF_LOCK) {
+			fimc_is_af_face(dev);
+		} else if (dev->af.mode == IS_FOCUS_MODE_FACEDETECT) {
+			/* Using face information once only */
+			fimc_is_af_face(dev);
+			dev->af.mode = IS_FOCUS_MODE_IDLE;
+		}
 		break;
 	case IHC_FRAME_DONE:
 		break;
@@ -406,6 +415,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 	set_bit(IS_ST_IDLE, &dev->state);
 	set_bit(IS_PWR_ST_POWEROFF, &dev->power);
 	dev->af.af_state = FIMC_IS_AF_IDLE;
+	dev->af.mode = IS_FOCUS_MODE_IDLE;
 	printk(KERN_INFO "FIMC-IS probe completed\n");
 	return 0;
 
@@ -522,10 +532,6 @@ static int fimc_is_runtime_resume(struct device *dev)
 		printk(KERN_ERR "#### failed to Clock On ####\n");
 		return -EINVAL;
 	}
-#ifdef CONFIG_BUSFREQ_OPP
-	/* lock bus frequency */
-	dev_lock(is_dev->bus_dev, dev, BUS_LOCK_FREQ_L0);
-#endif
 	is_dev->frame_count = 0;
 #if defined(CONFIG_VIDEOBUF2_ION)
 	if (is_dev->alloc_ctx)

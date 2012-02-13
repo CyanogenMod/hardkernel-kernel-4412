@@ -67,6 +67,9 @@
 #define FD_SETFILE_SIZE			(0x88*2)
 #define FIMC_IS_DEBUG_REGION_ADDR	0x00840000
 #define FIMC_IS_SHARED_REGION_ADDR	0x008C0000
+#define FIMC_IS_FW_INFO_LENGTH		31
+#define FIMC_IS_FW_VERSION_LENGTH	6
+#define FIMC_IS_SETFILE_INFO_LENGTH	38
 
 #define GED_FD_RANGE			1000
 
@@ -226,9 +229,9 @@ struct is_fw {
 	const struct firmware	*info;
 	int			state;
 	int			ver;
-	char			fw_info[25];
-	char			setfile_info[32];
-	char			fw_version[6];
+	char			fw_info[FIMC_IS_FW_INFO_LENGTH];
+	char			setfile_info[FIMC_IS_SETFILE_INFO_LENGTH];
+	char			fw_version[FIMC_IS_FW_VERSION_LENGTH];
 };
 
 struct is_setfile {
@@ -285,6 +288,8 @@ struct is_af_info {
 	u32 awb_lock_state;
 	u16 pos_x;
 	u16 pos_y;
+	u16 prev_pos_x;
+	u16 prev_pos_y;
 	u16 use_af;
 };
 
@@ -425,6 +430,11 @@ extern int fimc_is_hw_get_sensor_max_framerate(struct fimc_is_dev *dev);
 extern void fimc_is_hw_set_debug_level(struct fimc_is_dev *dev, int level1,
 								int level2);
 extern int fimc_is_hw_set_tune(struct fimc_is_dev *dev);
+extern int fimc_is_hw_get_sensor_size_width(struct fimc_is_dev *dev);
+extern int fimc_is_hw_get_sensor_size_height(struct fimc_is_dev *dev);
+extern int fimc_is_hw_get_sensor_format(struct fimc_is_dev *dev);
+
+extern int fimc_is_af_face(struct fimc_is_dev *dev);
 
 extern int fimc_is_s_power(struct v4l2_subdev *sd, int on);
 

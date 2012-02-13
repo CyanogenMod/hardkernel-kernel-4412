@@ -61,6 +61,12 @@ static const struct isp_param init_val_isp_preview_still = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.crop_offset_x = 0,
+		.crop_offset_y = 0,
+		.crop_width = 0,
+		.crop_height = 0,
+		.frametime_min = 0,
+		.frametime_max = 66666,
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -116,8 +122,6 @@ static const struct isp_param init_val_isp_preview_still = {
 		.exposure = 0,
 		.brightness = 0,
 		.hue = 0,
-		.shutter_time_min = 0,
-		.shutter_time_max = 66666,
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
@@ -267,6 +271,12 @@ static const struct isp_param init_val_isp_capture = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.crop_offset_x = 0,
+		.crop_offset_y = 0,
+		.crop_width = 0,
+		.crop_height = 0,
+		.frametime_min = 0,
+		.frametime_max = 66666,
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -322,8 +332,6 @@ static const struct isp_param init_val_isp_capture = {
 		.exposure = 0,
 		.brightness = 0,
 		.hue = 0,
-		.shutter_time_min = 0,
-		.shutter_time_max = 66666,
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
@@ -464,6 +472,12 @@ static const struct isp_param init_val_isp_preview_video = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.crop_offset_x = 0,
+		.crop_offset_y = 0,
+		.crop_width = 0,
+		.crop_height = 0,
+		.frametime_min = 0,
+		.frametime_max = 33333,
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -519,8 +533,6 @@ static const struct isp_param init_val_isp_preview_video = {
 		.exposure = 0,
 		.brightness = 0,
 		.hue = 0,
-		.shutter_time_min = 0,
-		.shutter_time_max = 33333,
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
@@ -671,6 +683,12 @@ static const struct isp_param init_val_isp_camcording = {
 #endif
 		.bitwidth = OTF_INPUT_BIT_WIDTH_10BIT,
 		.order = OTF_INPUT_ORDER_BAYER_GR_BG,
+		.crop_offset_x = 0,
+		.crop_offset_y = 0,
+		.crop_width = 0,
+		.crop_height = 0,
+		.frametime_min = 0,
+		.frametime_max = 33333,
 		.err = OTF_INPUT_ERROR_NO,
 	},
 	.dma1_input = {
@@ -726,8 +744,6 @@ static const struct isp_param init_val_isp_camcording = {
 		.exposure = 0,
 		.brightness = 0,
 		.hue = 0,
-		.shutter_time_min = 0,
-		.shutter_time_max = 33333,
 		.err = ISP_ADJUST_ERROR_NO,
 	},
 	.metering = {
@@ -900,6 +916,72 @@ int fimc_is_fw_clear_irq2(struct fimc_is_dev *dev)
 /*
  Group 2. Common
 */
+int fimc_is_hw_get_sensor_size_width(struct fimc_is_dev *dev)
+{
+	int width = 0;
+	switch (dev->scenario_id) {
+	case ISS_PREVIEW_STILL:
+		width = dev->sensor.width_prev;
+		break;
+	case ISS_PREVIEW_VIDEO:
+		width = dev->sensor.width_prev_cam;
+		break;
+	case ISS_CAPTURE_STILL:
+		width = dev->sensor.width_cap;
+		break;
+	case ISS_CAPTURE_VIDEO:
+		width = dev->sensor.width_cam;
+		break;
+	default:
+		break;
+	}
+	return width;
+}
+
+int fimc_is_hw_get_sensor_size_height(struct fimc_is_dev *dev)
+{
+	int height = 0;
+	switch (dev->scenario_id) {
+	case ISS_PREVIEW_STILL:
+		height = dev->sensor.height_prev;
+		break;
+	case ISS_PREVIEW_VIDEO:
+		height = dev->sensor.height_prev_cam;
+		break;
+	case ISS_CAPTURE_STILL:
+		height = dev->sensor.height_cap;
+		break;
+	case ISS_CAPTURE_VIDEO:
+		height = dev->sensor.height_cam;
+		break;
+	default:
+		break;
+	}
+	return height;
+}
+
+int fimc_is_hw_get_sensor_format(struct fimc_is_dev *dev)
+{
+	int format = 0;
+	switch (dev->scenario_id) {
+	case ISS_PREVIEW_STILL:
+		format = init_val_isp_preview_still.otf_input.format;
+		break;
+	case ISS_PREVIEW_VIDEO:
+		format = init_val_isp_preview_video.otf_input.format;
+		break;
+	case ISS_CAPTURE_STILL:
+		format = init_val_isp_capture.otf_input.format;
+		break;
+	case ISS_CAPTURE_VIDEO:
+		format = init_val_isp_camcording.otf_input.format;
+		break;
+	default:
+		break;
+	}
+	return format;
+}
+
 int fimc_is_hw_get_sensor_max_framerate(struct fimc_is_dev *dev)
 {
 	int max_framerate = 0;
@@ -918,7 +1000,7 @@ int fimc_is_hw_get_sensor_max_framerate(struct fimc_is_dev *dev)
 		break;
 	case SENSOR_S5K4E5_CSI_A:
 	case SENSOR_S5K4E5_CSI_B:
-		max_framerate = 15;
+		max_framerate = 30;
 		break;
 	default:
 		max_framerate = 15;
@@ -1069,7 +1151,6 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 			timeout--;
 			udelay(1);
 		}
-		/* 4. ISP Power down mode (LOWPWR) */
 	}
 }
 
@@ -1256,10 +1337,18 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_still.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
 			init_val_isp_preview_still.otf_input.order);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev,
+			init_val_isp_preview_still.otf_input.crop_offset_x);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev,
+			init_val_isp_preview_still.otf_input.crop_offset_y);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev,
+			init_val_isp_preview_still.otf_input.crop_width);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev,
+			init_val_isp_preview_still.otf_input.crop_height);
+		IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MIN(dev,
+			init_val_isp_preview_still.otf_input.frametime_min);
+		IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MAX(dev,
+			init_val_isp_preview_still.otf_input.frametime_max);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_preview_still.otf_input.err);
 		dev->sensor.width_prev =
@@ -1374,10 +1463,6 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_still.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
 			init_val_isp_preview_still.adjust.hue);
-		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev,
-			init_val_isp_preview_still.adjust.shutter_time_min);
-		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
-			init_val_isp_preview_still.adjust.shutter_time_max);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
 			init_val_isp_preview_still.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
@@ -1629,10 +1714,18 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_video.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
 			init_val_isp_preview_video.otf_input.order);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev,
+			init_val_isp_preview_video.otf_input.crop_offset_x);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev,
+			init_val_isp_preview_video.otf_input.crop_offset_y);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev,
+			init_val_isp_preview_video.otf_input.crop_width);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev,
+			init_val_isp_preview_video.otf_input.crop_height);
+		IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MIN(dev,
+			init_val_isp_preview_video.otf_input.frametime_min);
+		IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MAX(dev,
+			init_val_isp_preview_video.otf_input.frametime_max);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_preview_video.otf_input.err);
 		dev->sensor.width_prev_cam =
@@ -1747,10 +1840,6 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_preview_video.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
 			init_val_isp_preview_video.adjust.hue);
-		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev,
-			init_val_isp_preview_video.adjust.shutter_time_min);
-		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
-			init_val_isp_preview_video.adjust.shutter_time_max);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
 			init_val_isp_preview_video.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
@@ -2003,10 +2092,18 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_capture.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
 			init_val_isp_capture.otf_input.order);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev,
+			init_val_isp_capture.otf_input.crop_offset_x);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev,
+			init_val_isp_capture.otf_input.crop_offset_y);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev,
+			init_val_isp_capture.otf_input.crop_width);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev,
+			init_val_isp_capture.otf_input.crop_height);
+		IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MIN(dev,
+			init_val_isp_capture.otf_input.frametime_min);
+		IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MAX(dev,
+			init_val_isp_capture.otf_input.frametime_max);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_capture.otf_input.err);
 		dev->sensor.width_cap =
@@ -2114,10 +2211,6 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_capture.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
 			init_val_isp_capture.adjust.hue);
-		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev,
-			init_val_isp_capture.adjust.shutter_time_min);
-		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
-			init_val_isp_capture.adjust.shutter_time_max);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
 			init_val_isp_capture.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
@@ -2368,10 +2461,18 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_camcording.otf_input.bitwidth);
 		IS_ISP_SET_PARAM_OTF_INPUT_ORDER(dev,
 			init_val_isp_camcording.otf_input.order);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev, 0);
-		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, 0);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_X(dev,
+			init_val_isp_camcording.otf_input.crop_offset_x);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_OFFSET_Y(dev,
+			init_val_isp_camcording.otf_input.crop_offset_y);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_WIDTH(dev,
+			init_val_isp_camcording.otf_input.crop_width);
+		IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev,
+			init_val_isp_camcording.otf_input.crop_height);
+		IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MIN(dev,
+			init_val_isp_camcording.otf_input.frametime_min);
+		IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MAX(dev,
+			init_val_isp_camcording.otf_input.frametime_max);
 		IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev,
 			init_val_isp_camcording.otf_input.err);
 		dev->sensor.width_cam =
@@ -2480,10 +2581,6 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 			init_val_isp_camcording.adjust.brightness);
 		IS_ISP_SET_PARAM_ADJUST_HUE(dev,
 			init_val_isp_camcording.adjust.hue);
-		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev,
-			init_val_isp_camcording.adjust.shutter_time_min);
-		IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev,
-			init_val_isp_camcording.adjust.shutter_time_max);
 		IS_ISP_SET_PARAM_ADJUST_ERR(dev,
 			init_val_isp_camcording.adjust.err);
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);

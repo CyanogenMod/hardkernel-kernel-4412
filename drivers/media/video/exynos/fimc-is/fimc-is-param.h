@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 118  /* IS REGION VERSION 1.18 */
+#define IS_REGION_VER 119  /* IS REGION VERSION 1.19 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -69,18 +69,12 @@
 		(dev->is_p_region->parameter.isp.otf_input.crop_width = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_CROP_HEIGHT(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.crop_height = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MIN(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.frametime_min = x)
+#define IS_ISP_SET_PARAM_OTF_INPUT_FRAMETIME_MAX(dev, x) \
+		(dev->is_p_region->parameter.isp.otf_input.frametime_max = x)
 #define IS_ISP_SET_PARAM_OTF_INPUT_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.otf_input.err = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED0(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[0] = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED1(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[1] = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED2(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[2] = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED3(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[3] = x)
-#define IS_ISP_SET_PARAM_OTF_INPUT_RESERVED4(dev, x) \
-		(dev->is_p_region->parameter.isp.otf_input.reserved[4] = x)
 
 #define IS_ISP_SET_PARAM_DMA_INPUT1_CMD(dev, x) \
 		(dev->is_p_region->parameter.isp.dma1_input.cmd = x)
@@ -185,10 +179,6 @@
 		(dev->is_p_region->parameter.isp.adjust.brightness = x)
 #define IS_ISP_SET_PARAM_ADJUST_HUE(dev, x) \
 		(dev->is_p_region->parameter.isp.adjust.hue = x)
-#define IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MIN(dev, x) \
-		(dev->is_p_region->parameter.isp.adjust.shutter_time_min = x)
-#define IS_ISP_SET_PARAM_ADJUST_SHUTTER_TIME_MAX(dev, x) \
-		(dev->is_p_region->parameter.isp.adjust.shutter_time_max = x)
 #define IS_ISP_SET_PARAM_ADJUST_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.adjust.err = x)
 
@@ -989,8 +979,14 @@ enum iso_error {
 
 /* --------------------------  Adjust  ----------------------------------- */
 enum iso_adjust_command {
-	ISP_ADJUST_COMMAND_AUTO		= 0,
-	ISP_ADJUST_COMMAND_MANUAL	= 1
+	ISP_ADJUST_COMMAND_AUTO			= 0,
+	ISP_ADJUST_COMMAND_MANUAL_CONTRAST	= (1 << 0),
+	ISP_ADJUST_COMMAND_MANUAL_SATURATION	= (1 << 1),
+	ISP_ADJUST_COMMAND_MANUAL_SHARPNESS	= (1 << 2),
+	ISP_ADJUST_COMMAND_MANUAL_EXPOSURE	= (1 << 3),
+	ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS	= (1 << 4),
+	ISP_ADJUST_COMMAND_MANUAL_HUE		= (1 << 5),
+	ISP_ADJUST_COMMAND_MANUAL_ALL		= 0x7F,
 };
 
 enum isp_adjust_error {
@@ -1182,7 +1178,9 @@ struct param_otf_input {
 	u32	crop_offset_y;
 	u32	crop_width;
 	u32	crop_height;
-	u32	reserved[PARAMETER_MAX_MEMBER-11];
+	u32	frametime_min;
+	u32	frametime_max;
+	u32	reserved[PARAMETER_MAX_MEMBER-13];
 	u32	err;
 };
 
@@ -1288,9 +1286,7 @@ struct param_isp_adjust {
 	s32	exposure;
 	s32	brightness;
 	s32	hue;
-	s32	shutter_time_min;
-	s32	shutter_time_max;
-	u32	reserved[PARAMETER_MAX_MEMBER-10];
+	u32	reserved[PARAMETER_MAX_MEMBER-8];
 	u32	err;
 };
 
