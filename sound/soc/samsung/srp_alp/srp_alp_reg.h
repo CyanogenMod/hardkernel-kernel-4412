@@ -19,11 +19,11 @@
 #define SRP_INTERRUPT		(0x0008)
 #define SRP_PENDING		(0x000C)
 #define SRP_INTERRUPT_CODE	(0x0010)
-#define SRP_INFORMATION		(0x0014)
+#define SRP_POWER_MODE		(0x0014)
 #define SRP_ERROR_CODE		(0x0018)
 #define SRP_ARM_INTERRUPT_CODE	(0x001C)
-#define SRP_EFFECT_DEF		(0x0020)
-#define SRP_EQ_USER_DEF		(0x0024)
+#define SRP_SUSPENDED_IP	(0x0020)
+#define SRP_SUSPENDED_SP	(0x0024)
 #define SRP_FRAME_INDEX		(0x0028)
 #define SRP_PCM_BUFF_SIZE	(0x002C)
 #define SRP_PCM_BUFF0		(0x0030)
@@ -42,6 +42,9 @@
 #define SRP_GAIN_CTRL_FACTOR_L		(0x0124)
 #define SRP_UART_INFORMATION		(0x0128)
 #define SRP_GAIN_CTRL_FACTOR_R		(0x012C)
+#define SRP_INTREN			(0x0180)
+#define SRP_INTRMASK			(0x0184)
+#define SRP_INTRSRC			(0x0188)
 
 /*
  * SRP Configuration register
@@ -127,4 +130,20 @@
 #define SRP_ARM_INTR_CODE_AM_FILTER_LOAD	(0x0001 << 12)
 #define SRP_ARM_INTR_CODE_SUPPORT_MONO	(0x0001 << 13)
 
+/* For Suspend/Resume */
+#define SRP_POWER_MODE_MASK		(0xFFFF)
+#define SRP_POWER_MODE_TRIGGER		(0x1)
+#define SRP_SUSPENED_CHECKED		(0x1 << 1)
+/* INTREN */
+#define SRP_INTR_EN			(0x1)
+#define SRP_INTR_DI			(0x0)
+/* INTRMASK */
+#define SRP_ARM_INTR_MASK		(0x1 << 6)
+#define SRP_DMA_INTR_MASK		(0x1 << 5)
+#define SRP_TMR_INTR_MASK		(0x1F << 0)
+/* INTRSRC */
+#define SRP_INTRSRC_MASK		(0x7F)
+#define SRP_ARM_INTR_SRC		(0x1 << 6)
+#define SRP_DMA_INTR_SRC		(0x1 << 5)
+#define SRP_TMR_INTR_SRC		(0x1F << 0)
 #endif

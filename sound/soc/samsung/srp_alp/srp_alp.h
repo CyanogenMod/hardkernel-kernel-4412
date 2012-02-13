@@ -15,10 +15,11 @@
 			(0x28000) : (0x20000))
 #define ICACHE_SIZE	(soc_is_exynos5250() ? \
 			(0x18000) : (0x10000))
+#define CMEM_SIZE       0x9000
 
 /* SRAM & Commbox base address */
 #define SRP_ICACHE_ADDR		(SRP_DMEM_BASE + DMEM_SIZE)
-#define SRP_CMEM_ADDR		(SRP_DMEM_BASE + ICACHE_SIZE)
+#define SRP_CMEM_ADDR		(SRP_ICACHE_ADDR + ICACHE_SIZE)
 
 /* IBUF/OBUF Size */
 #define IBUF_SIZE	(0x4000)
@@ -55,10 +56,10 @@
 #define START_THRESHOLD	(IBUF_SIZE * 3)
 
 /* Commbox & Etc information */
-#define COMMBOX_SIZE	(0x2000)
+#define COMMBOX_SIZE	(0x200)
 
 /* F/W code size */
-#define VLIW_SIZE	(0x20000)	/* 128KBytes */
+#define VLIW_SIZE	(0x10000)	/* 128KBytes */
 #define CGA_SIZE	(0x9000)	/* 36KBytes */
 #if defined(CONFIG_ARCH_EXYNOS4)
 #define DATA_SIZE	(0x20000)	/* 128KBytes */
@@ -68,7 +69,7 @@
 
 /* Reserved memory on DRAM */
 #define BASE_MEM_SIZE	(CONFIG_AUDIO_SAMSUNG_MEMSIZE_SRP << 10)
-#define VLIW_SIZE_MAX	(0x20000)
+#define VLIW_SIZE_MAX	(0x10000)
 #define CGA_SIZE_MAX	(0x10000)
 #if defined(CONFIG_ARCH_EXYNOS4)
 #define DATA_SIZE_MAX	(0x20000)
@@ -76,6 +77,7 @@
 #define DATA_SIZE_MAX	(0x28000)
 #endif
 #define BITSTREAM_SIZE_MAX	(0x7FFFFFFF)
+#define SRP_PENDING_RETRY	(0x20)
 
 /* F/W Endian Configuration */
 #ifdef USE_FW_ENDIAN_CONVERT
@@ -130,15 +132,9 @@ struct srp_dec_info {
 };
 
 struct srp_for_suspend {
-	unsigned char	*dmem;
+	unsigned char	*ibuf;
 	unsigned char	*obuf;
-	unsigned char	*wbuf;
-	unsigned long	wbuf_pos;
-	unsigned int	obuf_saved;
-	unsigned int	obuf_restored;
-	unsigned int	wait_for_eos;
-	unsigned int	prepare_for_eos;
-	unsigned int	resume_after_suspend;
+	unsigned char	*commbox;
 };
 
 struct srp_info {
@@ -153,6 +149,7 @@ struct srp_info {
 	void __iomem	*iram;
 	void __iomem	*dmem;
 	void __iomem	*icache;
+	void __iomem	*cmem;
 	void __iomem	*commbox;
 
 	/* IBUF informaion */
@@ -190,9 +187,8 @@ struct srp_info {
 	unsigned long	wbuf_fill_size;
 
 	/* Decoding informaion */
-	unsigned long	frame_size;
 	unsigned long	set_bitstream_size;
-        unsigned long   pcm_size;
+	unsigned long	pcm_size;
 
 	/* SRP status information */
 	unsigned int	decoding_started;
@@ -205,6 +201,9 @@ struct srp_info {
 	unsigned int	prepare_for_eos;
 	unsigned int	play_done;
 
+	bool	pm_suspended;
+	bool	pm_resumed;
+
 	/* Function pointer for clock control */
 	void	(*audss_clk_enable)(bool enable);
 };
@@ -213,6 +212,12 @@ struct srp_info {
 enum {
 	RUN = 0,
 	STALL,
+};
+
+/* Request Suspend/Resume */
+enum {
+	SUSPEND = 0,
+	RESUME = 1,
 };
 
 #endif /* __SRP_ALP_H */
