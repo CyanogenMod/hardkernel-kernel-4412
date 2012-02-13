@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -72,9 +72,13 @@ struct kbase_context *kbase_create_context(kbase_device *kbdev)
 	if (OSK_ERR_NONE != osk_err)
 		goto free_region_lock;
 
+	mali_err = kbase_mmu_init(kctx);
+	if(MALI_ERROR_NONE != mali_err)
+		goto free_phy;
+
 	kctx->pgd = kbase_mmu_alloc_pgd(kctx);
 	if (!kctx->pgd)
-		goto free_phy;
+		goto free_mmu;
 	
 	if (kbase_create_os_context(&kctx->osctx))
 		goto free_pgd;
@@ -89,7 +93,9 @@ struct kbase_context *kbase_create_context(kbase_device *kbdev)
 	if (NULL == kctx->nulljob_va)
 		goto free_nulljob_alloc;
 	/* NOTE: we use page 1 of the reserved address region */
-	kbase_mmu_insert_pages(kctx, (u64)1, &kctx->nulljob_pa, 1, KBASE_REG_CPU_RW|KBASE_REG_GPU_RW);
+	mali_err = kbase_mmu_insert_pages(kctx, (u64)1, &kctx->nulljob_pa, 1, KBASE_REG_CPU_RW|KBASE_REG_GPU_RW);
+	if(MALI_ERROR_NONE != mali_err)
+		goto free_nulljob_kmap;
 #endif
 
 	/* Make sure page 0 is not used... */
@@ -114,6 +120,8 @@ struct kbase_context *kbase_create_context(kbase_device *kbdev)
 
 	return kctx;
 #if (BASE_HW_ISSUE_6787 && BASE_HW_ISSUE_6315)
+free_nulljob_kmap:
+	osk_kunmap(kctx->nulljob_pa, kctx->nulljob_va);
 free_nulljob_alloc:
 	osk_phy_pages_free(&kctx->nulljob_allocator, 1, &kctx->nulljob_pa);
 free_nulljob_allocinit:
@@ -123,6 +131,8 @@ free_context:
 #endif /* (BASE_HW_ISSUE_6787 && BASE_HW_ISSUE_6315) */
 free_pgd:
 	kbase_mmu_free_pgd(kctx);
+free_mmu:
+	kbase_mmu_term(kctx);
 free_phy:
 	osk_phy_allocator_term(&kctx->pgd_allocator);
 free_region_lock:
@@ -158,6 +168,8 @@ void kbase_destroy_context(struct kbase_context *kctx)
 	kbdev = kctx->kbdev;
 	OSK_ASSERT(NULL != kbdev);
 
+	KBASE_TRACE_ADD( kbdev, CORE_CTX_DESTROY, kctx, NULL, 0u, 0u );
+
 	/* Ensure the core is powered up for the destroy process */
 	kbase_pm_context_active(kbdev);
 
@@ -166,6 +178,7 @@ void kbase_destroy_context(struct kbase_context *kctx)
 		/* disable the use of the hw counters if the app didn't use the API correctly or crashed */
 		kbase_uk_hwcnt_setup tmp;
 
+		KBASE_TRACE_ADD( kbdev, CORE_CTX_HWINSTR_TERM, kctx, NULL, 0u, 0u );
 		OSK_PRINT_WARN(OSK_BASE_CTX,
 					   "The privileged process asking for instrumentation forgot to disable it "
 					   "before exiting. Will end instrumentation for them" );
@@ -198,6 +211,9 @@ void kbase_destroy_context(struct kbase_context *kctx)
 	osk_phy_pages_free(&kctx->nulljob_allocator, 1, &kctx->nulljob_pa);
 	osk_phy_allocator_term(&kctx->nulljob_allocator);
 #endif /* (BASE_HW_ISSUE_6787 && BASE_HW_ISSUE_6315) */
+
+	kbase_mmu_term(kctx);
+
 	kbase_mem_usage_term(&kctx->usage);
 	osk_free(kctx);
 }

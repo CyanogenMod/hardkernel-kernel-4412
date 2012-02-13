@@ -110,6 +110,22 @@ OSK_STATIC_INLINE osk_error osk_timer_on_stack_init(osk_timer * const tim) CHECK
 OSK_STATIC_INLINE osk_error osk_timer_start(osk_timer *tim, u32 delay) CHECK_RESULT;
 
 /**
+ * @brief Starts a timer using a high-resolution parameter
+ *
+ * This is identical to osk_timer_start(), except that the argument is
+ * expressed in nanoseconds.
+ *
+ * @note whilst the parameter is high-resolution, the actual resolution of the
+ * timer may be much more coarse than nanoseconds. In this case, \a delay_ns
+ * will be rounded up to the timer resolution.
+ *
+ * @param[in] tim   an initialized osk timer object
+ * @param[in] delay_ns timer expiration in nanoseconds, at least 1.
+ * @return OSK_ERR_NONE on success. Any other value indicates failure.
+ */
+OSK_STATIC_INLINE osk_error osk_timer_start_ns(osk_timer *tim, u64 delay_ns) CHECK_RESULT;
+
+/**
  * @brief Modifies a timer's timeout
  *
  * See \a osk_timer_start for details.
@@ -122,6 +138,22 @@ OSK_STATIC_INLINE osk_error osk_timer_start(osk_timer *tim, u32 delay) CHECK_RES
  * @return OSK_ERR_NONE on success. Any other value indicates failure.
  */
 OSK_STATIC_INLINE osk_error osk_timer_modify(osk_timer *tim, u32 new_delay) CHECK_RESULT;
+
+/**
+ * @brief Modifies a timer's timeout using a high-resolution parameter
+ *
+ * This is identical to osk_timer_modify(), except that the argument is
+ * expressed in nanoseconds.
+ *
+ * @note whilst the parameter is high-resolution, the actual resolution of the
+ * timer may be much more coarse than nanoseconds. In this case, \a new_delay_ns
+ * will be rounded up to the timer resolution.
+ *
+ * @param[in] tim          an initialized osk timer object
+ * @param[in] new_delay_ns timer expiration in nanoseconds, at least 1.
+ * @return OSK_ERR_NONE on success. Any other value indicates failure.
+ */
+OSK_STATIC_INLINE osk_error osk_timer_modify_ns(osk_timer *tim, u64 new_delay_ns) CHECK_RESULT;
 
 /**
  * @brief Stops a timer

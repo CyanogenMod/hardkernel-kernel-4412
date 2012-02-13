@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -21,6 +21,13 @@
 #include <kbase/src/common/mali_kbase_js.h>
 #include <kbase/src/common/mali_kbase_js_policy_cfs.h>
 
+/**
+ * Define for when dumping is enabled.
+ * This should not be based on the instrumentation level as whether dumping is enabled for a particular level is down to the integrator.
+ * However this is being used for now as otherwise the cinstr headers would be needed.
+ */
+#define CINSTR_DUMPING_ENABLED ( 2 == MALI_INSTRUMENTATION_LEVEL )
+
 /** Fixed point constants used for runtime weight calculations */
 #define WEIGHT_FIXEDPOINT_SHIFT 10
 #define WEIGHT_TABLE_SIZE       40
@@ -35,10 +42,10 @@
  * selection of JS does not depend on the coherency requirement. */
 static const base_jd_core_req core_req_variants[] ={
 
-	BASE_JD_REQ_FS | BASE_JD_REQ_CF | BASE_JD_REQ_V | BASE_JD_REQ_PERMON,
-	BASE_JD_REQ_CS | BASE_JD_REQ_CF | BASE_JD_REQ_V | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON,
-	BASE_JD_REQ_CS | BASE_JD_REQ_T  | BASE_JD_REQ_CF | BASE_JD_REQ_V   | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON,
-	BASE_JD_REQ_CS | BASE_JD_REQ_CF | BASE_JD_REQ_V  | BASE_JD_REQ_NSS | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON
+	(BASE_JD_REQ_FS | BASE_JD_REQ_CF | BASE_JD_REQ_V | BASE_JD_REQ_PERMON ),
+	(BASE_JD_REQ_CS | BASE_JD_REQ_CF | BASE_JD_REQ_V | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON ),
+	(BASE_JD_REQ_CS | BASE_JD_REQ_T | BASE_JD_REQ_CF | BASE_JD_REQ_V | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON ),
+	(BASE_JD_REQ_CS | BASE_JD_REQ_CF | BASE_JD_REQ_V | BASE_JD_REQ_NSS | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON ),
 };
 
 #define NUM_CORE_REQ_VARIANTS NELEMS(core_req_variants)
@@ -137,6 +144,58 @@ STATIC u64 priority_weight(kbasep_js_policy_cfs_ctx *ctx_info, u32 time_us)
 	return time_delta_us;
 }
 
+#if KBASE_TRACE_ENABLE != 0
+STATIC int kbasep_js_policy_trace_get_refcnt_nolock( kbase_device *kbdev, kbase_context *kctx )
+{
+	kbasep_js_device_data *js_devdata;
+	int as_nr;
+	int refcnt = 0;
+
+	js_devdata = &kbdev->js_data;
+
+	as_nr = kctx->as_nr;
+	if ( as_nr != KBASEP_AS_NR_INVALID )
+	{
+		kbasep_js_per_as_data *js_per_as_data;
+		js_per_as_data = &js_devdata->runpool_irq.per_as_data[as_nr];
+
+		refcnt = js_per_as_data->as_busy_refcount;
+	}
+
+	return refcnt;
+}
+
+STATIC INLINE int kbasep_js_policy_trace_get_refcnt( kbase_device *kbdev, kbase_context *kctx )
+{
+	kbasep_js_device_data *js_devdata;
+	int refcnt = 0;
+
+	js_devdata = &kbdev->js_data;
+
+	osk_spinlock_irq_lock( &js_devdata->runpool_irq.lock );
+	refcnt = kbasep_js_policy_trace_get_refcnt_nolock( kbdev, kctx );
+	osk_spinlock_irq_unlock( &js_devdata->runpool_irq.lock );
+
+	return refcnt;
+}
+#else /* KBASE_TRACE_ENABLE != 0 */
+STATIC int kbasep_js_policy_trace_get_refcnt_nolock( kbase_device *kbdev, kbase_context *kctx )
+{
+	CSTD_UNUSED( kbdev );
+	CSTD_UNUSED( kctx );
+	return 0;
+}
+
+STATIC INLINE int kbasep_js_policy_trace_get_refcnt( kbase_device *kbdev, kbase_context *kctx )
+{
+	CSTD_UNUSED( kbdev );
+	CSTD_UNUSED( kctx );
+	return 0;
+}
+#endif /* KBASE_TRACE_ENABLE != 0 */
+
+
+#if MALI_DEBUG != 0
 STATIC void kbasep_js_debug_check( kbasep_js_policy_cfs *policy_info, kbase_context *kctx, kbasep_js_check check_flag )
 {
 	/* This function uses the ternary operator and non-explicit comparisons,
@@ -185,6 +244,15 @@ STATIC void kbasep_js_debug_check( kbasep_js_policy_cfs *policy_info, kbase_cont
 	}
 
 }
+#else /* MALI_DEBUG != 0 */
+STATIC void kbasep_js_debug_check( kbasep_js_policy_cfs *policy_info, kbase_context *kctx, kbasep_js_check check_flag )
+{
+	CSTD_UNUSED( policy_info );
+	CSTD_UNUSED( kctx );
+	CSTD_UNUSED( check_flag );
+	return;
+}
+#endif /* MALI_DEBUG != 0 */
 
 STATIC INLINE void set_slot_to_variant_lookup( u32 *bit_array, u32 slot_idx, u32 variants_supported )
 {
@@ -222,7 +290,7 @@ STATIC INLINE u32 get_slot_to_variant_lookup( u32 *bit_array, u32 slot_idx )
 STATIC void debug_check_core_req_variants( kbase_device *kbdev, kbasep_js_policy_cfs *policy_info )
 {
 	kbasep_js_device_data *js_devdata;
-	int i;
+	u32 i;
 	int j;
 
 	js_devdata = &kbdev->js_data;
@@ -259,6 +327,7 @@ STATIC void build_core_req_variants( kbase_device *kbdev, kbasep_js_policy_cfs *
 {
 	OSK_ASSERT( kbdev != NULL );
 	OSK_ASSERT( policy_info != NULL );
+	CSTD_UNUSED( kbdev );
 
 	/* Assume a static set of variants */
 	OSK_MEMCPY( policy_info->core_req_variants, core_req_variants, sizeof(core_req_variants) );
@@ -297,7 +366,7 @@ STATIC mali_error cached_variant_idx_init( kbasep_js_policy_cfs *policy_info, kb
 	OSK_ASSERT( atom != NULL );
 
 	job_info = &atom->sched_info.cfs;
-	job_core_req = atom->atom->core_req;
+	job_core_req = atom->core_req;
 
 	/* Pick a core_req variant that matches us. Since they're ordered by least
 	 * restrictive first, it picks the least restrictive variant */
@@ -321,7 +390,8 @@ STATIC mali_error cached_variant_idx_init( kbasep_js_policy_cfs *policy_info, kb
 STATIC mali_bool dequeue_job( kbase_device *kbdev,
                               kbase_context *kctx,
                               u32 variants_supported,
-                              kbase_jd_atom **katom_ptr)
+                              kbase_jd_atom **katom_ptr,
+							  int job_slot_idx)
 {
 	kbasep_js_device_data *js_devdata;
 	kbasep_js_policy_cfs *policy_info;
@@ -349,6 +419,11 @@ STATIC mali_bool dequeue_job( kbase_device *kbdev,
 			if ( OSK_DLIST_IS_EMPTY( job_list ) == MALI_FALSE )
 			{
 				/* Found a context with a matching job */
+				{
+					kbase_jd_atom *front_atom = OSK_DLIST_FRONT( job_list, kbase_jd_atom, sched_info.cfs.list );
+					KBASE_TRACE_ADD_SLOT( kbdev, JS_POLICY_DEQUEUE_JOB, front_atom->kctx, front_atom->user_atom,
+					                      front_atom->jc, job_slot_idx );
+				}
 				*katom_ptr = OSK_DLIST_POP_FRONT( job_list, kbase_jd_atom, sched_info.cfs.list );
 
 				(*katom_ptr)->sched_info.cfs.ticks = 0;
@@ -393,15 +468,27 @@ static void timer_callback(void *data)
 	for(s=0; s<kbdev->nr_job_slots; s++)
 	{
 		kbase_jm_slot *slot = kbase_job_slot_lock(kbdev, s);
+		kbase_jd_atom *atom = NULL;
 
 		if (kbasep_jm_nr_jobs_submitted(slot) > 0)
 		{
+			atom = kbasep_jm_peek_idx_submit_slot(slot, 0);
+			OSK_ASSERT( atom != NULL );
+
+			if ( kbasep_jm_is_dummy_workaround_job( atom ) != MALI_FALSE )
+			{
+				/* Prevent further use of the atom - never cause a soft-stop, hard-stop, or a GPU reset due to it. */
+				atom = NULL;
+			}
+		}
+
+		if ( atom != NULL )
+		{
 /* The current version of the model doesn't support Soft-Stop */
 #if (BASE_HW_ISSUE_5736 == 0) || MALI_BACKEND_KERNEL
-			kbase_jd_atom *atom = kbasep_jm_peek_idx_submit_slot(slot, 0);
 			u32 ticks = atom->sched_info.cfs.ticks ++;
 
-			if ((atom->atom->core_req & BASE_JD_REQ_NSS) == 0)
+			if ( (!CINSTR_DUMPING_ENABLED) && (atom->core_req & BASE_JD_REQ_NSS) == 0 )
 			{
 				/* Job is Soft-Stoppable */
 				if (ticks == js_devdata->soft_stop_ticks)
@@ -485,7 +572,7 @@ static void timer_callback(void *data)
 
 	if (OSK_DLIST_IS_EMPTY(&policy_info->scheduled_ctxs_head) == MALI_FALSE)
 	{
-		osk_err = osk_timer_start(&policy_info->timer, js_devdata->scheduling_tick_ns/1000000u);
+		osk_err = osk_timer_start_ns(&policy_info->timer, js_devdata->scheduling_tick_ns);
 		if (OSK_ERR_NONE != osk_err)
 		{
 			policy_info->timer_running = MALI_FALSE;
@@ -493,6 +580,7 @@ static void timer_callback(void *data)
 	}
 	else
 	{
+		KBASE_TRACE_ADD( kbdev, JS_POLICY_TIMER_END, NULL, NULL, 0u, 0u );
 		policy_info->timer_running = MALI_FALSE;
 	}
 
@@ -560,7 +648,7 @@ mali_error kbasep_js_policy_init_ctx( kbase_device *kbdev, kbase_context *kctx )
 	kbasep_js_policy_cfs_ctx *ctx_info;
 	kbasep_js_policy_cfs     *policy_info;
 	osk_process_priority prio;
-	int i;
+	u32 i;
 
 	OSK_ASSERT( kbdev != NULL );
 	OSK_ASSERT( kctx != NULL );
@@ -568,6 +656,9 @@ mali_error kbasep_js_policy_init_ctx( kbase_device *kbdev, kbase_context *kctx )
 	js_devdata = &kbdev->js_data;
 	policy_info = &kbdev->js_data.policy.cfs;
 	ctx_info = &kctx->jctx.sched_info.runpool.policy_ctx.cfs;
+
+	KBASE_TRACE_ADD_REFCOUNT( kbdev, JS_POLICY_INIT_CTX, kctx, NULL, 0u,
+							  kbasep_js_policy_trace_get_refcnt( kbdev, kctx ));
 
 	for ( i = 0 ; i < policy_info->num_core_req_variants ; ++i )
 	{
@@ -606,13 +697,19 @@ void kbasep_js_policy_term_ctx( kbasep_js_policy *js_policy, kbase_context *kctx
 {
 	kbasep_js_policy_cfs_ctx *ctx_info;
 	kbasep_js_policy_cfs     *policy_info;
-	int i;
+	u32 i;
 
 	OSK_ASSERT( js_policy != NULL );
 	OSK_ASSERT( kctx != NULL );
 
 	policy_info = &js_policy->cfs;
 	ctx_info = &kctx->jctx.sched_info.runpool.policy_ctx.cfs;
+
+	{
+		kbase_device *kbdev = CONTAINER_OF( js_policy, kbase_device, js_data.policy );
+		KBASE_TRACE_ADD_REFCOUNT( kbdev, JS_POLICY_TERM_CTX, kctx, NULL, 0u,
+								  kbasep_js_policy_trace_get_refcnt( kbdev, kctx ));
+	}
 
 	/* ASSERT that no jobs are present */
 	for ( i = 0 ; i < policy_info->num_core_req_variants ; ++i )
@@ -642,6 +739,12 @@ void kbasep_js_policy_enqueue_ctx( kbasep_js_policy *js_policy, kbase_context *k
 	policy_info = &js_policy->cfs;
 	ctx_info = &kctx->jctx.sched_info.runpool.policy_ctx.cfs;
 	js_devdata = CONTAINER_OF( js_policy, kbasep_js_device_data, policy );
+
+	{
+		kbase_device *kbdev = CONTAINER_OF( js_policy, kbase_device, js_data.policy );
+		KBASE_TRACE_ADD_REFCOUNT( kbdev, JS_POLICY_ENQUEUE_CTX, kctx, NULL, 0u,
+								  kbasep_js_policy_trace_get_refcnt( kbdev, kctx ));
+	}
 
 	/* ASSERT about scheduled-ness/queued-ness */
 	kbasep_js_debug_check( policy_info, kctx, KBASEP_JS_CHECK_NOTQUEUED );
@@ -734,6 +837,13 @@ mali_bool kbasep_js_policy_dequeue_head_ctx( kbasep_js_policy *js_policy, kbase_
 	                                 kbase_context,
 	                                 jctx.sched_info.runpool.policy_ctx.cfs.list );
 
+	{
+		kbase_device *kbdev = CONTAINER_OF( js_policy, kbase_device, js_data.policy );
+		kbase_context *kctx = *kctx_ptr;
+		KBASE_TRACE_ADD_REFCOUNT( kbdev, JS_POLICY_DEQUEUE_HEAD_CTX, kctx, NULL, 0u,
+								  kbasep_js_policy_trace_get_refcnt( kbdev, kctx ));
+	}
+
 
 	/* Update the head runtime */
 	head_ctx = OSK_DLIST_FRONT( queue_head,
@@ -783,6 +893,12 @@ mali_bool kbasep_js_policy_try_evict_ctx( kbasep_js_policy *js_policy, kbase_con
 	                                  kctx,
 	                                  jctx.sched_info.runpool.policy_ctx.cfs.list );
 
+	{
+		kbase_device *kbdev = CONTAINER_OF( js_policy, kbase_device, js_data.policy );
+		KBASE_TRACE_ADD_REFCOUNT_INFO( kbdev, JS_POLICY_TRY_EVICT_CTX, kctx, NULL, 0u,
+									   kbasep_js_policy_trace_get_refcnt( kbdev, kctx ), is_present);
+	}
+
 	if ( is_present != MALI_FALSE )
 	{
 		kbase_context *head_ctx;
@@ -826,6 +942,12 @@ void kbasep_js_policy_kill_all_ctx_jobs( kbasep_js_policy *js_policy, kbase_cont
 	policy_info = &js_policy->cfs;
 	ctx_info = &kctx->jctx.sched_info.runpool.policy_ctx.cfs;
 
+	{
+		kbase_device *kbdev = CONTAINER_OF( js_policy, kbase_device, js_data.policy );
+		KBASE_TRACE_ADD_REFCOUNT( kbdev, JS_POLICY_KILL_ALL_CTX_JOBS, kctx, NULL, 0u,
+								  kbasep_js_policy_trace_get_refcnt( kbdev, kctx ));
+	}
+
 	/* Kill jobs on each variant in turn */
 	for ( i = 0; i < policy_info->num_core_req_variants; ++i )
 	{
@@ -850,6 +972,12 @@ void kbasep_js_policy_runpool_add_ctx( kbasep_js_policy *js_policy, kbase_contex
 	policy_info = &js_policy->cfs;
 	js_devdata = CONTAINER_OF( js_policy, kbasep_js_device_data, policy );
 
+	{
+		kbase_device *kbdev = CONTAINER_OF( js_policy, kbase_device, js_data.policy );
+		KBASE_TRACE_ADD_REFCOUNT( kbdev, JS_POLICY_RUNPOOL_ADD_CTX, kctx, NULL, 0u,
+								  kbasep_js_policy_trace_get_refcnt_nolock( kbdev, kctx ));
+	}
+
 	/* ASSERT about scheduled-ness/queued-ness */
 	kbasep_js_debug_check( policy_info, kctx, KBASEP_JS_CHECK_NOTSCHEDULED );
 
@@ -861,9 +989,11 @@ void kbasep_js_policy_runpool_add_ctx( kbasep_js_policy *js_policy, kbase_contex
 
 	if (policy_info->timer_running == MALI_FALSE)
 	{
-		osk_err = osk_timer_start(&policy_info->timer, js_devdata->scheduling_tick_ns/1000000u);
+		osk_err = osk_timer_start_ns(&policy_info->timer, js_devdata->scheduling_tick_ns);
 		if (OSK_ERR_NONE == osk_err)
 		{
+			kbase_device *kbdev = CONTAINER_OF( js_policy, kbase_device, js_data.policy );
+			KBASE_TRACE_ADD( kbdev, JS_POLICY_TIMER_START, NULL, NULL, 0u, 0u );
 			policy_info->timer_running = MALI_TRUE;
 		}
 	}
@@ -877,6 +1007,12 @@ void kbasep_js_policy_runpool_remove_ctx( kbasep_js_policy *js_policy, kbase_con
 	OSK_ASSERT( kctx != NULL );
 
 	policy_info = &js_policy->cfs;
+
+	{
+		kbase_device *kbdev = CONTAINER_OF( js_policy, kbase_device, js_data.policy );
+		KBASE_TRACE_ADD_REFCOUNT( kbdev, JS_POLICY_RUNPOOL_REMOVE_CTX, kctx, NULL, 0u,
+								  kbasep_js_policy_trace_get_refcnt_nolock( kbdev, kctx ));
+	}
 
 	/* ASSERT about scheduled-ness/queued-ness */
 	kbasep_js_debug_check( policy_info, kctx, KBASEP_JS_CHECK_SCHEDULED );
@@ -938,6 +1074,7 @@ mali_bool kbasep_js_policy_should_remove_ctx( kbasep_js_policy *js_policy, kbase
 
 mali_error kbasep_js_policy_init_job( kbasep_js_policy *js_policy, kbase_jd_atom *atom )
 {
+	kbasep_js_policy_cfs_ctx *ctx_info;
 	kbasep_js_policy_cfs *policy_info;
 	kbase_context *parent_ctx;
 
@@ -947,6 +1084,17 @@ mali_error kbasep_js_policy_init_job( kbasep_js_policy *js_policy, kbase_jd_atom
 	OSK_ASSERT( parent_ctx != NULL );
 
 	policy_info = &js_policy->cfs;
+	ctx_info = &parent_ctx->jctx.sched_info.runpool.policy_ctx.cfs;
+
+	/* Adjust context priority to include the new job */
+	ctx_info->bag_total_nr_atoms++;
+	ctx_info->bag_total_priority += atom->nice_prio;
+
+	/* Get average priority and convert to NICE range -20..19 */
+	if(ctx_info->bag_total_nr_atoms)
+	{
+		ctx_info->bag_priority = (ctx_info->bag_total_priority / ctx_info->bag_total_nr_atoms) - 20;
+	}
 
 	/* Determine the job's index into the job list head, will return error if the
 	 * atom is malformed and so is reported. */
@@ -960,6 +1108,7 @@ void kbasep_js_policy_term_job( kbasep_js_policy *js_policy, kbase_jd_atom *atom
 	kbase_context *parent_ctx;
 
 	OSK_ASSERT( js_policy != NULL );
+	CSTD_UNUSED(js_policy);
 	OSK_ASSERT( atom != NULL );
 	parent_ctx = atom->kctx;
 	OSK_ASSERT( parent_ctx != NULL );
@@ -967,7 +1116,17 @@ void kbasep_js_policy_term_job( kbasep_js_policy *js_policy, kbase_jd_atom *atom
 	job_info = &atom->sched_info.cfs;
 	ctx_info = &parent_ctx->jctx.sched_info.runpool.policy_ctx.cfs;
 
-	/* This policy is simple enough that nothing is required */
+	/* Adjust context priority to no longer include removed job */
+	OSK_ASSERT(ctx_info->bag_total_nr_atoms > 0);
+	ctx_info->bag_total_nr_atoms--;
+	ctx_info->bag_total_priority -= atom->nice_prio;
+	OSK_ASSERT(ctx_info->bag_total_priority >= 0);
+
+	/* Get average priority and convert to NICE range -20..19 */
+	if(ctx_info->bag_total_nr_atoms)
+	{
+		ctx_info->bag_priority = (ctx_info->bag_total_priority / ctx_info->bag_total_nr_atoms) - 20;
+	}
 
 	/* In any case, we'll ASSERT that this job was correctly removed from the relevant lists */
 	OSK_ASSERT( OSK_DLIST_MEMBER_OF( &ctx_info->job_list_head[job_info->cached_variant_idx],
@@ -1011,7 +1170,7 @@ mali_bool kbasep_js_policy_dequeue_job( kbase_device *kbdev,
 	{
 		if(kctx->jctx.sched_info.runpool.policy_ctx.cfs.process_rt_policy)
 		{
-			if(dequeue_job(kbdev, kctx, variants_supported, katom_ptr))
+			if(dequeue_job(kbdev, kctx, variants_supported, katom_ptr, job_slot_idx))
 			{
 				/* Realtime policy job matched */
 				return MALI_TRUE;
@@ -1027,7 +1186,7 @@ mali_bool kbasep_js_policy_dequeue_job( kbase_device *kbdev,
 	{
 		if(kctx->jctx.sched_info.runpool.policy_ctx.cfs.process_rt_policy == MALI_FALSE)
 		{
-			if(dequeue_job(kbdev, kctx, variants_supported, katom_ptr))
+			if(dequeue_job(kbdev, kctx, variants_supported, katom_ptr, job_slot_idx))
 			{
 				/* Non-realtime policy job matched */
 				return MALI_TRUE;
@@ -1044,6 +1203,9 @@ mali_bool kbasep_js_policy_dequeue_job_irq( kbase_device *kbdev,
                                             kbase_jd_atom **katom_ptr )
 {
 	/* IRQ and non-IRQ variants of this are the same (though, the IRQ variant could be made faster) */
+
+	/* KBASE_TRACE_ADD_SLOT( kbdev, JS_POLICY_DEQUEUE_JOB_IRQ, NULL, NULL, 0u,
+	                         job_slot_idx); */
 	return kbasep_js_policy_dequeue_job( kbdev, job_slot_idx, katom_ptr );
 }
 
@@ -1062,6 +1224,12 @@ void kbasep_js_policy_enqueue_job( kbasep_js_policy *js_policy, kbase_jd_atom *k
 	job_info = &katom->sched_info.cfs;
 	ctx_info = &parent_ctx->jctx.sched_info.runpool.policy_ctx.cfs;
 
+	{
+		kbase_device *kbdev = CONTAINER_OF( js_policy, kbase_device, js_data.policy );
+		KBASE_TRACE_ADD( kbdev, JS_POLICY_ENQUEUE_JOB, katom->kctx, katom->user_atom, katom->jc,
+						 0 );
+	}
+
 	OSK_DLIST_PUSH_BACK( &ctx_info->job_list_head[job_info->cached_variant_idx],
 	                     katom,
 	                     kbase_jd_atom,
@@ -1072,9 +1240,10 @@ void kbasep_js_policy_log_job_result( kbasep_js_policy *js_policy, kbase_jd_atom
 {
 	kbasep_js_policy_cfs_ctx *ctx_info;
 	kbase_context *parent_ctx;
-
 	OSK_ASSERT( js_policy != NULL );
 	OSK_ASSERT( katom != NULL );
+	CSTD_UNUSED( js_policy );
+
 	parent_ctx = katom->kctx;
 	OSK_ASSERT( parent_ctx != NULL );
 
@@ -1082,3 +1251,31 @@ void kbasep_js_policy_log_job_result( kbasep_js_policy *js_policy, kbase_jd_atom
 
 	ctx_info->runtime_us += priority_weight(ctx_info, time_spent_us);
 }
+
+mali_bool kbasep_js_policy_ctx_has_priority( kbasep_js_policy *js_policy, kbase_context *current_ctx, kbase_context *new_ctx )
+{
+	kbasep_js_policy_cfs_ctx *current_ctx_info;
+	kbasep_js_policy_cfs_ctx *new_ctx_info;
+
+	OSK_ASSERT( current_ctx != NULL );
+	OSK_ASSERT( new_ctx != NULL );
+	CSTD_UNUSED(js_policy);
+
+	current_ctx_info = &current_ctx->jctx.sched_info.runpool.policy_ctx.cfs;
+	new_ctx_info = &new_ctx->jctx.sched_info.runpool.policy_ctx.cfs;
+
+	if((current_ctx_info->process_rt_policy == MALI_FALSE) &&
+	   (new_ctx_info->process_rt_policy == MALI_TRUE))
+	{
+		return MALI_TRUE;
+	}
+
+	if((current_ctx_info->process_rt_policy == new_ctx_info->process_rt_policy) &&
+	   (current_ctx_info->bag_priority > new_ctx_info->bag_priority))
+	{
+		return MALI_TRUE;
+	}
+
+	return MALI_FALSE;
+}
+

@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2008-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -23,46 +23,9 @@
 #include <ump_arch.h>
 #include <common/ump_kernel_priv.h>
 
+#define UMP_FLAGS_RANGE ((UMP_PROT_SHAREABLE<<1) - 1u)
+
 static umpp_device device;
-
-/**
- * Update UMP allocation flags
- *
- * Sets implicit flags
- *    - Hint flags implicitly set PROT flags
- *
- * Clears flags not in use by the UMP
- *
- * @param  flags UMP allocation flags
- * @return flags updated for implicitly set flags
- */
-static ump_alloc_flags umpp_dd_update_alloc_flags(ump_alloc_flags flags)
-{
-	/* Clear any flags not in use by the UMP API */
-	u32 device_shift[] = { UMP_DEVICE_CPU_SHIFT,
-						   UMP_DEVICE_W_SHIFT,
-						   UMP_DEVICE_X_SHIFT,
-						   UMP_DEVICE_Y_SHIFT,
-	 					   UMP_DEVICE_Z_SHIFT};
-	u32 i;
-
-	flags &= ~UMPP_ALLOCBITS_UNUSED;
-
-	for(i = 0; i < ARRAY_SIZE(device_shift); i++)
-	{
-		/* Hint flags implicitly set Prot flags */
-		if( flags & (UMP_HINT_DEVICE_RD << device_shift[i]) )
-		{
-			flags |= UMP_PROT_DEVICE_RD << device_shift[i];
-		}
-		if( flags & (UMP_HINT_DEVICE_WR << device_shift[i]) )
-		{
-			flags |= UMP_HINT_DEVICE_WR << device_shift[i];
-		}
-	}
-
-	return flags;
-}
 
 ump_result umpp_core_constructor(void)
 {
@@ -130,13 +93,34 @@ void umpp_core_session_end(umpp_session *session)
 ump_dd_handle ump_dd_allocate_64(uint64_t size, ump_alloc_flags flags, ump_dd_security_filter filter_func, ump_dd_final_release_callback final_release_func, void* callback_data)
 {
 	umpp_allocation * alloc;
+	int i;
 
-	flags = umpp_dd_update_alloc_flags(flags);
+	UMP_ASSERT(size);
+
+	if (flags & (~UMP_FLAGS_RANGE))
+	{
+		printk(KERN_WARNING "UMP: allocation flags out of allowed bits range\n");
+		return UMP_DD_INVALID_MEMORY_HANDLE;
+	}
+
 	if( ( flags & (UMP_PROT_CPU_RD | UMP_PROT_W_RD | UMP_PROT_X_RD | UMP_PROT_Y_RD | UMP_PROT_Z_RD ) ) == 0 ||
 	    ( flags & (UMP_PROT_CPU_WR | UMP_PROT_W_WR | UMP_PROT_X_WR | UMP_PROT_Y_WR | UMP_PROT_Z_WR )) == 0 )
 	{
 		printk(KERN_WARNING "UMP: allocation flags should have at least one read and one write permission bit set\n");
 		return UMP_DD_INVALID_MEMORY_HANDLE;
+	}
+
+	/*check permission flags to be set if hit flags are set too*/
+	for (i = UMP_DEVICE_CPU_SHIFT; i<=UMP_DEVICE_Z_SHIFT; i+=4)
+	{
+		if (flags & (UMP_HINT_DEVICE_RD<<i))
+		{
+			UMP_ASSERT(flags & (UMP_PROT_DEVICE_RD<<i));
+		}
+		if (flags & (UMP_HINT_DEVICE_WR<<i))
+		{
+			UMP_ASSERT(flags & (UMP_PROT_DEVICE_WR<<i));
+		}
 	}
 
 	alloc = kzalloc(sizeof(*alloc), GFP_KERNEL | __GFP_HARDWALL);
@@ -239,6 +223,7 @@ ump_dd_handle ump_dd_from_secure_id(ump_secure_id secure_id)
 	umpp_allocation * alloc = UMP_DD_INVALID_MEMORY_HANDLE;
 
 	mutex_lock(&device.secure_id_map_lock);
+
 	if (0 == umpp_descriptor_mapping_lookup(device.secure_id_map, secure_id, (void**)&alloc))
 	{
 		if (NULL != alloc->filter_func)
@@ -249,8 +234,8 @@ ump_dd_handle ump_dd_from_secure_id(ump_secure_id secure_id)
 			}
 		}
 
-		/*check permission to access it*/
-		if (!(alloc->flags & UMP_PROT_SHAREABLE))
+		/* check permission to access it */
+		if ((UMP_DD_INVALID_MEMORY_HANDLE != alloc) && !(alloc->flags & UMP_PROT_SHAREABLE))
 		{
 			if (alloc->owner != get_current()->pid)
 			{
@@ -266,7 +251,6 @@ ump_dd_handle ump_dd_from_secure_id(ump_secure_id secure_id)
 			}
 		}
 	}
-
 	mutex_unlock(&device.secure_id_map_lock);
 
 	return alloc;
@@ -590,12 +574,39 @@ UMP_KERNEL_API_EXPORT ump_dd_handle ump_dd_create_from_phys_blocks_64(const ump_
 	uint64_t i;
 	umpp_allocation * alloc;
 
-	flags = umpp_dd_update_alloc_flags(flags);
+	UMP_ASSERT(blocks);
+	UMP_ASSERT(num_blocks);
+
+	for (i = 0; i < num_blocks; i++)
+	{
+		size += blocks[i].size;
+	}
+	UMP_ASSERT(size);
+
+	if (flags & (~UMP_FLAGS_RANGE))
+	{
+		printk(KERN_WARNING "UMP: allocation flags out of allowed bits range\n");
+		return UMP_DD_INVALID_MEMORY_HANDLE;
+	}
+
 	if( ( flags & (UMP_PROT_CPU_RD | UMP_PROT_W_RD | UMP_PROT_X_RD | UMP_PROT_Y_RD | UMP_PROT_Z_RD
 	    | UMP_PROT_CPU_WR | UMP_PROT_W_WR | UMP_PROT_X_WR | UMP_PROT_Y_WR | UMP_PROT_Z_WR )) == 0 )
 	{
 		printk(KERN_WARNING "UMP: allocation flags should have at least one read or write permission bit set\n");
 		return UMP_DD_INVALID_MEMORY_HANDLE;
+	}
+
+	/*check permission flags to be set if hit flags are set too*/
+	for (i = UMP_DEVICE_CPU_SHIFT; i<=UMP_DEVICE_Z_SHIFT; i+=4)
+	{
+		if (flags & (UMP_HINT_DEVICE_RD<<i))
+		{
+			UMP_ASSERT(flags & (UMP_PROT_DEVICE_RD<<i));
+		}
+		if (flags & (UMP_HINT_DEVICE_WR<<i))
+		{
+			UMP_ASSERT(flags & (UMP_PROT_DEVICE_WR<<i));
+		}
 	}
 
 	alloc = kzalloc(sizeof(*alloc),__GFP_HARDWALL | GFP_KERNEL);
@@ -613,12 +624,6 @@ UMP_KERNEL_API_EXPORT ump_dd_handle ump_dd_create_from_phys_blocks_64(const ump_
 
 	memcpy(alloc->block_array, blocks, sizeof(ump_dd_physical_block_64) * num_blocks);
 
-
-	for (i = 0; i < num_blocks; i++)
-	{
-		size += blocks[i].size;
-	}
-
 	alloc->size = size;
 	alloc->blocksCount = num_blocks;
 	alloc->flags = flags;
@@ -628,8 +633,9 @@ UMP_KERNEL_API_EXPORT ump_dd_handle ump_dd_create_from_phys_blocks_64(const ump_
 
 	if (!(alloc->flags & UMP_PROT_SHAREABLE))
 	{
-		alloc->owner = current_euid();
+		alloc->owner = get_current()->pid;
 	}
+
 
 	INIT_LIST_HEAD(&alloc->map_list);
 	atomic_set(&alloc->refcount, 1);

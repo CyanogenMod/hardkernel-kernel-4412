@@ -1,5 +1,4 @@
-#
-# (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
+# (C) COPYRIGHT 2011-2012 ARM Limited. All rights reserved.
 #
 # This program is free software and is provided to you under the terms of the GNU General Public License version 2
 # as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -27,6 +26,8 @@
 #export MALI_FAKE_PLATFORM_DEVICE?=0
 #export MALI_MOCK_TEST?=0
 #export MALI_HW_VERSION?=r0p0
+#export MALI_UNCACHED?=0
+#export MALI_INSTRUMENTATION_LEVEL?=0
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
 

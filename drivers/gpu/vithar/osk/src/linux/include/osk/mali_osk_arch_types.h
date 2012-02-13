@@ -25,7 +25,9 @@
 #include <linux/mutex.h>
 #include <linux/rwsem.h>
 #include <linux/wait.h>
-#include <linux/timer.h>
+#if MALI_LICENSE_IS_GPL
+#include <linux/hrtimer.h>
+#endif
 #include <linux/workqueue.h>
 #include <linux/mm_types.h>
 #include <asm/atomic.h>
@@ -82,7 +84,13 @@ typedef struct osk_waitq
 } osk_waitq;
 
 typedef struct osk_timer {
+#if MALI_LICENSE_IS_GPL
+	struct hrtimer timer;
+	osk_timer_callback callback;
+	void *data;
+#else /* MALI_LICENSE_IS_GPL */
 	struct timer_list timer;
+#endif /* MALI_LICENSE_IS_GPL */
 #ifdef MALI_DEBUG
 	mali_bool active;
 #endif
@@ -132,6 +140,7 @@ struct osk_workq
 
 typedef struct device osk_power_info;
 
+typedef struct timeval osk_timeval;
 
 #endif /* _OSK_ARCH_TYPES_H_ */
 

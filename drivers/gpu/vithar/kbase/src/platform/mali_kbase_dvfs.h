@@ -24,7 +24,17 @@
 #define MALI_DVFS_DEBUG 0
 #define MALI_DVFS_CPUFREQ_TEST 0
 #define MALI_DVFS_START_MAX_STEP 1
-#define MALI_DVFS_STEPS 4
+
+#ifdef	CONFIG_MACH_SMDK5250
+#define	MALI_DVFS_STEPS 4
+#elif	defined(CONFIG_MACH_P11)
+#define	MALI_DVFS_STEPS 5
+#elif	defined(CONFIG_MACH_P10)
+#define	MALI_DVFS_STEPS 5
+#else
+#error	VITHAR : YOU MUST DECLARE YOUR CONFIG_MACH FOR GPU DVFS
+#endif
+
 #define MALI_DVFS_KEEP_STAY_CNT 10
 
 struct regulator *kbase_platform_get_regulator(void);
@@ -40,6 +50,7 @@ int kbase_platform_dvfs_init(int step);
 void kbase_platform_dvfs_term(void);
 int kbase_platform_dvfs_event(u32 utilisation);
 int kbase_platform_dvfs_get_control_status(void);
+int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev);
 #endif
 
 #endif /* _KBASE_DVFS_H_ */

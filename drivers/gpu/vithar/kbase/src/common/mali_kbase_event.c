@@ -37,10 +37,10 @@ static void *kbase_event_process(kbase_context *ctx,
 	{
 		kbase_jd_atom *katom = (void *)event->data;
 		/* return the offset in the ring buffer... */
-		data = (void *)((uintptr_t)katom->atom - (uintptr_t)ctx->jctx.pool);
+		data = (void *)((uintptr_t)katom->user_atom - (uintptr_t)ctx->jctx.pool);
 		/* perform the sync operations only on successful jobs */
 		kbase_post_job_sync(ctx,
-				base_jd_get_atom_syncset(katom->atom, 0),
+				base_jd_get_atom_syncset(katom->user_atom, 0),
 				katom->nr_syncsets);
 		ptr = katom;
 		/* As the event is integral part of the katom, return

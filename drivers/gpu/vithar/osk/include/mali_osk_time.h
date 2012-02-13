@@ -113,6 +113,17 @@ OSK_STATIC_INLINE u32 osk_time_elapsed(osk_ticks ticka, osk_ticks tickb) CHECK_R
  */
 OSK_STATIC_INLINE mali_bool osk_time_after(osk_ticks ticka, osk_ticks tickb) CHECK_RESULT;
 
+/**
+ * @brief Retrieve current "wall clock" time
+ *
+ * This function returns the current time in a format that userspace can also
+ * produce and allows direct comparison of events in the kernel with events
+ * that userspace controls.
+ *
+ * @param[in] ts    An osk_timespec structure
+ */
+OSK_STATIC_INLINE void osk_gettimeofday(osk_timeval *ts);
+
 /* @} */ /* end group osktime */
 
 /** @} */ /* end group base_osk_api */

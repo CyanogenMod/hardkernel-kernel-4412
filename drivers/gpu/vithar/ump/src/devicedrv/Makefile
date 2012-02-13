@@ -1,5 +1,5 @@
 #
-# (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+# (C) COPYRIGHT 2008-2012 ARM Limited. All rights reserved.
 #
 # This program is free software and is provided to you under the terms of the GNU General Public License version 2
 # as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -8,7 +8,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA. 
 #
 #
-
 
 
 ifneq ($(KBUILD_EXTMOD),)
@@ -26,6 +25,23 @@ endif
 ARCH ?= $(shell uname -m)
 
 # linux build system integration
+
+######################################################################
+#******************************************************************###
+#TODO: remove OSK references for Linux Kernel mainline release:  **###
+#***** I.E. for each ifeq ($(MALI_UNIT_TEST),1) leave only the   **###
+#####* body in the else branch and remove the rest               **###
+#####**************************************************************###
+######################################################################
+
+ifeq ($(MALI_UNIT_TEST),1)
+OS=linux
+RELATIVE_ROOT=../../..
+ROOT = $(PWD)/../../..
+OSK_PATH = $(ROOT)/osk
+include $(OSK_PATH)/src/$(OS)/Makefile.osk
+EXTRA_CFLAGS += -DMALI_UNIT_TEST=$(MALI_UNIT_TEST) -DMALI_DEBUG=$(MALI_DEBUG) -DMALI_LICENSE_IS_GPL=$(MALI_LICENSE_IS_GPL) -DMALI_BASE_TRACK_MEMLEAK=$(MALI_BASE_TRACK_MEMLEAK)
+endif
 
 #ifneq ($(KERNELRELEASE),)
 ifneq ($(VITHAR_ROOT),)
@@ -50,7 +66,11 @@ SRC +=	linux/ump_kernel_linux.c linux/ump_kernel_linux_mem.c
 #obj-m := $(MODULE:.ko=.o)
 #$(MODULE:.ko=-y) := $(SRC:.c=.o)
 
+ifeq ($(MALI_UNIT_TEST),1)
+$(MODULE:.ko=-objs) := $(SRC:.c=.o) $(RELATIVE_ROOT)/osk/src/linux/lib.a
+else
 #$(MODULE:.ko=-objs) := $(SRC:.c=.o) 
+endif
 
 else
 # Outside the kernel build system
@@ -94,10 +114,18 @@ $(shell touch arch/config.h)
 endif
 
 all:
+ifeq ($(MALI_UNIT_TEST),1)
+	$(MAKE) ARCH=$(ARCH) -C $(KDIR) M=$(CURDIR) KBUILD_EXTRA_SYMBOLS="$(ROOT)/uk/src/ukk/linux/Module.symvers"
+else
 	$(MAKE) ARCH=$(ARCH) -C $(KDIR) M=$(CURDIR)
+endif
 
 kernelrelease:
+ifeq ($(MALI_UNIT_TEST),1)
+	$(MAKE) -C $(KDIR) KBUILD_EXTRA_SYMBOLS="$(ROOT)/uk/src/ukk/linux/Module.symvers" kernelrelease
+else
 	$(MAKE) -C $(KDIR) kernelrelease
+endif
 
 clean:
 	$(MAKE) ARCH=$(ARCH) -C $(KDIR) M=$(CURDIR) clean

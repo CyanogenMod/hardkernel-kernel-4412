@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -591,27 +591,66 @@ void kbase_pm_check_transitions(struct kbase_device *kbdev);
  */
 void kbasep_pm_read_present_cores(struct kbase_device *kbdev);
 
-/** Retain one or more cores.
+/** Mark one or more cores as being required for jobs to be submitted.
  *
- * This function is called by the job scheduler to retain one or more cores for future use.
- * As a result, cores can be powered up (depending on the policy).
+ * This function is called by the job scheduler to mark one or both cores
+ * as being required to submit jobs that are ready to run.
  *
- * @param kbdev     The kbase device structure for the device
- * @param type      The type of core (see the @ref kbase_pm_core_type enumeration)
- * @param cores     A bitmask of cores to retain
+ * The cores requested are reference counted and a subsequent call to @ref kbase_pm_register_inuse_cores or
+ * @ref kbase_pm_unrequest_cores should be made to dereference the cores as being 'needed'.
+ *
+ * The policy is expected to make these cores available at some point in the future,
+ * but may take an arbitrary length of time to reach this state.
+ *
+ * @param kbdev         The kbase device structure for the device
+ * @param shader_cores  A bitmask of shader cores which are necessary for the job
+ * @param tiler_cores   A bitmask of tiler cores which are necessary for the job
+ *
+ * @return MALI_ERROR_NONE if the cores were successfully requested.
  */
-void kbase_pm_retain_cores(struct kbase_device *kbdev, kbase_pm_core_type type, u64 cores);
+mali_error kbase_pm_request_cores(struct kbase_device *kbdev, u64 shader_cores, u64 tiler_cores);
 
-/** Release one or more cores.
+/** Unmark one or more cores as being required for jobs to be submitted.
  *
- * This function is called by the job scheduler to release one or more cores when it's done using them.
- * As a result, cores can be powered down (depending on the policy).
+ * This function undoes the effect of @ref kbase_pm_request_cores. It should be used when a job is not
+ * going to be submitted to the hardware (e.g. the job is cancelled before it is enqueued).
  *
- * @param kbdev     The kbase device structure for the device
- * @param type      The type of core (see the @ref kbase_pm_core_type enumeration)
- * @param cores     A bitmask of cores to release
+ * The policy may use this as an indication that it can power down cores.
+ *
+ * @param kbdev         The kbase device structure for the device
+ * @param shader_cores  A bitmask of shader cores (as given to @ref kbase_pm_request_cores)
+ * @param tiler_cores   A bitmask of tiler cores (as given to @ref kbase_pm_request_cores)
  */
-void kbase_pm_release_cores(struct kbase_device *kbdev, kbase_pm_core_type type, u64 cores);
+void kbase_pm_unrequest_cores(struct kbase_device *kbdev, u64 shader_cores, u64 tiler_cores);
+
+/** Register a set of cores as in use by a job.
+ *
+ * This function should be called after @ref kbase_pm_request_cores when the job is about to be submitted to
+ * the hardware. It will check that the necessary cores are available and if so update the 'needed' and 'inuse'
+ * bitmasks to reflect that the job is now committed to being run.
+ *
+ * If the necessary cores are not currently available then the function will return MALI_FALSE and have no effect.
+ *
+ * @param kbdev         The kbase device structure for the device
+ * @param shader_cores  A bitmask of shader cores (as given to @ref kbase_pm_request_cores)
+ * @param tiler_cores   A bitmask of tiler cores (as given to @ref kbase_pm_request_cores)
+ *
+ * @return MALI_TRUE if the job can be submitted to the hardware or MALI_FALSE if the job is not ready to run.
+ */
+mali_bool kbase_pm_register_inuse_cores(struct kbase_device *kbdev, u64 shader_cores, u64 tiler_cores);
+
+/** Release cores after a job has run.
+ *
+ * This function should be called when a job has finished running on the hardware. A call to @ref
+ * kbase_pm_register_inuse_cores must have previously occurred. The reference counts of the specified cores will be
+ * decremented which may cause the bitmask of 'inuse' cores to be reduced. The power policy may then turn off any
+ * cores which are no longer 'inuse'.
+ *
+ * @param kbdev         The kbase device structure for the device
+ * @param shader_cores  A bitmask of shader cores (as given to @ref kbase_pm_register_inuse_cores)
+ * @param tiler_cores   A bitmask of tiler cores (as given to @ref kbase_pm_register_inuse_cores)
+ */
+void kbase_pm_release_cores(struct kbase_device *kbdev, u64 shader_cores, u64 tiler_cores);
 
 /** Initialize the metrics gathering framework.
  *

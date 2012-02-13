@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -21,6 +21,9 @@
 #include <kbase/src/common/mali_midg_regmap.h>
 #include <kbase/src/common/mali_kbase_gator.h>
 
+#if BASE_HW_ISSUE_8401
+#include <kbase/src/common/mali_kbase_8401_workaround.h>
+#endif
 
 #include "mali_kbase_jm.h"
 
@@ -32,6 +35,7 @@ static void kbase_job_hw_submit(kbase_device *kbdev, kbase_jd_atom *katom, int j
 {
 	kbase_context *kctx;
 	u32 cfg;
+	u64 jc_head = katom->jc;
 
 	OSK_ASSERT(kbdev);
 	OSK_ASSERT(katom);
@@ -39,17 +43,17 @@ static void kbase_job_hw_submit(kbase_device *kbdev, kbase_jd_atom *katom, int j
 	kctx = katom->kctx;
 
 	/* Command register must be available */
-	OSK_ASSERT(kbasep_jm_is_js_free(kbdev, js, katom->kctx));
+	OSK_ASSERT(kbasep_jm_is_js_free(kbdev, js, kctx));
 
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_LO), katom->atom->jc & 0xFFFFFFFF, katom->kctx);
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_HI), katom->atom->jc >> 32, katom->kctx);
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_LO), jc_head & 0xFFFFFFFF, kctx);
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_HEAD_NEXT_HI), jc_head >> 32, kctx);
 
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_AFFINITY_NEXT_LO), katom->affinity & 0xFFFFFFFF, katom->kctx);
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_AFFINITY_NEXT_HI), katom->affinity >> 32, katom->kctx);
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_AFFINITY_NEXT_LO), katom->affinity & 0xFFFFFFFF, kctx);
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_AFFINITY_NEXT_HI), katom->affinity >> 32, kctx);
 
 	/* start MMU, medium priority, cache clean/flush on end, clean/flush on start */
 	cfg = kctx->as_nr | (3 << 12) | (1 << 10) | (8 << 16) | (3 << 8);
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_CONFIG_NEXT), cfg, katom->kctx);
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_CONFIG_NEXT), cfg, kctx);
 
 	/* Write an approximate start timestamp.
 	 * It's approximate because there might be a job in the HEAD register. In
@@ -59,12 +63,14 @@ static void kbase_job_hw_submit(kbase_device *kbdev, kbase_jd_atom *katom, int j
 
 	/* GO ! */
 	OSK_PRINT_INFO(OSK_BASE_JM, "JS: Submitting atom %p from ctx %p to js[%d] with head=0x%llx, affinity=0x%llx",
-				   katom, kctx, js, katom->atom->jc, katom->affinity );
+	               katom, kctx, jc_head, katom->affinity );
+
+	KBASE_TRACE_ADD_SLOT( kbdev, JM_SUBMIT, kctx, katom->user_atom, jc_head, js );
 
 #if MALI_GATOR_SUPPORT
 	kbase_trace_mali_timeline_event(GATOR_MAKE_EVENT(GATOR_TIMELINE_START, js));
 #endif
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), 1, katom->kctx);
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), JSn_COMMAND_START, katom->kctx);
 }
 
 void kbase_job_submit_nolock(kbase_device *kbdev, kbase_jd_atom *katom, int js)
@@ -95,11 +101,20 @@ void kbase_job_done_slot(kbase_device *kbdev, int s, u32 completion_code, u64 jo
 {
 	kbase_jm_slot *slot;
 	kbase_jd_atom *katom;
+	mali_addr64    jc_head;
+	kbase_context *kctx;
 
 	OSK_ASSERT(kbdev);
 
 	slot = &kbdev->jm_slots[s];
 	katom = kbasep_jm_dequeue_submit_slot( slot );
+
+	/* If the katom completed is because it's a dummy job for HW workarounds, then take no further action */
+	if(kbasep_jm_is_dummy_workaround_job(katom))
+	{
+		KBASE_TRACE_ADD_SLOT_INFO( kbdev, JM_JOB_DONE, NULL, NULL, 0, s, completion_code );
+		return;
+	}
 
 #if BASE_HW_ISSUE_8316
 	if (katom->poking)
@@ -110,10 +125,27 @@ void kbase_job_done_slot(kbase_device *kbdev, int s, u32 completion_code, u64 jo
 	}
 #endif /* BASE_HW_ISSUE_8316 */
 
+	jc_head = katom->jc;
+	kctx = katom->kctx;
+
+	KBASE_TRACE_ADD_SLOT_INFO( kbdev, JM_JOB_DONE, kctx, katom->user_atom, jc_head, s, completion_code );
+
+	if ( completion_code != BASE_JD_EVENT_DONE && completion_code != BASE_JD_EVENT_STOPPED )
+	{
+
+#if KBASE_TRACE_DUMP_ON_JOB_SLOT_ERROR != 0
+		KBASE_TRACE_DUMP( kbdev );
+#endif
+	}
 	if (job_tail != 0)
 	{
+		mali_bool was_updated = (job_tail != jc_head);
 		/* Some of the job has been executed, so we update the job chain address to where we should resume from */
-		katom->atom->jc = job_tail;
+		katom->jc = job_tail;
+		if ( was_updated )
+		{
+			KBASE_TRACE_ADD_SLOT( kbdev, JM_UPDATE_HEAD, kctx, katom->user_atom, job_tail, s );
+		}
 	}
 
 #if BASE_HW_ISSUE_5713
@@ -134,7 +166,7 @@ void kbase_job_done_slot(kbase_device *kbdev, int s, u32 completion_code, u64 jo
 #endif
 	kbasep_js_job_done_slot_irq( kbdev, s, katom, end_timestamp );
 
-	kbase_device_trace_register_access(katom->kctx, REG_WRITE , JOB_CONTROL_REG(JOB_IRQ_CLEAR), 1 << s);
+	kbase_device_trace_register_access(kctx, REG_WRITE , JOB_CONTROL_REG(JOB_IRQ_CLEAR), 1 << s);
 
 	/* Defer the remaining work onto the workqueue:
 	 * - Re-queue Soft-stopped jobs
@@ -165,6 +197,12 @@ STATIC void kbasep_job_slot_update_head_start_timestamp( kbase_jm_slot *slot, kb
 
 		OSK_ASSERT( katom != NULL );
 
+		if ( kbasep_jm_is_dummy_workaround_job( katom ) != MALI_FALSE )
+		{
+			/* Don't access the members of HW workaround 'dummy' jobs */
+			return;
+		}
+
 		/* Account for any IRQ Throttle time - makes an overestimate of the time spent by the job */
 		new_timestamp = end_timestamp - kbasep_js_convert_js_us_to_ticks(KBASE_JS_IRQ_THROTTLE_TIME_US);
 		if ( kbasep_js_ticks_after( new_timestamp, katom->start_timestamp ) )
@@ -184,6 +222,8 @@ void kbase_job_done(kbase_device *kbdev, u32 done)
 	kbasep_js_tick end_timestamp = kbasep_js_get_js_ticks();
 
 	OSK_ASSERT(kbdev);
+
+	KBASE_TRACE_ADD( kbdev, JM_IRQ, NULL, NULL, 0, done );
 
 	OSK_MEMSET( &kbdev->slot_submit_count_irq[0], 0, sizeof(kbdev->slot_submit_count_irq) );
 
@@ -263,7 +303,6 @@ void kbase_job_done(kbase_device *kbdev, u32 done)
 					u32 cfg;
 					int as_number;
 					kbase_jd_atom katom;
-					base_jd_atom atom;
 
 					/* use null job completion solution */
 					/* get slot context */
@@ -291,10 +330,10 @@ void kbase_job_done(kbase_device *kbdev, u32 done)
 					null_job[4] = (1 << 1);
 
 					/* create the katom struct that job_hw_submit expects to see */
-					katom.atom = &atom;
+					katom.user_atom = NULL;
 					katom.kctx = kctx;
 					/* nulljob uses reserved memory */
-					atom.jc = 4096;
+					katom.jc = 4096;
 
 					/* write job to hw registers */
 					kbase_job_hw_submit(kbdev, &katom, i);
@@ -401,13 +440,90 @@ spurious:
 		kbasep_try_reset_gpu_early(kbdev);
 	}
 
-	beenthere("irq efficiency = %d", count);
+	KBASE_TRACE_ADD( kbdev, JM_IRQ_END, NULL, NULL, 0, count );
 }
 KBASE_EXPORT_TEST_API(kbase_job_done)
 
 
-static void kbasep_job_slot_soft_or_hard_stop_do_action(kbase_device *kbdev, int js, u32 action)
+static mali_bool kbasep_soft_stop_allowed(u16 core_reqs)
 {
+	mali_bool soft_stops_allowed = MALI_TRUE;
+
+#if BASE_HW_ISSUE_8408
+	if ( (core_reqs & BASE_JD_REQ_T) != 0 )
+	{
+		soft_stops_allowed = MALI_FALSE;
+	}
+#else
+	CSTD_UNUSED(core_reqs);
+#endif
+
+	return soft_stops_allowed;
+}
+
+static mali_bool kbasep_hard_stop_allowed(u16 core_reqs)
+{
+	mali_bool hard_stops_allowed = MALI_TRUE;
+
+#if BASE_HW_ISSUE_8394
+	if ( (core_reqs & BASE_JD_REQ_T) != 0 )
+	{
+		hard_stops_allowed = MALI_FALSE;
+	}
+#else
+	CSTD_UNUSED(core_reqs);
+#endif
+
+	return hard_stops_allowed;
+}
+
+static void kbasep_job_slot_soft_or_hard_stop_do_action(kbase_device *kbdev, int js, u32 action,
+                                                        u16 core_reqs, kbase_context *kctx )
+{
+#if KBASE_TRACE_ENABLE
+	u32 status_reg_before;
+	u64 job_in_head_before;
+	u32 status_reg_after;
+
+	/* Check the head pointer */
+	job_in_head_before = ((u64)kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_HEAD_LO), NULL))
+		| (((u64)kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_HEAD_HI), NULL)) << 32);
+	status_reg_before = kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_STATUS), NULL );
+#endif
+
+	if (action == JSn_COMMAND_SOFT_STOP)
+	{
+		mali_bool soft_stop_allowed = kbasep_soft_stop_allowed( core_reqs );
+		if (!soft_stop_allowed)
+		{
+			OSK_PRINT_WARN(OSK_BASE_JM, "Attempt made to soft-stop a job that cannot be soft-stopped. core_reqs = 0x%X", (unsigned int) core_reqs);
+			return;
+		}
+	}
+
+	if (action == JSn_COMMAND_HARD_STOP)
+	{
+		mali_bool hard_stop_allowed = kbasep_hard_stop_allowed( core_reqs );
+		if (!hard_stop_allowed)
+		{
+			/* Jobs can be hard-stopped for the following reasons:
+			 *  * CFS decides the job has been running too long (and soft-stop has not occurred).
+			 *    In this case the GPU will be reset by CFS if the job remains on the GPU.
+			 *
+			 *  * The context is destroyed, kbase_jd_zap_context will attempt to hard-stop the job. However
+			 *    it also has a watchdog which will cause the GPU to be reset if the job remains on the GPU.
+			 *
+			 *  * An (unhandled) MMU fault occurred. As long as BASE_HW_ISSUE_8245 is defined then
+			 *    the GPU will be reset.
+			 *
+			 * All three cases result in the GPU being reset if the hard-stop fails,
+			 * so it is safe to just return and ignore the hard-stop request.
+			 */
+			OSK_PRINT_WARN(OSK_BASE_JM, "Attempt made to hard-stop a job that cannot be hard-stopped. core_reqs = 0x%X", (unsigned int) core_reqs);
+			return;
+		}
+	}
+
 #if BASE_HW_ISSUE_8316
 	if (action == JSn_COMMAND_SOFT_STOP)
 	{
@@ -423,6 +539,16 @@ static void kbasep_job_slot_soft_or_hard_stop_do_action(kbase_device *kbdev, int
 			katom = kbasep_jm_peek_idx_submit_slot(slot, i);
 	
 			OSK_ASSERT(katom);
+
+			if ( kbasep_jm_is_dummy_workaround_job( katom ) != MALI_FALSE )
+			{
+				/* Don't access the members of HW workaround 'dummy' jobs
+				 *
+				 * This assumes that such jobs can't cause HW_ISSUE_8316, and could only be blocked
+				 * by other jobs causing HW_ISSUE_8316 (which will get poked/or eventually get killed) */
+				continue;
+			}
+
 			OSK_ASSERT(katom->kctx);
 			OSK_ASSERT(katom->kctx->as_nr != KBASEP_AS_NR_INVALID);
 	
@@ -445,13 +571,78 @@ static void kbasep_job_slot_soft_or_hard_stop_do_action(kbase_device *kbdev, int
 		slot->submission_blocked_for_soft_stop = MALI_TRUE;
 	}
 #endif
-	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND), action, NULL);
+	kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND), action, kctx);
+
+#if KBASE_TRACE_ENABLE
+	status_reg_after = kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_STATUS), NULL );
+	if (status_reg_after == 0x8)
+	{
+		kbase_jm_slot *slot;
+		kbase_jd_atom *head;
+		kbase_context *kctx;
+
+		slot = &kbdev->jm_slots[js];
+		head = kbasep_jm_peek_idx_submit_slot( slot, slot->submitted_nr-1 );
+		kctx = head->kctx;
+
+		/* We don't need to check kbasep_jm_is_dummy_workaround_job( head ) here:
+		 * - Members are not indirected through
+		 * - The members will all be zero anyway
+		 */
+		if ( status_reg_before == 0x8 )
+		{
+			KBASE_TRACE_ADD_SLOT( kbdev, JM_CHECK_HEAD, kctx, head->user_atom, job_in_head_before, js );
+		}
+		else
+		{
+			KBASE_TRACE_ADD_SLOT( kbdev, JM_CHECK_HEAD, NULL, NULL, 0, js );
+		}
+		if (action == JSn_COMMAND_SOFT_STOP)
+		{
+			KBASE_TRACE_ADD_SLOT( kbdev, JM_SOFTSTOP, kctx, head->user_atom, head->jc, js );
+		}
+		else
+		{
+			KBASE_TRACE_ADD_SLOT( kbdev, JM_HARDSTOP, kctx, head->user_atom, head->jc, js );
+		}
+	}
+	else
+	{
+		if ( status_reg_before == 0x8 )
+		{
+			KBASE_TRACE_ADD_SLOT( kbdev, JM_CHECK_HEAD, NULL, NULL, job_in_head_before, js );
+		}
+		else
+		{
+			KBASE_TRACE_ADD_SLOT( kbdev, JM_CHECK_HEAD, NULL, NULL, 0, js );
+		}
+
+		if (action == JSn_COMMAND_SOFT_STOP)
+		{
+			KBASE_TRACE_ADD_SLOT( kbdev, JM_SOFTSTOP, NULL, NULL, 0, js );
+		}
+		else
+		{
+			KBASE_TRACE_ADD_SLOT( kbdev, JM_HARDSTOP, NULL, NULL, 0, js );
+		}
+	}
+#endif
+
+#if BASE_HW_ISSUE_8401
+	/* Only issue a compute dummy job on slots that support them */
+	if((action == JSn_COMMAND_HARD_STOP) & (js != 0))
+	{
+		kbasep_8401_submit_dummy_job(kbdev, js);
+	}
+#endif
 }
 
 /** Soft or hard-stop a slot
  *
  * This function safely ensures that the correct job is either hard or soft-stopped.
  * It deals with evicting jobs from the next registers where appropriate.
+ *
+ * This does not attempt to stop or evict jobs that are 'dummy' jobs for HW workarounds.
  *
  * @param kbdex         The kbase device
  * @param kctx          The context to soft/hard-stop job(s) from (or NULL is all jobs should be targeted)
@@ -466,6 +657,8 @@ static void kbasep_job_slot_soft_or_hard_stop(kbase_device *kbdev, kbase_context
 	u8 i;
 	u8 jobs_submitted;
 	kbase_jm_slot *slot;
+	u16 core_reqs;
+
 
 	OSK_ASSERT(action == JSn_COMMAND_HARD_STOP || action == JSn_COMMAND_SOFT_STOP);
 	OSK_ASSERT(kbdev);
@@ -474,6 +667,7 @@ static void kbasep_job_slot_soft_or_hard_stop(kbase_device *kbdev, kbase_context
 	OSK_ASSERT(slot);
 
 	jobs_submitted = kbasep_jm_nr_jobs_submitted( slot );
+	KBASE_TRACE_ADD_SLOT_INFO( kbdev, JM_ZAP_CONTEXT_SLOT, kctx, NULL, 0u, js, jobs_submitted );
 
 	if (jobs_submitted > 2)
 	{
@@ -497,12 +691,19 @@ static void kbasep_job_slot_soft_or_hard_stop(kbase_device *kbdev, kbase_context
 		{
 			continue;
 		}
+		if ( kbasep_jm_is_dummy_workaround_job( katom ) )
+		{
+			continue;
+		}
 
-		if (i+1 == jobs_submitted) {
+		core_reqs = katom->core_req;
+
+		if (i+1 == jobs_submitted)
+		{
 			/* The last job in the slot, check if there is a job in the next register */
 			if (kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), NULL) == 0)
 			{
-				kbasep_job_slot_soft_or_hard_stop_do_action(kbdev, js, action);
+				kbasep_job_slot_soft_or_hard_stop_do_action(kbdev, js, action, core_reqs, katom->kctx);
 			}
 			else
 			{
@@ -531,14 +732,41 @@ static void kbasep_job_slot_soft_or_hard_stop(kbase_device *kbdev, kbase_context
 					/* The job transitioned into the current registers before we managed to evict it,
 					 * in this case we fall back to soft/hard-stopping the job */
 					beenthere("missed job in next register, soft/hard-stopping slot %d", js);
-					kbasep_job_slot_soft_or_hard_stop_do_action(kbdev, js, action);
+					kbasep_job_slot_soft_or_hard_stop_do_action(kbdev, js, action, core_reqs, katom->kctx);
 				}
 			}
-		} else if (i+2 == jobs_submitted) {
+		}
+		else if (i+2 == jobs_submitted)
+		{
 			/* There's a job after this one, check to see if that job is in the next registers */
 			if (kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), NULL) != 0)
 			{
+				kbase_jd_atom *check_next_atom;
 				/* It is - we should remove that job and soft/hard-stop the slot */
+
+				/* Only proceed when the next jobs isn't a HW workaround 'dummy' job
+				 *
+				 * This can't be an ASSERT due to MMU fault code:
+				 * - This first hard-stops the job that caused the fault
+				 *  - Under HW Issue 8401, this inserts a dummy workaround job into NEXT
+				 * - Under HW Issue 8245, it will then reset the GPU
+				 *  - This causes a Soft-stop to occur on all slots
+				 * - By the time of the soft-stop, we may (depending on timing) still have:
+				 *  - The original job in HEAD, if it's not finished the hard-stop
+				 *  - The dummy workaround job in NEXT
+				 *
+				 * Other cases could be coded in future that cause back-to-back Soft/Hard
+				 * stops with dummy workaround jobs in place, e.g. MMU handler code and Job
+				 * Scheduler watchdog timer running in parallel.
+				 *
+				 * Note, the index i+1 is valid to peek from: i == jobs_submitted-2, therefore
+				 * i+1 == jobs_submitted-1 */
+				check_next_atom = kbasep_jm_peek_idx_submit_slot( slot, i+1 );
+				if ( kbasep_jm_is_dummy_workaround_job( check_next_atom ) != MALI_FALSE )
+				{
+					continue;
+				}
+
 				beenthere("clearing job from next registers on slot %d", js);
 				kbase_reg_write(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), JSn_COMMAND_NOP, NULL);
 
@@ -548,6 +776,7 @@ static void kbasep_job_slot_soft_or_hard_stop(kbase_device *kbdev, kbase_context
 				{
 					/* We did remove a job from the next registers, requeue it */
 					kbase_jd_atom *dequeued_katom = kbasep_jm_dequeue_tail_submit_slot( slot );
+					OSK_ASSERT(dequeued_katom != NULL);
 					jobs_submitted --;
 
 					/* Set the next registers to NULL */
@@ -566,7 +795,7 @@ static void kbasep_job_slot_soft_or_hard_stop(kbase_device *kbdev, kbase_context
 
 				/* Next is now free, so we can soft/hard-stop the slot */
 				beenthere("soft/hard-stopped slot %d (there was a job in next which was successfully cleared)\n", js);
-				kbasep_job_slot_soft_or_hard_stop_do_action(kbdev, js, action);
+				kbasep_job_slot_soft_or_hard_stop_do_action(kbdev, js, action, core_reqs, katom->kctx);
 			}
 			/* If there was no job in the next registers, then the job we were
 			 * interested in has finished, so we need not take any action
@@ -631,7 +860,9 @@ void kbase_job_zap_context(kbase_context *kctx)
 
 	/* locks must be dropped by this point, to prevent deadlock on flush */
 	OSK_PRINT_INFO(OSK_BASE_JM, "Zap: Flush Workqueue Ctx %p", kctx );
+	KBASE_TRACE_ADD( kbdev, JM_FLUSH_WORKQS, kctx, NULL, 0u, 0u );
 	kbase_jd_flush_workqueues( kctx );
+	KBASE_TRACE_ADD( kbdev, JM_FLUSH_WORKQS_DONE, kctx, NULL, 0u, 0u );
 
 	/*
 	 * At this point we know that:
@@ -679,6 +910,8 @@ void kbase_job_zap_context(kbase_context *kctx)
 		 * already been idled
 		 */
 
+		KBASE_TRACE_ADD( kbdev, JM_ZAP_NON_SCHEDULED, kctx, NULL, 0u, js_kctx_info->ctx.is_scheduled );
+
 		OSK_PRINT_INFO(OSK_BASE_JM, "Zap: Ctx %p evict_success=%d, scheduled=%d", kctx, evict_success, js_kctx_info->ctx.is_scheduled );
 
 		/* Only cancel jobs and pm-idle when we evicted from the policy queue*/
@@ -699,6 +932,7 @@ void kbase_job_zap_context(kbase_context *kctx)
 		mali_bool was_retained;
 		/* Didn't evict, but it is scheduled - it's in the Run Pool:
 		 * Cases d and b(i) */
+		KBASE_TRACE_ADD( kbdev, JM_ZAP_SCHEDULED, kctx, NULL, 0u, js_kctx_info->ctx.is_scheduled );
 		OSK_PRINT_INFO(OSK_BASE_JM, "Zap: Ctx %p is in RunPool", kctx );
 
 		/* Disable the ctx from submitting any more jobs */
@@ -728,6 +962,7 @@ void kbase_job_zap_context(kbase_context *kctx)
 		OSK_PRINT_INFO(OSK_BASE_JM, "Zap: Ctx %p Release (may or may not schedule out immediately)", kctx );
 		kbasep_js_runpool_release_ctx( kbdev, kctx );
 	}
+	KBASE_TRACE_ADD( kbdev, JM_ZAP_DONE, kctx, NULL, 0u, 0u );
 
 	/* After this, you must wait on both the kbase_jd_context::zero_jobs_waitq
 	 * and the kbasep_js_kctx_info::ctx::is_scheduled_waitq - to wait for the
@@ -736,6 +971,7 @@ void kbase_job_zap_context(kbase_context *kctx)
 	 *
 	 * kbase_jd_zap_context() will do this. */
 }
+KBASE_EXPORT_TEST_API(kbase_job_zap_context)
 
 mali_error kbase_job_slot_init(kbase_device *kbdev)
 {
@@ -776,7 +1012,7 @@ KBASE_EXPORT_TEST_API(kbase_job_slot_init)
 
 void kbase_job_slot_halt(kbase_device *kbdev)
 {
-
+	CSTD_UNUSED(kbdev);
 }
 
 void kbase_job_slot_term(kbase_device *kbdev)
@@ -834,6 +1070,7 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 	int i;
 	kbasep_js_tick end_timestamp = kbasep_js_get_js_ticks();
 	kbasep_js_device_data *js_devdata;
+	int c;
 
 	OSK_ASSERT(data);
 
@@ -863,8 +1100,13 @@ void kbasep_reset_timeout_worker(osk_workq_work *data)
 	 * after the KBASE_PM_EVENT_POLICY_INIT message is sent
 	 */
 	osk_spinlock_irq_lock(&kbdev->pm.active_count_lock);
-	++kbdev->pm.active_count;
+	c = ++kbdev->pm.active_count;
 	osk_spinlock_irq_unlock(&kbdev->pm.active_count_lock);
+
+	if (c == 1)
+	{
+		kbasep_pm_record_gpu_active(kbdev);
+	}
 
 	/* Re-init the power policy */
 	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_POLICY_INIT);

@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -119,7 +119,6 @@ typedef enum
 	 * For modification of the MMU mask register, which is done as a read-modify-write
 	 */
 	OSK_LOCK_ORDER_MMU_MASK,
-
 	/**
 	 * For access and modification to the power state of a device
 	 */
@@ -130,6 +129,8 @@ typedef enum
 	 */
 	OSK_LOCK_ORDER_POWER_MGMT_ACTIVE = OSK_LOCK_ORDER_POWER_MGMT,
 
+
+	OSK_LOCK_ORDER_TRACE,
 	/**
 	 * For the resources used during MMU pf or low-level job handling
 	 */

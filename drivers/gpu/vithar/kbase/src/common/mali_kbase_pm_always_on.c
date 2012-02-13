@@ -208,6 +208,7 @@ static void always_on_init(kbase_device *kbdev)
  */
 static void always_on_term(kbase_device *kbdev)
 {
+	CSTD_UNUSED(kbdev);
 }
 
 /** The @ref kbase_pm_policy structure for the always_on power policy

@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -21,11 +21,6 @@
 #include <kbase/src/common/mali_kbase.h>
 #include <kbase/src/common/mali_kbase_pm.h>
 
-#ifdef CONFIG_VITHAR_RT_PM
-#include <kbase/src/platform/mali_kbase_runtime_pm.h>
-#endif
-
-
 /* Forward declaration for state change function, as it is required by
  * the power up and down functions */
 static void demand_state_changed(kbase_device *kbdev);
@@ -36,11 +31,6 @@ static void demand_state_changed(kbase_device *kbdev);
  */
 static void demand_power_up(kbase_device *kbdev)
 {
-#ifdef CONFIG_VITHAR_RT_PM
-    //kbase_device_runtime_get_sync(kbdev->osdev.dev);
-    kbase_device_runtime_resume(kbdev->osdev.dev);
-#endif
-
 	/* Inform the system that the transition has started */
 	kbase_pm_power_transitioning(kbdev);
 
@@ -82,17 +72,6 @@ static void demand_power_down(kbase_device *kbdev)
  */
 static void demand_change_gpu_state(kbase_device *kbdev)
 {
-#ifdef CONFIG_VITHAR_RT_PM
-    if((kbdev->shader_inuse_bitmap == 0) && (kbdev->tiler_inuse_bitmap == 0))
-    {
-		if((kbdev->shader_needed_bitmap != 0) || (kbdev->tiler_needed_bitmap != 0))
-        {
-            //kbase_device_runtime_get_sync(kbdev->osdev.dev);
-            kbase_device_runtime_resume(kbdev->osdev.dev);
-        }
-    }
-#endif
-
 	/* Update the bitmap of the cores we need */
 	kbdev->pm.desired_shader_state = kbdev->shader_needed_bitmap;
 	kbdev->pm.desired_tiler_state = kbdev->tiler_needed_bitmap;
@@ -143,10 +122,6 @@ static void demand_state_changed(kbase_device *kbdev)
 			kbase_pm_disable_interrupts(kbdev);
 			kbase_pm_clock_off(kbdev);
 			kbase_pm_power_down_done(kbdev);
-#ifdef CONFIG_VITHAR_RT_PM
-			//kbase_device_runtime_put_sync(kbdev->osdev.dev);
-			kbase_device_runtime_suspend(kbdev->osdev.dev);
-#endif
 			break;
 		case KBASEP_PM_DEMAND_STATE_POWERED_UP:
 			/* Core states may have been changed, try to run jobs */
@@ -247,6 +222,7 @@ static void demand_init(kbase_device *kbdev)
  */
 static void demand_term(kbase_device *kbdev)
 {
+	CSTD_UNUSED(kbdev);
 }
 
 /** The @ref kbase_pm_policy structure for the demand power policy.

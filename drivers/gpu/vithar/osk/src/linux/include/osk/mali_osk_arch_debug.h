@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -21,6 +21,7 @@
 #define _OSK_ARCH_DEBUG_H_
 
 #include <malisw/mali_stdtypes.h>
+#include "mali_osk_arch_types.h"
 
 #if MALI_UNIT_TEST
 /* Kernel testing helpers */
@@ -33,7 +34,7 @@ void      oskp_kernel_test_exit(void);
 #endif
 
 /** Maximum number of bytes (incl. end of string character) supported in the generated debug output string */
-#define OSK_DEBUG_MESSAGE_SIZE 192
+#define OSK_DEBUG_MESSAGE_SIZE 256
 
 /**
  * All OSKP_ASSERT* and OSKP_PRINT_* macros will eventually call OSKP_PRINT to output messages
@@ -216,6 +217,7 @@ void oskp_debug_print(const char *fmt, ...);
 	do\
 	{\
 		OSKP_ASSERT_OUT(OSKP_PRINT_TRACE, OSKP_PRINT_FUNCTION, __VA_ARGS__);\
+		oskp_debug_assert_call_hook();\
 		OSKP_ASSERT_ACTION();\
 	}while(MALI_FALSE)
 
@@ -626,6 +628,19 @@ void oskp_debug_print(const char *fmt, ...);
 #else
 #define OSKP_SIMULATE_FAILURE_IS_ENABLED(module, channel) MALI_TRUE
 #endif
+
+OSK_STATIC_INLINE void osk_debug_get_thread_info( u32 *thread_id, u32 *cpu_nr )
+{
+	OSK_ASSERT( thread_id != NULL );
+	OSK_ASSERT( cpu_nr != NULL );
+
+	/* This implementation uses the PID as shown in ps listings.
+	 * On 64-bit systems, this could narrow from signed 64-bit to unsigned 32-bit */
+	*thread_id = (u32)task_pid_nr(current);
+
+	/* On 64-bit systems, this could narrow from unsigned 64-bit to unsigned 32-bit */
+	*cpu_nr = (u32)task_cpu(current);
+}
 
 
 #endif /* _OSK_ARCH_DEBUG_H_ */

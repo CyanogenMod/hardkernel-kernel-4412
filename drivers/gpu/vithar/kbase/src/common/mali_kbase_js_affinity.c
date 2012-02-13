@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -77,9 +77,10 @@ STATIC void debug_print_affinity_info(const kbase_device *kbdev, const kbase_jd_
 */
 void kbase_js_choose_affinity(u64 *affinity, kbase_device *kbdev, kbase_jd_atom *katom, int js)
 {
-	base_jd_core_req core_req = katom->atom->core_req;
+	base_jd_core_req core_req = katom->core_req;
 	kbasep_js_device_data *device_data = &kbdev->js_data;
 	u64 shader_present_bitmap = kbdev->shader_present_bitmap;
+	CSTD_UNUSED(js);
 
 	OSK_ASSERT(0 != shader_present_bitmap);
 
@@ -105,7 +106,7 @@ void kbase_js_choose_affinity(u64 *affinity, kbase_device *kbdev, kbase_jd_atom 
 		/* NSS state - divide cores in two non-overlapping groups
 		   for SS and NSS jobs */
 		u64 ss_bitmap, nss_bitmap;
-		unsigned int n_nss_cores = kbdev->gpu_props.num_cores >> 1;
+		int n_nss_cores = kbdev->gpu_props.num_cores >> 1;
 		OSK_ASSERT(0 != n_nss_cores);
 
 		/* compute the nss reserved cores bitmap */

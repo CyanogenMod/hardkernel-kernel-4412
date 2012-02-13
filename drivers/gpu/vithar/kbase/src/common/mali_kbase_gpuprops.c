@@ -24,6 +24,7 @@
 #ifdef CONFIG_VITHAR_RT_PM
 #include <kbase/src/platform/mali_kbase_runtime_pm.h>
 #endif
+
 /**
  * @brief Extracts bits from a 32-bit bitfield.
  * @hideinitializer

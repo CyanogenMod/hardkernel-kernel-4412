@@ -27,7 +27,7 @@
 
 
 #include <ump/ump_common.h>
-#include <common/ump_kernel_descriptor_mapping.h>
+#include <ump/src/devicedrv/common/ump_kernel_descriptor_mapping.h>
 
 /* forward decl */
 struct umpp_session;

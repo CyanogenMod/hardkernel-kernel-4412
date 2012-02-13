@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -19,6 +19,10 @@
 
 #ifndef _KBASE_JM_H_
 #define _KBASE_JM_H_
+
+#if BASE_HW_ISSUE_8401
+#include <kbase/src/common/mali_kbase_8401_workaround.h>
+#endif
 
 /**
  * @addtogroup base_api
@@ -42,14 +46,7 @@ static INLINE int kbasep_jm_is_js_free(kbase_device *kbdev, int js, kbase_contex
 	OSK_ASSERT( kbdev != NULL );
 	OSK_ASSERT( 0 <= js && js < kbdev->nr_job_slots  );
 
-#if BASE_HW_ISSUE_5713
-	/* On r0p0 we need to ensure that there is no job in the current registers as well
-	 * because it is unsafe to soft-stop a slot when a second job is queued */
-	return !kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), kctx) &&
-	       !kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_COMMAND), kctx);
-#else
 	return !kbase_reg_read(kbdev, JOB_SLOT_REG(js, JSn_COMMAND_NEXT), kctx);
-#endif /* BASE_HW_ISSUE_5713 */
 }
 
 /**
@@ -162,6 +159,39 @@ static INLINE void kbasep_jm_enqueue_submit_slot( kbase_jm_slot *slot, kbase_jd_
 	
 	pos = (slot->submitted_head + nr) & BASE_JM_SUBMIT_SLOTS_MASK;
 	slot->submitted[pos] = katom;
+}
+
+/**
+ * @brief Query whether a job peeked/dequeued from the submit slots is a
+ * 'dummy' job that is used for hardware workaround purposes.
+ *
+ * Any time a job is peeked/dequeued from the submit slots, this should be
+ * queried on that job.
+ *
+ * If a \a atom is indicated as being a dummy job, then you <b>must not attempt
+ * to use \a atom</b>. This is because its members will not necessarily be
+ * initialized, and so could lead to a fault if they were used.
+ *
+ * @param[in] atom The atom to query
+ *
+ * @return    MALI_TRUE if \a atom is for a dummy job, in which case you must not
+ *            attempt to use it.
+ * @return    MALI_FALSE otherwise, and \a atom is safe to use.
+ */
+static INLINE mali_bool kbasep_jm_is_dummy_workaround_job( kbase_jd_atom *atom )
+{
+	/* Query the set of workaround jobs here */
+#if BASE_HW_ISSUE_8401
+	if ( kbasep_8401_is_workaround_job( atom ) != MALI_FALSE )
+	{
+		return MALI_TRUE;
+	}
+#else
+	CSTD_UNUSED(atom);
+#endif
+
+	/* This job is not a workaround job, so it will be processed as normal */
+	return MALI_FALSE;
 }
 
 /**

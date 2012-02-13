@@ -17,7 +17,6 @@ ROOT=$(KBUILD_EXTMOD)/../../..
 SRC=\
 	mali_osk_debug.c \
 	mali_osk_workq.c \
-	../common/mali_osk_cutils_cstr.c \
 	../common/mali_osk_bitops_cmn.c \
 	../common/mali_osk_debug_cmn.c 
 
@@ -26,6 +25,7 @@ SRC += ../common/mali_osk_failure.c ../common/mali_osk_mem_track.c
 endif
 
 ifeq ($(MALI_LICENSE_IS_GPL), 1)
+SRC += mali_osk_timers.c
 # ensure GPL version of malisw gets pulled in
 EXTRA_CFLAGS += -I$(ROOT)/kbase
 endif

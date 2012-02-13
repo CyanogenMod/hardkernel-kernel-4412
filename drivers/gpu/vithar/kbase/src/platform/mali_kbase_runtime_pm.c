@@ -96,11 +96,10 @@ int kbase_device_runtime_suspend(struct device *dev)
 
 	osk_spinlock_irq_lock(&kbdev->pm.cmu_pmu_lock);
 
-	if(kbase_platform_clock_off(dev))
-		panic("failed to turn off sclk_g3d\n");
 	if(kbase_platform_power_off(dev))
 		panic("failed to turn off g3d power\n");
-
+	if(kbase_platform_clock_off(dev))
+		panic("failed to turn off sclk_g3d\n");
 	osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);
 
 	return 0;
@@ -125,11 +124,10 @@ int kbase_device_runtime_resume(struct device *dev)
 		goto nodev;
 
 	osk_spinlock_irq_lock(&kbdev->pm.cmu_pmu_lock);
-
-	if(kbase_platform_power_on(dev))
-		panic("failed to turn on g3d power\n");
 	if(kbase_platform_clock_on(dev))
 		panic("failed to turn on sclk_g3d\n");
+	if(kbase_platform_power_on(dev))
+		panic("failed to turn on g3d power\n");
 
 	osk_spinlock_irq_unlock(&kbdev->pm.cmu_pmu_lock);
 

@@ -31,6 +31,7 @@ mali_bool kbase_security_has_capability(kbase_context *kctx, kbase_security_capa
 	mali_bool audit = (KBASE_SEC_FLAG_AUDIT & flags)? MALI_TRUE : MALI_FALSE;
 
 	OSK_ASSERT(NULL != kctx);
+	CSTD_UNUSED(kctx);
 
 	/* Detect unsupported flags */
 	OSK_ASSERT(((~KBASE_SEC_FLAG_MASK) & flags) == 0);

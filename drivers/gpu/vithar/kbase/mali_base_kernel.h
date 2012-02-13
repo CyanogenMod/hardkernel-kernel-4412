@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010, 2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -27,14 +27,14 @@
  * we decide to make the number of semaphores a configurable
  * option.
  */
-#define BASEP_JD_SEM_PER_WORD_LOG2	5
-#define BASEP_JD_SEM_PER_WORD		(1 << BASEP_JD_SEM_PER_WORD_LOG2)
-#define BASEP_JD_SEM_WORD_NR(x)		((x) >> BASEP_JD_SEM_PER_WORD_LOG2)
-#define BASEP_JD_SEM_MASK_IN_WORD(x)	(1 << ((x) & (BASEP_JD_SEM_PER_WORD - 1)))
-#define BASEP_JD_SEM_ARRAY_SIZE		BASEP_JD_SEM_WORD_NR(256)
+#define BASEP_JD_SEM_PER_WORD_LOG2      5
+#define BASEP_JD_SEM_PER_WORD           (1 << BASEP_JD_SEM_PER_WORD_LOG2)
+#define BASEP_JD_SEM_WORD_NR(x)         ((x) >> BASEP_JD_SEM_PER_WORD_LOG2)
+#define BASEP_JD_SEM_MASK_IN_WORD(x)    (1 << ((x) & (BASEP_JD_SEM_PER_WORD - 1)))
+#define BASEP_JD_SEM_ARRAY_SIZE         BASEP_JD_SEM_WORD_NR(256)
 
 /* Size of the ring buffer */
-#define BASEP_JCTX_RB_NRPAGES	16
+#define BASEP_JCTX_RB_NRPAGES           16
 
 #define BASE_GPU_NUM_TEXTURE_FEATURES_REGISTERS 3
 
@@ -74,22 +74,22 @@ typedef u32 base_mem_alloc_flags;
  */
 enum
 {
-	BASE_MEM_PROT_CPU_RD =	(1U << 0), /**< Read access CPU side */
-	BASE_MEM_PROT_CPU_WR =	(1U << 1), /**< Write access CPU side */
-	BASE_MEM_PROT_GPU_RD =	(1U << 2), /**< Read access GPU side */
-	BASE_MEM_PROT_GPU_WR =	(1U << 3), /**< Write access GPU side */
-	BASE_MEM_PROT_GPU_EX =	(1U << 4), /**< Execute allowed on the GPU side */
+	BASE_MEM_PROT_CPU_RD =      (1U << 0), /**< Read access CPU side */
+	BASE_MEM_PROT_CPU_WR =      (1U << 1), /**< Write access CPU side */
+	BASE_MEM_PROT_GPU_RD =      (1U << 2), /**< Read access GPU side */
+	BASE_MEM_PROT_GPU_WR =      (1U << 3), /**< Write access GPU side */
+	BASE_MEM_PROT_GPU_EX =      (1U << 4), /**< Execute allowed on the GPU side */
 
-	BASE_MEM_HINT_CPU_RD =	(1U << 5), /**< Heavily read CPU side */
-	BASE_MEM_HINT_CPU_WR =	(1U << 6), /**< Heavily written CPU side */
-	BASE_MEM_HINT_GPU_RD =	(1U << 7), /**< Heavily read GPU side */
-	BASE_MEM_HINT_GPU_WR =	(1U << 8), /**< Heavily written GPU side */
+	BASE_MEM_HINT_CPU_RD =      (1U << 5), /**< Heavily read CPU side */
+	BASE_MEM_HINT_CPU_WR =      (1U << 6), /**< Heavily written CPU side */
+	BASE_MEM_HINT_GPU_RD =      (1U << 7), /**< Heavily read GPU side */
+	BASE_MEM_HINT_GPU_WR =      (1U << 8), /**< Heavily written GPU side */
 
-	BASEP_MEM_GROWABLE   =	(1U << 9), /**< Growable memory. This is a private flag that is set automatically. Not valid for PMEM. */
-	BASE_MEM_GROW_ON_GPF =	(1U << 10), /**< Grow backing store on GPU Page Fault */
+	BASEP_MEM_GROWABLE   =      (1U << 9), /**< Growable memory. This is a private flag that is set automatically. Not valid for PMEM. */
+	BASE_MEM_GROW_ON_GPF =      (1U << 10), /**< Grow backing store on GPU Page Fault */
 
-	BASE_MEM_COHERENT_SYSTEM =	(1U << 11),/**< Page coherence Outer shareable */
-	BASE_MEM_COHERENT_LOCAL =	(1U << 12) /**< Page coherence Inner shareable */
+	BASE_MEM_COHERENT_SYSTEM =  (1U << 11),/**< Page coherence Outer shareable */
+	BASE_MEM_COHERENT_LOCAL =   (1U << 12) /**< Page coherence Inner shareable */
 };
 
 /**
@@ -97,7 +97,7 @@ enum
  *
  * Must be kept in sync with the ::base_mem_alloc_flags flags
  */
-#define BASE_MEM_FLAGS_NR_BITS	13
+#define BASE_MEM_FLAGS_NR_BITS  13
 
 /**
  * @brief Result codes of changing the size of the backing store allocated to a tmem region
@@ -150,7 +150,7 @@ typedef struct base_syncset
  * dependencies set to 0.
  */
 typedef struct base_jd_dep {
-	u8		dep[2]; /**< pre/post dependencies */
+	u8      dep[2]; /**< pre/post dependencies */
 } base_jd_dep;
 
 /**
@@ -163,7 +163,7 @@ typedef struct base_jd_dep {
  */
 typedef struct base_jd_udata
 {
-	u64		blob[2]; /**< per-job data array */
+	u64     blob[1]; /**< per-job data array */
 } base_jd_udata;
 
 /**
@@ -176,15 +176,15 @@ typedef struct base_jd_udata
  * Special case is ::BASE_JD_REQ_DEP, which is used to express complex
  * dependencies, and that doesn't execute anything on the hardware.
  */
-typedef u8 base_jd_core_req;
+typedef u16 base_jd_core_req;
 
 /* Requirements that come from the HW */
-#define	BASE_JD_REQ_DEP	0		/**< No requirement, dependency only */
-#define	BASE_JD_REQ_FS	(1U << 0)	/**< Requires fragment shaders */
-#define	BASE_JD_REQ_CS	(1U << 1)	/**< Requires compute shaders */
-#define	BASE_JD_REQ_T	(1U << 2)	/**< Requires tiling */
-#define	BASE_JD_REQ_CF	(1U << 3)	/**< Requires cache flushes */
-#define	BASE_JD_REQ_V	(1U << 4)	/**< Requires value writeback */
+#define BASE_JD_REQ_DEP 0           /**< No requirement, dependency only */
+#define BASE_JD_REQ_FS  (1U << 0)   /**< Requires fragment shaders */
+#define BASE_JD_REQ_CS  (1U << 1)   /**< Requires compute shaders */
+#define BASE_JD_REQ_T   (1U << 2)   /**< Requires tiling */
+#define BASE_JD_REQ_CF  (1U << 3)   /**< Requires cache flushes */
+#define BASE_JD_REQ_V   (1U << 4)   /**< Requires value writeback */
 
 /* SW-only requirements - the HW does not expose these as part of the job slot capabilities */
 /**
@@ -200,20 +200,50 @@ typedef u8 base_jd_core_req;
  * "soon after" and "a long time after" are implementation defined, and
  * configurable in the device driver by the system integrator.
  */
-#define	BASE_JD_REQ_NSS (1U << 5)
+#define BASE_JD_REQ_NSS             (1U << 5)
 
 /**
  * SW Only requirement: the job chain requires a coherent core group. We don't
  * mind which coherent core group is used.
  */
-#define	BASE_JD_REQ_COHERENT_GROUP (1U << 6)
+#define BASE_JD_REQ_COHERENT_GROUP  (1U << 6)
 
 /**
  * SW Only requirement: The performance counters should be enabled only when
  * they are needed, to reduce power consumption.
  */
 
-#define	BASE_JD_REQ_PERMON (1U << 7)
+#define BASE_JD_REQ_PERMON          (1U << 7)
+
+/**
+ * SW Only requirement: Software defined job. Jobs with this bit set will not be submitted
+ * to the hardware but will cause some action to happen within the driver
+ */
+#define BASE_JD_REQ_SOFT_JOB        (1U << 8)
+
+#define BASE_JD_REQ_SOFT_DUMP_CPU_GPU_TIME      (BASE_JD_REQ_SOFT_JOB | 0x1)
+
+/**
+* These requirement bits are currently unused in base_jd_core_req (currently a u16)
+*/
+
+#define BASEP_JD_REQ_RESERVED_BIT9  ( 1U << 9 )
+#define BASEP_JD_REQ_RESERVED_BIT10 ( 1U << 10 )
+#define BASEP_JD_REQ_RESERVED_BIT11 ( 1U << 11 )
+#define BASEP_JD_REQ_RESERVED_BIT12 ( 1U << 12 )
+#define BASEP_JD_REQ_RESERVED_BIT13 ( 1U << 13 )
+#define BASEP_JD_REQ_RESERVED_BIT14 ( 1U << 14 )
+#define BASEP_JD_REQ_RESERVED_BIT15 ( 1U << 15 )
+
+/**
+* Mask of all the currently unused requirement bits in base_jd_core_req.
+*/
+
+#define BASEP_JD_REQ_RESERVED ( BASEP_JD_REQ_RESERVED_BIT9  |\
+                                BASEP_JD_REQ_RESERVED_BIT10 | BASEP_JD_REQ_RESERVED_BIT11 |\
+                                BASEP_JD_REQ_RESERVED_BIT12 | BASEP_JD_REQ_RESERVED_BIT13 |\
+                                BASEP_JD_REQ_RESERVED_BIT14 | BASEP_JD_REQ_RESERVED_BIT15 )
+
 
 /**
  * @brief A single job chain, with pre/post dependendencies and mem ops
@@ -226,12 +256,12 @@ typedef u8 base_jd_core_req;
  */
 typedef struct base_jd_atom
 {
-	base_jd_udata		udata;		/**< user data */
-	mali_addr64		jc;		/**< job-chain GPU address */
-	base_jd_dep		pre_dep;	/**< pre-dependencies */
-	base_jd_dep		post_dep;	/**< post-dependencies */
-	u16			nr_syncsets;	/**< nr of syncsets following the atom */
-	base_jd_core_req	core_req;	/**< core requirements */
+	base_jd_udata       udata;          /**< user data */
+	mali_addr64         jc;             /**< job-chain GPU address */
+	base_jd_dep         pre_dep;        /**< pre-dependencies */
+	base_jd_dep         post_dep;       /**< post-dependencies */
+	u16                 nr_syncsets;    /**< nr of syncsets following the atom */
+	base_jd_core_req    core_req;       /**< core requirements */
 
 	/** @brief Relative priority.
 	 *
@@ -240,14 +270,14 @@ typedef struct base_jd_atom
 	 * higher priority. For unprivileged processes, a negative priority will
 	 * be interpreted as zero.
 	 */
-	s8			prio;
+	s8                  prio;
 } base_jd_atom;
 
 /* Lot of hacks to cope with the fact that C89 doesn't allow arrays of size 0 */
 typedef struct basep_jd_atom_ss
 {
-	base_jd_atom	atom;
-	base_syncset	syncsets[1];
+	base_jd_atom    atom;
+	base_syncset    syncsets[1];
 } basep_jd_atom_ss;
 
 /**
@@ -411,16 +441,16 @@ typedef enum base_jd_event_code
 	BASE_JD_EVENT_SHAREABILITY_FAULT = 0x88,
 	
 	/* MMU exceptions */
-	BASE_JD_EVENT_TRANSLATION_FAULT_LEVEL1	= 0xC1,
-	BASE_JD_EVENT_TRANSLATION_FAULT_LEVEL2	= 0xC2,
-	BASE_JD_EVENT_TRANSLATION_FAULT_LEVEL3	= 0xC3,
-	BASE_JD_EVENT_TRANSLATION_FAULT_LEVEL4	= 0xC4,
-	BASE_JD_EVENT_PERMISSION_FAULT		= 0xC8,
-	BASE_JD_EVENT_TRANSTAB_BUS_FAULT_LEVEL1	= 0xD1,
-	BASE_JD_EVENT_TRANSTAB_BUS_FAULT_LEVEL2	= 0xD2,
-	BASE_JD_EVENT_TRANSTAB_BUS_FAULT_LEVEL3	= 0xD3,
-	BASE_JD_EVENT_TRANSTAB_BUS_FAULT_LEVEL4	= 0xD4,
-	BASE_JD_EVENT_ACCESS_FLAG		= 0xD8,
+	BASE_JD_EVENT_TRANSLATION_FAULT_LEVEL1  = 0xC1,
+	BASE_JD_EVENT_TRANSLATION_FAULT_LEVEL2  = 0xC2,
+	BASE_JD_EVENT_TRANSLATION_FAULT_LEVEL3  = 0xC3,
+	BASE_JD_EVENT_TRANSLATION_FAULT_LEVEL4  = 0xC4,
+	BASE_JD_EVENT_PERMISSION_FAULT          = 0xC8,
+	BASE_JD_EVENT_TRANSTAB_BUS_FAULT_LEVEL1 = 0xD1,
+	BASE_JD_EVENT_TRANSTAB_BUS_FAULT_LEVEL2 = 0xD2,
+	BASE_JD_EVENT_TRANSTAB_BUS_FAULT_LEVEL3 = 0xD3,
+	BASE_JD_EVENT_TRANSTAB_BUS_FAULT_LEVEL4 = 0xD4,
+	BASE_JD_EVENT_ACCESS_FLAG               = 0xD8,
 
 	/* SW defined exceptions */
 	BASE_JD_EVENT_MEM_GROWTH_FAILED = BASE_JD_SW_EVENT | BASE_JD_SW_EVENT_JOB | 0x000,
@@ -468,9 +498,21 @@ typedef enum base_jd_event_code
  */
 typedef struct base_jd_event
 {
-	base_jd_event_code	event_code;	/**< event code */
-	void                  * data;		/**< event specific data */
+	base_jd_event_code      event_code; /**< event code */
+	void                  * data;       /**< event specific data */
 } base_jd_event;
+
+/**
+ * @brief Structure for BASE_JD_REQ_SOFT_DUMP_CPU_GPU_COUNTERS jobs.
+ *
+ * This structure is stored into the memory pointed to by the @c jc field of @ref base_jd_atom.
+ */
+typedef struct base_dump_cpu_gpu_counters {
+	u64 system_time;
+	u64 cycle_counter;
+	u64 sec;
+	u32 usec;
+} base_dump_cpu_gpu_counters;
 
 /** @} end group base_user_api_job_dispatch */
 

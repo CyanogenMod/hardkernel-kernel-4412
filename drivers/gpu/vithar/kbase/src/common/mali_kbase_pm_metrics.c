@@ -21,11 +21,8 @@
 
 #include <kbase/src/common/mali_kbase.h>
 #include <kbase/src/common/mali_kbase_pm.h>
-#include <kbase/src/platform/mali_kbase_dvfs.h>
-
-
 #ifdef CONFIG_VITHAR_DVFS
-int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev);
+#include <kbase/src/platform/mali_kbase_dvfs.h>
 #endif
 
 /* When VSync is being hit aim for utilisation between 70-90% */
@@ -35,11 +32,17 @@ int kbase_pm_get_dvfs_utilisation(kbase_device *kbdev);
 #define KBASE_PM_NO_VSYNC_MIN_UTILISATION       10
 #define KBASE_PM_NO_VSYNC_MAX_UTILISATION       40
 
+#ifndef CONFIG_VITHAR_DVFS
+/* Frequency that DVFS clock frequency decisions should be made */
+#define KBASE_PM_DVFS_FREQUENCY                 500
+#endif
+
 static void dvfs_callback(void *data)
 {
 	kbase_device *kbdev;
 	kbase_pm_dvfs_action action;
 	osk_error ret;
+
 	OSK_ASSERT(data != NULL);
 
 	kbdev = (kbase_device*)data;

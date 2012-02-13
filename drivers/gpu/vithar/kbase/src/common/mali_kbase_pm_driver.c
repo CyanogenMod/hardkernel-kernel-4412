@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -22,6 +22,9 @@
 #include <kbase/src/common/mali_midg_regmap.h>
 
 #include <kbase/src/common/mali_kbase_pm.h>
+#ifdef CONFIG_VITHAR_RT_PM
+#include <kbase/src/platform/mali_kbase_runtime_pm.h>
+#endif
 
 #if MALI_MOCK_TEST
 #define MOCKABLE(function) function##_original
@@ -324,69 +327,151 @@ static u64 get_desired_cache_status(u64 present, u64 cores_powered)
 		int bit = 63-osk_clz_64(present);
 
 		/* Create a mask which has all bits from 'bit' upwards set */
-		u64 mask = ~((1 << bit)-1);
+		u64 mask = ~((1ULL << bit)-1);
 
 		/* If there are any cores powered at this bit or above (that haven't previously been processed) then we need
 		 * this core on */
 		if (cores_powered & mask)
 		{
-			desired |= (1 << bit);
+			desired |= (1ULL << bit);
 		}
 
 		/* Remove bits from cores_powered and present */
 		cores_powered &= ~mask;
-		present &= ~(1 << bit);
+		present &= ~(1ULL << bit);
 	}
 	
 	return desired;
 }
 
-void kbase_pm_retain_cores(kbase_device *kbdev, kbase_pm_core_type type, u64 cores)
+static mali_bool kbasep_pm_unrequest_cores_nolock(kbase_device *kbdev, u64 shader_cores, u64 tiler_cores)
 {
-	u64 *needed_bitmap;
-	u8 *needed_cnt;
-	u64 power_up_bitmap = 0;
-	int bit = 0;
+	mali_bool change_gpu_state = MALI_FALSE;
 
-	switch (type)
+	while (shader_cores)
 	{
-		case KBASE_PM_CORE_SHADER:
-			needed_bitmap = &kbdev->shader_needed_bitmap;	
-			needed_cnt = kbdev->shader_needed_cnt;	
-			break;
-		case KBASE_PM_CORE_TILER:
-			needed_bitmap = &kbdev->tiler_needed_bitmap;	
-			needed_cnt = kbdev->tiler_needed_cnt;	
-			break;
-		default:
-			OSK_ASSERT(0);
-			return;
+		int bitnum = 63 - osk_clz_64(shader_cores);
+		u64 bit = 1ULL << bitnum;
+		int cnt;
+
+		OSK_ASSERT(kbdev->shader_needed_cnt[bitnum] > 0);
+
+		cnt = --kbdev->shader_needed_cnt[bitnum];
+
+		if (0 == cnt)
+		{
+			kbdev->shader_needed_bitmap &= ~bit;
+			change_gpu_state = MALI_TRUE;
+		}
+
+		shader_cores &= ~bit;
 	}
 
+	while (tiler_cores)
+	{
+		int bitnum = 63 - osk_clz_64(tiler_cores);
+		u64 bit = 1ULL << bitnum;
+		int cnt;
+
+		OSK_ASSERT(kbdev->tiler_needed_cnt[bitnum] > 0);
+
+		cnt = --kbdev->tiler_needed_cnt[bitnum];
+
+		if (0 == cnt)
+		{
+			kbdev->tiler_needed_bitmap &= ~bit;
+			change_gpu_state = MALI_TRUE;
+		}
+
+		tiler_cores &= ~bit;
+	}
+
+	return change_gpu_state;
+}
+
+mali_error kbase_pm_request_cores(kbase_device *kbdev, u64 shader_cores, u64 tiler_cores)
+{
+	u64 cores;
+
+	mali_bool change_gpu_state = MALI_FALSE;
+
 	osk_spinlock_irq_lock(&kbdev->pm.power_change_lock);
-	/* Update per core usage refcount */
+
+	cores = shader_cores;
 	while (cores)
-	{   
-		if (cores & 1)
-		{   
-			int cnt = needed_cnt[bit]++;
+	{
+		int bitnum = 63 - osk_clz_64(cores);
+		u64 bit = 1ULL << bitnum;
 
-			if (0 == cnt)
-			{
-				/* This core can be powered up */
-				power_up_bitmap |= (1ULL << bit);
-			}
-		}   
+		int cnt = ++kbdev->shader_needed_cnt[bitnum];
 
-		bit++;
-		cores >>= 1;
-	}   
+		if (0 == cnt)
+		{
+			/* Wrapped, undo everything we've done so far */
 
-	/* Update needed cores */
-	*needed_bitmap |= power_up_bitmap;
+			kbdev->shader_needed_cnt[bitnum]--;
+			kbasep_pm_unrequest_cores_nolock(kbdev, cores ^ shader_cores, 0);
 
-	/* Power up cores */
-	if (power_up_bitmap)
+			osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
+			return MALI_ERROR_FUNCTION_FAILED;
+		}
+
+		if (1 == cnt)
+		{
+			kbdev->shader_needed_bitmap |= bit;
+			change_gpu_state = MALI_TRUE;
+		}
+
+		cores &= ~bit;
+	}
+
+	cores = tiler_cores;
+	while (cores)
+	{
+		int bitnum = 63 - osk_clz_64(cores);
+		u64 bit = 1ULL << bitnum;
+
+		int cnt = ++kbdev->tiler_needed_cnt[bitnum];
+
+		if (0 == cnt)
+		{
+			/* Wrapped, undo everything we've done so far */
+
+			kbdev->tiler_needed_cnt[bitnum]--;
+			kbasep_pm_unrequest_cores_nolock(kbdev, shader_cores, cores ^ tiler_cores);
+
+			osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
+			return MALI_ERROR_FUNCTION_FAILED;
+		}
+
+		if (1 == cnt)
+		{
+			kbdev->tiler_needed_bitmap |= bit;
+			change_gpu_state = MALI_TRUE;
+		}
+
+		cores &= ~bit;
+	}
+
+	if (change_gpu_state)
+	{
+		kbase_pm_send_event(kbdev, KBASE_PM_EVENT_CHANGE_GPU_STATE);
+	}
+
+	osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
+
+	return MALI_ERROR_NONE;
+}
+
+void kbase_pm_unrequest_cores(kbase_device *kbdev, u64 shader_cores, u64 tiler_cores)
+{
+	mali_bool change_gpu_state = MALI_FALSE;
+
+	osk_spinlock_irq_lock(&kbdev->pm.power_change_lock);
+
+	change_gpu_state = kbasep_pm_unrequest_cores_nolock(kbdev, shader_cores, tiler_cores);
+
+	if (change_gpu_state)
 	{
 		kbase_pm_send_event(kbdev, KBASE_PM_EVENT_CHANGE_GPU_STATE);
 	}
@@ -394,56 +479,118 @@ void kbase_pm_retain_cores(kbase_device *kbdev, kbase_pm_core_type type, u64 cor
 	osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
 }
 
-void kbase_pm_release_cores(kbase_device *kbdev, kbase_pm_core_type type, u64 cores)
+mali_bool kbase_pm_register_inuse_cores(kbase_device *kbdev, u64 shader_cores, u64 tiler_cores)
 {
-	u64 *needed_bitmap;
-	u8 *needed_cnt;
-	u64 power_down_bitmap = 0;
-	int bit = 0;
+	osk_spinlock_irq_lock(&kbdev->pm.power_change_lock);
 
-	switch (type)
+	if ((kbdev->shader_available_bitmap & shader_cores) != shader_cores ||
+	    (kbdev->tiler_available_bitmap & tiler_cores) != tiler_cores)
 	{
-		case KBASE_PM_CORE_SHADER:
-			needed_bitmap = &kbdev->shader_needed_bitmap;	
-			needed_cnt = kbdev->shader_needed_cnt;	
-			break;
-		case KBASE_PM_CORE_TILER:
-			needed_bitmap = &kbdev->tiler_needed_bitmap;	
-			needed_cnt = kbdev->tiler_needed_cnt;	
-			break;
-		default:
-			OSK_ASSERT(0);
-			return;
+		osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
+		return MALI_FALSE;
 	}
+
+	while (shader_cores)
+	{
+		int bitnum = 63 - osk_clz_64(shader_cores);
+		u64 bit = 1ULL << bitnum;
+		int cnt;
+
+		OSK_ASSERT(kbdev->shader_needed_cnt[bitnum] > 0);
+
+		cnt = --kbdev->shader_needed_cnt[bitnum];
+
+		if (0 == cnt)
+		{
+			kbdev->shader_needed_bitmap &= ~bit;
+		}
+
+		/* shader_inuse_cnt should not overflow because there can only be a
+		 * very limited number of jobs on the h/w at one time */
+
+		kbdev->shader_inuse_cnt[bitnum]++;
+		kbdev->shader_inuse_bitmap |= bit;
+
+		shader_cores &= ~bit;
+	}
+
+	while (tiler_cores)
+	{
+		int bitnum = 63 - osk_clz_64(tiler_cores);
+		u64 bit = 1ULL << bitnum;
+		int cnt;
+
+		OSK_ASSERT(kbdev->tiler_needed_cnt[bitnum] > 0);
+
+		cnt = --kbdev->tiler_needed_cnt[bitnum];
+
+		if (0 == cnt)
+		{
+			kbdev->tiler_needed_bitmap &= ~bit;
+		}
+
+		/* tiler_inuse_cnt should not overflow because there can only be a
+		 * very limited number of jobs on the h/w at one time */
+
+		kbdev->tiler_inuse_cnt[bitnum]++;
+		kbdev->tiler_inuse_bitmap |= bit;
+
+		tiler_cores &= ~bit;
+	}
+
+	osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
+
+	return MALI_TRUE;
+}
+
+void kbase_pm_release_cores(kbase_device *kbdev, u64 shader_cores, u64 tiler_cores)
+{
+	mali_bool change_gpu_state = MALI_FALSE;
 
 	osk_spinlock_irq_lock(&kbdev->pm.power_change_lock);
 
-	/* Update per core usage refcount */
-	while (cores)
-	{   
-		if (cores & 1)
+	while (shader_cores)
+	{
+		int bitnum = 63 - osk_clz_64(shader_cores);
+		u64 bit = 1ULL << bitnum;
+		int cnt;
+
+		OSK_ASSERT(kbdev->shader_inuse_cnt[bitnum] > 0);
+
+		cnt = --kbdev->shader_inuse_cnt[bitnum];
+
+		if (0 == cnt)
 		{
-			int cnt = --needed_cnt[bit];
+			kbdev->shader_inuse_bitmap &= ~bit;
+			change_gpu_state = MALI_TRUE;
+		}
 
-			if (0 == cnt)
-			{
-				/* This core can be powered down */
-				power_down_bitmap |= (1ULL << bit);
-			}
-		}   
-
-		bit++;
-		cores >>= 1;
+		shader_cores &= ~bit;
 	}
-	
-	/* Update needed cores */
-	*needed_bitmap ^= power_down_bitmap;
 
-	/* Power down cores */
-	if (power_down_bitmap)
-	{   
+	while (tiler_cores)
+	{
+		int bitnum = 63 - osk_clz_64(tiler_cores);
+		u64 bit = 1ULL << bitnum;
+		int cnt;
+
+		OSK_ASSERT(kbdev->tiler_inuse_cnt[bitnum] > 0);
+
+		cnt = --kbdev->tiler_inuse_cnt[bitnum];
+
+		if (0 == cnt)
+		{
+			kbdev->tiler_inuse_bitmap &= ~bit;
+			change_gpu_state = MALI_TRUE;
+		}
+
+		tiler_cores &= ~bit;
+	}
+
+	if (change_gpu_state)
+	{
 		kbase_pm_send_event(kbdev, KBASE_PM_EVENT_CHANGE_GPU_STATE);
-	}   
+	}
 
 	osk_spinlock_irq_unlock(&kbdev->pm.power_change_lock);
 }
@@ -532,6 +679,11 @@ void MOCKABLE(kbase_pm_disable_interrupts)(kbase_device *kbdev)
 
 void MOCKABLE(kbase_pm_clock_on)(kbase_device *kbdev)
 {
+#ifdef CONFIG_VITHAR_RT_PM
+	//kbase_device_runtime_get_sync(kbdev->osdev.dev);
+	kbase_device_runtime_resume(kbdev->osdev.dev);
+#endif
+
 	/* The GPU is going to transition, so unset the wait queues until the policy
 	 * informs us that the transition is complete */
 	osk_waitq_clear(&kbdev->pm.power_up_waitqueue);
@@ -545,6 +697,11 @@ void MOCKABLE(kbase_pm_clock_off)(kbase_device *kbdev)
 {
 	if (kbase_device_has_feature(kbdev, KBASE_FEATURE_HAS_MODEL_PMU))
 		kbase_reg_write(kbdev, 0x4008, 0, NULL);
+
+#ifdef CONFIG_VITHAR_RT_PM
+	//kbase_device_runtime_put_sync(kbdev->osdev.dev);
+	kbase_device_runtime_suspend(kbdev->osdev.dev);
+#endif
 }
 
 struct kbasep_reset_timeout_data
@@ -573,6 +730,11 @@ static void kbase_pm_hw_issues(kbase_device *kbdev, uint32_t gpu_id)
 
 		/* Needed due to MIDBASE-1092 */
 		kbase_reg_write(kbdev, GPU_CONTROL_REG(L2_MMU_CONFIG), 0x80000000, NULL);
+	}
+	if (gpu_id == 0x69560000 || gpu_id == 0x69560001)
+	{
+		/* Needed due to MIDBASE-1494: LS_PAUSEBUFFER_DISABLE. See PRLAM-8443. */
+		kbase_reg_write(kbdev, GPU_CONTROL_REG(SHADER_CONFIG), 0x00010000, NULL);
 	}
 }
 
@@ -704,5 +866,7 @@ out:
 
 KBASE_EXPORT_TEST_API(kbase_pm_get_present_cores)
 KBASE_EXPORT_TEST_API(kbase_pm_check_transitions)
-KBASE_EXPORT_TEST_API(kbase_pm_retain_cores)
+KBASE_EXPORT_TEST_API(kbase_pm_request_cores)
+KBASE_EXPORT_TEST_API(kbase_pm_unrequest_cores)
+KBASE_EXPORT_TEST_API(kbase_pm_register_inuse_cores)
 KBASE_EXPORT_TEST_API(kbase_pm_release_cores)

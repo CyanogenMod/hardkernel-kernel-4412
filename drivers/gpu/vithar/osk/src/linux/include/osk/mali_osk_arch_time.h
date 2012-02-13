@@ -44,4 +44,13 @@ OSK_STATIC_INLINE mali_bool osk_time_after(osk_ticks ticka, osk_ticks tickb)
 	return time_after(ticka, tickb);
 }
 
+OSK_STATIC_INLINE void osk_gettimeofday(osk_timeval *tv)
+{
+	struct timespec ts;
+	getnstimeofday(&ts);
+
+	tv->tv_sec = ts.tv_sec;
+	tv->tv_usec = ts.tv_nsec/1000;
+}
+
 #endif /* _OSK_ARCH_TIME_H_ */

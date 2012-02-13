@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -21,11 +21,10 @@
 
 #define GPU_CONTROL_BASE        0x0000
 #define GPU_CONTROL_REG(r)      (GPU_CONTROL_BASE + (r))
-#define TILER_FEATURES          0x00c   /* (RO) Tiler Features */
 #define GPU_ID                  0x000   /* (RO) GPU and revision identifier */
 #define L2_FEATURES             0x004   /* (RO) Level 2 cache features */
 #define L3_FEATURES             0x008   /* (RO) Level 3 cache features */
-
+#define TILER_FEATURES          0x00C   /* (RO) Tiler Features */
 #define MEM_FEATURES            0x010   /* (RO) Memory system features */
 #define MMU_FEATURES            0x014   /* (RO) MMU features */
 #define AS_PRESENT              0x018   /* (RO) Address space slots present */
@@ -177,6 +176,7 @@
 #define L3_PWRACTIVE_HI         0x274   /* (RO) Level 3 cache active bitmap, high word */
 
 
+#define SHADER_CONFIG           0xF04   /* (RW) Shader core configuration settings (Mali-T60x additional register) */
 #define L2_MMU_CONFIG           0xF0C   /* (RW) Configuration of the L2 cache and MMU (Mali-T60x additional register) */
 
 
@@ -283,14 +283,12 @@
 #define JSn_COMMAND_SOFT_STOP          0x02    /* Gently stop processing a job chain */
 #define JSn_COMMAND_HARD_STOP          0x03    /* Rudely stop processing a job chain */
 
-
 /* ASn_COMMAND register commands */
 #define ASn_COMMAND_NOP                0x00    /* NOP Operation */
-#define ASn_COMMAND_UPDATE             0x01    /* Broadcast values in AS<n>_TRANSTAB and AS<n>_MEMATTR to all MMUs */
+#define ASn_COMMAND_UPDATE             0x01    /* Broadcasts the values in ASn_TRANSTAB and ASn_MEMATTR to all MMUs */
 #define ASn_COMMAND_LOCK               0x02    /* Issue a lock region command to all MMUs */
 #define ASn_COMMAND_UNLOCK             0x03    /* Issue a flush region command to all MMUs */
-#define ASn_COMMAND_FLUSH              0x04    /* Flush all L2 caches, then issue a flush region command to all MMUs */
-
+#define ASn_COMMAND_FLUSH              0x04    /* Flush all L2 caches then issue a flush region command to all MMUs */
 
 /* GPU_COMMAND values */
 #define GPU_COMMAND_NOP                0x00    /* No operation, nothing happens */
@@ -302,6 +300,8 @@
 #define GPU_COMMAND_CYCLE_COUNT_STOP   0x06    /* Stops the cycle counter, and system timestamp propagation */
 #define GPU_COMMAND_CLEAN_CACHES       0x07    /* Clean all caches */
 #define GPU_COMMAND_CLEAN_INV_CACHES   0x08    /* Clean and invalidate all caches */
+
+/* End Command Values */
 
 /* GPU_STATUS values */
 #define GPU_STATUS_PRFCNT_ACTIVE           (1 << 2)    /* Set if the performance counters are active. */

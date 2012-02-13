@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -44,6 +44,9 @@
 #include <linux/uaccess.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#if BASE_HW_ISSUE_8401
+#include <kbase/src/common/mali_kbase_8401_workaround.h>
+#endif
 #ifdef CONFIG_VITHAR
 #include <mach/map.h>
 #include <kbase/src/platform/mali_kbase_platform.h>
@@ -146,7 +149,9 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			struct kbase_va_region *reg;
 
 			if (sizeof(*tmem) != args_size)
+			{
 				goto bad_size;
+			}
 
 			reg = kbase_tmem_alloc(kctx, tmem->vsize, tmem->psize,
 					       tmem->extent, tmem->flags, tmem->is_growable);
@@ -155,7 +160,9 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 				tmem->gpu_addr	= reg->start_pfn << 12;
 			}
 			else
+			{
 				ukh->ret = MALI_ERROR_FUNCTION_FAILED;
+			}
 			break;
 		}
 
@@ -166,7 +173,10 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			struct kbase_va_region *reg;
 
 			if (sizeof(*tmem_ump) != args_size)
+			{
 				goto bad_size;
+			}
+
 			reg = kbase_tmem_from_ump(kctx, tmem_ump->id, &tmem_ump->pages);
 			if (reg)
 			{
@@ -191,11 +201,16 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			struct kbase_va_region *reg;
 
 			if (sizeof(*pmem) != args_size)
+			{
 				goto bad_size;
+			}
+
 			reg = kbase_pmem_alloc(kctx, pmem->vsize, pmem->flags,
 					       &pmem->cookie);
 			if (!reg)
+			{
 				ukh->ret = MALI_ERROR_FUNCTION_FAILED;
+			}
 			break;
 		}
 
@@ -204,9 +219,14 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			kbase_uk_mem_free *mem = args;
 
 			if (sizeof(*mem) != args_size)
+			{
 				goto bad_size;
+			}
+
 			if (kbase_mem_free(kctx, mem->gpu_addr))
+			{
 				ukh->ret = MALI_ERROR_FUNCTION_FAILED;
+			}
 			break;
 		}
 
@@ -215,10 +235,14 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			kbase_uk_job_submit * job = args;
 			
 			if (sizeof(*job) != args_size)
+			{
 				goto bad_size;
+			}
 
 			if (MALI_ERROR_NONE != kbase_jd_submit(kctx, job))
+			{
 				ukh->ret = MALI_ERROR_FUNCTION_FAILED;
+			}
 			break;
 		}
 
@@ -227,9 +251,14 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			kbase_uk_sync_now *sn = args;
 
 			if (sizeof(*sn) != args_size)
+			{
 				goto bad_size;
+			}
 
-			kbase_sync_now(kctx, &sn->sset);
+			if (MALI_ERROR_NONE != kbase_sync_now(kctx, &sn->sset))
+			{
+				ukh->ret = MALI_ERROR_FUNCTION_FAILED;
+			}
 			break;
 		}
 
@@ -244,7 +273,9 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			kbase_uk_hwcnt_setup * setup = args;
 
 			if (sizeof(*setup) != args_size)
+			{
 				goto bad_size;
+			}
 
 			if (MALI_ERROR_NONE != kbase_instr_hwcnt_setup(kctx, setup))
 			{
@@ -278,7 +309,9 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			kbase_uk_gpuprops * setup = args;
 
 			if (sizeof(*setup) != args_size)
+			{
 				goto bad_size;
+			}
 
 			if (MALI_ERROR_NONE != kbase_gpuprops_uk_get_props(kctx, setup))
 			{
@@ -291,7 +324,9 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 		{
 			kbase_uk_tmem_resize *resize = args;
 			if (sizeof(*resize) != args_size)
+			{
 				goto bad_size;
+			}
 
 			ukh->ret = kbase_tmem_resize(kctx, resize->gpu_addr, resize->delta, &resize->size, &resize->result_subcode);
 			break;
@@ -373,6 +408,18 @@ static mali_error kbase_dispatch(ukk_call_context * const ukk_ctx, void * const 
 			break;
 		}
 #endif /*MALI_ERROR_INJECT_ON*/
+#if MALI_NO_MALI
+		case KBASE_FUNC_MODEL_CONTROL:
+		{
+			kbase_model_control_params params = ((kbase_uk_model_control_params*)args)->params;
+			/*mutex lock*/
+			osk_spinlock_lock(&kbdev->osdev.reg_op_lock);
+			ukh->ret = midg_model_control(kbdev->osdev.model, &params);
+			osk_spinlock_unlock(&kbdev->osdev.reg_op_lock);
+			/*mutex unlock*/
+			break;
+		}
+#endif /* MALI_NO_MALI */
 		default:
 			dev_err(kbdev->osdev.dev, "unknown syscall %08x", ukh->id);
 			goto out_bad;
@@ -391,13 +438,12 @@ static struct kbase_device *to_kbase_device(struct device *dev)
 {
 	return dev_get_drvdata(dev);
 }
-#endif
+#endif /* MALI_LICENSE_IS_GPL */
 
-static int kbase_open(struct inode *inode, struct file *filp)
+/* Find a particular kbase device (as specified by minor number), or find the "first" device if -1 is specified */
+struct kbase_device *kbase_find_device(int minor)
 {
 	struct kbase_device *kbdev = NULL;
-	struct kbase_context *kctx;
-
 #if MALI_LICENSE_IS_GPL
 	struct list_head *entry;
 
@@ -407,9 +453,10 @@ static int kbase_open(struct inode *inode, struct file *filp)
 		struct kbase_device *tmp;
 
 		tmp = list_entry(entry, struct kbase_device, osdev.entry);
-		if (tmp->osdev.mdev.minor == iminor(inode))
+		if (tmp->osdev.mdev.minor == minor || minor == -1)
 		{
 			kbdev = tmp;
+			get_device(kbdev->osdev.dev);
 			break;
 		}
 	}
@@ -417,38 +464,53 @@ static int kbase_open(struct inode *inode, struct file *filp)
 #else
 	kbdev = g_kbdev;
 #endif
-	if (!kbdev)
-		return -ENODEV;
+
+	return kbdev;
+}
+
+EXPORT_SYMBOL(kbase_find_device);
+
+void kbase_release_device(struct kbase_device *kbdev)
+{
+#if MALI_LICENSE_IS_GPL
+	put_device(kbdev->osdev.dev);
+#endif
+}
+
+EXPORT_SYMBOL(kbase_release_device);
+
+static int kbase_open(struct inode *inode, struct file *filp)
+{
+	struct kbase_device *kbdev = NULL;
+	struct kbase_context *kctx;
+	int ret = 0;
 
 	/* Enforce that the driver is opened with O_CLOEXEC so that execve() automatically
 	 * closes the file descriptor in a child process. 
 	 */
 	if (0 == (filp->f_flags & O_CLOEXEC))
 	{
-		dev_err(kbdev->osdev.dev, "O_CLOEXEC flag not set\n");
+		printk(KERN_ERR   KBASE_DRV_NAME " error: O_CLOEXEC flag not set\n");
 		return -EINVAL;
 	}
 
-#if MALI_LICENSE_IS_GPL
-	get_device(kbdev->osdev.dev);
-#endif
+	kbdev = kbase_find_device(iminor(inode));
+
+	if (!kbdev)
+		return -ENODEV;
 
 	kctx = kbase_create_context(kbdev);
 	if (!kctx)
 	{
-#if MALI_LICENSE_IS_GPL
-		put_device(kbdev->osdev.dev);
-#endif
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto out;
 	}
     
 	if (MALI_ERROR_NONE != ukk_session_init(&kctx->ukk_session, kbase_dispatch, BASE_UK_VERSION_MAJOR, BASE_UK_VERSION_MINOR))
 	{
 		kbase_destroy_context(kctx);
-#if MALI_LICENSE_IS_GPL
-		put_device(kbdev->osdev.dev);
-#endif
-	        return -EFAULT;
+		ret = -EFAULT;
+		goto out;
 	}
 
 	init_waitqueue_head(&kctx->osctx.event_queue);
@@ -456,22 +518,23 @@ static int kbase_open(struct inode *inode, struct file *filp)
 
 	dev_dbg(kbdev->osdev.dev, "created base context\n");
 	return 0;
+
+out:
+	kbase_release_device(kbdev);
+	return ret;
 }
 
 static int kbase_release(struct inode *inode, struct file *filp)
 {
 	struct kbase_context *kctx = filp->private_data;
-#if MALI_LICENSE_IS_GPL
 	struct kbase_device *kbdev = kctx->kbdev;
-#endif
+
 	ukk_session_term(&kctx->ukk_session);
 	filp->private_data = NULL;
 	kbase_destroy_context(kctx);
 
-#if MALI_LICENSE_IS_GPL
 	dev_dbg(kbdev->osdev.dev, "deleted base context\n");
-	put_device(kbdev->osdev.dev);
-#endif
+	kbase_release_device(kbdev);
 	return 0;
 }
 
@@ -511,16 +574,22 @@ static ssize_t kbase_read(struct file *filp, char __user *buf,
 	base_jd_event uevent;
 
 	if (count < sizeof(uevent))
+	{
 		return -ENOBUFS;
+	}
 
 	while (kbase_event_dequeue(kctx, &uevent))
 	{
 		if (filp->f_flags & O_NONBLOCK)
+		{
 			return -EAGAIN;
+		}
 
 		if (wait_event_interruptible(kctx->osctx.event_queue,
 					     kbase_event_pending(kctx)))
+		{
 			return -ERESTARTSYS;
+		}
 	}
 
 	if (copy_to_user(buf, &uevent, sizeof(uevent)))
@@ -537,7 +606,9 @@ static unsigned int kbase_poll(struct file *filp, poll_table *wait)
 
 	poll_wait(filp, &kctx->osctx.event_queue, wait);
 	if (kbase_event_pending(kctx))
+	{
 		return POLLIN | POLLRDNORM;
+	}
 
 	return 0;
 }
@@ -603,7 +674,9 @@ static irqreturn_t kbase_job_irq_handler(int irq, void *data)
 
 	val = kbase_reg_read(kbdev, JOB_CONTROL_REG(JOB_IRQ_RAWSTAT), NULL);
 	if (!val)
+	{
 		return IRQ_NONE;
+	}
 
 	dev_dbg(kbdev->osdev.dev, "%s: irq %d rawstat 0x%x\n", __func__, irq, val);
 
@@ -619,7 +692,9 @@ static irqreturn_t kbase_mmu_irq_handler(int irq, void *data)
 
 	val = kbase_reg_read(kbdev, MMU_REG(MMU_IRQ_STATUS), NULL);
 	if (!val)
+	{
 		return IRQ_NONE;
+	}
 
 	dev_dbg(kbdev->osdev.dev, "%s: irq %d irqstatus 0x%x\n", __func__, irq, val);
 
@@ -636,7 +711,9 @@ static irqreturn_t kbase_gpu_irq_handler(int irq, void *data)
 	val = kbase_reg_read(kbdev, GPU_CONTROL_REG(GPU_IRQ_STATUS), NULL);
 
 	if (!val)
+	{
 		return IRQ_NONE;
+	}
 
 	dev_dbg(kbdev->osdev.dev, "%s: irq %d rawstat 0x%x\n", __func__, irq, val);
 
@@ -694,7 +771,9 @@ static void kbase_release_interrupts(kbase_device *kbdev)
 	for (i = 0; i < nr; i++)
 	{
 		if (osdev->irqs[i].irq)
+		{
 			free_irq(osdev->irqs[i].irq, kbase_tag(kbdev, i));
+		}
 	}
 }
 #endif
@@ -725,7 +804,9 @@ static ssize_t show_policy(struct device *dev, struct device_attribute *attr, ch
 	kbdev = to_kbase_device(dev);
 
 	if (!kbdev)
+	{
 		return -ENODEV;
+	}
 
 	current_policy = kbase_pm_get_policy(kbdev);
 
@@ -734,13 +815,19 @@ static ssize_t show_policy(struct device *dev, struct device_attribute *attr, ch
 	for(i=0; i<policy_count && ret<PAGE_SIZE; i++)
 	{
 		if (policy_list[i] == current_policy)
-			ret += snprintf(buf+ret, PAGE_SIZE - ret, "[%s] ", policy_list[i]->name);
+		{
+			ret += scnprintf(buf+ret, PAGE_SIZE - ret, "[%s] ", policy_list[i]->name);
+		}
 		else
-			ret += snprintf(buf+ret, PAGE_SIZE - ret, "%s ", policy_list[i]->name);
+		{
+			ret += scnprintf(buf+ret, PAGE_SIZE - ret, "%s ", policy_list[i]->name);
+		}
 	}
 
 	if (ret < PAGE_SIZE - 1)
-		ret += snprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	{
+		ret += scnprintf(buf+ret, PAGE_SIZE-ret, "\n");
+	}
 	else
 	{
 		buf[PAGE_SIZE-2] = '\n';
@@ -776,7 +863,9 @@ static ssize_t set_policy(struct device *dev, struct device_attribute *attr, con
 	kbdev = to_kbase_device(dev);
 
 	if (!kbdev)
+	{
 		return -ENODEV;
+	}
 
 	policy_count = kbase_pm_list_policies(&policy_list);
 
@@ -789,7 +878,8 @@ static ssize_t set_policy(struct device *dev, struct device_attribute *attr, con
 		}
 	}
 
-	if (!new_policy) {
+	if (!new_policy)
+	{
 		dev_err(dev, "power_policy: policy not found\n");
 		return -EINVAL;
 	}
@@ -806,7 +896,271 @@ static ssize_t set_policy(struct device *dev, struct device_attribute *attr, con
  */
 DEVICE_ATTR(power_policy, S_IRUGO|S_IWUSR, show_policy, set_policy);
 
-#endif /* MALI_LICENSE_IS_GPL */
+#if  MALI_LICENSE_IS_GPL && (MALI_CUSTOMER_RELEASE == 0)
+/** Store callback for the @c js_timeouts sysfs file.
+ *
+ * This function is called to get the contents of the @c js_timeouts sysfs
+ * file. This file contains five values separated by whitespace. The values
+ * are basically the same as KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS,
+ * KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS, KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS,
+ * KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS, BASE_CONFIG_ATTR_JS_RESET_TICKS_NSS
+ * configuration values (in that order), with the difference that the js_timeout
+ * valus are expressed in MILLISECONDS.
+ *
+ * The js_timeouts sysfile file allows the current values in
+ * use by the job scheduler to get override. Note that a value needs to
+ * be other than 0 for it to override the current job scheduler value.
+ *
+ * @param dev	The device with sysfs file is for
+ * @param attr	The attributes of the sysfs file
+ * @param buf	The value written to the sysfs file
+ * @param count	The number of bytes written to the sysfs file
+ *
+ * @return @c count if the function succeeded. An error code on failure.
+ */
+static ssize_t set_js_timeouts(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct kbase_device *kbdev;
+	int items;
+	unsigned long js_soft_stop_ms;
+	unsigned long js_hard_stop_ms_ss;
+	unsigned long js_hard_stop_ms_nss;
+	unsigned long js_reset_ms_ss;
+	unsigned long js_reset_ms_nss;
+
+	kbdev = to_kbase_device(dev);
+	if (!kbdev)
+	{
+		return -ENODEV;
+	}
+
+	items = sscanf(buf, "%lu %lu %lu %lu %lu", &js_soft_stop_ms, &js_hard_stop_ms_ss, &js_hard_stop_ms_nss, &js_reset_ms_ss, &js_reset_ms_nss);
+	if (items == 5)
+	{
+		u64 ticks;
+
+		ticks = js_soft_stop_ms * 1000000ULL;
+		osk_divmod6432(&ticks, kbdev->js_data.scheduling_tick_ns);
+		kbdev->js_soft_stop_ticks = ticks;
+
+		ticks = js_hard_stop_ms_ss * 1000000ULL;
+		osk_divmod6432(&ticks, kbdev->js_data.scheduling_tick_ns);
+		kbdev->js_hard_stop_ticks_ss = ticks;
+
+		ticks = js_hard_stop_ms_nss * 1000000ULL;
+		osk_divmod6432(&ticks, kbdev->js_data.scheduling_tick_ns);
+		kbdev->js_hard_stop_ticks_nss = ticks;
+
+		ticks = js_reset_ms_ss * 1000000ULL;
+		osk_divmod6432(&ticks, kbdev->js_data.scheduling_tick_ns);
+		kbdev->js_reset_ticks_ss = ticks;
+
+		ticks = js_reset_ms_nss * 1000000ULL;
+		osk_divmod6432(&ticks, kbdev->js_data.scheduling_tick_ns);
+		kbdev->js_reset_ticks_nss = ticks;
+
+		dev_info(kbdev->osdev.dev, "Overriding KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS with %lu ticks (%lu ms)\n", (unsigned long)kbdev->js_soft_stop_ticks, js_soft_stop_ms);
+		dev_info(kbdev->osdev.dev, "Overriding KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS with %lu ticks (%lu ms)\n", (unsigned long)kbdev->js_hard_stop_ticks_ss, js_hard_stop_ms_ss);
+		dev_info(kbdev->osdev.dev, "Overriding KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS with %lu ticks (%lu ms)\n", (unsigned long)kbdev->js_hard_stop_ticks_nss, js_hard_stop_ms_nss);
+		dev_info(kbdev->osdev.dev, "Overriding KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS with %lu ticks (%lu ms)\n", (unsigned long)kbdev->js_reset_ticks_ss, js_reset_ms_ss);
+		dev_info(kbdev->osdev.dev, "Overriding KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS with %lu ticks (%lu ms)\n", (unsigned long)kbdev->js_reset_ticks_nss, js_reset_ms_nss);
+
+		return count;
+	}
+	else
+	{
+		dev_err(kbdev->osdev.dev, "Couldn't process js_timeouts write operation.\nUse format "
+		                          "<soft_stop_ms> <hard_stop_ms_ss> <hard_stop_ms_nss> <reset_ms_ss> <reset_ms_nss>\n");
+		return -EINVAL;
+	}
+}
+
+/** Show callback for the @c js_timeouts sysfs file.
+ *
+ * This function is called to get the contents of the @c js_timeouts sysfs
+ * file. It returns the last set values written to the js_timeouts sysfs file.
+ * If the file didn't get written yet, the values will be 0.
+ *
+ * @param dev	The device this sysfs file is for
+ * @param attr	The attributes of the sysfs file
+ * @param buf	The output buffer for the sysfs file contents
+ *
+ * @return The number of bytes output to @c buf.
+ */
+static ssize_t show_js_timeouts(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	ssize_t ret;
+	u64 ms;
+	unsigned long js_soft_stop_ms;
+	unsigned long js_hard_stop_ms_ss;
+	unsigned long js_hard_stop_ms_nss;
+	unsigned long js_reset_ms_ss;
+	unsigned long js_reset_ms_nss;
+
+	kbdev = to_kbase_device(dev);
+	if (!kbdev)
+	{
+		return -ENODEV;
+	}
+
+	ms = (u64)kbdev->js_soft_stop_ticks * kbdev->js_data.scheduling_tick_ns;
+	osk_divmod6432(&ms, 1000000UL);
+	js_soft_stop_ms = (unsigned long)ms;
+
+	ms = (u64)kbdev->js_hard_stop_ticks_ss * kbdev->js_data.scheduling_tick_ns;
+	osk_divmod6432(&ms, 1000000UL);
+	js_hard_stop_ms_ss = (unsigned long)ms;
+
+	ms = (u64)kbdev->js_hard_stop_ticks_nss * kbdev->js_data.scheduling_tick_ns;
+	osk_divmod6432(&ms, 1000000UL);
+	js_hard_stop_ms_nss = (unsigned long)ms;
+
+	ms = (u64)kbdev->js_reset_ticks_ss * kbdev->js_data.scheduling_tick_ns;
+	osk_divmod6432(&ms, 1000000UL);
+	js_reset_ms_ss = (unsigned long)ms;
+
+	ms = (u64)kbdev->js_reset_ticks_nss * kbdev->js_data.scheduling_tick_ns;
+	osk_divmod6432(&ms, 1000000UL);
+	js_reset_ms_nss = (unsigned long)ms;
+
+	ret = scnprintf(buf, PAGE_SIZE, "%lu %lu %lu %lu %lu\n", js_soft_stop_ms, js_hard_stop_ms_ss, js_hard_stop_ms_nss, js_reset_ms_ss, js_reset_ms_nss);
+
+	if (ret >= PAGE_SIZE )
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+/** The sysfs file @c js_timeouts.
+ *
+ * This is used to override the current job scheduler values for
+ * KBASE_CONFIG_ATTR_JS_STOP_STOP_TICKS_SS
+ * KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS
+ * KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS
+ * KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS
+ * KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS.
+ */
+DEVICE_ATTR(js_timeouts, S_IRUGO|S_IWUSR, show_js_timeouts, set_js_timeouts);
+#endif  /* MALI_LICENSE_IS_GPL && (MALI_CUSTOMER_RELEASE == 0) */
+
+#if MALI_DEBUG
+typedef void (kbasep_debug_command_func)( kbase_device * );
+
+typedef enum
+{
+	KBASEP_DEBUG_COMMAND_DUMPTRACE,
+
+	/* This must be the last enum */
+	KBASEP_DEBUG_COMMAND_COUNT
+} kbasep_debug_command_code;
+
+typedef struct kbasep_debug_command
+{
+	char *str;
+	kbasep_debug_command_func *func;
+} kbasep_debug_command;
+
+/** Debug commands supported by the driver */
+static const kbasep_debug_command debug_commands[] =
+{
+	{
+		.str = "dumptrace",
+		.func = &kbasep_trace_dump,
+	}
+};
+
+/** Show callback for the @c debug_command sysfs file.
+ *
+ * This function is called to get the contents of the @c debug_command sysfs
+ * file. This is a list of the available debug commands, separated by newlines.
+ *
+ * @param dev	The device this sysfs file is for
+ * @param attr	The attributes of the sysfs file
+ * @param buf	The output buffer for the sysfs file contents
+ *
+ * @return The number of bytes output to @c buf.
+ */
+static ssize_t show_debug(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct kbase_device *kbdev;
+	int i;
+	ssize_t ret = 0;
+
+	kbdev = to_kbase_device(dev);
+
+	if (!kbdev)
+	{
+		return -ENODEV;
+	}
+
+	for(i=0; i<KBASEP_DEBUG_COMMAND_COUNT && ret<PAGE_SIZE; i++)
+	{
+		ret += scnprintf(buf+ret, PAGE_SIZE - ret, "%s\n", debug_commands[i].str);
+	}
+
+	if (ret >= PAGE_SIZE )
+	{
+		buf[PAGE_SIZE-2] = '\n';
+		buf[PAGE_SIZE-1] = '\0';
+		ret = PAGE_SIZE-1;
+	}
+
+	return ret;
+}
+
+/** Store callback for the @c debug_command sysfs file.
+ *
+ * This function is called when the @c debug_command sysfs file is written to.
+ * It matches the requested command against the available commands, and if
+ * a matching command is found calls the associated function from
+ * @ref debug_commands to issue the command.
+ *
+ * @param dev	The device with sysfs file is for
+ * @param attr	The attributes of the sysfs file
+ * @param buf	The value written to the sysfs file
+ * @param count	The number of bytes written to the sysfs file
+ *
+ * @return @c count if the function succeeded. An error code on failure.
+ */
+static ssize_t issue_debug(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct kbase_device *kbdev;
+	int i;
+
+	kbdev = to_kbase_device(dev);
+
+	if (!kbdev)
+	{
+		return -ENODEV;
+	}
+
+	for(i=0; i<KBASEP_DEBUG_COMMAND_COUNT; i++)
+	{
+		if (sysfs_streq(debug_commands[i].str, buf))
+		{
+			debug_commands[i].func( kbdev );
+			return count;
+		}
+	}
+
+	/* Debug Command not found */
+	dev_err(dev, "debug_command: command not known\n");
+	return -EINVAL;
+}
+
+/** The sysfs file @c debug_command.
+ *
+ * This is used to issue general debug commands to the device driver.
+ * Reading it will produce a list of debug commands, separated by newlines.
+ * Writing to it with one of those commands will issue said command.
+ */
+DEVICE_ATTR(debug_command, S_IRUGO|S_IWUSR, show_debug, issue_debug);
+#endif /*MALI_DEBUG*/
+#endif /*MALI_LICENSE_IS_GPL*/
 
 static int kbase_common_device_init(kbase_device *kbdev)
 {
@@ -815,11 +1169,20 @@ static int kbase_common_device_init(kbase_device *kbdev)
 	mali_error mali_err;
 	enum
 	{
-		inited_mem         = (1u << 0),
-		inited_job_slot    = (1u << 1),
-		inited_pm          = (1u << 2),
-		inited_js          = (1u << 3),
-		inited_irqs        = (1u << 4)
+		 inited_mem         = (1u << 0),
+		 inited_job_slot    = (1u << 1),
+		 inited_pm          = (1u << 2),
+		 inited_js          = (1u << 3),
+		 inited_irqs        = (1u << 4)
+#if MALI_LICENSE_IS_GPL
+		,inited_debug       = (1u << 5)
+#endif
+#if MALI_CUSTOMER_RELEASE == 0
+		,inited_js_timeouts = (1u << 6)
+#endif
+#if BASE_HW_ISSUE_8401
+		,inited_workaround  = (1u << 7)
+#endif
 	};
 
 	int inited = 0;
@@ -832,14 +1195,16 @@ static int kbase_common_device_init(kbase_device *kbdev)
 					    mali_dev_name
 #endif
 					);
-	if (!osdev->reg_res) {
+	if (!osdev->reg_res)
+	{
 		dev_err(osdev->dev, "Register window unavailable\n");
 		err = -EIO;
 		goto out_region;
 	}
 
 	osdev->reg = ioremap(osdev->reg_start, osdev->reg_size);
-	if (!osdev->reg) {
+	if (!osdev->reg)
+	{
 		dev_err(osdev->dev, "Can't remap register window\n");
 		err = -EINVAL;
 		goto out_ioremap;
@@ -869,7 +1234,7 @@ static int kbase_common_device_init(kbase_device *kbdev)
 
 	if (device_create_file(osdev->dev, &dev_attr_power_policy))
 	{
-		dev_err(osdev->dev, "Couldn't create sysfs file\n");
+		dev_err(osdev->dev, "Couldn't create power_policy sysfs file\n");
 		goto out_file;
 	}
 
@@ -926,6 +1291,34 @@ static int kbase_common_device_init(kbase_device *kbdev)
 	}
 	inited |= inited_irqs;
 
+#if MALI_LICENSE_IS_GPL
+#if MALI_DEBUG
+	if (device_create_file(osdev->dev, &dev_attr_debug_command))
+	{
+		dev_err(osdev->dev, "Couldn't create debug_command sysfs file\n");
+		goto out_partial;
+	}
+	inited |= inited_debug;
+
+#endif
+#if MALI_CUSTOMER_RELEASE == 0
+	if (device_create_file(osdev->dev, &dev_attr_js_timeouts))
+	{
+		dev_err(osdev->dev, "Couldn't create js_timeouts sysfs file\n");
+		goto out_partial;
+	}
+	inited |= inited_js_timeouts;
+#endif
+#endif /*MALI_LICENSE_IS_GPL*/
+
+#if BASE_HW_ISSUE_8401
+	if (MALI_ERROR_NONE != kbasep_8401_workaround_init(kbdev))
+	{
+		goto out_partial;
+	}
+	inited |= inited_workaround;
+#endif
+
 	mali_err = kbase_pm_powerup(kbdev);
 	if (MALI_ERROR_NONE == mali_err)
 	{
@@ -934,6 +1327,28 @@ static int kbase_common_device_init(kbase_device *kbdev)
 	}
 
 out_partial:
+#if BASE_HW_ISSUE_8401
+	if (inited & inited_workaround)
+	{
+		kbasep_8401_workaround_term(kbdev);
+	}
+#endif
+
+#if MALI_LICENSE_IS_GPL
+#if MALI_CUSTOMER_RELEASE == 0
+	if (inited & inited_js_timeouts)
+	{
+		device_remove_file(kbdev->osdev.dev, &dev_attr_js_timeouts);
+	}
+#endif
+#if MALI_DEBUG
+	if (inited & inited_debug)
+	{
+		device_remove_file(kbdev->osdev.dev, &dev_attr_debug_command);
+	}
+#endif
+#endif /*MALI_LICENSE_IS_GPL*/
+
 	if (inited & inited_js)
 	{
 		kbasep_js_devdata_halt(kbdev);
@@ -1002,7 +1417,8 @@ out_region:
 
 #if MALI_LICENSE_IS_GPL
 
-static kbase_attribute pci_attributes[] = {
+static kbase_attribute pci_attributes[] =
+{
 	{
 		KBASE_CONFIG_ATTR_MEMORY_PER_PROCESS_LIMIT,
 		512 * 1024 * 1024UL /* 512MB */
@@ -1032,7 +1448,8 @@ static int kbase_pci_device_probe(struct pci_dev *pdev,
 
 	dev_info = &kbase_dev_info[pci_id->driver_data];
 	kbdev = kbase_device_create(dev_info);
-	if (!kbdev) {
+	if (!kbdev)
+	{
 		dev_err(&pdev->dev, "Can't allocate device\n");
 		err = -ENOMEM;
 		goto out;
@@ -1044,11 +1461,14 @@ static int kbase_pci_device_probe(struct pci_dev *pdev,
 
 	err = pci_enable_device(pdev);
 	if (err)
+	{
 		goto out_free_dev;
+	}
 
 	osdev->reg_start = pci_resource_start(pdev, 0);
 	osdev->reg_size = pci_resource_len(pdev, 0);
-	if (!(pci_resource_flags(pdev, 0) & IORESOURCE_MEM)) {
+	if (!(pci_resource_flags(pdev, 0) & IORESOURCE_MEM))
+	{
 		err = -EINVAL;
 		goto out_disable;
 	}
@@ -1089,7 +1509,9 @@ static int kbase_pci_device_probe(struct pci_dev *pdev,
 
 	err = kbase_common_device_init(kbdev);
 	if (err)
+	{
 		goto out_disable;
+	}
 
 	return 0;
 
@@ -1214,9 +1636,15 @@ out:
 
 static int kbase_common_device_remove(struct kbase_device *kbdev)
 {
+#if BASE_HW_ISSUE_8401
+	kbasep_8401_workaround_term(kbdev);
+#endif
 #if MALI_LICENSE_IS_GPL
 	/* Remove the sys power policy file */
 	device_remove_file(kbdev->osdev.dev, &dev_attr_power_policy);
+#if MALI_DEBUG
+	device_remove_file(kbdev->osdev.dev, &dev_attr_debug_command);
+#endif
 #endif
 #ifdef CONFIG_VITHAR
 	kbase_platform_remove_sysfs_file(kbdev->osdev.dev);
@@ -1261,7 +1689,9 @@ static void kbase_pci_device_remove(struct pci_dev *pdev)
 	struct kbase_device *kbdev = to_kbase_device(&pdev->dev);
 
 	if (!kbdev)
+	{
 		return;
+	}
 
 	kbase_common_device_remove(kbdev);
 	pci_disable_device(pdev);
@@ -1272,7 +1702,9 @@ static int kbase_platform_device_remove(struct platform_device *pdev)
 	struct kbase_device *kbdev = to_kbase_device(&pdev->dev);
 
 	if (!kbdev)
+	{
 		return -ENODEV;
+	}
 
 	return kbase_common_device_remove(kbdev);
 }
@@ -1290,7 +1722,9 @@ static int kbase_device_suspend(struct device *dev)
 	struct kbase_device *kbdev = to_kbase_device(dev);
 
 	if (!kbdev)
+	{
 		return -ENODEV;
+	}
 
 	/* Send the event to the power policy */
 	kbase_pm_send_event(kbdev, KBASE_PM_EVENT_SYSTEM_SUSPEND);
@@ -1302,8 +1736,11 @@ static int kbase_device_suspend(struct device *dev)
 	kbase_platform_clock_off(dev);
 	kbase_platform_power_off(dev);
 
+#if 1
 	/* Turn off PMIC input power! Using Regulator */
 	kbase_platform_regulator_disable(dev);
+#endif
+
 #endif
 
 	return 0;
@@ -1322,11 +1759,14 @@ static int kbase_device_resume(struct device *dev)
 	struct kbase_device *kbdev = to_kbase_device(dev);
 
 	if (!kbdev)
+	{
 		return -ENODEV;
-
+	}
 #ifdef CONFIG_VITHAR
+#if 1
 	/* Turn on PMIC input power! Using Regulator */
 	kbase_platform_regulator_enable(dev);
+#endif
 
 	/* Turn on Host clock & power to Vithar */
 	kbase_platform_power_on(dev);
@@ -1370,7 +1810,8 @@ static struct platform_device_id kbase_platform_id_table[] =
 
 MODULE_DEVICE_TABLE(platform, kbase_platform_id_table);
 
-static DEFINE_PCI_DEVICE_TABLE(kbase_pci_id_table) = {
+static DEFINE_PCI_DEVICE_TABLE(kbase_pci_id_table) =
+{
 	{ PCI_DEVICE(0x13b5, 0x6956), 0, 0, KBASE_MALI_T6XM },
 	{},
 };
@@ -1464,7 +1905,8 @@ static int __init kbase_driver_init(void)
 	}
 
 	err = pci_register_driver(&kbase_pci_driver);
-	if (err) {
+	if (err)
+	{
 		platform_driver_unregister(&kbase_platform_driver);
 		return err;
 	}
@@ -1558,7 +2000,8 @@ static int __init kbase_driver_init(void)
 	}
 
 	err = kbase_common_device_init(kbdev);
-	if (0 != err)	{
+	if (0 != err)
+	{
 		goto out_device_init;
 	}
 
@@ -1587,14 +2030,18 @@ static void __exit kbase_driver_exit(void)
 	platform_driver_unregister(&kbase_platform_driver);
 #if MALI_FAKE_PLATFORM_DEVICE
 	if (mali_device)
+	{
 		platform_device_unregister(mali_device);
+	}
 #endif
 #else
 	dev_t dev = MKDEV(mali_major, 0);
 	struct kbase_device *kbdev = g_kbdev;
 
 	if (!kbdev)
+	{
 		return;
+	}
 
 	kbase_common_device_remove(kbdev);
 

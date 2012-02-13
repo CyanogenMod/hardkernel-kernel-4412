@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -25,7 +25,7 @@
 #include "mali_kbase_pm.h"
 #include "mali_kbase_gpuprops.h"
 
-#if defined(CSTD_OS_LINUX_KERNEL)
+#if defined(__KERNEL__) && defined(__linux__)
 #include <kbase/src/linux/mali_kbase_linux.h>
 #elif defined(MALI_KBASE_USERSPACE)
 #include <kbase/src/userspace/mali_kbase_userspace.h>
@@ -105,17 +105,14 @@ void kbase_event_close(kbase_context *kctx);
 void kbase_event_cleanup(kbase_context *kctx);
 void kbase_event_wakeup(kbase_context *kctx);
 
-void kbase_power_on(kbase_device *kbdev);
-void kbase_power_off(kbase_device *kbdev);
+void kbase_process_soft_job( kbase_context *kctx, kbase_jd_atom *katom );
 
 /* api used internally for register access. Contains validation and tracing */
 void kbase_reg_write(kbase_device *kbdev, u16 offset, u32 value, kbase_context * kctx);
 u32 kbase_reg_read(kbase_device *kbdev, u16 offset, kbase_context * kctx);
-#if KBASE_REGISTER_TRACE_ENABLED
 void kbase_device_trace_register_access(kbase_context * kctx, kbase_reg_access_type type, u16 reg_offset, u32 reg_value);
 void kbase_device_trace_buffer_install(kbase_context * kctx, u32 * tb, size_t size);
 void kbase_device_trace_buffer_uninstall(kbase_context * kctx);
-#endif /* KBASE_REGISTER_TRACE_ENABLED */
 
 /* api to be ported per OS, only need to do the raw register access */
 void kbase_os_reg_write(kbase_device *kbdev, u16 offset, u32 value);
@@ -179,4 +176,150 @@ void kbase_reset_gpu(kbase_device *kbdev);
  */
 const char *kbase_exception_name(u32 exception_code);
 
+
+#if KBASE_TRACE_ENABLE != 0
+/** Add trace values about a job-slot
+ *
+ * @note Any functions called through this macro will still be evaluated in
+ * Release builds (MALI_DEBUG=0). Therefore, when KBASE_TRACE_ENABLE == 0 any
+ * functions called to get the parameters supplied to this macro must:
+ * - be static or static inline
+ * - must just return 0 and have no other statements present in the body.
+ */
+#define KBASE_TRACE_ADD_SLOT( kbdev, code, ctx, uatom, gpu_addr, jobslot ) \
+	kbasep_trace_add( kbdev, KBASE_TRACE_CODE(code), ctx, uatom, gpu_addr, \
+					  KBASE_TRACE_FLAG_JOBSLOT, 0, jobslot, 0 )
+
+/** Add trace values about a job-slot, with info
+ *
+ * @note Any functions called through this macro will still be evaluated in
+ * Release builds (MALI_DEBUG=0). Therefore, when KBASE_TRACE_ENABLE == 0 any
+ * functions called to get the parameters supplied to this macro must:
+ * - be static or static inline
+ * - must just return 0 and have no other statements present in the body.
+ */
+#define KBASE_TRACE_ADD_SLOT_INFO( kbdev, code, ctx, uatom, gpu_addr, jobslot, info_val ) \
+	kbasep_trace_add( kbdev, KBASE_TRACE_CODE(code), ctx, uatom, gpu_addr, \
+					  KBASE_TRACE_FLAG_JOBSLOT, 0, jobslot, info_val )
+
+
+/** Add trace values about a ctx refcount
+ *
+ * @note Any functions called through this macro will still be evaluated in
+ * Release builds (MALI_DEBUG=0). Therefore, when KBASE_TRACE_ENABLE == 0 any
+ * functions called to get the parameters supplied to this macro must:
+ * - be static or static inline
+ * - must just return 0 and have no other statements present in the body.
+ */
+#define KBASE_TRACE_ADD_REFCOUNT( kbdev, code, ctx, uatom, gpu_addr, refcount ) \
+	kbasep_trace_add( kbdev, KBASE_TRACE_CODE(code), ctx, uatom, gpu_addr, \
+					  KBASE_TRACE_FLAG_REFCOUNT, refcount, 0, 0 )
+/** Add trace values about a ctx refcount, and info
+ *
+ * @note Any functions called through this macro will still be evaluated in
+ * Release builds (MALI_DEBUG=0). Therefore, when KBASE_TRACE_ENABLE == 0 any
+ * functions called to get the parameters supplied to this macro must:
+ * - be static or static inline
+ * - must just return 0 and have no other statements present in the body.
+ */
+#define KBASE_TRACE_ADD_REFCOUNT_INFO( kbdev, code, ctx, uatom, gpu_addr, refcount, info_val ) \
+	kbasep_trace_add( kbdev, KBASE_TRACE_CODE(code), ctx, uatom, gpu_addr, \
+					  KBASE_TRACE_FLAG_REFCOUNT, refcount, 0, info_val )
+
+/** Add trace values (no slot or refcount)
+ *
+ * @note Any functions called through this macro will still be evaluated in
+ * Release builds (MALI_DEBUG=0). Therefore, when KBASE_TRACE_ENABLE == 0 any
+ * functions called to get the parameters supplied to this macro must:
+ * - be static or static inline
+ * - must just return 0 and have no other statements present in the body.
+ */
+#define KBASE_TRACE_ADD( kbdev, code, ctx, uatom, gpu_addr, info_val )     \
+	kbasep_trace_add( kbdev, KBASE_TRACE_CODE(code), ctx, uatom, gpu_addr, \
+					  0, 0, 0, info_val )
+
+
+/** Clear the trace */
+#define KBASE_TRACE_CLEAR( kbdev ) \
+	kbasep_trace_clear( kbdev )
+
+/** Dump the slot trace */
+#define KBASE_TRACE_DUMP( kbdev ) \
+	kbasep_trace_dump( kbdev )
+
+/** PRIVATE - do not use directly. Use KBASE_TRACE_ADD() instead */
+void kbasep_trace_add(kbase_device *kbdev, kbase_trace_code code, void *ctx, void *uatom, u64 gpu_addr,
+					  u8 flags, int refcount, int jobslot, u32 info_val );
+/** PRIVATE - do not use directly. Use KBASE_TRACE_CLEAR() instead */
+void kbasep_trace_clear(kbase_device *kbdev);
+#else /* KBASE_TRACE_ENABLE != 0 */
+#define KBASE_TRACE_ADD_SLOT( kbdev, code, ctx, uatom, gpu_addr, jobslot )\
+	do{\
+		CSTD_UNUSED(kbdev);\
+		CSTD_NOP(code);\
+		CSTD_UNUSED(ctx);\
+		CSTD_UNUSED(uatom);\
+		CSTD_UNUSED(gpu_addr);\
+		CSTD_UNUSED(jobslot);\
+	}while(0)
+
+#define KBASE_TRACE_ADD_SLOT_INFO( kbdev, code, ctx, uatom, gpu_addr, jobslot, info_val )\
+		do{\
+			CSTD_UNUSED(kbdev);\
+			CSTD_NOP(code);\
+			CSTD_UNUSED(ctx);\
+			CSTD_UNUSED(uatom);\
+			CSTD_UNUSED(gpu_addr);\
+			CSTD_UNUSED(jobslot);\
+			CSTD_UNUSED(info_val);\
+			CSTD_NOP(0);\
+		}while(0)
+
+#define KBASE_TRACE_ADD_REFCOUNT( kbdev, code, ctx, uatom, gpu_addr, refcount )\
+		do{\
+			CSTD_UNUSED(kbdev);\
+			CSTD_NOP(code);\
+			CSTD_UNUSED(ctx);\
+			CSTD_UNUSED(uatom);\
+			CSTD_UNUSED(gpu_addr);\
+			CSTD_UNUSED(refcount);\
+			CSTD_NOP(0);\
+		}while(0)
+
+#define KBASE_TRACE_ADD_REFCOUNT_INFO( kbdev, code, ctx, uatom, gpu_addr, refcount, info_val )\
+			do{\
+				CSTD_UNUSED(kbdev);\
+				CSTD_NOP(code);\
+				CSTD_UNUSED(ctx);\
+				CSTD_UNUSED(uatom);\
+				CSTD_UNUSED(gpu_addr);\
+				CSTD_UNUSED(info_val);\
+				CSTD_NOP(0);\
+			}while(0)
+
+#define KBASE_TRACE_ADD( kbdev, code, subcode, ctx, uatom, val )\
+			do{\
+				CSTD_UNUSED(kbdev);\
+				CSTD_NOP(code);\
+				CSTD_UNUSED(subcode);\
+				CSTD_UNUSED(ctx);\
+				CSTD_UNUSED(uatom);\
+				CSTD_UNUSED(val);\
+				CSTD_NOP(0);\
+			}while(0)
+
+#define KBASE_TRACE_CLEAR( kbdev )\
+			do{\
+				CSTD_UNUSED(kbdev);\
+				CSTD_NOP(0);\
+			}while(0)
+#define KBASE_TRACE_DUMP( kbdev )\
+			do{\
+				CSTD_UNUSED(kbdev);\
+				CSTD_NOP(0);\
+			}while(0)
+
+#endif /* KBASE_TRACE_ENABLE != 0 */
+/** PRIVATE - do not use directly. Use KBASE_TRACE_DUMP() instead */
+void kbasep_trace_dump(kbase_device *kbdev);
 #endif

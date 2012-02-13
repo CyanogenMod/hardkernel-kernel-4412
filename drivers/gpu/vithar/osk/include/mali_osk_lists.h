@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2008-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -447,7 +447,7 @@ typedef struct osk_dlist
 
 
 /**
- * @brief Remove and call the destructor function for every item in the list.
+ * @brief Remove and call the destructor function for every item in the list, walking from start to end.
  *
  * @param [in, out] osk_dlist_ptr Pointer to the list to empty
  * @param [in] type                  Type of the list container.
@@ -474,6 +474,38 @@ typedef struct osk_dlist
 			destructor_func(to_delete);\
 		}\
 	}while(MALI_FALSE)
+
+/**
+ * @brief Remove and call the destructor function for every item in the list, walking from the end and to the front.
+ *
+ * @param [in, out] osk_dlist_ptr Pointer to the list to empty
+ * @param [in] type                  Type of the list container.
+ * @param [in] attribute             Attribute of the container of type @c osk_dlist_item
+ * @param [in] destructor_func       Destructor function called for every item present in the list.
+ *
+ * This function has to be of the form void func(type* item);
+ *
+ * @note An assert is triggered if @c osk_dlist_ptr is NULL.
+ * @note An assert is triggered if @c destructor_func is NULL.
+ * @note If @c type or @c attribute is invalid then the behavior is undefined.
+ */
+
+#define OSK_DLIST_EMPTY_LIST_REVERSE(osk_dlist_ptr, type, attribute, destructor_func)\
+	do\
+	{\
+		type* oskp_it;\
+		OSK_ASSERT(NULL != osk_dlist_ptr); \
+		OSK_ASSERT(NULL != destructor_func); \
+		oskp_it = OSK_DLIST_BACK(osk_dlist_ptr, type, attribute);\
+		while ( oskp_it != NULL )\
+		{\
+			type* to_delete = oskp_it;\
+			oskp_it = OSK_DLIST_REMOVE_AND_RETURN_PREV(osk_dlist_ptr, oskp_it, type, attribute);\
+			destructor_func(to_delete);\
+		}\
+	}while(MALI_FALSE)
+
+
 
 /**
  * @brief Iterate forward through each container item of the given list

@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010, 2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -12,16 +12,37 @@
 
 
 
+/**
+ * @file mali_kbase_config.h
+ * Configuration API and Attributes for KBase
+ */
+
 #ifndef _KBASE_CONFIG_H_
 #define _KBASE_CONFIG_H_
 
 #include <malisw/mali_stdtypes.h>
 
-/* This flag is set for internal builds so we can run tests without credentials.
- * It should be removed from customer builds to actually enable the security checks.
- * See MIDBLD-953.
+/**
+ * @addtogroup base_api
+ * @{
  */
+
+/**
+ * @addtogroup base_kbase_api
+ * @{
+ */
+
+/**
+ * @addtogroup kbase_config Configuration API and Attributes
+ * @{
+ */
+
+#if MALI_CUSTOMER_RELEASE == 0
+/* This flag is set for internal builds so we can run tests without credentials. */
 #define KBASE_HWCNT_DUMP_BYPASS_ROOT 1
+#else
+#define KBASE_HWCNT_DUMP_BYPASS_ROOT 0
+#endif
 
 /**
  * Relative memory performance indicators. Enum elements should always be defined in slowest to fastest order.
@@ -30,7 +51,9 @@ typedef enum kbase_memory_performance
 {
 	KBASE_MEM_PERF_SLOW,
 	KBASE_MEM_PERF_NORMAL,
-	KBASE_MEM_PERF_FAST
+	KBASE_MEM_PERF_FAST,
+
+	KBASE_MEM_PERF_MAX_VALUE = KBASE_MEM_PERF_FAST
 } kbase_memory_performance;
 
 /**
@@ -97,7 +120,8 @@ enum
 	KBASE_CONFIG_ATTR_UMP_DEVICE,
 
 	/**
-	 * Maximun frequency GPU will be clocked at. Given in kHz.
+	 * Maximum frequency GPU will be clocked at. Given in kHz.
+	 * This must be specified as there is no default value.
 	 * 
 	 * Attached value: number in kHz
 	 * Default value: NA
@@ -106,6 +130,7 @@ enum
 
 	/**
 	 * Minimum frequency GPU will be clocked at. Given in kHz.
+	 * This must be specified as there is no default value.
 	 * 
 	 * Attached value: number in kHz
 	 * Default value: NA
@@ -535,7 +560,8 @@ void kbasep_get_memory_performance(const kbase_memory_resource *resource,
  * @brief Validates configuration attributes
  *
  * Function checks validity of given configuration attributes. It will fail on any attribute with unknown id, attribute
- * with invalid value or attribute list that is not correctly terminated.
+ * with invalid value or attribute list that is not correctly terminated. It will also fail if
+ * KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MIN or KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MAX are not specified.
  *
  * @param[in]  attributes  Array of attributes to validate
  *
@@ -551,5 +577,9 @@ mali_bool kbasep_validate_configuration_attributes(const kbase_attribute *attrib
  */
 kbase_platform_config *kbasep_get_platform_config(void);
 #endif /* !MALI_LICENSE_IS_GPL || (defined(MALI_FAKE_PLATFORM_DEVICE) && MALI_FAKE_PLATFORM_DEVICE) */
+
+/** @} */ /* end group kbase_config */
+/** @} */ /* end group base_kbase_api */
+/** @} */ /* end group base_api */
 
 #endif /* _KBASE_CONFIG_H_ */

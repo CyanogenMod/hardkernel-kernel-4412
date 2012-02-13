@@ -54,12 +54,12 @@ static kbase_attribute config_attributes[] = {
 
 	{
 		KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MAX,
-		130
+		4000
 	},
 
 	{
 		KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MIN,
-		130
+		1000
 	},
 	{
 		KBASE_CONFIG_ATTR_JS_RESET_TIMEOUT_MS,

@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -63,13 +63,13 @@
  * Default minimum number of scheduling ticks before the GPU is reset
  * to clear a "stuck" Soft-Stoppable job
  */
-#define DEFAULT_JS_RESET_TICKS_SS 5 /* 0.5-0.6s before GPU is reset */
+#define DEFAULT_JS_RESET_TICKS_SS 3 /* 0.3-0.4s before GPU is reset */
 
 /**
  * Default minimum number of scheduling ticks before the GPU is reset
  * to clear a "stuck" Non-Soft-Stoppable job
  */
-#define DEFAULT_JS_RESET_TICKS_NSS 610 /* 61s @ 100ms tick */
+#define DEFAULT_JS_RESET_TICKS_NSS 601 /* 60.1s @ 100ms tick */
 
 /**
  * Number of milliseconds given for other jobs on the GPU to be 
@@ -161,7 +161,7 @@ static const char* midgard_type_strings[] =
 
 const char *kbasep_midgard_type_to_string(kbase_midgard_type midgard_type)
 {
-	OSK_ASSERT(midgard_type >= 0 && midgard_type < KBASE_MALI_COUNT);
+	OSK_ASSERT(midgard_type < KBASE_MALI_COUNT);
 
 	return midgard_type_strings[midgard_type];
 }
@@ -291,7 +291,7 @@ static mali_bool kbasep_validate_ump_device(int ump_device)
 
 static mali_bool kbasep_validate_memory_performance(kbase_memory_performance performance)
 {
-	return performance >= KBASE_MEM_PERF_SLOW && performance <= KBASE_MEM_PERF_FAST;
+	return performance <= KBASE_MEM_PERF_MAX_VALUE;
 }
 
 static mali_bool kbasep_validate_memory_resource(const kbase_memory_resource *memory_resource)
@@ -372,7 +372,7 @@ static mali_bool kbasep_validate_gpu_clock_freq(const kbase_attribute *attribute
 		(freq_max < MIN_GPU_ALLOWED_FREQ_KHZ) ||
 		(freq_min > freq_max))
 	{
-		OSK_PRINT_WARN(OSK_BASE_CORE, "Invalid GPU frequencies found in configuration: min=%lkHz, max=%lkHz.", freq_min, freq_max);
+		OSK_PRINT_WARN(OSK_BASE_CORE, "Invalid GPU frequencies found in configuration: min=%ldkHz, max=%ldkHz.", freq_min, freq_max);
 		return MALI_FALSE;
 	}
 	
@@ -382,6 +382,7 @@ static mali_bool kbasep_validate_gpu_clock_freq(const kbase_attribute *attribute
 mali_bool kbasep_validate_configuration_attributes(const kbase_attribute *attributes)
 {
 	int i;
+	mali_bool had_gpu_freq_min = MALI_FALSE, had_gpu_freq_max = MALI_FALSE;
 
 	OSK_ASSERT(attributes);
 
@@ -430,7 +431,16 @@ mali_bool kbasep_validate_configuration_attributes(const kbase_attribute *attrib
 				break;
 
 		    case KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MIN:
+				had_gpu_freq_min = MALI_TRUE;
+				if (MALI_FALSE == kbasep_validate_gpu_clock_freq(attributes))
+				{
+					/* Warning message handled by kbasep_validate_gpu_clock_freq() */
+					return MALI_FALSE;
+				}
+				break;
+
 		    case KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MAX:
+				had_gpu_freq_max = MALI_TRUE;
 				if (MALI_FALSE == kbasep_validate_gpu_clock_freq(attributes))
 				{
 					/* Warning message handled by kbasep_validate_gpu_clock_freq() */
@@ -440,13 +450,17 @@ mali_bool kbasep_validate_configuration_attributes(const kbase_attribute *attrib
 
 				/* Only non-zero unsigned 32-bit values accepted */
 			case KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS:
-				if ( attributes[i].data == 0u || (u64)attributes[i].data > (u64)U32_MAX )
-				{
-					OSK_PRINT_WARN(OSK_BASE_CORE, "Invalid Job Scheduling Configuration attribute for "
-								   "KBASE_CONFIG_ATTR_JS_SCHEDULING_TICKS_NS: %i",
-								   (int)attributes[i].data);
-					return MALI_FALSE;
-				}
+				#if CSTD_CPU_64BIT
+						if ( attributes[i].data == 0u || (u64)attributes[i].data > (u64)U32_MAX )
+				#else
+						if ( attributes[i].data == 0u )
+				#endif
+						{
+							OSK_PRINT_WARN(OSK_BASE_CORE, "Invalid Job Scheduling Configuration attribute for "
+										   "KBASE_CONFIG_ATTR_JS_SCHEDULING_TICKS_NS: %i",
+										   (int)attributes[i].data);
+							return MALI_FALSE;
+						}
 				break;
 
 				/* All these Job Scheduling attributes are FALLTHROUGH: only unsigned 32-bit values accepted */
@@ -459,19 +473,33 @@ mali_bool kbasep_validate_configuration_attributes(const kbase_attribute *attrib
 			case KBASE_CONFIG_ATTR_JS_CTX_TIMESLICE_NS:
 			case KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_INIT_SLICES:
 			case KBASE_CONFIG_ATTR_JS_CFS_CTX_RUNTIME_MIN_SLICES:
-				if ( (u64)attributes[i].data > (u64)U32_MAX )
-				{
-					OSK_PRINT_WARN(OSK_BASE_CORE, "Job Scheduling Configuration attribute exceeds 32-bits: "
-								   "id==%d val==%i",
-								   attributes[i].id, (int)attributes[i].data);
-					return MALI_FALSE;
-				}
+				#if	CSTD_CPU_64BIT
+					if ( (u64)attributes[i].data > (u64)U32_MAX )
+					{
+						OSK_PRINT_WARN(OSK_BASE_CORE, "Job Scheduling Configuration attribute exceeds 32-bits: "
+									   "id==%d val==%i",
+									   attributes[i].id, (int)attributes[i].data);
+						return MALI_FALSE;
+					}
+				#endif
 				break;
 
 			default:
 				OSK_PRINT_WARN(OSK_BASE_CORE, "Invalid attribute found in configuration: %i", attributes[i].id);
 				return MALI_FALSE;
 		}
+	}
+
+	if(!had_gpu_freq_min)
+	{
+		OSK_PRINT_WARN(OSK_BASE_CORE, "Configuration does not include mandatory attribute KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MIN");
+		return MALI_FALSE;
+	}
+
+	if(!had_gpu_freq_max)
+	{
+		OSK_PRINT_WARN(OSK_BASE_CORE, "Configuration does not include mandatory attribute KBASE_CONFIG_ATTR_GPU_FREQ_KHZ_MAX");
+		return MALI_FALSE;
 	}
 
 	return MALI_TRUE;

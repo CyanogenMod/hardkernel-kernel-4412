@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -575,6 +575,14 @@ void kbasep_js_policy_runpool_remove_ctx( kbasep_js_policy *js_policy, kbase_con
  * @note This API is called from IRQ context.
  */
 mali_bool kbasep_js_policy_should_remove_ctx( kbasep_js_policy *js_policy, kbase_context *kctx );
+
+/**
+ * @brief Indicate whether a new context has an higher priority than the current context.
+ *
+ * The locking conditions on the caller are as follows:
+ * - it will be holding kbasep_js_device_data::runpool_mutex.
+ */
+mali_bool kbasep_js_policy_ctx_has_priority( kbasep_js_policy *js_policy, kbase_context *current_ctx, kbase_context *new_ctx );
 
 
 /** @} */ /* end group kbase_js_policy_ctx */

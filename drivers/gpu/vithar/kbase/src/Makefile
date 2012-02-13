@@ -14,6 +14,7 @@
 ifneq ($(VITHAR_ROOT),)
 SRC=\
 	common/mali_kbase_device.c		\
+	common/mali_kbase_cache_policy.c \
 	common/mali_kbase_mem.c			\
 	common/mali_kbase_mmu.c			\
 	common/mali_kbase_jd.c			\
@@ -33,6 +34,8 @@ SRC=\
 	common/mali_kbase_security.c		\
 	common/mali_kbase_instr.c		\
 	common/mali_kbase_instr_7115.c	\
+	common/mali_kbase_softjobs.c \
+	common/mali_kbase_8401_workaround.c \
 	linux/mali_kbase_mem_linux.c		\
 	linux/mali_kbase_core_linux.c			\
 	linux/mali_kbase_config_linux.c	
@@ -101,6 +104,7 @@ EXTRA_CFLAGS += -DMALI_DEBUG=$(MALI_DEBUG) -DMALI_BACKEND_KERNEL=$(MALI_BACKEND_
 				-DMALI_ANDROID=$(MALI_ANDROID) -DMALI_BASE_TRACK_MEMLEAK=$(MALI_BASE_TRACK_MEMLEAK) \
 				-DMALI_KERNEL_TEST_API=$(MALI_KERNEL_TEST_API) -I$(ROOT)/kbase/midg_gpus/$(MALI_HW_VERSION) \
 				-DMALI_UNIT_TEST=$(MALI_UNIT_TEST) -DMALI_INFINITE_CACHE=$(MALI_INFINITE_CACHE) \
+				-DMALI_UNCACHED=$(MALI_UNCACHED) \
 				-DMALI_LICENSE_IS_GPL=$(MALI_LICENSE_IS_GPL) \
 				-DMALI_FAKE_PLATFORM_DEVICE=$(MALI_FAKE_PLATFORM_DEVICE) \
 				-DMALI_MOCK_TEST=$(MALI_MOCK_TEST) \
@@ -108,7 +112,9 @@ EXTRA_CFLAGS += -DMALI_DEBUG=$(MALI_DEBUG) -DMALI_BACKEND_KERNEL=$(MALI_BACKEND_
 				-DMALI_GATOR_SUPPORT=$(MALI_GATOR_SUPPORT) \
 				-DMALI_KBASE_SRC_LINUX_PATH=$(MALI_KBASE_SRC_LINUX_PATH) \
 				-DMALI_NO_MALI=$(MALI_NO_MALI) \
-				-DMALI_ERROR_INJECT_ON=$(MALI_ERROR_INJECT_ON)
+				-DMALI_ERROR_INJECT_ON=$(MALI_ERROR_INJECT_ON) \
+				-DMALI_CUSTOMER_RELEASE=$(MALI_CUSTOMER_RELEASE) \
+				-DMALI_INSTRUMENTATION_LEVEL=$(MALI_INSTRUMENTATION_LEVEL)
 
 #MODULE:=mali_kbase.ko
 #obj-m := $(MODULE:.ko=.o)

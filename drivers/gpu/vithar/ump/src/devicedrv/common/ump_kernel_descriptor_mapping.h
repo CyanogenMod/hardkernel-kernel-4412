@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2008-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -77,16 +77,6 @@ unsigned int umpp_descriptor_mapping_allocate(umpp_descriptor_mapping * map, voi
  * @return 0 on success lookup, -EINVAL on lookup failure.
  */
 int umpp_descriptor_mapping_lookup(umpp_descriptor_mapping * map, unsigned int descriptor, void** target);
-
-/**
- * Set the value mapped to by a descriptor ID
- * If growing the descriptor table is needed it could run out of memory.
- * @param[in] map The map to set the descriptor id in
- * @param descriptor The descriptor ID to set
- * @param[in] target Pointer to replace the current value with
- * @return 0 on success, -EINVAL on failure.
- */
-int umpp_descriptor_mapping_set(umpp_descriptor_mapping * map, unsigned int descriptor, void * target);
 
 /**
  * Free the descriptor ID

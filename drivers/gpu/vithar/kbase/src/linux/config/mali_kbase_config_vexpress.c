@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -116,6 +116,8 @@ static kbase_attribute config_attributes[] = {
 		5000
 	},
 
+#if MALI_DEBUG
+/* Use more aggressive scheduling timeouts in debug builds for testing purposes */
 	{
 		KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS,
 		15000000 /* 15ms, an agressive tick for testing purposes. This will reduce performance significantly */
@@ -128,24 +130,55 @@ static kbase_attribute config_attributes[] = {
 
 	{
 		KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS,
-		133 /* 2s (0.2s scaled up from 50MHz to 5MHz) before hard-stop */
+		333 /* 5s before hard-stop */
 	},
 
 	{
 		KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS,
-		40000 /* 10min (60s scaled up from 50MHz to 5MHz) before NSS hard-stop */
+		100000 /* 1500s (25mins) before NSS hard-stop */
 	},
 
 	{
 		KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS,
-		200 /* 3s before resetting GPU */
+		500 /* 7.5s before resetting GPU */
 	},
 
 	{
 		KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS,
-		40067 /* 10min 1 second before resetting GPU */
+		100166 /* 1502s before resetting GPU */
+	},
+#else /* MALI_DEBUG */
+/* In release builds same as the defaults but scaled for 5MHz FPGA */
+	{
+		KBASE_CONFIG_ATTR_JS_SCHEDULING_TICK_NS,
+		2500000000u /* 2.5s */
 	},
 
+	{
+		KBASE_CONFIG_ATTR_JS_SOFT_STOP_TICKS,
+		1 /* 2.5s before soft-stop a job */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS,
+		2 /* 5s before hard-stop */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS,
+		600 /* 1500s before NSS hard-stop */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS,
+		3 /* 7.5s before resetting GPU */
+	},
+
+	{
+		KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS,
+		601 /* 1502s before resetting GPU */
+	},
+#endif /* MALI_DEBUG */
 	{
 		KBASE_CONFIG_ATTR_JS_RESET_TIMEOUT_MS,
 		3000 /* 3s before cancelling stuck jobs */

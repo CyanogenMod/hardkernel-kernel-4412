@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2008-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -108,7 +108,8 @@ typedef void (*ump_dd_final_release_callback)(const ump_dd_handle, void *);
  * Use @ref ump_dd_retain and @ref ump_dd_release to control the reference count.
  * @param size Number of bytes to allocate. Will be padded up to a multiple of the page size.
  * @param flags Bit-wise OR of zero or more of the allocation flag bits.
- * @param[in] filter_func Pointer to a function which will be called before this allocation is returned to user-space.
+ * @param[in] filter_func Pointer to a function which will be called when an allocation is required from a
+ * secure id before the allocation itself is returned to user-space.
  * NULL permitted if no need for a callback.
  * @param[in] final_release_func Pointer to a function which will be called when the last reference is removed,
  * just before the allocation is freed. NULL permitted if no need for a callback.
@@ -263,7 +264,8 @@ UMP_KERNEL_API_EXPORT void ump_dd_release(ump_dd_handle mem);
  * @param[in] blocks Array of @ref ump_dd_physical_block_64
  * @param num_blocks Number of elements in the array pointed to by @a blocks
  * @param flags Allocation flags to mark the handle with
- * @param[in] filter_func Pointer to a function which will be called before this allocation is returned to user-space. NULL permitted if no need for a callback.
+ * @param[in] filter_func Pointer to a function which will be called when an allocation is required from a secure id before the allocation itself is returned to user-space.
+ * NULL permitted if no need for a callback.
  * @param[in] final_release_func Pointer to a function which will be called when the last reference is removed, just before the allocation is freed. NULL permitted if no need for a callback.
  * @param[in] callback_data An opaque pointer which will be provided to @a filter_func and @a final_release_func
  * @return Handle to the UMP allocation handle created, or @a UMP_DD_INVALID_MEMORY_HANDLE if no such handle could be created.

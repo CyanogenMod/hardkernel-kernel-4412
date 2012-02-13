@@ -522,7 +522,9 @@ int ump_import_module_register(enum ump_external_memory_type type, struct ump_im
 	/* validate input */
 	BUG_ON(type == 0 || type >= UMPP_EXTERNAL_MEM_COUNT);
 	BUG_ON(!handler);
-	/* BUG_ON(!handler->linux_module); */
+#ifndef CONFIG_VITHAR
+	BUG_ON(!handler->linux_module);
+#endif
 	BUG_ON(!handler->session_begin);
 	BUG_ON(!handler->session_end);
 	BUG_ON(!handler->import);

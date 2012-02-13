@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2008-2010, 2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -26,12 +26,18 @@
 #define UMP_MAX_IDS 32768
 
 #ifdef __KERNEL__
+/*TODO: for Linux Kernel Mainline Release to remove OSK define and dependencies below*/
+#if defined(MALI_UNIT_TEST) && (MALI_UNIT_TEST)
+#include <osk/mali_osk.h>
+#define UMP_ASSERT OSK_ASSERT
+#else
 #define UMP_ASSERT(expr) \
 		if (!(expr)) { \
 			printk(KERN_ERR "UMP: Assertion failed! %s,%s,%s,line=%d\n",\
 					#expr,__FILE__,__func__,__LINE__); \
 					BUG(); \
 		}
+#endif
 
 static inline void ump_sync_to_memory(uint64_t paddr, void* vaddr, size_t sz)
 {

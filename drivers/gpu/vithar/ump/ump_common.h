@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -41,12 +41,12 @@ extern "C"
 /**
  * Typedef for a secure ID, a system wide identifier for UMP memory buffers.
  */
-typedef uint32_t ump_secure_id;
+typedef int32_t ump_secure_id;
 
 /**
  * Value to indicate an invalid secure Id.
  */
-#define UMP_INVALID_SECURE_ID  ((ump_secure_id)-1)
+#define UMP_INVALID_SECURE_ID  ((ump_secure_id)0)
 
 /**
  * UMP error codes.

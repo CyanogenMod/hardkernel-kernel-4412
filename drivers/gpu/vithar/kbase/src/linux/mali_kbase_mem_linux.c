@@ -42,6 +42,11 @@ struct kbase_va_region *kbase_pmem_alloc(struct kbase_context *kctx, u32 size,
 		goto out1;
 	}
 
+	if (!kbase_check_alloc_flags(flags))
+	{
+		goto out1;
+	}
+
 	reg = kbase_alloc_free_region(kctx, 0, size, KBASE_REG_ZONE_PMEM);
 	if (!reg)
 		goto out1;
@@ -384,6 +389,9 @@ void kbase_unlink_cookie(struct kbase_context * kctx, mali_addr64 cookie, struct
 {
 	OSKP_ASSERT(kctx != NULL);
 	OSKP_ASSERT(reg != NULL);
+	OSKP_ASSERT(MALI_TRUE == OSK_DLIST_MEMBER_OF(&kctx->osctx.reg_pending, reg, link));
+	OSKP_ASSERT(KBASE_REG_COOKIE(cookie) == (reg->flags & KBASE_REG_COOKIE_MASK));
+	OSKP_ASSERT((kctx->osctx.cookies & (1UL << cookie)) == 0);
 
 	OSK_DLIST_REMOVE(&kctx->osctx.reg_pending, reg, link);
 	kctx->osctx.cookies |= (1UL << cookie); /* mark as resolved */

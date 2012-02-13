@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2008-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -55,3 +55,75 @@ const char* oskp_module_to_str(const osk_module module)
 	}
 	return oskp_str_modules[module];
 }
+
+void oskp_validate_format_string(const char *format, ...)
+{
+#if MALI_DEBUG
+	char c;
+	static const char *supported[] =
+	{
+		"d", "ld", "lld",
+		"x", "lx", "llx",
+		"X", "lX", "llX",
+		"u", "lu", "llu",
+		"p",
+		"c",
+		"s",
+	};
+	static const unsigned char sizes[] = { 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 1, 1 };
+
+	unsigned int i;
+
+	/* %[flags][width][.precision][length]specifier  */
+
+	while ( (c = *format++) )
+	{
+		if (c == '%')
+		{
+			c = *format;
+
+			if (c == '\0')
+			{
+				/* Unsupported format */
+				OSK_PRINT_WARN(OSK_OSK, "OSK Format specification not complete (%% not followed by anything)\n");
+				return;
+			}
+			else if (c != '%')
+			{
+				/* Skip to the [length]specifier part assuming it starts with
+				 * an alphabetic character and flags, width, precision do not
+				 * contain alphabetic characters.
+				 */
+				do
+				{
+					if ((c >= 'a' && c <= 'z') || c == 'X')
+					{
+						/* Match supported formats with current position in format string */
+						for (i = 0; i < NELEMS(supported); i++)
+						{
+							if (strncmp(format, supported[i], sizes[i]) == 0)
+							{
+								/* Supported format */
+								break;
+							}
+						}
+
+						if (i == NELEMS(supported))
+						{
+							/* Unsupported format */
+							OSK_PRINT_WARN(OSK_OSK, "OSK Format string specifier not supported (starting at '%s')\n", format);
+							return;
+						}
+
+						/* Start looking for next '%' */
+						break;
+					}
+				} while ( (c = *++format) );
+			}
+		}
+	}
+#else
+	CSTD_UNUSED(format);
+#endif
+}
+

@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2008-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -118,20 +118,6 @@ int umpp_descriptor_mapping_lookup(umpp_descriptor_mapping * map, unsigned int d
 		result = 0;
 	}
 	/* keep target untouched if the descriptor was not found */
-	up_read(&map->lock);
-	return result;
-}
-
-int umpp_descriptor_mapping_set(umpp_descriptor_mapping * map, unsigned int descriptor, void * target)
-{
-	int result = -EINVAL;
-	UMP_ASSERT(map);
- 	down_read(&map->lock);
- 	if ( (descriptor > 0) && (descriptor < map->current_nr_mappings) && test_bit(descriptor, map->table->usage) )
- 	{
-		map->table->mappings[descriptor] = target;
-		result = 0;
-	}
 	up_read(&map->lock);
 	return result;
 }

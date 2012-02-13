@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -286,6 +286,7 @@ mali_error kbase_gpu_mmap(struct kbase_context *kctx,
                           struct kbase_va_region *reg,
                           mali_addr64 addr, u32 nr_pages,
                           u32 align);
+mali_bool kbase_check_alloc_flags(u32 flags);
 void kbase_update_region_flags(struct kbase_va_region *reg, u32 flags, mali_bool is_growable);
 
 void kbase_gpu_vm_lock(struct kbase_context *kctx);
@@ -296,11 +297,14 @@ int kbase_alloc_phy_pages(struct kbase_va_region *reg, u32 vsize, u32 size);
 
 mali_error kbase_cpu_free_mapping(struct kbase_va_region *reg, const void *ptr);
 
+mali_error kbase_mmu_init(struct kbase_context *kctx);
+void kbase_mmu_term(struct kbase_context *kctx);
+
 osk_phy_addr kbase_mmu_alloc_pgd(kbase_context *kctx);
 void kbase_mmu_free_pgd(struct kbase_context *kctx);
-void kbase_mmu_insert_pages(struct kbase_context *kctx, u64 vpfn,
-                            osk_phy_addr *phys, u32 nr, u16 flags);
-void kbase_mmu_teardown_pages(struct kbase_context *kctx, u64 vpfn, u32 nr);
+mali_error kbase_mmu_insert_pages(struct kbase_context *kctx, u64 vpfn,
+                                  osk_phy_addr *phys, u32 nr, u16 flags);
+mali_error kbase_mmu_teardown_pages(struct kbase_context *kctx, u64 vpfn, u32 nr);
 
 /**
  * The caller has the following locking conditions:
@@ -351,7 +355,7 @@ mali_error kbase_alloc_phy_pages_helper(kbase_va_region *reg, u32 nr_pages);
  */
 void *kbase_mmu_dump(struct kbase_context *kctx,int nr_pages);
 
-void kbase_sync_now(kbase_context *kctx, base_syncset *syncset);
+mali_error kbase_sync_now(kbase_context *kctx, base_syncset *syncset);
 void kbase_pre_job_sync(kbase_context *kctx, base_syncset *syncsets, u32 nr);
 void kbase_post_job_sync(kbase_context *kctx, base_syncset *syncsets, u32 nr);
 

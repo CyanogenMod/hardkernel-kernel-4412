@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -27,10 +27,10 @@
  * selection of JS does not depend on the coherency requirement. */
 static const base_jd_core_req core_req_variants[] ={
 
-	BASE_JD_REQ_FS | BASE_JD_REQ_CF | BASE_JD_REQ_V | BASE_JD_REQ_PERMON,
-	BASE_JD_REQ_CS | BASE_JD_REQ_CF | BASE_JD_REQ_V  | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON,
-	BASE_JD_REQ_CS | BASE_JD_REQ_T  | BASE_JD_REQ_CF | BASE_JD_REQ_V   | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON,
-	BASE_JD_REQ_CS | BASE_JD_REQ_CF | BASE_JD_REQ_V  | BASE_JD_REQ_NSS | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON
+	(BASE_JD_REQ_FS | BASE_JD_REQ_CF | BASE_JD_REQ_V | BASE_JD_REQ_PERMON ),
+	(BASE_JD_REQ_CS | BASE_JD_REQ_CF | BASE_JD_REQ_V | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON ),
+	(BASE_JD_REQ_CS | BASE_JD_REQ_T  | BASE_JD_REQ_CF | BASE_JD_REQ_V   | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON ),
+	(BASE_JD_REQ_CS | BASE_JD_REQ_CF | BASE_JD_REQ_V  | BASE_JD_REQ_NSS | BASE_JD_REQ_COHERENT_GROUP | BASE_JD_REQ_PERMON ),
 };
 
 #define NUM_CORE_REQ_VARIANTS NELEMS(core_req_variants)
@@ -222,7 +222,7 @@ STATIC mali_error cached_variant_idx_init( kbasep_js_policy_fcfs *policy_info, k
 	OSK_ASSERT( atom != NULL );
 
 	job_info = &atom->sched_info.fcfs;
-	job_core_req = atom->atom->core_req;
+	job_core_req = atom->user_atom->core_req;
 
 	/* Pick a core_req variant that matches us. Since they're ordered by least
 	 * restrictive first, it picks the least restrictive variant */
@@ -611,3 +611,10 @@ void kbasep_js_policy_log_job_result( kbasep_js_policy *js_policy, kbase_jd_atom
 	/* We ignore the job result */
 	return;
 }
+
+mali_bool kbasep_js_policy_ctx_has_priority( kbasep_js_policy *js_policy, kbase_context *current_ctx, kbase_context *new_ctx )
+{
+	/* A new context never has priority over the current one */
+	return MALI_FALSE;
+}
+

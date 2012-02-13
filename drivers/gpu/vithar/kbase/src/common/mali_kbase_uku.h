@@ -19,7 +19,7 @@
 #include <ump/ump_common.h>
 #include <malisw/mali_malisw.h>
 #include <kbase/mali_base_kernel.h>
-#if MALI_ERROR_INJECT_ON
+#if (MALI_ERROR_INJECT_ON || MALI_NO_MALI)
 #include <kbase/src/common/mali_kbase_model_dummy.h>
 #endif
 
@@ -193,6 +193,15 @@ typedef struct kbase_uk_error_params
 } kbase_uk_error_params;
 #endif
 
+#if MALI_NO_MALI
+typedef struct kbase_uk_model_control_params
+{
+	uk_header header;
+	/* IN */
+	kbase_model_control_params params;
+} kbase_uk_model_control_params;
+#endif /* MALI_NO_MALI */
+
 typedef enum kbase_uk_function_id
 {
 	KBASE_FUNC_TMEM_ALLOC = (UK_FUNC_ID + 0),
@@ -224,6 +233,9 @@ typedef enum kbase_uk_function_id
 #if MALI_ERROR_INJECT_ON
 	, KBASE_FUNC_INJECT_ERROR
 #endif
+#if MALI_NO_MALI
+	, KBASE_FUNC_MODEL_CONTROL
+#endif /* MALI_NO_MALI */
 
 } kbase_uk_function_id;
 

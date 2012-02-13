@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2008-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2008-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -144,6 +144,33 @@ static inline void *osk_kmap(osk_phy_addr page)
 static inline void osk_kunmap(osk_phy_addr page, void * mapping)
 {
 	kunmap(pfn_to_page(PFN_DOWN(page)));
+}
+
+#if MALI_DEBUG
+void osk_kmap_debug(int slot);
+void osk_kunmap_debug(int slot);
+#endif
+
+static inline void *osk_kmap_atomic(osk_phy_addr page, osk_kmap_slot slot)
+{
+	/**
+	 * Note: kmap_atomic should never fail and so OSK_SIMULATE_FAILURE is not
+	 * included for this function call.
+	 */
+	OSK_ASSERT((slot >= OSK_KMAP_SLOT_0) && (slot <= OSK_KMAP_SLOT_1));
+	OSK_DEBUG_CODE( osk_kmap_debug(slot) );
+
+	preempt_disable();
+	return kmap_atomic(pfn_to_page(PFN_DOWN(page)), KM_USER0+slot);
+}
+
+static inline void osk_kunmap_atomic(osk_phy_addr page, void *mapping, osk_kmap_slot slot)
+{
+	OSK_ASSERT((slot >= OSK_KMAP_SLOT_0) && (slot <= OSK_KMAP_SLOT_1));
+	OSK_DEBUG_CODE( osk_kunmap_debug(slot) );
+
+	kunmap_atomic(mapping, KM_USER0+slot);
+	preempt_enable();
 }
 
 static inline void osk_sync_to_memory(osk_phy_addr paddr, osk_virt_addr vaddr, size_t sz)

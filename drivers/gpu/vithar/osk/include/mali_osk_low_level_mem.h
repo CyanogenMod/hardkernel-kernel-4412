@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -226,6 +226,47 @@ OSK_STATIC_INLINE void *osk_kmap(osk_phy_addr page) CHECK_RESULT;
  * @param[in] mapping   virtual address of the mapping to unmap
  */
 OSK_STATIC_INLINE void osk_kunmap(osk_phy_addr page, void * mapping);
+
+typedef enum osk_kmap_slot {
+	OSK_KMAP_SLOT_0 = 0,
+	OSK_KMAP_SLOT_1 = 1
+} osk_kmap_slot;
+
+/**
+ * @brief Map a physical page into the kernel
+ *
+ * Maps a physical page that was previously allocated by osk_phy_pages_alloc()
+ * with a physical allocator setup for allocating pages for use by the kernel,
+ * @see osk_phy_allocator_init().
+ *
+ * Notes:
+ * - Uses a very small set of predefined slots
+ * - Used for mapping a single page (in each slot) for a very short duration
+ *   using one of the defined slots.
+ * -  The caller must not sleep until after the osk_kunmap_atomic is called.
+ * - It may be assumed that osk_k[un]map_atomic will not fail.
+ *
+ * @param[in] page  physical address of the page to unmap
+ * @param[in] slot  mapping slot. If more than one mapping is active at the
+ *                  same time then the mappings must have different slots
+ *                  specified. Must be wither OSK_KMAP_SLOT_0 or
+ *                  OSK_KMAP_SLOT_1.
+ * @return CPU virtual address in the kernel, NULL in case of a failure.
+ */
+
+OSK_STATIC_INLINE void *osk_kmap_atomic(osk_phy_addr page, osk_kmap_slot slot) CHECK_RESULT;
+
+/**
+ * @brief Unmap a physical page from the kernel
+ *
+ * Unmaps a previously mapped physical page (with osk_kmap_atomic) from the kernel.
+ *
+ * @param[in] page      physical address of the page to unmap
+ * @param[in] mapping   virtual address of the mapping to unmap
+ * @param[in] slot      mapping slot. Must be the same as what was passed into osk_kmap_atomic.
+ */
+
+OSK_STATIC_INLINE void osk_kunmap_atomic(osk_phy_addr page, void * mapping, osk_kmap_slot slot);
 
 /**
  * A pointer to a cache synchronization function, either osk_sync_to_cpu()

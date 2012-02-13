@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -23,10 +23,21 @@
 #define _KBASE_DEFS_H_
 
 #define KBASE_DRV_NAME  "mali"
-#define KBASE_REGISTER_TRACE_ENABLED 1
 
 #include <mali_base_hwconfig.h>
 #include <kbase/mali_kbase_config.h>
+
+/** Enable SW tracing when set */
+#ifndef KBASE_TRACE_ENABLE
+#if MALI_DEBUG
+#define KBASE_TRACE_ENABLE 1
+#else
+#define KBASE_TRACE_ENABLE 0
+#endif /*MALI_DEBUG*/
+#endif /*KBASE_TRACE_ENABLE*/
+
+/** Dump Job slot trace on error (only active if KBASE_TRACE_ENABLE != 0) */
+#define KBASE_TRACE_DUMP_ON_JOB_SLOT_ERROR 1
 
 /**
  * Number of milliseconds before resetting the GPU when a job cannot be "zapped" from the hardware.
@@ -125,6 +136,10 @@ typedef struct kbase_device kbase_device;
 #define KBASE_LOCK_REGION_MAX_SIZE (63)
 #define KBASE_LOCK_REGION_MIN_SIZE (11)
 
+#define KBASE_TRACE_SIZE_LOG2 8 /* 256 entries */
+#define KBASE_TRACE_SIZE (1 << KBASE_TRACE_SIZE_LOG2)
+#define KBASE_TRACE_MASK ((1 << KBASE_TRACE_SIZE_LOG2)-1)
+
 #include "mali_kbase_js_defs.h"
 
 typedef struct kbase_event {
@@ -147,13 +162,16 @@ typedef struct kbase_jd_atom {
 	kbase_event     event;
 	osk_workq_work  work;
 	kbasep_js_tick  start_timestamp;
-	base_jd_atom    *atom;
+	base_jd_atom    *user_atom;
 	kbase_jd_bag    *bag;
 	kbase_context   *kctx;
 	base_jd_dep     pre_dep;
 	base_jd_dep     post_dep;
 	u32             nr_syncsets;
 	u64             affinity;
+	u64             jc;
+
+	base_jd_core_req    core_req;       /**< core requirements */
 
 	kbasep_js_policy_job_info sched_info;
 	/** Job Slot to retry submitting to if submission from IRQ handler failed
@@ -387,6 +405,39 @@ typedef struct kbasep_mem_device
 	kbase_phys_allocator_array allocators;               /* List of available physical memory allocators */
 } kbasep_mem_device;
 
+
+#define KBASE_TRACE_CODE( X ) KBASE_TRACE_CODE_ ## X
+
+typedef enum
+{
+	/* IMPORTANT: USE OF SPECIAL #INCLUDE OF NON-STANDARD HEADER FILE
+	 * THIS MUST BE USED AT THE START OF THE ENUM */
+#define KBASE_TRACE_CODE_MAKE_CODE( X ) KBASE_TRACE_CODE( X )
+#include "mali_kbase_trace_defs.h"
+#undef  KBASE_TRACE_CODE_MAKE_CODE
+	/* Comma on its own, to extend the list */
+	,
+	/* Must be the last in the enum */
+	KBASE_TRACE_CODE_COUNT
+} kbase_trace_code;
+
+#define KBASE_TRACE_FLAG_REFCOUNT (((u8)1) << 0)
+#define KBASE_TRACE_FLAG_JOBSLOT  (((u8)1) << 1)
+
+typedef struct kbase_trace
+{
+	u32   thread_id;
+	u32   cpu;
+	void *ctx;
+	void *uatom;
+	u64   gpu_addr;
+	u32   info_val;
+	u8    code;
+	u8    jobslot;
+	u8    refcount;
+	u8    flags;
+} kbase_trace;
+
 struct kbase_device {
 	const kbase_device_info *dev_info;
 	kbase_jm_slot           jm_slots[BASE_JM_MAX_NR_SLOTS];
@@ -423,14 +474,18 @@ struct kbase_device {
 	u64                     shader_inuse_bitmap;
 	u64                     tiler_inuse_bitmap;
 
+	/* Refcount for cores in use */
+	u32                      shader_inuse_cnt[64];
+	u32                      tiler_inuse_cnt[64];
+
 	/* Bitmaps of cores the JS needs for jobs ready to run */
 	u64                     shader_needed_bitmap;
 	u64                     tiler_needed_bitmap;
- 
- 	/* Refcount for cores usage */
+
+	/* Refcount for cores needed */
 	u8                      shader_needed_cnt[64];
 	u8                      tiler_needed_cnt[64];
-	
+
 	/* Bitmaps of cores that are currently available (powered up and the power policy is happy for jobs to be
 	 * submitted to these cores. These are updated by the power management code. The job scheduler should avoid
 	 * submitting new jobs to any cores that are not marked as available.
@@ -476,6 +531,36 @@ struct kbase_device {
 	osk_atomic irq_throttle_cycles;
 
 	kbase_attribute        *config_attributes;
+
+#if BASE_HW_ISSUE_8401
+#define KBASE_8401_WORKAROUND_COMPUTEJOB_COUNT 3
+	kbase_context           *workaround_kctx;
+	osk_virt_addr           workaround_compute_job_va[KBASE_8401_WORKAROUND_COMPUTEJOB_COUNT];
+	osk_phy_addr            workaround_compute_job_pa[KBASE_8401_WORKAROUND_COMPUTEJOB_COUNT];
+#endif
+#if KBASE_TRACE_ENABLE != 0
+	osk_spinlock_irq        trace_lock;
+	u16                     trace_first_out;
+	u16                     trace_next_in;
+	kbase_trace            *trace_rbuf;
+#endif
+
+#if MALI_CUSTOMER_RELEASE == 0
+	/* This is used to override the current job scheduler values for
+	 * KBASE_CONFIG_ATTR_JS_STOP_STOP_TICKS_SS
+	 * KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_SS
+	 * KBASE_CONFIG_ATTR_JS_HARD_STOP_TICKS_NSS
+	 * KBASE_CONFIG_ATTR_JS_RESET_TICKS_SS
+	 * KBASE_CONFIG_ATTR_JS_RESET_TICKS_NSS.
+	 *
+	 * These values are set via the js_timeouts sysfs file.
+	 */
+	u32                     js_soft_stop_ticks;
+	u32                     js_hard_stop_ticks_ss;
+	u32                     js_hard_stop_ticks_nss;
+	u32                     js_reset_ticks_ss;
+	u32                     js_reset_ticks_nss;
+#endif
 };
 
 struct kbase_context
@@ -491,6 +576,8 @@ struct kbase_context
 	osk_dlist               event_list;
 	osk_mutex               event_mutex;
 	mali_bool               event_closed;
+
+	u64                     *mmu_teardown_pages;
 
 	osk_mutex               reg_lock; /* To be converted to a rwlock? */
 	osk_dlist               reg_list; /* Ordered list of GPU regions */
@@ -514,13 +601,11 @@ struct kbase_context
 	int                     as_nr;
 };
 
-#if KBASE_REGISTER_TRACE_ENABLED
 typedef enum kbase_reg_access_type
 {
 	REG_READ,
 	REG_WRITE
 } kbase_reg_access_type;
-#endif /* KBASE_REGISTER_TRACE_ENABLED */
 
 
 typedef enum kbase_share_attr_bits

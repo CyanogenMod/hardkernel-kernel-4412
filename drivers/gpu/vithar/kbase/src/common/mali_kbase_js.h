@@ -596,7 +596,7 @@ static INLINE kbasep_js_tick kbasep_js_get_js_ticks( void )
  */
 static INLINE u32 kbasep_js_convert_js_ticks_to_us( kbasep_js_tick js_tick )
 {
-	return (js_tick*10000u)/osk_time_mstoticks(10u);
+	return (js_tick * 10000u) / osk_time_mstoticks(10u);
 }
 
 /**
@@ -607,7 +607,7 @@ static INLINE u32 kbasep_js_convert_js_ticks_to_us( kbasep_js_tick js_tick )
  */
 static INLINE kbasep_js_tick kbasep_js_convert_js_us_to_ticks( u32 us )
 {
-	return (us*osk_time_mstoticks(1000u))/1000000u;
+	return (us * (kbasep_js_tick)osk_time_mstoticks(1000u)) / 1000000u;
 }
 /**
  * Determine if ticka comes after tickb
@@ -649,7 +649,7 @@ static INLINE kbasep_js_gpu_tick kbasep_js_convert_us_to_gpu_ticks_max_freq( kba
 {
 	u32 gpu_freq = kbdev->gpu_props.props.core_props.gpu_freq_khz_max;
 	OSK_ASSERT( 0!= gpu_freq );
-	return (us * (gpu_freq / 1000));
+	return (us * (kbasep_js_gpu_tick)(gpu_freq / 1000));
 }
 
 /**

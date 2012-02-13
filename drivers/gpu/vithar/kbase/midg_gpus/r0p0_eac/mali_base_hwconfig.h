@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2011 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2012 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -20,6 +20,9 @@
  */
 #define BASE_HW_ISSUE_999   0
 
+/** Incorrect handling of unorm16 pixel formats. */
+#define BASE_HW_ISSUE_4015  0
+
 /** Tiler triggers a fault if the scissor rectangle is empty. */
 #define BASE_HW_ISSUE_5699  1
 
@@ -33,7 +36,7 @@
 #define BASE_HW_ISSUE_5753  0
 
 /* Transaction Elimination doesn't work correctly. */
-#define BASE_HW_ISSUE_5907  1
+#define BASE_HW_ISSUE_5907  0
 
 /* Multisample write mask must be set to all 1s. */
 #define BASE_HW_ISSUE_5936  0
@@ -59,6 +62,9 @@
 /* Need way to guarantee that all previously-translated memory accesses are commited */
 #define BASE_HW_ISSUE_6367  1
 
+/* Unaligned load stores crossing 128 bit boundaries will fail */
+#define BASE_HW_ISSUE_6402 1
+
 /* Pixel format 95 doesn't work properly (HW writes to memory) */
 #define BASE_HW_ISSUE_6405  0
 
@@ -77,6 +83,9 @@
 /* Nested page faults not visible to SW */
 #define BASE_HW_ISSUE_7660  1
 
+/* Hang when doing 4x multisampled writeback with transaction elimination enabled */
+#define BASE_HW_ISSUE_8142 0
+
 /* Write of PRFCNT_CONFIG_MODE_MANUAL to PRFCNT_CONFIG causes a instrumentation dump if
    PRFCNT_TILER_EN is enabled */
 #define BASE_HW_ISSUE_8186  1
@@ -94,15 +103,54 @@
 /* TIB: Reports faults from a vtile which has not yet been allocated */
 #define BASE_HW_ISSUE_8245  1
 
+/* HT: TERMINATE for RUN command ignored if previous LOAD_DESCRIPTOR is still executing */
+#define BASE_HW_ISSUE_8394  0
+
+/* CSE : Sends a TERMINATED response for a task that should not be terminated */
+/* (Note that PRLAM-8379 also uses this workaround) */
+#define BASE_HW_ISSUE_8401  0
+
 /* Repeatedly Soft-stopping a job chain consisting of (Vertex Shader, Cache Flush, Tiler)
  * jobs causes 0x58 error on tiler job. */
-#define BASE_HW_ISSUE_8408 1
+#define BASE_HW_ISSUE_8408 0
+
+/* Compute job hangs: disable the Pause buffer in the LS pipe.
+ * BASE_HW_ISSUE_8443 implemented at run-time for GPUs with GPU ID
+ * 0x69560000 and 0x69560001 (beta-eco1 and r0p0-15dev0)
+ */
 
 /** Tiler heap issue using FBOs or multiple processes using the tiler simultaneously
  */
-#define BASE_HW_ISSUE_8564 1
+#define BASE_HW_ISSUE_8564 0
 
 /* Jobs with relaxed dependencies are not supporting soft-stop */
 #define BASE_HW_ISSUE_8803 1
+
+/* Boolean occlusion queries don't work properly due to sdc issue. */
+#define BASE_HW_ISSUE_8986 1
+
+/* Occlusion query result is not updated if color writes are disabled. */
+#define BASE_HW_ISSUE_9010 1
+
+/* Occlusion queries can create false 0 result in boolean and counter modes */
+#define BASE_HW_ISSUE_8879 0
+
+/* The whole tiler pointer array must be cleared */
+#define BASE_HW_ISSUE_9102 0
+
+/* Blend shader output is wrong for certain formats */
+#define BASE_HW_ISSUE_8833 1
+
+/* RSD and DCD structures are incorrectly uncached in GPU L2 */
+#define BASE_HW_ISSUE_6494 0
+
+/* Stencil test enable 1->0 sticks */
+#define BASE_HW_ISSUE_8456 0
+
+/* YUV image dimensions are specified in chroma samples, not luma samples. */
+#define BASE_HW_ISSUE_6996 0
+
+/* BASE_MEM_COHERENT_LOCAL does not work on beta HW */
+#define BASE_HW_ISSUE_9235 0
 
 #endif /* _BASE_HWCONFIG_H_ */
