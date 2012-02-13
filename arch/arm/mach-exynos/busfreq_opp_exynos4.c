@@ -316,6 +316,8 @@ void exynos_request_apply(unsigned long freq, bool fix, bool disable)
 		if (disable) {
 			opp_disable(bus_ctrl.data->dev, opp_get_freq(bus_ctrl.data->force_opp));
 			bus_ctrl.data->force_opp = NULL;
+			bus_ctrl.data->curr_opp = bus_ctrl.data->max_opp;
+			opp = bus_ctrl.data->curr_opp;
 		} else {
 			opp_enable(bus_ctrl.data->dev, freq);
 			opp = opp_find_freq_exact(bus_ctrl.data->dev, freq, true);
@@ -331,7 +333,7 @@ void exynos_request_apply(unsigned long freq, bool fix, bool disable)
 	if (bus_ctrl.opp_lock)
 		opp = bus_ctrl.opp_lock;
 
-	if (opp_get_freq(bus_ctrl.data->curr_opp) >= opp_get_freq(opp))
+	if (!fix && opp_get_freq(bus_ctrl.data->curr_opp) >= opp_get_freq(opp))
 		goto out;
 
 	index = _target(bus_ctrl.data, opp);
