@@ -148,6 +148,8 @@ void s5p_dp_reset(struct s5p_dp_device *dp)
 	/* Configure Lane mapping as default setting. */
 	s5p_dp_lane_swap(dp, 0);
 
+	writel(0x75, dp->reg_base + S5P_DP_PLL_FILTER_CTL_1);
+
 	writel(0x0, dp->reg_base + S5P_DP_SYS_CTL_1);
 	writel(0x40, dp->reg_base + S5P_DP_SYS_CTL_2);
 	writel(0x0, dp->reg_base + S5P_DP_SYS_CTL_3);
