@@ -291,36 +291,6 @@ static void exynos_ss_udc_run_stop(struct exynos_ss_udc *udc, int is_on)
 }
 
 /**
- * exynos_ss_udc_pullup - software-controlled connect/disconnect to USB host
- * @gadget: The peripheral being connected/disconnected.
- * @is_on: The action to take (1 - connect, 0 - disconnect).
- */
-static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on)
-{
-	struct exynos_ss_udc *udc = container_of(gadget,
-					struct exynos_ss_udc, gadget);
-
-	exynos_ss_udc_run_stop(udc, is_on);
-
-	return 0;
-}
-
-/**
- * exynos_ss_udc_get_config_params - get UDC configuration
- * @params: The controller parameters being returned to the caller.
- */
-void exynos_ss_udc_get_config_params(struct usb_dcd_config_params *params)
-{
-	params->bU1devExitLat = EXYNOS_USB3_U1_DEV_EXIT_LAT;
-	params->bU2DevExitLat = cpu_to_le16(EXYNOS_USB3_U2_DEV_EXIT_LAT);
-}
-
-static struct usb_gadget_ops exynos_ss_udc_gadget_ops = {
-	.pullup			= exynos_ss_udc_pullup,
-	.get_config_params	= exynos_ss_udc_get_config_params,
-};
-
-/**
  * exynos_ss_udc_ep_enable - configure endpoint, making it usable
  * @ep: The endpoint being configured.
  * @desc: The descriptor for desired behavior.
@@ -2279,12 +2249,98 @@ static void exynos_ss_udc_init(struct exynos_ss_udc *udc)
 	/* WORKAROUND : DRD Host PHY OFF */
 	__bic32(udc->regs + 0x420, (0x1 << 9));
 	__bic32(udc->regs + 0x430, (0x1 << 9));
+}
+
+static int exynos_ss_udc_enable(struct exynos_ss_udc *udc)
+{
+	struct platform_device *pdev = to_platform_device(udc->dev);
+
+	enable_irq(udc->irq);
+	clk_enable(udc->clk);
+
+	exynos_ss_udc_phy_set(pdev);
+	exynos_ss_udc_corereset(udc);
+	exynos_ss_udc_init(udc);
+
+	udc->ep0_state = EP0_SETUP_PHASE;
+	exynos_ss_udc_enqueue_setup(udc);
 
 	/* Start the device controller operation */
-#ifndef CONFIG_USB_G_ANDROID
 	exynos_ss_udc_run_stop(udc, 1);
-#endif
+
+	return 0;
 }
+
+static int exynos_ss_udc_disable(struct exynos_ss_udc *udc)
+{
+	struct platform_device *pdev = to_platform_device(udc->dev);
+	int ep;
+
+	exynos_ss_udc_run_stop(udc, 0);
+	/* all endpoints should be shutdown */
+	for (ep = 0; ep < EXYNOS_USB3_EPS; ep++)
+		exynos_ss_udc_ep_disable(&udc->eps[ep].ep);
+
+	call_gadget(udc, disconnect);
+	udc->gadget.speed = USB_SPEED_UNKNOWN;
+
+	exynos_ss_udc_phy_unset(pdev);
+
+	clk_disable(udc->clk);
+
+	disable_irq(udc->irq);
+
+	return 0;
+}
+
+/**
+ * exynos_ss_udc_vbus_session - software-controlled vbus active/in-active
+ * @gadget: The peripheral being vbus active/in-active.
+ * @is_active: The action to take (1 - vbus enable, 0 - vbus disable).
+ */
+static int exynos_ss_udc_vbus_session(struct usb_gadget *gadget, int is_active)
+{
+	struct exynos_ss_udc *udc = container_of(gadget,
+					struct exynos_ss_udc, gadget);
+
+	if (!is_active)
+		exynos_ss_udc_disable(udc);
+	else
+		exynos_ss_udc_enable(udc);
+
+	return 0;
+}
+
+/**
+ * exynos_ss_udc_pullup - software-controlled connect/disconnect to USB host
+ * @gadget: The peripheral being connected/disconnected.
+ * @is_on: The action to take (1 - connect, 0 - disconnect).
+ */
+static int exynos_ss_udc_pullup(struct usb_gadget *gadget, int is_on)
+{
+	struct exynos_ss_udc *udc = container_of(gadget,
+					struct exynos_ss_udc, gadget);
+
+	exynos_ss_udc_run_stop(udc, is_on);
+
+	return 0;
+}
+
+/**
+ * exynos_ss_udc_get_config_params - get UDC configuration
+ * @params: The controller parameters being returned to the caller.
+ */
+void exynos_ss_udc_get_config_params(struct usb_dcd_config_params *params)
+{
+	params->bU1devExitLat = EXYNOS_USB3_U1_DEV_EXIT_LAT;
+	params->bU2DevExitLat = cpu_to_le16(EXYNOS_USB3_U2_DEV_EXIT_LAT);
+}
+
+static struct usb_gadget_ops exynos_ss_udc_gadget_ops = {
+	.vbus_session		= exynos_ss_udc_vbus_session,
+	.pullup			= exynos_ss_udc_pullup,
+	.get_config_params	= exynos_ss_udc_get_config_params,
+};
 
 int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 			    int (*bind)(struct usb_gadget *))
@@ -2334,16 +2390,9 @@ int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
 		udc->driver = NULL;
 		goto err;
 	}
-
 	/* we must now enable ep0 ready for host detection and then
 	 * set configuration. */
-
-	exynos_ss_udc_corereset(udc);
-
-	exynos_ss_udc_init(udc);
-
-	udc->ep0_state = EP0_SETUP_PHASE;
-	exynos_ss_udc_enqueue_setup(udc);
+	exynos_ss_udc_enable(udc);
 
 	/* report to the user, and return */
 	dev_info(udc->dev, "bound driver %s\n", driver->driver.name);
@@ -2379,9 +2428,8 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 
 	device_del(&udc->gadget.dev);
 
-#ifndef CONFIG_USB_G_ANDROID
-	exynos_ss_udc_run_stop(udc, 0);
-#endif
+	exynos_ss_udc_disable(udc);
+
 	dev_info(udc->dev, "unregistered gadget driver '%s'\n",
 		 driver->driver.name);
 
@@ -2481,6 +2529,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
+	disable_irq(udc->irq);
 	dev_info(dev, "regs %p, irq %d\n", udc->regs, udc->irq);
 
 	udc->clk = clk_get(&pdev->dev, "usbdrd30");
@@ -2516,9 +2565,6 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, udc);
-
-	clk_enable(udc->clk);
-	exynos_ss_udc_phy_set(pdev);
 
 	our_udc = udc;
 	return 0;
@@ -2590,23 +2636,12 @@ static int exynos_ss_udc_suspend(struct platform_device *pdev,
 				 pm_message_t state)
 {
 	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
-	int ep;
 
 	if (udc->driver) {
 		call_gadget(udc, suspend);
 
-		/* all endpoints should be shutdown */
-		for (ep = 0; ep < EXYNOS_USB3_EPS; ep++)
-			exynos_ss_udc_ep_disable(&udc->eps[ep].ep);
-
-		call_gadget(udc, disconnect);
-		udc->gadget.speed = USB_SPEED_UNKNOWN;
+		exynos_ss_udc_disable(udc);
 	}
-
-	exynos_ss_udc_run_stop(udc, 0);
-	exynos_ss_udc_phy_unset(pdev);
-
-	clk_disable(udc->clk);
 
 	return 0;
 }
@@ -2615,20 +2650,8 @@ static int exynos_ss_udc_resume(struct platform_device *pdev)
 {
 	struct exynos_ss_udc *udc = platform_get_drvdata(pdev);
 
-	clk_enable(udc->clk);
-
-	exynos_ss_udc_phy_set(pdev);
-
 	if (udc->driver) {
-		/* we must now enable ep0 ready for host detection and then
-		 * set configuration. */
-
-		exynos_ss_udc_corereset(udc);
-
-		exynos_ss_udc_init(udc);
-
-		udc->ep0_state = EP0_SETUP_PHASE;
-		exynos_ss_udc_enqueue_setup(udc);
+		exynos_ss_udc_enable(udc);
 
 		call_gadget(udc, resume);
 	}
