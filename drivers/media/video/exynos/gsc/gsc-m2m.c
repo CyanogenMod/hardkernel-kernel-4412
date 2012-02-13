@@ -110,6 +110,7 @@ static void gsc_m2m_device_run(void *priv)
 		return;
 
 	gsc = ctx->gsc_dev;
+	pm_runtime_get_sync(&gsc->pdev->dev);
 
 	spin_lock_irqsave(&ctx->slock, flags);
 	/* Reconfigure hardware if the context has changed. */
@@ -124,16 +125,14 @@ static void gsc_m2m_device_run(void *priv)
 	ctx->state &= ~GSC_CTX_STOP_REQ;
 	if (is_set) {
 		wake_up(&gsc->irq_queue);
-		goto dma_unlock;
+		goto put_device;
 	}
 
 	ret = gsc_fill_addr(ctx);
 	if (ret) {
 		gsc_err("Wrong address");
-		goto dma_unlock;
+		goto put_device;
 	}
-
-	pm_runtime_get_sync(&gsc->pdev->dev);
 
 	gsc_set_prefbuf(gsc, ctx->s_frame);
 	gsc_hw_set_input_addr(gsc, &ctx->s_frame.addr, GSC_M2M_BUF_NUM);
@@ -147,7 +146,7 @@ static void gsc_m2m_device_run(void *priv)
 
 		if (gsc_set_scaler_info(ctx)) {
 			gsc_err("Scaler setup error");
-			goto dma_unlock;
+			goto put_device;
 		}
 
 		gsc_hw_set_input_path(ctx);
@@ -175,13 +174,20 @@ static void gsc_m2m_device_run(void *priv)
 		 GSCALER_ON off */
 		gsc_hw_enable_control(gsc, true);
 		ret = gsc_wait_operating(gsc);
-		if (ret < 0)
-			goto dma_unlock;
+		if (ret < 0) {
+			gsc_err("gscaler wait operating timeout");
+			goto put_device;
+		}
 		gsc_hw_enable_control(gsc, false);
 	}
 
-dma_unlock:
 	spin_unlock_irqrestore(&ctx->slock, flags);
+	return;
+
+put_device:
+	ctx->state &= ~GSC_PARAMS;
+	spin_unlock_irqrestore(&ctx->slock, flags);
+	pm_runtime_put_sync(&gsc->pdev->dev);
 }
 
 static int gsc_m2m_queue_setup(struct vb2_queue *vq, unsigned int *num_buffers,
