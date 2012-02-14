@@ -1900,6 +1900,8 @@ static int fimc_is_v4l2_af_start_stop(struct fimc_is_dev *dev, int value)
 			/* 6A3 can't support AF */
 			dev->af.af_state = FIMC_IS_AF_IDLE;
 		} else {
+			if (dev->af.af_state == FIMC_IS_AF_IDLE)
+				return ret;
 			/* Abort or lock AF */
 			dev->af.af_state = FIMC_IS_AF_ABORT;
 			IS_ISP_SET_PARAM_AA_CMD(dev, ISP_AA_COMMAND_STOP);
