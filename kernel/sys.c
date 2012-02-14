@@ -54,12 +54,6 @@
 #include <asm/io.h>
 #include <asm/unistd.h>
 
-#include <plat/cpu.h>
-
-#include <mach/regs-pmu.h>
-
-#define REG_INFORM4            (S5P_INFORM4)
-
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
 #endif
@@ -339,11 +333,6 @@ void kernel_restart_prepare(char *cmd)
  */
 void kernel_restart(char *cmd)
 {
-	/* For Android Factory reset */
-	if (soc_is_exynos4212() || soc_is_exynos4412() || soc_is_exynos5250())
-		if (!strcmp("recovery", cmd))
-			__raw_writel(0xF, REG_INFORM4);
-
 	kernel_restart_prepare(cmd);
 	if (!cmd)
 		printk(KERN_EMERG "Restarting system.\n");
