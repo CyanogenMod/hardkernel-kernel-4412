@@ -29,6 +29,8 @@
 #include <linux/smsc911x.h>
 #include <linux/delay.h>
 #include <linux/platform_data/exynos_usb3_drd.h>
+#include <linux/notifier.h>
+#include <linux/reboot.h>
 
 #include <video/platform_lcd.h>
 
@@ -70,6 +72,7 @@
 #include <mach/spi-clocks.h>
 #include <mach/ppmu.h>
 #include <mach/dev.h>
+#include <mach/regs-pmu.h>
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
@@ -97,6 +100,8 @@
 #include <plat/dsim.h>
 #include <plat/mipi_dsi.h>
 #endif
+
+#define REG_INFORM4            (S5P_INFORM4)
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK5250_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -806,6 +811,24 @@ struct exynos_c2c_platdata smdk5250_c2c_pdata = {
 	.c2c_sysreg	= S3C_VA_SYS + 0x0360,
 };
 #endif
+
+static int exynos5_notifier_call(struct notifier_block *this,
+					unsigned long code, void *_cmd)
+{
+	int mode = 0;
+
+	if ((code == SYS_RESTART) && _cmd)
+		if (!strcmp((char *)_cmd, "recovery"))
+			mode = 0xf;
+
+	__raw_writel(mode, REG_INFORM4);
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block exynos5_reboot_notifier = {
+	.notifier_call = exynos5_notifier_call,
+};
 
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 static void exynos_dwmci_cfg_gpio(int width)
@@ -2937,6 +2960,7 @@ static void __init smdk5250_machine_init(void)
 	ppmu_init(&exynos_ppmu[PPMU_DDR_L], &exynos5_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_RIGHT0_BUS], &exynos5_busfreq.dev);
 #endif
+	register_reboot_notifier(&exynos5_reboot_notifier);
 }
 
 #ifdef CONFIG_EXYNOS_C2C
