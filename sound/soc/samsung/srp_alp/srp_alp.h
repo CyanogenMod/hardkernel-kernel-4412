@@ -77,7 +77,6 @@
 #define DATA_SIZE_MAX	(0x28000)
 #endif
 #define BITSTREAM_SIZE_MAX	(0x7FFFFFFF)
-#define SRP_PENDING_RETRY	(0x20)
 
 /* F/W Endian Configuration */
 #ifdef USE_FW_ENDIAN_CONVERT

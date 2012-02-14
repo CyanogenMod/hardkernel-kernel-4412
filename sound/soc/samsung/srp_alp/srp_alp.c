@@ -64,9 +64,15 @@ static void srp_obuf_elapsed(void)
 
 static void srp_wait_for_pending(void)
 {
+	unsigned long deadline = jiffies + HZ / 10;
+
 	do {
 		/* Wait for SRP Pending */
-	} while (!readl(srp.commbox + SRP_PENDING));
+		if (readl(srp.commbox + SRP_PENDING))
+			break;
+
+		msleep_interruptible(5);
+	} while (time_before(jiffies, deadline));
 
 	srp_info("Pending status[%s]\n",
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN");
@@ -954,6 +960,8 @@ static void srp_request_pwr_mode(int mode)
 
 static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 {
+	unsigned long deadline = jiffies + (HZ / 100);
+
 	srp_info("Suspend\n");
 
 	if (srp.is_opened) {
@@ -969,7 +977,10 @@ static int srp_suspend(struct platform_device *pdev, pm_message_t state)
 
 			do {
 				/* Waiting for completed suspended mode */
-			} while (!(readl(srp.commbox + SRP_POWER_MODE) & SRP_SUSPENED_CHECKED));
+				if ((readl(srp.commbox + SRP_POWER_MODE)
+						& SRP_SUSPENED_CHECKED))
+					break;
+			} while (time_before(jiffies, deadline));
 
 			srp_pending_ctrl(STALL);
 			memcpy(srp.fw_info.data, srp.dmem, DMEM_SIZE);
