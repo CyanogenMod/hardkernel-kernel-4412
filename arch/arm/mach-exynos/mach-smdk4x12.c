@@ -30,6 +30,8 @@
 #include <linux/memblock.h>
 #include <linux/delay.h>
 #include <linux/smsc911x.h>
+#include <linux/notifier.h>
+#include <linux/reboot.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -86,6 +88,7 @@
 #include <mach/map.h>
 #include <mach/spi-clocks.h>
 #include <mach/exynos-ion.h>
+#include <mach/regs-pmu.h>
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 #include <mach/dwmci.h>
 #endif
@@ -122,6 +125,8 @@
 #if defined(CONFIG_EXYNOS_SETUP_THERMAL)
 #include <plat/s5p-tmu.h>
 #endif
+
+#define REG_INFORM4            (S5P_INFORM4)
 
 /* Following are default values for UCON, ULCON and UFCON UART registers */
 #define SMDK4X12_UCON_DEFAULT	(S3C2410_UCON_TXILEVEL |	\
@@ -1651,6 +1656,24 @@ static void __init mipi_fb_init(void)
 }
 #endif
 #endif
+
+static int exynos4_notifier_call(struct notifier_block *this,
+					unsigned long code, void *_cmd)
+{
+	int mode = 0;
+
+	if ((code == SYS_RESTART) && _cmd)
+		if (!strcmp((char *)_cmd, "recovery"))
+			mode = 0xf;
+
+	__raw_writel(mode, REG_INFORM4);
+
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block exynos4_reboot_notifier = {
+	.notifier_call = exynos4_notifier_call,
+};
 
 #ifdef CONFIG_EXYNOS4_DEV_DWMCI
 static void exynos_dwmci_cfg_gpio(int width)
@@ -4214,6 +4237,7 @@ static void __init smdk4x12_machine_init(void)
 	ppmu_init(&exynos_ppmu[PPMU_DMC1], &exynos4_busfreq.dev);
 	ppmu_init(&exynos_ppmu[PPMU_CPU], &exynos4_busfreq.dev);
 #endif
+	register_reboot_notifier(&exynos4_reboot_notifier);
 }
 
 #ifdef CONFIG_EXYNOS_C2C
