@@ -36,9 +36,17 @@ static int __init exynos4_asv_init(void)
 
 	if (soc_is_exynos4210())
 		ret = exynos4210_asv_init(exynos_asv);
-	else if (soc_is_exynos4412() || soc_is_exynos4212())
+	else if (soc_is_exynos4412() || soc_is_exynos4212()) {
 		ret = exynos4x12_asv_init(exynos_asv);
-	else {
+
+		/*
+		 * If return value is not zero,
+		 * There is already value for asv group.
+		 * So, It is not necessary to execute for getting asv group.
+		 */
+		if (ret)
+			return 0;
+	} else {
 		pr_info("EXYNOS: There is no type for ASV\n");
 		goto out2;
 	}
