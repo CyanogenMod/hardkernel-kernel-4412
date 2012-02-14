@@ -117,6 +117,7 @@ struct dw_mci {
 	struct mmc_data		*data;
 	struct clk          *hclk;
 	struct clk          *cclk;
+	bool			prv_err;
 
 	/* DMA interface members*/
 	int			use_dma;

@@ -663,6 +663,7 @@ static void __dw_mci_start_request(struct dw_mci *host,
 	struct mmc_data	*data;
 	u32 cmdflags;
 
+	host->prv_err = 0;
 	mrq = slot->mrq;
 	if (host->pdata->select_slot)
 		host->pdata->select_slot(slot->id);
@@ -735,14 +736,43 @@ static void dw_mci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct dw_mci_slot *slot = mmc_priv(mmc);
 	struct dw_mci *host = slot->host;
+	ktime_t expr;
+	u64 add_time = 50000; /* 50us */
+	int timeout = 100000;
 
 	WARN_ON(slot->mrq);
 
 	if (!test_bit(DW_MMC_CARD_PRESENT, &slot->flags)) {
 		mrq->cmd->error = -ENOMEDIUM;
+		host->prv_err = 1;
 		mmc_request_done(mmc, mrq);
 		return;
 	}
+
+	do {
+		if (mrq->cmd->opcode == MMC_STOP_TRANSMISSION)
+			break;
+
+		if (mci_readl(host, STATUS) & (1 << 9)) {
+			if (!timeout) {
+				printk(KERN_ERR "%s: Data0: Never released\n",
+						mmc_hostname(mmc));
+				mrq->cmd->error = -ENOTRECOVERABLE;
+				host->prv_err = 1;
+				mmc_request_done(mmc, mrq);
+				return;
+			}
+			if (host->prv_err) {
+				udelay(10);
+			} else {
+				expr = ktime_add_ns(ktime_get(), add_time);
+				set_current_state(TASK_UNINTERRUPTIBLE);
+				schedule_hrtimeout(&expr, HRTIMER_MODE_ABS);
+			}
+			timeout--;
+		} else
+			break;
+	} while(1);
 
 	/* We don't support multiple blocks of weird lengths. */
 	dw_mci_queue_request(host, slot, mrq);
@@ -926,6 +956,7 @@ static void dw_mci_command_complete(struct dw_mci *host, struct mmc_command *cmd
 			host->data = NULL;
 			dw_mci_stop_dma(host);
 		}
+		host->prv_err = 1;
 	}
 }
 
@@ -1016,6 +1047,7 @@ static void dw_mci_tasklet_func(unsigned long priv)
 						status);
 					data->error = -EIO;
 				}
+				host->prv_err = 1;
 			} else {
 				data->bytes_xfered = data->blocks * data->blksz;
 				data->error = 0;
@@ -1421,6 +1453,7 @@ static void dw_mci_tasklet_card(unsigned long data)
 						break;
 					case STATE_SENDING_CMD:
 						mrq->cmd->error = -ENOMEDIUM;
+						host->prv_err = 1;
 						if (!mrq->data)
 							break;
 						/* fall through */
@@ -1444,6 +1477,7 @@ static void dw_mci_tasklet_card(unsigned long data)
 				} else {
 					list_del(&slot->queue_node);
 					mrq->cmd->error = -ENOMEDIUM;
+					host->prv_err = 1;
 					if (mrq->data)
 						mrq->data->error = -ENOMEDIUM;
 					if (mrq->stop)
