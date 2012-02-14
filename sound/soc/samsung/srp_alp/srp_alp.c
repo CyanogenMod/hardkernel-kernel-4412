@@ -695,19 +695,9 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	if (irq_code & SRP_INTR_CODE_NOTIFY_OBUF)
 		srp_check_obuf_info();
 
-	if (irq_code & SRP_INTR_CODE_ERROR) {
-		srp_err("ERR CODE : 0x%x\n", readl(srp.commbox + SRP_ERROR_CODE));
 
-		/* Workaround code : Should be fixed on f/w */
-		srp.pcm_size = 0;
-		srp.play_done = 1;
-
-		srp.obuf_fill_done[0] = 1;
-		srp.obuf_fill_done[1] = 1;
-		wakeup_read = 1;
-	}
-
-	if (irq_code & SRP_INTR_CODE_PLAYDONE) {
+	if ((irq_code & (SRP_INTR_CODE_PLAYDONE | SRP_INTR_CODE_ERROR))
+				&& (irq_code & SRP_INTR_CODE_PLAYEND)) {
 		srp_info("Play Done interrupt!!\n");
 		srp.pcm_size = 0;
 		srp.play_done = 1;
