@@ -862,7 +862,7 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 25),
 	}, {
-		.name		= "usbdev30",
+		.name		= "usbdrd30",
 		.parent		= &exynos5_clk_aclk_200.clk,
 		.enable		= exynos5_clk_ip_fsys_ctrl,
 		.ctrlbit	= (1 << 19),
@@ -1445,14 +1445,14 @@ static struct clksrc_clk exynos5_clk_sclk_spdif = {
 	.reg_src = { .reg = EXYNOS5_CLKSRC_PERIC1, .shift = 8, .size = 2 },
 };
 
-struct clk *exynos5_clkset_usbdev30_list[] = {
+struct clk *exynos5_clkset_usbdrd30_list[] = {
 	[0] = &exynos5_clk_mout_mpll.clk,
 	[1] = &exynos5_clk_mout_cpll.clk,
 };
 
-struct clksrc_sources exynos5_clkset_usbdev30 = {
-	.sources	= exynos5_clkset_usbdev30_list,
-	.nr_sources	= ARRAY_SIZE(exynos5_clkset_usbdev30_list),
+struct clksrc_sources exynos5_clkset_usbdrd30 = {
+	.sources	= exynos5_clkset_usbdrd30_list,
+	.nr_sources	= ARRAY_SIZE(exynos5_clkset_usbdrd30_list),
 };
 
 struct clk *exynos5_clkset_group_list[] = {
@@ -1651,11 +1651,11 @@ static struct clksrc_clk exynos5_clksrcs[] = {
 		.reg_div = { .reg = EXYNOS5_CLKDIV_PERIC0, .shift = 12, .size = 4 },
 	}, {
 		.clk	= {
-			.name		= "sclk_usbdev30",
+			.name		= "sclk_usbdrd30",
 			.enable		= exynos5_clksrc_mask_fsys_ctrl,
 			.ctrlbit	= (1 << 28),
 		},
-		.sources = &exynos5_clkset_usbdev30,
+		.sources = &exynos5_clkset_usbdrd30,
 		.reg_src = { .reg = EXYNOS5_CLKSRC_FSYS, .shift = 28, .size = 1 },
 		.reg_div = { .reg = EXYNOS5_CLKDIV_FSYS0, .shift = 24, .size = 4 },
 	}, {

@@ -337,7 +337,7 @@ static int usb_hcd_exynos_probe(struct platform_device *pdev, const struct hc_dr
 	}
 
 
-	exynos_xhci->clk = clk_get(&pdev->dev, "usbdev30");
+	exynos_xhci->clk = clk_get(&pdev->dev, "usbdrd30");
 	if (IS_ERR(exynos_xhci->clk)) {
 		dev_err(&pdev->dev, "Failed to get usbhost clock\n");
 		err = PTR_ERR(exynos_xhci->clk);

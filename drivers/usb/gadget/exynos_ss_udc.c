@@ -2432,7 +2432,7 @@ static int __devinit exynos_ss_udc_probe(struct platform_device *pdev)
 
 	dev_info(dev, "regs %p, irq %d\n", udc->regs, udc->irq);
 
-	udc->clk = clk_get(&pdev->dev, "usbdev30");
+	udc->clk = clk_get(&pdev->dev, "usbdrd30");
 	if (IS_ERR(udc->clk)) {
 		dev_err(dev, "cannot get UDC clock\n");
 		ret = -EINVAL;
