@@ -50,6 +50,7 @@
 static struct srp_info srp;
 static DEFINE_MUTEX(srp_mutex);
 static DECLARE_WAIT_QUEUE_HEAD(read_wq);
+static DECLARE_WAIT_QUEUE_HEAD(decinfo_wq);
 
 int srp_get_status(int cmd)
 {
@@ -499,7 +500,6 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 		ret = copy_to_user(argp, &srp.obuf_info,
 					sizeof(struct srp_buf_info));
-
 		break;
 
 	case SRP_SEND_EOS:
@@ -533,11 +533,22 @@ static long srp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case SRP_GET_DEC_INFO:
-		if (!srp.dec_info.sample_rate || !srp.dec_info.channels) {
+		if (!srp.decoding_started) {
 			srp.dec_info.sample_rate = 0;
 			srp.dec_info.channels = 0;
 		} else {
-			srp_info("Sample Rate[%d], Channels[%d]\n",
+			if (srp.dec_info.sample_rate && srp.dec_info.channels) {
+				srp_info("Already get dec info!\n");
+			} else {
+				ret = wait_event_interruptible_timeout(decinfo_wq,
+						srp.dec_info.channels != 0, HZ / 2);
+				if (!ret) {
+					srp_err("Couldn't Get Decoding info!!!\n");
+					ret = SRP_ERROR_GETINFO_FAIL;
+				}
+			}
+
+			srp_info("SampleRate[%d], Channels[%d]\n",
 					srp.dec_info.sample_rate,
 					srp.dec_info.channels);
 		}
@@ -641,6 +652,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	unsigned int irq_code = readl(srp.commbox + SRP_INTERRUPT_CODE);
 	unsigned int irq_code_req;
 	unsigned int wakeup_read = 0;
+	unsigned int wakeup_decinfo = 0;
 
 	srp_debug("IRQ: Code [0x%x], Pending [%s], CFGR [0x%x]", irq_code,
 			readl(srp.commbox + SRP_PENDING) ? "STALL" : "RUN",
@@ -653,6 +665,7 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 		case SRP_INTR_CODE_NOTIFY_INFO:
 			srp_info("Notify SRP interrupt!\n");
 			srp_check_stream_info();
+			wakeup_decinfo = 1;
 			break;
 
 		case SRP_INTR_CODE_IBUF_REQUEST:
@@ -718,6 +731,11 @@ static irqreturn_t srp_irq(int irqno, void *dev_id)
 	if (wakeup_read) {
 		if (waitqueue_active(&read_wq))
 			wake_up_interruptible(&read_wq);
+	}
+
+	if (wakeup_decinfo) {
+		if (waitqueue_active(&decinfo_wq))
+			wake_up_interruptible(&decinfo_wq);
 	}
 
 	srp_debug("IRQ Exited!\n");
