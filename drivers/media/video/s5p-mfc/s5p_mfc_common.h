@@ -117,6 +117,14 @@ enum s5p_mfc_check_state {
 	MFCSTATE_ENC_NO_OUTPUT,
 };
 
+/**
+ * enum s5p_mfc_buf_cacheable_mask - The mask for cacheble setting
+ */
+enum s5p_mfc_buf_cacheable_mask {
+	MFCMASK_DST_CACHE = (1 << 0),
+	MFCMASK_SRC_CACHE = (1 << 1),
+};
+
 struct s5p_mfc_ctx;
 struct s5p_mfc_extra_buf;
 

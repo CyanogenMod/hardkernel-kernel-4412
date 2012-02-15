@@ -1600,7 +1600,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 	case V4L2_CID_CACHEABLE:
 		/*if (stream_on)
 			return -EBUSY; */
-		if(ctrl->value == 0 || ctrl->value ==1)
+		if(ctrl->value >= 0 || ctrl->value <= 3)
 			ctx->cacheable = ctrl->value;
 		else
 			ctx->cacheable = 0;
@@ -1899,10 +1899,10 @@ static int s5p_mfc_buf_prepare(struct vb2_buffer *vb)
 		}
 		mfc_debug(2, "Size: 0=%lu 2=%lu\n", vb2_plane_size(vb, 0),
 							vb2_plane_size(vb, 1));
-		if (ctx->cacheable)
+		if (ctx->cacheable & MFCMASK_DST_CACHE)
 			s5p_mfc_mem_cache_flush(vb, 2);
 	} else if (vq->type == V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE) {
-		if (ctx->cacheable)
+		if (ctx->cacheable & MFCMASK_SRC_CACHE)
 			s5p_mfc_mem_cache_flush(vb, 1);
 		mfc_debug(2, "Plane size: %ld, ctx->dec_src_buf_size: %d\n",
 				vb2_plane_size(vb, 0), dec->src_buf_size);
