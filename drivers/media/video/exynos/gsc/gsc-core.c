@@ -39,14 +39,12 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "RGB565",
 		.pixelformat	= V4L2_PIX_FMT_RGB565X,
 		.depth		= { 16 },
-		.color		= GSC_RGB,
 		.num_planes	= 1,
 		.nr_comp	= 1,
 	}, {
 		.name		= "XRGB-8-8-8-8, 32 bpp",
 		.pixelformat	= V4L2_PIX_FMT_RGB32,
 		.depth		= { 32 },
-		.color		= GSC_RGB,
 		.num_planes	= 1,
 		.nr_comp	= 1,
 		.mbus_code	= V4L2_MBUS_FMT_XRGB8888_4X8_LE,
@@ -54,7 +52,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:2 packed, YCbYCr",
 		.pixelformat	= V4L2_PIX_FMT_YUYV,
 		.depth		= { 16 },
-		.color		= GSC_YUV422,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CBCR,
 		.num_planes	= 1,
@@ -64,7 +61,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:2 packed, CbYCrY",
 		.pixelformat	= V4L2_PIX_FMT_UYVY,
 		.depth		= { 16 },
-		.color		= GSC_YUV422,
 		.yorder		= GSC_LSB_C,
 		.corder		= GSC_CBCR,
 		.num_planes	= 1,
@@ -74,7 +70,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:2 packed, CrYCbY",
 		.pixelformat	= V4L2_PIX_FMT_VYUY,
 		.depth		= { 16 },
-		.color		= GSC_YUV422,
 		.yorder		= GSC_LSB_C,
 		.corder		= GSC_CRCB,
 		.num_planes	= 1,
@@ -84,7 +79,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:2 packed, YCrYCb",
 		.pixelformat	= V4L2_PIX_FMT_YVYU,
 		.depth		= { 16 },
-		.color		= GSC_YUV422,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CRCB,
 		.num_planes	= 1,
@@ -94,7 +88,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:4:4 planar, YCbYCr",
 		.pixelformat	= V4L2_PIX_FMT_YUV32,
 		.depth		= { 32 },
-		.color		= GSC_YUV444,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CBCR,
 		.num_planes	= 1,
@@ -104,7 +97,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:2 planar, Y/Cb/Cr",
 		.pixelformat	= V4L2_PIX_FMT_YUV422P,
 		.depth		= { 16 },
-		.color		= GSC_YUV422,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CBCR,
 		.num_planes	= 1,
@@ -113,7 +105,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:2 planar, Y/CbCr",
 		.pixelformat	= V4L2_PIX_FMT_NV16,
 		.depth		= { 16 },
-		.color		= GSC_YUV422,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CBCR,
 		.num_planes	= 1,
@@ -122,7 +113,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:2 planar, Y/CrCb",
 		.pixelformat	= V4L2_PIX_FMT_NV61,
 		.depth		= { 16 },
-		.color		= GSC_YUV422,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CRCB,
 		.num_planes	= 1,
@@ -131,7 +121,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:0 planar, YCbCr",
 		.pixelformat	= V4L2_PIX_FMT_YUV420,
 		.depth		= { 12 },
-		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CBCR,
 		.num_planes	= 1,
@@ -140,7 +129,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:0 planar, YCbCr",
 		.pixelformat	= V4L2_PIX_FMT_YVU420,
 		.depth		= { 12 },
-		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CRCB,
 		.num_planes	= 1,
@@ -150,7 +138,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:0 planar, Y/CbCr",
 		.pixelformat	= V4L2_PIX_FMT_NV12,
 		.depth		= { 12 },
-		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CBCR,
 		.num_planes	= 1,
@@ -159,7 +146,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:0 planar, Y/CrCb",
 		.pixelformat	= V4L2_PIX_FMT_NV21,
 		.depth		= { 12 },
-		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CRCB,
 		.num_planes	= 1,
@@ -168,7 +154,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:0 non-contiguous 2-planar, Y/CbCr",
 		.pixelformat	= V4L2_PIX_FMT_NV12M,
 		.depth		= { 8, 4 },
-		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CBCR,
 		.num_planes	= 2,
@@ -177,7 +162,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YVU 4:2:0 non-contiguous 2-planar, Y/CrCb",
 		.pixelformat	= V4L2_PIX_FMT_NV21M,
 		.depth		= { 8, 4 },
-		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CRCB,
 		.num_planes	= 2,
@@ -186,7 +170,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:0 non-contiguous 3-planar, Y/Cb/Cr",
 		.pixelformat	= V4L2_PIX_FMT_YUV420M,
 		.depth		= { 8, 2, 2 },
-		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CBCR,
 		.num_planes	= 3,
@@ -195,7 +178,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:0 non-contiguous 3-planar, Y/Cr/Cb",
 		.pixelformat	= V4L2_PIX_FMT_YVU420M,
 		.depth		= { 8, 2, 2 },
-		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CRCB,
 		.num_planes	= 3,
@@ -204,7 +186,6 @@ static struct gsc_fmt gsc_formats[] = {
 		.name		= "YUV 4:2:0 non-contiguous 2-planar, Y/CbCr, tiled",
 		.pixelformat	= V4L2_PIX_FMT_NV12MT_16X16,
 		.depth		= { 8, 4 },
-		.color		= GSC_YUV420,
 		.yorder		= GSC_LSB_Y,
 		.corder		= GSC_CBCR,
 		.num_planes	= 2,
@@ -287,10 +268,10 @@ void gsc_check_src_scale_info(struct gsc_variant *var, struct gsc_frame *s_frame
 {
 	int remainder = 0, walign, halign;
 
-	if (is_yuv420(s_frame->fmt->color)) {
+	if (is_yuv420(s_frame->fmt->pixelformat)) {
 		walign = GSC_SC_ALIGN_4;
 		halign = GSC_SC_ALIGN_4;
-	} else if (is_yuv422(s_frame->fmt->color)) {
+	} else if (is_yuv422(s_frame->fmt->pixelformat)) {
 		walign = GSC_SC_ALIGN_4;
 		halign = GSC_SC_ALIGN_2;
 	} else {
@@ -432,7 +413,7 @@ int gsc_try_fmt_mplane(struct gsc_ctx *ctx, struct v4l2_format *f)
 	max_h = variant->pix_max->target_rot_dis_h;
 	if (V4L2_TYPE_IS_OUTPUT(f->type)) {
 		mod_x = ffs(variant->pix_align->org_w) - 1;
-		if (is_yuv420(fmt->color))
+		if (is_yuv420(fmt->pixelformat))
 			mod_y = ffs(variant->pix_align->org_h) - 1;
 		else
 			mod_y = ffs(variant->pix_align->org_h) - 2;
@@ -440,7 +421,7 @@ int gsc_try_fmt_mplane(struct gsc_ctx *ctx, struct v4l2_format *f)
 		min_h = variant->pix_min->org_h;
 	} else {
 		mod_x = ffs(variant->pix_align->org_w) - 1;
-		if (is_yuv420(fmt->color))
+		if (is_yuv420(fmt->pixelformat))
 			mod_y = ffs(variant->pix_align->org_h) - 1;
 		else
 			mod_y = ffs(variant->pix_align->org_h) - 2;
@@ -562,20 +543,21 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 	tmp_h = cr->c.height;
 
 	if (V4L2_TYPE_IS_OUTPUT(cr->type)) {
-		if ((is_yuv422(f->fmt->color) && f->fmt->nr_comp == 1) ||
-		    is_rgb(f->fmt->color))
+		if ((is_yuv422(f->fmt->pixelformat) && f->fmt->nr_comp == 1) ||
+		    is_rgb(f->fmt->pixelformat))
 			min_w = 32;
 		else
 			min_w = 64;
-		if ((is_yuv422(f->fmt->color) && f->fmt->nr_comp == 3) ||
-		    is_yuv420(f->fmt->color))
+		if ((is_yuv422(f->fmt->pixelformat) && f->fmt->nr_comp == 3) ||
+		    is_yuv420(f->fmt->pixelformat))
 			min_h = 32;
 		else
 			min_h = 16;
 	} else {
-		if (is_yuv420(f->fmt->color) || is_yuv422(f->fmt->color))
+		if (is_yuv420(f->fmt->pixelformat) ||
+		    is_yuv422(f->fmt->pixelformat))
 			mod_x = ffs(variant->pix_align->target_w) - 1;
-		if (is_yuv420(f->fmt->color))
+		if (is_yuv420(f->fmt->pixelformat))
 			mod_y = ffs(variant->pix_align->target_h) - 1;
 		if (ctx->gsc_ctrls.rotate->val == 90 ||
 		    ctx->gsc_ctrls.rotate->val == 270) {
@@ -612,7 +594,7 @@ int gsc_try_crop(struct gsc_ctx *ctx, struct v4l2_crop *cr)
 	if (cr->c.top + tmp_h > max_h)
 		cr->c.top = max_h - tmp_h;
 
-	if (is_yuv420(f->fmt->color) || is_yuv422(f->fmt->color))
+	if (is_yuv420(f->fmt->pixelformat) || is_yuv422(f->fmt->pixelformat))
 		if (cr->c.left % 2)
 			cr->c.left -= 1;
 

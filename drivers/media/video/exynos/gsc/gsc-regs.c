@@ -379,7 +379,7 @@ void gsc_hw_set_in_image_format(struct gsc_ctx *ctx)
 		 GSC_IN_TILE_TYPE_MASK | GSC_IN_TILE_MODE);
 	writel(cfg, dev->regs + GSC_IN_CON);
 
-	if (is_rgb(frame->fmt->color)) {
+	if (is_rgb(frame->fmt->pixelformat)) {
 		gsc_hw_set_in_image_rgb(ctx);
 		return;
 	}
@@ -507,7 +507,7 @@ void gsc_hw_set_out_image_format(struct gsc_ctx *ctx)
 		 GSC_OUT_TILE_TYPE_MASK | GSC_OUT_TILE_MODE);
 	writel(cfg, dev->regs + GSC_OUT_CON);
 
-	if (is_rgb(frame->fmt->color)) {
+	if (is_rgb(frame->fmt->pixelformat)) {
 		gsc_hw_set_out_image_rgb(ctx);
 		return;
 	}
@@ -621,7 +621,7 @@ void gsc_hw_set_global_alpha(struct gsc_ctx *ctx)
 	cfg = readl(dev->regs + GSC_OUT_CON);
 	cfg &= ~GSC_OUT_GLOBAL_ALPHA_MASK;
 
-	if (!is_rgb(frame->fmt->color)) {
+	if (!is_rgb(frame->fmt->pixelformat)) {
 		gsc_dbg("Not a RGB format");
 		return;
 	}

@@ -149,13 +149,6 @@ enum gsc_datapath {
 	GSC_WRITEBACK,
 };
 
-enum gsc_color_fmt {
-	GSC_RGB = 0x1,
-	GSC_YUV420 = 0x2,
-	GSC_YUV422 = 0x4,
-	GSC_YUV444 = 0x8,
-};
-
 enum gsc_yuv_fmt {
 	GSC_LSB_Y = 0x10,
 	GSC_LSB_C,
@@ -164,9 +157,18 @@ enum gsc_yuv_fmt {
 };
 
 #define fh_to_ctx(__fh) container_of(__fh, struct gsc_ctx, fh)
-#define is_rgb(x) (!!((x) & 0x1))
-#define is_yuv420(x) (!!((x) & 0x2))
-#define is_yuv422(x) (!!((x) & 0x4))
+
+#define is_rgb(img) ((img == V4L2_PIX_FMT_RGB565X) | (img == V4L2_PIX_FMT_RGB32))
+#define is_yuv422(img) ((img == V4L2_PIX_FMT_YUYV) | (img == V4L2_PIX_FMT_UYVY) | \
+		     (img == V4L2_PIX_FMT_VYUY) | (img == V4L2_PIX_FMT_YVYU) | \
+		     (img == V4L2_PIX_FMT_YUV422P) | (img == V4L2_PIX_FMT_NV16) | \
+		     (img == V4L2_PIX_FMT_NV61))
+#define is_yuv420(img) ((img == V4L2_PIX_FMT_YUV420) | (img == V4L2_PIX_FMT_YVU420) | \
+		     (img == V4L2_PIX_FMT_NV12) | (img == V4L2_PIX_FMT_NV21) | \
+		     (img == V4L2_PIX_FMT_NV12M) | (img == V4L2_PIX_FMT_NV21M) | \
+		     (img == V4L2_PIX_FMT_YUV420M) | (img == V4L2_PIX_FMT_YVU420M) | \
+		     (img == V4L2_PIX_FMT_NV12MT_16X16))
+
 #define gsc_m2m_run(dev) test_bit(ST_M2M_RUN, &(dev)->state)
 #define gsc_m2m_opened(dev) test_bit(ST_M2M_OPEN, &(dev)->state)
 #define gsc_out_run(dev) test_bit(ST_OUTPUT_STREAMON, &(dev)->state)
@@ -196,7 +198,6 @@ struct gsc_fmt {
 	enum v4l2_mbus_pixelcode mbus_code;
 	char	*name;
 	u32	pixelformat;
-	u32	color;
 	u32	yorder;
 	u32	corder;
 	u16	num_planes;
