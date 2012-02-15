@@ -46,15 +46,22 @@
 #include <plat/cpu.h>
 #include <plat/clock.h>
 
-#define UP_THRESHOLD		30
-#define DMC_MAX_THRESHOLD	42
-#define PPMU_THRESHOLD		5
-#define IDLE_THRESHOLD		4
-#define UP_CPU_THRESHOLD	11
-#define MAX_CPU_THRESHOLD	20
-#define CPU_SLOPE_SIZE		7
+#define MIF_MAX_THRESHOLD	20
+#define INT_MAX_THRESHOLD	20
+#define MIF_IDLE_THRESHOLD	4
+#define INT_IDLE_THRESHOLD	4
 
 #define INT_RBB		6	/* +300mV */
+
+static const unsigned int max_threshold[PPMU_TYPE_END] = {
+	MIF_MAX_THRESHOLD,
+	INT_MAX_THRESHOLD,
+};
+
+static const unsigned int idle_threshold[PPMU_TYPE_END] = {
+	MIF_IDLE_THRESHOLD,
+	INT_IDLE_THRESHOLD,
+};
 
 static struct device busfreq_for_int;
 
@@ -507,88 +514,100 @@ static void exynos5250_monitor(struct busfreq_data *data,
 			struct opp **mif_opp, struct opp **int_opp)
 {
 	int i;
-	unsigned int cpu_load_average = 0;
-	unsigned int dmc_c_load_average = 0;
-	unsigned int dmc_l_load_average = 0;
-	unsigned int dmc_r1_load_average = 0;
-	unsigned int dmc_load_average;
+	unsigned long tmpfreq;
 	unsigned long cpufreq = 0;
-	unsigned long lockfreq;
-	unsigned long dmcfreq;
+	unsigned long freq[PPMU_TYPE_END];
 	unsigned long cpu_load;
-	unsigned long dmc_load;
-	unsigned long dmc_c_load;
-	unsigned long dmc_r1_load;
-	unsigned long dmc_l_load;
+	unsigned long ddr_c_load;
+	unsigned long right0_load;
+	unsigned long ddr_r1_load;
+	unsigned long ddr_l_load;
+	unsigned long load[PPMU_TYPE_END];
+	unsigned int cpu_load_average = 0;
+	unsigned int ddr_c_load_average = 0;
+	unsigned int ddr_l_load_average = 0;
+	unsigned int right0_load_average = 0;
+	unsigned int ddr_r1_load_average = 0;
+	unsigned int load_average[PPMU_TYPE_END];
 	struct opp *opp[PPMU_TYPE_END];
+	unsigned long lockfreq[PPMU_TYPE_END];
 	unsigned long newfreq[PPMU_TYPE_END];
 
 	ppmu_update(data->dev[PPMU_MIF], 3);
 
 	/* Convert from base xxx to base maxfreq */
 	cpu_load = div64_u64(ppmu_load[PPMU_CPU] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
-	dmc_c_load = div64_u64(ppmu_load[PPMU_DDR_C] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
-	dmc_r1_load = div64_u64(ppmu_load[PPMU_DDR_R1] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
-	dmc_l_load = div64_u64(ppmu_load[PPMU_DDR_L] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
+	ddr_c_load = div64_u64(ppmu_load[PPMU_DDR_C] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
+	right0_load = div64_u64(ppmu_load[PPMU_RIGHT0_BUS] * data->curr_freq[PPMU_INT], data->max_freq[PPMU_INT]);
+	ddr_r1_load = div64_u64(ppmu_load[PPMU_DDR_R1] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
+	ddr_l_load = div64_u64(ppmu_load[PPMU_DDR_L] * data->curr_freq[PPMU_MIF], data->max_freq[PPMU_MIF]);
 
 	data->load_history[PPMU_CPU][data->index] = cpu_load;
-	data->load_history[PPMU_DDR_C][data->index] = dmc_c_load;
-	data->load_history[PPMU_DDR_R1][data->index] = dmc_r1_load;
-	data->load_history[PPMU_DDR_L][data->index++] = dmc_l_load;
+	data->load_history[PPMU_DDR_C][data->index] = ddr_c_load;
+	data->load_history[PPMU_RIGHT0_BUS][data->index] = right0_load;
+	data->load_history[PPMU_DDR_R1][data->index] = ddr_r1_load;
+	data->load_history[PPMU_DDR_L][data->index++] = ddr_l_load;
 
+	printk("Load = %lu - %lu - %lu - %lu - %lu\n", cpu_load, ddr_c_load, right0_load, ddr_r1_load, ddr_l_load);
 	if (data->index >= LOAD_HISTORY_SIZE)
 		data->index = 0;
 
 	for (i = 0; i < LOAD_HISTORY_SIZE; i++) {
 		cpu_load_average += data->load_history[PPMU_CPU][i];
-		dmc_c_load_average += data->load_history[PPMU_DDR_C][i];
-		dmc_r1_load_average += data->load_history[PPMU_DDR_R1][i];
-		dmc_l_load_average += data->load_history[PPMU_DDR_L][i];
+		ddr_c_load_average += data->load_history[PPMU_DDR_C][i];
+		right0_load_average += data->load_history[PPMU_RIGHT0_BUS][i];
+		ddr_r1_load_average += data->load_history[PPMU_DDR_R1][i];
+		ddr_l_load_average += data->load_history[PPMU_DDR_L][i];
 	}
 
 	/* Calculate average Load */
 	cpu_load_average /= LOAD_HISTORY_SIZE;
-	dmc_c_load_average /= LOAD_HISTORY_SIZE;
-	dmc_r1_load_average /= LOAD_HISTORY_SIZE;
-	dmc_l_load_average /= LOAD_HISTORY_SIZE;
+	ddr_c_load_average /= LOAD_HISTORY_SIZE;
+	right0_load_average /= LOAD_HISTORY_SIZE;
+	ddr_r1_load_average /= LOAD_HISTORY_SIZE;
+	ddr_l_load_average /= LOAD_HISTORY_SIZE;
 
-	if (dmc_c_load >= dmc_r1_load) {
-		dmc_load = dmc_c_load;
-		dmc_load_average = dmc_c_load_average;
+	if (ddr_c_load >= ddr_r1_load) {
+		load[PPMU_MIF] = ddr_c_load;
+		load_average[PPMU_MIF] = ddr_c_load_average;
 	} else {
-		dmc_load = dmc_r1_load;
-		dmc_load_average = dmc_r1_load_average;
+		load[PPMU_MIF] = ddr_r1_load;
+		load_average[PPMU_MIF] = ddr_r1_load_average;
 	}
 
-	if (dmc_l_load >= dmc_load) {
-		dmc_load = dmc_l_load;
-		dmc_load_average = dmc_l_load_average;
+	if (ddr_l_load >= load[PPMU_MIF]) {
+		load[PPMU_MIF] = ddr_l_load;
+		load_average[PPMU_MIF] = ddr_l_load_average;
 	}
 
-	if (dmc_load >= DMC_MAX_THRESHOLD) {
-		dmcfreq = data->max_freq[PPMU_MIF];
-	} else if (dmc_load < IDLE_THRESHOLD) {
-		if (dmc_load_average < IDLE_THRESHOLD)
-			dmcfreq = step_down(data, PPMU_MIF, 1);
-		else
-			dmcfreq = data->curr_freq[PPMU_MIF];
-	} else {
-		if (dmc_load < dmc_load_average) {
-			dmc_load = dmc_load_average;
-			if (dmc_load >= DMC_MAX_THRESHOLD)
-				dmc_load = DMC_MAX_THRESHOLD;
+	for (i = PPMU_MIF; i < PPMU_TYPE_END; i++) {
+		if (load[i] >= max_threshold[i]) {
+			freq[i] = data->max_freq[i];
+		} else if (load[i] < idle_threshold[i]) {
+			if (load_average[i] < idle_threshold[i])
+				freq[i] = step_down(data, i, 1);
+			else
+				freq[i] = data->curr_freq[i];
+		} else {
+			if (load[i] < load_average[i]) {
+				load[i] = load_average[i];
+				if (load[i] >= max_threshold[i])
+					load[i] = max_threshold[i];
+			}
+			freq[i] = div64_u64(data->max_freq[i] * load[i], max_threshold[i]);
 		}
-		dmcfreq = div64_u64(data->max_freq[PPMU_MIF] * dmc_load, DMC_MAX_THRESHOLD);
 	}
 
-	lockfreq = dev_max_freq(data->dev[PPMU_MIF]);
+	tmpfreq = dev_max_freq(data->dev[PPMU_MIF]);
+	lockfreq[PPMU_MIF] = (tmpfreq / 1000) * 1000;
+	lockfreq[PPMU_INT] = (tmpfreq % 1000) * 1000;
 
-	newfreq[PPMU_MIF] = max3(lockfreq, dmcfreq, cpufreq);
+	newfreq[PPMU_MIF] = max3(lockfreq[PPMU_MIF], freq[PPMU_MIF], cpufreq);
+	newfreq[PPMU_INT] = max(lockfreq[PPMU_INT], freq[PPMU_INT]);
 	opp[PPMU_MIF] = opp_find_freq_ceil(data->dev[PPMU_MIF], &newfreq[PPMU_MIF]);
-	opp[PPMU_INT] = opp_find_freq_ceil(data->dev[PPMU_INT], &data->max_freq[PPMU_INT]);
+	opp[PPMU_INT] = opp_find_freq_ceil(data->dev[PPMU_INT], &newfreq[PPMU_INT]);
 
 	*mif_opp = opp[PPMU_MIF];
-	/* temporary */
 	*int_opp = opp[PPMU_INT];
 }
 
