@@ -1109,6 +1109,23 @@ int fimc_is_hw_io_init(struct fimc_is_dev *dev)
 	return 0;
 }
 
+void fimc_is_hw_set_low_poweroff(struct fimc_is_dev *dev, int on)
+{
+	if (on) {
+		printk(KERN_INFO "Set low poweroff mode\n");
+		__raw_writel(0x0, PMUREG_ISP_ARM_OPTION);
+		__raw_writel(0x47C8, PMUREG_ISP_LOW_POWER_OFF);
+		dev->low_power_mode = true;
+	} else {
+		if (dev->low_power_mode) {
+			printk(KERN_INFO "Clear low poweroff mode\n");
+			__raw_writel(0xFFFFFFFF, PMUREG_ISP_ARM_OPTION);
+			__raw_writel(0x8, PMUREG_ISP_LOW_POWER_OFF);
+		}
+		dev->low_power_mode = false;
+	}
+}
+
 void fimc_is_hw_subip_poweroff(struct fimc_is_dev *dev)
 {
 	/* 1. Make FIMC-IS power-off state */
@@ -1139,14 +1156,16 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 		writel(0x00018000, PMUREG_ISP_ARM_OPTION);
 	} else {
 		/* 1. disable A5 */
-		writel(0x00010000, PMUREG_ISP_ARM_OPTION);
+		writel(0x0, PMUREG_ISP_ARM_OPTION);
 		/* 2. A5 power off*/
 		writel(0x0, PMUREG_ISP_ARM_CONFIGURATION);
 		/* 3. Check A5 power off status register */
 		timeout = 1000;
 		while (__raw_readl(PMUREG_ISP_ARM_STATUS) & 0x1) {
-			if (timeout == 0)
-				printk(KERN_ERR "A5 power off failed\n");
+			if (timeout == 0) {
+				printk(KERN_ERR "Low power off\n");
+				fimc_is_hw_set_low_poweroff(dev, true);
+			}
 			printk(KERN_INFO "Wait A5 power off\n");
 			timeout--;
 			udelay(1);
@@ -1310,10 +1329,13 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 {
 	switch (dev->scenario_id) {
 	case ISS_PREVIEW_STILL:
+		dev->sensor.frametime_max_prev =
+			init_val_isp_preview_still.otf_input.frametime_max;
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
-		IS_SENSOR_SET_FRAME_RATE(dev, DEFAULT_PREVIEW_STILL_FRAMERATE);
+		IS_SENSOR_SET_FRAME_RATE(dev,
+			fimc_is_hw_get_sensor_max_framerate(dev));
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);
 		/* ISP */
@@ -1687,6 +1709,8 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		IS_INC_PARAM_NUM(dev);
 		break;
 	case ISS_PREVIEW_VIDEO:
+		dev->sensor.frametime_max_prev_cam =
+			init_val_isp_preview_video.otf_input.frametime_max;
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
@@ -2065,6 +2089,8 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		break;
 
 	case ISS_CAPTURE_STILL:
+		dev->sensor.frametime_max_cap =
+			init_val_isp_capture.otf_input.frametime_max;
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_GLOBAL_SHOTMODE);
 		IS_INC_PARAM_NUM(dev);
@@ -2434,6 +2460,8 @@ void fimc_is_hw_set_init(struct fimc_is_dev *dev)
 		break;
 
 	case ISS_CAPTURE_VIDEO:
+		dev->sensor.frametime_max_cam =
+			init_val_isp_camcording.otf_input.frametime_max;
 		IS_SET_PARAM_GLOBAL_SHOTMODE_CMD(dev, 1);
 		IS_SET_PARAM_BIT(dev, PARAM_SENSOR_FRAME_RATE);
 		IS_INC_PARAM_NUM(dev);

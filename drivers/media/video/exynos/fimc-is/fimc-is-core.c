@@ -411,11 +411,13 @@ static int fimc_is_probe(struct platform_device *pdev)
 	dev->p_region_index2 = 0;
 	dev->sensor.offset_x = 16;
 	dev->sensor.offset_y = 12;
+	dev->sensor.framerate_update = false;
 	atomic_set(&dev->p_region_num, 0);
 	set_bit(IS_ST_IDLE, &dev->state);
 	set_bit(IS_PWR_ST_POWEROFF, &dev->power);
 	dev->af.af_state = FIMC_IS_AF_IDLE;
 	dev->af.mode = IS_FOCUS_MODE_IDLE;
+	dev->low_power_mode = false;
 	printk(KERN_INFO "FIMC-IS probe completed\n");
 	return 0;
 

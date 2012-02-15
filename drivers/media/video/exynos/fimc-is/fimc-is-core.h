@@ -269,6 +269,11 @@ struct is_sensor {
 	u32 offset_y;
 	u32 zoom_out_width;
 	u32 zoom_out_height;
+	u32 frametime_max_prev;
+	u32 frametime_max_prev_cam;
+	u32 frametime_max_cap;
+	u32 frametime_max_cam;
+	int framerate_update;
 };
 
 struct is_fd_result_header {
@@ -368,6 +373,7 @@ struct fimc_is_dev {
 	unsigned long			vb_state;
 #endif
 	struct device			*bus_dev;
+	int				low_power_mode;
 	/* Shared parameter region */
 	atomic_t			p_region_num;
 	unsigned long			p_region_index1;
@@ -433,6 +439,7 @@ extern int fimc_is_hw_set_tune(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_sensor_size_width(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_sensor_size_height(struct fimc_is_dev *dev);
 extern int fimc_is_hw_get_sensor_format(struct fimc_is_dev *dev);
+extern void fimc_is_hw_set_low_poweroff(struct fimc_is_dev *dev, int on);
 
 extern int fimc_is_af_face(struct fimc_is_dev *dev);
 
