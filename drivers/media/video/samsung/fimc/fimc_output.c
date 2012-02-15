@@ -2151,7 +2151,8 @@ static int fimc_qbuf_output_single_buf(struct fimc_control *ctrl,
 
 	switch (format) {
 	case V4L2_PIX_FMT_RGB32:
-	case V4L2_PIX_FMT_RGB565:	/* fall through */
+	case V4L2_PIX_FMT_RGB565:
+	case V4L2_PIX_FMT_YUYV:
 		buf_set.base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
 		break;
 	case V4L2_PIX_FMT_YUV420:
@@ -2206,7 +2207,8 @@ static int fimc_qbuf_output_multi_buf(struct fimc_control *ctrl,
 
 	switch (format) {
 	case V4L2_PIX_FMT_RGB32:
-	case V4L2_PIX_FMT_RGB565:	/* fall through */
+	case V4L2_PIX_FMT_RGB565:
+	case V4L2_PIX_FMT_YUYV:
 		buf_set.base[FIMC_ADDR_Y] = ctx->dst[idx].base[FIMC_ADDR_Y];
 		break;
 	case V4L2_PIX_FMT_YUV420:
