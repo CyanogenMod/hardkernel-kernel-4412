@@ -225,6 +225,13 @@ static mali_bool set_mali_dvfs_status(u32 step,mali_bool boostup)
 #endif
 	}
 
+#ifdef EXYNOS4_ASV_ENABLED
+	if (mali_dvfs[step].clock == 160)
+		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_100V);
+	else
+		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_130V);
+#endif
+
 	set_mali_dvfs_current_step(validatedStep);
 	/*for future use*/
 	maliDvfsStatus.pCurrentDvfs = &mali_dvfs[validatedStep];
