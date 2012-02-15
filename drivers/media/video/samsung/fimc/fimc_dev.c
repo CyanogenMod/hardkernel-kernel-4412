@@ -142,9 +142,63 @@ static inline u32 fimc_irq_out_single_buf(struct fimc_control *ctrl,
 	ret = fimc_pop_inq(ctrl, &ctx_num, &next);
 	if (ret == 0) {		/* There is a buffer in incomming queue. */
 		if (ctx_num != ctrl->out->last_ctx) {
+			struct fimc_buf_set buf_set;	/* destination addr */
+			u32 format = ctx->fbuf.fmt.pixelformat;
+			u32 width = ctx->fbuf.fmt.width;
+			u32 height = ctx->fbuf.fmt.height;
+			u32 y_size = width * height;
+			u32 c_size = y_size >> 2;
+			u32 rot = ctx->rotate;
+			int i, cfg;
+
 			ctx = &ctrl->out->ctx[ctx_num];
 			ctrl->out->last_ctx = ctx->ctx_num;
 			fimc_outdev_set_ctx_param(ctrl, ctx);
+
+			memset(&buf_set, 0x00, sizeof(buf_set));
+
+			switch (format) {
+				case V4L2_PIX_FMT_RGB32:
+				case V4L2_PIX_FMT_RGB565:
+				case V4L2_PIX_FMT_YUYV:
+					buf_set.base[FIMC_ADDR_Y] =
+						(dma_addr_t)ctx->fbuf.base;
+					break;
+				case V4L2_PIX_FMT_YUV420:
+					buf_set.base[FIMC_ADDR_Y] =
+						(dma_addr_t)ctx->fbuf.base;
+					buf_set.base[FIMC_ADDR_CB] =
+						buf_set.base[FIMC_ADDR_Y] + y_size;
+					buf_set.base[FIMC_ADDR_CR] =
+						buf_set.base[FIMC_ADDR_CB] + c_size;
+					break;
+				case V4L2_PIX_FMT_NV12:
+				case V4L2_PIX_FMT_NV21:
+					buf_set.base[FIMC_ADDR_Y] =
+						(dma_addr_t)ctx->fbuf.base;
+					buf_set.base[FIMC_ADDR_CB] =
+						buf_set.base[FIMC_ADDR_Y] + y_size;
+					break;
+				case V4L2_PIX_FMT_NV12T:
+					if (rot == 0 || rot == 180)
+						fimc_get_nv12t_size(width, height, &y_size, &c_size);
+					else
+						fimc_get_nv12t_size(height, width, &y_size, &c_size);
+					buf_set.base[FIMC_ADDR_Y] =
+						(dma_addr_t)ctx->fbuf.base;
+					buf_set.base[FIMC_ADDR_CB] =
+						buf_set.base[FIMC_ADDR_Y] + y_size;
+					break;
+				default:
+					fimc_err("%s: Invalid pixelformt : %d\n", __func__, format);
+					return -EINVAL;
+			}
+			cfg = fimc_hwget_output_buf_sequence(ctrl);
+
+			for (i = 0; i < FIMC_PHYBUFS; i++) {
+				if (check_bit(cfg, i))
+					fimc_hwset_output_address(ctrl, &buf_set, i);
+			}
 		}
 
 		fimc_outdev_set_src_addr(ctrl, ctx->src[next].base);
