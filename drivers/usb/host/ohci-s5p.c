@@ -195,7 +195,7 @@ static int ohci_hcd_s5p_drv_runtime_resume(struct device *dev)
 #define ohci_hcd_s5p_drv_runtime_resume		NULL
 #endif
 
-static int __devinit ohci_s5p_start(struct usb_hcd *hcd)
+static int ohci_s5p_start(struct usb_hcd *hcd)
 {
 	struct ohci_hcd *ohci = hcd_to_ohci(hcd);
 	int ret;
@@ -312,7 +312,7 @@ static inline void remove_ohci_sys_file(struct ohci_hcd *ohci)
 	device_remove_file(ohci_to_hcd(ohci)->self.controller,
 			&dev_attr_ohci_power);
 }
-static int ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
+static int __devinit ohci_hcd_s5p_drv_probe(struct platform_device *pdev)
 {
 	struct s5p_ohci_platdata *pdata;
 	struct s5p_ohci_hcd *s5p_ohci;
@@ -426,7 +426,7 @@ fail_hcd:
 	return err;
 }
 
-static int ohci_hcd_s5p_drv_remove(struct platform_device *pdev)
+static int __devexit ohci_hcd_s5p_drv_remove(struct platform_device *pdev)
 {
 	struct s5p_ohci_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
