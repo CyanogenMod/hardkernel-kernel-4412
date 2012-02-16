@@ -548,7 +548,6 @@ static void exynos5250_monitor(struct busfreq_data *data,
 	data->load_history[PPMU_DDR_R1][data->index] = ddr_r1_load;
 	data->load_history[PPMU_DDR_L][data->index++] = ddr_l_load;
 
-	printk("Load = %lu - %lu - %lu - %lu - %lu\n", cpu_load, ddr_c_load, right0_load, ddr_r1_load, ddr_l_load);
 	if (data->index >= LOAD_HISTORY_SIZE)
 		data->index = 0;
 
