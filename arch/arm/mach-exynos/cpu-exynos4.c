@@ -345,10 +345,12 @@ core_initcall(exynos4_core_init);
 
 #ifdef CONFIG_CACHE_L2X0
 #ifdef CONFIG_ARM_TRUSTZONE
+#if defined(CONFIG_PL310_ERRATA_588369) || defined(CONFIG_PL310_ERRATA_727915)
 static void exynos4_l2x0_set_debug(unsigned long val)
 {
 	exynos_smc(SMC_CMD_L2X0DEBUG, val, 0, 0);
 }
+#endif
 #endif
 
 static int __init exynos4_l2x0_cache_init(void)
@@ -379,7 +381,9 @@ static int __init exynos4_l2x0_cache_init(void)
 	l2x0_init(S5P_VA_L2CC, aux_val, aux_mask);
 
 #ifdef CONFIG_ARM_TRUSTZONE
+#if defined(CONFIG_PL310_ERRATA_588369) || defined(CONFIG_PL310_ERRATA_727915)
 	outer_cache.set_debug = exynos4_l2x0_set_debug;
+#endif
 #endif
 
 	return 0;
