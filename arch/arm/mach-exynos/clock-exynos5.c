@@ -927,6 +927,10 @@ static struct clk exynos5_init_clocks_off[] = {
 		.enable		= exynos5_clk_ip_gscl_ctrl,
 		.ctrlbit	= (1 << 3),
 	}, {
+		.name		= "camif_top",
+		.enable		= exynos5_clk_ip_gscl_ctrl,
+		.ctrlbit	= (1 << 4),
+	}, {
 		.name		= "gscl_wrap",
 		.devname	= "s5p-mipi-csis.0",
 		.enable		= exynos5_clk_ip_gscl_ctrl,
