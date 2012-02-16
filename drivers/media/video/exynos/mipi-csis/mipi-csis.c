@@ -644,14 +644,14 @@ static int __devinit s5pcsis_probe(struct platform_device *pdev)
 		srclk = clk_get(&state->pdev->dev, CSIS_SRC_CLK);
 		if (IS_ERR_OR_NULL(srclk)) {
 			dev_err(&state->pdev->dev, "failed to get csis src clk\n");
-			return -ENXIO;
+			goto e_unmap;
 		}
 		clk_set_parent(state->clock[CSIS_CLK_MUX], srclk);
 		clk_put(srclk);
 		clk_set_rate(state->clock[CSIS_CLK_MUX], pdata->clk_rate);
-	}
-	else
+	} else {
 		dev_WARN(&pdev->dev, "No clock frequency specified!\n");
+	}
 
 	state->irq = platform_get_irq(pdev, 0);
 	if (state->irq < 0) {
