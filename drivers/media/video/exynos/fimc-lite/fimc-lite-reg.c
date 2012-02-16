@@ -57,7 +57,7 @@ void flite_hw_reset(struct flite_dev *dev)
 		if (cfg & FLITE_REG_CIGCTRL_SWRST_RDY)
 			break;
 		usleep_range(1000, 5000);
-	} while(time_before(jiffies, timeo));
+	} while (time_before(jiffies, timeo));
 
 	flite_dbg("wait time : %d ms",
 		jiffies_to_msecs(jiffies - timeo + FLITE_MAX_RESET_READY_TIME));
@@ -112,7 +112,7 @@ int flite_hw_set_source_format(struct flite_dev *dev)
 	if (f_fmt->is_yuv) {
 		cfg = readl(dev->regs + FLITE_REG_CISRCSIZE);
 
-		switch(f_fmt->code) {
+		switch (f_fmt->code) {
 		case V4L2_MBUS_FMT_YUYV8_2X8:
 			cfg |= FLITE_REG_CISRCSIZE_ORDER422_IN_YCBYCR;
 			break;
@@ -169,8 +169,7 @@ void flite_hw_set_test_pattern_enable(struct flite_dev *dev)
 	writel(cfg, dev->regs + FLITE_REG_CIGCTRL);
 }
 
-void flite_hw_set_config_irq(struct flite_dev *dev, struct
-		s3c_platform_camera *cam)
+void flite_hw_set_config_irq(struct flite_dev *dev, struct s3c_platform_camera *cam)
 {
 	u32 cfg = 0;
 	cfg = readl(dev->regs + FLITE_REG_CIGCTRL);
@@ -196,8 +195,7 @@ void flite_hw_set_interrupt_source(struct flite_dev *dev, u32 source)
 	writel(cfg, dev->regs + FLITE_REG_CIGCTRL);
 }
 
-void flite_hw_set_camera_type(struct flite_dev *dev, struct
-		s3c_platform_camera *cam)
+void flite_hw_set_camera_type(struct flite_dev *dev, struct s3c_platform_camera *cam)
 {
 	u32 cfg = 0;
 	cfg = readl(dev->regs + FLITE_REG_CIGCTRL);
@@ -338,11 +336,11 @@ void flite_hw_set_output_size(struct flite_dev *dev)
 	writel(cfg, dev->regs + FLITE_REG_CIOCAN);
 }
 #else
-void flite_hw_set_inverse_polarity(struct flite_dev *dev){}
-void flite_hw_set_sensor_type(struct flite_dev *dev){}
-void flite_hw_set_dma_offset(struct flite_dev *dev){}
+void flite_hw_set_inverse_polarity(struct flite_dev *dev) {}
+void flite_hw_set_sensor_type(struct flite_dev *dev) {}
+void flite_hw_set_dma_offset(struct flite_dev *dev) {}
 void flite_hw_set_output_addr(struct flite_dev *dev,
-			struct flite_addr *addr, int index){}
-void flite_hw_set_out_order(struct flite_dev *dev){}
-void flite_hw_set_output_size(struct flite_dev *dev){}
+			struct flite_addr *addr, int index) {}
+void flite_hw_set_out_order(struct flite_dev *dev) {}
+void flite_hw_set_output_size(struct flite_dev *dev) {}
 #endif

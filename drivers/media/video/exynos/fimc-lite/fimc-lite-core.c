@@ -35,49 +35,49 @@ static struct flite_fmt flite_formats[] = {
 		.code		= V4L2_MBUS_FMT_UYVY8_2X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_YUV422_1P,
 		.is_yuv		= 1,
-	},{
+	}, {
 		.name		= "YUV422 8-bit 1 plane(VYUY)",
 		.pixelformat	= V4L2_PIX_FMT_VYUY,
 		.depth		= { 16 },
 		.code		= V4L2_MBUS_FMT_VYUY8_2X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_YUV422_1P,
 		.is_yuv		= 1,
-	},{
+	}, {
 		.name		= "YUV422 8-bit 1 plane(YUYV)",
 		.pixelformat	= V4L2_PIX_FMT_YUYV,
 		.depth		= { 16 },
 		.code		= V4L2_MBUS_FMT_YUYV8_2X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_YUV422_1P,
 		.is_yuv		= 1,
-	},{
+	}, {
 		.name		= "YUV422 8-bit 1 plane(YVYU)",
 		.pixelformat	= V4L2_PIX_FMT_YVYU,
 		.depth		= { 16 },
 		.code		= V4L2_MBUS_FMT_YVYU8_2X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_YUV422_1P,
 		.is_yuv		= 1,
-	},{
+	}, {
 		.name		= "RAW8(GRBG)",
 		.pixelformat	= V4L2_PIX_FMT_SGRBG8,
 		.depth		= { 8 },
 		.code		= V4L2_MBUS_FMT_SGRBG8_1X8,
 		.fmt_reg	= FLITE_REG_CIGCTRL_RAW8,
 		.is_yuv		= 0,
-	},{
+	}, {
 		.name		= "RAW10(GRBG)",
 		.pixelformat	= V4L2_PIX_FMT_SGRBG10,
 		.depth		= { 10 },
 		.code		= V4L2_MBUS_FMT_SGRBG10_1X10,
 		.fmt_reg	= FLITE_REG_CIGCTRL_RAW10,
 		.is_yuv		= 0,
-	},{
+	}, {
 		.name		= "RAW12(GRBG)",
 		.pixelformat	= V4L2_PIX_FMT_SGRBG12,
 		.depth		= { 12 },
 		.code		= V4L2_MBUS_FMT_SGRBG12_1X12,
 		.fmt_reg	= FLITE_REG_CIGCTRL_RAW12,
 		.is_yuv		= 0,
-	},{
+	}, {
 		.name		= "User Defined(JPEG)",
 		.code		= V4L2_MBUS_FMT_JPEG_1X8,
 		.depth		= { 8 },
@@ -122,8 +122,7 @@ static struct flite_fmt *find_format(u32 *pixelformat, u32 *mbus_code, int index
 }
 #endif
 
-inline struct flite_fmt const *find_flite_format(struct
-		v4l2_mbus_framefmt *mf)
+inline struct flite_fmt const *find_flite_format(struct v4l2_mbus_framefmt *mf)
 {
 	int num_fmt = ARRAY_SIZE(flite_formats);
 
@@ -260,6 +259,10 @@ static int flite_s_stream(struct v4l2_subdev *sd, int enable)
 			flite_info("@local out start@");
 			flite_hw_set_camera_type(flite, cam);
 			flite_hw_set_config_irq(flite, cam);
+			if (IS_ERR_OR_NULL(cam)) {
+				flite_err("cam is null");
+				goto s_stream_unlock;
+			}
 			if (cam->use_isp)
 				flite_hw_set_output_dma(flite, false);
 			int_src = FLITE_REG_CIGCTRL_IRQ_OVFEN0_ENABLE |
@@ -665,11 +668,10 @@ static void flite_pipeline_prepare(struct flite_dev *flite, struct media_entity 
 
 	media_entity_graph_walk_start(&graph, me);
 
-	while((me = media_entity_graph_walk_next(&graph))) {
+	while ((me = media_entity_graph_walk_next(&graph))) {
 		flite_info("me->name : %s", me->name);
-		if (media_entity_type(me) != MEDIA_ENT_T_V4L2_SUBDEV) {
+		if (media_entity_type(me) != MEDIA_ENT_T_V4L2_SUBDEV)
 			continue;
-		}
 		sd = media_entity_to_v4l2_subdev(me);
 		switch (sd->grp_id) {
 		case FLITE_GRP_ID:
@@ -1374,7 +1376,7 @@ static int flite_link_validate(struct flite_dev *flite)
 	/* Get the subdev of source pad */
 	sd = media_entity_to_v4l2_subdev(pad->entity);
 
-	while(1) {
+	while (1) {
 		/* Find sink pad of the subdev*/
 		pad = &sd->entity.pads[0];
 		if (!(pad->flags & MEDIA_PAD_FL_SINK))
@@ -1689,7 +1691,7 @@ static int flite_create_link(struct flite_dev *flite)
 			sink = &flite->sd_csis->entity;
 			if (source && sink) {
 				ret = media_entity_create_link(source, 0,
-					      sink, CSIS_PAD_SINK,0);
+					      sink, CSIS_PAD_SINK, 0);
 				if (ret) {
 					flite_err("failed link sensor to csis\n");
 					return ret;
@@ -1701,7 +1703,7 @@ static int flite_create_link(struct flite_dev *flite)
 			if (source && sink) {
 				ret = media_entity_create_link(source,
 						CSIS_PAD_SOURCE,
-						sink, FLITE_PAD_SINK,0);
+						sink, FLITE_PAD_SINK, 0);
 				if (ret) {
 					flite_err("failed link csis to flite\n");
 					return ret;

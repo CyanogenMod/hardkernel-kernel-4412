@@ -107,7 +107,7 @@ struct flite_variant {
   * @fmt_reg :	H/W bit for setting format
   */
 struct flite_fmt {
-	char 				*name;
+	char				*name;
 	u32				pixelformat;
 	enum v4l2_mbus_pixelcode	code;
 	u32				fmt_reg;
@@ -288,8 +288,7 @@ static inline void user_to_drv(struct v4l2_ctrl *ctrl, s32 value)
 	ctrl->cur.val = ctrl->val = value;
 }
 
-inline struct flite_fmt const *find_flite_format(struct
-		v4l2_mbus_framefmt *mf);
+inline struct flite_fmt const *find_flite_format(struct v4l2_mbus_framefmt *mf);
 
 /*
  * Add buf to the capture active buffers queue.
