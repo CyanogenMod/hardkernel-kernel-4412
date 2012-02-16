@@ -206,6 +206,7 @@ struct flite_dev {
 	int				pending_buf_cnt;
 	int				buf_index;
 	struct clk			*gsc_clk;
+	struct clk			*camif_clk;
 #endif
 	struct v4l2_mbus_framefmt	mbus_fmt;
 	struct flite_frame		s_frame;

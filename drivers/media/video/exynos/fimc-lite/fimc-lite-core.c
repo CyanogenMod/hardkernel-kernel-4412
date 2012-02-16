@@ -25,6 +25,7 @@
 #define MODULE_NAME			"exynos-fimc-lite"
 #define DEFAULT_FLITE_SINK_WIDTH	800
 #define DEFAULT_FLITE_SINK_HEIGHT	480
+#define CAMIF_TOP_CLK			"camif_top"
 
 static struct flite_fmt flite_formats[] = {
 	{
@@ -1878,6 +1879,7 @@ static int flite_runtime_suspend(struct device *dev)
 
 #if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
 	flite->vb2->suspend(flite->alloc_ctx);
+	clk_disable(flite->camif_clk);
 #endif
 	spin_lock_irqsave(&flite->slock, flags);
 	set_bit(FLITE_ST_SUSPEND, &flite->state);
@@ -1894,6 +1896,7 @@ static int flite_runtime_resume(struct device *dev)
 	unsigned long flags;
 
 #if defined(CONFIG_MEDIA_CONTROLLER) && defined(CONFIG_ARCH_EXYNOS5)
+	clk_enable(flite->camif_clk);
 	flite->vb2->resume(flite->alloc_ctx);
 #endif
 	spin_lock_irqsave(&flite->slock, flags);
@@ -2044,6 +2047,12 @@ static int flite_probe(struct platform_device *pdev)
 	flite->alloc_ctx = flite->vb2->init(flite);
 	if (IS_ERR(flite->alloc_ctx)) {
 		ret = PTR_ERR(flite->alloc_ctx);
+		goto err_entity;
+	}
+
+	flite->camif_clk = clk_get(&flite->pdev->dev, CAMIF_TOP_CLK);
+	if (IS_ERR(flite->camif_clk)) {
+		flite_err("failed to get flite.%d clock", flite->id);
 		goto err_entity;
 	}
 #endif
