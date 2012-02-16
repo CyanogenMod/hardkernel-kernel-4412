@@ -132,7 +132,7 @@ int gsc_hw_get_done_input_buf_index(struct gsc_dev *dev)
 	}
 
 	for (i = dev->variant->in_buf_cnt; i > curr_index; i--) {
-		if (cfg ^ (1 << (i -1)))
+		if (cfg ^ (1 << (i - 1)))
 			return i - 1;
 	}
 
@@ -150,7 +150,7 @@ int gsc_hw_get_done_output_buf_index(struct gsc_dev *dev)
 	gsc_dbg("curr_index : %d", curr_index);
 	state_mask = cfg & GSC_OUT_BASE_ADDR_MASK;
 
-	done_buf_index = (curr_index == 0) ? reqbufs_cnt - 1: curr_index - 1;
+	done_buf_index = (curr_index == 0) ? reqbufs_cnt - 1 : curr_index - 1;
 
 	do {
 		/* Test done_buf_index whether masking or not */
@@ -260,7 +260,7 @@ int gsc_hw_get_nr_unmask_bits(struct gsc_dev *dev)
 	u32 mask_bits = readl(dev->regs + GSC_OUT_BASE_ADDR_Y_MASK);
 	mask_bits &= GSC_OUT_BASE_ADDR_MASK;
 
-	while(mask_bits) {
+	while (mask_bits) {
 		mask_bits = mask_bits & (mask_bits - 1);
 		bits++;
 	}
@@ -416,7 +416,7 @@ void gsc_hw_set_in_image_format(struct gsc_ctx *ctx)
 		break;
 	};
 
-	if(is_tiled(frame->fmt))
+	if (is_tiled(frame->fmt))
 		cfg |= GSC_IN_TILE_C_16x8 | GSC_IN_TILE_MODE;
 
 	writel(cfg, dev->regs + GSC_IN_CON);
@@ -429,11 +429,10 @@ void gsc_hw_set_output_path(struct gsc_ctx *ctx)
 	u32 cfg = readl(dev->regs + GSC_OUT_CON);
 	cfg &= ~GSC_OUT_PATH_MASK;
 
-	if (ctx->out_path == GSC_DMA) {
+	if (ctx->out_path == GSC_DMA)
 		cfg |= GSC_OUT_PATH_MEMORY;
-	} else {
+	else
 		cfg |= GSC_OUT_PATH_LOCAL;
-	}
 
 	writel(cfg, dev->regs + GSC_OUT_CON);
 }
@@ -547,7 +546,7 @@ void gsc_hw_set_out_image_format(struct gsc_ctx *ctx)
 		break;
 	};
 
-	if(is_tiled(frame->fmt))
+	if (is_tiled(frame->fmt))
 		cfg |= GSC_OUT_TILE_C_16x8 | GSC_OUT_TILE_MODE;
 
 end_set:

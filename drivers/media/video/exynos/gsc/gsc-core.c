@@ -125,7 +125,7 @@ static struct gsc_fmt gsc_formats[] = {
 		.corder		= GSC_CBCR,
 		.num_planes	= 1,
 		.nr_comp	= 3,
-	},{
+	}, {
 		.name		= "YUV 4:2:0 planar, YCbCr",
 		.pixelformat	= V4L2_PIX_FMT_YVU420,
 		.depth		= { 12 },
@@ -949,7 +949,7 @@ int gsc_ctrls_create(struct gsc_ctx *ctx)
 
 	v4l2_ctrl_handler_init(&ctx->ctrl_handler, GSC_MAX_CTRL_NUM);
 
-	ctx->gsc_ctrls.rotate= v4l2_ctrl_new_std(&ctx->ctrl_handler,
+	ctx->gsc_ctrls.rotate = v4l2_ctrl_new_std(&ctx->ctrl_handler,
 				&gsc_ctrl_ops, V4L2_CID_ROTATE, 0, 270, 90, 0);
 	ctx->gsc_ctrls.hflip = v4l2_ctrl_new_std(&ctx->ctrl_handler,
 				&gsc_ctrl_ops, V4L2_CID_HFLIP, 0, 1, 1, 0);
@@ -1431,7 +1431,7 @@ static const struct dev_pm_ops gsc_pm_ops = {
 	.runtime_resume		= gsc_runtime_resume,
 };
 
-struct gsc_pix_max gsc_v_100_max= {
+struct gsc_pix_max gsc_v_100_max = {
 	.org_scaler_bypass_w	= 8192,
 	.org_scaler_bypass_h	= 8192,
 	.org_scaler_input_w	= 4800,
@@ -1446,7 +1446,7 @@ struct gsc_pix_max gsc_v_100_max= {
 	.target_rot_en_h	= 2016,
 };
 
-struct gsc_pix_min gsc_v_100_min= {
+struct gsc_pix_min gsc_v_100_min = {
 	.org_w			= 64,
 	.org_h			= 32,
 	.real_w			= 64,
@@ -1457,7 +1457,7 @@ struct gsc_pix_min gsc_v_100_min= {
 	.target_rot_en_h	= 16,
 };
 
-struct gsc_pix_align gsc_v_100_align= {
+struct gsc_pix_align gsc_v_100_align = {
 	.org_h			= 16,
 	.org_w			= 16, /* yuv420 : 16, others : 8 */
 	.offset_h		= 2,  /* yuv420/422 : 2, others : 1 */
@@ -1467,7 +1467,7 @@ struct gsc_pix_align gsc_v_100_align= {
 	.target_h		= 2,  /* yuv420 : 2, others : 1 */
 };
 
-struct gsc_variant gsc_v_100_variant= {
+struct gsc_variant gsc_v_100_variant = {
 	.pix_max		= &gsc_v_100_max,
 	.pix_min		= &gsc_v_100_min,
 	.pix_align		= &gsc_v_100_align,
@@ -1480,7 +1480,7 @@ struct gsc_variant gsc_v_100_variant= {
 	.local_sc_down		= 2,
 };
 
-static struct gsc_driverdata gsc_v_100_drvdata= {
+static struct gsc_driverdata gsc_v_100_drvdata = {
 	.variant = {
 		[0] = &gsc_v_100_variant,
 		[1] = &gsc_v_100_variant,

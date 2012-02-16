@@ -131,7 +131,7 @@ enum gsc_cap_input_entity {
 
 enum gsc_irq {
 	GSC_OR_IRQ = 17,
-	GSC_DONE_IRQ= 16,
+	GSC_DONE_IRQ = 16,
 };
 
 /**

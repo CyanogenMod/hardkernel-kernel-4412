@@ -213,7 +213,7 @@ static int gsc_capture_scaler_info(struct gsc_ctx *ctx)
 	gsc_capture_get_scaler_factor(s_frame->crop.height, d_frame->crop.width,
 				      &sc->pre_vratio);
 
-	sc->main_hratio = (s_frame->crop.width << 16 ) / d_frame->crop.width;
+	sc->main_hratio = (s_frame->crop.width << 16) / d_frame->crop.width;
 	sc->main_vratio = (s_frame->crop.height << 16) / d_frame->crop.height;
 
 	gsc_info("src width : %d, src height : %d, dst width : %d,\
@@ -239,7 +239,7 @@ static int gsc_capture_subdev_s_stream(struct v4l2_subdev *sd, int enable)
 	gsc_hw_set_one_frm_mode(gsc, false);
 	gsc_hw_set_gsc_irq_enable(gsc, true);
 
-	if(gsc->pipeline.disp)
+	if (gsc->pipeline.disp)
 		gsc_hw_set_sysreg_writeback(ctx);
 	else
 		gsc_hw_set_sysreg_camif(true);
@@ -547,7 +547,7 @@ void gsc_cap_pipeline_prepare(struct gsc_dev *gsc, struct media_entity *me)
 
 	media_entity_graph_walk_start(&graph, me);
 
-	while((me = media_entity_graph_walk_next(&graph))) {
+	while ((me = media_entity_graph_walk_next(&graph))) {
 		gsc_info("me->name : %s", me->name);
 		if (media_entity_type(me) != MEDIA_ENT_T_V4L2_SUBDEV)
 			continue;
@@ -567,7 +567,7 @@ void gsc_cap_pipeline_prepare(struct gsc_dev *gsc, struct media_entity *me)
 			gsc->pipeline.csis = sd;
 			break;
 		case FIMD_GRP_ID:
-			gsc->pipeline.disp= sd;
+			gsc->pipeline.disp = sd;
 			break;
 		default:
 			gsc_err("Unsupported group id");
@@ -797,7 +797,7 @@ static int gsc_cap_link_validate(struct gsc_dev *gsc)
 	/* Get the subdev of source pad */
 	sd = media_entity_to_v4l2_subdev(pad->entity);
 
-	while(1) {
+	while (1) {
 		/* Find sink pad of the subdev*/
 		pad = &sd->entity.pads[0];
 		if (!(pad->flags & MEDIA_PAD_FL_SINK))
@@ -892,7 +892,7 @@ static int gsc_capture_streamoff(struct file *file, void *priv,
 	return ret;
 }
 
-static struct v4l2_subdev * gsc_cap_remote_subdev(struct gsc_dev *gsc, u32 *pad)
+static struct v4l2_subdev *gsc_cap_remote_subdev(struct gsc_dev *gsc, u32 *pad)
 {
 	struct media_pad *remote;
 
@@ -1016,29 +1016,29 @@ static void gsc_cap_check_limit_size(struct gsc_dev *gsc, unsigned int pad,
 	struct gsc_ctx *ctx = gsc->cap.ctx;
 	u32 min_w, min_h, max_w, max_h;
 
-	switch(pad) {
-		case GSC_PAD_SINK:
-			if (gsc_cap_opened(gsc) &&
-			    (ctx->gsc_ctrls.rotate->val == 90 ||
-			    ctx->gsc_ctrls.rotate->val == 270)) {
-				min_w = variant->pix_min->real_w;
-				min_h = variant->pix_min->real_h;
-				max_w = variant->pix_max->real_rot_en_w;
-				max_h = variant->pix_max->real_rot_en_h;
-			} else {
-				min_w = variant->pix_min->real_w;
-				min_h = variant->pix_min->real_h;
-				max_w = variant->pix_max->real_rot_dis_w;
-				max_h = variant->pix_max->real_rot_dis_h;
-			}
-			break;
+	switch (pad) {
+	case GSC_PAD_SINK:
+		if (gsc_cap_opened(gsc) &&
+		    (ctx->gsc_ctrls.rotate->val == 90 ||
+		    ctx->gsc_ctrls.rotate->val == 270)) {
+			min_w = variant->pix_min->real_w;
+			min_h = variant->pix_min->real_h;
+			max_w = variant->pix_max->real_rot_en_w;
+			max_h = variant->pix_max->real_rot_en_h;
+		} else {
+			min_w = variant->pix_min->real_w;
+			min_h = variant->pix_min->real_h;
+			max_w = variant->pix_max->real_rot_dis_w;
+			max_h = variant->pix_max->real_rot_dis_h;
+		}
+		break;
 
-		case GSC_PAD_SOURCE:
-			min_w = variant->pix_min->target_rot_dis_w;
-			min_h = variant->pix_min->target_rot_dis_h;
-			max_w = variant->pix_max->target_rot_dis_w;
-			max_h = variant->pix_max->target_rot_dis_h;
-			break;
+	case GSC_PAD_SOURCE:
+		min_w = variant->pix_min->target_rot_dis_w;
+		min_h = variant->pix_min->target_rot_dis_h;
+		max_w = variant->pix_max->target_rot_dis_w;
+		max_h = variant->pix_max->target_rot_dis_h;
+		break;
 	}
 
 	fmt->width = clamp_t(u32, fmt->width, min_w, max_w);
@@ -1276,11 +1276,11 @@ static int gsc_capture_link_setup(struct media_entity *entity,
 				gsc->cap.sd_disp->grp_id = FIMD_GRP_ID;
 				cap->ctx->in_path = GSC_WRITEBACK;
 				cap->input |= GSC_IN_FIMD_WRITEBACK;
-			}
-			else if (remote->index == FLITE_PAD_SOURCE_PREV)
+			} else if (remote->index == FLITE_PAD_SOURCE_PREV) {
 				cap->input |= GSC_IN_FLITE_PREVIEW;
-			else
+			} else {
 				cap->input |= GSC_IN_FLITE_CAMCORDING;
+			}
 		} else {
 			cap->input = GSC_IN_NONE;
 		}

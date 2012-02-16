@@ -92,16 +92,16 @@ static void gsc_subdev_try_crop(struct gsc_dev *gsc, struct v4l2_rect *cr)
 	u32 tmp_w, tmp_h;
 
 	if (gsc->out.ctx->gsc_ctrls.rotate->val == 90 ||
-            gsc->out.ctx->gsc_ctrls.rotate->val == 270) {
-		max_w= variant->pix_max->target_rot_en_w;
-		max_h= variant->pix_max->target_rot_en_h;
+		gsc->out.ctx->gsc_ctrls.rotate->val == 270) {
+		max_w = variant->pix_max->target_rot_en_w;
+		max_h = variant->pix_max->target_rot_en_h;
 		min_w = variant->pix_min->target_rot_en_w;
 		min_h = variant->pix_min->target_rot_en_h;
 		tmp_w = cr->height;
 		tmp_h = cr->width;
 	} else {
-		max_w= variant->pix_max->target_rot_dis_w;
-		max_h= variant->pix_max->target_rot_dis_h;
+		max_w = variant->pix_max->target_rot_dis_w;
+		max_h = variant->pix_max->target_rot_dis_h;
 		min_w = variant->pix_min->target_rot_dis_w;
 		min_h = variant->pix_min->target_rot_dis_h;
 		tmp_w = cr->width;
@@ -281,7 +281,7 @@ static struct v4l2_subdev_pad_ops gsc_subdev_pad_ops = {
 	.set_crop = gsc_subdev_set_crop,
 };
 
-static struct v4l2_subdev_video_ops gsc_subdev_video_ops= {
+static struct v4l2_subdev_video_ops gsc_subdev_video_ops = {
 	.s_stream = gsc_subdev_s_stream,
 };
 
@@ -873,8 +873,8 @@ static int gsc_create_link(struct gsc_dev *gsc)
 	struct media_entity *source, *sink;
 	int ret;
 
-	source= &gsc->out.vfd->entity;
-	sink= &gsc->out.sd->entity;
+	source = &gsc->out.vfd->entity;
+	sink = &gsc->out.sd->entity;
 	ret = media_entity_create_link(source, 0, sink, GSC_PAD_SINK,
 				       MEDIA_LNK_FL_IMMUTABLE |
 				       MEDIA_LNK_FL_ENABLED);

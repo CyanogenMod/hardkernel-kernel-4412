@@ -19,9 +19,9 @@ void *gsc_cma_init(struct gsc_dev *gsc)
 	return vb2_cma_phys_init(&gsc->pdev->dev, NULL, 0, false);
 }
 
-void gsc_cma_resume(void *alloc_ctx){}
-void gsc_cma_suspend(void *alloc_ctx){}
-void gsc_cma_set_cacheable(void *alloc_ctx, bool cacheable){}
+void gsc_cma_resume(void *alloc_ctx) {}
+void gsc_cma_suspend(void *alloc_ctx) {}
+void gsc_cma_set_cacheable(void *alloc_ctx, bool cacheable) {}
 
 int gsc_cma_cache_flush(struct vb2_buffer *vb, u32 plane_no)
 {
