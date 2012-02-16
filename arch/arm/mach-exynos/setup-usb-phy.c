@@ -46,6 +46,7 @@ struct exynos_usb_phy {
 	u8 phy0_usage;
 	u8 phy1_usage;
 	u8 phy2_usage;
+	u8 lpa_entered;
 	unsigned long flags;
 };
 
@@ -223,61 +224,64 @@ static u32 exynos_usb_phy_set_clock(struct platform_device *pdev)
 
 static void exynos_usb_phy_control(enum usb_phy_type phy_type , int on)
 {
-	spin_lock(&phy_lock);
-
 	if (soc_is_exynos4210()) {
 		if (phy_type & USB_PHY0) {
-			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
+			if (on == PHY_ENABLE) {
+				usb_phy_control.phy0_usage++;
 				writel(PHY_ENABLE, S5P_USBOTG_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
+			} else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
 				writel(PHY_DISABLE, S5P_USBOTG_PHY_CONTROL);
 		}
 		if (phy_type & USB_PHY1) {
-			if (on == PHY_ENABLE && (usb_phy_control.phy1_usage++) == 0)
+			if (on == PHY_ENABLE) {
+				usb_phy_control.phy1_usage++;
 				writel(PHY_ENABLE, S5P_USBHOST_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
+			} else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
 				writel(PHY_DISABLE, S5P_USBHOST_PHY_CONTROL);
 		}
 	} else if (soc_is_exynos4212() | soc_is_exynos4412()) {
 		if (phy_type & USB_PHY) {
-			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
+			if (on == PHY_ENABLE) {
+				usb_phy_control.phy0_usage++;
 				writel(PHY_ENABLE, S5P_USB_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
+			} else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
 				writel(PHY_DISABLE, S5P_USB_PHY_CONTROL);
 		}
 #ifdef CONFIG_USB_S5P_HSIC0
 		if (phy_type & USB_PHY_HSIC0) {
-			if (on == PHY_ENABLE && (usb_phy_control.phy1_usage++) == 0)
+			if (on == PHY_ENABLE) {
+				usb_phy_control.phy1_usage++;
 				writel(PHY_ENABLE, S5P_HSIC_1_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
+			} else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
 				writel(PHY_DISABLE, S5P_HSIC_1_PHY_CONTROL);
 		}
 #endif
 #ifdef CONFIG_USB_S5P_HSIC1
 		if (phy_type & USB_PHY_HSIC1) {
-			if (on == PHY_ENABLE && (usb_phy_control.phy2_usage++) == 0)
+			if (on == PHY_ENABLE) {
+				usb_phy_control.phy2_usage++;
 				writel(PHY_ENABLE, S5P_HSIC_2_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--usb_phy_control.phy2_usage) == 0)
+			} else if (on == PHY_DISABLE && (--usb_phy_control.phy2_usage) == 0)
 				writel(PHY_DISABLE, S5P_HSIC_2_PHY_CONTROL);
 		}
 #endif
 	} else {
 		if (phy_type & USB_PHY0) {
-			if (on == PHY_ENABLE && (usb_phy_control.phy0_usage++) == 0)
+			if (on == PHY_ENABLE) {
+				usb_phy_control.phy0_usage++;
 				writel(PHY_ENABLE, EXYNOS5_USBDEV_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
+			} else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
 				writel(PHY_DISABLE, EXYNOS5_USBDEV_PHY_CONTROL);
 		}
 
 		if (phy_type & USB_PHY1) {
-			if (on == PHY_ENABLE && (usb_phy_control.phy1_usage++) == 0)
+			if (on == PHY_ENABLE) {
+				usb_phy_control.phy1_usage++;
 				writel(PHY_ENABLE, EXYNOS5_USBHOST_PHY_CONTROL);
-			else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
+			} else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
 				writel(PHY_DISABLE, EXYNOS5_USBHOST_PHY_CONTROL);
 		}
 	}
-
-	spin_unlock(&phy_lock);
 }
 
 static int exynos4_usb_phy0_init(struct platform_device *pdev)
@@ -399,6 +403,7 @@ int exynos4_check_usb_op(void)
 			writel(PHY_DISABLE, S5P_USB_PHY_CONTROL);
 
 			op = 0;
+			usb_phy_control.lpa_entered = 1;
 		}
 	}
 done:
@@ -449,7 +454,11 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| EXYNOS4212_HSIC1_FORCE_SUSPEND);
 		}
 		writel(phypwr, EXYNOS4_PHYPWR);
-		err = 0;
+		if (usb_phy_control.lpa_entered) {
+			usb_phy_control.lpa_entered = 0;
+			err = 1;
+		} else
+			err = 0;
 	} else {
 		phypwr = readl(EXYNOS4_PHYPWR);
 		/* set to normal HSIC 0 and 1 of PHY1 */
@@ -504,6 +513,7 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| EXYNOS4212_PHY1_SWRST_MASK);
 			writel(rstcon, EXYNOS4_RSTCON);
 		}
+		usb_phy_control.lpa_entered = 0;
 		err = 1;
 	}
 	udelay(80);
@@ -679,6 +689,8 @@ static int exynos4_usb_phy20_exit(struct platform_device *pdev)
 		| USB_PHY_HSIC1,
 		PHY_DISABLE);
 
+	usb_phy_control.lpa_entered = 0;
+
 	return 0;
 }
 
@@ -798,9 +810,11 @@ static int exynos_usb_dev_phy20_init(struct platform_device *pdev)
 		return err;
 	}
 
-	if (soc_is_exynos4212() || soc_is_exynos4412())
+	if (soc_is_exynos4212() || soc_is_exynos4412()) {
 		exynos4_usb_phy20_init(pdev);
-	else
+		if (usb_phy_control.lpa_entered)
+			exynos4_usb_phy1_suspend(pdev);
+	} else
 		exynos5_usb_phy20_init(pdev);
 
 	exynos_usb_mux_change(pdev, 0);
@@ -950,23 +964,25 @@ int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 {
 	int ret = 0;
 
+	spin_lock(&phy_lock);
 	if (!strcmp(pdev->name, "s5p-ehci"))
 		clear_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
 	else if (!strcmp(pdev->name, "s5p-ohci"))
 		clear_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
 
 	if (usb_phy_control.flags)
-		return ret;
+		goto done;
 
 	ret = exynos_usb_phy_clock_enable(pdev);
 	if (ret)
-		return ret;
+		goto done;
 
 	if (type == S5P_USB_PHY_HOST)
 		ret = exynos4_usb_phy1_suspend(pdev);
 
 	exynos_usb_phy_clock_disable(pdev);
-
+done:
+	spin_unlock(&phy_lock);
 	return ret;
 }
 
@@ -974,12 +990,15 @@ int s5p_usb_phy_resume(struct platform_device *pdev, int type)
 {
 	int ret = 0;
 
+	spin_lock(&phy_lock);
 	if (usb_phy_control.flags)
 		goto done;
 
 	ret = exynos_usb_phy_clock_enable(pdev);
-	if (ret)
+	if (ret) {
+		spin_unlock(&phy_lock);
 		return ret;
+	}
 
 	if (type == S5P_USB_PHY_HOST)
 		ret = exynos4_usb_phy1_resume(pdev);
@@ -991,6 +1010,7 @@ done:
 	else if (!strcmp(pdev->name, "s5p-ohci"))
 		set_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
 
+	spin_unlock(&phy_lock);
 	return ret;
 }
 
@@ -998,15 +1018,16 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 {
 	int ret = -EINVAL;
 
+	spin_lock(&phy_lock);
 	if (type == S5P_USB_PHY_HOST) {
+		ret = exynos_usb_phy_clock_enable(pdev);
+		if (ret)
+			goto done;
+
 		if (!strcmp(pdev->name, "s5p-ehci"))
 			set_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
 		else if (!strcmp(pdev->name, "s5p-ohci"))
 			set_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
-
-		ret = exynos_usb_phy_clock_enable(pdev);
-		if (ret)
-			return ret;
 
 		if (soc_is_exynos4210())
 			ret = exynos4_usb_phy1_init(pdev);
@@ -1019,7 +1040,7 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 	} else if (type == S5P_USB_PHY_DEVICE) {
 		ret = exynos_usb_phy_clock_enable(pdev);
 		if (ret)
-			return ret;
+			goto done;
 
 		if (soc_is_exynos4210())
 			ret = exynos4_usb_phy0_init(pdev);
@@ -1030,7 +1051,7 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 	} else if (type == S5P_USB_PHY_HSIC) {
 		ret = exynos_usb_phy_clock_enable(pdev);
 		if (ret)
-			return ret;
+			goto done;
 
 		if (soc_is_exynos4210())
 			ret = exynos4_usb_phy1_init(pdev);
@@ -1041,7 +1062,8 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 	} else if (type == S5P_USB_PHY_DRD) {
 		return exynos5_usb_phy30_init(pdev);
 	}
-
+done:
+	spin_unlock(&phy_lock);
 	return ret;
 }
 
@@ -1049,10 +1071,11 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 {
 	int ret = -EINVAL;
 
+	spin_lock(&phy_lock);
 	if (type == S5P_USB_PHY_HOST) {
 		ret = exynos_usb_phy_clock_enable(pdev);
 		if (ret)
-			return ret;
+			goto done;
 
 		if (soc_is_exynos4210())
 			ret = exynos4_usb_phy1_exit(pdev);
@@ -1061,16 +1084,15 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 		else
 			ret = exynos5_usb_phy20_exit(pdev);
 
-		exynos_usb_phy_clock_disable(pdev);
-
 		if (!strcmp(pdev->name, "s5p-ehci"))
 			clear_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
 		else if (!strcmp(pdev->name, "s5p-ohci"))
 			clear_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
+		exynos_usb_phy_clock_disable(pdev);
 	} else if (type == S5P_USB_PHY_DEVICE) {
 		ret = exynos_usb_phy_clock_enable(pdev);
 		if (ret)
-			return ret;
+			goto done;
 
 		if (soc_is_exynos4210())
 			ret = exynos4_usb_phy0_exit(pdev);
@@ -1081,7 +1103,7 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 	} else if (type == S5P_USB_PHY_HSIC) {
 		ret = exynos_usb_phy_clock_enable(pdev);
 		if (ret)
-			return ret;
+			goto done;
 
 		if (soc_is_exynos4210())
 			ret = exynos4_usb_phy1_exit(pdev);
@@ -1092,6 +1114,7 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 	} else if (type == S5P_USB_PHY_DRD) {
 		ret = exynos5_usb_phy30_exit(pdev);
 	}
-
+done:
+	spin_unlock(&phy_lock);
 	return ret;
 }
