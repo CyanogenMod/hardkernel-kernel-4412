@@ -1731,6 +1731,7 @@ static int kbase_device_suspend(struct device *dev)
 
 	/* Wait for the policy to suspend the device */
 	kbase_pm_wait_for_power_down(kbdev);
+
 #ifdef CONFIG_VITHAR
 	/* Turn off Host clock & power to Vithar */
 	kbase_platform_clock_off(dev);
