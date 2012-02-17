@@ -13,7 +13,22 @@
 #ifndef __FIMG2D_HELPER_H
 #define __FIMG2D_HELPER_H
 
+#include <linux/sched.h>
 #include "fimg2d.h"
+
+static inline char *perfname(enum perf_desc id)
+{
+	switch (id) {
+	case PERF_INNERCACHE:
+		return "INNER$";
+	case PERF_OUTERCACHE:
+		return "OUTER$";
+	case PERF_BLIT:
+		return "BITBLT";
+	default:
+		return "";
+	}
+}
 
 static inline char *imagename(enum image_object image)
 {
@@ -53,9 +68,13 @@ static inline int is_opaque(enum color_format fmt)
 	return 1;
 }
 
-static inline long elapsed_usec(struct timeval *start, struct timeval *end)
+static inline long elapsed_usec(struct fimg2d_context *ctx, enum perf_desc desc)
 {
-	long sec, usec, time;
+	struct fimg2d_perf *perf = &ctx->perf[desc];
+#ifdef PERF_TIMEVAL
+	struct timeval *start = &perf->start;
+	struct timeval *end = &perf->end;
+	long sec, usec;
 
 	sec = end->tv_sec - start->tv_sec;
 	if (end->tv_usec >= start->tv_usec) {
@@ -64,33 +83,44 @@ static inline long elapsed_usec(struct timeval *start, struct timeval *end)
 		usec = end->tv_usec + 1000000 - start->tv_usec;
 		sec--;
 	}
-	time = sec * 1000000 + usec;
-
-	return time; /* microseconds */
+	return sec * 1000000 + usec;
+#else
+	return (long)(perf->end - perf->start)/1000;
+#endif
 }
 
-static inline void perf_start(struct fimg2d_context *ctx,
-				enum perf_desc desc)
+static inline void perf_start(struct fimg2d_context *ctx, enum perf_desc desc)
 {
-	struct timeval time;
 	struct fimg2d_perf *perf = &ctx->perf[desc];
 
-	if (!(perf->valid & 0x01)) {
+	if (!perf->valid) {
+#ifdef PERF_TIMEVAL
+		struct timeval time;
 		do_gettimeofday(&time);
 		perf->start = time;
+#else
+		long time;
+		perf->start = sched_clock();
+		time = perf->start / 1000;
+#endif
 		perf->valid = 0x01;
 	}
 }
 
-static inline void perf_end(struct fimg2d_context *ctx,
-				enum perf_desc desc)
+static inline void perf_end(struct fimg2d_context *ctx, enum perf_desc desc)
 {
-	struct timeval time;
 	struct fimg2d_perf *perf = &ctx->perf[desc];
 
-	if (!(perf->valid & 0x10)) {
+	if (perf->valid == 0x01) {
+#ifdef PERF_TIMEVAL
+		struct timeval time;
 		do_gettimeofday(&time);
 		perf->end = time;
+#else
+		long time;
+		perf->end = sched_clock();
+		time = perf->end / 1000;
+#endif
 		perf->valid |= 0x10;
 	}
 }

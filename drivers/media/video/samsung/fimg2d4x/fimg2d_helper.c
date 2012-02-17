@@ -54,9 +54,9 @@ void perf_print(struct fimg2d_context *ctx, int seq_no)
 		perf = &ctx->perf[i];
 		if (perf->valid != 0x11)
 			continue;
-		time = elapsed_usec(&perf->start, &perf->end);
-		printk(KERN_INFO "[FIMG2D PERF %02d] ctx(0x%08x) seq(%d) %8ld   usec\n",
-				i, (unsigned int)ctx, seq_no, time);
+		time = elapsed_usec(ctx, i);
+		printk(KERN_INFO "[FIMG2D PERF (%8s)] ctx(0x%08x) seq(%d) %8ld   usec\n",
+				perfname(i), (unsigned int)ctx, seq_no, time);
 	}
 	printk(KERN_INFO "[FIMG2D PERF **]\n");
 }
@@ -68,18 +68,18 @@ void fimg2d_print_params(struct fimg2d_blit __user *u)
 	struct fimg2d_image *m, *ui[MAX_IMAGES] = image_table(u);
 	struct fimg2d_rect *r;
 
-	fimg2d_debug("op: %d\n", u->op);
-	fimg2d_debug("solid color: 0x%lx\n", p->solid_color);
-	fimg2d_debug("g_alpha: 0x%x\n", p->g_alpha);
-	fimg2d_debug("premultiplied: %d\n", p->premult);
-	fimg2d_debug("dither: %d\n", p->dither);
-	fimg2d_debug("rotate: %d\n", p->rotate);
-	fimg2d_debug("repeat mode: %d, pad color: 0x%lx\n",
+	printk(KERN_INFO "op: %d\n", u->op);
+	printk(KERN_INFO "solid color: 0x%lx\n", p->solid_color);
+	printk(KERN_INFO "g_alpha: 0x%x\n", p->g_alpha);
+	printk(KERN_INFO "premultiplied: %d\n", p->premult);
+	printk(KERN_INFO "dither: %d\n", p->dither);
+	printk(KERN_INFO "rotate: %d\n", p->rotate);
+	printk(KERN_INFO "repeat mode: %d, pad color: 0x%lx\n",
 			p->repeat.mode, p->repeat.pad_color);
-	fimg2d_debug("bluescreen mode: %d, bs_color: 0x%lx bg_color: 0x%lx\n",
+	printk(KERN_INFO "bluescreen mode: %d, bs_color: 0x%lx bg_color: 0x%lx\n",
 			p->bluscr.mode,
 			p->bluscr.bs_color, p->bluscr.bg_color);
-	fimg2d_debug("scaling mode: %d, src:%d,%d dst:%d,%d\n",
+	printk(KERN_INFO "scaling mode: %d, src:%d,%d dst:%d,%d\n",
 			p->scaling.mode,
 			p->scaling.src_w, p->scaling.src_h,
 			p->scaling.dst_w, p->scaling.dst_h);
@@ -91,18 +91,17 @@ void fimg2d_print_params(struct fimg2d_blit __user *u)
 		m = ui[i];
 		r = &m->rect;
 
-		fimg2d_debug("%s type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
+		printk(KERN_INFO "%s type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
 				imagename(i),
 				m->addr.type, m->addr.start, m->addr.size,
 				m->addr.cacheable);
-		fimg2d_debug("%s width: %d height: %d stride: %d order: %d format: %d\n",
+		printk(KERN_INFO "%s width: %d height: %d stride: %d order: %d format: %d\n",
 				imagename(i),
 				m->width, m->height, m->stride,
 				m->order, m->fmt);
-		fimg2d_debug("%s rect LT(%d,%d) RB(%d,%d)\n",
+		printk(KERN_INFO "%s rect LT(%d,%d) RB(%d,%d)\n",
 				imagename(i), r->x1, r->y1, r->x2, r->y2);
 	}
-
 }
 
 void fimg2d_dump_command(struct fimg2d_bltcmd *cmd)

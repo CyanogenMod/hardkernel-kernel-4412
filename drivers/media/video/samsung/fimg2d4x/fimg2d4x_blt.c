@@ -55,10 +55,6 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 	fimg2d_debug("enter blitter\n");
 
-#ifdef PERF_PROFILE
-	perf_end(ctx, PERF_WORKQUE);
-#endif
-
 #ifdef CONFIG_PM_RUNTIME
 	pm_runtime_get_sync(info->dev);
 	fimg2d_debug("pm_runtime_get_sync\n");
@@ -73,13 +69,9 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 		}
 
 		atomic_set(&info->busy, 1);
-#ifdef PERF_PROFILE
-		perf_start(cmd->ctx, PERF_SFR);
-#endif
+
 		info->configure(info, cmd);
-#ifdef PERF_PROFILE
-		perf_end(cmd->ctx, PERF_SFR);
-#endif
+
 		if (cmd->image[IDST].addr.type != ADDR_PHYS) {
 			pgd = (unsigned long *)ctx->mm->pgd;
 			s5p_sysmmu_enable(info->dev, (unsigned long)virt_to_phys(pgd));
@@ -94,8 +86,8 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 #endif
 		/* start blit */
 		info->run(info);
-
 		fimg2d4x_blit_wait(info, cmd);
+
 #ifdef PERF_PROFILE
 		perf_end(cmd->ctx, PERF_BLIT);
 #endif

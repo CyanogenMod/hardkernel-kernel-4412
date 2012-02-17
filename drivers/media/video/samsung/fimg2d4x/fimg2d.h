@@ -394,24 +394,31 @@ struct fimg2d_blit {
 
 #ifdef __KERNEL__
 
-/* enables definition to estimate performance */
+/**
+ * Enables definition to estimate performance.
+ * These debug codes includes printk, so perf
+ * data are unreliable under multi instance environment
+ */
 #undef PERF_PROFILE
+#define PERF_TIMEVAL
 
 enum perf_desc {
 	PERF_INNERCACHE,
-	PERF_WORKQUE,
 	PERF_OUTERCACHE,
-	PERF_SFR,
 	PERF_BLIT,
-	PERF_DRV_ALL,	/* a whole driver */
 	PERF_END
 };
 #define MAX_PERF_DESCS		PERF_END
 
 struct fimg2d_perf {
 	int valid;
+#ifdef PERF_TIMEVAL
 	struct timeval start;
 	struct timeval end;
+#else
+	unsigned long long start;
+	unsigned long long end;
+#endif
 };
 
 /**

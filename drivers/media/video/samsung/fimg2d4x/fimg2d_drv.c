@@ -114,9 +114,6 @@ static void fimg2d_request_bitblt(struct fimg2d_context *ctx)
 	if (!atomic_read(&info->active)) {
 		atomic_set(&info->active, 1);
 		fimg2d_debug("dispatch ctx %p to kernel thread\n", ctx);
-#ifdef PERF_PROFILE
-		perf_start(ctx, PERF_WORKQUE);
-#endif
 		queue_work(info->work_q, &fimg2d_work);
 	}
 	fimg2d_context_wait(ctx);
@@ -189,14 +186,11 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case FIMG2D_BITBLT_BLIT:
 		fimg2d_debug("FIMG2D_BITBLT_BLIT ctx: %p\n", ctx);
 		u.blit = (struct fimg2d_blit *)arg;
-#ifdef PERF_PROFILE
-		perf_start(ctx, PERF_DRV_ALL);
-#endif
+
 		ret = fimg2d_add_command(info, ctx, u.blit);
 		if (!ret)
 			fimg2d_request_bitblt(ctx);
 #ifdef PERF_PROFILE
-		perf_end(ctx, PERF_DRV_ALL);
 		perf_print(ctx, u.blit->seq_no);
 		perf_clear(ctx);
 #endif
