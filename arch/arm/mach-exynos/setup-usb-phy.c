@@ -909,7 +909,7 @@ static int exynos5_usb_phy30_init(struct platform_device *pdev)
 	writel(0x087fffc0, EXYNOS_USB3_LINKSYSTEM);
 	writel(0x00000000, EXYNOS_USB3_PHYREG0);
 	writel(0x24d4e6e4, EXYNOS_USB3_PHYPARAM0);
-	writel(0x03fff815, EXYNOS_USB3_PHYPARAM1);
+	writel(0x03fff820, EXYNOS_USB3_PHYPARAM1);
 	writel(0x00000000, EXYNOS_USB3_PHYBATCHG);
 	writel(0x00000000, EXYNOS_USB3_PHYRESUME);
 	/* REVISIT : Over-current pin is inactive on SMDK5250 */
@@ -1059,9 +1059,8 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 			ret = exynos_usb_hsic_init(pdev);
 
 		exynos_usb_phy_clock_disable(pdev);
-	} else if (type == S5P_USB_PHY_DRD) {
-		return exynos5_usb_phy30_init(pdev);
-	}
+	} else if (type == S5P_USB_PHY_DRD)
+		ret = exynos5_usb_phy30_init(pdev);
 done:
 	spin_unlock(&phy_lock);
 	return ret;
@@ -1111,9 +1110,8 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 			ret = exynos_usb_hsic_exit(pdev);
 
 		exynos_usb_phy_clock_disable(pdev);
-	} else if (type == S5P_USB_PHY_DRD) {
+	} else if (type == S5P_USB_PHY_DRD)
 		ret = exynos5_usb_phy30_exit(pdev);
-	}
 done:
 	spin_unlock(&phy_lock);
 	return ret;
