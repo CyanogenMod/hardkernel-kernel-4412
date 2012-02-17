@@ -681,7 +681,7 @@ void MOCKABLE(kbase_pm_clock_on)(kbase_device *kbdev)
 {
 #ifdef CONFIG_VITHAR_RT_PM
 	//kbase_device_runtime_get_sync(kbdev->osdev.dev);
-	kbase_device_runtime_resume(kbdev->osdev.dev);
+	//kbase_device_runtime_resume(kbdev->osdev.dev);
 #endif
 
 	/* The GPU is going to transition, so unset the wait queues until the policy
@@ -700,7 +700,7 @@ void MOCKABLE(kbase_pm_clock_off)(kbase_device *kbdev)
 
 #ifdef CONFIG_VITHAR_RT_PM
 	//kbase_device_runtime_put_sync(kbdev->osdev.dev);
-	kbase_device_runtime_suspend(kbdev->osdev.dev);
+	//kbase_device_runtime_suspend(kbdev->osdev.dev);
 #endif
 }
 
