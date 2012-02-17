@@ -303,7 +303,6 @@ void exynos_request_apply(unsigned long freq, bool fix, bool disable)
 {
 	struct opp *opp = bus_ctrl.data->curr_opp;
 	unsigned int index;
-	unsigned int tmp;
 
 	mutex_lock(&busfreq_lock);
 
@@ -318,25 +317,14 @@ void exynos_request_apply(unsigned long freq, bool fix, bool disable)
 	}
 
 	if (fix) {
-		tmp = __raw_readl(EXYNOS4_CLKSRC_RIGHTBUS);
 		if (disable) {
-			opp_disable(bus_ctrl.data->dev, opp_get_freq(bus_ctrl.data->force_opp));
 			bus_ctrl.data->force_opp = NULL;
 			bus_ctrl.data->curr_opp = bus_ctrl.data->max_opp;
 			opp = bus_ctrl.data->curr_opp;
-			tmp &= ~0x1;
 		} else {
-			opp_enable(bus_ctrl.data->dev, freq);
 			opp = opp_find_freq_exact(bus_ctrl.data->dev, freq, true);
 			bus_ctrl.data->force_opp = opp;
-			tmp |= 0x1;
 		}
-		__raw_writel(tmp, EXYNOS4_CLKSRC_RIGHTBUS);
-
-		do {
-			tmp = __raw_readl(EXYNOS4_CLKMUX_STAT_RIGHTBUS);
-		} while (tmp & 0x4);
-
 	} else {
 		opp = opp_find_freq_ceil(bus_ctrl.data->dev, &freq);
 	}
