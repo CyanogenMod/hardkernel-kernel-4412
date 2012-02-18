@@ -852,51 +852,52 @@ static int exynos_ss_udc_process_set_sel(struct exynos_ss_udc *udc)
 }
 
 /**
- * exynos_ss_udc_process_set_test_mode - process request TEST_MODE
+ * exynos_ss_udc_set_test_mode - set TEST_MODE feature
  * @udc: The device state.
+ * @wIndex: The request wIndex field.
  */
-static int exynos_ss_udc_process_set_test_mode(struct exynos_ss_udc *udc, u16 windex)
+static int exynos_ss_udc_set_test_mode(struct exynos_ss_udc *udc,
+				       u16 wIndex)
 {
-	u8 selector = (windex >> 8) & TEST_SELECTOR_MASK;
+	u8 selector = wIndex >> 8;
+	char *mode;
 	u32 reg;
-
-	reg = readl(udc->regs + EXYNOS_USB3_DCTL) & (~EXYNOS_USB3_DCTL_TstCtl_MASK);
+	int ret = 0;
 
 	switch (selector) {
 	case TEST_J:
-		dev_info(udc->dev, "Test mode selector is"
-			" TEST J\n");
-		reg |= EXYNOS_USB3_DCTL_TstCtl(0x1);
+		mode = "TEST J";
 		break;
-
 	case TEST_K:
-		dev_info(udc->dev, "Test mode selector is"
-			" TEST K\n");
-		reg |= EXYNOS_USB3_DCTL_TstCtl(0x2);
+		mode = "TEST K";
 		break;
-
 	case TEST_SE0_NAK:
-		dev_info(udc->dev, "Test mode selector is"
-			" TEST SE0 NAK\n");
-		reg |= EXYNOS_USB3_DCTL_TstCtl(0x3);
+		mode = "TEST SE0 NAK";
 		break;
-
 	case TEST_PACKET:
-		dev_info(udc->dev, "Test mode selector is"
-			" TEST PACKET\n");
-		reg |= EXYNOS_USB3_DCTL_TstCtl(0x4);
+		mode = "TEST PACKET";
 		break;
-
 	case TEST_FORCE_EN:
-		dev_info(udc->dev, "Test mode selector is"
-			" TEST FORCE EN\n");
-		reg |= EXYNOS_USB3_DCTL_TstCtl(0x5);
+		mode = "TEST FORCE EN";
+		break;
+	default:
+		mode = "unknown";
+		ret = -EINVAL;
 		break;
 	}
 
-	writel(reg, udc->regs + EXYNOS_USB3_DCTL);
+	dev_info(udc->dev, "Test mode selector is %s\n", mode);
 
-	return 1;
+	if (ret == 0) {
+		reg = readl(udc->regs + EXYNOS_USB3_DCTL) &
+				~EXYNOS_USB3_DCTL_TstCtl_MASK;
+
+		reg |= EXYNOS_USB3_DCTL_TstCtl(selector);
+
+		writel(reg, udc->regs + EXYNOS_USB3_DCTL);
+	}
+
+	return ret;
 }
 
 /**
@@ -976,14 +977,23 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 					     struct usb_ctrlrequest *ctrl)
 {
 	struct exynos_ss_udc_ep *udc_ep;
+	int ret;
+	u16 wIndex;
 
 	dev_dbg(udc->dev, "%s\n", __func__);
+
+	wIndex = le16_to_cpu(ctrl->wIndex);
 
 	switch (ctrl->bRequestType & USB_RECIP_MASK) {
 	case USB_RECIP_DEVICE:
 		switch (le16_to_cpu(ctrl->wValue)) {
 		case USB_DEVICE_TEST_MODE:
-			exynos_ss_udc_process_set_test_mode(udc, le16_to_cpu(ctrl->wIndex));
+			if (wIndex & 0xff)
+				return -EINVAL;
+
+			ret = exynos_ss_udc_set_test_mode(udc, wIndex);
+			if (ret < 0)
+				return ret;
 			break;
 		case USB_DEVICE_U1_ENABLE:
 			/* Temporarily disabled because of HW bug */
@@ -1007,10 +1017,10 @@ static int exynos_ss_udc_process_set_feature(struct exynos_ss_udc *udc,
 		break;
 
 	case USB_RECIP_ENDPOINT:
-		udc_ep = ep_from_windex(udc, le16_to_cpu(ctrl->wIndex));
+		udc_ep = ep_from_windex(udc, wIndex);
 		if (!udc_ep) {
 			dev_dbg(udc->dev, "%s: no endpoint for 0x%04x\n",
-					  __func__, le16_to_cpu(ctrl->wIndex));
+					  __func__, wIndex);
 			return -ENOENT;
 		}
 
