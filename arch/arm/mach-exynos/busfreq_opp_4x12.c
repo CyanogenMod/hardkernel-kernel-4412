@@ -93,7 +93,7 @@ static unsigned int exynos4212_mif_volt[1][LV_END] = {
 
 static unsigned int exynos4212_int_volt[1][LV_END] = {
 	/* 266      200       200     160    160      133     100 */
-	{1050000, 1050000, 1050000, 950000, 950000, 900000, 875000}, /* ASV0 */
+	{1100000, 1050000, 1050000, 950000, 950000, 900000, 875000}, /* ASV0 */
 };
 
 static unsigned int exynos4412_mif_volt[ASV_GROUP][LV_END] = {
