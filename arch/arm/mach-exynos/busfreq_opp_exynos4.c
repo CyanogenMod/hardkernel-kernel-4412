@@ -54,6 +54,7 @@ struct busfreq_control {
 	struct opp *opp_lock;
 	struct device *dev;
 	struct busfreq_data *data;
+	bool init_done;
 };
 
 static struct busfreq_control bus_ctrl;
@@ -301,10 +302,15 @@ static struct attribute *busfreq_attributes[] = {
 
 void exynos_request_apply(unsigned long freq, bool fix, bool disable)
 {
-	struct opp *opp = bus_ctrl.data->curr_opp;
+	struct opp *opp;
 	unsigned int index;
 
 	mutex_lock(&busfreq_lock);
+
+	if (!bus_ctrl.init_done)
+		goto out;
+
+	opp = bus_ctrl.data->curr_opp;
 
 	if (bus_ctrl.data->force_opp && fix && !disable) {
 		pr_debug("Fix lock already exist.\n");
@@ -423,6 +429,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	}
 
 	data->use = true;
+	bus_ctrl.init_done = true;
 
 	if (register_reboot_notifier(&data->exynos_reboot_notifier))
 		pr_err("Failed to setup reboot notifier\n");
