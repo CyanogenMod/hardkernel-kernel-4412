@@ -14,20 +14,20 @@
 #include "fimg2d_cache.h"
 #include "fimg2d_helper.h"
 
-static int fmt2bpp[MSK_FORMAT_END+1] = {
+static int bpptable[MSK_FORMAT_END+1] = {
 	32, 32,	16, 16, 16, 16, 16, 24,	/* rgb */
 	8, 8, 8, 8, 8, 0,		/* yuv */
 	1, 4, 8, 16, 16, 16, 32, 0,	/* msk */
 };
 
-int point_to_offset(int point, enum color_format cf)
+int pixel2offset(int pixel, enum color_format cf)
 {
-	return (point * fmt2bpp[cf]) >> 3;
+	return (pixel * bpptable[cf]) >> 3;
 }
 
-int width_to_bytes(int width, enum color_format cf)
+int width2bytes(int width, enum color_format cf)
 {
-	int bpp = fmt2bpp[cf];
+	int bpp = bpptable[cf];
 
 	switch (bpp) {
 	case 1:

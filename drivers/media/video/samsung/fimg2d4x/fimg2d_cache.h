@@ -44,7 +44,7 @@ enum pt_status {
 	PT_FAULT,
 };
 
-static inline bool is_inner_flushall(unsigned int size)
+static inline bool is_inner_flushall(size_t size)
 {
 	if (soc_is_exynos5250())
 		return (size >= SZ_1M * 25) ? true : false;
@@ -52,9 +52,29 @@ static inline bool is_inner_flushall(unsigned int size)
 		return (size >= L1_CACHE_SIZE) ? true : false;
 }
 
-static inline bool is_outer_flushall(unsigned int size)
+static inline bool is_outer_flushall(size_t size)
 {
 	return (size >= L2_CACHE_SIZE) ? true : false;
+}
+
+static inline bool is_inner_flushrange(size_t hole)
+{
+	if (!soc_is_exynos5250())
+		return true;
+	else {
+		if (hole < LINE_FLUSH_THRESHOLD)
+			return true;
+		else
+			return false;	/* line-by-line flush */
+	}
+}
+
+static inline bool is_outer_flushrange(size_t hole)
+{
+	if (hole < LINE_FLUSH_THRESHOLD)
+		return true;
+	else
+		return false;	/* line-by-line flush */
 }
 
 static inline void fimg2d_dma_sync_inner(unsigned long addr, size_t size, int dir)

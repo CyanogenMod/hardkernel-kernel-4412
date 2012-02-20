@@ -86,24 +86,21 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 
 static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 {
-	int i, dir;
 	struct mm_struct *mm = cmd->ctx->mm;
 	struct fimg2d_image *m;
 	struct fimg2d_rect *r;
 	struct fimg2d_dma *c;
 	enum pt_status pt;
-#ifdef CONFIG_OUTER_CACHE
-	int clip_x, clip_w, clip_h;
-	int clip_size, clip_start, y;
-#endif
+	int clip_x, clip_w, clip_h, y, dir, i;
+	unsigned long clip_start;
 
 	for (i = 0; i < MAX_IMAGES; i++) {
 		m = &cmd->image[i];
-		if (m->addr.type == ADDR_NONE)
-			continue;
-
 		c = &cmd->dma[i];
 		r = &m->rect;
+
+		if (m->addr.type == ADDR_NONE)
+			continue;
 
 		/* caculate horizontally clipped region */
 		c->addr = m->addr.start + (m->stride * r->y1);
@@ -129,7 +126,12 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 		flush_all_cpu_caches();
 	else {
 		for (i = 0; i < MAX_IMAGES; i++) {
+			m = &cmd->image[i];
 			c = &cmd->dma[i];
+			r = &m->rect;
+
+			if (m->addr.type == ADDR_NONE)
+				continue;
 
 			if (c->cached) {
 				if (i == IMAGE_DST)
@@ -137,7 +139,18 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 				else
 					dir = DMA_TO_DEVICE;
 
-				fimg2d_dma_sync_inner(c->addr, c->cached, dir);
+				clip_w = width2bytes(r->x2 - r->x1, m->fmt);
+
+				if (is_inner_flushrange(m->stride - clip_w))
+					fimg2d_dma_sync_inner(c->addr, c->cached, dir);
+				else {
+					clip_x = pixel2offset(r->x1, m->fmt);
+					clip_h = r->y2 - r->y1;
+					for (y = 0; y < clip_h; y++) {
+						clip_start = c->addr + (m->stride * y) + clip_x;
+						fimg2d_dma_sync_inner(clip_start, clip_w, dir);
+					}
+				}
 			}
 		}
 	}
@@ -154,30 +167,29 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 	else {
 		for (i = 0; i < MAX_IMAGES; i++) {
 			m = &cmd->image[i];
-			if (m->addr.type == ADDR_NONE)
-				continue;
-
 			c = &cmd->dma[i];
 			r = &m->rect;
 
-			if (i == IMAGE_DST)
-				dir = CACHE_FLUSH;
-			else
-				dir = CACHE_CLEAN;
+			if (m->addr.type == ADDR_NONE)
+				continue;
 
+			/* clean pagetable */
 			if (m->addr.type == ADDR_USER)
 				fimg2d_clean_outer_pagetable(mm, c->addr, c->size);
 
 			if (c->cached) {
-				clip_x = point_to_offset(r->x1, m->fmt);
-				clip_w = width_to_bytes(r->x2 - r->x1, m->fmt);
-				clip_h = r->y2 - r->y1;
-				clip_size = clip_w * clip_h;
+				if (i == IMAGE_DST)
+					dir = CACHE_FLUSH;
+				else
+					dir = CACHE_CLEAN;
 
-				if ((m->stride - clip_w) < LINE_FLUSH_THRESHOLD)
+				clip_w = width2bytes(r->x2 - r->x1, m->fmt);
+
+				if (is_outer_flushrange(m->stride - clip_w))
 					fimg2d_dma_sync_outer(mm, c->addr, c->cached, dir);
 				else {
-					/* line-by-line cache flush */
+					clip_x = pixel2offset(r->x1, m->fmt);
+					clip_h = r->y2 - r->y1;
 					for (y = 0; y < clip_h; y++) {
 						clip_start = c->addr + (m->stride * y) + clip_x;
 						fimg2d_dma_sync_outer(mm, clip_start, clip_w, dir);

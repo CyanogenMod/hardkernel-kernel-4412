@@ -132,8 +132,8 @@ static inline void perf_clear(struct fimg2d_context *ctx)
 		ctx->perf[i].valid = 0;
 }
 
-int point_to_offset(int point, enum color_format cf);
-int width_to_bytes(int pixels, enum color_format cf);
+int pixel2offset(int pixel, enum color_format cf);
+int width2bytes(int width, enum color_format cf);
 void perf_print(struct fimg2d_context *ctx, int seq_no);
 void fimg2d_print_params(struct fimg2d_blit __user *u);
 void fimg2d_dump_command(struct fimg2d_bltcmd *cmd);
