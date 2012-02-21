@@ -883,8 +883,18 @@ static int gsc_capture_streamoff(struct file *file, void *priv,
 			    enum v4l2_buf_type type)
 {
 	struct gsc_dev *gsc = video_drvdata(file);
-	struct v4l2_subdev *sd = gsc->pipeline.sensor;
+	struct v4l2_subdev *sd;
+	struct gsc_pipeline *p = &gsc->pipeline;
 	int ret;
+
+	if (p->disp) {
+		sd = gsc->pipeline.disp;
+	} else if (p->sensor) {
+		sd = gsc->pipeline.sensor;
+	} else {
+		gsc_err("Error pipeline");
+		return -EPIPE;
+	}
 
 	ret = vb2_streamoff(&gsc->cap.vbq, type);
 	if (ret == 0)
