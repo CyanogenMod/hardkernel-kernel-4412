@@ -157,16 +157,17 @@ int iovmm_activate(struct device *dev)
 {
 	struct s5p_iovmm *vmm;
 	int ret = 0;
+	unsigned long flags;
 
 	vmm = find_iovmm(dev);
 	if (WARN_ON(!vmm))
 		return -EINVAL;
 
-	spin_lock(&vmm->lock);
+	spin_lock_irqsave(&vmm->lock, flags);
 	ret = iommu_attach_device(vmm->domain, vmm->dev);
 	if (!ret)
 		vmm->active = true;
-	spin_unlock(&vmm->lock);
+	spin_unlock_irqrestore(&vmm->lock, flags);
 
 	return ret;
 }
