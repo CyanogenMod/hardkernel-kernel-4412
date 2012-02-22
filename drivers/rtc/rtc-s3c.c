@@ -222,20 +222,14 @@ static int s3c_rtc_setalarm(struct device *dev, struct rtc_wkalrm *alrm)
 	alrm_en = readb(base + S3C2410_RTCALM) & S3C2410_RTCALM_ALMEN;
 	writeb(0x00, base + S3C2410_RTCALM);
 
-	if (tm->tm_sec < 60 && tm->tm_sec >= 0) {
-		alrm_en |= S3C2410_RTCALM_SECEN;
-		writeb(bin2bcd(tm->tm_sec), base + S3C2410_ALMSEC);
-	}
+	alrm_en |= S3C2410_RTCALM_SECEN;
+	writeb(bin2bcd(tm->tm_sec), base + S3C2410_ALMSEC);
 
-	if (tm->tm_min < 60 && tm->tm_min >= 0) {
-		alrm_en |= S3C2410_RTCALM_MINEN;
-		writeb(bin2bcd(tm->tm_min), base + S3C2410_ALMMIN);
-	}
+	alrm_en |= S3C2410_RTCALM_MINEN;
+	writeb(bin2bcd(tm->tm_min), base + S3C2410_ALMMIN);
 
-	if (tm->tm_hour < 24 && tm->tm_hour >= 0) {
-		alrm_en |= S3C2410_RTCALM_HOUREN;
-		writeb(bin2bcd(tm->tm_hour), base + S3C2410_ALMHOUR);
-	}
+	alrm_en |= S3C2410_RTCALM_HOUREN;
+	writeb(bin2bcd(tm->tm_hour), base + S3C2410_ALMHOUR);
 
 	pr_debug("setting S3C2410_RTCALM to %08x\n", alrm_en);
 
