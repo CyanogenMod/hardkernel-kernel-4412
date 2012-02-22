@@ -20,7 +20,7 @@
 #define JPEG_WATCHDOG_CNT 10
 #define JPEG_WATCHDOG_INTERVAL   1000
 #if defined(CONFIG_BUSFREQ_OPP)
-#define BUSFREQ_400MHZ	400000
+#define BUSFREQ_400MHZ	400266
 #endif
 
 #endif /*__JPEG_DEV_H__*/
