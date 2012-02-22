@@ -349,7 +349,7 @@ void fimg2d4x_enable_dithering(struct fimg2d_control *info)
  * @n: numerator
  * @d: denominator
  */
-inline static unsigned long scale_factor_to_fixed16(int n, int d)
+static inline unsigned long scale_factor_to_fixed16(int n, int d)
 {
 	int i;
 	u32 fixed16;
