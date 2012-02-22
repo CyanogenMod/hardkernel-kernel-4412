@@ -46,6 +46,11 @@
 #include "fimc-is-cmd.h"
 #include "fimc-is-err.h"
 
+#if defined(TN_MIDAS_PROJECT)
+extern struct class *camera_class;
+struct device *s5k6a3_dev; /*sys/class/camera/front*/
+#endif
+
 struct fimc_is_dev *to_fimc_is_dev(struct v4l2_subdev *sdev)
 {
 	return container_of(sdev, struct fimc_is_dev, sd);
@@ -242,6 +247,57 @@ static irqreturn_t fimc_is_irq_handler1(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#if defined(TN_MIDAS_PROJECT)
+static ssize_t s5k6a3_camera_front_camtype_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	char type[] = "SLSI_S5K6A3_FIMC_IS";
+
+	return sprintf(buf, "%s\n", type);
+}
+
+static ssize_t s5k6a3_camera_front_camfw_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	char fw_sd[7];
+	char fw_ori[7];
+	struct file *fp_sd;
+	struct file *fp_ori;
+
+	mm_segment_t old_fs;
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	fp_ori = filp_open("/vendor/firmware/fimc_is_fw.bin", O_RDONLY, 0);
+
+	if (IS_ERR(fp_ori))
+		return sprintf(buf, "%s\n", "Error!!!");
+
+	vfs_llseek(fp_ori, -7, SEEK_END);
+	vfs_read(fp_ori, (char __user *)fw_ori, 7, &fp_ori->f_pos);
+	fw_ori[6] = '\0';
+	filp_close(fp_ori, current->files);
+
+	fp_sd = filp_open("/sdcard/fimc_is_fw.bin", O_RDONLY, 0);
+
+	if (IS_ERR(fp_sd))
+		return sprintf(buf, "%s %s\n", fw_ori, fw_ori);
+	else {
+		vfs_llseek(fp_sd, -7, SEEK_END);
+		vfs_read(fp_sd, (char __user *)fw_sd, 7, &fp_sd->f_pos);
+		fw_sd[6] = '\0';
+		filp_close(fp_sd, current->files);
+	}
+	set_fs(old_fs);
+	return sprintf(buf, "%s %s\n", fw_ori, fw_sd);
+
+}
+
+static DEVICE_ATTR(front_camtype, S_IRUGO,
+		s5k6a3_camera_front_camtype_show, NULL);
+static DEVICE_ATTR(front_camfw, S_IRUGO, s5k6a3_camera_front_camfw_show, NULL);
+#endif
+
 static int fimc_is_probe(struct platform_device *pdev)
 {
 	struct exynos4_platform_fimc_is *pdata;
@@ -399,7 +455,7 @@ static int fimc_is_probe(struct platform_device *pdev)
 
 	pm_runtime_enable(&pdev->dev);
 
-#ifdef CONFIG_BUSFREQ_OPP
+#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
 	/* To lock bus frequency in OPP mode */
 	dev->bus_dev = dev_get("exynos-busfreq");
 #endif
@@ -418,6 +474,23 @@ static int fimc_is_probe(struct platform_device *pdev)
 	dev->af.af_state = FIMC_IS_AF_IDLE;
 	dev->af.mode = IS_FOCUS_MODE_IDLE;
 	dev->low_power_mode = false;
+
+#if defined(TN_MIDAS_PROJECT)
+	s5k6a3_dev = device_create(camera_class, NULL, 0, NULL, "front");
+	if (IS_ERR(s5k6a3_dev)) {
+		printk(KERN_ERR "failed to create device!\n");
+	} else {
+		if (device_create_file(s5k6a3_dev, &dev_attr_front_camtype)
+				< 0) {
+			printk(KERN_ERR "failed to create device file, %s\n",
+				dev_attr_front_camtype.attr.name);
+		}
+		if (device_create_file(s5k6a3_dev, &dev_attr_front_camfw) < 0) {
+			printk(KERN_ERR "failed to create device file, %s\n",
+				dev_attr_front_camfw.attr.name);
+		}
+	}
+#endif
 	printk(KERN_INFO "FIMC-IS probe completed\n");
 	return 0;
 
@@ -460,14 +533,52 @@ static int fimc_is_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
+	int ret = 0;
 
 	printk(KERN_INFO "FIMC_IS suspend\n");
-	mutex_lock(&is_dev->lock);
-	if (!test_bit(IS_PWR_ST_POWEROFF, &is_dev->power)) {
-		err("not power off state\n");
-		fimc_is_s_power(sd, false);
+	if (!test_bit(IS_ST_INIT_DONE, &is_dev->state)) {
+		printk(KERN_INFO "FIMC_IS suspend end\n");
+		return 0;
 	}
-	mutex_unlock(&is_dev->lock);
+	/* If stream was not stopped, stop streaming */
+	if (!test_bit(IS_ST_STREAM_OFF, &is_dev->state)) {
+		err("Not stream off state\n");
+		clear_bit(IS_ST_STREAM_OFF, &is_dev->state);
+		fimc_is_hw_set_stream(is_dev, false);
+		ret = wait_event_timeout(is_dev->irq_queue1,
+				test_bit(IS_ST_STREAM_OFF, &is_dev->state),
+				(HZ));
+		if (!ret) {
+			err("wait timeout : Stream off\n");
+			fimc_is_hw_set_low_poweroff(is_dev, true);
+		}
+	}
+	/* If the power is not off state, turn off the power */
+	if (!test_bit(IS_PWR_ST_POWEROFF, &is_dev->power)) {
+		err("Not power off state\n");
+		if (!test_bit(IS_PWR_SUB_IP_POWER_OFF, &is_dev->power)) {
+			fimc_is_hw_subip_poweroff(is_dev);
+			ret = wait_event_timeout(is_dev->irq_queue1,
+				test_bit(IS_PWR_SUB_IP_POWER_OFF,
+				&is_dev->power), FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				err("wait timeout : %s\n", __func__);
+				fimc_is_hw_set_low_poweroff(is_dev, true);
+			}
+		}
+		fimc_is_hw_a5_power(is_dev, 0);
+		pm_runtime_put_sync(dev);
+
+		is_dev->sensor.id = 0;
+		is_dev->p_region_index1 = 0;
+		is_dev->p_region_index2 = 0;
+		atomic_set(&is_dev->p_region_num, 0);
+		is_dev->state = 0;
+		set_bit(IS_ST_IDLE, &is_dev->state);
+		is_dev->power = 0;
+		is_dev->af.af_state = FIMC_IS_AF_IDLE;
+		set_bit(IS_PWR_ST_POWEROFF, &is_dev->power);
+	}
 	printk(KERN_INFO "FIMC_IS suspend end\n");
 	return 0;
 }
@@ -492,14 +603,13 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
 	printk(KERN_INFO "FIMC_IS runtime suspend\n");
-	mutex_lock(&is_dev->lock);
 	if (is_dev->pdata->clk_off) {
 		is_dev->pdata->clk_off(pdev);
 	} else {
 		printk(KERN_ERR "#### failed to Clock OFF ####\n");
 		return -EINVAL;
 	}
-#ifdef CONFIG_BUSFREQ_OPP
+#if defined(CONFIG_BUSFREQ_OPP) || defined(CONFIG_BUSFREQ_LOCK_WRAPPER)
 	/* Unlock bus frequency */
 	dev_unlock(is_dev->bus_dev, dev);
 #endif
@@ -507,6 +617,7 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	if (is_dev->alloc_ctx)
 		fimc_is_mem_suspend(is_dev->alloc_ctx);
 #endif
+	mutex_lock(&is_dev->lock);
 	clear_bit(IS_PWR_ST_POWERON, &is_dev->power);
 	set_bit(IS_PWR_ST_POWEROFF, &is_dev->power);
 	mutex_unlock(&is_dev->lock);
@@ -521,7 +632,6 @@ static int fimc_is_runtime_resume(struct device *dev)
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
 	printk(KERN_INFO "FIMC_IS runtime resume\n");
-	mutex_lock(&is_dev->lock);
 	if (is_dev->pdata->clk_cfg) {
 		is_dev->pdata->clk_cfg(pdev);
 	} else {
@@ -539,6 +649,7 @@ static int fimc_is_runtime_resume(struct device *dev)
 	if (is_dev->alloc_ctx)
 		fimc_is_mem_resume(is_dev->alloc_ctx);
 #endif
+	mutex_lock(&is_dev->lock);
 	clear_bit(IS_PWR_ST_POWEROFF, &is_dev->power);
 	clear_bit(IS_PWR_SUB_IP_POWER_OFF, &is_dev->power);
 	set_bit(IS_PWR_ST_POWERON, &is_dev->power);

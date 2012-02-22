@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 119  /* IS REGION VERSION 1.19 */
+#define IS_REGION_VER 120  /* IS REGION VERSION 1.20 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -1163,7 +1163,8 @@ enum fd_config_orientation {
 struct param_control {
 	u32	cmd;
 	u32	bypass;
-	u32	reserved[PARAMETER_MAX_MEMBER-3];
+	u32	first_drop_frames; /* only valid at ISP */
+	u32	reserved[PARAMETER_MAX_MEMBER-4];
 	u32	err;
 };
 
