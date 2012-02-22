@@ -280,16 +280,10 @@ struct fimg2d_dma {
 
 /**
  * @start: start address or unique id of image
- * @size: whole length of allocated image
- * @cacheable: memory is cacheable
- * @pinnable: memory is pinnable. currently not supported.
  */
 struct fimg2d_addr {
 	enum addr_space type;
 	unsigned long start;
-	size_t size;
-	int cacheable;
-	int pinnable;
 };
 
 struct fimg2d_rect {
@@ -335,6 +329,7 @@ struct fimg2d_bluscr {
 /**
  * @plane2: address info for CbCr in YCbCr 2plane mode
  * @rect: crop/clip rect
+ * @need_cacheopr: true if cache coherency is required
  */
 struct fimg2d_image {
 	int width;
@@ -345,6 +340,7 @@ struct fimg2d_image {
 	struct fimg2d_addr addr;
 	struct fimg2d_addr plane2;
 	struct fimg2d_rect rect;
+	bool need_cacheopr;
 };
 
 /**

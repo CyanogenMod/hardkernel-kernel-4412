@@ -113,7 +113,7 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 				return -1;
 		}
 
-		if (m->addr.cacheable && i != IMAGE_TMP) {
+		if (m->need_cacheopr && i != IMAGE_TMP) {
 			c->cached = c->size;
 			cmd->dma_all += c->cached;
 		}

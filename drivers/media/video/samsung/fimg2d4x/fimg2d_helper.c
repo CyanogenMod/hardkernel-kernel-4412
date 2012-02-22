@@ -91,16 +91,13 @@ void fimg2d_print_params(struct fimg2d_blit __user *u)
 		m = ui[i];
 		r = &m->rect;
 
-		printk(KERN_INFO "%s type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
-				imagename(i),
-				m->addr.type, m->addr.start, m->addr.size,
-				m->addr.cacheable);
+		printk(KERN_INFO "%s type: %d addr: 0x%lx\n",
+				imagename(i), m->addr.type, m->addr.start);
 		printk(KERN_INFO "%s width: %d height: %d stride: %d order: %d format: %d\n",
-				imagename(i),
-				m->width, m->height, m->stride,
-				m->order, m->fmt);
+				imagename(i), m->width, m->height, m->stride, m->order, m->fmt);
 		printk(KERN_INFO "%s rect LT(%d,%d) RB(%d,%d)\n",
 				imagename(i), r->x1, r->y1, r->x2, r->y2);
+		printk(KERN_INFO "%s cacheopr: %d\n", imagename(i), m->need_cacheopr);
 	}
 }
 
@@ -121,8 +118,7 @@ void fimg2d_dump_command(struct fimg2d_bltcmd *cmd)
 	printk(KERN_INFO " repeat mode: %d, pad color: 0x%lx\n",
 			p->repeat.mode, p->repeat.pad_color);
 	printk(KERN_INFO " bluescreen mode: %d, bs_color: 0x%lx bg_color: 0x%lx\n",
-			p->bluscr.mode,
-			p->bluscr.bs_color, p->bluscr.bg_color);
+			p->bluscr.mode, p->bluscr.bs_color, p->bluscr.bg_color);
 	printk(KERN_INFO " scaling mode: %d, s:%d,%d d:%d,%d\n",
 			p->scaling.mode,
 			p->scaling.src_w, p->scaling.src_h,
@@ -136,16 +132,14 @@ void fimg2d_dump_command(struct fimg2d_bltcmd *cmd)
 		c = &cmd->dma[i];
 		r = &m->rect;
 
-		printk(KERN_INFO " %s type: %d addr: 0x%lx size: 0x%x cacheable: %d\n",
-				imagename(i), m->addr.type,
-				m->addr.start, m->addr.size, m->addr.cacheable);
+		printk(KERN_INFO " %s type: %d addr: 0x%lx\n",
+				imagename(i), m->addr.type, m->addr.start);
 		printk(KERN_INFO " %s width: %d height: %d stride: %d order: %d format: %d\n",
-				imagename(i), m->width, m->height,
-				m->stride, m->order, m->fmt);
+				imagename(i), m->width, m->height, m->stride, m->order, m->fmt);
 		printk(KERN_INFO " %s rect LT(%d,%d) RB(%d,%d)\n",
 				imagename(i), r->x1, r->y1, r->x2, r->y2);
-		printk(KERN_INFO " %s cache addr: 0x%lx size: 0x%x\n",
-				imagename(i), c->addr, c->size);
+		printk(KERN_INFO " %s dma addr: 0x%lx size: 0x%x cached: 0x%x\n",
+				imagename(i), c->addr, c->size, c->cached);
 	}
 
 	printk(KERN_INFO " dma size all: 0x%x bytes\n", cmd->dma_all);
