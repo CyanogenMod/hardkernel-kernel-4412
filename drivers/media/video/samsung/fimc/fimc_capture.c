@@ -562,6 +562,8 @@ int fimc_s_parm(struct file *file, void *fh, struct v4l2_streamparm *a)
 
 	if (ctrl->cam->sd && fimc_cam_use)
 		ret = v4l2_subdev_call(ctrl->cam->sd, video, s_parm, a);
+	else if (ctrl->is.sd && fimc_cam_use)
+		ret = v4l2_subdev_call(ctrl->is.sd, video, s_parm, a);
 
 	mutex_unlock(&ctrl->v4l2_lock);
 
