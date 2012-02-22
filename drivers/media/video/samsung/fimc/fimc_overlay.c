@@ -193,6 +193,7 @@ int fimc_g_fbuf(struct file *filp, void *fh, struct v4l2_framebuffer *fb)
 
 	switch (format) {
 	case V4L2_PIX_FMT_YUV420: /* fall through */
+	case V4L2_PIX_FMT_YVU420: /* fall through */
 	case V4L2_PIX_FMT_NV12:
 		bpp = 1;
 		break;
@@ -258,6 +259,7 @@ int fimc_s_fbuf(struct file *filp, void *fh, struct v4l2_framebuffer *fb)
 
 		switch (format) {
 		case V4L2_PIX_FMT_YUV420:	/* fall through */
+		case V4L2_PIX_FMT_YVU420:	/* fall through */
 		case V4L2_PIX_FMT_NV12:
 			bpp = 1;
 			break;

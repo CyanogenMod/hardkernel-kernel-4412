@@ -39,6 +39,7 @@ static __u32 fimc_get_pixel_format_type(__u32 pixelformat)
 	case V4L2_PIX_FMT_NV12T:
 	case V4L2_PIX_FMT_NV21:
 	case V4L2_PIX_FMT_YUV420:
+	case V4L2_PIX_FMT_YVU420:
 		return FIMC_YUV420;
 
 	case V4L2_PIX_FMT_YUYV:
@@ -1185,6 +1186,7 @@ static int fimc_outdev_check_scaler(struct fimc_control *ctrl,
 		pixels = 2;
 		break;
 	case V4L2_PIX_FMT_YUV420:	/* fall through */
+	case V4L2_PIX_FMT_YVU420:	/* fall through */
 	case V4L2_PIX_FMT_NV12:		/* fall through */
 	case V4L2_PIX_FMT_NV21:		/* fall through */
 	case V4L2_PIX_FMT_NV12T:
@@ -1224,6 +1226,7 @@ static int fimc_outdev_check_scaler(struct fimc_control *ctrl,
 		pixels = 2;
 		break;
 	case V4L2_PIX_FMT_YUV420:	/* fall through */
+	case V4L2_PIX_FMT_YVU420:	/* fall through */
 	case V4L2_PIX_FMT_NV12:		/* fall through */
 	case V4L2_PIX_FMT_NV21:		/* fall through */
 	case V4L2_PIX_FMT_NV12T:
@@ -1837,6 +1840,7 @@ int fimc_cropcap_output(void *fh, struct v4l2_cropcap *a)
 	case V4L2_PIX_FMT_NV12T:	/* fall through */
 	case V4L2_PIX_FMT_YUYV:		/* fall through */
 	case V4L2_PIX_FMT_YUV420:	/* fall through */
+	case V4L2_PIX_FMT_YVU420:	/* fall through */
 		max_w = FIMC_SRC_MAX_W;
 		max_h = FIMC_SRC_MAX_H;
 		break;
@@ -2160,6 +2164,11 @@ static int fimc_qbuf_output_single_buf(struct fimc_control *ctrl,
 		buf_set.base[FIMC_ADDR_CB] = buf_set.base[FIMC_ADDR_Y] + y_size;
 		buf_set.base[FIMC_ADDR_CR] = buf_set.base[FIMC_ADDR_CB] + c_size;
 		break;
+	case V4L2_PIX_FMT_YVU420:
+		buf_set.base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
+		buf_set.base[FIMC_ADDR_CR] = buf_set.base[FIMC_ADDR_Y] + y_size;
+		buf_set.base[FIMC_ADDR_CB] = buf_set.base[FIMC_ADDR_CR] + c_size;
+		break;
 	case V4L2_PIX_FMT_NV12:
 	case V4L2_PIX_FMT_NV21:
 		buf_set.base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
@@ -2411,8 +2420,13 @@ static int fimc_update_in_queue_addr(struct fimc_control *ctrl,
 	}
 
 	ctx->src[idx].base[FIMC_ADDR_Y] = addr[FIMC_ADDR_Y];
-	ctx->src[idx].base[FIMC_ADDR_CB] = addr[FIMC_ADDR_CB];
-	ctx->src[idx].base[FIMC_ADDR_CR] = addr[FIMC_ADDR_CR];
+	if (ctx->pix.pixelformat == V4L2_PIX_FMT_YVU420) {
+		ctx->src[idx].base[FIMC_ADDR_CB] = addr[FIMC_ADDR_CR];
+		ctx->src[idx].base[FIMC_ADDR_CR] = addr[FIMC_ADDR_CB];
+	} else {
+		ctx->src[idx].base[FIMC_ADDR_CB] = addr[FIMC_ADDR_CB];
+		ctx->src[idx].base[FIMC_ADDR_CR] = addr[FIMC_ADDR_CR];
+	}
 
 	return 0;
 }
