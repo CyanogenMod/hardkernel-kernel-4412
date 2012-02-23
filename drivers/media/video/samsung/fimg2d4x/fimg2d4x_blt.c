@@ -125,6 +125,9 @@ static int fast_op(struct fimg2d_bltcmd *cmd)
 	struct fimg2d_image *sm, *dm;
 	struct fimg2d_param *p = &cmd->param;
 
+	if (cmd->image[IMSK].addr.type != ADDR_NONE)
+		return fop;
+
 	sm = &cmd->image[ISRC];
 	dm = &cmd->image[IDST];
 
