@@ -107,7 +107,7 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_DIS_IRQ_ARM_CORE1_CENTRAL_SYS,	{ 0, 0, 0 } },
 	{ S5P_ISP_ARM_SYS,			{ 1, 0, 0 } },
 	{ S5P_DIS_IRQ_ISP_ARM_LOCAL_SYS,	{ 0, 0, 0 } },
-	{ S5P_DIS_IRQ_ISP_ARM_CENTRAL_SYS,	{ 0, 0, 0 } },
+	{ S5P_DIS_IRQ_ISP_ARM_CENTRAL_SYS,	{ 1, 0, 0 } },
 	{ S5P_ARM_COMMON_SYS,			{ 0, 0, 2 } },
 	{ S5P_ARM_L2_0_SYS,			{ 0, 0, 3 } },
 	{ S5P_ARM_L2_0_OPTION,			{ 0x10, 0x10, 0 } },
@@ -142,7 +142,7 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_CMU_RESET_MFC_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_RESET_G3D_SYS,		{ 1, 0, 0 } },
 	{ S5P_CMU_RESET_LCD0_SYS,		{ 1, 0, 0 } },
-	{ S5P_CMU_RESET_ISP_SYS,		{ 1, 0, 0 } },
+	{ S5P_CMU_RESET_ISP_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_RESET_MAUDIO_SYS,		{ 1, 1, 0 } },
 	{ S5P_CMU_RESET_GPS_SYS,		{ 1, 0, 0 } },
 	{ S5P_TOP_BUS_SYS,			{ 3, 0, 0 } },
@@ -200,7 +200,7 @@ static struct exynos4_pmu_conf exynos4212_pmu_config[] = {
 	{ S5P_MAUDIO_SYS,			{ 7, 7, 0 } },
 	{ S5P_GPS_SYS,				{ 7, 0, 0 } },
 	{ S5P_GPS_ALIVE_SYS,			{ 7, 0, 0 } },
-	{ S5P_CMU_SYSCLK_ISP_SYS,		{ 1, 0, 0 } },
+	{ S5P_CMU_SYSCLK_ISP_SYS,		{ 0, 0, 0 } },
 	{ S5P_CMU_SYSCLK_GPS_SYS,		{ 1, 0, 0 } },
 };
 
