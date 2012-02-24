@@ -179,6 +179,11 @@ static inline u32 fimc_irq_out_single_buf(struct fimc_control *ctrl,
 					buf_set.base[FIMC_ADDR_CB] =
 						buf_set.base[FIMC_ADDR_Y] + y_size;
 					break;
+				case V4L2_PIX_FMT_NV12M:
+					buf_set.base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
+					buf_set.base[FIMC_ADDR_CB] =
+						ALIGN(buf_set.base[FIMC_ADDR_Y] + y_size, PAGE_SIZE - 1);
+					break;
 				case V4L2_PIX_FMT_NV12T:
 					if (rot == 0 || rot == 180)
 						fimc_get_nv12t_size(width, height, &y_size, &c_size);

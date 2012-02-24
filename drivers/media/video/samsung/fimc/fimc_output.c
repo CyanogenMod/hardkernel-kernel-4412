@@ -36,6 +36,7 @@ static __u32 fimc_get_pixel_format_type(__u32 pixelformat)
 		return FIMC_RGB;
 
 	case V4L2_PIX_FMT_NV12:
+	case V4L2_PIX_FMT_NV12M:
 	case V4L2_PIX_FMT_NV12T:
 	case V4L2_PIX_FMT_NV21:
 	case V4L2_PIX_FMT_YUV420:
@@ -1228,6 +1229,7 @@ static int fimc_outdev_check_scaler(struct fimc_control *ctrl,
 	case V4L2_PIX_FMT_YUV420:	/* fall through */
 	case V4L2_PIX_FMT_YVU420:	/* fall through */
 	case V4L2_PIX_FMT_NV12:		/* fall through */
+	case V4L2_PIX_FMT_NV12M:		/* fall through */
 	case V4L2_PIX_FMT_NV21:		/* fall through */
 	case V4L2_PIX_FMT_NV12T:
 		pixels = 8;
@@ -2173,6 +2175,11 @@ static int fimc_qbuf_output_single_buf(struct fimc_control *ctrl,
 	case V4L2_PIX_FMT_NV21:
 		buf_set.base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
 		buf_set.base[FIMC_ADDR_CB] = buf_set.base[FIMC_ADDR_Y] + y_size;
+		break;
+	case V4L2_PIX_FMT_NV12M:
+		buf_set.base[FIMC_ADDR_Y] = (dma_addr_t)ctx->fbuf.base;
+		buf_set.base[FIMC_ADDR_CB] =
+			ALIGN(buf_set.base[FIMC_ADDR_Y] + y_size, PAGE_SIZE - 1);
 		break;
 	case V4L2_PIX_FMT_NV12T:
 		if (rot == 0 || rot == 180)
