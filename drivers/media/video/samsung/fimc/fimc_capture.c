@@ -2462,68 +2462,14 @@ int fimc_is_set_zoom(struct fimc_control *ctrl, struct v4l2_control *c)
 			fimc_dbg("V4L2_CID_IS_ZOOM_STATE - %d", is_ctrl.value);
 		}
 	}
-
-	/* 3. FIMC-lite stream off and MIPI stop*/
-	if (fimc_cam_use) {
-		if (ctrl->flite_sd)
-			v4l2_subdev_call(ctrl->flite_sd, video, s_stream, 0);
-		if (ctrl->cam->type == CAM_TYPE_MIPI) {
-			if (ctrl->cam->id == CAMERA_CSI_C)
-				s3c_csis_stop(CSI_CH_0);
-			else
-				s3c_csis_stop(CSI_CH_1);
-		}
-	}
-	/* 4. Set FIMC-Lite and MIPI size with new CAC margin */
-	if (ctrl->is.sd && fimc_cam_use) {
-		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_OFFSET_X;
-		is_ctrl.value = 0;
-		v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
-		ctrl->is.offset_x = is_ctrl.value;
-		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_OFFSET_Y;
-		is_ctrl.value = 0;
-		v4l2_subdev_call(ctrl->is.sd, core, g_ctrl, &is_ctrl);
-		ctrl->is.offset_y = is_ctrl.value;
-		fimc_dbg("CSI setting width = %d, height = %d\n",
-				ctrl->is.fmt.width + ctrl->is.offset_x,
-				ctrl->is.fmt.height + ctrl->is.offset_y);
-		if (ctrl->flite_sd) {
-			ctrl->is.mbus_fmt.width = ctrl->is.fmt.width +
-							ctrl->is.offset_x;
-			ctrl->is.mbus_fmt.height = ctrl->is.fmt.height +
-							ctrl->is.offset_y;
-			ret = v4l2_subdev_call(ctrl->flite_sd, video,
-					s_mbus_fmt, &ctrl->is.mbus_fmt);
-		}
-		/* MIPI-CSI start */
-		if (ctrl->cam->id == CAMERA_CSI_C)
-			s3c_csis_start(CSI_CH_0, cam->mipi_lanes,
-			cam->mipi_settle, cam->mipi_align,
-			ctrl->is.fmt.width + ctrl->is.offset_x,
-			ctrl->is.fmt.height + ctrl->is.offset_y,
-			V4L2_PIX_FMT_SGRBG10);
-		else if (ctrl->cam->id == CAMERA_CSI_D)
-			s3c_csis_start(CSI_CH_1, cam->mipi_lanes,
-			cam->mipi_settle, cam->mipi_align,
-			ctrl->is.fmt.width + ctrl->is.offset_x,
-			ctrl->is.fmt.height + ctrl->is.offset_y,
-			V4L2_PIX_FMT_SGRBG10);
-		fimc_hwset_sysreg_camblk_isp_wb(ctrl);
-	}
-
-	/* 5. FIMC-Lite stream on */
-	if (ctrl->flite_sd && fimc_cam_use)
-		v4l2_subdev_call(ctrl->flite_sd, video, s_stream, 1);
-	/* 6. Change soruce size of FIMC */
+	/* 2. Change soruce size of FIMC */
 	fimc_hwset_camera_change_source(ctrl);
 	fimc_capture_change_scaler_info(ctrl);
 	fimc_hwset_prescaler(ctrl, &ctrl->sc);
 	fimc_hwset_scaler(ctrl, &ctrl->sc);
-
-	/* 6. Start FIMC */
+	/* 4. Start FIMC */
 	fimc_start_zoom_capture(ctrl);
-
-	/* 7. FIMC-IS stream on */
+	/* 5. FIMC-IS stream on */
 	if (ctrl->is.sd && fimc_cam_use)
 		ret = v4l2_subdev_call(ctrl->is.sd, video, s_stream, 1);
 
