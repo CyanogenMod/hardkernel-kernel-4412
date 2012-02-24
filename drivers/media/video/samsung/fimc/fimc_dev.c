@@ -1283,6 +1283,10 @@ static int fimc_release(struct file *filp)
 		 * reset related status flags */
 		fimc_release_subdev(ctrl);
 		fimc_is_release_subdev(ctrl);
+#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
+		if (ctrl->power_status == FIMC_POWER_ON)
+			pm_runtime_put_sync(ctrl->dev);
+#endif
 	}
 
 	if (atomic_read(&ctrl->in_use) == 0) {
@@ -1292,11 +1296,6 @@ static int fimc_release(struct file *filp)
 					&ctrl->clk);
 			ctrl->power_status = FIMC_POWER_OFF;
 		}
-#endif
-
-#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-		if (ctrl->power_status == FIMC_POWER_ON)
-			pm_runtime_put_sync(ctrl->dev);
 #endif
 	}
 	if (ctrl->out) {
