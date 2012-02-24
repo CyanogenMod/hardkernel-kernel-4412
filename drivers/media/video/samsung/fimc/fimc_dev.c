@@ -143,17 +143,19 @@ static inline u32 fimc_irq_out_single_buf(struct fimc_control *ctrl,
 	if (ret == 0) {		/* There is a buffer in incomming queue. */
 		if (ctx_num != ctrl->out->last_ctx) {
 			struct fimc_buf_set buf_set;	/* destination addr */
-			u32 format = ctx->fbuf.fmt.pixelformat;
-			u32 width = ctx->fbuf.fmt.width;
-			u32 height = ctx->fbuf.fmt.height;
-			u32 y_size = width * height;
-			u32 c_size = y_size >> 2;
-			u32 rot = ctx->rotate;
+			u32 format, width, height, y_size, c_size, rot;
 			int i, cfg;
 
 			ctx = &ctrl->out->ctx[ctx_num];
 			ctrl->out->last_ctx = ctx->ctx_num;
 			fimc_outdev_set_ctx_param(ctrl, ctx);
+
+			format = ctx->fbuf.fmt.pixelformat;
+			width = ctx->fbuf.fmt.width;
+			height = ctx->fbuf.fmt.height;
+			y_size = width * height;
+			c_size = y_size >> 2;
+			rot = ctx->rotate;
 
 			memset(&buf_set, 0x00, sizeof(buf_set));
 
