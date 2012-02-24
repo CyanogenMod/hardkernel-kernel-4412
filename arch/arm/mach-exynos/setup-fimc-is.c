@@ -275,27 +275,35 @@ int exynos_fimc_is_clk_on(struct platform_device *pdev)
 	pdata = to_fimc_is_plat(&pdev->dev);
 
 	/* 1. CLK_GATE_IP_ISP (0x1003 C938)*/
+#if defined(CONFIG_MACH_SMDK4X12)
 	clk_enable(pdata->div_clock[UART_ISP_RATIO]);
-
+#endif
 	/* 2. CLK_GATE_IP_ISP0, CLK_GATE_IP_ISP1 (0x1004 8800) (0x1004 8804)*/
 	for (i = 0; i < (EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS - 4); i++)
 		clk_enable(pdata->control_clock[i]);
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	/* In case of CMA, clocks related system MMU off */
-	clk_enable(pdata->control_clock[11]);
-	clk_enable(pdata->control_clock[12]);
-	clk_enable(pdata->control_clock[13]);
-	clk_enable(pdata->control_clock[14]);
+	clk_enable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-4]);
+	clk_enable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-3]);
+	clk_enable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-2]);
+	clk_enable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-1]);
 #endif
 	for (i = 0; i < (EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS - 4); i++)
 		clk_disable(pdata->control_clock[i]);
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	/* In case of CMA, clocks related system MMU off */
-	clk_disable(pdata->control_clock[11]);
-	clk_disable(pdata->control_clock[12]);
-	clk_disable(pdata->control_clock[13]);
-	clk_disable(pdata->control_clock[14]);
+	clk_disable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-4]);
+	clk_disable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-3]);
+	clk_disable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-2]);
+	clk_disable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-1]);
 #endif
+
+	printk(KERN_INFO "FIMC-IS GATE = 0x%08x\n",
+					__raw_readl(EXYNOS4_CLKGATE_IP_ISP));
+	printk(KERN_INFO "FIMC-IS GATE0 = 0x%08x\n",
+					__raw_readl(EXYNOS4_CLKGATE_IP_ISP0));
+	printk(KERN_INFO "FIMC-IS GATE1 = 0x%08x\n",
+					__raw_readl(EXYNOS4_CLKGATE_IP_ISP1));
 	return 0;
 }
 
@@ -305,7 +313,9 @@ int exynos_fimc_is_clk_off(struct platform_device *pdev)
 	pdata = to_fimc_is_plat(&pdev->dev);
 
 	/* 1. CLK_GATE_IP_ISP (0x1003 C938)*/
+#if defined(CONFIG_MACH_SMDK4X12)
 	clk_disable(pdata->div_clock[UART_ISP_RATIO]);
+#endif
 
 	return 0;
 }
