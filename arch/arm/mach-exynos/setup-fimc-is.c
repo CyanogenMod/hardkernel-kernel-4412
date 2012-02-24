@@ -254,12 +254,6 @@ int exynos_fimc_is_cfg_clk(struct platform_device *pdev)
 		0x1 << EXYNOS4_CLKDIV_TOP1_ACLK400_MCUISP_SUB_SHIFT);
 	__raw_writel(tmp, EXYNOS4_CLKSRC_TOP1);
 
-	/* For debugging */
-	printk(KERN_INFO "FIMC-IS MUX TOP1 = 0x%08x\n",
-					__raw_readl(EXYNOS4_CLKSRC_TOP1));
-	printk(KERN_INFO "FIMC-IS DIV = 0x%08x, 0x%08x\n",
-					__raw_readl(EXYNOS4_CLKDIV_ISP0),
-					__raw_readl(EXYNOS4_CLKDIV_ISP1));
 	/* 4. UART-ISP */
 	clk_set_parent(pdata->div_clock[UART_ISP_RATIO],
 					pdata->div_clock[UART_ISP_SEL]);
@@ -297,13 +291,6 @@ int exynos_fimc_is_clk_on(struct platform_device *pdev)
 	clk_disable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-2]);
 	clk_disable(pdata->control_clock[EXYNOS4_FIMC_IS_MAX_CONTROL_CLOCKS-1]);
 #endif
-
-	printk(KERN_INFO "FIMC-IS GATE = 0x%08x\n",
-					__raw_readl(EXYNOS4_CLKGATE_IP_ISP));
-	printk(KERN_INFO "FIMC-IS GATE0 = 0x%08x\n",
-					__raw_readl(EXYNOS4_CLKGATE_IP_ISP0));
-	printk(KERN_INFO "FIMC-IS GATE1 = 0x%08x\n",
-					__raw_readl(EXYNOS4_CLKGATE_IP_ISP1));
 	return 0;
 }
 
