@@ -242,15 +242,17 @@ static int loop_sdmmc_check(void)
 }
 
 /*
- * Check USBOTG is working or not
+ * Check USB Device and Host is working or not
+ * USB_S3C-OTGD can check GOTGCTL register
  * GOTGCTL(0xEC000000)
  * BSesVld (Indicates the Device mode transceiver status)
  * BSesVld =	1b : B-session is valid
- *		0b : B-session is not valid
+ *		0b : B-session is not valiid
+ * USB_EXYNOS_SWITCH can check Both Host and Device status.
  */
-#if defined(CONFIG_USB_S3C_OTGD) && !defined(CONFIG_USB_EXYNOS_SWITCH)
-static int check_usbotg_op(void)
+static int check_usb_op(void)
 {
+#if defined(CONFIG_USB_S3C_OTGD) && !defined(CONFIG_USB_EXYNOS_SWITCH)
 	void __iomem *base_addr;
 	unsigned int val;
 
@@ -258,8 +260,12 @@ static int check_usbotg_op(void)
 	val = __raw_readl(base_addr + S3C_UDC_OTG_GOTGCTL);
 
 	return val & (A_SESSION_VALID | B_SESSION_VALID);
-}
+#elif defined(CONFIG_USB_EXYNOS_SWITCH)
+	return exynos_check_usb_op();
+#else
+	return 0;
 #endif
+}
 
 #ifdef CONFIG_SND_SAMSUNG_RP
 extern int srp_get_op_level(void);	/* By srp driver */
@@ -280,13 +286,8 @@ static int exynos4_check_operation(void)
 	if (srp_get_op_level())
 		return 1;
 #endif
-#if defined(CONFIG_USB_S3C_OTGD) && !defined(CONFIG_USB_EXYNOS_SWITCH)
-	if (check_usbotg_op())
+	if (check_usb_op())
 		return 1;
-#elif defined(CONFIG_USB_EXYNOS_SWITCH)
-	if (exynos4_check_usb_op())
-		return 1;
-#endif
 
 	return 0;
 }

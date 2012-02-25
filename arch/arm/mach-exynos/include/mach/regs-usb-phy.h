@@ -107,6 +107,6 @@
 #define OTG_SYS_SIDDQ_UOTG			(0x1 <<1)
 #define OTG_SYS_FORCE_SUSPEND			(0x1 <<0)
 
-extern int exynos4_check_usb_op(void);
+extern int exynos_check_usb_op(void);
 
 #endif /* __ASM_ARCH_REGS_USB_PHY_H */
