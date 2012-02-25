@@ -805,7 +805,7 @@ static int s3c_udc_get_status(struct s3c_udc *dev,
 		break;
 
 	case USB_RECIP_DEVICE:
-		g_status = 0x1; /* Self powered */
+		g_status = 0x0;
 		DEBUG_SETUP("\tGET_STATUS: USB_RECIP_DEVICE,"
 			"g_stauts = %d\n", g_status);
 		break;
@@ -1363,7 +1363,6 @@ static void s3c_ep0_setup(struct s3c_udc *dev)
 			if (dev->req_config) {
 				DEBUG_SETUP("\tconfig change 0x%02x fail %d?\n",
 					(u32)usb_ctrl->bRequest, i);
-				return;
 			}
 
 			/* setup processing failed, force stall */
