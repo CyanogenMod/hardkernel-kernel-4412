@@ -129,6 +129,12 @@ enum mmc_blk_status {
 	MMC_BLK_ECC_ERR,
 };
 
+enum {
+	MMC_PACKED_N_IDX = -1,
+	MMC_PACKED_N_ZERO,
+	MMC_PACKED_N_SINGLE,
+};
+
 module_param(perdev_minors, int, 0444);
 MODULE_PARM_DESC(perdev_minors, "Minors numbers to allocate per device");
 
@@ -1185,7 +1191,7 @@ static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
 	u8 max_packed_rw = 0;
 	u8 reqs = 0;
 
-	mq->mqrq_cur->packed_num = 0;
+	mq->mqrq_cur->packed_num = MMC_PACKED_N_ZERO;
 
 	if (!(md->flags & MMC_BLK_CMD23) ||
 			!card->ext_csd.packed_event_en)
@@ -1277,14 +1283,13 @@ static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
 
 no_packed:
 	mq->mqrq_cur->packed_cmd = MMC_PACKED_NONE;
-	mq->mqrq_cur->packed_num = 0;
+	mq->mqrq_cur->packed_num = MMC_PACKED_N_ZERO;
 	return 0;
 }
 
 static void mmc_blk_packed_hdr_wrq_prep(struct mmc_queue_req *mqrq,
 			       struct mmc_card *card,
-			       struct mmc_queue *mq,
-			       u8 reqs)
+			       struct mmc_queue *mq)
 {
 	struct mmc_blk_request *brq = &mqrq->brq;
 	struct request *req = mqrq->req;
@@ -1297,10 +1302,10 @@ static void mmc_blk_packed_hdr_wrq_prep(struct mmc_queue_req *mqrq,
 	mqrq->packed_cmd = (rq_data_dir(req) == READ) ?
 		MMC_PACKED_WR_HDR : MMC_PACKED_WRITE;
 	mqrq->packed_blocks = 0;
-	mqrq->packed_fail_idx = -1;
+	mqrq->packed_fail_idx = MMC_PACKED_N_IDX;
 
 	memset(packed_cmd_hdr, 0, sizeof(mqrq->packed_cmd_hdr));
-	packed_cmd_hdr[0] = (reqs << 16) |
+	packed_cmd_hdr[0] = (mqrq->packed_num << 16) |
 		(((rq_data_dir(req) == READ) ?
 		  PACKED_CMD_RD : PACKED_CMD_WR) << 8) |
 		PACKED_CMD_VER;
@@ -1470,7 +1475,7 @@ static int mmc_blk_issue_packed_rd(struct mmc_queue *mq,
 			ret = mmc_blk_chk_hdr_err(mq, status);
 			if (ret)
 				break;
-			mmc_blk_packed_hdr_wrq_prep(mq_rq, card, mq, mq_rq->packed_num);
+			mmc_blk_packed_hdr_wrq_prep(mq_rq, card, mq);
 			mmc_start_req(card->host, &mq_rq->mmc_active, NULL);
 		} else {
 			mmc_blk_packed_rrq_prep(mq_rq, card, mq);
@@ -1493,6 +1498,7 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 	struct mmc_queue_req *mq_rq;
 	struct request *req, *prq;
 	struct mmc_async_req *areq;
+	const u8 packed_num = 2;
 	u8 reqs = 0;
 
 	if (!rqc && !mq->mqrq_prev->req)
@@ -1503,8 +1509,9 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 
 	do {
 		if (rqc) {
-			if (reqs >= 2)
-				mmc_blk_packed_hdr_wrq_prep(mq->mqrq_cur, card, mq, reqs);
+			if (reqs >= packed_num) {
+				mmc_blk_packed_hdr_wrq_prep(mq->mqrq_cur, card, mq);
+			}
 			else
 				mmc_blk_rw_rq_prep(mq->mqrq_cur, card, 0, mq);
 			areq = &mq->mqrq_cur->mmc_active;
@@ -1534,27 +1541,28 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 
 			if (mq_rq->packed_cmd != MMC_PACKED_NONE) {
 				int idx = mq_rq->packed_fail_idx, i = 0;
+				ret = 0;
 				while (!list_empty(&mq_rq->packed_list)) {
 					prq = list_entry_rq(mq_rq->packed_list.next);
-					list_del_init(&prq->queuelist);
 					if (idx == i) {
 						/* retry from error index */
 						mq_rq->packed_num -= idx;
-						if (mq_rq->packed_num == 1) {
-							mq_rq->packed_cmd = MMC_PACKED_NONE;
-							mq_rq->packed_num = 0;
-						}
 						mq_rq->req = prq;
 						ret = 1;
 						break;
 					}
+					list_del_init(&prq->queuelist);
 					spin_lock_irq(&md->lock);
-					ret = __blk_end_request(prq, 0, blk_rq_bytes(prq));
+					__blk_end_request(prq, 0, blk_rq_bytes(prq));
 					spin_unlock_irq(&md->lock);
 					i++;
 				}
-				if (idx == -1)
-					mq_rq->packed_num = 0;
+				if (mq_rq->packed_num == MMC_PACKED_N_SINGLE) {
+					prq = list_entry_rq(mq_rq->packed_list.next);
+					list_del_init(&prq->queuelist);
+					mq_rq->packed_cmd = MMC_PACKED_NONE;
+					mq_rq->packed_num = MMC_PACKED_N_ZERO;
+				}
 				break;
 			} else {
 				spin_lock_irq(&md->lock);
@@ -1632,7 +1640,7 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 				mmc_blk_rw_rq_prep(mq_rq, card, disable_multi, mq);
 				mmc_start_req(card->host, &mq_rq->mmc_active, NULL);
 			} else {
-				mmc_blk_packed_hdr_wrq_prep(mq_rq, card, mq, mq_rq->packed_num);
+				mmc_blk_packed_hdr_wrq_prep(mq_rq, card, mq);
 				mmc_start_req(card->host, &mq_rq->mmc_active, NULL);
 				if (mq_rq->packed_cmd == MMC_PACKED_WR_HDR) {
 					if (mmc_blk_issue_packed_rd(mq, mq_rq))
@@ -1668,7 +1676,7 @@ snd_packed_rd:
  start_new_req:
 	if (rqc) {
 		/*
-		 * If current request is packed, it need to put back.
+		 * If current request is packed, it needs to put back.
 		 */
 		if (mq->mqrq_cur->packed_cmd != MMC_PACKED_NONE) {
 			while (!list_empty(&mq->mqrq_cur->packed_list)) {
@@ -1683,7 +1691,7 @@ snd_packed_rd:
 				}
 			}
 			mq->mqrq_cur->packed_cmd = MMC_PACKED_NONE;
-			mq->mqrq_cur->packed_num = 0;
+			mq->mqrq_cur->packed_num = MMC_PACKED_N_ZERO;
 		}
 		mmc_blk_rw_rq_prep(mq->mqrq_cur, card, 0, mq);
 		mmc_start_req(card->host, &mq->mqrq_cur->mmc_active, NULL);
