@@ -153,7 +153,7 @@ static _mali_osk_errcode_t mali_kernel_l2_cache_invalidate_all_cache(mali_kernel
 struct mali_kernel_subsystem mali_subsystem_l2_cache =
 {
 	mali_l2_cache_initialize,    /**< startup */
-	mali_l2_cache_terminate,     /**< shutdown */
+	NULL, /*mali_l2_cache_terminate,*/     /**< shutdown */
 	mali_l2_cache_load_complete, /**< load_complete */
 	NULL,                        /**< system_info_fill */
 	NULL,                        /**< session_begin */

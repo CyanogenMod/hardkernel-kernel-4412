@@ -62,6 +62,10 @@ int profiling_get_config_wrapper(struct mali_session_data *session_data, _mali_u
 
 int vsync_event_report_wrapper(struct mali_session_data *session_data, _mali_uk_vsync_event_report_s __user *uargs);
 
+#if MALI_TRACEPOINTS_ENABLED
+int transfer_sw_counters_wrapper(struct mali_session_data *session_data, _mali_uk_sw_counters_s __user *uargs);
+#endif
+
 int map_errcode( _mali_osk_errcode_t err );
 
 #ifdef __cplusplus

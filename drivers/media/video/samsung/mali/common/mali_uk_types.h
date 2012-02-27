@@ -122,6 +122,7 @@ typedef enum
 	_MALI_UK_PROFILING_GET_EVENT,         /**< __mali_uku_profiling_get_event() */
 	_MALI_UK_PROFILING_CLEAR,             /**< __mali_uku_profiling_clear() */
 	_MALI_UK_PROFILING_GET_CONFIG,        /**< __mali_uku_profiling_get_config() */
+	_MALI_UK_TRANSFER_SW_COUNTERS,
 
 #if USING_MALI_PMM
     /** Power Management Module Functions */
@@ -373,6 +374,14 @@ typedef enum
     _MALI_UK_START_JOB_NOT_STARTED_DO_REQUEUE           /**< Job could not be started at this time. Try starting the job again */
 } _mali_uk_start_job_status;
 
+/** @brief Status indicating the result of starting a Vertex or Fragment processor job */
+typedef enum
+{
+	MALI_UK_START_JOB_FLAG_DEFAULT = 0,          /**< Default behaviour; Flush L2 caches before start, no following jobs */
+	MALI_UK_START_JOB_FLAG_NO_FLUSH = 1,         /**< No need to flush L2 caches before start */
+	MALI_UK_START_JOB_FLAG_MORE_JOBS_FOLLOW = 2, /**< More related jobs follows, try to schedule them as soon as possible after this job */
+} _mali_uk_start_job_flags;
+
 /** @brief Status indicating the result of the execution of a Vertex or Fragment processor job  */
 
 typedef enum
@@ -487,7 +496,7 @@ typedef struct
     u32 perf_counter_src1;          /**< [out] source id for performance counter 1 (see ARM DDI0415A, Table 3-60) */
     u32 perf_counter0;              /**< [out] value of perfomance counter 0 (see ARM DDI0415A) */
     u32 perf_counter1;              /**< [out] value of perfomance counter 1 (see ARM DDI0415A) */
-    u32 render_time;                /**< [out] number of milliseconds it took for the job to render */
+    u32 render_time;                /**< [out] number of microseconds it took for the job to render */
 	u32 perf_counter_l2_src0;       /**< [out] soruce id for Mali-400 MP L2 cache performance counter 0 */
 	u32 perf_counter_l2_src1;       /**< [out] soruce id for Mali-400 MP L2 cache performance counter 1 */
 	u32 perf_counter_l2_val0;       /**< [out] Value of the Mali-400 MP L2 cache performance counter 0 */
@@ -579,6 +588,7 @@ typedef struct
 	u32 perf_counter_l2_src1;           /**< [in] source id for Mali-400 MP L2 cache performance counter 1 */
 	u32 frame_builder_id;				/**< [in] id of the originating frame builder */
 	u32 flush_id;						/**< [in] flush id within the originating frame builder */
+	_mali_uk_start_job_flags flags;     /**< [in] Flags for job, see _mali_uk_start_job_flags for more information */
 } _mali_uk_pp_start_job_s;
 /** @} */ /* end group _mali_uk_ppstartjob_s */
 
@@ -592,7 +602,7 @@ typedef struct
     u32 perf_counter_src1;          /**< [out] source id for performance counter 1 (see ARM DDI0415A, Table 3-60) */
     u32 perf_counter0;              /**< [out] value of perfomance counter 0 (see ARM DDI0415A) */
     u32 perf_counter1;              /**< [out] value of perfomance counter 1 (see ARM DDI0415A) */
-    u32 render_time;                /**< [out] number of milliseconds it took for the job to render */
+    u32 render_time;                /**< [out] number of microseconds it took for the job to render */
 	u32 perf_counter_l2_src0;       /**< [out] soruce id for Mali-400 MP L2 cache performance counter 0 */
 	u32 perf_counter_l2_src1;       /**< [out] soruce id for Mali-400 MP L2 cache performance counter 1 */
 	u32 perf_counter_l2_val0;       /**< [out] Value of the Mali-400 MP L2 cache performance counter 0 */
@@ -738,7 +748,7 @@ typedef struct
  * The 16bit integer is stored twice in a 32bit integer
  * For example, for version 1 the value would be 0x00010001
  */
-#define _MALI_API_VERSION 9
+#define _MALI_API_VERSION 10
 #define _MALI_UK_API_VERSION _MAKE_VERSION_ID(_MALI_API_VERSION)
 
 /**
@@ -1018,6 +1028,14 @@ typedef struct
 	u32 event_id;                   /**< [out] event id of event (see  enum mali_profiling_events for values) */
 	u32 data[5];                    /**< [out] event specific data */
 } _mali_uk_profiling_get_event_s;
+
+typedef struct
+{
+	void *ctx;
+
+	u32 id;
+	s64 value;
+} _mali_uk_sw_counters_s;
 
 typedef struct
 {

@@ -32,6 +32,10 @@
 #include <plat/pd.h>
 #endif
 
+#if MALI_TIMELINE_PROFILING_ENABLED
+#include "mali_kernel_profiling.h"
+#endif
+
 #include <asm/io.h>
 #include <mach/regs-pmu.h>
 
@@ -148,8 +152,23 @@ void mali_regulator_set_voltage(int min_uV, int max_uV)
 		return;
 	}
 	MALI_DEBUG_PRINT(2, ("= regulator_set_voltage: %d, %d \n",min_uV, max_uV));
+
+#if MALI_TIMELINE_PROFILING_ENABLED
+    _mali_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
+                               MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |
+                               MALI_PROFILING_EVENT_REASON_SINGLE_SW_GPU_VOLTS,
+                               min_uV, max_uV, 0, 0, 0);
+#endif
+
 	regulator_set_voltage(g3d_regulator,min_uV,max_uV);
 	voltage = regulator_get_voltage(g3d_regulator);
+
+#if MALI_TIMELINE_PROFILING_ENABLED
+    _mali_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
+                               MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |
+                               MALI_PROFILING_EVENT_REASON_SINGLE_SW_GPU_VOLTS,
+                               voltage, 0, 1, 0, 0);
+#endif
 	mali_gpu_vol = voltage;
 	MALI_DEBUG_PRINT(1, ("= regulator_get_voltage: %d \n",mali_gpu_vol));
 
@@ -331,8 +350,22 @@ mali_bool mali_clk_set_rate(unsigned int clk, unsigned int mhz)
 	if (clk_enable(mali_clock) < 0)
 		return MALI_FALSE;
 
+#if MALI_TIMELINE_PROFILING_ENABLED
+    _mali_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
+                               MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |
+                               MALI_PROFILING_EVENT_REASON_SINGLE_SW_GPU_FREQ,
+                               rate, 0, 0, 0, 0);
+#endif
+
 	clk_set_rate(mali_clock, rate);
 	rate = clk_get_rate(mali_clock);
+
+#if MALI_TIMELINE_PROFILING_ENABLED
+    _mali_profiling_add_event( MALI_PROFILING_EVENT_TYPE_SINGLE |
+                               MALI_PROFILING_EVENT_CHANNEL_SOFTWARE |
+                               MALI_PROFILING_EVENT_REASON_SINGLE_SW_GPU_FREQ,
+                               rate, 0, 0, 0, 0);
+#endif
 
 	if (bis_vpll)
 		mali_gpu_clk = (int)(rate / mhz);
