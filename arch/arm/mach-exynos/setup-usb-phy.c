@@ -755,7 +755,7 @@ static int exynos_usb_dev_phy20_exit(struct platform_device *pdev)
 	return 0;
 }
 
-static int exynos_usb_hsic_init(struct platform_device *pdev)
+static int __maybe_unused exynos_usb_hsic_init(struct platform_device *pdev)
 {
 	u32 rstcon, hsic_ctrl;
 
@@ -789,7 +789,7 @@ static int exynos_usb_hsic_init(struct platform_device *pdev)
 	return 0;
 }
 
-static int exynos_usb_hsic_exit(struct platform_device *pdev)
+static int __maybe_unused exynos_usb_hsic_exit(struct platform_device *pdev)
 {
 	u32 hsic_ctrl;
 
@@ -943,11 +943,6 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 			ret = exynos4_usb_phy0_init(pdev);
 		else
 			ret = exynos_usb_dev_phy20_init(pdev);
-	} else if (type == S5P_USB_PHY_HSIC) {
-		if (soc_is_exynos4210())
-			ret = exynos4_usb_phy1_init(pdev);
-		else
-			ret = exynos_usb_hsic_init(pdev);
 	} else if (type == S5P_USB_PHY_DRD)
 		ret = exynos5_usb_phy30_init(pdev);
 	mutex_unlock(&phy_lock);
@@ -981,11 +976,6 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 			ret = exynos4_usb_phy0_exit(pdev);
 		else
 			ret = exynos_usb_dev_phy20_exit(pdev);
-	} else if (type == S5P_USB_PHY_HSIC) {
-		if (soc_is_exynos4210())
-			ret = exynos4_usb_phy1_exit(pdev);
-		else
-			ret = exynos_usb_hsic_exit(pdev);
 	} else if (type == S5P_USB_PHY_DRD)
 		ret = exynos5_usb_phy30_exit(pdev);
 

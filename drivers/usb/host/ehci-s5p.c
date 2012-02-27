@@ -325,7 +325,7 @@ static ssize_t store_ehci_power(struct device *dev,
 		usb_remove_hcd(hcd);
 
 		if (pdata && pdata->phy_exit)
-			pdata->phy_exit(pdev, S5P_USB_PHY_HSIC);
+			pdata->phy_exit(pdev, S5P_USB_PHY_HOST);
 	} else if (power_on) {
 		printk(KERN_DEBUG "%s: EHCI turns on\n", __func__);
 		if (s5p_ehci->power_on) {
@@ -333,7 +333,7 @@ static ssize_t store_ehci_power(struct device *dev,
 		}
 
 		if (pdata && pdata->phy_init)
-			pdata->phy_init(pdev, S5P_USB_PHY_HSIC);
+			pdata->phy_init(pdev, S5P_USB_PHY_HOST);
 		s5p_ehci_configurate(hcd);
 
 		irq = platform_get_irq(pdev, 0);
