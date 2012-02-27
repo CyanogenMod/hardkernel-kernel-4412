@@ -74,32 +74,45 @@ static int exynos_change_usb_mode(struct exynos_usb_switch *usb_switch,
 				enum usb_cable_status mode)
 {
 	struct s3c_udc *udc = the_controller;
+	enum usb_cable_status cur_mode = atomic_read(&usb_switch->connect);
 	int ret = 0;
 
-	if (atomic_read(&usb_switch->connect)) {
+	if (cur_mode) {
 		if (mode == USB_DEVICE_ATTACHED || mode == USB_HOST_ATTACHED) {
 			printk(KERN_DEBUG "Skip requested mode (%d), current mode=%d\n",
-				mode, atomic_read(&usb_switch->connect));
+				mode, cur_mode);
 			return -EPERM;
 		}
 	} else {
 		if (mode == USB_DEVICE_DETACHED || mode == USB_HOST_DETACHED) {
 			printk(KERN_DEBUG "Skip requested mode (%d), current mode=%d\n",
-				mode, atomic_read(&usb_switch->connect));
+				mode, cur_mode);
 			return -EPERM;
 		}
 	}
 
 	switch (mode) {
 	case USB_DEVICE_DETACHED:
+		if (cur_mode == USB_HOST_ATTACHED) {
+			printk(KERN_ERR "Abnormal request mode (%d), current mode=%d\n",
+				mode, cur_mode);
+			return -EPERM;
+		}
+
 		udc->gadget.ops->vbus_session(&udc->gadget, 0);
 		atomic_set(&usb_switch->connect, 0);
 		break;
 	case USB_DEVICE_ATTACHED:
 		udc->gadget.ops->vbus_session(&udc->gadget, 1);
-		atomic_set(&usb_switch->connect, 1);
+		atomic_set(&usb_switch->connect, USB_DEVICE_ATTACHED);
 		break;
 	case USB_HOST_DETACHED:
+		if (cur_mode == USB_DEVICE_ATTACHED) {
+			printk(KERN_ERR "Abnormal request mode (%d), current mode=%d\n",
+				mode, cur_mode);
+			return -EPERM;
+		}
+
 		pm_runtime_put(&s5p_device_ohci.dev);
 		pm_runtime_put(&s5p_device_ehci.dev);
 		if (usb_switch->gpio_host_vbus)
@@ -121,7 +134,7 @@ static int exynos_change_usb_mode(struct exynos_usb_switch *usb_switch,
 
 		pm_runtime_get_sync(&s5p_device_ehci.dev);
 		pm_runtime_get_sync(&s5p_device_ohci.dev);
-		atomic_set(&usb_switch->connect, 1);
+		atomic_set(&usb_switch->connect, USB_HOST_ATTACHED);
 		break;
 	default:
 		printk(KERN_ERR "Does not changed\n");
