@@ -140,15 +140,23 @@ int ump_ion_import_wrapper(u32 __user * argument, struct ump_session_data  * ses
 
 	num_blocks = i;
 
-	ump_handle = ump_dd_handle_create_from_phys_blocks(blocks, num_blocks);
-
 	/* Initialize the session_memory_element, and add it to the session object */
 	session_memory_element = _mali_osk_calloc( 1, sizeof(ump_session_memory_list_element));
 
 	if (NULL == session_memory_element)
 	{
-	     DBG_MSG(1, ("Failed to allocate ump_session_memory_list_element in ump_ioctl_allocate()\n"));
-	     return -EFAULT;
+		_mali_osk_free(blocks);
+		DBG_MSG(1, ("Failed to allocate ump_session_memory_list_element in ump_ioctl_allocate()\n"));
+		return -EFAULT;
+	}
+
+	ump_handle = ump_dd_handle_create_from_phys_blocks(blocks, num_blocks);
+	if (UMP_DD_HANDLE_INVALID == ump_handle)
+	{
+		_mali_osk_free(session_memory_element);
+		_mali_osk_free(blocks);
+		DBG_MSG(1, ("Failed to allocate ump_session_memory_list_element in ump_ioctl_allocate()\n"));
+		return -EFAULT;
 	}
 
 	session_memory_element->mem = (ump_dd_mem*)ump_handle;
