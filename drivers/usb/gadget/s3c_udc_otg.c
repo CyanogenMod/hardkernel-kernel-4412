@@ -22,6 +22,7 @@
  */
 
 #include "s3c_udc.h"
+#include <linux/clk.h>
 #include <linux/platform_device.h>
 #include <mach/map.h>
 #include <plat/regs-otg.h>
@@ -243,6 +244,7 @@ static void udc_disable(struct s3c_udc *dev)
 	udelay(20);
 	if (pdata && pdata->phy_exit)
 		pdata->phy_exit(pdev, S5P_USB_PHY_DEVICE);
+	clk_disable(dev->clk);
 }
 
 /*
@@ -288,6 +290,7 @@ static int udc_enable(struct s3c_udc *dev)
 	DEBUG_SETUP("%s: %p\n", __func__, dev);
 
 	enable_irq(dev->irq);
+	clk_enable(dev->clk);
 	if (pdata->phy_init)
 		pdata->phy_init(pdev, S5P_USB_PHY_DEVICE);
 	reconfig_usbd();
@@ -1212,6 +1215,13 @@ static int s3c_udc_probe(struct platform_device *pdev)
 	dev->irq = irq;
 	disable_irq(dev->irq);
 
+	dev->clk = clk_get(&pdev->dev, "usbotg");
+
+	if (IS_ERR(dev->clk)) {
+		dev_err(&pdev->dev, "Failed to get clock\n");
+		goto err_irq;
+	}
+
 	dev->usb_ctrl = dma_alloc_coherent(&pdev->dev,
 			sizeof(struct usb_ctrlrequest)*BACK2BACK_SIZE,
 			&dev->usb_ctrl_dma, GFP_KERNEL);
@@ -1220,12 +1230,14 @@ static int s3c_udc_probe(struct platform_device *pdev)
 		DEBUG(KERN_ERR "%s: can't get usb_ctrl dma memory\n",
 			driver_name);
 		retval = -ENOMEM;
-		goto err_irq;
+		goto err_clk;
 	}
 
 	create_proc_files();
 
 	return retval;
+err_clk:
+	clk_put(dev->clk);
 err_irq:
 	free_irq(dev->irq, dev);
 err_regs:
@@ -1244,6 +1256,7 @@ static int s3c_udc_remove(struct platform_device *pdev)
 
 	remove_proc_files();
 	usb_gadget_unregister_driver(dev->driver);
+	clk_put(dev->clk);
 	if (dev->usb_ctrl)
 		dma_free_coherent(&pdev->dev,
 				sizeof(struct usb_ctrlrequest)*BACK2BACK_SIZE,
