@@ -271,6 +271,7 @@ static ssize_t store_ohci_power(struct device *dev,
 	device_lock(dev);
 	if (!power_on && s5p_ohci->power_on) {
 		printk(KERN_DEBUG "%s: EHCI turns off\n", __func__);
+		pm_runtime_forbid(dev);
 		s5p_ohci->power_on = 0;
 		usb_remove_hcd(hcd);
 
@@ -294,6 +295,7 @@ static ssize_t store_ohci_power(struct device *dev,
 		}
 
 		s5p_ohci->power_on = 1;
+		pm_runtime_allow(dev);
 	}
 exit:
 	device_unlock(dev);
@@ -460,6 +462,9 @@ static void ohci_hcd_s5p_drv_shutdown(struct platform_device *pdev)
 	struct s5p_ohci_platdata *pdata = pdev->dev.platform_data;
 	struct s5p_ohci_hcd *s5p_ohci = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = s5p_ohci->hcd;
+
+	if (!s5p_ohci->power_on)
+		return;
 
 	if (pdata && pdata->phy_resume)
 		pdata->phy_resume(pdev, S5P_USB_PHY_HOST);
