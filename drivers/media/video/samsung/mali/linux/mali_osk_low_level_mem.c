@@ -79,7 +79,7 @@ static void _allocation_list_item_release(AllocationList * item);
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,36)
 spinlock_t allocation_list_spinlock = SPIN_LOCK_UNLOCKED;
 #else
-DEFINE_SPINLOCK(allocation_list_spinlock);
+spinlock_t allocation_list_spinlock;
 #endif
 
 static AllocationList * pre_allocated_memory = (AllocationList*) NULL ;

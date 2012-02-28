@@ -171,9 +171,9 @@ int _mali_osk_pmm_dev_activate(void)
 		err = pm_runtime_get_sync(&(mali_gpu_device.dev));
 	}
 	if(err < 0)
-        {
+    {
 		MALI_PRINT(("OSPMM: Error in _mali_osk_pmm_dev_activate, err : %d\n",err ));
-        }
+    }
 #endif /* MALI_PMM_RUNTIME_JOB_CONTROL_ON */
 #endif /* CONFIG_PM_RUNTIME */
 #endif /* MALI_LICENSE_IS_GPL */

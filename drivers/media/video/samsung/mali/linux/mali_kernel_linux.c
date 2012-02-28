@@ -558,11 +558,6 @@ static int mali_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, 
 		case MALI_IOC_VSYNC_EVENT_REPORT:
 			err = vsync_event_report_wrapper(session_data, (_mali_uk_vsync_event_report_s __user *)arg);
 			break;
-#if MALI_TRACEPOINTS_ENABLED
-		case MALI_IOC_TRANSFER_SW_COUNTERS:
-			err = transfer_sw_counters_wrapper(session_data, (_mali_uk_sw_counters_s __user *)arg);
-#endif
-			break;
 
 		default:
 			MALI_DEBUG_PRINT(2, ("No handler for ioctl 0x%08X 0x%08lX\n", cmd, arg));
@@ -579,9 +574,3 @@ module_exit(mali_driver_exit);
 MODULE_LICENSE(MALI_KERNEL_LINUX_LICENSE);
 MODULE_AUTHOR("ARM Ltd.");
 MODULE_VERSION(SVN_REV_STRING);
-
-#if MALI_TRACEPOINTS_ENABLED
-/* Create the trace points (otherwise we just get code to call a tracepoint) */
-#define CREATE_TRACE_POINTS
-#include "mali_linux_trace.h"
-#endif

@@ -1684,11 +1684,6 @@ u32 _mali_osk_get_pid(void);
  */
 u32 _mali_osk_get_tid(void);
 
-void _mali_osk_profiling_add_event(u32 event_id, u32 data0);
-void _mali_osk_profiling_add_counter(u32 event_id, u32 data0);
-int _mali_osk_counter_event(u32 counter, u32 event);
-extern u32 counter_table[];
-
 /** @} */ /* end group  _mali_osk_miscellaneous */
 
 

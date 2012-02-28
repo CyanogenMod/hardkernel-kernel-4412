@@ -14,7 +14,6 @@
 #include "mali_ukk.h"
 #include "mali_timestamp.h"
 #include "mali_kernel_profiling.h"
-#include "mali_linux_trace.h"
 
 typedef struct mali_profiling_entry
 {
@@ -97,19 +96,11 @@ inline _mali_osk_errcode_t _mali_profiling_start(u32 * limit)
 {
 	_mali_osk_errcode_t ret;
 
-	mali_profiling_entry *new_profile_entries = _mali_osk_valloc(*limit * sizeof(mali_profiling_entry));
-
-	if(NULL == new_profile_entries)
-	{
-		return _MALI_OSK_ERR_NOMEM;
-	}
-
 	_mali_osk_lock_wait(lock, _MALI_OSK_LOCKMODE_RW);
 
 	if (prof_state != MALI_PROFILING_STATE_IDLE)
 	{
 		_mali_osk_lock_signal(lock, _MALI_OSK_LOCKMODE_RW);
-		_mali_osk_vfree(new_profile_entries);
 		return _MALI_OSK_ERR_INVALID_ARGS; /* invalid to call this function in this state */
 	}
 
@@ -118,8 +109,13 @@ inline _mali_osk_errcode_t _mali_profiling_start(u32 * limit)
 		*limit = MALI_PROFILING_MAX_BUFFER_ENTRIES;
 	}
 
-	profile_entries = new_profile_entries;
+	profile_entries = _mali_osk_valloc(*limit * sizeof(mali_profiling_entry));
 	profile_entry_count = *limit;
+	if (NULL == profile_entries)
+	{
+		_mali_osk_lock_signal(lock, _MALI_OSK_LOCKMODE_RW);
+		return _MALI_OSK_ERR_NOMEM;
+	}
 
 	ret = _mali_timestamp_reset();
 
@@ -137,20 +133,9 @@ inline _mali_osk_errcode_t _mali_profiling_start(u32 * limit)
 	return ret;
 }
 
-inline void _mali_profiling_add_counter(u32 event_id, u32 data0)
-{
-#if MALI_TRACEPOINTS_ENABLED
-	_mali_osk_profiling_add_counter(event_id, data0);
-#endif
-}
-
 inline _mali_osk_errcode_t _mali_profiling_add_event(u32 event_id, u32 data0, u32 data1, u32 data2, u32 data3, u32 data4)
 {
 	u32 cur_index = _mali_osk_atomic_inc_return(&profile_insert_index) - 1;
-
-#if MALI_TRACEPOINTS_ENABLED
-	_mali_osk_profiling_add_event(event_id, data0);
-#endif
 
 	if (prof_state != MALI_PROFILING_STATE_RUNNING || cur_index >= profile_entry_count)
 	{
@@ -174,50 +159,6 @@ inline _mali_osk_errcode_t _mali_profiling_add_event(u32 event_id, u32 data0, u3
 
 	return _MALI_OSK_ERR_OK;
 }
-
-#if MALI_TRACEPOINTS_ENABLED
-/*
- * The following code uses a bunch of magic numbers taken from the userspace
- * side of the DDK; they are re-used here verbatim. They are taken from the
- * file mali_instrumented_counter_types.h.
- */
-#define MALI_GLES_COUNTER_OFFSET   1000
-#define MALI_VG_COUNTER_OFFSET     2000
-#define MALI_EGL_COUNTER_OFFSET    3000
-#define MALI_SHARED_COUNTER_OFFSET 4000
-
-/* These offsets are derived from the gator driver; see gator_events_mali.c. */
-#define GATOR_EGL_COUNTER_OFFSET    17
-#define GATOR_GLES_COUNTER_OFFSET   18
-
-_mali_osk_errcode_t _mali_ukk_transfer_sw_counters(_mali_uk_sw_counters_s *args)
-{
-	/* Convert the DDK counter ID to what gator expects */
-	unsigned int gator_counter_value = 0;
-
-	_mali_osk_lock_wait(lock, _MALI_OSK_LOCKMODE_RW);
-
-	if (args->id >= MALI_EGL_COUNTER_OFFSET && args->id <= MALI_SHARED_COUNTER_OFFSET)
-	{
-		gator_counter_value = (args->id - MALI_EGL_COUNTER_OFFSET) + GATOR_EGL_COUNTER_OFFSET;
-	}
-	else if (args->id >= MALI_GLES_COUNTER_OFFSET && args->id <= MALI_VG_COUNTER_OFFSET)
-	{
-		gator_counter_value = (args->id - MALI_GLES_COUNTER_OFFSET) + GATOR_GLES_COUNTER_OFFSET;
-	}
-	else
-	{
-		/* Pass it straight through; gator will ignore it anyway. */
-		gator_counter_value = args->id;
-	}
-
-	trace_mali_sw_counter(gator_counter_value, args->value);
-
-	_mali_osk_lock_signal(lock, _MALI_OSK_LOCKMODE_RW);
-
-	return _MALI_OSK_ERR_OK;
-}
-#endif
 
 inline _mali_osk_errcode_t _mali_profiling_stop(u32 * count)
 {

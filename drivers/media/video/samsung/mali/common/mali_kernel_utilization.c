@@ -147,7 +147,7 @@ void mali_utilization_term(void)
 
 
 
-void mali_utilization_core_start(u64 time_now)
+void mali_utilization_core_start(void)
 {
 	if (_mali_osk_atomic_inc_return(&num_running_cores) == 1) {
 		/*
@@ -157,7 +157,7 @@ void mali_utilization_core_start(u64 time_now)
 
 		_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
-		work_start_time = time_now;
+		work_start_time = _mali_osk_time_get_ns();
 
 		if (timer_running != MALI_TRUE) {
 			timer_running = MALI_TRUE;
@@ -174,14 +174,17 @@ void mali_utilization_core_start(u64 time_now)
 
 
 
-void mali_utilization_core_end(u64 time_now)
+void mali_utilization_core_end(void)
 {
 	if (_mali_osk_atomic_dec_return(&num_running_cores) == 0) {
 		/*
 		 * No more cores are working, so accumulate the time we was busy.
 		 */
+		u64 time_now;
+
 		_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
+		time_now = _mali_osk_time_get_ns();
 		accumulated_work_time += (time_now - work_start_time);
 		work_start_time = 0;
 
