@@ -180,6 +180,8 @@ static void fimc_is_irq_handler_general(struct fimc_is_dev *dev)
 			break;
 		case HIC_OPEN_SENSOR:
 			set_bit(IS_ST_OPEN_SENSOR, &dev->state);
+			printk(KERN_INFO "FIMC-IS Lane= %d, Settle line= %d\n",
+				dev->i2h_cmd.arg[2], dev->i2h_cmd.arg[1]);
 			break;
 		case HIC_CLOSE_SENSOR:
 			clear_bit(IS_ST_OPEN_SENSOR, &dev->state);

@@ -87,23 +87,22 @@ static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 	memcpy((void *)phys_to_virt(dev->mem.base), (void *)buf, fsize);
 	fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
 		fsize + 1);
-	memcpy((void *)dev->fw.fw_info, (buf + fsize - 0x1F), 0x17);
-	memcpy((void *)dev->fw.fw_version, (buf + fsize - 0x7), 0x6);
 #elif defined(CONFIG_VIDEOBUF2_ION)
 	if (dev->mem.bitproc_buf == 0) {
 		err("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
 	} else {
 		memcpy(dev->mem.kvaddr, (void *)buf, fsize);
 		fimc_is_mem_cache_clean((void *)dev->mem.kvaddr, fsize + 1);
-		memcpy((void *)dev->fw.fw_info, (buf + fsize -
-			(FIMC_IS_FW_INFO_LENGTH + FIMC_IS_FW_VERSION_LENGTH)),
-			(FIMC_IS_FW_INFO_LENGTH - 1));
-		dev->fw.fw_info[FIMC_IS_FW_INFO_LENGTH - 1] = '\0';
-		memcpy((void *)dev->fw.fw_version, (buf + fsize -
-				(FIMC_IS_FW_VERSION_LENGTH + 1)),
-			FIMC_IS_FW_VERSION_LENGTH);
 	}
 #endif
+	vfs_llseek(fp, -(FIMC_IS_FW_VERSION_LENGTH + 1), SEEK_END);
+	vfs_read(fp, (char __user *)dev->fw.fw_version,
+				(FIMC_IS_FW_INFO_LENGTH - 1), &fp->f_pos);
+	dev->fw.fw_info[FIMC_IS_FW_INFO_LENGTH - 1] = '\0';
+	vfs_llseek(fp, -(FIMC_IS_FW_INFO_LENGTH +
+				FIMC_IS_FW_VERSION_LENGTH + 1), SEEK_END);
+	vfs_read(fp, (char __user *)dev->fw.fw_info,
+					FIMC_IS_FW_INFO_LENGTH, &fp->f_pos);
 	dev->fw.state = 1;
 request_fw:
 	if (fw_requested) {
@@ -141,7 +140,7 @@ request_fw:
 		memcpy((void *)dev->fw.fw_version,
 			(fw_blob->data + fw_blob->size -
 				(FIMC_IS_FW_VERSION_LENGTH + 1)),
-			FIMC_IS_FW_VERSION_LENGTH);
+						FIMC_IS_FW_VERSION_LENGTH);
 		dev->fw.state = 1;
 		dbg("FIMC_IS F/W loaded successfully - size:%d\n",
 							fw_blob->size);
@@ -203,9 +202,6 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 	fimc_is_mem_cache_clean(
 		(void *)phys_to_virt(dev->mem.base + dev->setfile.base),
 		fsize + 1);
-	memcpy((void *)dev->fw.setfile_info,
-				(buf + fsize - FIMC_IS_SETFILE_INFO_LENGTH),
-				FIMC_IS_SETFILE_INFO_LENGTH);
 #elif defined(CONFIG_VIDEOBUF2_ION)
 	if (dev->mem.bitproc_buf == 0) {
 		err("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
@@ -213,14 +209,12 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 		memcpy((dev->mem.kvaddr + dev->setfile.base),
 						(void *)buf, fsize);
 		fimc_is_mem_cache_clean((void *)dev->mem.kvaddr, fsize + 1);
-		dev->fw.state = 1;
-		memcpy((void *)dev->fw.setfile_info,
-				(buf + fsize - FIMC_IS_SETFILE_INFO_LENGTH),
-				FIMC_IS_SETFILE_INFO_LENGTH);
-		dev->fw.setfile_info[FIMC_IS_SETFILE_INFO_LENGTH - 1] = '\0';
-		dbg("FIMC_IS F/W loaded successfully - size:%ld\n", fsize);
+		dbg("FIMC_IS Setfile loaded successfully - size:%ld\n", fsize);
 	}
 #endif
+	vfs_llseek(fp, -FIMC_IS_SETFILE_INFO_LENGTH, SEEK_END);
+	vfs_read(fp, (char __user *)dev->fw.setfile_info,
+				FIMC_IS_SETFILE_INFO_LENGTH, &fp->f_pos);
 	dev->fw.state = 1;
 request_fw:
 	if (fw_requested) {
@@ -254,7 +248,7 @@ request_fw:
 #endif
 		memcpy((void *)dev->fw.setfile_info,
 			(fw_blob->data + fw_blob->size -
-				FIMC_IS_SETFILE_INFO_LENGTH - 1),
+				FIMC_IS_SETFILE_INFO_LENGTH),
 				(FIMC_IS_SETFILE_INFO_LENGTH - 1));
 		dev->fw.setfile_info[FIMC_IS_SETFILE_INFO_LENGTH - 1] = '\0';
 		dev->setfile.state = 1;
