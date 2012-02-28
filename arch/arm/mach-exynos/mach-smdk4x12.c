@@ -488,7 +488,7 @@ static struct s3c_platform_camera s5k3h7 = {
 	},
 	.srclk_name	= "xusbxti",
 	.clk_rate	= 24000000,
-	.mipi_lanes	= 2,
+	.mipi_lanes	= 4,
 	.mipi_settle	= 12,
 	.mipi_align	= 24,
 
@@ -596,7 +596,7 @@ static struct s3c_platform_camera s5k6a3 = {
 	.srclk_name	= "xusbxti",
 	.clk_rate	= 24000000,
 	.mipi_lanes	= 1,
-	.mipi_settle	= 12,
+	.mipi_settle	= 18,
 	.mipi_align	= 24,
 
 	.initialized	= 0,
