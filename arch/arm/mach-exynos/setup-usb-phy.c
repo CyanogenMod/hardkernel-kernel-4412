@@ -52,7 +52,7 @@ struct exynos_usb_phy {
 
 static struct exynos_usb_phy usb_phy_control;
 static atomic_t host_usage;
-static DEFINE_SPINLOCK(phy_lock);
+static DEFINE_MUTEX(phy_lock);
 static struct clk *phy_clk = NULL;
 
 static void exynos_usb_mux_change(struct platform_device *pdev, int val)
@@ -912,7 +912,7 @@ int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 	if (exynos_usb_phy_clock_enable(pdev))
 		return 0;
 
-	spin_lock(&phy_lock);
+	mutex_lock(&phy_lock);
 	if (!strcmp(pdev->name, "s5p-ehci"))
 		clear_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
 	else if (!strcmp(pdev->name, "s5p-ohci"))
@@ -924,7 +924,7 @@ int s5p_usb_phy_suspend(struct platform_device *pdev, int type)
 	if (type == S5P_USB_PHY_HOST)
 		ret = exynos4_usb_phy1_suspend(pdev);
 done:
-	spin_unlock(&phy_lock);
+	mutex_unlock(&phy_lock);
 	exynos_usb_phy_clock_disable(pdev);
 
 	return ret;
@@ -937,7 +937,7 @@ int s5p_usb_phy_resume(struct platform_device *pdev, int type)
 	if (exynos_usb_phy_clock_enable(pdev))
 		return 0;
 
-	spin_lock(&phy_lock);
+	mutex_lock(&phy_lock);
 	if (usb_phy_control.flags)
 		goto done;
 
@@ -949,7 +949,7 @@ done:
 	else if (!strcmp(pdev->name, "s5p-ohci"))
 		set_bit(HOST_PHY_OHCI, &usb_phy_control.flags);
 
-	spin_unlock(&phy_lock);
+	mutex_unlock(&phy_lock);
 	exynos_usb_phy_clock_disable(pdev);
 
 	return ret;
@@ -962,7 +962,7 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 	if (exynos_usb_phy_clock_enable(pdev))
 		return ret;
 
-	spin_lock(&phy_lock);
+	mutex_lock(&phy_lock);
 	if (type == S5P_USB_PHY_HOST) {
 		if (!strcmp(pdev->name, "s5p-ehci"))
 			set_bit(HOST_PHY_EHCI, &usb_phy_control.flags);
@@ -987,7 +987,7 @@ int s5p_usb_phy_init(struct platform_device *pdev, int type)
 			ret = exynos_usb_hsic_init(pdev);
 	} else if (type == S5P_USB_PHY_DRD)
 		ret = exynos5_usb_phy30_init(pdev);
-	spin_unlock(&phy_lock);
+	mutex_unlock(&phy_lock);
 	exynos_usb_phy_clock_disable(pdev);
 
 	return ret;
@@ -1000,7 +1000,7 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 	if (exynos_usb_phy_clock_enable(pdev))
 		return ret;
 
-	spin_lock(&phy_lock);
+	mutex_lock(&phy_lock);
 	if (type == S5P_USB_PHY_HOST) {
 		if (soc_is_exynos4210())
 			ret = exynos4_usb_phy1_exit(pdev);
@@ -1026,7 +1026,7 @@ int s5p_usb_phy_exit(struct platform_device *pdev, int type)
 	} else if (type == S5P_USB_PHY_DRD)
 		ret = exynos5_usb_phy30_exit(pdev);
 
-	spin_unlock(&phy_lock);
+	mutex_unlock(&phy_lock);
 	exynos_usb_phy_clock_disable(pdev);
 
 	return ret;
