@@ -43,9 +43,6 @@ enum usb_phy_type {
 };
 
 struct exynos_usb_phy {
-	u8 phy0_usage;
-	u8 phy1_usage;
-	u8 phy2_usage;
 	u8 lpa_entered;
 	unsigned long flags;
 };
@@ -225,62 +222,26 @@ static u32 exynos_usb_phy_set_clock(struct platform_device *pdev)
 static void exynos_usb_phy_control(enum usb_phy_type phy_type , int on)
 {
 	if (soc_is_exynos4210()) {
-		if (phy_type & USB_PHY0) {
-			if (on == PHY_ENABLE) {
-				usb_phy_control.phy0_usage++;
-				writel(PHY_ENABLE, S5P_USBOTG_PHY_CONTROL);
-			} else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
-				writel(PHY_DISABLE, S5P_USBOTG_PHY_CONTROL);
-		}
-		if (phy_type & USB_PHY1) {
-			if (on == PHY_ENABLE) {
-				usb_phy_control.phy1_usage++;
-				writel(PHY_ENABLE, S5P_USBHOST_PHY_CONTROL);
-			} else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
-				writel(PHY_DISABLE, S5P_USBHOST_PHY_CONTROL);
-		}
+		if (phy_type & USB_PHY0)
+			writel(on, S5P_USBOTG_PHY_CONTROL);
+		if (phy_type & USB_PHY1)
+			writel(on, S5P_USBHOST_PHY_CONTROL);
 	} else if (soc_is_exynos4212() | soc_is_exynos4412()) {
-		if (phy_type & USB_PHY) {
-			if (on == PHY_ENABLE) {
-				usb_phy_control.phy0_usage++;
-				writel(PHY_ENABLE, S5P_USB_PHY_CONTROL);
-			} else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
-				writel(PHY_DISABLE, S5P_USB_PHY_CONTROL);
-		}
+		if (phy_type & USB_PHY)
+			writel(on, S5P_USB_PHY_CONTROL);
 #ifdef CONFIG_USB_S5P_HSIC0
-		if (phy_type & USB_PHY_HSIC0) {
-			if (on == PHY_ENABLE) {
-				usb_phy_control.phy1_usage++;
-				writel(PHY_ENABLE, S5P_HSIC_1_PHY_CONTROL);
-			} else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
-				writel(PHY_DISABLE, S5P_HSIC_1_PHY_CONTROL);
-		}
+		if (phy_type & USB_PHY_HSIC0)
+			writel(on, S5P_HSIC_1_PHY_CONTROL);
 #endif
 #ifdef CONFIG_USB_S5P_HSIC1
-		if (phy_type & USB_PHY_HSIC1) {
-			if (on == PHY_ENABLE) {
-				usb_phy_control.phy2_usage++;
-				writel(PHY_ENABLE, S5P_HSIC_2_PHY_CONTROL);
-			} else if (on == PHY_DISABLE && (--usb_phy_control.phy2_usage) == 0)
-				writel(PHY_DISABLE, S5P_HSIC_2_PHY_CONTROL);
-		}
+		if (phy_type & USB_PHY_HSIC1)
+			writel(on, S5P_HSIC_2_PHY_CONTROL);
 #endif
 	} else {
-		if (phy_type & USB_PHY0) {
-			if (on == PHY_ENABLE) {
-				usb_phy_control.phy0_usage++;
-				writel(PHY_ENABLE, EXYNOS5_USBDEV_PHY_CONTROL);
-			} else if (on == PHY_DISABLE && (--usb_phy_control.phy0_usage) == 0)
-				writel(PHY_DISABLE, EXYNOS5_USBDEV_PHY_CONTROL);
-		}
-
-		if (phy_type & USB_PHY1) {
-			if (on == PHY_ENABLE) {
-				usb_phy_control.phy1_usage++;
-				writel(PHY_ENABLE, EXYNOS5_USBHOST_PHY_CONTROL);
-			} else if (on == PHY_DISABLE && (--usb_phy_control.phy1_usage) == 0)
-				writel(PHY_DISABLE, EXYNOS5_USBHOST_PHY_CONTROL);
-		}
+		if (phy_type & USB_PHY0)
+			writel(on, EXYNOS5_USBDEV_PHY_CONTROL);
+		if (phy_type & USB_PHY1)
+			writel(on, EXYNOS5_USBHOST_PHY_CONTROL);
 	}
 }
 
@@ -371,9 +332,10 @@ int exynos4_check_usb_op(void)
 			writel((readl(EXYNOS4_PHYPWR) | PHY0_NORMAL_MASK),
 					EXYNOS4_PHYPWR);
 
-			writel(PHY_DISABLE, S5P_HSIC_1_PHY_CONTROL);
-			writel(PHY_DISABLE, S5P_HSIC_2_PHY_CONTROL);
-			writel(PHY_DISABLE, S5P_USB_PHY_CONTROL);
+			exynos_usb_phy_control(USB_PHY
+				| USB_PHY_HSIC0
+				| USB_PHY_HSIC1,
+				PHY_DISABLE);
 
 			op = 0;
 			usb_phy_control.lpa_entered = 1;
@@ -454,9 +416,10 @@ static int exynos4_usb_phy1_resume(struct platform_device *pdev)
 				| EXYNOS4210_PHY1_SWRST_MASK);
 			writel(rstcon, EXYNOS4_RSTCON);
 		} else {
-			writel(PHY_ENABLE, S5P_USB_PHY_CONTROL);
-			writel(PHY_ENABLE, S5P_HSIC_1_PHY_CONTROL);
-			writel(PHY_ENABLE, S5P_HSIC_2_PHY_CONTROL);
+			exynos_usb_phy_control(USB_PHY
+				| USB_PHY_HSIC0
+				| USB_PHY_HSIC1,
+				PHY_ENABLE);
 
 			/* set to normal of Device */
 			phypwr = readl(EXYNOS4_PHYPWR) & ~PHY0_NORMAL_MASK;
