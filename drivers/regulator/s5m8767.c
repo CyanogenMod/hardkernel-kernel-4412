@@ -687,8 +687,7 @@ static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
 	struct regulator_dev **rdev;
 	struct s5m8767_info *s5m8767;
 	struct i2c_client *i2c;
-	int i, ret, size, reg;
-	u8 val;
+	int i, ret, size;
 
 	if (!pdata) {
 		dev_err(pdev->dev.parent, "Platform data not supplied\n");
@@ -846,20 +845,6 @@ static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
 	s5m_reg_update(i2c, S5M8767_REG_BUCK2CTRL, 0x78, 0xff);
 	s5m_reg_update(i2c, S5M8767_REG_BUCK3CTRL, 0x58, 0xff);
 	s5m_reg_update(i2c, S5M8767_REG_BUCK4CTRL, 0x78, 0xff);
-
-	reg = S5M8767_REG_LDO7CTRL;
-
-	do{
-		ret = s5m_reg_read(i2c, reg, &val);
-		if (ret)
-			return ret;
-
-		s5m_reg_update(i2c, reg, ((val & 0x3f) | 0x40), 0xff);
-		reg++;
-		if ((reg == S5M8767_REG_LDO9CTRL) || (reg == S5M8767_REG_LDO11CTRL)
-		|| (reg == S5M8767_REG_LDO13CTRL) || (reg == S5M8767_REG_LDO17CTRL))
-			reg++;
-	} while (reg <= S5M8767_REG_LDO16CTRL);
 
 	if (s5m8767->buck2_ramp)
 		s5m_reg_update(i2c, S5M8767_REG_DVSRAMP, 0x08, 0x08);
