@@ -480,7 +480,7 @@ static int s5m8767_set_voltage(struct regulator_dev *rdev,
 
 	if (val < i) {
 		udelay(DIV_ROUND_UP(desc->step * (i - val),
-			s5m8767->ramp_delay));
+			s5m8767->ramp_delay * 1000));
 	}
 	return ret;
 }
