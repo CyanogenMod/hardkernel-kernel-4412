@@ -44,9 +44,9 @@ void fimg2d4x_reset(struct fimg2d_control *info)
 	/* turn off wince option */
 	wr(0x0, FIMG2D_BLEND_FUNCTION_REG);
 
-	/* set default repeat mode to clamp */
-	wr(FIMG2D_SRC_REPEAT_CLAMP, FIMG2D_SRC_REPEAT_MODE_REG);
-	wr(FIMG2D_MSK_REPEAT_CLAMP, FIMG2D_MSK_REPEAT_MODE_REG);
+	/* set default repeat mode to reflect(mirror) */
+	wr(FIMG2D_SRC_REPEAT_REFLECT, FIMG2D_SRC_REPEAT_MODE_REG);
+	wr(FIMG2D_MSK_REPEAT_REFLECT, FIMG2D_MSK_REPEAT_MODE_REG);
 }
 
 void fimg2d4x_enable_irq(struct fimg2d_control *info)
@@ -157,7 +157,7 @@ void fimg2d4x_set_dst_type(struct fimg2d_control *info, enum image_sel type)
 
 /**
  * @d: set base address, stride, color format, order
-*/
+ */
 void fimg2d4x_set_dst_image(struct fimg2d_control *info, struct fimg2d_image *d)
 {
 	unsigned long cfg;
@@ -375,7 +375,9 @@ static inline unsigned long scale_factor_to_fixed16(int n, int d)
 	return fixed16;
 }
 
-void fimg2d4x_set_src_scaling(struct fimg2d_control *info, struct fimg2d_scale *s)
+void fimg2d4x_set_src_scaling(struct fimg2d_control *info,
+				struct fimg2d_scale *scl,
+				struct fimg2d_repeat *rep)
 {
 	unsigned long wcfg, hcfg;
 	unsigned long mode;
@@ -387,8 +389,8 @@ void fimg2d4x_set_src_scaling(struct fimg2d_control *info, struct fimg2d_scale *
 	 */
 
 	/* inversed scaling factor: src is numerator */
-	wcfg = scale_factor_to_fixed16(s->src_w, s->dst_w);
-	hcfg = scale_factor_to_fixed16(s->src_h, s->dst_h);
+	wcfg = scale_factor_to_fixed16(scl->src_w, scl->dst_w);
+	hcfg = scale_factor_to_fixed16(scl->src_h, scl->dst_h);
 
 	if (wcfg == DEFAULT_SCALE_RATIO && hcfg == DEFAULT_SCALE_RATIO)
 		return;
@@ -397,16 +399,22 @@ void fimg2d4x_set_src_scaling(struct fimg2d_control *info, struct fimg2d_scale *
 	wr(hcfg, FIMG2D_SRC_YSCALE_REG);
 
 	/* scaling algorithm */
-	if (s->mode == SCALING_NEAREST)
+	if (scl->mode == SCALING_NEAREST)
 		mode = FIMG2D_SCALE_MODE_NEAREST;
-	else
-		mode = FIMG2D_SCALE_MODE_BILINEAR;
+	else {
+		/* 0x3: ignore repeat mode at boundary */
+		if (rep->mode == REPEAT_PAD || rep->mode == REPEAT_CLAMP)
+			mode = 0x3;	/* hidden */
+		else
+			mode = FIMG2D_SCALE_MODE_BILINEAR;
+	}
 
 	wr(mode, FIMG2D_SRC_SCALE_CTRL_REG);
-
 }
 
-void fimg2d4x_set_msk_scaling(struct fimg2d_control *info, struct fimg2d_scale *s)
+void fimg2d4x_set_msk_scaling(struct fimg2d_control *info,
+				struct fimg2d_scale *scl,
+				struct fimg2d_repeat *rep)
 {
 	unsigned long wcfg, hcfg;
 	unsigned long mode;
@@ -418,8 +426,8 @@ void fimg2d4x_set_msk_scaling(struct fimg2d_control *info, struct fimg2d_scale *
 	 */
 
 	/* inversed scaling factor: src is numerator */
-	wcfg = scale_factor_to_fixed16(s->src_w, s->dst_w);
-	hcfg = scale_factor_to_fixed16(s->src_h, s->dst_h);
+	wcfg = scale_factor_to_fixed16(scl->src_w, scl->dst_w);
+	hcfg = scale_factor_to_fixed16(scl->src_h, scl->dst_h);
 
 	if (wcfg == DEFAULT_SCALE_RATIO && hcfg == DEFAULT_SCALE_RATIO)
 		return;
@@ -428,44 +436,51 @@ void fimg2d4x_set_msk_scaling(struct fimg2d_control *info, struct fimg2d_scale *
 	wr(hcfg, FIMG2D_MSK_YSCALE_REG);
 
 	/* scaling algorithm */
-	if (s->mode == SCALING_NEAREST)
+	if (scl->mode == SCALING_NEAREST)
 		mode = FIMG2D_SCALE_MODE_NEAREST;
-	else
-		mode = FIMG2D_SCALE_MODE_BILINEAR;
+	else {
+		/* 0x3: ignore repeat mode at boundary */
+		if (rep->mode == REPEAT_PAD || rep->mode == REPEAT_CLAMP)
+			mode = 0x3;	/* hidden */
+		else
+			mode = FIMG2D_SCALE_MODE_BILINEAR;
+	}
 
 	wr(mode, FIMG2D_MSK_SCALE_CTRL_REG);
 }
 
-void fimg2d4x_set_src_repeat(struct fimg2d_control *info, struct fimg2d_repeat *r)
+void fimg2d4x_set_src_repeat(struct fimg2d_control *info,
+				struct fimg2d_repeat *rep)
 {
 	unsigned long cfg;
 
-	if (r->mode == NO_REPEAT)
+	if (rep->mode == NO_REPEAT)
 		return;
 
-	cfg = (r->mode - REPEAT_NORMAL) << FIMG2D_SRC_REPEAT_SHIFT;
+	cfg = (rep->mode - REPEAT_NORMAL) << FIMG2D_SRC_REPEAT_SHIFT;
 
 	wr(cfg, FIMG2D_SRC_REPEAT_MODE_REG);
 
 	/* src pad color */
-	if (r->mode == REPEAT_PAD)
-		wr(r->pad_color, FIMG2D_SRC_PAD_VALUE_REG);
+	if (rep->mode == REPEAT_PAD)
+		wr(rep->pad_color, FIMG2D_SRC_PAD_VALUE_REG);
 }
 
-void fimg2d4x_set_msk_repeat(struct fimg2d_control *info, struct fimg2d_repeat *r)
+void fimg2d4x_set_msk_repeat(struct fimg2d_control *info,
+				struct fimg2d_repeat *rep)
 {
 	unsigned long cfg;
 
-	if (r->mode == NO_REPEAT)
+	if (rep->mode == NO_REPEAT)
 		return;
 
-	cfg = (r->mode - REPEAT_NORMAL) << FIMG2D_MSK_REPEAT_SHIFT;
+	cfg = (rep->mode - REPEAT_NORMAL) << FIMG2D_MSK_REPEAT_SHIFT;
 
 	wr(cfg, FIMG2D_MSK_REPEAT_MODE_REG);
 
 	/* mask pad color */
-	if (r->mode == REPEAT_PAD)
-		wr(r->pad_color, FIMG2D_MSK_PAD_VALUE_REG);
+	if (rep->mode == REPEAT_PAD)
+		wr(rep->pad_color, FIMG2D_MSK_PAD_VALUE_REG);
 }
 
 void fimg2d4x_set_rotation(struct fimg2d_control *info, enum rotation rot)

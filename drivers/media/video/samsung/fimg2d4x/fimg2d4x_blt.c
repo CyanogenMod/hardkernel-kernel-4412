@@ -122,21 +122,22 @@ static int fast_op(struct fimg2d_bltcmd *cmd)
 {
 	int sa, da, ga;
 	int fop = cmd->op;
-	struct fimg2d_image *sm, *dm;
+	struct fimg2d_image *src, *msk, *dst;
 	struct fimg2d_param *p = &cmd->param;
 
-	if (cmd->image[IMSK].addr.type != ADDR_NONE)
+	src = &cmd->image[ISRC];
+	msk = &cmd->image[IMSK];
+	dst = &cmd->image[IDST];
+
+	if (msk->addr.type)
 		return fop;
 
-	sm = &cmd->image[ISRC];
-	dm = &cmd->image[IDST];
-
-	if (sm->addr.type == ADDR_NONE)
+	if (!src->addr.type)
 		sa = (p->solid_color >> 24) & 0xff;
 	else
-		sa = is_opaque(sm->fmt) ? 0xff : 0;
+		sa = is_opaque(src->fmt) ? 0xff : 0;
 
-	da = is_opaque(dm->fmt) ? 0xff : 0;
+	da = is_opaque(dst->fmt) ? 0xff : 0;
 	ga = p->g_alpha;
 
 	switch (cmd->op) {
@@ -190,7 +191,7 @@ static int fast_op(struct fimg2d_bltcmd *cmd)
 	}
 
 	if (fop == BLIT_OP_SRC) {
-		if (sm->addr.type == ADDR_NONE && sa == 0xff && ga == 0xff)
+		if (!src->addr.type && sa == 0xff && ga == 0xff)
 			fop = BLIT_OP_SOLID_FILL;
 	}
 
@@ -202,8 +203,13 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 	int op;
 	enum image_sel srcsel, dstsel;
 	struct fimg2d_param *p = &cmd->param;
+	struct fimg2d_image *src, *msk, *dst;
 
 	fimg2d_debug("ctx %p seq_no(%u)\n", cmd->ctx, cmd->seq_no);
+
+	src = &cmd->image[ISRC];
+	msk = &cmd->image[IMSK];
+	dst = &cmd->image[IDST];
 
 	/* TODO: batch blit */
 	fimg2d4x_reset(info);
@@ -226,7 +232,7 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 		srcsel = IMG_FGCOLOR;
 		break;
 	default:
-		if (cmd->image[ISRC].addr.type == ADDR_NONE) {
+		if (!src->addr.type) {
 			srcsel = IMG_FGCOLOR;
 			fimg2d4x_set_fgcolor(info, p->solid_color);
 		}
@@ -245,37 +251,37 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 	fimg2d4x_set_dst_type(info, dstsel);
 
 	/* src */
-	if (cmd->image[ISRC].addr.type != ADDR_NONE) {
-		fimg2d4x_set_src_image(info, &cmd->image[ISRC]);
-		fimg2d4x_set_src_rect(info, &cmd->image[ISRC].rect);
+	if (src->addr.type) {
+		fimg2d4x_set_src_image(info, src);
+		fimg2d4x_set_src_rect(info, &src->rect);
 		fimg2d4x_set_src_repeat(info, &p->repeat);
-		if (p->scaling.mode != NO_SCALING)
-			fimg2d4x_set_src_scaling(info, &p->scaling);
+		if (p->scaling.mode)
+			fimg2d4x_set_src_scaling(info, &p->scaling, &p->repeat);
 	}
 
 	/* msk */
-	if (cmd->image[IMSK].addr.type != ADDR_NONE) {
+	if (msk->addr.type) {
 		fimg2d4x_enable_msk(info);
-		fimg2d4x_set_msk_image(info, &cmd->image[IMSK]);
-		fimg2d4x_set_msk_rect(info, &cmd->image[IMSK].rect);
+		fimg2d4x_set_msk_image(info, msk);
+		fimg2d4x_set_msk_rect(info, &msk->rect);
 		fimg2d4x_set_msk_repeat(info, &p->repeat);
-		if (p->scaling.mode != NO_SCALING)
-			fimg2d4x_set_msk_scaling(info, &p->scaling);
+		if (p->scaling.mode)
+			fimg2d4x_set_msk_scaling(info, &p->scaling, &p->repeat);
 	}
 
 	/* dst */
-	if (cmd->image[IDST].addr.type != ADDR_NONE) {
-		fimg2d4x_set_dst_image(info, &cmd->image[IDST]);
-		fimg2d4x_set_dst_rect(info, &cmd->image[IDST].rect);
-		fimg2d4x_enable_clipping(info, &cmd->image[IDST].rect);
+	if (dst->addr.type) {
+		fimg2d4x_set_dst_image(info, dst);
+		fimg2d4x_set_dst_rect(info, &dst->rect);
+		fimg2d4x_enable_clipping(info, &dst->rect);
 	}
 
 	/* bluescreen */
-	if (p->bluscr.mode != OPAQUE)
+	if (p->bluscr.mode)
 		fimg2d4x_set_bluescreen(info, &p->bluscr);
 
 	/* rotation */
-	if (p->rotate != ORIGIN)
+	if (p->rotate)
 		fimg2d4x_set_rotation(info, p->rotate);
 
 	/* dithering */
