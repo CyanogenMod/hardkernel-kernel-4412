@@ -28,6 +28,7 @@
 
 struct platform_device; /* don't need the contents */
 
+#if defined(CONFIG_ARCH_EXYNOS4)
 /*------------------------------------------------------*/
 /*		Exynos4 series - FIMC-IS		*/
 /*------------------------------------------------------*/
@@ -319,7 +320,9 @@ int exynos_fimc_is_clk_put(struct platform_device *pdev)
 		clk_put(pdata->control_clock[i]);
 	return 0;
 }
+#endif
 
+#if defined(CONFIG_ARCH_EXYNOS5)
 /*------------------------------------------------------*/
 /*		Exynos5 series - FIMC-IS		*/
 /*------------------------------------------------------*/
@@ -696,3 +699,4 @@ int exynos5_fimc_is_clk_off(struct platform_device *pdev)
 
 	return 0;
 }
+#endif
