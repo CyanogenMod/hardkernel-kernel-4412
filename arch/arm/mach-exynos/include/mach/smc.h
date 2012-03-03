@@ -69,6 +69,12 @@ static inline u32 exynos_smc_readsfr(u32 addr, u32 *val)
 		: "+r"(reg0), "+r"(reg1), "+r"(reg2), "+r"(reg3)
 	);
 
+	if (reg0 == SMC_CMD_REG) {
+		if (!reg1)
+			*val = reg2;
+		return reg1;
+	}
+
 	if (!reg0)
 		*val = reg2;
 
