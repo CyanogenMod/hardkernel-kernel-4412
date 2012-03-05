@@ -2549,10 +2549,36 @@ static int fimc_is_v4l2_isp_exposure_legacy(struct fimc_is_dev *dev, int value)
 static int fimc_is_v4l2_isp_brightness(struct fimc_is_dev *dev, int value)
 {
 	int ret = 0;
-	if (value >= -4 && value < 5) {
+	switch (value) {
+	case IS_BRIGHTNESS_MINUS_2:
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
 					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
-		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, value);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, -2);
+		break;
+	case IS_BRIGHTNESS_MINUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, -1);
+		break;
+	case IS_BRIGHTNESS_DEFAULT:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+		break;
+	case IS_BRIGHTNESS_PLUS_1:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 1);
+		break;
+	case IS_BRIGHTNESS_PLUS_2:
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_BRIGHTNESS);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 2);
+		break;
+	default:
+		return ret;
+	}
+	if (value >= 0 && value < IS_BRIGHTNESS_MAX) {
 		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
@@ -3560,6 +3586,30 @@ static int fimc_is_v4l2_mode_change(struct fimc_is_dev *dev, int value)
 	if (!test_bit(IS_ST_INIT_DONE, &dev->state)) {
 		err("Not init done state!!\n");
 		return -EINVAL;
+	}
+	/* Set default value between still and video mode change */
+	/* This is optional part */
+	if ((dev->scenario_id + value) == 1) {
+		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+		IS_INC_PARAM_NUM(dev);
+		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_EXPOSURE);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+		IS_INC_PARAM_NUM(dev);
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
+		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	clear_bit(IS_ST_CHANGE_MODE, &dev->state);
 	fimc_is_hw_change_mode(dev, value);
