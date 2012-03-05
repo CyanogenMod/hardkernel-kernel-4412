@@ -1329,9 +1329,7 @@ int fimc_outdev_set_ctx_param(struct fimc_control *ctrl, struct fimc_ctx *ctx)
 #endif
 
 	fimc_hwset_reset(ctrl);
-	if ((ctrl->status == FIMC_READY_ON) ||
-			(ctrl->status == FIMC_STREAMON_IDLE))
-		fimc_hwset_enable_irq(ctrl, 0, 1);
+	fimc_hwset_enable_irq(ctrl, 0, 1);
 
 #if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
 	fimc_hwset_output_buf_sequence_all(ctrl, FRAME_SEQ);

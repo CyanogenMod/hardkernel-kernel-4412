@@ -49,7 +49,8 @@ void s3c_fimc_irq_work(struct work_struct *work)
 	if (ctrl->irq_cnt.counter > 0) {
 		do {
 			ret = atomic_dec_and_test((atomic_t *)&ctrl->irq_cnt);
-			pm_runtime_put_sync(ctrl->dev);
+			if (atomic_read(&ctrl->dev->power.usage_count) > 0)
+				pm_runtime_put_sync(ctrl->dev);
 		} while (ret != 1);
 	}
 }
@@ -1386,10 +1387,6 @@ static int fimc_release(struct file *filp)
 		kfree(ctrl->cap);
 		ctrl->cap = NULL;
 	}
-
-#if (defined(CONFIG_EXYNOS_DEV_PD) && defined(CONFIG_PM_RUNTIME))
-	flush_workqueue(ctrl->fimc_irq_wq);
-#endif
 
 	/*
 	 * Close window for FIMC if window is enabled.
