@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 120  /* IS REGION VERSION 1.20 */
+#define IS_REGION_VER 121  /* IS REGION VERSION 1.21 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -521,8 +521,8 @@ enum is_param_set_bit {
 	PARAM_SCALERC_CONTROL,
 	PARAM_SCALERC_OTF_INPUT,
 	PARAM_SCALERC_IMAGE_EFFECT,
-	PARAM_SCALERC_CROP,
-	PARAM_SCALERC_SCALING = 30,
+	PARAM_SCALERC_INPUT_CROP,
+	PARAM_SCALERC_OUTPUT_CROP = 30,
 	PARAM_SCALERC_OTF_OUTPUT,
 	PARAM_SCALERC_DMA_OUTPUT = 32,
 	PARAM_ODC_CONTROL,
@@ -539,8 +539,8 @@ enum is_param_set_bit {
 	PARAM_SCALERP_CONTROL,
 	PARAM_SCALERP_OTF_INPUT,
 	PARAM_SCALERP_IMAGE_EFFECT,
-	PARAM_SCALERP_CROP,
-	PARAM_SCALERP_SCALING,
+	PARAM_SCALERP_INPUT_CROP,
+	PARAM_SCALERP_OUTPUT_CROP,
 	PARAM_SCALERP_ROTATION,
 	PARAM_SCALERP_FLIP = 50,
 	PARAM_SCALERP_OTF_OUTPUT,
@@ -592,9 +592,9 @@ enum is_param_set_bit {
 #define PARAM_SCALERC_CONTROL		INC_NUM(PARAM_DRC_OTF_OUTPUT)
 #define PARAM_SCALERC_OTF_INPUT		INC_NUM(PARAM_SCALERC_CONTROL)
 #define PARAM_SCALERC_IMAGE_EFFECT	INC_NUM(PARAM_SCALERC_OTF_INPUT)
-#define PARAM_SCALERC_CROP		INC_NUM(PARAM_SCALERC_IMAGE_EFFECT)
-#define PARAM_SCALERC_SCALING		INC_NUM(PARAM_SCALERC_CROP)
-#define PARAM_SCALERC_OTF_OUTPUT	INC_NUM(PARAM_SCALERC_SCALING)
+#define PARAM_SCALERC_INPUT_CROP	INC_NUM(PARAM_SCALERC_IMAGE_EFFECT)
+#define PARAM_SCALERC_OUTPUT_CROP	INC_NUM(PARAM_SCALERC_INPUT_CROP)
+#define PARAM_SCALERC_OTF_OUTPUT	INC_NUM(PARAM_SCALERC_OUTPUT_CROP)
 
 /* 32~63 */
 #define PARAM_SCALERC_DMA_OUTPUT	INC_NUM(PARAM_SCALERC_OTF_OUTPUT)
@@ -612,9 +612,9 @@ enum is_param_set_bit {
 #define PARAM_SCALERP_CONTROL		INC_NUM(PARAM_TDNR_DMA_OUTPUT)
 #define PARAM_SCALERP_OTF_INPUT		INC_NUM(PARAM_SCALERP_CONTROL)
 #define PARAM_SCALERP_IMAGE_EFFECT	INC_NUM(PARAM_SCALERP_OTF_INPUT)
-#define PARAM_SCALERP_CROP		INC_NUM(PARAM_SCALERP_IMAGE_EFFECT)
-#define PARAM_SCALERP_SCALING		INC_NUM(PARAM_SCALERP_CROP)
-#define PARAM_SCALERP_ROTATION		INC_NUM(PARAM_SCALERP_SCALING)
+#define PARAM_SCALERP_INPUT_CROP	INC_NUM(PARAM_SCALERP_IMAGE_EFFECT)
+#define PARAM_SCALERP_OUTPUT_CROP	INC_NUM(PARAM_SCALERP_INPUT_CROP)
+#define PARAM_SCALERP_ROTATION		INC_NUM(PARAM_SCALERP_OUTPUT_CROP)
 #define PARAM_SCALERP_FLIP		INC_NUM(PARAM_SCALERP_ROTATION)
 #define PARAM_SCALERP_OTF_OUTPUT	INC_NUM(PARAM_SCALERP_FLIP)
 #define PARAM_SCALERP_DMA_OUTPUT	INC_NUM(PARAM_SCALERP_OTF_OUTPUT)
@@ -1043,12 +1043,11 @@ enum isp_afc_error {
 /* --------------------------  Scaler  --------------------------------- */
 enum scaler_imageeffect_command {
 	SCALER_IMAGE_EFFECT_COMMNAD_DISABLE	= 0,
-	SCALER_IMAGE_EFFECT_COMMNAD_SEPIA_CB	= 1,
-	SCALER_IMAGE_EFFECT_COMMAND_SEPIA_CR	= 2,
-	SCALER_IMAGE_EFFECT_COMMAND_NEGATIVE	= 3,
-	SCALER_IMAGE_EFFECT_COMMAND_ARTFREEZE	= 4,
-	SCALER_IMAGE_EFFECT_COMMAND_EMBOSSING	= 5,
-	SCALER_IMAGE_EFFECT_COMMAND_SILHOUETTE	= 6
+	SCALER_IMAGE_EFFECT_COMMNAD_ARBITRARY	= 1,
+	SCALER_IMAGE_EFFECT_COMMAND_NEGATIVE	= 2,
+	SCALER_IMAGE_EFFECT_COMMAND_ARTFREEZE	= 3,
+	SCALER_IMAGE_EFFECT_COMMAND_EMBOSSING	= 4,
+	SCALER_IMAGE_EFFECT_COMMAND_SILHOUETTE	= 5
 };
 
 enum scaler_imageeffect_error {
@@ -1068,6 +1067,12 @@ enum scaler_scaling_command {
 	SCALER_SCALING_COMMNAD_DISABLE		= 0,
 	SCALER_SCALING_COMMAND_UP		= 1,
 	SCALER_SCALING_COMMAND_DOWN		= 2
+};
+
+enum scaler_dma_out_sel {
+	SCALER_DMA_OUT_IMAGE_EFFECT		= 0,
+	SCALER_DMA_OUT_SCALED			= 1,
+	SCALER_DMA_OUT_UNSCALED			= 2
 };
 
 enum scaler_scaling_error {
@@ -1163,8 +1168,10 @@ enum fd_config_orientation {
 struct param_control {
 	u32	cmd;
 	u32	bypass;
+	u32	buffer_address;
+	u32	buffer_size;
 	u32	first_drop_frames; /* only valid at ISP */
-	u32	reserved[PARAMETER_MAX_MEMBER-4];
+	u32	reserved[PARAMETER_MAX_MEMBER-6];
 	u32	err;
 };
 
@@ -1310,22 +1317,34 @@ struct param_isp_afc {
 
 struct param_scaler_imageeffect {
 	u32	cmd;
-	u32	reserved[PARAMETER_MAX_MEMBER-2];
-	u32	err;
-};
-
-struct param_scaler_crop {
-	u32	cmd;
-	u32	pos_x;
-	u32	pos_y;
+	u32	arbitrary_cb;
+	u32	arbitrary_cr;
 	u32	reserved[PARAMETER_MAX_MEMBER-4];
 	u32	err;
 };
 
-struct param_scaler_scaling {
+struct param_scaler_input_crop {
 	u32	cmd;
-	u32	ratio;
-	u32	reserved[PARAMETER_MAX_MEMBER-3];
+	u32	crop_offset_x;
+	u32	crop_offset_y;
+	u32	crop_width;
+	u32	crop_height;
+	u32	in_width;
+	u32	in_height;
+	u32	out_width;
+	u32	out_height;
+	u32	reserved[PARAMETER_MAX_MEMBER-10];
+	u32	err;
+};
+
+struct param_scaler_output_crop {
+	u32	cmd;
+	u32	crop_offset_x;
+	u32	crop_offset_y;
+	u32	crop_width;
+	u32	crop_height;
+	u32	out_format;
+	u32	reserved[PARAMETER_MAX_MEMBER-7];
 	u32	err;
 };
 
@@ -1405,13 +1424,13 @@ struct drc_param {
 };
 
 struct scalerc_param {
-	struct param_control		control;
-	struct param_otf_input		otf_input;
-	struct param_scaler_imageeffect	effect;
-	struct param_scaler_crop	crop;
-	struct param_scaler_scaling	scale;
-	struct param_otf_output		otf_output;
-	struct param_dma_output		dma_output;
+	struct param_control			control;
+	struct param_otf_input			otf_input;
+	struct param_scaler_imageeffect		effect;
+	struct param_scaler_input_crop		input_crop;
+	struct param_scaler_output_crop		output_crop;
+	struct param_otf_output			otf_output;
+	struct param_dma_output			dma_output;
 };
 
 struct odc_param {
@@ -1438,8 +1457,8 @@ struct scalerp_param {
 	struct param_control			control;
 	struct param_otf_input			otf_input;
 	struct param_scaler_imageeffect		effect;
-	struct param_scaler_crop		crop;
-	struct param_scaler_scaling		scale;
+	struct param_scaler_input_crop		input_crop;
+	struct param_scaler_output_crop		output_crop;
 	struct param_scaler_rotation		rotation;
 	struct param_scaler_flip		flip;
 	struct param_otf_output			otf_output;

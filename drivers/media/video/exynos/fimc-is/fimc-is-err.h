@@ -139,16 +139,17 @@ enum error {
 	ERROR_CONTROL_BYPASS		= 11,	/* Enable or Disable */
 
 	ERROR_OTF_INPUT_NO		= ERROR_COMMON_NO,
+	ERROR_OTF_INPUT_CMD		= 21,
 	/* invalid format  (DRC: YUV444, FD: YUV444, 422, 420) */
-	ERROR_OTF_INPUT_FORMAT		= 21,
+	ERROR_OTF_INPUT_FORMAT		= 22,
 	/* invalid width (DRC: 128~8192, FD: 32~8190) */
-	ERROR_OTF_INPUT_WIDTH		= 22,
+	ERROR_OTF_INPUT_WIDTH		= 23,
 	/* invalid height (DRC: 64~8192, FD: 16~8190) */
-	ERROR_OTF_INPUT_HEIGHT		= 23,
+	ERROR_OTF_INPUT_HEIGHT		= 24,
 	/* invalid bit-width (DRC: 8~12bits, FD: 8bit) */
-	ERROR_OTF_INPUT_BIT_WIDTH	= 24,
+	ERROR_OTF_INPUT_BIT_WIDTH	= 25,
 	/* invalid FrameTime for ISP */
-	ERROR_OTF_INPUT_USER_FRAMETIIME	= 25,
+	ERROR_OTF_INPUT_USER_FRAMETIIME	= 26,
 
 	ERROR_DMA_INPUT_NO		= ERROR_COMMON_NO,
 	/* invalid width (DRC: 128~8192, FD: 32~8190) */
@@ -231,8 +232,18 @@ enum error {
 	ERROR_FD_RESULT			= 414,	/* PARAM_FdResultStr can
 						be only applied in ready-state
 						or stream off */
-	ERROR_FD_MODE			= 415	/* PARAM_FdModeStr can be only
+	ERROR_FD_MODE			= 415,	/* PARAM_FdModeStr can be only
 						applied in ready-state or
 						stream off */
+	/* Scaler Error  (500 ~ 599) */
+	ERROR_SCALER_NO					= ERROR_COMMON_NO,
+	ERROR_SCALER_DMA_OUTSEL				= 501,
+	ERROR_SCALER_H_RATIO				= 502,
+	ERROR_SCALER_V_RATIO				= 503,
+
+	ERROR_SCALER_IMAGE_EFFECT			= 510,
+
+	ERROR_SCALER_ROTATE				= 520,
+	ERROR_SCALER_FLIP				= 521,
 };
 #endif
