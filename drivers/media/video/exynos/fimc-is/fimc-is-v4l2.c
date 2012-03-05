@@ -95,14 +95,15 @@ static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 		fimc_is_mem_cache_clean((void *)dev->mem.kvaddr, fsize + 1);
 	}
 #endif
-	vfs_llseek(fp, -(FIMC_IS_FW_VERSION_LENGTH + 1), SEEK_END);
+	vfs_llseek(fp, -FIMC_IS_FW_VERSION_LENGTH, SEEK_END);
 	vfs_read(fp, (char __user *)dev->fw.fw_version,
-				(FIMC_IS_FW_INFO_LENGTH - 1), &fp->f_pos);
-	dev->fw.fw_info[FIMC_IS_FW_INFO_LENGTH - 1] = '\0';
+				(FIMC_IS_FW_VERSION_LENGTH - 1), &fp->f_pos);
+	dev->fw.fw_version[FIMC_IS_FW_VERSION_LENGTH - 1] = '\0';
 	vfs_llseek(fp, -(FIMC_IS_FW_INFO_LENGTH +
-				FIMC_IS_FW_VERSION_LENGTH + 1), SEEK_END);
+				FIMC_IS_FW_VERSION_LENGTH - 1), SEEK_END);
 	vfs_read(fp, (char __user *)dev->fw.fw_info,
-					FIMC_IS_FW_INFO_LENGTH, &fp->f_pos);
+					(FIMC_IS_FW_INFO_LENGTH-1), &fp->f_pos);
+	dev->fw.fw_info[FIMC_IS_FW_INFO_LENGTH - 1] = '\0';
 	dev->fw.state = 1;
 request_fw:
 	if (fw_requested) {
@@ -134,13 +135,14 @@ request_fw:
 #endif
 		memcpy((void *)dev->fw.fw_info,
 			(fw_blob->data + fw_blob->size -
-			(FIMC_IS_FW_INFO_LENGTH + FIMC_IS_FW_VERSION_LENGTH)),
+			(FIMC_IS_FW_INFO_LENGTH + FIMC_IS_FW_VERSION_LENGTH-1)),
 			(FIMC_IS_FW_INFO_LENGTH - 1));
 		dev->fw.fw_info[FIMC_IS_FW_INFO_LENGTH - 1] = '\0';
 		memcpy((void *)dev->fw.fw_version,
 			(fw_blob->data + fw_blob->size -
-				(FIMC_IS_FW_VERSION_LENGTH + 1)),
-						FIMC_IS_FW_VERSION_LENGTH);
+				FIMC_IS_FW_VERSION_LENGTH),
+					(FIMC_IS_FW_VERSION_LENGTH - 1));
+		dev->fw.fw_version[FIMC_IS_FW_VERSION_LENGTH - 1] = '\0';
 		dev->fw.state = 1;
 		dbg("FIMC_IS F/W loaded successfully - size:%d\n",
 							fw_blob->size);
