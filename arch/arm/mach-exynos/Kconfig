@@ -87,6 +87,13 @@ config EXYNOS4_CPUIDLE
 	help
 	  Enable CPUIDLE for Exynos4 series.
 
+config EXYNOS4_LOWPWR_IDLE
+	bool "Exynos4 Lowpower IDLE Feature"
+	depends on EXYNOS4_CPUIDLE
+	default y
+	help
+	  Enable Low power IDLE for Exynos4 series.
+
 config EXYNOS5_CPUIDLE
 	bool "Exynos5 CPUIDLE Feature"
 	depends on (CPU_IDLE && ARCH_EXYNOS5)

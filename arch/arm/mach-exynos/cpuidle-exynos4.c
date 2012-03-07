@@ -542,6 +542,7 @@ static struct cpuidle_state exynos4_cpuidle_set[] = {
 		.name			= "IDLE",
 		.desc			= "ARM clock gating(WFI)",
 	},
+#ifdef CONFIG_EXYNOS4_LOWPWR_IDLE
 	[1] = {
 		.enter			= exynos4_enter_lowpower,
 		.exit_latency		= 300,
@@ -550,6 +551,7 @@ static struct cpuidle_state exynos4_cpuidle_set[] = {
 		.name			= "LOW_POWER",
 		.desc			= "ARM power down",
 	},
+#endif
 };
 
 static DEFINE_PER_CPU(struct cpuidle_device, exynos4_cpuidle_device);
