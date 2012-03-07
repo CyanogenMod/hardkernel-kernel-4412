@@ -32,7 +32,7 @@
 #define ORIG_SG_OFFSET		17
 #define ORIG_SG_MASK		0xF
 #define MOD_SG_OFFSET		21
-#define MOD_SG_MASK		0xF
+#define MOD_SG_MASK		0x7
 
 #define DEFAULT_ASV_GROUP	1
 
@@ -91,7 +91,8 @@ static int exynos4x12_asv_store_result(struct samsung_asv *asv_info)
 	unsigned int i;
 
 	for (i = 0; i < ARRAY_SIZE(exynos4x12_limit); i++) {
-		if (asv_info->ids_result <= exynos4x12_limit[i].ids_limit) {
+		if ((asv_info->ids_result <= exynos4x12_limit[i].ids_limit) ||
+		    (asv_info->hpm_result <= exynos4x12_limit[i].hpm_limit)) {
 			exynos_result_of_asv = i;
 			break;
 		}
@@ -117,6 +118,7 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 	unsigned int tmp;
 	unsigned int exynos_orig_sp;
 	unsigned int exynos_mod_sp;
+	int exynos_cal_asv;
 
 	exynos_result_of_asv = 0;
 
@@ -132,22 +134,20 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 		exynos_orig_sp = (tmp >> ORIG_SG_OFFSET) & ORIG_SG_MASK;
 		exynos_mod_sp = (tmp >> MOD_SG_OFFSET) & MOD_SG_MASK;
 
+		exynos_cal_asv = exynos_orig_sp - exynos_mod_sp;
 		/*
 		 * If There is no origin speed group,
 		 * store 1 asv group into exynos_result_of_asv.
 		 */
 		if (!exynos_orig_sp) {
 			pr_info("EXYNOS4X12: No Origin speed Group\n");
-			exynos_result_of_asv = 1;
-		} else
-			exynos_result_of_asv = exynos_orig_sp - exynos_mod_sp;
-
-		/*
-		 * If ASV result value is lower than default value
-		 * Fix with default value.
-		 */
-		if (exynos_result_of_asv < DEFAULT_ASV_GROUP)
 			exynos_result_of_asv = DEFAULT_ASV_GROUP;
+		} else {
+			if (exynos_cal_asv < DEFAULT_ASV_GROUP)
+				exynos_result_of_asv = DEFAULT_ASV_GROUP;
+			else
+				exynos_result_of_asv = exynos_cal_asv;
+		}
 
 		pr_info("EXYNOS4X12(SG):  ORIG : %d MOD : %d RESULT : %d\n",
 			exynos_orig_sp, exynos_mod_sp, exynos_result_of_asv);
