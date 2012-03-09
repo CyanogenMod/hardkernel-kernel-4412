@@ -1276,6 +1276,19 @@ static int fimc_outdev_set_scaler(struct fimc_control *ctrl,
 		return ret;
 	}
 
+	if (src.width == src.height) {
+		if ((src.width * 10 / dst.width) >= 15 &&
+					(src.width * 10 / dst.width) < 20) {
+			ctx->sc.pre_hratio = 2;
+			ctx->sc.hfactor = 1;
+		}
+		if ((src.height * 10 / dst.height) >= 15 &&
+					(src.height * 10 / dst.height) < 20) {
+			ctx->sc.pre_vratio = 2;
+			ctx->sc.vfactor = 1;
+		}
+	}
+
 	ctx->sc.pre_dst_width = src.width / ctx->sc.pre_hratio;
 	ctx->sc.pre_dst_height = src.height / ctx->sc.pre_vratio;
 

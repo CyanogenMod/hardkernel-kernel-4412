@@ -357,6 +357,18 @@ static int fimc_capture_scaler_info(struct fimc_control *ctrl)
 	fimc_get_scaler_factor(sx, tx, &sc->pre_hratio, &sc->hfactor);
 	fimc_get_scaler_factor(sy, ty, &sc->pre_vratio, &sc->vfactor);
 
+	if (sx == sy) {
+		if (sx*10/tx >= 15 && sx*10/tx < 20) {
+			sc->pre_hratio = 2;
+			sc->hfactor = 1;
+		}
+		if (sy*10/ty >= 15 && sy*10/ty < 20) {
+			sc->pre_vratio = 2;
+			sc->vfactor = 1;
+		}
+	}
+
+
 	sc->pre_dst_width = sx / sc->pre_hratio;
 	sc->pre_dst_height = sy / sc->pre_vratio;
 
