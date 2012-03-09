@@ -273,7 +273,8 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 	if (dst->addr.type) {
 		fimg2d4x_set_dst_image(info, dst);
 		fimg2d4x_set_dst_rect(info, &dst->rect);
-		fimg2d4x_enable_clipping(info, &dst->rect);
+		if (p->clipping.enable)
+			fimg2d4x_enable_clipping(info, &p->clipping);
 	}
 
 	/* bluescreen */

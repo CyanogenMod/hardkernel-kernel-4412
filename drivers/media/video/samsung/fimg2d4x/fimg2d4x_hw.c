@@ -321,7 +321,8 @@ void fimg2d4x_set_bluescreen(struct fimg2d_control *info,
 /**
  * @c: destination clipping region
  */
-void fimg2d4x_enable_clipping(struct fimg2d_control *info, struct fimg2d_rect *c)
+void fimg2d4x_enable_clipping(struct fimg2d_control *info,
+				struct fimg2d_clip *clp)
 {
 	unsigned long cfg;
 
@@ -330,8 +331,8 @@ void fimg2d4x_enable_clipping(struct fimg2d_control *info, struct fimg2d_rect *c
 
 	wr(cfg, FIMG2D_BITBLT_COMMAND_REG);
 
-	wr(FIMG2D_OFFSET(c->x1, c->y1), FIMG2D_CW_LT_REG);
-	wr(FIMG2D_OFFSET(c->x2, c->y2), FIMG2D_CW_RB_REG);
+	wr(FIMG2D_OFFSET(clp->x1, clp->y1), FIMG2D_CW_LT_REG);
+	wr(FIMG2D_OFFSET(clp->x2, clp->y2), FIMG2D_CW_RB_REG);
 }
 
 void fimg2d4x_enable_dithering(struct fimg2d_control *info)

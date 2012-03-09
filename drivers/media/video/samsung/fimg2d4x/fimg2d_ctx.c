@@ -25,6 +25,7 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 	struct fimg2d_param *p = &u->param;
 	struct fimg2d_image *img, *buf[MAX_IMAGES] = image_table(u);
 	struct fimg2d_scale *scl;
+	struct fimg2d_clip *clp;
 	struct fimg2d_rect *r;
 
 	if (!u->dst)
@@ -33,6 +34,20 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 	/* DST op makes no effect */
 	if (u->op < 0 || u->op == BLIT_OP_DST || u->op >= BLIT_OP_END)
 		return -1;
+
+	for (i = 0; i < MAX_IMAGES; i++) {
+		img = buf[i];
+		if (!img)
+			continue;
+
+		w = img->width;
+		h = img->height;
+		r = &img->rect;
+
+		/* 8000: max width & height */
+		if (w > 8000 || h > 8000 || r->x1 == r->x2 || r->y1 == r->y2)
+			return -1;
+	}
 
 	scl = &p->scaling;
 
@@ -49,22 +64,16 @@ static int fimg2d_check_params(struct fimg2d_blit __user *u)
 			return -1;
 	}
 
-	for (i = 0; i < MAX_IMAGES; i++) {
-		img = buf[i];
-		if (!img)
-			continue;
+	clp = &p->clipping;
 
-		w = img->width;
-		h = img->height;
+	if (clp->enable) {
+		img = buf[IDST];
 		r = &img->rect;
 
-		/* 8000: max width & height */
-		if (w > 8000 || h > 8000 ||
-			r->x1 < 0 || r->x2 > w ||
-			r->y1 < 0 || r->y2 > h ||
-			r->x1 == r->x2 || r->y1 == r->y2) {
+		/* clip rect must be within dst rect */
+		if (clp->x1 >= r->x2 || clp->x2 <= r->x1 ||
+			clp->y1 >= r->y2 || clp->y2 <= r->y1)
 			return -1;
-		}
 	}
 
 	return 0;
@@ -75,25 +84,40 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 	struct fimg2d_param *p = &cmd->param;
 	struct fimg2d_scale *scl = &p->scaling;
 	struct fimg2d_repeat *rep = &p->repeat;
-	struct fimg2d_image *src, *dst;
-	struct fimg2d_rect *sr, *dr;
+	struct fimg2d_clip *clp = &p->clipping;
+	struct fimg2d_image *img, *src, *dst;
+	struct fimg2d_rect *r, *sr, *dr;
 	unsigned int ow, oh;
+	int i;
 
-	dst = &cmd->image[IDST];
-	dr = &dst->rect;
+	/* fit dst rect to image width/height */
+	for (i = 0; i < MAX_IMAGES; i++) {
+		img = &cmd->image[i];
+		if (!img)
+			continue;
 
-	if (dr->x2 > dst->width)
-		dr->x2 = dst->width;
+		r = &img->rect;
 
-	if (dr->y2 > dst->height)
-		dr->y2 = dst->height;
+		if (r->x1 < 0)
+			r->x1 = 0;
+		if (r->y1 < 0)
+			r->y2 = 0;
+		if (r->x2 > img->width)
+			r->x2 = img->width;
+		if (r->y2 > img->height)
+			r->y2 = img->height;
+	}
 
+	/* avoid devided by zero error */
 	if (scl->mode &&
 		(scl->src_w == scl->dst_w && scl->src_h == scl->dst_h))
 		scl->mode = NO_SCALING;
 
 	src = &cmd->image[ISRC];
+	dst = &cmd->image[IDST];
+
 	sr = &src->rect;
+	dr = &dst->rect;
 
 	/* fit dst rect to drawing output rect */
 	if (src->addr.type && !rep->mode) {
@@ -113,29 +137,50 @@ static void fimg2d_fixup_params(struct fimg2d_bltcmd *cmd)
 		if (oh < rect_h(dr))
 			dr->y2 = dr->y1 + oh;
 	}
+
+	/* fit clip rect to dst rect */
+	if (clp->enable) {
+		if (clp->x1 < dr->x1)
+			clp->x1 = dr->x1;
+		if (clp->y1 < dr->y1)
+			clp->y1 = dr->y1;
+		if (clp->x2 > dr->x2)
+			clp->x2 = dr->x2;
+		if (clp->y2 > dr->y2)
+			clp->y2 = dr->y2;
+	}
 }
 
 static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 {
 	struct mm_struct *mm = cmd->ctx->mm;
+	struct fimg2d_param *p = &cmd->param;
 	struct fimg2d_image *img;
+	struct fimg2d_clip *clp;
 	struct fimg2d_rect *r;
 	struct fimg2d_dma *c;
 	enum pt_status pt;
 	int clip_x, clip_w, clip_h, y, dir, i;
 	unsigned long clip_start;
 
+	clp = &p->clipping;
+
 	for (i = 0; i < MAX_IMAGES; i++) {
 		img = &cmd->image[i];
 		c = &cmd->dma[i];
 		r = &img->rect;
 
-		if (img->addr.type == ADDR_NONE)
+		if (!img->addr.type)
 			continue;
 
 		/* caculate horizontally clipped region */
-		c->addr = img->addr.start + (img->stride * r->y1);
-		c->size = img->stride * (r->y2 - r->y1);
+		if (i == IMAGE_DST && clp->enable) {
+			c->addr = img->addr.start + (img->stride * clp->y1);
+			c->size = img->stride * (clp->y2 - clp->y1);
+		} else {
+			c->addr = img->addr.start + (img->stride * r->y1);
+			c->size = img->stride * (r->y2 - r->y1);
+		}
 
 		/* check pagetable */
 		if (img->addr.type == ADDR_USER) {
@@ -153,6 +198,7 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 #ifdef PERF_PROFILE
 	perf_start(cmd->ctx, PERF_INNERCACHE);
 #endif
+
 	if (is_inner_flushall(cmd->dma_all))
 		flush_all_cpu_caches();
 	else {
@@ -161,30 +207,33 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 			c = &cmd->dma[i];
 			r = &img->rect;
 
-			if (img->addr.type == ADDR_NONE)
+			if (!img->addr.type || !c->cached)
 				continue;
 
-			if (c->cached) {
-				if (i == IMAGE_DST)
-					dir = DMA_BIDIRECTIONAL;
-				else
-					dir = DMA_TO_DEVICE;
+			if (i == IMAGE_DST)
+				dir = DMA_BIDIRECTIONAL;
+			else
+				dir = DMA_TO_DEVICE;
 
+			if (i == IDST && clp->enable) {
+				clip_w = width2bytes(clp->x2 - clp->x1,
+							img->fmt);
+				clip_x = pixel2offset(clp->x1, img->fmt);
+				clip_h = clp->y2 - clp->y1;
+			} else {
 				clip_w = width2bytes(r->x2 - r->x1, img->fmt);
+				clip_x = pixel2offset(r->x1, img->fmt);
+				clip_h = r->y2 - r->y1;
+			}
 
-				if (is_inner_flushrange(img->stride - clip_w))
-					fimg2d_dma_sync_inner(c->addr, c->cached, dir);
-				else {
-					clip_x = pixel2offset(r->x1, img->fmt);
-					clip_h = r->y2 - r->y1;
-					for (y = 0; y < clip_h; y++) {
-						clip_start = c->addr +
-							(img->stride * y) +
-							clip_x;
-						fimg2d_dma_sync_inner(
-								clip_start,
+			if (is_inner_flushrange(img->stride - clip_w))
+				fimg2d_dma_sync_inner(c->addr, c->cached, dir);
+			else {
+				for (y = 0; y < clip_h; y++) {
+					clip_start = c->addr +
+						(img->stride * y) + clip_x;
+					fimg2d_dma_sync_inner(clip_start,
 								clip_w, dir);
-					}
 				}
 			}
 		}
@@ -205,34 +254,41 @@ static int fimg2d_check_dma_sync(struct fimg2d_bltcmd *cmd)
 			c = &cmd->dma[i];
 			r = &img->rect;
 
-			if (img->addr.type == ADDR_NONE)
+			if (!img->addr.type)
 				continue;
 
 			/* clean pagetable */
 			if (img->addr.type == ADDR_USER)
 				fimg2d_clean_outer_pagetable(mm, c->addr, c->size);
 
-			if (c->cached) {
-				if (i == IMAGE_DST)
-					dir = CACHE_FLUSH;
-				else
-					dir = CACHE_CLEAN;
+			if (!c->cached)
+				continue;
 
+			if (i == IMAGE_DST)
+				dir = CACHE_FLUSH;
+			else
+				dir = CACHE_CLEAN;
+
+			if (i == IDST && clp->enable) {
+				clip_w = width2bytes(clp->x2 - clp->x1,
+							img->fmt);
+				clip_x = pixel2offset(clp->x1, img->fmt);
+				clip_h = clp->y2 - clp->y1;
+			} else {
 				clip_w = width2bytes(r->x2 - r->x1, img->fmt);
+				clip_x = pixel2offset(r->x1, img->fmt);
+				clip_h = r->y2 - r->y1;
+			}
 
-				if (is_outer_flushrange(img->stride - clip_w))
-					fimg2d_dma_sync_outer(mm, c->addr, c->cached, dir);
-				else {
-					clip_x = pixel2offset(r->x1, img->fmt);
-					clip_h = r->y2 - r->y1;
-					for (y = 0; y < clip_h; y++) {
-						clip_start = c->addr +
-							(img->stride * y) +
-							clip_x;
-						fimg2d_dma_sync_outer(mm,
-								clip_start,
+			if (is_outer_flushrange(img->stride - clip_w))
+				fimg2d_dma_sync_outer(mm, c->addr,
+							c->cached, dir);
+			else {
+				for (y = 0; y < clip_h; y++) {
+					clip_start = c->addr +
+						(img->stride * y) + clip_x;
+					fimg2d_dma_sync_outer(mm, clip_start,
 								clip_w, dir);
-					}
 				}
 			}
 		}

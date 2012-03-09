@@ -345,9 +345,8 @@ struct fimg2d_image {
 
 /**
  * @solid_color:
- *         src color instead of src image / dst color instead of dst read image.
+ *         src color instead of src image
  *         color format and order must be ARGB8888(A is MSB).
- *         premultiplied format must be same to 'premult' of this struct.
  * @g_alpha: global(constant) alpha. 0xff is opaque, 0 is transparnet
  * @dither: dithering
  * @rotate: rotation degree in clockwise
@@ -355,6 +354,7 @@ struct fimg2d_image {
  * @scaling: common scaling info for src and mask image.
  * @repeat: repeat type (tile mode)
  * @bluscr: blue screen and transparent mode
+ * @clipping: clipping rect within dst rect
  */
 struct fimg2d_param {
 	unsigned long solid_color;
@@ -365,6 +365,7 @@ struct fimg2d_param {
 	struct fimg2d_scale scaling;
 	struct fimg2d_repeat repeat;
 	struct fimg2d_bluscr bluscr;
+	struct fimg2d_clip clipping;
 };
 
 /**

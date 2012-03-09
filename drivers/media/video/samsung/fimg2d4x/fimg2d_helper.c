@@ -85,6 +85,10 @@ void fimg2d_print_params(struct fimg2d_blit __user *u)
 			p->scaling.mode,
 			p->scaling.src_w, p->scaling.src_h,
 			p->scaling.dst_w, p->scaling.dst_h);
+	printk(KERN_INFO "clipping mode: %d, LT(%d,%d) RB(%d,%d)\n",
+			p->clipping.enable,
+			p->clipping.x1, p->clipping.y1,
+			p->clipping.x2, p->clipping.y2);
 
 	for (i = 0; i < MAX_IMAGES; i++) {
 		if (!buf[i])
@@ -132,6 +136,10 @@ void fimg2d_dump_command(struct fimg2d_bltcmd *cmd)
 			p->scaling.mode,
 			p->scaling.src_w, p->scaling.src_h,
 			p->scaling.dst_w, p->scaling.dst_h);
+	printk(KERN_INFO " clipping mode: %d, LT(%d,%d) RB(%d,%d)\n",
+			p->clipping.enable,
+			p->clipping.x1, p->clipping.y1,
+			p->clipping.x2, p->clipping.y2);
 
 	for (i = 0; i < MAX_IMAGES; i++) {
 		img = &cmd->image[i];
