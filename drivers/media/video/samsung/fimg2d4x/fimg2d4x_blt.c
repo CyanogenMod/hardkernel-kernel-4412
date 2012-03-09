@@ -52,6 +52,7 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 	struct fimg2d_context *ctx;
 	struct fimg2d_bltcmd *cmd;
 	unsigned long *pgd;
+	int ret;
 
 	fimg2d_debug("enter blitter\n");
 
@@ -70,7 +71,9 @@ void fimg2d4x_bitblt(struct fimg2d_control *info)
 
 		atomic_set(&info->busy, 1);
 
-		info->configure(info, cmd);
+		ret = info->configure(info, cmd);
+		if (ret)
+			goto blitend;
 
 		if (cmd->image[IDST].addr.type != ADDR_PHYS) {
 			pgd = (unsigned long *)ctx->mm->pgd;
@@ -132,20 +135,15 @@ static int fast_op(struct fimg2d_bltcmd *cmd)
 	if (msk->addr.type)
 		return fop;
 
+	ga = p->g_alpha;
+	da = is_opaque(dst->fmt) ? 0xff : 0;
+
 	if (!src->addr.type)
 		sa = (p->solid_color >> 24) & 0xff;
 	else
 		sa = is_opaque(src->fmt) ? 0xff : 0;
 
-	da = is_opaque(dst->fmt) ? 0xff : 0;
-	ga = p->g_alpha;
-
 	switch (cmd->op) {
-	case BLIT_OP_SOLID_FILL:
-	case BLIT_OP_CLR:
-	case BLIT_OP_SRC:
-	case BLIT_OP_DST:
-		break;
 	case BLIT_OP_SRC_OVER:
 		/* Sc + (1-Sa)*Dc = Sc */
 		if (sa == 0xff && ga == 0xff)
@@ -154,7 +152,7 @@ static int fast_op(struct fimg2d_bltcmd *cmd)
 	case BLIT_OP_DST_OVER:
 		/* (1-Da)*Sc + Dc = Dc */
 		if (da == 0xff)
-			fop = BLIT_OP_DST;
+			fop = BLIT_OP_DST;	/* nop */
 		break;
 	case BLIT_OP_SRC_IN:
 		/* Da*Sc = Sc */
@@ -164,7 +162,7 @@ static int fast_op(struct fimg2d_bltcmd *cmd)
 	case BLIT_OP_DST_IN:
 		/* Sa*Dc = Dc */
 		if (sa == 0xff && ga == 0xff)
-			fop = BLIT_OP_DST;
+			fop = BLIT_OP_DST;	/* nop */
 		break;
 	case BLIT_OP_SRC_OUT:
 		/* (1-Da)*Sc = 0 */
@@ -184,21 +182,20 @@ static int fast_op(struct fimg2d_bltcmd *cmd)
 	case BLIT_OP_DST_ATOP:
 		/* (1-Da)*Sc + Sa*Dc = Dc */
 		if (sa == 0xff && da == 0xff && ga == 0xff)
-			fop = BLIT_OP_DST;
+			fop = BLIT_OP_DST;	/* nop */
 		break;
 	default:
 		break;
 	}
 
-	if (fop == BLIT_OP_SRC) {
-		if (!src->addr.type && sa == 0xff && ga == 0xff)
-			fop = BLIT_OP_SOLID_FILL;
-	}
+	if (fop == BLIT_OP_SRC && !src->addr.type && ga == 0xff)
+		fop = BLIT_OP_SOLID_FILL;
 
 	return fop;
 }
 
-static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd *cmd)
+static int fimg2d4x_configure(struct fimg2d_control *info,
+				struct fimg2d_bltcmd *cmd)
 {
 	int op;
 	enum image_sel srcsel, dstsel;
@@ -222,15 +219,14 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 	switch (op) {
 	case BLIT_OP_SOLID_FILL:
 		srcsel = dstsel = IMG_FGCOLOR;
-		fimg2d4x_set_color_fill(info, p->solid_color);
+		fimg2d4x_set_fgcolor(info, p->solid_color);
 		break;
 	case BLIT_OP_CLR:
 		srcsel = dstsel = IMG_FGCOLOR;
 		fimg2d4x_set_color_fill(info, 0);
 		break;
 	case BLIT_OP_DST:
-		srcsel = IMG_FGCOLOR;
-		break;
+		return -1;	/* nop */
 	default:
 		if (!src->addr.type) {
 			srcsel = IMG_FGCOLOR;
@@ -288,6 +284,8 @@ static void fimg2d4x_configure(struct fimg2d_control *info, struct fimg2d_bltcmd
 	/* dithering */
 	if (p->dither)
 		fimg2d4x_enable_dithering(info);
+
+	return 0;
 }
 
 static void fimg2d4x_run(struct fimg2d_control *info)
