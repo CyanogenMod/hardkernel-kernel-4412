@@ -992,7 +992,7 @@ int fimc_is_hw_get_sensor_max_framerate(struct fimc_is_dev *dev)
 		break;
 	case SENSOR_S5K3H7_CSI_A:
 	case SENSOR_S5K3H7_CSI_B:
-		max_framerate = 30;
+		max_framerate = 15;
 		break;
 	case SENSOR_S5K6A3_CSI_A:
 	case SENSOR_S5K6A3_CSI_B:
@@ -1275,7 +1275,7 @@ void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on)
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);
 		writel(HIC_STREAM_ON, dev->regs + ISSR0);
 		writel(dev->sensor.id, dev->regs + ISSR1);
-		writel(1, dev->regs + ISSR2);
+		writel(0, dev->regs + ISSR2);
 		fimc_is_hw_set_intgr0_gd0(dev);
 	} else {
 		fimc_is_hw_wait_intmsr0_intmsd0(dev);

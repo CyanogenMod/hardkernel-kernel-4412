@@ -398,7 +398,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 	fimc_is_hw_open_sensor(dev, dev->sensor.id, val);
 	ret = wait_event_timeout(dev->irq_queue1,
 		test_bit(IS_ST_OPEN_SENSOR, &dev->state),
-		FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		FIMC_IS_SHUTDOWN_TIMEOUT);
 	if (!ret) {
 		err("wait timeout - open sensor\n");
 		return -EINVAL;
