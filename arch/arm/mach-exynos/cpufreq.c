@@ -548,7 +548,7 @@ static int exynos_cpufreq_notifier_event(struct notifier_block *this,
 
 			exynos_info->set_freq(exynos_info->pm_lock_idx, exynos_info->max_support_idx);
 
-			cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
+			cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 
 			mutex_unlock(&set_freq_lock);
 		}
