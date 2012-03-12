@@ -203,6 +203,9 @@ static irqreturn_t exynos_device_detect_thread(int irq, void *data)
 {
 	struct exynos_usb_switch *usb_switch = data;
 
+	/* Debounce connect delay */
+	msleep(20);
+
 	mutex_lock(&usb_switch->mutex);
 
 	if (is_host_detect(usb_switch)) {
@@ -246,6 +249,9 @@ static int exynos_usbswitch_suspend(struct device *dev)
 	struct exynos_usb_switch *usb_switch = platform_get_drvdata(pdev);
 
 	printk(KERN_INFO "%s\n", __func__);
+	if (atomic_read(&usb_switch->connect) == USB_DEVICE_ATTACHED)
+		exynos_change_usb_mode(usb_switch, USB_DEVICE_DETACHED);
+
 	atomic_set(&usb_switch->connect, 0);
 
 	return 0;
