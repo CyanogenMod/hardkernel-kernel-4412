@@ -1322,6 +1322,8 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 		ctrl->is.offset_y = 12;
 	}
 
+	fimc_hwset_reset(ctrl);
+
 	mutex_unlock(&ctrl->v4l2_lock);
 	fimc_dbg("%s -- FIMC%d\n", __func__, ctrl->id);
 

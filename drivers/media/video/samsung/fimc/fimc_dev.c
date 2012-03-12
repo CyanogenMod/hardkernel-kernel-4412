@@ -1281,7 +1281,7 @@ static int fimc_release(struct file *filp)
 		fimc_streamoff_capture((void *)ctrl);
 
 	/* FIXME: turning off actual working camera */
-	if (ctrl->cam) {
+	if (ctrl->cap && ctrl->cam) {
 		/* Unload the subdev (camera sensor) module,
 		 * reset related status flags */
 		fimc_release_subdev(ctrl);
