@@ -4365,7 +4365,10 @@ static int fimc_is_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *a)
 	int width, height, format;
 	int i, ret = 0;
 
-	fps = a->parm.capture.timeperframe.denominator /
+	if (a->parm.capture.timeperframe.numerator == 0)
+		fps = 0; /* prevent divide-by-0 error case */
+	else
+		fps = a->parm.capture.timeperframe.denominator /
 					a->parm.capture.timeperframe.numerator;
 
 	if (!test_bit(IS_ST_INIT_DONE, &dev->state)) {

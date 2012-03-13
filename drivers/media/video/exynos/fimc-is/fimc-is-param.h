@@ -1645,6 +1645,7 @@ struct is_debug_frame_descriptor {
 };
 
 #define MAX_FRAMEDESCRIPTOR_CONTEXT_NUM	(30*20)	/* 600 frames */
+#define MAX_VERSION_DISPLAY_BUF	32
 
 struct is_share_region {
 	u32	frame_time;
@@ -1673,6 +1674,11 @@ struct is_share_region {
 
 	u32	chip_id;
 	u32	chip_rev_no;
+	u8	isp_fw_ver_no[MAX_VERSION_DISPLAY_BUF];
+	u8	isp_fw_ver_date[MAX_VERSION_DISPLAY_BUF];
+	u8	sirc_sdk_ver_no[MAX_VERSION_DISPLAY_BUF];
+	u8	sirc_sdk_rev_no[MAX_VERSION_DISPLAY_BUF];
+	u8	sirc_sdk_rev_date[MAX_VERSION_DISPLAY_BUF];
 };
 
 struct is_debug_control {
