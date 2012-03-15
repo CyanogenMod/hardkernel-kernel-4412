@@ -32,6 +32,7 @@
 
 #ifdef CONFIG_CPU_FREQ
 #include <mach/asv.h>
+#include <plat/cpu.h>
 #define EXYNOS4_ASV_ENABLED
 #endif
 
@@ -151,7 +152,7 @@ mali_dvfs_threshold_table mali_dvfs_threshold[MALI_DVFS_STEPS]={
 #ifdef EXYNOS4_ASV_ENABLED
 #define ASV_LEVEL     12	/* ASV0, 1, 11 is reserved */
 
-static unsigned int asv_3d_volt_9_table[MALI_DVFS_STEPS][ASV_LEVEL] = {
+static unsigned int asv_3d_volt_4412_9_table[MALI_DVFS_STEPS][ASV_LEVEL] = {
 	{  950000,  925000,  900000,  900000,  875000,  875000,  875000,  875000,  850000,  850000,  850000,  850000},	/* L3(160Mhz) */
 #if (MALI_DVFS_STEPS > 1)
 	{  975000,  950000,  925000,  925000,  925000,  900000,  900000,  875000,  875000,  875000,  875000,  850000},	/* L2(266Mhz) */
@@ -159,6 +160,19 @@ static unsigned int asv_3d_volt_9_table[MALI_DVFS_STEPS][ASV_LEVEL] = {
 	{ 1050000, 1025000, 1000000, 1000000,  975000,  950000,  950000,  950000,  925000,  925000,  925000,  900000},	/* L1(350Mhz) */
 #if (MALI_DVFS_STEPS > 3)
 	{ 1100000, 1075000, 1050000, 1050000, 1050000, 1025000, 1025000, 1000000, 1000000, 1000000,  975000,  950000},	/* L0(440Mhz) */
+#endif
+#endif
+#endif
+};
+
+static unsigned int asv_3d_volt_4212_9_table[MALI_DVFS_STEPS][ASV_LEVEL] = {
+	{  912500,  900000,  900000,  900000,  900000,  900000,  900000,  900000,  875000,  850000,  850000,  850000},	/* L3(160Mhz) */
+#if (MALI_DVFS_STEPS > 1)
+	{  937500,  925000,  925000,  900000,  925000,  925000,  925000,  900000,  900000,  900000,  875000,  862500},	/* L2(266Mhz) */
+#if (MALI_DVFS_STEPS > 2)
+	{  987500,  975000,  975000,  950000,  975000,  950000,  950000,  925000,  925000,  925000,  925000,  912500},	/* L1(350Mhz) */
+#if (MALI_DVFS_STEPS > 3)
+	{ 1062500, 1050000, 1050000, 1025000, 1050000, 1050000, 1025000, 1000000, 1000000,  975000,  975000,  962500},	/* L0(440Mhz) */
 #endif
 #endif
 #endif
@@ -276,10 +290,19 @@ static mali_bool mali_dvfs_table_update(void)
 {
 	unsigned int i;
 
-	for (i = 0; i < MALI_DVFS_STEPS; i++) {
-		MALI_PRINT((":::exynos_result_of_asv : %d\n", exynos_result_of_asv));
-		mali_dvfs[i].vol = asv_3d_volt_9_table[i][exynos_result_of_asv];
-		MALI_PRINT(("mali_dvfs[%d].vol = %d\n", i, mali_dvfs[i].vol));
+	if(soc_is_exynos4412()) {
+		for (i = 0; i < MALI_DVFS_STEPS; i++) {
+			MALI_PRINT((":::exynos_result_of_asv : %d\n", exynos_result_of_asv));
+			mali_dvfs[i].vol = asv_3d_volt_4412_9_table[i][exynos_result_of_asv];
+			MALI_PRINT(("mali_dvfs[%d].vol = %d\n", i, mali_dvfs[i].vol));
+		}
+	}
+	else if(soc_is_exynos4212()) {
+		for (i = 0; i < MALI_DVFS_STEPS; i++) {
+			MALI_PRINT((":::exynos_result_of_asv : %d\n", exynos_result_of_asv));
+			mali_dvfs[i].vol = asv_3d_volt_4212_9_table[i][exynos_result_of_asv];
+			MALI_PRINT(("mali_dvfs[%d].vol = %d\n", i, mali_dvfs[i].vol));
+		}
 	}
 
 	return MALI_TRUE;
