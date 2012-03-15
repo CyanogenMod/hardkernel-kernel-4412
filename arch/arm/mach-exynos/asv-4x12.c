@@ -54,6 +54,22 @@ struct asv_judge_table exynos4x12_limit[] = {
 	{999, 999},		/* Reserved Group */
 };
 
+struct asv_judge_table exynos4212_limit[] = {
+	/* HPM, IDS */
+	{  0,   0},		/* Reserved Group */
+	{ 17,  12},
+	{ 18,  13},
+	{ 20,  14},
+	{ 22,  18},
+	{ 24,  22},
+	{ 25,  29},
+	{ 26,  31},
+	{ 27,  35},
+	{ 28,  39},
+	{100, 100},
+	{999, 999},		/* Reserved Group */
+};
+
 static int exynos4x12_get_hpm(struct samsung_asv *asv_info)
 {
 	asv_info->hpm_result = (asv_info->pkg_id >> HPM_OFFSET) & HPM_MASK;
@@ -90,12 +106,23 @@ static int exynos4x12_asv_store_result(struct samsung_asv *asv_info)
 {
 	unsigned int i;
 
-	for (i = 0; i < ARRAY_SIZE(exynos4x12_limit); i++) {
-		if ((asv_info->ids_result <= exynos4x12_limit[i].ids_limit) ||
-		    (asv_info->hpm_result <= exynos4x12_limit[i].hpm_limit)) {
-			exynos_result_of_asv = i;
-			break;
+	if (soc_is_exynos4412()) {
+		for (i = 0; i < ARRAY_SIZE(exynos4x12_limit); i++) {
+			if ((asv_info->ids_result <= exynos4x12_limit[i].ids_limit) ||
+			    (asv_info->hpm_result <= exynos4x12_limit[i].hpm_limit)) {
+				exynos_result_of_asv = i;
+				break;
+			}
 		}
+	} else {
+		for (i = 0; i < ARRAY_SIZE(exynos4212_limit); i++) {
+			if ((asv_info->ids_result <= exynos4212_limit[i].ids_limit) ||
+			    (asv_info->hpm_result <= exynos4212_limit[i].hpm_limit)) {
+				exynos_result_of_asv = i;
+				break;
+			}
+		}
+
 	}
 
 	/*
