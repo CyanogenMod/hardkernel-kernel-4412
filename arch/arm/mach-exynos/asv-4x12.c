@@ -86,19 +86,17 @@ static int exynos4x12_get_ids(struct samsung_asv *asv_info)
 
 static void exynos4x12_pre_set_abb(void)
 {
-	if (soc_is_exynos4412()) {
-		switch (exynos_result_of_asv) {
-		case 0:
-		case 1:
-		case 2:
-		case 3:
-			exynos4x12_set_abb(ABB_MODE_100V);
-			break;
+	switch (exynos_result_of_asv) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+		exynos4x12_set_abb(ABB_MODE_100V);
+		break;
 
-		default:
-			exynos4x12_set_abb(ABB_MODE_130V);
-			break;
-		}
+	default:
+		exynos4x12_set_abb(ABB_MODE_130V);
+		break;
 	}
 }
 
