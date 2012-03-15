@@ -79,7 +79,7 @@ static unsigned int clkdiv_cpu0_4212[CPUFREQ_LEVEL_END][8] = {
 	{ 0, 3, 7, 0, 6, 1, 2, 0 },
 
 	/* ARM L2: 1300Mhz */
-	{ 0, 3, 7, 0, 6, 1, 2, 0 },
+	{ 0, 3, 7, 0, 5, 1, 2, 0 },
 
 	/* ARM L3: 1200Mhz */
 	{ 0, 3, 7, 0, 5, 1, 2, 0 },
@@ -590,7 +590,8 @@ int exynos4x12_cpufreq_init(struct exynos_dvfs_info *info)
 			EXYNOS4_CLKDIV_CPU0_PERIPH_MASK |
 			EXYNOS4_CLKDIV_CPU0_ATB_MASK |
 			EXYNOS4_CLKDIV_CPU0_PCLKDBG_MASK |
-			EXYNOS4_CLKDIV_CPU0_APLL_MASK);
+			EXYNOS4_CLKDIV_CPU0_APLL_MASK |
+			EXYNOS4_CLKDIV_CPU0_CORE2_MASK);
 
 		if (soc_is_exynos4212()) {
 			tmp |= ((clkdiv_cpu0_4212[i][0] << EXYNOS4_CLKDIV_CPU0_CORE_SHIFT) |
@@ -599,10 +600,9 @@ int exynos4x12_cpufreq_init(struct exynos_dvfs_info *info)
 				(clkdiv_cpu0_4212[i][3] << EXYNOS4_CLKDIV_CPU0_PERIPH_SHIFT) |
 				(clkdiv_cpu0_4212[i][4] << EXYNOS4_CLKDIV_CPU0_ATB_SHIFT) |
 				(clkdiv_cpu0_4212[i][5] << EXYNOS4_CLKDIV_CPU0_PCLKDBG_SHIFT) |
-				(clkdiv_cpu0_4212[i][6] << EXYNOS4_CLKDIV_CPU0_APLL_SHIFT));
+				(clkdiv_cpu0_4212[i][6] << EXYNOS4_CLKDIV_CPU0_APLL_SHIFT) |
+				(clkdiv_cpu0_4212[i][7] << EXYNOS4_CLKDIV_CPU0_CORE2_SHIFT));
 		} else {
-			tmp &= ~EXYNOS4_CLKDIV_CPU0_CORE2_MASK;
-
 			tmp |= ((clkdiv_cpu0_4412[i][0] << EXYNOS4_CLKDIV_CPU0_CORE_SHIFT) |
 				(clkdiv_cpu0_4412[i][1] << EXYNOS4_CLKDIV_CPU0_COREM0_SHIFT) |
 				(clkdiv_cpu0_4412[i][2] << EXYNOS4_CLKDIV_CPU0_COREM1_SHIFT) |
