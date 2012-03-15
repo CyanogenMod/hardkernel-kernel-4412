@@ -40,6 +40,7 @@
 #include <mach/regs-mem.h>
 #include <mach/dev.h>
 #include <mach/asv.h>
+#include <mach/smc.h>
 
 #include <plat/map-s5p.h>
 #include <plat/gpio-cfg.h>
@@ -490,24 +491,50 @@ void exynos4x12_prepare(unsigned int index)
 {
 	unsigned int timing0;
 
+#ifdef CONFIG_ARM_TRUSTZONE
+	exynos_smc_readsfr(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET, &timing0);
+	timing0 |= exynos4x12_timingrow[index];
+	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET),
+			timing0, 0);
+	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET),
+			exynos4x12_timingrow[index], 0);
+	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC1_4212 + TIMINGROW_OFFSET),
+			timing0, 0);
+	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC1_4212 + TIMINGROW_OFFSET),
+			exynos4x12_timingrow[index], 0);
+#else
 	timing0 = __raw_readl(S5P_VA_DMC0 + TIMINGROW_OFFSET);
 	timing0 |= exynos4x12_timingrow[index];
 	__raw_writel(timing0, S5P_VA_DMC0 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC0 + TIMINGROW_OFFSET);
 	__raw_writel(timing0, S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
+#endif
 }
 
 void exynos4x12_post(unsigned int index)
 {
 	unsigned int timing0;
 
+#ifdef CONFIG_ARM_TRUSTZONE
+	exynos_smc_readsfr(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET, &timing0);
+	timing0 |= exynos4x12_timingrow[index];
+	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET),
+			timing0, 0);
+	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET),
+			exynos4x12_timingrow[index], 0);
+	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC1_4212 + TIMINGROW_OFFSET),
+			timing0, 0);
+	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC1_4212 + TIMINGROW_OFFSET),
+			exynos4x12_timingrow[index], 0);
+#else
 	timing0 = __raw_readl(S5P_VA_DMC0 + TIMINGROW_OFFSET);
 	timing0 |= exynos4x12_timingrow[index];
 	__raw_writel(timing0, S5P_VA_DMC0 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC0 + TIMINGROW_OFFSET);
 	__raw_writel(timing0, S5P_VA_DMC1 + TIMINGROW_OFFSET);
 	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
+#endif
 }
 
 void exynos4x12_suspend(void)

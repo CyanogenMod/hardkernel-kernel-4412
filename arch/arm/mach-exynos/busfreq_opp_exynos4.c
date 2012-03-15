@@ -41,6 +41,7 @@
 #include <mach/cpufreq.h>
 #include <mach/dev.h>
 #include <mach/busfreq_exynos4.h>
+#include <mach/smc.h>
 
 #include <plat/map-s5p.h>
 #include <plat/cpu.h>
@@ -357,7 +358,11 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	struct busfreq_data *data;
 	unsigned int val;
 
+#ifdef CONFIG_ARM_TRUSTZONE
+	exynos_smc_readsfr(EXYNOS4_PA_DMC0_4212 + 0x4, &val);
+#else
 	val = __raw_readl(S5P_VA_DMC0 + 0x4);
+#endif
 	val = (val >> 8) & 0xf;
 
 	/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
