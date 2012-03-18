@@ -62,14 +62,16 @@
 
 #define FIMC_IS_A5_MEM_SIZE		0x00A00000
 #define FIMC_IS_REGION_SIZE		0x5000
-#define ISP_SETFILE_SIZE		0xc0d8
-#define DRC_SETFILE_SIZE		0x140
-#define FD_SETFILE_SIZE			(0x88*2)
+
 #define FIMC_IS_DEBUG_REGION_ADDR	0x00840000
 #define FIMC_IS_SHARED_REGION_ADDR	0x008C0000
 #define FIMC_IS_FW_INFO_LENGTH		32
 #define FIMC_IS_FW_VERSION_LENGTH	7
 #define FIMC_IS_SETFILE_INFO_LENGTH	39
+
+#define FIMC_IS_EXTRA_MEM_SIZE		0x1B3000
+#define FIMC_IS_EXTRA_FW_SIZE		0x180000
+#define FIMC_IS_EXTRA_SETFILE_SIZE	0x32000
 
 #define GED_FD_RANGE			1000
 
@@ -223,6 +225,8 @@ struct is_meminfo {
 	size_t		dvaddr;
 	unsigned char	*kvaddr;
 	struct vb2_buffer	vb2_buf;
+	dma_addr_t	fw_ref_base;
+	dma_addr_t	setfile_ref_base;
 };
 
 struct is_fw {
@@ -232,6 +236,7 @@ struct is_fw {
 	char			fw_info[FIMC_IS_FW_INFO_LENGTH];
 	char			setfile_info[FIMC_IS_SETFILE_INFO_LENGTH];
 	char			fw_version[FIMC_IS_FW_VERSION_LENGTH];
+	size_t			size;
 };
 
 struct is_setfile {
@@ -239,7 +244,7 @@ struct is_setfile {
 	int			state;
 	u32			sub_index;
 	u32			base;
-	u32			size;
+	size_t			size;
 };
 
 struct is_to_host_cmd {

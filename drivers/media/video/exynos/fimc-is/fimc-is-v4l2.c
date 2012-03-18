@@ -87,6 +87,13 @@ static int fimc_is_request_firmware(struct fimc_is_dev *dev)
 	memcpy((void *)phys_to_virt(dev->mem.base), (void *)buf, fsize);
 	fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
 		fsize + 1);
+	if (dev->mem.fw_ref_base > 0) {
+		memcpy((void *)phys_to_virt(dev->mem.fw_ref_base),
+							(void *)buf, fsize);
+		fimc_is_mem_cache_clean(
+			(void *)phys_to_virt(dev->mem.fw_ref_base), fsize + 1);
+		dev->fw.size = fsize;
+	}
 #elif defined(CONFIG_VIDEOBUF2_ION)
 	if (dev->mem.bitproc_buf == 0) {
 		err("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
@@ -121,6 +128,14 @@ request_fw:
 				fw_blob->data, fw_blob->size);
 		fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
 							fw_blob->size + 1);
+		if (dev->mem.fw_ref_base > 0) {
+			memcpy((void *)phys_to_virt(dev->mem.fw_ref_base),
+						fw_blob->data, fw_blob->size);
+			fimc_is_mem_cache_clean(
+				(void *)phys_to_virt(dev->mem.fw_ref_base),
+				fw_blob->size + 1);
+			dev->fw.size = fw_blob->size;
+		}
 #elif defined(CONFIG_VIDEOBUF2_ION)
 		if (dev->mem.bitproc_buf == 0) {
 			err("failed to load FIMC-IS F/W\n");
@@ -204,6 +219,14 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 	fimc_is_mem_cache_clean(
 		(void *)phys_to_virt(dev->mem.base + dev->setfile.base),
 		fsize + 1);
+	if (dev->mem.setfile_ref_base > 0) {
+		memcpy((void *)phys_to_virt(dev->mem.setfile_ref_base),
+							(void *)buf, fsize);
+		fimc_is_mem_cache_clean(
+			(void *)phys_to_virt(dev->mem.setfile_ref_base),
+			fsize + 1);
+		dev->setfile.size = fsize;
+	}
 #elif defined(CONFIG_VIDEOBUF2_ION)
 	if (dev->mem.bitproc_buf == 0) {
 		err("failed to load FIMC-IS F/W, FIMC-IS will not working\n");
@@ -217,7 +240,7 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 	vfs_llseek(fp, -FIMC_IS_SETFILE_INFO_LENGTH, SEEK_END);
 	vfs_read(fp, (char __user *)dev->fw.setfile_info,
 				FIMC_IS_SETFILE_INFO_LENGTH, &fp->f_pos);
-	dev->fw.state = 1;
+	dev->setfile.state = 1;
 request_fw:
 	if (fw_requested) {
 		set_fs(old_fs);
@@ -235,6 +258,14 @@ request_fw:
 		fimc_is_mem_cache_clean(
 			(void *)phys_to_virt(dev->mem.base + dev->setfile.base),
 			fw_blob->size + 1);
+		if (dev->mem.setfile_ref_base > 0) {
+			memcpy((void *)phys_to_virt(dev->mem.setfile_ref_base),
+					fw_blob->data, fw_blob->size);
+			fimc_is_mem_cache_clean(
+				(void *)phys_to_virt(dev->mem.setfile_ref_base),
+				fw_blob->size + 1);
+			dev->setfile.size = fw_blob->size;
+		}
 #elif defined(CONFIG_VIDEOBUF2_ION)
 		if (dev->mem.bitproc_buf == 0) {
 			err("failed to load FIMC-IS F/W\n");
@@ -278,7 +309,6 @@ out:
 */
 static int fimc_is_load_fw(struct v4l2_subdev *sd)
 {
-	u32 timeout;
 	int ret = 0;
 	struct fimc_is_dev *dev = to_fimc_is_dev(sd);
 	dbg("+++ fimc_is_load_fw\n");
@@ -287,18 +317,18 @@ static int fimc_is_load_fw(struct v4l2_subdev *sd)
 		return ret;
 	}
 	/* 1. Load IS firmware */
-	dev->fw.state = 0;
-	ret = fimc_is_request_firmware(dev);
-	if (ret) {
-		err("failed to fimc_is_request_firmware (%d)\n", ret);
-		return -EINVAL;
-	}
-	timeout = 30;
-	while (!dev->fw.state) {
-		if (timeout == 0)
-			err("Load firmware failed\n");
-		timeout--;
-		mdelay(1);
+	if (dev->fw.state && (dev->mem.fw_ref_base > 0)) {
+		memcpy((void *)phys_to_virt(dev->mem.base),
+			(void *)phys_to_virt(dev->mem.fw_ref_base),
+			dev->fw.size);
+		fimc_is_mem_cache_clean((void *)phys_to_virt(dev->mem.base),
+							dev->fw.size + 1);
+	} else {
+		ret = fimc_is_request_firmware(dev);
+		if (ret) {
+			err("failed to fimc_is_request_firmware (%d)\n", ret);
+			return -EINVAL;
+		}
 	}
 	/* 2. Init GPIO (UART) */
 	ret = fimc_is_hw_io_init(dev);
@@ -320,6 +350,7 @@ static int fimc_is_load_fw(struct v4l2_subdev *sd)
 		dev_err(&dev->pdev->dev,
 			"wait timeout A5 power on: %s\n", __func__);
 		fimc_is_hw_set_low_poweroff(dev, true);
+		fimc_is_s_power(sd, 0);
 		return -EINVAL;
 	}
 	clear_bit(IS_ST_IDLE, &dev->state);
@@ -416,7 +447,16 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		return -EINVAL;
 	}
 	dbg("v4l2 : load setfile\n");
-	fimc_is_load_setfile(dev);
+	if (dev->setfile.state && (dev->mem.setfile_ref_base > 0)) {
+		memcpy((void *)phys_to_virt(dev->mem.base + dev->setfile.base),
+			(void *)phys_to_virt(dev->mem.setfile_ref_base),
+			dev->setfile.size);
+		fimc_is_mem_cache_clean(
+			(void *)phys_to_virt(dev->mem.base + dev->setfile.base),
+			dev->setfile.size + 1);
+	} else {
+		fimc_is_load_setfile(dev);
+	}
 	clear_bit(IS_ST_SETFILE_LOADED, &dev->state);
 	fimc_is_hw_load_setfile(dev);
 	ret = wait_event_timeout(dev->irq_queue1,
@@ -2304,6 +2344,12 @@ static int fimc_is_v4l2_isp_contrast(struct fimc_is_dev *dev, int value)
 	switch (value) {
 	case IS_CONTRAST_AUTO:
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev, ISP_ADJUST_COMMAND_AUTO);
+		IS_ISP_SET_PARAM_ADJUST_CONTRAST(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SATURATION(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_SHARPNESS(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_BRIGHTNESS(dev, 0);
+		IS_ISP_SET_PARAM_ADJUST_HUE(dev, 0);
 		break;
 	case IS_CONTRAST_MINUS_2:
 		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
@@ -3589,30 +3635,6 @@ static int fimc_is_v4l2_mode_change(struct fimc_is_dev *dev, int value)
 		err("Not init done state!!\n");
 		return -EINVAL;
 	}
-	/* Set default value between still and video mode change */
-	/* This is optional part */
-	if ((dev->scenario_id + value) == 1) {
-		IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
-		IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
-		IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
-		IS_INC_PARAM_NUM(dev);
-		IS_ISP_SET_PARAM_ADJUST_CMD(dev,
-					ISP_ADJUST_COMMAND_MANUAL_EXPOSURE);
-		IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
-		IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
-		IS_INC_PARAM_NUM(dev);
-		fimc_is_mem_cache_clean((void *)dev->is_p_region,
-							IS_PARAM_SIZE);
-		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
-		fimc_is_hw_set_param(dev);
-		ret = wait_event_timeout(dev->irq_queue1,
-				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
-					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
-		if (!ret) {
-			err("wait timeout : %s\n", __func__);
-			return -EINVAL;
-		}
-	}
 	clear_bit(IS_ST_CHANGE_MODE, &dev->state);
 	fimc_is_hw_change_mode(dev, value);
 	ret = wait_event_timeout(dev->irq_queue1,
@@ -3639,6 +3661,30 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ret = fimc_is_v4l2_mode_change(dev, ctrl->value);
 		break;
 	case V4L2_CID_IS_S_FORMAT_SCENARIO:
+		/* Set default value between still and video mode change */
+		/* This is optional part */
+		if ((dev->scenario_id + ctrl->value) == 1) {
+			IS_ISP_SET_PARAM_AWB_CMD(dev, ISP_AWB_COMMAND_AUTO);
+			IS_ISP_SET_PARAM_AWB_ILLUMINATION(dev, 0);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_AWB);
+			IS_INC_PARAM_NUM(dev);
+			IS_ISP_SET_PARAM_ADJUST_CMD(dev,
+					ISP_ADJUST_COMMAND_MANUAL_EXPOSURE);
+			IS_ISP_SET_PARAM_ADJUST_EXPOSURE(dev, 0);
+			IS_SET_PARAM_BIT(dev, PARAM_ISP_ADJUST);
+			IS_INC_PARAM_NUM(dev);
+			fimc_is_mem_cache_clean((void *)dev->is_p_region,
+								IS_PARAM_SIZE);
+			clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
+			fimc_is_hw_set_param(dev);
+			ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+			if (!ret) {
+				err("wait timeout : %s\n", __func__);
+				return -EINVAL;
+			}
+		}
 		switch (ctrl->value) {
 		case IS_MODE_PREVIEW_STILL:
 			dev->scenario_id = ISS_PREVIEW_STILL;
@@ -4039,6 +4085,9 @@ static int fimc_is_g_ext_ctrls_handler(struct fimc_is_dev *dev,
 	/* 7. Update next face information */
 	case V4L2_CID_IS_FD_GET_NEXT:
 		dev->fd_header.offset++;
+		break;
+	case V4L2_CID_CAM_SENSOR_FW_VER:
+		strcpy(ctrl->string, dev->fw.fw_version);
 		break;
 	default:
 		return 255;
