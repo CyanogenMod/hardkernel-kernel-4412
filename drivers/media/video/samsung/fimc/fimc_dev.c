@@ -1290,8 +1290,9 @@ static int fimc_release(struct file *filp)
 		if (ctrl->power_status == FIMC_POWER_ON)
 			pm_runtime_put_sync(ctrl->dev);
 #endif
+	} else if (ctrl->is.sd) {
+		fimc_is_release_subdev(ctrl);
 	}
-
 	if (atomic_read(&ctrl->in_use) == 0) {
 #if (!defined(CONFIG_EXYNOS_DEV_PD) || !defined(CONFIG_PM_RUNTIME))
 		if (pdata->clk_off) {
@@ -1719,6 +1720,7 @@ static int __devinit fimc_probe(struct platform_device *pdev)
 		fimc_err("%s: v4l2 device register failed\n", __func__);
 		goto err_fimc;
 	}
+	ctrl->vd->v4l2_dev = &ctrl->v4l2_dev;
 
 	/* things to initialize once */
 	if (!fimc_dev->initialized) {
