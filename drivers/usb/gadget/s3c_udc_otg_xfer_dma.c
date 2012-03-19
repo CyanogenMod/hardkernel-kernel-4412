@@ -50,19 +50,14 @@ static u8 test_pkt[TEST_PKT_SIZE] __attribute__((aligned(8))) = {
 static void s3c_udc_ep_set_stall(struct s3c_ep *ep);
 
 #if defined(CONFIG_BATTERY_SAMSUNG)
-u32 cable_connected;
 void s3c_udc_cable_connect(struct s3c_udc *dev)
 {
 	samsung_cable_check_status(1);
-	cable_connected = 1;
 }
 
 void s3c_udc_cable_disconnect(struct s3c_udc *dev)
 {
-	if (cable_connected) {
-		samsung_cable_check_status(0);
-		cable_connected = 0;
-	}
+	samsung_cable_check_status(0);
 }
 #endif
 
