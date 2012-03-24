@@ -616,6 +616,43 @@ static struct s3c_platform_camera s5k6a3 = {
 };
 #endif
 
+#if defined(CONFIG_VIDEO_S5K6A3) && defined(CONFIG_S5K6A3_CSI_D)
+static struct i2c_board_info s5k6a3_fd_sensor_info = {
+	.type = "S5K6A3_FD",
+};
+
+static struct s3c_platform_camera s5k6a3_fd = {
+	.id		= CAMERA_CSI_D,
+	.clk_name	= "sclk_cam1",
+	.cam_power	= smdk4x12_cam1_reset,
+
+	.type		= CAM_TYPE_MIPI,
+	.fmt		= MIPI_CSI_RAW10,
+	.info		= &s5k6a3_fd_sensor_info,
+	.order422	= CAM_ORDER422_8BIT_YCBYCR,
+	.pixelformat	= V4L2_PIX_FMT_UYVY,
+	.line_length	= 1920,
+	.width		= 1920,
+	.height		= 1080,
+	.window		= {
+		.left	= 0,
+		.top	= 0,
+		.width	= 1920,
+		.height	= 1080,
+	},
+	.srclk_name	= "xusbxti",
+	.clk_rate	= 24000000,
+	.mipi_lanes	= 1,
+	.mipi_settle	= 18,
+	.mipi_align	= 24,
+
+	.initialized	= 0,
+	.flite_id	= FLITE_IDX_B,
+	.use_isp	= true,
+	.sensor_index	= 200
+};
+#endif
+
 #endif
 
 /* legacy M5MOLS Camera driver configuration */
@@ -738,6 +775,9 @@ static struct s3c_platform_fimc fimc_plat = {
 #endif
 #ifdef WRITEBACK_ENABLED
 		&writeback,
+#endif
+#if defined(CONFIG_VIDEO_S5K6A3) && defined(CONFIG_S5K6A3_CSI_D)
+		&s5k6a3_fd,
 #endif
 	},
 	.hw_ver		= 0x51,
