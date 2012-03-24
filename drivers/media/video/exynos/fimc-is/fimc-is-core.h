@@ -121,11 +121,11 @@ Default setting values
 #define DEFAULT_CAPTURE_VIDEO_WIDTH	640
 #define DEFAULT_CAPTURE_VIDEO_HEIGHT	480
 
-
 #define DEFAULT_PREVIEW_STILL_FRAMERATE	30
 #define DEFAULT_CAPTURE_STILL_FRAMERATE	15
 #define DEFAULT_PREVIEW_VIDEO_FRAMERATE	30
 #define DEFAULT_CAPTURE_VIDEO_FRAMERATE	30
+
 enum fimc_is_state_flag {
 	IS_ST_IDLE,
 	IS_ST_FW_LOADED,
@@ -162,6 +162,8 @@ enum sensor_list {
 	SENSOR_S5K6A3_CSI_B	= 102,
 	SENSOR_S5K4E5_CSI_B	= 103,
 	SENSOR_S5K3H7_CSI_B	= 104,
+	/* Custom mode */
+	SENSOR_S5K6A3_CSI_B_CUSTOM	= 200,
 };
 
 enum sensor_name {
@@ -385,12 +387,6 @@ struct fimc_is_dev {
 	unsigned long			p_region_index2;
 	struct is_region		*is_p_region;
 	struct is_share_region		*is_shared_region;
-};
-
-struct fimc_is_ctx {
-	spinlock_t			slock;
-	u32				state;
-	struct fimc_is_dev		*is_dev;
 };
 
 static inline void fimc_is_state_lock_set(u32 state, struct fimc_is_dev *dev)

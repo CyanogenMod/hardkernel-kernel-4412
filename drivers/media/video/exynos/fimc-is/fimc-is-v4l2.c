@@ -3911,8 +3911,8 @@ static int fimc_is_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CAMERA_VT_MODE:
 		dev->setfile.sub_index = ctrl->value;
-		if (ctrl->value == 1)
-			printk(KERN_INFO "VT mode is selected\n");
+		printk(KERN_INFO "VT mode(%d) is selected\n",
+						dev->setfile.sub_index);
 		break;
 	case V4L2_CID_CAMERA_VGA_BLUR:
 		break;

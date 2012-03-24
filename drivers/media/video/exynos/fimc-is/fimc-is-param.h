@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 121  /* IS REGION VERSION 1.21 */
+#define IS_REGION_VER 122  /* IS REGION VERSION 1.22 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -1609,8 +1609,8 @@ struct is_face_marker {
 	u32	roll_angle;
 	u32	yaw_angle;
 	u32	confidence;
-	u32	smile_level;
-	u32	blink_level;
+	s32	smile_level;
+	s32	blink_level;
 };
 
 #define MAX_FRAME_COUNT		8
@@ -1686,5 +1686,14 @@ struct is_debug_control {
 	u32 assert_flag;	/* 0: Not invoked, 1: Invoked */
 	u32 pabort_flag;	/* 0: Not invoked, 1: Invoked */
 	u32 dabort_flag;	/* 0: Not invoked, 1: Invoked */
+};
+
+struct sensor_open_extended {
+	u32 actuator_type;
+	u32 mclk;
+	u32 mipi_lane_num;
+	u32 mipi_speed;
+	/* Skip setfile loading when fast_open_sensor is not 0 */
+	u32 fast_open_sensor;
 };
 #endif
