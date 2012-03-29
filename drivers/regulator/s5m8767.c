@@ -842,10 +842,6 @@ static __devinit int s5m8767_pmic_probe(struct platform_device *pdev)
 		}
 	}
 
-	s5m_reg_update(i2c, S5M8767_REG_BUCK2CTRL, 0x78, 0xff);
-	s5m_reg_update(i2c, S5M8767_REG_BUCK3CTRL, 0x58, 0xff);
-	s5m_reg_update(i2c, S5M8767_REG_BUCK4CTRL, 0x78, 0xff);
-
 	if (s5m8767->buck2_ramp)
 		s5m_reg_update(i2c, S5M8767_REG_DVSRAMP, 0x08, 0x08);
 
