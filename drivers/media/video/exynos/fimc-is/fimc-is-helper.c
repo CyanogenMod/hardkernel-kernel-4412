@@ -1030,32 +1030,72 @@ void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 		writel(0x0, dev->regs + ISSR4);
 		break;
 	case SENSOR_S5K6A3_CSI_A:
+		sensor_ext = (struct sensor_open_extended *)
+						&dev->is_p_region->shared;
+		sensor_ext->actuator_type = 0;
+		sensor_ext->mclk = 0;
+		sensor_ext->mipi_lane_num = 0;
+		sensor_ext->mipi_speed = 0;
+		sensor_ext->fast_open_sensor = 0;
+		sensor_ext->self_calibration_mode = 1;
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
 		dev->af.use_af = 0;
 		dev->sensor.sensor_type = SENSOR_S5K6A3_CSI_A;
 		writel(SENSOR_NAME_S5K6A3, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
-		writel(0x0, dev->regs + ISSR4);
+		writel(virt_to_phys(sensor_ext), dev->regs + ISSR4);
 		break;
 	case SENSOR_S5K6A3_CSI_B:
+		sensor_ext = (struct sensor_open_extended *)
+						&dev->is_p_region->shared;
+		sensor_ext->actuator_type = 0;
+		sensor_ext->mclk = 0;
+		sensor_ext->mipi_lane_num = 0;
+		sensor_ext->mipi_speed = 0;
+		sensor_ext->fast_open_sensor = 0;
+		sensor_ext->self_calibration_mode = 1;
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
 		dev->af.use_af = 0;
 		dev->sensor.sensor_type = SENSOR_S5K6A3_CSI_B;
 		writel(SENSOR_NAME_S5K6A3, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
-		writel(0x0, dev->regs + ISSR4);
+		writel(virt_to_phys(sensor_ext), dev->regs + ISSR4);
 		break;
 	case SENSOR_S5K3H7_CSI_A:
+		sensor_ext = (struct sensor_open_extended *)
+						&dev->is_p_region->shared;
+		sensor_ext->actuator_type = 3;
+		sensor_ext->mclk = 0;
+		sensor_ext->mipi_lane_num = 0;
+		sensor_ext->mipi_speed = 0;
+		sensor_ext->fast_open_sensor = 0;
+		sensor_ext->self_calibration_mode = 0;
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
 		dev->af.use_af = 1;
 		dev->sensor.sensor_type = SENSOR_S5K3H7_CSI_A;
 		writel(SENSOR_NAME_S5K3H7, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C0, dev->regs + ISSR3);
-		writel(0x0, dev->regs + ISSR4);
+		writel(virt_to_phys(sensor_ext), dev->regs + ISSR4);
 		break;
 	case SENSOR_S5K3H7_CSI_B:
+		sensor_ext = (struct sensor_open_extended *)
+						&dev->is_p_region->shared;
+		sensor_ext->actuator_type = 3;
+		sensor_ext->mclk = 0;
+		sensor_ext->mipi_lane_num = 0;
+		sensor_ext->mipi_speed = 0;
+		sensor_ext->fast_open_sensor = 0;
+		sensor_ext->self_calibration_mode = 0;
+		fimc_is_mem_cache_clean((void *)dev->is_p_region,
+							IS_PARAM_SIZE);
 		dev->af.use_af = 1;
 		dev->sensor.sensor_type = SENSOR_S5K3H7_CSI_B;
 		writel(SENSOR_NAME_S5K3H7, dev->regs + ISSR2);
 		writel(SENSOR_CONTROL_I2C1, dev->regs + ISSR3);
-		writel(0x0, dev->regs + ISSR4);
+		writel(virt_to_phys(sensor_ext), dev->regs + ISSR4);
 		break;
 	case SENSOR_S5K4E5_CSI_A:
 		dev->af.use_af = 1;

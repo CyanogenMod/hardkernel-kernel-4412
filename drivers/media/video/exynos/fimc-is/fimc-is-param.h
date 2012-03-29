@@ -1695,5 +1695,6 @@ struct sensor_open_extended {
 	u32 mipi_speed;
 	/* Skip setfile loading when fast_open_sensor is not 0 */
 	u32 fast_open_sensor;
+	u32 self_calibration_mode;
 };
 #endif

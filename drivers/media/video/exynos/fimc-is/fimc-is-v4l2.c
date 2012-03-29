@@ -350,7 +350,6 @@ static int fimc_is_load_fw(struct v4l2_subdev *sd)
 		dev_err(&dev->pdev->dev,
 			"wait timeout A5 power on: %s\n", __func__);
 		fimc_is_hw_set_low_poweroff(dev, true);
-		fimc_is_s_power(sd, 0);
 		return -EINVAL;
 	}
 	clear_bit(IS_ST_IDLE, &dev->state);
@@ -432,6 +431,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		FIMC_IS_SHUTDOWN_TIMEOUT);
 	if (!ret) {
 		err("wait timeout - open sensor\n");
+		fimc_is_hw_set_low_poweroff(dev, true);
 		return -EINVAL;
 	}
 	/* Init sequence 2: Load setfile */
