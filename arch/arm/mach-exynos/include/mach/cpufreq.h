@@ -40,6 +40,7 @@ enum cpufreq_lock_ID {
 	DVFS_LOCK_ID_TMU,	/* TMU */
 	DVFS_LOCK_ID_LPA,	/* LPA */
 	DVFS_LOCK_ID_DRM,	/* DRM */
+	DVFS_LOCK_ID_G3D,	/* G3D */
 	DVFS_LOCK_ID_END,
 };
 
