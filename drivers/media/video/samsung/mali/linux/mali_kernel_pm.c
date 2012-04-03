@@ -603,7 +603,7 @@ int _mali_dev_platform_register(void)
 {
 	int err;
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON	
-	set_mali_parent_power_domain(&mali_gpu_device);
+	set_mali_parent_power_domain((void *)&mali_gpu_device);
 #endif
 
 #ifdef CONFIG_PM_RUNTIME

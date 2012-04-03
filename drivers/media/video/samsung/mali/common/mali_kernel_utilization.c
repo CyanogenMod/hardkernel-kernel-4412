@@ -157,6 +157,15 @@ void mali_utilization_core_start(u64 time_now)
 
 		_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
 
+		if (time_now < period_start_time)
+		{
+			/*
+			 * This might happen if the calculate_gpu_utilization() was able
+			 * to run between the sampling of time_now and us grabbing the lock above
+			 */
+			time_now = period_start_time;
+		}
+
 		work_start_time = time_now;
 
 		if (timer_running != MALI_TRUE) {
@@ -164,6 +173,8 @@ void mali_utilization_core_start(u64 time_now)
 			period_start_time = work_start_time; /* starting a new period */
 
 			_mali_osk_lock_signal(time_data_lock, _MALI_OSK_LOCKMODE_RW);
+
+			_mali_osk_timer_del(utilization_timer);
 
 			_mali_osk_timer_add(utilization_timer, _mali_osk_time_mstoticks(MALI_GPU_UTILIZATION_TIMEOUT));
 		} else {
@@ -181,6 +192,15 @@ void mali_utilization_core_end(u64 time_now)
 		 * No more cores are working, so accumulate the time we was busy.
 		 */
 		_mali_osk_lock_wait(time_data_lock, _MALI_OSK_LOCKMODE_RW);
+
+		if (time_now < work_start_time)
+		{
+			/*
+			 * This might happen if the calculate_gpu_utilization() was able
+			 * to run between the sampling of time_now and us grabbing the lock above
+			 */
+			time_now = work_start_time;
+		}
 
 		accumulated_work_time += (time_now - work_start_time);
 		work_start_time = 0;

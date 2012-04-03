@@ -834,22 +834,14 @@ void mali_core_subsystem_ioctl_abort_job(mali_core_session * session, u32 id)
 	find_and_abort(session, id);
 }
 
-/* TODO: Fix find_and_abort */
-#if 0
 static mali_bool job_should_be_aborted(mali_core_job *job, u32 abort_id)
 {
 	if ( job->abort_id == abort_id ) return MALI_TRUE;
 	else return MALI_FALSE;
 }
-#endif
 
 static void find_and_abort(mali_core_session* session, u32 abort_id)
 {
-	MALI_PRINT_ERROR(("find_and_abort not supported\n"));
-	return;
-
-/* TODO: Fix find_and_abort */
-#if 0
 	mali_core_subsystem * subsystem;
 	mali_core_renderunit *core;
 	mali_core_renderunit *tmp;
@@ -859,14 +851,16 @@ static void find_and_abort(mali_core_session* session, u32 abort_id)
 
 	MALI_CORE_SUBSYSTEM_MUTEX_GRAB( subsystem );
 
-	job = session->job_waiting_to_run;
-	if ( (job!=NULL) && job_should_be_aborted (job, abort_id) )
+	job = mali_job_queue_abort_job(session, abort_id);
+	if (NULL != job)
 	{
 		MALI_DEBUG_PRINT(3, ("Core: Aborting %s job, with id nr: %u, from the waiting_to_run slot.\n", subsystem->name, abort_id ));
-		session->job_waiting_to_run = NULL;
-		_mali_osk_list_delinit(&(session->awaiting_sessions_list));
+		if (mali_job_queue_empty(session))
+		{
+			_mali_osk_list_delinit(&(session->awaiting_sessions_list));
+		}
 		subsystem->awaiting_sessions_sum_all_priorities--;
-		subsystem->return_job_to_user( job , JOB_STATUS_END_ABORT);
+		subsystem->return_job_to_user(job , JOB_STATUS_END_ABORT);
 	}
 
 	_MALI_OSK_LIST_FOREACHENTRY( core, tmp, &session->renderunits_working_head, mali_core_renderunit, list )
@@ -886,7 +880,6 @@ static void find_and_abort(mali_core_session* session, u32 abort_id)
 end_bug:
 
 	MALI_CORE_SUBSYSTEM_MUTEX_RELEASE( subsystem );
-#endif
 }
 
 
@@ -1420,8 +1413,6 @@ _mali_osk_errcode_t mali_core_session_add_job(mali_core_session * session, mali_
 	MALI_DEBUG_ASSERT_POINTER(job_return);
 	*job_return = NULL;
 
-	/* TODO: Ignoring job priorities for now. Add a queue for each priority to ensure priorities work (intra
-	 * session). */
 	if (mali_job_queue_empty(session))
 	{
 		/* Add session to the wait list only if it didn't already have a job waiting. */

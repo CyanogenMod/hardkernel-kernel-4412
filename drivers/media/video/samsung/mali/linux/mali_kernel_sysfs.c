@@ -18,6 +18,7 @@
 #include <linux/device.h>
 #include "mali_kernel_license.h"
 #include "mali_kernel_linux.h"
+#include "mali_ukk.h"
 
 #if MALI_LICENSE_IS_GPL
 
@@ -25,7 +26,6 @@
 #include <linux/debugfs.h>
 #include <asm/uaccess.h>
 #include <linux/slab.h>
-#include "mali_ukk.h"
 #include "mali_kernel_subsystem.h"
 #include "mali_kernel_sysfs.h"
 #include "mali_kernel_profiling.h"
@@ -385,7 +385,7 @@ int mali_sysfs_unregister(struct mali_dev *device, dev_t dev, const char *mali_d
 
 #else
 
-/* Dummy implementations for non-GPL */
+/* Dummy implementations for when the sysfs API isn't available. */
 
 int mali_sysfs_register(struct mali_dev *device, dev_t dev, const char *mali_dev_name)
 {

@@ -772,6 +772,7 @@ void malipmm_core_unregister( mali_pmm_core_id core )
 #if MALI_PMM_TRACE
 		mali_pmm_core_mask old_power = pmm->cores_powered;
 #endif
+
 		/* Remove the core from the system */
 		pmm->cores_idle &= (~core);
 		pmm->cores_powered &= (~core);

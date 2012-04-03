@@ -13,7 +13,7 @@ config VIDEO_MALI400MP
 choice
 depends on VIDEO_MALI400MP
 prompt "MALI MEMORY OPTION"
-default MALI_OSMEM_ONLY 
+default MALI_OSMEM_ONLY
 config MALI_DED_ONLY
   bool "mali dedicated memory only"
    ---help---
@@ -47,6 +47,13 @@ config VIDEO_MALI400MP_DEBUG
 	default n
 	help
 	  This enables Mali driver debug messages.
+
+config VIDEO_MALI400MP_STREAMLINE_PROFILING
+	bool "Enables mali streamline profiling"
+	depends on VIDEO_MALI400MP
+	default n
+	help
+	  This enables Mali streamline profiling.
 
 config VIDEO_MALI400MP_DVFS
 	bool "Enables DVFS"

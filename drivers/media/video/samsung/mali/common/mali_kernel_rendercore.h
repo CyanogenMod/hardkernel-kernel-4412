@@ -201,6 +201,23 @@ typedef struct mali_core_session
 #endif
 } mali_core_session;
 
+/* This must be embedded into a specific mali_core_job struct */
+/* use this macro to get spesific mali_core_job:  container_of(ptr, type, member)*/
+typedef struct mali_core_job
+{
+	_mali_osk_list_t list; /* Linked list of jobs. Used by struct mali_core_session */
+	struct mali_core_session *session;
+	u32 magic_nr;
+	u32 priority;
+	u32 watchdog_msecs;
+	u32 render_time_usecs ;
+	u64 start_time;
+	unsigned long watchdog_jiffies;
+	u32 abort_id;
+	u32 job_nr;
+	_mali_uk_start_job_flags flags;
+} mali_core_job;
+
 MALI_STATIC_INLINE mali_bool mali_job_queue_empty(mali_core_session *session)
 {
 	if (0 == session->queue_size)
@@ -255,23 +272,43 @@ MALI_STATIC_INLINE u32 mali_job_queue_size(mali_core_session *session)
 	return (u32)(session->queue_size);
 }
 
-
-/* This must be embedded into a specific mali_core_job struct */
-/* use this macro to get spesific mali_core_job:  container_of(ptr, type, member)*/
-typedef struct mali_core_job
+MALI_STATIC_INLINE struct mali_core_job *mali_job_queue_abort_job(mali_core_session *session, u32 abort_id)
 {
-	_mali_osk_list_t list; /* Linked list of jobs. Used by struct mali_core_session */
-	struct mali_core_session *session;
-	u32 magic_nr;
-	u32 priority;
-	u32 watchdog_msecs;
-	u32 render_time_usecs ;
-	u64 start_time;
-	unsigned long watchdog_jiffies;
-	u32 abort_id;
-	u32 job_nr;
-	_mali_uk_start_job_flags flags;
-} mali_core_job;
+	int i;
+	int n;
+	struct mali_core_job *job = NULL;
+
+	for (i = session->queue_head, n = session->queue_size; n > 0; n--, i = (i+1)%MALI_JOB_QUEUE_SIZE)
+	{
+		if (session->queue[i]->abort_id == abort_id)
+		{
+			/* Remove job from queue */
+			job = session->queue[i];
+			session->queue[i] = NULL;
+
+			session->queue_size -= 1;
+			n--;
+			break;
+		}
+	}
+	if (NULL == job)
+	{
+		return NULL;
+	}
+
+	/* Rearrange queue */
+	while (n > 0)
+	{
+		int next = (i + 1) % MALI_JOB_QUEUE_SIZE;
+		session->queue[i] = session->queue[next];
+		i = next;
+		n--;
+	}
+	session->queue_tail = i;
+
+	return job;
+}
+
 
 /*
  * The rendercode subsystem is included in the subsystems[] array.
