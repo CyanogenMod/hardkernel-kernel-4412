@@ -7,6 +7,8 @@
  * A copy of the licence is included with the program, and can also be obtained from Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
+//added for SPI
+#include <linux/kernel.h>
 
 #include "mali_kernel_common.h"
 #include "mali_kernel_core.h"
@@ -145,7 +147,7 @@ static register_address_and_value default_mgmt_regs[] =
 struct mali_kernel_subsystem mali_subsystem_gp2=
 {
 	maligp_subsystem_startup,                   /* startup */
-	maligp_subsystem_terminate,                 /* shutdown */
+	NULL, /*maligp_subsystem_terminate,*/                 /* shutdown */
 #if USING_MMU
 	maligp_subsystem_mmu_connect,               /* load_complete */
 #else
@@ -628,6 +630,19 @@ static _mali_osk_errcode_t subsystem_maligp_start_job(mali_core_job * job, mali_
 			&(jobgp->user_input.frame_registers[0]),
 			sizeof(jobgp->user_input.frame_registers)/sizeof(jobgp->user_input.frame_registers[0]));
 
+#if MALI_TRACEPOINTS_ENABLED
+	jobgp->user_input.perf_counter_flag = 0;
+
+	if( counter_table[7] != 0xFFFFFFFF ) {
+		jobgp->user_input.perf_counter_flag |= _MALI_PERFORMANCE_COUNTER_FLAG_SRC0_ENABLE;
+		jobgp->user_input.perf_counter_src0 = counter_table[7];
+	}
+	if( counter_table[8] != 0xFFFFFFFF ) {
+		jobgp->user_input.perf_counter_flag |= _MALI_PERFORMANCE_COUNTER_FLAG_SRC1_ENABLE;
+		jobgp->user_input.perf_counter_src1 = counter_table[8];
+	}
+#endif
+
 	/* This selects which performance counters we are reading */
 	if ( 0 != jobgp->user_input.perf_counter_flag )
 	{
@@ -715,6 +730,7 @@ static _mali_osk_errcode_t subsystem_maligp_start_job(mali_core_job * job, mali_
 										startcmd);
 	_mali_osk_write_mem_barrier();
 
+	trace_printk("SPI_GPU_GP Start\n");
 #if MALI_TIMELINE_PROFILING_ENABLED
 	_mali_profiling_add_event(MALI_PROFILING_EVENT_TYPE_SINGLE | MALI_PROFILING_MAKE_EVENT_CHANNEL_GP(core->core_number) | MALI_PROFILING_EVENT_REASON_SINGLE_HW_FLUSH,
 	                          jobgp->user_input.frame_builder_id, jobgp->user_input.flush_id, 0, 0, 0);
@@ -809,6 +825,12 @@ static int subsystem_maligp_irq_handler_bottom_half(mali_core_renderunit* core)
 		{
 			jobgp->perf_counter0 = mali_core_renderunit_register_read(core, MALIGP2_REG_ADDR_MGMT_PERF_CNT_0_VALUE);
 			jobgp->perf_counter1 = mali_core_renderunit_register_read(core, MALIGP2_REG_ADDR_MGMT_PERF_CNT_1_VALUE);
+
+#if MALI_TRACEPOINTS_ENABLED
+			//TODO magic numbers should come from mali_linux_trace.h instead
+			_mali_profiling_add_counter(7, jobgp->perf_counter0);
+			_mali_profiling_add_counter(8, jobgp->perf_counter1);
+#endif
 		}
 
 #if defined(USING_MALI400_L2_CACHE)
@@ -870,6 +892,12 @@ static int subsystem_maligp_irq_handler_bottom_half(mali_core_renderunit* core)
 			{
 				jobgp->perf_counter0 = mali_core_renderunit_register_read(core, MALIGP2_REG_ADDR_MGMT_PERF_CNT_0_VALUE);
 				jobgp->perf_counter1 = mali_core_renderunit_register_read(core, MALIGP2_REG_ADDR_MGMT_PERF_CNT_1_VALUE);
+
+#if MALI_TRACEPOINTS_ENABLED
+                //TODO magic numbers should come from mali_linux_trace.h instead
+                _mali_profiling_add_counter(7, jobgp->perf_counter0);
+                _mali_profiling_add_counter(8, jobgp->perf_counter1);
+#endif
 			}
 
 #if defined(USING_MALI400_L2_CACHE)
@@ -921,6 +949,7 @@ static int subsystem_maligp_irq_handler_bottom_half(mali_core_renderunit* core)
 #if MALI_STATE_TRACKING
 		_mali_osk_atomic_inc(&job->session->jobs_ended);
 #endif
+		trace_printk("SPI_GPU_GP Idle\n");
 		return JOB_STATUS_END_SUCCESS; /* core idle */
 	}
 	/* sw watchdog timeout handling or time to do hang checking ? */
@@ -1099,6 +1128,7 @@ static _mali_osk_errcode_t subsystem_maligp_get_new_job_from_user(struct mali_co
 	job = GET_JOB_EMBEDDED_PTR(jobgp);
 
 	job->session = session;
+	job->flags = MALI_UK_START_JOB_FLAG_DEFAULT; /* Current flags only make sence for PP jobs */
 	job_priority_set(job, jobgp->user_input.priority);
 	job_watchdog_set(job, jobgp->user_input.watchdog_msecs );
 	jobgp->heap_current_addr = jobgp->user_input.frame_registers[4];
@@ -1112,16 +1142,11 @@ static _mali_osk_errcode_t subsystem_maligp_get_new_job_from_user(struct mali_co
 	jobgp->tid = _mali_osk_get_tid();
 #endif
 
-	if (NULL != session->job_waiting_to_run)
+	if (mali_job_queue_full(session))
 	{
-		/* IF NOT( newjow HAS HIGHER PRIORITY THAN waitingjob) EXIT_NOT_START new job */
-		if(!job_has_higher_priority(job, session->job_waiting_to_run))
-		{
-			/* The job we try to add does NOT have higher pri than current */
-			/* Cause jobgp to free: */
-			user_ptr_job_input->status = _MALI_UK_START_JOB_NOT_STARTED_DO_REQUEUE;
-			goto function_exit;
-		}
+		/* Cause jobgp to free: */
+		user_ptr_job_input->status = _MALI_UK_START_JOB_NOT_STARTED_DO_REQUEUE;
+		goto function_exit;
 	}
 
 	/* We now know that we have a job, and a slot to put it in */
@@ -1283,9 +1308,9 @@ static void subsystem_maligp_return_job_to_user( mali_core_job * job, mali_subsy
 	job_input= &(jobgp->user_input);
 	session = job->session;
 
-	MALI_DEBUG_PRINT(5, ("Mali GP: Job: 0x%08x OUTPUT to user. Runtime: %d ms, irq readout %x\n",
+	MALI_DEBUG_PRINT(5, ("Mali GP: Job: 0x%08x OUTPUT to user. Runtime: %d us, irq readout %x\n",
 			(u32)jobgp->user_input.user_job_ptr,
-			job->render_time_msecs,
+			job->render_time_usecs,
 		   	jobgp->irq_status)) ;
 
 	_mali_osk_memset(job_out, 0 , sizeof(_mali_uk_gp_job_finished_s));
@@ -1320,7 +1345,7 @@ static void subsystem_maligp_return_job_to_user( mali_core_job * job, mali_subsy
 	job_out->perf_counter1 = jobgp->perf_counter1;
 	job_out->perf_counter_src0 = jobgp->user_input.perf_counter_src0 ;
 	job_out->perf_counter_src1 = jobgp->user_input.perf_counter_src1 ;
-	job_out->render_time = job->render_time_msecs;
+	job_out->render_time = job->render_time_usecs;
 #if defined(USING_MALI400_L2_CACHE)
 	job_out->perf_counter_l2_src0 = jobgp->perf_counter_l2_src0;
 	job_out->perf_counter_l2_src1 = jobgp->perf_counter_l2_src1;

@@ -76,7 +76,7 @@ u32 malipmm_subsystem_dump_state( char *buf, u32 size );
 struct mali_kernel_subsystem mali_subsystem_pmm=
 {
 	malipmm_kernel_subsystem_start,                     /* startup */
-	malipmm_kernel_subsystem_terminate,                 /* shutdown */
+	NULL, /*malipmm_kernel_subsystem_terminate,*/                 /* shutdown */
 	malipmm_kernel_load_complete,                       /* loaded all subsystems */
 	NULL,
 	NULL,
@@ -643,10 +643,11 @@ _mali_osk_errcode_t malipmm_powerup( u32 cores )
 #if MALI_PMM_RUNTIME_JOB_CONTROL_ON
 		/* Initiate the power up */
                 if (_mali_osk_pmm_dev_activate() < 0) {
-					MALI_PRINT(("PMM: Mali PMM device activate failed\n"));
-					err = _MALI_OSK_ERR_FAULT;
-					return err;
-				}
+                                       MALI_PRINT(("PMM: Mali PMM device activate failed\n"));
+                                       err = _MALI_OSK_ERR_FAULT;
+                                       return err;
+                               }
+
 #endif
         }
 
@@ -771,7 +772,6 @@ void malipmm_core_unregister( mali_pmm_core_id core )
 #if MALI_PMM_TRACE
 		mali_pmm_core_mask old_power = pmm->cores_powered;
 #endif
-
 		/* Remove the core from the system */
 		pmm->cores_idle &= (~core);
 		pmm->cores_powered &= (~core);

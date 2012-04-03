@@ -13,7 +13,7 @@
 
 #if MALI_TIMELINE_PROFILING_ENABLED
 
-#include <../../../include/cinstr/mali_cinstr_profiling_events_m200.h>
+#include "cinstr/mali_cinstr_profiling_events_m200.h"
 
 #define MALI_PROFILING_MAX_BUFFER_ENTRIES 1048576
 
@@ -27,6 +27,12 @@ _mali_osk_errcode_t _mali_profiling_init(mali_bool auto_start);
  * Terminate the profiling module.
  */
 void _mali_profiling_term(void);
+
+/** Add a counter event
+ * @param event_id - Magic counter id
+ * @param data0 - Value of counter
+ */
+void _mali_profiling_add_counter(u32 event_id, u32 data0);
 
 /**
  * Start recording profiling data

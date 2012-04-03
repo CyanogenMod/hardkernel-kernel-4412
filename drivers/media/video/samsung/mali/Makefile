@@ -70,6 +70,7 @@ USING_MALI_PMU ?= 0
 USING_GPU_UTILIZATION ?= 0
 OS_MEMORY_KERNEL_BUFFER_SIZE_IN_MB ?= 6
 USING_PROFILING ?= 0
+USING_TRACEPOINTS ?= 0
 USING_MALI_MAJOR_PREDEFINE = 1
 USING_MALI_DVFS_ENABLED ?= 0
 TIMESTAMP ?= default
@@ -111,6 +112,7 @@ DEFINES += -DMALI_DVFS_ENABLED=$(USING_MALI_DVFS_ENABLED)
 DEFINES += -DUSING_MALI_PMM_EARLYSUSPEND=$(USING_MALI_PMM_EARLYSUSPEND)
 DEFINES += -DMALI_STATE_TRACKING=1
 DEFINES += -DMALI_OS_MEMORY_KERNEL_BUFFER_SIZE_IN_MB=$(OS_MEMORY_KERNEL_BUFFER_SIZE_IN_MB)
+DEFINES += -DMALI_TRACEPOINTS_ENABLED=$(USING_TRACEPOINTS)
 
 ifeq ($(BUILD),debug)
 DEFINES += -DDEBUG
@@ -196,10 +198,19 @@ mali-y := \
 	#__malidrv_build_info.o
 
 ifeq ($(USING_PROFILING),1)
+EXTRA_CFLAGS += -I$(MALI_FILE_PREFIX)/timestamp-default
+EXTRA_CFLAGS += -I$(MALI_FILE_PREFIX)/profiling/include
 mali-y += \
 	common/mali_kernel_profiling.o \
-	timestamp-$(TIMESTAMP)/mali_timestamp.o
+	timestamp-$(TIMESTAMP)/mali_timestamp.o \
+	linux/mali_ukk_profiling.o
+
 EXTRA_CFLAGS += -I$(KBUILD_EXTMOD)/timestamp-$(TIMESTAMP)
+endif
+
+ifeq ($(USING_TRACEPOINTS),1)
+mali-y += \
+	linux/mali_osk_profiling.o
 endif
 
 # Selecting files to compile by parsing the config file
