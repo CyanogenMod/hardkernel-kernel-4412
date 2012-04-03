@@ -1,9 +1,9 @@
 /*
  * Copyright (C) 2010 ARM Limited. All rights reserved.
- * 
+ *
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
- * 
+ *
  * A copy of the licence is included with the program, and can also be obtained from Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
@@ -27,6 +27,7 @@
 #include <linux/slab.h>
 
 #include <asm/memory.h>
+#include <asm/uaccess.h>			/* to verify pointers from user space */
 #include <asm/cacheflush.h>
 #include <linux/dma-mapping.h>
 
@@ -104,6 +105,8 @@ static void ump_vma_close(struct vm_area_struct * vma)
 	new_val = atomic_dec_return(&vma_usage_tracker->references);
 
 	DBG_MSG(4, ("VMA close, VMA reference count decremented. VMA: 0x%08lx, reference count: %d\n", (unsigned long)vma, new_val));
+
+	vma_usage_tracker->descriptor->process_mapping_info = vma;
 
 	if (0 == new_val)
 	{
