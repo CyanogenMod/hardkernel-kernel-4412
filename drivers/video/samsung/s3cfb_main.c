@@ -81,8 +81,10 @@ static irqreturn_t s3cfb_irq_frame(int irq, void *dev_id)
 	if (fbdev[0]->regs != 0)
 		s3cfb_clear_interrupt(fbdev[0]);
 
-	fbdev[0]->wq_count++;
-	wake_up(&fbdev[0]->wq);
+	fbdev[0]->vsync_timestamp = ktime_get();
+	wmb();
+	wake_up_interruptible(&fbdev[0]->vsync_wq);
+
 
 	return IRQ_HANDLED;
 }

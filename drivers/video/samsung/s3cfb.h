@@ -159,9 +159,9 @@ struct s3cfb_global {
 	struct device		*dev;
 	struct clk		*clock;
 	int			irq;
-	wait_queue_head_t	wq;
-	unsigned int		wq_count;
 	struct fb_info		**fb;
+	wait_queue_head_t       vsync_wq;
+	ktime_t                 vsync_timestamp;
 
 	atomic_t		enabled_win;
 	enum s3cfb_output_t	output;
