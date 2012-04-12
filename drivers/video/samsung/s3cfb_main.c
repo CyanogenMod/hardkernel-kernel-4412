@@ -29,6 +29,7 @@
 #include <linux/memory.h>
 #include <linux/pm_runtime.h>
 #include <linux/delay.h>
+#include <linux/kthread.h>
 #include <plat/clock.h>
 #include <plat/media.h>
 #include <mach/media.h>
@@ -207,6 +208,35 @@ static int s3cfb_sysfs_store_win_power(struct device *dev,
 	return len;
 }
 
+extern int s3cfb_vsync_timestamp_changed(struct s3cfb_global *fbdev,
+               ktime_t prev_timestamp);
+
+static int s3cfb_wait_for_vsync_thread(void *data)
+{
+	struct s3cfb_global *fbdev = data;
+
+	while (!kthread_should_stop()) {
+		ktime_t prev_timestamp = fbdev->vsync_timestamp;
+		int ret = wait_event_interruptible_timeout(fbdev->vsync_wq,
+				s3cfb_vsync_timestamp_changed(fbdev,
+					prev_timestamp) &&
+				fbdev->vsync_active,
+				msecs_to_jiffies(100));
+		if (ret > 0) {
+			char *envp[2];
+			char buf[64];
+			snprintf(buf, sizeof(buf), "VSYNC=%llu",
+					ktime_to_ns(fbdev->vsync_timestamp));
+			envp[0] = buf;
+			envp[1] = NULL;
+			kobject_uevent_env(&fbdev->dev->kobj, KOBJ_CHANGE,
+					envp);
+		}
+	}
+
+	return 0;
+}
+
 static DEVICE_ATTR(win_power, 0644,
 	s3cfb_sysfs_show_win_power, s3cfb_sysfs_store_win_power);
 
@@ -377,6 +407,13 @@ static int s3cfb_probe(struct platform_device *pdev)
 		pdata->backlight_on(pdev);
 #endif
 
+	fbdev[0]->vsync_thread = kthread_run(s3cfb_wait_for_vsync_thread,
+			fbdev[0], "s3cfb-vsync");
+	if (fbdev[0]->vsync_thread == ERR_PTR(-ENOMEM)) {
+		dev_err(fbdev[0]->dev, "failed to run vsync thread\n");
+		fbdev[0]->vsync_thread = NULL;
+	}
+
 	ret = device_create_file(&(pdev->dev), &dev_attr_win_power);
 	if (ret < 0)
 		dev_err(fbdev[0]->dev, "failed to add sysfs entries\n");
@@ -405,6 +442,9 @@ static int s3cfb_remove(struct platform_device *pdev)
 	struct s3cfb_global *fbdev[2];
 	int i;
 	int j;
+
+	if (fbdev[0]->vsync_thread)
+		kthread_stop(fbdev[0]->vsync_thread);
 
 	for (i = 0; i < FIMD_MAX; i++) {
 		fbdev[i] = fbfimd->fbdev[i];

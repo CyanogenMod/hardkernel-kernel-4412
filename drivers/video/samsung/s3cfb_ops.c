@@ -147,7 +147,7 @@ int s3cfb_update_power_state(struct s3cfb_global *fbdev, int id, int state)
 	return 0;
 }
 
-static int s3cfb_vsync_timestamp_changed(struct s3cfb_global *fbdev,
+int s3cfb_vsync_timestamp_changed(struct s3cfb_global *fbdev,
                ktime_t prev_timestamp)
 {
        rmb();
@@ -1003,6 +1003,16 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 
 			s3cfb_set_chroma_key(fbdev, win->id);
 		}
+		break;
+
+	case S3CFB_SET_VSYNC_ACTIVE:
+		if (get_user(p.vsync, (int __user *)arg))
+			ret = -EFAULT;
+
+		fbdev->vsync_active = p.vsync;
+		wmb();
+		if (p.vsync)
+			wake_up(&fbdev->vsync_wq);
 		break;
 
 	case S3CFB_SET_VSYNC_INT:
