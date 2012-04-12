@@ -2545,15 +2545,23 @@ static struct s5m_platform_data exynos4_s5m8767_pdata = {
 	.buck4_voltage[6]	= 1100000,
 	.buck4_voltage[7]	= 1100000,
 
-	.buck_default_idx	= 3,
-	.buck_gpios[0]		= EXYNOS4_GPX2(3),
-	.buck_gpios[1]		= EXYNOS4_GPX2(4),
-	.buck_gpios[2]		= EXYNOS4_GPX2(5),
+	.buck_default_idx	= 1,
+	.buck_gpios[0]		= EXYNOS4_GPL0(3),
+	.buck_gpios[1]		= EXYNOS4_GPL0(4),
+	.buck_gpios[2]		= EXYNOS4_GPL0(6),
+
+	.buck_ds[0]		= EXYNOS4_GPL0(0),
+	.buck_ds[1]		= EXYNOS4_GPL0(1),
+	.buck_ds[2]		= EXYNOS4_GPL0(2),
 
 	.buck_ramp_delay        = 10,
 	.buck2_ramp_enable      = true,
 	.buck3_ramp_enable      = true,
 	.buck4_ramp_enable      = true,
+
+	.buck2_init		= 1100000,
+	.buck3_init		= 1000000,
+	.buck4_init		= 1000000,
 };
 /* End of S5M8767 */
 
