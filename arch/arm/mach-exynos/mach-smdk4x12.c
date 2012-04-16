@@ -15,7 +15,7 @@
 #include <linux/clk.h>
 #include <linux/lcd.h>
 #include <linux/gpio.h>
-#include <linux/gpio_event.h>
+#include <linux/gpio_keys.h>
 #include <linux/i2c.h>
 #include <linux/pwm_backlight.h>
 #include <linux/input.h>
@@ -2774,57 +2774,26 @@ static struct platform_device samsung_device_battery = {
 };
 #endif
 
-static struct gpio_event_direct_entry smdk4x12_keypad_key_map[] = {
+struct gpio_keys_button smdk4x12_button[] = {
 	{
-		.gpio   = EXYNOS4_GPX0(0),
-		.code   = KEY_POWER,
+		.code = KEY_POWER,
+		.gpio = EXYNOS4_GPX0(0),
+		.active_low = 1,
+		.wakeup = 1,
 	}
 };
 
-static struct gpio_event_input_info smdk4x12_keypad_key_info = {
-	.info.func              = gpio_event_input_func,
-	.info.no_suspend        = true,
-	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
-	.type                   = EV_KEY,
-	.keymap                 = smdk4x12_keypad_key_map,
-	.keymap_size            = ARRAY_SIZE(smdk4x12_keypad_key_map)
+struct gpio_keys_platform_data smdk4x12_gpiokeys_platform_data = {
+	smdk4x12_button,
+	ARRAY_SIZE(smdk4x12_button),
 };
 
-static struct gpio_event_info *smdk4x12_input_info[] = {
-	&smdk4x12_keypad_key_info.info,
-};
-
-static struct gpio_event_platform_data smdk4x12_input_data = {
-	.names  = {
-		"smdk4x12-keypad",
-		NULL,
-	},
-	.info           = smdk4x12_input_info,
-	.info_count     = ARRAY_SIZE(smdk4x12_input_info),
-};
-
-static struct platform_device smdk4x12_input_device = {
-	.name   = GPIO_EVENT_DEV_NAME,
-	.id     = 0,
-	.dev    = {
-		.platform_data = &smdk4x12_input_data,
+static struct platform_device smdk4x12_gpio_keys = {
+	.name	= "gpio-keys",
+	.dev	= {
+		.platform_data = &smdk4x12_gpiokeys_platform_data,
 	},
 };
-
-static void __init smdk4x12_gpio_power_init(void)
-{
-	int err = 0;
-
-	err = gpio_request_one(EXYNOS4_GPX0(0), 0, "GPX0");
-	if (err) {
-		printk(KERN_ERR "failed to request GPX0 for "
-				"suspend/resume control\n");
-		return;
-	}
-	s3c_gpio_setpull(EXYNOS4_GPX0(0), S3C_GPIO_PULL_NONE);
-
-	gpio_free(EXYNOS4_GPX0(0));
-}
 
 static uint32_t smdk4x12_keymap0[] __initdata = {
 	/* KEY(row, col, keycode) */
@@ -2861,12 +2830,6 @@ static struct samsung_keypad_platdata smdk4x12_keypad_data1 __initdata = {
 	.rows		= 3,
 	.cols		= 8,
 };
-
-#ifdef CONFIG_WAKEUP_ASSIST
-static struct platform_device wakeup_assist_device = {
-	.name   = "wakeup_assist",
-};
-#endif
 
 #ifdef CONFIG_VIDEO_FIMG2D
 static struct fimg2d_platdata fimg2d_data __initdata = {
@@ -3137,13 +3100,10 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&samsung_device_battery,
 #endif
 	&samsung_device_keypad,
-#ifdef CONFIG_WAKEUP_ASSIST
-	&wakeup_assist_device,
-#endif
 #ifdef CONFIG_EXYNOS_C2C
 	&exynos_device_c2c,
 #endif
-	&smdk4x12_input_device,
+	&smdk4x12_gpio_keys,
 	&smdk4x12_smsc911x,
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	&exynos_device_spi0,
@@ -4191,8 +4151,6 @@ static void __init smdk4x12_machine_init(void)
 #endif
 
 	exynos_sysmmu_init();
-
-	smdk4x12_gpio_power_init();
 
 	platform_add_devices(smdk4x12_devices, ARRAY_SIZE(smdk4x12_devices));
 	if (soc_is_exynos4412())
