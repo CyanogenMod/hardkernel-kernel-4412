@@ -1118,7 +1118,8 @@ void fimc_is_hw_open_sensor(struct fimc_is_dev *dev, u32 id, u32 sensor_index)
 		sensor_ext->mclk = 0;
 		sensor_ext->mipi_lane_num = 0;
 		sensor_ext->mipi_speed = 0;
-		sensor_ext->fast_open_sensor = 2;
+		sensor_ext->fast_open_sensor = 6;
+		sensor_ext->self_calibration_mode = 1;
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
 		dev->af.use_af = 0;
@@ -1176,9 +1177,11 @@ void fimc_is_hw_set_low_poweroff(struct fimc_is_dev *dev, int on)
 {
 	if (on) {
 		printk(KERN_INFO "Set low poweroff mode\n");
-		__raw_writel(0x0, PMUREG_ISP_ARM_OPTION);
-		__raw_writel(0x47C8, PMUREG_ISP_LOW_POWER_OFF);
-		dev->low_power_mode = true;
+		if (!dev->low_power_mode) {
+			__raw_writel(0x0, PMUREG_ISP_ARM_OPTION);
+			__raw_writel(0x47C8, PMUREG_ISP_LOW_POWER_OFF);
+			dev->low_power_mode = true;
+		}
 	} else {
 		if (dev->low_power_mode) {
 			printk(KERN_INFO "Clear low poweroff mode\n");

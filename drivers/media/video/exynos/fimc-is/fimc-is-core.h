@@ -430,6 +430,7 @@ extern void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on);
 extern int fimc_is_hw_io_init(struct fimc_is_dev *dev);
 extern void fimc_is_hw_open_sensor(struct fimc_is_dev *dev,
 					u32 id, u32 sensor_index);
+extern void fimc_is_hw_close_sensor(struct fimc_is_dev *dev, u32 id);
 extern void fimc_is_hw_set_stream(struct fimc_is_dev *dev, int on);
 extern void fimc_is_hw_set_init(struct fimc_is_dev *dev);
 extern void fimc_is_hw_change_mode(struct fimc_is_dev *dev, int val);

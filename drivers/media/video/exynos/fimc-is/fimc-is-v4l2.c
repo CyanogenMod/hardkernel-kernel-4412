@@ -379,6 +379,25 @@ int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 		ret = pm_runtime_get_sync(dev);
 		set_bit(IS_ST_A5_PWR_ON, &is_dev->state);
 	} else {
+		if (test_bit(IS_PWR_ST_POWEROFF, &is_dev->power)) {
+			err("FIMC-IS was already power off state!!\n");
+			printk(KERN_INFO "Close sensor - %d\n",
+							is_dev->sensor.id);
+			fimc_is_hw_close_sensor(is_dev, 0);
+			ret = wait_event_timeout(is_dev->irq_queue1,
+				!test_bit(IS_ST_OPEN_SENSOR,
+				&is_dev->power), FIMC_IS_SHUTDOWN_TIMEOUT);
+			if (!ret) {
+				err("Timeout-close sensor:%s\n", __func__);
+				fimc_is_hw_set_low_poweroff(is_dev, true);
+			} else {
+				is_dev->p_region_index1 = 0;
+				is_dev->p_region_index2 = 0;
+				atomic_set(&is_dev->p_region_num, 0);
+				return ret;
+			}
+		}
+
 		if (!test_bit(IS_PWR_SUB_IP_POWER_OFF, &is_dev->power)) {
 			fimc_is_hw_subip_poweroff(is_dev);
 			ret = wait_event_timeout(is_dev->irq_queue1,
@@ -389,10 +408,7 @@ int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 				fimc_is_hw_set_low_poweroff(is_dev, true);
 			}
 		}
-		if (test_bit(IS_PWR_ST_POWEROFF, &is_dev->power)) {
-			err("FIMC-IS was already power off state!!\n");
-			return ret;
-		}
+
 		fimc_is_hw_a5_power(is_dev, 0);
 		dbg("A5 power off\n");
 		ret = pm_runtime_put_sync(dev);
