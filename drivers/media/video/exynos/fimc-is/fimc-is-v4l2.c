@@ -381,8 +381,7 @@ int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 	} else {
 		if (test_bit(IS_PWR_ST_POWEROFF, &is_dev->power)) {
 			err("FIMC-IS was already power off state!!\n");
-			printk(KERN_INFO "Close sensor - %d\n",
-							is_dev->sensor.id);
+			err("Close sensor - %d\n", is_dev->sensor.id);
 			fimc_is_hw_close_sensor(is_dev, 0);
 			ret = wait_event_timeout(is_dev->irq_queue1,
 				!test_bit(IS_ST_OPEN_SENSOR,
@@ -4122,7 +4121,7 @@ static int fimc_is_g_ext_ctrls(struct v4l2_subdev *sd,
 
 	spin_lock_irqsave(&dev->slock, flags);
 	ctrl = ctrls->controls;
-	if (!ctrls->ctrl_class == V4L2_CTRL_CLASS_CAMERA)
+	if (ctrls->ctrl_class != V4L2_CTRL_CLASS_CAMERA)
 		return -EINVAL;
 
 	fimc_is_mem_cache_inv((void *)IS_FACE,
@@ -4203,7 +4202,7 @@ static int fimc_is_s_ext_ctrls(struct v4l2_subdev *sd,
 	int i, ret = 0;
 
 	dbg("S_EXT_CTRLS - %d\n", ctrls->count);
-	if (!ctrls->ctrl_class == V4L2_CTRL_CLASS_CAMERA)
+	if (ctrls->ctrl_class != V4L2_CTRL_CLASS_CAMERA)
 		return -EINVAL;
 
 	dev->h2i_cmd.cmd_type = 0;
