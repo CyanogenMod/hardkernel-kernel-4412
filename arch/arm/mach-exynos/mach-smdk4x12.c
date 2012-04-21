@@ -117,10 +117,8 @@
 #include <plat/jpeg.h>
 #endif
 
-#ifdef CONFIG_REGULATOR_S5M8767
 #include <linux/mfd/s5m87xx/s5m-core.h>
 #include <linux/mfd/s5m87xx/s5m-pmic.h>
-#endif
 
 #if defined(CONFIG_EXYNOS_SETUP_THERMAL)
 #include <plat/s5p-tmu.h>
@@ -2405,7 +2403,6 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.buck4_voltage[6] = 950000,	/* 0.95V */
 	.buck4_voltage[7] = 900000,	/* 0.9V */
 };
-#ifdef CONFIG_REGULATOR_S5M8767
 /* S5M8767 Regulator */
 static int s5m_cfg_irq(void)
 {
@@ -2559,7 +2556,6 @@ static struct s5m_platform_data exynos4_s5m8767_pdata = {
 	.buck4_ramp_enable      = true,
 };
 /* End of S5M8767 */
-#endif
 
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 static struct regulator_consumer_supply mipi_csi_fixed_voltage_supplies[] = {
@@ -2742,21 +2738,24 @@ static struct wm8994_pdata wm8994_platform_data = {
 };
 
 static struct i2c_board_info i2c_devs0[] __initdata = {
-#ifdef CONFIG_REGULATOR_S5M8767
 	{
+		I2C_BOARD_INFO("max77686", (0x12 >> 1)),
+		.platform_data	= &exynos4_max77686_info,
+	}, {
 		I2C_BOARD_INFO("s5m87xx", 0xCC >> 1),
 		.platform_data = &exynos4_s5m8767_pdata,
 		.irq		= IRQ_EINT(26),
 	},
-#else
+};
+
+static struct i2c_board_info i2c_devs0_rev0[] __initdata = {
 	{
-		I2C_BOARD_INFO("max8997", 0x66),
-		.platform_data	= &exynos4_max8997_info,
-	}, {
 		I2C_BOARD_INFO("max77686", (0x12 >> 1)),
 		.platform_data	= &exynos4_max77686_info,
+	}, {
+		I2C_BOARD_INFO("max8997", 0x66),
+		.platform_data  = &exynos4_max8997_info,
 	},
-#endif
 };
 
 static struct i2c_board_info i2c_devs1[] __initdata = {
@@ -3926,7 +3925,11 @@ static void __init smdk4x12_machine_init(void)
 	exynos_pd_enable(&exynos4_device_pd[PD_ISP].dev);
 #endif
 	s3c_i2c0_set_platdata(NULL);
-	i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
+	if (samsung_board_rev_is_0_0())
+		i2c_register_board_info(0, i2c_devs0_rev0,
+					ARRAY_SIZE(i2c_devs0_rev0));
+	else
+		i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
 
 	s3c_i2c1_set_platdata(NULL);
 	i2c_register_board_info(1, i2c_devs1, ARRAY_SIZE(i2c_devs1));
