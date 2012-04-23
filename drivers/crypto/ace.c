@@ -330,6 +330,7 @@ static int s5p_ace_aes_set_cipher(struct s5p_ace_aes_ctx *sctx,
 	if (s5p_ace_dev.cputype == TYPE_EXYNOS4) {
 		new_status |= ACE_AES_SWAPDO_ON;
 		new_status |= ACE_AES_SWAPDI_ON;
+		new_status |= ACE_AES_COUNTERSIZE_128;
 	}
 
 	switch (MI_GET_MODE(alg_id)) {
