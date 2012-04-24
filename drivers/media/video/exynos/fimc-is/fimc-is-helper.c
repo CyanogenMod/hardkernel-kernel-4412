@@ -879,22 +879,40 @@ void fimc_is_hw_set_intgr0_gd0(struct fimc_is_dev *dev)
 
 int fimc_is_hw_wait_intsr0_intsd0(struct fimc_is_dev *dev)
 {
+	u32 timeout;
 	u32 cfg = readl(dev->regs + INTSR0);
 	u32 status = INTSR0_GET_INTSD0(cfg);
+
+	timeout = 1000;
 	while (status) {
 		cfg = readl(dev->regs + INTSR0);
 		status = INTSR0_GET_INTSD0(cfg);
+		if (timeout == 0) {
+			err("Check status failed..\n");
+			return -EINVAL;
+		}
+		timeout--;
+		udelay(1);
 	}
 	return 0;
 }
 
 int fimc_is_hw_wait_intmsr0_intmsd0(struct fimc_is_dev *dev)
 {
+	u32 timeout;
 	u32 cfg = readl(dev->regs + INTMSR0);
 	u32 status = INTMSR0_GET_INTMSD0(cfg);
+
+	timeout = 1000;
 	while (status) {
 		cfg = readl(dev->regs + INTMSR0);
 		status = INTMSR0_GET_INTMSD0(cfg);
+		if (timeout == 0) {
+			err("Check status failed..\n");
+			return -EINVAL;
+		}
+		timeout--;
+		udelay(1);
 	}
 	return 0;
 }
@@ -1222,7 +1240,13 @@ void fimc_is_hw_a5_power(struct fimc_is_dev *dev, int on)
 		writel(0x00018000, PMUREG_ISP_ARM_OPTION);
 	} else {
 		/* 1. disable A5 */
-		writel(0x0, PMUREG_ISP_ARM_OPTION);
+		if (dev->low_power_mode) {
+			/* Low power mode */
+			printk(KERN_INFO "Low power mode (Option 0)\n");
+			writel(0x0, PMUREG_ISP_ARM_OPTION);
+		} else {
+			writel(0x10000, PMUREG_ISP_ARM_OPTION);
+		}
 		/* 2. A5 power off*/
 		writel(0x0, PMUREG_ISP_ARM_CONFIGURATION);
 		/* 3. Check A5 power off status register */

@@ -174,7 +174,7 @@ out:
 		set_fs(old_fs);
 	}
 #endif
-	printk(KERN_INFO "FIMC_IS FW loaded = 0x%08x\n", dev->mem.base);
+	printk(KERN_INFO "FIMC-IS FW loaded = 0x%08x\n", dev->mem.base);
 	return ret;
 }
 
@@ -342,6 +342,7 @@ static int fimc_is_load_fw(struct v4l2_subdev *sd)
 	fimc_is_mem_cache_clean((void *)IS_SHARED,
 		(unsigned long)(sizeof(struct is_share_region)));
 	/* 4. A5 power on */
+	printk(KERN_INFO "FIMC-IS A5 power on\n");
 	fimc_is_hw_a5_power(dev, 1);
 	ret = wait_event_timeout(dev->irq_queue1,
 		test_bit(IS_ST_FW_LOADED, &dev->state),
@@ -408,8 +409,8 @@ int fimc_is_s_power(struct v4l2_subdev *sd, int on)
 			}
 		}
 
+		printk(KERN_INFO "FIMC-IS A5 power off\n");
 		fimc_is_hw_a5_power(is_dev, 0);
-		dbg("A5 power off\n");
 		ret = pm_runtime_put_sync(dev);
 
 		is_dev->sensor.id = 0;

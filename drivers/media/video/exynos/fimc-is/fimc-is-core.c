@@ -509,9 +509,9 @@ static int fimc_is_suspend(struct device *dev)
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 	int ret = 0;
 
-	printk(KERN_INFO "FIMC_IS suspend\n");
+	printk(KERN_INFO "FIMC-IS suspend\n");
 	if (!test_bit(IS_ST_INIT_DONE, &is_dev->state)) {
-		printk(KERN_INFO "FIMC_IS suspend end\n");
+		printk(KERN_INFO "FIMC-IS suspend end\n");
 		return 0;
 	}
 	/* If stream was not stopped, stop streaming */
@@ -553,7 +553,7 @@ static int fimc_is_suspend(struct device *dev)
 		is_dev->af.af_state = FIMC_IS_AF_IDLE;
 		set_bit(IS_PWR_ST_POWEROFF, &is_dev->power);
 	}
-	printk(KERN_INFO "FIMC_IS suspend end\n");
+	printk(KERN_INFO "FIMC-IS suspend end\n");
 	return 0;
 }
 
@@ -563,10 +563,10 @@ static int fimc_is_resume(struct device *dev)
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
-	printk(KERN_INFO "FIMC_IS resume\n");
+	printk(KERN_INFO "FIMC-IS resume\n");
 	mutex_lock(&is_dev->lock);
 	mutex_unlock(&is_dev->lock);
-	printk(KERN_INFO "FIMC_IS resume end\n");
+	printk(KERN_INFO "FIMC-IS resume end\n");
 	return 0;
 }
 
@@ -576,7 +576,7 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
-	printk(KERN_INFO "FIMC_IS runtime suspend\n");
+	printk(KERN_INFO "FIMC-IS runtime suspend\n");
 	if (is_dev->pdata->clk_off) {
 		is_dev->pdata->clk_off(pdev);
 	} else {
@@ -595,7 +595,7 @@ static int fimc_is_runtime_suspend(struct device *dev)
 	clear_bit(IS_PWR_ST_POWERON, &is_dev->power);
 	set_bit(IS_PWR_ST_POWEROFF, &is_dev->power);
 	mutex_unlock(&is_dev->lock);
-	printk(KERN_INFO "FIMC_IS runtime suspend end\n");
+	printk(KERN_INFO "FIMC-IS runtime suspend end\n");
 	return 0;
 }
 
@@ -605,7 +605,7 @@ static int fimc_is_runtime_resume(struct device *dev)
 	struct v4l2_subdev *sd = platform_get_drvdata(pdev);
 	struct fimc_is_dev *is_dev = to_fimc_is_dev(sd);
 
-	printk(KERN_INFO "FIMC_IS runtime resume\n");
+	printk(KERN_INFO "FIMC-IS runtime resume\n");
 	if (is_dev->pdata->clk_cfg) {
 		is_dev->pdata->clk_cfg(pdev);
 	} else {
@@ -628,7 +628,7 @@ static int fimc_is_runtime_resume(struct device *dev)
 	clear_bit(IS_PWR_SUB_IP_POWER_OFF, &is_dev->power);
 	set_bit(IS_PWR_ST_POWERON, &is_dev->power);
 	mutex_unlock(&is_dev->lock);
-	printk(KERN_INFO "FIMC_IS runtime resume end\n");
+	printk(KERN_INFO "FIMC-IS runtime resume end\n");
 	return 0;
 }
 
