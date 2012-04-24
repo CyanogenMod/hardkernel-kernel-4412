@@ -623,7 +623,7 @@ void s5p_ace_sg_update(struct scatterlist **sg, size_t *offset,
 	*offset += count;
 	if (*offset >= sg_dma_len(*sg)) {
 		*offset -= sg_dma_len(*sg);
-		*sg = sg_next(*sg);
+		*sg = scatterwalk_sg_next(*sg);
 	}
 }
 
@@ -634,9 +634,9 @@ int s5p_ace_sg_set_from_sg(struct scatterlist *dst, struct scatterlist *src,
 	while (num--) {
 		sg_set_page(dst, sg_page(src), sg_dma_len(src), src->offset);
 
-		src = sg_next(src);
-		dst = sg_next(dst);
-		if (!src || !dst)
+		dst++;
+		src = scatterwalk_sg_next(src);
+		if (!src)
 			return -ENOMEM;
 	}
 	return 0;
