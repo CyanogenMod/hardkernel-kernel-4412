@@ -1799,10 +1799,8 @@ static void sha256_import_ctx_from_sw(struct shash_desc *desc)
 static void hash_export_ctx_to_sw(struct shash_desc *desc)
 {
 	struct s5p_ace_hash_ctx *sctx = shash_desc_ctx(desc);
-	struct sha256_state *sw_ctx = shash_desc_ctx(&sctx->sw_desc);
 
 	if (!sctx->sw_init) {
-		sw_ctx = &sctx->dummy;
 		sctx->sw_init = 1;
 		if (sctx->prelen_low == 0 && sctx->prelen_high == 0 &&
 			sctx->buflen == 0) {
