@@ -2232,8 +2232,20 @@ int ace_s5p_get_sync_lock(void)
 	if (get_lock_bc && get_lock_hash)
 		set_bit(FLAGS_USE_SW, &s5p_ace_dev.flags);
 
-	if (get_lock_bc)
+	if (get_lock_bc) {
+#ifdef CONFIG_ACE_BC_ASYNC
+		if (s5p_ace_dev.queue_bc.qlen > 0) {
+			s5p_ace_clock_gating(ACE_CLOCK_ON);
+			s5p_ace_dev.rc_depth_bc = 0;
+			s5p_ace_aes_handle_req(&s5p_ace_dev);
+		} else {
+			clear_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags);
+		}
+#else
 		clear_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags);
+#endif
+	}
+
 	if (get_lock_hash)
 		clear_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags);
 
