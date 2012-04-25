@@ -914,15 +914,9 @@ static int s5p_ace_handle_lock_req(struct s5p_ace_device *dev,
 	else
 		ret = crypto_ablkcipher_decrypt(req);
 
-	if (!test_and_set_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags)) {
-		sctx->req = req;
-		dev->ctx_bc = sctx;
-		tasklet_schedule(&dev->task_bc);
-	} else {
-		req->base.tfm = sctx->origin_tfm;
-		req->base.complete(&req->base, ret);
-		s5p_ace_clock_gating(ACE_CLOCK_OFF);
-	}
+	sctx->req = req;
+	dev->ctx_bc = sctx;
+	tasklet_schedule(&dev->task_bc);
 
 	return ret;
 }
@@ -970,10 +964,8 @@ static int s5p_ace_aes_handle_req(struct s5p_ace_device *dev)
 #endif
 	rctx = ablkcipher_request_ctx(req);
 
-	if (s5p_ace_dev.flags & BIT_MASK(FLAGS_USE_SW)) {
-		clear_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags);
+	if (s5p_ace_dev.flags & BIT_MASK(FLAGS_USE_SW))
 		return s5p_ace_handle_lock_req(dev, sctx, req, rctx->mode);
-	}
 
 	/* assign new request to device */
 	sctx->req = req;
