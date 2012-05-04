@@ -192,15 +192,24 @@ static int fimc_is_load_setfile(struct fimc_is_dev *dev)
 	ret = 0;
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
-	fp = filp_open(FIMC_IS_SETFILE_SDCARD, O_RDONLY, 0);
+	if ((dev->sensor.sensor_type == SENSOR_S5K3H7_CSI_A) ||
+		(dev->sensor.sensor_type == SENSOR_S5K3H7_CSI_B))
+		fp = filp_open(FIMC_IS_SETFILE_SDCARD_3H7, O_RDONLY, 0);
+	else
+		fp = filp_open(FIMC_IS_SETFILE_SDCARD_6A3, O_RDONLY, 0);
 	if (IS_ERR(fp)) {
 		dbg("failed to open %s\n", FIMC_IS_SETFILE_SDCARD);
 		goto request_fw;
 	}
 	fw_requested = 0;
 	fsize = fp->f_path.dentry->d_inode->i_size;
-	dbg("start, file path %s, size %ld Bytes\n",
-		FIMC_IS_SETFILE_SDCARD, fsize);
+	if ((dev->sensor.sensor_type == SENSOR_S5K3H7_CSI_A) ||
+		(dev->sensor.sensor_type == SENSOR_S5K3H7_CSI_B))
+		dbg("start, file path %s, size %ld Bytes\n",
+			FIMC_IS_SETFILE_SDCARD_3H7, fsize);
+	else
+		dbg("start, file path %s, size %ld Bytes\n",
+			FIMC_IS_SETFILE_SDCARD_6A3, fsize);
 	buf = vmalloc(fsize);
 	if (!buf) {
 		err("failed to allocate memory\n");
@@ -245,8 +254,15 @@ request_fw:
 	if (fw_requested) {
 		set_fs(old_fs);
 #endif
-		ret = request_firmware((const struct firmware **)&fw_blob,
-					FIMC_IS_SETFILE, &dev->pdev->dev);
+		if ((dev->sensor.sensor_type == SENSOR_S5K3H7_CSI_A) ||
+			(dev->sensor.sensor_type == SENSOR_S5K3H7_CSI_B))
+			ret = request_firmware(
+					(const struct firmware **)&fw_blob,
+					FIMC_IS_SETFILE_3H7, &dev->pdev->dev);
+		else
+			ret = request_firmware(
+					(const struct firmware **)&fw_blob,
+					FIMC_IS_SETFILE_6A3, &dev->pdev->dev);
 		if (ret) {
 			dev_err(&dev->pdev->dev,
 				"could not load firmware (err=%d)\n", ret);
@@ -479,7 +495,7 @@ static int fimc_is_init_set(struct v4l2_subdev *sd, u32 val)
 		test_bit(IS_ST_SETFILE_LOADED, &dev->state),
 		FIMC_IS_SHUTDOWN_TIMEOUT);
 	if (!ret) {
-		err("wait timeout - get setfile address\n");
+		err("wait timeout - load setfile\n");
 		fimc_is_hw_set_low_poweroff(dev, true);
 		return -EINVAL;
 	}
@@ -1024,7 +1040,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_PORTRAIT:
 		/* ISO */
@@ -1083,7 +1107,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_LANDSCAPE:
 		/* ISO */
@@ -1142,7 +1174,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_SPORTS:
 		/* ISO */
@@ -1201,7 +1241,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_PARTY_INDOOR:
 		/* ISO */
@@ -1260,7 +1308,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_BEACH_SNOW:
 		/* ISO */
@@ -1319,7 +1375,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_SUNSET:
 		/* ISO */
@@ -1379,7 +1443,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_DUSK_DAWN:
 		/* ISO */
@@ -1440,7 +1512,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_FALL_COLOR:
 		/* ISO */
@@ -1500,7 +1580,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_NIGHTSHOT:
 		/* ISO */
@@ -1560,7 +1648,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_BACK_LIGHT:
 		/* ISO */
@@ -1620,7 +1716,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		dev->af.af_state = FIMC_IS_AF_SETCONFIG;
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	/* FIXME add with SCENE_MODE_BACK_LIGHT (FLASH mode) */
 	case SCENE_MODE_FIREWORKS:
@@ -1681,7 +1785,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_TEXT:
 		/* ISO */
@@ -1741,7 +1853,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 		IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	case SCENE_MODE_CANDLE_LIGHT:
 		/* ISO */
@@ -1801,7 +1921,15 @@ static int fimc_is_v4l2_isp_scene_mode(struct fimc_is_dev *dev, int mode)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+				test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		break;
 	default:
 		break;
@@ -1919,7 +2047,7 @@ static int fimc_is_v4l2_af_mode(struct fimc_is_dev *dev, int value)
 		IS_ISP_SET_PARAM_AA_TARGET(dev, ISP_AA_TARGET_AF);
 		IS_ISP_SET_PARAM_AA_MODE(dev, ISP_AF_MODE_CONTINUOUS);
 		IS_ISP_SET_PARAM_AA_SLEEP(dev, ISP_AF_SLEEP_OFF);
-		IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_DISABLE);
+		IS_ISP_SET_PARAM_AA_FACE(dev, ISP_AF_FACE_ENABLE);
 		IS_ISP_SET_PARAM_AA_TOUCH_X(dev, 0);
 		IS_ISP_SET_PARAM_AA_TOUCH_Y(dev, 0);
 		IS_ISP_SET_PARAM_AA_MANUAL_AF(dev, 0);
@@ -1928,7 +2056,15 @@ static int fimc_is_v4l2_af_mode(struct fimc_is_dev *dev, int value)
 		dev->af.af_state = FIMC_IS_AF_SETCONFIG;
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		dev->af.af_lock_state = 0;
 		dev->af.ae_lock_state = 0;
 		dev->af.awb_lock_state = 0;
@@ -1950,7 +2086,15 @@ static int fimc_is_v4l2_af_mode(struct fimc_is_dev *dev, int value)
 		dev->af.af_state = FIMC_IS_AF_SETCONFIG;
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 		dev->af.af_lock_state = 0;
 		dev->af.ae_lock_state = 0;
 		dev->af.awb_lock_state = 0;
@@ -2090,6 +2234,9 @@ static int fimc_is_v4l2_af_start_stop(struct fimc_is_dev *dev, int value)
 			IS_ISP_SET_PARAM_AA_MANUAL_AF(dev, 0);
 			switch (dev->af.mode) {
 			case IS_FOCUS_MODE_AUTO:
+				if (dev->af.mode == IS_FOCUS_MODE_FACEDETECT)
+					IS_ISP_SET_PARAM_AA_FACE(dev,
+							ISP_AF_FACE_ENABLE);
 				IS_ISP_SET_PARAM_AA_SCENE(dev,
 					ISP_AF_SCENE_NORMAL);
 				IS_SET_PARAM_BIT(dev, PARAM_ISP_AA);
@@ -2174,7 +2321,15 @@ static int fimc_is_v4l2_isp_iso(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 							IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2207,7 +2362,15 @@ static int fimc_is_v4l2_isp_effect(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2318,7 +2481,15 @@ static int fimc_is_v4l2_awb_mode(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2416,7 +2587,15 @@ static int fimc_is_v4l2_isp_contrast(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2500,7 +2679,15 @@ static int fimc_is_v4l2_isp_saturation(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2543,7 +2730,15 @@ static int fimc_is_v4l2_isp_sharpness(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2605,7 +2800,15 @@ static int fimc_is_v4l2_isp_exposure(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2663,7 +2866,15 @@ static int fimc_is_v4l2_isp_brightness(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2705,7 +2916,15 @@ static int fimc_is_v4l2_isp_hue(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2735,7 +2954,15 @@ static int fimc_is_v4l2_isp_metering(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }
@@ -2794,7 +3021,15 @@ static int fimc_is_v4l2_isp_afc(struct fimc_is_dev *dev, int value)
 		IS_INC_PARAM_NUM(dev);
 		fimc_is_mem_cache_clean((void *)dev->is_p_region,
 			IS_PARAM_SIZE);
+		clear_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state);
 		fimc_is_hw_set_param(dev);
+		ret = wait_event_timeout(dev->irq_queue1,
+			test_bit(IS_ST_BLOCK_CMD_CLEARED, &dev->state),
+					FIMC_IS_SHUTDOWN_TIMEOUT_SENSOR);
+		if (!ret) {
+			err("wait timeout : %s\n", __func__);
+			return -EINVAL;
+		}
 	}
 	return ret;
 }

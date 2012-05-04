@@ -47,7 +47,6 @@
 #include "fimc-is-err.h"
 
 #if defined(M0)
-extern struct class *camera_class;
 struct device *s5k6a3_dev; /*sys/class/camera/front*/
 #endif
 
@@ -105,15 +104,6 @@ static void fimc_is_irq_handler_general(struct fimc_is_dev *dev)
 	case IHC_SET_FACE_MARK:
 		dev->fd_header.count = dev->i2h_cmd.arg[0];
 		dev->fd_header.index = dev->i2h_cmd.arg[1];
-		/* Implementation of AF with face */
-		if (dev->af.mode == IS_FOCUS_MODE_CONTINUOUS &&
-				dev->af.af_state == FIMC_IS_AF_LOCK) {
-			fimc_is_af_face(dev);
-		} else if (dev->af.mode == IS_FOCUS_MODE_FACEDETECT) {
-			/* Using face information once only */
-			fimc_is_af_face(dev);
-			dev->af.mode = IS_FOCUS_MODE_IDLE;
-		}
 		break;
 	case IHC_FRAME_DONE:
 		break;

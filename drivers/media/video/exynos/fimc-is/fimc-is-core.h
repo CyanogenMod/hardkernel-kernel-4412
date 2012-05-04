@@ -91,11 +91,13 @@
 #define SDCARD_FW
 
 #ifdef SDCARD_FW
-#define FIMC_IS_FW_SDCARD	"/sdcard/fimc_is_fw.bin"
-#define FIMC_IS_SETFILE_SDCARD	"/sdcard/setfile.bin"
+#define FIMC_IS_FW_SDCARD		"/sdcard/fimc_is_fw.bin"
+#define FIMC_IS_SETFILE_SDCARD_6A3	"/sdcard/setfile.bin"
+#define FIMC_IS_SETFILE_SDCARD_3H7	"/sdcard/setfile_S5K3H7.bin"
 #endif
 #define FIMC_IS_FW		"fimc_is_fw.bin"
-#define FIMC_IS_SETFILE		"setfile.bin"
+#define FIMC_IS_SETFILE_6A3	"setfile.bin"
+#define FIMC_IS_SETFILE_3H7	"setfile_S5K3H7.bin"
 
 #define FIMC_IS_MSG_FILE	"/sdcard/fimc_is_msg_dump.txt"
 
@@ -127,6 +129,10 @@ Default setting values
 #define DEFAULT_CAPTURE_STILL_FRAMERATE	15
 #define DEFAULT_PREVIEW_VIDEO_FRAMERATE	30
 #define DEFAULT_CAPTURE_VIDEO_FRAMERATE	30
+
+#if defined(M0)
+extern struct class *camera_class;
+#endif
 
 enum fimc_is_state_flag {
 	IS_ST_IDLE,

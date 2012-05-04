@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 122  /* IS REGION VERSION 1.22 */
+#define IS_REGION_VER 123  /* IS REGION VERSION 1.23 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -891,7 +891,8 @@ enum isp_af_mode {
 	ISP_AF_MODE_SLEEP		= 4,
 	ISP_AF_MODE_INIT		= 5,
 	ISP_AF_MODE_SET_CENTER_WINDOW	= 6,
-	ISP_AF_MODE_SET_TOUCH_WINDOW	= 7
+	ISP_AF_MODE_SET_TOUCH_WINDOW	= 7,
+	ISP_AF_MODE_SET_FACE_WINDOW	= 8,
 };
 
 enum isp_af_face {
