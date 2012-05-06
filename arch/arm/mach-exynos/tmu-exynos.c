@@ -372,22 +372,25 @@ static void thermal_remove_sysfs_file(struct device *dev)
 }
 /* End of Interface sysfs for thermal information */
 
-#ifdef CONFIG_TMU_DEBUG
 static void print_temperature_params(struct tmu_info *info)
 {
 	struct tmu_data *data = info->dev->platform_data;
 
 	pr_info("** temperature set value **\n"
-		"throttling stop_temp  = %d, start_temp     = %d\n"
-		"waring stop_temp      = %d, start_tmep     = %d\n"
-		"tripping temp         = %d\n",
+		"Throttling stop_temp  = %d, start_temp     = %d\n"
+		"Waring stop_temp      = %d, start_tmep     = %d\n"
+		"Tripping temp         = %d\n"
+		"Trhottling freq = %d,  Warning freq = %d\n",
 		data->ts.stop_throttle,
 		data->ts.start_throttle,
 		data->ts.stop_warning,
 		data->ts.start_warning,
-		data->ts.start_tripping);
+		data->ts.start_tripping,
+		data->cpulimit.throttle_freq,
+		data->cpulimit.warning_freq);
 }
 
+#ifdef CONFIG_TMU_DEBUG
 static void cur_temp_monitor(struct work_struct *work)
 {
 	char cur_temp;
@@ -735,7 +738,7 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 	if (!info) {
 		dev_err(&pdev->dev, "failed to alloc memory!\n");
 		ret = -ENOMEM;
-		goto err_nores;
+		goto err_nomem;
 	}
 	platform_set_drvdata(pdev, info);
 	info->dev = &pdev->dev;
@@ -743,7 +746,8 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 	info->irq = platform_get_irq(pdev, 0);
 	if (info->irq < 0) {
 		dev_err(&pdev->dev, "no irq for thermal\n");
-		return -ENOENT;
+		ret = -ENOENT;
+		goto err_noirq;
 	}
 	if (soc_is_exynos4210())
 		ret = request_irq(info->irq, exynos4210_tmu_irq,
@@ -759,14 +763,15 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
 		dev_err(&pdev->dev, "failed to get memory region resource\n");
-		return -ENOENT;
+		ret = -ENODEV;
+		goto err_nores;
 	}
 
 	info->ioarea = request_mem_region(res->start,
 			res->end-res->start+1, pdev->name);
 	if (!(info->ioarea)) {
 		dev_err(&pdev->dev, "failed to reserve memory region\n");
-		ret = -ENOENT;
+		ret = -EBUSY;
 		goto err_nores;
 	}
 
@@ -783,7 +788,8 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 	tmu_monitor_wq = create_freezable_workqueue("tmu");
 	if (!tmu_monitor_wq) {
 		pr_info("Creation of tmu_monitor_wq failed\n");
-		return -EFAULT;
+		ret = -EFAULT;
+		goto err_wq;
 	}
 
 #ifdef CONFIG_TMU_DEBUG
@@ -793,6 +799,7 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 #endif
 	INIT_DELAYED_WORK_DEFERRABLE(&info->polling, tmu_monitor);
 
+	print_temperature_params(info);
 	ret = tmu_initialize(pdev);
 	if (ret)
 		goto err_noinit;
@@ -800,14 +807,20 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 	return ret;
 
 err_noinit:
-	free_irq(info->irq, info);
+	destroy_workqueue(tmu_monitor_wq);
+err_wq:
+	thermal_remove_sysfs_file(&pdev->dev);
+err_sysfs:
+	iounmap(info->tmu_base);
 err_nomap:
 	release_resource(info->ioarea);
-err_sysfs:
-	thermal_remove_sysfs_file(&pdev->dev);
-err_noirq:
-	iounmap(info->tmu_base);
 err_nores:
+	free_irq(info->irq, info);
+err_noirq:
+	kfree(info);
+	info = NULL;
+err_nomem:
+	dev_err(&pdev->dev, "initialization failed.\n");
 	return ret;
 }
 
