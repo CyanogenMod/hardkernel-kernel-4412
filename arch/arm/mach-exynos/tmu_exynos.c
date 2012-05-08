@@ -43,25 +43,14 @@ enum tmu_status_t {
 
 static struct workqueue_struct  *tmu_monitor_wq;
 
-static int tmu_tripped_cb(void)
+static void tmu_tripped_cb(void)
 {
-	struct power_supply *psy = power_supply_get_by_name("battery");
-	union power_supply_propval value;
-
-	if (!psy) {
-		pr_err("%s:fail to get batter ps\n", __func__);
-		return -ENODEV;
-	}
-
-	value.intval = TMU_STATUS_TRIPPED;
-
-	return psy->set_property(psy, POWER_SUPPLY_PROP_TEMP_AMBIENT, &value);
 }
 
-static unsigned char get_cur_temp(struct tmu_info *info)
+static int get_cur_temp(struct tmu_info *info)
 {
 	unsigned char curr_temp;
-	unsigned char temperature;
+	int temperature;
 
 	/* After reading temperature code from register, compensating
 	 * its value and calculating celsius temperatue,
@@ -82,7 +71,7 @@ static unsigned char get_cur_temp(struct tmu_info *info)
 #ifdef CONFIG_TMU_DEBUG
 static void cur_temp_monitor(struct work_struct *work)
 {
-	unsigned char cur_temp;
+	int cur_temp;
 	struct delayed_work *delayed_work = to_delayed_work(work);
 	struct tmu_info *info =
 		 container_of(delayed_work, struct tmu_info, monitor);
@@ -100,7 +89,7 @@ static void tmu_monitor(struct work_struct *work)
 	struct tmu_info *info =
 		container_of(delayed_work, struct tmu_info, polling);
 	struct tmu_data *data = info->dev->platform_data;
-	unsigned char cur_temp;
+	int cur_temp;
 
 #ifdef CONFIG_TMU_DEBUG
 	cancel_delayed_work(&info->monitor);

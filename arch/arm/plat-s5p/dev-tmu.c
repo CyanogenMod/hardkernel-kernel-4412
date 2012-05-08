@@ -76,9 +76,9 @@ void __init s5p_tmu_set_platdata(struct tmu_data *pd)
 		printk(KERN_ERR "%s: no memory for platform data\n", __func__);
 	} else {
 		if (!pd->ts.stop_throttle)
-			memcpy(&npd->ts, &default_tmu_data.ts, sizeof(struct temperature_params));
+			memcpy(npd, &default_tmu_data, sizeof(struct tmu_data));
 		else
-			memcpy(&npd->ts, &pd->ts, sizeof(struct tmu_data));
+			memcpy(npd, pd, sizeof(struct tmu_data));
 	}
 	exynos_device_tmu.dev.platform_data = npd;
 }
