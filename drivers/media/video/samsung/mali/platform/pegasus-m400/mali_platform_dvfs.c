@@ -680,3 +680,15 @@ void mali_default_step_set(int step, mali_bool boostup)
 	if (maliDvfsStatus.currentStep == 1)
 		set_mali_dvfs_status(step, boostup);
 }
+#if MALI_VOLTAGE_LOCK
+int mali_vol_get_from_table(int vol)
+{
+	int i;
+	for (i = 0; i < MALI_DVFS_STEPS; i++) {
+		if (mali_dvfs[i].vol >= vol)
+			return mali_dvfs[i].vol;
+	}
+	MALI_PRINT(("Failed to get voltage from mali_dvfs table, maximum voltage is %d uV\n", mali_dvfs[MALI_DVFS_STEPS-1].vol));
+	return 0;
+}
+#endif
