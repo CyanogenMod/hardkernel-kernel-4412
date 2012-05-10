@@ -539,13 +539,17 @@ static void __init set_volt_table(void)
 			exynos4x12_volt_table[i] = asv_voltage_s[i];
 	} else {
 		if (soc_is_exynos4212()) {
-			for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
+			for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++) {
 				exynos4x12_volt_table[i] =
 					asv_voltage_4212[i][exynos_result_of_asv];
+				pr_info("CPUFREQ L%d : %d uV\n", i, exynos4x12_volt_table[i]);
+			}
 		} else if (soc_is_exynos4412()) {
-			for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++)
+			for (i = 0 ; i < CPUFREQ_LEVEL_END ; i++) {
 				exynos4x12_volt_table[i] =
 					asv_voltage_step_12_5[i][exynos_result_of_asv];
+				pr_info("CPUFREQ L%d : %d uV\n", i, exynos4x12_volt_table[i]);
+			}
 		} else {
 			pr_err("%s: Can't find SoC type \n", __func__);
 		}
