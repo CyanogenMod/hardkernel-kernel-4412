@@ -206,10 +206,10 @@ static int exynos_busfreq_reboot_event(struct notifier_block *this,
 			exynos_reboot_notifier);
 
 	unsigned long voltage = opp_get_voltage(data->max_opp);
-	unsigned long freq = opp_get_freq(data->max_opp);
+	unsigned int index = data->get_table_index(data->max_opp);
 
 	regulator_set_voltage(data->vdd_mif, voltage, voltage + 25000);
-	voltage = data->get_int_volt(freq);
+	voltage = data->get_int_volt(index);
 	regulator_set_voltage(data->vdd_int, voltage, voltage + 25000);
 	data->use = false;
 

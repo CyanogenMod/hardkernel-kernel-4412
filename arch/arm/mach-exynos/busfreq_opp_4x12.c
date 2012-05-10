@@ -581,7 +581,7 @@ int exynos4x12_find_busfreq_by_volt(unsigned int req_volt, unsigned int *freq)
 }
 EXPORT_SYMBOL_GPL(exynos4x12_find_busfreq_by_volt);
 
-unsigned int exynos4x12_get_int_volt(unsigned long index)
+unsigned int exynos4x12_get_int_volt(unsigned int index)
 {
 	return exynos4_int_volt[asv_group_index][index];
 }

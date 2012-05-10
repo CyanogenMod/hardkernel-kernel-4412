@@ -56,7 +56,7 @@ struct busfreq_data {
 	int (*init)	(struct device *dev, struct busfreq_data *data);
 	struct opp *(*monitor)(struct busfreq_data *data);
 	void (*target)	(int index);
-	unsigned int (*get_int_volt) (unsigned long freq);
+	unsigned int (*get_int_volt) (unsigned int index);
 	unsigned int (*get_table_index) (struct opp *opp);
 	void (*busfreq_prepare) (unsigned int index);
 	void (*busfreq_post) (unsigned int index);
@@ -78,7 +78,7 @@ struct opp *step_down(struct busfreq_data *data, int step);
 
 int exynos4x12_init(struct device *dev, struct busfreq_data *data);
 void exynos4x12_target(int index);
-unsigned int exynos4x12_get_int_volt(unsigned long freq);
+unsigned int exynos4x12_get_int_volt(unsigned int index);
 unsigned int exynos4x12_get_table_index(struct opp *opp);
 struct opp *exynos4x12_monitor(struct busfreq_data *data);
 void exynos4x12_prepare(unsigned int index);
