@@ -289,7 +289,12 @@ config EXYNOS4_SETUP_TVOUT
 	help
 	  Common setup code for TVOUT
 
-config EXYNOS_SETUP_THERMAL
+config EXYNOS_DEV_TMU
+	bool
+	help
+	  Compile in platform device definitions for TMU
+
+config EXYNOS_THERMAL
 	bool "Use thermal management"
 	depends on CPU_FREQ
 	help
@@ -297,7 +302,7 @@ config EXYNOS_SETUP_THERMAL
 
 config TMU_DEBUG
 	bool "Thermal management Debug"
-	depends on EXYNOS_SETUP_THERMAL
+	depends on EXYNOS_THERMAL
 	help
 	  TMU debugging message on
 
@@ -471,10 +476,10 @@ config MACH_SMDKC210
 	select S5P_DEV_ROTATOR
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_JPEG
-	select S5P_DEV_THERMAL
 	select S5P_DEV_USB_EHCI
 	select S5P_SYSTEM_MMU
 	select EXYNOS_DEV_PD
+	select EXYNOS_DEV_TMU
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
@@ -508,10 +513,10 @@ config MACH_SMDKV310
 	select S5P_DEV_ROTATOR
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_JPEG
-	select S5P_DEV_THERMAL
 	select S5P_DEV_USB_EHCI
 	select S5P_SYSTEM_MMU
 	select EXYNOS_DEV_PD
+	select EXYNOS_DEV_TMU
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
 	select EXYNOS4_SETUP_KEYPAD
@@ -601,8 +606,8 @@ config MACH_SMDK4X12
 	select S5P_DEV_USB_EHCI
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_USB_SWITCH
-	select S5P_DEV_THERMAL
 	select S5P_SYSTEM_MMU
+	select EXYNOS_DEV_TMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FB_S5P
@@ -648,7 +653,8 @@ config MACH_SMDK5250
 	select S5P_DEV_ROTATOR
 	select S5P_DEV_USBGADGET
 	select S5P_DEV_I2C_HDMIPHY
-	select S5P_DEV_THERMAL
+	select S5P_DEV_USB_SWITCH
+	select EXYNOS_DEV_TMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_DEV_FIMC_LITE
 	select EXYNOS4_SETUP_I2C1

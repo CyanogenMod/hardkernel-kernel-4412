@@ -3,7 +3,7 @@
 * Copyright (c) 2010 Samsung Electronics Co., Ltd.
 *      http://www.samsung.com/
 *
-* EXYNOS4 - Thermal Management support
+* EXYNOS - Thermal Management support
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License version 2 as
@@ -13,17 +13,18 @@
 #ifndef __ASM_ARCH_REGS_THERMAL_H
 #define __ASM_ARCH_REGS_THERMAL_H __FILE__
 
+#include "regs-tmu-4210.h"
+
 #define TRIMINFO		(0x0)
+#define TRIMINFO_CON		(0x14)
 
 #define TMU_CON			(0x20)
 #define TMU_STATUS		(0x28)
 #define SAMPLING_INTERNAL	(0x2C)
 #define CNT_VALUE0		(0x30)
 #define CNT_VALUE1		(0x34)
-
 #define CURRENT_TEMP		(0x40)
 
-#define TRIMINFO_CON		(0x14)
 #define THD_TEMP_RISE		(0x50)
 #define THD_TEMP_FALL		(0x54)
 
@@ -70,9 +71,9 @@
 #define INTCLEAR_FALL0		(1<<16)
 #define INTCLEAR_FALL1		(1<<20)
 #define INTCLEAR_FALL2		(1<<24)
-#define INTCLEARALL		(INTCLEAR_RISE0 | INTCLEAR_RISE1 | \
-				 INTCLEAR_RISE2 | INTCLEAR_FALL0 | \
-				 INTCLEAR_FALL1 | INTCLEAR_FALL2)
-
+#define CLEAR_RISE_INT		(INTCLEAR_RISE0 | INTCLEAR_RISE1 | \
+				 INTCLEAR_RISE2)
+#define CLEAR_FALL_INT		(INTCLEAR_FALL0 | INTCLEAR_FALL1 | \
+				 INTCLEAR_FALL2)
 #define EMUL_EN		(1)
 #endif

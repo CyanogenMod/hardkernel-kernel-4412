@@ -1,6 +1,6 @@
-/* linux/arch/arm/plat-s5p/dev-tmu.c
+/* linux/arch/arm/mach-exynos/dev-tmu.c
  *
- * Copyright 2009 by SAMSUNG
+ * Copyright 2011 by SAMSUNG
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,9 +16,9 @@
 
 #include <mach/irqs.h>
 #include <mach/map.h>
+#include <mach/tmu.h>
 
 #include <plat/devs.h>
-#include <plat/s5p-tmu.h>
 
 static struct resource tmu_resource[] = {
 	[0] = {
@@ -34,7 +34,7 @@ static struct resource tmu_resource[] = {
 };
 
 struct platform_device exynos_device_tmu = {
-	.name	= "s5p-tmu",
+	.name	= "tmu",
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(tmu_resource),
 	.resource	= tmu_resource,
@@ -57,24 +57,24 @@ static struct tmu_data default_tmu_data __initdata = {
 	.mode = 0,
 };
 
-int s5p_tmu_get_irqno(int num)
+int exynos_tmu_get_irqno(int num)
 {
 	return platform_get_irq(&exynos_device_tmu, num);
 }
 
-struct tmu_info *s5p_tmu_get_platdata(void)
+struct tmu_info *exynos_tmu_get_platdata(void)
 {
 	return platform_get_drvdata(&exynos_device_tmu);
 }
 
-void __init s5p_tmu_set_platdata(struct tmu_data *pd)
+void __init exynos_tmu_set_platdata(struct tmu_data *pd)
 {
 	struct tmu_data *npd;
 
 	npd = kmalloc(sizeof(struct tmu_data), GFP_KERNEL);
-	if (!npd) {
+	if (!npd)
 		printk(KERN_ERR "%s: no memory for platform data\n", __func__);
-	} else {
+	else {
 		if (!pd->ts.stop_throttle)
 			memcpy(npd, &default_tmu_data, sizeof(struct tmu_data));
 		else

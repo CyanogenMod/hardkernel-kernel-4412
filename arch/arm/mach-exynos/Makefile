@@ -73,6 +73,7 @@ obj-$(CONFIG_EXYNOS4_DEV_DWMCI)		+= dev-dwmci.o
 obj-$(CONFIG_EXYNOS4_DEV_FIMC_IS)	+= dev-fimc-is.o
 obj-$(CONFIG_EXYNOS4_DEV_FIMC_LITE)	+= dev-fimc-lite.o
 obj-$(CONFIG_EXYNOS_DEV_C2C)		+= dev-c2c.o
+obj-$(CONFIG_EXYNOS_DEV_TMU)		+= dev-tmu.o
 obj-$(CONFIG_EXYNOS5_DEV_GSC)		+= dev-gsc.o
 
 obj-$(CONFIG_EXYNOS4_SETUP_FIMC)	+= setup-fimc.o
@@ -107,7 +108,6 @@ obj-$(CONFIG_EXYNOS4_SETUP_USB_PHY)	+= setup-usb-phy.o
 obj-$(CONFIG_EXYNOS4_SETUP_FB_S5P)	+= setup-fb-s5p.o
 obj-$(CONFIG_EXYNOS4_SETUP_TVOUT)	+= setup-tvout.o
 obj-$(CONFIG_EXYNOS4_SETUP_JPEG)	+= setup-jpeg.o
-obj-$(CONFIG_EXYNOS_SETUP_THERMAL)	+= tmu_exynos.o
 obj-$(CONFIG_EXYNOS4_SETUP_MIPI_DSI)	+= setup-dsim.o
 obj-$(CONFIG_EXYNOS4_SETUP_MIPI_DSIM)	+= setup-mipidsim.o
 obj-$(CONFIG_EXYNOS4_CONTENT_PATH_PROTECTION) += secmem-allocdev.o
@@ -116,3 +116,4 @@ obj-$(CONFIG_WAKEUP_ASSIST)		+= wakeup_assist.o
 
 obj-$(CONFIG_ION_EXYNOS)		+= dev-ion.o
 obj-$(CONFIG_EXYNOS_C2C)		+= setup-c2c.o
+obj-$(CONFIG_EXYNOS_THERMAL)		+= tmu-exynos.o

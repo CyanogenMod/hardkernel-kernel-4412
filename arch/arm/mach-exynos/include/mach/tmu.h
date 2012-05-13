@@ -1,9 +1,9 @@
-/* linux/arch/arm/plat-s5p/include/plat/s5p-tmu.h
+/* linux/arch/arm/mach-exynos/include/mach/tmu.h
  *
  * Copyright 2011 Samsung Electronics Co., Ltd.
  *      http://www.samsung.com/
  *
- * Header file for s5p tmu support
+ * Header file for tmu support
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -55,8 +55,8 @@ struct tmu_info {
 	unsigned int reg_save[TMU_SAVE_NUM];
 };
 
-void s5p_tmu_set_platdata(struct tmu_data *pd);
-struct tmu_info *s5p_tmu_get_platdata(void);
-int s5p_tmu_get_irqno(int num);
+void exynos_tmu_set_platdata(struct tmu_data *pd);
+struct tmu_info *exynos_tmu_get_platdata(void);
+int exynos_tmu_get_irqno(int num);
 extern struct platform_device exynos_device_tmu;
 #endif /* _S5P_THERMAL_H */

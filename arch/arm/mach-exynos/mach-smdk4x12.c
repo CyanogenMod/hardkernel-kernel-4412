@@ -120,8 +120,8 @@
 #include <linux/mfd/s5m87xx/s5m-core.h>
 #include <linux/mfd/s5m87xx/s5m-pmic.h>
 
-#if defined(CONFIG_EXYNOS_SETUP_THERMAL)
-#include <plat/s5p-tmu.h>
+#if defined(CONFIG_EXYNOS_THERMAL)
+#include <mach/tmu.h>
 #endif
 
 #define REG_INFORM4            (S5P_INFORM4)
@@ -3112,7 +3112,7 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 #endif
 	&exynos_device_spi2,
 #endif
-#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+#ifdef CONFIG_EXYNOS_THERMAL
 	&exynos_device_tmu,
 #endif
 #ifdef CONFIG_S5P_DEV_ACE
@@ -3121,14 +3121,14 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&exynos4_busfreq,
 };
 
-#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+#ifdef CONFIG_EXYNOS_THERMAL
 /* below temperature base on the celcius degree */
 struct tmu_data exynos_tmu_data __initdata = {
 	.ts = {
-		.stop_throttle  = 82,
-		.start_throttle = 85,
-		.stop_warning  = 95,
-		.start_warning = 103,
+		.stop_throttle  = 40, 
+		.start_throttle = 43,
+		.stop_warning  = 102,
+		.start_warning = 105,
 		.start_tripping = 110, /* temp to do tripping */
 	},
 	.efuse_value = 55,
@@ -3988,8 +3988,8 @@ static void __init smdk4x12_machine_init(void)
 	exynos_device_flite1.dev.parent = &exynos4_device_pd[PD_ISP].dev;
 #endif
 #endif
-#ifdef CONFIG_EXYNOS_SETUP_THERMAL
-	s5p_tmu_set_platdata(&exynos_tmu_data);
+#ifdef CONFIG_EXYNOS_THERMAL
+	exynos_tmu_set_platdata(&exynos_tmu_data);
 #endif
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);
