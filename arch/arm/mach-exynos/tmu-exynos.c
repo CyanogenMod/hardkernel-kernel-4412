@@ -85,19 +85,19 @@ static ssize_t show_throttle(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct tmu_info *info = dev_get_drvdata(dev);
-	struct tmu_data *pdata = info->dev->platform_data;
+	struct tmu_data *data = info->dev->platform_data;
 	unsigned int start, stop;
 	ssize_t ret = 0;
 
-	start = pdata->ts.start_throttle;
-	stop = pdata->ts.stop_throttle;
+	start = data->ts.start_throttle;
+	stop = data->ts.stop_throttle;
 
 	if (!dev)
 		return -ENODEV;
 
 	ret += sprintf(buf+ret, "Throttling/Cooling: %dc/%dc\n", start, stop);
 	ret += sprintf(buf+ret, "\n");
-	ret += sprintf(buf+ret, "[Change usage] echo Throttling temp"
+	ret += sprintf(buf+ret, "[Change usage] echo Throttling_temp"
 			" Cooling_temp > throttle_temp\n");
 	ret += sprintf(buf+ret, "[Example] echo 80 75 > throttle_temp\n");
 
@@ -108,7 +108,7 @@ static ssize_t store_throttle(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
 	struct tmu_info *info = dev_get_drvdata(dev);
-	struct tmu_data *pdata = info->dev->platform_data;
+	struct tmu_data *data = info->dev->platform_data;
 	unsigned int start, stop;
 	unsigned int tmp;
 	unsigned char temp_throttle;
@@ -121,24 +121,24 @@ static ssize_t store_throttle(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 	}
 
-	if (start >= pdata->ts.stop_warning) {
-		printk(KERN_ERR "[Wrong value] - Throttling temp needs"
-				" smaller vaule than warning temp\n");
+	if (start >= data->ts.stop_warning) {
+		printk(KERN_ERR "[Wrong value] - Throttling start temp needs"
+				" smaller vaule than warning stop temp\n");
 		return -ENODEV;
 	}
 
 	if (stop >= start || (stop <= 0)) {
 		printk(KERN_ERR "[Wrong value] - Cooling temp needs smaller"
-				" positive value than throttle temp\n");
+				" positive value than throttle start temp\n");
 		return -ENODEV;
 	}
 
 	mutex_lock(&tmu_lock);
 
-	pdata->ts.start_throttle = start;
-	pdata->ts.stop_throttle = stop;
+	data->ts.start_throttle = start;
+	data->ts.stop_throttle = stop;
 
-	temp_throttle = pdata->ts.start_throttle
+	temp_throttle = data->ts.start_throttle
 			+ info->te1 - TMU_DC_VALUE;
 
 	tmp = __raw_readl(info->tmu_base + THD_TEMP_RISE);
@@ -156,20 +156,20 @@ static ssize_t show_warning(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct tmu_info *info = dev_get_drvdata(dev);
-	struct tmu_data *pdata = info->dev->platform_data;
+	struct tmu_data *data = info->dev->platform_data;
 	unsigned int start, stop;
 	ssize_t ret = 0;
 
-	start = pdata->ts.start_warning;
-	stop = pdata->ts.stop_warning;
+	start = data->ts.start_warning;
+	stop = data->ts.stop_warning;
 
 	if (!dev)
 		return -ENODEV;
 
 	ret += sprintf(buf+ret, "Waring/Cooling: %dc/%dc\n", start, stop);
 	ret += sprintf(buf+ret, "\n");
-	ret += sprintf(buf+ret, "[Change usage] echo Warning temp"
-			" Cooling_temp > warning_temp\n");
+	ret += sprintf(buf+ret, "[Change usage] echo warning_temp"
+			" waring_stop_temp > warning_temp\n");
 	ret += sprintf(buf+ret, "[Example] echo 100 90 > warning_temp\n");
 
 	return ret;
@@ -179,7 +179,7 @@ static ssize_t store_warning(struct device *dev, struct device_attribute *attr,
 		const char *buf, size_t count)
 {
 	struct tmu_info *info = dev_get_drvdata(dev);
-	struct tmu_data *pdata = info->dev->platform_data;
+	struct tmu_data *data = info->dev->platform_data;
 	unsigned int start, stop;
 	unsigned int tmp;
 	unsigned char temp_warning;
@@ -192,22 +192,23 @@ static ssize_t store_warning(struct device *dev, struct device_attribute *attr,
 		return -EINVAL;
 	}
 
-	if (start <= pdata->ts.start_throttle) {
-		pr_err("[Wrong value] - Warning temp needs"
-			" bigger value than throttle temp\n");
+	if (start <= data->ts.start_throttle
+		|| (start >= data->ts.start_tripping)) {
+		pr_err("[Wrong value] - Warning start temp needs"
+			" value between throttle start and tirpping temp\n");
 		return -ENODEV;
 	}
 
-	if ((stop <= pdata->ts.start_throttle) || (stop >= start)) {
+	if ((stop <= data->ts.start_throttle) || (stop >= start)) {
 		pr_err("[Wrong value] - Cooling temp needs"
-				" value between throttle and warning temp\n");
+				" value between throttle start and warning start temp\n");
 		return -ENODEV;
 	}
 
 	mutex_lock(&tmu_lock);
-	pdata->ts.start_warning = start;
-	pdata->ts.stop_warning = stop;
-	temp_warning = pdata->ts.start_warning
+	data->ts.start_warning = start;
+	data->ts.stop_warning = stop;
+	temp_warning = data->ts.start_warning
 			+ info->te1 - TMU_DC_VALUE;
 
 	tmp = __raw_readl(info->tmu_base + THD_TEMP_RISE);
@@ -225,7 +226,7 @@ static ssize_t show_throttle_freq(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct tmu_info *info = dev_get_drvdata(dev);
-	struct tmu_data *pdata = info->dev->platform_data;
+	struct tmu_data *data = info->dev->platform_data;
 	unsigned int freq;
 	ssize_t ret = 0;
 
@@ -235,7 +236,7 @@ static ssize_t show_throttle_freq(struct device *dev,
 		return -ENODEV;
 
 	ret += sprintf(buf+ret, "Throttling freq level: %d (%dMHz)\n", \
-			freq, (pdata->cpulimit.throttle_freq)/1000);
+			freq, (data->cpulimit.throttle_freq)/1000);
 	ret += sprintf(buf+ret, "\n");
 	ret += sprintf(buf+ret, "[Change usage] echo freq > throttle_freq\n");
 	ret += sprintf(buf+ret, "[Example] If you want to set 800Mhz,"
@@ -249,7 +250,7 @@ static ssize_t store_throttle_freq(struct device *dev,
 			const char *buf, size_t count)
 {
 	struct tmu_info *info = dev_get_drvdata(dev);
-	struct tmu_data *pdata = info->dev->platform_data;
+	struct tmu_data *data = info->dev->platform_data;
 	unsigned int freq;
 
 	if (!dev)
@@ -261,9 +262,9 @@ static ssize_t store_throttle_freq(struct device *dev,
 	}
 
 	mutex_lock(&tmu_lock);
-	pdata->cpulimit.throttle_freq = (freq * 1000);
+	data->cpulimit.throttle_freq = (freq * 1000);
 	/* Set frequecny level */
-	exynos_cpufreq_get_level(pdata->cpulimit.throttle_freq,
+	exynos_cpufreq_get_level(data->cpulimit.throttle_freq,
 				&info->throttle_freq);
 	mutex_unlock(&tmu_lock);
 
@@ -274,7 +275,7 @@ static ssize_t show_warning_freq(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct tmu_info *info = dev_get_drvdata(dev);
-	struct tmu_data *pdata = info->dev->platform_data;
+	struct tmu_data *data = info->dev->platform_data;
 	unsigned int freq;
 	ssize_t ret = 0;
 
@@ -284,7 +285,7 @@ static ssize_t show_warning_freq(struct device *dev,
 		return -ENODEV;
 
 	ret += sprintf(buf+ret, "Warning freq level: %d (%dMHz)\n", \
-			freq, (pdata->cpulimit.warning_freq)/1000);
+			freq, (data->cpulimit.warning_freq)/1000);
 	ret += sprintf(buf+ret, "\n");
 	ret += sprintf(buf+ret, "[Change usage] echo freq > warning_freq\n");
 	ret += sprintf(buf+ret, "[Example] If you want to set 200Mhz,"
@@ -298,7 +299,7 @@ static ssize_t store_warning_freq(struct device *dev,
 				const char *buf, size_t count)
 {
 	struct tmu_info *info = dev_get_drvdata(dev);
-	struct tmu_data *pdata = info->dev->platform_data;
+	struct tmu_data *data = info->dev->platform_data;
 	unsigned int freq;
 
 	if (!dev)
@@ -310,9 +311,9 @@ static ssize_t store_warning_freq(struct device *dev,
 	}
 
 	mutex_lock(&tmu_lock);
-	pdata->cpulimit.warning_freq = (freq * 1000);
+	data->cpulimit.warning_freq = (freq * 1000);
 	/* Set frequecny level */
-	exynos_cpufreq_get_level(pdata->cpulimit.warning_freq,
+	exynos_cpufreq_get_level(data->cpulimit.warning_freq,
 				&info->warning_freq);
 	mutex_unlock(&tmu_lock);
 
