@@ -1953,6 +1953,10 @@ struct tmu_data exynos_tmu_data __initdata = {
 		.start_warning = 103,
 		.start_tripping = 110, /* temp to do tripping */
 	},
+	.cpulimit = {
+		.throttle_freq = 800000,
+		.warning_freq = 200000,
+	},
 	.efuse_value = 55,
 	.slope = 0x10008802,
 	.mode = 0,

@@ -50,6 +50,9 @@ struct tmu_info {
 	unsigned int te2; /* triminfo_85 */
 	int tmu_state;
 
+	unsigned int throttle_freq;
+	unsigned int warning_freq;
+
 	struct delayed_work polling;
 	struct delayed_work monitor;
 	unsigned int reg_save[TMU_SAVE_NUM];
@@ -59,4 +62,6 @@ void exynos_tmu_set_platdata(struct tmu_data *pd);
 struct tmu_info *exynos_tmu_get_platdata(void);
 int exynos_tmu_get_irqno(int num);
 extern struct platform_device exynos_device_tmu;
+extern int mali_dvfs_freq_lock(int level);
+extern void mali_dvfs_freq_unlock(void);
 #endif /* _S5P_THERMAL_H */

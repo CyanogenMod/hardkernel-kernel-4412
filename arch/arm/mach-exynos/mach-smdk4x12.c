@@ -3125,11 +3125,15 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 /* below temperature base on the celcius degree */
 struct tmu_data exynos_tmu_data __initdata = {
 	.ts = {
-		.stop_throttle  = 40, 
-		.start_throttle = 43,
+		.stop_throttle  = 82,
+		.start_throttle = 85,
 		.stop_warning  = 102,
 		.start_warning = 105,
 		.start_tripping = 110, /* temp to do tripping */
+	},
+	.cpulimit = {
+		.throttle_freq = 800000,
+		.warning_freq = 200000,
 	},
 	.efuse_value = 55,
 	.slope = 0x10008802,

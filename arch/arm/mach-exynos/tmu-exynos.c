@@ -43,6 +43,8 @@ enum tmu_status_t {
 	TMU_STATUS_TRIPPED,
 };
 
+static DEFINE_MUTEX(tmu_lock);
+
 unsigned int already_limit;
 static struct workqueue_struct  *tmu_monitor_wq;
 
@@ -71,13 +73,306 @@ static int get_cur_temp(struct tmu_info *info)
 	return temperature;
 }
 
-#ifdef CONFIG_TMU_DEBUG
-static int tmu_test_on;
-static struct temperature_params in;
-static int tmu_limit_on;
-static int freq_limit_1st_throttle;
-static int freq_limit_2nd_throttle;
+/* Sysfs interface for thermal information */
+static ssize_t show_temperature(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct tmu_info *info = dev_get_drvdata(dev);
+	unsigned char temperature;
 
+	if (!dev)
+		return -ENODEV;
+
+	temperature = get_cur_temp(info);
+	return sprintf(buf, "%d\n", temperature);
+}
+
+static ssize_t show_throttle(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct tmu_info *info = dev_get_drvdata(dev);
+	struct tmu_data *pdata = info->dev->platform_data;
+	unsigned int start, stop;
+	ssize_t ret = 0;
+
+	start = pdata->ts.start_throttle;
+	stop = pdata->ts.stop_throttle;
+
+	if (!dev)
+		return -ENODEV;
+
+	ret += sprintf(buf+ret, "Throttling/Cooling: %dc/%dc\n", start, stop);
+	ret += sprintf(buf+ret, "\n");
+	ret += sprintf(buf+ret, "[Change usage] echo Throttling temp"
+			" Cooling_temp > throttle_temp\n");
+	ret += sprintf(buf+ret, "[Example] echo 80 75 > throttle_temp\n");
+
+	return ret;
+}
+
+static ssize_t store_throttle(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct tmu_info *info = dev_get_drvdata(dev);
+	struct tmu_data *pdata = info->dev->platform_data;
+	unsigned int start, stop;
+	unsigned int tmp;
+	unsigned char temp_throttle;
+
+	if (!dev)
+		return -ENODEV;
+
+	if (!sscanf(buf, "%u %u", &start, &stop)) {
+		printk(KERN_ERR "Invaild format!\n");
+		return -EINVAL;
+	}
+
+	if (start >= pdata->ts.stop_warning) {
+		printk(KERN_ERR "[Wrong value] - Throttling temp needs"
+				" smaller vaule than warning temp\n");
+		return -ENODEV;
+	}
+
+	if (stop >= start || (stop <= 0)) {
+		printk(KERN_ERR "[Wrong value] - Cooling temp needs smaller"
+				" positive value than throttle temp\n");
+		return -ENODEV;
+	}
+
+	mutex_lock(&tmu_lock);
+
+	pdata->ts.start_throttle = start;
+	pdata->ts.stop_throttle = stop;
+
+	temp_throttle = pdata->ts.start_throttle
+			+ info->te1 - TMU_DC_VALUE;
+
+	tmp = __raw_readl(info->tmu_base + THD_TEMP_RISE);
+	tmp &= ~(0xFF);
+	/* Set interrupt trigger level */
+	tmp |= (temp_throttle << 0);
+	__raw_writel(tmp, info->tmu_base + THD_TEMP_RISE);
+
+	mutex_unlock(&tmu_lock);
+
+	return count;
+}
+
+static ssize_t show_warning(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct tmu_info *info = dev_get_drvdata(dev);
+	struct tmu_data *pdata = info->dev->platform_data;
+	unsigned int start, stop;
+	ssize_t ret = 0;
+
+	start = pdata->ts.start_warning;
+	stop = pdata->ts.stop_warning;
+
+	if (!dev)
+		return -ENODEV;
+
+	ret += sprintf(buf+ret, "Waring/Cooling: %dc/%dc\n", start, stop);
+	ret += sprintf(buf+ret, "\n");
+	ret += sprintf(buf+ret, "[Change usage] echo Warning temp"
+			" Cooling_temp > warning_temp\n");
+	ret += sprintf(buf+ret, "[Example] echo 100 90 > warning_temp\n");
+
+	return ret;
+}
+
+static ssize_t store_warning(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	struct tmu_info *info = dev_get_drvdata(dev);
+	struct tmu_data *pdata = info->dev->platform_data;
+	unsigned int start, stop;
+	unsigned int tmp;
+	unsigned char temp_warning;
+
+	if (!dev)
+		return -ENODEV;
+
+	if (!sscanf(buf, "%u %u", &start, &stop)) {
+		printk("Invaild format!\n");
+		return -EINVAL;
+	}
+
+	if (start <= pdata->ts.start_throttle) {
+		pr_err("[Wrong value] - Warning temp needs"
+			" bigger value than throttle temp\n");
+		return -ENODEV;
+	}
+
+	if ((stop <= pdata->ts.start_throttle) || (stop >= start)) {
+		pr_err("[Wrong value] - Cooling temp needs"
+				" value between throttle and warning temp\n");
+		return -ENODEV;
+	}
+
+	mutex_lock(&tmu_lock);
+	pdata->ts.start_warning = start;
+	pdata->ts.stop_warning = stop;
+	temp_warning = pdata->ts.start_warning
+			+ info->te1 - TMU_DC_VALUE;
+
+	tmp = __raw_readl(info->tmu_base + THD_TEMP_RISE);
+	tmp = tmp & ~((0xFF)<<8);
+	/* Set interrupt trigger level */
+	tmp |= (temp_warning << 8);
+	__raw_writel(tmp, info->tmu_base + THD_TEMP_RISE);
+
+	mutex_unlock(&tmu_lock);
+
+	return count;
+}
+
+static ssize_t show_throttle_freq(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct tmu_info *info = dev_get_drvdata(dev);
+	struct tmu_data *pdata = info->dev->platform_data;
+	unsigned int freq;
+	ssize_t ret = 0;
+
+	freq = info->throttle_freq;
+
+	if (!dev)
+		return -ENODEV;
+
+	ret += sprintf(buf+ret, "Throttling freq level: %d (%dMHz)\n", \
+			freq, (pdata->cpulimit.throttle_freq)/1000);
+	ret += sprintf(buf+ret, "\n");
+	ret += sprintf(buf+ret, "[Change usage] echo freq > throttle_freq\n");
+	ret += sprintf(buf+ret, "[Example] If you want to set 800Mhz,"
+				" write 800 to freq\n");
+
+	return ret;
+}
+
+static ssize_t store_throttle_freq(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	struct tmu_info *info = dev_get_drvdata(dev);
+	struct tmu_data *pdata = info->dev->platform_data;
+	unsigned int freq;
+
+	if (!dev)
+		return -ENODEV;
+
+	if (!sscanf(buf, "%u", &freq)) {
+		printk(KERN_ERR "Invaild format!\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&tmu_lock);
+	pdata->cpulimit.throttle_freq = (freq * 1000);
+	/* Set frequecny level */
+	exynos_cpufreq_get_level(pdata->cpulimit.throttle_freq,
+				&info->throttle_freq);
+	mutex_unlock(&tmu_lock);
+
+	return count;
+}
+
+static ssize_t show_warning_freq(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct tmu_info *info = dev_get_drvdata(dev);
+	struct tmu_data *pdata = info->dev->platform_data;
+	unsigned int freq;
+	ssize_t ret = 0;
+
+	freq = info->warning_freq;
+
+	if (!dev)
+		return -ENODEV;
+
+	ret += sprintf(buf+ret, "Warning freq level: %d (%dMHz)\n", \
+			freq, (pdata->cpulimit.warning_freq)/1000);
+	ret += sprintf(buf+ret, "\n");
+	ret += sprintf(buf+ret, "[Change usage] echo freq > warning_freq\n");
+	ret += sprintf(buf+ret, "[Example] If you want to set 200Mhz,"
+				" write 200 to freq\n");
+
+	return ret;
+}
+
+static ssize_t store_warning_freq(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct tmu_info *info = dev_get_drvdata(dev);
+	struct tmu_data *pdata = info->dev->platform_data;
+	unsigned int freq;
+
+	if (!dev)
+		return -ENODEV;
+
+	if (!sscanf(buf, "%u", &freq)) {
+		printk(KERN_ERR "Invaild format!\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&tmu_lock);
+	pdata->cpulimit.warning_freq = (freq * 1000);
+	/* Set frequecny level */
+	exynos_cpufreq_get_level(pdata->cpulimit.warning_freq,
+				&info->warning_freq);
+	mutex_unlock(&tmu_lock);
+
+	return count;
+}
+static DEVICE_ATTR(temperature, 0444, show_temperature, NULL);
+static DEVICE_ATTR(throttle_temp, 0666, show_throttle, store_throttle);
+static DEVICE_ATTR(warning_temp, 0666, show_warning, store_warning);
+static DEVICE_ATTR(throttle_freq, 0666,
+			show_throttle_freq, store_throttle_freq);
+static DEVICE_ATTR(warning_freq, 0666, show_warning_freq, store_warning_freq);
+
+static int thermal_create_sysfs_file(struct device *dev)
+{
+	if (device_create_file(dev, &dev_attr_temperature)) {
+		pr_err("Failed to create sysfs file [temperature]\n");
+		goto out;
+	}
+
+	if (device_create_file(dev, &dev_attr_throttle_temp)) {
+		pr_err("Failed to create sysfs file [throttle_temp]\n");
+		goto out;
+	}
+
+	if (device_create_file(dev, &dev_attr_warning_temp)) {
+		pr_err("Failed to create sysfs file [warning_temp]\n");
+		goto out;
+	}
+
+	if (device_create_file(dev, &dev_attr_throttle_freq)) {
+		pr_err("Failed to create sysfs file [throttle_freq]\n");
+		goto out;
+	}
+
+	if (device_create_file(dev, &dev_attr_warning_freq)) {
+		pr_err("Failed to create sysfs file [warning_freq]\n");
+		goto out;
+}
+	return 0;
+out:
+	return -ENOENT;
+}
+
+static void thermal_remove_sysfs_file(struct device *dev)
+{
+	device_remove_file(dev, &dev_attr_temperature);
+	device_remove_file(dev, &dev_attr_throttle_temp);
+	device_remove_file(dev, &dev_attr_warning_temp);
+	device_remove_file(dev, &dev_attr_throttle_freq);
+	device_remove_file(dev, &dev_attr_warning_freq);
+}
+/* End of Interface sysfs for thermal information */
+
+#ifdef CONFIG_TMU_DEBUG
 static void print_temperature_params(struct tmu_info *info)
 {
 	struct tmu_data *data = info->dev->platform_data;
@@ -92,49 +387,6 @@ static void print_temperature_params(struct tmu_info *info)
 		data->ts.start_warning,
 		data->ts.start_tripping);
 }
-
-static int __init get_temperature_params(char *str)
-{
-	unsigned int tmu_temp[6] = { (int)NULL, (int)NULL, (int)NULL,
-			(int)NULL, (int)NULL, (int)NULL};
-
-	get_options(str, 6, tmu_temp);
-	tmu_test_on = tmu_temp[0];
-	pr_info("@@@ tmu_test enable = %d\n", tmu_test_on);
-
-	if (tmu_temp[1] > 0)
-		in.stop_throttle = tmu_temp[1];
-	if (tmu_temp[2] > 0)
-		in.start_throttle = tmu_temp[2];
-	if (tmu_temp[3] > 0)
-		in.stop_warning = tmu_temp[3];
-	if (tmu_temp[4] > 0)
-		in.start_warning = tmu_temp[4];
-	if (tmu_temp[5] > 0)
-		in.start_tripping = tmu_temp[5];
-
-	return 0;
-}
-early_param("tmu_test", get_temperature_params);
-
-static int __init get_cpufreq_limit_param(char *str)
-{
-	int tmu_temp[3] = { (int)NULL, (int)NULL, (int)NULL };
-
-	get_options(str, 3, tmu_temp);
-	tmu_limit_on = tmu_temp[0];
-	pr_info("@@@ tmu_limit_on = %d\n", tmu_limit_on);
-
-	if (tmu_temp[1] > 0)
-		freq_limit_1st_throttle = tmu_temp[1];
-	if (tmu_temp[2] > 0)
-		freq_limit_2nd_throttle = tmu_temp[2];
-	pr_info("@@ 1st throttling : cpu_level = %d, 2nd cpu_level = %d\n",
-		freq_limit_1st_throttle, freq_limit_2nd_throttle);
-
-	return 0;
-}
-early_param("cpu_level", get_cpufreq_limit_param);
 
 static void cur_temp_monitor(struct work_struct *work)
 {
@@ -183,7 +435,7 @@ static void tmu_monitor(struct work_struct *work)
 				cur_temp < data->ts.start_warning &&
 							!already_limit) {
 			exynos_cpufreq_upper_limit(DVFS_LOCK_ID_TMU,
-				data->cpulimit.throttle_freq);
+				info->throttle_freq);
 			already_limit = 1;
 		} else if (cur_temp <= data->ts.stop_throttle) {
 			info->tmu_state = TMU_STATUS_NORMAL;
@@ -202,7 +454,7 @@ static void tmu_monitor(struct work_struct *work)
 				cur_temp < data->ts.start_tripping &&
 							!already_limit) {
 			exynos_cpufreq_upper_limit(DVFS_LOCK_ID_TMU,
-				data->cpulimit.warning_freq);
+							info->warning_freq);
 			already_limit = 1;
 		} else if (cur_temp <= data->ts.stop_warning) {
 			info->tmu_state = TMU_STATUS_THROTTLED;
@@ -231,7 +483,8 @@ static void pm_tmu_save(struct tmu_info *info)
 	info->reg_save[4] = __raw_readl(info->tmu_base + INTEN);
 
 	if (soc_is_exynos4210()) {
-		info->reg_save[5] = __raw_readl(info->tmu_base + THRESHOLD_TEMP);
+		info->reg_save[5] = __raw_readl(info->tmu_base	\
+						+ THRESHOLD_TEMP);
 		info->reg_save[6] = __raw_readl(info->tmu_base + TRIG_LEV0);
 		info->reg_save[7] = __raw_readl(info->tmu_base + TRIG_LEV1);
 		info->reg_save[8] = __raw_readl(info->tmu_base + TRIG_LEV2);
@@ -249,7 +502,8 @@ static void pm_tmu_restore(struct tmu_info *info)
 	__raw_writel(info->reg_save[4], info->tmu_base + INTEN);
 
 	if (soc_is_exynos4210()) {
-		__raw_writel(info->reg_save[5], info->tmu_base + THRESHOLD_TEMP);
+		__raw_writel(info->reg_save[5], info->tmu_base	\
+						+ THRESHOLD_TEMP);
 		__raw_writel(info->reg_save[6], info->tmu_base + TRIG_LEV0);
 		__raw_writel(info->reg_save[7], info->tmu_base + TRIG_LEV1);
 		__raw_writel(info->reg_save[8], info->tmu_base + TRIG_LEV2);
@@ -296,6 +550,12 @@ static int exynos4210_tmu_init(struct tmu_info *info)
 
 	/* Clear interrupt ot eliminate dummy interrupt signal */
 	__raw_writel(INTCLEARALL, info->tmu_base + INTCLEAR);
+
+	/* Set frequecny level */
+	exynos_cpufreq_get_level(data->cpulimit.throttle_freq,
+				&info->throttle_freq);
+	exynos_cpufreq_get_level(data->cpulimit.warning_freq,
+				&info->warning_freq);
 
 	/* Need to initail regsiter setting after getting parameter info */
 	/* [28:23] vref [11:8] slope - Tunning parameter */
@@ -347,14 +607,17 @@ static int exynos_tmu_init(struct tmu_info *info)
 	info->tmu_state = TMU_STATUS_INIT;
 
 	/* Set frequecny level */
-	exynos_cpufreq_get_level(800000, &data->cpulimit.throttle_freq);
-	exynos_cpufreq_get_level(200000, &data->cpulimit.warning_freq);
+	exynos_cpufreq_get_level(data->cpulimit.throttle_freq,
+				&info->throttle_freq);
+	exynos_cpufreq_get_level(data->cpulimit.warning_freq,
+				&info->warning_freq);
 
 	/* Need to initail regsiter setting after getting parameter info */
 	/* [28:23] vref [11:8] slope - Tunning parameter */
 	__raw_writel(data->slope, info->tmu_base + TMU_CON);
 
-	__raw_writel((CLEAR_RISE_INT | CLEAR_FALL_INT), info->tmu_base + INTCLEAR);
+	__raw_writel((CLEAR_RISE_INT | CLEAR_FALL_INT),	\
+				info->tmu_base + INTCLEAR);
 
 	/* TMU core enable */
 	con = __raw_readl(info->tmu_base + TMU_CON);
@@ -514,6 +777,9 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 		goto err_nomap;
 	}
 
+	if (thermal_create_sysfs_file(&pdev->dev))
+		goto err_sysfs;
+
 	tmu_monitor_wq = create_freezable_workqueue("tmu");
 	if (!tmu_monitor_wq) {
 		pr_info("Creation of tmu_monitor_wq failed\n");
@@ -535,10 +801,12 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 
 err_noinit:
 	free_irq(info->irq, info);
-err_noirq:
-	iounmap(info->tmu_base);
 err_nomap:
 	release_resource(info->ioarea);
+err_sysfs:
+	thermal_remove_sysfs_file(&pdev->dev);
+err_noirq:
+	iounmap(info->tmu_base);
 err_nores:
 	return ret;
 }
