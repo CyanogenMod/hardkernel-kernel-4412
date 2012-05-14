@@ -282,7 +282,7 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct s3c_dma_params *dma_data;
 	void __iomem *regs = pcm->regs;
 	struct clk *clk;
-	int sclk_div, sync_div;
+	int sclk_div = 0, sync_div = 0;
 	unsigned long flags;
 	u32 clkctl;
 
@@ -329,16 +329,19 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 	else
 		clk = pcm->cclk;
 
+	if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
+		clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
+
+#if defined(CONFIG_ARCH_S5PC100) || defined(CONFIG_ARCH_S5PV210)
 	/* Set the SCLK divider */
 	sclk_div = clk_get_rate(clk) / pcm->sclk_per_fs /
 					params_rate(params) / 2 - 1;
-	if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
-		clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
 
 	clkctl &= ~(S3C_PCM_CLKCTL_SCLKDIV_MASK
 			<< S3C_PCM_CLKCTL_SCLKDIV_SHIFT);
 	clkctl |= ((sclk_div & S3C_PCM_CLKCTL_SCLKDIV_MASK)
 			<< S3C_PCM_CLKCTL_SCLKDIV_SHIFT);
+#endif
 
 	/* Set the SYNC divider */
 	sync_div = pcm->sclk_per_fs - 1;
@@ -592,9 +595,9 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 	/* Default is 128fs */
 	pcm->sclk_per_fs = 128;
 
-	pcm->cclk = clk_get(&pdev->dev, "audio-bus");
+	pcm->cclk = clk_get(&pdev->dev, "sclk_pcm");
 	if (IS_ERR(pcm->cclk)) {
-		dev_err(&pdev->dev, "failed to get audio-bus\n");
+		dev_err(&pdev->dev, "failed to get sclk_pcm\n");
 		ret = PTR_ERR(pcm->cclk);
 		goto err1;
 	}
