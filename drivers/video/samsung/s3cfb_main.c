@@ -219,8 +219,7 @@ static int s3cfb_wait_for_vsync_thread(void *data)
 		ktime_t prev_timestamp = fbdev->vsync_timestamp;
 		int ret = wait_event_interruptible_timeout(fbdev->vsync_wq,
 				s3cfb_vsync_timestamp_changed(fbdev,
-					prev_timestamp) &&
-				fbdev->vsync_active,
+					prev_timestamp),
 				msecs_to_jiffies(100));
 		if (ret > 0) {
 			char *envp[2];

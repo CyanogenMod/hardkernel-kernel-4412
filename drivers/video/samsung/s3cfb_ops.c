@@ -1005,16 +1005,6 @@ int s3cfb_ioctl(struct fb_info *fb, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
-	case S3CFB_SET_VSYNC_ACTIVE:
-		if (get_user(p.vsync, (int __user *)arg))
-			ret = -EFAULT;
-
-		fbdev->vsync_active = p.vsync;
-		wmb();
-		if (p.vsync)
-			wake_up(&fbdev->vsync_wq);
-		break;
-
 	case S3CFB_SET_VSYNC_INT:
 		if (get_user(p.vsync, (int __user *)arg))
 			ret = -EFAULT;
