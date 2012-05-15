@@ -1840,110 +1840,85 @@ static void __init origen_quad_usbgadget_init(void)
 static int s5m_cfg_irq(void)
 {
 	/* AP_PMIC_IRQ: EINT22 */
-	s3c_gpio_cfgpin(EXYNOS4_GPX2(2), S3C_GPIO_SFN(0xF));
-	s3c_gpio_setpull(EXYNOS4_GPX2(2), S3C_GPIO_PULL_UP);
+	s3c_gpio_cfgpin(EXYNOS4_GPX2(6), S3C_GPIO_SFN(0xF));
+	s3c_gpio_setpull(EXYNOS4_GPX2(6), S3C_GPIO_PULL_UP);
 	return 0;
 }
 static struct regulator_consumer_supply s5m8767_ldo1_supply[] = {
 	REGULATOR_SUPPLY("vdd_alive", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo2_supply[] = {
 	REGULATOR_SUPPLY("vddq_m12", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo3_supply[] = {
 	REGULATOR_SUPPLY("vddioap_18", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo4_supply[] = {
 	REGULATOR_SUPPLY("vddq_pre", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo5_supply[] = {
 	REGULATOR_SUPPLY("vdd18_2m", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo6_supply[] = {
 	REGULATOR_SUPPLY("vdd10_mpll", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo7_supply[] = {
 	REGULATOR_SUPPLY("vdd10_xpll", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo8_supply[] = {
 	REGULATOR_SUPPLY("vdd10_mipi", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo9_supply[] = {
 	REGULATOR_SUPPLY("vdd33_lcd", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo10_supply[] = {
 	REGULATOR_SUPPLY("vdd18_mipi", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo11_supply[] = {
 	REGULATOR_SUPPLY("vdd18_abb1", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo12_supply[] = {
 	REGULATOR_SUPPLY("vdd33_uotg", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo13_supply[] = {
 	REGULATOR_SUPPLY("vddioperi_18", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo14_supply[] = {
 	REGULATOR_SUPPLY("vdd18_abb02", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo15_supply[] = {
 	REGULATOR_SUPPLY("vdd10_ush", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo16_supply[] = {
 	REGULATOR_SUPPLY("vdd18_hsic", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo17_supply[] = {
 	REGULATOR_SUPPLY("vddioap_mmc012_28", NULL),
 };
 static struct regulator_consumer_supply s5m8767_ldo18_supply[] = {
 	REGULATOR_SUPPLY("vddioperi_28", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo19_supply[] = {
 	REGULATOR_SUPPLY("dvdd25", NULL),
 };
-
-
 static struct regulator_consumer_supply s5m8767_ldo20_supply[] = {
 	REGULATOR_SUPPLY("vdd28_cam", NULL),
 };
 static struct regulator_consumer_supply s5m8767_ldo21_supply[] = {
 	REGULATOR_SUPPLY("vdd28_af", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo22_supply[] = {
 	REGULATOR_SUPPLY("vdda28_2m", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo23_supply[] = {
 	REGULATOR_SUPPLY("vdd_tf", NULL),
 };
-
-
 static struct regulator_consumer_supply s5m8767_ldo24_supply[] = {
 	REGULATOR_SUPPLY("vdd33_a31", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo25_supply[] = {
 	REGULATOR_SUPPLY("vdd18_cam", NULL),
 };
-
 static struct regulator_consumer_supply s5m8767_ldo26_supply[] = {
 	REGULATOR_SUPPLY("vdd18_a31", NULL),
 };
@@ -1953,7 +1928,6 @@ static struct regulator_consumer_supply s5m8767_ldo27_supply[] = {
 static struct regulator_consumer_supply s5m8767_ldo28_supply[] = {
 	REGULATOR_SUPPLY("dvdd12", NULL),
 };
-
 
 static struct regulator_consumer_supply s5m8767_buck1_consumer =
 	REGULATOR_SUPPLY("vdd_mif", NULL);
@@ -1966,16 +1940,12 @@ static struct regulator_consumer_supply s5m8767_buck3_consumer =
 
 static struct regulator_consumer_supply s5m8767_buck4_consumer =
 	REGULATOR_SUPPLY("vdd_g3d", NULL);
-
 static struct regulator_consumer_supply s5m8767_buck5_consumer =
 	REGULATOR_SUPPLY("vdd_m12", NULL);
 static struct regulator_consumer_supply s5m8767_buck6_consumer =
 	REGULATOR_SUPPLY("vdd12_5m", NULL);
-
 static struct regulator_consumer_supply s5m8767_buck9_consumer =
 	REGULATOR_SUPPLY("vddf28_emmc", NULL);
-
-
 
 #define REGULATOR_INIT(_ldo, _name, _min_uV, _max_uV, _always_on, _ops_mask,\
 		_disabled) \
@@ -2005,7 +1975,6 @@ REGULATOR_INIT(ldo3, "VDDIOAP_18", 1800000, 1800000, 1,
 		REGULATOR_CHANGE_STATUS, 0);
 REGULATOR_INIT(ldo4, "VDDQ_PRE", 1800000, 1800000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
-
 REGULATOR_INIT(ldo5, "VDD18_2M", 1800000, 1800000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
 REGULATOR_INIT(ldo6, "VDD10_MPLL", 1000000, 1000000, 1,
@@ -2016,8 +1985,6 @@ REGULATOR_INIT(ldo8, "VDD10_MIPI", 1000000, 1000000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
 REGULATOR_INIT(ldo9, "VDD33_LCD", 3300000, 3300000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
-
-
 REGULATOR_INIT(ldo10, "VDD18_MIPI", 1800000, 1800000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
 REGULATOR_INIT(ldo11, "VDD18_ABB1", 1800000, 1800000, 1,
@@ -2030,7 +1997,6 @@ REGULATOR_INIT(ldo14, "VDD18_ABB02", 1800000, 1800000, 1,
 		REGULATOR_CHANGE_STATUS, 0);
 REGULATOR_INIT(ldo15, "VDD10_USH", 1000000, 1000000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
-
 REGULATOR_INIT(ldo16, "VDD18_HSIC", 1800000, 1800000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
 REGULATOR_INIT(ldo17, "VDDIOAP_MMC012_28", 2800000, 2800000, 1,
@@ -2041,7 +2007,6 @@ REGULATOR_INIT(ldo19, "DVDD25", 2500000, 2500000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
 REGULATOR_INIT(ldo20, "VDD28_CAM", 2800000, 2800000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
-
 REGULATOR_INIT(ldo21, "VDD28_AF", 2800000, 2800000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
 REGULATOR_INIT(ldo22, "VDDA28_2M", 2800000, 2800000, 1,
@@ -2058,7 +2023,6 @@ REGULATOR_INIT(ldo27, "GPS_1V8", 1800000, 1800000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
 REGULATOR_INIT(ldo28, "DVDD12", 1200000, 1200000, 1,
 		REGULATOR_CHANGE_STATUS, 1);
-
 
 static struct regulator_init_data s5m8767_buck1_data = {
 	.constraints	= {
@@ -2147,6 +2111,7 @@ static struct regulator_init_data s5m8767_buck5_data = {
 	.num_consumer_supplies = 1,
 	.consumer_supplies = &s5m8767_buck5_consumer,
 };
+
 static struct regulator_init_data s5m8767_buck6_data = {
 	.constraints	= {
 		.name		= "vdd12_5m range",
@@ -2163,6 +2128,7 @@ static struct regulator_init_data s5m8767_buck6_data = {
 	.num_consumer_supplies = 1,
 	.consumer_supplies = &s5m8767_buck6_consumer,
 };
+
 static struct regulator_init_data s5m8767_buck9_data = {
 	.constraints	= {
 		.name		= "vddf28_emmc range",
@@ -2179,9 +2145,6 @@ static struct regulator_init_data s5m8767_buck9_data = {
 	.num_consumer_supplies = 1,
 	.consumer_supplies = &s5m8767_buck9_consumer,
 };
-
-
-
 
 static struct s5m_regulator_data pegasus_regulators[] = {
 	{ S5M8767_BUCK1, &s5m8767_buck1_data },
@@ -2240,6 +2203,7 @@ static struct s5m_platform_data exynos4_s5m8767_pdata = {
 	.wakeup			= 1,
 	.opmode_data		= s5m8767_opmode_data,
 	.wtsr_smpl		= 1,
+
 	.buck2_voltage[2]	= 1150000,
 	.buck2_voltage[3]	= 1100000,
 	.buck2_voltage[4]	= 1050000,
@@ -2253,12 +2217,14 @@ static struct s5m_platform_data exynos4_s5m8767_pdata = {
 	.buck3_voltage[5]	= 1000000,
 	.buck3_voltage[6]	= 950000,
 	.buck3_voltage[7]	= 900000,
+
 	.buck4_voltage[1]	= 1150000,
 	.buck4_voltage[3]	= 1100000,
 	.buck4_voltage[4]	= 1100000,
 	.buck4_voltage[5]	= 1100000,
 	.buck4_voltage[6]	= 1100000,
 	.buck4_voltage[7]	= 1100000,
+
 	.buck_default_idx	= 1,
 	.buck_gpios[0]		= EXYNOS4_GPX2(3),
 	.buck_gpios[1]		= EXYNOS4_GPX2(4),
