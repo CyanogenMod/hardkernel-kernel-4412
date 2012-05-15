@@ -164,7 +164,7 @@ static void *vb2_cma_phys_get_userptr(void *alloc_ctx, unsigned long vaddr,
 	printk(KERN_DEBUG "[%s] paddr(0x%08lx)\n", __func__, vaddr);
 	buf->size = size;
 	buf->paddr = vaddr;	/* drv directly gets phys. addr. from user. */
-
+	buf->cacheable = ((struct vb2_cma_phys_conf *)alloc_ctx)->cacheable;
 	return buf;
 }
 
