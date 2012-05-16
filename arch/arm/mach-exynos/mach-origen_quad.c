@@ -2330,6 +2330,12 @@ static struct i2c_board_info i2c_devs2[] __initdata = {
 };
 
 static struct i2c_board_info i2c_devs3[] __initdata = {
+#ifdef CONFIG_TOUCHSCREEN_UNIDISPLAY_TS
+	{
+		I2C_BOARD_INFO("unidisplay_ts", 0x41),
+		.irq = IRQ_EINT(25),
+	},
+#endif
 };
 
 static struct i2c_board_info i2c_devs7[] __initdata = {
