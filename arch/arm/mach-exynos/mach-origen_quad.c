@@ -15,7 +15,7 @@
 #include <linux/clk.h>
 #include <linux/lcd.h>
 #include <linux/gpio.h>
-#include <linux/gpio_keys.h>
+#include <linux/gpio_event.h>
 #include <linux/i2c.h>
 #include <linux/pwm_backlight.h>
 #include <linux/input.h>
@@ -2351,26 +2351,57 @@ static struct platform_device samsung_device_battery = {
 };
 #endif
 
-struct gpio_keys_button origen_quad_button[] = {
+static struct gpio_event_direct_entry origen_quad_keypad_key_map[] = {
 	{
-		.code = KEY_POWER,
-		.gpio = EXYNOS4_GPX0(0),
-		.active_low = 1,
-		.wakeup = 1,
+		.gpio   = EXYNOS4_GPX2(7),
+		.code   = KEY_POWER,
 	}
 };
 
-struct gpio_keys_platform_data origen_quad_gpiokeys_platform_data = {
-	origen_quad_button,
-	ARRAY_SIZE(origen_quad_button),
+static struct gpio_event_input_info origen_quad_keypad_key_info = {
+	.info.func              = gpio_event_input_func,
+	.info.no_suspend        = true,
+	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
+	.type                   = EV_KEY,
+	.keymap                 = origen_quad_keypad_key_map,
+	.keymap_size            = ARRAY_SIZE(origen_quad_keypad_key_map)
 };
 
-static struct platform_device origen_quad_gpio_keys = {
-	.name	= "gpio-keys",
-	.dev	= {
-		.platform_data = &origen_quad_gpiokeys_platform_data,
+static struct gpio_event_info *origen_quad_input_info[] = {
+	&origen_quad_keypad_key_info.info,
+};
+
+static struct gpio_event_platform_data origen_quad_input_data = {
+	.names  = {
+		"origen-keypad",
+		NULL,
+	},
+	.info           = origen_quad_input_info,
+	.info_count     = ARRAY_SIZE(origen_quad_input_info),
+};
+
+static struct platform_device origen_quad_input_device = {
+	.name   = GPIO_EVENT_DEV_NAME,
+	.id     = 0,
+	.dev    = {
+		.platform_data = &origen_quad_input_data,
 	},
 };
+
+static void __init origen_quad_gpio_power_init(void)
+{
+	int err = 0;
+
+	err = gpio_request_one(EXYNOS4_GPX2(7), 0, "GPX2");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX2 for "
+				"suspend/resume control\n");
+		return;
+	}
+	s3c_gpio_setpull(EXYNOS4_GPX2(7), S3C_GPIO_PULL_NONE);
+
+	gpio_free(EXYNOS4_GPX2(7));
+}
 
 static uint32_t origen_quad_keymap0[] __initdata = {
 	/* KEY(row, col, keycode) */
@@ -2385,16 +2416,15 @@ static struct matrix_keymap_data origen_quad_keymap_data0 __initdata = {
 
 static struct samsung_keypad_platdata origen_quad_keypad_data0 __initdata = {
 	.keymap_data	= &origen_quad_keymap_data0,
-	.rows		= 2,
-	.cols		= 5,
+	.rows		= 3,
+	.cols		= 2,
 };
 
 static uint32_t origen_quad_keymap1[] __initdata = {
 	/* KEY(row, col, keycode) */
-	KEY(1, 3, KEY_1), KEY(1, 4, KEY_2), KEY(1, 5, KEY_3),
-	KEY(1, 6, KEY_4), KEY(1, 7, KEY_5),
-	KEY(2, 5, KEY_D), KEY(2, 6, KEY_A), KEY(2, 7, KEY_B),
-	KEY(0, 7, KEY_E), KEY(0, 5, KEY_C)
+	KEY(0, 0, KEY_HOME), KEY(0, 1, KEY_DOWN),
+	KEY(1, 0, KEY_UP), KEY(1, 1, KEY_MENU),
+	KEY(2, 0, KEY_BACK), KEY(2, 1, KEY_SEARCH)
 };
 
 static struct matrix_keymap_data origen_quad_keymap_data1 __initdata = {
@@ -2405,7 +2435,7 @@ static struct matrix_keymap_data origen_quad_keymap_data1 __initdata = {
 static struct samsung_keypad_platdata origen_quad_keypad_data1 __initdata = {
 	.keymap_data	= &origen_quad_keymap_data1,
 	.rows		= 3,
-	.cols		= 8,
+	.cols		= 2,
 };
 
 #ifdef CONFIG_VIDEO_FIMG2D
@@ -2677,7 +2707,7 @@ static struct platform_device *origen_quad_devices[] __initdata = {
 #ifdef CONFIG_EXYNOS_C2C
 	&exynos_device_c2c,
 #endif
-	&origen_quad_gpio_keys,
+	&origen_quad_input_device,
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	&exynos_device_spi0,
 #ifndef CONFIG_FB_S5P_LMS501KF03
@@ -3715,6 +3745,8 @@ static void __init origen_quad_machine_init(void)
 #endif
 
 	exynos_sysmmu_init();
+
+	origen_quad_gpio_power_init();
 
 	platform_add_devices(origen_quad_devices, ARRAY_SIZE(origen_quad_devices));
 	if (soc_is_exynos4412())
