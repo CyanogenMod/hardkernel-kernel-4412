@@ -3425,6 +3425,19 @@ err_clk:
 	return ret;
 }
 
+static int origen_quad_uhostphy_reset(void)
+{
+	int err;
+	err = gpio_request(EXYNOS4_GPX3(5), "GPX3");
+	if (!err) {
+		s3c_gpio_setpull(EXYNOS4_GPX3(5), S3C_GPIO_PULL_UP);
+		gpio_direction_output(EXYNOS4_GPX3(5), 1);
+		gpio_set_value(EXYNOS4_GPX3(5), 1);
+		gpio_free(EXYNOS4_GPX3(5));
+	}
+	return 0;
+}
+
 static void __init origen_quad_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -3476,6 +3489,8 @@ static void __init origen_quad_machine_init(void)
 	s3c_i2c5_set_platdata(NULL);
 
 	s3c_i2c7_set_platdata(NULL);
+
+	origen_quad_uhostphy_reset();
 
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
 	mipi_fb_init();
