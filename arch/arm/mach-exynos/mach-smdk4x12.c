@@ -3130,10 +3130,17 @@ struct tmu_data exynos_tmu_data __initdata = {
 		.stop_warning  = 102,
 		.start_warning = 105,
 		.start_tripping = 110, /* temp to do tripping */
+		.stop_tc = 13,
+		.start_tc = 10,
 	},
 	.cpulimit = {
 		.throttle_freq = 800000,
 		.warning_freq = 200000,
+	},
+	.temp_compensate = {
+		.arm_volt = 925000, /* vdd_arm in uV for temperature compensation */
+		.bus_volt = 900000, /* vdd_bus in uV for temperature compensation */
+		.g3d_volt = 900000, /* vdd_g3d in uV for temperature compensation */
 	},
 	.efuse_value = 55,
 	.slope = 0x10008802,
