@@ -33,12 +33,14 @@
 #include <mach/busfreq_exynos4.h>
 #include <mach/dev.h>
 #endif
+#include <mach/smc.h>
 
 #include <plat/cpu.h>
 
 static DEFINE_MUTEX(tmu_lock);
 
 unsigned int already_limit;
+unsigned int auto_refresh_changed;
 static struct workqueue_struct  *tmu_monitor_wq;
 
 static void tmu_tripped_cb(void)
@@ -375,12 +377,15 @@ static void print_temperature_params(struct tmu_info *info)
 		"Throttling stop_temp  = %d  start_temp     = %d\n"
 		"Waring stop_temp      = %d start_tmep     = %d\n"
 		"Tripping temp         = %d\n"
+		"Mem throttle stop_temp= %d, start_temp     = %d\n"
 		"Trhottling freq = %d   Warning freq = %d\n",
 		data->ts.stop_throttle,
 		data->ts.start_throttle,
 		data->ts.stop_warning,
 		data->ts.start_warning,
 		data->ts.start_tripping,
+		data->ts.stop_mem_throttle,
+		data->ts.start_mem_throttle,
 		data->cpulimit.throttle_freq,
 		data->cpulimit.warning_freq);
 #if defined(CONFIG_TC_VOLTAGE)
@@ -400,9 +405,57 @@ static void cur_temp_monitor(struct work_struct *work)
 	cur_temp = get_cur_temp(info);
 	pr_info("current temp = %d\n", cur_temp);
 	queue_delayed_work_on(0, tmu_monitor_wq, &info->monitor,
-			secs_to_jiffies(200 * 1000));
+			usecs_to_jiffies(200 * 1000));
 }
 #endif
+
+
+unsigned int get_refresh_interval(unsigned int freq_ref,
+					unsigned int refresh_nsec)
+{
+	unsigned int uRlk, refresh = 0;
+
+	/*
+	 * uRlk = FIN / 100000;
+	 * refresh_usec =  (unsigned int)(fMicrosec * 10);
+	 * uRegVal = ((unsigned int)(uRlk * uMicroSec / 100)) - 1;
+	 * refresh =
+	 * (unsigned int)(freq_ref * (unsigned int)(refresh_usec * 10) /
+	 * 100) - 1;
+	*/
+	uRlk = freq_ref / 1000000;
+	refresh = ((unsigned int)(uRlk * refresh_nsec / 1000));
+
+	pr_info("@@@ get_refresh_interval = 0x%02x\n", refresh);
+	return refresh;
+}
+
+void set_refresh_rate(unsigned int auto_refresh)
+{
+	/*
+	 * uRlk = FIN / 100000;
+	 * refresh_usec =  (unsigned int)(fMicrosec * 10);
+	 * uRegVal = ((unsigned int)(uRlk * uMicroSec / 100)) - 1;
+	*/
+	pr_debug("@@@ set_auto_refresh = 0x%02x\n", auto_refresh);
+
+#ifdef CONFIG_ARCH_EXYNOS4
+#ifdef CONFIG_ARM_TRUSTZONE
+	exynos_smc(SMC_CMD_REG,
+		SMC_REG_ID_SFR_W((EXYNOS4_PA_DMC0_4212 + TIMING_AREF_OFFSET)),
+		auto_refresh, 0);
+	exynos_smc(SMC_CMD_REG,
+		SMC_REG_ID_SFR_W((EXYNOS4_PA_DMC1_4212 + TIMING_AREF_OFFSET)),
+		auto_refresh, 0);
+#else
+	/* change auto refresh period in TIMING_AREF register of dmc0  */
+	__raw_writel(auto_refresh, S5P_VA_DMC0 + TIMING_AREF_OFFSET);
+
+	/* change auto refresh period in TIMING_AREF regisger of dmc1 */
+	__raw_writel(auto_refresh, S5P_VA_DMC1 + TIMING_AREF_OFFSET);
+#endif
+#endif	/* CONFIG_ARCH_EXYNOS4 */
+}
 
 #if defined(CONFIG_TC_VOLTAGE)
 /**
@@ -474,7 +527,6 @@ static void tmu_monitor(struct work_struct *work)
 		container_of(delayed_work, struct tmu_info, polling);
 	struct tmu_data *data = info->dev->platform_data;
 	int cur_temp;
-	unsigned int gpu_status;
 
 	cur_temp = get_cur_temp(info);
 #ifdef CONFIG_TMU_DEBUG
@@ -557,6 +609,20 @@ static void tmu_monitor(struct work_struct *work)
 	default:
 	    break;
 	}
+
+	/* memory throttling */
+	if (cur_temp >= data->ts.start_mem_throttle
+				&& !(auto_refresh_changed)) {
+			pr_info("set auto_refresh 1.95us\n");
+			set_refresh_rate(info->auto_refresh_tq0);
+			auto_refresh_changed = 1;
+	} else if (cur_temp <= (data->ts.stop_mem_throttle)
+				&& (auto_refresh_changed)) {
+			pr_info("set auto_refresh 3.9us\n");
+			set_refresh_rate(info->auto_refresh_normal);
+			auto_refresh_changed = 0;
+	}
+
 	return;
 }
 
@@ -717,6 +783,12 @@ static int exynos_tmu_init(struct tmu_info *info)
 				&info->throttle_freq);
 	exynos_cpufreq_get_level(data->cpulimit.warning_freq,
 				&info->warning_freq);
+	/* Map auto_refresh_rate of normal & tq0 mode */
+	info->auto_refresh_tq0 =
+		get_refresh_interval(FREQ_IN_PLL, AUTO_REFRESH_PERIOD_TQ0);
+	info->auto_refresh_normal =
+		get_refresh_interval(FREQ_IN_PLL, AUTO_REFRESH_PERIOD_NORMAL);
+
 
 #if defined(CONFIG_TC_VOLTAGE) /* Temperature compensated voltage */
 	if (exynos_find_cpufreq_level_by_volt(data->temp_compensate.arm_volt,

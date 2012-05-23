@@ -20,6 +20,11 @@
 #define EFUSE_MAX_VALUE 100
 #define UNUSED_THRESHOLD 0xFF
 
+#define FREQ_IN_PLL       24000000  /* 24MHZ in Hz */
+#define AUTO_REFRESH_PERIOD_TQ0    1950
+#define AUTO_REFRESH_PERIOD_NORMAL 3900
+#define TIMING_AREF_OFFSET 0x30
+
 #if defined(CONFIG_CPU_EXYNOS4212) || defined(CONFIG_CPU_EXYNOS4412)
 #define CONFIG_TC_VOLTAGE /* Temperature compensated voltage */
 #endif
@@ -39,6 +44,8 @@ struct temperature_params {
 	unsigned int stop_warning;
 	unsigned int start_warning;
 	unsigned int start_tripping; /* temp to do tripping */
+	unsigned int stop_mem_throttle;
+	unsigned int start_mem_throttle;
 #if defined(CONFIG_TC_VOLTAGE)
 	int stop_tc;	/* temperature compensation for sram */
 	int start_tc;
@@ -58,9 +65,15 @@ struct temp_compensate_params {
 };
 #endif
 
+struct memory_params {
+	unsigned int rclk;
+	unsigned int period_bank_refresh;
+};
+
 struct tmu_data {
 	struct temperature_params ts;
 	struct cpufreq_params cpulimit;
+	struct memory_params mp;
 	unsigned int efuse_value;
 	unsigned int slope;
 	int mode;
@@ -82,6 +95,9 @@ struct tmu_info {
 
 	unsigned int throttle_freq;
 	unsigned int warning_freq;
+	/* memory refresh timing compensation */
+	unsigned int auto_refresh_tq0;
+	unsigned int auto_refresh_normal;
 
 	/* temperature compensation */
 	unsigned int cpulevel_tc;
