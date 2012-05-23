@@ -25,23 +25,16 @@
 #include <linux/irq.h>
 #include <linux/slab.h>
 
-#include <linux/irq.h>
-
 #include <mach/regs-tmu.h>
 #include <mach/cpufreq.h>
 #include <mach/tmu.h>
+#include <mach/asv.h>
+#ifdef CONFIG_BUSFREQ_OPP
+#include <mach/busfreq_exynos4.h>
+#include <mach/dev.h>
+#endif
 
 #include <plat/cpu.h>
-
-#define MUX_ADDR_VALUE 6
-
-enum tmu_status_t {
-	TMU_STATUS_INIT = 0,
-	TMU_STATUS_NORMAL,
-	TMU_STATUS_THROTTLED,
-	TMU_STATUS_WARNING,
-	TMU_STATUS_TRIPPED,
-};
 
 static DEFINE_MUTEX(tmu_lock);
 
@@ -54,7 +47,7 @@ static void tmu_tripped_cb(void)
 
 static int get_cur_temp(struct tmu_info *info)
 {
-	unsigned char curr_temp;
+	int curr_temp;
 	int temperature;
 
 	/* After reading temperature code from register, compensating
@@ -65,9 +58,10 @@ static int get_cur_temp(struct tmu_info *info)
 
 	/* compensate and calculate current temperature */
 	temperature = curr_temp - info->te1 + TMU_DC_VALUE;
-	if (temperature <= 0) {
-		/* temperature code range are between min 25 and 125 */
-		pr_err("%s: Current temperature is unreasonable\n", __func__);
+	if (temperature < 10) {
+		/* temperature code range are between min 10 and 125 */
+		pr_alert("Current temperature is in inaccurate range->"
+			" check if vdd_18_ts is on or room temperature.\n");
 	}
 
 	return temperature;
@@ -78,7 +72,7 @@ static ssize_t show_temperature(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct tmu_info *info = dev_get_drvdata(dev);
-	unsigned char temperature;
+	int temperature;
 
 	if (!dev)
 		return -ENODEV;
@@ -377,10 +371,10 @@ static void print_temperature_params(struct tmu_info *info)
 	struct tmu_data *data = info->dev->platform_data;
 
 	pr_info("** temperature set value **\n"
-		"Throttling stop_temp  = %d, start_temp     = %d\n"
-		"Waring stop_temp      = %d, start_tmep     = %d\n"
+		"Throttling stop_temp  = %d  start_temp     = %d\n"
+		"Waring stop_temp      = %d start_tmep     = %d\n"
 		"Tripping temp         = %d\n"
-		"Trhottling freq = %d,  Warning freq = %d\n",
+		"Trhottling freq = %d   Warning freq = %d\n",
 		data->ts.stop_throttle,
 		data->ts.start_throttle,
 		data->ts.stop_warning,
@@ -388,12 +382,16 @@ static void print_temperature_params(struct tmu_info *info)
 		data->ts.start_tripping,
 		data->cpulimit.throttle_freq,
 		data->cpulimit.warning_freq);
+#if defined(CONFIG_TC_VOLTAGE)
+	pr_info("TC_voltage stop_temp = %d  Start_temp = %d\n",
+		data->ts.stop_tc, data->ts.start_tc);
+#endif
 }
 
 #ifdef CONFIG_TMU_DEBUG
 static void cur_temp_monitor(struct work_struct *work)
 {
-	char cur_temp;
+	int cur_temp;
 	struct delayed_work *delayed_work = to_delayed_work(work);
 	struct tmu_info *info =
 		 container_of(delayed_work, struct tmu_info, monitor);
@@ -401,7 +399,70 @@ static void cur_temp_monitor(struct work_struct *work)
 	cur_temp = get_cur_temp(info);
 	pr_info("current temp = %d\n", cur_temp);
 	queue_delayed_work_on(0, tmu_monitor_wq, &info->monitor,
-			usecs_to_jiffies(200 * 1000));
+			secs_to_jiffies(200 * 1000));
+}
+#endif
+
+#if defined(CONFIG_TC_VOLTAGE)
+/**
+ * exynos_tc_volt - locks or frees vdd_arm, vdd_mif/int and vdd_g3d for
+ * temperature compensation.
+ *
+ * This function limits or free voltage of cpufreq, busfreq, and mali driver
+ * according to 2nd arguments.
+ */
+static int exynos_tc_volt(struct tmu_info *info, int enable)
+{
+	struct tmu_data *data = info->dev->platform_data;
+	static int usage;
+	int ret = 0;
+
+	if (!info)
+		return -EPERM;
+
+	if (enable == usage) {
+		pr_debug("TMU: already is %s.\n",
+			enable ? "locked" : "unlocked");
+		return 0;
+	}
+
+	if (enable) {
+		ret = exynos_cpufreq_lock(DVFS_LOCK_ID_TMU, info->cpulevel_tc);
+		if (ret)
+			goto err_lock;
+#ifdef CONFIG_BUSFREQ_OPP
+		ret = dev_lock(info->bus_dev, info->dev, info->busfreq_tc);
+		if (ret)
+			goto err_lock;
+#endif
+		ret = mali_voltage_lock_push(data->temp_compensate.g3d_volt);
+		if (ret < 0) {
+			pr_err("TMU: g3d_push error: %u uV\n",
+				data->temp_compensate.g3d_volt);
+			goto err_lock;
+		}
+		pr_info("Lock for TC is sucessful..\n");
+	} else {
+		exynos_cpufreq_lock_free(DVFS_LOCK_ID_TMU);
+#ifdef CONFIG_BUSFREQ_OPP
+		ret = dev_unlock(info->bus_dev, info->dev);
+		if (ret)
+			goto err_unlock;
+#endif
+		ret = mali_voltage_lock_pop();
+		if (ret < 0) {
+			pr_err("TMU: g3d_pop error\n");
+			goto err_unlock;
+		}
+		pr_info("Unlock for TC is sucessful..\n");
+	}
+	usage = enable;
+	return ret;
+
+err_lock:
+err_unlock:
+	pr_err("TMU: %s is fail.\n", enable ? "Lock" : "Unlock");
+	return ret;
 }
 #endif
 
@@ -411,16 +472,34 @@ static void tmu_monitor(struct work_struct *work)
 	struct tmu_info *info =
 		container_of(delayed_work, struct tmu_info, polling);
 	struct tmu_data *data = info->dev->platform_data;
-	char cur_temp;
+	int cur_temp;
+	unsigned int gpu_status;
 
+	cur_temp = get_cur_temp(info);
 #ifdef CONFIG_TMU_DEBUG
 	cancel_delayed_work(&info->monitor);
-#endif
-	cur_temp = get_cur_temp(info);
 	pr_info("Current: %dc, FLAG=%d\n",
 			cur_temp, info->tmu_state);
-
+#endif
 	switch (info->tmu_state) {
+#if defined(CONFIG_TC_VOLTAGE)
+	case TMU_STATUS_TC:
+		if (cur_temp >= data->ts.stop_tc) {
+			__raw_writel(INTCLEAR_FALL0, info->tmu_base + INTCLEAR);
+			if (exynos_tc_volt(info, 0) < 0)
+				pr_err("%s\n", __func__);
+			info->tmu_state = TMU_STATUS_NORMAL;
+			already_limit = 0;
+			pr_info("TC limit is released!!\n");
+		} else if (cur_temp <= data->ts.start_tc && !already_limit) {
+			if (exynos_tc_volt(info, 1) < 0)
+				pr_err("%s\n", __func__);
+			already_limit = 1;
+		}
+		queue_delayed_work_on(0, tmu_monitor_wq,
+				&info->polling, usecs_to_jiffies(200 * 1000));
+		break;
+#endif
 	case TMU_STATUS_NORMAL:
 #ifdef CONFIG_TMU_DEBUG
 		queue_delayed_work_on(0, tmu_monitor_wq, &info->monitor,
@@ -429,6 +508,7 @@ static void tmu_monitor(struct work_struct *work)
 		cancel_delayed_work(&info->polling);
 		enable_irq(info->irq);
 		break;
+
 	case TMU_STATUS_THROTTLED:
 		if (cur_temp >= data->ts.start_warning) {
 			info->tmu_state = TMU_STATUS_WARNING;
@@ -447,8 +527,9 @@ static void tmu_monitor(struct work_struct *work)
 			already_limit = 0;
 		}
 		queue_delayed_work_on(0, tmu_monitor_wq,
-		&info->polling, usecs_to_jiffies(200 * 1000));
+				&info->polling, usecs_to_jiffies(200 * 1000));
 		break;
+
 	case TMU_STATUS_WARNING:
 		if (cur_temp >= data->ts.start_tripping) {
 			info->tmu_state = TMU_STATUS_TRIPPED;
@@ -467,6 +548,7 @@ static void tmu_monitor(struct work_struct *work)
 		queue_delayed_work_on(0, tmu_monitor_wq,
 				&info->polling, usecs_to_jiffies(200 * 1000));
 		break;
+
 	case TMU_STATUS_TRIPPED:
 		tmu_tripped_cb();
 		queue_delayed_work_on(0, tmu_monitor_wq,
@@ -492,27 +574,36 @@ static void pm_tmu_save(struct tmu_info *info)
 		info->reg_save[7] = __raw_readl(info->tmu_base + TRIG_LEV1);
 		info->reg_save[8] = __raw_readl(info->tmu_base + TRIG_LEV2);
 		info->reg_save[9] = __raw_readl(info->tmu_base + TRIG_LEV3);
-	} else
+	} else {
 		info->reg_save[5] = __raw_readl(info->tmu_base + THD_TEMP_RISE);
+#if defined(CONFIG_TC_VOLTAGE)
+		info->reg_save[6] = __raw_readl(info->tmu_base
+					+ THD_TEMP_FALL);
+#endif
+	}
 }
 
 static void pm_tmu_restore(struct tmu_info *info)
 {
-	__raw_writel(info->reg_save[0], info->tmu_base + TMU_CON);
-	__raw_writel(info->reg_save[1], info->tmu_base + SAMPLING_INTERNAL);
-	__raw_writel(info->reg_save[2], info->tmu_base + CNT_VALUE0);
-	__raw_writel(info->reg_save[3], info->tmu_base + CNT_VALUE1);
-	__raw_writel(info->reg_save[4], info->tmu_base + INTEN);
-
 	if (soc_is_exynos4210()) {
+		__raw_writel(info->reg_save[9], info->tmu_base + TRIG_LEV3);
+		__raw_writel(info->reg_save[8], info->tmu_base + TRIG_LEV2);
+		__raw_writel(info->reg_save[7], info->tmu_base + TRIG_LEV1);
+		__raw_writel(info->reg_save[6], info->tmu_base + TRIG_LEV0);
 		__raw_writel(info->reg_save[5], info->tmu_base	\
 						+ THRESHOLD_TEMP);
-		__raw_writel(info->reg_save[6], info->tmu_base + TRIG_LEV0);
-		__raw_writel(info->reg_save[7], info->tmu_base + TRIG_LEV1);
-		__raw_writel(info->reg_save[8], info->tmu_base + TRIG_LEV2);
-		__raw_writel(info->reg_save[9], info->tmu_base + TRIG_LEV3);
-	} else
+	} else {
+#if defined(CONFIG_TC_VOLTAGE)
+		 __raw_writel(info->reg_save[6], info->tmu_base \
+						+ THD_TEMP_FALL);
+#endif
 		__raw_writel(info->reg_save[5], info->tmu_base + THD_TEMP_RISE);
+	}
+	__raw_writel(info->reg_save[4], info->tmu_base + INTEN);
+	__raw_writel(info->reg_save[3], info->tmu_base + CNT_VALUE1);
+	__raw_writel(info->reg_save[2], info->tmu_base + CNT_VALUE0);
+	__raw_writel(info->reg_save[0], info->tmu_base + TMU_CON);
+	__raw_writel(info->reg_save[1], info->tmu_base + SAMPLING_INTERNAL);
 }
 
 static int exynos4210_tmu_init(struct tmu_info *info)
@@ -567,6 +658,10 @@ static int exynos4210_tmu_init(struct tmu_info *info)
 	con |= (data->slope | CORE_EN);
 	__raw_writel(con, info->tmu_base + TMU_CON);
 
+	/* Because temperature sensing time is appro 940us,
+	* tmu is enabled and 1st valid sample can get 1ms after.
+	*/
+	mdelay(1);
 	__raw_writel(INTEN0 | INTEN1 | INTEN2, info->tmu_base + INTEN);
 
 	return 0;
@@ -591,7 +686,7 @@ static int exynos_tmu_init(struct tmu_info *info)
 		||  (info->te2 != 0))
 		info->te1 = data->efuse_value;
 
-	/*Get RISING & FALLING Threshold value */
+	/*Get rising Threshold and Set interrupt level*/
 	temp_throttle = data->ts.start_throttle
 			+ info->te1 - TMU_DC_VALUE;
 	temp_warning = data->ts.start_warning
@@ -600,10 +695,17 @@ static int exynos_tmu_init(struct tmu_info *info)
 			+ info->te1 - TMU_DC_VALUE;
 
 	rising_thr = (temp_throttle | (temp_warning<<8) | \
-		(temp_trip<<16));
+		(temp_trip<<16) | (UNUSED_THRESHOLD<<24));
 
-	/* Set interrupt level */
 	__raw_writel(rising_thr, info->tmu_base + THD_TEMP_RISE);
+
+#if defined(CONFIG_TC_VOLTAGE)
+	/* Get set temperature for tc_voltage and set falling interrupt
+	 * trigger level
+	*/
+	cooling_thr = data->ts.start_tc
+			+ info->te1 - TMU_DC_VALUE;
+#endif
 	__raw_writel(cooling_thr, info->tmu_base + THD_TEMP_FALL);
 
 	/* Set TMU status */
@@ -615,6 +717,33 @@ static int exynos_tmu_init(struct tmu_info *info)
 	exynos_cpufreq_get_level(data->cpulimit.warning_freq,
 				&info->warning_freq);
 
+#if defined(CONFIG_TC_VOLTAGE) /* Temperature compensated voltage */
+	if (exynos_find_cpufreq_level_by_volt(data->temp_compensate.arm_volt,
+		&info->cpulevel_tc) < 0) {
+		pr_err("cpufreq_get_level error\n");
+		return  -EINVAL;
+	}
+#ifdef CONFIG_BUSFREQ_OPP
+	/* To lock bus frequency in OPP mode */
+	info->bus_dev = dev_get("exynos-busfreq");
+	if (info->bus_dev < 0) {
+		pr_err("Failed to get_dev\n");
+		return -EINVAL;
+	}
+	if (exynos4x12_find_busfreq_by_volt(data->temp_compensate.bus_volt,
+		&info->busfreq_tc)) {
+		pr_err("get_busfreq_value error\n");
+		return -EINVAL;
+	}
+#endif
+	if (mali_voltage_lock_init()) {
+		pr_err("Failed to initialize mail voltage lock.\n");
+		return -EINVAL;
+	}
+
+	pr_info("%s: cpufreq_level[%d], busfreq_value[%d]\n",
+		 __func__, info->cpulevel_tc, info->busfreq_tc);
+#endif
 	/* Need to initail regsiter setting after getting parameter info */
 	/* [28:23] vref [11:8] slope - Tunning parameter */
 	__raw_writel(data->slope, info->tmu_base + TMU_CON);
@@ -628,12 +757,35 @@ static int exynos_tmu_init(struct tmu_info *info)
 
 	__raw_writel(con, info->tmu_base + TMU_CON);
 
+	/* Because temperature sensing time is appro 940us,
+	* tmu is enabled and 1st valid sample can get 1ms after.
+	*/
+	mdelay(1);
+
 	/*LEV0 LEV1 LEV2 interrupt enable */
 	__raw_writel(INTEN_RISE0 | INTEN_RISE1 | INTEN_RISE2,	\
 		     info->tmu_base + INTEN);
 
-	pr_info("TMU is initialized!!");
+#if defined(CONFIG_TC_VOLTAGE)
+	te_temp = __raw_readl(info->tmu_base + INTEN);
+	te_temp |= INTEN_FALL0;
+	__raw_writel(te_temp, info->tmu_base + INTEN);
 
+	/* s/w workaround for fast service when interrupt is not occured,
+	* such as current temp is lower than tc interrupt temperature
+	* or current temp is continuosly increased.
+	*/
+	if (get_cur_temp(info) <= data->ts.start_tc) {
+		disable_irq_nosync(info->irq);
+		if (exynos_tc_volt(info, 1) < 0)
+			pr_err("%s\n", __func__);
+
+		info->tmu_state = TMU_STATUS_TC;
+		already_limit = 1;
+		queue_delayed_work_on(0, tmu_monitor_wq,
+				&info->polling, usecs_to_jiffies(1 * 1000));
+}
+#endif
 	return 0;
 }
 
@@ -667,23 +819,37 @@ static irqreturn_t tmu_irq(int irq, void *id)
 
 	status = __raw_readl(info->tmu_base + INTSTAT);
 
+	/* To handle multiple interrupt pending,
+	* interrupt by high temperature are serviced with priority.
+	*/
+
+#if defined(CONFIG_TC_VOLTAGE)
+	if (status & INTSTAT_FALL0) {
+		pr_info("TC interrupt occured..!\n");
+		__raw_writel(INTCLEAR_FALL0, info->tmu_base + INTCLEAR);
+		info->tmu_state = TMU_STATUS_TC;
+		queue_delayed_work_on(0, tmu_monitor_wq,
+				&info->polling, usecs_to_jiffies(1 * 1000));
+	} else if (status & INTSTAT_RISE2) {
+#else
 	if (status & INTSTAT_RISE2) {
-		pr_info("Tripping interrupt occured!!!!\n");
+#endif
+		pr_info("Tripping interrupt occured..!\n");
 		info->tmu_state = TMU_STATUS_TRIPPED;
 		__raw_writel(INTCLEAR_RISE2, info->tmu_base + INTCLEAR);
 		tmu_tripped_cb();
 	} else if (status & INTSTAT_RISE1) {
-		pr_info("Warning interrupt occured!!!!\n");
+		pr_info("Warning interrupt occured..!\n");
 		__raw_writel(INTCLEAR_RISE1, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_WARNING;
 		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(200 * 1000));
+				&info->polling, usecs_to_jiffies(1 * 1000));
 	} else if (status & INTSTAT_RISE0) {
-		pr_info("Throttling interrupt occured!!!!\n");
+		pr_info("Throttling interrupt occured..!\n");
 		__raw_writel(INTCLEAR_RISE0, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_THROTTLED;
 		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(200 * 1000));
+				&info->polling, usecs_to_jiffies(1 * 1000));
 	} else {
 		pr_err("%s: TMU interrupt error\n", __func__);
 		return -ENODEV;
@@ -702,22 +868,22 @@ static irqreturn_t exynos4210_tmu_irq(int irq, void *id)
 	status = __raw_readl(info->tmu_base + INTSTAT);
 
 	if (status & INTSTAT2) {
-		pr_info("Tripping interrupt occured!!!!\n");
+		pr_info("Tripping interrupt occured..!\n");
 		info->tmu_state = TMU_STATUS_TRIPPED;
 		__raw_writel(INTCLEAR2, info->tmu_base + INTCLEAR);
 		tmu_tripped_cb();
 	} else if (status & INTSTAT1) {
-		pr_info("Warning interrupt occured!!!!\n");
+		pr_info("Warning interrupt occured..!\n");
 		__raw_writel(INTCLEAR1, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_WARNING;
 		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(500 * 1000));
+				&info->polling, usecs_to_jiffies(1 * 1000));
 	} else if (status & INTSTAT0) {
-		pr_info("Throttling interrupt occured!!!!\n");
+		pr_info("Throttling interrupt occured..!\n");
 		__raw_writel(INTCLEAR0, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_THROTTLED;
 		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(500 * 1000));
+				&info->polling, usecs_to_jiffies(1 * 1000));
 	} else {
 		pr_err("%s: TMU interrupt error\n", __func__);
 		return -ENODEV;
@@ -787,23 +953,23 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 
 	tmu_monitor_wq = create_freezable_workqueue("tmu");
 	if (!tmu_monitor_wq) {
-		pr_info("Creation of tmu_monitor_wq failed\n");
+		dev_err(&pdev->dev, "Creation of tmu_monitor_wq failed\n");
 		ret = -EFAULT;
 		goto err_wq;
 	}
+	INIT_DELAYED_WORK_DEFERRABLE(&info->polling, tmu_monitor);
+
+	print_temperature_params(info);
+	ret = tmu_initialize(pdev);
+	if (ret < 0)
+		goto err_noinit;
 
 #ifdef CONFIG_TMU_DEBUG
 	INIT_DELAYED_WORK_DEFERRABLE(&info->monitor, cur_temp_monitor);
 	queue_delayed_work_on(0, tmu_monitor_wq, &info->monitor,
 			usecs_to_jiffies(200 * 1000));
 #endif
-	INIT_DELAYED_WORK_DEFERRABLE(&info->polling, tmu_monitor);
-
-	print_temperature_params(info);
-	ret = tmu_initialize(pdev);
-	if (ret)
-		goto err_noinit;
-
+	pr_info("Tmu Initialization is sucessful...!\n");
 	return ret;
 
 err_noinit:
@@ -828,8 +994,18 @@ static int __devinit tmu_remove(struct platform_device *pdev)
 {
 	struct tmu_info *info = platform_get_drvdata(pdev);
 
-	free_irq(info->irq, (void *)pdev);
+	cancel_delayed_work(&info->polling);
+	destroy_workqueue(tmu_monitor_wq);
+
+	thermal_remove_sysfs_file(&pdev->dev);
+
 	iounmap(info->tmu_base);
+	release_resource(info->ioarea);
+
+	free_irq(info->irq, (void *)pdev);
+
+	kfree(info);
+	info = NULL;
 
 	pr_info("%s is removed\n", dev_name(&pdev->dev));
 	return 0;
@@ -847,8 +1023,28 @@ static int tmu_suspend(struct platform_device *pdev, pm_message_t state)
 static int tmu_resume(struct platform_device *pdev)
 {
 	struct tmu_info *info = platform_get_drvdata(pdev);
+#if defined(CONFIG_TC_VOLTAGE)
+	struct tmu_data *data = info->dev->platform_data;
+#endif
 	pm_tmu_restore(info);
 
+#if defined(CONFIG_TC_VOLTAGE)
+	/* s/w workaround for fast service when interrupt is not occured,
+	* such as current temp is lower than tc interrupt temperature
+	* or current temp is continuosly increased.
+	*/
+	mdelay(1);
+	if (get_cur_temp(info) <= data->ts.start_tc) {
+		disable_irq_nosync(info->irq);
+		if (exynos_tc_volt(info, 1) < 0)
+			pr_err("%s\n", __func__);
+
+		info->tmu_state = TMU_STATUS_TC;
+		already_limit = 1;
+		queue_delayed_work_on(0, tmu_monitor_wq,
+				&info->polling, usecs_to_jiffies(1 * 1000));
+	}
+#endif
 	return 0;
 }
 
