@@ -441,7 +441,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, data);
 
-	queue_delayed_work(system_freezable_wq, &data->worker, data->sampling_rate);
+	queue_delayed_work(system_freezable_wq, &data->worker, 10 * data->sampling_rate);
 	return 0;
 
 err_pm_notifier:

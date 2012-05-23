@@ -85,4 +85,5 @@ void exynos4x12_prepare(unsigned int index);
 void exynos4x12_post(unsigned int index);
 void exynos4x12_suspend(void);
 void exynos4x12_resume(void);
+int exynos4x12_find_busfreq_by_volt(unsigned int req_volt, unsigned int *freq);
 #endif /* __ASM_ARCH_BUSFREQ_H */

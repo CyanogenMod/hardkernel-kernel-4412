@@ -547,6 +547,40 @@ void exynos4x12_resume(void)
 	__raw_writel(dmc_pause_ctrl, EXYNOS4_DMC_PAUSE_CTRL);
 }
 
+/**
+ * exynos4x12_find_busfreq_by_volt - find busfreq by requested
+ * voltage.
+ *
+ * This function finds the busfreq to set for voltage above req_volt
+ * and return its value.
+ */
+int exynos4x12_find_busfreq_by_volt(unsigned int req_volt, unsigned int *freq)
+{
+	unsigned int volt_cmp;
+	int i;
+
+	/* check if req_volt has value or not */
+	if (!req_volt) {
+		pr_err("%s: req_volt has no value.\n", __func__);
+		return -EINVAL;
+	}
+
+	/* find busfreq level in busfreq_table */
+	for (i = LV_END - 1; i >= 0; i--) {
+		volt_cmp = min(exynos4_int_volt[asv_group_index][i],
+				exynos4_mif_volt[asv_group_index][i]);
+
+		if (volt_cmp >= req_volt) {
+			*freq = exynos4_busfreq_table[i].mem_clk;
+			return 0;
+		}
+	}
+	pr_err("%s: %u volt can't support\n", __func__, req_volt);
+
+	return -EINVAL;
+}
+EXPORT_SYMBOL_GPL(exynos4x12_find_busfreq_by_volt);
+
 unsigned int exynos4x12_get_int_volt(unsigned long index)
 {
 	return exynos4_int_volt[asv_group_index][index];
