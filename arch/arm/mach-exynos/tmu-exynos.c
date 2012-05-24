@@ -601,6 +601,7 @@ static void tmu_monitor(struct work_struct *work)
 	case TMU_STATUS_TRIPPED:
 		mutex_unlock(&tmu_lock);
 		tmu_tripped_cb();
+		return;
 	default:
 	    break;
 	}
