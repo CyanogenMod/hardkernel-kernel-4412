@@ -404,8 +404,8 @@ static void cur_temp_monitor(struct work_struct *work)
 
 	cur_temp = get_cur_temp(info);
 	pr_info("current temp = %d\n", cur_temp);
-	queue_delayed_work_on(0, tmu_monitor_wq, &info->monitor,
-			usecs_to_jiffies(200 * 1000));
+	queue_delayed_work_on(0, tmu_monitor_wq,
+			&info->monitor, info->sampling_rate);
 }
 #endif
 
@@ -534,11 +534,11 @@ static void tmu_monitor(struct work_struct *work)
 	pr_info("Current: %dc, FLAG=%d\n",
 			cur_temp, info->tmu_state);
 #endif
+	mutex_lock(&tmu_lock);
 	switch (info->tmu_state) {
 #if defined(CONFIG_TC_VOLTAGE)
 	case TMU_STATUS_TC:
 		if (cur_temp >= data->ts.stop_tc) {
-			__raw_writel(INTCLEAR_FALL0, info->tmu_base + INTCLEAR);
 			if (exynos_tc_volt(info, 0) < 0)
 				pr_err("%s\n", __func__);
 			info->tmu_state = TMU_STATUS_NORMAL;
@@ -549,18 +549,18 @@ static void tmu_monitor(struct work_struct *work)
 				pr_err("%s\n", __func__);
 			already_limit = 1;
 		}
-		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(200 * 1000));
 		break;
 #endif
 	case TMU_STATUS_NORMAL:
 #ifdef CONFIG_TMU_DEBUG
-		queue_delayed_work_on(0, tmu_monitor_wq, &info->monitor,
-		usecs_to_jiffies(200 * 1000));
+		queue_delayed_work_on(0, tmu_monitor_wq,
+				&info->monitor, info->sampling_rate);
 #endif
-		cancel_delayed_work(&info->polling);
+		__raw_writel((CLEAR_RISE_INT|CLEAR_FALL_INT),
+					info->tmu_base + INTCLEAR);
 		enable_irq(info->irq);
-		break;
+		mutex_unlock(&tmu_lock);
+		return;
 
 	case TMU_STATUS_THROTTLED:
 		if (cur_temp >= data->ts.start_warning) {
@@ -579,8 +579,6 @@ static void tmu_monitor(struct work_struct *work)
 			pr_info("Freq limit is released!!\n");
 			already_limit = 0;
 		}
-		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(200 * 1000));
 		break;
 
 	case TMU_STATUS_WARNING:
@@ -598,14 +596,11 @@ static void tmu_monitor(struct work_struct *work)
 			exynos_cpufreq_upper_limit_free(DVFS_LOCK_ID_TMU);
 			already_limit = 0;
 		}
-		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(200 * 1000));
 		break;
 
 	case TMU_STATUS_TRIPPED:
+		mutex_unlock(&tmu_lock);
 		tmu_tripped_cb();
-		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(3000 * 1000));
 	default:
 	    break;
 	}
@@ -622,6 +617,10 @@ static void tmu_monitor(struct work_struct *work)
 			set_refresh_rate(info->auto_refresh_normal);
 			auto_refresh_changed = 0;
 	}
+
+	queue_delayed_work_on(0, tmu_monitor_wq,
+			&info->polling, info->sampling_rate);
+	mutex_unlock(&tmu_lock);
 
 	return;
 }
@@ -789,6 +788,8 @@ static int exynos_tmu_init(struct tmu_info *info)
 	info->auto_refresh_normal =
 		get_refresh_interval(FREQ_IN_PLL, AUTO_REFRESH_PERIOD_NORMAL);
 
+	/* To poll current temp, set sampling rate */
+	info->sampling_rate  = usecs_to_jiffies(200 * 1000);
 
 #if defined(CONFIG_TC_VOLTAGE) /* Temperature compensated voltage */
 	if (exynos_find_cpufreq_level_by_volt(data->temp_compensate.arm_volt,
@@ -856,7 +857,7 @@ static int exynos_tmu_init(struct tmu_info *info)
 		info->tmu_state = TMU_STATUS_TC;
 		already_limit = 1;
 		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(1 * 1000));
+				&info->polling, usecs_to_jiffies(1000));
 }
 #endif
 	return 0;
@@ -901,8 +902,6 @@ static irqreturn_t tmu_irq(int irq, void *id)
 		pr_info("TC interrupt occured..!\n");
 		__raw_writel(INTCLEAR_FALL0, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_TC;
-		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(1 * 1000));
 	} else if (status & INTSTAT_RISE2) {
 #else
 	if (status & INTSTAT_RISE2) {
@@ -910,24 +909,21 @@ static irqreturn_t tmu_irq(int irq, void *id)
 		pr_info("Tripping interrupt occured..!\n");
 		info->tmu_state = TMU_STATUS_TRIPPED;
 		__raw_writel(INTCLEAR_RISE2, info->tmu_base + INTCLEAR);
-		tmu_tripped_cb();
 	} else if (status & INTSTAT_RISE1) {
 		pr_info("Warning interrupt occured..!\n");
 		__raw_writel(INTCLEAR_RISE1, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_WARNING;
-		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(1 * 1000));
 	} else if (status & INTSTAT_RISE0) {
 		pr_info("Throttling interrupt occured..!\n");
 		__raw_writel(INTCLEAR_RISE0, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_THROTTLED;
-		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(1 * 1000));
 	} else {
 		pr_err("%s: TMU interrupt error\n", __func__);
 		return -ENODEV;
 	}
 
+	queue_delayed_work_on(0, tmu_monitor_wq,
+			&info->polling, usecs_to_jiffies(1 * 1000));
 	return IRQ_HANDLED;
 }
 
@@ -944,24 +940,21 @@ static irqreturn_t exynos4210_tmu_irq(int irq, void *id)
 		pr_info("Tripping interrupt occured..!\n");
 		info->tmu_state = TMU_STATUS_TRIPPED;
 		__raw_writel(INTCLEAR2, info->tmu_base + INTCLEAR);
-		tmu_tripped_cb();
 	} else if (status & INTSTAT1) {
 		pr_info("Warning interrupt occured..!\n");
 		__raw_writel(INTCLEAR1, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_WARNING;
-		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(1 * 1000));
 	} else if (status & INTSTAT0) {
 		pr_info("Throttling interrupt occured..!\n");
 		__raw_writel(INTCLEAR0, info->tmu_base + INTCLEAR);
 		info->tmu_state = TMU_STATUS_THROTTLED;
-		queue_delayed_work_on(0, tmu_monitor_wq,
-				&info->polling, usecs_to_jiffies(1 * 1000));
 	} else {
 		pr_err("%s: TMU interrupt error\n", __func__);
 		return -ENODEV;
 	}
 
+	queue_delayed_work_on(0, tmu_monitor_wq,
+			&info->polling, usecs_to_jiffies(1000));
 	return IRQ_HANDLED;
 }
 
@@ -1031,6 +1024,9 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 		goto err_wq;
 	}
 	INIT_DELAYED_WORK_DEFERRABLE(&info->polling, tmu_monitor);
+#ifdef CONFIG_TMU_DEBUG
+	INIT_DELAYED_WORK_DEFERRABLE(&info->monitor, cur_temp_monitor);
+#endif
 
 	print_temperature_params(info);
 	ret = tmu_initialize(pdev);
@@ -1038,9 +1034,8 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 		goto err_noinit;
 
 #ifdef CONFIG_TMU_DEBUG
-	INIT_DELAYED_WORK_DEFERRABLE(&info->monitor, cur_temp_monitor);
-	queue_delayed_work_on(0, tmu_monitor_wq, &info->monitor,
-			usecs_to_jiffies(200 * 1000));
+	queue_delayed_work_on(0, tmu_monitor_wq,
+			&info->monitor, info->sampling_rate);
 #endif
 	pr_info("Tmu Initialization is sucessful...!\n");
 	return ret;

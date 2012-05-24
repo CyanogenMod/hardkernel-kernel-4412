@@ -98,6 +98,8 @@ struct tmu_info {
 	/* memory refresh timing compensation */
 	unsigned int auto_refresh_tq0;
 	unsigned int auto_refresh_normal;
+	/* monitoring rate */ 
+	unsigned int sampling_rate;
 
 	/* temperature compensation */
 	unsigned int cpulevel_tc;
