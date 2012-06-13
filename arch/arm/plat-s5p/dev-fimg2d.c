@@ -62,6 +62,9 @@ void __init s5p_fimg2d_set_platdata(struct fimg2d_platdata *pd)
 	if (!pd)
 		pd = &default_fimg2d_data;
 
+	if (samsung_rev() == EXYNOS4412_REV_2_0)
+		pd->clkrate = 221 * MHZ;	/* 220 Mhz */
+
 	npd = kmemdup(pd, sizeof(*pd), GFP_KERNEL);
 	if (!npd)
 		printk(KERN_ERR "no memory for fimg2d platform data\n");
