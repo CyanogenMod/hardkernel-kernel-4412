@@ -127,7 +127,10 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 		goto err_clk2;
 	}
 
-	ret = clk_set_rate(sclk, 800000000);
+	if ((soc_is_exynos4412()) && (samsung_rev() >= EXYNOS4412_REV_2_0))
+		ret = clk_set_rate(sclk, 880000000);
+	else
+		ret = clk_set_rate(sclk, 800000000);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to clk_set_rate of sclk for fimd\n");
 		goto err_clk2;

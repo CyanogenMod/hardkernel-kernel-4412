@@ -4174,8 +4174,12 @@ static void __init smdk4x12_machine_init(void)
 		platform_add_devices(smdk4412_devices, ARRAY_SIZE(smdk4412_devices));
 
 #ifdef CONFIG_FB_S3C
-	exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev, "mout_mpll_user",
-				800 * MHZ);
+	if (samsung_rev() >= EXYNOS4412_REV_2_0)
+		exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev,
+					"mout_mpll_user", 880 * MHZ);
+	else
+		exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev,
+					"mout_mpll_user", 800 * MHZ);
 #endif
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	sclk = clk_get(spi0_dev, "dout_spi0");
