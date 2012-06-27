@@ -237,6 +237,8 @@
 	(dev->is_p_region->parameter.isp.dma1_output.buffer_address = x)
 #define IS_ISP_SET_PARAM_DMA_OUTPUT1_NODIFY_DMA_DONE(dev, x) \
 	(dev->is_p_region->parameter.isp.dma1_output.notify_dma_done = x)
+#define IS_ISP_SET_PARAM_DMA_OUTPUT1_MASK(dev, x) \
+	(dev->is_p_region->parameter.isp.dma1_output.dma_out_mask = x)
 #define IS_ISP_SET_PARAM_DMA_OUTPUT1_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.dma1_output.err = x)
 
@@ -260,6 +262,8 @@
 		(dev->is_p_region->parameter.isp.dma2_output.buffer_address = x)
 #define IS_ISP_SET_PARAM_DMA_OUTPUT2_NODIFY_DMA_DONE(dev, x) \
 	(dev->is_p_region->parameter.isp.dma2_output.notify_dma_done = x)
+#define IS_ISP_SET_PARAM_DMA_OUTPUT2_MASK(dev, x) \
+	(dev->is_p_region->parameter.isp.dma2_output.dma_out_mask = x)
 #define IS_ISP_SET_PARAM_DMA_OUTPUT2_ERR(dev, x) \
 		(dev->is_p_region->parameter.isp.dma2_output.err = x)
 
@@ -1229,7 +1233,8 @@ struct param_dma_output {
 	u32	buffer_number;
 	u32	buffer_address;
 	u32	notify_dma_done;
-	u32	reserved[PARAMETER_MAX_MEMBER-11];
+	u32	dma_out_mask;
+	u32	reserved[PARAMETER_MAX_MEMBER-12];
 	u32	err;
 };
 
