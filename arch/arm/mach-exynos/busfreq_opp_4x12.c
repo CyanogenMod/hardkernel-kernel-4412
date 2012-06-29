@@ -151,10 +151,6 @@ static unsigned int exynos4412_int_volt[ASV_GROUP][LV_END] = {
 	{1025000,  975000,  975000, 887500, 887500, 850000, 850000}, /* RESERVED */
 };
 
-static unsigned int exynos4x12_timingrow[LV_END] = {
-	0x34498691, 0x34498691, 0x24488490, 0x24488490, 0x154882D0, 0x154882D0, 0x0D488210
-};
-
 static unsigned int clkdiv_dmc0[LV_END][6] = {
 	/*
 	 * Clock divider value for following
@@ -489,52 +485,12 @@ unsigned int exynos4x12_get_table_index(struct opp *opp)
 
 void exynos4x12_prepare(unsigned int index)
 {
-	unsigned int timing0;
-
-#ifdef CONFIG_ARM_TRUSTZONE
-	exynos_smc_readsfr(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET, &timing0);
-	timing0 |= exynos4x12_timingrow[index];
-	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET),
-			timing0, 0);
-	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET),
-			exynos4x12_timingrow[index], 0);
-	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC1_4212 + TIMINGROW_OFFSET),
-			timing0, 0);
-	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC1_4212 + TIMINGROW_OFFSET),
-			exynos4x12_timingrow[index], 0);
-#else
-	timing0 = __raw_readl(S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	timing0 |= exynos4x12_timingrow[index];
-	__raw_writel(timing0, S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	__raw_writel(timing0, S5P_VA_DMC1 + TIMINGROW_OFFSET);
-	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
-#endif
+	/* Nothing to do */
 }
 
 void exynos4x12_post(unsigned int index)
 {
-	unsigned int timing0;
-
-#ifdef CONFIG_ARM_TRUSTZONE
-	exynos_smc_readsfr(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET, &timing0);
-	timing0 |= exynos4x12_timingrow[index];
-	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET),
-			timing0, 0);
-	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC0_4212 + TIMINGROW_OFFSET),
-			exynos4x12_timingrow[index], 0);
-	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC1_4212 + TIMINGROW_OFFSET),
-			timing0, 0);
-	exynos_smc(SMC_CMD_REG, SMC_REG_ID_SFR_W(EXYNOS4_PA_DMC1_4212 + TIMINGROW_OFFSET),
-			exynos4x12_timingrow[index], 0);
-#else
-	timing0 = __raw_readl(S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	timing0 |= exynos4x12_timingrow[index];
-	__raw_writel(timing0, S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC0 + TIMINGROW_OFFSET);
-	__raw_writel(timing0, S5P_VA_DMC1 + TIMINGROW_OFFSET);
-	__raw_writel(exynos4x12_timingrow[index], S5P_VA_DMC1 + TIMINGROW_OFFSET);
-#endif
+	/* Nothing to do */
 }
 
 void exynos4x12_suspend(void)
