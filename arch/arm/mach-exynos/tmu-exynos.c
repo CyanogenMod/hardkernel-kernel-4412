@@ -808,7 +808,6 @@ static int exynos_tmu_init(struct tmu_info *info)
 	if (exynos4x12_find_busfreq_by_volt(data->temp_compensate.bus_volt,
 		&info->busfreq_tc)) {
 		pr_err("get_busfreq_value error\n");
-		return -EINVAL;
 	}
 #endif
 	if (mali_voltage_lock_init()) {
