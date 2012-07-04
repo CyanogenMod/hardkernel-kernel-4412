@@ -1817,6 +1817,7 @@ static u32 epll_div[][6] = {
 	{  49152000, 0, 49, 3, 3, 9961 },
 	{  45158400, 0, 45, 3, 3, 10381 },
 	{ 180633600, 0, 45, 3, 1, 10381 },
+	{ 400000000, 0, 100, 3, 1, 0 },
 };
 
 static int exynos4_epll_set_rate(struct clk *clk, unsigned long rate)
@@ -1841,7 +1842,6 @@ static int exynos4_epll_set_rate(struct clk *clk, unsigned long rate)
 		pr_err("Invalid Clock : recommended clock is 24MHz.\n");
 		return -EINVAL;
 	}
-
 
 	epll_con = __raw_readl(EXYNOS4_EPLL_CON0);
 	epll_con &= ~(0x1 << 27 | \
@@ -1987,8 +1987,10 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	clk_p.rate = aclk_100;
 
 	clk_fout_epll.ops = &exynos4_epll_ops;
+	clk_set_rate(&clk_fout_epll, 400000000);
 
-#ifdef CONFIG_EXYNOS4_MSHC_EPLL_45MHZ
+#ifdef CONFIG_EXYNOS4_DWMCI_EPLL_50MHZ
+	__raw_writel(0x0, EXYNOS4_CLKDIV_FSYS3);
 	if (clk_set_parent(&exynos4_clk_dout_mmc4.clk, &exynos4_clk_mout_epll.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				 exynos4_clk_mout_epll.clk.name, exynos4_clk_dout_mmc4.clk.name);
