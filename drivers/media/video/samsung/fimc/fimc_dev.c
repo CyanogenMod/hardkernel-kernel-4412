@@ -791,7 +791,10 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 		clk_put(fimc_src_clk);
 		return NULL;
 	}
-	clk_set_rate(sclk_fimc_lclk, FIMC_CLK_RATE);
+	if (samsung_rev() >= EXYNOS4412_REV_2_0)
+		clk_set_rate(sclk_fimc_lclk, FIMC_OVR_CLK_RATE);
+	else
+		clk_set_rate(sclk_fimc_lclk, FIMC_CLK_RATE);
 	clk_put(sclk_fimc_lclk);
 	clk_put(fimc_src_clk);
 
