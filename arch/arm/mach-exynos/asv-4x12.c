@@ -116,6 +116,49 @@ static void exynos4x12_pre_set_abb(void)
 	}
 }
 
+static void exynos4x12_prime_pre_set_abb(void)
+{
+	/* ABB setting for ARM */
+	switch (exynos_result_of_asv) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_070V);
+		break;
+	case 4:
+	case 5:
+	case 6:
+	case 7:
+		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
+		break;
+	default:
+		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_130V);
+		break;
+	}
+
+	/* ABB setting for INT/MIF/G3D */
+	switch (exynos_result_of_asv) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	case 7:
+		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_100V);
+		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_100V);
+		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_100V);
+		break;
+	default:
+		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_130V);
+		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_130V);
+		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_130V);
+		break;
+	}
+}
+
 static int exynos4x12_asv_store_result(struct samsung_asv *asv_info)
 {
 	unsigned int i;
@@ -159,7 +202,10 @@ static int exynos4x12_asv_store_result(struct samsung_asv *asv_info)
 	pr_info("EXYNOS4X12(NO SG): IDS : %d HPM : %d RESULT : %d\n",
 		asv_info->ids_result, asv_info->hpm_result, exynos_result_of_asv);
 
-	exynos4x12_pre_set_abb();
+	if (samsung_rev() >= EXYNOS4412_REV_2_0)
+		exynos4x12_prime_pre_set_abb();
+	else
+		exynos4x12_pre_set_abb();
 
 	return 0;
 }
@@ -203,7 +249,10 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 		pr_info("EXYNOS4X12(SG):  ORIG : %d MOD : %d RESULT : %d\n",
 			exynos_orig_sp, exynos_mod_sp, exynos_result_of_asv);
 
-		exynos4x12_pre_set_abb();
+		if (samsung_rev() >= EXYNOS4412_REV_2_0)
+			exynos4x12_prime_pre_set_abb();
+		else
+			exynos4x12_pre_set_abb();
 
 		return -EEXIST;
 	}
