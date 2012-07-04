@@ -4128,7 +4128,10 @@ static void __init smdk4x12_machine_init(void)
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-	exynos4_jpeg_setup_clock(&s5p_device_jpeg.dev, 160000000);
+	if (samsung_rev() == EXYNOS4412_REV_2_0)
+		exynos4_jpeg_setup_clock(&s5p_device_jpeg.dev, 176000000);
+	else
+		exynos4_jpeg_setup_clock(&s5p_device_jpeg.dev, 160000000);
 #endif
 #endif
 
