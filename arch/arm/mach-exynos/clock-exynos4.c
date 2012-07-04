@@ -1707,18 +1707,21 @@ static struct clksrc_clk exynos4_clksrcs[] = {
 	}, {
 		.clk	= {
 			.name		= "sclk_pcm",
+			.devname	= "samsung-pcm.0",
 			.parent		= &exynos4_clk_sclk_audio0.clk,
 		},
 			.reg_div = { .reg = EXYNOS4_CLKDIV_MAUDIO, .shift = 4, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_pcm",
+			.devname	= "samsung-pcm.1",
 			.parent		= &exynos4_clk_sclk_audio1.clk,
 		},
 			.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 4, .size = 8 },
 	}, {
 		.clk	= {
 			.name		= "sclk_pcm",
+			.devname	= "samsung-pcm.2",
 			.parent		= &exynos4_clk_sclk_audio2.clk,
 		},
 			.reg_div = { .reg = EXYNOS4_CLKDIV_PERIL4, .shift = 20, .size = 8 },
