@@ -136,7 +136,7 @@ static int os_allocate(void* ctx, ump_dd_mem * descriptor)
 		return 0; /* failure */
 	}
 
-	while (left > 0 && ((info->num_pages_allocated + pages_allocated) < info->num_pages_max))
+	while (left > 0)
 	{
 		struct page * new_page;
 
