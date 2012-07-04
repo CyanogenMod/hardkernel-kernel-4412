@@ -77,7 +77,6 @@ enum {
 	FLAGS_BC_BUSY,
 	FLAGS_HASH_BUSY,
 	FLAGS_SUSPENDED,
-	FLAGS_USE_SW
 };
 
 static struct s5p_ace_device s5p_ace_dev;
@@ -91,6 +90,8 @@ static void s5p_ace_bc_task(unsigned long data);
 
 static int count_clk;
 static int count_clk_delta;
+
+static int count_use_sw;
 
 #if defined(ACE_DEBUG_HEARTBEAT) || defined(ACE_DEBUG_WATCHDOG)
 #define ACE_HEARTBEAT_MS		10000
@@ -125,6 +126,7 @@ struct s5p_ace_device {
 	void __iomem			*sss_usercon;
 #endif
 	spinlock_t			lock;
+	spinlock_t			sw_lock;
 	unsigned long			flags;
 
 	struct hrtimer			timer;
@@ -964,7 +966,7 @@ static int s5p_ace_aes_handle_req(struct s5p_ace_device *dev)
 #endif
 	rctx = ablkcipher_request_ctx(req);
 
-	if (s5p_ace_dev.flags & BIT_MASK(FLAGS_USE_SW))
+	if (count_use_sw > 0)
 		return s5p_ace_handle_lock_req(dev, sctx, req, rctx->mode);
 
 	/* assign new request to device */
@@ -1124,7 +1126,7 @@ static int s5p_ace_aes_crypt(struct blkcipher_desc *desc,
 	while (test_and_set_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags))
 		udelay(1);
 
-	if (s5p_ace_dev.flags & BIT_MASK(FLAGS_USE_SW)) {
+	if (count_use_sw > 0) {
 		clear_bit(FLAGS_BC_BUSY, &s5p_ace_dev.flags);
 		local_bh_enable();
 		return s5p_ace_handle_lock_req(sctx, desc, dst, src, nbytes,
@@ -1901,7 +1903,7 @@ static int s5p_ace_sha_update(struct shash_desc *desc,
 	while (test_and_set_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags))
 		udelay(1);
 
-	if (s5p_ace_dev.flags & BIT_MASK(FLAGS_USE_SW)) {
+	if (count_use_sw > 0) {
 		clear_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags);
 		local_bh_enable();
 		return sha_sw_update(desc, data, len);
@@ -1963,7 +1965,7 @@ static int s5p_ace_sha_final(struct shash_desc *desc, u8 *out)
 	while (test_and_set_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags))
 		udelay(1);
 
-	if (s5p_ace_dev.flags & BIT_MASK(FLAGS_USE_SW)) {
+	if (count_use_sw > 0) {
 		clear_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags);
 		local_bh_enable();
 		return sha_sw_final(desc, out);
@@ -1997,7 +1999,7 @@ static int s5p_ace_sha_finup(struct shash_desc *desc, const u8 *data,
 	while (test_and_set_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags))
 		udelay(1);
 
-	if (s5p_ace_dev.flags & BIT_MASK(FLAGS_USE_SW)) {
+	if (count_use_sw > 0) {
 		clear_bit(FLAGS_HASH_BUSY, &s5p_ace_dev.flags);
 		local_bh_enable();
 		return sha_sw_finup(desc, data, len, out);
@@ -2209,6 +2211,16 @@ int ace_s5p_get_sync_lock(void)
 {
 	unsigned long timeout;
 	int get_lock_bc = 0, get_lock_hash = 0;
+	unsigned long flags;
+
+	spin_lock_irqsave(&s5p_ace_dev.sw_lock, flags);
+	if (count_use_sw > 0) {
+		count_use_sw++;
+		spin_unlock_irqrestore(&s5p_ace_dev.sw_lock, flags);
+		s5p_ace_clock_gating(ACE_CLOCK_ON);
+		return 0;
+	}
+	spin_unlock_irqrestore(&s5p_ace_dev.sw_lock, flags);
 
 	timeout = jiffies + msecs_to_jiffies(10);
 	while (time_before(jiffies, timeout)) {
@@ -2228,9 +2240,12 @@ int ace_s5p_get_sync_lock(void)
 		udelay(1);
 	}
 
-	/* set lock flag */
-	if (get_lock_bc && get_lock_hash)
-		set_bit(FLAGS_USE_SW, &s5p_ace_dev.flags);
+	if (get_lock_bc && get_lock_hash) {
+		spin_lock_irqsave(&s5p_ace_dev.sw_lock, flags);
+		count_use_sw++;
+		spin_unlock_irqrestore(&s5p_ace_dev.sw_lock, flags);
+		s5p_ace_clock_gating(ACE_CLOCK_ON);
+	}
 
 	if (get_lock_bc) {
 #ifdef CONFIG_ACE_BC_ASYNC
@@ -2252,18 +2267,16 @@ int ace_s5p_get_sync_lock(void)
 	if (!(get_lock_bc && get_lock_hash))
 		return -EBUSY;
 
-	s5p_ace_clock_gating(ACE_CLOCK_ON);
-
 	return 0;
 }
 
 int ace_s5p_release_sync_lock(void)
 {
-	/* clear lock flag */
-	if (!test_and_clear_bit(FLAGS_USE_SW, &s5p_ace_dev.flags))
-		return -ENOLCK;
+	unsigned long flags;
 
-	clear_bit(FLAGS_USE_SW, &s5p_ace_dev.flags);
+	spin_lock_irqsave(&s5p_ace_dev.sw_lock, flags);
+	count_use_sw--;
+	spin_unlock_irqrestore(&s5p_ace_dev.sw_lock, flags);
 	s5p_ace_clock_gating(ACE_CLOCK_OFF);
 
 	return 0;
@@ -2339,6 +2352,7 @@ static int __devinit s5p_ace_probe(struct platform_device *pdev)
 #endif
 
 	spin_lock_init(&s5p_adt->lock);
+	spin_lock_init(&s5p_adt->sw_lock);
 	s5p_adt->flags = 0;
 	hrtimer_init(&s5p_adt->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	s5p_adt->timer.function = s5p_ace_timer_func;
