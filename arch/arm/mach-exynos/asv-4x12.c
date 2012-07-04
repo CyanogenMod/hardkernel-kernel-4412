@@ -57,16 +57,16 @@ struct asv_judge_table exynos4x12_limit[] = {
 struct asv_judge_table exynos4x12_prime_limit[] = {
 	/* HPM, IDS */
 	{  0,   0},		/* Reserved Group */
-	{  0,   0},		/* Reserved Group */
-	{ 14,   9},
-	{ 16,  14},
-	{ 18,  17},
-	{ 20,  20},
-	{ 21,  24},
-	{ 22,  30},
-	{ 23,  34},
-	{ 24,  39},
-	{999, 999},
+	{ 15,   8},
+	{ 16,  11},
+	{ 18,  14},
+	{ 19,  18},
+	{ 20,  22},
+	{ 21,  26},
+	{ 22,  29},
+	{ 23,  36},
+	{ 24,  44},
+	{ 25,  56},
 	{999, 999},		/* Reserved Group */
 };
 
