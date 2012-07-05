@@ -4195,7 +4195,7 @@ static void __init smdk4x12_machine_init(void)
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				prnt->name, sclk->name);
 
-	clk_set_rate(sclk, 800 * 1000 * 1000);
+	clk_set_rate(sclk, 100 * 1000 * 1000);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -4220,7 +4220,7 @@ static void __init smdk4x12_machine_init(void)
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				prnt->name, sclk->name);
 
-	clk_set_rate(sclk, 800 * 1000 * 1000);
+	clk_set_rate(sclk, 100 * 1000 * 1000);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -4245,7 +4245,7 @@ static void __init smdk4x12_machine_init(void)
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				prnt->name, sclk->name);
 
-	clk_set_rate(sclk, 800 * 1000 * 1000);
+	clk_set_rate(sclk, 100 * 1000 * 1000);
 	clk_put(sclk);
 	clk_put(prnt);
 
