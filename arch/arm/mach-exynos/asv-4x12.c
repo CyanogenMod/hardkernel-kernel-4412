@@ -34,6 +34,9 @@
 #define MOD_SG_OFFSET		21
 #define MOD_SG_MASK		0x7
 
+#define LOCKING_OFFSET		7
+#define LOCKING_MASK		0x1F
+
 #define DEFAULT_ASV_GROUP	1
 
 #define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
@@ -218,6 +221,7 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 	int exynos_cal_asv;
 
 	exynos_result_of_asv = 0;
+	exynos_special_flag = 0;
 
 	pr_info("EXYNOS4X12: Adaptive Support Voltage init\n");
 
@@ -256,6 +260,9 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 
 		return -EEXIST;
 	}
+
+	/* Set Special flag into exynos_special_flag */
+	exynos_special_flag = (tmp >> LOCKING_OFFSET) & LOCKING_MASK;
 
 	asv_info->get_ids = exynos4x12_get_ids;
 	asv_info->get_hpm = exynos4x12_get_hpm;
