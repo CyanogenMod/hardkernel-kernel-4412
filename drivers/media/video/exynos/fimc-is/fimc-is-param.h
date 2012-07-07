@@ -14,7 +14,7 @@
 #ifndef FIMC_IS_PARAMS_H_
 #define FIMC_IS_PARAMS_H_
 
-#define IS_REGION_VER 123  /* IS REGION VERSION 1.23 */
+#define IS_REGION_VER 124  /* IS REGION VERSION 1.24 */
 
 /* MACROs */
 #define IS_SET_PARAM_BIT(dev, num) \
@@ -1703,5 +1703,8 @@ struct sensor_open_extended {
 	u32 fast_open_sensor;
 	/* Activatiing sensor self calibration mode (6A3) */
 	u32 self_calibration_mode;
+	/* This field is to adjust I2c clock based on ACLK200 */
+	/* This value is varied in case of rev 0.2 */
+	u32 i2c_sclk;
 };
 #endif
