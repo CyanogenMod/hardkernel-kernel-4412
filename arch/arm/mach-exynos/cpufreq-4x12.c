@@ -533,7 +533,7 @@ static void exynos4x12_set_frequency(unsigned int old_index,
 static void __init set_volt_table(void)
 {
 	bool for_1500 = false, for_1200 = false, for_1400 = false;
-	unsigned int i;
+	unsigned int i, tmp;
 
 #ifdef CONFIG_EXYNOS4X12_1500MHZ_SUPPORT
 	for_1500 = true;
@@ -599,6 +599,35 @@ static void __init set_volt_table(void)
 			}
 		} else {
 			pr_err("%s: Can't find SoC type \n", __func__);
+		}
+	}
+
+	if (soc_is_exynos4412() && (samsung_rev() >= EXYNOS4412_REV_2_0)) {
+		tmp = is_special_flag();
+		if (tmp) {
+			pr_info("%s : special flag[%d]\n", __func__, tmp);
+			switch ((tmp >> ARM_LOCK_FLAG) & 0x3) {
+			case 1:
+				/* 500MHz fixed volt */
+				i = L11;
+				break;
+			case 2:
+				/* 700MHz fixed volt */
+				i = L9;
+				break;
+			case 3:
+				/* 800MHz fixed volt */
+				i = L8;
+				break;
+			default:
+				break;
+			}
+
+			pr_info("ARM voltage locking at L%d\n", i);
+
+			for (tmp = (i + 1) ; tmp < CPUFREQ_LEVEL_END ; tmp++)
+				exynos4x12_volt_table[tmp] =
+					exynos4x12_volt_table[i];
 		}
 	}
 }
