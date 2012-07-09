@@ -56,6 +56,8 @@
 #define CPU_SLOPE_SIZE			7
 
 static unsigned int dmc_max_threshold;
+static bool mif_locking;
+static bool int_locking;
 
 /* To save/restore DMC_PAUSE_CTRL register */
 static unsigned int dmc_pause_ctrl;
@@ -374,11 +376,24 @@ static void exynos4x12_set_bus_volt(void)
 	if (asv_group_index == 0xff)
 		asv_group_index = 0;
 
+	if ((is_special_flag() >> MIF_LOCK_FLAG) & 0x1)
+		mif_locking = true;
+
+	if ((is_special_flag() >> INT_LOCK_FLAG) & 0x1)
+		int_locking = true;
+
 	printk(KERN_INFO "DVFS : VDD_INT Voltage table set with %d Group\n", asv_group_index);
 
-	for (i = 0 ; i < LV_END ; i++)
+	for (i = 0 ; i < LV_END ; i++) {
 		exynos4_busfreq_table[i].volt =
 			exynos4_mif_volt[asv_group_index][i];
+
+		if (mif_locking)
+			exynos4_busfreq_table[i].volt += 50000;
+
+		if (int_locking)
+			exynos4_int_volt[asv_group_index][i] += 25000;
+	}
 
 	return;
 }
