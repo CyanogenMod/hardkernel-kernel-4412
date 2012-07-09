@@ -32,9 +32,10 @@
 
 #ifdef CONFIG_CPU_FREQ
 #include <mach/asv.h>
-#include <plat/cpu.h>
 #define EXYNOS4_ASV_ENABLED
 #endif
+
+#include <plat/cpu.h>
 
 static int bMaliDvfsRun=0;
 
