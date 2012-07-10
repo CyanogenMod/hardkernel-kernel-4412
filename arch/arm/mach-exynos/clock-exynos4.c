@@ -1992,11 +1992,30 @@ void __init_or_cpufreq exynos4_setup_clocks(void)
 	clk_fout_epll.ops = &exynos4_epll_ops;
 	clk_set_rate(&clk_fout_epll, 400000000);
 
-#ifdef CONFIG_EXYNOS4_DWMCI_EPLL_50MHZ
+#ifdef CONFIG_EXYNOS4_SDMMC_EPLL_50MHZ
+	__raw_writel(0x70007, EXYNOS4_CLKDIV_FSYS1);
+	if (clk_set_parent(&exynos4_clk_dout_mmc0.clk, &exynos4_clk_mout_epll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				 exynos4_clk_mout_epll.clk.name,
+				 exynos4_clk_dout_mmc0.clk.name);
+	if (clk_set_parent(&exynos4_clk_dout_mmc1.clk, &exynos4_clk_mout_epll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				 exynos4_clk_mout_epll.clk.name,
+				 exynos4_clk_dout_mmc1.clk.name);
+	__raw_writel(0x70007, EXYNOS4_CLKDIV_FSYS2);
+	if (clk_set_parent(&exynos4_clk_dout_mmc2.clk, &exynos4_clk_mout_epll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				 exynos4_clk_mout_epll.clk.name,
+				 exynos4_clk_dout_mmc2.clk.name);
+	if (clk_set_parent(&exynos4_clk_dout_mmc3.clk, &exynos4_clk_mout_epll.clk))
+		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
+				 exynos4_clk_mout_epll.clk.name,
+				 exynos4_clk_dout_mmc3.clk.name);
 	__raw_writel(0x0, EXYNOS4_CLKDIV_FSYS3);
 	if (clk_set_parent(&exynos4_clk_dout_mmc4.clk, &exynos4_clk_mout_epll.clk))
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
-				 exynos4_clk_mout_epll.clk.name, exynos4_clk_dout_mmc4.clk.name);
+				 exynos4_clk_mout_epll.clk.name,
+				 exynos4_clk_dout_mmc4.clk.name);
 #endif
 #ifdef CONFIG_EXYNOS4_MSHC_VPLL_46MHZ
 	if (clk_set_parent(&exynos4_clk_dout_mmc4.clk, &exynos4_clk_sclk_vpll.clk))
