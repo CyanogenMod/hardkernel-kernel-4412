@@ -678,6 +678,21 @@ endmenu
 menu "MMC/SD slot setup"
 depends on PLAT_S5P
 
+comment "SELECT PLL for SDMMC"
+choice
+	prompt "Use Special PLL for SDMMC"
+	depends on PLAT_S5P
+	help
+		This feature change MMCxOUT's clock source between MPLL and EPLL
+	default EXYNOS4_SDMMC_EPLL_50MHZ
+
+config EXYNOS4_SDMMC_MPLL_50MHZ
+	bool "MPLL"
+
+config EXYNOS4_SDMMC_EPLL_50MHZ
+	bool "EPLL"
+endchoice
+
 comment "SELECT SYNOPSYS CONTROLLER INTERFACE DRIVER"
 config EXYNOS4_DEV_DWMCI
 	bool "DWMCI"
@@ -685,19 +700,6 @@ config EXYNOS4_DEV_DWMCI
 	default n
 	help
 	IF DWMCI is used, SDHC channel 0 is disabled.
-choice
-	prompt "Use Special PLL for DWMCI"
-	depends on PLAT_S5P && EXYNOS4_DEV_DWMCI
-	help
-		This feature change MMC4OUT's clock source between MPLL and EPLL
-	default EXYNOS4_DWMCI_MPLL_50MHZ
-
-config EXYNOS4_DWMCI_MPLL_50MHZ
-	bool "MPLL"
-
-config EXYNOS4_DWMCI_EPLL_50MHZ
-	bool "EPLL"
-endchoice
 
 config S5P_DEV_MSHC
 	bool "MSHCI"
