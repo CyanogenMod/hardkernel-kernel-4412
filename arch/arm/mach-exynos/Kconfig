@@ -684,7 +684,7 @@ choice
 	depends on PLAT_S5P
 	help
 		This feature change MMCxOUT's clock source between MPLL and EPLL
-	default EXYNOS4_SDMMC_EPLL_50MHZ
+	default EXYNOS4_SDMMC_MPLL_50MHZ
 
 config EXYNOS4_SDMMC_MPLL_50MHZ
 	bool "MPLL"
