@@ -253,6 +253,9 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 		pr_info("EXYNOS4X12(SG):  ORIG : %d MOD : %d RESULT : %d\n",
 			exynos_orig_sp, exynos_mod_sp, exynos_result_of_asv);
 
+		/* Set Special flag into exynos_special_flag */
+		exynos_special_flag = (tmp >> LOCKING_OFFSET) & LOCKING_MASK;
+
 		if (samsung_rev() >= EXYNOS4412_REV_2_0)
 			exynos4x12_prime_pre_set_abb();
 		else
