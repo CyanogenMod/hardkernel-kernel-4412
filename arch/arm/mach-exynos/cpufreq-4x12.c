@@ -603,10 +603,12 @@ static void __init set_volt_table(void)
 	}
 
 	if (soc_is_exynos4412() && (samsung_rev() >= EXYNOS4412_REV_2_0)) {
-		tmp = is_special_flag();
+
+		tmp = (is_special_flag() >> ARM_LOCK_FLAG) & 0x3;
+
 		if (tmp) {
 			pr_info("%s : special flag[%d]\n", __func__, tmp);
-			switch ((tmp >> ARM_LOCK_FLAG) & 0x3) {
+			switch (tmp) {
 			case 1:
 				/* 500MHz fixed volt */
 				i = L11;
@@ -625,9 +627,11 @@ static void __init set_volt_table(void)
 
 			pr_info("ARM voltage locking at L%d\n", i);
 
-			for (tmp = (i + 1) ; tmp < CPUFREQ_LEVEL_END ; tmp++)
+			for (tmp = (i + 1) ; tmp < CPUFREQ_LEVEL_END ; tmp++) {
 				exynos4x12_volt_table[tmp] =
 					exynos4x12_volt_table[i];
+				pr_info("CPUFREQ: L%d : %d\n", tmp, exynos4x12_volt_table[tmp]);
+			}
 		}
 	}
 }
