@@ -37,6 +37,9 @@
 #define LOCKING_OFFSET		7
 #define LOCKING_MASK		0x1F
 
+#define EMA_OFFSET		6
+#define EMA_MASK		0x1
+
 #define DEFAULT_ASV_GROUP	1
 
 #define CHIP_ID_REG		(S5P_VA_CHIPID + 0x4)
@@ -222,6 +225,7 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 
 	exynos_result_of_asv = 0;
 	exynos_special_flag = 0;
+	exynos_dynamic_ema = false;
 
 	pr_info("EXYNOS4X12: Adaptive Support Voltage init\n");
 
@@ -229,6 +233,11 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 
 	/* Store PKG_ID */
 	asv_info->pkg_id = tmp;
+
+	if ((tmp >> EMA_OFFSET) & EMA_MASK)
+		exynos_dynamic_ema = true;
+	else
+		exynos_dynamic_ema = false;
 
 	/* If Speed group is fused, get speed group from */
 	if ((tmp >> FUSED_SG_OFFSET) & 0x1) {

@@ -26,6 +26,7 @@
 static struct samsung_asv *exynos_asv;
 unsigned int exynos_result_of_asv;
 unsigned int exynos_special_flag;
+bool exynos_dynamic_ema;
 
 static int __init exynos4_asv_init(void)
 {

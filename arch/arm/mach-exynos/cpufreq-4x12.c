@@ -37,6 +37,7 @@ static struct clk *cpu_clk;
 static struct clk *moutcore;
 static struct clk *mout_mpll;
 static struct clk *mout_apll;
+static bool need_dynamic_ema = false;
 
 struct cpufreq_clkdiv {
 	unsigned int	index;
@@ -126,40 +127,40 @@ static unsigned int clkdiv_cpu0_4412[CPUFREQ_LEVEL_END][8] = {
 	 *		DIVATB, DIVPCLK_DBG, DIVAPLL, DIVCORE2 }
 	 */
 	/* ARM L0: 1600Mhz */
-	{ 0, 3, 7, 0, 6, 1, 2, 0 },
+	{ 0, 3, 7, 0, 6, 1, 7, 0 },
 
 	/* ARM L1: 1500Mhz */
-	{ 0, 3, 7, 0, 6, 1, 2, 0 },
+	{ 0, 3, 7, 0, 6, 1, 7, 0 },
 
 	/* ARM L2: 1400Mhz */
-	{ 0, 3, 7, 0, 6, 1, 2, 0 },
+	{ 0, 3, 7, 0, 6, 1, 6, 0 },
 
 	/* ARM L3: 1300Mhz */
-	{ 0, 3, 7, 0, 5, 1, 2, 0 },
+	{ 0, 3, 7, 0, 5, 1, 6, 0 },
 
 	/* ARM L4: 1200Mhz */
-	{ 0, 3, 7, 0, 5, 1, 2, 0 },
+	{ 0, 3, 7, 0, 5, 1, 5, 0 },
 
 	/* ARM L5: 1100MHz */
-	{ 0, 3, 6, 0, 4, 1, 2, 0 },
+	{ 0, 3, 6, 0, 4, 1, 5, 0 },
 
 	/* ARM L6: 1000MHz */
-	{ 0, 2, 5, 0, 4, 1, 1, 0 },
+	{ 0, 2, 5, 0, 4, 1, 4, 0 },
 
 	/* ARM L7: 900MHz */
-	{ 0, 2, 5, 0, 3, 1, 1, 0 },
+	{ 0, 2, 5, 0, 3, 1, 4, 0 },
 
 	/* ARM L8: 800MHz */
-	{ 0, 2, 5, 0, 3, 1, 1, 0 },
+	{ 0, 2, 5, 0, 3, 1, 3, 0 },
 
 	/* ARM L9: 700MHz */
-	{ 0, 2, 4, 0, 3, 1, 1, 0 },
+	{ 0, 2, 4, 0, 3, 1, 3, 0 },
 
 	/* ARM L10: 600MHz */
-	{ 0, 2, 4, 0, 3, 1, 1, 0 },
+	{ 0, 2, 4, 0, 3, 1, 2, 0 },
 
 	/* ARM L11: 500MHz */
-	{ 0, 2, 4, 0, 3, 1, 1, 0 },
+	{ 0, 2, 4, 0, 3, 1, 2, 0 },
 
 	/* ARM L12: 400MHz */
 	{ 0, 2, 4, 0, 3, 1, 1, 0 },
@@ -487,6 +488,10 @@ static void exynos4x12_set_frequency(unsigned int old_index,
 	unsigned int tmp;
 
 	if (old_index > new_index) {
+		if (exynos4x12_volt_table[new_index] >= 950000 &&
+				need_dynamic_ema)
+			__raw_writel(0x101, EXYNOS4_EMA_CONF);
+
 		if (!exynos4x12_pms_change(old_index, new_index)) {
 			/* 1. Change the system clock divider values */
 			set_clkdiv(new_index);
@@ -519,6 +524,9 @@ static void exynos4x12_set_frequency(unsigned int old_index,
 			/* 2. Change the system clock divider values */
 			set_clkdiv(new_index);
 		}
+		if (exynos4x12_volt_table[new_index] < 950000 &&
+				need_dynamic_ema)
+			__raw_writel(0x404, EXYNOS4_EMA_CONF);
 	}
 
 	/* ABB value is changed in below case */
@@ -632,6 +640,11 @@ static void __init set_volt_table(void)
 					exynos4x12_volt_table[i];
 				pr_info("CPUFREQ: L%d : %d\n", tmp, exynos4x12_volt_table[tmp]);
 			}
+		}
+
+		if (exynos_dynamic_ema) {
+			need_dynamic_ema = true;
+			pr_info("%s: Dynamic EMA is enabled\n", __func__);
 		}
 	}
 }
