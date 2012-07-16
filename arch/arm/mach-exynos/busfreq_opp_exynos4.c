@@ -357,6 +357,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 {
 	struct busfreq_data *data;
 	unsigned int val;
+	bool pop = true;
 
 #ifdef CONFIG_ARM_TRUSTZONE
 	exynos_smc_readsfr(EXYNOS4_PA_DMC0_4212 + 0x4, &val);
@@ -368,7 +369,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 	/* Check Memory Type Only support -> 0x5: 0xLPDDR2 */
 	if (val != 0x05) {
 		pr_err("[ %x ] Memory Type Undertermined.\n", val);
-		return -ENODEV;
+		pop = false;
 	}
 
 	data = kzalloc(sizeof(struct busfreq_data), GFP_KERNEL);
@@ -406,7 +407,7 @@ static __devinit int exynos_busfreq_probe(struct platform_device *pdev)
 
 	INIT_DELAYED_WORK(&data->worker, exynos_busfreq_timer);
 
-	if (data->init(&pdev->dev, data)) {
+	if (data->init(&pdev->dev, data, pop)) {
 		pr_err("Failed to init busfreq.\n");
 		goto err_busfreq;
 	}

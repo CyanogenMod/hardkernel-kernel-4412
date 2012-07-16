@@ -717,7 +717,7 @@ static int exynos4x12_busfreq_cpufreq_transition(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
-int exynos4x12_init(struct device *dev, struct busfreq_data *data)
+int exynos4x12_init(struct device *dev, struct busfreq_data *data, bool pop)
 {
 	unsigned int i;
 	unsigned int tmp;
@@ -820,6 +820,17 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data)
 	if (IS_ERR(data->vdd_mif)) {
 		pr_err("failed to get resource %s\n", "vdd_mif");
 		regulator_put(data->vdd_int);
+		return -ENODEV;
+	}
+
+	if (!pop) {
+		regulator_set_voltage(data->vdd_mif, 1000000, 1000000);
+		regulator_set_voltage(data->vdd_int, exynos4_int_volt[asv_group_index][LV_0],
+				exynos4_int_volt[asv_group_index][LV_0]);
+		regulator_put(data->vdd_mif);
+		regulator_put(data->vdd_int);
+		data->vdd_mif = ERR_PTR(-ENODEV);
+		data->vdd_int = ERR_PTR(-ENODEV);
 		return -ENODEV;
 	}
 

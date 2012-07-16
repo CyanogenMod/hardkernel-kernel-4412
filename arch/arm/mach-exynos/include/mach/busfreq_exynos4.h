@@ -53,7 +53,7 @@ struct busfreq_data {
 	struct notifier_block exynos_cpufreq_notifier;
 	struct early_suspend busfreq_early_suspend_handler;
 	struct attribute_group busfreq_attr_group;
-	int (*init)	(struct device *dev, struct busfreq_data *data);
+	int (*init)	(struct device *dev, struct busfreq_data *data, bool pop);
 	struct opp *(*monitor)(struct busfreq_data *data);
 	void (*target)	(int index);
 	unsigned int (*get_int_volt) (unsigned int index);
@@ -76,7 +76,7 @@ struct busfreq_table {
 void exynos_request_apply(unsigned long freq, bool fix, bool disable);
 struct opp *step_down(struct busfreq_data *data, int step);
 
-int exynos4x12_init(struct device *dev, struct busfreq_data *data);
+int exynos4x12_init(struct device *dev, struct busfreq_data *data, bool pop);
 void exynos4x12_target(int index);
 unsigned int exynos4x12_get_int_volt(unsigned int index);
 unsigned int exynos4x12_get_table_index(struct opp *opp);
