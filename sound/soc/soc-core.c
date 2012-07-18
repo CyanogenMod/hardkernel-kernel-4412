@@ -535,9 +535,19 @@ static int soc_pcm_open(struct snd_pcm_substream *substream)
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_dai_driver *cpu_dai_drv = cpu_dai->driver;
 	struct snd_soc_dai_driver *codec_dai_drv = codec_dai->driver;
+	struct snd_soc_card *card = cpu_dai->card;
 	int ret = 0;
 
 	mutex_lock(&pcm_mutex);
+
+	if (card->suspended) {
+		ret = wait_for_completion_timeout(&card->resume_completion, HZ);
+		if (!ret) {
+			printk(KERN_ERR "asoc: can't ready to open pcm\n");
+			goto out;
+		}
+		card->suspended = 0;
+	}
 
 	/* startup the audio subsystem */
 	if (cpu_dai->driver->ops->startup) {
@@ -1135,6 +1145,8 @@ int snd_soc_suspend(struct device *dev)
 	if (card->suspend_post)
 		card->suspend_post(card);
 
+	card->suspended = 1;
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(snd_soc_suspend);
@@ -1237,6 +1249,7 @@ static void soc_resume_deferred(struct work_struct *work)
 		card->resume_post(card);
 
 	dev_dbg(card->dev, "resume work completed\n");
+	complete(&card->resume_completion);
 
 	/* userspace can access us now we are back as we were before */
 	snd_power_change_state(card->snd_card, SNDRV_CTL_POWER_D0);
@@ -1873,6 +1886,10 @@ static void snd_soc_instantiate_card(struct snd_soc_card *card)
 #ifdef CONFIG_PM_SLEEP
 	/* deferred resume work */
 	INIT_WORK(&card->deferred_resume_work, soc_resume_deferred);
+
+	/* Completion resume work */
+	init_completion(&card->resume_completion);
+	card->suspended = 0;
 #endif
 
 	if (card->dapm_widgets)
