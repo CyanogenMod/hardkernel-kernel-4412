@@ -824,7 +824,8 @@ int exynos4x12_init(struct device *dev, struct busfreq_data *data, bool pop)
 	}
 
 	if (!pop) {
-		regulator_set_voltage(data->vdd_mif, 1000000, 1000000);
+		regulator_set_voltage(data->vdd_mif, exynos4_mif_volt[asv_group_index][LV_0],
+				exynos4_mif_volt[asv_group_index][LV_0]);
 		regulator_set_voltage(data->vdd_int, exynos4_int_volt[asv_group_index][LV_0],
 				exynos4_int_volt[asv_group_index][LV_0]);
 		regulator_put(data->vdd_mif);
