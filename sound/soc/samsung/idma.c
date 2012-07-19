@@ -63,6 +63,7 @@ struct idma_ctrl {
 };
 
 static struct idma_info {
+	struct idma_ctrl *prtd;
 	spinlock_t	lock;
 	void		__iomem	*regs;
 	int		trigger_stat;
@@ -294,7 +295,7 @@ static int idma_mmap(struct snd_pcm_substream *substream,
 
 static irqreturn_t iis_irq(int irqno, void *dev_id)
 {
-	struct idma_ctrl *prtd = (struct idma_ctrl *)dev_id;
+	struct idma_ctrl *prtd = idma.prtd;
 	u32 iiscon = readl(idma.regs + I2SCON);
 	u32 iisahb = readl(idma.regs + I2SAHB);
 	u32 addr = 0;
@@ -357,7 +358,6 @@ static int idma_open(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct idma_ctrl *prtd;
-	int ret;
 
 	pr_debug("Entered %s\n", __func__);
 
@@ -370,12 +370,7 @@ static int idma_open(struct snd_pcm_substream *substream)
 	if (prtd == NULL)
 		return -ENOMEM;
 
-	ret = request_irq(IRQ_I2S0, iis_irq, 0, "i2s", prtd);
-	if (ret < 0) {
-		pr_err("fail to claim i2s irq , ret = %d\n", ret);
-		kfree(prtd);
-		return ret;
-	}
+	idma.prtd = prtd;
 
 	spin_lock_init(&prtd->lock);
 
@@ -391,13 +386,14 @@ static int idma_close(struct snd_pcm_substream *substream)
 
 	pr_debug("Entered %s, prtd = %p\n", __func__, prtd);
 
-	free_irq(IRQ_I2S0, prtd);
-
-	if (!prtd)
-		pr_err("idma_close called with prtd == NULL\n");
+	if (!prtd) {
+		pr_debug("idma_close called with prtd == NULL\n");
+		goto exit_func;
+	}
 
 	kfree(prtd);
 
+exit_func:
 	return 0;
 }
 
@@ -532,11 +528,20 @@ static struct snd_soc_platform_driver asoc_idma_platform = {
 
 static int __devinit samsung_idma_platform_probe(struct platform_device *pdev)
 {
+	int ret;
+
+	ret = request_irq(IRQ_I2S0, iis_irq, 0, "i2s", NULL);
+	if (ret < 0) {
+		pr_err("fail to request i2s irq , ret = %d\n", ret);
+		return ret;
+	}
+
 	return snd_soc_register_platform(&pdev->dev, &asoc_idma_platform);
 }
 
 static int __devexit samsung_idma_platform_remove(struct platform_device *pdev)
 {
+	free_irq(IRQ_I2S0, idma.prtd);
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;
 }
