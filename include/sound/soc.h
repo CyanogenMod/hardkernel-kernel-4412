@@ -762,6 +762,7 @@ struct snd_soc_card {
 	int num_dapm_routes;
 
 	struct work_struct deferred_resume_work;
+	struct workqueue_struct *resume_wq;
 	struct completion resume_completion;
 	int suspended;
 

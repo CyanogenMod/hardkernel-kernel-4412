@@ -1275,8 +1275,7 @@ int snd_soc_resume(struct device *dev)
 		soc_resume_deferred(&card->deferred_resume_work);
 	} else {
 		dev_dbg(dev, "Scheduling resume work\n");
-		if (!schedule_work(&card->deferred_resume_work))
-			dev_err(dev, "resume work item may be lost\n");
+		queue_work(card->resume_wq, &card->deferred_resume_work);
 	}
 
 	return 0;
@@ -1884,6 +1883,14 @@ static void snd_soc_instantiate_card(struct snd_soc_card *card)
 #endif
 
 #ifdef CONFIG_PM_SLEEP
+	card->resume_wq = alloc_workqueue("soc_resume_work",
+			                   WQ_UNBOUND | WQ_HIGHPRI, 1);
+	if (!card->resume_wq) {
+		printk(KERN_ERR "asoc: can't create workqueue for resume. %s\n",
+				card->name);
+		goto card_probe_error;
+	}
+
 	/* deferred resume work */
 	INIT_WORK(&card->deferred_resume_work, soc_resume_deferred);
 
