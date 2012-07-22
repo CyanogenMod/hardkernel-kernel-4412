@@ -44,6 +44,7 @@ struct temperature_params {
 	unsigned int stop_warning;
 	unsigned int start_warning;
 	unsigned int start_tripping; /* temp to do tripping */
+	unsigned int start_hw_tripping;
 	unsigned int stop_mem_throttle;
 	unsigned int start_mem_throttle;
 #if defined(CONFIG_TC_VOLTAGE)
@@ -98,7 +99,7 @@ struct tmu_info {
 	/* memory refresh timing compensation */
 	unsigned int auto_refresh_tq0;
 	unsigned int auto_refresh_normal;
-	/* monitoring rate */ 
+	/* monitoring rate */
 	unsigned int sampling_rate;
 
 	/* temperature compensation */

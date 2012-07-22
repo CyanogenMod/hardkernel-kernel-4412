@@ -75,5 +75,7 @@
 				 INTCLEAR_RISE2)
 #define CLEAR_FALL_INT		(INTCLEAR_FALL0 | INTCLEAR_FALL1 | \
 				 INTCLEAR_FALL2)
-#define EMUL_EN		(1)
+#define EMUL_EN			(1)
+#define HW_TRIP_MODE		(7<<13)
+#define HW_TRIPPING_EN		(1<<12)
 #endif

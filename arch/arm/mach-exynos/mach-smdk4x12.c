@@ -3129,7 +3129,8 @@ struct tmu_data exynos_tmu_data __initdata = {
 		.start_throttle = 85,
 		.stop_warning  = 102,
 		.start_warning = 105,
-		.start_tripping = 110, /* temp to do tripping */
+		.start_tripping = 110,		/* temp to do tripping */
+		.start_hw_tripping = 113,	/* temp to do hw_trpping*/
 		.stop_mem_throttle = 80,
 		.start_mem_throttle = 85,
 
