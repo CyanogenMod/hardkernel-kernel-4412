@@ -221,16 +221,8 @@ static int s3cfb_wait_for_vsync_thread(void *data)
 				s3cfb_vsync_timestamp_changed(fbdev,
 					prev_timestamp),
 				msecs_to_jiffies(100));
-		if (ret > 0) {
-			char *envp[2];
-			char buf[64];
-			snprintf(buf, sizeof(buf), "VSYNC=%llu",
-					ktime_to_ns(fbdev->vsync_timestamp));
-			envp[0] = buf;
-			envp[1] = NULL;
-			kobject_uevent_env(&fbdev->dev->kobj, KOBJ_CHANGE,
-					envp);
-		}
+		if (ret > 0)
+			sysfs_notify(&fbdev->dev->kobj, NULL, "vsync");
 	}
 
 	return 0;
@@ -266,6 +258,19 @@ void s3cfb_trigger(void)
 }
 EXPORT_SYMBOL(s3cfb_trigger);
 #endif
+
+static ssize_t s3c_fb_vsync_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct s3cfb_global *fbdev[2];
+	fbdev[0] = fbfimd->fbdev[0];
+
+	return scnprintf(buf, PAGE_SIZE, "%llu\n",
+			ktime_to_ns(fbdev[0]->vsync_timestamp));
+}
+
+static DEVICE_ATTR(vsync, S_IRUGO, s3c_fb_vsync_show, NULL);
+
 static int s3cfb_probe(struct platform_device *pdev)
 {
 	struct s3c_platform_fb *pdata = NULL;
@@ -406,6 +411,12 @@ static int s3cfb_probe(struct platform_device *pdev)
 		pdata->backlight_on(pdev);
 #endif
 
+	ret = device_create_file(fbdev[0]->dev, &dev_attr_vsync);
+	if (ret) {
+		dev_err(fbdev[0]->dev, "failed to create vsync file\n");
+		goto err3;
+	}
+
 	fbdev[0]->vsync_thread = kthread_run(s3cfb_wait_for_vsync_thread,
 			fbdev[0], "s3cfb-vsync");
 	if (fbdev[0]->vsync_thread == ERR_PTR(-ENOMEM)) {
@@ -444,6 +455,8 @@ static int s3cfb_remove(struct platform_device *pdev)
 
 	if (fbdev[0]->vsync_thread)
 		kthread_stop(fbdev[0]->vsync_thread);
+
+	device_remove_file(fbdev[0]->dev, &dev_attr_vsync);
 
 	for (i = 0; i < FIMD_MAX; i++) {
 		fbdev[i] = fbfimd->fbdev[i];
