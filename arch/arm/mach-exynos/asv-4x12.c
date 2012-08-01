@@ -71,8 +71,9 @@ struct asv_judge_table exynos4x12_prime_limit[] = {
 	{ 21,  26},
 	{ 22,  29},
 	{ 23,  36},
-	{ 24,  44},
-	{ 25,  56},
+	{ 24,  40},
+	{ 25,  45},
+	{ 26,  50},
 	{999, 999},		/* Reserved Group */
 };
 
@@ -128,14 +129,9 @@ static void exynos4x12_prime_pre_set_abb(void)
 	switch (exynos_result_of_asv) {
 	case 0:
 	case 1:
-	case 2:
-	case 3:
 		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_070V);
 		break;
-	case 4:
-	case 5:
-	case 6:
-	case 7:
+	case 2:
 		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
 		break;
 	default:
