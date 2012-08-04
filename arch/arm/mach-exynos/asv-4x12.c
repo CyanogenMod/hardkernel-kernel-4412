@@ -139,7 +139,30 @@ static void exynos4x12_prime_pre_set_abb(void)
 		break;
 	}
 
-	/* ABB setting for INT/MIF/G3D */
+	/* ABB setting for INT */
+	switch (exynos_result_of_asv) {
+	case 0:
+	case 1:
+	case 2:
+		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_100V);
+		break;
+	default:
+		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_130V);
+		break;
+	}
+
+	/* ABB setting for MIF */
+	switch (exynos_result_of_asv) {
+	case 0:
+	case 1:
+		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_100V);
+		break;
+	default:
+		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_140V);
+		break;
+	}
+
+	/* ABB setting for G3D */
 	switch (exynos_result_of_asv) {
 	case 0:
 	case 1:
@@ -150,13 +173,9 @@ static void exynos4x12_prime_pre_set_abb(void)
 	case 6:
 	case 7:
 		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_100V);
-		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_100V);
-		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_100V);
 		break;
 	default:
 		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_130V);
-		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_130V);
-		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_130V);
 		break;
 	}
 }
