@@ -202,6 +202,8 @@ void exynos4_cpu_suspend(void)
 
 	outer_flush_all();
 
+	/* Disable the full line of zero */
+	disable_cache_foz();
 #ifdef CONFIG_ARM_TRUSTZONE
 	exynos_smc(SMC_CMD_SLEEP, 0, 0, 0);
 #else
@@ -375,6 +377,8 @@ static void exynos4_pm_resume(void)
 	/* enable L2X0*/
 	writel_relaxed(1, S5P_VA_L2CC + L2X0_CTRL);
 #endif
+	/* Enable the full line of zero */
+	enable_cache_foz();
 #endif
 
 early_wakeup:
