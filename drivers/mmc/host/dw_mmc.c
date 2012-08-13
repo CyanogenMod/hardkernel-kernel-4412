@@ -1752,7 +1752,7 @@ static int dw_mci_probe(struct platform_device *pdev)
 		host->ddr_timing = 0x00020002;
 	} else if (soc_is_exynos4212() || soc_is_exynos4412()) {
 		host->sdr_timing = 0x00010001;
-		host->ddr_timing = 0x00010001;
+		host->ddr_timing = 0x00010002;
 	} else if (soc_is_exynos5250()) {
 		host->sdr_timing = 0x00010000;
 		host->ddr_timing = 0x00010000;
