@@ -522,7 +522,7 @@ void exynos4x12_target(int index)
 		tmp = __raw_readl(EXYNOS4_CLKDIV_STAT_CAM1);
 	} while (tmp & 0x1111);
 
-	if (soc_is_exynos4412() && (exynos_result_of_asv > 3)) {
+	if ((samsung_rev() < EXYNOS4412_REV_2_0) && soc_is_exynos4412() && (exynos_result_of_asv > 3)) {
 		if (index == LV_6) { /* MIF:100 / INT:100 */
 			exynos4x12_set_abb_member(ABB_INT, ABB_MODE_100V);
 			exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_100V);
