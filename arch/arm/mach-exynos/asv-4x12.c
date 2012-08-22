@@ -172,10 +172,10 @@ static void exynos4x12_prime_pre_set_abb(void)
 	case 5:
 	case 6:
 	case 7:
-		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_100V);
+		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_100V);
 		break;
 	default:
-		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_130V);
+		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_130V);
 		break;
 	}
 }
