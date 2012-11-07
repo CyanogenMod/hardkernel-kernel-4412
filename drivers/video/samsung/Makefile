@@ -16,6 +16,7 @@ obj-$(CONFIG_FB_S5P_HT101HD1)	+= s3cfb_ht101hd1.o
 obj-$(CONFIG_FB_S5P_WA101S)	+= s3cfb_wa101s.o
 obj-$(CONFIG_FB_S5P_AMS369FG06)	+= s3cfb_ams369fg06.o
 obj-$(CONFIG_FB_S5P_LMS501KF03)	+= s3cfb_lms501kf03.o
+obj-$(CONFIG_FB_S5P_HV070WSA)	+= s3cfb_hv070wsa.o
 endif
 
 ifeq ($(CONFIG_FB_S5P_DEBUG),y)

@@ -123,6 +123,12 @@ config FB_S5P_LMS501KF03
 	help
 	  This enables support for Samsung LMS501KF03 5.01" WVGA TFT LCD panel
 
+config FB_S5P_HV070WSA
+	bool "HV070WSA"
+	depends on MACH_ORIGEN_QUAD
+	help
+	  This enables support for BOE HV070WSA 7" LCD panel
+
 config FB_S5P_DUMMY_MIPI_LCD
 	bool "DUMMY MIPI LCD"
 	depends on FB_S5P_MIPI_DSIM
