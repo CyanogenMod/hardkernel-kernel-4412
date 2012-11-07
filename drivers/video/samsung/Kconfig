@@ -90,7 +90,7 @@ prompt "Select LCD Type"
 default FB_S5P_AMS369FG06
 config FB_S5P_LTE480WV
 	bool "LTE480WV"
-	depends on MACH_SMDKV310 || MACH_SMDKC210 || MACH_SMDKV210 || MACH_SMDKC110
+	depends on MACH_SMDKV310 || MACH_SMDKC210 || MACH_SMDKV210 || MACH_SMDKC110 || MACH_ORIGEN_QUAD
 	help
 	  This enables support for Samsung LTE480WV 4.8" WVGA LCD panel
 

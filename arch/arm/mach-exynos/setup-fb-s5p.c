@@ -425,7 +425,7 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 	gpio_set_value(EXYNOS4_GPX0(6), 1);
 
 	gpio_free(EXYNOS4_GPX0(6));
-#elif defined(CONFIG_MACH_SMDK4X12)
+#elif defined(CONFIG_MACH_SMDK4X12) || defined(MACH_ORIGEN_QUAD)
 	if (samsung_board_rev_is_0_1()) {
 		err = gpio_request_one(EXYNOS4212_GPM3(6),
 				GPIOF_OUT_INIT_HIGH, "GPM3");

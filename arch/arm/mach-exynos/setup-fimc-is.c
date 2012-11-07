@@ -270,7 +270,7 @@ int exynos_fimc_is_clk_on(struct platform_device *pdev)
 	pdata = to_fimc_is_plat(&pdev->dev);
 
 	/* 1. CLK_GATE_IP_ISP (0x1003 C938)*/
-#if defined(CONFIG_MACH_SMDK4X12)
+#if defined(CONFIG_MACH_SMDK4X12) || defined(CONFIG_MACH_ORIGEN_QUAD)
 	clk_enable(pdata->div_clock[UART_ISP_RATIO]);
 #endif
 	/* 2. CLK_GATE_IP_ISP0, CLK_GATE_IP_ISP1 (0x1004 8800) (0x1004 8804)*/
