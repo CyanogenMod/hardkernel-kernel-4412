@@ -60,7 +60,7 @@ typedef u_int8_t u8;
 #include <bcmcdc.h>
 #include <bcmutils.h>
 #include "dhdu.h"
-#include "wlu_remote.h"
+#include "../../wl/exe/wlu_remote.h"
 #include <netdb.h>
 #include <dhdioctl.h>
 #include "dhdu_common.h"

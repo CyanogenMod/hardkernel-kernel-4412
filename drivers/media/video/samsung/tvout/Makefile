@@ -12,7 +12,7 @@ ifeq ($(CONFIG_VIDEO_UMP),y)
     EXTRA_CFLAGS += -Idrivers/media/video/samsung/ump/include
 endif
 
-obj-$(CONFIG_VIDEO_TVOUT) :=	s5p_tvout.o		\
+tvout-objs		 :=	s5p_tvout.o		\
 				s5p_tvout_v4l2.o	\
 				s5p_tvout_fb.o		\
 				s5p_tvout_common_lib.o	\
@@ -23,6 +23,8 @@ obj-$(CONFIG_VIDEO_TVOUT) :=	s5p_tvout.o		\
 				hw_if/vp.o		\
 				hw_if/hdmi.o		\
 				hw_if/hdcp.o
+
+obj-$(CONFIG_VIDEO_TVOUT) :=	tvout.o
 
 obj-$(CONFIG_ANALOG_TVENC) +=	hw_if/sdo.o
 

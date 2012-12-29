@@ -2633,16 +2633,18 @@ wl_HCI_cmd(void *wl, cmd_t *cmd, char **argv)
 	return dhd_var_setbuf(wl, cmd->name, cpkt, HCI_CMD_PREAMBLE_SIZE + plen);
 }
 
+	typedef union {
+		uint8 buf[HCI_ACL_DATA_PREAMBLE_SIZE + 2048];
+		uint32 alignme;
+	} g_hci_dbuf_t;
+
 static int
 wl_HCI_ACL_data(void *wl, cmd_t *cmd, char **argv)
 {
 	/* Align struct. Also declare static so that large array isn't allocated
 	 * from the stack.
 	 */
-	static union {
-		uint8 buf[HCI_ACL_DATA_PREAMBLE_SIZE + 2048];
-		uint32 alignme;
-	} g_hci_dbuf;
+        static g_hci_dbuf_t g_hci_dbuf;
 
 	amp_hci_ACL_data_t *dpkt = (amp_hci_ACL_data_t *)&g_hci_dbuf.buf[0];
 	uint16 dlen;
