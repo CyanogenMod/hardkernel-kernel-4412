@@ -451,7 +451,7 @@ static struct iommu_ops s5p_iommu_ops = {
 
 static int __init s5p_iommu_init(void)
 {
-	l2table_cachep = kmem_cache_create("SysMMU Lv2 Tables",
+	l2table_cachep = kmem_cache_create("SysMMU_Lv2_Tables",
 				S5P_LV2TABLE_SIZE, S5P_LV2TABLE_SIZE, 0, NULL);
 	if (!l2table_cachep)
 		return -ENOMEM;

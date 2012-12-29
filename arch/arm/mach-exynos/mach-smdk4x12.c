@@ -15,7 +15,7 @@
 #include <linux/clk.h>
 #include <linux/lcd.h>
 #include <linux/gpio.h>
-#include <linux/gpio_keys.h>
+#include <linux/gpio_event.h>
 #include <linux/i2c.h>
 #include <linux/pwm_backlight.h>
 #include <linux/input.h>
@@ -117,11 +117,13 @@
 #include <plat/jpeg.h>
 #endif
 
+#ifdef CONFIG_REGULATOR_S5M8767
 #include <linux/mfd/s5m87xx/s5m-core.h>
 #include <linux/mfd/s5m87xx/s5m-pmic.h>
+#endif
 
-#if defined(CONFIG_EXYNOS_THERMAL)
-#include <mach/tmu.h>
+#if defined(CONFIG_EXYNOS_SETUP_THERMAL)
+#include <plat/s5p-tmu.h>
 #endif
 
 #define REG_INFORM4            (S5P_INFORM4)
@@ -614,43 +616,6 @@ static struct s3c_platform_camera s5k6a3 = {
 };
 #endif
 
-#if defined(CONFIG_VIDEO_S5K6A3) && defined(CONFIG_S5K6A3_CSI_D)
-static struct i2c_board_info s5k6a3_fd_sensor_info = {
-	.type = "S5K6A3_FD",
-};
-
-static struct s3c_platform_camera s5k6a3_fd = {
-	.id		= CAMERA_CSI_D,
-	.clk_name	= "sclk_cam1",
-	.cam_power	= smdk4x12_cam1_reset,
-
-	.type		= CAM_TYPE_MIPI,
-	.fmt		= MIPI_CSI_RAW10,
-	.info		= &s5k6a3_fd_sensor_info,
-	.order422	= CAM_ORDER422_8BIT_YCBYCR,
-	.pixelformat	= V4L2_PIX_FMT_UYVY,
-	.line_length	= 1920,
-	.width		= 1920,
-	.height		= 1080,
-	.window		= {
-		.left	= 0,
-		.top	= 0,
-		.width	= 1920,
-		.height	= 1080,
-	},
-	.srclk_name	= "xusbxti",
-	.clk_rate	= 24000000,
-	.mipi_lanes	= 1,
-	.mipi_settle	= 18,
-	.mipi_align	= 24,
-
-	.initialized	= 0,
-	.flite_id	= FLITE_IDX_B,
-	.use_isp	= true,
-	.sensor_index	= 200
-};
-#endif
-
 #endif
 
 /* legacy M5MOLS Camera driver configuration */
@@ -773,9 +738,6 @@ static struct s3c_platform_fimc fimc_plat = {
 #endif
 #ifdef WRITEBACK_ENABLED
 		&writeback,
-#endif
-#if defined(CONFIG_VIDEO_S5K6A3) && defined(CONFIG_S5K6A3_CSI_D)
-		&s5k6a3_fd,
 #endif
 	},
 	.hw_ver		= 0x51,
@@ -1556,6 +1518,15 @@ static struct s3c_fb_platdata smdk4x12_lcd0_pdata __initdata = {
 #endif
 
 #ifdef CONFIG_FB_S5P
+
+static struct s3c_platform_fb ltn101al03_data __initdata = {
+	.hw_ver = 0x70,
+	.clk_name = "sclk_lcd",
+	.nr_wins = 5,
+	.default_win = CONFIG_FB_S5P_DEFAULT_WINDOW,
+	.swap = FB_SWAP_HWORD | FB_SWAP_WORD,
+};
+
 #ifdef CONFIG_FB_S5P_LMS501KF03
 static struct s3c_platform_fb lms501kf03_data __initdata = {
 	.hw_ver = 0x70,
@@ -2266,7 +2237,7 @@ static struct regulator_init_data max77686_buck1_data = {
 	.constraints = {
 		.name = "vdd_mif range",
 		.min_uV = 800000,
-		.max_uV = 1300000,
+		.max_uV = 1050000,
 		.always_on = 1,
 		.boot_on = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE |
@@ -2280,7 +2251,7 @@ static struct regulator_init_data max77686_buck2_data = {
 	.constraints = {
 		.name = "vdd_arm range",
 		.min_uV = 800000,
-		.max_uV = 1400000,
+		.max_uV = 1350000,
 		.always_on = 1,
 		.boot_on = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
@@ -2293,7 +2264,7 @@ static struct regulator_init_data max77686_buck3_data = {
 	.constraints = {
 		.name = "vdd_int range",
 		.min_uV = 800000,
-		.max_uV = 1300000,
+		.max_uV = 1150000,
 		.always_on = 1,
 		.boot_on = 1,
 		.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
@@ -2403,6 +2374,7 @@ static struct max77686_platform_data exynos4_max77686_info = {
 	.buck4_voltage[6] = 950000,	/* 0.95V */
 	.buck4_voltage[7] = 900000,	/* 0.9V */
 };
+#ifdef CONFIG_REGULATOR_S5M8767
 /* S5M8767 Regulator */
 static int s5m_cfg_irq(void)
 {
@@ -2518,25 +2490,45 @@ static struct s5m_platform_data exynos4_s5m8767_pdata = {
 	.opmode_data		= s5m8767_opmode_data,
 	.wtsr_smpl		= 1,
 
-	.buck_default_idx	= 1,
-	.buck_gpios[0]		= EXYNOS4_GPL0(3),
-	.buck_gpios[1]		= EXYNOS4_GPL0(4),
-	.buck_gpios[2]		= EXYNOS4_GPL0(6),
+	.buck2_voltage[0]	= 1250000,
+	.buck2_voltage[1]	= 1200000,
+	.buck2_voltage[2]	= 1150000,
+	.buck2_voltage[3]	= 1100000,
+	.buck2_voltage[4]	= 1050000,
+	.buck2_voltage[5]	= 1000000,
+	.buck2_voltage[6]	=  950000,
+	.buck2_voltage[7]	=  900000,
 
-	.buck_ds[0]		= EXYNOS4_GPL0(0),
-	.buck_ds[1]		= EXYNOS4_GPL0(1),
-	.buck_ds[2]		= EXYNOS4_GPL0(2),
+	.buck3_voltage[0]	= 1100000,
+	.buck3_voltage[1]	= 1000000,
+	.buck3_voltage[2]	= 950000,
+	.buck3_voltage[3]	= 900000,
+	.buck3_voltage[4]	= 1100000,
+	.buck3_voltage[5]	= 1000000,
+	.buck3_voltage[6]	= 950000,
+	.buck3_voltage[7]	= 900000,
 
-	.buck_ramp_delay        = 25,
+	.buck4_voltage[0]	= 1200000,
+	.buck4_voltage[1]	= 1150000,
+	.buck4_voltage[2]	= 1200000,
+	.buck4_voltage[3]	= 1100000,
+	.buck4_voltage[4]	= 1100000,
+	.buck4_voltage[5]	= 1100000,
+	.buck4_voltage[6]	= 1100000,
+	.buck4_voltage[7]	= 1100000,
+
+	.buck_default_idx	= 3,
+	.buck_gpios[0]		= EXYNOS4_GPX2(3),
+	.buck_gpios[1]		= EXYNOS4_GPX2(4),
+	.buck_gpios[2]		= EXYNOS4_GPX2(5),
+
+	.buck_ramp_delay        = 10,
 	.buck2_ramp_enable      = true,
 	.buck3_ramp_enable      = true,
 	.buck4_ramp_enable      = true,
-
-	.buck2_init		= 1100000,
-	.buck3_init		= 1000000,
-	.buck4_init		= 1000000,
 };
 /* End of S5M8767 */
+#endif
 
 #ifdef CONFIG_VIDEO_S5P_MIPI_CSIS
 static struct regulator_consumer_supply mipi_csi_fixed_voltage_supplies[] = {
@@ -2718,32 +2710,69 @@ static struct wm8994_pdata wm8994_platform_data = {
 	.ldo[1] = { 0, NULL, &wm8994_ldo2_data },
 };
 
+#if defined(CONFIG_USB_HSIC_USB3503)
+	#include <linux/usb/hsic_usb3503.h>
+	static struct usb3503_platform_data usb3503_pdata = {
+		.gpio_reset		=	EXYNOS4_GPX3(5),
+		.gpio_hub_con	=	EXYNOS4_GPX3(4),
+
+		.sys_irq		=	IRQ_EINT(24),
+		.irq_gpio		=	EXYNOS4_GPX3(0),
+	};
+#endif
+
 static struct i2c_board_info i2c_devs0[] __initdata = {
+//#ifdef CONFIG_REGULATOR_S5M8767
+//	{
+//		I2C_BOARD_INFO("s5m87xx", 0xCC >> 1),
+//		.platform_data = &exynos4_s5m8767_pdata,
+//		.irq		= IRQ_EINT(26),
+//	},
+//#else
+//	{
+//		I2C_BOARD_INFO("max8997", 0x66),
+//		.platform_data	= &exynos4_max8997_info,
+//	}, {
 	{
 		I2C_BOARD_INFO("max77686", (0x12 >> 1)),
 		.platform_data	= &exynos4_max77686_info,
-	}, {
-		I2C_BOARD_INFO("s5m87xx", 0xCC >> 1),
-		.platform_data = &exynos4_s5m8767_pdata,
-		.irq		= IRQ_EINT(26),
 	},
+//#endif
+
+#if defined(CONFIG_USB_HSIC_USB3503)
+	{
+		I2C_BOARD_INFO("usb3503", (0x08)),
+		.platform_data	= &usb3503_pdata,
+	},
+#endif
 };
 
-static struct i2c_board_info i2c_devs0_rev0[] __initdata = {
-	{
-		I2C_BOARD_INFO("max77686", (0x12 >> 1)),
-		.platform_data	= &exynos4_max77686_info,
-	}, {
-		I2C_BOARD_INFO("max8997", 0x66),
-		.platform_data  = &exynos4_max8997_info,
-	},
+
+#if defined(CONFIG_INPUT_ISA1200)
+#include <linux/input/isa1200.h>
+struct isa1200_platform_data isa1200_pdata = {
+	.gpio_hen = EXYNOS4_GPX0(6),
+	.gpio_len = EXYNOS4_GPC0(1),
+	.mode_sel = ISA1200_PWM_INPUT_MODE,
+
+	.pwm_gpio = EXYNOS4_GPD0(0),
+	.pwm_func = S3C_GPIO_SFN(2),
+
+	.pwm_id = 0,
+	.pwm_periode_ns = 44200,	// Freq 22KHz,
+	.pwm_duty = 50,				// max=255, 
 };
+#endif
 
 static struct i2c_board_info i2c_devs1[] __initdata = {
+
+#if defined(CONFIG_INPUT_ISA1200)
 	{
-		I2C_BOARD_INFO("wm8994", 0x1a),
-		.platform_data	= &wm8994_platform_data,
+		I2C_BOARD_INFO("isa1200", (0x90>>1)),
+		.platform_data = & isa1200_pdata,
 	},
+#endif
+
 };
 
 static struct i2c_board_info i2c_devs2[] __initdata = {
@@ -2754,17 +2783,59 @@ static struct i2c_board_info i2c_devs2[] __initdata = {
 #endif
 };
 
-static struct i2c_board_info i2c_devs3[] __initdata = {
-	{
-		I2C_BOARD_INFO("max8952", 0x60),
-		.platform_data	= &exynos4_max8952_info,
-	},
+#if defined(CONFIG_TOUCHSCREEN_SOLOMON_MT)
+#include	<linux/input/touch-pdata.h>
+#include	<linux/input/odroidq-touch.h>
+
+static	int	odroidq_keycode[] = {
+	KEY_HOME,	KEY_MENU,	KEY_BACK,	KEY_SEARCH
 };
 
-static struct i2c_board_info i2c_devs7[] __initdata = {
+static	struct	touch_pdata		odroidq_touch_pdata = {
+	.name			= "odroidq-ts",		/* input name define */
+	.irq_gpio		= EXYNOS4_GPX3(3),	/* irq gpio define */
+	.reset_gpio		= EXYNOS4_GPX2(1),	/* reset gpio define */
+	.reset_level	= 0,				/* reset level setting (1 = High reset, 0 = Low reset) */
+	/* irq flags setup : Therad irq mode(IRQF_TRIGGER_HIGH | IRQF_ONESHOT) */
+//	.irq_flags 		= IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+//	.irq_mode		= IRQ_MODE_THREAD,
+	.irq_mode		= IRQ_MODE_NORMAL,	/* IRQ_MODE_THREAD, IRQ_MODE_NORMAL, IRQ_MODE_POLLING */
+	.irq_flags		= IRQF_TRIGGER_FALLING | IRQF_DISABLED,
+
+	.abs_max_x		= SENSE_DATA_MAX,
+	.abs_max_y		= DRIVE_DATA_MAX,
+
+	.area_max		= 10, 
+	.press_max		= PRESSURE_MAX, 
+	.id_max			= TRACKING_ID_MAX,
+	
+	.vendor			= 0x16B4, 
+	.product		= 0x0702, 
+	.version		= 0x0100,
+
+	.max_fingers	= 10,
+	
+//	.keycode		= odroidq_keycode, 
+//	.keycnt			= 4,
+
+	.touch_work		= odroidq_work,
+	.early_probe	= odroidq_early_probe,
+	.probe			= odroidq_probe,
+	.enable			= odroidq_enable,
+	.disable		= odroidq_disable,
+	.i2c_read		= odroidq_i2c_read,
+	.calibration	= odroidq_calibration,
+};
+
+#endif
+
+static struct i2c_board_info i2c_devs4[] __initdata = {
+#if defined(CONFIG_TOUCHSCREEN_SOLOMON_MT)
 	{
-		I2C_BOARD_INFO("pixcir-ts", 0x5C),
+		I2C_BOARD_INFO(I2C_TOUCH_NAME, (0x48)), 
+		.platform_data = &odroidq_touch_pdata,
 	},
+#endif
 };
 
 #ifdef CONFIG_BATTERY_SAMSUNG
@@ -2774,26 +2845,57 @@ static struct platform_device samsung_device_battery = {
 };
 #endif
 
-struct gpio_keys_button smdk4x12_button[] = {
+static struct gpio_event_direct_entry smdk4x12_keypad_key_map[] = {
 	{
-		.code = KEY_POWER,
 		.gpio = EXYNOS4_GPX0(0),
-		.active_low = 1,
-		.wakeup = 1,
+		.code   = KEY_POWER,
 	}
 };
 
-struct gpio_keys_platform_data smdk4x12_gpiokeys_platform_data = {
-	smdk4x12_button,
-	ARRAY_SIZE(smdk4x12_button),
+static struct gpio_event_input_info smdk4x12_keypad_key_info = {
+	.info.func              = gpio_event_input_func,
+	.info.no_suspend        = true,
+	.debounce_time.tv64	= 5 * NSEC_PER_MSEC,
+	.type                   = EV_KEY,
+	.keymap                 = smdk4x12_keypad_key_map,
+	.keymap_size            = ARRAY_SIZE(smdk4x12_keypad_key_map)
 };
 
-static struct platform_device smdk4x12_gpio_keys = {
-	.name	= "gpio-keys",
+static struct gpio_event_info *smdk4x12_input_info[] = {
+	&smdk4x12_keypad_key_info.info,
+};
+
+static struct gpio_event_platform_data smdk4x12_input_data = {
+	.names  = {
+		"smdk4x12-keypad",
+		NULL,
+	},
+	.info           = smdk4x12_input_info,
+	.info_count     = ARRAY_SIZE(smdk4x12_input_info),
+};
+
+static struct platform_device smdk4x12_input_device = {
+	.name   = GPIO_EVENT_DEV_NAME,
+	.id     = 0,
 	.dev	= {
-		.platform_data = &smdk4x12_gpiokeys_platform_data,
+		.platform_data = &smdk4x12_input_data,
 	},
 };
+
+static void __init smdk4x12_gpio_power_init(void)
+{
+	int err = 0;
+
+	err = gpio_request_one(EXYNOS4_GPX0(0), 0, "GPX0");
+	if (err) {
+		printk(KERN_ERR "failed to request GPX0 for "
+				"suspend/resume control\n");
+		return;
+	}
+	s3c_gpio_setpull(EXYNOS4_GPX0(0), S3C_GPIO_PULL_NONE);
+
+	gpio_free(EXYNOS4_GPX0(0));
+}
 
 static uint32_t smdk4x12_keymap0[] __initdata = {
 	/* KEY(row, col, keycode) */
@@ -2830,6 +2932,12 @@ static struct samsung_keypad_platdata smdk4x12_keypad_data1 __initdata = {
 	.rows		= 3,
 	.cols		= 8,
 };
+
+#ifdef CONFIG_WAKEUP_ASSIST
+static struct platform_device wakeup_assist_device = {
+	.name   = "wakeup_assist",
+};
+#endif
 
 #ifdef CONFIG_VIDEO_FIMG2D
 static struct fimg2d_platdata fimg2d_data __initdata = {
@@ -2965,6 +3073,11 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&s3c_device_i2c4,
 	&s3c_device_i2c5,
 	&s3c_device_i2c7,
+
+#if defined(CONFIG_INPUT_ISA1200) //Haptic Motor PWM
+	&s3c_device_timer[0],
+#endif
+
 #ifdef CONFIG_USB_EHCI_S5P
 	&s5p_device_ehci,
 #endif
@@ -3100,10 +3213,13 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&samsung_device_battery,
 #endif
 	&samsung_device_keypad,
+#ifdef CONFIG_WAKEUP_ASSIST
+	&wakeup_assist_device,
+#endif
 #ifdef CONFIG_EXYNOS_C2C
 	&exynos_device_c2c,
 #endif
-	&smdk4x12_gpio_keys,
+	&smdk4x12_input_device,
 	&smdk4x12_smsc911x,
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	&exynos_device_spi0,
@@ -3112,7 +3228,7 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 #endif
 	&exynos_device_spi2,
 #endif
-#ifdef CONFIG_EXYNOS_THERMAL
+#ifdef CONFIG_EXYNOS_SETUP_THERMAL
 	&exynos_device_tmu,
 #endif
 #ifdef CONFIG_S5P_DEV_ACE
@@ -3121,30 +3237,15 @@ static struct platform_device *smdk4x12_devices[] __initdata = {
 	&exynos4_busfreq,
 };
 
-#ifdef CONFIG_EXYNOS_THERMAL
+#ifdef CONFIG_EXYNOS_SETUP_THERMAL
 /* below temperature base on the celcius degree */
 struct tmu_data exynos_tmu_data __initdata = {
 	.ts = {
 		.stop_throttle  = 82,
 		.start_throttle = 85,
-		.stop_warning  = 102,
-		.start_warning = 105,
+		.stop_warning  = 95,
+		.start_warning = 103,
 		.start_tripping = 110,		/* temp to do tripping */
-		.start_hw_tripping = 113,	/* temp to do hw_trpping*/
-		.stop_mem_throttle = 80,
-		.start_mem_throttle = 85,
-
-		.stop_tc = 13,
-		.start_tc = 10,
-	},
-	.cpulimit = {
-		.throttle_freq = 800000,
-		.warning_freq = 200000,
-	},
-	.temp_compensate = {
-		.arm_volt = 925000, /* vdd_arm in uV for temperature compensation */
-		.bus_volt = 900000, /* vdd_bus in uV for temperature compensation */
-		.g3d_volt = 900000, /* vdd_g3d in uV for temperature compensation */
 	},
 	.efuse_value = 55,
 	.slope = 0x10008802,
@@ -3845,6 +3946,29 @@ err_clk:
 	return ret;
 }
 
+static int smdk4x12_p5v_enable(void)
+{
+	int err;
+
+	err = gpio_request(EXYNOS4_GPC0(2), "GPX1");
+	if (err)
+		printk(KERN_ERR "#### failed to request GPX1_2 ####\n");
+
+	s3c_gpio_setpull(EXYNOS4_GPC0(2), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS4_GPC0(2), 1);
+	gpio_free(EXYNOS4_GPC0(2));
+
+	err = gpio_request(EXYNOS4_GPC0(3), "GPX1");
+	if (err)
+		printk(KERN_ERR "#### failed to request GPX1_2 ####\n");
+
+	s3c_gpio_setpull(EXYNOS4_GPC0(3), S3C_GPIO_PULL_NONE);
+	gpio_direction_output(EXYNOS4_GPC0(3), 1);
+	gpio_free(EXYNOS4_GPC0(3));
+
+	return 0;
+}
+
 static void __init smdk4x12_machine_init(void)
 {
 #ifdef CONFIG_S3C64XX_DEV_SPI
@@ -3880,11 +4004,8 @@ static void __init smdk4x12_machine_init(void)
 	exynos_pd_enable(&exynos4_device_pd[PD_GPS_ALIVE].dev);
 	exynos_pd_enable(&exynos4_device_pd[PD_ISP].dev);
 #endif
+ 	smdk4x12_p5v_enable();
 	s3c_i2c0_set_platdata(NULL);
-	if (samsung_board_rev_is_0_0())
-		i2c_register_board_info(0, i2c_devs0_rev0,
-					ARRAY_SIZE(i2c_devs0_rev0));
-	else
 		i2c_register_board_info(0, i2c_devs0, ARRAY_SIZE(i2c_devs0));
 
 	s3c_i2c1_set_platdata(NULL);
@@ -3893,41 +4014,21 @@ static void __init smdk4x12_machine_init(void)
 	s3c_i2c2_set_platdata(NULL);
 	i2c_register_board_info(2, i2c_devs2, ARRAY_SIZE(i2c_devs2));
 
-	s3c_i2c3_set_platdata(NULL);
-	i2c_register_board_info(3, i2c_devs3, ARRAY_SIZE(i2c_devs3));
-
 	s3c_i2c4_set_platdata(NULL);
-	s3c_i2c5_set_platdata(NULL);
+	i2c_register_board_info(4, i2c_devs4, ARRAY_SIZE(i2c_devs4));
 
-	s3c_i2c7_set_platdata(NULL);
-	i2c_devs7[0].irq = samsung_board_rev_is_0_0() ? IRQ_EINT(15) : IRQ_EINT(22);
-	i2c_register_board_info(7, i2c_devs7, ARRAY_SIZE(i2c_devs7));
+	s3c_i2c5_set_platdata(NULL);
 
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
 	mipi_fb_init();
 #endif
-#ifdef CONFIG_FB_S3C
-	dev_set_name(&s5p_device_fimd0.dev, "s3cfb.0");
-	clk_add_alias("lcd", "exynos4-fb.0", "lcd", &s5p_device_fimd0.dev);
-	clk_add_alias("sclk_fimd", "exynos4-fb.0", "sclk_fimd", &s5p_device_fimd0.dev);
-	s5p_fb_setname(0, "exynos4-fb");
-#if defined(CONFIG_LCD_AMS369FG06) || defined(CONFIG_LCD_LMS501KF03)
-	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
-#endif
-	s5p_fimd0_set_platdata(&smdk4x12_lcd0_pdata);
-#ifdef CONFIG_FB_MIPI_DSIM
-	s5p_device_mipi_dsim.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
-#endif
-#ifdef CONFIG_EXYNOS_DEV_PD
-	s5p_device_fimd0.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
-#endif
-#endif
+
 #ifdef CONFIG_FB_S5P
 #ifdef CONFIG_FB_S5P_LMS501KF03
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 	s3cfb_set_platdata(&lms501kf03_data);
 #else
-	s3cfb_set_platdata(NULL);
+	s3cfb_set_platdata(&ltn101al03_data);
 #endif
 #ifdef CONFIG_FB_S5P_MIPI_DSIM
 	s5p_device_dsim.dev.parent = &exynos4_device_pd[PD_LCD0].dev;
@@ -4003,8 +4104,8 @@ static void __init smdk4x12_machine_init(void)
 	exynos_device_flite1.dev.parent = &exynos4_device_pd[PD_ISP].dev;
 #endif
 #endif
-#ifdef CONFIG_EXYNOS_THERMAL
-	exynos_tmu_set_platdata(&exynos_tmu_data);
+#ifdef CONFIG_EXYNOS_SETUP_THERMAL
+	s5p_tmu_set_platdata(&exynos_tmu_data);
 #endif
 #ifdef CONFIG_VIDEO_FIMC
 	s3c_fimc0_set_platdata(&fimc_plat);
@@ -4129,9 +4230,6 @@ static void __init smdk4x12_machine_init(void)
 #ifdef CONFIG_VIDEO_JPEG_V2X
 #ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_jpeg.dev.parent = &exynos4_device_pd[PD_CAM].dev;
-	if (samsung_rev() == EXYNOS4412_REV_2_0)
-		exynos4_jpeg_setup_clock(&s5p_device_jpeg.dev, 176000000);
-	else
 		exynos4_jpeg_setup_clock(&s5p_device_jpeg.dev, 160000000);
 #endif
 #endif
@@ -4144,10 +4242,7 @@ static void __init smdk4x12_machine_init(void)
 #ifdef CONFIG_EXYNOS_DEV_PD
 	s5p_device_mfc.dev.parent = &exynos4_device_pd[PD_MFC].dev;
 #endif
-	if (soc_is_exynos4412() && samsung_rev() >= EXYNOS4412_REV_2_0)
-		exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 220 * MHZ);
-	else if ((soc_is_exynos4412() && samsung_rev() >= EXYNOS4412_REV_1_0) ||
-		(soc_is_exynos4212() && samsung_rev() >= EXYNOS4212_REV_1_0))
+	if (soc_is_exynos4412() && samsung_rev() >= EXYNOS4412_REV_1_0)
 		exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 200 * MHZ);
 	else
 		exynos4_mfc_setup_clock(&s5p_device_mfc.dev, 267 * MHZ);
@@ -4173,17 +4268,15 @@ static void __init smdk4x12_machine_init(void)
 
 	exynos_sysmmu_init();
 
+	smdk4x12_gpio_power_init();
+
 	platform_add_devices(smdk4x12_devices, ARRAY_SIZE(smdk4x12_devices));
 	if (soc_is_exynos4412())
 		platform_add_devices(smdk4412_devices, ARRAY_SIZE(smdk4412_devices));
 
 #ifdef CONFIG_FB_S3C
-	if (samsung_rev() >= EXYNOS4412_REV_2_0)
-		exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev,
-					"mout_mpll_user", 880 * MHZ);
-	else
-		exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev,
-					"mout_mpll_user", 800 * MHZ);
+	exynos4_fimd0_setup_clock(&s5p_device_fimd0.dev, "mout_mpll_user",
+				800 * MHZ);
 #endif
 #ifdef CONFIG_S3C64XX_DEV_SPI
 	sclk = clk_get(spi0_dev, "dout_spi0");
@@ -4196,7 +4289,7 @@ static void __init smdk4x12_machine_init(void)
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				prnt->name, sclk->name);
 
-	clk_set_rate(sclk, 100 * 1000 * 1000);
+	clk_set_rate(sclk, 800 * 1000 * 1000);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -4221,7 +4314,7 @@ static void __init smdk4x12_machine_init(void)
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				prnt->name, sclk->name);
 
-	clk_set_rate(sclk, 100 * 1000 * 1000);
+	clk_set_rate(sclk, 800 * 1000 * 1000);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -4246,7 +4339,7 @@ static void __init smdk4x12_machine_init(void)
 		printk(KERN_ERR "Unable to set parent %s of clock %s.\n",
 				prnt->name, sclk->name);
 
-	clk_set_rate(sclk, 100 * 1000 * 1000);
+	clk_set_rate(sclk, 800 * 1000 * 1000);
 	clk_put(sclk);
 	clk_put(prnt);
 
@@ -4298,7 +4391,7 @@ MACHINE_START(SMDK4212, "SMDK4X12")
 #endif
 MACHINE_END
 
-MACHINE_START(SMDK4412, "SMDK4X12")
+MACHINE_START(SMDK4412, "ODROIDQ")
 	.boot_params	= S5P_PA_SDRAM + 0x100,
 	.init_irq	= exynos4_init_irq,
 	.map_io		= smdk4x12_map_io,

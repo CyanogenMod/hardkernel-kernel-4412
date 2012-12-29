@@ -223,11 +223,6 @@ static void exynos4_pm_prepare(void)
 
 	/* Before enter central sequence mode, clock src register have to set */
 
-#ifdef CONFIG_CACHE_L2X0
-	/* Disable the full line of zero */
-	disable_cache_foz();
-#endif
-
 	s3c_pm_do_restore_core(exynos4_set_clksrc, ARRAY_SIZE(exynos4_set_clksrc));
 
 	if (soc_is_exynos4210())
@@ -385,11 +380,6 @@ static void exynos4_pm_resume(void)
 early_wakeup:
 	if (!soc_is_exynos4210())
 		exynos4_reset_assert_ctrl(1);
-
-#ifdef CONFIG_CACHE_L2X0
-	/* Enable the full line of zero */
-	enable_cache_foz();
-#endif
 
 	/* Clear Check mode */
 	__raw_writel(0x0, REG_INFORM1);

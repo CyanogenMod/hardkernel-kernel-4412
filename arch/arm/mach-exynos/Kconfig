@@ -290,6 +290,7 @@ config EXYNOS4_SETUP_TVOUT
 	  Common setup code for TVOUT
 
 config EXYNOS_DEV_TMU
+	default y
 	bool
 	help
 	  Compile in platform device definitions for TMU
@@ -371,24 +372,6 @@ choice
 	prompt "Max CPU frequency"
 	default EXYNOS4X12_1400MHZ_SUPPORT
 	default EXYNOS5250_1400MHZ_SUPPORT
-
-config EXYNOS4X12_1500MHZ_SUPPORT
-	bool "Max 1500MHz CPUFREQ LEVEL"
-	depends on EXYNOS4_CPUFREQ && (CPU_EXYNOS4212 || CPU_EXYNOS4412)
-	help
-	  Max 1.5Ghz support
-
-config EXYNOS4X12_1400MHZ_SUPPORT
-	bool "Max 1400MHz CPUFREQ LEVEL"
-	depends on EXYNOS4_CPUFREQ && (CPU_EXYNOS4212 || CPU_EXYNOS4412)
-	help
-	  Max 1.4Ghz support
-
-config EXYNOS4X12_1200MHZ_SUPPORT
-	bool "Max 1200MHz CPUFREQ LEVEL"
-	depends on EXYNOS4_CPUFREQ && (CPU_EXYNOS4212 || CPU_EXYNOS4412)
-	help
-	  Max 1.2Ghz support
 
 config EXYNOS5250_1400MHZ_SUPPORT
 	bool "Max 1400MHz CPUFREQ LEVEL"
@@ -629,19 +612,17 @@ config MACH_SMDK4X12
 	help
 	  Machine support for Samsung SMDK4X12
 
-config MACH_ORIGEN_QUAD
-	bool "ORIGEN_QUAD board"
+config MACH_ODROID_4X12
+	bool "ODROID 4X12 board"
 	select CPU_EXYNOS4212
 	select CPU_EXYNOS4412
 	select S3C_DEV_WDT
 	select S3C_DEV_RTC
 	select S3C_DEV_HSMMC2
+	select S3C_DEV_HSMMC3
 	select S3C_DEV_I2C1
-	select S3C_DEV_I2C2
-	select S3C_DEV_I2C3
 	select S3C_DEV_I2C4
 	select S3C_DEV_I2C5
-	select S3C_DEV_I2C7
 	select S5P_DEV_I2C_HDMIPHY
 	select S5P_GPIO_INT
 	select S5P_DEV_MFC
@@ -651,28 +632,66 @@ config MACH_ORIGEN_QUAD
 	select S5P_DEV_USB_EHCI
 	select S5P_DEV_USBGADGET
 	select S5P_SYSTEM_MMU
-	select EXYNOS_DEV_TMU
 	select EXYNOS_DEV_PD
 	select EXYNOS4_SETUP_SDHCI
 	select EXYNOS4_SETUP_FB_S5P
 	select EXYNOS4_SETUP_FIMD0
 	select EXYNOS4_SETUP_I2C1
-	select EXYNOS4_SETUP_I2C2
-	select EXYNOS4_SETUP_I2C3
 	select EXYNOS4_SETUP_I2C4
 	select EXYNOS4_SETUP_I2C5
-	select EXYNOS4_SETUP_I2C7
 	select EXYNOS4_SETUP_USB_PHY
-	select EXYNOS4_SETUP_KEYPAD
 	select EXYNOS4_SETUP_MFC
 	select EXYNOS4_DEV_FIMC_LITE
 	select SAMSUNG_DEV_ADC
 	select SAMSUNG_DEV_BACKLIGHT
 	select SAMSUNG_DEV_PWM
-	select SAMSUNG_DEV_KEYPAD
 	help
-	  Machine support for Insignal ORIGEN_QUAD board
+	  Machine support for Hardkernel ODROID_4X12
+
 endmenu
+
+choice
+	depends on MACH_ODROID_4X12
+	prompt "ODROID_4412 PRODUCT"
+	default BOARD_ODROID_Q
+
+	config BOARD_ODROID_Q
+		bool "ODROID_Q ARM Quad-Core Tablet(10.1)"
+		select EXYNOS_DEV_TMU
+		help
+		  This enables support for ODROID_Q
+
+	config BOARD_ODROID_Q2
+		bool "ODROID_Q2 ARM Quad-Core Tablet(10.1)"
+		select EXYNOS_DEV_TMU
+		help
+		  This enables support for ODROID_Q2
+	
+	config BOARD_ODROID_X
+		bool "ODROID_X ARM Quad-Core mini-PC"
+		help
+		  This enables support for ODROID_X(Quad-Core ARM PC)
+
+	config BOARD_ODROID_X2
+		bool "ODROID_X2 ARM Quad-Core mini-PC"
+		help
+		  This enables support for ODROID_X2(Quad-Core ARM PC)
+
+	config BOARD_ODROID_U
+		bool "ODROID_U ARM Quad-Core Ultra mini-PC"
+		help
+		  This enables support for ODROID_U(Quad-Core ARM PC)
+
+	config BOARD_ODROID_U2
+		bool "ODROID_U2 ARM Quad-Core Ultra mini-PC"
+		help
+		  This enables support for ODROID_U2(Quad-Core ARM PC)
+
+	config BOARD_SMD_A2
+		bool "SMD A2 Board"
+		help
+		  This enables support for SMD A2
+endchoice
 
 menu "EXYNOS5 Machines"
 	depends on ARCH_EXYNOS5
@@ -815,6 +834,21 @@ config WAKEUP_ASSIST
 	  If selected, the wakeup assistant driver will report POWER key event
 	  directly
 endif
+
+config ODROID_FAN
+	bool "ODROID Dev-Board FAN PWM control driver"
+	depends on BOARD_ODROID_U || BOARD_ODROID_U2
+	default n
+	help
+		Use PWM as FAN control
+
+config USE_GPIO_AS_I2C
+	bool "Gpio_AS_i2c driver"
+	depends on MACH_ODROID_4210 || MACH_ODROID_4X12
+	default n
+	help
+		Use GPIO pins as I2C
+		This driver is misc devices  driver that uses xxx as minor number
 
 config EXYNOS_C2C
 	bool "C2C device support"

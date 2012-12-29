@@ -105,8 +105,8 @@
 #include <media/m5mo_platform.h>
 #include <media/m5mols.h>
 
-#if defined(CONFIG_EXYNOS_THERMAL)
-#include <mach/tmu.h>
+#if defined(CONFIG_EXYNOS4_SETUP_THERMAL)
+#include <plat/s5p-tmu.h>
 #endif
 
 #if defined(CONFIG_FB_S5P_MIPI_DSIM)
@@ -1931,8 +1931,8 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&s3c_device_android_usb,
 	&s3c_device_usb_mass_storage,
 #endif
-#ifdef CONFIG_EXYNOS_THERMAL
-	&exynos_device_tmu,
+#ifdef CONFIG_EXYNOS4_SETUP_THERMAL
+	&s5p_device_tmu,
 #endif
 #ifdef CONFIG_SATA_AHCI_PLATFORM
 	&exynos4_device_ahci,
@@ -1943,25 +1943,6 @@ static struct platform_device *smdkv310_devices[] __initdata = {
 	&exynos4_busfreq,
 };
 
-#ifdef CONFIG_EXYNOS_THERMAL
-/* below temperature base on the celcius degree */
-struct tmu_data exynos_tmu_data __initdata = {
-	.ts = {
-		.stop_throttle  = 82,
-		.start_throttle = 85,
-		.stop_warning  = 95,
-		.start_warning = 103,
-		.start_tripping = 110, /* temp to do tripping */
-	},
-	.cpulimit = {
-		.throttle_freq = 800000,
-		.warning_freq = 200000,
-	},
-	.efuse_value = 55,
-	.slope = 0x10008802,
-	.mode = 0,
-};
-#endif
 #if defined(CONFIG_VIDEO_TVOUT)
 static struct s5p_platform_hpd hdmi_hpd_data __initdata = {
 
@@ -2568,8 +2549,8 @@ static void __init smdkv310_machine_init(void)
 	exynos_ion_set_platdata();
 #endif
 
-#ifdef CONFIG_EXYNOS_THERMAL
-	exynos_tmu_set_platdata(&exynos_tmu_data);
+#ifdef CONFIG_EXYNOS4_SETUP_THERMAL
+	s5p_tmu_set_platdata(NULL);
 #endif
 
 #if defined(CONFIG_VIDEO_MFC5X) || defined(CONFIG_VIDEO_SAMSUNG_S5P_MFC)

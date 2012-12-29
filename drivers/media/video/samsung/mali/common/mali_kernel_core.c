@@ -169,8 +169,7 @@ _mali_osk_errcode_t mali_kernel_constructor( void )
     err  = initialize_subsystems();
     if (_MALI_OSK_ERR_OK != err) goto error3;
 
-    MALI_PRINT(("Mali device driver %s loaded\n", SVN_REV_STRING));
-
+    //MALI_PRINT(("Mali device driver %s loaded\n", SVN_REV_STRING));
 	MALI_SUCCESS;
 
 error3:

@@ -494,4 +494,10 @@ config INPUT_XEN_KBDDEV_FRONTEND
 	  To compile this driver as a module, choose M here: the
 	  module will be called xen-kbdfront.
 
+config INPUT_ISA1200
+	tristate "ISA1200 Haptic Driver"
+	depends on I2C && HAVE_PWM
+	help
+	  This option enables support for the Imagis ISA1200 Haptic Driver.
+
 endif

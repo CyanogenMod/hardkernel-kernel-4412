@@ -61,8 +61,13 @@ void exynos4_setup_sdhci_cfg_card(struct platform_device *dev, void __iomem *r,
 			 S3C_SDHCI_CTRL3_FCSEL2 |
 			 S3C_SDHCI_CTRL3_FCSEL1 |
 			 S3C_SDHCI_CTRL3_FCSEL0);
-	else
-		ctrl3 = (S3C_SDHCI_CTRL3_FCSEL1 | S3C_SDHCI_CTRL3_FCSEL0);
+	else {
+		ctrl2 |= S3C_SDHCI_CTRL2_ENFBCLKTX;
+		ctrl3 = (S3C_SDHCI_CTRL3_FCSEL3 |
+			 S3C_SDHCI_CTRL3_FCSEL2 |
+			 S3C_SDHCI_CTRL3_FCSEL1 |
+			 S3C_SDHCI_CTRL3_FCSEL0);
+	}
 
 	writel(ctrl2, r + S3C_SDHCI_CONTROL2);
 	writel(ctrl3, r + S3C_SDHCI_CONTROL3);

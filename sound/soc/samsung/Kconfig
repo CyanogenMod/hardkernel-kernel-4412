@@ -69,6 +69,23 @@ config SND_SOC_SAMSUNG_SMDK_WM8994
 	help
 		Say Y if you want to add support for SoC audio on the SMDKs.
 
+config SND_SOC_ODROID_MAX98095
+	tristate "SoC I2S Audio support for MAX98095 on ODROID"
+	depends on SND_SOC_SAMSUNG && (MACH_ODROID_4X12)
+	select SND_SOC_MAX98095
+	select SND_SAMSUNG_I2S
+	help
+		Say Y if you want to add support for SoC audio on the ODROID.
+
+config SND_SOC_ODROID_MAX98090
+	tristate "SoC I2S Audio support for MAX98090 on ODROID"
+	depends on SND_SOC_SAMSUNG && (MACH_ODROID_4X12)
+	select SND_SOC_MAX98090
+	select SND_SAMSUNG_I2S
+	help
+		Say Y if you want to add support for SoC audio on the ODROID.
+
+
 choice
 	prompt "Samsung I2S Audio type"
 	depends on SND_SAMSUNG_I2S && (ARCH_EXYNOS4 || ARCH_S5PV210 || ARCH_EXYNOS5)
@@ -207,7 +224,7 @@ config SND_SOC_GONI_AQUILA_WM8994
 
 config SND_SOC_SAMSUNG_SMDK_SPDIF
 	tristate "SoC S/PDIF Audio support for SMDK"
-	depends on SND_SOC_SAMSUNG && (MACH_SMDKC100 || MACH_SMDKC110 || MACH_SMDKV210 || MACH_SMDKV310 || MACH_SMDK4X12 || MACH_SMDK5250 || MACH_ORIGEN_QUAD)
+	depends on SND_SOC_SAMSUNG && (MACH_SMDKC100 || MACH_SMDKC110 || MACH_SMDKV210 || MACH_SMDKV310 || MACH_SMDK4X12 || MACH_SMDK5250 || MACH_ODROID_4X12)
 	select SND_SAMSUNG_SPDIF
 	help
 	  Say Y if you want to add support for SoC S/PDIF audio on the SMDK.
@@ -226,3 +243,15 @@ config SND_SOC_SPEYSIDE
 	select SND_SAMSUNG_I2S
 	select SND_SOC_WM8915
 	select SND_SOC_WM9081
+
+config MAX98090_HEADSET
+	bool "MAX98090 HeadSet detect"
+	depends on SND_SOC_ODROID_MAX98090
+	help
+	  Provides support for detecting max98090 jack_sw
+
+config MAX98095_HEADSET
+	bool "MAX98095 audio jack"
+	depends on SND_SOC_ODROID_MAX98095
+	help
+	  Provides support for detecting max98095 jack_sw

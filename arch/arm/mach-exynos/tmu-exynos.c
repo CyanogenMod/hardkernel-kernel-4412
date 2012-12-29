@@ -495,13 +495,13 @@ static int exynos_tc_volt(struct tmu_info *info, int enable)
 		if (ret)
 			goto err_lock;
 #endif
-		ret = mali_voltage_lock_push(data->temp_compensate.g3d_volt);
+		/* ret = mali_voltage_lock_push(data->temp_compensate.g3d_volt);
 		if (ret < 0) {
 			pr_err("TMU: g3d_push error: %u uV\n",
 				data->temp_compensate.g3d_volt);
 			goto err_lock;
 		}
-		pr_info("Lock for TC is sucessful..\n");
+		pr_info("Lock for TC is sucessful..\n"); */ 
 	} else {
 		exynos_cpufreq_lock_free(DVFS_LOCK_ID_TMU);
 #ifdef CONFIG_BUSFREQ_OPP
@@ -509,12 +509,12 @@ static int exynos_tc_volt(struct tmu_info *info, int enable)
 		if (ret)
 			goto err_unlock;
 #endif
-		ret = mali_voltage_lock_pop();
+		/*ret = mali_voltage_lock_pop();
 		if (ret < 0) {
 			pr_err("TMU: g3d_pop error\n");
 			goto err_unlock;
 		}
-		pr_info("Unlock for TC is sucessful..\n");
+		pr_info("Unlock for TC is sucessful..\n"); */
 	}
 	usage = enable;
 	return ret;
@@ -819,10 +819,10 @@ static int exynos_tmu_init(struct tmu_info *info)
 		pr_err("get_busfreq_value error\n");
 	}
 #endif
-	if (mali_voltage_lock_init()) {
+	/*if (mali_voltage_lock_init()) {
 		pr_err("Failed to initialize mail voltage lock.\n");
 		return -EINVAL;
-	}
+	}*/
 
 	pr_info("%s: cpufreq_level[%d], busfreq_value[%d]\n",
 		 __func__, info->cpulevel_tc, info->busfreq_tc);
@@ -985,8 +985,13 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_nomem;
 	}
+	pr_emerg("TMU: Memory Allocation Sucessful\n");
+	
 	platform_set_drvdata(pdev, info);
+	pr_emerg("TMU: Platform data set\n");
+	
 	info->dev = &pdev->dev;
+	pr_emerg("TMU: Copied the Dev access Information \n");
 
 	info->irq = platform_get_irq(pdev, 0);
 	if (info->irq < 0) {
@@ -1004,6 +1009,7 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "IRQ%d error %d\n", info->irq, ret);
 		goto err_noirq;
 	}
+	pr_emerg("TMU: IRQ Granted!\n");
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
@@ -1011,6 +1017,7 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_nores;
 	}
+	pr_emerg("TMU: IO Resource alloced on Memory\n");
 
 	info->ioarea = request_mem_region(res->start,
 			res->end-res->start+1, pdev->name);
@@ -1019,6 +1026,7 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 		ret = -EBUSY;
 		goto err_nores;
 	}
+	pr_emerg("TMU: Memory area resersed\n");
 
 	info->tmu_base = ioremap(res->start, (res->end - res->start) + 1);
 	if (!(info->tmu_base)) {
@@ -1026,22 +1034,30 @@ static int __devinit tmu_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto err_nomap;
 	}
+	pr_emerg("TMU: IO Memory Remapped\n");
 
 	if (thermal_create_sysfs_file(&pdev->dev))
 		goto err_sysfs;
 
+	pr_emerg("TMU: Created Sysfs\n");
+	
 	tmu_monitor_wq = create_freezable_workqueue("tmu");
 	if (!tmu_monitor_wq) {
 		dev_err(&pdev->dev, "Creation of tmu_monitor_wq failed\n");
 		ret = -EFAULT;
 		goto err_wq;
 	}
+	pr_emerg("TMU: Workqueue Created\n");
+	
 	INIT_DELAYED_WORK_DEFERRABLE(&info->polling, tmu_monitor);
+	pr_emerg("TMU: Work Created\n");
 #ifdef CONFIG_TMU_DEBUG
 	INIT_DELAYED_WORK_DEFERRABLE(&info->monitor, cur_temp_monitor);
 #endif
 
 	print_temperature_params(info);
+	pr_emerg("TMU: Printed Parameters\n");
+	
 	ret = tmu_initialize(pdev);
 	if (ret < 0)
 		goto err_noinit;

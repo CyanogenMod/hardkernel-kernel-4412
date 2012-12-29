@@ -674,15 +674,15 @@ enum v4l2_flash_mode
 
 #define V4L2_CID_CAMERA_BRIGHTNESS		(V4L2_CID_PRIVATE_BASE+72)
 enum v4l2_ev_mode {
-	EV_MINUS_4	= -4,
-	EV_MINUS_3	= -3,
-	EV_MINUS_2	= -2,
-	EV_MINUS_1	= -1,
-	EV_DEFAULT	= 0,
-	EV_PLUS_1	= 1,
-	EV_PLUS_2	= 2,
-	EV_PLUS_3	= 3,
-	EV_PLUS_4	= 4,
+	EV_MINUS_4 = 0,
+	EV_MINUS_3,
+	EV_MINUS_2,
+	EV_MINUS_1,
+	EV_DEFAULT,
+	EV_PLUS_1,
+	EV_PLUS_2,
+	EV_PLUS_3,
+	EV_PLUS_4,
 	EV_MAX,
 };
 
@@ -922,13 +922,19 @@ enum v4l2_caf_start_stop {
 	CAF_MAX,
 };
 
-#define V4L2_CID_CAMERA_AUTO_FOCUS_RESULT			(V4L2_CID_PRIVATE_BASE+103)
+#define V4L2_CID_CAMERA_AUTO_FOCUS_RESULT_FIRST	(V4L2_CID_PRIVATE_BASE + 103)
+#define V4L2_CID_CAMERA_AUTO_FOCUS_RESULT_SECOND	(V4L2_CID_PRIVATE_BASE + 127)
+#define V4L2_CID_CAMERA_FINISH_AUTO_FOCUS	(V4L2_CID_PRIVATE_BASE + 128)
+#define V4L2_CID_CAMERA_RETURN_FOCUS	(V4L2_CID_PRIVATE_BASE+205)
+
+
 #define V4L2_CID_CAMERA_FRAME_RATE			(V4L2_CID_PRIVATE_BASE+104)
 enum v4l2_frame_rate {
 	FRAME_RATE_AUTO = 0,
 	FRAME_RATE_7 = 7,
 	FRAME_RATE_15 = 15,
 	FRAME_RATE_20 = 20,
+	FRAME_RATE_25 = 25,
 	FRAME_RATE_30 = 30,
 	FRAME_RATE_60 = 60,
 	FRAME_RATE_120 = 120,
@@ -994,6 +1000,18 @@ typedef enum {
 #define V4L2_CID_CAMERA_BUSFREQ_LOCK		(V4L2_CID_PRIVATE_BASE+125)
 #define V4L2_CID_CAMERA_BUSFREQ_UNLOCK		(V4L2_CID_PRIVATE_BASE+126)
 
+#define V4L2_CID_EMBEDDEDDATA_ENABLE	(V4L2_CID_PRIVATE_BASE + 130)
+
+
+#define V4L2_CID_CAMERA_GET_ISO	(V4L2_CID_PRIVATE_BASE+202)
+#define V4L2_CID_CAMERA_GET_SHT_TIME	(V4L2_CID_PRIVATE_BASE+203)
+#define V4L2_CID_CAMERA_GET_FLASH_ONOFF	(V4L2_CID_PRIVATE_BASE+204)
+#define V4L2_CID_ESD_INT	(V4L2_CID_PRIVATE_BASE+206)
+
+
+
+
+
 /*      Pixel format FOURCC depth  Description  */
 enum v4l2_pix_format_mode {
 	V4L2_PIX_FMT_MODE_PREVIEW,
@@ -1005,7 +1023,7 @@ enum v4l2_pix_format_mode {
 /* 12  Y/CbCr 4:2:0 64x32 macroblocks */
 #define V4L2_PIX_FMT_NV12T    v4l2_fourcc('T', 'V', '1', '2')
 #define V4L2_PIX_FMT_NV21T    v4l2_fourcc('T', 'V', '2', '1')
-
+#define V4L2_PIX_FMT_INTERLEAVED    v4l2_fourcc('I', 'T', 'L', 'V')
 
 /*
  *  * V4L2 extention for digital camera
@@ -1136,5 +1154,28 @@ struct v4l2_recognition {
 
 #define VIDIOC_S_RECOGNITION	_IOWR('V', 85, struct v4l2_recognition)
 #define VIDIOC_G_RECOGNITION	_IOR('V', 86, struct v4l2_recognition)
+
+/* We use this struct as the v4l2_streamparm raw_data for
+ * VIDIOC_G_PARM and VIDIOC_S_PARM
+ */
+struct sec_cam_parm {
+    struct v4l2_captureparm capture;
+    int contrast;
+    int effects;
+    int brightness;
+    int exposure;
+    int flash_mode;
+    int focus_mode;
+    int aeawb_mode;
+    int iso;
+    int metering;
+    int saturation;
+    int scene_mode;
+    int sharpness;
+    int hue;
+    int white_balance;
+    int anti_banding;
+	int fps;
+};
 
 #endif /* __LINUX_VIDEODEV2_SAMSUNG_H */

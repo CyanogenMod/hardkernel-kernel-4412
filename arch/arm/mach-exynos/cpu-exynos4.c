@@ -18,7 +18,6 @@
 #include <asm/proc-fns.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/hardware/gic.h>
-#include <asm/cacheflush.h>
 
 #include <plat/cpu.h>
 #include <plat/clock.h>
@@ -386,8 +385,7 @@ static int __init exynos4_l2x0_cache_init(void)
 	outer_cache.set_debug = exynos4_l2x0_set_debug;
 #endif
 #endif
-	/* Enable the full line of zero */
-	enable_cache_foz();
+
 	return 0;
 }
 

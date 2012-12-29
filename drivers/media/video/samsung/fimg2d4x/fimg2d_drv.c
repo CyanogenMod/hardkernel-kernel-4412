@@ -212,7 +212,7 @@ static long fimg2d_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	default:
-		printk(KERN_ERR "[%s] unknown ioctl\n", __func__);
+		fimg2d_debug("[%s] unknown ioctl\n", __func__);
 		ret = -EFAULT;
 		break;
 	}

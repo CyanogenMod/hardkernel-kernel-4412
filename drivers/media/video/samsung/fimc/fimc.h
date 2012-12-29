@@ -43,7 +43,6 @@
 
 #define FIMC_CORE_CLK		"sclk_fimc"
 #define FIMC_CLK_RATE		166750000
-#define FIMC_OVR_CLK_RATE	180000000
 #define EXYNOS_BUSFREQ_NAME	"exynos-busfreq"
 
 #if defined(CONFIG_ARCH_EXYNOS4)
@@ -245,6 +244,10 @@ struct fimc_buf_set {
 	enum videobuf_state	state;
 	u32			flags;
 	atomic_t		mapped_cnt;
+
+	dma_addr_t		paddr_pktdata;
+	u32			*vaddr_pktdata;
+
 	struct list_head	list;
 };
 
@@ -263,6 +266,11 @@ struct fimc_capinfo {
 	int			nr_bufs;
 	int			irq;
 	int			lastirq;
+
+	bool		pktdata_enable;
+	u32			pktdata_size;
+	u32			pktdata_plane;
+
 	/* flip: V4L2_CID_xFLIP, rotate: 90, 180, 270 */
 	u32			flip;
 	u32			rotate;
@@ -478,12 +486,12 @@ struct fimc_prv_data {
 };
 
 /* debug macro */
-#define FIMC_LOG_DEFAULT	(FIMC_LOG_WARN | FIMC_LOG_ERR)
+#define FIMC_LOG_DEFAULT	(FIMC_LOG_WARN | FIMC_LOG_ERR )
 
 #define FIMC_DEBUG(fmt, ...)						\
 	do {								\
 		if (ctrl->log & FIMC_LOG_DEBUG)				\
-			printk(KERN_DEBUG FIMC_NAME "%d: "		\
+			printk(KERN_INFO FIMC_NAME "%d: "		\
 				fmt, ctrl->id, ##__VA_ARGS__);			\
 	} while (0)
 
@@ -504,7 +512,7 @@ struct fimc_prv_data {
 #define FIMC_WARN(fmt, ...)						\
 	do {								\
 		if (ctrl->log & FIMC_LOG_WARN)				\
-			printk(KERN_WARNING FIMC_NAME "%d: "		\
+			printk(KERN_INFO FIMC_NAME "%d: "		\
 				fmt, ctrl->id, ##__VA_ARGS__);			\
 	} while (0)
 
@@ -512,7 +520,7 @@ struct fimc_prv_data {
 #define FIMC_ERROR(fmt, ...)						\
 	do {								\
 		if (ctrl->log & FIMC_LOG_ERR)				\
-			printk(KERN_ERR FIMC_NAME "%d: "		\
+			printk(KERN_INFO FIMC_NAME "%d: "		\
 				fmt, ctrl->id, ##__VA_ARGS__);			\
 	} while (0)
 
@@ -548,6 +556,9 @@ static inline int s3cfb_close_fifo(int id, int (*do_priv)(void *), void *param) 
 /* general */
 extern void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, int height, int pixel_format);
 extern void s3c_csis_stop(int csis_id);
+extern int s3c_csis_get_pkt(int csis_id, void *pktdata);
+extern void s3c_csis_enable_pktdata(int csis_id, bool enable);
+
 extern int fimc_dma_alloc(struct fimc_control *ctrl, struct fimc_buf_set *bs, int i, int align);
 extern void fimc_dma_free(struct fimc_control *ctrl, struct fimc_buf_set *bs, int i);
 extern u32 fimc_mapping_rot_flip(u32 rot, u32 flip);

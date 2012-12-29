@@ -26,24 +26,21 @@ static struct dsim_config dsim_info = {
 
 	.eot_disable = false,		/* only DSIM_1_02 or DSIM_1_03 */
 
-	.auto_vertical_cnt = true,
+	.auto_vertical_cnt = false,
 	.hse = false,
-	.hfp = false,
+	.hfp = true,
 	.hbp = false,
 	.hsa = false,
 
-	.e_no_data_lane = DSIM_DATA_LANE_2,
+	.e_no_data_lane = DSIM_DATA_LANE_4,
 	.e_byte_clk = DSIM_PLL_OUT_DIV8,
 
-	.p = 3,
-	.m = 90,
-	.s = 1,
 
 	.pll_stable_time = 500,		/* D-PHY PLL stable time spec :min = 200usec ~ max 400usec */
 
 	.esc_clk = 20 * 1000000,	/* escape clk : 10MHz */
 
-	.stop_holding_cnt = 0x07ff,	/* stop state holding counter after bta change count 0 ~ 0xfff */
+	.stop_holding_cnt = 0,		/* stop state holding counter after bta change count 0 ~ 0xfff */
 	.bta_timeout = 0xff,		/* bta timeout 0 ~ 0xff */
 	.rx_timeout = 0xffff,		/* lp rx timeout 0 ~ 0xffff */
 
@@ -60,8 +57,7 @@ static struct dsim_lcd_config dsim_lcd_info = {
 
 	.parameter[DSI_VIRTUAL_CH_ID]	= (unsigned int) DSIM_VIRTUAL_CH_0,
 	.parameter[DSI_FORMAT]		= (unsigned int) DSIM_24BPP_888,
-	.parameter[DSI_VIDEO_MODE_SEL]	= (unsigned int) DSIM_NON_BURST_SYNC_PULSE,
-
+	.parameter[DSI_VIDEO_MODE_SEL]	= (unsigned int) DSIM_BURST_SYNC_EVENT,
 	.mipi_ddi_pd		= (void *) &mipi_ddi_pd,
 };
 
@@ -78,19 +74,18 @@ static struct resource s5p_dsim_resource[] = {
 	},
 };
 
-static void s5p_dsim_mipi_power(int enable)
-{
-	return;
-}
-
 static struct s5p_platform_dsim dsim_platform_data = {
 	.clk_name = "dsim0",
 	.dsim_info = &dsim_info,
 	.dsim_lcd_info = &dsim_lcd_info,
-	.mipi_power = s5p_dsim_mipi_power,
+	.mipi_power = NULL,
 	.enable_clk = s5p_dsim_enable_clk,
 	.part_reset = s5p_dsim_part_reset,
 	.init_d_phy = s5p_dsim_init_d_phy,
+	.exit_d_phy = s5p_dsim_exit_d_phy,
+
+	/* default platform revision is 0(evt0). */
+	.platform_rev = 0,
 	.cfg_gpio = exynos4_dsim_gpio_setup_24bpp,
 };
 

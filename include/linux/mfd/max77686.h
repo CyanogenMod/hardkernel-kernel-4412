@@ -1,8 +1,8 @@
 /*
  * max77686.h - Driver for the Maxim 77686
  *
- *  Copyright (C) 2011 Samsung Electrnoics
- *  Chiwoong Byun <woong.byun@samsung.com>
+ *  Copyright (C) 2009-2010 Samsung Electrnoics
+ *  MyungJoo Ham <myungjoo.ham@samsung.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +18,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
- * This driver is based on max8997.h
+ * This driver is based on max77686.h
  *
- * MAX77686 has PMIC, RTC devices.
- * The devices share the same I2C bus and included in
- * this mfd driver.
+ * MAX77686 has PMIC, MUIC, HAPTIC, RTC, FLASH, and Fuel Gauge devices.
+ * Except Fuel Gauge, every device shares the same I2C bus and included in
+ * this mfd driver. Although the fuel gauge is included in the chip, it is
+ * excluded from the driver because a) it has a different I2C bus from
+ * others and b) it can be enabled simply by using MAX17042 driver.
  */
 
 #ifndef __LINUX_MFD_MAX77686_H
@@ -67,9 +69,9 @@ enum max77686_regulators {
 	MAX77686_BUCK7,
 	MAX77686_BUCK8,
 	MAX77686_BUCK9,
+
 	MAX77686_EN32KHZ_AP,
 	MAX77686_EN32KHZ_CP,
-	MAX77686_P32KH,
 
 	MAX77686_REG_MAX,
 };
@@ -79,27 +81,8 @@ struct max77686_regulator_data {
 	struct regulator_init_data *initdata;
 };
 
-enum max77686_opmode {
-	MAX77686_OPMODE_NORMAL,
-	MAX77686_OPMODE_LP,
-	MAX77686_OPMODE_STANDBY,
-};
-
-enum max77686_ramp_rate {
-	MAX77686_RAMP_RATE_100MV,
-	MAX77686_RAMP_RATE_13MV,
-	MAX77686_RAMP_RATE_27MV,
-	MAX77686_RAMP_RATE_55MV,
-};
-
-struct max77686_opmode_data {
-	int id;
-	int mode;
-};
-
 struct max77686_platform_data {
 	/* IRQ */
-	int irq_gpio;
 	int irq_base;
 	int ono;
 	int wakeup;
@@ -108,19 +91,27 @@ struct max77686_platform_data {
 	struct max77686_regulator_data *regulators;
 	int num_regulators;
 
-	struct max77686_opmode_data *opmode_data;
-	int ramp_rate;
-
 	/*
-	 * GPIO-DVS feature is not enabled with the current version of
-	 * MAX77686 driver. Buck2/3/4_voltages[0] is used as the default
-	 * voltage at probe. DVS/SELB gpios are set as OUTPUT-LOW.
+	 * SET1~3 DVS GPIOs control Buck1, 2, and 5 simultaneously. Therefore,
+	 * With buckx_gpiodvs enabled, the buckx cannot be controlled
+	 * independently. To control buckx (of 1, 2, and 5) independently,
+	 * disable buckx_gpiodvs and control with BUCKxDVS1 register.
+	 *
+	 * When buckx_gpiodvs and bucky_gpiodvs are both enabled, set_voltage
+	 * on buckx will change the voltage of bucky at the same time.
+	 *
 	 */
-	int buck234_gpio_dvs[3]; /* GPIO of [0]DVS1, [1]DVS2, [2]DVS3 */
-	int buck234_gpio_selb[3]; /* [0]SELB2, [1]SELB3, [2]SELB4 */
+	bool ignore_gpiodvs_side_effect;
+	int buck234_gpios[3]; /* GPIO of [0]SET1, [1]SET2, [2]SET3 */
+	int buck234_default_idx; /* Default value of SET1, 2, 3 */
 	unsigned int buck2_voltage[8]; /* buckx_voltage in uV */
+	bool buck2_gpiodvs;
 	unsigned int buck3_voltage[8];
+	bool buck3_gpiodvs;
 	unsigned int buck4_voltage[8];
+	bool buck4_gpiodvs;
+
+	/* RTC: Not implemented */
 };
 
 #endif /* __LINUX_MFD_MAX77686_H */

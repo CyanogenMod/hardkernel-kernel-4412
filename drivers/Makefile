@@ -123,3 +123,5 @@ obj-y				+= ieee802154/
 obj-y				+= clk/
 
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/
+
+obj-$(CONFIG_ARM_STREAMLINE_DEBUGGER) 	+= gator_v5/

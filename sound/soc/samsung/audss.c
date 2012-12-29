@@ -54,7 +54,6 @@ static int audss_clk_div_init(struct clk *src_clk)
 {
 	u32 clk_div = readl(S5P_CLKDIV_AUDSS);
 	u32 src_clk_rate = 0;
-	u32 srp_div = 0;
 	u32 bus_div = 0;
 	u32 i2s_div = 0;
 	u32 ret = -1;
@@ -68,11 +67,6 @@ static int audss_clk_div_init(struct clk *src_clk)
 
 	pr_debug("%s: SRC Clock Rate[%d]\n", __func__, src_clk_rate);
 	switch (src_clk_rate) {
-	case 400000000:
-		srp_div = 4;
-		bus_div = 2;
-		i2s_div = !strcmp(audss.rclksrc, "i2sclk") ? 5 : 16;
-		break;
 	case 192000000:
 	case 180633605:
 	case 180000000:
@@ -93,9 +87,6 @@ static int audss_clk_div_init(struct clk *src_clk)
 		| S5P_AUDSS_CLKDIV_BUSCLK_MASK
 		| S5P_AUDSS_CLKDIV_I2SCLK_MASK);
 
-	if (srp_div)
-		clk_div |= (srp_div - 1) << S5P_AUDSS_CLKDIV_RP_SHIFT;
-
 	if (bus_div)
 		clk_div |= (bus_div - 1) << S5P_AUDSS_CLKDIV_BUSCLK_SHIFT;
 
@@ -104,13 +95,7 @@ static int audss_clk_div_init(struct clk *src_clk)
 
 	writel(clk_div, S5P_CLKDIV_AUDSS);
 
-	clk_set_parent(audss.mout_audss, src_clk);
-	pr_info("%s: Audio subsystem clk source is [%s]",
-		__func__, readl(S5P_CLKSRC_AUDSS) & 0x1 ? "EPLL" : "XXTI");
-
-
-	pr_info("%s: RPCLK [%ld], BUSCLK[%ld], I2SCLK[%ld]\n", __func__,
-						clk_get_rate(audss.srp_clk),
+	pr_debug("%s: BUSCLK[%ld], I2SCLK[%ld]\n", __func__,
 						clk_get_rate(audss.bus_clk),
 						clk_get_rate(audss.i2s_clk));
 	pr_debug("%s: CLKDIV[0x%x]\n", __func__, readl(S5P_CLKDIV_AUDSS));
@@ -213,21 +198,13 @@ void audss_resume(void)
 
 static __devinit int audss_init(void)
 {
-	struct clk *fout_epll;
 	int ret = 0;
-
-	fout_epll = clk_get(NULL, "fout_epll");
-	if (IS_ERR(fout_epll)) {
-		pr_err("%s: failed to get fout_epll\n", __func__);
-		ret = PTR_ERR(fout_epll);
-		return ret;
-	}
 
 	audss.mout_audss = clk_get(NULL, "mout_audss");
 	if (IS_ERR(audss.mout_audss)) {
 		pr_err("%s: failed to get mout audss\n", __func__);
 		ret = PTR_ERR(audss.mout_audss);
-		goto err;
+		return ret;
 	}
 
 	audss.dout_srp = clk_get(NULL, "dout_srp");
@@ -264,15 +241,13 @@ static __devinit int audss_init(void)
 	audss.reg_saved = false;
 	audss.clk_enabled = false;
 
-	ret = audss_clk_div_init(fout_epll);
+	ret = audss_clk_div_init(audss.mout_audss);
 	if (ret < 0) {
 		pr_err("%s: failed to init clk div\n", __func__);
 		goto err5;
 	}
 
 	audss_reg_save();
-
-	clk_put(fout_epll);
 
 	return ret;
 err5:
@@ -285,8 +260,6 @@ err2:
 	clk_put(audss.dout_srp);
 err1:
 	clk_put(audss.mout_audss);
-err:
-	clk_put(fout_epll);
 
 	return ret;
 }

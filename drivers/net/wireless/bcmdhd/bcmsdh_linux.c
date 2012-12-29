@@ -47,6 +47,25 @@ extern void dhdsdio_isr(void * args);
 #include <bcmutils.h>
 #include <dngl_stats.h>
 #include <dhd.h>
+
+#if defined(HARD_KERNEL_OOB)
+	#include <linux/gpio.h>
+	#include <mach/gpio.h>
+	#include <mach/regs-gpio.h>
+	#include <plat/gpio-cfg.h>
+#endif
+
+#if defined(HARD_KERNEL)
+	#include <linux/hrtimer.h>
+	
+	#if !defined(OOB_TIMER_INTERVAL_NS)
+		#define	OOB_TIMER_INTERVAL_NS		100000000	// ns value (100ms)
+	#endif
+	
+	// interrupt generation timer
+	static	struct hrtimer	oob_timer;
+#endif
+
 #endif /* defined(OOB_INTR_ONLY) */
 
 /**
@@ -183,7 +202,9 @@ int bcmsdh_probe(struct device *dev)
 	irq = dhd_customer_oob_irq_map(&irq_flags);
 	if  (irq < 0) {
 		SDLX_MSG(("%s: Host irq is not defined\n", __FUNCTION__));
+#if !defined(HARD_KERNEL)
 		return 1;
+#endif
 	}
 #endif /* defined(OOB_INTR_ONLY) */
 	/* allocate SDIO Host Controller state info */
@@ -259,6 +280,10 @@ int bcmsdh_remove(struct device *dev)
 {
 	bcmsdh_hc_t *sdhc, *prev;
 	osl_t *osh;
+
+#if defined(HARD_KERNEL) && defined(OOB_INTR_ONLY) && defined(HW_OOB)
+	hrtimer_cancel(&oob_timer);		msleep(100);
+#endif	
 
 	sdhc = sdhcinfo;
 	drvinfo.detach(sdhc->ch);
@@ -566,14 +591,39 @@ void bcmsdh_oob_intr_set(bool enable)
 
 	spin_lock_irqsave(&sdhcinfo->irq_lock, flags);
 	if (curstate != enable) {
+#if !defined(HARD_KERNEL)
 		if (enable)
 			enable_irq(sdhcinfo->oob_irq);
 		else
 			disable_irq_nosync(sdhcinfo->oob_irq);
+#endif			
 		curstate = enable;
 	}
 	spin_unlock_irqrestore(&sdhcinfo->irq_lock, flags);
 }
+
+#if defined(HARD_KERNEL)
+
+static enum hrtimer_restart oob_irq_timer(struct hrtimer *timer)
+{
+	dhd_pub_t *dhdp;
+
+	dhdp = (dhd_pub_t *)dev_get_drvdata(sdhcinfo->dev);
+
+	bcmsdh_oob_intr_set(0);
+
+	if (dhdp == NULL) {
+		SDLX_MSG(("Out of band GPIO interrupt fired way too early\n"));
+		return HRTIMER_NORESTART;
+	}
+
+	dhdsdio_isr((void *)dhdp->bus);
+	hrtimer_start(&oob_timer, ktime_set(0, OOB_TIMER_INTERVAL_NS), HRTIMER_MODE_REL);
+
+	return HRTIMER_NORESTART;
+}
+
+#else
 
 static irqreturn_t wlan_oob_irq(int irq, void *dev_id)
 {
@@ -593,10 +643,9 @@ static irqreturn_t wlan_oob_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+#endif	// #if defined(HARD_KERNEL)
 int bcmsdh_register_oob_intr(void * dhdp)
 {
-	int error = 0;
-
 	SDLX_MSG(("%s Enter \n", __FUNCTION__));
 
 	/* IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE; */
@@ -604,6 +653,11 @@ int bcmsdh_register_oob_intr(void * dhdp)
 	dev_set_drvdata(sdhcinfo->dev, dhdp);
 
 	if (!sdhcinfo->oob_irq_registered) {
+#if defined(HARD_KERNEL)
+		hrtimer_init(&oob_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+		oob_timer.function = oob_irq_timer;
+		hrtimer_start(&oob_timer, ktime_set(0, OOB_TIMER_INTERVAL_NS), HRTIMER_MODE_REL);
+#else		
 		SDLX_MSG(("%s IRQ=%d Type=%X \n", __FUNCTION__,
 			(int)sdhcinfo->oob_irq, (int)sdhcinfo->oob_flags));
 		/* Refer to customer Host IRQ docs about proper irqflags definition */
@@ -613,6 +667,7 @@ int bcmsdh_register_oob_intr(void * dhdp)
 			return -ENODEV;
 
 		enable_irq_wake(sdhcinfo->oob_irq);
+#endif
 		sdhcinfo->oob_irq_registered = TRUE;
 		sdhcinfo->oob_irq_enable_flag = TRUE;
 	}
@@ -632,13 +687,19 @@ void bcmsdh_set_irq(int flag)
 	if (sdhcinfo->oob_irq_registered && sdhcinfo->oob_irq_enable_flag != flag) {
 		SDLX_MSG(("%s Flag = %d", __FUNCTION__, flag));
 		sdhcinfo->oob_irq_enable_flag = flag;
+#if !defined(HARD_KERNEL)
 		if (flag) {
 			enable_irq(sdhcinfo->oob_irq);
+#if !defined(USE_OOB_WITH_SHARED_IRQ)			
 			enable_irq_wake(sdhcinfo->oob_irq);
+#endif
 		} else {
+#if !defined(USE_OOB_WITH_SHARED_IRQ)			
 			disable_irq_wake(sdhcinfo->oob_irq);
+#endif
 			disable_irq(sdhcinfo->oob_irq);
 		}
+#endif		
 	}
 }
 
@@ -648,12 +709,24 @@ void bcmsdh_unregister_oob_intr(void)
 
 	if (sdhcinfo->oob_irq_registered == TRUE) {
 		bcmsdh_set_irq(FALSE);
+#if !defined(HARD_KERNEL)
 		free_irq(sdhcinfo->oob_irq, NULL);
+#endif		
 		sdhcinfo->oob_irq_registered = FALSE;
 	}
 }
-#endif /* defined(OOB_INTR_ONLY) */
+#else
+//
+// ADD Hardkernel/Odroid
+//
+void *bcmsdh_get_drvdata(void)
+{
+	if (!sdhcinfo)
+		return NULL;
+	return dev_get_drvdata(sdhcinfo->dev);
+}
 
+#endif /* defined(OOB_INTR_ONLY) */
 /* Module parameters specific to each host-controller driver */
 
 extern uint sd_msglevel;	/* Debug message level */

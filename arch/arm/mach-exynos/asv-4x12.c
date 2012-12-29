@@ -71,9 +71,8 @@ struct asv_judge_table exynos4x12_prime_limit[] = {
 	{ 21,  26},
 	{ 22,  29},
 	{ 23,  36},
-	{ 24,  40},
-	{ 25,  45},
-	{ 26,  50},
+	{ 24,  44},
+	{ 25,  56},
 	{999, 999},		/* Reserved Group */
 };
 
@@ -129,9 +128,14 @@ static void exynos4x12_prime_pre_set_abb(void)
 	switch (exynos_result_of_asv) {
 	case 0:
 	case 1:
+	case 2:
+	case 3:
 		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_070V);
 		break;
-	case 2:
+	case 4:
+	case 5:
+	case 6:
+	case 7:
 		exynos4x12_set_abb_member(ABB_ARM, ABB_MODE_100V);
 		break;
 	default:
@@ -139,30 +143,7 @@ static void exynos4x12_prime_pre_set_abb(void)
 		break;
 	}
 
-	/* ABB setting for INT */
-	switch (exynos_result_of_asv) {
-	case 0:
-	case 1:
-	case 2:
-		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_100V);
-		break;
-	default:
-		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_130V);
-		break;
-	}
-
-	/* ABB setting for MIF */
-	switch (exynos_result_of_asv) {
-	case 0:
-	case 1:
-		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_100V);
-		break;
-	default:
-		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_140V);
-		break;
-	}
-
-	/* ABB setting for G3D */
+	/* ABB setting for INT/MIF/G3D */
 	switch (exynos_result_of_asv) {
 	case 0:
 	case 1:
@@ -172,9 +153,13 @@ static void exynos4x12_prime_pre_set_abb(void)
 	case 5:
 	case 6:
 	case 7:
+		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_100V);
+		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_100V);
 		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_100V);
 		break;
 	default:
+		exynos4x12_set_abb_member(ABB_MIF, ABB_MODE_130V);
+		exynos4x12_set_abb_member(ABB_INT, ABB_MODE_130V);
 		exynos4x12_set_abb_member(ABB_G3D, ABB_MODE_130V);
 		break;
 	}
@@ -185,7 +170,6 @@ static int exynos4x12_asv_store_result(struct samsung_asv *asv_info)
 	unsigned int i;
 
 	if (soc_is_exynos4412()) {
-		if (samsung_rev() >= EXYNOS4412_REV_2_0)	{
 			for (i = 0; i < ARRAY_SIZE(exynos4x12_prime_limit); i++)	{
 				if ((asv_info->ids_result <= exynos4x12_prime_limit[i].ids_limit) ||
 				    (asv_info->hpm_result <= exynos4x12_prime_limit[i].hpm_limit)) {
@@ -194,15 +178,6 @@ static int exynos4x12_asv_store_result(struct samsung_asv *asv_info)
 				}
 			}
 		} else {
-			for (i = 0; i < ARRAY_SIZE(exynos4x12_limit); i++) {
-				if ((asv_info->ids_result <= exynos4x12_limit[i].ids_limit) ||
-				    (asv_info->hpm_result <= exynos4x12_limit[i].hpm_limit)) {
-					exynos_result_of_asv = i;
-					break;
-				}
-			}
-		}
-	} else {
 		for (i = 0; i < ARRAY_SIZE(exynos4212_limit); i++) {
 			if ((asv_info->ids_result <= exynos4212_limit[i].ids_limit) ||
 			    (asv_info->hpm_result <= exynos4212_limit[i].hpm_limit)) {
@@ -223,10 +198,7 @@ static int exynos4x12_asv_store_result(struct samsung_asv *asv_info)
 	pr_info("EXYNOS4X12(NO SG): IDS : %d HPM : %d RESULT : %d\n",
 		asv_info->ids_result, asv_info->hpm_result, exynos_result_of_asv);
 
-	if (samsung_rev() >= EXYNOS4412_REV_2_0)
 		exynos4x12_prime_pre_set_abb();
-	else
-		exynos4x12_pre_set_abb();
 
 	return 0;
 }
@@ -280,10 +252,7 @@ int exynos4x12_asv_init(struct samsung_asv *asv_info)
 		/* Set Special flag into exynos_special_flag */
 		exynos_special_flag = (tmp >> LOCKING_OFFSET) & LOCKING_MASK;
 
-		if (samsung_rev() >= EXYNOS4412_REV_2_0)
 			exynos4x12_prime_pre_set_abb();
-		else
-			exynos4x12_pre_set_abb();
 
 		return -EEXIST;
 	}

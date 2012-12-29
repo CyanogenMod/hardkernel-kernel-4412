@@ -31,12 +31,14 @@
 
 #include "mshci.h"
 
-#ifdef MSHCI_S3C_OWN_DMA_MAP
-void mshci_s3c_dma_map_sg(struct device *dev, struct scatterlist *sg,
-		int nents, enum dma_data_direction dir, int flush_type);
+#ifdef CONFIG_MMC_MSHCI_S3C_DMA_MAP
+int mshci_s3c_dma_map_sg(struct mshci_host *host, struct device *dev,
+		struct scatterlist *sg, int nents,
+		enum dma_data_direction dir, int flush_type);
 
-void mshci_s3c_dma_unmap_sg(struct device *dev, struct scatterlist *sg,
-		int nents, enum dma_data_direction dir, int flush_type);
+void mshci_s3c_dma_unmap_sg(struct mshci_host *host, struct device *dev,
+		struct scatterlist *sg, int nents,
+		enum dma_data_direction dir, int flush_type);
 #endif
 
 #define MAX_BUS_CLK	(1)
@@ -90,7 +92,7 @@ static unsigned int mshci_s3c_get_max_clk(struct mshci_host *host)
 		rate = clk_get_rate(busclk);
 		/* It should be checked later ############# */
 		if (rate > max) {
-			if (soc_is_exynos4412() &&
+			if ((soc_is_exynos4412() || soc_is_exynos4212()) &&
 				(samsung_rev() >= EXYNOS4412_REV_1_0))
 				max = rate >> 2;
 			else
@@ -98,6 +100,8 @@ static unsigned int mshci_s3c_get_max_clk(struct mshci_host *host)
 		}
 	}
 
+	/* max clock can be change after changing clock source. */
+	host->mmc->f_max = max;
 	return max;
 }
 
@@ -241,22 +245,15 @@ static void mshci_s3c_set_ios(struct mshci_host *host,
 		pdata->cfg_card(ourhost->pdev, host->ioaddr,
 				ios, host->mmc->card);
 
-#if defined(CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
-	defined(CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
 	if (pdata->cfg_ddr) {
-		if (ios->ddr == MMC_1_2V_DDR_MODE ||
-			ios->ddr == MMC_1_8V_DDR_MODE)
+		if (ios->timing == MMC_TIMING_UHS_DDR50)
 			pdata->cfg_ddr(ourhost->pdev, 1);
 		else
 			pdata->cfg_ddr(ourhost->pdev, 0);
 	}
-#endif
-
 	/* after change DDR/SDR, max_clk has been changed.
 	   You should re-calc the max_clk */
 	host->max_clk = mshci_s3c_get_max_clk(host);
-
-	mdelay(1);
 }
 
 /**
@@ -274,15 +271,25 @@ static void mshci_s3c_init_card(struct mshci_host *host)
 		pdata->init_card(ourhost->pdev);
 }
 
+static int mshci_s3c_get_fifo_depth(struct mshci_host *host)
+{
+	struct mshci_s3c *ourhost = to_s3c(host);
+	struct s3c_mshci_platdata *pdata = ourhost->pdata;
+
+	return pdata->fifo_depth;
+}
+
+
 static struct mshci_ops mshci_s3c_ops = {
 	.get_max_clock		= mshci_s3c_get_max_clk,
 	.set_clock		= mshci_s3c_set_clock,
 	.set_ios		= mshci_s3c_set_ios,
 	.init_card		= mshci_s3c_init_card,
-#ifdef MSHCI_S3C_OWN_DMA_MAP
+#ifdef CONFIG_MMC_MSHCI_S3C_DMA_MAP
 	.dma_map_sg		= mshci_s3c_dma_map_sg,
 	.dma_unmap_sg		= mshci_s3c_dma_unmap_sg,
 #endif
+	.get_fifo_depth		= mshci_s3c_get_fifo_depth,
 };
 
 static void mshci_s3c_notify_change(struct platform_device *dev, int state)
@@ -473,6 +480,11 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 	else
 		host->mmc->caps = 0;
 
+        if (pdata->host_caps2)
+                host->mmc->caps2 = pdata->host_caps2;
+	else
+                host->mmc->caps2 = 0;
+
 	if (pdata->cd_type == S3C_MSHCI_CD_PERMANENT) {
 		host->quirks |= MSHCI_QUIRK_BROKEN_PRESENT_BIT;
 		host->mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -492,7 +504,12 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 	if (pdata->cd_type == S3C_MSHCI_CD_GPIO &&
 		gpio_is_valid(pdata->ext_cd_gpio)) {
 
-		gpio_request(pdata->ext_cd_gpio, "SDHCI EXT CD");
+		ret = gpio_request(pdata->ext_cd_gpio, "MSHCI EXT CD");
+		if (ret) {
+			dev_err(&pdev->dev, "cannot request gpio for card detect\n");
+			goto err_add_host;
+		}
+
 		sc->ext_cd_gpio = pdata->ext_cd_gpio;
 
 		sc->ext_cd_irq = gpio_to_irq(pdata->ext_cd_gpio);
@@ -512,6 +529,9 @@ static int __devinit mshci_s3c_probe(struct platform_device *pdev)
 		dev_err(dev, "mshci_add_host() failed\n");
 		goto err_add_host;
 	}
+
+	device_enable_async_suspend(dev);
+
 	return 0;
 
  err_add_host:
@@ -543,18 +563,39 @@ static int __devexit mshci_s3c_remove(struct platform_device *pdev)
 static int mshci_s3c_suspend(struct platform_device *dev, pm_message_t pm)
 {
 	struct mshci_host *host = platform_get_drvdata(dev);
+	struct s3c_mshci_platdata *pdata = dev->dev.platform_data;
 
 	mshci_suspend_host(host, pm);
+
+	if (pdata->set_power)
+		pdata->set_power(dev, 0);
+
 	return 0;
 }
 
 static int mshci_s3c_resume(struct platform_device *dev)
 {
 	struct mshci_host *host = platform_get_drvdata(dev);
+	struct s3c_mshci_platdata *pdata = dev->dev.platform_data;
+
+	if (pdata->set_power)
+		pdata->set_power(dev, 1);
 
 	mshci_resume_host(host);
 	return 0;
 }
+
+static void mshci_s3c_shutdown(struct platform_device *dev, pm_message_t pm)
+{
+	struct mshci_host *host = platform_get_drvdata(dev);
+	struct s3c_mshci_platdata *pdata = dev->dev.platform_data;
+
+	mshci_suspend_host(host, pm);
+
+	if (pdata->shutdown)
+		pdata->shutdown();
+}
+
 
 #else
 #define mshci_s3c_suspend NULL

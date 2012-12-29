@@ -50,6 +50,13 @@ config VIDEOBUF2_CORE
 config VIDEOBUF2_MEMOPS
 	tristate
 
+config VIDEOBUF2_FB
+	depends on VIDEOBUF2_CORE
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	tristate
+
 config VIDEOBUF2_DMA_CONTIG
 	select VIDEOBUF2_CORE
 	select VIDEOBUF2_MEMOPS
@@ -419,6 +426,27 @@ config S5K3H2_CSI_D
 	  This enables support for CSI B port
 endchoice
 
+config VIDEO_AR0832_IS
+        tristate "AR0832_IS supporting camera driver"
+	depends on VIDEO_V4L2 && (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS) && VIDEO_EXYNOS_FIMC_IS
+        ---help---
+          This driver supports AR0832_IS sensor.
+choice
+depends on VIDEO_AR0832_IS
+prompt "MIPI Camera port for AR0832_IS"
+default AR0832_IS_CSI_C
+config AR0832_IS_CSI_C
+	bool "CSI Camera A port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for CSI A port
+config AR0832_IS_CSI_D
+	bool "CSI Camera B port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for CSI B port
+endchoice
+
 config VIDEO_S5K3H7
         tristate "S5K3H7 supporting camera driver"
 	depends on VIDEO_V4L2 && (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS) && VIDEO_EXYNOS_FIMC_IS
@@ -482,11 +510,67 @@ config S5K6A3_CSI_D
 	  This enalbes support for CSI B port
 endchoice
 
+# hardkernel added
+config VIDEO_S5K5AAFA
+	tristate "S5K5AAFA  supporting camera driver"
+	depends on I2C && VIDEO_V4L2
+	---help---
+	  This driver supports s5k5aafa SoC camera module with
+
+config VIDEO_S5K5CAGX
+	tristate "S5K5CAGX  supporting camera driver"
+	depends on I2C && VIDEO_V4L2
+	---help---
+	  This driver supports s5k5cagx SoC camera module with
+
+config VIDEO_S5K4ECGX
+	tristate "S5K4ECGX supporting camera driver"
+	depends on VIDEO_V4L2 && (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS) 
+	select VIDEO_S5K4ECGX_ODROIDQ
+	---help---
+	  This driver supports S5K4ECGX sensor.
+choice
+depends on VIDEO_S5K4ECGX
+prompt "MIPI Camera port for S5K4ECGX"
+default S5K4ECGX_CSI_D
+config S5K4ECGX_CSI_C
+	bool "CSI Camera A port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enables support for CSI A port
+config SS5K4ECGX_CSI_D
+	bool "CSI Camera B port"
+	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS)
+	help
+	  This enalbes support for CSI B port
+endchoice
+
+config VIDEO_S5K4ECGX_ODROIDQ
+	tristate "S5K4ECGX supporting camera driver for odroid-q"
+	depends on VIDEO_S5K4ECGX
+	help
+	  This driver supports S5K4ECGX SoC camera module
+
+config VIDEO_MT9M113
+        tristate "mt9m113 support"
+        depends on I2C
+        help
+          This driver supports MT9M113cameras from Micron/Aptina
+
+#
+
 config VIDEO_M5MO
         tristate "M5MO supporting camera driver"
 	depends on I2C && VIDEO_V4L2 && VIDEO_FIMC_MIPI
         ---help---
           This driver supports M5MO SoC camera module
+
+config VIDEO_AR0832
+        tristate "AR0832 supporting camera driver"
+        depends on I2C && VIDEO_V4L2 && VIDEO_FIMC_MIPI
+        ---help---
+          This driver supports AR0832 SoC camera module
+
 
 config VIDEO_S5K4BA
 	tristate "S5K4BA supporting camera driver"
@@ -504,7 +588,7 @@ config VIDEO_S5K4EA
 #source "drivers/media/video/m5mols/Kconfig"
 
 choice
-depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_M5MO || VIDEO_M5MOLS
+depends on VIDEO_S5K4BA || VIDEO_S5K4EA || VIDEO_M5MO || VIDEO_M5MOLS || VIDEO_AR0832
 prompt "Select ITU / MIPI Camera port"
 default ITU_A
 config ITU_A
@@ -519,7 +603,7 @@ config ITU_B
 			VIDEO_EXYNOS_MIPI_CSIS)
 	help
 	  This enables support for ITU B port
-config CSI_C
+config CSI_Cs5k4ecgx_regs-odroidq.h
 	bool "CSI Camera A port"
 	depends on (VIDEO_FIMC_MIPI || VIDEO_S5P_MIPI_CSIS ||\
 			VIDEO_EXYNOS_MIPI_CSIS)

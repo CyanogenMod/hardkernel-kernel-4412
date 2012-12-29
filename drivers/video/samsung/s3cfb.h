@@ -104,8 +104,9 @@ struct s3cfb_lcd_timing {
 	int	v_bp;
 	int	v_bpe;
 	int	v_sw;
-#if defined(CONFIG_FB_S5P_MIPI_DSIM)
+#if defined(CONFIG_FB_S5P_MIPI_DSIM) || defined(CONFIG_S5P_MIPI_DSI2)
 	int	cmd_allow_len;
+	int	stable_vfp;
 	void	(*cfg_gpio)(struct platform_device *dev);
 	int	(*backlight_on)(struct platform_device *dev);
 	int	(*reset_lcd)(struct platform_device *dev);
@@ -119,13 +120,29 @@ struct s3cfb_lcd_polarity {
 	int inv_vden;
 };
 
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+/* for CPU Interface */
+struct s3cfb_cpu_timing {
+	unsigned int	cs_setup;
+	unsigned int	wr_setup;
+	unsigned int	wr_act;
+	unsigned int	wr_hold;
+};
+#endif
+
 struct s3cfb_lcd {
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+	char	*name;
+#endif
 	int	width;
 	int	height;
 	int	bpp;
 	int	freq;
 	struct	s3cfb_lcd_timing timing;
 	struct	s3cfb_lcd_polarity polarity;
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+	struct	s3cfb_cpu_timing cpu_timing;
+#endif
 	void	(*init_ldi)(void);
 	void	(*deinit_ldi)(void);
 };
@@ -288,6 +305,14 @@ extern int s3cfb_set_buffer_size(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_set_chroma_key(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_channel_localpath_on(struct s3cfb_global *ctrl, int id);
 extern int s3cfb_channel_localpath_off(struct s3cfb_global *ctrl, int id);
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+extern void s3cfb_set_trigger(struct s3cfb_global *ctrl);
+extern void s3cfb_trigger(void);
+#endif
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+extern int s3cfb_check_vsync_status(struct s3cfb_global *ctrl);
+extern int s3cfb_vsync_status_check(void);
+#endif
 
 #ifdef CONFIG_HAS_WAKELOCK
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -298,5 +323,29 @@ extern void s3cfb_late_resume(struct early_suspend *h);
 
 /* LCD */
 extern void s3cfb_set_lcd_info(struct s3cfb_global *ctrl);
+
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+extern void s5p_dsim_early_suspend(void);
+extern void s5p_dsim_late_resume(void);
+extern int s5p_dsim_fifo_clear(void);
+extern void set_dsim_hs_clk_toggle_count(u8 count);
+extern void set_dsim_lcd_enabled(void);
+extern u32 read_dsim_register(u32 num);
+#endif
+
+#if defined(CONFIG_FB_S5P_DUMMY_MIPI_LCD)
+extern void s6e8ax0_early_suspend(void);
+extern void s6e8ax0_late_resume(void);
+#endif
+
+#if defined(CONFIG_FB_S5P_LG4591)
+extern void lg4591_early_suspend(void);
+extern void lg4591_late_resume(void);
+#endif
+
+#if defined(CONFIG_FB_S5P_S6E8AA1)
+extern void s6e8aa1_early_suspend(void);
+extern void s6e8aa1_late_resume(void);
+#endif
 
 #endif /* _S3CFB_H */

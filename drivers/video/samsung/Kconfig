@@ -90,7 +90,7 @@ prompt "Select LCD Type"
 default FB_S5P_AMS369FG06
 config FB_S5P_LTE480WV
 	bool "LTE480WV"
-	depends on MACH_SMDKV310 || MACH_SMDKC210 || MACH_SMDKV210 || MACH_SMDKC110 || MACH_ORIGEN_QUAD
+	depends on MACH_SMDKV310 || MACH_SMDKC210 || MACH_SMDKV210 || MACH_SMDKC110
 	help
 	  This enables support for Samsung LTE480WV 4.8" WVGA LCD panel
 
@@ -123,17 +123,48 @@ config FB_S5P_LMS501KF03
 	help
 	  This enables support for Samsung LMS501KF03 5.01" WVGA TFT LCD panel
 
-config FB_S5P_HV070WSA
-	bool "HV070WSA"
-	depends on MACH_ORIGEN_QUAD
-	help
-	  This enables support for BOE HV070WSA 7" LCD panel
-
 config FB_S5P_DUMMY_MIPI_LCD
 	bool "DUMMY MIPI LCD"
 	depends on FB_S5P_MIPI_DSIM
 	---help---
 	  This enables support for Samsung DUMMY MIPI LCD
+
+config FB_S5P_LG4591
+	bool "LG4591 MIPI LCD"
+	depends on FB_S5P_MIPI_DSIM
+	---help---
+	  This enables support for LG4591 MIPI LCD
+
+config FB_S5P_S6E8AA1
+	bool "SMD S6E8AA1 MIPI LCD"
+	depends on FB_S5P_MIPI_DSIM
+	---help---
+	  This enables support for SMD S6E8AA1 MIPI LCD
+
+config FB_S5P_LTN101AL03
+	bool "LTN101AL03"
+	depends on MACH_ODROID_4X12
+	help
+	  This enables support for 10.1" 1280*800 LCD panel
+
+config FB_S5P_LP101WH1
+	bool "LP101WH1"
+	depends on MACH_ODROID_4X12
+	help
+	  This enables support for 10.1" 1366*768 LCD panel
+
+config FB_S5P_U133WA01
+	bool "U133WA01"
+	depends on MACH_ODROID_4X12
+	help
+	  This enables support for 13.3" 1366*768 LCD panel
+
+config FB_S5P_FAKE_FB
+    bool "fake fb"
+	depends on MACH_ODROID_4X12
+	help
+	  This enables support for odroid-u virtual panel
+    
 endchoice
 
 config FB_S5P_V2

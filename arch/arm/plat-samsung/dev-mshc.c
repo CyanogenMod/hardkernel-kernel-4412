@@ -70,27 +70,32 @@ void s3c_mshci_set_platdata(struct s3c_mshci_platdata *pd)
 	set->ext_cd_gpio_invert = pd->ext_cd_gpio_invert;
 	set->wp_gpio = pd->wp_gpio;
 	set->has_wp_gpio = pd->has_wp_gpio;
+	set->int_power_gpio = pd->int_power_gpio;
+	if(pd->fifo_depth)
+		set->fifo_depth = pd->fifo_depth;
+	else
+		set->fifo_depth = 0x20; /* exynos4210 size. */
 
 	if (pd->max_width)
 		set->max_width = pd->max_width;
 	if (pd->host_caps)
 		set->host_caps |= pd->host_caps;
+	if (pd->host_caps2)
+		set->host_caps2 |= pd->host_caps2;
 	if (soc_is_exynos4210()) {
-		if (pd->host_caps && samsung_rev() != EXYNOS4210_REV_1_1) {
+		if (pd->host_caps && samsung_rev() < EXYNOS4210_REV_1_1) {
 			printk(KERN_INFO "MSHC: This exynos4 is EVT1.0. "
 				"Disable DDR R/W for eMMC.\n");
-			set->host_caps &= ~MMC_CAP_1_8V_DDR;
+			set->host_caps &= ~(MMC_CAP_1_8V_DDR |
+						MMC_CAP_UHS_DDR50);
 		}
 	}
 	if (pd->cfg_gpio)
 		set->cfg_gpio = pd->cfg_gpio;
 	if (pd->cfg_card)
 		set->cfg_card = pd->cfg_card;
-#if defined(CONFIG_EXYNOS4_MSHC_VPLL_46MHZ) || \
-	defined(CONFIG_EXYNOS4_MSHC_EPLL_45MHZ)
 	if (pd->cfg_ddr)
 		set->cfg_ddr = pd->cfg_ddr;
-#endif
 	if (pd->init_card)
 		set->init_card = pd->init_card;
 }

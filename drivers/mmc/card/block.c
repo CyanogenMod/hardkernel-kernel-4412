@@ -45,8 +45,35 @@
 #include <asm/uaccess.h>
 
 #include "queue.h"
+#include "../core/core.h"
 
 MODULE_ALIAS("mmc:block");
+
+#if defined(CONFIG_MMC_CPRM)
+#define MMC_ENABLE_CPRM
+#endif
+
+#ifdef MMC_ENABLE_CPRM
+#include "cprmdrv_samsung.h"
+#include <linux/ioctl.h>
+#define MMC_IOCTL_BASE		0xB3 /* Same as MMC block device major number */
+#define MMC_IOCTL_GET_SECTOR_COUNT	_IOR(MMC_IOCTL_BASE, 100, int)
+#define MMC_IOCTL_GET_SECTOR_SIZE		_IOR(MMC_IOCTL_BASE, 101, int)
+#define MMC_IOCTL_GET_BLOCK_SIZE		_IOR(MMC_IOCTL_BASE, 102, int)
+#endif
+
+#ifdef MOVI_DEBUG
+struct CMD_LOG {
+	u32 cmd;
+	u32 arg;
+	u32 cnt;
+	u32 rsp;
+	u32 stoprsp;
+};
+struct CMD_LOG gaCmdLog[5];
+int gnCmdLogIdx;
+#endif
+
 #ifdef MODULE_PARAM_PREFIX
 #undef MODULE_PARAM_PREFIX
 #endif
@@ -127,6 +154,7 @@ enum mmc_blk_status {
 	MMC_BLK_ABORT,
 	MMC_BLK_DATA_ERR,
 	MMC_BLK_ECC_ERR,
+	MMC_BLK_NOMEDIUM,
 };
 
 enum {
@@ -426,6 +454,7 @@ cmd_rel_host:
 	mmc_release_host(card->host);
 
 cmd_done:
+	if (md)
 	mmc_blk_put(md);
 	kfree(idata->buf);
 	kfree(idata);
@@ -435,9 +464,45 @@ cmd_done:
 static int mmc_blk_ioctl(struct block_device *bdev, fmode_t mode,
 	unsigned int cmd, unsigned long arg)
 {
+#ifdef MMC_ENABLE_CPRM
+	struct mmc_blk_data *md = bdev->bd_disk->private_data;
+	struct mmc_card *card = md->queue.card;
+#endif
 	int ret = -EINVAL;
 	if (cmd == MMC_IOC_CMD)
 		ret = mmc_blk_ioctl_cmd(bdev, (struct mmc_ioc_cmd __user *)arg);
+
+#ifdef MMC_ENABLE_CPRM
+	printk(KERN_DEBUG " %s ], %x ", __func__, cmd);
+
+	switch (cmd) {
+	case MMC_IOCTL_GET_SECTOR_COUNT: {
+		int size = 0;
+
+		size = (int)get_capacity(md->disk) << 9;
+		printk(KERN_DEBUG "[%s]:MMC_IOCTL_GET_SECTOR_COUNT size = %d\n",
+			__func__, size);
+
+		return copy_to_user((void *)arg, &size, sizeof(u64));
+		}
+		break;
+	case ACMD13:
+	case ACMD18:
+	case ACMD25:
+	case ACMD43:
+	case ACMD44:
+	case ACMD45:
+	case ACMD46:
+	case ACMD47:
+	case ACMD48: {
+		struct cprm_request *req = (struct cprm_request *)arg;
+
+		printk(KERN_DEBUG "[%s]: cmd [%x]\n", __func__, cmd);
+		return stub_sendcmd(card, req->cmd, req->arg, \
+				req->len, req->buff);
+		}
+	}
+#endif
 	return ret;
 }
 
@@ -516,8 +581,15 @@ static u32 mmc_sd_num_wr_blocks(struct mmc_card *card)
 	data.timeout_clks = card->csd.tacc_clks * 100;
 
 	timeout_us = data.timeout_ns / 1000;
+	if (card->host->ios.clock) {
+		/* original */
 	timeout_us += data.timeout_clks * 1000 /
 		(card->host->ios.clock / 1000);
+	} else {
+		/* if clock is 0, assume ios.clock is 50000000(working clock) */
+		timeout_us += data.timeout_clks * 1000 /
+			(50000000 / 1000);
+	}
 
 	if (timeout_us > 100000) {
 		data.timeout_ns = 100000000;
@@ -578,6 +650,7 @@ static int get_card_status(struct mmc_card *card, u32 *status, int retries)
 	return err;
 }
 
+#define ERR_NOMEDIUM	3
 #define ERR_RETRY	2
 #define ERR_ABORT	1
 #define ERR_CONTINUE	0
@@ -649,6 +722,9 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 	u32 status, stop_status = 0;
 	int err, retry;
 
+	if (mmc_card_removed(card))
+		return ERR_NOMEDIUM;
+
 	/*
 	 * Try to get card status which indicates both the card state
 	 * and why there was no response.  If the first attempt fails,
@@ -665,8 +741,12 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 	}
 
 	/* We couldn't get a response from the card.  Give up. */
-	if (err)
+	if (err) {
+		/* Check if the card is removed */
+		if (mmc_detect_card_removed(card->host))
+			return ERR_NOMEDIUM;
 		return ERR_ABORT;
+	}
 
 	/* Flag ECC errors */
 	if ((status & R1_CARD_ECC_FAILED) ||
@@ -934,11 +1014,27 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	 */
 	if (brq->sbc.error || brq->cmd.error || brq->stop.error ||
 	    brq->data.error) {
+#if defined(CONFIG_MACH_M0) || defined(CONFIG_MACH_P4NOTE) || \
+		defined(CONFIG_MACH_C1_USA_ATT)
+		/* dh0421.hwang */
+		if (mmc_card_mmc(card)) {
+			printk(KERN_ERR "[TEST] brq->sbc.opcode=%d,"
+					"brq->cmd.opcode=%d.\n",
+					brq->sbc.opcode, brq->cmd.opcode);
+			printk(KERN_ERR "[TEST] brq->sbc.error=%d,"
+					"brq->cmd.error=%d, brq->stop.error=%d,"
+					"brq->data.error=%d.\n", brq->sbc.error,
+					brq->cmd.error, brq->stop.error,
+					brq->data.error);
+		}
+#endif
 		switch (mmc_blk_cmd_recovery(card, req, brq, &ecc_err)) {
 		case ERR_RETRY:
 			return MMC_BLK_RETRY;
 		case ERR_ABORT:
 			return MMC_BLK_ABORT;
+		case ERR_NOMEDIUM:
+			return MMC_BLK_NOMEDIUM;
 		case ERR_CONTINUE:
 			break;
 		}
@@ -963,6 +1059,12 @@ static int mmc_blk_err_check(struct mmc_card *card,
 	if ((!mmc_host_is_spi(card->host) && rq_data_dir(req) != READ) ||
 			(mq_mrq->packed_cmd == MMC_PACKED_WR_HDR)) {
 		u32 status;
+		/* timeout value set 0x30000 : It works just SDcard case.
+		 * It means send CMD sequencially about 7.8sec.
+		 * If SDcard's data line stays low, timeout is about 4sec.
+		 * max timeout is up to 300ms
+		 */
+		u32 timeout = 0x30000;
 		do {
 			int err = get_card_status(card, &status, 5);
 			if (err) {
@@ -975,8 +1077,20 @@ static int mmc_blk_err_check(struct mmc_card *card,
 			 * so make sure to check both the busy
 			 * indication and the card state.
 			 */
-		} while (!(status & R1_READY_FOR_DATA) ||
-			 (R1_CURRENT_STATE(status) == R1_STATE_PRG));
+			/* Just SDcard case, decrease timeout */
+			if (mmc_card_sd(card))
+				timeout--;
+		} while ((!(status & R1_READY_FOR_DATA) ||
+			 (R1_CURRENT_STATE(status) == R1_STATE_PRG)) &&
+			 timeout);
+
+		/* If SDcard stays busy status, timeout is to be zero */
+		if (!timeout) {
+			pr_err("%s: card state has been never changed "
+					"to trans.!\n",
+					req->rq_disk->disk_name);
+			return MMC_BLK_DATA_ERR;
+		}
 	}
 
 	if (brq->data.error) {
@@ -1215,6 +1329,11 @@ static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
 	if (max_packed_rw == 0)
 		goto no_packed;
 
+#ifdef CONFIG_MMC_SELECTIVE_PACKED_CMD_POLICY
+	if (rq_data_dir(cur) == READ)
+		goto no_packed;
+#endif
+
 	if (mmc_req_rel_wr(cur) &&
 			(md->flags & MMC_BLK_REL_WR) &&
 			!en_rel_wr) {
@@ -1247,7 +1366,15 @@ static u8 mmc_blk_prep_packed_list(struct mmc_queue *mq, struct request *req)
 			put_back = 1;
 			break;
 		}
-
+#ifdef CONFIG_MMC_SELECTIVE_PACKED_CMD_POLICY
+		if ((blk_rq_pos(cur) + blk_rq_sectors(cur)) != \
+			blk_rq_pos(next)) {
+			/* if next request dose not start at end block of
+			   previous request */
+			put_back = 1;
+			break;
+		}
+#endif
 		if (rq_data_dir(cur) != rq_data_dir(next)) {
 			put_back = 1;
 			break;
@@ -1508,6 +1635,9 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 	struct mmc_async_req *areq;
 	const u8 packed_num = 2;
 	u8 reqs = 0;
+#ifdef MOVI_DEBUG
+	gnCmdLogIdx = 0;
+#endif
 
 	if (!rqc && !mq->mqrq_prev->req)
 		return 0;
@@ -1516,6 +1646,9 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 		reqs = mmc_blk_prep_packed_list(mq, rqc);
 
 	do {
+#ifdef MOVI_DEBUG
+		struct mmc_command cmd;
+#endif
 		if (rqc) {
 			if (reqs >= packed_num) {
 				mmc_blk_packed_hdr_wrq_prep(mq->mqrq_cur, card, mq);
@@ -1538,6 +1671,126 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 		req = mq_rq->req;
 		type = rq_data_dir(req) == READ ? MMC_BLK_READ : MMC_BLK_WRITE;
 		mmc_queue_bounce_post(mq_rq);
+
+#ifdef MOVI_DEBUG
+		if (card->type == MMC_TYPE_MMC) {
+			gaCmdLog[gnCmdLogIdx].cmd = brq->cmd.opcode;
+			gaCmdLog[gnCmdLogIdx].arg = brq->cmd.arg;
+			gaCmdLog[gnCmdLogIdx].cnt = brq->data.blocks;
+			gaCmdLog[gnCmdLogIdx].rsp = brq->cmd.resp[0];
+			gaCmdLog[gnCmdLogIdx].stoprsp = brq->stop.resp[0];
+			gnCmdLogIdx++;
+
+			if (gnCmdLogIdx >= 5)
+				gnCmdLogIdx = 0;
+		}
+
+		if (brq->cmd.error) {
+			if (card->type == MMC_TYPE_MMC) {
+				get_card_status(card, &status, 0);
+				printk(KERN_ERR "[MOVI_DEBUG] card status is 0x%x\n",
+					status);
+				if (!status) {
+					int err, i, j;
+					for (i = 0; i < 5; i++) {
+						printk(KERN_ERR "[CMD LOG] CMD:%d, ARG:0x%x, CNT:%d, RSP:0x%x, STRSP:0x%x\n",
+						gaCmdLog[gnCmdLogIdx].cmd,
+						gaCmdLog[gnCmdLogIdx].arg,
+						gaCmdLog[gnCmdLogIdx].cnt,
+						gaCmdLog[gnCmdLogIdx].rsp,
+						gaCmdLog[gnCmdLogIdx].stoprsp);
+						gnCmdLogIdx++;
+						if (gnCmdLogIdx >= 5)
+							gnCmdLogIdx = 0;
+					}
+
+					get_card_status(card, &status, 0);
+					printk(KERN_ERR "COMMAND13 response = 0x%x\n",
+					status);
+
+					cmd.opcode = 12;
+					cmd.arg = 0;
+					cmd.flags = MMC_RSP_R1;
+					err = mmc_wait_for_cmd
+						(card->host, &cmd, 0);
+					if (err) {
+						printk(KERN_ERR "KERN_ERR %s: error %d CMD12\n",
+					       req->rq_disk->disk_name, err);
+					}
+					printk(KERN_ERR "COMD12 RESP = 0x%x\n",
+						cmd.resp[0]);
+					msleep(100);
+
+					get_card_status(card, &status, 0);
+					printk(KERN_ERR "COMMAND13 response = 0x%x\n",
+						status);
+
+					mmc_set_clock(card->host, 400000);
+
+					for (i = 0; i < 3; i++) {
+						cmd.opcode = 1;
+						cmd.arg = 0x40ff8080;
+						cmd.flags = MMC_RSP_R3 |
+							MMC_CMD_BCR;
+						err = mmc_wait_for_cmd
+							(card->host, &cmd, 0);
+						if (err) {
+							printk(KERN_ERR "%s: error %d CMD1\n",
+							req->rq_disk->disk_name,
+							err);
+						}
+						printk(KERN_ERR "COMD1 RESP = 0x%x\n",
+							cmd.resp[0]);
+						msleep(50);
+					}
+
+					for (i = 0; i < 3; i++) {
+						cmd.opcode = 0;
+						cmd.arg = 0x20110210;
+						cmd.flags = MMC_RSP_NONE |
+								MMC_CMD_BC;
+						err = mmc_wait_for_cmd
+							(card->host, &cmd, 0);
+						if (err) {
+							printk(KERN_ERR "%s: error %d CMD0\n",
+							req->rq_disk->disk_name,
+							err);
+						}
+						msleep(50);
+						cmd.opcode = 0;
+						cmd.arg = 0x60FACC06;
+						cmd.flags = MMC_RSP_NONE |
+						MMC_CMD_BC;
+						err = mmc_wait_for_cmd
+						(card->host, &cmd, 0);
+						if (err) {
+							printk(KERN_ERR "%s: error %d CMD0\n",
+							req->rq_disk->disk_name,
+							err);
+						}
+						for (j = 0; j < 3; j++) {
+							msleep(50);
+							cmd.opcode = 1;
+							cmd.arg = 0x0;
+							cmd.flags = MMC_RSP_R3 |
+								MMC_CMD_BCR;
+							err = mmc_wait_for_cmd
+							(card->host, &cmd, 0);
+							if (err) {
+								printk(KERN_ERR "%s: error %d CMD1\n",
+							req->rq_disk->disk_name,
+							err);
+							}
+
+							printk(KERN_ERR "COMD1 RESP = 0x%x\n",
+								cmd.resp[0]);
+						}
+					}
+				panic("MOVINAND DEBUG PANIC\n");
+				}
+			}
+		}
+#endif
 
 		switch (status) {
 		case MMC_BLK_SUCCESS:
@@ -1637,6 +1890,8 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 			if (!ret)
 				goto start_new_req;
 			break;
+		case MMC_BLK_NOMEDIUM:
+			goto cmd_abort;
 		}
 
 		if (ret) {
@@ -1666,6 +1921,10 @@ snd_packed_rd:
 	return 1;
 
  cmd_abort:
+	spin_lock_irq(&md->lock);
+	if (mmc_card_removed(card))
+		req->cmd_flags |= REQ_QUIET;
+	spin_unlock_irq(&md->lock);
 	if (mq_rq->packed_cmd == MMC_PACKED_NONE) {
 		spin_lock_irq(&md->lock);
 		while (ret)
@@ -1680,6 +1939,40 @@ snd_packed_rd:
 			spin_unlock_irq(&md->lock);
 		}
 	}
+#if defined(CONFIG_MACH_M0) || defined(CONFIG_MACH_P4NOTE) || \
+		defined(CONFIG_MACH_C1_USA_ATT)
+	/*
+	 * dh0421.hwang
+	 * It's for Engineering DEBUGGING only
+	 * This has to be removed before PVR(guessing)
+	 * Please refer mshci reg dumps
+	 */
+	if (mmc_card_mmc(card) && status != 3) {
+		printk(KERN_ERR "[TEST] CMD aborting case in"
+				"MMC's block layer ret %d.\n", ret);
+		printk(KERN_ERR "%s: CMD%d, ARG=0x%x.\n",
+				req->rq_disk->disk_name,
+				brq->cmd.opcode,
+				brq->cmd.arg);
+		printk(KERN_ERR "[TEST] If PACKED_NONE,"
+				"confirm end_request done\n");
+		printk(KERN_ERR "packed CMD type = %d.\n",
+				mq_rq ?	mq_rq->packed_cmd : -1);
+		printk(KERN_ERR "[TEST] mmc%d, request returns %d.\n",
+				card->host->index, status);
+		printk(KERN_ERR "[TEST] err means...\n");
+		printk(KERN_ERR "\t1: MMC_BLK_PARTIAL.\n");
+		printk(KERN_ERR "\t2: MMC_BLK_CMD_ERR.\n");
+		printk(KERN_ERR "\t3: MMC_BLK_RETRY.\n");
+		printk(KERN_ERR "\t4: MMC_BLK_ABORT.\n");
+		printk(KERN_ERR "\t5: MMC_BLK_DATA_ERR.\n");
+		printk(KERN_ERR "\t6: MMC_BLK_ECC_ERR.\n");
+		if (!rqc) {
+			panic("[TEST] mmc%d, returns %d.\n",
+					card->host->index, status);
+		}
+	}
+#endif
 
  start_new_req:
 	if (rqc) {
@@ -2062,6 +2355,7 @@ static int mmc_blk_probe(struct mmc_card *card)
 		md->disk->disk_name, mmc_card_id(card), mmc_card_name(card),
 		cap_str, md->read_only ? "(ro)" : "");
 
+        // expose boot partitions.
 	if (mmc_blk_alloc_parts(card, md))
 		goto out;
 

@@ -58,10 +58,20 @@ obj-$(CONFIG_MACH_NURI)			+= mach-nuri.o
 obj-$(CONFIG_MACH_SMDK4X12)		+= mach-smdk4x12.o
 obj-$(CONFIG_MACH_SMDK5250)		+= mach-smdk5250.o
 
-obj-$(CONFIG_MACH_ORIGEN_QUAD)		+= mach-origen_quad.o
+# For Odroid
+ifeq ($(CONFIG_MACH_ODROID_4X12),y)
+	obj-$(CONFIG_BOARD_ODROID_Q)	+= mach-odroid-q.o odroid-sysfs.o
+	obj-$(CONFIG_BOARD_ODROID_Q2)	+= mach-odroid-q.o odroid-sysfs.o
+	obj-$(CONFIG_BOARD_ODROID_X)	+= mach-odroid-x.o odroid-sysfs.o
+	obj-$(CONFIG_BOARD_ODROID_X2)	+= mach-odroid-x.o odroid-sysfs.o
+	obj-$(CONFIG_BOARD_ODROID_U)	+= mach-odroid-u.o odroid-sysfs.o
+	obj-$(CONFIG_BOARD_ODROID_U2)	+= mach-odroid-u.o odroid-sysfs.o 
+	obj-$(CONFIG_BOARD_SMD_A2)		+= mach-smd-a2.o odroid-sysfs.o
+endif
 
 # device support
 
+obj-$(CONFIG_ODROID_FAN)		+= odroid_fan.o
 obj-$(CONFIG_ARCH_EXYNOS)		+= dev-audio.o
 obj-$(CONFIG_EXYNOS5_DEV_AHCI)		+= dev-ahci-exynos5.o
 obj-$(CONFIG_EXYNOS4_DEV_AHCI)		+= dev-ahci.o
@@ -107,7 +117,8 @@ obj-$(CONFIG_EXYNOS4_SETUP_MSHCI_GPIO)	+= setup-mshci-gpio.o
 obj-$(CONFIG_S3C64XX_DEV_SPI)		+= dev-spi.o
 
 obj-$(CONFIG_EXYNOS4_SETUP_USB_PHY)	+= setup-usb-phy.o
-obj-$(CONFIG_EXYNOS4_SETUP_FB_S5P)	+= setup-fb-s5p.o
+#obj-$(CONFIG_EXYNOS4_SETUP_FB_S5P)	+= setup-fb-s5p.o
+obj-$(CONFIG_EXYNOS4_SETUP_FB_S5P)	+= setup-fb-odroid.o
 obj-$(CONFIG_EXYNOS4_SETUP_TVOUT)	+= setup-tvout.o
 obj-$(CONFIG_EXYNOS4_SETUP_JPEG)	+= setup-jpeg.o
 obj-$(CONFIG_EXYNOS4_SETUP_MIPI_DSI)	+= setup-dsim.o
@@ -119,3 +130,5 @@ obj-$(CONFIG_WAKEUP_ASSIST)		+= wakeup_assist.o
 obj-$(CONFIG_ION_EXYNOS)		+= dev-ion.o
 obj-$(CONFIG_EXYNOS_C2C)		+= setup-c2c.o
 obj-$(CONFIG_EXYNOS_THERMAL)		+= tmu-exynos.o
+
+obj-$(CONFIG_USE_GPIO_AS_I2C)		+= pix_i2c.o

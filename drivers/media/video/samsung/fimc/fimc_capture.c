@@ -199,6 +199,7 @@ static const struct v4l2_queryctrl fimc_controls[] = {
 void s3c_csis_start(int csis_id, int lanes, int settle, \
 	int align, int width, int height, int pixel_format) {}
 void s3c_csis_stop(int csis_id) {}
+void s3c_csis_enable_pktdata(int csis_id, bool enable) {}
 #endif
 
 static int fimc_init_camera(struct fimc_control *ctrl)
@@ -283,11 +284,12 @@ retry:
 			clk_disable(ctrl->cam->clk);
 			fimc->mclk_status = CAM_MCLK_OFF;
 		}
-		if (retry_cnt++ < 3) {
-			msleep(100);
-			fimc_err("Retry power on(%d/3)\n\n", retry_cnt);
-			goto retry;
-		}
+//		if (retry_cnt++ < 3) {
+//			msleep(100);
+//			fimc_err("Retry power on(%d/3)\n\n", retry_cnt);
+//			goto retry;
+//		}
+		cam->initialized = 0;
 	} else {
 		cam->initialized = 1;
 	}
@@ -574,7 +576,7 @@ int fimc_s_parm(struct file *file, void *fh, struct v4l2_streamparm *a)
 
 	if (ctrl->cam->sd && fimc_cam_use)
 		ret = v4l2_subdev_call(ctrl->cam->sd, video, s_parm, a);
-	else if (ctrl->is.sd && fimc_cam_use)
+	else if (ctrl->cam->use_isp)
 		ret = v4l2_subdev_call(ctrl->is.sd, video, s_parm, a);
 
 	mutex_unlock(&ctrl->v4l2_lock);
@@ -1318,7 +1320,7 @@ int fimc_s_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 		return 0;
 	}
 
-	if (ctrl->is.sd && fimc_cam_use) {
+	if (ctrl->cam->use_isp) {
 		ctrl->is.mbus_fmt.code = V4L2_MBUS_FMT_SGRBG10_1X10;
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_WIDTH;
 		is_ctrl.value = 0;
@@ -1349,7 +1351,7 @@ int fimc_try_fmt_vid_capture(struct file *file, void *fh, struct v4l2_format *f)
 }
 
 static int fimc_alloc_buffers(struct fimc_control *ctrl,
-			int plane, int size, int align, int bpp, int use_paddingbuf)
+			int plane, int size, int align, int bpp, int use_paddingbuf, int pad_size)
 {
 	struct fimc_capinfo *cap = ctrl->cap;
 	int i, j;
@@ -1406,10 +1408,11 @@ static int fimc_alloc_buffers(struct fimc_control *ctrl,
 		return -ENOMEM;
 	}
 
-	if (use_paddingbuf)
-		plane_length[3] = 16;
-	else
-		plane_length[3] = 0;
+	if (use_paddingbuf) {
+		plane_length[plane] = pad_size;
+		cap->pktdata_plane = plane;
+	} else
+		plane_length[plane] = 0;
 
 	for (i = 0; i < cap->nr_bufs; i++) {
 		for (j = 0; j < plane; j++) {
@@ -1420,10 +1423,14 @@ static int fimc_alloc_buffers(struct fimc_control *ctrl,
 				goto err_alloc;
 		}
 		if (use_paddingbuf) {
-			cap->bufs[i].length[3] = plane_length[3];
-			fimc_dma_alloc(ctrl, &cap->bufs[i], 3, align);
+			cap->bufs[i].length[plane] = plane_length[plane];
+			fimc_dma_alloc(ctrl, &cap->bufs[i], plane, align);
 
-			if (!cap->bufs[i].base[3])
+			cap->bufs[i].vaddr_pktdata = phys_to_virt(cap->bufs[i].base[plane]);
+			/* printk(KERN_INFO "pktdata address = 0x%x, 0x%x\n"
+				,cap->bufs[i].base[1], cap->bufs[i].vaddr_pktdata ); */
+
+			if (!cap->bufs[i].base[plane])
 				goto err_alloc;
 		}
 		cap->bufs[i].state = VIDEOBUF_PREPARED;
@@ -1438,8 +1445,8 @@ err_alloc:
 				fimc_dma_free(ctrl, &cap->bufs[i], j);
 		}
 		if (use_paddingbuf) {
-			if (cap->bufs[i].base[3])
-				fimc_dma_free(ctrl, &cap->bufs[i], 3);
+			if (cap->bufs[i].base[plane])
+				fimc_dma_free(ctrl, &cap->bufs[i], plane);
 		}
 		memset(&cap->bufs[i], 0, sizeof(cap->bufs[i]));
 	}
@@ -1542,6 +1549,9 @@ int fimc_reqbufs_capture_mmap(void *fh, struct v4l2_requestbuffers *b)
 		}
 	}
 
+	if (cap->pktdata_enable)
+		cap->pktdata_size = 0x1000;
+		
 	bpp = fimc_fmt_depth(ctrl, &cap->fmt);
 
 	switch (cap->fmt.pixelformat) {
@@ -1553,7 +1563,7 @@ int fimc_reqbufs_capture_mmap(void *fh, struct v4l2_requestbuffers *b)
 	case V4L2_PIX_FMT_YVYU:		/* fall through */
 		fimc_info1("%s : 1plane\n", __func__);
 		ret = fimc_alloc_buffers(ctrl, 1,
-			cap->fmt.width * cap->fmt.height, SZ_4K, bpp, 0);
+			cap->fmt.width * cap->fmt.height, SZ_4K, bpp, cap->pktdata_enable, cap->pktdata_size);
 		break;
 
 	case V4L2_PIX_FMT_NV21:
@@ -1562,20 +1572,20 @@ int fimc_reqbufs_capture_mmap(void *fh, struct v4l2_requestbuffers *b)
 		fimc_info1("%s : 2plane for NV21 w %d h %d\n", __func__,
 				cap->fmt.width, cap->fmt.height);
 		ret = fimc_alloc_buffers(ctrl, 2,
-			cap->fmt.width * cap->fmt.height, SZ_4K, bpp, 0);
+			cap->fmt.width * cap->fmt.height, 0, bpp, cap->pktdata_enable, cap->pktdata_size);
 		break;
 
 	case V4L2_PIX_FMT_NV12:
 		fimc_info1("%s : 2plane for NV12\n", __func__);
 		ret = fimc_alloc_buffers(ctrl, 2,
-			cap->fmt.width * cap->fmt.height, SZ_64K, bpp, 0);
+			cap->fmt.width * cap->fmt.height, SZ_64K, bpp, cap->pktdata_enable, cap->pktdata_size);
 		break;
 
 	case V4L2_PIX_FMT_NV12T:
 		fimc_info1("%s : 2plane for NV12T\n", __func__);
 		ret = fimc_alloc_buffers(ctrl, 2,
 			ALIGN(cap->fmt.width, 128) * ALIGN(cap->fmt.height, 32),
-			SZ_64K, bpp, 0);
+			SZ_64K, bpp, cap->pktdata_enable, cap->pktdata_size);
 		break;
 
 	case V4L2_PIX_FMT_YUV422P:	/* fall through */
@@ -1583,14 +1593,14 @@ int fimc_reqbufs_capture_mmap(void *fh, struct v4l2_requestbuffers *b)
 	case V4L2_PIX_FMT_YVU420:
 		fimc_info1("%s : 3plane\n", __func__);
 		ret = fimc_alloc_buffers(ctrl, 3,
-			cap->fmt.width * cap->fmt.height, 0, bpp, 0);
+			cap->fmt.width * cap->fmt.height, 0, bpp, cap->pktdata_enable, cap->pktdata_size);
 		break;
 
 	case V4L2_PIX_FMT_JPEG:
 		fimc_info1("%s : JPEG 1plane\n", __func__);
 		size = fimc_camera_get_jpeg_memsize(ctrl);
 		fimc_info2("%s : JPEG 1plane size = %x\n", __func__, size);
-		ret = fimc_alloc_buffers(ctrl, 1, size, 0, 8, 0);
+		ret = fimc_alloc_buffers(ctrl, 1, size, 0, 8, cap->pktdata_enable, cap->pktdata_size);
 		break;
 	default:
 		break;
@@ -1725,6 +1735,10 @@ int fimc_querybuf_capture(void *fh, struct v4l2_buffer *b)
 		b->length = cap->bufs[b->index].length[0];
 		break;
 	}
+
+	if (cap->pktdata_enable)
+		b->length += ctrl->cap->bufs[b->index].length[cap->pktdata_plane];
+
 	b->m.offset = b->index * PAGE_SIZE;
 	/* memory field should filled V4L2_MEMORY_MMAP */
 	b->memory = V4L2_MEMORY_MMAP;
@@ -1854,25 +1868,31 @@ int fimc_s_ctrl_capture(void *fh, struct v4l2_control *c)
 		break;
 
 	case V4L2_CID_IS_LOAD_FW:
-		if (ctrl->is.sd && fimc_cam_use)
+		if (ctrl->cam->use_isp)
 			ret = v4l2_subdev_call(ctrl->is.sd, core, s_power, c->value);
 		break;
 	case V4L2_CID_IS_RESET:
-		if (ctrl->is.sd && fimc_cam_use)
+		if (ctrl->cam->use_isp)
 			ret = v4l2_subdev_call(ctrl->is.sd, core, reset, c->value);
 		break;
 	case V4L2_CID_IS_S_POWER:
-		if (ctrl->is.sd && fimc_cam_use)
+		if (ctrl->cam->use_isp)
 			ret = v4l2_subdev_call(ctrl->is.sd, core, s_power, c->value);
 		break;
 	case V4L2_CID_IS_S_STREAM:
-		if (ctrl->is.sd && fimc_cam_use)
+		if (ctrl->cam->use_isp)
 			ret = v4l2_subdev_call(ctrl->is.sd, video, s_stream, c->value);
 		break;
 	case V4L2_CID_CACHEABLE:
 		ctrl->cap->cacheable = c->value;
 		ret = 0;
 		break;
+
+	case V4L2_CID_EMBEDDEDDATA_ENABLE:
+		ctrl->cap->pktdata_enable = c->value;
+		ret = 0;
+		break;
+
 	case V4L2_CID_IS_ZOOM:
 		fimc_is_set_zoom(ctrl, c);
 		break;
@@ -2138,9 +2158,8 @@ int fimc_streamon_capture(void *fh)
 
 	if (cam->sd) {
 		if (is_scale_up(ctrl))
-			return -EINVAL;
+			1;  //			return -EINVAL; /* rapheal 2012.06.27*/
 	}
-
 	if (pdata->hw_ver < 0x51)
 		fimc_hw_reset_camera(ctrl);
 #if (!defined(CONFIG_EXYNOS_DEV_PD) && !defined(CONFIG_PM_RUNTIME))
@@ -2185,16 +2204,20 @@ int fimc_streamon_capture(void *fh)
 			}
 
 			if (cam->type == CAM_TYPE_MIPI) {
-				if (cam->id == CAMERA_CSI_C)
+				if(cam->id == CAMERA_CSI_C)	{
+					s3c_csis_enable_pktdata(CSI_CH_0, cap->pktdata_enable);
 					s3c_csis_start(CSI_CH_0, cam->mipi_lanes,
 					cam->mipi_settle, cam->mipi_align,
 					cam->width, cam->height,
 					cap->fmt.pixelformat);
-				else
+				}
+				else {
+					s3c_csis_enable_pktdata(CSI_CH_1, cap->pktdata_enable);
 					s3c_csis_start(CSI_CH_1, cam->mipi_lanes,
 					cam->mipi_settle, cam->mipi_align,
 					cam->width, cam->height,
 					cap->fmt.pixelformat);
+			}
 			}
 			if (cap->fmt.priv != V4L2_PIX_FMT_MODE_CAPTURE) {
 				ret = v4l2_subdev_call(cam->sd, video, s_stream, 1);
@@ -2226,7 +2249,7 @@ int fimc_streamon_capture(void *fh)
 
 	}
 
-	if (ctrl->is.sd && fimc_cam_use) {
+	if (ctrl->cam->use_isp) {
 		struct platform_device *pdev = to_platform_device(ctrl->dev);
 		struct clk *pxl_async = NULL;
 		is_ctrl.id = V4L2_CID_IS_GET_SENSOR_OFFSET_X;
@@ -2248,18 +2271,20 @@ int fimc_streamon_capture(void *fh)
 				s_mbus_fmt, &ctrl->is.mbus_fmt);
 		}
 
-		if (cam->id == CAMERA_CSI_C)
+		if (cam->id == CAMERA_CSI_C) {
 			s3c_csis_start(CSI_CH_0, cam->mipi_lanes,
 			cam->mipi_settle, cam->mipi_align,
 			ctrl->is.fmt.width + ctrl->is.offset_x,
 			ctrl->is.fmt.height + ctrl->is.offset_y,
 			V4L2_PIX_FMT_SGRBG10);
-		else if (cam->id == CAMERA_CSI_D)
+		}
+		else if (cam->id == CAMERA_CSI_D) {
 			s3c_csis_start(CSI_CH_1, cam->mipi_lanes,
 			cam->mipi_settle, cam->mipi_align,
 			ctrl->is.fmt.width + ctrl->is.offset_x,
 			ctrl->is.fmt.height + ctrl->is.offset_y,
 			V4L2_PIX_FMT_SGRBG10);
+		}
 
 		pxl_async = clk_get(&pdev->dev, "pxl_async1");
 		if (IS_ERR(pxl_async)) {
@@ -2343,7 +2368,7 @@ int fimc_streamon_capture(void *fh)
 	fimc_start_capture(ctrl);
 	ctrl->status = FIMC_STREAMON;
 
-	if (ctrl->is.sd && fimc_cam_use)
+	if (ctrl->cam->use_isp)
 		ret = v4l2_subdev_call(ctrl->is.sd, video, s_stream, 1);
 	fimc_info1("%s-- fimc%d\n", __func__, ctrl->id);
 
@@ -2377,11 +2402,14 @@ int fimc_streamoff_capture(void *fh)
 
 	ctrl->status = FIMC_STREAMOFF;
 	if (fimc_cam_use) {
-		if (ctrl->is.sd)
+		if (ctrl->cam->use_isp)
 			v4l2_subdev_call(ctrl->is.sd, video, s_stream, 0);
 
 		if (ctrl->flite_sd)
 			v4l2_subdev_call(ctrl->flite_sd, video, s_stream, 0);
+
+		if (ctrl->cam->sd)
+			v4l2_subdev_call(ctrl->cam->sd, video, s_stream, 0);
 
 		if (ctrl->cam->type == CAM_TYPE_MIPI) {
 			if (ctrl->cam->id == CAMERA_CSI_C)
@@ -2391,8 +2419,6 @@ int fimc_streamoff_capture(void *fh)
 		}
 		fimc_hwset_reset(ctrl);
 
-		if (ctrl->cam->sd)
-			v4l2_subdev_call(ctrl->cam->sd, video, s_stream, 0);
 	} else {
 		fimc_hwset_reset(ctrl);
 	}
@@ -2435,36 +2461,36 @@ int fimc_is_set_zoom(struct fimc_control *ctrl, struct v4l2_control *c)
 		return -ENODEV;
 
 	/* 0. Check zoom width and height */
-	if (!c->value) {
-		ctrl->is.zoom_in_width = ctrl->is.fmt.width;
-		ctrl->is.zoom_in_height = ctrl->is.fmt.height;
-	} else {
-		ctrl->is.zoom_in_width = ctrl->is.fmt.width - (16 * c->value);
-		ctrl->is.zoom_in_height =
-			(ctrl->is.zoom_in_width * ctrl->is.fmt.height)
-			/ ctrl->is.fmt.width;
-		/* bayer crop contraint */
-		switch (ctrl->is.zoom_in_height%4) {
-		case 1:
-			ctrl->is.zoom_in_height--;
-			break;
-		case 2:
-			ctrl->is.zoom_in_height += 2;
-			break;
-		case 3:
-			ctrl->is.zoom_in_height++;
-			break;
-		}
-		if ((ctrl->is.zoom_in_width < (ctrl->is.fmt.width/4))
-		|| (ctrl->is.zoom_in_height < (ctrl->is.fmt.height/4))) {
-			ctrl->is.zoom_in_width = ctrl->is.fmt.width/4;
-			ctrl->is.zoom_in_height = ctrl->is.fmt.height/4;
-		}
-	}
+//	if (!c->value) {
+//		ctrl->is.zoom_in_width = ctrl->is.fmt.width;
+//		ctrl->is.zoom_in_height = ctrl->is.fmt.height;
+//	} else {
+//		ctrl->is.zoom_in_width = ctrl->is.fmt.width - (16 * c->value);
+//		ctrl->is.zoom_in_height =
+//			(ctrl->is.zoom_in_width * ctrl->is.fmt.height)
+//			/ ctrl->is.fmt.width;
+//		/* bayer crop contraint */
+//		switch (ctrl->is.zoom_in_height%4) {
+//		case 1:
+//			ctrl->is.zoom_in_height--;
+//			break;
+//		case 2:
+//			ctrl->is.zoom_in_height += 2;
+//			break;
+//		case 3:
+//			ctrl->is.zoom_in_height++;
+//			break;
+//		}
+//		if ((ctrl->is.zoom_in_width < (ctrl->is.fmt.width/4))
+//		|| (ctrl->is.zoom_in_height < (ctrl->is.fmt.height/4))) {
+//			ctrl->is.zoom_in_width = ctrl->is.fmt.width/4;
+//			ctrl->is.zoom_in_height = ctrl->is.fmt.height/4;
+//		}
+//	}
 	/* 1. fimc stop */
 	fimc_stop_zoom_capture(ctrl);
 	/* 2. Set zoom and calculate new width and height */
-	if (ctrl->is.sd && fimc_cam_use) {
+	if (ctrl->cam->use_isp) {
 		ret = v4l2_subdev_call(ctrl->is.sd, core, s_ctrl, c);
 		/* 2. Set zoom */
 		is_ctrl.id = V4L2_CID_IS_ZOOM_STATE;
@@ -2482,7 +2508,7 @@ int fimc_is_set_zoom(struct fimc_control *ctrl, struct v4l2_control *c)
 	/* 4. Start FIMC */
 	fimc_start_zoom_capture(ctrl);
 	/* 5. FIMC-IS stream on */
-	if (ctrl->is.sd && fimc_cam_use)
+	if (ctrl->cam->use_isp)
 		ret = v4l2_subdev_call(ctrl->is.sd, video, s_stream, 1);
 
 	return 0;

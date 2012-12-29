@@ -386,7 +386,7 @@ static int __devinit s3c_rtc_probe(struct platform_device *pdev)
 
 	s3c_rtc_gettime(NULL, &rtc_tm);
 
-	if (rtc_valid_tm(&rtc_tm) || rtc_tm.tm_year > 205) {
+	if (rtc_valid_tm(&rtc_tm)) {
 		rtc_tm.tm_year	= 100;
 		rtc_tm.tm_mon	= 0;
 		rtc_tm.tm_mday	= 1;

@@ -23,6 +23,10 @@
 #define S3C_CSIS_INTMSK		(0x10)
 #define S3C_CSIS_INTSRC		(0x14)
 #define S3C_CSIS_RESOL		(0x2c)
+#define S3C_CSIS_PKTDATA_ODD	(0x2000)
+#define S3C_CSIS_PKTDATA_EVEN	(0x3000)
+
+
 
 /*
  * Bit Definitions
@@ -108,6 +112,10 @@
 						S3C_CSIS_INTSRC_ERR_CRC | \
 						S3C_CSIS_INTSRC_ERR_ID)
 
+#define S3C_CSIS_INTSRC_NON_IMAGE_DATA		(S3C_CSIS_INTSRC_EVEN_BEFORE | \
+						S3C_CSIS_INTSRC_EVEN_AFTER | \
+						S3C_CSIS_INTSRC_ODD_BEFORE | \
+						S3C_CSIS_INTSRC_ODD_AFTER)
 
 /* Resolution Register */
 #define S3C_CSIS_RESOL_HOR_SHIFT		(16)

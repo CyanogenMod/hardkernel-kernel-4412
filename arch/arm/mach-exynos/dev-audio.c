@@ -366,12 +366,13 @@ struct platform_device exynos_device_ac97 = {
 
 static int exynos_spdif_cfg_gpio(struct platform_device *pdev)
 {
+#if !defined(CONFIG_MACH_ODROID_4X12)
 	/* configure GPIO for SPDIF port */
 	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
 		s3c_gpio_cfgpin_range(EXYNOS4_GPC1(0), 2, S3C_GPIO_SFN(4));
 	else if (soc_is_exynos5250())
 		s3c_gpio_cfgpin_range(EXYNOS5_GPB1(0), 2, S3C_GPIO_SFN(4));
-
+#endif
 	return 0;
 }
 

@@ -25,6 +25,8 @@
 
 #include <linux/mmc/host.h>
 
+#include <plat/cpu.h>
+
 #include "mshci.h"
 
 #define DRIVER_NAME "mshci"
@@ -48,7 +50,7 @@ static void mshci_set_clock(struct mshci_host *host,
 				unsigned int clock, u32 bus_width);
 
 #define MSHCI_MAX_DMA_SINGLE_TRANS_SIZE	(0x1000)
-#define MSHCI_MAX_DMA_TRANS_SIZE	(0x100000)
+#define MSHCI_MAX_DMA_TRANS_SIZE	(0x400000)
 #define MSHCI_MAX_DMA_LIST		(MSHCI_MAX_DMA_TRANS_SIZE / \
 					 MSHCI_MAX_DMA_SINGLE_TRANS_SIZE)
 
@@ -469,6 +471,7 @@ static int mshci_mdma_table_pre(struct mshci_host *host,
 	else
 		direction = DMA_TO_DEVICE;
 
+	if (!data->host_cookie) {
 	if (host->ops->dma_map_sg && data->blocks >= 2048) {
 		/* if transfer size is bigger than 1MiB */
 		host->sg_count = host->ops->dma_map_sg(host,
@@ -479,10 +482,6 @@ static int mshci_mdma_table_pre(struct mshci_host *host,
 		host->sg_count = host->ops->dma_map_sg(host,
 			mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 1);
-	} else if (host->ops->dma_map_sg) {
-		host->sg_count = host->ops->dma_map_sg(host,
-			mmc_dev(host->mmc),
-			data->sg, data->sg_len, direction, 0);
 	} else {
 		host->sg_count = dma_map_sg(mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction);
@@ -490,13 +489,16 @@ static int mshci_mdma_table_pre(struct mshci_host *host,
 
 	if (host->sg_count == 0)
 		goto fail;
+	} else
+		host->sg_count = data->host_cookie;
 
 	desc_vir = host->idma_desc;
 
 	/* to know phy address */
 	host->idma_addr = dma_map_single(mmc_dev(host->mmc),
 				host->idma_desc,
-				MSHCI_MAX_DMA_LIST * size_idmac,
+				/* cache flush for only transfer size */
+				(host->sg_count+1) * 16,
 				DMA_TO_DEVICE);
 	if (dma_mapping_error(mmc_dev(host->mmc), host->idma_addr))
 		goto unmap_entries;
@@ -532,7 +534,8 @@ static int mshci_mdma_table_pre(struct mshci_host *host,
 	/* it has to dma map again to resync vir data to phy data  */
 	host->idma_addr = dma_map_single(mmc_dev(host->mmc),
 				host->idma_desc,
-				MSHCI_MAX_DMA_LIST * size_idmac,
+				/* cache flush for only transfer size */
+				(host->sg_count+1) * 16,
 				DMA_TO_DEVICE);
 	if (dma_mapping_error(mmc_dev(host->mmc), host->idma_addr))
 		goto unmap_entries;
@@ -549,10 +552,6 @@ unmap_entries:
 		/* if transfer size is bigger than 64KiB */
 		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 1);
-	} else if (host->ops->dma_unmap_sg) {
-		/* if transfer size is lower than 64KiB */
-		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
-			data->sg, data->sg_len, direction, 0);
 	} else {
 		dma_unmap_sg(mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction);
@@ -572,8 +571,11 @@ static void mshci_idma_table_post(struct mshci_host *host,
 		direction = DMA_TO_DEVICE;
 
 	dma_unmap_single(mmc_dev(host->mmc), host->idma_addr,
-		MSHCI_MAX_DMA_LIST*sizeof(struct mshci_idmac), DMA_TO_DEVICE);
+				/* cache flush for only transfer size */
+				(host->sg_count+1) * 16,
+				DMA_TO_DEVICE);
 
+	if (!host->mmc->ops->post_req || !data->host_cookie) {
 	if (host->ops->dma_unmap_sg && data->blocks >= 2048) {
 		/* if transfer size is bigger than 1MiB */
 		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
@@ -582,13 +584,10 @@ static void mshci_idma_table_post(struct mshci_host *host,
 		/* if transfer size is bigger than 64KiB */
 		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction, 1);
-	} else if (host->ops->dma_unmap_sg) {
-		/* if transfer size is lower than 64KiB */
-		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
-			data->sg, data->sg_len, direction, 0);
 	} else {
 		dma_unmap_sg(mmc_dev(host->mmc),
 			data->sg, data->sg_len, direction);
+	}
 	}
 }
 
@@ -618,10 +617,8 @@ static void mshci_prepare_data(struct mshci_host *host, struct mmc_data *data)
 	if (data == NULL)
 		return;
 
-	BUG_ON(data->blksz * data->blocks > (host->mmc->max_req_size *
-					host->mmc->max_segs));
 	BUG_ON(data->blksz > host->mmc->max_blk_size);
-	BUG_ON(data->blocks > 400000);
+	BUG_ON(data->blocks > host->mmc->max_blk_count);
 
 	host->data = data;
 	host->data_early = 0;
@@ -634,6 +631,8 @@ static void mshci_prepare_data(struct mshci_host *host, struct mmc_data *data)
 	if (host->flags & (MSHCI_USE_IDMA))
 		host->flags |= MSHCI_REQ_USE_DMA;
 
+	if (data->host_cookie)
+		goto check_done;
 	/*
 	 * FIXME: This doesn't account for merging when mapping the
 	 * scatterlist.
@@ -659,6 +658,7 @@ static void mshci_prepare_data(struct mshci_host *host, struct mmc_data *data)
 			}
 		}
 	}
+check_done:
 
 	if (host->flags & MSHCI_REQ_USE_DMA) {
 		ret = mshci_mdma_table_pre(host, data);
@@ -757,38 +757,63 @@ static void mshci_finish_data(struct mshci_host *host)
 	} else
 		data->bytes_xfered = data->blksz * data->blocks;
 
-	if (data->stop)
+	/*
+	 * Need to send CMD12 if -
+	 * a) open-ended multiblock transfer (no CMD23)
+	 * b) error in multiblock transfer
+	 */
+	if (data->stop && ((data->error) ||
+	 !(host->mmc->caps & MMC_CAP_CMD23) ||
+	 ((host->mmc->caps & MMC_CAP_CMD23) &&
+	 !host->mrq->sbc))) /* packed cmd case */
 		mshci_send_command(host, data->stop);
 	else
 		tasklet_schedule(&host->finish_tasklet);
 }
 
+static void mshci_wait_release_start_bit(struct mshci_host *host)
+{
+	u32 loop_count = 1000000;
+
+	ktime_t expires;
+	u64 add_time = 100000; /* 100us */
+
+	/* before off clock, make sure data busy is released. */
+	while (mshci_readl(host, MSHCI_STATUS) & (1<<9) && --loop_count) {
+		spin_unlock_irqrestore(&host->lock, host->sl_flags);
+		expires = ktime_add_ns(ktime_get(), add_time);
+		set_current_state(TASK_UNINTERRUPTIBLE);
+		schedule_hrtimeout(&expires, HRTIMER_MODE_ABS);
+		spin_lock_irqsave(&host->lock, host->sl_flags);
+	}
+	if (loop_count == 0)
+		printk(KERN_ERR "%s: cmd_strt_bit not released for 11sec\n",
+				mmc_hostname(host->mmc));
+
+	loop_count = 1000000;
+		do {
+			if (!(mshci_readl(host, MSHCI_CMD) & CMD_STRT_BIT))
+				break;
+			loop_count--;
+		udelay(1);
+		} while (loop_count);
+	if (loop_count == 0)
+		printk(KERN_ERR "%s: cmd_strt_bit not released for 1sec\n",
+				mmc_hostname(host->mmc));
+}
+
 static void mshci_clock_onoff(struct mshci_host *host, bool val)
 {
-	u32 loop_count = 0x100000;
+	mshci_wait_release_start_bit(host);
 
 	if (val) {
 		mshci_writel(host, (0x1<<0), MSHCI_CLKENA);
 		mshci_writel(host, 0, MSHCI_CMD);
 		mshci_writel(host, CMD_ONLY_CLK, MSHCI_CMD);
-		do {
-			if (!(mshci_readl(host, MSHCI_CMD) & CMD_STRT_BIT))
-				break;
-			loop_count--;
-		} while (loop_count);
 	} else {
 		mshci_writel(host, (0x0<<0), MSHCI_CLKENA);
 		mshci_writel(host, 0, MSHCI_CMD);
 		mshci_writel(host, CMD_ONLY_CLK, MSHCI_CMD);
-		do {
-			if (!(mshci_readl(host, MSHCI_CMD) & CMD_STRT_BIT))
-				break;
-			loop_count--;
-		} while (loop_count);
-	}
-	if (loop_count == 0) {
-		printk(KERN_ERR "%s: Clock %s has been failed.\n "
-				, mmc_hostname(host->mmc), val ? "ON" : "OFF");
 	}
 }
 
@@ -831,7 +856,9 @@ static void mshci_send_command(struct mshci_host *host, struct mmc_command *cmd)
 	}
 	if (cmd->flags & MMC_RSP_CRC)
 		flags |= CMD_CHECK_CRC_BIT;
-	flags |= (cmd->opcode | CMD_STRT_BIT | host->hold_bit | CMD_WAIT_PRV_DAT_BIT);
+
+	flags |= (cmd->opcode | CMD_STRT_BIT | host->hold_bit |
+				CMD_WAIT_PRV_DAT_BIT);
 
 	ret = mshci_readl(host, MSHCI_CMD);
 	if (ret & CMD_STRT_BIT)
@@ -873,7 +900,6 @@ static void mshci_finish_command(struct mshci_host *host)
 
 	host->cmd->error = 0;
 
-	/* if data interrupt occurs earlier than command interrupt */
 	if (host->data && host->data_early)
 		mshci_finish_data(host);
 
@@ -887,7 +913,6 @@ static void mshci_set_clock(struct mshci_host *host,
 				unsigned int clock, u32 ddr)
 {
 	int div;
-	u32 loop_count;
 
 	/* befor changing clock. clock needs to be off. */
 	mshci_clock_onoff(host, CLK_DISABLE);
@@ -905,22 +930,12 @@ static void mshci_set_clock(struct mshci_host *host,
 		}
 	}
 
+	mshci_wait_release_start_bit(host);
+
 	mshci_writel(host, div, MSHCI_CLKDIV);
 
 	mshci_writel(host, 0, MSHCI_CMD);
 	mshci_writel(host, CMD_ONLY_CLK, MSHCI_CMD);
-	loop_count = 0x100000;
-
-	do {
-		if (!(mshci_readl(host, MSHCI_CMD) & CMD_STRT_BIT))
-			break;
-		loop_count--;
-	} while (loop_count);
-
-	if (loop_count == 0) {
-		printk(KERN_ERR "%s: Changing clock has been failed.\n "
-				, mmc_hostname(host->mmc));
-	}
 	mshci_writel(host, mshci_readl(host, MSHCI_CMD)&(~CMD_SEND_CLK_ONLY),
 					MSHCI_CMD);
 
@@ -948,6 +963,151 @@ static void mshci_set_power(struct mshci_host *host, unsigned short power)
 		mshci_writel(host, 0x1, MSHCI_PWREN);
 }
 
+#ifdef CONFIG_MMC_POLLING_WAIT_CMD23
+static void mshci_check_sbc_status(struct mshci_host *host, int intmask)
+{
+	int timeout, int_status;;
+
+	/* wait for command done or error by polling */
+	timeout = 0x100000; /* it is bigger than 1ms */
+	do {
+		int_status = mshci_readl(host, MSHCI_RINTSTS);
+		if (int_status & CMD_STATUS)
+			break;
+		timeout--;
+	} while (timeout);
+
+	/* clear pending interupt bit */
+	mshci_writel(host, int_status, MSHCI_RINTSTS);
+
+	/* check whether command error has been occured or not. */
+	if (int_status & INTMSK_HTO) {
+		printk(KERN_ERR "%s: %s Host timeout error\n",
+					mmc_hostname(host->mmc),
+					__func__);
+		host->mrq->sbc->error = -ETIMEDOUT;
+	} else if (int_status & INTMSK_DRTO) {
+		printk(KERN_ERR "%s: %s Data read timeout error\n",
+					mmc_hostname(host->mmc),
+					__func__);
+		host->mrq->sbc->error = -ETIMEDOUT;
+	} else if (int_status & INTMSK_SBE) {
+		printk(KERN_ERR "%s: %s FIFO Start bit error\n",
+					mmc_hostname(host->mmc),
+					__func__);
+		host->mrq->sbc->error = -EIO;
+	} else if (int_status & INTMSK_EBE) {
+		printk(KERN_ERR "%s: %s FIFO Endbit/Write no CRC error\n",
+					mmc_hostname(host->mmc),
+					__func__);
+		host->mrq->sbc->error = -EIO;
+	} else if (int_status & INTMSK_DCRC) {
+		printk(KERN_ERR "%s: %s Data CRC error\n",
+					mmc_hostname(host->mmc),
+					__func__);
+		host->mrq->sbc->error = -EIO;
+	} else if (int_status & INTMSK_FRUN) {
+		printk(KERN_ERR "%s: %s FIFO underrun/overrun error\n",
+					mmc_hostname(host->mmc),
+					__func__);
+		host->mrq->sbc->error = -EIO;
+	} else if (int_status & CMD_ERROR) {
+		printk(KERN_ERR "%s: %s cmd %s error\n",
+					mmc_hostname(host->mmc),
+					__func__, (intmask & INTMSK_RCRC) ?
+					"response crc" :
+					(intmask & INTMSK_RE) ? "response" :
+					"response timeout");
+		host->mrq->sbc->error = -ETIMEDOUT;
+	}
+
+	if (host->mrq->sbc->error) {
+		/* restore interrupt mask bit */
+		mshci_writel(host, intmask, MSHCI_INTMSK);
+		return;
+	}
+
+	if (!timeout) {
+		printk(KERN_ERR "%s: %s no interrupt occured\n",
+			mmc_hostname(host->mmc), __func__);
+		host->mrq->sbc->error = -ETIMEDOUT;
+		/* restore interrupt mask bit */
+		mshci_writel(host, intmask, MSHCI_INTMSK);
+		return;
+	}
+
+	/* command done interrupt has been occured with no errors.
+	   nothing to do. just return to the previous function */
+	if ((int_status & INTMSK_CDONE) && !(int_status & CMD_ERROR)) {
+		/* restore interrupt mask bit */
+		mshci_writel(host, intmask, MSHCI_INTMSK);
+		return;
+	}
+
+	/* should not be here */
+	printk(KERN_ERR "%s: an error that has not to be occured was"
+			" occured 0x%x\n",mmc_hostname(host->mmc),int_status);
+}
+
+static void mshci_send_sbc(struct mshci_host *host, struct mmc_command *cmd)
+{
+	int flags = 0, ret, intmask;
+
+	WARN_ON(host->cmd);
+
+	/* disable interrupt before issuing cmd to the card. */
+	mshci_writel(host, (mshci_readl(host, MSHCI_CTRL) & ~INT_ENABLE),
+					MSHCI_CTRL);
+
+	host->cmd = cmd;
+
+	mod_timer(&host->timer, jiffies + 10 * HZ);
+
+	mshci_writel(host, cmd->arg, MSHCI_CMDARG);
+
+	if ((cmd->flags & MMC_RSP_136) && (cmd->flags & MMC_RSP_BUSY)) {
+		printk(KERN_ERR "%s: Unsupported response type!\n",
+			mmc_hostname(host->mmc));
+		cmd->error = -EINVAL;
+		tasklet_schedule(&host->finish_tasklet);
+		return;
+	}
+
+	if (cmd->flags & MMC_RSP_PRESENT) {
+		flags |= CMD_RESP_EXP_BIT;
+		if (cmd->flags & MMC_RSP_136)
+			flags |= CMD_RESP_LENGTH_BIT;
+	}
+	if (cmd->flags & MMC_RSP_CRC)
+		flags |= CMD_CHECK_CRC_BIT;
+
+	flags |= (cmd->opcode | CMD_STRT_BIT | host->hold_bit |
+				CMD_WAIT_PRV_DAT_BIT);
+
+	ret = mshci_readl(host, MSHCI_CMD);
+	if (ret & CMD_STRT_BIT)
+		printk(KERN_ERR "CMD busy. current cmd %d. last cmd reg 0x%x\n",
+			cmd->opcode, ret);
+
+	/* backup interrupt mask bit */
+	intmask = mshci_readl(host, MSHCI_INTMSK);
+
+	/* disable interrupts for sbc command. it will wait for command done
+	   by polling. it expects a faster repsonse */
+	mshci_clear_set_irqs(host, INTMSK_ALL, 0);
+
+	/* send command */
+	mshci_writel(host, flags, MSHCI_CMD);
+
+	/* enable interrupt upon it sends a command to the card. */
+	mshci_writel(host, (mshci_readl(host, MSHCI_CTRL) | INT_ENABLE),
+					MSHCI_CTRL);
+
+	/* check the interrupt by polling */
+	mshci_check_sbc_status(host,intmask);
+}
+#endif
+
 /*****************************************************************************\
  *                                                                           *
  * MMC callbacks                                                             *
@@ -958,7 +1118,6 @@ static void mshci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
 	struct mshci_host *host;
 	bool present;
-	unsigned long flags;
 	int timeout;
 	ktime_t expires;
 	u64 add_time = 50000; /* 50us */
@@ -978,7 +1137,7 @@ static void mshci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		/* nothing to do */
 	} else {
 		for (;;) {
-			spin_lock_irqsave(&host->lock, flags);
+			spin_lock_irqsave(&host->lock, host->sl_flags);
 			if (mshci_readl(host, MSHCI_STATUS) & (1<<9)) {
 				if (timeout == 0) {
 					printk(KERN_ERR "%s: Controller never"
@@ -992,7 +1151,7 @@ static void mshci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 					tasklet_schedule \
 						(&host->finish_tasklet);
 					spin_unlock_irqrestore \
-						(&host->lock, flags);
+						(&host->lock, host->sl_flags);
 					return;
 				}
 				timeout--;
@@ -1002,11 +1161,11 @@ static void mshci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 				* So, it SHOULD NOT use schedule_hrtimeout */
 				if (host->error_state == 1) {
 					spin_unlock_irqrestore
-						(&host->lock, flags);
+						(&host->lock, host->sl_flags);
 					udelay(10);
 				} else {
 					spin_unlock_irqrestore
-						(&host->lock, flags);
+						(&host->lock, host->sl_flags);
 					expires = ktime_add_ns
 						(ktime_get(), add_time);
 					set_current_state
@@ -1015,7 +1174,8 @@ static void mshci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 						(&expires, HRTIMER_MODE_ABS);
 				}
 			} else {
-				spin_unlock_irqrestore(&host->lock, flags);
+				spin_unlock_irqrestore(&host->lock,
+						host->sl_flags);
 				break;
 			}
 		}
@@ -1033,6 +1193,18 @@ static void mshci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		host->mrq->cmd->error = -ENOMEDIUM;
 		tasklet_schedule(&host->finish_tasklet);
 	} else {
+#ifdef CONFIG_MMC_POLLING_WAIT_CMD23
+		if (mrq->sbc) {
+			mshci_send_sbc(host, mrq->sbc);
+			if (mrq->sbc->error) {
+				tasklet_schedule(&host->finish_tasklet);
+			} else {
+				if (host->cmd)
+					host->cmd = NULL;
+				mshci_send_command(host, mrq->cmd);
+			}
+		} else
+#endif
 		mshci_send_command(host, mrq->cmd);
 	}
 
@@ -1043,12 +1215,11 @@ static void mshci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 static void mshci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 {
 	struct mshci_host *host;
-	unsigned long flags;
 	u32 regs;
 
 	host = mmc_priv(mmc);
 
-	spin_lock_irqsave(&host->lock, flags);
+	spin_lock_irqsave(&host->lock, host->sl_flags);
 
 	if (host->flags & MSHCI_DEVICE_DEAD)
 		goto out;
@@ -1060,6 +1231,7 @@ static void mshci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	/* gating the clock and out */
 	if (mmc->clk_gated) {
 		WARN_ON(ios->clock != 0);
+		if (host->clock != 0)
 		mshci_set_clock(host, ios->clock, ios->ddr);
 		goto out;
 	}
@@ -1079,11 +1251,27 @@ static void mshci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if (ios->bus_width == MMC_BUS_WIDTH_8) {
 		mshci_writel(host, (0x1<<16), MSHCI_CTYPE);
-		if (ios->ddr == MMC_1_2V_DDR_MODE ||
-			ios->ddr == MMC_1_8V_DDR_MODE) {
+		if (ios->timing == MMC_TIMING_UHS_DDR50) {
 			regs |= (0x1 << 16);
 			mshci_writel(host, regs, MSHCI_UHS_REG);
-			mshci_writel(host, (0x00020002), MSHCI_CLKSEL);
+			/* if exynos4412 EVT1 or the latest one */
+			if (soc_is_exynos4412() &&
+				samsung_rev() >= EXYNOS4412_REV_1_0) {
+				if ((host->max_clk/2) < 46300000) {
+					mshci_writel(host, (0x00010001),
+						MSHCI_CLKSEL);
+				} else {
+					mshci_writel(host, (0x00020002),
+						MSHCI_CLKSEL);
+				}
+			} else {
+				if ((host->max_clk/2) < 40000000)
+					mshci_writel(host, (0x00010001),
+						MSHCI_CLKSEL);
+				else
+					mshci_writel(host, (0x00020002),
+						MSHCI_CLKSEL);
+			}
 		} else {
 			regs &= ~(0x1 << 16);
 			mshci_writel(host, regs|(0x0<<0), MSHCI_UHS_REG);
@@ -1091,8 +1279,7 @@ static void mshci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 		}
 	} else if (ios->bus_width == MMC_BUS_WIDTH_4) {
 		mshci_writel(host, (0x1<<0), MSHCI_CTYPE);
-		if (ios->ddr == MMC_1_2V_DDR_MODE ||
-			ios->ddr == MMC_1_8V_DDR_MODE) {
+		if (ios->timing == MMC_TIMING_UHS_DDR50) {
 			regs |= (0x1 << 16);
 			mshci_writel(host, regs, MSHCI_UHS_REG);
 			mshci_writel(host, (0x00010001), MSHCI_CLKSEL);
@@ -1109,18 +1296,17 @@ static void mshci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	}
 out:
 	mmiowb();
-	spin_unlock_irqrestore(&host->lock, flags);
+	spin_unlock_irqrestore(&host->lock, host->sl_flags);
 }
 
 static int mshci_get_ro(struct mmc_host *mmc)
 {
 	struct mshci_host *host;
-	unsigned long flags;
 	int wrtprt;
 
 	host = mmc_priv(mmc);
 
-	spin_lock_irqsave(&host->lock, flags);
+	spin_lock_irqsave(&host->lock, host->sl_flags);
 
 	if (host->quirks & MSHCI_QUIRK_NO_WP_BIT)
 		wrtprt = host->ops->get_ro(mmc) ? 0 : WRTPRT_ON;
@@ -1129,7 +1315,7 @@ static int mshci_get_ro(struct mmc_host *mmc)
 	else
 		wrtprt = mshci_readl(host, MSHCI_WRTPRT);
 
-	spin_unlock_irqrestore(&host->lock, flags);
+	spin_unlock_irqrestore(&host->lock, host->sl_flags);
 
 	return wrtprt & WRTPRT_ON;
 }
@@ -1137,11 +1323,10 @@ static int mshci_get_ro(struct mmc_host *mmc)
 static void mshci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
 	struct mshci_host *host;
-	unsigned long flags;
 
 	host = mmc_priv(mmc);
 
-	spin_lock_irqsave(&host->lock, flags);
+	spin_lock_irqsave(&host->lock, host->sl_flags);
 
 	if (host->flags & MSHCI_DEVICE_DEAD)
 		goto out;
@@ -1153,17 +1338,16 @@ static void mshci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 out:
 	mmiowb();
 
-	spin_unlock_irqrestore(&host->lock, flags);
+	spin_unlock_irqrestore(&host->lock, host->sl_flags);
 }
 
 static void mshci_init_card(struct mmc_host *mmc, struct mmc_card *card)
 {
 	struct mshci_host *host;
-	unsigned long flags;
 
 	host = mmc_priv(mmc);
 
-	spin_lock_irqsave(&host->lock, flags);
+	spin_lock_irqsave(&host->lock, host->sl_flags);
 
 	if (host->flags & MSHCI_DEVICE_DEAD)
 		goto out;
@@ -1173,7 +1357,114 @@ static void mshci_init_card(struct mmc_host *mmc, struct mmc_card *card)
 out:
 	mmiowb();
 
-	spin_unlock_irqrestore(&host->lock, flags);
+	spin_unlock_irqrestore(&host->lock, host->sl_flags);
+}
+
+static void mshci_pre_req(struct mmc_host *mmc, struct mmc_request *mrq,
+							bool is_first_req)
+{
+	struct mshci_host *host;
+	struct mmc_data *data = mrq->data;
+	int sg_count, direction;
+
+	host = mmc_priv(mmc);
+	spin_lock_irqsave(&host->lock, host->sl_flags);
+
+	if (!data)
+		goto out;
+
+	if (data->host_cookie) {
+		data->host_cookie = 0;
+		goto out;
+	}
+
+	if (host->flags & MSHCI_USE_IDMA) {
+		/* mshc's IDMAC can't transfer data that is not aligned
+		 * or has length not divided by 4 byte. */
+		int i;
+		struct scatterlist *sg;
+
+		for_each_sg(data->sg, sg, data->sg_len, i) {
+			if (sg->length & 0x3) {
+				DBG("Reverting to PIO because of "
+					"transfer size (%d)\n",
+					sg->length);
+				data->host_cookie = 0;
+				goto out;
+			} else if (sg->offset & 0x3) {
+				DBG("Reverting to PIO because of "
+					"bad alignment\n");
+				host->flags &= ~MSHCI_REQ_USE_DMA;
+				data->host_cookie = 0;
+				goto out;
+			}
+		}
+	}
+
+	if (data->flags & MMC_DATA_READ)
+		direction = DMA_FROM_DEVICE;
+	else
+		direction = DMA_TO_DEVICE;
+
+	if (host->ops->dma_map_sg && data->blocks >= 2048) {
+		/* if transfer size is bigger than 1MiB */
+		sg_count = host->ops->dma_map_sg(host,
+			mmc_dev(host->mmc),
+			data->sg, data->sg_len, direction, 2);
+	} else if (host->ops->dma_map_sg && data->blocks >= 128) {
+		/* if transfer size is bigger than 64KiB */
+		sg_count = host->ops->dma_map_sg(host,
+			mmc_dev(host->mmc),
+			data->sg, data->sg_len, direction, 1);
+	} else {
+		sg_count = dma_map_sg(mmc_dev(host->mmc),
+			data->sg, data->sg_len, direction);
+	}
+
+	if (sg_count == 0)
+		data->host_cookie = 0;
+	else
+		data->host_cookie = sg_count;
+out:
+	spin_unlock_irqrestore(&host->lock, host->sl_flags);
+	return;
+}
+
+static void mshci_post_req(struct mmc_host *mmc, struct mmc_request *mrq,
+							int err)
+{
+	struct mshci_host *host;
+	struct mmc_data *data = mrq->data;
+	int direction;
+
+	host = mmc_priv(mmc);
+	spin_lock_irqsave(&host->lock, host->sl_flags);
+
+	if (!data)
+		goto out;
+
+	if (data->flags & MMC_DATA_READ)
+		direction = DMA_FROM_DEVICE;
+	else
+		direction = DMA_TO_DEVICE;
+
+	if ((host->ops->dma_unmap_sg && data->blocks >= 2048 &&
+		data->host_cookie)) {
+		/* if transfer size is bigger than 1MiB */
+		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
+			data->sg, data->sg_len, direction, 2);
+	} else if ((host->ops->dma_unmap_sg && data->blocks >= 128 &&
+		data->host_cookie)) {
+		/* if transfer size is bigger than 64KiB */
+		host->ops->dma_unmap_sg(host, mmc_dev(host->mmc),
+			data->sg, data->sg_len, direction, 1);
+	} else if (data->host_cookie) {
+		dma_unmap_sg(mmc_dev(host->mmc),
+			data->sg, data->sg_len, direction);
+	}
+out:
+	spin_unlock_irqrestore(&host->lock, host->sl_flags);
+	return;
 }
 
 static struct mmc_host_ops mshci_ops = {
@@ -1182,6 +1473,10 @@ static struct mmc_host_ops mshci_ops = {
 	.get_ro		= mshci_get_ro,
 	.enable_sdio_irq = mshci_enable_sdio_irq,
 	.init_card	= mshci_init_card,
+#ifdef CONFIG_MMC_MSHCI_ASYNC_OPS
+	.pre_req	= mshci_pre_req,
+	.post_req	= mshci_post_req,
+#endif
 };
 
 /*****************************************************************************\
@@ -1193,11 +1488,10 @@ static struct mmc_host_ops mshci_ops = {
 static void mshci_tasklet_card(unsigned long param)
 {
 	struct mshci_host *host;
-	unsigned long flags;
 
 	host = (struct mshci_host *)param;
 
-	spin_lock_irqsave(&host->lock, flags);
+	spin_lock_irqsave(&host->lock, host->sl_flags);
 
 	if ((host->quirks & MSHCI_QUIRK_BROKEN_CARD_DETECTION) ||
 			(host->quirks & MSHCI_QUIRK_BROKEN_PRESENT_BIT) ||
@@ -1213,7 +1507,7 @@ static void mshci_tasklet_card(unsigned long param)
 		}
 	}
 
-	spin_unlock_irqrestore(&host->lock, flags);
+	spin_unlock_irqrestore(&host->lock, host->sl_flags);
 
 	mmc_detect_change(host->mmc, msecs_to_jiffies(200));
 }
@@ -1221,7 +1515,6 @@ static void mshci_tasklet_card(unsigned long param)
 static void mshci_tasklet_finish(unsigned long param)
 {
 	struct mshci_host *host;
-	unsigned long flags;
 	struct mmc_request *mrq;
 
 	host = (struct mshci_host *)param;
@@ -1229,7 +1522,7 @@ static void mshci_tasklet_finish(unsigned long param)
 	if (host == NULL)
 		return;
 
-	spin_lock_irqsave(&host->lock, flags);
+	spin_lock_irqsave(&host->lock, host->sl_flags);
 
 	del_timer(&host->timer);
 
@@ -1244,9 +1537,11 @@ static void mshci_tasklet_finish(unsigned long param)
 	 */
 	if (!(host->flags & MSHCI_DEVICE_DEAD) &&
 		(mrq->cmd->error ||
+#ifdef CONFIG_MMC_POLLING_WAIT_CMD23
+		(mrq->sbc && mrq->sbc->error) ||
+#endif
 		 (mrq->data && (mrq->data->error ||
 		  (mrq->data->stop && mrq->data->stop->error))))) {
-
 		mshci_reset_fifo(host);
 	}
 
@@ -1256,19 +1551,19 @@ out:
 	host->data = NULL;
 
 	mmiowb();
-	spin_unlock_irqrestore(&host->lock, flags);
+	spin_unlock_irqrestore(&host->lock, host->sl_flags);
 
+	if (mrq)
 	mmc_request_done(host->mmc, mrq);
 }
 
 static void mshci_timeout_timer(unsigned long data)
 {
 	struct mshci_host *host;
-	unsigned long flags;
 
 	host = (struct mshci_host *)data;
 
-	spin_lock_irqsave(&host->lock, flags);
+	spin_lock_irqsave(&host->lock, host->sl_flags);
 
 	if (host->mrq) {
 		printk(KERN_ERR "%s: Timeout waiting for hardware "
@@ -1289,7 +1584,7 @@ static void mshci_timeout_timer(unsigned long data)
 	}
 
 	mmiowb();
-	spin_unlock_irqrestore(&host->lock, flags);
+	spin_unlock_irqrestore(&host->lock, host->sl_flags);
 }
 
 /*****************************************************************************\
@@ -1323,6 +1618,12 @@ static void mshci_cmd_irq(struct mshci_host *host, u32 intmask)
 	if (host->cmd->error) {
 		/* to notify an error happend */
 		host->error_state = 1;
+#if defined(CONFIG_MACH_M0) || defined(CONFIG_MACH_P4NOTE) || \
+		defined(CONFIG_MACH_C1_USA_ATT)
+		/* dh0421.hwang */
+		if (host->mmc && host->mmc->card)
+			mshci_dumpregs(host);
+#endif
 		tasklet_schedule(&host->finish_tasklet);
 		return;
 	}
@@ -1361,6 +1662,11 @@ static void mshci_data_irq(struct mshci_host *host, u32 intmask, u8 intr_src)
 			printk(KERN_ERR "%s: Host timeout error\n",
 						mmc_hostname(host->mmc));
 			host->data->error = -ETIMEDOUT;
+#if 1	/* debugging for Host timeout error */
+			mshci_dumpregs(host);
+			panic("[TEST] %s: HTO error interrupt occured\n",
+					mmc_hostname(host->mmc));
+#endif
 		} else if (intmask & INTMSK_DRTO) {
 			printk(KERN_ERR "%s: Data read timeout error\n",
 						mmc_hostname(host->mmc));
@@ -1401,6 +1707,12 @@ static void mshci_data_irq(struct mshci_host *host, u32 intmask, u8 intr_src)
 	if (host->data->error) {
 		/* to notify an error happend */
 		host->error_state = 1;
+#if defined(CONFIG_MACH_M0) || defined(CONFIG_MACH_P4NOTE) || \
+		defined(CONFIG_MACH_C1_USA_ATT)
+		/* dh0421.hwang */
+		if (host->mmc && host->mmc->card)
+			mshci_dumpregs(host);
+#endif
 		mshci_finish_data(host);
 	} else {
 		if (!(host->flags & MSHCI_REQ_USE_DMA) &&
@@ -1495,7 +1807,7 @@ static irqreturn_t mshci_irq(int irq, void *dev_id)
 				& INTMSK_DTO))
 				; /* Nothing to do */
 			if (!timeout)
-				printk(KERN_ERR"*** %s time out for	CDONE intr\n",
+				printk(KERN_ERR"*** %s time out for	DTO intr\n",
 					mmc_hostname(host->mmc));
 			else
 				mshci_writel(host, INTMSK_DTO,
@@ -1640,20 +1952,28 @@ static void mshci_fifo_init(struct mshci_host *host)
 	int fifo_val, fifo_depth, fifo_threshold;
 
 	fifo_val = mshci_readl(host, MSHCI_FIFOTH);
-	fifo_depth = ((fifo_val & RX_WMARK)>>16)+1;
+	fifo_depth = host->ops->get_fifo_depth(host);
 	fifo_threshold = fifo_depth/2;
 	host->fifo_threshold = fifo_threshold;
 	host->fifo_depth = fifo_threshold*2;
 
 	printk(KERN_INFO "%s: FIFO WMARK FOR RX 0x%x WX 0x%x. ###########\n",
 		mmc_hostname(host->mmc), fifo_depth,
-		    ((fifo_val & TX_WMARK)>>16)+1);
+		    fifo_threshold);
 
 	fifo_val &= ~(RX_WMARK | TX_WMARK | MSIZE_MASK);
 
-	/* to prevent early-wakeup problem status */
-	fifo_val |= (0x8 | (0x8<<16));
+	fifo_val |= (fifo_threshold | ((fifo_threshold-1)<<16));
+	if (fifo_threshold >= 0x40)
+		fifo_val |= MSIZE_64;
+	else if (fifo_threshold >= 0x20)
+		fifo_val |= MSIZE_32;
+	else if (fifo_threshold >= 0x10)
+		fifo_val |= MSIZE_16;
+	else if (fifo_threshold >= 0x8)
 	fifo_val |= MSIZE_8;
+	else
+		fifo_val |= MSIZE_1;
 
 	mshci_writel(host, fifo_val, MSHCI_FIFOTH);
 }
@@ -1852,10 +2172,8 @@ EXPORT_SYMBOL_GPL(mshci_add_host);
 
 void mshci_remove_host(struct mshci_host *host, int dead)
 {
-	unsigned long flags;
-
 	if (dead) {
-		spin_lock_irqsave(&host->lock, flags);
+		spin_lock_irqsave(&host->lock, host->sl_flags);
 
 		host->flags |= MSHCI_DEVICE_DEAD;
 
@@ -1867,7 +2185,7 @@ void mshci_remove_host(struct mshci_host *host, int dead)
 			tasklet_schedule(&host->finish_tasklet);
 		}
 
-		spin_unlock_irqrestore(&host->lock, flags);
+		spin_unlock_irqrestore(&host->lock, host->sl_flags);
 	}
 
 	mshci_disable_card_detection(host);
@@ -1905,12 +2223,13 @@ EXPORT_SYMBOL_GPL(mshci_free_host);
 
 static int __init mshci_drv_init(void)
 {
+	int ret = 0;
 	printk(KERN_INFO DRIVER_NAME
 		": Mobile Storage Host Controller Interface driver\n");
 	printk(KERN_INFO DRIVER_NAME
 		": Copyright (c) 2011 Samsung Electronics Co., Ltd\n");
 
-	return 0;
+	return ret;
 }
 
 static void __exit mshci_drv_exit(void)

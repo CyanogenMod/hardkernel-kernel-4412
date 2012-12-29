@@ -159,12 +159,18 @@ static int smdk_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 
 	ret = snd_soc_dai_set_pll(codec_dai, WM8994_FLL1,
-				WM8994_FLL_SRC_BCLK,
-				params_rate(params)*rfs,
+				WM8994_FLL_SRC_MCLK1,
+				SMDK_WM8994_FREQ,
 				params_rate(params)*rfs);
 	if (ret < 0)
 		return ret;
 #endif /* CONFIG_SND_SAMSUNG_PCM_USE_EPLL */
+
+	ret = snd_soc_dai_set_sysclk(codec_dai, WM8994_SYSCLK_MCLK1,
+					params_rate(params)*rfs,
+					SND_SOC_CLOCK_IN);
+	if (ret < 0)
+		return ret;
 
 #ifdef CONFIG_SND_SAMSUNG_PCM_USE_EPLL
 	/* Set EPLL clock rate */

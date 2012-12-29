@@ -28,6 +28,7 @@
 #include <linux/io.h>
 #include <linux/memory.h>
 #include <linux/pm_runtime.h>
+#include <linux/delay.h>
 #include <plat/clock.h>
 #include <plat/media.h>
 #include <mach/media.h>
@@ -41,6 +42,12 @@
 
 struct s3cfb_fimd_desc		*fbfimd;
 
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+
+extern  void s5p_dsim_init(void);
+
+#endif
+
 inline struct s3cfb_global *get_fimd_global(int id)
 {
 	struct s3cfb_global *fbdev;
@@ -52,6 +59,19 @@ inline struct s3cfb_global *get_fimd_global(int id)
 
 	return fbdev;
 }
+
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+int s3cfb_vsync_status_check(void)
+{
+	struct s3cfb_global *fbdev[2];
+	fbdev[0] = fbfimd->fbdev[0];
+
+	if (fbdev[0]->regs != 0 && fbdev[0]->system_state == POWER_ON)
+		return s3cfb_check_vsync_status(fbdev[0]);
+	else
+		return 0;
+}
+#endif
 
 static irqreturn_t s3cfb_irq_frame(int irq, void *dev_id)
 {
@@ -99,8 +119,24 @@ int s3cfb_register_framebuffer(struct s3cfb_global *fbdev)
 			s3cfb_check_var_window(fbdev, &fbdev->fb[j]->var,
 					fbdev->fb[j]);
 			s3cfb_set_par_window(fbdev, fbdev->fb[j]);
+			#if defined(CONFIG_FB_S5P_S6E8AA1)
+                if (fb_prepare_logo(fbdev->fb[j], FB_ROTATE_UR)) {
+                    fb_set_cmap(&fbdev->fb[j]->cmap, fbdev->fb[j]);
+                    fb_show_logo(fbdev->fb[j], FB_ROTATE_UR);
+                }
+			#else
 			s3cfb_draw_logo(fbdev->fb[j]);
+			#endif
+	#ifndef CONFIG_VT // android
+			s3cfb_draw_logo(fbdev->fb[j]);
+	#else
+	        if (fb_prepare_logo(fbdev->fb[j], FB_ROTATE_UR)) {
+	            fb_set_cmap(&fbdev->fb[j]->cmap, fbdev->fb[j]);
+	            fb_show_logo(fbdev->fb[j], FB_ROTATE_UR);
+	        }
+	#endif
 		}
+		
 #endif
 	}
 	return 0;
@@ -172,6 +208,33 @@ static int s3cfb_sysfs_store_win_power(struct device *dev,
 static DEVICE_ATTR(win_power, 0644,
 	s3cfb_sysfs_show_win_power, s3cfb_sysfs_store_win_power);
 
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+void s3cfb_display_on_remote(void)
+{
+	struct s3cfb_global *fbdev = fbfimd->fbdev[0];
+	struct s3c_platform_fb *pdata = to_fb_plat(fbdev->dev);
+
+	if (pdata == NULL) {
+	    dev_err(fbdev->dev, "failed to get defualt window number.\n");
+	    return;
+	}
+	s3cfb_display_on(fbdev);
+}
+EXPORT_SYMBOL(s3cfb_display_on_remote);
+
+void s3cfb_trigger(void)
+{
+	struct s3cfb_global *fbdev = fbfimd->fbdev[0];
+	struct s3c_platform_fb *pdata = to_fb_plat(fbdev->dev);
+
+	if (pdata == NULL) {
+		dev_err(fbdev->dev, "failed to get defualt window number.\n");
+		return;
+	}
+	s3cfb_set_trigger(fbdev);
+}
+EXPORT_SYMBOL(s3cfb_trigger);
+#endif
 static int s3cfb_probe(struct platform_device *pdev)
 {
 	struct s3c_platform_fb *pdata = NULL;
@@ -204,10 +267,19 @@ static int s3cfb_probe(struct platform_device *pdev)
 		}
 
 		fbdev[i]->dev = &pdev->dev;
-		s3cfb_set_lcd_info(fbdev[i]);
 
+#if !defined(CONFIG_FB_S5P_MIPI_DSIM)
+		s3cfb_set_lcd_info(fbdev[i]);
+#endif		
 		/* platform_data*/
 		pdata = to_fb_plat(&pdev->dev);
+
+#if defined(CONFIG_FB_S5P_MIPI_DSIM)
+        s5p_dsim_init();
+        
+		if (pdata->lcd)
+			fbdev[i]->lcd = (struct s3cfb_lcd *)pdata->lcd;
+#endif
 		if (pdata->cfg_gpio)
 			pdata->cfg_gpio(pdev);
 
@@ -265,12 +337,14 @@ static int s3cfb_probe(struct platform_device *pdev)
 		/* alloc fb_info */
 		if (s3cfb_alloc_framebuffer(fbdev[i], i)) {
 			dev_err(fbdev[i]->dev, "alloc error fimd[%d]\n", i);
+			ret = -ENOMEM;
 			goto err3;
 		}
 
 		/* register fb_info */
 		if (s3cfb_register_framebuffer(fbdev[i])) {
 			dev_err(fbdev[i]->dev, "register error fimd[%d]\n", i);
+			return -EINVAL;
 			goto err3;
 		}
 
@@ -293,12 +367,12 @@ static int s3cfb_probe(struct platform_device *pdev)
 #endif
 	}
 #ifdef CONFIG_FB_S5P_LCD_INIT
+	if (pdata->lcd_on)
+		pdata->lcd_on(pdev);
+
 	/* panel control */
 	if (pdata->backlight_on)
 		pdata->backlight_on(pdev);
-
-	if (pdata->lcd_on)
-		pdata->lcd_on(pdev);
 #endif
 
 	ret = device_create_file(&(pdev->dev), &dev_attr_win_power);
@@ -390,6 +464,14 @@ void s3cfb_early_suspend(struct early_suspend *h)
 
 	printk("s3cfb_early_suspend is called\n");
 
+#if defined(CONFIG_FB_S5P_LG4591)
+	lg4591_early_suspend();
+#endif
+
+#if defined(CONFIG_FB_S5P_S6E8AA1)
+	s6e8aa1_early_suspend();
+#endif
+
 	info->system_state = POWER_OFF;
 
 	for (i = 0; i < FIMD_MAX; i++) {
@@ -408,6 +490,9 @@ void s3cfb_early_suspend(struct early_suspend *h)
 		if (pdata->clk_off)
 			pdata->clk_off(pdev, &fbdev[i]->clock);
 	}
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+	s5p_dsim_early_suspend();
+#endif
 #ifdef CONFIG_EXYNOS_DEV_PD
 	/* disable the power domain */
 	printk(KERN_DEBUG "s3cfb - disable power domain\n");
@@ -434,6 +519,20 @@ void s3cfb_late_resume(struct early_suspend *h)
 	/* enable the power domain */
 	printk(KERN_DEBUG "s3cfb - enable power domain\n");
 	pm_runtime_get_sync(&pdev->dev);
+#endif
+
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+	s5p_dsim_late_resume();
+
+	if (s5p_dsim_fifo_clear() == 0) {
+		s5p_dsim_early_suspend();
+		msleep(10);
+		s5p_dsim_late_resume();
+		if (s5p_dsim_fifo_clear() == 0)
+			pr_info("dsim resume fail!!!\n");
+	}
+
+	msleep(10);
 #endif
 
 	info->system_state = POWER_ON;
@@ -487,6 +586,14 @@ void s3cfb_late_resume(struct early_suspend *h)
 
 	info->system_state = POWER_ON;
 
+#if defined(CONFIG_FB_S5P_LG4591)
+	lg4591_late_resume();
+#endif
+
+#if defined(CONFIG_FB_S5P_S6E8AA1)
+	s6e8aa1_late_resume();
+#endif
+
 	return;
 }
 #else /* else !CONFIG_HAS_EARLYSUSPEND */
@@ -530,10 +637,12 @@ int s3cfb_resume(struct platform_device *pdev)
 		if (pdata->cfg_gpio)
 			pdata->cfg_gpio(pdev);
 
-		if (pdata->backlight_on)
-			pdata->backlight_on(pdev);
 		if (pdata->lcd_on)
 			pdata->lcd_on(pdev);
+
+		if (pdata->backlight_on)
+			pdata->backlight_on(pdev);
+
 		if (fbdev[i]->lcd->init_ldi)
 			fbdev[i]->lcd->init_ldi();
 
@@ -565,11 +674,11 @@ int s3cfb_resume(struct platform_device *pdev)
 
 			s3cfb_display_on(fbdev[i]);
 
-			if (pdata->backlight_on)
-				pdata->backlight_on(pdev);
-
 			if (pdata->lcd_on)
 				pdata->lcd_on(pdev);
+
+			if (pdata->backlight_on)
+				pdata->backlight_on(pdev);
 
 			if (fbdev[i]->lcd->init_ldi)
 				fbdev[i]->lcd->init_ldi();

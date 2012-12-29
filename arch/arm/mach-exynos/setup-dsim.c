@@ -28,8 +28,11 @@ static void s5p_dsim_enable_d_phy(unsigned char enable)
 {
 	unsigned int reg;
 
-	reg = (readl(S5P_MIPI_DPHY_CONTROL(0))) & ~(1 << 0);
-	reg |= (enable << 0);
+	reg = readl(S5P_MIPI_DPHY_CONTROL(0));
+	if (enable)
+		reg |= S5P_MIPI_DPHY_ENABLE;
+	else if (!(reg & S5P_MIPI_DPHY_SRESETN))
+		reg &= ~S5P_MIPI_DPHY_ENABLE;
 	writel(reg, S5P_MIPI_DPHY_CONTROL(0));
 }
 
@@ -69,11 +72,18 @@ void s5p_dsim_init_d_phy(unsigned int dsim_base)
 	s5p_dsim_enable_dsi_master(1);
 }
 
+void s5p_dsim_exit_d_phy(unsigned int dsim_base)
+{
+	/* enable DSI master block */
+	s5p_dsim_enable_dsi_master(0);
+
+	/* enable D-PHY */
+	s5p_dsim_enable_d_phy(0);
+}
+
 static void exynos4_dsim_setup_24bpp(unsigned int start, unsigned int size,
 		unsigned int cfg, s5p_gpio_drvstr_t drvstr)
 {
-	u32 reg;
-
 	s3c_gpio_cfgrange_nopull(start, size, cfg);
 
 	for (; size > 0; size--, start++)
@@ -83,11 +93,6 @@ static void exynos4_dsim_setup_24bpp(unsigned int start, unsigned int size,
 void exynos4_dsim_gpio_setup_24bpp(void)
 {
 	unsigned int reg = 0;
-
-	exynos4_dsim_setup_24bpp(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-	exynos4_dsim_setup_24bpp(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
-	exynos4_dsim_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
-	exynos4_dsim_setup_24bpp(EXYNOS4_GPF3(0), 4, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 
 	/*
 	 * Set DISPLAY_CONTROL register for Display path selection.

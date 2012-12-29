@@ -39,6 +39,17 @@ void s3cfb_check_line_count(struct s3cfb_global *ctrl)
 	}
 }
 
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+int s3cfb_check_vsync_status(struct s3cfb_global *ctrl)
+{
+	u32 cfg = (readl(ctrl->regs + S3C_VIDCON1) & S3C_VIDCON1_VSTATUS_MASK);
+
+	if (cfg != S3C_VIDCON1_VSTATUS_ACTIVE && cfg != S3C_VIDCON1_VSTATUS_BACK)
+		return 1;
+	else
+		return 0;
+}
+#endif
 int s3cfb_set_output(struct s3cfb_global *ctrl)
 {
 	u32 cfg;
@@ -97,6 +108,19 @@ int s3cfb_set_output(struct s3cfb_global *ctrl)
 
 	return 0;
 }
+
+#ifdef CONFIG_FB_S5P_MIPI_DSIM
+void s3cfb_set_trigger(struct s3cfb_global *ctrl)
+{
+	u32 reg = 0;
+
+	reg = readl(ctrl->regs + S3C_TRIGCON);
+
+	reg |= 1 << 0 | 1 << 1;
+
+	writel(reg, ctrl->regs + S3C_TRIGCON);
+}
+#endif
 
 int s3cfb_set_display_mode(struct s3cfb_global *ctrl)
 {
@@ -279,7 +303,7 @@ int s3cfb_set_lcd_size(struct s3cfb_global *ctrl)
 {
 	u32 cfg = 0;
 
-#ifdef CONFIG_FB_S5P_WA101S
+#if defined(CONFIG_FB_S5P_WA101S) || defined(CONFIG_FB_S5P_LP101WH1)
 	cfg |= S3C_VIDTCON2_HOZVAL(ctrl->lcd->width - 1 + 6);
 #else
 	cfg |= S3C_VIDTCON2_HOZVAL(ctrl->lcd->width - 1);

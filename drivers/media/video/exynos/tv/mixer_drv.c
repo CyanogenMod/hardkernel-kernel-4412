@@ -22,6 +22,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/clk.h>
 #include <linux/kernel.h>
+#include <linux/videodev2_exynos_media.h>
+#include <mach/dev.h>
 
 #include <mach/videonode-exynos5.h>
 #include <media/exynos_mc.h>
@@ -106,6 +108,12 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 	mxr_dbg(mdev, "%s(%d)\n", __func__, mdev->n_streamer);
 	/* If pipeline is started from Gscaler input video device,
 	 * TV basic configuration must be set before running mixer */
+
+#if defined(CONFIG_BUSFREQ_OPP)
+	/* add bus device ptr for using bus frequency with opp */
+	mdev->bus_dev = dev_get("exynos-busfreq");
+#endif
+
 	if (mdev->mxr_data_from == FROM_GSC_SD) {
 		mxr_dbg(mdev, "%s: from gscaler\n", __func__);
 		local = 0;
@@ -123,12 +131,16 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 			sub_mxr = &mdev->sub_mxr[i];
 			if (sub_mxr->local) {
 				layer = sub_mxr->layer[MXR_LAYER_VIDEO];
+				layer->pipe.state = MXR_PIPELINE_STREAMING;
 				mxr_layer_geo_fix(layer);
 				layer->ops.format_set(layer);
 				layer->ops.stream_set(layer, 1);
 				local += sub_mxr->local;
 			}
 		}
+		if (local == 2)
+			mxr_layer_sync(mdev, MXR_ENABLE);
+
 		/* Set the TVOUT register about gsc-mixer local path */
 		mxr_reg_local_path_set(mdev, mdev->mxr0_gsc, mdev->mxr1_gsc, mdev->flags);
 	}
@@ -136,6 +148,7 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 	/* Alpha blending configuration always can be changed
 	 * whenever streaming */
 	mxr_set_alpha_blend(mdev);
+	mxr_reg_set_layer_prio(mdev);
 
 	if ((mdev->n_streamer == 1 && local == 1) ||
 	    (mdev->n_streamer == 2 && local == 2)) {
@@ -157,6 +170,11 @@ static int mxr_streamer_get(struct mxr_device *mdev, struct v4l2_subdev* sd)
 
 		mxr_dbg(mdev, "cookie of current output = (%d)\n",
 			to_output(mdev)->cookie);
+
+#if defined(CONFIG_BUSFREQ_OPP)
+		/* Request min 200MHz */
+		dev_lock(mdev->bus_dev, mdev->dev, INT_LOCK_TV);
+#endif
 
 #if defined(CONFIG_CPU_EXYNOS4210)
 		if (to_output(mdev)->cookie == 0)
@@ -227,6 +245,8 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 				local += sub_mxr->local;
 			}
 		}
+		if (local == 2)
+			mxr_layer_sync(mdev, MXR_DISABLE);
 	}
 
 	if ((mdev->n_streamer == 0 && local == 1) ||
@@ -248,6 +268,10 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 		hdmi_sd = media_entity_to_v4l2_subdev(pad->entity);
 
 		mxr_reg_streamoff(mdev);
+#if defined(CONFIG_BUSFREQ_OPP)
+		dev_unlock(mdev->bus_dev, mdev->dev);
+#endif
+
 		/* vsync applies Mixer setup */
 		ret = mxr_reg_wait4vsync(mdev);
 		if (ret) {
@@ -288,8 +312,10 @@ static int mxr_streamer_put(struct mxr_device *mdev, struct v4l2_subdev *sd)
 			if (sub_mxr->local) {
 				layer = sub_mxr->layer[MXR_LAYER_VIDEO];
 				layer->ops.stream_set(layer, 0);
+				layer->pipe.state = MXR_PIPELINE_IDLE;
 			}
 		}
+		mxr_reg_local_path_clear(mdev);
 		mxr_output_put(mdev);
 
 		/* disable mixer clock */
@@ -652,6 +678,7 @@ static int mxr_s_power(struct v4l2_subdev *sd, int on)
 static int mxr_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct mxr_device *mdev = sd_to_mdev(sd);
+	struct mxr_layer *layer;
 	int v = ctrl->value;
 	int num = 0;
 
@@ -663,21 +690,27 @@ static int mxr_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	else if (!strcmp(sd->name, "s5p-mixer1"))
 		num = MXR_SUB_MIXER1;
 
+	layer = mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO];
 	switch (ctrl->id) {
 	case V4L2_CID_TV_LAYER_BLEND_ENABLE:
-		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->layer_blend_en = v;
+		layer->layer_blend_en = v;
 		break;
 	case V4L2_CID_TV_LAYER_BLEND_ALPHA:
-		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->layer_alpha = (u32)v;
+		layer->layer_alpha = (u32)v;
 		break;
 	case V4L2_CID_TV_PIXEL_BLEND_ENABLE:
-		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->pixel_blend_en = v;
+		layer->pixel_blend_en = v;
 		break;
 	case V4L2_CID_TV_CHROMA_ENABLE:
-		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->chroma_en = v;
+		layer->chroma_en = v;
 		break;
 	case V4L2_CID_TV_CHROMA_VALUE:
-		mdev->sub_mxr[num].layer[MXR_LAYER_VIDEO]->chroma_val = (u32)v;
+		layer->chroma_val = (u32)v;
+		break;
+	case V4L2_CID_TV_LAYER_PRIO:
+		layer->prio = (u8)v;
+		if (layer->pipe.state == MXR_PIPELINE_STREAMING)
+			mxr_reg_set_layer_prio(mdev);
 		break;
 	default:
 		mxr_err(mdev, "invalid control id\n");
@@ -862,6 +895,11 @@ static int mxr_try_crop(struct v4l2_subdev *sd,
 	r->width = clamp_val(r->width, 1, fmt->width - r->left);
 	r->height = clamp_val(r->height, 1, fmt->height - r->top);
 
+	/* need to align size with G-Scaler */
+	if (pad == MXR_PAD_SINK_GSCALER || pad == MXR_PAD_SOURCE_GSCALER)
+		if (r->width % 2)
+			r->width -= 1;
+
 	return 0;
 }
 
@@ -1039,7 +1077,7 @@ static int mxr_link_setup(struct media_entity *entity,
 	int gsc_num = 0;
 
 	/* difficult to get dev ptr */
-	printk(KERN_DEBUG "%s start\n", __func__);
+	printk(KERN_DEBUG "%s %s\n", __func__, flags ? "start" : "stop");
 
 	if (flags & MEDIA_LNK_FL_ENABLED) {
 		sub_mxr->use = 1;
@@ -1319,7 +1357,7 @@ static int __devinit mxr_probe(struct platform_device *pdev)
 
 	mdev = kzalloc(sizeof *mdev, GFP_KERNEL);
 	if (!mdev) {
-		mxr_err(mdev, "not enough memory.\n");
+		dev_err(dev, "not enough memory.\n");
 		ret = -ENOMEM;
 		goto fail;
 	}
@@ -1329,6 +1367,7 @@ static int __devinit mxr_probe(struct platform_device *pdev)
 
 	/* use only sub mixer0 as default */
 	mdev->sub_mxr[MXR_SUB_MIXER0].use = 1;
+	mdev->sub_mxr[MXR_SUB_MIXER1].use = 1;
 
 #if defined(CONFIG_VIDEOBUF2_CMA_PHYS)
 	mdev->vb2 = &mxr_vb2_cma;

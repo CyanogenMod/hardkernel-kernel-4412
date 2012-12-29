@@ -18,7 +18,7 @@
 
 #include <linux/device.h>
 
-typedef enum {
+enum dsim_read_id {
 	Ack = 0x02,
 	EoTp = 0x08,
 	GenShort1B = 0x11,
@@ -27,27 +27,21 @@ typedef enum {
 	DcsLong = 0x1c,
 	DcsShort1B = 0x21,
 	DcsShort2B = 0x22,
-} dsim_read_id;
+};
 
 struct mipi_lcd_driver {
 	s8	name[64];
 
-	s32	(*init)(void);
+	s32	(*init)(struct device *dev);
 	void	(*display_on)(struct device *dev);
 	s32	(*set_link)(void *pd, u32 dsim_base,
 		u8 (*cmd_write)(u32 dsim_base, u32 data0, u32 data1, u32 data2),
-		u8 (*cmd_read)(u32 dsim_base, u32 data0, u32 data1, u32 data2));
+		int (*cmd_read)(u32 reg_base, u8 addr, u16 count, u8 *buf));
 	s32	(*probe)(struct device *dev);
 	s32	(*remove)(struct device *dev);
 	void	(*shutdown)(struct device *dev);
-	s32	(*suspend)(void);
+	s32	(*suspend)(struct device *dev, pm_message_t mesg);
 	s32	(*resume)(struct device *dev);
-
-	bool	(*partial_mode_status)(struct device *dev);
-	int     (*partial_mode_on)(struct device *dev, u8 display);
-	int     (*partial_mode_off)(struct device *dev);
-	void	(*display_off)(struct device *dev);
-	int	(*is_panel_on)(void);
 };
 
 int s5p_dsim_register_lcd_driver(struct mipi_lcd_driver *lcd_drv);

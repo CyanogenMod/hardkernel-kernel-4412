@@ -76,13 +76,19 @@ obj-$(CONFIG_VIDEO_S5K4BA) += s5k4ba.o
 obj-$(CONFIG_VIDEO_S5K4EA) += s5k4ea.o
 endif
 obj-$(CONFIG_VIDEO_M5MO)	+= m5mo.o
+obj-$(CONFIG_VIDEO_AR0832)        += ar0832.o
+obj-$(CONFIG_VIDEO_AR0832_IS)        += ar0832_is.o
 obj-$(CONFIG_VIDEO_SR030PC30)	+= sr030pc30.o
 obj-$(CONFIG_VIDEO_NOON010PC30)	+= noon010pc30.o
 obj-$(CONFIG_VIDEO_M5MOLS)	+= m5mols/
 
+obj-$(CONFIG_VIDEO_AR0832_)      += ar0832_main.o
+obj-$(CONFIG_VIDEO_AR0832_)      += ar0832_focuser.o
+
 obj-$(CONFIG_SOC_CAMERA_IMX074)		+= imx074.o
 obj-$(CONFIG_SOC_CAMERA_MT9M001)	+= mt9m001.o
 obj-$(CONFIG_SOC_CAMERA_MT9M111)	+= mt9m111.o
+obj-$(CONFIG_VIDEO_MT9M113)	+= mt9m113.o
 obj-$(CONFIG_SOC_CAMERA_MT9T031)	+= mt9t031.o
 obj-$(CONFIG_SOC_CAMERA_MT9T112)	+= mt9t112.o
 obj-$(CONFIG_SOC_CAMERA_MT9V022)	+= mt9v022.o
@@ -93,6 +99,10 @@ obj-$(CONFIG_SOC_CAMERA_OV9640)		+= ov9640.o
 obj-$(CONFIG_SOC_CAMERA_OV9740)		+= ov9740.o
 obj-$(CONFIG_SOC_CAMERA_RJ54N1)		+= rj54n1cb0c.o
 obj-$(CONFIG_SOC_CAMERA_TW9910)		+= tw9910.o
+
+obj-$(CONFIG_VIDEO_S5K5CAGX)		+= s5k5cagx.o
+obj-$(CONFIG_VIDEO_S5K4ECGX)		+= s5k4ecgx.o
+obj-$(CONFIG_VIDEO_S5K5AAFA)		+= s5k5aafa.o
 
 # And now the v4l2 drivers:
 
@@ -128,6 +138,7 @@ obj-$(CONFIG_VIDEO_BTCX)  += btcx-risc.o
 
 obj-$(CONFIG_VIDEOBUF2_CORE)		+= videobuf2-core.o
 obj-$(CONFIG_VIDEOBUF2_MEMOPS)		+= videobuf2-memops.o
+obj-$(CONFIG_VIDEOBUF2_FB)		    += videobuf2-fb.o
 obj-$(CONFIG_VIDEOBUF2_VMALLOC)		+= videobuf2-vmalloc.o
 obj-$(CONFIG_VIDEOBUF2_DMA_CONTIG)	+= videobuf2-dma-contig.o
 obj-$(CONFIG_VIDEOBUF2_DMA_SG)		+= videobuf2-dma-sg.o

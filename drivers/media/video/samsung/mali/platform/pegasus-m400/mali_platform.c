@@ -76,8 +76,22 @@ static struct clk  *mali_clock = 0;
 
 static unsigned int GPU_MHZ	= 1000000;
 
-int mali_gpu_clk = 266;
-int mali_gpu_vol = 900000;
+#if defined(CONFIG_MALI_OVERCLOCK_533)
+	int mali_gpu_clk = 533;
+	int mali_gpu_vol = 1075000;
+#elif defined(CONFIG_MALI_OVERCLOCK_640)
+	int mali_gpu_clk = 640;
+	int mali_gpu_vol = 1125000;
+#elif defined(CONFIG_MALI_OVERCLOCK_733)
+	int mali_gpu_clk = 733;
+	int mali_gpu_vol = 1175000;
+#elif defined(CONFIG_MALI_OVERCLOCK_800)
+	int mali_gpu_clk = 800;
+	int mali_gpu_vol = 1200000;
+#else
+	int mali_gpu_clk = 440;
+	int mali_gpu_vol = 1050000;
+#endif
 
 #if MALI_DVFS_ENABLED
 #define MALI_DVFS_DEFAULT_STEP 0
@@ -528,9 +542,6 @@ static _mali_osk_errcode_t enable_mali_clocks(void)
 		mali_clk_set_rate(mali_runtime_resume.clk, GPU_MHZ);
 		set_mali_dvfs_current_step(MALI_DVFS_STEPS+1);
 	}
-	/* lock/unlock CPU freq by Mali */
-	if (mali_gpu_clk == 440)
-		err = cpufreq_lock_by_mali(1200);
 #else
 	mali_regulator_set_voltage(mali_runtime_resume.vol, mali_runtime_resume.vol);
 	mali_clk_set_rate(mali_runtime_resume.clk, GPU_MHZ);
@@ -546,8 +557,10 @@ static _mali_osk_errcode_t disable_mali_clocks(void)
 	clk_disable(mali_clock);
 	MALI_DEBUG_PRINT(3,("disable_mali_clocks mali_clock %p \n", mali_clock));
 
+#if MALI_DVFS_ENABLED
 	/* lock/unlock CPU freq by Mali */
 	cpufreq_unlock_by_mali();
+#endif
 	MALI_SUCCESS;
 }
 

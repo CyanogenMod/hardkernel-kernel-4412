@@ -282,7 +282,7 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct s3c_dma_params *dma_data;
 	void __iomem *regs = pcm->regs;
 	struct clk *clk;
-	int sclk_div = 0, sync_div = 0;
+	int sclk_div, sync_div;
 	unsigned long flags;
 	u32 clkctl;
 
@@ -329,19 +329,16 @@ static int s3c_pcm_hw_params(struct snd_pcm_substream *substream,
 	else
 		clk = pcm->cclk;
 
-	if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
-		clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
-
-#if defined(CONFIG_ARCH_S5PC100) || defined(CONFIG_ARCH_S5PV210)
 	/* Set the SCLK divider */
 	sclk_div = clk_get_rate(clk) / pcm->sclk_per_fs /
 					params_rate(params) / 2 - 1;
+	if (clk_get_rate(clk) != (pcm->sclk_per_fs*params_rate(params)))
+		clk_set_rate(clk, pcm->sclk_per_fs*params_rate(params));
 
 	clkctl &= ~(S3C_PCM_CLKCTL_SCLKDIV_MASK
 			<< S3C_PCM_CLKCTL_SCLKDIV_SHIFT);
 	clkctl |= ((sclk_div & S3C_PCM_CLKCTL_SCLKDIV_MASK)
 			<< S3C_PCM_CLKCTL_SCLKDIV_SHIFT);
-#endif
 
 	/* Set the SYNC divider */
 	sync_div = pcm->sclk_per_fs - 1;
@@ -550,8 +547,6 @@ EXPORT_SYMBOL_GPL(s3c_pcm_dai);
 
 static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 {
-	struct clk *mout_epll = NULL;
-	struct clk *sclk_audio = NULL;
 	struct s3c_pcm_info *pcm;
 	struct resource *mem_res, *dmatx_res, *dmarx_res;
 	struct s3c_audio_pdata *pcm_pdata;
@@ -597,40 +592,9 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 	/* Default is 128fs */
 	pcm->sclk_per_fs = 128;
 
-	/* Clock configuration */
-	mout_epll = clk_get(&pdev->dev, "mout_epll");
-	if (IS_ERR(mout_epll)) {
-		dev_err(&pdev->dev, "failed to get mout_epll\n");
-		ret = PTR_ERR(mout_epll);
-		return ret;
-	}
-
-	switch (pdev->id) {
-	case 0:
-		sclk_audio = clk_get(&pdev->dev, "audio-bus");
-		break;
-	case 1:
-		sclk_audio = clk_get(&pdev->dev, "audio-bus1");
-		break;
-	case 2:
-		sclk_audio = clk_get(&pdev->dev, "audio-bus2");
-		break;
-	default:
-		dev_err(&pdev->dev, "Not support device num\n");
-		break;
-	}
-
-	if (IS_ERR(sclk_audio)) {
-		dev_err(&pdev->dev, "failed to get sclk_audio\n");
-		ret = PTR_ERR(sclk_audio);
-		goto err;
-	}
-
-	clk_set_parent(sclk_audio, mout_epll);
-
-	pcm->cclk = clk_get(&pdev->dev, "sclk_pcm");
+	pcm->cclk = clk_get(&pdev->dev, "audio-bus");
 	if (IS_ERR(pcm->cclk)) {
-		dev_err(&pdev->dev, "failed to get sclk_pcm\n");
+		dev_err(&pdev->dev, "failed to get audio-bus\n");
 		ret = PTR_ERR(pcm->cclk);
 		goto err1;
 	}
@@ -678,9 +642,6 @@ static __devinit int s3c_pcm_dev_probe(struct platform_device *pdev)
 	pcm->dma_capture = &s3c_pcm_stereo_in[pdev->id];
 	pcm->dma_playback = &s3c_pcm_stereo_out[pdev->id];
 
-	clk_put(mout_epll);
-	clk_put(sclk_audio);
-
 	return 0;
 
 err5:
@@ -694,9 +655,6 @@ err2:
 	clk_disable(pcm->cclk);
 	clk_put(pcm->cclk);
 err1:
-	clk_put(sclk_audio);
-err:
-	clk_put(mout_epll);
 	return ret;
 }
 

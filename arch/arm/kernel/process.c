@@ -283,6 +283,7 @@ __setup("reboot=", reboot_setup);
 void machine_shutdown(void)
 {
 #ifdef CONFIG_SMP
+        preempt_disable();
 	smp_send_stop();
 #endif
 }

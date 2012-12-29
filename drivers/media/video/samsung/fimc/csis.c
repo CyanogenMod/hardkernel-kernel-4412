@@ -19,6 +19,7 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/videodev2.h>
+#include <linux/videodev2_samsung.h>
 
 #include <linux/io.h>
 #include <linux/memory.h>
@@ -212,11 +213,25 @@ static void s3c_csis_set_hs_settle(struct platform_device *pdev, int settle)
 }
 #endif
 
+int s3c_csis_get_pkt(int csis_id, void *pktdata)
+{
+	memcpy(pktdata, s3c_csis[csis_id]->bufs.pktdata, CSIS_PKTSIZE);
+	return 0;
+}
+
+void s3c_csis_enable_pktdata(int csis_id, bool enable)
+{
+	s3c_csis[csis_id]->pktdata_enable = enable;
+}
+
 void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 				int height, int pixel_format)
 {
 	struct platform_device *pdev = NULL;
 	struct s3c_platform_csis *pdata = NULL;
+	int i;
+
+	memset(&s3c_csis[csis_id]->bufs, 0, sizeof(s3c_csis[csis_id]->bufs));
 
 	/* clock & power on */
 	pdev = to_platform_device(s3c_csis[csis_id]->dev);
@@ -236,9 +251,10 @@ void s3c_csis_start(int csis_id, int lanes, int settle, int align, int width, \
 	s3c_csis_set_hs_settle(pdev, settle);	/* s5k6aa */
 	s3c_csis_set_data_align(pdev, align);
 	s3c_csis_set_wclk(pdev, 1);
-	if (pixel_format == V4L2_PIX_FMT_JPEG)
+	if (pixel_format == V4L2_PIX_FMT_JPEG ||
+		pixel_format == V4L2_PIX_FMT_INTERLEAVED) {
 		s3c_csis_set_format(pdev, MIPI_USER_DEF_PACKET_1);
-	else if (pixel_format == V4L2_PIX_FMT_SGRBG10)
+	} else if (pixel_format == V4L2_PIX_FMT_SGRBG10)
 		s3c_csis_set_format(pdev, MIPI_CSI_RAW10);
 	else
 		s3c_csis_set_format(pdev, MIPI_CSI_YCBCR422_8BIT);
@@ -265,6 +281,7 @@ void s3c_csis_stop(int csis_id)
 	s3c_csis_disable_interrupt(pdev);
 	s3c_csis_system_off(pdev);
 	s3c_csis_phy_off(pdev);
+	s3c_csis[csis_id]->pktdata_enable = 0;
 
 	if (pdata->cfg_phy_global)
 		pdata->cfg_phy_global(0);
@@ -280,14 +297,44 @@ static irqreturn_t s3c_csis_irq(int irq, void *dev_id)
 	u32 cfg;
 
 	struct platform_device *pdev = (struct platform_device *) dev_id;
+	int bufnum = 0;
 	/* just clearing the pends */
 	cfg = readl(s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 	writel(cfg, s3c_csis[pdev->id]->regs + S3C_CSIS_INTSRC);
 	/* receiving non-image data is not error */
+	cfg &= 0xFFFFFFFF;
+
+#ifdef CONFIG_VIDEO_FIMC_MIPI_IRQ_DEBUG
 	if (unlikely(cfg & S3C_CSIS_INTSRC_ERR)) {
 		if (err_print_cnt < 30) {
 			err("csis error interrupt[%d]: %#x\n", err_print_cnt, cfg);
 			err_print_cnt++;
+		}
+	}
+#endif
+	if(s3c_csis[pdev->id]->pktdata_enable) {
+		if (unlikely(cfg & S3C_CSIS_INTSRC_NON_IMAGE_DATA)) {
+			/* printk("%s NON Image Data bufnum = %d 0x%x\n", __func__, bufnum, cfg); */
+
+			if (cfg & S3C_CSIS_INTSRC_EVEN_BEFORE) {
+				/* printk(KERN_INFO "S3C_CSIS_INTSRC_EVEN_BEFORE\n"); */
+				memcpy_fromio(s3c_csis[pdev->id]->bufs.pktdata,
+					(s3c_csis[pdev->id]->regs + S3C_CSIS_PKTDATA_EVEN), CSIS_PKTSIZE);
+			} else if (cfg & S3C_CSIS_INTSRC_EVEN_AFTER) {
+				/* printk(KERN_INFO "S3C_CSIS_INTSRC_EVEN_AFTER\n"); */
+				memcpy_fromio(s3c_csis[pdev->id]->bufs.pktdata,
+					(s3c_csis[pdev->id]->regs + S3C_CSIS_PKTDATA_EVEN), CSIS_PKTSIZE);
+			} else if (cfg & S3C_CSIS_INTSRC_ODD_BEFORE) {
+				/* printk(KERN_INFO "S3C_CSIS_INTSRC_ODD_BEFORE\n"); */
+				memcpy_fromio(s3c_csis[pdev->id]->bufs.pktdata,
+					(s3c_csis[pdev->id]->regs + S3C_CSIS_PKTDATA_ODD), CSIS_PKTSIZE);
+			} else if (cfg & S3C_CSIS_INTSRC_ODD_AFTER) {
+				/* printk(KERN_INFO "S3C_CSIS_INTSRC_ODD_AFTER\n"); */
+				memcpy_fromio(s3c_csis[pdev->id]->bufs.pktdata,
+					(s3c_csis[pdev->id]->regs + S3C_CSIS_PKTDATA_ODD), CSIS_PKTSIZE);
+			}
+			/* printk(KERN_INFO "0x%x\n", s3c_csis[pdev->id]->bufs.pktdata[0x2c/4]); */
+			/* printk(KERN_INFO "0x%x\n", s3c_csis[pdev->id]->bufs.pktdata[0x30/4]); */
 		}
 	}
 

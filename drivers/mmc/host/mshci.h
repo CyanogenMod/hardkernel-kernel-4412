@@ -432,6 +432,7 @@ struct mshci_ops {
 				struct scatterlist *sg,
 				int nents, enum dma_data_direction dir,
 				int flush_type);
+	int		(*get_fifo_depth)(struct mshci_host *host);
 };
 
 static inline void mshci_writel(struct mshci_host *host, u32 val, int reg)

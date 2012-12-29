@@ -19,20 +19,26 @@
 #include <linux/mm.h>
 #include <linux/ctype.h>
 #include <linux/io.h>
+#include <mach/map.h>
+#include <mach/dsim.h>
+#include <mach/mipi_ddi.h>
+#include <plat/regs-dsim.h>
 #include <linux/clk.h>
 #include <linux/err.h>
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
 #include <linux/types.h>
-#include <asm/io.h>
-#include <plat/regs-dsim.h>
 #include <plat/clock.h>
 #include <plat/gpio-cfg.h>
+#include <asm/io.h>
+#include <mach/map.h>
 #include <plat/regs-fb-s5p.h>
-#include <mach/map.h>
-#include <mach/dsim.h>
-#include <mach/mipi_ddi.h>
-#include <mach/map.h>
+
+#ifdef DEBUG_DSIM
+#define dprintk(x...) printk(x)
+#else
+#define dprintk(x...)
+#endif
 
 void s5p_dsim_func_reset(unsigned int dsim_base)
 {
@@ -41,6 +47,8 @@ void s5p_dsim_func_reset(unsigned int dsim_base)
 	cfg = DSIM_FUNCRST;
 
 	writel(cfg, dsim_base + S5P_DSIM_SWRST);
+
+	dprintk("%s : %x\n", __func__, cfg);
 }
 
 void s5p_dsim_sw_reset(unsigned int dsim_base)
@@ -50,6 +58,8 @@ void s5p_dsim_sw_reset(unsigned int dsim_base)
 	cfg = DSIM_SWRST;
 
 	writel(cfg, dsim_base + S5P_DSIM_SWRST);
+
+	dprintk("%s : %x\n", __func__, cfg);
 }
 
 void s5p_dsim_set_interrupt_mask(unsigned int dsim_base, unsigned int mode,
@@ -63,6 +73,8 @@ void s5p_dsim_set_interrupt_mask(unsigned int dsim_base, unsigned int mode,
 		reg &= ~(mode);
 
 	writel(reg, dsim_base + S5P_DSIM_INTMSK);
+
+	/* dprintk("%s : %x\n", __func__, reg); */
 }
 
 void s5p_dsim_init_fifo_pointer(unsigned int dsim_base, unsigned char cfg)
@@ -72,10 +84,12 @@ void s5p_dsim_init_fifo_pointer(unsigned int dsim_base, unsigned char cfg)
 	reg = readl(dsim_base + S5P_DSIM_FIFOCTRL);
 
 	writel(reg & ~(cfg), dsim_base + S5P_DSIM_FIFOCTRL);
-	mdelay(10);
+	msleep(10);
 	reg |= cfg;
 
 	writel(reg, dsim_base + S5P_DSIM_FIFOCTRL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 /*
@@ -84,6 +98,8 @@ void s5p_dsim_init_fifo_pointer(unsigned int dsim_base, unsigned char cfg)
 void s5p_dsim_set_phy_tunning(unsigned int dsim_base, unsigned int value)
 {
 	writel(DSIM_AFC_CTL(value), dsim_base + S5P_DSIM_PHYACCHR);
+
+	dprintk("%s : %x\n", __func__, DSIM_AFC_CTL(value));
 }
 
 void s5p_dsim_set_main_disp_resol(unsigned int dsim_base, unsigned short vert_resol,
@@ -95,11 +111,15 @@ void s5p_dsim_set_main_disp_resol(unsigned int dsim_base, unsigned short vert_re
 	reg = (readl(dsim_base + S5P_DSIM_MDRESOL)) & ~(DSIM_MAIN_STAND_BY);
 	writel(reg, dsim_base + S5P_DSIM_MDRESOL);
 
+	dprintk("%s : %x\n", __func__, reg);
+
 	reg &= ~(0x7ff << 16) & ~(0x7ff << 0);
 	reg |= DSIM_MAIN_VRESOL(vert_resol) | DSIM_MAIN_HRESOL(hori_resol);
 
 	reg |= DSIM_MAIN_STAND_BY;
 	writel(reg, dsim_base + S5P_DSIM_MDRESOL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_main_disp_vporch(unsigned int dsim_base, unsigned int cmd_allow,
@@ -115,6 +135,8 @@ void s5p_dsim_set_main_disp_vporch(unsigned int dsim_base, unsigned int cmd_allo
 		((vback & 0x7ff) << DSIM_MAIN_VBP_SHIFT);
 
 	writel(reg, dsim_base + S5P_DSIM_MVPORCH);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_main_disp_hporch(unsigned int dsim_base, unsigned short front,
@@ -128,6 +150,8 @@ void s5p_dsim_set_main_disp_hporch(unsigned int dsim_base, unsigned short front,
 	reg |= (front << DSIM_MAIN_HFP_SHIFT) | (back << DSIM_MAIN_HBP_SHIFT);
 
 	writel(reg, dsim_base + S5P_DSIM_MHPORCH);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_main_disp_sync_area(unsigned int dsim_base, unsigned short vert,
@@ -141,6 +165,8 @@ void s5p_dsim_set_main_disp_sync_area(unsigned int dsim_base, unsigned short ver
 	reg |= ((vert & 0x3ff) << DSIM_MAIN_VSA_SHIFT) | (hori << DSIM_MAIN_HSA_SHIFT);
 
 	writel(reg, dsim_base + S5P_DSIM_MSYNC);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_sub_disp_resol(unsigned int dsim_base, unsigned short vert,
@@ -151,14 +177,19 @@ void s5p_dsim_set_sub_disp_resol(unsigned int dsim_base, unsigned short vert,
 	reg = (readl(dsim_base + S5P_DSIM_SDRESOL)) & ~(DSIM_SUB_STANDY_MASK);
 	writel(reg, dsim_base + S5P_DSIM_SDRESOL);
 
+	dprintk("%s : %x\n", __func__, reg);
 
 	reg &= ~(DSIM_SUB_VRESOL_MASK) | ~(DSIM_SUB_HRESOL_MASK);
 	reg |= ((vert & 0x7ff) << DSIM_SUB_VRESOL_SHIFT) |
 		((hori & 0x7ff) << DSIM_SUB_HRESOL_SHIFT);
 	writel(reg, dsim_base + S5P_DSIM_SDRESOL);
 
+	dprintk("%s : %x\n", __func__, reg);
+
 	reg |= (1 << DSIM_SUB_STANDY_SHIFT);
 	writel(reg, dsim_base + S5P_DSIM_SDRESOL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_init_config(unsigned int dsim_base, struct dsim_lcd_config *main_lcd_info,
@@ -177,6 +208,8 @@ void s5p_dsim_init_config(unsigned int dsim_base, struct dsim_lcd_config *main_l
 		(dsim_info->e_no_data_lane << DSIM_NUM_OF_DATALANE_SHIFT);
 
 	writel(cfg, dsim_base + S5P_DSIM_CONFIG);
+
+	dprintk("%s : %x\n", __func__, cfg);
 }
 
 void s5p_dsim_display_config(unsigned int dsim_base,
@@ -207,11 +240,14 @@ void s5p_dsim_display_config(unsigned int dsim_base,
 	}
 
 	writel(reg, dsim_base + S5P_DSIM_CONFIG);
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_enable_lane(unsigned int dsim_base, unsigned char lane, unsigned char enable)
 {
 	unsigned int reg;
+
+	dprintk("%s : %x\n", __func__, lane);
 	reg = readl(dsim_base + S5P_DSIM_CONFIG);
 
 	if (lane == DSIM_LANE_CLOCK) {
@@ -227,6 +263,8 @@ void s5p_dsim_enable_lane(unsigned int dsim_base, unsigned char lane, unsigned c
 	}
 
 	writel(reg, dsim_base + S5P_DSIM_CONFIG);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 
@@ -238,6 +276,8 @@ void s5p_dsim_set_data_lane_number(unsigned int dsim_base, unsigned char count)
 	cfg = DSIM_NUM_OF_DATA_LANE(count);
 
 	writel(cfg, dsim_base + S5P_DSIM_CONFIG);
+
+	dprintk("%s : %x\n", __func__, cfg);
 }
 
 void s5p_dsim_enable_afc(unsigned int dsim_base, unsigned char enable,
@@ -253,6 +293,8 @@ void s5p_dsim_enable_afc(unsigned int dsim_base, unsigned char enable,
 		reg &= ~(1 << 14);
 
 	writel(reg, dsim_base + S5P_DSIM_PHYACCHR);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_enable_pll_bypass(unsigned int dsim_base, unsigned char enable)
@@ -263,6 +305,8 @@ void s5p_dsim_enable_pll_bypass(unsigned int dsim_base, unsigned char enable)
 	reg |= enable << DSIM_PLL_BYPASS_SHIFT;
 
 	writel(reg, dsim_base + S5P_DSIM_CLKCTRL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_pll_pms(unsigned int dsim_base, unsigned char p,
@@ -273,6 +317,8 @@ void s5p_dsim_set_pll_pms(unsigned int dsim_base, unsigned char p,
 	reg |= ((p & 0x3f) << 13) | ((m & 0x1ff) << 4) | ((s & 0x7) << 1);
 
 	writel(reg, dsim_base + S5P_DSIM_PLLCTRL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_pll_freq_band(unsigned int dsim_base, unsigned char freq_band)
@@ -283,6 +329,8 @@ void s5p_dsim_pll_freq_band(unsigned int dsim_base, unsigned char freq_band)
 	reg |= ((freq_band & 0x1f) << DSIM_FREQ_BAND_SHIFT);
 
 	writel(reg, dsim_base + S5P_DSIM_PLLCTRL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_pll_freq(unsigned int dsim_base, unsigned char pre_divider,
@@ -300,6 +348,8 @@ void s5p_dsim_pll_freq(unsigned int dsim_base, unsigned char pre_divider,
 void s5p_dsim_pll_stable_time(unsigned int dsim_base, unsigned int lock_time)
 {
 	writel(lock_time, dsim_base + S5P_DSIM_PLLTMR);
+
+	dprintk("%s : %x\n", __func__, lock_time);
 }
 
 void s5p_dsim_enable_pll(unsigned int dsim_base, unsigned char enable)
@@ -310,6 +360,8 @@ void s5p_dsim_enable_pll(unsigned int dsim_base, unsigned char enable)
 	reg |= ((enable & 0x1) << DSIM_PLL_EN_SHIFT);
 
 	writel(reg, dsim_base + S5P_DSIM_PLLCTRL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_byte_clock_src(unsigned int dsim_base, unsigned char src)
@@ -320,6 +372,8 @@ void s5p_dsim_set_byte_clock_src(unsigned int dsim_base, unsigned char src)
 	reg |= ((unsigned int) src) << DSIM_BYTE_CLK_SRC_SHIFT;
 
 	writel(reg, dsim_base + S5P_DSIM_CLKCTRL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_enable_byte_clock(unsigned int dsim_base, unsigned char enable)
@@ -330,6 +384,8 @@ void s5p_dsim_enable_byte_clock(unsigned int dsim_base, unsigned char enable)
 	reg |= enable << DSIM_BYTE_CLKEN_SHIFT;
 
 	writel(reg, dsim_base + S5P_DSIM_CLKCTRL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_esc_clk_prs(unsigned int dsim_base, unsigned char enable,
@@ -343,6 +399,8 @@ void s5p_dsim_set_esc_clk_prs(unsigned int dsim_base, unsigned char enable,
 		reg |= prs_val;
 
 	writel(reg, dsim_base + S5P_DSIM_CLKCTRL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_enable_esc_clk_on_lane(unsigned int dsim_base,
@@ -375,6 +433,8 @@ void s5p_dsim_enable_esc_clk_on_lane(unsigned int dsim_base,
 	}
 
 	writel(reg, dsim_base + S5P_DSIM_CLKCTRL);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_force_dphy_stop_state(unsigned int dsim_base, unsigned char enable)
@@ -385,11 +445,17 @@ void s5p_dsim_force_dphy_stop_state(unsigned int dsim_base, unsigned char enable
 	reg |= ((enable & 0x1) << DSIM_FORCE_STOP_STATE_SHIFT);
 
 	writel(reg, dsim_base + S5P_DSIM_ESCMODE);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 unsigned char s5p_dsim_is_lane_state(unsigned int dsim_base, unsigned char lane)
 {
 	unsigned int reg = readl(dsim_base + S5P_DSIM_STATUS);
+
+	dprintk("%s : %x\n", __func__, dsim_base);
+	dprintk("%s : %x\n", __func__, lane);
+	dprintk("%s : %x\n", __func__, reg);
 
 	if ((lane & DSIM_LANE_ALL) > DSIM_LANE_CLOCK) { /* all lane state */
 		if ((reg & 0x7ff) ^ (((lane & 0xf) << 4) | (1 << 9)))
@@ -397,7 +463,7 @@ unsigned char s5p_dsim_is_lane_state(unsigned int dsim_base, unsigned char lane)
 		else if ((reg & 0x7ff) ^ (((lane & 0xf) << 0) | (1 << 8)))
 			return DSIM_LANE_STATE_STOP;
 		else {
-			printk("lane state is unknown.\n");
+			printk(KERN_ERR "lane state is unknown.\n");
 			return -1;
 		}
 	} else if (lane & DSIM_LANE_DATA_ALL) {	/* data lane */
@@ -406,7 +472,7 @@ unsigned char s5p_dsim_is_lane_state(unsigned int dsim_base, unsigned char lane)
 		} else if (reg & (lane << 0)) {
 			return DSIM_LANE_STATE_STOP;
 		} else {
-			printk("data lane state is unknown.\n");
+			printk(KERN_ERR "data lane state is unknown.\n");
 			return -1;
 		}
 	} else if (lane & DSIM_LANE_CLOCK) { /* clock lane */
@@ -417,7 +483,7 @@ unsigned char s5p_dsim_is_lane_state(unsigned int dsim_base, unsigned char lane)
 		} else if (reg & (1 << 10)) {
 			return DSIM_LANE_STATE_HS_READY;
 		} else {
-			printk("clock lane state is unknown.\n");
+			printk(KERN_ERR "clock lane state is unknown.\n");
 			return -1;
 		}
 	}
@@ -433,6 +499,8 @@ void s5p_dsim_set_stop_state_counter(unsigned int dsim_base, unsigned short cnt_
 	reg |= ((cnt_val & 0x7ff) << DSIM_STOP_STATE_CNT_SHIFT);
 
 	writel(reg, dsim_base + S5P_DSIM_ESCMODE);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_bta_timeout(unsigned int dsim_base, unsigned char timeout)
@@ -443,6 +511,8 @@ void s5p_dsim_set_bta_timeout(unsigned int dsim_base, unsigned char timeout)
 	reg |= (timeout << DSIM_BTA_TOUT_SHIFT);
 
 	writel(reg, dsim_base + S5P_DSIM_TIMEOUT);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_lpdr_timeout(unsigned int dsim_base, unsigned short timeout)
@@ -453,6 +523,8 @@ void s5p_dsim_set_lpdr_timeout(unsigned int dsim_base, unsigned short timeout)
 	reg |= (timeout << DSIM_LPDR_TOUT_SHIFT);
 
 	writel(reg, dsim_base + S5P_DSIM_TIMEOUT);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_set_data_mode(unsigned int dsim_base, unsigned char data,
@@ -466,6 +538,8 @@ void s5p_dsim_set_data_mode(unsigned int dsim_base, unsigned char data,
 		reg |= data;
 
 	writel(reg, dsim_base + S5P_DSIM_ESCMODE);
+
+	dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_enable_hs_clock(unsigned int dsim_base, unsigned char enable)
@@ -478,6 +552,21 @@ void s5p_dsim_enable_hs_clock(unsigned int dsim_base, unsigned char enable)
 	writel(reg, dsim_base + S5P_DSIM_CLKCTRL);
 }
 
+void s5p_dsim_toggle_hs_clock(unsigned int dsim_base)
+{
+	unsigned int reg = (readl(dsim_base + S5P_DSIM_CLKCTRL)) &
+		~(1 << DSIM_TX_REQUEST_HSCLK_SHIFT);
+
+	writel(reg, dsim_base + S5P_DSIM_CLKCTRL);
+
+	reg |= 1 << DSIM_TX_REQUEST_HSCLK_SHIFT;
+
+	writel(reg, dsim_base + S5P_DSIM_CLKCTRL);
+
+	dprintk("%s\n", __func__);
+}
+
+
 void s5p_dsim_dp_dn_swap(unsigned int dsim_base, unsigned char swap_en)
 {
 	unsigned int reg = readl(dsim_base + S5P_DSIM_PHYACCHR1);
@@ -486,6 +575,8 @@ void s5p_dsim_dp_dn_swap(unsigned int dsim_base, unsigned char swap_en)
 	reg |= (swap_en & 0x3) << 0;
 
 	writel(reg, dsim_base + S5P_DSIM_PHYACCHR1);
+
+	dprintk("%s : %x\n", __func__, readl(dsim_base + S5P_DSIM_PHYACCHR1));
 }
 
 void s5p_dsim_hs_zero_ctrl(unsigned int dsim_base, unsigned char hs_zero)
@@ -496,6 +587,7 @@ void s5p_dsim_hs_zero_ctrl(unsigned int dsim_base, unsigned char hs_zero)
 	reg |= ((hs_zero & 0xf) << 28);
 
 	writel(reg, dsim_base + S5P_DSIM_PLLCTRL);
+	//dprintk("%s : %x\n", __func__, readl(dsim_base + S5P_DSIM_PLLCTRL));
 }
 
 void s5p_dsim_prep_ctrl(unsigned int dsim_base, unsigned char prep)
@@ -506,6 +598,7 @@ void s5p_dsim_prep_ctrl(unsigned int dsim_base, unsigned char prep)
 	reg |= ((prep & 0x7) << 20);
 
 	writel(reg, dsim_base + S5P_DSIM_PLLCTRL);
+	dprintk("%s : %x\n", __func__, readl(dsim_base + S5P_DSIM_PLLCTRL));
 }
 
 void s5p_dsim_clear_interrupt(unsigned int dsim_base, unsigned int int_src)
@@ -521,8 +614,7 @@ unsigned char s5p_dsim_is_pll_stable(unsigned int dsim_base)
 
 unsigned int s5p_dsim_get_fifo_state(unsigned int dsim_base)
 {
-	unsigned int reg = ((readl(dsim_base + S5P_DSIM_FIFOCTRL)) & ~(0x1f));
-	return reg;
+	return ((readl(dsim_base + S5P_DSIM_FIFOCTRL)) & ~(0x1f));
 }
 
 void s5p_dsim_wr_tx_header(unsigned int dsim_base,
@@ -531,11 +623,15 @@ void s5p_dsim_wr_tx_header(unsigned int dsim_base,
 	unsigned int reg = (data1 << 16) | (data0 << 8) | ((di & 0x3F) << 0);
 
 	writel(reg, dsim_base + S5P_DSIM_PKTHDR);
+
+	//dprintk("%s : %x\n", __func__, reg);
 }
 
 void s5p_dsim_wr_tx_data(unsigned int dsim_base, unsigned int tx_data)
 {
 	writel(tx_data, dsim_base + S5P_DSIM_PAYLOAD);
+
+	//dprintk("%s : %x\n", __func__, tx_data);
 }
 
 int s5p_dsim_rd_rx_data(unsigned int dsim_base)

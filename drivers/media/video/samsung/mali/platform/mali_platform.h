@@ -20,6 +20,8 @@
 
 #ifdef CONFIG_CPU_EXYNOS4210
 #define MALI_DVFS_STEPS 2
+#elif defined(CONFIG_MALI_GPU_OVERCLOCK_533MHZ)
+#define MALI_DVFS_STEPS 5
 #else
 #define MALI_DVFS_STEPS 5
 #endif

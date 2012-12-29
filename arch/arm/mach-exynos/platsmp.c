@@ -80,10 +80,6 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 	void __iomem *cpu_base = S5P_VA_GIC_CPU +
 				(gic_bank_offset * cpu);
 
-	/* Enable the full line of zero */
-	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412())
-		enable_cache_foz();
-
 	/*
 	 * if any interrupts are already enabled for the primary
 	 * core (e.g. timer irq), then they will not have been enabled
@@ -135,6 +131,24 @@ static int exynos_power_up_cpu(unsigned int cpu)
 	return 0;
 }
 
+#ifdef CONFIG_CACHE_L2X0
+static void enable_foz(void)
+{
+	u32 val;
+
+	asm volatile(
+	"mrc p15, 0, %0, c1, c0, 1\n"
+	"orr %0, %0, #(1 << 3)\n"
+	: "=r" (val));
+
+#ifdef CONFIG_ARM_TRUSTZONE
+	exynos_smc(SMC_CMD_REG, SMC_REG_ID_CP15(1, 0, 0, 1), val, 0);
+#else
+	asm volatile("mcr p15, 0, %0, c1, c0, 1" : : "r" (val));
+#endif
+}
+#endif
+
 int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
@@ -151,6 +165,16 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		spin_unlock(&boot_lock);
 		return ret;
 	}
+
+	/*
+	* Enable write full line for zeros mode
+	*/
+#ifdef CONFIG_CACHE_L2X0
+	if (soc_is_exynos4210() || soc_is_exynos4212() || soc_is_exynos4412()) {
+		enable_foz();
+		smp_call_function((void (*)(void *))enable_foz, NULL, 0);
+	}
+#endif
 
 	/*
 	 * The secondary processor is waiting to be released from

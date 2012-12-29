@@ -11,6 +11,19 @@ menuconfig INPUT_TOUCHSCREEN
 
 if INPUT_TOUCHSCREEN
 
+config TOUCHSCREEN_DUMMY
+	bool "ODROID Dummy touchscreen driver"
+	depends on MACH_ODROID_4210 || MACH_ODROID_4X12
+	default n
+	---help---
+	  This enables support for ODROID default Touch panel
+
+config TOUCHSCREEN_SOLOMON_MT
+	bool "Solomon 10.1\" WXGA multi touch panel(I2C Driver)"
+	default n
+	---help---
+	  This enables support for ODROID-Q 10.1\" WXGA Touch panel (Multi-Touch)
+
 config TOUCHSCREEN_88PM860X
 	tristate "Marvell 88PM860x touchscreen"
 	depends on MFD_88PM860X
@@ -748,12 +761,5 @@ config TOUCHSCREEN_TPS6507X
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
-
-config TOUCHSCREEN_UNIDISPLAY_TS
-        tristate "Pixcir capacitive touchscreen driver"
-        depends on I2C
-        help
-          Say Y here if you have a Pixcir capacitive based touchscreen
-          controller.
 
 endif

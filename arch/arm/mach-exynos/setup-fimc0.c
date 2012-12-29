@@ -41,7 +41,11 @@ void s3c_fimc0_cfg_gpio(struct platform_device *pdev)
 		/* CAM A port(b0010) : PCLK, VSYNC, HREF, DATA[0-4] */
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ0(0), 8, S3C_GPIO_SFN(2));
 		/* CAM A port(b0010) : DATA[5-7], CLKOUT(MIPI CAM also), FIELD */
+#if defined(CONFIG_BOARD_ODROID_U)||defined(CONFIG_BOARD_ODROID_U2)
+		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ1(0), 5, S3C_GPIO_SFN(0));
+#else
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPJ1(0), 5, S3C_GPIO_SFN(2));
+#endif
 		/* CAM B port(b0011) : PCLK, DATA[0-6] */
 		s3c_gpio_cfgrange_nopull(EXYNOS4212_GPM0(0), 8, S3C_GPIO_SFN(3));
 		/* CAM B port(b0011) : FIELD, DATA[7]*/

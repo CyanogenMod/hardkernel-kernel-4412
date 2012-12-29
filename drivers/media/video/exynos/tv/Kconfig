@@ -35,7 +35,7 @@ config VIDEO_EXYNOS_HDMI
 config VIDEO_EXYNOS_HDMI_AUDIO_I2S
 	bool "Enable HDMI audio using I2S path"
 	depends on VIDEO_EXYNOS_HDMI
-	depends on SND_SOC_SAMSUNG_SMDK_WM8994
+	depends on SND_SAMSUNG_I2S
 	default y
 	help
 	  Enables HDMI audio through I2S path.
@@ -43,7 +43,7 @@ config VIDEO_EXYNOS_HDMI_AUDIO_I2S
 config VIDEO_EXYNOS_HDMI_AUDIO_SPDIF
 	bool "Enable HDMI audio using SPDIF path"
 	depends on VIDEO_EXYNOS_HDMI
-	depends on SND_SOC_SAMSUNG_SMDK_SPDIF
+	depends on SND_SAMSUNG_SPDIF
 	default n
 	help
 	  Enables HDMI audio through SPDIF path.
@@ -91,6 +91,7 @@ config VIDEO_EXYNOS_MIXER
 	depends on VIDEO_DEV && VIDEO_V4L2
 	depends on VIDEO_EXYNOS_TV
 	select VIDEOBUF2_DMA_CONTIG
+	select VIDEOBUF2_FB
 	help
 	  Say Y here if you want support for the Mixer in Samsung S5P SoCs.
 	  This device produce image data to one of output interfaces.

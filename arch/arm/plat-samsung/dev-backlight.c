@@ -61,8 +61,12 @@ static void samsung_bl_exit(struct device *dev)
 
 static struct platform_pwm_backlight_data samsung_dfl_bl_data = {
 	.max_brightness = 255,
+#if defined(CONFIG_BOARD_ODROID_X)||defined(CONFIG_BOARD_ODROID_X2)||defined(CONFIG_BOARD_ODROID_U)||defined(CONFIG_BOARD_ODROID_U2)
 	.dft_brightness = 255,
-	.pwm_period_ns  = 78770,
+#else	
+	.dft_brightness = 128,
+#endif	
+	.pwm_period_ns  = 20972,
 	.init           = samsung_bl_init,
 	.exit           = samsung_bl_exit,
 };

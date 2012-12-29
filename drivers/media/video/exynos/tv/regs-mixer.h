@@ -120,12 +120,16 @@
 	(((val) << (low_bit)) & MXR_MASK(high_bit, low_bit))
 
 /* bits for MXR_STATUS */
+#define MXR_STATUS_SOFT_RESET		(1 << 8)
 #define MXR_STATUS_16_BURST		(1 << 7)
 #define MXR_STATUS_BURST_MASK		(1 << 7)
+#define MXR_STATUS_LAYER_SYNC		(1 << 6)
 #define MXR_STATUS_SYNC_ENABLE		(1 << 2)
 #define MXR_STATUS_REG_RUN		(1 << 0)
 
 /* bits for MXR_CFG */
+#define MXR_CFG_LAYER_UPDATE            (1 << 31)
+#define MXR_CFG_LAYER_UPDATE_COUNTER    (3 << 29)
 #define MXR_CFG_MX1_GRP1_ENABLE		(1 << 15)
 #define MXR_CFG_MX1_GRP0_ENABLE		(1 << 14)
 #define MXR_CFG_MX1_VIDEO_ENABLE	(1 << 13)
@@ -149,8 +153,9 @@
 #define MXR_CFG_SCAN_MASK		0x47
 
 /* bits for MXR_GRAPHICn_CFG */
-#define MXR_GRP_CFG_COLOR_KEY_DISABLE	(1 << 21)
-#define MXR_GRP_CFG_BLEND_PRE_MUL	(1 << 20)
+#define MXR_GRP_CFG_BLANK_KEY_OFF	(1 << 21)
+#define MXR_GRP_CFG_LAYER_BLEND_EN	(1 << 17)
+#define MXR_GRP_CFG_PIXEL_BLEND_EN	(1 << 16)
 #define MXR_GRP_CFG_FORMAT_VAL(x)	MXR_MASK_VAL(x, 11, 8)
 #define MXR_GRP_CFG_FORMAT_MASK		MXR_GRP_CFG_FORMAT_VAL(~0)
 #define MXR_GRP_CFG_ALPHA_VAL(x)	MXR_MASK_VAL(x, 7, 0)
@@ -191,12 +196,6 @@
 /* bit for MXR_VIDEO_CFG */
 #define MXR_VIDEO_CFG_BLEND_EN		(1 << 16)
 #define MXR_VIDEO_CFG_ALPHA(x)		MXR_MASK_VAL(x, 7, 0)
-
-/* bit for MXR_GRAPHIC0_CFG */
-#define MXR_GRP_CFG_BLANK_KEY_EN	(1 << 21)
-#define MXR_GRP_CFG_LAYER_BLEND_EN	(1 << 17)
-#define MXR_GRP_CFG_PIXEL_BLEND_EN	(1 << 16)
-#define MXR_GRP_CFG_ALPHA(x)		MXR_MASK_VAL(x, 7, 0)
 
 /* bit for MXR_VIDEO_LT */
 #define MXR_VIDEO_LT_LEFT_VAL(x)	MXR_MASK_VAL(x, 31, 16)

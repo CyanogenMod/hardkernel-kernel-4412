@@ -80,14 +80,6 @@ void s3cfb_cfg_gpio(struct platform_device *pdev)
 	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 6, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV1);
 }
-#elif defined(CONFIG_FB_S5P_HV070WSA)
-void s3cfb_cfg_gpio(struct platform_device *pdev)
-{
-	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF0(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF1(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF2(0), 8, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-	s3cfb_gpio_setup_24bpp(EXYNOS4_GPF3(0), 4, S3C_GPIO_SFN(2), S5P_GPIO_DRVSTR_LV4);
-}
 #endif
 #endif
 
@@ -135,9 +127,6 @@ int s3cfb_clk_on(struct platform_device *pdev, struct clk **s3cfb_clk)
 		goto err_clk2;
 	}
 
-	if ((soc_is_exynos4412()) && (samsung_rev() >= EXYNOS4412_REV_2_0))
-		ret = clk_set_rate(sclk, 880000000);
-	else
 		ret = clk_set_rate(sclk, 800000000);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to clk_set_rate of sclk for fimd\n");
@@ -433,7 +422,7 @@ int s3cfb_lcd_on(struct platform_device *pdev)
 	gpio_set_value(EXYNOS4_GPX0(6), 1);
 
 	gpio_free(EXYNOS4_GPX0(6));
-#elif defined(CONFIG_MACH_SMDK4X12) || defined(MACH_ORIGEN_QUAD)
+#elif defined(CONFIG_MACH_SMDK4X12)
 	if (samsung_board_rev_is_0_1()) {
 		err = gpio_request_one(EXYNOS4212_GPM3(6),
 				GPIOF_OUT_INIT_HIGH, "GPM3");
@@ -475,48 +464,7 @@ int s3cfb_lcd_off(struct platform_device *pdev)
 {
 	return 0;
 }
-#elif defined(CONFIG_FB_S5P_HV070WSA)
-int s3cfb_backlight_on(struct platform_device *pdev)
-{
-#if !defined(CONFIG_BACKLIGHT_PWM)
-	int err;
 
-	err = gpio_request_one(EXYNOS4_GPD0(0), GPIOF_OUT_INIT_HIGH, "GPD0");
-	if (err) {
-		printk(KERN_ERR "failed to request GPD0 for "
-			"lcd backlight control\n");
-		return err;
-	}
-	gpio_free(EXYNOS4_GPD0(0));
-#endif
-	return 0;
-}
-
-int s3cfb_backlight_off(struct platform_device *pdev)
-{
-#if !defined(CONFIG_BACKLIGHT_PWM)
-	int err;
-
-	err = gpio_request_one(EXYNOS4_GPD0(0), GPIOF_OUT_INIT_LOW, "GPD0");
-	if (err) {
-		printk(KERN_ERR "failed to request GPD0 for "
-			"lcd backlight control\n");
-		return err;
-	}
-	gpio_free(EXYNOS4_GPD0(0));
-#endif
-	return 0;
-}
-
-int s3cfb_lcd_on(struct platform_device *pdev)
-{
-	return 0;
-}
-
-int s3cfb_lcd_off(struct platform_device *pdev)
-{
-	return 0;
-}
 #else
 void s3cfb_cfg_gpio(struct platform_device *pdev)
 {

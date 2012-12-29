@@ -14,6 +14,7 @@
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/poll.h>
+#include <linux/switch.h>
 
 #include <plat/tvout.h>
 #include <linux/delay.h>
@@ -40,6 +41,11 @@
 
 #define RETRY_COUNT	50
 
+//codewalker
+//struct switch_dev switch_hdmi_detection = {
+//	.name = "hdmi",
+//};
+
 struct hpd_struct {
 	spinlock_t lock;
 	wait_queue_head_t waitq;
@@ -51,6 +57,10 @@ struct hpd_struct {
 };
 
 static struct hpd_struct hpd_struct;
+
+#if defined(CONFIG_MACH_ODROID_4X12)&&defined(CONFIG_SND_SAMSUNG_I2S)
+extern void	odroid_audio_tvout(bool tvout);
+#endif
 
 static int last_hpd_state;
 static int last_uevent_state;
@@ -121,6 +131,9 @@ static void s5p_hpd_kobject_uevent(void)
 			on_start_process = true;
 		}
 		last_uevent_state = HPD_HI;
+	#if defined(CONFIG_MACH_ODROID_4X12)&&defined(CONFIG_SND_SAMSUNG_I2S)
+		odroid_audio_tvout(1);
+	#endif
 	} else {
 		if (last_uevent_state == -1 || last_uevent_state == HPD_HI) {
 			sprintf(env_buf, "HDMI_STATE=offline");
@@ -131,7 +144,14 @@ static void s5p_hpd_kobject_uevent(void)
 			on_stop_process = true;
 		}
 		last_uevent_state = HPD_LO;
+
+	#if defined(CONFIG_MACH_ODROID_4X12)&&defined(CONFIG_SND_SAMSUNG_I2S)
+		odroid_audio_tvout(0);
+	#endif
 	}
+
+	//codewalker
+	//switch_set_state(&switch_hdmi_detection, hpd_state);
 }
 
 static DECLARE_WORK(hpd_work, (void *)s5p_hpd_kobject_uevent);
@@ -139,6 +159,10 @@ static DECLARE_WORK(hpd_work, (void *)s5p_hpd_kobject_uevent);
 static int s5p_hpd_open(struct inode *inode, struct file *file)
 {
 	atomic_set(&poll_state, 1);
+
+	//codewalker
+	//int hpd_state = atomic_read(&hpd_struct.state);
+	//switch_set_state(&switch_hdmi_detection, hpd_state);
 
 	return 0;
 }
@@ -176,6 +200,7 @@ static unsigned int s5p_hpd_poll(struct file *file, poll_table *wait)
 }
 
 #define HPD_GET_STATE _IOR('H', 100, unsigned int)
+#define HPD_GET_I2C_CHANNEL _IOR('H', 101, unsigned int)
 
 static long s5p_hpd_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
@@ -198,6 +223,21 @@ static long s5p_hpd_ioctl(struct file *file,
 				(*status) ? "plugged" : "unplugged");
 		return 0;
 		}
+	case HPD_GET_I2C_CHANNEL:
+		{
+		unsigned int *channel= (unsigned int *)arg;
+	#if defined(CONFIG_MACH_ODROID_4X12)
+			char *string="/dev/i2c-2";
+	#else
+			char *string="/dev/i2c-1";
+	#endif
+
+		HPDIFPRINTK("I2C channel is %d\n",channel);
+	
+		return	copy_to_user(channel,string,11);
+		
+		}
+
 	default:
 		printk(KERN_ERR "(%d) unknown ioctl, HPD_GET_STATE(%d)\n",
 				(unsigned int)cmd, (unsigned int)HPD_GET_STATE);
@@ -256,6 +296,7 @@ int s5p_hpd_get_status(void)
 	return hpd_state;
 
 }
+EXPORT_SYMBOL_GPL(s5p_hpd_get_status);
 
 static int s5p_hdp_irq_eint(int irq)
 {
@@ -448,11 +489,16 @@ static int __devinit s5p_hpd_probe(struct platform_device *pdev)
 
 	last_uevent_state = -1;
 
+	//codewalker
+	//switch_dev_register(&switch_hdmi_detection);
+
 	return 0;
 }
 
 static int __devexit s5p_hpd_remove(struct platform_device *pdev)
 {
+	//codewalker
+	//switch_dev_unregister(&switch_hdmi_detection);
 	return 0;
 }
 

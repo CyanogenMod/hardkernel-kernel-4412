@@ -40,6 +40,10 @@
 char buf[32];
 struct fimc_global *fimc_dev;
 
+#ifndef CONFIG_VIDEO_FIMC_MIPI
+int s3c_csis_get_pkt(int csis_id, void *pktdata) {}
+#endif
+
 void s3c_fimc_irq_work(struct work_struct *work)
 {
 	struct fimc_control *ctrl = container_of(work, struct fimc_control,
@@ -611,6 +615,14 @@ static inline void fimc_irq_cap(struct fimc_control *ctrl)
 					core, s_ctrl, &is_ctrl);
 			}
 		}
+
+		if (cap->pktdata_enable) {
+			if (ctrl->cam->id == CAMERA_CSI_C)
+				s3c_csis_get_pkt(CSI_CH_0 , cap->bufs[buf_index].vaddr_pktdata);
+			else if (ctrl->cam->id == CAMERA_CSI_D)
+				s3c_csis_get_pkt(CSI_CH_1 , cap->bufs[buf_index].vaddr_pktdata);
+		}
+
 		fimc_add_outgoing_queue(ctrl, buf_index);
 		fimc_hwset_output_buf_sequence(ctrl, buf_index,
 				FIMC_FRAMECNT_SEQ_DISABLE);
@@ -791,9 +803,6 @@ static struct fimc_control *fimc_register_controller(struct platform_device *pde
 		clk_put(fimc_src_clk);
 		return NULL;
 	}
-	if (samsung_rev() >= EXYNOS4412_REV_2_0)
-		clk_set_rate(sclk_fimc_lclk, FIMC_OVR_CLK_RATE);
-	else
 		clk_set_rate(sclk_fimc_lclk, FIMC_CLK_RATE);
 	clk_put(sclk_fimc_lclk);
 	clk_put(fimc_src_clk);
@@ -2068,10 +2077,8 @@ static int fimc_runtime_suspend_cap(struct fimc_control *ctrl)
 	}
 	fimc_dbg("%s\n", __func__);
 
-	if (!ctrl->cam) {
-		fimc_err("%s: No capture device.\n", __func__);
+	if (!ctrl->cam) 
 		return -ENODEV;
-	}
 
 	if (ctrl->cam->id == CAMERA_WB) {
 		fimc_info1("%s : writeback 0 suspend\n", __func__);
