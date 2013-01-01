@@ -380,7 +380,14 @@ static int max77686_set_voltage_ldobuck(struct regulator_dev *rdev,
 
 	desc = reg_voltage_map[rid];
 
+#if defined(CONFIG_BOARD_ODROID_U2) || defined(CONFIG_BOARD_ODROID_U)
+	if((rid == MAX77686_BUCK8) && (min_vol > max_vol))	i = 0;
+	else
+		i = max77686_get_voltage_proper_val(desc, min_vol, max_vol);
+#else
 	i = max77686_get_voltage_proper_val(desc, min_vol, max_vol);
+#endif
+
 	if (i < 0)
 		return i;
 
@@ -515,6 +522,12 @@ static int max77686_set_voltage_buck(struct regulator_dev *rdev,
 		if (max77686->buck4_gpiodvs)
 			gpio_dvs_mode = true;
 		break;
+#if defined(CONFIG_BOARD_ODROID_U2) || defined(CONFIG_BOARD_ODROID_U)
+	case MAX77686_BUCK8:	
+		max77686_set_voltage_ldobuck(rdev, min_uV, -1, selector);
+		mdelay(100);
+		break;
+#endif		
 	}
 	max77686_set_gpio(max77686);
 

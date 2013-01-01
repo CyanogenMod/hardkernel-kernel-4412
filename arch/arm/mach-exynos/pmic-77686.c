@@ -162,13 +162,22 @@ static struct regulator_init_data max77686_buck7_data = {
 static struct regulator_init_data max77686_buck8_data = {
 	.constraints	= {
 		.name		= "BUCK8 3V0",
+#if defined(CONFIG_BOARD_ODROID_U)||defined(CONFIG_BOARD_ODROID_U2)
+		.min_uV		= 3300000,
+		.max_uV		= 3300000,
+#else
 		.min_uV		= 3000000,
 		.max_uV		= 3000000,
+#endif
 		.always_on	= 1,
 		.apply_uV	= 1,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 		.state_mem	= {
+#if defined(CONFIG_BOARD_ODROID_U)||defined(CONFIG_BOARD_ODROID_U2)
+			.uV	= 3300000,
+#else
 			.uV	= 3000000,
+#endif
 			.mode	= REGULATOR_MODE_NORMAL,
 			.enabled = 1,
 		},
