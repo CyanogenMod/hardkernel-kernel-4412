@@ -20,6 +20,7 @@ config ARM
 	select HAVE_KERNEL_GZIP
 	select HAVE_KERNEL_LZO
 	select HAVE_KERNEL_LZMA
+	select HAVE_KERNEL_XZ
 	select HAVE_IRQ_WORK
 	select HAVE_PERF_EVENTS
 	select PERF_USE_VMALLOC
@@ -136,10 +137,9 @@ config GENERIC_LOCKBREAK
 
 config RWSEM_GENERIC_SPINLOCK
 	bool
-	default y
 
 config RWSEM_XCHGADD_ALGORITHM
-	bool
+	def_bool y
 
 config ARCH_HAS_ILOG2_U32
 	bool
@@ -1365,6 +1365,16 @@ config PL310_ERRATA_769419
 	  on systems with an outer cache, the store buffer is drained
 	  explicitly.
 
+config ARM_ERRATA_775420
+       bool "ARM errata: A data cache maintenance operation which aborts, might lead to deadlock"
+       depends on CPU_V7
+       help
+	 This option enables the workaround for the 775420 Cortex-A9 (r2p2,
+	 r2p6,r2p8,r2p10,r3p0) erratum. In case a date cache maintenance
+	 operation aborts with MMU exception, it might cause the processor
+	 to deadlock. This workaround puts DSB before executing ISB if
+	 an abort may occur on cache maintenance.
+
 endmenu
 
 menu "Kernel Features"
@@ -1410,6 +1420,31 @@ config SMP_ON_UP
 	  savings.
 
 	  If you don't know what to do here, say Y.
+
+config ARM_CPU_TOPOLOGY
+	bool "Support cpu topology definition"
+	depends on SMP && CPU_V7
+	default y
+	help
+	  Support ARM cpu topology definition. The MPIDR register defines
+	  affinity between processors which is then used to describe the cpu
+	  topology of an ARM System.
+
+config SCHED_MC
+	bool "Multi-core scheduler support"
+	depends on ARM_CPU_TOPOLOGY
+	help
+	  Multi-core scheduler support improves the CPU scheduler's decision
+	  making when dealing with multi-core CPU chips at a cost of slightly
+	  increased overhead in some places. If unsure say N here.
+
+config SCHED_SMT
+	bool "SMT scheduler support"
+	depends on ARM_CPU_TOPOLOGY
+	help
+	  Improves the CPU scheduler's decision making when dealing with
+	  MultiThreading at a cost of slightly increased overhead in some
+	  places. If unsure say N here.
 
 config HAVE_ARM_SCU
 	bool
@@ -1936,6 +1971,7 @@ source "drivers/cpufreq/Kconfig"
 config CPU_FREQ_IMX
 	tristate "CPUfreq driver for i.MX CPUs"
 	depends on ARCH_MXC && CPU_FREQ
+	select CPU_FREQ_TABLE
 	help
 	  This enables the CPUfreq driver for i.MX CPUs.
 

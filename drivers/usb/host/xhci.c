@@ -51,7 +51,7 @@ MODULE_PARM_DESC(link_quirk, "Don't clear the chain bit on a link TRB");
  * handshake done).  There are two failure modes:  "usec" have passed (major
  * hardware flakeout), or the register reads as all-ones (hardware removed).
  */
-static int handshake(struct xhci_hcd *xhci, void __iomem *ptr,
+int handshake(struct xhci_hcd *xhci, void __iomem *ptr,
 		      u32 mask, u32 done, int usec)
 {
 	u32	result;
@@ -104,8 +104,10 @@ int xhci_halt(struct xhci_hcd *xhci)
 
 	ret = handshake(xhci, &xhci->op_regs->status,
 			STS_HALT, STS_HALT, XHCI_MAX_HALT_USEC);
-	if (!ret)
+	if (!ret) {
 		xhci->xhc_state |= XHCI_STATE_HALTED;
+		xhci->cmd_ring_state = CMD_RING_STATE_STOPPED;
+	}
 	return ret;
 }
 
@@ -163,7 +165,7 @@ int xhci_reset(struct xhci_hcd *xhci)
 	xhci_writel(xhci, command, &xhci->op_regs->command);
 
 	ret = handshake(xhci, &xhci->op_regs->command,
-			CMD_RESET, 0, 250 * 1000);
+			CMD_RESET, 0, 10 * 1000 * 1000);
 	if (ret)
 		return ret;
 
@@ -172,7 +174,8 @@ int xhci_reset(struct xhci_hcd *xhci)
 	 * xHCI cannot write to any doorbells or operational registers other
 	 * than status until the "Controller Not Ready" flag is cleared.
 	 */
-	return handshake(xhci, &xhci->op_regs->status, STS_CNR, 0, 250 * 1000);
+	return handshake(xhci, &xhci->op_regs->status,
+			 STS_CNR, 0, 10 * 1000 * 1000);
 }
 
 #ifdef CONFIG_PCI
@@ -468,6 +471,7 @@ static int xhci_run_finished(struct xhci_hcd *xhci)
 		return -ENODEV;
 	}
 	xhci->shared_hcd->state = HC_STATE_RUNNING;
+	xhci->cmd_ring_state = CMD_RING_STATE_RUNNING;
 
 	if (xhci->quirks & XHCI_NEC_HOST)
 		xhci_ring_cmd_db(xhci);
@@ -642,6 +646,9 @@ void xhci_shutdown(struct usb_hcd *hcd)
 {
 	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
 
+	if (xhci->quirks & XHCI_SPURIOUS_REBOOT)
+		usb_disable_xhci_ports(to_pci_dev(hcd->self.controller));
+
 	spin_lock_irq(&xhci->lock);
 	xhci_halt(xhci);
 	spin_unlock_irq(&xhci->lock);
@@ -659,11 +666,11 @@ static void xhci_save_registers(struct xhci_hcd *xhci)
 	xhci->s3.dev_nt = xhci_readl(xhci, &xhci->op_regs->dev_notification);
 	xhci->s3.dcbaa_ptr = xhci_read_64(xhci, &xhci->op_regs->dcbaa_ptr);
 	xhci->s3.config_reg = xhci_readl(xhci, &xhci->op_regs->config_reg);
-	xhci->s3.irq_pending = xhci_readl(xhci, &xhci->ir_set->irq_pending);
-	xhci->s3.irq_control = xhci_readl(xhci, &xhci->ir_set->irq_control);
 	xhci->s3.erst_size = xhci_readl(xhci, &xhci->ir_set->erst_size);
 	xhci->s3.erst_base = xhci_read_64(xhci, &xhci->ir_set->erst_base);
 	xhci->s3.erst_dequeue = xhci_read_64(xhci, &xhci->ir_set->erst_dequeue);
+	xhci->s3.irq_pending = xhci_readl(xhci, &xhci->ir_set->irq_pending);
+	xhci->s3.irq_control = xhci_readl(xhci, &xhci->ir_set->irq_control);
 }
 
 static void xhci_restore_registers(struct xhci_hcd *xhci)
@@ -672,10 +679,11 @@ static void xhci_restore_registers(struct xhci_hcd *xhci)
 	xhci_writel(xhci, xhci->s3.dev_nt, &xhci->op_regs->dev_notification);
 	xhci_write_64(xhci, xhci->s3.dcbaa_ptr, &xhci->op_regs->dcbaa_ptr);
 	xhci_writel(xhci, xhci->s3.config_reg, &xhci->op_regs->config_reg);
-	xhci_writel(xhci, xhci->s3.irq_pending, &xhci->ir_set->irq_pending);
-	xhci_writel(xhci, xhci->s3.irq_control, &xhci->ir_set->irq_control);
 	xhci_writel(xhci, xhci->s3.erst_size, &xhci->ir_set->erst_size);
 	xhci_write_64(xhci, xhci->s3.erst_base, &xhci->ir_set->erst_base);
+	xhci_write_64(xhci, xhci->s3.erst_dequeue, &xhci->ir_set->erst_dequeue);
+	xhci_writel(xhci, xhci->s3.irq_pending, &xhci->ir_set->irq_pending);
+	xhci_writel(xhci, xhci->s3.irq_control, &xhci->ir_set->irq_control);
 }
 
 static void xhci_set_cmd_ring_deq(struct xhci_hcd *xhci)
@@ -763,7 +771,7 @@ int xhci_suspend(struct xhci_hcd *xhci)
 	command &= ~CMD_RUN;
 	xhci_writel(xhci, command, &xhci->op_regs->command);
 	if (handshake(xhci, &xhci->op_regs->status,
-		      STS_HALT, STS_HALT, 100*100)) {
+		      STS_HALT, STS_HALT, XHCI_MAX_HALT_USEC)) {
 		xhci_warn(xhci, "WARN: xHC CMD_RUN timeout\n");
 		spin_unlock_irq(&xhci->lock);
 		return -ETIMEDOUT;
@@ -777,8 +785,8 @@ int xhci_suspend(struct xhci_hcd *xhci)
 	command = xhci_readl(xhci, &xhci->op_regs->command);
 	command |= CMD_CSS;
 	xhci_writel(xhci, command, &xhci->op_regs->command);
-	if (handshake(xhci, &xhci->op_regs->status, STS_SAVE, 0, 10*100)) {
-		xhci_warn(xhci, "WARN: xHC CMD_CSS timeout\n");
+	if (handshake(xhci, &xhci->op_regs->status, STS_SAVE, 0, 10 * 1000)) {
+		xhci_warn(xhci, "WARN: xHC save state timeout\n");
 		spin_unlock_irq(&xhci->lock);
 		return -ETIMEDOUT;
 	}
@@ -830,8 +838,8 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 		command |= CMD_CRS;
 		xhci_writel(xhci, command, &xhci->op_regs->command);
 		if (handshake(xhci, &xhci->op_regs->status,
-			      STS_RESTORE, 0, 10*100)) {
-			xhci_dbg(xhci, "WARN: xHC CMD_CSS timeout\n");
+			      STS_RESTORE, 0, 10 * 1000)) {
+			xhci_warn(xhci, "WARN: xHC restore state timeout\n");
 			spin_unlock_irq(&xhci->lock);
 			return -ETIMEDOUT;
 		}
@@ -1618,6 +1626,7 @@ static int xhci_configure_endpoint_result(struct xhci_hcd *xhci,
 		/* FIXME: can we allocate more resources for the HC? */
 		break;
 	case COMP_BW_ERR:
+	case COMP_2ND_BW_ERR:
 		dev_warn(&udev->dev, "Not enough bandwidth "
 				"for new device state.\n");
 		ret = -ENOSPC;
@@ -1814,6 +1823,7 @@ static int xhci_configure_endpoint(struct xhci_hcd *xhci,
 	struct completion *cmd_completion;
 	u32 *cmd_status;
 	struct xhci_virt_device *virt_dev;
+	union xhci_trb *cmd_trb;
 
 	spin_lock_irqsave(&xhci->lock, flags);
 	virt_dev = xhci->devs[udev->slot_id];
@@ -1856,6 +1866,7 @@ static int xhci_configure_endpoint(struct xhci_hcd *xhci,
 	}
 	init_completion(cmd_completion);
 
+	cmd_trb = xhci->cmd_ring->dequeue;
 	if (!ctx_change)
 		ret = xhci_queue_configure_endpoint(xhci, in_ctx->dma,
 				udev->slot_id, must_succeed);
@@ -1877,14 +1888,17 @@ static int xhci_configure_endpoint(struct xhci_hcd *xhci,
 	/* Wait for the configure endpoint command to complete */
 	timeleft = wait_for_completion_interruptible_timeout(
 			cmd_completion,
-			USB_CTRL_SET_TIMEOUT);
+			XHCI_CMD_DEFAULT_TIMEOUT);
 	if (timeleft <= 0) {
 		xhci_warn(xhci, "%s while waiting for %s command\n",
 				timeleft == 0 ? "Timeout" : "Signal",
 				ctx_change == 0 ?
 					"configure endpoint" :
 					"evaluate context");
-		/* FIXME cancel the configure endpoint command */
+		/* cancel the configure endpoint command */
+		ret = xhci_cancel_cmd(xhci, command, cmd_trb);
+		if (ret < 0)
+			return ret;
 		return -ETIME;
 	}
 
@@ -2233,8 +2247,7 @@ static int xhci_calculate_streams_and_bitmask(struct xhci_hcd *xhci,
 		if (ret < 0)
 			return ret;
 
-		max_streams = USB_SS_MAX_STREAMS(
-				eps[i]->ss_ep_comp.bmAttributes);
+		max_streams = usb_ss_max_streams(&eps[i]->ss_ep_comp);
 		if (max_streams < (*num_streams - 1)) {
 			xhci_dbg(xhci, "Ep 0x%x only supports %u stream IDs.\n",
 					eps[i]->desc.bEndpointAddress,
@@ -2818,8 +2831,10 @@ int xhci_alloc_dev(struct usb_hcd *hcd, struct usb_device *udev)
 	unsigned long flags;
 	int timeleft;
 	int ret;
+	union xhci_trb *cmd_trb;
 
 	spin_lock_irqsave(&xhci->lock, flags);
+	cmd_trb = xhci->cmd_ring->dequeue;
 	ret = xhci_queue_slot_control(xhci, TRB_ENABLE_SLOT, 0);
 	if (ret) {
 		spin_unlock_irqrestore(&xhci->lock, flags);
@@ -2831,12 +2846,12 @@ int xhci_alloc_dev(struct usb_hcd *hcd, struct usb_device *udev)
 
 	/* XXX: how much time for xHC slot assignment? */
 	timeleft = wait_for_completion_interruptible_timeout(&xhci->addr_dev,
-			USB_CTRL_SET_TIMEOUT);
+			XHCI_CMD_DEFAULT_TIMEOUT);
 	if (timeleft <= 0) {
 		xhci_warn(xhci, "%s while waiting for a slot\n",
 				timeleft == 0 ? "Timeout" : "Signal");
-		/* FIXME cancel the enable slot request */
-		return 0;
+		/* cancel the enable slot request */
+		return xhci_cancel_cmd(xhci, NULL, cmd_trb);
 	}
 
 	if (!xhci->slot_id) {
@@ -2897,6 +2912,7 @@ int xhci_address_device(struct usb_hcd *hcd, struct usb_device *udev)
 	struct xhci_slot_ctx *slot_ctx;
 	struct xhci_input_control_ctx *ctrl_ctx;
 	u64 temp_64;
+	union xhci_trb *cmd_trb;
 
 	if (!udev->slot_id) {
 		xhci_dbg(xhci, "Bad Slot ID %d\n", udev->slot_id);
@@ -2935,6 +2951,7 @@ int xhci_address_device(struct usb_hcd *hcd, struct usb_device *udev)
 	xhci_dbg_ctx(xhci, virt_dev->in_ctx, 2);
 
 	spin_lock_irqsave(&xhci->lock, flags);
+	cmd_trb = xhci->cmd_ring->dequeue;
 	ret = xhci_queue_address_device(xhci, virt_dev->in_ctx->dma,
 					udev->slot_id);
 	if (ret) {
@@ -2947,7 +2964,7 @@ int xhci_address_device(struct usb_hcd *hcd, struct usb_device *udev)
 
 	/* ctrl tx can take up to 5 sec; XXX: need more time for xHC? */
 	timeleft = wait_for_completion_interruptible_timeout(&xhci->addr_dev,
-			USB_CTRL_SET_TIMEOUT);
+			XHCI_CMD_DEFAULT_TIMEOUT);
 	/* FIXME: From section 4.3.4: "Software shall be responsible for timing
 	 * the SetAddress() "recovery interval" required by USB and aborting the
 	 * command on a timeout.
@@ -2955,7 +2972,10 @@ int xhci_address_device(struct usb_hcd *hcd, struct usb_device *udev)
 	if (timeleft <= 0) {
 		xhci_warn(xhci, "%s while waiting for a slot\n",
 				timeleft == 0 ? "Timeout" : "Signal");
-		/* FIXME cancel the address device command */
+		/* cancel the address device command */
+		ret = xhci_cancel_cmd(xhci, NULL, cmd_trb);
+		if (ret < 0)
+			return ret;
 		return -ETIME;
 	}
 
