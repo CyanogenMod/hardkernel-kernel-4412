@@ -485,7 +485,7 @@ int s3cfb_set_par(struct fb_info *fb)
 #ifdef CONFIG_EXYNOS_DEV_PD
 	if (fbdev->system_state == POWER_OFF) {
 		dev_err(fbdev->dev, "system_state is POWER_OFF\n");
-		//return 0;
+		return 0;
 	}
 #endif
 
@@ -726,7 +726,7 @@ int s3cfb_blank(int blank_mode, struct fb_info *fb)
 
 	dev_dbg(fbdev->dev, "change blank mode\n");
 
-#ifdef CONFIG_EXYNOS_DEV_PD_DONOTUSE
+#ifdef CONFIG_EXYNOS_DEV_PD
 	if (fbdev->system_state == POWER_OFF) {
 		dev_err(fbdev->dev, "system_state is POWER_OFF\n");
 		win->power_state = blank_mode;
