@@ -28,7 +28,7 @@
 #include <mach/hardware.h>
 #include <plat/gpio-cfg.h>
 
-#define FAKE_BAT_LEVEL	80
+#define FAKE_BAT_LEVEL	100
 
 static struct wake_lock vbus_wake_lock;
 
@@ -416,6 +416,9 @@ static void samsung_fake_bat_status_update(struct power_supply *bat_ps)
 	samsung_fake_bat_info.bat_info.batt_temp = samsung_get_bat_temp(bat_ps);
 	samsung_fake_bat_info.bat_info.level = samsung_get_bat_level(bat_ps);
 	samsung_fake_bat_info.bat_info.batt_vol = samsung_get_bat_vol(bat_ps);
+	if (samsung_fake_bat_info.bat_info.level == 100) {
+		samsung_fake_bat_info.bat_info.batt_is_full = 1;
+	}
 
 	if (old_level != samsung_fake_bat_info.bat_info.level ||
 	    old_temp != samsung_fake_bat_info.bat_info.batt_temp ||
