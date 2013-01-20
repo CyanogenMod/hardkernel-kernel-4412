@@ -13,8 +13,10 @@
 #include "s3cfb.h"
 
 static struct s3cfb_lcd fake_fb = {
-	.width = 1280,
-	.height = 720,
+	/*.width = 1280,
+	.height = 720,*/
+	.width = 1920,
+	.height = 1080,
 	.bpp = 24,
 	.freq = 60,
 
@@ -72,8 +74,8 @@ void s3cfb_set_lcd_info(struct s3cfb_global *ctrl)
 {
 	fake_fb.init_ldi	= NULL;
 
-    if(SetEnableX)  fake_fb.width    = atoi(FbBootArgsX);
-    if(SetEnableY)  fake_fb.height   = atoi(FbBootArgsY);
+/*    if(SetEnableX)  fake_fb.width    = atoi(FbBootArgsX);
+    if(SetEnableY)  fake_fb.height   = atoi(FbBootArgsY);*/
 	
 	ctrl->lcd = &fake_fb;
 	
