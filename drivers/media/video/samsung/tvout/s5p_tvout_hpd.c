@@ -129,8 +129,6 @@ static void s5p_hpd_kobject_uevent(void)
 			HPDIFPRINTK("online event\n");
 			kobject_uevent_env(&(hpd_misc_device.this_device->kobj), KOBJ_CHANGE, envp);
 			on_start_process = true;
-			if (last_uevent_state == HPD_LO)
-				s5p_hdcp_start();
 		}
 		last_uevent_state = HPD_HI;
 	#if defined(CONFIG_MACH_ODROID_4X12)&&defined(CONFIG_SND_SAMSUNG_I2S)
@@ -384,8 +382,6 @@ static int s5p_hpd_irq_hdmi(int irq)
 		HPDIFPRINTK("HPD_HI\n");
 
 	} else if (flag & (1 << HDMI_IRQ_HPD_UNPLUG)) {
-		s5p_hdcp_stop();
-
 		s5p_hdmi_reg_intc_enable(HDMI_IRQ_HPD_PLUG, 1);
 		if (atomic_read(&hpd_struct.state) == HPD_LO)
 			return IRQ_HANDLED;
