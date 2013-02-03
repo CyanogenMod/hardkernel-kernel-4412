@@ -188,7 +188,11 @@ static int samsung_power_get_property(struct power_supply *bat_ps,
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
 		if (bat_ps->type == POWER_SUPPLY_TYPE_MAINS)
+#ifdef CONFIG_BOARD_ODROID_U2
+			val->intval = 1;
+#else
 			val->intval = (charger == CHARGER_AC ? 1 : 0);
+#endif
 		else if (bat_ps->type == POWER_SUPPLY_TYPE_USB)
 			val->intval = (charger == CHARGER_USB ? 1 : 0);
 		else
